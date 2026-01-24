@@ -123,7 +123,7 @@ Implementors should expose a compatible signature with legacy NEAT code.
 
 ### computeDiversityStats
 
-`(population: GenomeWithMetrics[], compatibilityComputer: CompatComputer) => import("D:/code-practice/NeatapticTS/src/neat/neat.diversity").DiversityStats | undefined`
+`(population: GenomeWithMetrics[], compatibilityComputer: CompatComputer) => import("C:/NeatapticTS/src/neat/neat.diversity").DiversityStats | undefined`
 
 ### DiversityStats
 
@@ -140,7 +140,7 @@ Minimal node interface with connections.
 
 ### structuralEntropy
 
-`(graph: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => number`
+`(graph: import("C:/NeatapticTS/src/architecture/network").default) => number`
 
 ## neat/neat.evaluate.ts
 
@@ -196,7 +196,7 @@ Objective definition for multi-objective optimization.
 
 ### evolve
 
-`() => Promise<import("D:/code-practice/NeatapticTS/src/architecture/network").default>`
+`() => Promise<import("C:/NeatapticTS/src/architecture/network").default>`
 
 Run a single evolution step for this NEAT population.
 
@@ -255,7 +255,7 @@ Runtime interface for a species with allocation metadata.
 
 ### exportPopulation
 
-`() => import("D:/code-practice/NeatapticTS/src/neat/neat.export").GenomeJSON[]`
+`() => import("C:/NeatapticTS/src/neat/neat.export").GenomeJSON[]`
 
 Export the current population (array of genomes) into plain JSON objects.
 Each genome is converted via its `toJSON()` method. You can persist this
@@ -277,7 +277,7 @@ Returns: Array of genome JSON objects.
 
 ### exportState
 
-`() => import("D:/code-practice/NeatapticTS/src/neat/neat.export").NeatStateJSON`
+`() => import("C:/NeatapticTS/src/neat/neat.export").NeatStateJSON`
 
 Convenience helper that returns a full evolutionary snapshot: both NEAT meta
 information and the serialized population array. Use this when you want a
@@ -294,7 +294,7 @@ const neat2 = Neat.importState(raw, fitnessFn); // identical evolutionary contex
 
 ### fromJSONImpl
 
-`(neatJSON: import("D:/code-practice/NeatapticTS/src/neat/neat.export").NeatMetaJSON, fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>) => NeatControllerForExport`
+`(neatJSON: import("C:/NeatapticTS/src/neat/neat.export").NeatMetaJSON, fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>) => NeatControllerForExport`
 
 Static-style implementation that rehydrates a NEAT instance from previously
 exported meta JSON produced by {@link toJSONImpl}. This does *not* restore a
@@ -327,7 +327,7 @@ Genome with toJSON serialization method.
 
 ### importPopulation
 
-`(populationJSON: import("D:/code-practice/NeatapticTS/src/neat/neat.export").GenomeJSON[]) => Promise<void>`
+`(populationJSON: import("C:/NeatapticTS/src/neat/neat.export").GenomeJSON[]) => Promise<void>`
 
 Import (replace) the current population from an array of serialized genomes.
 This does not touch NEAT meta state (generation, innovations, etc.)—only the
@@ -349,7 +349,7 @@ Parameters:
 
 ### importStateImpl
 
-`(stateBundle: import("D:/code-practice/NeatapticTS/src/neat/neat.export").NeatStateJSON, fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>) => Promise<NeatControllerForExport>`
+`(stateBundle: import("C:/NeatapticTS/src/neat/neat.export").NeatStateJSON, fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>) => Promise<NeatControllerForExport>`
 
 Static-style helper that rehydrates a full evolutionary state previously
 produced by {@link exportState}. Invoke this with the NEAT *class* (not an
@@ -406,7 +406,7 @@ Network class with static fromJSON method.
 
 ### toJSONImpl
 
-`() => import("D:/code-practice/NeatapticTS/src/neat/neat.export").NeatMetaJSON`
+`() => import("C:/NeatapticTS/src/neat/neat.export").NeatMetaJSON`
 
 Serialize NEAT meta (excluding the mutable population) for persistence of
 innovation history and experiment configuration. This is sufficient to
@@ -518,7 +518,7 @@ tolerant/robust nature of many historical NEAT library implementations.
 
 ### buildAnc
 
-`(genome: import("D:/code-practice/NeatapticTS/src/neat/neat.lineage").GenomeLike) => Set<number>`
+`(genome: import("C:/NeatapticTS/src/neat/neat.lineage").GenomeLike) => Set<number>`
 
 Build the (shallow) ancestor ID set for a single genome using breadth‑first traversal.
 
@@ -594,7 +594,7 @@ Expected `this` context for lineage helpers (a subset of the NEAT instance).
 
 ### fastNonDominated
 
-`(pop: import("D:/code-practice/NeatapticTS/src/architecture/network").default[]) => import("D:/code-practice/NeatapticTS/src/architecture/network").default[][]`
+`(pop: import("C:/NeatapticTS/src/architecture/network").default[]) => import("C:/NeatapticTS/src/architecture/network").default[][]`
 
 Perform fast non-dominated sorting and compute crowding distances for a
 population of networks (genomes). This implements a standard NSGA-II style
@@ -640,28 +640,827 @@ Shape of an objective descriptor used by the Neat instance.
 - `direction` optionally indicates whether the objective is maximized or
   minimized (defaults to 'max')
 
+## neat/neat.mutation.add-conn.utils.ts
+
+### assignInnovationForConnection
+
+`(connection: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, pairNodes: { symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Assign an innovation id for a new connection, reusing when possible.
+
+Parameters:
+- `connection` - - newly created connection
+- `pairNodes` - - resolved pair metadata
+- `internal` - - neat controller context
+
+Returns: void
+
+### buildLegacyKeyForConn
+
+`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => string`
+
+Build a legacy directional innovation key.
+
+Parameters:
+- `sourceNode` - - source node
+- `targetNode` - - target node
+
+Returns: directional innovation key
+
+### buildSymmetricKeyForConn
+
+`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => string`
+
+Build a symmetric innovation key for an unordered node pair.
+
+Parameters:
+- `sourceNode` - - source node
+- `targetNode` - - target node
+
+Returns: symmetric innovation key
+
+### choosePairForConn
+
+`(pairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata] | null`
+
+Choose a pair deterministically when only one candidate exists.
+
+Parameters:
+- `pairs` - - selection pool
+- `internal` - - neat controller context
+
+Returns: chosen pair or null
+
+### collectCandidatePairsForConn
+
+`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+
+Collect legal (from,to) node pairs not already connected.
+
+Parameters:
+- `genomeToInspect` - - genome to scan
+
+Returns: candidate node pairs
+
+### connectChosenPair
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; }) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined`
+
+Create the connection for the chosen pair.
+
+Parameters:
+- `genomeToEdit` - - genome to edit
+- `pairNodes` - - resolved pair nodes
+
+Returns: created connection or undefined
+
+### createsCycle
+
+`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+
+Detect whether adding a connection would create a cycle.
+
+Parameters:
+- `sourceNode` - - source node of the new connection
+- `targetNode` - - target node of the new connection
+
+Returns: true when a cycle is detected
+
+### filterPairsWithInnovations
+
+`(pairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+
+Filter candidate pairs that already have innovation reuse keys.
+
+Parameters:
+- `pairs` - - candidate node pairs
+- `internal` - - neat controller context
+
+Returns: reuse candidates
+
+### resolvePairNodes
+
+`(chosenPair: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata]) => { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }`
+
+Resolve nodes and innovation key details for a chosen pair.
+
+Parameters:
+- `chosenPair` - - pair to connect
+
+Returns: resolved pair metadata
+
+### selectPairPool
+
+`(allPairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], reusePairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+
+Build the final selection pool based on reuse and hidden-node preference.
+
+Parameters:
+- `allPairs` - - all candidate pairs
+- `reusePairs` - - pairs with historical innovations
+
+Returns: selection pool
+
+### shouldAbortForCycle
+
+`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; }) => boolean`
+
+Determine whether adding the connection would create a cycle.
+
+Parameters:
+- `genomeToInspect` - - genome to inspect
+- `pairNodes` - - resolved pair nodes
+
+Returns: true if the connection should be aborted
+
+## neat/neat.mutation.add-node.utils.ts
+
+### applySplitWithExistingRecord
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, splitRecord: { newNodeGeneId: number; inInnov: number; outInnov: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown) => void`
+
+Apply a split using an existing innovation record.
+
+Parameters:
+- `genomeToEdit` - - genome being modified
+- `connectionToSplit` - - connection being split
+- `splitDescriptor` - - metadata for the split
+- `splitRecord` - - existing innovation record
+- `NodeClass` - - node constructor
+
+Returns: void
+
+### applySplitWithNewRecord
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Apply a split and create a new innovation record.
+
+Parameters:
+- `genomeToEdit` - - genome being modified
+- `connectionToSplit` - - connection being split
+- `splitDescriptor` - - metadata for the split
+- `NodeClass` - - node constructor
+- `internal` - - neat controller context
+
+Returns: void
+
+### assignInnovationsForNewSplit
+
+`(newNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, splitConnections: { incomingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => { newNodeGeneId: number; inInnov: number; outInnov: number; }`
+
+Assign new innovations for a split and build the innovation record.
+
+Parameters:
+- `newNode` - - newly created hidden node
+- `splitConnections` - - incoming/outgoing connections
+- `internal` - - neat controller context
+
+Returns: innovation record for the split
+
+### buildSplitDescriptor
+
+`(connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata) => { splitKey: string; originalWeight: number; }`
+
+Build the split descriptor used for innovation lookup and connection creation.
+
+Parameters:
+- `connectionToSplit` - - connection being split
+
+Returns: split descriptor
+
+### chooseConnectionForSplit
+
+`(enabledConnectionsList: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | null`
+
+Choose a random enabled connection to split.
+
+Parameters:
+- `enabledConnectionsList` - - candidate connections
+- `internal` - - neat controller context
+
+Returns: selected connection or null
+
+### collectEnabledConnections
+
+`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata[]`
+
+Collect all enabled connections from a genome.
+
+Parameters:
+- `genomeToInspect` - - genome to inspect
+
+Returns: enabled connections list
+
+### connectSplitEdges
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, newNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, originalWeight: number) => { incomingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }`
+
+Create the incoming and outgoing split connections.
+
+Parameters:
+- `genomeToEdit` - - genome being modified
+- `connectionToSplit` - - connection being split
+- `newNode` - - newly created hidden node
+- `originalWeight` - - weight to preserve on the outgoing connection
+
+Returns: incoming/outgoing connection handles
+
+### disconnectOriginalConnection
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToRemove: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata) => void`
+
+Disconnect the original connection before inserting the split node.
+
+Parameters:
+- `genomeToEdit` - - genome to edit
+- `connectionToRemove` - - original connection to remove
+
+Returns: void
+
+### ensureBootstrapConnection
+
+`(genomeToSeed: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure the genome has at least one connection by linking input to output.
+
+Parameters:
+- `genomeToSeed` - - genome that may need a bootstrap connection
+- `internal` - - neat controller context
+
+Returns: void
+
+### findFirstNodeByType
+
+`(genomeToSearch: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeType: "input" | "output" | "hidden") => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | undefined`
+
+Find the first node of a given type.
+
+Parameters:
+- `genomeToSearch` - - genome whose nodes are searched
+- `nodeType` - - node type to match
+
+Returns: the first matching node or undefined
+
+### resolveInsertIndex
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => number`
+
+Resolve the insertion index for a new node, keeping outputs at the end.
+
+Parameters:
+- `genomeToEdit` - - genome whose node list is updated
+- `targetNode` - - original target node of the split connection
+
+Returns: insertion index
+
+## neat/neat.mutation.dead-ends.utils.ts
+
+### chooseRandomNodeForDeadEnds
+
+`(candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | null`
+
+Choose a random node from candidates for dead-end repair.
+
+Parameters:
+- `candidates` - - candidate nodes
+- `internal` - - neat controller context
+
+Returns: selected node or null
+
+### collectNodeGroupsForDeadEnds
+
+`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }`
+
+Collect categorized node arrays for dead-end repair.
+
+Parameters:
+- `networkToInspect` - - network to inspect
+
+Returns: grouped node arrays
+
+### connectIfCandidatesExistForDeadEnds
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, anchorNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], reverse: boolean, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Connect a node to a random candidate if candidates exist.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `anchorNode` - - node to connect from/to
+- `candidates` - - candidate nodes for connection
+- `reverse` - - whether to connect candidate -> anchor
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureHiddenConnectivityForDeadEnds
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure hidden nodes have both incoming and outgoing connections.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureInputConnectivityForDeadEnds
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure all input nodes have at least one outgoing connection.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureOutputConnectivityForDeadEnds
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure all output nodes have at least one incoming connection.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `internal` - - neat controller context
+
+Returns: void
+
+### hasIncomingForDeadEnds
+
+`(node: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+
+Check whether a node has any incoming connections.
+
+Parameters:
+- `node` - - node to inspect
+
+Returns: true when incoming connections exist
+
+### hasOutgoingForDeadEnds
+
+`(node: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+
+Check whether a node has any outgoing connections.
+
+Parameters:
+- `node` - - node to inspect
+
+Returns: true when outgoing connections exist
+
+## neat/neat.mutation.flow.utils.ts
+
+### applyAddConnMutation
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+
+Apply an ADD_CONN mutation with reuse and weight nudging.
+
+Parameters:
+- `genome` - - genome to mutate
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: void
+
+### applyAddNodeMutation
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+
+Apply an ADD_NODE mutation with reuse and weight nudging.
+
+Parameters:
+- `genome` - - genome to mutate
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: void
+
+### applyMutationOperator
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+
+Apply a mutation operator to a genome and invalidate caches as needed.
+
+Parameters:
+- `genome` - - genome to mutate
+- `mutationMethod` - - mutation operator to apply
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: void
+
+### captureStructuralSizes
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { beforeNodes: number; beforeConns: number; }`
+
+Capture structural sizes used to evaluate operator success.
+
+Parameters:
+- `genome` - - genome to inspect
+
+Returns: structural size snapshot
+
+### initializeAdaptiveMutation
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Initialize per-genome adaptive mutation parameters if configured.
+
+Parameters:
+- `genome` - - genome to initialize
+- `internal` - - neat controller context
+
+Returns: void
+
+### maybeAddExtraConnection
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Optionally add an extra connection to increase exploration.
+
+Parameters:
+- `genome` - - genome to mutate
+- `internal` - - neat controller context
+
+Returns: void
+
+### mutateGenome
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => Promise<void>`
+
+Mutate a single genome based on configured mutation policies.
+
+Parameters:
+- `genome` - - genome to mutate
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: Promise resolving after mutation attempts complete
+
+### resolveEffectiveAmount
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+
+Resolve the effective mutation amount for a genome.
+
+Parameters:
+- `genome` - - genome to resolve for
+- `internal` - - neat controller context
+
+Returns: effective mutation amount
+
+### resolveEffectiveRate
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+
+Resolve the effective mutation rate for a genome.
+
+Parameters:
+- `genome` - - genome to resolve for
+- `internal` - - neat controller context
+
+Returns: effective mutation rate
+
+### selectConcreteMutationMethod
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => Promise<import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | null>`
+
+Select a concrete mutation method, resolving any legacy arrays.
+
+Parameters:
+- `genome` - - genome to select for
+- `internal` - - neat controller context
+
+Returns: resolved mutation method or null
+
+### shouldInvalidateCaches
+
+`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, methods: { mutation: unknown; }) => boolean`
+
+Determine whether a mutation method invalidates cached structures.
+
+Parameters:
+- `mutationMethod` - - mutation operator to inspect
+- `methods` - - mutation methods module
+
+Returns: true when caches should be invalidated
+
+### shouldMutateGenome
+
+`(effectiveRate: number, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => boolean`
+
+Decide whether a genome should be mutated based on probability.
+
+Parameters:
+- `effectiveRate` - - effective mutation probability
+- `internal` - - neat controller context
+
+Returns: true when the genome should be mutated
+
+### updateOperatorStatsIfNeeded
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, beforeSizes: { beforeNodes: number; beforeConns: number; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Update operator statistics when adaptation is enabled.
+
+Parameters:
+- `genome` - - genome used to compute after-sizes
+- `mutationMethod` - - operator being recorded
+- `beforeSizes` - - structural sizes captured before mutation
+- `internal` - - neat controller context
+
+Returns: void
+
+## neat/neat.mutation.min-hidden.utils.ts
+
+### chooseRandomNodeForMinHidden
+
+`(candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | null`
+
+Choose a random node from a candidate list.
+
+Parameters:
+- `candidates` - - candidate nodes
+- `internal` - - neat controller context
+
+Returns: selected node or null
+
+### collectNodeGroupsForMinHidden
+
+`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }`
+
+Collect categorized node arrays for the network.
+
+Parameters:
+- `networkToInspect` - - network to inspect
+
+Returns: grouped node arrays
+
+### ensureHiddenConnectivityForMinHidden
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure hidden nodes have both incoming and outgoing connections.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureHiddenNodeCountForMinHidden
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToEdit: { hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, minimumHidden: number, maxNodesLimit: number) => Promise<void>`
+
+Ensure the network has at least the minimum number of hidden nodes.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToEdit` - - grouped node arrays
+- `minimumHidden` - - minimum hidden nodes required
+- `maxNodesLimit` - - maximum allowed nodes
+
+Returns: Promise resolving when nodes are created
+
+### ensureIncomingConnectionForMinHidden
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure a hidden node has at least one incoming connection.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `hiddenNode` - - hidden node to connect
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureOutgoingConnectionForMinHidden
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure a hidden node has at least one outgoing connection.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `hiddenNode` - - hidden node to connect
+- `internal` - - neat controller context
+
+Returns: void
+
+### hasRequiredEndpointsForMinHidden
+
+`(nodeGroupsToCheck: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }) => boolean`
+
+Check whether the network has at least one input and output node.
+
+Parameters:
+- `nodeGroupsToCheck` - - grouped node arrays
+
+Returns: true when inputs and outputs are present
+
+### rebuildNetworkConnectionsForMinHidden
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => Promise<void>`
+
+Rebuild connection caches after structural edits.
+
+Parameters:
+- `networkToEdit` - - network to rebuild
+
+Returns: Promise resolving after rebuild completes
+
+### resolveMaxNodesForMinHidden
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+
+Resolve the maximum node limit for the network.
+
+Parameters:
+- `internal` - - neat controller context
+
+Returns: maximum node limit
+
+### resolveMinHiddenForMinHidden
+
+`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, maxNodesLimit: number, multiplier: number | undefined, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+
+Resolve the minimum hidden node requirement for the network.
+
+Parameters:
+- `networkToInspect` - - network to inspect
+- `maxNodesLimit` - - maximum allowed nodes
+- `multiplier` - - optional size multiplier
+- `internal` - - neat controller context
+
+Returns: minimum hidden node count
+
+### warnMissingEndpointsForMinHidden
+
+`() => void`
+
+Emit a warning when the network lacks input or output nodes.
+
+Returns: void
+
+## neat/neat.mutation.select.utils.ts
+
+### applyOperatorAdaptationForSelect
+
+`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+
+Apply operator adaptation weighting to the pool when enabled.
+
+Parameters:
+- `pool` - - base pool
+- `internal` - - neat controller context
+
+Returns: augmented pool
+
+### applyOperatorBanditForSelect
+
+`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], fallbackMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod`
+
+Apply operator bandit selection if enabled.
+
+Parameters:
+- `pool` - - operator pool
+- `fallbackMethod` - - method used when bandit is disabled
+- `internal` - - neat controller context
+
+Returns: selected method
+
+### applyPhasedComplexityForSelect
+
+`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+
+Apply phased complexity adjustments to the pool when enabled.
+
+Parameters:
+- `pool` - - base operator pool
+- `internal` - - neat controller context
+
+Returns: pool with phased complexity adjustments
+
+### isBlockedByRecurrentPolicyForSelect
+
+`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
+
+Check whether a mutation is blocked by recurrent connection policy.
+
+Parameters:
+- `mutationMethod` - - mutation operator to check
+- `internal` - - neat controller context
+- `methods` - - methods module
+
+Returns: true when the mutation should be blocked
+
+### isBlockedByStructuralLimitsForSelect
+
+`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
+
+Check whether a mutation is blocked by structural limits.
+
+Parameters:
+- `mutationMethod` - - mutation operator to check
+- `genome` - - genome to inspect
+- `internal` - - neat controller context
+- `methods` - - methods module
+
+Returns: true when the mutation should be blocked
+
+### isLegacyFFWPoolForSelect
+
+`(configuredPool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], methods: { mutation: unknown; }) => boolean`
+
+Check whether a pool matches the legacy FFW operator ordering.
+
+Parameters:
+- `configuredPool` - - configured operator pool
+- `methods` - - methods module
+
+Returns: true when the pool matches FFW
+
+### isOperatorNamePrefixedForSelect
+
+`(method: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, prefix: string) => boolean`
+
+Check whether an operator name uses a specific prefix.
+
+Parameters:
+- `method` - - mutation operator
+- `prefix` - - name prefix to match
+
+Returns: true when the operator name matches the prefix
+
+### normalizeMutationPoolForSelect
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+
+Normalize the configured mutation pool to a flat operator list.
+
+Parameters:
+- `internal` - - neat controller context
+- `methods` - - methods module
+- `rawReturnForTest` - - whether to return raw FFW for tests
+
+Returns: normalized mutation pool
+
+### resolveFFWPolicyForSelect
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[] | null`
+
+Resolve legacy FFW policy behavior, including test-specific returns.
+
+Parameters:
+- `internal` - - neat controller context
+- `methods` - - methods module
+- `rawReturnForTest` - - whether to return raw FFW array for tests
+
+Returns: mutation method or null when not handled
+
+### sampleFromPoolForSelect
+
+`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | null`
+
+Sample a random method from the pool.
+
+Parameters:
+- `pool` - - operator pool
+- `internal` - - neat controller context
+
+Returns: sampled method or null
+
 ## neat/neat.mutation.ts
 
-### ConnectionWithMetadata
+### DEFAULT_CONNECTION_WEIGHT
 
-Runtime interface for a connection within a genome.
+### DEFAULT_GENE_ID
+
+### DEFAULT_INNOVATION_ID
 
 ### ensureMinHiddenNodes
 
-`(network: GenomeWithMetadata, multiplierOverride: number | undefined) => Promise<void>`
+`(network: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, multiplierOverride: number | undefined) => Promise<void>`
 
 Ensure the network has a minimum number of hidden nodes and connectivity.
 
 ### ensureNoDeadEnds
 
-`(network: GenomeWithMetadata) => void`
+`(network: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => void`
 
 Ensure there are no dead-end nodes (input/output isolation) in the network.
-
-### GenomeWithMetadata
-
-Runtime interface for a genome with mutation-related metadata.
-Avoids circular dependencies by defining only the properties accessed in this module.
 
 ### mutate
 
@@ -689,7 +1488,7 @@ neat.mutate();
 
 ### mutateAddConnReuse
 
-`(genome: GenomeWithMetadata) => void`
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => void`
 
 Add a connection between two previously unconnected nodes, reusing a
 stable innovation id per unordered node pair when possible.
@@ -717,7 +1516,7 @@ Parameters:
 
 ### mutateAddNodeReuse
 
-`(genome: GenomeWithMetadata) => Promise<void>`
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => Promise<void>`
 
 Split a randomly chosen enabled connection and insert a hidden node.
 
@@ -744,6 +1543,26 @@ neat._mutateAddNodeReuse(genome);
 Parameters:
 - `genome` - - genome to modify in-place
 
+### selectMutationMethod
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, rawReturnForTest: boolean) => Promise<import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[] | null>`
+
+Select a mutation method respecting structural constraints and adaptive controllers.
+Mirrors legacy implementation from `neat.ts` to preserve test expectations.
+`rawReturnForTest` retains historical behavior where the full FFW array is
+returned for identity checks in tests.
+
+## neat/neat.mutation.types.ts
+
+### ConnectionWithMetadata
+
+Runtime interface for a connection within a genome.
+
+### GenomeWithMetadata
+
+Type definitions for NEAT mutation operations.
+Extracted to avoid circular dependencies.
+
 ### MutationMethod
 
 Runtime interface for a mutation method descriptor.
@@ -751,7 +1570,7 @@ Runtime interface for a mutation method descriptor.
 ### NeatControllerForMutation
 
 Runtime interface for the NEAT controller used in mutation operations.
-Avoids circular dependencies by defining only properties accessed in this module.
+Avoids circular dependencies by defining only properties accessed in mutation modules.
 
 ### NodeSplitRecord
 
@@ -765,20 +1584,803 @@ Runtime interface for a node within a genome.
 
 Runtime interface for operator statistics tracking.
 
-### selectMutationMethod
+## neat/neat.mutation.utils.ts
 
-`(genome: GenomeWithMetadata, rawReturnForTest: boolean) => Promise<MutationMethod | MutationMethod[] | null>`
+### applyAddConnMutation
 
-Select a mutation method respecting structural constraints and adaptive controllers.
-Mirrors legacy implementation from `neat.ts` to preserve test expectations.
-`rawReturnForTest` retains historical behavior where the full FFW array is
-returned for identity checks in tests.
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+
+Apply an ADD_CONN mutation with reuse and weight nudging.
+
+Parameters:
+- `genome` - - genome to mutate
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: void
+
+### applyAddNodeMutation
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+
+Apply an ADD_NODE mutation with reuse and weight nudging.
+
+Parameters:
+- `genome` - - genome to mutate
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: void
+
+### applyMutationOperator
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+
+Apply a mutation operator to a genome and invalidate caches as needed.
+
+Parameters:
+- `genome` - - genome to mutate
+- `mutationMethod` - - mutation operator to apply
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: void
+
+### applyOperatorAdaptationForSelect
+
+`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+
+Apply operator adaptation weighting to the pool when enabled.
+
+Parameters:
+- `pool` - - base pool
+- `internal` - - neat controller context
+
+Returns: augmented pool
+
+### applyOperatorBanditForSelect
+
+`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], fallbackMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod`
+
+Apply operator bandit selection if enabled.
+
+Parameters:
+- `pool` - - operator pool
+- `fallbackMethod` - - method used when bandit is disabled
+- `internal` - - neat controller context
+
+Returns: selected method
+
+### applyPhasedComplexityForSelect
+
+`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+
+Apply phased complexity adjustments to the pool when enabled.
+
+Parameters:
+- `pool` - - base operator pool
+- `internal` - - neat controller context
+
+Returns: pool with phased complexity adjustments
+
+### applySplitWithExistingRecord
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, splitRecord: { newNodeGeneId: number; inInnov: number; outInnov: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown) => void`
+
+Apply a split using an existing innovation record.
+
+Parameters:
+- `genomeToEdit` - - genome being modified
+- `connectionToSplit` - - connection being split
+- `splitDescriptor` - - metadata for the split
+- `splitRecord` - - existing innovation record
+- `NodeClass` - - node constructor
+
+Returns: void
+
+### applySplitWithNewRecord
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Apply a split and create a new innovation record.
+
+Parameters:
+- `genomeToEdit` - - genome being modified
+- `connectionToSplit` - - connection being split
+- `splitDescriptor` - - metadata for the split
+- `NodeClass` - - node constructor
+- `internal` - - neat controller context
+
+Returns: void
+
+### assignInnovationForConnection
+
+`(connection: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, pairNodes: { symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Assign an innovation id for a new connection, reusing when possible.
+
+Parameters:
+- `connection` - - newly created connection
+- `pairNodes` - - resolved pair metadata
+- `internal` - - neat controller context
+
+Returns: void
+
+### assignInnovationsForNewSplit
+
+`(newNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, splitConnections: { incomingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => { newNodeGeneId: number; inInnov: number; outInnov: number; }`
+
+Assign new innovations for a split and build the innovation record.
+
+Parameters:
+- `newNode` - - newly created hidden node
+- `splitConnections` - - incoming/outgoing connections
+- `internal` - - neat controller context
+
+Returns: innovation record for the split
+
+### buildLegacyKeyForConn
+
+`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => string`
+
+Build a legacy directional innovation key.
+
+Parameters:
+- `sourceNode` - - source node
+- `targetNode` - - target node
+
+Returns: directional innovation key
+
+### buildSplitDescriptor
+
+`(connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata) => { splitKey: string; originalWeight: number; }`
+
+Build the split descriptor used for innovation lookup and connection creation.
+
+Parameters:
+- `connectionToSplit` - - connection being split
+
+Returns: split descriptor
+
+### buildSymmetricKeyForConn
+
+`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => string`
+
+Build a symmetric innovation key for an unordered node pair.
+
+Parameters:
+- `sourceNode` - - source node
+- `targetNode` - - target node
+
+Returns: symmetric innovation key
+
+### captureStructuralSizes
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { beforeNodes: number; beforeConns: number; }`
+
+Capture structural sizes used to evaluate operator success.
+
+Parameters:
+- `genome` - - genome to inspect
+
+Returns: structural size snapshot
+
+### chooseConnectionForSplit
+
+`(enabledConnectionsList: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | null`
+
+Choose a random enabled connection to split.
+
+Parameters:
+- `enabledConnectionsList` - - candidate connections
+- `internal` - - neat controller context
+
+Returns: selected connection or null
+
+### choosePairForConn
+
+`(pairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata] | null`
+
+Choose a pair deterministically when only one candidate exists.
+
+Parameters:
+- `pairs` - - selection pool
+- `internal` - - neat controller context
+
+Returns: chosen pair or null
+
+### chooseRandomNodeForDeadEnds
+
+`(candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | null`
+
+Choose a random node from candidates for dead-end repair.
+
+Parameters:
+- `candidates` - - candidate nodes
+- `internal` - - neat controller context
+
+Returns: selected node or null
+
+### chooseRandomNodeForMinHidden
+
+`(candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | null`
+
+Choose a random node from a candidate list.
+
+Parameters:
+- `candidates` - - candidate nodes
+- `internal` - - neat controller context
+
+Returns: selected node or null
+
+### collectCandidatePairsForConn
+
+`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+
+Collect legal (from,to) node pairs not already connected.
+
+Parameters:
+- `genomeToInspect` - - genome to scan
+
+Returns: candidate node pairs
+
+### collectEnabledConnections
+
+`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata[]`
+
+Collect all enabled connections from a genome.
+
+Parameters:
+- `genomeToInspect` - - genome to inspect
+
+Returns: enabled connections list
+
+### collectNodeGroupsForDeadEnds
+
+`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }`
+
+Collect categorized node arrays for dead-end repair.
+
+Parameters:
+- `networkToInspect` - - network to inspect
+
+Returns: grouped node arrays
+
+### collectNodeGroupsForMinHidden
+
+`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }`
+
+Collect categorized node arrays for the network.
+
+Parameters:
+- `networkToInspect` - - network to inspect
+
+Returns: grouped node arrays
+
+### connectChosenPair
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; }) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined`
+
+Create the connection for the chosen pair.
+
+Parameters:
+- `genomeToEdit` - - genome to edit
+- `pairNodes` - - resolved pair nodes
+
+Returns: created connection or undefined
+
+### connectIfCandidatesExistForDeadEnds
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, anchorNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], reverse: boolean, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Connect a node to a random candidate if candidates exist.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `anchorNode` - - node to connect from/to
+- `candidates` - - candidate nodes for connection
+- `reverse` - - whether to connect candidate -> anchor
+- `internal` - - neat controller context
+
+Returns: void
+
+### connectSplitEdges
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, newNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, originalWeight: number) => { incomingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }`
+
+Create the incoming and outgoing split connections.
+
+Parameters:
+- `genomeToEdit` - - genome being modified
+- `connectionToSplit` - - connection being split
+- `newNode` - - newly created hidden node
+- `originalWeight` - - weight to preserve on the outgoing connection
+
+Returns: incoming/outgoing connection handles
+
+### createsCycle
+
+`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+
+Detect whether adding a connection would create a cycle.
+
+Parameters:
+- `sourceNode` - - source node of the new connection
+- `targetNode` - - target node of the new connection
+
+Returns: true when a cycle is detected
+
+### disconnectOriginalConnection
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToRemove: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata) => void`
+
+Disconnect the original connection before inserting the split node.
+
+Parameters:
+- `genomeToEdit` - - genome to edit
+- `connectionToRemove` - - original connection to remove
+
+Returns: void
+
+### ensureBootstrapConnection
+
+`(genomeToSeed: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure the genome has at least one connection by linking input to output.
+
+Parameters:
+- `genomeToSeed` - - genome that may need a bootstrap connection
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureHiddenConnectivityForDeadEnds
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure hidden nodes have both incoming and outgoing connections.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureHiddenConnectivityForMinHidden
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure hidden nodes have both incoming and outgoing connections.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureHiddenNodeCountForMinHidden
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToEdit: { hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, minimumHidden: number, maxNodesLimit: number) => Promise<void>`
+
+Ensure the network has at least the minimum number of hidden nodes.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToEdit` - - grouped node arrays
+- `minimumHidden` - - minimum hidden nodes required
+- `maxNodesLimit` - - maximum allowed nodes
+
+Returns: Promise resolving when nodes are created
+
+### ensureIncomingConnectionForMinHidden
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure a hidden node has at least one incoming connection.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `hiddenNode` - - hidden node to connect
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureInputConnectivityForDeadEnds
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure all input nodes have at least one outgoing connection.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureOutgoingConnectionForMinHidden
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure a hidden node has at least one outgoing connection.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `hiddenNode` - - hidden node to connect
+- `internal` - - neat controller context
+
+Returns: void
+
+### ensureOutputConnectivityForDeadEnds
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Ensure all output nodes have at least one incoming connection.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `internal` - - neat controller context
+
+Returns: void
+
+### filterPairsWithInnovations
+
+`(pairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+
+Filter candidate pairs that already have innovation reuse keys.
+
+Parameters:
+- `pairs` - - candidate node pairs
+- `internal` - - neat controller context
+
+Returns: reuse candidates
+
+### findFirstNodeByType
+
+`(genomeToSearch: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeType: "input" | "output" | "hidden") => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | undefined`
+
+Find the first node of a given type.
+
+Parameters:
+- `genomeToSearch` - - genome whose nodes are searched
+- `nodeType` - - node type to match
+
+Returns: the first matching node or undefined
+
+### hasIncomingForDeadEnds
+
+`(node: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+
+Check whether a node has any incoming connections.
+
+Parameters:
+- `node` - - node to inspect
+
+Returns: true when incoming connections exist
+
+### hasOutgoingForDeadEnds
+
+`(node: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+
+Check whether a node has any outgoing connections.
+
+Parameters:
+- `node` - - node to inspect
+
+Returns: true when outgoing connections exist
+
+### hasRequiredEndpointsForMinHidden
+
+`(nodeGroupsToCheck: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }) => boolean`
+
+Check whether the network has at least one input and output node.
+
+Parameters:
+- `nodeGroupsToCheck` - - grouped node arrays
+
+Returns: true when inputs and outputs are present
+
+### initializeAdaptiveMutation
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Initialize per-genome adaptive mutation parameters if configured.
+
+Parameters:
+- `genome` - - genome to initialize
+- `internal` - - neat controller context
+
+Returns: void
+
+### isBlockedByRecurrentPolicyForSelect
+
+`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
+
+Check whether a mutation is blocked by recurrent connection policy.
+
+Parameters:
+- `mutationMethod` - - mutation operator to check
+- `internal` - - neat controller context
+- `methods` - - methods module
+
+Returns: true when the mutation should be blocked
+
+### isBlockedByStructuralLimitsForSelect
+
+`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
+
+Check whether a mutation is blocked by structural limits.
+
+Parameters:
+- `mutationMethod` - - mutation operator to check
+- `genome` - - genome to inspect
+- `internal` - - neat controller context
+- `methods` - - methods module
+
+Returns: true when the mutation should be blocked
+
+### isLegacyFFWPoolForSelect
+
+`(configuredPool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], methods: { mutation: unknown; }) => boolean`
+
+Check whether a pool matches the legacy FFW operator ordering.
+
+Parameters:
+- `configuredPool` - - configured operator pool
+- `methods` - - methods module
+
+Returns: true when the pool matches FFW
+
+### isOperatorNamePrefixedForSelect
+
+`(method: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, prefix: string) => boolean`
+
+Check whether an operator name uses a specific prefix.
+
+Parameters:
+- `method` - - mutation operator
+- `prefix` - - name prefix to match
+
+Returns: true when the operator name matches the prefix
+
+### maybeAddExtraConnection
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Optionally add an extra connection to increase exploration.
+
+Parameters:
+- `genome` - - genome to mutate
+- `internal` - - neat controller context
+
+Returns: void
+
+### mutateGenome
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => Promise<void>`
+
+Mutate a single genome based on configured mutation policies.
+
+Parameters:
+- `genome` - - genome to mutate
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: Promise resolving after mutation attempts complete
+
+### normalizeMutationPoolForSelect
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+
+Normalize the configured mutation pool to a flat operator list.
+
+Parameters:
+- `internal` - - neat controller context
+- `methods` - - methods module
+- `rawReturnForTest` - - whether to return raw FFW for tests
+
+Returns: normalized mutation pool
+
+### rebuildNetworkConnectionsForMinHidden
+
+`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => Promise<void>`
+
+Rebuild connection caches after structural edits.
+
+Parameters:
+- `networkToEdit` - - network to rebuild
+
+Returns: Promise resolving after rebuild completes
+
+### resolveEffectiveAmount
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+
+Resolve the effective mutation amount for a genome.
+
+Parameters:
+- `genome` - - genome to resolve for
+- `internal` - - neat controller context
+
+Returns: effective mutation amount
+
+### resolveEffectiveRate
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+
+Resolve the effective mutation rate for a genome.
+
+Parameters:
+- `genome` - - genome to resolve for
+- `internal` - - neat controller context
+
+Returns: effective mutation rate
+
+### resolveFFWPolicyForSelect
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[] | null`
+
+Resolve legacy FFW policy behavior, including test-specific returns.
+
+Parameters:
+- `internal` - - neat controller context
+- `methods` - - methods module
+- `rawReturnForTest` - - whether to return raw FFW array for tests
+
+Returns: mutation method or null when not handled
+
+### resolveInsertIndex
+
+`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => number`
+
+Resolve the insertion index for a new node, keeping outputs at the end.
+
+Parameters:
+- `genomeToEdit` - - genome whose node list is updated
+- `targetNode` - - original target node of the split connection
+
+Returns: insertion index
+
+### resolveMaxNodesForMinHidden
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+
+Resolve the maximum node limit for the network.
+
+Parameters:
+- `internal` - - neat controller context
+
+Returns: maximum node limit
+
+### resolveMinHiddenForMinHidden
+
+`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, maxNodesLimit: number, multiplier: number | undefined, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+
+Resolve the minimum hidden node requirement for the network.
+
+Parameters:
+- `networkToInspect` - - network to inspect
+- `maxNodesLimit` - - maximum allowed nodes
+- `multiplier` - - optional size multiplier
+- `internal` - - neat controller context
+
+Returns: minimum hidden node count
+
+### resolvePairNodes
+
+`(chosenPair: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata]) => { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }`
+
+Resolve nodes and innovation key details for a chosen pair.
+
+Parameters:
+- `chosenPair` - - pair to connect
+
+Returns: resolved pair metadata
+
+### sampleFromPoolForSelect
+
+`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | null`
+
+Sample a random method from the pool.
+
+Parameters:
+- `pool` - - operator pool
+- `internal` - - neat controller context
+
+Returns: sampled method or null
+
+### selectConcreteMutationMethod
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => Promise<import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | null>`
+
+Select a concrete mutation method, resolving any legacy arrays.
+
+Parameters:
+- `genome` - - genome to select for
+- `internal` - - neat controller context
+
+Returns: resolved mutation method or null
+
+### selectPairPool
+
+`(allPairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], reusePairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+
+Build the final selection pool based on reuse and hidden-node preference.
+
+Parameters:
+- `allPairs` - - all candidate pairs
+- `reusePairs` - - pairs with historical innovations
+
+Returns: selection pool
+
+### shouldAbortForCycle
+
+`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; }) => boolean`
+
+Determine whether adding the connection would create a cycle.
+
+Parameters:
+- `genomeToInspect` - - genome to inspect
+- `pairNodes` - - resolved pair nodes
+
+Returns: true if the connection should be aborted
+
+### shouldInvalidateCaches
+
+`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, methods: { mutation: unknown; }) => boolean`
+
+Determine whether a mutation method invalidates cached structures.
+
+Parameters:
+- `mutationMethod` - - mutation operator to inspect
+- `methods` - - mutation methods module
+
+Returns: true when caches should be invalidated
+
+### shouldMutateGenome
+
+`(effectiveRate: number, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => boolean`
+
+Decide whether a genome should be mutated based on probability.
+
+Parameters:
+- `effectiveRate` - - effective mutation probability
+- `internal` - - neat controller context
+
+Returns: true when the genome should be mutated
+
+### updateOperatorStatsIfNeeded
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, beforeSizes: { beforeNodes: number; beforeConns: number; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+
+Update operator statistics when adaptation is enabled.
+
+Parameters:
+- `genome` - - genome used to compute after-sizes
+- `mutationMethod` - - operator being recorded
+- `beforeSizes` - - structural sizes captured before mutation
+- `internal` - - neat controller context
+
+Returns: void
+
+### warnMissingEndpointsForMinHidden
+
+`() => void`
+
+Emit a warning when the network lacks input or output nodes.
+
+Returns: void
 
 ## neat/neat.objectives.ts
 
 ### _getObjectives
 
-`() => import("D:/code-practice/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+`() => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
 
 Build and return the list of registered objectives for this NEAT instance.
 
@@ -816,13 +2418,9 @@ neat.clearObjectives();
 // now only the default fitness objective (unless suppressed) will remain
 ```
 
-### NeatLikeWithObjectives
-
-Minimal interface for NEAT instances using objective management.
-
 ### registerObjective
 
-`(key: string, direction: "max" | "min", accessor: (genome: import("D:/code-practice/NeatapticTS/src/neat/neat.types").GenomeLike) => number) => void`
+`(key: string, direction: "max" | "min", accessor: (genome: import("C:/NeatapticTS/src/neat/neat.types").GenomeLike) => number) => void`
 
 Register a new objective descriptor.
 
@@ -846,6 +2444,96 @@ Parameters:
 - `` - Unique name for the objective (used for sorting/lookup)
 - `` - Whether the objective should be minimized or maximized
 - `` - Function to extract a numeric value from a genome
+
+## neat/neat.objectives.utils.ts
+
+### buildDefaultFitnessObjective
+
+`() => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor`
+
+Returns: Default fitness objective descriptor.
+
+### collectDefaultObjectives
+
+`(neatInstance: import("C:/NeatapticTS/src/neat/neat.objectives.utils").NeatLikeWithObjectives) => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+
+Parameters:
+- `neatInstance` - - Instance providing objective settings.
+
+Returns: Default objectives when fitness is not suppressed.
+
+### collectUserObjectives
+
+`(neatInstance: import("C:/NeatapticTS/src/neat/neat.objectives.utils").NeatLikeWithObjectives) => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+
+Parameters:
+- `neatInstance` - - Instance providing objective settings.
+
+Returns: Valid user-registered objectives when multi-objective is enabled.
+
+### ensureMultiObjectiveOptions
+
+`(neatInstance: import("C:/NeatapticTS/src/neat/neat.objectives.utils").NeatLikeWithObjectives) => { enabled?: boolean | undefined; objectives?: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[] | undefined; }`
+
+Parameters:
+- `neatInstance` - - Instance receiving the multi-objective container.
+
+Returns: Initialized multi-objective options.
+
+### ensureObjectivesList
+
+`(multiObjectiveOptions: { enabled?: boolean | undefined; objectives?: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[] | undefined; }) => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+
+Parameters:
+- `multiObjectiveOptions` - - Multi-objective container to hydrate.
+
+Returns: Objectives list for mutation-free operations.
+
+### getObjectiveCandidates
+
+`(neatInstance: import("C:/NeatapticTS/src/neat/neat.objectives.utils").NeatLikeWithObjectives) => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+
+Parameters:
+- `neatInstance` - - Instance providing objective settings.
+
+Returns: Candidate objectives from configuration.
+
+### isMultiObjectiveEnabled
+
+`(neatInstance: import("C:/NeatapticTS/src/neat/neat.objectives.utils").NeatLikeWithObjectives) => boolean`
+
+Parameters:
+- `neatInstance` - - Instance providing objective settings.
+
+Returns: Whether multi-objective mode is enabled with a candidate list.
+
+### isValidObjective
+
+`(candidateObjective: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor | undefined) => boolean`
+
+Parameters:
+- `candidateObjective` - - Candidate descriptor to validate.
+
+Returns: True when the descriptor has the required shape.
+
+### NeatLikeWithObjectives
+
+Minimal interface for NEAT instances using objective management.
+
+This shape is intentionally small and only includes the pieces needed by
+`_getObjectives`, `registerObjective`, and `clearObjectives`.
+
+### replaceObjectiveByKey
+
+`(objectivesList: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[], objectiveKey: string, objectiveDirection: "max" | "min", objectiveAccessor: (genome: import("C:/NeatapticTS/src/neat/neat.types").GenomeLike) => number) => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+
+Parameters:
+- `objectivesList` - - Existing objectives to update.
+- `objectiveKey` - - Key to replace.
+- `objectiveDirection` - - Direction for the new objective.
+- `objectiveAccessor` - - Accessor for the new objective.
+
+Returns: Updated objectives list with the new descriptor appended.
 
 ## neat/neat.pruning.ts
 
@@ -895,15 +2583,178 @@ Notes for docs:
 - This function performs no changes if pruning options are not set or
   the generation is before `startGeneration`.
 
+## neat/neat.pruning.utils.ts
+
+### AdaptivePruningOptions
+
+Adaptive pruning options extracted from the Neat instance.
+
+### applyAdaptivePruneLevelToPopulation
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning, pruneLevel: number) => void`
+
+Parameters:
+- `host` - - Neat instance with population.
+- `pruneLevel` - - Prune level to apply.
+
+### applyPruningToPopulation
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning, options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; }, targetSparsity: number) => void`
+
+Parameters:
+- `host` - - Neat instance with population.
+- `options` - - Evolution pruning options.
+- `targetSparsity` - - Target sparsity to apply.
+
+### computeMeanConnectionCount
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => number`
+
+Parameters:
+- `host` - - Neat instance with population.
+
+Returns: Average number of connections per genome.
+
+### computeMeanNodeCount
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => number`
+
+Parameters:
+- `host` - - Neat instance with population.
+
+Returns: Average number of nodes per genome.
+
+### computeNextAdaptivePruneLevel
+
+`(options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; }, currentPruneLevel: number, currentMetricValue: number, targetRemainingMetric: number) => number`
+
+Parameters:
+- `options` - - Adaptive pruning options.
+- `currentPruneLevel` - - Current global prune level.
+- `currentMetricValue` - - Current observed metric value.
+- `targetRemainingMetric` - - Target remaining metric value.
+
+Returns: Updated prune level.
+
+### computePopulationMetrics
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => import("C:/NeatapticTS/src/neat/neat.pruning.utils").PopulationMetrics`
+
+Parameters:
+- `host` - - Neat instance with population.
+
+Returns: Population metric summary.
+
+### computeRampFraction
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning, options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; }) => number`
+
+Parameters:
+- `host` - - Neat instance with generation state.
+- `options` - - Evolution pruning options.
+
+Returns: Fraction in [0,1] indicating ramp completion.
+
+### computeTargetRemainingMetric
+
+`(options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; }, adaptivePruneBaseline: number) => number`
+
+Parameters:
+- `options` - - Adaptive pruning options.
+- `adaptivePruneBaseline` - - Baseline metric value.
+
+Returns: Target remaining metric value.
+
+### computeTargetSparsityNow
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning, options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; }) => number`
+
+Parameters:
+- `host` - - Neat instance with generation state.
+- `options` - - Evolution pruning options.
+
+Returns: Target sparsity to apply for this generation.
+
+### EvolutionPruningOptions
+
+Evolution pruning options extracted from the Neat instance.
+
+### initializeAdaptivePruningState
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => void`
+
+Parameters:
+- `host` - - Neat instance with adaptive pruning state.
+
 ### NeatLikeForPruning
 
-Minimal Neat instance interface for pruning functions.
+Minimal Neat instance contract required by pruning helpers.
+
+### PopulationMetrics
+
+Summary of population metrics used by adaptive pruning.
+
+### resolveActiveAdaptivePruningOptions
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; } | null`
+
+Parameters:
+- `host` - - Neat instance with adaptive pruning options.
+
+Returns: Adaptive pruning options when enabled, otherwise null.
+
+### resolveActiveEvolutionPruningOptions
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; } | null`
+
+Parameters:
+- `host` - - Neat instance with generation state.
+
+Returns: Evolution pruning options when active, otherwise null.
+
+### resolveAdaptivePruneBaseline
+
+`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning, currentMetricValue: number) => number`
+
+Parameters:
+- `host` - - Neat instance with adaptive baseline state.
+- `currentMetricValue` - - Current observed metric value.
+
+Returns: Baseline metric value used for adaptation.
+
+### resolveObservedMetricValue
+
+`(options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; }, metrics: import("C:/NeatapticTS/src/neat/neat.pruning.utils").PopulationMetrics) => number`
+
+Parameters:
+- `options` - - Adaptive pruning options.
+- `metrics` - - Population metric summary.
+
+Returns: Current observed metric value used for adaptation.
+
+### shouldAdjustAdaptivePruning
+
+`(options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; }, currentMetricValue: number, targetRemainingMetric: number, adaptivePruneBaseline: number) => boolean`
+
+Parameters:
+- `options` - - Adaptive pruning options.
+- `currentMetricValue` - - Current observed metric value.
+- `targetRemainingMetric` - - Target remaining metric value.
+- `adaptivePruneBaseline` - - Baseline metric value.
+
+Returns: True when pruning should be adjusted.
 
 ## neat/neat.selection.ts
 
-### GenomeWithScore
+### DEFAULT_POWER
 
-Genome with score and optional selection-related properties.
+### DEFAULT_SCORE
+
+### DEFAULT_TOURNAMENT_PROBABILITY
+
+### DEFAULT_TOURNAMENT_SIZE
+
+### FIRST_INDEX
 
 ### getAverage
 
@@ -922,7 +2773,7 @@ Returns: The mean fitness as a number.
 
 ### getFittest
 
-`() => GenomeWithScore`
+`() => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
 
 Return the fittest genome in the population.
 
@@ -937,7 +2788,7 @@ Returns: The genome object judged to be the fittest (highest score).
 
 ### getParent
 
-`() => GenomeWithScore`
+`() => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
 
 Select a parent genome according to the configured selection strategy.
 
@@ -961,9 +2812,19 @@ const parent2 = neat.getParent();
 
 Returns: A genome object chosen as the parent according to the selection strategy
 
-### NeatLikeWithSelection
+### INITIAL_CUMULATIVE_FITNESS
 
-NEAT instance extended with selection-specific properties.
+### INITIAL_MOST_NEGATIVE_SCORE
+
+### INITIAL_TOTAL_FITNESS
+
+### LAST_ELEMENT_INDEX
+
+### LAST_INDEX_OFFSET
+
+### LOOP_INDEX_INCREMENT
+
+### SECOND_INDEX
 
 ### sort
 
@@ -984,29 +2845,526 @@ Notes for documentation generators: this is a small utility used by many
 selection and evaluation routines; it intentionally sorts in-place for
 performance and to preserve references to genome objects.
 
+## neat/neat.selection.utils.ts
+
+### calculateFitnessTotals
+
+`(population: import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore[]) => { totalFitness: number; minFitnessShift: number; }`
+
+Compute the total fitness and minimal score shift for roulette selection.
+
+Parameters:
+- `population` - - Genomes in the current population.
+
+Returns: Aggregated fitness totals.
+
+### calculateTotalScore
+
+`(population: import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore[]) => number`
+
+Calculate the total fitness across the population.
+
+Parameters:
+- `population` - - Genomes in the current population.
+
+Returns: The sum of all scores.
+
+### DEFAULT_POWER
+
+### DEFAULT_SCORE
+
+### DEFAULT_TOURNAMENT_PROBABILITY
+
+### DEFAULT_TOURNAMENT_SIZE
+
+### ensurePopulationEvaluated
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.selection.utils").NeatLikeWithSelection) => void`
+
+Ensure population scores exist by running evaluation if needed.
+
+Parameters:
+- `internal` - - The Neat instance containing `population` and `evaluate`.
+
+Returns: void
+
+### ensurePopulationSortedDescending
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.selection.utils").NeatLikeWithSelection) => void`
+
+Ensure the population is sorted descending by score when out of order.
+
+Parameters:
+- `internal` - - The Neat instance containing `population`.
+
+Returns: void
+
+### ensurePopulationSortedDescendingForPower
+
+`(selectionContext: SelectionContext) => void`
+
+Ensure the population is sorted descending by score if the first two
+entries are out of order.
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+
+Returns: void
+
+### FIRST_INDEX
+
+### GenomeWithScore
+
+Genome with a fitness score and arbitrary additional metadata.
+
+### getRandomPopulationMember
+
+`(selectionContext: SelectionContext) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+
+Select a random population member using the configured RNG.
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+
+Returns: A randomly chosen genome.
+
+### INITIAL_CUMULATIVE_FITNESS
+
+### INITIAL_MOST_NEGATIVE_SCORE
+
+### INITIAL_TOTAL_FITNESS
+
+### LAST_ELEMENT_INDEX
+
+### LAST_INDEX_OFFSET
+
+### LOOP_INDEX_INCREMENT
+
+### NeatLikeWithSelection
+
+NEAT-like instance extended with selection-specific state and helpers.
+
+### pickByShiftedThreshold
+
+`(population: import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore[], selectionThreshold: number, minFitnessShift: number) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore | undefined`
+
+Pick the first genome whose shifted cumulative fitness exceeds the threshold.
+
+Parameters:
+- `population` - - Genomes in the current population.
+- `selectionThreshold` - - Random threshold in shifted fitness space.
+- `minFitnessShift` - - Amount added to each score to shift negatives.
+
+Returns: The chosen genome if one crosses the threshold.
+
+### pickTournamentWinner
+
+`(selectionContext: SelectionContext, sortedParticipants: import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore[]) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+
+Select a winner from sorted tournament participants.
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+- `sortedParticipants` - - Participants sorted by descending score.
+
+Returns: The chosen tournament winner.
+
+### resolveTournamentOverflow
+
+`(selectionContext: SelectionContext) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+
+Resolve what happens when the tournament size exceeds population size.
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+
+Returns: A fallback parent genome.
+
+### sampleTournamentParticipants
+
+`(selectionContext: SelectionContext, tournamentSize: number) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore[]`
+
+Sample a list of tournament participants (with possible repeats).
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+- `tournamentSize` - - Number of competitors to sample.
+
+Returns: Sampled participants.
+
+### SECOND_INDEX
+
+### selectParentByFitnessProportionate
+
+`(selectionContext: SelectionContext) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+
+Select a parent using roulette-wheel fitness proportionate selection.
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+
+Returns: The chosen parent genome.
+
+### selectParentByPower
+
+`(selectionContext: SelectionContext) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+
+Select a parent by power-law distribution on the sorted population.
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+
+Returns: The chosen parent genome.
+
+### selectParentByStrategy
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.selection.utils").NeatLikeWithSelection) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+
+Select a parent genome according to configured selection strategy.
+
+Parameters:
+- `internal` - - The Neat instance containing population and options.
+
+Returns: A genome object chosen as the parent.
+
+### selectParentByTournament
+
+`(selectionContext: SelectionContext) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+
+Select a parent by tournament selection.
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+
+Returns: The chosen parent genome.
+
 ## neat/neat.speciation.ts
 
 ### _applyFitnessSharing
 
 `() => void`
 
+Apply fitness sharing to penalize similarity within species.
+
+Parameters:
+- `this` - - Neat instance context with species array and compatibility distance function.
+
 ### _sortSpeciesMembers
 
-`(sp: import("D:/code-practice/NeatapticTS/src/neat/neat.types").SpeciesLike) => void`
+`(species: import("C:/NeatapticTS/src/neat/neat.types").SpeciesLike) => void`
+
+Sort species members by descending score.
+
+Parameters:
+- `this` - - Neat instance context.
+- `sp` - - Species to sort.
 
 ### _speciate
 
 `() => void`
 
+Assign genomes into species based on compatibility distance.
+
+Parameters:
+- `this` - - Speciation harness context.
+
+Returns: Nothing.
+
 ### _updateSpeciesStagnation
 
 `() => void`
+
+Update stagnation counters for all species.
+
+Parameters:
+- `this` - - Neat instance context with species array and generation counter.
+
+## neat/neat.speciation.utils.ts
+
+### adjustCompatibilityThreshold
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions, compatAdjust: { smoothingWindow?: number | undefined; decay?: number | undefined; kp?: number | undefined; ki?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; }, minCompatibilityThreshold: number, maxCompatibilityThreshold: number) => void`
+
+Update the adaptive compatibility threshold and clamp to bounds.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+- `options` - - Speciation options.
+- `compatAdjust` - - Compatibility adjustment settings.
+- `minCompatibilityThreshold` - - Lower clamp bound.
+- `maxCompatibilityThreshold` - - Upper clamp bound.
+
+Returns: Nothing.
+
+### applyAgeProtection
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions) => void`
+
+Apply age protection penalties to old species.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+- `options` - - Speciation options.
+
+Returns: Nothing.
+
+### applyFitnessSharing
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.speciation.utils").FitnessSharingContext, sharingSigma: number) => void`
+
+Apply fitness sharing to penalize similarity within species.
+
+Parameters:
+- `speciationContext` - - Neat instance context with species and distance function.
+- `sharingSigma` - - Sharing radius used for distance weighting.
+
+Returns: Nothing.
+
+### assignPopulationToSpecies
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions) => void`
+
+Assign each genome in the population to a compatible species.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+- `options` - - Speciation options.
+
+Returns: Nothing.
+
+### averageNumbers
+
+`(values: number[]) => number`
+
+Average a list of numbers, returning zero when empty.
+
+Parameters:
+- `values` - - Numeric values to average.
+
+Returns: Mean of the values or zero.
+
+### buildExtendedHistoryStats
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, species: import("C:/NeatapticTS/src/neat/neat.types").SpeciesLike) => Record<string, unknown>`
+
+Build extended history stats for a species.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+- `species` - - Species to snapshot.
+
+Returns: Extended history entry.
+
+### clampCompatibilityThreshold
+
+`(options: import("C:/NeatapticTS/src/neat/neat.types").SpeciationOptions, minCompatibilityThreshold: number, maxCompatibilityThreshold: number) => void`
+
+Clamp the compatibility threshold to configured bounds.
+
+Parameters:
+- `options` - - Speciation options.
+- `minCompatibilityThreshold` - - Lower clamp bound.
+- `maxCompatibilityThreshold` - - Upper clamp bound.
+
+Returns: Nothing.
+
+### CompatAdjust
+
+Resolved compatibility-threshold adjustment settings.
+
+This is the non-nullable form of {@link SpeciationOptions.compatAdjust} used
+by the speciation PID controller.
+
+### computePidThreshold
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions, compatAdjust: { smoothingWindow?: number | undefined; decay?: number | undefined; kp?: number | undefined; ki?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; }, currentThreshold: number, minCompatibilityThreshold: number, maxCompatibilityThreshold: number) => number`
+
+Compute a PID-based threshold update and clamp when needed.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+- `options` - - Speciation options.
+- `compatAdjust` - - Compatibility adjustment settings.
+- `currentThreshold` - - Current compatibility threshold.
+- `minCompatibilityThreshold` - - Lower clamp bound.
+- `maxCompatibilityThreshold` - - Upper clamp bound.
+
+Returns: Updated threshold.
+
+### createSpeciesForGenome
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, genome: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed) => void`
+
+Create a new species for the provided genome.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+- `genome` - - Genome that starts a new species.
+
+Returns: Nothing.
+
+### DEFAULT_COMPAT_INTEGRAL
+
+### DEFAULT_COMPATIBILITY_INTEGRAL_GAIN
+
+### DEFAULT_COMPATIBILITY_PROPORTIONAL_GAIN
+
+### DEFAULT_COMPATIBILITY_THRESHOLD
+
+### DEFAULT_LAST_IMPROVED_GENERATION
+
+### DEFAULT_MAX_COMPATIBILITY_THRESHOLD
+
+### DEFAULT_MEMBER_COUNT_FALLBACK
+
+### DEFAULT_MIN_COMPATIBILITY_THRESHOLD
+
+### DEFAULT_SCORE_FALLBACK
+
+### DEFAULT_SHARING_SIGMA
+
+### DEFAULT_SPECIES_AGE_GRACE
+
+### DEFAULT_SPECIES_OLD_PENALTY
+
+### DEFAULT_STAGNATION_WINDOW
+
+### DEFAULT_TARGET_SPECIES
+
+### findCompatibleSpecies
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions, genome: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed) => import("C:/NeatapticTS/src/neat/neat.types").SpeciesLike | undefined`
+
+Find a compatible species representative for the given genome.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+- `options` - - Speciation options.
+- `genome` - - Genome to match.
+
+Returns: Matching species or undefined.
+
+### FitnessSharingContext
+
+Minimal context required to apply fitness sharing.
+
+Fitness sharing normalizes per-genome fitness within each species to reduce
+selection pressure toward dense clusters of very similar genomes.
+
+### HISTORY_BUFFER_MAX_ENTRIES
+
+### InnovationAccumulator
+
+Accumulator for innovation-id statistics across a set of connections.
+
+Used for extended history telemetry (mean innovation, innovation range, and
+enabled/disabled ratios).
+
+### NEGATIVE_INFINITY
+
+### PENALTY_NO_EFFECT_THRESHOLD
+
+### recordHistory
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions) => void`
+
+Record the current species history snapshot.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+- `options` - - Speciation options.
+
+Returns: Nothing.
+
+### refreshSpeciesRepresentatives
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
+
+Refresh representatives and remove empty species.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+
+Returns: Nothing.
+
+### resetSpeciesMembers
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
+
+Clear member lists for all species.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+
+Returns: Nothing.
+
+### SHARING_MAX_CONTRIBUTION
+
+### SHARING_SELF_DISTANCE
+
+### SHARING_SUM_FLOOR
+
+### snapshotPreviousMembers
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
+
+Snapshot current species memberships for telemetry.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+
+Returns: Nothing.
+
+### SPECIES_AGE_GRACE_MULTIPLIER
+
+### StagnationContext
+
+Minimal context required to update species stagnation.
+
+Stagnation pruning removes species that have not improved their best score
+within a configured number of generations.
+
+### summarizeInnovations
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, members: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => { meanInnovation: number; innovationRange: number; enabledRatio: number; }`
+
+Summarize innovation statistics for a set of members.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+- `members` - - Members to summarize.
+
+Returns: Innovation summary statistics.
+
+### trimHistory
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
+
+Trim species history to the maximum buffer size.
+
+Parameters:
+- `speciationContext` - - Speciation harness context.
+
+Returns: Nothing.
+
+### updateSpeciesStagnation
+
+`(speciationContext: import("C:/NeatapticTS/src/neat/neat.speciation.utils").StagnationContext, stagnationWindow: number, sortSpeciesMembers: (species: import("C:/NeatapticTS/src/neat/neat.types").SpeciesLike) => void) => void`
+
+Update stagnation counters and prune stagnant species.
+
+Parameters:
+- `speciationContext` - - Neat instance context with species array and generation counter.
+- `stagnationWindow` - - Allowed stagnation window.
+- `sortSpeciesMembers` - - Sort function for species members.
+
+Returns: Nothing.
 
 ## neat/neat.species.ts
 
 ### getSpeciesHistory
 
-`() => import("D:/code-practice/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[]`
+`() => import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[]`
 
 Retrieve the recorded species history across generations.
 
@@ -1061,23 +3419,898 @@ Success criteria:
 
 Returns: Array of per-species summaries suitable for reporting.
 
+## neat/neat.species.utils.ts
+
+### backfillExtendedHistory
+
+`(history: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[], context: { _species?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesLike[] | undefined; _fallbackInnov?: ((c: import("C:/NeatapticTS/src/neat/neat.types").ConnectionLike) => number) | undefined; }) => void`
+
+Parameters:
+- `history` - - Recorded history to enrich in place.
+- `context` - - Neat instance context for lookups.
+
+### shouldAugmentExtendedHistory
+
+`(options: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions | undefined) => boolean`
+
+Parameters:
+- `options` - - Current Neat options.
+
+Returns: True when extended history is enabled.
+
+### SPECIES_HISTORY_DEFAULT_ENABLED_RATIO
+
+### SPECIES_HISTORY_DEFAULT_INNOVATION_ID
+
+### SPECIES_HISTORY_DEFAULT_INNOVATION_RANGE
+
+### SPECIES_HISTORY_INITIAL_MAX_INNOVATION
+
+### SPECIES_HISTORY_INITIAL_MIN_INNOVATION
+
+### SPECIES_HISTORY_ZERO
+
+## neat/neat.telemetry.buffer.utils.ts
+
+### ensureTelemetryBuffer
+
+`(telemetryContext: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryBufferContext) => import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[]`
+
+Ensure the telemetry buffer is initialized.
+
+Parameters:
+- `telemetryContext` - - Neat-like context holding telemetry buffer.
+
+Returns: A mutable telemetry buffer.
+
+### safelyStreamTelemetryEntry
+
+`(telemetryContext: { options?: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryStreamOptions | undefined; }, telemetryEntry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry) => void`
+
+Stream telemetry entry when a stream callback is configured.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with stream settings.
+- `telemetryEntry` - - Entry to stream.
+
+### trimTelemetryBuffer
+
+`(telemetryBufferRef: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[], maxEntries: number) => void`
+
+Trim the telemetry buffer to a maximum size.
+
+Parameters:
+- `telemetryBufferRef` - - Buffer to trim in-place.
+- `maxEntries` - - Maximum entries to keep.
+
+## neat/neat.telemetry.complexity.utils.ts
+
+### applyComplexityStatsMonoObjective
+
+`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Attach complexity stats for mono-objective mode.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with population state.
+- `telemetryOptions` - - Options controlling complexity telemetry.
+- `entry` - - Telemetry entry to update.
+
+### applyComplexityStatsMultiObjective
+
+`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Attach complexity stats for multi-objective mode.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with population state.
+- `telemetryOptions` - - Options controlling complexity telemetry.
+- `population` - - Population snapshot.
+- `entry` - - Telemetry entry to update.
+
+### buildComplexityEntry
+
+`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, meanCounts: { meanNodes: number; meanConns: number; }, maxCounts: { maxNodes: number; maxConns: number; }, meanEnabledRatio: number, growthValues: { growthNodes: number; growthConns: number; }) => { meanNodes: number; meanConns: number; maxNodes: number; maxConns: number; meanEnabledRatio: number; growthNodes: number; growthConns: number; budgetMaxNodes: number; budgetMaxConns: number; }`
+
+Build the complexity entry payload for multi-objective mode.
+
+Parameters:
+- `telemetryOptions` - - Options controlling complexity telemetry.
+- `meanCounts` - - Mean node/connection counts.
+- `maxCounts` - - Max node/connection counts.
+- `meanEnabledRatio` - - Mean enabled ratio.
+- `growthValues` - - Growth deltas.
+
+Returns: Complexity entry payload.
+
+### collectPopulationCounts
+
+`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => { nodeCounts: number[]; connectionCounts: number[]; }`
+
+Collect node and connection counts for the population.
+
+Parameters:
+- `populationSnapshot` - - Population snapshot.
+
+Returns: Node and connection counts arrays.
+
+### computeAndStoreGrowthValues
+
+`(context: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, meanCounts: { meanNodes: number; meanConns: number; }) => { growthNodes: number; growthConns: number; }`
+
+Compute growth values and store the latest means on the context.
+
+Parameters:
+- `context` - - Neat-like context with previous mean values.
+- `meanCounts` - - Current mean node/connection counts.
+
+Returns: Growth values for nodes and connections.
+
+### computeEnabledRatios
+
+`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+
+Compute enabled ratios per genome.
+
+Parameters:
+- `populationSnapshot` - - Population snapshot.
+
+Returns: Array of enabled ratios.
+
+### computeMaxCounts
+
+`(counts: { nodeCounts: number[]; connectionCounts: number[]; }) => { maxNodes: number; maxConns: number; }`
+
+Compute max node and connection counts.
+
+Parameters:
+- `counts` - - Node and connection counts arrays.
+
+Returns: Max node and connection counts.
+
+### computeMeanCounts
+
+`(counts: { nodeCounts: number[]; connectionCounts: number[]; }) => { meanNodes: number; meanConns: number; }`
+
+Compute mean node and connection counts.
+
+Parameters:
+- `counts` - - Node and connection counts arrays.
+
+Returns: Mean node and connection counts.
+
+### computeMeanEnabledRatio
+
+`(enabledRatios: number[]) => number`
+
+Compute mean of enabled ratios.
+
+Parameters:
+- `enabledRatios` - - Enabled ratios per genome.
+
+Returns: Mean enabled ratio.
+
+## neat/neat.telemetry.diversity.utils.ts
+
+### applyFastModeDefaults
+
+`(telemetryContext: { _fastModeTuned?: boolean | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions) => void`
+
+Apply fast-mode tuning to diversity sampling and novelty defaults.
+
+Parameters:
+- `telemetryContext` - - Context object storing fast-mode tuning flag.
+- `telemetryOptions` - - Options with diversity and novelty settings.
+
+### computeCompatibilityStats
+
+`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number, compatibilityDistance: ((a: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome, b: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome) => number) | undefined) => { meanCompat: number; varCompat: number; }`
+
+Compute pairwise compatibility statistics via sampling.
+
+Parameters:
+- `genomes` - - Population snapshot.
+- `size` - - Population size.
+- `pairSampleCount` - - Number of pairs to sample.
+- `rngFactoryFn` - - RNG factory returning a uniform random function.
+- `compatibilityDistance` - - Optional compatibility distance function.
+
+Returns: Mean and variance of sampled compatibilities.
+
+### computeEntropyStats
+
+`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], structuralEntropyFn: (genome: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome) => number) => { meanEntropy: number; varEntropy: number; }`
+
+Compute structural entropy mean and variance across the population.
+
+Parameters:
+- `genomes` - - Population snapshot.
+- `structuralEntropyFn` - - Function to compute entropy for a genome.
+
+Returns: Mean and variance of entropy values.
+
+### computeGraphletEntropy
+
+`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, graphletSampleCount: number, rngFactoryFn: () => () => number) => number`
+
+Sample graphlet motifs and compute entropy over their edge counts.
+
+Parameters:
+- `genomes` - - Population snapshot.
+- `size` - - Population size.
+- `graphletSampleCount` - - Number of graphlets to sample.
+- `rngFactoryFn` - - RNG factory returning a uniform random function.
+
+Returns: Graphlet entropy value.
+
+### countEnabledEdges
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome, selectedNodes: import("C:/NeatapticTS/src/neat/neat.types").NodeLike[]) => number`
+
+Count enabled edges between the selected nodes in a genome.
+
+Parameters:
+- `genome` - - Genome with connections to inspect.
+- `selectedNodes` - - Nodes forming the graphlet sample.
+
+Returns: Edge count capped at 3.
+
+### pickDistinctIndices
+
+`(upperBound: number, count: number, rng: () => number) => number[]`
+
+Pick a fixed number of distinct random indices.
+
+Parameters:
+- `upperBound` - - Exclusive upper bound for random indices.
+- `count` - - Number of distinct indices to pick.
+- `rng` - - RNG function returning values in [0,1).
+
+Returns: Array of distinct indices.
+
+## neat/neat.telemetry.entropy.utils.ts
+
+### buildDegreeHistogram
+
+`(counts: Record<number, number>) => Record<number, number>`
+
+Build a histogram of degree frequencies from a degree-count table.
+
+Parameters:
+- `counts` - - Map geneId -> degree count.
+
+Returns: Map degree -> number of nodes with that degree.
+
+### computeDegreeCounts
+
+`(entropyGraph: { nodes: { geneId: number; }[]; connections: { from: { geneId: number; }; to: { geneId: number; }; enabled: boolean; }[]; }) => Record<number, number>`
+
+Compute per-node degree counts for enabled connections.
+
+Parameters:
+- `entropyGraph` - - Genome-like graph object.
+
+Returns: Map geneId -> degree count.
+
+### computeEntropyFromHistogram
+
+`(histogram: Record<number, number>, totalNodes: number) => number`
+
+Compute entropy from a degree-frequency histogram.
+
+Parameters:
+- `histogram` - - Map degree -> number of nodes.
+- `totalNodes` - - Total node count used to normalize into probabilities.
+
+Returns: Entropy value (non-negative).
+
+### getCachedEntropy
+
+`(generation: number | undefined, entropyGraph: Record<string, unknown>) => number | undefined`
+
+Read a cached entropy value if it exists and belongs to the current
+generation.
+
+Parameters:
+- `generation` - - Current generation number.
+- `entropyGraph` - - Genome-like graph object.
+
+Returns: Cached entropy number, or undefined when not available.
+
+### setCachedEntropy
+
+`(generation: number | undefined, entropyGraph: Record<string, unknown>, entropyValue: number) => void`
+
+Cache an entropy value for the current generation on the graph object.
+
+Parameters:
+- `generation` - - Current generation number.
+- `entropyGraph` - - Genome-like graph object.
+- `entropyValue` - - Entropy value to cache.
+
 ## neat/neat.telemetry.exports.ts
+
+### buildSpeciesHistoryCsv
+
+`(recentHistory: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[], headers: string[]) => string`
+
+Build the full CSV string for species history given ordered headers and
+a slice of history entries.
+
+Implementation notes:
+- The history is a 2‑level structure (generation entry -> species stats[]).
+- We emit one CSV row per species stat, repeating the generation value.
+- Values are JSON.stringify'd to remain safe for commas/quotes.
+
+### buildTelemetryHeaders
+
+`(info: TelemetryHeaderInfo) => string[]`
+
+Build the ordered list of CSV headers from collected metadata.
+Flattened nested metrics are emitted using group prefixes (group.key).
+
+### collectTelemetryHeaderInfo
+
+`(entries: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[]) => TelemetryHeaderInfo`
+
+Collect header metadata from the raw telemetry entries.
+- Discovers base (top‑level) keys excluding grouped objects.
+- Discovers nested keys inside complexity, perf, lineage, diversity groups.
+- Tracks presence of optional multi-value structures (ops, objectives, etc.).
+
+### DEFAULT_SPECIES_BEST_SCORE
+
+### DEFAULT_SPECIES_HISTORY_GENERATION
+
+### DEFAULT_SPECIES_HISTORY_MAX_ENTRIES
+
+### DEFAULT_SPECIES_ID
+
+### DEFAULT_SPECIES_LAST_IMPROVED
+
+### DEFAULT_SPECIES_SIZE
 
 ### exportSpeciesHistoryCSV
 
 `(maxEntries: number) => string`
 
+Export species history snapshots to CSV.
+
+Each row represents a single species at a specific generation; the generation
+value is repeated per species. Dynamically discovers species stat keys so
+custom metadata added at runtime is preserved.
+
+Behavior:
+- If `_speciesHistory` is absent/empty but `_species` exists, synthesizes a
+  minimal snapshot to ensure deterministic headers early in a run.
+- Returns a header-only CSV when there is no history or species.
+
+Parameters:
+- `this` - Neat instance (expects `_speciesHistory` and optionally `_species`).
+- `maxEntries` - Maximum number of most recent history snapshots (generations) to include (default 200).
+
+Returns: CSV string (headers + rows) describing species evolution timeline.
+
 ### exportTelemetryCSV
 
 `(maxEntries: number) => string`
+
+Export recent telemetry entries to a CSV string.
+
+Responsibilities:
+- Collect a bounded slice (`maxEntries`) of recent telemetry records.
+- Discover and flatten dynamic header keys (top-level + grouped metrics).
+- Serialize each entry into a CSV row with stable, parseable values.
+
+Flattening Rules:
+- Nested groups (complexity, perf, lineage, diversity) become group.key columns.
+- Optional arrays/maps (ops, objectives, objAges, speciesAlloc, objEvents, objImportance, fronts) included only if present.
+
+Parameters:
+- `this` - Neat instance (expects `_telemetry` array field).
+- `maxEntries` - Maximum number of most recent telemetry entries to include (default 500).
+
+Returns: CSV string (headers + rows) or empty string when no telemetry.
 
 ### exportTelemetryJSONL
 
 `() => string`
 
+Telemetry export helpers extracted from `neat.ts`.
+
+This module exposes small helpers intended to serialize the internal
+telemetry gathered by the NeatapticTS `Neat` runtime into common
+data-export formats (JSONL and CSV). The functions intentionally
+operate against `this` so they can be attached to instances.
+
+### serializeTelemetryEntry
+
+`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, headers: string[]) => string`
+
+Serialize one telemetry entry into a CSV row using previously computed headers.
+Uses a `switch(true)` pattern instead of a long if/else chain to reduce
+cognitive complexity while preserving readability of each scenario.
+
 ### TelemetryHeaderInfo
 
 Shape describing collected telemetry header discovery info.
+
+## neat/neat.telemetry.exports.utils.ts
+
+### buildSpeciesHistoryStats
+
+`(speciesList: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryStat[], defaultSpeciesId: number, defaultSpeciesSize: number, defaultBestScore: number, defaultLastImproved: number) => import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryStat[]`
+
+Normalize raw species records into exportable history stats.
+
+Parameters:
+- `speciesList` - - Raw species records to normalize.
+- `defaultSpeciesId` - - Default species id when missing.
+- `defaultSpeciesSize` - - Default species size when missing.
+- `defaultBestScore` - - Default best score when missing.
+- `defaultLastImproved` - - Default last improved when missing.
+
+Returns: Normalized stats for CSV export.
+
+### collectBaseKeys
+
+`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, state: import("C:/NeatapticTS/src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState, frontsHeader: string) => void`
+
+Collect base (top-level) telemetry keys for a single entry.
+
+Parameters:
+- `entry` - - Telemetry entry to inspect.
+- `state` - - Mutable header collection state.
+- `frontsHeader` - - Header label for fronts column.
+
+Returns: void. Mutates `state.baseKeys`.
+
+### collectDiversityLineageMetrics
+
+`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, state: import("C:/NeatapticTS/src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState) => void`
+
+Collect curated diversity lineage metrics for stable CSV exports.
+
+Parameters:
+- `entry` - - Telemetry entry to inspect.
+- `state` - - Mutable header collection state.
+
+Returns: void. Mutates diversity lineage key set.
+
+### collectGroupedMetricKeys
+
+`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, state: import("C:/NeatapticTS/src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState) => void`
+
+Collect nested metric keys for grouped telemetry fields.
+
+Parameters:
+- `entry` - - Telemetry entry to inspect.
+- `state` - - Mutable header collection state.
+
+Returns: void. Mutates complexity/perf/lineage key sets.
+
+### collectOptionalColumnPresence
+
+`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, state: import("C:/NeatapticTS/src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState) => void`
+
+Collect presence flags for optional telemetry columns.
+
+Parameters:
+- `entry` - - Telemetry entry to inspect.
+- `state` - - Mutable header collection state.
+
+Returns: void. Mutates optional-column flags.
+
+### collectSpeciesHistoryHeaders
+
+`(history: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[], generationHeader: string) => string[]`
+
+Collect ordered header keys for species history CSV export.
+
+Parameters:
+- `history` - - Recent species history entries.
+- `generationHeader` - - Header label for generation column.
+
+Returns: Ordered header list for CSV output.
+
+### ensureMinimalSpeciesSnapshot
+
+`(neatInstance: import("C:/NeatapticTS/src/neat/neat.types").NeatLike & { _speciesHistory?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[] | undefined; _species?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryStat[] | undefined; generation?: number | undefined; }, history: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[], fallbackGeneration: number, defaultSpeciesId: number, defaultSpeciesSize: number, defaultBestScore: number, defaultLastImproved: number) => void`
+
+Ensure a minimal species snapshot exists for deterministic CSV headers.
+
+Parameters:
+- `neatInstance` - - Neat instance with optional species history and species.
+- `history` - - Species history backing array.
+- `fallbackGeneration` - - Generation fallback when missing.
+- `defaultSpeciesId` - - Default species id when missing.
+- `defaultSpeciesSize` - - Default species size when missing.
+- `defaultBestScore` - - Default best score when missing.
+- `defaultLastImproved` - - Default last improved when missing.
+
+Returns: void. Mutates history when a minimal snapshot is needed.
+
+### ensureSpeciesHistoryArray
+
+`(neatInstance: import("C:/NeatapticTS/src/neat/neat.types").NeatLike & { _speciesHistory?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[] | undefined; }) => import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[]`
+
+Ensure the species history array exists on the Neat instance.
+
+Parameters:
+- `neatInstance` - - Neat instance holding species history.
+
+Returns: Species history backing array (ensured on instance).
+
+### resolveSpeciesHistoryCellValue
+
+`(historyEntry: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry, speciesStat: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryStat, headerName: string, generationHeader: string) => string`
+
+Resolve a single species history cell value for the provided header.
+
+Parameters:
+- `historyEntry` - - A single generation snapshot.
+- `speciesStat` - - A single species stat record.
+- `headerName` - - Column header name.
+- `generationHeader` - - Column header name for generation.
+
+Returns: Serialized cell (JSON) or empty string for missing values.
+
+### safeStringifyCell
+
+`(value: unknown) => string`
+
+Serialize a CSV cell with JSON.stringify safeguards.
+
+Parameters:
+- `value` - - Any value to stringify.
+
+Returns: JSON string or empty string when JSON.stringify returns undefined.
+
+### serializeSpeciesHistoryRow
+
+`(historyEntry: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry, speciesStat: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryStat, orderedHeaders: string[], generationHeader: string) => string`
+
+Serialize one species history row using the provided headers.
+
+Parameters:
+- `historyEntry` - - A single generation snapshot.
+- `speciesStat` - - A single species stat record for that generation.
+- `orderedHeaders` - - Ordered header list for stable CSV.
+- `generationHeader` - - Column header name for generation.
+
+Returns: CSV row string matching the provided header order.
+
+### TelemetryHeaderCollectionState
+
+Mutable state container used while collecting telemetry header metadata.
+
+## neat/neat.telemetry.lineage.utils.ts
+
+### applyLineageStatsMonoObjective
+
+`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply lineage stats for mono-objective mode using sampled ancestors.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with lineage settings.
+- `population` - - Population snapshot.
+- `entry` - - Telemetry entry to update.
+
+### applyLineageStatsMultiObjective
+
+`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply lineage stats for multi-objective mode using ancestor uniqueness.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with lineage settings.
+- `population` - - Population snapshot.
+- `entry` - - Telemetry entry to update.
+
+### buildLineageContext
+
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => import("C:/NeatapticTS/src/neat/neat.lineage").NeatLineageContext`
+
+Build a lineage helper context for ancestor operations.
+
+Parameters:
+- `context` - - Neat-like context with RNG helpers.
+- `populationSnapshot` - - Population snapshot.
+
+Returns: Lineage helper context.
+
+### buildLineageEntry
+
+`(context: { _prevInbreedingCount?: number | undefined; }, bestGenomeSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed, meanDepthValue: number, ancestorUniquenessScore: number) => { parents: number[]; depthBest: number; meanDepth: number; inbreeding: number; ancestorUniq: number; }`
+
+Build the lineage entry payload.
+
+Parameters:
+- `context` - - Neat-like context with lineage info.
+- `bestGenomeSnapshot` - - Best genome snapshot.
+- `meanDepthValue` - - Mean lineage depth.
+- `ancestorUniquenessScore` - - Ancestor uniqueness score.
+
+Returns: Lineage entry payload.
+
+### collectDepths
+
+`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+
+Collect depth values for the current population.
+
+Parameters:
+- `populationSnapshot` - - Population snapshot.
+
+Returns: Array of depth values (defaults to 0).
+
+### computeAncestorUniquenessSampled
+
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number`
+
+Compute ancestor uniqueness using sampled Jaccard distance.
+
+Parameters:
+- `context` - - Neat-like context with RNG helpers.
+- `populationSnapshot` - - Population snapshot.
+
+Returns: Rounded ancestor uniqueness score.
+
+### computeLineageStats
+
+`(lineageEnabled: boolean, genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number) => { lineageMeanDepth: number; lineageMeanPairDist: number; }`
+
+Compute lineage depth and pairwise depth-distance statistics.
+
+Parameters:
+- `lineageEnabled` - - Whether lineage metrics are enabled.
+- `genomes` - - Population snapshot.
+- `size` - - Population size.
+- `pairSampleCount` - - Number of pairs to sample.
+- `rngFactoryFn` - - RNG factory returning a uniform random function.
+
+Returns: Lineage mean depth and pairwise distance.
+
+### computeMeanDepth
+
+`(depthValues: number[]) => number`
+
+Compute the mean depth from a depth list.
+
+Parameters:
+- `depthValues` - - Depth values to average.
+
+Returns: Mean depth value.
+
+### computePairJaccardDistance
+
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], firstIndex: number, secondIndex: number) => number | undefined`
+
+Compute Jaccard distance between ancestor sets for a pair.
+
+Parameters:
+- `context` - - Neat-like context for lineage helpers.
+- `populationSnapshot` - - Population snapshot.
+- `firstIndex` - - First genome index.
+- `secondIndex` - - Second genome index.
+
+Returns: Jaccard distance or undefined when both sets are empty.
+
+### countAncestorIntersection
+
+`(ancestorsA: Set<number>, ancestorsB: Set<number>) => number`
+
+Count the size of an ancestor intersection.
+
+Parameters:
+- `ancestorsA` - - First ancestor set.
+- `ancestorsB` - - Second ancestor set.
+
+Returns: Intersection count.
+
+### isLineageEligible
+
+`(context: { _lineageEnabled?: boolean | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => boolean`
+
+Check whether lineage metrics should be computed.
+
+Parameters:
+- `context` - - Neat-like context with lineage flag.
+- `populationSnapshot` - - Population snapshot to validate.
+
+Returns: True when lineage stats should be computed.
+
+### pickDistinctPairIndices
+
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSize: number) => { firstIndex: number; secondIndex: number; }`
+
+Pick two distinct indices using the context RNG.
+
+Parameters:
+- `context` - - Neat-like context with RNG factory.
+- `populationSize` - - Population size for index bounds.
+
+Returns: Pair of distinct indices.
+
+## neat/neat.telemetry.objectives.utils.ts
+
+### applyHypervolumeTelemetry
+
+`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, hyperVolumeProxy: number, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Attach hypervolume scalar when requested.
+
+Parameters:
+- `telemetryOptions` - - Options controlling telemetry fields.
+- `hyperVolumeProxy` - - Hypervolume proxy value.
+- `entry` - - Telemetry entry to update.
+
+### applyObjectiveAges
+
+`(telemetryContext: { _objectiveAges?: Map<string, number> | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply objective age snapshots to the entry.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with objective ages.
+- `entry` - - Telemetry entry to update.
+
+### applyObjectiveEvents
+
+`(telemetryContext: { _pendingObjectiveAdds?: string[] | undefined; _pendingObjectiveRemoves?: string[] | undefined; _objectiveEvents?: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveEvent[] | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord, generation: number) => void`
+
+Apply and flush objective lifecycle events.
+
+Parameters:
+- `telemetryContext` - - Neat-like context holding objective events.
+- `entry` - - Telemetry entry to update.
+- `generation` - - Generation index for event records.
+
+### applyObjectiveImportance
+
+`(telemetryContext: { _lastObjImportance?: import("C:/NeatapticTS/src/neat/neat.types").ObjImportance | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply the most recent objective importance snapshot.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with objective importance.
+- `entry` - - Telemetry entry to update.
+
+### applyObjectivesSnapshot
+
+`(telemetryContext: { _getObjectives?: (() => { key: string; }[]) | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply objectives list snapshot (keys only).
+
+Parameters:
+- `telemetryContext` - - Neat-like context with objective provider.
+- `entry` - - Telemetry entry to update.
+
+### applySpeciesAllocation
+
+`(telemetryContext: { _lastOffspringAlloc?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesAlloc[] | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply per-species offspring allocation snapshot.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with allocation snapshot.
+- `entry` - - Telemetry entry to update.
+
+### computeHyperVolumeProxy
+
+`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number`
+
+Compute a hypervolume-like proxy for the Pareto front.
+
+Parameters:
+- `telemetryOptions` - - Options controlling complexity metric.
+- `population` - - Population snapshot.
+
+Returns: Hypervolume proxy value.
+
+### computeParetoFrontSizes
+
+`(population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+
+Compute sizes of early Pareto fronts.
+
+Parameters:
+- `population` - - Population snapshot.
+
+Returns: Array of front sizes (rank 0..4).
+
+## neat/neat.telemetry.operator.utils.ts
+
+### computeOperatorStatsSnapshot
+
+`(operatorStats: import("C:/NeatapticTS/src/neat/neat.telemetry.types").OperatorStatsMap | undefined) => { op: string; succ: number; att: number; }[]`
+
+Snapshot operator statistics into a telemetry-friendly array.
+
+Parameters:
+- `operatorStats` - - Operator stats map (opName -> success/attempts).
+
+Returns: Operator stats snapshot array.
+
+## neat/neat.telemetry.performance.utils.ts
+
+### applyPerformanceStats
+
+`(telemetryContext: { _lastEvalDuration?: number | undefined; _lastEvolveDuration?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Attach performance stats when configured.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with performance data.
+- `telemetryOptions` - - Options controlling performance telemetry.
+- `entry` - - Telemetry entry to update.
+
+## neat/neat.telemetry.rng.utils.ts
+
+### applyRngState
+
+`(telemetryContext: { _rngState?: unknown; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Attach RNG state when configured.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with RNG state.
+- `telemetryOptions` - - Options controlling RNG telemetry.
+- `entry` - - Telemetry entry to update.
+
+## neat/neat.telemetry.selection.utils.ts
+
+### getTelemetryCoreSnapshot
+
+`(sourceEntry: Record<string, unknown>, fields: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryCoreFields) => Partial<Record<string, unknown>>`
+
+Build a snapshot of the core telemetry fields present on the entry; does
+not mutate the source entry.
+
+Parameters:
+- `sourceEntry` - - Source telemetry object.
+- `fields` - - Core telemetry field keys to preserve.
+
+Returns: Shallow snapshot of core fields that exist on the entry.
+
+### mergeTelemetryCoreFields
+
+`(sourceEntry: Record<string, unknown>, coreSnapshot: Partial<Record<string, unknown>>) => Record<string, unknown>`
+
+Re-attach core fields to the filtered entry.
+Mutates the entry so the caller keeps the original reference.
+
+Parameters:
+- `sourceEntry` - - Filtered telemetry entry to update.
+- `coreSnapshot` - - Snapshot of core fields to ensure presence.
+
+Returns: The same entry reference with core fields restored.
+
+### safelyApplyTelemetrySelect
+
+`(telemetryContext: TContext, telemetryEntry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, applyTelemetrySelectFn: (this: TContext, entry: Record<string, unknown>) => Record<string, unknown>) => void`
+
+Apply telemetry selection while swallowing any selection errors.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with telemetry selection.
+- `telemetryEntry` - - Entry to filter in place.
+- `applyTelemetrySelectFn` - - Selection helper to invoke.
+
+### stripUnselectedTelemetryKeys
+
+`(sourceEntry: Record<string, unknown>, selection: Set<string>, fields: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryCoreFields) => Record<string, unknown>`
+
+Remove non-core keys that are not whitelisted by the selection set.
+Mutates the provided entry in-place for efficiency.
+
+Parameters:
+- `sourceEntry` - - Telemetry entry being filtered.
+- `selection` - - Whitelist of additional telemetry keys.
+- `fields` - - Core telemetry field keys that must be preserved.
+
+Returns: The same entry reference after filtering.
 
 ## neat/neat.telemetry.ts
 
@@ -1101,7 +4334,7 @@ Returns: The filtered telemetry object (same reference as input).
 
 ### buildTelemetryEntry
 
-`(fittest: Record<string, unknown>) => import("D:/code-practice/NeatapticTS/src/neat/neat.types").TelemetryEntry`
+`(fittest: Record<string, unknown>) => import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry`
 
 Build a comprehensive telemetry entry for the current generation.
 
@@ -1127,9 +4360,25 @@ Compute several diversity statistics used by telemetry reporting.
 
 This helper is intentionally conservative in runtime: when `fastMode` is enabled it will automatically tune a few sampling defaults to keep the computation cheap. The computed statistics are written to `this._diversityStats` as an object with keys like `meanCompat` and `graphletEntropy`.
 
+### createTelemetryEntryBase
+
+`(generationIndex: number, bestScore: number, speciesCount: number) => import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry`
+
+Create a strict baseline telemetry entry with required fields populated.
+
+This helper centralizes defaults so downstream telemetry producers can
+extend the entry while keeping the strict `TelemetryEntry` contract.
+
+Parameters:
+- `generationIndex` - Generation index for the telemetry snapshot.
+- `bestScore` - Best fitness value observed in the generation.
+- `speciesCount` - Number of extant species.
+
+Returns: A strict telemetry entry with required fields populated.
+
 ### recordTelemetryEntry
 
-`(entry: import("D:/code-practice/NeatapticTS/src/neat/neat.types").TelemetryEntry) => void`
+`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry) => void`
 
 Record a telemetry entry into the instance buffer and optionally stream it.
 
@@ -1168,12 +4417,659 @@ Returns: A non-negative number approximating structural entropy.
 Context view used within telemetry helpers to access optional internal
 fields with descriptive names rather than repeated inline casts.
 
+## neat/neat.telemetry.types.ts
+
+### OperatorStatsMap
+
+Operator stats map shape for telemetry extraction.
+
+### TelemetryBufferContext
+
+Minimal telemetry buffer context shape.
+
+### TelemetryCoreFields
+
+Core telemetry field keys used by selection helpers.
+
 ### TelemetryDiversityOptions
+
+Diversity telemetry options for sampling and novelty defaults.
+
+### TelemetryEntryRecord
+
+Telemetry entry shape used for constructing snapshots.
 
 ### TelemetryGenome
 
-Minimal genome shape used by telemetry helpers (kept local to avoid
-scattering lightweight shapes across other type files).
+Minimal genome shape used by telemetry helpers.
+
+### TelemetrySelectContext
+
+Minimal telemetry selection context shape.
+
+### TelemetryStreamOptions
+
+Minimal telemetry stream options for streaming helpers.
+
+## neat/neat.telemetry.utils.ts
+
+### applyComplexityStatsMonoObjective
+
+`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Attach complexity stats for mono-objective mode.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with population state.
+- `telemetryOptions` - - Options controlling complexity telemetry.
+- `entry` - - Telemetry entry to update.
+
+### applyComplexityStatsMultiObjective
+
+`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Attach complexity stats for multi-objective mode.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with population state.
+- `telemetryOptions` - - Options controlling complexity telemetry.
+- `population` - - Population snapshot.
+- `entry` - - Telemetry entry to update.
+
+### applyFastModeDefaults
+
+`(telemetryContext: { _fastModeTuned?: boolean | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions) => void`
+
+Apply fast-mode tuning to diversity sampling and novelty defaults.
+
+Parameters:
+- `telemetryContext` - - Context object storing fast-mode tuning flag.
+- `telemetryOptions` - - Options with diversity and novelty settings.
+
+### applyHypervolumeTelemetry
+
+`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, hyperVolumeProxy: number, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Attach hypervolume scalar when requested.
+
+Parameters:
+- `telemetryOptions` - - Options controlling telemetry fields.
+- `hyperVolumeProxy` - - Hypervolume proxy value.
+- `entry` - - Telemetry entry to update.
+
+### applyLineageStatsMonoObjective
+
+`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply lineage stats for mono-objective mode using sampled ancestors.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with lineage settings.
+- `population` - - Population snapshot.
+- `entry` - - Telemetry entry to update.
+
+### applyLineageStatsMultiObjective
+
+`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply lineage stats for multi-objective mode using ancestor uniqueness.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with lineage settings.
+- `population` - - Population snapshot.
+- `entry` - - Telemetry entry to update.
+
+### applyObjectiveAges
+
+`(telemetryContext: { _objectiveAges?: Map<string, number> | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply objective age snapshots to the entry.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with objective ages.
+- `entry` - - Telemetry entry to update.
+
+### applyObjectiveEvents
+
+`(telemetryContext: { _pendingObjectiveAdds?: string[] | undefined; _pendingObjectiveRemoves?: string[] | undefined; _objectiveEvents?: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveEvent[] | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord, generation: number) => void`
+
+Apply and flush objective lifecycle events.
+
+Parameters:
+- `telemetryContext` - - Neat-like context holding objective events.
+- `entry` - - Telemetry entry to update.
+- `generation` - - Generation index for event records.
+
+### applyObjectiveImportance
+
+`(telemetryContext: { _lastObjImportance?: import("C:/NeatapticTS/src/neat/neat.types").ObjImportance | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply the most recent objective importance snapshot.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with objective importance.
+- `entry` - - Telemetry entry to update.
+
+### applyObjectivesSnapshot
+
+`(telemetryContext: { _getObjectives?: (() => { key: string; }[]) | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply objectives list snapshot (keys only).
+
+Parameters:
+- `telemetryContext` - - Neat-like context with objective provider.
+- `entry` - - Telemetry entry to update.
+
+### applyPerformanceStats
+
+`(telemetryContext: { _lastEvalDuration?: number | undefined; _lastEvolveDuration?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Attach performance stats when configured.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with performance data.
+- `telemetryOptions` - - Options controlling performance telemetry.
+- `entry` - - Telemetry entry to update.
+
+### applyRngState
+
+`(telemetryContext: { _rngState?: unknown; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Attach RNG state when configured.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with RNG state.
+- `telemetryOptions` - - Options controlling RNG telemetry.
+- `entry` - - Telemetry entry to update.
+
+### applySpeciesAllocation
+
+`(telemetryContext: { _lastOffspringAlloc?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesAlloc[] | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+
+Apply per-species offspring allocation snapshot.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with allocation snapshot.
+- `entry` - - Telemetry entry to update.
+
+### buildComplexityEntry
+
+`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, meanCounts: { meanNodes: number; meanConns: number; }, maxCounts: { maxNodes: number; maxConns: number; }, meanEnabledRatio: number, growthValues: { growthNodes: number; growthConns: number; }) => { meanNodes: number; meanConns: number; maxNodes: number; maxConns: number; meanEnabledRatio: number; growthNodes: number; growthConns: number; budgetMaxNodes: number; budgetMaxConns: number; }`
+
+Build the complexity entry payload for multi-objective mode.
+
+Parameters:
+- `telemetryOptions` - - Options controlling complexity telemetry.
+- `meanCounts` - - Mean node/connection counts.
+- `maxCounts` - - Max node/connection counts.
+- `meanEnabledRatio` - - Mean enabled ratio.
+- `growthValues` - - Growth deltas.
+
+Returns: Complexity entry payload.
+
+### buildDegreeHistogram
+
+`(counts: Record<number, number>) => Record<number, number>`
+
+Build a histogram of degree frequencies from a degree-count table.
+
+Parameters:
+- `counts` - - Map geneId -> degree count.
+
+Returns: Map degree -> number of nodes with that degree.
+
+### buildLineageContext
+
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => import("C:/NeatapticTS/src/neat/neat.lineage").NeatLineageContext`
+
+Build a lineage helper context for ancestor operations.
+
+Parameters:
+- `context` - - Neat-like context with RNG helpers.
+- `populationSnapshot` - - Population snapshot.
+
+Returns: Lineage helper context.
+
+### buildLineageEntry
+
+`(context: { _prevInbreedingCount?: number | undefined; }, bestGenomeSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed, meanDepthValue: number, ancestorUniquenessScore: number) => { parents: number[]; depthBest: number; meanDepth: number; inbreeding: number; ancestorUniq: number; }`
+
+Build the lineage entry payload.
+
+Parameters:
+- `context` - - Neat-like context with lineage info.
+- `bestGenomeSnapshot` - - Best genome snapshot.
+- `meanDepthValue` - - Mean lineage depth.
+- `ancestorUniquenessScore` - - Ancestor uniqueness score.
+
+Returns: Lineage entry payload.
+
+### collectDepths
+
+`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+
+Collect depth values for the current population.
+
+Parameters:
+- `populationSnapshot` - - Population snapshot.
+
+Returns: Array of depth values (defaults to 0).
+
+### collectPopulationCounts
+
+`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => { nodeCounts: number[]; connectionCounts: number[]; }`
+
+Collect node and connection counts for the population.
+
+Parameters:
+- `populationSnapshot` - - Population snapshot.
+
+Returns: Node and connection counts arrays.
+
+### computeAncestorUniquenessSampled
+
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number`
+
+Compute ancestor uniqueness using sampled Jaccard distance.
+
+Parameters:
+- `context` - - Neat-like context with RNG helpers.
+- `populationSnapshot` - - Population snapshot.
+
+Returns: Rounded ancestor uniqueness score.
+
+### computeAndStoreGrowthValues
+
+`(context: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, meanCounts: { meanNodes: number; meanConns: number; }) => { growthNodes: number; growthConns: number; }`
+
+Compute growth values and store the latest means on the context.
+
+Parameters:
+- `context` - - Neat-like context with previous mean values.
+- `meanCounts` - - Current mean node/connection counts.
+
+Returns: Growth values for nodes and connections.
+
+### computeCompatibilityStats
+
+`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number, compatibilityDistance: ((a: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome, b: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome) => number) | undefined) => { meanCompat: number; varCompat: number; }`
+
+Compute pairwise compatibility statistics via sampling.
+
+Parameters:
+- `genomes` - - Population snapshot.
+- `size` - - Population size.
+- `pairSampleCount` - - Number of pairs to sample.
+- `rngFactoryFn` - - RNG factory returning a uniform random function.
+- `compatibilityDistance` - - Optional compatibility distance function.
+
+Returns: Mean and variance of sampled compatibilities.
+
+### computeDegreeCounts
+
+`(entropyGraph: { nodes: { geneId: number; }[]; connections: { from: { geneId: number; }; to: { geneId: number; }; enabled: boolean; }[]; }) => Record<number, number>`
+
+Compute per-node degree counts for enabled connections.
+
+Parameters:
+- `entropyGraph` - - Genome-like graph object.
+
+Returns: Map geneId -> degree count.
+
+### computeEnabledRatios
+
+`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+
+Compute enabled ratios per genome.
+
+Parameters:
+- `populationSnapshot` - - Population snapshot.
+
+Returns: Array of enabled ratios.
+
+### computeEntropyFromHistogram
+
+`(histogram: Record<number, number>, totalNodes: number) => number`
+
+Compute entropy from a degree-frequency histogram.
+
+Parameters:
+- `histogram` - - Map degree -> number of nodes.
+- `totalNodes` - - Total node count used to normalize into probabilities.
+
+Returns: Entropy value (non-negative).
+
+### computeEntropyStats
+
+`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], structuralEntropyFn: (genome: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome) => number) => { meanEntropy: number; varEntropy: number; }`
+
+Compute structural entropy mean and variance across the population.
+
+Parameters:
+- `genomes` - - Population snapshot.
+- `structuralEntropyFn` - - Function to compute entropy for a genome.
+
+Returns: Mean and variance of entropy values.
+
+### computeGraphletEntropy
+
+`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, graphletSampleCount: number, rngFactoryFn: () => () => number) => number`
+
+Sample graphlet motifs and compute entropy over their edge counts.
+
+Parameters:
+- `genomes` - - Population snapshot.
+- `size` - - Population size.
+- `graphletSampleCount` - - Number of graphlets to sample.
+- `rngFactoryFn` - - RNG factory returning a uniform random function.
+
+Returns: Graphlet entropy value.
+
+### computeHyperVolumeProxy
+
+`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number`
+
+Compute a hypervolume-like proxy for the Pareto front.
+
+Parameters:
+- `telemetryOptions` - - Options controlling complexity metric.
+- `population` - - Population snapshot.
+
+Returns: Hypervolume proxy value.
+
+### computeLineageStats
+
+`(lineageEnabled: boolean, genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number) => { lineageMeanDepth: number; lineageMeanPairDist: number; }`
+
+Compute lineage depth and pairwise depth-distance statistics.
+
+Parameters:
+- `lineageEnabled` - - Whether lineage metrics are enabled.
+- `genomes` - - Population snapshot.
+- `size` - - Population size.
+- `pairSampleCount` - - Number of pairs to sample.
+- `rngFactoryFn` - - RNG factory returning a uniform random function.
+
+Returns: Lineage mean depth and pairwise distance.
+
+### computeMaxCounts
+
+`(counts: { nodeCounts: number[]; connectionCounts: number[]; }) => { maxNodes: number; maxConns: number; }`
+
+Compute max node and connection counts.
+
+Parameters:
+- `counts` - - Node and connection counts arrays.
+
+Returns: Max node and connection counts.
+
+### computeMeanCounts
+
+`(counts: { nodeCounts: number[]; connectionCounts: number[]; }) => { meanNodes: number; meanConns: number; }`
+
+Compute mean node and connection counts.
+
+Parameters:
+- `counts` - - Node and connection counts arrays.
+
+Returns: Mean node and connection counts.
+
+### computeMeanDepth
+
+`(depthValues: number[]) => number`
+
+Compute the mean depth from a depth list.
+
+Parameters:
+- `depthValues` - - Depth values to average.
+
+Returns: Mean depth value.
+
+### computeMeanEnabledRatio
+
+`(enabledRatios: number[]) => number`
+
+Compute mean of enabled ratios.
+
+Parameters:
+- `enabledRatios` - - Enabled ratios per genome.
+
+Returns: Mean enabled ratio.
+
+### computeOperatorStatsSnapshot
+
+`(operatorStats: import("C:/NeatapticTS/src/neat/neat.telemetry.types").OperatorStatsMap | undefined) => { op: string; succ: number; att: number; }[]`
+
+Snapshot operator statistics into a telemetry-friendly array.
+
+Parameters:
+- `operatorStats` - - Operator stats map (opName -> success/attempts).
+
+Returns: Operator stats snapshot array.
+
+### computePairJaccardDistance
+
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], firstIndex: number, secondIndex: number) => number | undefined`
+
+Compute Jaccard distance between ancestor sets for a pair.
+
+Parameters:
+- `context` - - Neat-like context for lineage helpers.
+- `populationSnapshot` - - Population snapshot.
+- `firstIndex` - - First genome index.
+- `secondIndex` - - Second genome index.
+
+Returns: Jaccard distance or undefined when both sets are empty.
+
+### computeParetoFrontSizes
+
+`(population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+
+Compute sizes of early Pareto fronts.
+
+Parameters:
+- `population` - - Population snapshot.
+
+Returns: Array of front sizes (rank 0..4).
+
+### countAncestorIntersection
+
+`(ancestorsA: Set<number>, ancestorsB: Set<number>) => number`
+
+Count the size of an ancestor intersection.
+
+Parameters:
+- `ancestorsA` - - First ancestor set.
+- `ancestorsB` - - Second ancestor set.
+
+Returns: Intersection count.
+
+### countEnabledEdges
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome, selectedNodes: import("C:/NeatapticTS/src/neat/neat.types").NodeLike[]) => number`
+
+Count enabled edges between the selected nodes in a genome.
+
+Parameters:
+- `genome` - - Genome with connections to inspect.
+- `selectedNodes` - - Nodes forming the graphlet sample.
+
+Returns: Edge count capped at 3.
+
+### ensureTelemetryBuffer
+
+`(telemetryContext: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryBufferContext) => import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[]`
+
+Ensure the telemetry buffer is initialized.
+
+Parameters:
+- `telemetryContext` - - Neat-like context holding telemetry buffer.
+
+Returns: A mutable telemetry buffer.
+
+### getCachedEntropy
+
+`(generation: number | undefined, entropyGraph: Record<string, unknown>) => number | undefined`
+
+Read a cached entropy value if it exists and belongs to the current
+generation.
+
+Parameters:
+- `generation` - - Current generation number.
+- `entropyGraph` - - Genome-like graph object.
+
+Returns: Cached entropy number, or undefined when not available.
+
+### getTelemetryCoreSnapshot
+
+`(sourceEntry: Record<string, unknown>, fields: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryCoreFields) => Partial<Record<string, unknown>>`
+
+Build a snapshot of the core telemetry fields present on the entry; does
+not mutate the source entry.
+
+Parameters:
+- `sourceEntry` - - Source telemetry object.
+- `fields` - - Core telemetry field keys to preserve.
+
+Returns: Shallow snapshot of core fields that exist on the entry.
+
+### isLineageEligible
+
+`(context: { _lineageEnabled?: boolean | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => boolean`
+
+Check whether lineage metrics should be computed.
+
+Parameters:
+- `context` - - Neat-like context with lineage flag.
+- `populationSnapshot` - - Population snapshot to validate.
+
+Returns: True when lineage stats should be computed.
+
+### mergeTelemetryCoreFields
+
+`(sourceEntry: Record<string, unknown>, coreSnapshot: Partial<Record<string, unknown>>) => Record<string, unknown>`
+
+Re-attach core fields to the filtered entry.
+Mutates the entry so the caller keeps the original reference.
+
+Parameters:
+- `sourceEntry` - - Filtered telemetry entry to update.
+- `coreSnapshot` - - Snapshot of core fields to ensure presence.
+
+Returns: The same entry reference with core fields restored.
+
+### OperatorStatsMap
+
+Operator stats map shape for telemetry extraction.
+
+### pickDistinctIndices
+
+`(upperBound: number, count: number, rng: () => number) => number[]`
+
+Pick a fixed number of distinct random indices.
+
+Parameters:
+- `upperBound` - - Exclusive upper bound for random indices.
+- `count` - - Number of distinct indices to pick.
+- `rng` - - RNG function returning values in [0,1).
+
+Returns: Array of distinct indices.
+
+### pickDistinctPairIndices
+
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSize: number) => { firstIndex: number; secondIndex: number; }`
+
+Pick two distinct indices using the context RNG.
+
+Parameters:
+- `context` - - Neat-like context with RNG factory.
+- `populationSize` - - Population size for index bounds.
+
+Returns: Pair of distinct indices.
+
+### safelyApplyTelemetrySelect
+
+`(telemetryContext: TContext, telemetryEntry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, applyTelemetrySelectFn: (this: TContext, entry: Record<string, unknown>) => Record<string, unknown>) => void`
+
+Apply telemetry selection while swallowing any selection errors.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with telemetry selection.
+- `telemetryEntry` - - Entry to filter in place.
+- `applyTelemetrySelectFn` - - Selection helper to invoke.
+
+### safelyStreamTelemetryEntry
+
+`(telemetryContext: { options?: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryStreamOptions | undefined; }, telemetryEntry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry) => void`
+
+Stream telemetry entry when a stream callback is configured.
+
+Parameters:
+- `telemetryContext` - - Neat-like context with stream settings.
+- `telemetryEntry` - - Entry to stream.
+
+### setCachedEntropy
+
+`(generation: number | undefined, entropyGraph: Record<string, unknown>, entropyValue: number) => void`
+
+Cache an entropy value for the current generation on the graph object.
+
+Parameters:
+- `generation` - - Current generation number.
+- `entropyGraph` - - Genome-like graph object.
+- `entropyValue` - - Entropy value to cache.
+
+### stripUnselectedTelemetryKeys
+
+`(sourceEntry: Record<string, unknown>, selection: Set<string>, fields: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryCoreFields) => Record<string, unknown>`
+
+Remove non-core keys that are not whitelisted by the selection set.
+Mutates the provided entry in-place for efficiency.
+
+Parameters:
+- `sourceEntry` - - Telemetry entry being filtered.
+- `selection` - - Whitelist of additional telemetry keys.
+- `fields` - - Core telemetry field keys that must be preserved.
+
+Returns: The same entry reference after filtering.
+
+### TelemetryBufferContext
+
+Minimal telemetry buffer context shape.
+
+### TelemetryCoreFields
+
+Core telemetry field keys used by selection helpers.
+
+### TelemetryDiversityOptions
+
+Diversity telemetry options for sampling and novelty defaults.
+
+### TelemetryEntryRecord
+
+Telemetry entry shape used for constructing snapshots.
+
+### TelemetryGenome
+
+Minimal genome shape used by telemetry helpers.
+
+### TelemetrySelectContext
+
+Minimal telemetry selection context shape.
+
+### TelemetryStreamOptions
+
+Minimal telemetry stream options for streaming helpers.
+
+### trimTelemetryBuffer
+
+`(telemetryBufferRef: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[], maxEntries: number) => void`
+
+Trim the telemetry buffer to a maximum size.
+
+Parameters:
+- `telemetryBufferRef` - - Buffer to trim in-place.
+- `maxEntries` - - Maximum entries to keep.
 
 ## neat/neat.types.ts
 
@@ -1215,8 +5111,8 @@ internal bookkeeping fields used by telemetry.
 
 Minimal genome structural surface used by several helpers (incrementally expanded).
 
-NOTE: `nodes` & `connections` intentionally remain `any[]` until a stable
-`NodeLike` / `ConnectionLike` abstraction is finalised.
+NOTE: `nodes` and `connections` remain intentionally structural/opaque
+until a stable public abstraction is finalised.
 
 ### LineageSnapshot
 
@@ -1246,9 +5142,15 @@ Map of objective key to age in generations since introduction.
 
 Descriptor for a single optimisation objective (single or multi‑objective runs).
 
+### ObjectiveEvent
+
+Objective add/remove lifecycle event for telemetry and auditing.
+
 ### ObjEvent
 
 Dynamic objective lifecycle event (addition or removal).
+
+**Deprecated:** Use `ObjectiveEvent` instead.
 
 ### ObjImportance
 
@@ -1271,6 +5173,10 @@ A high attempt count with low success can indicate constraints becoming tight
 
 Aggregated success / attempt counters over a window or entire run.
 
+### ParetoArchiveEntry
+
+Pareto archive entry capturing a genome plus its objective values.
+
 ### PerformanceMetrics
 
 Timing metrics for coarse evolutionary phases (milliseconds).
@@ -1282,8 +5188,12 @@ Tests and harnesses can narrow the options type via the generic parameter.
 
 ### SpeciationOptions
 
-Speciation options for NEAT speciation controller.
-Extends NeatOptions with additional fields for compatibility threshold control and species allocation.
+Speciation options for the NEAT speciation controller.
+
+Extends {@link NeatOptions} with speciation-specific configuration used by:
+- Compatibility-threshold based species assignment
+- Adaptive threshold controllers (PID-like)
+- Species allocation telemetry (history snapshots)
 
 ### SpeciesAlloc
 

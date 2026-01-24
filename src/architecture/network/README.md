@@ -77,7 +77,7 @@ Design terminology used below:
 
 ### connect
 
-`(from: import("D:/code-practice/NeatapticTS/src/architecture/node").default, to: import("D:/code-practice/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/connection").default[]`
+`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
 
 Network structural mutation helpers (connect / disconnect).
 
@@ -100,7 +100,7 @@ Key terminology:
 
 ### disconnect
 
-`(from: import("D:/code-practice/NeatapticTS/src/architecture/node").default, to: import("D:/code-practice/NeatapticTS/src/architecture/node").default) => void`
+`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => void`
 
 Remove (at most) one directed connection from source 'from' to target 'to'.
 
@@ -257,7 +257,7 @@ Parameters:
 
 ### snapshotRNG
 
-`() => import("D:/code-practice/NeatapticTS/src/architecture/network/network.deterministic").RNGSnapshot`
+`() => import("C:/NeatapticTS/src/architecture/network/network.deterministic").RNGSnapshot`
 
 Capture a snapshot of the RNG state together with the network's training step.
 
@@ -345,7 +345,7 @@ A single supervised training example used to evaluate fitness.
 
 ### gate
 
-`(node: import("D:/code-practice/NeatapticTS/src/architecture/node").default, connection: import("D:/code-practice/NeatapticTS/src/architecture/connection").default) => void`
+`(node: import("C:/NeatapticTS/src/architecture/node").default, connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
 
 Gating & node removal utilities for {@link Network}.
 
@@ -380,7 +380,7 @@ Internal Network properties accessed during gating operations.
 
 ### removeNode
 
-`(node: import("D:/code-practice/NeatapticTS/src/architecture/node").default) => void`
+`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
 
 Remove a hidden node from the network while attempting to preserve functional connectivity.
 
@@ -413,7 +413,7 @@ Parameters:
 
 ### ungate
 
-`(connection: import("D:/code-practice/NeatapticTS/src/architecture/connection").default) => void`
+`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
 
 Remove gating from a connection, restoring its static weight contribution.
 
@@ -440,7 +440,7 @@ Extended Connection properties for genetic operations.
 
 ### crossOver
 
-`(network1: import("D:/code-practice/NeatapticTS/src/architecture/network").default, network2: import("D:/code-practice/NeatapticTS/src/architecture/network").default, equal: boolean) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
+`(network1: import("C:/NeatapticTS/src/architecture/network").default, network2: import("C:/NeatapticTS/src/architecture/network").default, equal: boolean) => import("C:/NeatapticTS/src/architecture/network").default`
 
 ### NetworkGeneticProps
 
@@ -517,25 +517,25 @@ future batch normalization integration. Currently a no-op beyond tagging.
 
 ### _modActivation
 
-`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
+`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 MOD_ACTIVATION: Swap activation (squash) of a random eligible node; may exclude outputs.
 
 ### _modBias
 
-`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
+`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 MOD_BIAS: Delegate to node.mutate to adjust bias of a random non‑input node.
 
 ### _modWeight
 
-`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
+`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 MOD_WEIGHT: Perturb a single (possibly self) connection weight by uniform delta in [min,max].
 
 ### _reinitWeight
 
-`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
+`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 REINIT_WEIGHT: Reinitialize all incoming/outgoing/self connection weights for a random node.
 Useful as a heavy mutation to escape local minima. Falls back silently if no eligible node.
@@ -573,13 +573,13 @@ SUB_SELF_CONN: Remove a random existing self loop.
 
 ### _swapNodes
 
-`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
+`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 SWAP_NODES: Exchange bias & activation function between two random eligible nodes.
 
 ### mutateImpl
 
-`(method: import("D:/code-practice/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
+`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
 
 Public entry point: apply a single mutation operator to the network.
 
@@ -615,7 +615,7 @@ Validation ensures that input spatial * channels product equals the previous lay
 
 ### exportToONNX
 
-`(network: import("D:/code-practice/NeatapticTS/src/architecture/network").default, options: import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxExportOptions) => import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
+`(network: import("C:/NeatapticTS/src/architecture/network").default, options: import("C:/NeatapticTS/src/architecture/network/network.onnx").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
 
 Export a minimal multilayer perceptron Network to a lightweight ONNX JSON object.
 
@@ -630,7 +630,7 @@ Constraints: See module doc. Throws descriptive errors when assumptions violated
 
 ### importFromONNX
 
-`(onnx: import("D:/code-practice/NeatapticTS/src/architecture/network/network.onnx").OnnxModel) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
+`(onnx: import("C:/NeatapticTS/src/architecture/network/network.onnx").OnnxModel) => import("C:/NeatapticTS/src/architecture/network").default`
 
 Import a model previously produced by {@link exportToONNX} into a fresh Network instance.
 
@@ -734,7 +734,7 @@ Internal Network properties accessed during node removal operations.
 
 ### removeNode
 
-`(node: import("D:/code-practice/NeatapticTS/src/architecture/node").default) => void`
+`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
 
 Node removal utilities.
 
@@ -765,11 +765,11 @@ Notes / Limitations:
 
 ### deserialize
 
-`(data: [number[], number[], string[], import("D:/code-practice/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number], inputSize: number | undefined, outputSize: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
+`(data: [number[], number[], string[], import("C:/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number], inputSize: number | undefined, outputSize: number | undefined) => import("C:/NeatapticTS/src/architecture/network").default`
 
 ### fromJSONImpl
 
-`(json: NetworkJSON) => import("D:/code-practice/NeatapticTS/src/architecture/network").default`
+`(json: NetworkJSON) => import("C:/NeatapticTS/src/architecture/network").default`
 
 ### network.serialize
 
@@ -787,7 +787,7 @@ Runtime interface for accessing Node internal properties.
 
 ### serialize
 
-`() => [number[], number[], string[], import("D:/code-practice/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number]`
+`() => [number[], number[], string[], import("C:/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number]`
 
 Serialization & deserialization helpers for Network instances.
 
@@ -839,7 +839,7 @@ bits4+ reserved.
 
 #### acquire
 
-`(from: import("D:/code-practice/NeatapticTS/src/architecture/node").default, to: import("D:/code-practice/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("D:/code-practice/NeatapticTS/src/architecture/connection").default`
+`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default`
 
 Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
 a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
@@ -940,7 +940,7 @@ Last applied delta weight (used by classic momentum).
 
 #### release
 
-`(conn: import("D:/code-practice/NeatapticTS/src/architecture/connection").default) => void`
+`(conn: import("C:/NeatapticTS/src/architecture/connection").default) => void`
 
 Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
 afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
@@ -1064,7 +1064,7 @@ Returns: Output activations (detached plain array) of length `network.output`.
 
 ### getConnectionSlab
 
-`() => import("D:/code-practice/NeatapticTS/src/architecture/network/network.slab").ConnectionSlabView`
+`() => import("C:/NeatapticTS/src/architecture/network/network.slab").ConnectionSlabView`
 
 Obtain (and lazily rebuild if dirty) the current packed SoA view of connections.
 
@@ -1153,7 +1153,7 @@ Constructor type for typed arrays used in slabs.
 
 ### generateStandalone
 
-`(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default) => string`
+`(net: import("C:/NeatapticTS/src/architecture/network").default) => string`
 
 ### NetworkStandaloneProps
 
@@ -1208,7 +1208,7 @@ Design Notes:
 
 ### hasPath
 
-`(from: import("D:/code-practice/NeatapticTS/src/architecture/node").default, to: import("D:/code-practice/NeatapticTS/src/architecture/node").default) => boolean`
+`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
 
 Depth-first reachability test (avoids infinite loops via visited set).
 
@@ -1222,7 +1222,7 @@ Internal Network properties accessed during topology operations.
 
 ### applyGradientClippingImpl
 
-`(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default, cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; }) => void`
+`(net: import("C:/NeatapticTS/src/architecture/network").default, cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; }) => void`
 
 ### CheckpointConfig
 
@@ -1311,7 +1311,7 @@ Serialized network structure (used in checkpoint callbacks).
 
 ### trainImpl
 
-`(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], options: import("D:/code-practice/NeatapticTS/src/architecture/network/network.training").TrainingOptions) => { error: number; iterations: number; time: number; }`
+`(net: import("C:/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], options: import("C:/NeatapticTS/src/architecture/network/network.training").TrainingOptions) => { error: number; iterations: number; time: number; }`
 
 ### TrainingOptions
 
@@ -1319,4 +1319,4 @@ Primary training options object (public shape).
 
 ### trainSetImpl
 
-`(net: import("D:/code-practice/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: RegularizationConfig, costFunction: import("D:/code-practice/NeatapticTS/src/architecture/network/network.training").CostFunction | CostFunctionOrObject, optimizer: import("D:/code-practice/NeatapticTS/src/architecture/network/network.training").OptimizerConfigBase | undefined) => number`
+`(net: import("C:/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: RegularizationConfig, costFunction: import("C:/NeatapticTS/src/architecture/network/network.training").CostFunction | CostFunctionOrObject, optimizer: import("C:/NeatapticTS/src/architecture/network/network.training").OptimizerConfigBase | undefined) => number`

@@ -1,13 +1,8 @@
 import type { NeatLike } from './neat.types';
-import { EPSILON } from './neat.constants';
 import type {
   GenomeWithMetadata,
-  NodeWithMetadata,
-  ConnectionWithMetadata,
   MutationMethod,
   NeatControllerForMutation,
-  NodeSplitRecord,
-  OperatorStats,
 } from './neat.mutation.types';
 import * as MutateHelpers from './neat.mutation.utils';
 

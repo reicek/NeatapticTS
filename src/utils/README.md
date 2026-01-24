@@ -4,7 +4,7 @@
 
 ### memoryStats
 
-`(targetNetworks: import("D:/code-practice/NeatapticTS/src/utils/memory").NetworkView | import("D:/code-practice/NeatapticTS/src/utils/memory").NetworkView[] | undefined) => import("D:/code-practice/NeatapticTS/src/utils/memory").MemoryStats`
+`(targetNetworks: import("C:/NeatapticTS/src/utils/memory").NetworkView | import("C:/NeatapticTS/src/utils/memory").NetworkView[] | undefined) => import("C:/NeatapticTS/src/utils/memory").MemoryStats`
 
 ### MemoryStats
 
@@ -30,7 +30,7 @@ enabling typed local variables instead of `any` everywhere.
 
 ### registerTrackedNetwork
 
-`(network: import("D:/code-practice/NeatapticTS/src/utils/memory").NetworkView | null | undefined) => void`
+`(network: import("C:/NeatapticTS/src/utils/memory").NetworkView | null | undefined) => void`
 
 ### resetMemoryTracking
 
@@ -43,4 +43,4 @@ include additional fields; we only rely on fresh/pooled counts.
 
 ### unregisterTrackedNetwork
 
-`(network: import("D:/code-practice/NeatapticTS/src/utils/memory").NetworkView) => void`
+`(network: import("C:/NeatapticTS/src/utils/memory").NetworkView) => void`
