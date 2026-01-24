@@ -144,9 +144,37 @@ Minimal node interface with connections.
 
 ## neat/neat.evaluate.ts
 
-### DiversityStats
+### AUTO_COEFF_ADJUST_DEFAULT
 
-Diversity statistics tracked during evaluation.
+### AUTO_COEFF_MAX_DEFAULT
+
+### AUTO_COEFF_MIN_DEFAULT
+
+### COMPAT_MAX_THRESHOLD_DEFAULT
+
+### COMPAT_MIN_THRESHOLD_DEFAULT
+
+### COMPAT_THRESHOLD_DEFAULT
+
+### DISTANCE_COEFF_DEFAULT
+
+### ENTROPY_ADJUST_DEFAULT
+
+### ENTROPY_DEADBAND_DEFAULT
+
+### ENTROPY_TARGET_DEFAULT
+
+### ENTROPY_VAR_ADJUST_DEFAULT
+
+### ENTROPY_VAR_HIGH_BAND
+
+### ENTROPY_VAR_LOW_BAND
+
+### ENTROPY_VAR_MAX_SIGMA_DEFAULT
+
+### ENTROPY_VAR_MIN_SIGMA_DEFAULT
+
+### ENTROPY_VAR_TARGET_DEFAULT
 
 ### evaluate
 
@@ -176,21 +204,935 @@ Example usage:
 
 Returns: Promise<void> resolves after evaluation and adaptive updates complete.
 
+### NOVELTY_ARCHIVE_CAP
+
+### NOVELTY_DEFAULT_BLEND
+
+### NOVELTY_DEFAULT_NEIGHBORS
+
+### VARIANCE_DECREASE_THRESHOLD
+
+### VARIANCE_INCREASE_THRESHOLD
+
+## neat/neat.evaluate.utils.ts
+
+### addGenomeToNoveltyArchive
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, descriptor: number[], novelty: number, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `descriptor` - - Genome descriptor.
+- `novelty` - - Novelty score.
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: void.
+
+### applyAutoDistanceCoefficientTuning
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, autoDistanceCoeffOptions: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; }, connectionVariance: number) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `autoDistanceCoeffOptions` - - Tuning options.
+- `connectionVariance` - - Variance of connection counts.
+
+Returns: void.
+
+### applyDistanceCoefficientDecrease
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `bounds` - - Min/max coefficients.
+- `adjustRate` - - Adjustment rate.
+
+Returns: void.
+
+### applyDistanceCoefficientIncrease
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `bounds` - - Min/max coefficients.
+- `adjustRate` - - Adjustment rate.
+
+Returns: void.
+
+### applyNoveltyToPopulation
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, descriptors: number[][], distanceMatrix: number[][], kNeighbors: number, blendFactor: number, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `descriptors` - - Descriptor vectors for each genome.
+- `distanceMatrix` - - Distance matrix.
+- `kNeighbors` - - Neighbor count.
+- `blendFactor` - - Blend factor.
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: void.
+
+### AUTO_COEFF_ADJUST_DEFAULT
+
+### AUTO_COEFF_MAX_DEFAULT
+
+### AUTO_COEFF_MIN_DEFAULT
+
+### blendNoveltyIntoScore
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation, novelty: number, blendFactor: number) => void`
+
+Parameters:
+- `genome` - - Genome to update.
+- `novelty` - - Novelty value.
+- `blendFactor` - - Blend factor.
+
+Returns: void.
+
+### buildDistanceMatrix
+
+`(descriptors: number[][]) => number[][]`
+
+Parameters:
+- `descriptors` - - Descriptor vectors.
+
+Returns: Distance matrix.
+
+### buildNoveltyDescriptors
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number[][]`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: Descriptor vectors for each genome.
+
+### clearGenomeStateIfRequested
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }, clearAction: (genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => void) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+- `clearAction` - - Action that clears a genome's internal state.
+
+Returns: void.
+
+### COMPAT_MAX_THRESHOLD_DEFAULT
+
+### COMPAT_MIN_THRESHOLD_DEFAULT
+
+### COMPAT_THRESHOLD_DEFAULT
+
+### computeDescriptorDistance
+
+`(left: number[], right: number[], isSame: boolean) => number`
+
+Parameters:
+- `left` - - Left descriptor.
+- `right` - - Right descriptor.
+- `isSame` - - Whether the descriptors are the same index.
+
+Returns: Euclidean distance.
+
+### computeMean
+
+`(values: number[]) => number`
+
+Parameters:
+- `values` - - Input values.
+
+Returns: Mean of the values.
+
+### computeNextCompatibilityThreshold
+
+`(entropyCompatOptions: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; }, meanEntropy: number, currentThreshold: number) => number`
+
+Parameters:
+- `entropyCompatOptions` - - Tuning options.
+- `meanEntropy` - - Current mean entropy.
+- `currentThreshold` - - Current compatibility threshold.
+
+Returns: Next compatibility threshold.
+
+### computeNextSharingSigma
+
+`(entropySharingOptions: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; }, currentVarEntropy: number, currentSigma: number) => number`
+
+Parameters:
+- `entropySharingOptions` - - Tuning options.
+- `currentVarEntropy` - - Current variance of entropy.
+- `currentSigma` - - Current sigma value.
+
+Returns: Next sigma value.
+
+### computeNoveltyScore
+
+`(distanceRow: number[], kNeighbors: number) => number`
+
+Parameters:
+- `distanceRow` - - Distance values for a single genome.
+- `kNeighbors` - - Neighbor count.
+
+Returns: Novelty score.
+
+### computeVariance
+
+`(values: number[], meanValue: number) => number`
+
+Parameters:
+- `values` - - Input values.
+- `meanValue` - - Precomputed mean.
+
+Returns: Variance of the values.
+
+### DISTANCE_COEFF_DEFAULT
+
+### DiversityStats
+
+Diversity statistics tracked during evaluation.
+
+The values are optional because different evaluations may only compute a
+subset of metrics.
+
+### ensureDiversityStatsContainer
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+
+Returns: void.
+
+### ENTROPY_ADJUST_DEFAULT
+
+### ENTROPY_DEADBAND_DEFAULT
+
+### ENTROPY_TARGET_DEFAULT
+
+### ENTROPY_VAR_ADJUST_DEFAULT
+
+### ENTROPY_VAR_HIGH_BAND
+
+### ENTROPY_VAR_LOW_BAND
+
+### ENTROPY_VAR_MAX_SIGMA_DEFAULT
+
+### ENTROPY_VAR_MIN_SIGMA_DEFAULT
+
+### ENTROPY_VAR_TARGET_DEFAULT
+
 ### GenomeForEvaluation
 
 Genome with score, novelty, and clearing capabilities.
+
+This interface describes the minimal genome shape required by evaluation
+helpers. It intentionally stays permissive for compatibility with legacy
+genome variants while documenting the expected properties.
+
+### getDistanceCoefficientBounds
+
+`(autoDistanceCoeffOptions: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; }) => { minCoeff: number; maxCoeff: number; }`
+
+Parameters:
+- `autoDistanceCoeffOptions` - - Tuning options.
+
+Returns: Bounds for coefficients.
+
+### getNoveltyBlendFactor
+
+`(noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number`
+
+Parameters:
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: Blend factor for novelty vs. fitness.
+
+### getNoveltyNeighborCount
+
+`(noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number`
+
+Parameters:
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: Number of neighbors to consider.
+
+### initializeConnectionVarianceBootstrap
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, connectionVariance: number, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `connectionVariance` - - Current connection variance.
+- `bounds` - - Min/max coefficients.
+- `adjustRate` - - Adjustment rate.
+
+Returns: void.
 
 ### NeatControllerForEval
 
 NEAT controller interface for evaluation.
 
+This interface models the subset of a NEAT controller used by the evaluation
+helpers. It includes options, population data, and optional adaptive tuning
+hooks.
+
+### NOVELTY_ARCHIVE_CAP
+
+### NOVELTY_DEFAULT_BLEND
+
+### NOVELTY_DEFAULT_NEIGHBORS
+
 ### NoveltyArchiveEntry
 
 Novelty archive entry with descriptor and novelty score.
 
+Entries store a descriptor vector alongside the computed novelty so the
+archive can seed future novelty calculations.
+
 ### ObjectiveDef
 
 Objective definition for multi-objective optimization.
+
+Objectives are registered dynamically to guide evaluation and selection.
+
+### registerEntropyObjective
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+
+Returns: void.
+
+### runAutoDistanceCoefficientTuning
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+### runAutoEntropyObjectiveInjection
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+### runEntropyCompatibilityTuning
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+### runEntropySharingTuning
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+### runFitnessEvaluation
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => Promise<void>`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: Promise<void> after fitness evaluation completes.
+
+### runLightweightSpeciation
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+### runNoveltyBlendAndArchive
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+### shouldAutoInjectEntropy
+
+`(evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => boolean`
+
+Parameters:
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: Whether entropy objective should be injected.
+
+### shouldRunSpeciation
+
+`(evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => boolean`
+
+Parameters:
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: Whether speciation should be run.
+
+### VARIANCE_DECREASE_THRESHOLD
+
+### VARIANCE_INCREASE_THRESHOLD
+
+## neat/neat.evolve.adaptive.utils.ts
+
+### adaptReenableProbability
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { minSamples: number; target: number; min: number; max: number; deltaScale: number; }) => void`
+
+Adapt the re-enable probability based on recent success ratios.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applyAdaptiveComplexityControllers
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Apply adaptive complexity controllers if available.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applyAncestorUniqAdaptiveSafe
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Apply ancestor uniqueness adaptation if available.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applyAutoCompatibilityTuning
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { targetMin: number; adjustRate: number; minCoeff: number; maxCoeff: number; randomScale: number; }) => void`
+
+Apply auto-compatibility tuning if enabled.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `config` - - Tuning constants.
+
+Returns: void.
+
+### applyMinimalCriterionAdaptiveSafe
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Apply minimal criterion adaptive controller if available.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applyOperatorAdaptationSafe
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Apply operator adaptation if available.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applyPruningAndMutation
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Apply pruning and mutation phases.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### invalidateCompatibilityCaches
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Invalidate compatibility caches after mutations.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+## neat/neat.evolve.objectives.utils.ts
+
+### applyDynamicObjectiveSchedule
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, currentObjectiveKeys: string[], config: { autoEntropyAddAt: number; }) => void`
+
+Apply dynamic objective scheduling and entropy rules.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `currentObjectiveKeys` - - Keys of active objectives.
+- `config` - - Scheduling constants.
+
+Returns: void.
+
+### applyFitnessSuppressionForTests
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Suppress fitness objective for specific test scenarios.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### captureObjectiveImportanceSnapshot
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Capture objective importance stats for telemetry.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### handleEntropyDropAndReadd
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, currentObjectiveKeys: string[], dynamicConfig: { enabled?: boolean | undefined; addComplexityAt?: number | undefined; addEntropyAt?: number | undefined; dropEntropyOnStagnation?: number | undefined; readdEntropyAfter?: number | undefined; } | undefined) => void`
+
+Handle entropy removal and re-addition rules.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `currentObjectiveKeys` - - Active objective keys.
+- `dynamicConfig` - - Dynamic objective config.
+
+Returns: void.
+
+### resetObjectivesCache
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Clear cached objectives so dynamic schedules can rebuild them.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### updateObjectiveScheduleAndAges
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyDynamicObjectiveSchedule: (currentObjectiveKeys: string[]) => void; }) => Promise<void>`
+
+Update objective schedule, pending adds/removes, and objective ages.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `helpers` - - Helper callbacks used by scheduling logic.
+- `helpers` - - Dynamic objective scheduler.
+
+Returns: void.
+
+## neat/neat.evolve.population.utils.ts
+
+### addOffspring
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], helpers: { addSpeciatedOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>; addUnspeciatedOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>; }) => Promise<void>`
+
+Add offspring to fill remaining population slots.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Target population array.
+- `helpers` - - Helper callbacks for offspring selection.
+- `helpers` - - Speciated offspring helper.
+- `helpers` - - Unspeciated offspring helper.
+
+Returns: void.
+
+### addSpeciatedOffspring
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number, config: { minOffspringDefault: number; survivalThresholdDefault: number; youngThresholdDefault: number; youngMultiplierDefault: number; oldThresholdDefault: number; oldMultiplierDefault: number; crossSpeciesGuardLimit: number; }) => Promise<void>`
+
+Add offspring when speciation is enabled.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Target population array.
+- `remainingSlots` - - Slots remaining to fill.
+- `config` - - Offspring allocation constants.
+
+Returns: void.
+
+### addUnspeciatedOffspring
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>`
+
+Add offspring when speciation is disabled.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Target population array.
+- `remainingSlots` - - Slots remaining to fill.
+
+Returns: void.
+
+### applyElitism
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+
+Apply elitism for the next generation.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Target population array.
+
+Returns: void.
+
+### applyProvenance
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+
+Add provenance genomes into the next population.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Target population array.
+
+Returns: void.
+
+### buildNextPopulation
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyElitism: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void; applyProvenance: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void; addOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => Promise<void>; }) => Promise<import("C:/NeatapticTS/src/architecture/network").default[]>`
+
+Build the next population (elitism, provenance, offspring).
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `helpers` - - Helper callbacks for population construction.
+- `helpers` - - Elitism helper.
+- `helpers` - - Provenance helper.
+- `helpers` - - Offspring helper.
+
+Returns: next population array.
+
+### buildSpeciesOffspring
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, survivors: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[], speciesIndex: number, crossSpeciesProbability: number, crossSpeciesGuardLimit: number, survivalThresholdDefault: number) => import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata`
+
+Build a single offspring within a species.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `survivors` - - Survivors pool for selection.
+- `speciesIndex` - - Species index.
+- `crossSpeciesProbability` - - Cross-species mating probability.
+- `crossSpeciesGuardLimit` - - Retry guard for cross-species selection.
+
+Returns: offspring genome.
+
+### computeOffspringAllocation
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, remainingSlots: number, config: { minOffspringDefault: number; youngThresholdDefault: number; youngMultiplierDefault: number; oldThresholdDefault: number; oldMultiplierDefault: number; }) => number[]`
+
+Compute offspring allocation per species.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `remainingSlots` - - Slots remaining to fill.
+- `config` - - Allocation constants.
+
+Returns: allocation per species index.
+
+### distributeRemainingSlots
+
+`(allocation: number[], rawShares: number[], remainingSlots: number) => void`
+
+Distribute leftover slots by fractional remainders.
+
+Parameters:
+- `allocation` - - Allocation array to adjust.
+- `rawShares` - - Raw fractional shares.
+- `remainingSlots` - - Total slots available.
+
+Returns: void.
+
+### enforceMinimumOffspring
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, allocation: number[], remainingSlots: number, minOffspringDefault: number) => void`
+
+Enforce minimum offspring per species when possible.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `allocation` - - Allocation array to adjust.
+- `remainingSlots` - - Total slots available.
+- `minOffspringDefault` - - Default minimum offspring.
+
+Returns: void.
+
+### enforcePopulationConstraints
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => Promise<void>`
+
+Ensure new population meets structural constraints.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Population to validate.
+
+Returns: void.
+
+### selectSecondParent
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, survivors: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[], speciesIndex: number, crossSpeciesProbability: number, crossSpeciesGuardLimit: number, survivalThresholdDefault: number) => import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata`
+
+Select a second parent, optionally from another species.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `survivors` - - Survivors pool from the current species.
+- `speciesIndex` - - Current species index.
+- `crossSpeciesProbability` - - Probability to cross species.
+- `crossSpeciesGuardLimit` - - Retry guard for cross-species selection.
+
+Returns: chosen parent genome.
+
+### trimOversubscription
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, allocation: number[], remainingSlots: number, minOffspringDefault: number) => void`
+
+Trim allocations when oversubscribed.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `allocation` - - Allocation array to adjust.
+- `remainingSlots` - - Total slots available.
+- `minOffspringDefault` - - Default minimum offspring.
+
+Returns: void.
+
+## neat/neat.evolve.runtime.utils.ts
+
+### buildFittestSnapshot
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => import("C:/NeatapticTS/src/architecture/network").default`
+
+Build a cloned Network from the current best genome.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: best network snapshot.
+
+### clearPopulationScores
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Clear genome scores to force re-evaluation.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### computeElapsedTime
+
+`(startTimestamp: number) => number`
+
+Compute elapsed time since the start of evolve().
+
+Parameters:
+- `startTimestamp` - - Start time resolved earlier.
+
+Returns: elapsed time.
+
+### ensurePopulationEvaluated
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Ensure the population is evaluated before evolution operations.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### resolveStartTime
+
+`() => number`
+
+Resolve the start time for an evolution step.
+
+Returns: timestamp in milliseconds or high-resolution units.
+
+### trackGlobalImprovement
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("C:/NeatapticTS/src/architecture/network").default) => void`
+
+Track global best improvement for stagnation logic.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `snapshot` - - Best network snapshot.
+
+Returns: void.
+
+### updateGlobalBestTracking
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Update generation-level best score tracking.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+## neat/neat.evolve.speciation.utils.ts
+
+### applyGlobalStagnationInjectionIfNeeded
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { buildFreshGenomeForStagnation: () => Promise<import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata>; replaceFraction: number; }) => Promise<void>`
+
+Apply global stagnation injection if configured.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `helpers` - - Helper callbacks for stagnation injection.
+- `helpers` - - Genome builder for injection.
+
+Returns: void.
+
+### applySpeciationAndSharingIfEnabled
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyAutoCompatibilityTuning: () => void; recordSpeciesHistorySnapshot: () => void; }) => Promise<void>`
+
+Apply speciation, fitness sharing, and related side effects.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `helpers` - - Helper callbacks used for tuning and history.
+- `helpers` - - Auto-compatibility adjustment helper.
+- `helpers` - - Species history snapshot helper.
+
+Returns: void.
+
+### buildFreshGenomeForStagnation
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata>`
+
+Build a fresh genome for stagnation injection.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: new genome with minimum constraints.
+
+### ensureHiddenNodeVariance
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, genome: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata) => Promise<void>`
+
+Ensure a minimal hidden-node variance in injected genomes.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `genome` - - Genome to adjust.
+
+Returns: void.
+
+### ensureSpeciesHistorySnapshot
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
+
+Ensure a minimal species history snapshot exists for exports.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `maxHistory` - - Maximum history length.
+
+Returns: void.
+
+### recordSpeciesHistorySnapshot
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
+
+Record a species history snapshot when needed.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `maxHistory` - - Maximum history length.
+
+Returns: void.
+
+### updateSpeciesStagnationIfEnabled
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Update species stagnation status when speciation enabled.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+## neat/neat.evolve.telemetry.utils.ts
+
+### computeDiversityStatsSafely
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Compute diversity stats safely if the hook exists.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### recordTelemetryIfEnabled
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("C:/NeatapticTS/src/architecture/network").default) => Promise<void>`
+
+Record telemetry if enabled.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `snapshot` - - Best network snapshot for the generation.
+
+Returns: void.
 
 ## neat/neat.evolve.ts
 
@@ -221,35 +1163,524 @@ console.log('generation:', neat.generation);
 Returns: a deep-cloned Network representing the best genome
  in the previous generation (useful for evaluation)
 
+### EVOLVE_AUTO_COMPAT_ADJUST_RATE
+
+### EVOLVE_AUTO_COMPAT_MAX_COEFF
+
+### EVOLVE_AUTO_COMPAT_MIN_COEFF
+
+### EVOLVE_AUTO_COMPAT_RANDOM_SCALE
+
+### EVOLVE_AUTO_COMPAT_TARGET_MIN
+
+### EVOLVE_AUTO_ENTROPY_ADD_AT
+
+### EVOLVE_CROSS_SPECIES_GUARD_LIMIT
+
+### EVOLVE_DEFAULT_EPSILON_ADJUST
+
+### EVOLVE_DEFAULT_EPSILON_COOLDOWN
+
+### EVOLVE_DEFAULT_EPSILON_MAX
+
+### EVOLVE_DEFAULT_EPSILON_MIN
+
+### EVOLVE_GLOBAL_STAGNATION_REPLACE_FRACTION
+
+### EVOLVE_MIN_OFFSPRING_DEFAULT
+
+### EVOLVE_OLD_MULTIPLIER_DEFAULT
+
+### EVOLVE_OLD_THRESHOLD_DEFAULT
+
+### EVOLVE_PARETO_ARCHIVE_MAX
+
+### EVOLVE_PRUNE_RANGE_EPS_DEFAULT
+
+### EVOLVE_PRUNE_WINDOW_DEFAULT
+
+### EVOLVE_REENABLE_DELTA_SCALE
+
+### EVOLVE_REENABLE_MAX
+
+### EVOLVE_REENABLE_MIN
+
+### EVOLVE_REENABLE_MIN_SAMPLES
+
+### EVOLVE_REENABLE_TARGET
+
+### EVOLVE_SPECIES_HISTORY_MAX
+
+### EVOLVE_SURVIVAL_THRESHOLD_DEFAULT
+
+### EVOLVE_TARGET_FRONT_LOWER_RATIO
+
+### EVOLVE_TARGET_FRONT_MIN
+
+### EVOLVE_TARGET_FRONT_UPPER_RATIO
+
+### EVOLVE_YOUNG_MULTIPLIER_DEFAULT
+
+### EVOLVE_YOUNG_THRESHOLD_DEFAULT
+
+## neat/neat.evolve.types.ts
+
 ### GenomeWithMetadata
 
-Runtime interface for a genome with evolution-related metadata.
-Avoids circular dependencies by defining only properties accessed in this module.
+Runtime interface for a genome carrying evolution metadata.
+
+This mirrors the dynamic properties attached at runtime during evolution,
+without pulling in the full Genome class to avoid circular dependencies.
 
 ### MultiObjectiveOptions
 
-Runtime interface for multi-objective options.
+Multi-objective configuration block.
 
 ### MutationMethod
 
-Runtime interface for a mutation method.
+Mutation method descriptor used by runtime mutation hooks.
 
 ### NeatControllerForEvolution
 
-Runtime interface for the NEAT controller used in evolution operations.
-Avoids circular dependencies by defining only properties accessed in this module.
+NEAT controller subset used by evolve orchestrations.
 
 ### ObjectiveDescriptor
 
-Runtime interface for an objective descriptor.
+Objective descriptor for multi-objective evaluation.
 
 ### SpeciesHistoryRecord
 
-Runtime interface for species history record.
+Species history snapshot record used for telemetry/exports.
 
 ### SpeciesWithMetadata
 
-Runtime interface for a species with allocation metadata.
+Runtime interface for species metadata used in allocation and stats.
+
+## neat/neat.evolve.utils.ts
+
+### adaptReenableProbability
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { minSamples: number; target: number; min: number; max: number; deltaScale: number; }) => void`
+
+Adapt the re-enable probability based on recent success ratios.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### addOffspring
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], helpers: { addSpeciatedOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>; addUnspeciatedOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>; }) => Promise<void>`
+
+Add offspring to fill remaining population slots.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Target population array.
+- `helpers` - - Helper callbacks for offspring selection.
+- `helpers` - - Speciated offspring helper.
+- `helpers` - - Unspeciated offspring helper.
+
+Returns: void.
+
+### addSpeciatedOffspring
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number, config: { minOffspringDefault: number; survivalThresholdDefault: number; youngThresholdDefault: number; youngMultiplierDefault: number; oldThresholdDefault: number; oldMultiplierDefault: number; crossSpeciesGuardLimit: number; }) => Promise<void>`
+
+Add offspring when speciation is enabled.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Target population array.
+- `remainingSlots` - - Slots remaining to fill.
+- `config` - - Offspring allocation constants.
+
+Returns: void.
+
+### addUnspeciatedOffspring
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>`
+
+Add offspring when speciation is disabled.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Target population array.
+- `remainingSlots` - - Slots remaining to fill.
+
+Returns: void.
+
+### applyAdaptiveComplexityControllers
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Apply adaptive complexity controllers if available.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applyAncestorUniqAdaptiveSafe
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Apply ancestor uniqueness adaptation if available.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applyAutoCompatibilityTuning
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { targetMin: number; adjustRate: number; minCoeff: number; maxCoeff: number; randomScale: number; }) => void`
+
+Apply auto-compatibility tuning if enabled.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `config` - - Tuning constants.
+
+Returns: void.
+
+### applyDynamicObjectiveSchedule
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, currentObjectiveKeys: string[], config: { autoEntropyAddAt: number; }) => void`
+
+Apply dynamic objective scheduling and entropy rules.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `currentObjectiveKeys` - - Keys of active objectives.
+- `config` - - Scheduling constants.
+
+Returns: void.
+
+### applyElitism
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+
+Apply elitism for the next generation.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Target population array.
+
+Returns: void.
+
+### applyFitnessSuppressionForTests
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Suppress fitness objective for specific test scenarios.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applyGlobalStagnationInjectionIfNeeded
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { buildFreshGenomeForStagnation: () => Promise<import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata>; replaceFraction: number; }) => Promise<void>`
+
+Apply global stagnation injection if configured.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `helpers` - - Helper callbacks for stagnation injection.
+- `helpers` - - Genome builder for injection.
+
+Returns: void.
+
+### applyMinimalCriterionAdaptiveSafe
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Apply minimal criterion adaptive controller if available.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applyOperatorAdaptationSafe
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Apply operator adaptation if available.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applyProvenance
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+
+Add provenance genomes into the next population.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Target population array.
+
+Returns: void.
+
+### applyPruningAndMutation
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Apply pruning and mutation phases.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### applySpeciationAndSharingIfEnabled
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyAutoCompatibilityTuning: () => void; recordSpeciesHistorySnapshot: () => void; }) => Promise<void>`
+
+Apply speciation, fitness sharing, and related side effects.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `helpers` - - Helper callbacks used for tuning and history.
+- `helpers` - - Auto-compatibility adjustment helper.
+- `helpers` - - Species history snapshot helper.
+
+Returns: void.
+
+### buildFittestSnapshot
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => import("C:/NeatapticTS/src/architecture/network").default`
+
+Build a cloned Network from the current best genome.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: best network snapshot.
+
+### buildFreshGenomeForStagnation
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata>`
+
+Build a fresh genome for stagnation injection.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: new genome with minimum constraints.
+
+### buildNextPopulation
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyElitism: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void; applyProvenance: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void; addOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => Promise<void>; }) => Promise<import("C:/NeatapticTS/src/architecture/network").default[]>`
+
+Build the next population (elitism, provenance, offspring).
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `helpers` - - Helper callbacks for population construction.
+- `helpers` - - Elitism helper.
+- `helpers` - - Provenance helper.
+- `helpers` - - Offspring helper.
+
+Returns: next population array.
+
+### captureObjectiveImportanceSnapshot
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Capture objective importance stats for telemetry.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### clearPopulationScores
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Clear genome scores to force re-evaluation.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### computeDiversityStatsSafely
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Compute diversity stats safely if the hook exists.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### computeElapsedTime
+
+`(startTimestamp: number) => number`
+
+Compute elapsed time since the start of evolve().
+
+Parameters:
+- `startTimestamp` - - Start time resolved earlier.
+
+Returns: elapsed time.
+
+### enforcePopulationConstraints
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => Promise<void>`
+
+Ensure new population meets structural constraints.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `nextPopulation` - - Population to validate.
+
+Returns: void.
+
+### ensurePopulationEvaluated
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+
+Ensure the population is evaluated before evolution operations.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### ensureSpeciesHistorySnapshot
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
+
+Ensure a minimal species history snapshot exists for exports.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `maxHistory` - - Maximum history length.
+
+Returns: void.
+
+### invalidateCompatibilityCaches
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Invalidate compatibility caches after mutations.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### processMultiObjective
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { paretoArchiveMax: number; targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; pruneWindowDefault: number; pruneRangeEpsDefault: number; }) => void`
+
+Run multi-objective ranking, crowding distance, and archives.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `config` - - Multi-objective tuning constants.
+
+Returns: void.
+
+### recordSpeciesHistorySnapshot
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
+
+Record a species history snapshot when needed.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `maxHistory` - - Maximum history length.
+
+Returns: void.
+
+### recordTelemetryIfEnabled
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("C:/NeatapticTS/src/architecture/network").default) => Promise<void>`
+
+Record telemetry if enabled.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `snapshot` - - Best network snapshot for the generation.
+
+Returns: void.
+
+### resetObjectivesCache
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Clear cached objectives so dynamic schedules can rebuild them.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### resolveStartTime
+
+`() => number`
+
+Resolve the start time for an evolution step.
+
+Returns: timestamp in milliseconds or high-resolution units.
+
+### trackGlobalImprovement
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("C:/NeatapticTS/src/architecture/network").default) => void`
+
+Track global best improvement for stagnation logic.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `snapshot` - - Best network snapshot.
+
+Returns: void.
+
+### updateGlobalBestTracking
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Update generation-level best score tracking.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
+
+### updateObjectiveScheduleAndAges
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyDynamicObjectiveSchedule: (currentObjectiveKeys: string[]) => void; }) => Promise<void>`
+
+Update objective schedule, pending adds/removes, and objective ages.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `helpers` - - Helper callbacks used by scheduling logic.
+- `helpers` - - Dynamic objective scheduler.
+
+Returns: void.
+
+### updateSpeciesStagnationIfEnabled
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+
+Update species stagnation status when speciation enabled.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: void.
 
 ## neat/neat.export.ts
 
@@ -809,6 +2240,86 @@ Parameters:
 ### MAX_PARETO_ARCHIVE_FRONTS
 
 ### MAX_PARETO_ARCHIVE_LENGTH
+
+## neat/neat.multiobjective.category.utils.ts
+
+### adaptDominanceEpsilon
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, paretoFronts: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[][], config: { targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; }) => void`
+
+Adapt dominance epsilon based on Pareto front size.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `paretoFronts` - - Non-dominated fronts.
+- `config` - - Epsilon tuning constants.
+
+Returns: void.
+
+### computeCrowdingDistances
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[], paretoFronts: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[][], objectives: import("C:/NeatapticTS/src/neat/neat.evolve.types").ObjectiveDescriptor[]) => number[]`
+
+Compute crowding distances for multi-objective fronts.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `populationSnapshot` - - Current population reference.
+- `paretoFronts` - - Non-dominated fronts.
+- `objectives` - - Active objectives.
+
+Returns: crowding distances aligned with population order.
+
+### processMultiObjective
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { paretoArchiveMax: number; targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; pruneWindowDefault: number; pruneRangeEpsDefault: number; }) => void`
+
+Run multi-objective ranking, crowding distance, and archives.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `config` - - Multi-objective tuning constants.
+
+Returns: void.
+
+### pruneInactiveObjectives
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { pruneWindowDefault: number; pruneRangeEpsDefault: number; }) => void`
+
+Prune objectives that have collapsed ranges over a window.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `config` - - Pruning constants.
+
+Returns: void.
+
+### recordParetoArchives
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, paretoFronts: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[][], objectives: import("C:/NeatapticTS/src/neat/neat.evolve.types").ObjectiveDescriptor[], archiveMax: number) => void`
+
+Record Pareto front archives for telemetry.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `paretoFronts` - - Non-dominated fronts.
+- `objectives` - - Active objectives.
+- `archiveMax` - - Maximum archive size.
+
+Returns: void.
+
+### sortPopulationByPareto
+
+`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[], crowdingDistances: number[]) => void`
+
+Sort population by Pareto rank and crowding distance.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `populationSnapshot` - - Current population reference.
+- `crowdingDistances` - - Crowding distances aligned with population order.
+
+Returns: void.
 
 ## neat/neat.multiobjective.crowding.utils.ts
 

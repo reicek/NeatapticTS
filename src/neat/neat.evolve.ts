@@ -18,15 +18,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import Network from '../architecture/network';
-import type {
-  GenomeWithMetadata,
-  MutationMethod,
-  NeatControllerForEvolution,
-  ObjectiveDescriptor,
-  MultiObjectiveOptions,
-  SpeciesHistoryRecord,
-  SpeciesWithMetadata,
-} from './neat.evolve.types';
+import type { NeatControllerForEvolution } from './neat.evolve.types';
 import {
   addOffspring,
   addSpeciatedOffspring,
