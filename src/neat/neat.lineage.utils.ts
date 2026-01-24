@@ -26,6 +26,12 @@ export interface NeatLineageContext {
   _getRNG: () => () => number;
 }
 
+/** Index pair representing a sampled genome pair. */
+interface GenomeIndexPair {
+  firstIndex: number;
+  secondIndex: number;
+}
+
 /** Queue entry for ancestor traversal. */
 interface AncestorQueueEntry {
   ancestorId: number;
@@ -378,10 +384,4 @@ function countIntersection(
     if (largerSet.has(ancestorId)) intersectionCount += INDEX_OFFSET;
 
   return intersectionCount;
-}
-
-/** Index pair representing a sampled genome pair. */
-interface GenomeIndexPair {
-  firstIndex: number;
-  secondIndex: number;
 }
