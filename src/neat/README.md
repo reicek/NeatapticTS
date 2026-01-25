@@ -86,23 +86,110 @@ Exported for use in tests and type-safe function calls.
 
 ### _compatibilityDistance
 
-`(genomeA: GenomeLike, genomeB: GenomeLike) => number`
+`(genomeA: import("C:/NeatapticTS/src/neat/neat.compat.utils").GenomeLike, genomeB: import("C:/NeatapticTS/src/neat/neat.compat.utils").GenomeLike) => number`
 
 ### _fallbackInnov
 
-`(connection: ConnectionLike) => number`
+`(connection: import("C:/NeatapticTS/src/neat/neat.compat.utils").ConnectionLike) => number`
+
+## neat/neat.compat.utils.ts
+
+### buildPairKey
+
+`(firstGenome: import("C:/NeatapticTS/src/neat/neat.compat.utils").GenomeLike, secondGenome: import("C:/NeatapticTS/src/neat/neat.compat.utils").GenomeLike) => string`
+
+Build a stable cache key for a genome pair.
+
+Parameters:
+- `firstGenome` - - First genome in the pair.
+- `secondGenome` - - Second genome in the pair.
+
+Returns: Stable cache key in the form "minId|maxId".
+
+### compareInnovationLists
+
+`(firstList: [number, number][], secondList: [number, number][]) => import("C:/NeatapticTS/src/neat/neat.compat.utils").ComparisonMetrics`
+
+Compare two sorted innovation lists and derive comparison metrics.
+
+Parameters:
+- `firstList` - - Sorted innovation list for the first genome.
+- `secondList` - - Sorted innovation list for the second genome.
+
+Returns: Aggregated comparison metrics for distance computation.
+
+### ComparisonMetrics
+
+Aggregated comparison metrics for compatibility calculations.
+
+### computeCompatibilityDistance
+
+`(neatContext: import("C:/NeatapticTS/src/neat/neat.compat.utils").NeatLikeForCompat, metrics: import("C:/NeatapticTS/src/neat/neat.compat.utils").ComparisonMetrics) => number`
+
+Compute the compatibility distance from comparison metrics.
+
+Parameters:
+- `neatContext` - - NEAT context providing coefficients.
+- `metrics` - - Aggregated comparison metrics.
+
+Returns: Final compatibility distance for the genome pair.
 
 ### ConnectionLike
 
-Connection with optional innovation and node indices.
+Compatibility-distance helper utilities.
+
+### ensureGenerationCache
+
+`(neatContext: import("C:/NeatapticTS/src/neat/neat.compat.utils").NeatLikeForCompat) => void`
+
+Ensure generation-scoped compatibility caches exist.
+
+Parameters:
+- `neatContext` - - Current NEAT context holding generation and caches.
+
+Returns: void
 
 ### GenomeLike
 
-Genome/network with connections and compatibility cache.
+Minimal genome shape used for compatibility distance calculations.
+
+### getDistanceCacheMap
+
+`(neatContext: import("C:/NeatapticTS/src/neat/neat.compat.utils").NeatLikeForCompat) => Map<string, number>`
+
+Retrieve the generation-scoped cache map for pairwise distances.
+
+Parameters:
+- `neatContext` - - Current NEAT context with the cache map.
+
+Returns: Map storing cached distances for genome pairs this generation.
+
+### getSortedInnovationCache
+
+`(neatContext: import("C:/NeatapticTS/src/neat/neat.compat.utils").NeatLikeForCompat, genome: import("C:/NeatapticTS/src/neat/neat.compat.utils").GenomeLike) => [number, number][]`
+
+Retrieve or build a sorted innovation list for a genome.
+
+Parameters:
+- `neatContext` - - NEAT context used for fallback innovation numbers.
+- `genome` - - Genome to derive sorted innovation list for.
+
+Returns: Array of [innovationNumber, weight] sorted by innovationNumber.
 
 ### NeatLikeForCompat
 
-Minimal NEAT interface for compatibility checks.
+Minimal NEAT context required by compatibility helpers.
+
+### resolveMaxInnovation
+
+`(list: [number, number][]) => number`
+
+Resolve the highest innovation id from a sorted list.
+
+Parameters:
+- `list` - - Sorted innovation list for a genome.
+
+Returns: Highest innovation id or 0 if list is empty.
 
 ## neat/neat.constants.ts
 
