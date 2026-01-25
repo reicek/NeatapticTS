@@ -116,14 +116,98 @@ Minimal NEAT interface for compatibility checks.
 
 ## neat/neat.diversity.ts
 
+### computeDiversityStats
+
+`(population: import("C:/NeatapticTS/src/neat/neat.diversity.utils").GenomeWithMetrics[], compatibilityComputer: import("C:/NeatapticTS/src/neat/neat.diversity.utils").CompatComputer) => import("C:/NeatapticTS/src/neat/neat.diversity.utils").DiversityStats | undefined`
+
+Compute diversity statistics for a NEAT population.
+This is a pure helper used by reporting and diagnostics. It intentionally
+samples pairwise computations to keep cost bounded for large populations.
+
+Notes for documentation:
+- Lineage metrics rely on genomes exposing a numeric `_depth` property.
+- Compatibility distances are computed via the provided compatComputer
+  which mirrors legacy code and may use historical marker logic.
+
+Parameters:
+- `population` - - array of genome-like objects (nodes, connections, optional _depth)
+- `compatibilityComputer` - - object exposing _compatibilityDistance(a,b)
+
+Returns: DiversityStats object with all computed aggregates, or undefined if input empty
+
+### DiversityStats
+
+Diversity statistics returned by computeDiversityStats.
+Each field represents an aggregate metric for a NEAT population.
+
+### MAX_COMPATIBILITY_SAMPLE
+
+### MAX_LINEAGE_PAIR_SAMPLE
+
+### structuralEntropy
+
+`(graph: import("C:/NeatapticTS/src/architecture/network").default) => number`
+
+Compute the Shannon-style entropy of a network's out-degree distribution.
+This is a lightweight, approximate structural dispersion metric used to
+characterise how 'spread out' connections are across nodes.
+
+Educational note: structural entropy here is simply H = -sum(p_i log p_i)
+over the normalized out-degree histogram. It does not measure information
+content of weights or dynamics, but provides a quick structural fingerprint.
+
+## neat/neat.diversity.utils.ts
+
+### arrayMean
+
+`(values: number[]) => number`
+
+Compute the arithmetic mean of a numeric array. Returns 0 for empty arrays.
+
+Parameters:
+- `values` - - Values to average.
+
+Returns: Arithmetic mean of the values.
+
+### arrayVariance
+
+`(values: number[]) => number`
+
+Compute the variance (population variance) of a numeric array.
+Returns 0 for empty arrays. Uses arrayMean internally.
+
+Parameters:
+- `values` - - Values to evaluate.
+
+Returns: Population variance.
+
+### calculateDiversityStats
+
+`(population: import("C:/NeatapticTS/src/neat/neat.diversity.utils").GenomeWithMetrics[], compatibilityComputer: import("C:/NeatapticTS/src/neat/neat.diversity.utils").CompatComputer) => import("C:/NeatapticTS/src/neat/neat.diversity.utils").DiversityStats | undefined`
+
+Compute diversity statistics for a NEAT population.
+
+Parameters:
+- `population` - - array of genome-like objects (nodes, connections, optional _depth)
+- `compatibilityComputer` - - object exposing _compatibilityDistance(a,b)
+
+Returns: DiversityStats object with all computed aggregates, or undefined if input empty
+
+### calculateStructuralEntropy
+
+`(graph: import("C:/NeatapticTS/src/architecture/network").default) => number`
+
+Compute the Shannon-style entropy of a network's out-degree distribution.
+
+Parameters:
+- `graph` - - Network instance to evaluate.
+
+Returns: Shannon-style entropy value.
+
 ### CompatComputer
 
 Minimal interface that provides a compatibility distance function.
 Implementors should expose a compatible signature with legacy NEAT code.
-
-### computeDiversityStats
-
-`(population: GenomeWithMetrics[], compatibilityComputer: CompatComputer) => import("C:/NeatapticTS/src/neat/neat.diversity").DiversityStats | undefined`
 
 ### DiversityStats
 
@@ -134,13 +218,378 @@ Each field represents an aggregate metric for a NEAT population.
 
 Minimal genome interface for diversity computations.
 
+### MAX_COMPATIBILITY_SAMPLE
+
+### MAX_LINEAGE_PAIR_SAMPLE
+
 ### NodeWithConnections
 
 Minimal node interface with connections.
 
-### structuralEntropy
+## neat/neat.evaluate.auto-distance.utils.ts
 
-`(graph: import("C:/NeatapticTS/src/architecture/network").default) => number`
+### applyAutoDistanceCoefficientTuning
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, autoDistanceCoeffOptions: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; }, connectionVariance: number) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `autoDistanceCoeffOptions` - - Tuning options.
+- `connectionVariance` - - Variance of connection counts.
+
+Returns: void.
+
+### applyDistanceCoefficientDecrease
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `bounds` - - Min/max coefficients.
+- `adjustRate` - - Adjustment rate.
+
+Returns: void.
+
+### applyDistanceCoefficientIncrease
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `bounds` - - Min/max coefficients.
+- `adjustRate` - - Adjustment rate.
+
+Returns: void.
+
+### computeMean
+
+`(values: number[]) => number`
+
+Parameters:
+- `values` - - Input values.
+
+Returns: Mean of the values.
+
+### computeVariance
+
+`(values: number[], meanValue: number) => number`
+
+Parameters:
+- `values` - - Input values.
+- `meanValue` - - Precomputed mean.
+
+Returns: Variance of the values.
+
+### getDistanceCoefficientBounds
+
+`(autoDistanceCoeffOptions: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; }) => { minCoeff: number; maxCoeff: number; }`
+
+Parameters:
+- `autoDistanceCoeffOptions` - - Tuning options.
+
+Returns: Bounds for coefficients.
+
+### initializeConnectionVarianceBootstrap
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, connectionVariance: number, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `connectionVariance` - - Current connection variance.
+- `bounds` - - Min/max coefficients.
+- `adjustRate` - - Adjustment rate.
+
+Returns: void.
+
+### runAutoDistanceCoefficientTuning
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+## neat/neat.evaluate.constants.utils.ts
+
+### AUTO_COEFF_ADJUST_DEFAULT
+
+### AUTO_COEFF_MAX_DEFAULT
+
+### AUTO_COEFF_MIN_DEFAULT
+
+### COMPAT_MAX_THRESHOLD_DEFAULT
+
+### COMPAT_MIN_THRESHOLD_DEFAULT
+
+### COMPAT_THRESHOLD_DEFAULT
+
+### DISTANCE_COEFF_DEFAULT
+
+### ENTROPY_ADJUST_DEFAULT
+
+### ENTROPY_DEADBAND_DEFAULT
+
+### ENTROPY_TARGET_DEFAULT
+
+### ENTROPY_VAR_ADJUST_DEFAULT
+
+### ENTROPY_VAR_HIGH_BAND
+
+### ENTROPY_VAR_LOW_BAND
+
+### ENTROPY_VAR_MAX_SIGMA_DEFAULT
+
+### ENTROPY_VAR_MIN_SIGMA_DEFAULT
+
+### ENTROPY_VAR_TARGET_DEFAULT
+
+### NOVELTY_ARCHIVE_CAP
+
+### NOVELTY_DEFAULT_BLEND
+
+### NOVELTY_DEFAULT_NEIGHBORS
+
+### VARIANCE_DECREASE_THRESHOLD
+
+### VARIANCE_INCREASE_THRESHOLD
+
+## neat/neat.evaluate.entropy-compat.utils.ts
+
+### computeNextCompatibilityThreshold
+
+`(entropyCompatOptions: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; }, meanEntropy: number, currentThreshold: number) => number`
+
+Parameters:
+- `entropyCompatOptions` - - Tuning options.
+- `meanEntropy` - - Current mean entropy.
+- `currentThreshold` - - Current compatibility threshold.
+
+Returns: Next compatibility threshold.
+
+### runEntropyCompatibilityTuning
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+## neat/neat.evaluate.entropy-sharing.utils.ts
+
+### computeNextSharingSigma
+
+`(entropySharingOptions: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; }, currentVarEntropy: number, currentSigma: number) => number`
+
+Parameters:
+- `entropySharingOptions` - - Tuning options.
+- `currentVarEntropy` - - Current variance of entropy.
+- `currentSigma` - - Current sigma value.
+
+Returns: Next sigma value.
+
+### ensureDiversityStatsContainer
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+
+Returns: void.
+
+### runEntropySharingTuning
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+## neat/neat.evaluate.fitness.utils.ts
+
+### clearGenomeStateIfRequested
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }, clearAction: (genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => void) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+- `clearAction` - - Action that clears a genome's internal state.
+
+Returns: void.
+
+### runFitnessEvaluation
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => Promise<void>`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: Promise<void> after fitness evaluation completes.
+
+## neat/neat.evaluate.novelty.utils.ts
+
+### addGenomeToNoveltyArchive
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, descriptor: number[], novelty: number, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `descriptor` - - Genome descriptor.
+- `novelty` - - Novelty score.
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: void.
+
+### applyNoveltyToPopulation
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, descriptors: number[][], distanceMatrix: number[][], kNeighbors: number, blendFactor: number, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `descriptors` - - Descriptor vectors for each genome.
+- `distanceMatrix` - - Distance matrix.
+- `kNeighbors` - - Neighbor count.
+- `blendFactor` - - Blend factor.
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: void.
+
+### blendNoveltyIntoScore
+
+`(genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation, novelty: number, blendFactor: number) => void`
+
+Parameters:
+- `genome` - - Genome to update.
+- `novelty` - - Novelty value.
+- `blendFactor` - - Blend factor.
+
+Returns: void.
+
+### buildDistanceMatrix
+
+`(descriptors: number[][]) => number[][]`
+
+Parameters:
+- `descriptors` - - Descriptor vectors.
+
+Returns: Distance matrix.
+
+### buildNoveltyDescriptors
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number[][]`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: Descriptor vectors for each genome.
+
+### computeDescriptorDistance
+
+`(leftDescriptor: number[], rightDescriptor: number[], isSame: boolean) => number`
+
+Parameters:
+- `left` - - Left descriptor.
+- `right` - - Right descriptor.
+- `isSame` - - Whether the descriptors are the same index.
+
+Returns: Euclidean distance.
+
+### computeNoveltyScore
+
+`(distanceRow: number[], kNeighbors: number) => number`
+
+Parameters:
+- `distanceRow` - - Distance values for a single genome.
+- `kNeighbors` - - Neighbor count.
+
+Returns: Novelty score.
+
+### getNoveltyBlendFactor
+
+`(noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number`
+
+Parameters:
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: Blend factor for novelty vs. fitness.
+
+### getNoveltyNeighborCount
+
+`(noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number`
+
+Parameters:
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: Number of neighbors to consider.
+
+### runNoveltyBlendAndArchive
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+## neat/neat.evaluate.objectives.utils.ts
+
+### registerEntropyObjective
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+
+Returns: void.
+
+### runAutoEntropyObjectiveInjection
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+### shouldAutoInjectEntropy
+
+`(evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => boolean`
+
+Parameters:
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: Whether entropy objective should be injected.
+
+## neat/neat.evaluate.speciation.utils.ts
+
+### runLightweightSpeciation
+
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: void.
+
+### shouldRunSpeciation
+
+`(evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => boolean`
+
+Parameters:
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Returns: Whether speciation should be run.
 
 ## neat/neat.evaluate.ts
 
@@ -214,66 +663,45 @@ Returns: Promise<void> resolves after evaluation and adaptive updates complete.
 
 ### VARIANCE_INCREASE_THRESHOLD
 
+## neat/neat.evaluate.types.utils.ts
+
+### DiversityStats
+
+Diversity statistics tracked during evaluation.
+
+The values are optional because different evaluations may only compute a
+subset of metrics.
+
+### GenomeForEvaluation
+
+Genome with score, novelty, and clearing capabilities.
+
+This interface describes the minimal genome shape required by evaluation
+helpers. It intentionally stays permissive for compatibility with legacy
+genome variants while documenting the expected properties.
+
+### NeatControllerForEval
+
+NEAT controller interface for evaluation.
+
+This interface models the subset of a NEAT controller used by the evaluation
+helpers. It includes options, population data, and optional adaptive tuning
+hooks.
+
+### NoveltyArchiveEntry
+
+Novelty archive entry with descriptor and novelty score.
+
+Entries store a descriptor vector alongside the computed novelty so the
+archive can seed future novelty calculations.
+
+### ObjectiveDef
+
+Objective definition for multi-objective optimization.
+
+Objectives are registered dynamically to guide evaluation and selection.
+
 ## neat/neat.evaluate.utils.ts
-
-### addGenomeToNoveltyArchive
-
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, descriptor: number[], novelty: number, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => void`
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `descriptor` - - Genome descriptor.
-- `novelty` - - Novelty score.
-- `noveltyOptions` - - Novelty configuration.
-
-Returns: void.
-
-### applyAutoDistanceCoefficientTuning
-
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, autoDistanceCoeffOptions: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; }, connectionVariance: number) => void`
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `autoDistanceCoeffOptions` - - Tuning options.
-- `connectionVariance` - - Variance of connection counts.
-
-Returns: void.
-
-### applyDistanceCoefficientDecrease
-
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `bounds` - - Min/max coefficients.
-- `adjustRate` - - Adjustment rate.
-
-Returns: void.
-
-### applyDistanceCoefficientIncrease
-
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `bounds` - - Min/max coefficients.
-- `adjustRate` - - Adjustment rate.
-
-Returns: void.
-
-### applyNoveltyToPopulation
-
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, descriptors: number[][], distanceMatrix: number[][], kNeighbors: number, blendFactor: number, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => void`
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `descriptors` - - Descriptor vectors for each genome.
-- `distanceMatrix` - - Distance matrix.
-- `kNeighbors` - - Neighbor count.
-- `blendFactor` - - Blend factor.
-- `noveltyOptions` - - Novelty configuration.
-
-Returns: void.
 
 ### AUTO_COEFF_ADJUST_DEFAULT
 
@@ -281,114 +709,11 @@ Returns: void.
 
 ### AUTO_COEFF_MIN_DEFAULT
 
-### blendNoveltyIntoScore
-
-`(genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation, novelty: number, blendFactor: number) => void`
-
-Parameters:
-- `genome` - - Genome to update.
-- `novelty` - - Novelty value.
-- `blendFactor` - - Blend factor.
-
-Returns: void.
-
-### buildDistanceMatrix
-
-`(descriptors: number[][]) => number[][]`
-
-Parameters:
-- `descriptors` - - Descriptor vectors.
-
-Returns: Distance matrix.
-
-### buildNoveltyDescriptors
-
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number[][]`
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `noveltyOptions` - - Novelty configuration.
-
-Returns: Descriptor vectors for each genome.
-
-### clearGenomeStateIfRequested
-
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }, clearAction: (genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => void) => void`
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `evaluationOptions` - - Options object for the current evaluation pass.
-- `clearAction` - - Action that clears a genome's internal state.
-
-Returns: void.
-
 ### COMPAT_MAX_THRESHOLD_DEFAULT
 
 ### COMPAT_MIN_THRESHOLD_DEFAULT
 
 ### COMPAT_THRESHOLD_DEFAULT
-
-### computeDescriptorDistance
-
-`(left: number[], right: number[], isSame: boolean) => number`
-
-Parameters:
-- `left` - - Left descriptor.
-- `right` - - Right descriptor.
-- `isSame` - - Whether the descriptors are the same index.
-
-Returns: Euclidean distance.
-
-### computeMean
-
-`(values: number[]) => number`
-
-Parameters:
-- `values` - - Input values.
-
-Returns: Mean of the values.
-
-### computeNextCompatibilityThreshold
-
-`(entropyCompatOptions: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; }, meanEntropy: number, currentThreshold: number) => number`
-
-Parameters:
-- `entropyCompatOptions` - - Tuning options.
-- `meanEntropy` - - Current mean entropy.
-- `currentThreshold` - - Current compatibility threshold.
-
-Returns: Next compatibility threshold.
-
-### computeNextSharingSigma
-
-`(entropySharingOptions: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; }, currentVarEntropy: number, currentSigma: number) => number`
-
-Parameters:
-- `entropySharingOptions` - - Tuning options.
-- `currentVarEntropy` - - Current variance of entropy.
-- `currentSigma` - - Current sigma value.
-
-Returns: Next sigma value.
-
-### computeNoveltyScore
-
-`(distanceRow: number[], kNeighbors: number) => number`
-
-Parameters:
-- `distanceRow` - - Distance values for a single genome.
-- `kNeighbors` - - Neighbor count.
-
-Returns: Novelty score.
-
-### computeVariance
-
-`(values: number[], meanValue: number) => number`
-
-Parameters:
-- `values` - - Input values.
-- `meanValue` - - Precomputed mean.
-
-Returns: Variance of the values.
 
 ### DISTANCE_COEFF_DEFAULT
 
@@ -401,7 +726,7 @@ subset of metrics.
 
 ### ensureDiversityStatsContainer
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval) => void`
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -434,45 +759,6 @@ This interface describes the minimal genome shape required by evaluation
 helpers. It intentionally stays permissive for compatibility with legacy
 genome variants while documenting the expected properties.
 
-### getDistanceCoefficientBounds
-
-`(autoDistanceCoeffOptions: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; }) => { minCoeff: number; maxCoeff: number; }`
-
-Parameters:
-- `autoDistanceCoeffOptions` - - Tuning options.
-
-Returns: Bounds for coefficients.
-
-### getNoveltyBlendFactor
-
-`(noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number`
-
-Parameters:
-- `noveltyOptions` - - Novelty configuration.
-
-Returns: Blend factor for novelty vs. fitness.
-
-### getNoveltyNeighborCount
-
-`(noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number`
-
-Parameters:
-- `noveltyOptions` - - Novelty configuration.
-
-Returns: Number of neighbors to consider.
-
-### initializeConnectionVarianceBootstrap
-
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, connectionVariance: number, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `connectionVariance` - - Current connection variance.
-- `bounds` - - Min/max coefficients.
-- `adjustRate` - - Adjustment rate.
-
-Returns: void.
-
 ### NeatControllerForEval
 
 NEAT controller interface for evaluation.
@@ -500,18 +786,9 @@ Objective definition for multi-objective optimization.
 
 Objectives are registered dynamically to guide evaluation and selection.
 
-### registerEntropyObjective
-
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval) => void`
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-
-Returns: void.
-
 ### runAutoDistanceCoefficientTuning
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -521,7 +798,7 @@ Returns: void.
 
 ### runAutoEntropyObjectiveInjection
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -531,7 +808,7 @@ Returns: void.
 
 ### runEntropyCompatibilityTuning
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -541,7 +818,7 @@ Returns: void.
 
 ### runEntropySharingTuning
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -551,7 +828,7 @@ Returns: void.
 
 ### runFitnessEvaluation
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => Promise<void>`
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => Promise<void>`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -561,7 +838,7 @@ Returns: Promise<void> after fitness evaluation completes.
 
 ### runLightweightSpeciation
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -571,31 +848,13 @@ Returns: void.
 
 ### runNoveltyBlendAndArchive
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.types.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
 - `evaluationOptions` - - Options object for the current evaluation pass.
 
 Returns: void.
-
-### shouldAutoInjectEntropy
-
-`(evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => boolean`
-
-Parameters:
-- `evaluationOptions` - - Options object for the current evaluation pass.
-
-Returns: Whether entropy objective should be injected.
-
-### shouldRunSpeciation
-
-`(evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => boolean`
-
-Parameters:
-- `evaluationOptions` - - Options object for the current evaluation pass.
-
-Returns: Whether speciation should be run.
 
 ### VARIANCE_DECREASE_THRESHOLD
 
