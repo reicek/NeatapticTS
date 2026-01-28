@@ -145,7 +145,7 @@ export default class Network implements NetworkView {
   private _lastStats: unknown = null;
   private _stochasticDepthSchedule?: (
     step: number,
-    current: number[]
+    current: number[],
   ) => number[];
   private _mixedPrecision: { enabled: boolean; lossScale: number } = {
     enabled: false,
@@ -250,7 +250,7 @@ export default class Network implements NetworkView {
       activationPrecision?: 'f32' | 'f64';
       reuseActivationArrays?: boolean;
       returnTypedActivations?: boolean;
-    }
+    },
   ) {
     // Validate that input and output sizes are provided.
     if (typeof input === 'undefined' || typeof output === 'undefined') {
@@ -391,7 +391,7 @@ export default class Network implements NetworkView {
    */
   pruneToSparsity(
     targetSparsity: number,
-    method: 'magnitude' | 'snip' = 'magnitude'
+    method: 'magnitude' | 'snip' = 'magnitude',
   ) {
     return _pruneToSparsity.call(this, targetSparsity, method);
   }
@@ -405,12 +405,12 @@ export default class Network implements NetworkView {
     } else if (stdDev && Array.isArray(stdDev.perHiddenLayer)) {
       if (!this.layers || this.layers.length < 3)
         throw new Error(
-          'Per-hidden-layer weight noise requires a layered network with at least one hidden layer'
+          'Per-hidden-layer weight noise requires a layered network with at least one hidden layer',
         );
       const hiddenLayerCount = this.layers.length - 2;
       if (stdDev.perHiddenLayer.length !== hiddenLayerCount)
         throw new Error(
-          `Expected ${hiddenLayerCount} std dev entries (one per hidden layer), got ${stdDev.perHiddenLayer.length}`
+          `Expected ${hiddenLayerCount} std dev entries (one per hidden layer), got ${stdDev.perHiddenLayer.length}`,
         );
       if (stdDev.perHiddenLayer.some((s) => s < 0))
         throw new Error('Weight noise std devs must be >= 0');
@@ -443,7 +443,7 @@ export default class Network implements NetworkView {
     return this._trainingStep;
   }
   get lastSkippedLayers(): number[] {
-    return ((this as unknown) as NetworkRuntimeProps)._lastSkippedLayers || [];
+    return (this as unknown as NetworkRuntimeProps)._lastSkippedLayers || [];
   }
   snapshotRNG(): import('./network/network.deterministic').RNGSnapshot {
     return _snapshotRNG.call(this);
@@ -458,7 +458,7 @@ export default class Network implements NetworkView {
     _setRNGState.call(this, state);
   }
   setStochasticDepthSchedule(
-    fn: (step: number, current: number[]) => number[]
+    fn: (step: number, current: number[]) => number[],
   ) {
     this._stochasticDepthSchedule = fn;
   }
@@ -480,7 +480,7 @@ export default class Network implements NetworkView {
     const hiddenLayerCount = Math.max(0, this.layers.length - 2);
     if (survival.length !== hiddenLayerCount)
       throw new Error(
-        `Expected ${hiddenLayerCount} survival probabilities for hidden layers, got ${survival.length}`
+        `Expected ${hiddenLayerCount} survival probabilities for hidden layers, got ${survival.length}`,
       );
     this._stochasticDepth = survival.slice();
   }
@@ -537,14 +537,14 @@ export default class Network implements NetworkView {
   activate(
     input: number[],
     training = false,
-    _maxActivationDepth = 1000 // eslint-disable-line @typescript-eslint/no-unused-vars
+    _maxActivationDepth = 1000, // eslint-disable-line @typescript-eslint/no-unused-vars
   ): number[] {
     if (this._enforceAcyclic && this._topoDirty) this._computeTopoOrder();
     if (!Array.isArray(input) || input.length !== this.input) {
       throw new Error(
         `Input size mismatch: expected ${this.input}, got ${
           input ? input.length : 'undefined'
-        }`
+        }`,
       );
     }
     // Fast slab path (inference-only, ungated, acyclic, no stochastic features)
@@ -561,12 +561,12 @@ export default class Network implements NetworkView {
     // Check for empty or corrupted network structure
     if (!this.nodes || this.nodes.length === 0) {
       throw new Error(
-        'Network structure is corrupted or empty. No nodes found.'
+        'Network structure is corrupted or empty. No nodes found.',
       );
     }
 
     const output: ActivationArray = outputArr;
-    ((this as unknown) as NetworkRuntimeProps)._lastSkippedLayers = [];
+    (this as unknown as NetworkRuntimeProps)._lastSkippedLayers = [];
     const stats = {
       droppedHiddenNodes: 0,
       totalHiddenNodes: 0,
@@ -584,11 +584,11 @@ export default class Network implements NetworkView {
       if (dynamicStd > 0 || this._weightNoisePerHidden.length > 0) {
         for (const c of this.connections) {
           if (
-            ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise !=
+            (c as unknown as ConnectionWeightNoiseProps)._origWeightNoise !=
             null
           )
             continue;
-          ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise =
+          (c as unknown as ConnectionWeightNoiseProps)._origWeightNoise =
             c.weight;
           let std = dynamicStd;
           if (this._weightNoisePerHidden.length > 0 && this.layers) {
@@ -611,10 +611,10 @@ export default class Network implements NetworkView {
           if (std > 0) {
             const noise = std * Network._gaussianRand(this._rand);
             c.weight += noise;
-            ((c as unknown) as ConnectionWeightNoiseProps)._wnLast = noise;
+            (c as unknown as ConnectionWeightNoiseProps)._wnLast = noise;
             appliedWeightNoise = true;
           } else {
-            ((c as unknown) as ConnectionWeightNoiseProps)._wnLast = 0;
+            (c as unknown as ConnectionWeightNoiseProps)._wnLast = 0;
           }
         }
       }
@@ -627,7 +627,7 @@ export default class Network implements NetworkView {
     ) {
       const updated = this._stochasticDepthSchedule(
         this._trainingStep,
-        this._stochasticDepth.slice()
+        this._stochasticDepth.slice(),
       );
       if (
         Array.isArray(updated) &&
@@ -672,9 +672,7 @@ export default class Network implements NetworkView {
           }
         }
         if (skip) {
-          ((this as unknown) as NetworkRuntimeProps)._lastSkippedLayers!.push(
-            li
-          );
+          (this as unknown as NetworkRuntimeProps)._lastSkippedLayers!.push(li);
           stats.skippedLayers.push(li);
           // identity: acts unchanged
           continue;
@@ -764,11 +762,11 @@ export default class Network implements NetworkView {
         for (let ci = 0; ci < this.connections.length; ci++) {
           const c = this.connections[ci];
           if (
-            ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise !=
+            (c as unknown as ConnectionWeightNoiseProps)._origWeightNoise !=
             null
           )
             continue; // already perturbed in recursive call
-          ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise =
+          (c as unknown as ConnectionWeightNoiseProps)._origWeightNoise =
             c.weight;
           const noise =
             this._weightNoiseStd * Network._gaussianRand(this._rand);
@@ -791,47 +789,49 @@ export default class Network implements NetworkView {
         for (const conn of this.connections) {
           const mask = this._rand() < this._dropConnectProb ? 0 : 1;
           if (mask === 0) stats.droppedConnections++;
-          ((conn as unknown) as ConnectionWeightNoiseProps).dcMask = mask;
+          (conn as unknown as ConnectionWeightNoiseProps).dcMask = mask;
           if (mask === 0) {
             if (
-              ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight ==
+              (conn as unknown as ConnectionWeightNoiseProps)._origWeight ==
               null
             )
-              ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight =
+              (conn as unknown as ConnectionWeightNoiseProps)._origWeight =
                 conn.weight;
             conn.weight = 0;
           } else if (
-            ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight !=
-            null
+            (conn as unknown as ConnectionWeightNoiseProps)._origWeight != null
           ) {
-            conn.weight = ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight!;
-            delete ((conn as unknown) as ConnectionWeightNoiseProps)
-              ._origWeight;
+            conn.weight = (
+              conn as unknown as ConnectionWeightNoiseProps
+            )._origWeight!;
+            delete (conn as unknown as ConnectionWeightNoiseProps)._origWeight;
           }
         }
       } else {
         // restore any temporarily zeroed weights
         for (const conn of this.connections) {
           if (
-            ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight !=
-            null
+            (conn as unknown as ConnectionWeightNoiseProps)._origWeight != null
           ) {
-            conn.weight = ((conn as unknown) as ConnectionWeightNoiseProps)._origWeight!;
-            delete ((conn as unknown) as ConnectionWeightNoiseProps)
-              ._origWeight;
+            conn.weight = (
+              conn as unknown as ConnectionWeightNoiseProps
+            )._origWeight!;
+            delete (conn as unknown as ConnectionWeightNoiseProps)._origWeight;
           }
-          ((conn as unknown) as ConnectionWeightNoiseProps).dcMask = 1;
+          (conn as unknown as ConnectionWeightNoiseProps).dcMask = 1;
         }
       }
       // Restore weight noise
       if (training && appliedWeightNoise) {
         for (const c of this.connections) {
           if (
-            ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise !=
+            (c as unknown as ConnectionWeightNoiseProps)._origWeightNoise !=
             null
           ) {
-            c.weight = ((c as unknown) as ConnectionWeightNoiseProps)._origWeightNoise!;
-            delete ((c as unknown) as ConnectionWeightNoiseProps)
+            c.weight = (
+              c as unknown as ConnectionWeightNoiseProps
+            )._origWeightNoise!;
+            delete (c as unknown as ConnectionWeightNoiseProps)
               ._origWeightNoise;
           }
         }
@@ -879,7 +879,7 @@ export default class Network implements NetworkView {
   activateRaw(
     input: number[],
     training = false,
-    maxActivationDepth = 1000
+    maxActivationDepth = 1000,
   ): number[] | ActivationArray {
     return _activateRaw.call(this, input, training, maxActivationDepth);
   }
@@ -924,12 +924,12 @@ export default class Network implements NetworkView {
     update: boolean,
     target: number[],
     regularization: number = 0, // L2 regularization factor (lambda)
-    costDerivative?: (target: number, output: number) => number
+    costDerivative?: (target: number, output: number) => number,
   ): void {
     // Validate that the target array matches the network's output size.
     if (!target || target.length !== this.output) {
       throw new Error(
-        'Output target length should match network output length'
+        'Output target length should match network output length',
       );
     }
 
@@ -945,22 +945,24 @@ export default class Network implements NetworkView {
       if (costDerivative) {
         // Note: costDerivative parameter not currently supported by Node.propagate
         // This code path may be deprecated or requires Node.propagate signature update
-        ((this.nodes[i] as unknown) as {
-          propagate: (
-            rate: number,
-            momentum: number,
-            update: boolean,
-            regularization: number,
-            target: number,
-            costDerivative: (target: number, output: number) => number
-          ) => void;
-        }).propagate(
+        (
+          this.nodes[i] as unknown as {
+            propagate: (
+              rate: number,
+              momentum: number,
+              update: boolean,
+              regularization: number,
+              target: number,
+              costDerivative: (target: number, output: number) => number,
+            ) => void;
+          }
+        ).propagate(
           rate,
           momentum,
           update,
           regularization,
           target[--targetIndex],
-          costDerivative
+          costDerivative,
         );
       } else {
         this.nodes[i].propagate(
@@ -968,7 +970,7 @@ export default class Network implements NetworkView {
           momentum,
           update,
           regularization,
-          target[--targetIndex]
+          target[--targetIndex],
         );
       }
     }
@@ -1123,7 +1125,7 @@ export default class Network implements NetworkView {
   // Training is implemented in network.training.ts; this wrapper keeps public API stable.
   train(
     set: { input: number[]; output: number[] }[],
-    options: unknown
+    options: unknown,
   ): { error: number; iterations: number; time: number } {
     return _trainImpl(this, set, options as TrainingOptions);
   }
@@ -1161,7 +1163,7 @@ export default class Network implements NetworkView {
   static adjustRateForAccumulation(
     rate: number,
     accumulationSteps: number,
-    reduction: 'average' | 'sum'
+    reduction: 'average' | 'sum',
   ) {
     if (reduction === 'sum' && accumulationSteps > 1)
       return rate / accumulationSteps;
@@ -1171,7 +1173,7 @@ export default class Network implements NetworkView {
   // Evolution wrapper delegates to network/network.evolve.ts implementation.
   async evolve(
     set: { input: number[]; output: number[] }[],
-    options: Record<string, unknown> | undefined
+    options: Record<string, unknown> | undefined,
   ): Promise<{ error: number; iterations: number; time: number }> {
     const { evolveNetwork } = await import('./network/network.evolve');
     return evolveNetwork.call(this, set, options as never);
@@ -1189,7 +1191,7 @@ export default class Network implements NetworkView {
    */
   test(
     set: { input: number[]; output: number[] }[],
-    cost?: (target: number[], output: number[]) => number
+    cost?: (target: number[], output: number[]) => number,
   ): { error: number; time: number } {
     // Dataset dimension validation
     if (!Array.isArray(set) || set.length === 0) {
@@ -1200,7 +1202,7 @@ export default class Network implements NetworkView {
         throw new Error(
           `Test sample input size mismatch: expected ${this.input}, got ${
             sample.input ? sample.input.length : 'undefined'
-          }`
+          }`,
         );
       }
       if (
@@ -1210,7 +1212,7 @@ export default class Network implements NetworkView {
         throw new Error(
           `Test sample output size mismatch: expected ${this.output}, got ${
             sample.output ? sample.output.length : 'undefined'
-          }`
+          }`,
         );
       }
     }
@@ -1252,7 +1254,7 @@ export default class Network implements NetworkView {
     string[],
     import('./network/network.serialize').SerializedConnection[],
     number,
-    number
+    number,
   ] {
     return _serialize.call(this);
   }
@@ -1277,11 +1279,11 @@ export default class Network implements NetworkView {
           string[],
           { from: number; to: number; weight: number; gater: number | null }[],
           number,
-          number
+          number,
         ]
       | unknown[],
     inputSize?: number,
-    outputSize?: number
+    outputSize?: number,
   ): Network {
     return _deserialize(data as never, inputSize, outputSize);
   }
@@ -1295,7 +1297,7 @@ export default class Network implements NetworkView {
    */
   /** Verbose JSON serializer delegate */
   toJSON(): Record<string, unknown> {
-    return (_toJSONImpl.call(this) as unknown) as Record<string, unknown>;
+    return _toJSONImpl.call(this) as unknown as Record<string, unknown>;
   }
 
   /**
@@ -1331,7 +1333,7 @@ export default class Network implements NetworkView {
   static crossOver(
     network1: Network,
     network2: Network,
-    equal: boolean = false
+    equal: boolean = false,
   ): Network {
     return _crossOver(network1, network2, equal);
   }
@@ -1383,19 +1385,19 @@ export default class Network implements NetworkView {
   static createMLP(
     inputCount: number,
     hiddenCounts: number[],
-    outputCount: number
+    outputCount: number,
   ): Network {
     // Create all nodes
     const inputNodes = Array.from(
       { length: inputCount },
-      () => new Node('input')
+      () => new Node('input'),
     );
     const hiddenLayers: Node[][] = hiddenCounts.map((count) =>
-      Array.from({ length: count }, () => new Node('hidden'))
+      Array.from({ length: count }, () => new Node('hidden')),
     );
     const outputNodes = Array.from(
       { length: outputCount },
-      () => new Node('output')
+      () => new Node('output'),
     );
     // Flatten all nodes in topological order
     const allNodes = [...inputNodes, ...hiddenLayers.flat(), ...outputNodes];

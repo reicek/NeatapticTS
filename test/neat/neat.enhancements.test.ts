@@ -23,14 +23,14 @@ describe('Adaptive mutation rates', () => {
     await neat.evolve(); // initializes _mutRate
     type GenomeWithMutationRate = Network & { _mutRate?: number };
     await neat.evolve(); // adapts
-    const secondGenerationRates = (neat.population as GenomeWithMutationRate[]).map(
-      (genome) => genome._mutRate
-    );
+    const secondGenerationRates = (
+      neat.population as GenomeWithMutationRate[]
+    ).map((genome) => genome._mutRate);
     const mutationChanged = secondGenerationRates.some(
       (rate) =>
         rate !== undefined &&
         Math.abs(rate - (neat.options.adaptiveMutation?.initialRate ?? 0.5)) >
-          1e-6
+          1e-6,
     );
     // ensure at least one genome drifted away from the baseline mutation rate
     expect(mutationChanged).toBe(true);
@@ -58,13 +58,13 @@ describe('Novelty search blending', () => {
           k: 3,
           blendFactor: 0.5,
         },
-      }
+      },
     );
     await neat.evaluate();
     type GenomeWithNovelty = Network & { _novelty?: number };
     const noveltyPop = neat.population as GenomeWithNovelty[];
     const annotated = noveltyPop.filter(
-      (genome) => genome._novelty !== undefined
+      (genome) => genome._novelty !== undefined,
     );
     expect(annotated.length).toBeGreaterThan(0);
   });

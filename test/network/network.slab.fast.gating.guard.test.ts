@@ -8,7 +8,7 @@ import Node from '../../src/architecture/node';
 
 const runFastSlabActivate = (network: Network, values: number[]): number[] => {
   const fastSlabActivate = Reflect.get(network, 'fastSlabActivate') as (
-    input: number[]
+    input: number[],
   ) => number[];
   return fastSlabActivate.call(network, values);
 };
@@ -40,7 +40,7 @@ describe('network.slab.fast.gating.guard', () => {
     // Assert: outputs equal (fallback used) and gating array present
     expect(
       JSON.stringify(fastOutput) === JSON.stringify(legacyOutput) &&
-        getGateCollection(networkUnderTest).length > 0
+        getGateCollection(networkUnderTest).length > 0,
     ).toBe(true);
   });
 });

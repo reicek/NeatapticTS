@@ -54,7 +54,7 @@ describe('Standalone Functionality', () => {
     jest.setTimeout(15000);
     const runStandaloneTests = (
       architectureName: string,
-      createNetwork: () => Network
+      createNetwork: () => Network,
     ) => {
       describe(`Scenario: ${architectureName}`, () => {
         let original: Network;
@@ -76,7 +76,7 @@ describe('Standalone Functionality', () => {
           } catch (error: unknown) {
             console.error(
               `Error during standalone setup for ${architectureName}. Code:\n`,
-              strippedCode
+              strippedCode,
             );
             throw error;
           }
@@ -111,37 +111,37 @@ describe('Standalone Functionality', () => {
       Architect.perceptron(
         Math.floor(Math.random() * 2 + 1),
         Math.floor(Math.random() * 3 + 1),
-        Math.floor(Math.random() * 2 + 1)
-      )
+        Math.floor(Math.random() * 2 + 1),
+      ),
     );
     runStandaloneTests(
       'Basic Network',
       () =>
         new Network(
           Math.floor(Math.random() * 2 + 1),
-          Math.floor(Math.random() * 2 + 1)
-        )
+          Math.floor(Math.random() * 2 + 1),
+        ),
     );
     runStandaloneTests('LSTM', () =>
       Architect.lstm(
         Math.floor(Math.random() * 2 + 1),
         Math.floor(Math.random() * 3 + 1),
-        Math.floor(Math.random() * 2 + 1)
-      )
+        Math.floor(Math.random() * 2 + 1),
+      ),
     );
     runStandaloneTests('GRU', () =>
       Architect.gru(
         Math.floor(Math.random() * 2 + 1),
         Math.floor(Math.random() * 2 + 1),
-        Math.floor(Math.random() * 2 + 1)
-      )
+        Math.floor(Math.random() * 2 + 1),
+      ),
     );
     runStandaloneTests('Random', () =>
       Architect.random(
         Math.floor(Math.random() * 2 + 1),
         Math.floor(Math.random() * 4 + 1),
-        Math.floor(Math.random() * 2 + 1)
-      )
+        Math.floor(Math.random() * 2 + 1),
+      ),
     );
     runStandaloneTests('NARX', () =>
       Architect.narx(
@@ -149,11 +149,11 @@ describe('Standalone Functionality', () => {
         Math.floor(Math.random() * 2 + 1),
         Math.floor(Math.random() * 2 + 1),
         Math.floor(Math.random() * 2 + 1),
-        Math.floor(Math.random() * 2 + 1)
-      )
+        Math.floor(Math.random() * 2 + 1),
+      ),
     );
     runStandaloneTests('Hopfield', () =>
-      Architect.hopfield(Math.floor(Math.random() * 3 + 1))
+      Architect.hopfield(Math.floor(Math.random() * 3 + 1)),
     );
     describe('Scenario: network with no output nodes', () => {
       it('should throw or return a function that returns an empty array', () => {
@@ -162,7 +162,7 @@ describe('Standalone Functionality', () => {
         net.nodes = net.nodes.filter((n) => n.type !== 'output');
         // Act & Assert
         expect(() => net.standalone()).toThrow(
-          'Cannot create standalone function: network has no output nodes.'
+          'Cannot create standalone function: network has no output nodes.',
         );
       });
     });
@@ -199,7 +199,7 @@ describe('Standalone Functionality', () => {
         const act = () => net.standalone();
         // Assert
         expect(act).toThrow(
-          'Cannot create standalone function: network has no output nodes.'
+          'Cannot create standalone function: network has no output nodes.',
         );
       });
     });
@@ -296,7 +296,7 @@ describe('Standalone Functionality', () => {
           const nanOutput = standaloneFn(nanInput);
           // Assert
           nanOutput.forEach((val: number) =>
-            expect(Number.isNaN(val)).toBe(true)
+            expect(Number.isNaN(val)).toBe(true),
           );
         });
       });
@@ -309,7 +309,7 @@ describe('Standalone Functionality', () => {
       // Arrange
       const network = Architect.perceptron(10, 20, 5);
       const standaloneFn = new Function(
-        `return ${stripCoverage(network.standalone())}`
+        `return ${stripCoverage(network.standalone())}`,
       )();
       const inputs = Array(10)
         .fill(0)

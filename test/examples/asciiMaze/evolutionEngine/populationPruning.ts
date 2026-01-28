@@ -92,7 +92,7 @@ export const applySimplifyPruningToPopulation = ({
       pruneWeakConnectionsForGenome(
         genome,
         simplifyStrategy ?? '',
-        pruneFraction
+        pruneFraction,
       );
     } catch {
       // Swallow per-genome errors to keep simplify a best-effort maintenance step.
@@ -302,7 +302,7 @@ export const centerOutputBiases = ({
 const pruneWeakConnectionsForGenome = (
   genome: Network,
   simplifyStrategy: string,
-  simplifyPruneFraction: number
+  simplifyPruneFraction: number,
 ): void => {
   try {
     if (!genome || !Array.isArray(genome.connections)) return; // Step 1: validate genome structure
@@ -329,13 +329,13 @@ const pruneWeakConnectionsForGenome = (
     // Step 4: Order / partition candidates per strategy.
     candidateConnections = sortCandidatesByStrategy(
       candidateConnections,
-      simplifyStrategy
+      simplifyStrategy,
     );
 
     // Step 5: Disable smallest enabled connections.
     disableSmallestEnabledConnections(
       candidateConnections,
-      Math.min(pruneTarget, candidateConnections.length)
+      Math.min(pruneTarget, candidateConnections.length),
     );
   } catch {
     // Swallow per-genome pruning errors (non-critical maintenance operation)
@@ -404,7 +404,7 @@ const sortCandidatesByStrategy = (
   // Type assertion: connections are dynamic objects with weight/gater properties
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   candidateConnections: any[],
-  strategyKey: string
+  strategyKey: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any[] => {
   // Step 1: Validate input.
@@ -441,7 +441,7 @@ const sortCandidatesByStrategy = (
     insertionSortByAbsWeight(
       candidateConnections,
       partitionWriteIndex,
-      candidateConnections.length
+      candidateConnections.length,
     );
     return candidateConnections;
   }
@@ -450,7 +450,7 @@ const sortCandidatesByStrategy = (
   insertionSortByAbsWeight(
     candidateConnections,
     0,
-    candidateConnections.length
+    candidateConnections.length,
   );
   return candidateConnections;
 };
@@ -475,7 +475,7 @@ const insertionSortByAbsWeight = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   connectionsBuffer: any[],
   startIndex: number,
-  endExclusive: number
+  endExclusive: number,
 ): void => {
   // Step 1: Defensive validation & clamp bounds.
   if (!Array.isArray(connectionsBuffer) || connectionsBuffer.length === 0)
@@ -492,7 +492,7 @@ const insertionSortByAbsWeight = (
     // 2.1: Extract the candidate and compute its absolute weight (treat non-finite as 0).
     const candidate = connectionsBuffer[scanIndex];
     const candidateAbs = Math.abs(
-      candidate && Number.isFinite(candidate.weight) ? candidate.weight : 0
+      candidate && Number.isFinite(candidate.weight) ? candidate.weight : 0,
     );
 
     // 2.2: Shift larger elements one slot to the right to make room for the candidate.
@@ -500,7 +500,7 @@ const insertionSortByAbsWeight = (
     while (writePos >= from) {
       const probe = connectionsBuffer[writePos];
       const probeAbs = Math.abs(
-        probe && Number.isFinite(probe.weight) ? probe.weight : 0
+        probe && Number.isFinite(probe.weight) ? probe.weight : 0,
       );
       // Preserve stability: stop when probe <= candidate (no swap for equals).
       if (probeAbs <= candidateAbs) break;
@@ -532,7 +532,7 @@ const disableSmallestEnabledConnections = (
   // Type assertion: buffer holds connection objects with enabled property
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   candidateConnections: any[],
-  pruneCount: number
+  pruneCount: number,
 ): void => {
   // Step 0: Defensive validation & normalization.
   if (!Array.isArray(candidateConnections) || !candidateConnections.length)
@@ -567,7 +567,7 @@ const disableSmallestEnabledConnections = (
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (firstConnection: any, secondConnection: any) =>
             Math.abs(firstConnection?.weight || 0) -
-            Math.abs(secondConnection?.weight || 0)
+            Math.abs(secondConnection?.weight || 0),
         )
         .forEach((sortedConnection, sortedIndex) => {
           candidateConnections[sortedIndex] = sortedConnection;
@@ -591,12 +591,12 @@ const disableSmallestEnabledConnections = (
     let minAbsWeight = Math.abs(
       candidateConnections[0] && Number.isFinite(candidateConnections[0].weight)
         ? candidateConnections[0].weight
-        : 0
+        : 0,
     );
     for (let probeIndex = 1; probeIndex < activeSliceLength; probeIndex++) {
       const probe = candidateConnections[probeIndex];
       const probeAbs = Math.abs(
-        probe && Number.isFinite(probe.weight) ? probe.weight : 0
+        probe && Number.isFinite(probe.weight) ? probe.weight : 0,
       );
       if (probeAbs < minAbsWeight) {
         minAbsWeight = probeAbs;
@@ -636,7 +636,7 @@ const collectNodeIndicesByType = (
   // Type assertion: nodes are dynamic objects with type property
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   nodes: any[] | undefined,
-  nodeType: string
+  nodeType: string,
 ): number => {
   // Step 1: Defensive validation & fast exit.
   if (!Array.isArray(nodes) || nodes.length === 0) return 0;

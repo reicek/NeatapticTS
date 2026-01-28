@@ -41,7 +41,7 @@ let freshCount = 0;
 const resetNode = (
   node: Node,
   type?: string,
-  rng: () => number = Math.random
+  rng: () => number = Math.random,
 ): void => {
   // Preserve or update type
   if (type) node.type = type;

@@ -14,7 +14,7 @@ export class NetworkRefinement {
 
   static #ensureScratchCapacity(
     scratch: Float32Array,
-    minLength: number
+    minLength: number,
   ): Float32Array {
     if (scratch.length < minLength) {
       let capacity = scratch.length || 1;
@@ -87,28 +87,30 @@ export class NetworkRefinement {
     for (let iter = 0; iter < iterations; iter++) {
       for (const { input, output } of trainingSet) {
         // Prepare pooled scratch buffers for this sample to avoid allocations.
-        NetworkRefinement.#INPUT_SCRATCH = NetworkRefinement.#ensureScratchCapacity(
-          NetworkRefinement.#INPUT_SCRATCH,
-          input.length
-        );
-        NetworkRefinement.#OUTPUT_SCRATCH = NetworkRefinement.#ensureScratchCapacity(
-          NetworkRefinement.#OUTPUT_SCRATCH,
-          output.length
-        );
+        NetworkRefinement.#INPUT_SCRATCH =
+          NetworkRefinement.#ensureScratchCapacity(
+            NetworkRefinement.#INPUT_SCRATCH,
+            input.length,
+          );
+        NetworkRefinement.#OUTPUT_SCRATCH =
+          NetworkRefinement.#ensureScratchCapacity(
+            NetworkRefinement.#OUTPUT_SCRATCH,
+            output.length,
+          );
 
         NetworkRefinement.#INPUT_SCRATCH.set(input);
         NetworkRefinement.#OUTPUT_SCRATCH.set(output);
 
         // Activate the network with the input sample (best-effort).
         const activationInput = Array.from(
-          NetworkRefinement.#INPUT_SCRATCH.subarray(0, input.length)
+          NetworkRefinement.#INPUT_SCRATCH.subarray(0, input.length),
         );
         try {
           networkToRefine.activate(activationInput);
         } catch (error: unknown) {
           NetworkRefinement.#logDebug(
             'Activation failed during refinement:',
-            error
+            error,
           );
         }
 
@@ -118,7 +120,7 @@ export class NetworkRefinement {
           networkToRefine,
           learningRate,
           momentum,
-          NetworkRefinement.#OUTPUT_SCRATCH.subarray(0, output.length)
+          NetworkRefinement.#OUTPUT_SCRATCH.subarray(0, output.length),
         );
       }
     }
@@ -135,7 +137,7 @@ export class NetworkRefinement {
     net: Network,
     learningRate: number,
     momentum: number,
-    target: ArrayLike<number>
+    target: ArrayLike<number>,
   ): boolean {
     try {
       // `propagate` is a concrete implementation detail on `Network` instances.

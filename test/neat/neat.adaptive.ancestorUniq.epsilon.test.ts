@@ -1,5 +1,7 @@
 import Neat from '../../src/neat';
 import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
+import { createTelemetryEntryBase } from '../../src/neat/neat.telemetry';
+import type { TelemetryEntry } from '../../src/neat/neat.types';
 
 /** Tests ancestor uniqueness adaptive epsilon adjustments (both directions). */
 describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
@@ -23,13 +25,23 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
     });
     test('epsilon increases when below low threshold', async () => {
       // Arrange: fake telemetry with low ancestor uniqueness
-      ((neat as unknown) as {
-        _telemetry: Array<Record<string, unknown>>;
-      })._telemetry.push({ lineage: { ancestorUniq: 0.1 } });
-      const { applyAncestorUniqAdaptive } = await import(
-        '../../src/neat/neat.adaptive'
-      );
-      applyAncestorUniqAdaptive.call((neat as unknown) as NeatLikeWithAdaptive);
+      (
+        neat as unknown as {
+          _telemetry: TelemetryEntry[];
+        }
+      )._telemetry.push({
+        ...createTelemetryEntryBase(0, 0, 1),
+        lineage: {
+          parents: [],
+          depthBest: 0,
+          meanDepth: 0,
+          inbreeding: 0,
+          ancestorUniq: 0.1,
+        },
+      });
+      const { applyAncestorUniqAdaptive } =
+        await import('../../src/neat/neat.adaptive');
+      applyAncestorUniqAdaptive.call(neat as unknown as NeatLikeWithAdaptive);
       // Act: capture epsilon
       const eps = neat.options.multiObjective.dominanceEpsilon;
       // Assert: epsilon moved upwards
@@ -56,13 +68,23 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
     });
     test('epsilon decreases when above high threshold', async () => {
       // Arrange: telemetry with high ancestor uniqueness
-      ((neat as unknown) as {
-        _telemetry: Array<Record<string, unknown>>;
-      })._telemetry.push({ lineage: { ancestorUniq: 0.9 } });
-      const { applyAncestorUniqAdaptive } = await import(
-        '../../src/neat/neat.adaptive'
-      );
-      applyAncestorUniqAdaptive.call((neat as unknown) as NeatLikeWithAdaptive);
+      (
+        neat as unknown as {
+          _telemetry: TelemetryEntry[];
+        }
+      )._telemetry.push({
+        ...createTelemetryEntryBase(0, 0, 1),
+        lineage: {
+          parents: [],
+          depthBest: 0,
+          meanDepth: 0,
+          inbreeding: 0,
+          ancestorUniq: 0.9,
+        },
+      });
+      const { applyAncestorUniqAdaptive } =
+        await import('../../src/neat/neat.adaptive');
+      applyAncestorUniqAdaptive.call(neat as unknown as NeatLikeWithAdaptive);
       // Act: capture epsilon
       const eps = neat.options.multiObjective.dominanceEpsilon;
       // Assert: epsilon decreased (clamped to non-negative)

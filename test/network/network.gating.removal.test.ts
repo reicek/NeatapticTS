@@ -83,7 +83,7 @@ describe('Network.gating & removal', () => {
       const inboundConnection = net.connect(net.nodes[0], hidden)[0];
       const outboundConnection = net.connect(
         hidden,
-        net.nodes[net.nodes.length - 1]
+        net.nodes[net.nodes.length - 1],
       )[0];
       net.gate(net.nodes[0], inboundConnection);
       net.gate(net.nodes[net.nodes.length - 1], outboundConnection);

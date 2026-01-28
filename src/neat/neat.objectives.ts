@@ -1,18 +1,12 @@
 import type { ObjectiveDescriptor, GenomeLike } from './neat.types';
-
-/**
- * Minimal interface for NEAT instances using objective management.
- */
-interface NeatLikeWithObjectives {
-  options: {
-    multiObjective?: {
-      enabled?: boolean;
-      objectives?: ObjectiveDescriptor[];
-    };
-  };
-  _objectivesList?: ObjectiveDescriptor[];
-  _suppressFitnessObjective?: boolean;
-}
+import {
+  collectDefaultObjectives,
+  collectUserObjectives,
+  ensureMultiObjectiveOptions,
+  ensureObjectivesList,
+  replaceObjectiveByKey,
+  type NeatLikeWithObjectives,
+} from './neat.objectives.utils';
 
 /**
  * Build and return the list of registered objectives for this NEAT instance.
@@ -36,9 +30,9 @@ interface NeatLikeWithObjectives {
  *   fitness objective (unless suppressed).
  */
 export function _getObjectives(
-  this: NeatLikeWithObjectives
+  this: NeatLikeWithObjectives,
 ): ObjectiveDescriptor[] {
-  // Return cached objectives list if already computed
+  // Step 1: Reuse cached objectives when available.
   if (this._objectivesList) return this._objectivesList;
 
   /**
@@ -51,47 +45,14 @@ export function _getObjectives(
    */
   const objectivesList: ObjectiveDescriptor[] = [];
 
-  // Step 1: Add the default single-objective 'fitness' unless explicitly suppressed
-  if (!this._suppressFitnessObjective) {
-    objectivesList.push({
-      key: 'fitness',
-      direction: 'max',
-      /**
-       * Default accessor extracts the `score` property from a genome.
-       *
-       * @example
-       * ```ts
-       * // genome.score is used as the fitness metric by default
-       * const value = defaultAccessor(genome);
-       * ```
-       */
-      accessor: (genome: GenomeLike) => {
-        interface GenomeWithScore {
-          score?: number;
-        }
-        return (genome as GenomeWithScore).score || 0;
-      },
-    });
-  }
+  // Step 2: Collect default and user-registered objectives.
+  const defaultObjectives = collectDefaultObjectives(this);
+  const userObjectives = collectUserObjectives(this);
 
-  // Step 2: If multi-objective is enabled and objectives array exists, append them
-  if (
-    this.options.multiObjective?.enabled &&
-    Array.isArray(this.options.multiObjective.objectives)
-  ) {
-    for (const candidateObjective of this.options.multiObjective.objectives) {
-      // Validate shape before accepting
-      if (
-        !candidateObjective ||
-        !candidateObjective.key ||
-        typeof candidateObjective.accessor !== 'function'
-      )
-        continue;
-      objectivesList.push(candidateObjective);
-    }
-  }
+  // Step 3: Fold into the working list in deterministic order.
+  objectivesList.push(...defaultObjectives, ...userObjectives);
 
-  // Cache the computed objectives list for subsequent calls
+  // Step 4: Cache and return the computed objectives list.
   this._objectivesList = objectivesList;
   return objectivesList;
 }
@@ -123,29 +84,26 @@ export function registerObjective(
   this: NeatLikeWithObjectives,
   key: string,
   direction: 'min' | 'max',
-  accessor: (genome: GenomeLike) => number
+  accessor: (genome: GenomeLike) => number,
 ) {
-  // Ensure multi-objective container exists and is enabled
-  if (!this.options.multiObjective)
-    this.options.multiObjective = { enabled: true };
+  // Step 1: Ensure the multi-objective container is initialized.
+  const multiObjectiveOptions = ensureMultiObjectiveOptions(this);
 
-  /**
-   * Convenience reference to multi-objective related options on `this`.
-   */
-  const multiObjectiveOptions = this.options.multiObjective;
+  // Step 2: Ensure the objectives list exists.
+  const objectivesList = ensureObjectivesList(multiObjectiveOptions);
 
-  // Ensure the objectives array exists
-  if (!multiObjectiveOptions.objectives) multiObjectiveOptions.objectives = [];
-
-  // Step: remove any existing objective with the same key (replace semantics)
-  multiObjectiveOptions.objectives = multiObjectiveOptions.objectives.filter(
-    (existingObjective) => existingObjective.key !== key
+  // Step 3: Replace any existing objective with the same key.
+  const updatedObjectives = replaceObjectiveByKey(
+    objectivesList,
+    key,
+    direction,
+    accessor,
   );
 
-  // Step: push new objective descriptor
-  multiObjectiveOptions.objectives.push({ key, direction, accessor });
+  // Step 4: Persist the updated list.
+  multiObjectiveOptions.objectives = updatedObjectives;
 
-  // Invalidate cached list so callers will pick up the change
+  // Step 5: Invalidate cached list so callers will pick up the change.
   this._objectivesList = undefined;
 }
 

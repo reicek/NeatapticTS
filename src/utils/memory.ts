@@ -156,13 +156,13 @@ export type SlabAllocStats = { fresh: number; pooled: number } | null;
  * @returns MemoryStats heuristic snapshot.
  */
 export const memoryStats = (
-  targetNetworks?: NetworkView | NetworkView[]
+  targetNetworks?: NetworkView | NetworkView[],
 ): MemoryStats => {
   const networks: NetworkView[] = Array.isArray(targetNetworks)
     ? targetNetworks
     : targetNetworks
-    ? [targetNetworks]
-    : _trackedNetworks;
+      ? [targetNetworks]
+      : _trackedNetworks;
 
   let totalConnections = 0;
   let totalNodes = 0;
@@ -253,13 +253,15 @@ export const memoryStats = (
   try {
     // Guarded access to browser performance.memory (non-standard in some envs)
     if (typeof performance !== 'undefined' && 'memory' in performance) {
-      const mem = (performance as Performance & {
-        memory?: {
-          usedJSHeapSize: number;
-          totalJSHeapSize: number;
-          jsHeapSizeLimit: number;
-        };
-      }).memory;
+      const mem = (
+        performance as Performance & {
+          memory?: {
+            usedJSHeapSize: number;
+            totalJSHeapSize: number;
+            jsHeapSizeLimit: number;
+          };
+        }
+      ).memory;
       if (mem) {
         env.usedJSHeapSize = mem.usedJSHeapSize;
         env.totalJSHeapSize = mem.totalJSHeapSize;
@@ -272,9 +274,11 @@ export const memoryStats = (
   }
   try {
     // Node.js environment: use globalThis.process to avoid bundler shims
-    const maybeProcess = ((globalThis as unknown) as {
-      process?: { memoryUsage?: () => NodeJS.MemoryUsage };
-    }).process;
+    const maybeProcess = (
+      globalThis as unknown as {
+        process?: { memoryUsage?: () => NodeJS.MemoryUsage };
+      }
+    ).process;
     if (maybeProcess && typeof maybeProcess.memoryUsage === 'function') {
       const mu = maybeProcess.memoryUsage();
       env.rss = mu.rss;
@@ -299,7 +303,8 @@ export const memoryStats = (
       fragmentationPct:
         totalReservedBytes > 0
           ? Math.round(
-              (100 * (totalReservedBytes - totalUsedBytes)) / totalReservedBytes
+              (100 * (totalReservedBytes - totalUsedBytes)) /
+                totalReservedBytes,
             )
           : null,
       reservedBytes: totalReservedBytes || null,
@@ -333,7 +338,7 @@ export const memoryStats = (
         poolMaxPerBucket: config.poolMaxPerBucket ?? null,
         poolPrewarmCount: config.poolPrewarmCount ?? null,
         enableNodePooling:
-          ((config as unknown) as { enableNodePooling?: boolean })
+          (config as unknown as { enableNodePooling?: boolean })
             .enableNodePooling ?? false, // Phase 2 addition
         allocStats: (() => {
           try {
@@ -382,7 +387,7 @@ export const resetMemoryTracking = (): void => {
  * @param network Network instance (loose shape, validated at runtime).
  */
 export const registerTrackedNetwork = (
-  network: NetworkView | null | undefined
+  network: NetworkView | null | undefined,
 ): void => {
   if (network && !_trackedNetworks.includes(network as NetworkView)) {
     _trackedNetworks.push(network as NetworkView);

@@ -22,7 +22,7 @@ describe('benchmark.slab.fragmentation.trend', () => {
     // Arrange
     config.enableNodePooling = false;
     const net = new Network(6, 3, { enforceAcyclic: true });
-    const runtimeNet = (net as unknown) as RuntimeNetwork;
+    const runtimeNet = net as unknown as RuntimeNetwork;
     // Initial slab build
     runtimeNet._slabDirty = true;
     runtimeNet.getConnectionSlab();

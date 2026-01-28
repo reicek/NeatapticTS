@@ -23,7 +23,7 @@ describe('Network.training helper smoothing functions', () => {
         err,
         recent,
         { type: 'sma', window: 1 },
-        {}
+        {},
       );
       // Assert
       expect(out).toBe(err);
@@ -39,7 +39,7 @@ describe('Network.training helper smoothing functions', () => {
         2,
         recent,
         { type: 'median', window: 3 },
-        {}
+        {},
       );
       // Assert
       expect(out).toBe(2);
@@ -55,7 +55,7 @@ describe('Network.training helper smoothing functions', () => {
         5,
         [5],
         { type: 'ema', window: 3, emaAlpha: 0.5 },
-        state
+        state,
       );
       // Assert
       expect(state.emaValue).toBe(out);
@@ -72,7 +72,7 @@ describe('Network.training helper smoothing functions', () => {
         4,
         recent,
         { type: 'adaptive-ema', window: 4 },
-        state
+        state,
       );
       // Assert
       expect(out <= 4).toBe(true);
@@ -88,7 +88,7 @@ describe('Network.training helper smoothing functions', () => {
         3,
         recent,
         { type: 'gaussian', window: 3 },
-        {}
+        {},
       );
       // Assert
       expect(out > 0 && out <= 3).toBe(true);
@@ -104,7 +104,7 @@ describe('Network.training helper smoothing functions', () => {
         4,
         recent,
         { type: 'trimmed', window: 5, trimmedRatio: 0.2 },
-        {}
+        {},
       );
       // Assert
       expect(out < 100).toBe(true);
@@ -120,7 +120,7 @@ describe('Network.training helper smoothing functions', () => {
         4,
         recent,
         { type: 'wma', window: 4 },
-        {}
+        {},
       );
       // Assert
       expect(out <= 4).toBe(true);
@@ -136,7 +136,7 @@ describe('Network.training helper smoothing functions', () => {
         3,
         recent,
         { type: 'sma', window: 2 },
-        {}
+        {},
       );
       // Assert
       expect(out).toBe(3);
@@ -152,7 +152,7 @@ describe('Network.training helper smoothing functions', () => {
         3,
         plateau,
         { type: 'median', window: 3 },
-        {}
+        {},
       );
       // Assert
       expect(out).toBe(3);
@@ -168,7 +168,7 @@ describe('Network.training helper smoothing functions', () => {
         2,
         [2],
         { type: 'ema', window: 3, emaAlpha: 0.5 },
-        state
+        state,
       );
       // Assert
       expect(state.plateauEmaValue).toBe(out);

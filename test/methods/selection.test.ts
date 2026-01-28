@@ -161,7 +161,7 @@ describe('Selection Methods', () => {
       const keys = Object.keys(selection);
       // Assert
       expect(keys.sort()).toEqual(
-        ['FITNESS_PROPORTIONATE', 'POWER', 'TOURNAMENT'].sort()
+        ['FITNESS_PROPORTIONATE', 'POWER', 'TOURNAMENT'].sort(),
       );
     });
   });

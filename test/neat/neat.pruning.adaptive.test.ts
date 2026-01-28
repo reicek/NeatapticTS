@@ -17,7 +17,7 @@ describe('NEAT Pruning Controllers', () => {
         interval: 1,
       },
     });
-    const neatWithEvolutionPruning = (neat as unknown) as {
+    const neatWithEvolutionPruning = neat as unknown as {
       applyEvolutionPruning: () => void;
     };
     beforeAll(async () => {
@@ -49,7 +49,7 @@ describe('NEAT Pruning Controllers', () => {
         tolerance: 0,
       },
     });
-    const neatWithAdaptivePruning = (neat as unknown) as {
+    const neatWithAdaptivePruning = neat as unknown as {
       applyAdaptivePruning: () => void;
       _adaptivePruneLevel?: number;
     };

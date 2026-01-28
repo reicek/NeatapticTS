@@ -161,7 +161,7 @@ export interface AsciiMazeRunHandle {
   done: Promise<void>;
   /** Subscribe to per-generation telemetry events. Returns an unsubscribe function. */
   onTelemetry: (
-    listener: (telemetry: Record<string, unknown>) => void
+    listener: (telemetry: Record<string, unknown>) => void,
   ) => () => void;
   /** Return the last telemetry snapshot produced by the dashboard, if any. */
   getTelemetry: () => unknown;
@@ -185,7 +185,7 @@ export interface AsciiMazeRunHandle {
  */
 export const start = async (
   container: string | HTMLElement = DEFAULT_CONTAINER_ID,
-  opts: { signal?: AbortSignal } = {}
+  opts: { signal?: AbortSignal } = {},
 ): Promise<AsciiMazeRunHandle> => {
   // Step 0: Resolve host elements & loggers
   const hostElement =
@@ -202,7 +202,7 @@ export const start = async (
 
   // clearer will clear only the live area; archive remains
   const clearer = BrowserTerminalUtility.createTerminalClearer(
-    liveElement ?? undefined
+    liveElement ?? undefined,
   );
   const liveLogger = createBrowserLogger(liveElement ?? undefined);
   const archiveLogger = createBrowserLogger(archiveElement ?? undefined);
@@ -210,13 +210,13 @@ export const start = async (
   // DashboardManager will use live logger for ongoing redraws and archive logger to append solved blocks
   const dashboard = new DashboardManager(
     clearer,
-    (liveLogger as unknown) as (...args: unknown[]) => void,
-    (archiveLogger as unknown) as (...args: unknown[]) => void
+    liveLogger as unknown as (...args: unknown[]) => void,
+    archiveLogger as unknown as (...args: unknown[]) => void,
   );
 
   // Telemetry hub mediating dashboard -> external listeners
   const telemetryHub = new TelemetryHub<Record<string, unknown>>();
-  const runtimeDashboard = (dashboard as unknown) as RuntimeDashboard;
+  const runtimeDashboard = dashboard as unknown as RuntimeDashboard;
   runtimeDashboard._telemetryHook = (telemetry: Record<string, unknown>) =>
     telemetryHub.dispatch(telemetry);
 
@@ -281,7 +281,7 @@ export const start = async (
    * @returns A signal that will abort when either the internal controller or the external signal aborts.
    */
   const composeAbortSignal = (
-    externalSignalParam?: AbortSignal
+    externalSignalParam?: AbortSignal,
   ): AbortSignal => {
     // Step 0: fast-path when no external signal supplied
     if (!externalSignalParam) return internalController.signal;
@@ -296,16 +296,17 @@ export const start = async (
     switch (true) {
       // Case: external already aborted -> return it immediately (race fast-path)
       case !!externalSignal.aborted: {
-        return (externalSignal as unknown) as AbortSignal;
+        return externalSignal as unknown as AbortSignal;
       }
 
       // Case: environment supports AbortSignal.any (modern browsers / Node 20+)
-      case typeof ((AbortSignal as unknown) as RuntimeAbortSignalConstructor)
+      case typeof (AbortSignal as unknown as RuntimeAbortSignalConstructor)
         .any === 'function': {
         try {
           // Prefer native composition when available for clarity & performance.
-          const composedSignal = ((AbortSignal as unknown) as RuntimeAbortSignalConstructor)
-            .any!([(externalSignal as unknown) as AbortSignal, internalSignal]);
+          const composedSignal = (
+            AbortSignal as unknown as RuntimeAbortSignalConstructor
+          ).any!([externalSignal as unknown as AbortSignal, internalSignal]);
           return composedSignal;
         } catch {
           // If native composition throws, intentionally fall through to manual
@@ -328,7 +329,7 @@ export const start = async (
                 /* ignore */
               }
             },
-            { once: true }
+            { once: true },
           );
         } catch {
           // ignore event wiring errors (some polyfills / minimal DOMs may throw)
@@ -408,7 +409,7 @@ export const start = async (
           /* ignore */
         }
       },
-      { once: true }
+      { once: true },
     );
   } catch {
     /* ignore listener wiring errors */
@@ -471,16 +472,16 @@ export const start = async (
         cancellation: { isCancelled: () => cancelled },
         signal: combinedSignal,
       });
-      const runtimeResult = (result as unknown) as RuntimeEvolutionResult;
+      const runtimeResult = result as unknown as RuntimeEvolutionResult;
       const progress = runtimeResult.bestResult?.progress;
       // Capture & refine best network for seeding next curriculum phase (if any).
       try {
         const bestNet = runtimeResult.bestNetwork;
         if (bestNet) {
           const refined = NetworkRefinement.refineWinnerWithBackprop(
-            (bestNet as unknown) as Network
+            bestNet as unknown as Network,
           );
-          previousBestNetwork = ((refined as unknown) as INetwork) || bestNet;
+          previousBestNetwork = (refined as unknown as INetwork) || bestNet;
         }
       } catch {
         /* ignore refinement */
@@ -493,7 +494,7 @@ export const start = async (
           'solved?',
           solved,
           'progress',
-          progress
+          progress,
         );
       } catch {
         /* ignore */
@@ -502,14 +503,14 @@ export const start = async (
       console.error(
         'Error while running procedural maze',
         currentDimension,
-        error
+        error,
       );
     }
 
     if (!cancelled && solved && currentDimension < MAX_MAZE_DIMENSION) {
       currentDimension = Math.min(
         currentDimension + MAZE_DIMENSION_INCREMENT,
-        MAX_MAZE_DIMENSION
+        MAX_MAZE_DIMENSION,
       );
       scheduleNextMaze(() => runEvolution());
     } else {
@@ -537,9 +538,9 @@ export const start = async (
     done: Promise.resolve(donePromise).catch(() => {}) as Promise<void>,
     onTelemetry: (telemetryCallback) =>
       telemetryHub.add(
-        (telemetryCallback as unknown) as (
-          payload: Record<string, unknown>
-        ) => void
+        telemetryCallback as unknown as (
+          payload: Record<string, unknown>,
+        ) => void,
       ),
     getTelemetry: () => runtimeDashboard.getLastTelemetry?.(),
   };
@@ -552,15 +553,15 @@ export const start = async (
 // If loaded directly (no module loader), expose window.asciiMaze.start() and legacy asciiMazeStart().
 if (
   typeof window !== 'undefined' &&
-  ((window as unknown) as RuntimeWindow).document
+  (window as unknown as RuntimeWindow).document
 ) {
-  const globalWindow = (window as unknown) as RuntimeWindow;
+  const globalWindow = window as unknown as RuntimeWindow;
   globalWindow.asciiMaze = globalWindow.asciiMaze || {};
   globalWindow.asciiMaze.start = start;
   if (!globalWindow.asciiMazeStart) {
     globalWindow.asciiMazeStart = (containerElement?: unknown) => {
       console.warn(
-        '[asciiMaze] window.asciiMazeStart is deprecated; use import { start } ... or window.asciiMaze.start'
+        '[asciiMaze] window.asciiMazeStart is deprecated; use import { start } ... or window.asciiMaze.start',
       );
       return start(containerElement as string | HTMLElement | undefined);
     };

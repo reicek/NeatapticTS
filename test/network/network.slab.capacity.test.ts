@@ -77,7 +77,7 @@ describe('network.slab.capacity', () => {
       initialCapacity >= slab1.used &&
         slab2.capacity === initialCapacity && // reuse
         slab3.capacity > slab2.capacity && // grew
-        slab3.version > initialVersion
+        slab3.version > initialVersion,
     ).toBe(true);
   });
 });

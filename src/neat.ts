@@ -21,6 +21,9 @@ import type {
   SpeciesHistoryEntry,
   OperatorStatsRecord,
   SpeciesLike,
+  TelemetryEntry,
+  ParetoArchiveEntry,
+  ObjectiveEvent,
 } from './neat/neat.types';
 import * as methods from './methods/methods';
 import { selection as selectionMethods } from './methods/selection';
@@ -69,45 +72,6 @@ import {
 } from './neat/neat.export';
 
 /**
- * Runtime types for internal Neat bookkeeping.
- * These interfaces define the shape of internal state without requiring full type safety.
- */
-interface SpeciesInternals {
-  id: number;
-  representative: Network;
-  members: Network[];
-  age: number;
-  stagnation: number;
-  bestFitness: number;
-  avgFitness?: number;
-  [key: string]: unknown;
-}
-
-interface NodeSplitInnovation {
-  innovationId: number;
-  newNodeId: number;
-  inConnection: number;
-  outConnection: number;
-}
-
-interface TelemetryRecord {
-  generation: number;
-  [key: string]: unknown;
-}
-
-interface ParetoArchiveEntry {
-  genome: Network;
-  objectives: number[];
-  [key: string]: unknown;
-}
-
-interface ObjectiveEvent {
-  gen: number;
-  type: 'add' | 'remove';
-  key: string;
-}
-
-/**
  * Configuration options for Neat evolutionary runs.
  *
  * Each property is optional and the class applies sensible defaults when a
@@ -141,33 +105,16 @@ export default class Neat {
    * Cached RNG function; created lazily and seeded from `_rngState` when used.
    */
   private _rng?: () => number;
-  // Internal bookkeeping and caches (kept permissive during staggered migration)
-  /** Array of current species (internal representation). */
-  private _species: SpeciesInternals[] = [];
   /** Operator statistics used by adaptive operator selection. */
   private _operatorStats: Map<string, OperatorStatsRecord> = new Map();
-  /** Map of node-split innovations used to reuse innovation ids for node splits. */
-  private _nodeSplitInnovations: Map<string, NodeSplitInnovation> = new Map();
-  /** Map of connection innovations keyed by a string identifier. */
-  private _connInnovations: Map<string, number> = new Map();
-  /** Counter for issuing global innovation numbers when explicit numbers are used. */
-  private _nextGlobalInnovation: number = 1;
   /** Counter for assigning unique genome ids. */
   private _nextGenomeId: number = 1;
   /** Whether lineage metadata should be recorded on genomes. */
   private _lineageEnabled: boolean = false;
   /** Last observed count of inbreeding (used for detecting excessive cloning). */
   private _lastInbreedingCount: number = 0;
-  /** Previous inbreeding count snapshot. */
-  private _prevInbreedingCount: number = 0;
-  /** Optional phase marker for multi-stage experiments. */
-  private _phase?: string;
   /** Telemetry buffer storing diagnostic snapshots per generation. */
-  private _telemetry: TelemetryRecord[] = [];
-  /** Map of species id -> set of member genome ids from previous generation. */
-  private _prevSpeciesMembers: Map<number, Set<number>> = new Map();
-  /** Last recorded stats per species id. */
-  private _speciesLastStats: Map<number, SpeciesHistoryEntry> = new Map();
+  private _telemetry: TelemetryEntry[] = [];
   /** Time-series history of species stats (for exports/telemetry). */
   private _speciesHistory: SpeciesHistoryEntry[] = [];
   /** Archive of Pareto front metadata for multi-objective tracking. */
@@ -176,46 +123,14 @@ export default class Neat {
   private _paretoObjectivesArchive: number[][] = [];
   /** Novelty archive used by novelty search (behavior representatives). */
   private _noveltyArchive: number[][] = [];
-  /** Map tracking stale counts for objectives by key. */
-  private _objectiveStale: Map<string, number> = new Map();
-  /** Map tracking ages for objectives by key. */
-  private _objectiveAges: Map<string, number> = new Map();
   /** Queue of recent objective activation/deactivation events for telemetry. */
   private _objectiveEvents: ObjectiveEvent[] = [];
-  /** Pending objective keys to add during safe phases. */
-  private _pendingObjectiveAdds: string[] = [];
-  /** Pending objective keys to remove during safe phases. */
-  private _pendingObjectiveRemoves: string[] = [];
-  /** Last allocated offspring set (used by adaptive allocators). */
-  private _lastOffspringAlloc?: number[];
-  /** Adaptive prune level for complexity control (optional). */
-  private _adaptivePruneLevel?: number;
   /** Duration of the last evaluation run (ms). */
   private _lastEvalDuration?: number;
   /** Duration of the last evolve run (ms). */
   private _lastEvolveDuration?: number;
   /** Cached diversity metrics (computed lazily). */
   private _diversityStats?: any;
-  /** Cached list of registered objectives. */
-  private _objectivesList?: any[];
-  /** Generation index where the last global improvement occurred. */
-  private _lastGlobalImproveGeneration: number = 0;
-  /** Best score observed in the last generation (used for improvement detection). */
-  private _bestScoreLastGen?: number;
-  // Speciation controller state
-  /** Map of speciesId -> creation generation for bookkeeping. */
-  private _speciesCreated: Map<number, number> = new Map();
-  /** Exponential moving average for compatibility threshold (adaptive speciation). */
-  private _compatSpeciesEMA?: number;
-  /** Integral accumulator used by adaptive compatibility controllers. */
-  private _compatIntegral: number = 0;
-  /** Generation when epsilon compatibility was last adjusted. */
-  private _lastEpsilonAdjustGen: number = -Infinity;
-  /** Generation when ancestor uniqueness adjustment was last applied. */
-  private _lastAncestorUniqAdjustGen: number = -Infinity;
-  // Adaptive minimal criterion & complexity
-  /** Adaptive minimal criterion threshold (optional). */
-  private _mcThreshold?: number;
 
   // Lightweight RNG accessor used throughout migrated modules
   private _getRNG(): () => number {
@@ -260,7 +175,7 @@ export default class Neat {
     return ensureMinHiddenNodes.call(
       this as any,
       network as never,
-      multiplierOverride
+      multiplierOverride,
     );
   }
   /**
@@ -275,7 +190,7 @@ export default class Neat {
     input?: number,
     output?: number,
     fitness?: any,
-    options: any = {}
+    options: any = {},
   ) {
     // Assign basic fields; other internals are initialized above as class fields
     this.input = input ?? 0;
@@ -308,8 +223,8 @@ export default class Neat {
       opts.mutation = Array.isArray(methods.mutation.ALL)
         ? methods.mutation.ALL.slice()
         : methods.mutation.FFW
-        ? [methods.mutation.FFW]
-        : [];
+          ? [methods.mutation.FFW]
+          : [];
     }
     // Selection method defaults
     if (opts.selection === undefined) {
@@ -349,6 +264,31 @@ export default class Neat {
       opts.multiObjective.objectives = [];
     // Ensure population initialization consistent with original behavior
     this.population = this.population || [];
+    // Initialize innovation registries used by mutation helpers
+    const internalState = this as any;
+    if (!internalState._nodeSplitInnovations)
+      internalState._nodeSplitInnovations = new Map();
+    if (!internalState._connInnovations)
+      internalState._connInnovations = new Map();
+    if (internalState._nextGlobalInnovation === undefined)
+      internalState._nextGlobalInnovation = 0;
+    // Initialize speciation and objective tracking structures
+    if (!Array.isArray(internalState._species)) internalState._species = [];
+    if (internalState._nextSpeciesId === undefined)
+      internalState._nextSpeciesId = 1;
+    if (!internalState._speciesCreated)
+      internalState._speciesCreated = new Map();
+    if (!internalState._prevSpeciesMembers)
+      internalState._prevSpeciesMembers = new Map();
+    if (!internalState._speciesLastStats)
+      internalState._speciesLastStats = new Map();
+    if (!internalState._objectiveAges) internalState._objectiveAges = new Map();
+    if (!Array.isArray(internalState._pendingObjectiveAdds))
+      internalState._pendingObjectiveAdds = [];
+    if (!Array.isArray(internalState._pendingObjectiveRemoves))
+      internalState._pendingObjectiveRemoves = [];
+    if (!internalState._objectiveStale)
+      internalState._objectiveStale = new Map();
     // If a network or population seed provided, create initial pool
     try {
       if ((this.options as any).network !== undefined)
@@ -378,6 +318,7 @@ export default class Neat {
     // This binding makes it accessible as a property that returns the RNG function
     (this as any)._getRNG = this._getRNG.bind(this);
   }
+
   /**
    * Evolves the population by selecting, mutating, and breeding genomes.
    * This method is delegated to `src/neat/neat.evolve.ts` during the migration.
@@ -497,7 +438,7 @@ export default class Neat {
     const offspring = Network.crossOver(
       parent1,
       parent2,
-      this.options.equal || false
+      this.options.equal || false,
     );
     (offspring as any)._reenableProb = this.options.reenableProb;
     (offspring as any)._id = this._nextGenomeId++;
@@ -522,7 +463,7 @@ export default class Neat {
   _warnIfNoBestGenome() {
     try {
       console.warn(
-        'Evolution completed without finding a valid best genome (no fitness improvements recorded).'
+        'Evolution completed without finding a valid best genome (no fitness improvements recorded).',
       );
     } catch {
       // Empty catch: Console output may fail in restricted environments (e.g., headless
@@ -561,11 +502,11 @@ export default class Neat {
    * @returns A new `Network` instance derived from `parent`. The child is unregistered.
    */
   spawnFromParent(parent: Network, mutateCount: number = 1): Network {
-    return (spawnFromParent.call(
+    return spawnFromParent.call(
       this as any,
       parent as never,
-      mutateCount
-    ) as unknown) as Network;
+      mutateCount,
+    ) as unknown as Network;
   }
 
   /**
@@ -611,7 +552,7 @@ export default class Neat {
       return selectMutationMethod.call(
         this as any,
         genome as never,
-        rawReturnForTest
+        rawReturnForTest,
       );
     } catch {
       return null;
@@ -655,7 +596,7 @@ export default class Neat {
   getObjectiveKeys(): string[] {
     // Map objective descriptors to their key strings
     return (this._getObjectives() as ObjectiveDescriptor[]).map(
-      (obj) => obj.key
+      (obj) => obj.key,
     );
   }
 
@@ -833,7 +774,7 @@ export default class Neat {
         name: operatorName,
         success: stats.success,
         attempts: stats.attempts,
-      })
+      }),
     );
   }
   /**
@@ -883,7 +824,7 @@ export default class Neat {
    *
    * @returns Array of telemetry snapshot objects.
    */
-  getTelemetry(): any[] {
+  getTelemetry(): TelemetryEntry[] {
     return this._telemetry;
   }
   /**
@@ -955,7 +896,7 @@ export default class Neat {
     const fronts: Network[][] = [];
     for (let frontIdx = 0; frontIdx < maxFronts; frontIdx++) {
       const front = this.population.filter(
-        (genome) => ((genome as any)._moRank ?? 0) === frontIdx
+        (genome) => ((genome as any)._moRank ?? 0) === frontIdx,
       );
       if (!front.length) break;
       fronts.push(front);
@@ -981,7 +922,7 @@ export default class Neat {
     key: string,
     direction: 'min' | 'max',
     // Widen accessor parameter type to match underlying registerObjective expectation (GenomeLike)
-    accessor: (g: any) => number
+    accessor: (g: any) => number,
   ) {
     return registerObjective.call(this as any, key, direction, accessor);
   }
@@ -1097,7 +1038,7 @@ export default class Neat {
    * @throws Error if tournament size exceeds population size.
    */
   getParent(): Network {
-    return (getParent.call(this as any) as unknown) as Network;
+    return getParent.call(this as any) as unknown as Network;
   }
 
   /**
@@ -1106,7 +1047,7 @@ export default class Neat {
    * @returns The fittest genome in the population.
    */
   getFittest(): Network {
-    return (getFittest.call(this as any) as unknown) as Network;
+    return getFittest.call(this as any) as unknown as Network;
   }
 
   /**
@@ -1151,13 +1092,13 @@ export default class Neat {
    */
   static async importState(
     bundle: any,
-    fitness: (n: Network) => number
+    fitness: (n: Network) => number,
   ): Promise<Neat> {
-    return ((await importStateImpl.call(
+    return (await importStateImpl.call(
       Neat as any,
       bundle,
-      fitness as never
-    )) as unknown) as Neat;
+      fitness as never,
+    )) as unknown as Neat;
   }
   /**
    * Import a previously exported state bundle and rehydrate a Neat instance.
@@ -1168,10 +1109,10 @@ export default class Neat {
   }
 
   static fromJSON(json: any, fitness: (n: Network) => number): Neat {
-    return (fromJSONImpl.call(
+    return fromJSONImpl.call(
       Neat as any,
       json,
-      fitness as never
-    ) as unknown) as Neat;
+      fitness as never,
+    ) as unknown as Neat;
   }
 }

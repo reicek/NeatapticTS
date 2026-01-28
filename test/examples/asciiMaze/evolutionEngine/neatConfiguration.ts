@@ -96,7 +96,7 @@ export const createNeat = (
   inputCount: number,
   outputCount: number,
   fitnessCallback: (net: Network) => number,
-  cfg?: NeatConfig
+  cfg?: NeatConfig,
 ): Neat => {
   // Default constants (extracted from EvolutionEngine static fields)
   const DEFAULT_POPSIZE = 150;
@@ -131,7 +131,7 @@ export const createNeat = (
   const elitism = Math.max(1, Math.floor(popSize * DEFAULT_ELITISM_FRACTION));
   const provenance = Math.max(
     1,
-    Math.floor(popSize * DEFAULT_PROVENANCE_FRACTION)
+    Math.floor(popSize * DEFAULT_PROVENANCE_FRACTION),
   );
 
   // Step 3: Compose other option objects using nullish coalescing for defaults.
@@ -229,7 +229,7 @@ export const seedInitialPopulation = (
   initialPopulation: Network[] | undefined,
   initialBestNetwork: Network | undefined,
   targetPopSize: number,
-  scratchPopClone: Network[]
+  scratchPopClone: Network[],
 ): Network[] => {
   // Step 1: Defensive guard - nothing to do without a neat manager
   if (!neat) return scratchPopClone;

@@ -14,7 +14,7 @@ const markSlabDirty = (network: Network): void => {
 
 const runFastSlabActivate = (network: Network, values: number[]): number[] => {
   const fastSlabActivate = Reflect.get(network, 'fastSlabActivate') as (
-    input: number[]
+    input: number[],
   ) => number[];
   return fastSlabActivate.call(network, values);
 };

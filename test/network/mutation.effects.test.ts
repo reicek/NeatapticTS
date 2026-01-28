@@ -20,7 +20,7 @@ type NeatapticNode = InstanceType<typeof Network>['nodes'][number];
 const computeLongestPathDepth = (
   startNode: NeatapticNode | undefined,
   targetNode: NeatapticNode | undefined,
-  visitedNodes: Set<NeatapticNode> = new Set()
+  visitedNodes: Set<NeatapticNode> = new Set(),
 ): number => {
   if (!startNode || !targetNode) {
     return 0;
@@ -112,20 +112,20 @@ describe('Mutation Effects', () => {
             // Prepare network for specific mutation types
             if (
               [methods.mutation.SUB_GATE, methods.mutation.ADD_GATE].includes(
-                mutation
+                mutation,
               )
             ) {
               if (network.connections.length > 0) {
                 network.gate(
                   network.nodes[network.nodes.length - 1],
-                  network.connections[0]
+                  network.connections[0],
                 );
               }
             } else if (mutation === methods.mutation.ADD_NODE) {
               if (network.connections.length === 0) {
                 network.connect(
                   network.nodes[0],
-                  network.nodes[network.nodes.length - 1]
+                  network.nodes[network.nodes.length - 1],
                 );
               }
             } else if (mutation === methods.mutation.ADD_BACK_CONN) {
@@ -230,7 +230,7 @@ describe('Mutation Effects', () => {
       const net = new Network(2, 1);
       // Act & Assert
       expect(() => {
-        net.mutate(({ name: 'NOT_A_REAL_MUTATION' } as unknown) as never);
+        net.mutate({ name: 'NOT_A_REAL_MUTATION' } as unknown as never);
       }).not.toThrow();
     });
     it('warns but does not throw for empty mutation object', () => {
@@ -238,7 +238,7 @@ describe('Mutation Effects', () => {
       const net = new Network(2, 1);
       // Act & Assert
       expect(() => {
-        net.mutate(({} as unknown) as never);
+        net.mutate({} as unknown as never);
       }).not.toThrow();
     });
     it('throws error on null mutation method', () => {
@@ -246,7 +246,7 @@ describe('Mutation Effects', () => {
       const net = new Network(2, 1);
       // Act & Assert
       expect(() => {
-        net.mutate((null as unknown) as never);
+        net.mutate(null as unknown as never);
       }).toThrow('No (correct) mutate method given!');
     });
     describe('Scenario: mutation after serialization', () => {
@@ -457,7 +457,7 @@ const arraysClose = (
   a: unknown,
   b: unknown,
   epsilon = 1e-5,
-  logDelta = false
+  logDelta = false,
 ): boolean => {
   let maxDelta = 0;
   const compare = (x: unknown, y: unknown): boolean => {

@@ -74,7 +74,7 @@ export class FitnessEvaluator {
     startPosition: readonly [number, number],
     exitPosition: readonly [number, number],
     distanceMap: number[][] | undefined,
-    maxAllowedSteps: number
+    maxAllowedSteps: number,
   ): number {
     // Step 1: Simulate the agent's journey through the maze using its network "brain".
     // The result object contains detailed statistics about the run, like the path taken,
@@ -85,7 +85,7 @@ export class FitnessEvaluator {
       startPosition,
       exitPosition,
       distanceMap,
-      maxAllowedSteps
+      maxAllowedSteps,
     );
 
     // Step 2: Calculate exploration bonus using a pooled typed array (avoids Map + strings).
@@ -111,7 +111,7 @@ export class FitnessEvaluator {
       const flatIndex = cellY * strideWidth + cellX;
       if (visitCountsScratch[flatIndex] !== 1) continue; // only unique cells
       const distanceToExit = distanceMap
-        ? distanceMap[cellY]?.[cellX] ?? Infinity
+        ? (distanceMap[cellY]?.[cellX] ?? Infinity)
         : MazeUtils.bfsDistance(encodedMaze, [cellX, cellY], exitPosition);
       const proximityMultiplier =
         FitnessEvaluator.#PROXIMITY_MULTIPLIER_BASE -
@@ -132,14 +132,14 @@ export class FitnessEvaluator {
       fitness += FitnessEvaluator.#SUCCESS_BONUS;
       // Efficiency bonus scaled by path overhead.
       const optimalPathLength = distanceMap
-        ? distanceMap[startPosition[1]]?.[startPosition[0]] ?? Infinity
+        ? (distanceMap[startPosition[1]]?.[startPosition[0]] ?? Infinity)
         : MazeUtils.bfsDistance(encodedMaze, startPosition, exitPosition);
       const pathOverheadPercent =
         ((result.path.length - 1) / optimalPathLength) * 100 - 100;
       const efficiencyBonus = Math.max(
         0,
         FitnessEvaluator.#EFFICIENCY_BASE -
-          pathOverheadPercent * FitnessEvaluator.#EFFICIENCY_PENALTY_SCALE
+          pathOverheadPercent * FitnessEvaluator.#EFFICIENCY_PENALTY_SCALE,
       );
       fitness += efficiencyBonus;
     }
@@ -163,7 +163,7 @@ export class FitnessEvaluator {
    */
   static defaultFitnessEvaluator(
     network: INetwork,
-    context: IFitnessEvaluationContext
+    context: IFitnessEvaluationContext,
   ): number {
     // Call the main fitness evaluation function with the parameters unpacked from the context object.
     return FitnessEvaluator.evaluateNetworkFitness(
@@ -172,7 +172,7 @@ export class FitnessEvaluator {
       context.startPosition,
       context.exitPosition,
       context.distanceMap,
-      context.agentSimConfig.maxSteps
+      context.agentSimConfig.maxSteps,
     );
   }
 }

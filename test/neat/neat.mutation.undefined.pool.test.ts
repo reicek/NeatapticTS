@@ -6,7 +6,7 @@ describe('Mutation selection robustness with undefined entries', () => {
   test('selectMutationMethod handles undefined without throwing', async () => {
     const fitness = (n: Network) => n.nodes.length;
     const mutationPool: Array<
-      typeof mutation[keyof typeof mutation] | undefined
+      (typeof mutation)[keyof typeof mutation] | undefined
     > = [mutation.ADD_NODE, undefined, mutation.SUB_CONN];
     const neat = new Neat(3, 1, fitness, {
       popsize: 6,
@@ -16,7 +16,7 @@ describe('Mutation selection robustness with undefined entries', () => {
     });
     await neat.evaluate();
     // Force phase for both branches
-    const neatWithInternals = (neat as unknown) as {
+    const neatWithInternals = neat as unknown as {
       selectMutationMethod: (genome: Network, forceExploit: boolean) => void;
     };
     for (let generationIndex = 0; generationIndex < 3; generationIndex += 1) {

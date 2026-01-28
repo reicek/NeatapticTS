@@ -14,7 +14,7 @@ describe('Regularization', () => {
       const afterPerturb = net.connections.map((c) => c.weight);
       // Some weight likely changed (probabilistic). Allow all same rarely.
       const changed = afterPerturb.some(
-        (weight, index) => weight !== before[index]
+        (weight, index) => weight !== before[index],
       );
       expect(changed || !changed).toBe(true); // single expectation pattern
       net.activate([0, 0], false); // inference, noise off restores

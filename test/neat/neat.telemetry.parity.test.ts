@@ -17,7 +17,7 @@ describe('telemetry export parity', () => {
         telemetry: { enabled: true, complexity: true, performance: true },
         multiObjective: { enabled: true, objectives: [] },
         speciation: false,
-      }
+      },
     );
     // Run a few generations to accumulate telemetry snapshots
     for (let i = 0; i < 3; i++) await neat.evolve();
@@ -31,7 +31,7 @@ describe('telemetry export parity', () => {
     const last = lines[lines.length - 1];
     // Core presence
     ['gen', 'best', 'species', 'hyper', 'ops'].forEach((k) =>
-      expect(last).toHaveProperty(k)
+      expect(last).toHaveProperty(k),
     );
     // If complexity present in JSON ensure CSV header contains complexity.meanNodes
     if (last.complexity) {

@@ -13,7 +13,7 @@ interface NetworkInternals {
 
 const getNetworkInternal = <Key extends keyof NetworkInternals>(
   net: Network,
-  key: Key
+  key: Key,
 ): NetworkInternals[Key] => Reflect.get(net, key) as NetworkInternals[Key];
 
 /**

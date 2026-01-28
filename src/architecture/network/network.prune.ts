@@ -48,7 +48,7 @@ interface NetworkPruningProps {
 /** Rank connections ascending by removal priority according to a method. */
 const rankConnections = (
   conns: Connection[],
-  method: 'magnitude' | 'snip'
+  method: 'magnitude' | 'snip',
 ): Connection[] => {
   /** Shallow copy of connections to be sorted by removal priority (ascending). */
   const ranked = [...conns];
@@ -80,10 +80,10 @@ const rankConnections = (
 const regrowConnections = (
   network: Network,
   desiredRemaining: number,
-  maxAttempts: number
+  maxAttempts: number,
 ) => {
   /** Internal network reference for private fields (_rand, _enforceAcyclic). */
-  const netAny = (network as unknown) as NetworkPruningProps;
+  const netAny = network as unknown as NetworkPruningProps;
   /** Number of attempted regrowth trials so far. */
   let attempts = 0;
   while (
@@ -133,7 +133,7 @@ const regrowConnections = (
  * @param iteration Current (0-based or 1-based) training iteration counter used for scheduling.
  */
 export function maybePrune(this: Network, iteration: number): void {
-  const netProps = (this as unknown) as NetworkPruningProps;
+  const netProps = this as unknown as NetworkPruningProps;
   /** Active pruning configuration attached to the network (or undefined if disabled). */
   const cfg = netProps._pruningConfig; // internal schedule/config
   if (!cfg) return; // disabled
@@ -141,7 +141,7 @@ export function maybePrune(this: Network, iteration: number): void {
   if (cfg.lastPruneIter != null && iteration === cfg.lastPruneIter) return; // already pruned this iteration
   if ((iteration - cfg.start) % (cfg.frequency || 1) !== 0) return; // off-cycle
   /** Baseline connection count captured at training start for scheduled pruning reference. */
-  const initialConnectionBaseline = ((this as unknown) as NetworkPruningProps)
+  const initialConnectionBaseline = (this as unknown as NetworkPruningProps)
     ._initialConnectionCount;
   if (!initialConnectionBaseline) return; // baseline not captured yet
 
@@ -154,7 +154,7 @@ export function maybePrune(this: Network, iteration: number): void {
   /** Desired remaining connection count based on baseline & current sparsity. */
   const desiredRemainingConnections = Math.max(
     1,
-    Math.floor(initialConnectionBaseline * (1 - targetSparsityNow))
+    Math.floor(initialConnectionBaseline * (1 - targetSparsityNow)),
   );
   /** Excess connections present right now that should be removed to hit schedule target. */
   const excessConnectionCount =
@@ -167,7 +167,7 @@ export function maybePrune(this: Network, iteration: number): void {
   /** Ranked connections ascending by removal priority. */
   const rankedConnections = rankConnections(
     this.connections,
-    cfg.method || 'magnitude'
+    cfg.method || 'magnitude',
   );
   /** Subset of connections to prune this iteration. */
   const connectionsToPrune = rankedConnections.slice(0, excessConnectionCount);
@@ -177,17 +177,17 @@ export function maybePrune(this: Network, iteration: number): void {
   if (cfg.regrowFraction && cfg.regrowFraction > 0) {
     /** Intended number of new connections to attempt to regrow (before attempt limit multiplier). */
     const intendedRegrowCount = Math.floor(
-      connectionsToPrune.length * cfg.regrowFraction
+      connectionsToPrune.length * cfg.regrowFraction,
     );
     regrowConnections(
       this,
       desiredRemainingConnections,
-      intendedRegrowCount * 10
+      intendedRegrowCount * 10,
     );
   }
 
   cfg.lastPruneIter = iteration; // record bookkeeping
-  ((this as unknown) as NetworkPruningProps)._topoDirty = true; // structural change => invalidate cached order
+  (this as unknown as NetworkPruningProps)._topoDirty = true; // structural change => invalidate cached order
 }
 
 /**
@@ -198,12 +198,12 @@ export function maybePrune(this: Network, iteration: number): void {
 export function pruneToSparsity(
   this: Network,
   targetSparsity: number,
-  method: 'magnitude' | 'snip' = 'magnitude'
+  method: 'magnitude' | 'snip' = 'magnitude',
 ): void {
   if (targetSparsity <= 0) return; // trivial
   if (targetSparsity >= 1) targetSparsity = 0.999; // safety clamp
   /** Internal network reference for private evolutionary baseline. */
-  const netAny = (this as unknown) as NetworkPruningProps;
+  const netAny = this as unknown as NetworkPruningProps;
   if (!netAny._evoInitialConnCount)
     netAny._evoInitialConnCount = this.connections.length; // capture baseline only once
   /** Connection count baseline at first evolutionary pruning invocation. */
@@ -211,7 +211,7 @@ export function pruneToSparsity(
   /** Desired number of connections to retain. */
   const desiredRemainingConnections = Math.max(
     1,
-    Math.floor(evolutionaryBaseline * (1 - targetSparsity))
+    Math.floor(evolutionaryBaseline * (1 - targetSparsity)),
   );
   /** Excess relative to desired number. */
   const excessConnectionCount =
@@ -228,7 +228,7 @@ export function pruneToSparsity(
 /** Current sparsity fraction relative to the training-time pruning baseline. */
 export function getCurrentSparsity(this: Network): number {
   /** Baseline connection count used for scheduled pruning sparsity measurement. */
-  const initialBaseline = ((this as unknown) as NetworkPruningProps)
+  const initialBaseline = (this as unknown as NetworkPruningProps)
     ._initialConnectionCount;
   if (!initialBaseline) return 0;
   return 1 - this.connections.length / initialBaseline;

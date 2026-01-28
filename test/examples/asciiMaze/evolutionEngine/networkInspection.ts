@@ -97,7 +97,7 @@ const classifyNodesFromArray = (
   engineState: EngineState,
   // Type assertion: Network nodes are dynamically typed structures with variable properties
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  nodesArray: any[]
+  nodesArray: any[],
 ): {
   // Type assertion: Network nodes are dynamically typed structures with variable properties
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -176,7 +176,7 @@ const classifyNodesFromArray = (
  */
 const classifyNodes = (
   engineState: EngineState,
-  network: INetwork
+  network: INetwork,
 ): {
   // Type assertion: Network nodes are dynamically typed structures with variable properties
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -218,7 +218,7 @@ const classifyNodes = (
  */
 const gatherActivationNames = (
   engineState: EngineState,
-  network: INetwork
+  network: INetwork,
 ): string[] => {
   // Step 1: Safe normalisation of the node list reference.
   // Type assertion: Network nodes are dynamically typed structures with variable properties
@@ -296,7 +296,7 @@ const detectRecurrentOrGated = (
   engineState: EngineState,
   // Type assertion: Network connections are dynamically typed structures with variable properties
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  connectionsList: any[]
+  connectionsList: any[],
 ): boolean => {
   // Step 1: Validate input quickly
   if (!Array.isArray(connectionsList) || connectionsList.length === 0)
@@ -392,7 +392,7 @@ const detectRecurrentOrGated = (
  */
 export const printNetworkStructure = (
   engineState: EngineState,
-  network: INetwork
+  network: INetwork,
 ): void => {
   // Orchestrator: gather lightweight facts and delegate formatting to helpers.
   try {
@@ -401,7 +401,7 @@ export const printNetworkStructure = (
     // Nodes classification
     const { nodeList, inputNodes, hiddenNodes, outputNodes } = classifyNodes(
       engineState,
-      network
+      network,
     );
     console.log('Nodes:', nodeList.length);
     console.log('  Input nodes:', inputNodes.length);
@@ -419,7 +419,7 @@ export const printNetworkStructure = (
     console.log('Connections:', connectionsList.length);
     const hasRecurrentOrGated = detectRecurrentOrGated(
       engineState,
-      connectionsList
+      connectionsList,
     );
     console.log('Has recurrent/gated connections:', hasRecurrentOrGated);
   } catch (inspectError: unknown) {
@@ -428,7 +428,7 @@ export const printNetworkStructure = (
     // Avoid throwing from a debug helper.
 
     console.log(
-      'printNetworkStructure: failed to inspect network (partial data)'
+      'printNetworkStructure: failed to inspect network (partial data)',
     );
   }
 };

@@ -20,7 +20,7 @@ describe('Operator Adaptation & Bandit', () => {
       await neat.evaluate();
       await neat.mutate();
       await neat.mutate();
-      applyOperatorAdaptation.call((neat as unknown) as NeatLikeWithAdaptive);
+      applyOperatorAdaptation.call(neat as unknown as NeatLikeWithAdaptive);
       // Act: extract stats entries count
       const count = neat.getOperatorStats().length;
       // Assert: at least one operator stat tracked

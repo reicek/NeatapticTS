@@ -13,9 +13,11 @@ describe('training.gradient.refinements', () => {
       for (let i = 0; i < netAvg.connections.length; i++)
         netSum.connections[i].weight = netAvg.connections[i].weight;
       for (let n = 0; n < netAvg.nodes.length; n++)
-        (netSum.nodes[n] as { bias?: number }).bias = (netAvg.nodes[n] as {
-          bias?: number;
-        }).bias;
+        (netSum.nodes[n] as { bias?: number }).bias = (
+          netAvg.nodes[n] as {
+            bias?: number;
+          }
+        ).bias;
       netAvg.train(data, {
         iterations: 1,
         rate: 0.01,

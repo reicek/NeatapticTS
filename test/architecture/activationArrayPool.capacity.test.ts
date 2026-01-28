@@ -17,7 +17,7 @@ describe('ActivationArrayPool capacity limiting', () => {
   describe('Scenario: prewarm respects maxPerBucket cap', () => {
     it('does not exceed configured bucket capacity', () => {
       // Arrange
-      const pool = (activationArrayPool as unknown) as RuntimeActivationArrayPool;
+      const pool = activationArrayPool as unknown as RuntimeActivationArrayPool;
       pool.clear();
       pool.setMaxPerBucket(2);
       pool.prewarm(4, 5); // request > cap

@@ -64,7 +64,7 @@ describe('ONNX Conv2D Groundwork Export', () => {
       const onnxModel = onnx as OnnxModel;
       const hasConv = onnxModel.graph.node.some((n) => n.op_type === 'Conv');
       const metaConvLayers = (onnx.metadata_props || []).find(
-        (m: { key?: string }) => m.key === 'conv2d_layers'
+        (m: { key?: string }) => m.key === 'conv2d_layers',
       );
       expect(hasConv && !!metaConvLayers).toBe(true);
     });

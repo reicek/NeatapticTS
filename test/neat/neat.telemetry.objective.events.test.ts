@@ -98,7 +98,7 @@ describe('Telemetry objective events & lineage', () => {
     // Act
     const entry = buildTelemetryEntry.call(
       ctx,
-      ctx.population[0]
+      ctx.population[0],
     ) as TelemetryEntry;
     // Assert
     const objectiveEvents = Array.isArray(entry.objEvents)

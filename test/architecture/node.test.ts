@@ -653,7 +653,7 @@ describe('Node', () => {
         // L1: weight should decrease by 0.5 * sign(initialWeight)
         expect(conn.weight).toBeCloseTo(
           initialWeight - 0.5 * Math.sign(initialWeight),
-          6
+          6,
         );
       });
       it('L2 regularization decreases weight by lambda * weight', () => {
@@ -672,7 +672,7 @@ describe('Node', () => {
         node.propagate(1.0, 0, true, customFn);
         expect(conn.weight).toBeCloseTo(
           initialWeight - 0.25 * initialWeight * initialWeight,
-          6
+          6,
         );
       });
     });
@@ -965,7 +965,7 @@ describe('Node', () => {
           mutateOutput: false,
         };
         expect(() => outputNode.mutate(customMutation)).toThrow(
-          /Unsupported mutation method: MOD_ACTIVATION/
+          /Unsupported mutation method: MOD_ACTIVATION/,
         );
       });
 
@@ -977,7 +977,7 @@ describe('Node', () => {
           mutateOutput: true,
         };
         expect(() => outputNode.mutate(customMutation)).toThrow(
-          /Unsupported mutation method: MOD_ACTIVATION/
+          /Unsupported mutation method: MOD_ACTIVATION/,
         );
       });
 
@@ -986,7 +986,7 @@ describe('Node', () => {
         const node = new Node('hidden');
         const customMutation = { ...mutation.MOD_ACTIVATION, allowed: [] };
         expect(() => node.mutate(customMutation)).toThrow(
-          /Unsupported mutation method: MOD_ACTIVATION/
+          /Unsupported mutation method: MOD_ACTIVATION/,
         );
       });
 
@@ -1001,7 +1001,7 @@ describe('Node', () => {
           allowed: [targetSquash],
         };
         expect(() => node.mutate(customMutation)).toThrow(
-          /Unsupported mutation method: MOD_ACTIVATION/
+          /Unsupported mutation method: MOD_ACTIVATION/,
         );
       });
     });
@@ -1013,7 +1013,7 @@ describe('Node', () => {
         const node = new Node();
         const customMutation = { ...mutation.MOD_BIAS, min: 0.1, max: 0.2 };
         expect(() => node.mutate(customMutation)).toThrow(
-          /Unsupported mutation method: MOD_BIAS/
+          /Unsupported mutation method: MOD_BIAS/,
         );
       });
 
@@ -1075,7 +1075,7 @@ describe('Node', () => {
       it('should throw error as ADD_NODE is likely handled by Network', () => {
         const node = new Node();
         expect(() => node.mutate(mutation.ADD_NODE)).toThrow(
-          /Unsupported mutation method: ADD_NODE/
+          /Unsupported mutation method: ADD_NODE/,
         );
       });
     });
@@ -1084,7 +1084,7 @@ describe('Node', () => {
       it('should throw error as ADD_CONN is likely handled by Network', () => {
         const node = new Node();
         expect(() => node.mutate(mutation.ADD_CONN)).toThrow(
-          /Unsupported mutation method: ADD_CONN/
+          /Unsupported mutation method: ADD_CONN/,
         );
       });
     });
@@ -1093,7 +1093,7 @@ describe('Node', () => {
       it('should throw error as ADD_SELF_CONN is likely handled by Network', () => {
         const node = new Node();
         expect(() => node.mutate(mutation.ADD_SELF_CONN)).toThrow(
-          /Unsupported mutation method: ADD_SELF_CONN/
+          /Unsupported mutation method: ADD_SELF_CONN/,
         );
       });
     });
@@ -1103,7 +1103,7 @@ describe('Node', () => {
         const node = new Node();
         node.connect(node, 0.7); // Add a self-connection first.
         expect(() => node.mutate(mutation.SUB_SELF_CONN)).toThrow(
-          /Unsupported mutation method: SUB_SELF_CONN/
+          /Unsupported mutation method: SUB_SELF_CONN/,
         );
       });
     });
@@ -1112,7 +1112,7 @@ describe('Node', () => {
       it('should throw error as ADD_GATE is likely handled by Network', () => {
         const node = new Node();
         expect(() => node.mutate(mutation.ADD_GATE)).toThrow(
-          /Unsupported mutation method: ADD_GATE/
+          /Unsupported mutation method: ADD_GATE/,
         );
       });
     });
@@ -1121,7 +1121,7 @@ describe('Node', () => {
       it('should throw error as SUB_GATE is likely handled by Network', () => {
         const node = new Node();
         expect(() => node.mutate(mutation.SUB_GATE)).toThrow(
-          /Unsupported mutation method: SUB_GATE/
+          /Unsupported mutation method: SUB_GATE/,
         );
       });
     });
@@ -1130,7 +1130,7 @@ describe('Node', () => {
       it('should throw error as ADD_BACK_CONN is likely handled by Network', () => {
         const node = new Node();
         expect(() => node.mutate(mutation.ADD_BACK_CONN)).toThrow(
-          /Unsupported mutation method: ADD_BACK_CONN/
+          /Unsupported mutation method: ADD_BACK_CONN/,
         );
       });
     });
@@ -1139,7 +1139,7 @@ describe('Node', () => {
       it('should throw error as SUB_BACK_CONN is likely handled by Network', () => {
         const node = new Node();
         expect(() => node.mutate(mutation.SUB_BACK_CONN)).toThrow(
-          /Unsupported mutation method: SUB_BACK_CONN/
+          /Unsupported mutation method: SUB_BACK_CONN/,
         );
       });
     });
@@ -1148,7 +1148,7 @@ describe('Node', () => {
       it('should throw error as SUB_NODE is likely handled by Network', () => {
         const node = new Node();
         expect(() => node.mutate(mutation.SUB_NODE)).toThrow(
-          /Unsupported mutation method: SUB_NODE/
+          /Unsupported mutation method: SUB_NODE/,
         );
       });
     });
@@ -1248,7 +1248,7 @@ describe('Node', () => {
       it('should serialize squash function name', () => {
         const expectedSquashName = Object.keys(Activation).find(
           (key) =>
-            Activation[key as keyof typeof Activation] === Activation.relu
+            Activation[key as keyof typeof Activation] === Activation.relu,
         );
         expect(json.squash).toBe(expectedSquashName || 'relu');
       });
@@ -1315,7 +1315,7 @@ describe('Node', () => {
       });
       describe('when target is not a Node', () => {
         it('returns false for invalid target', () => {
-          const invalidTarget = ({ some: 'object' } as unknown) as Node;
+          const invalidTarget = { some: 'object' } as unknown as Node;
           expect(node1.isProjectingTo(invalidTarget)).toBe(false);
         });
       });
@@ -1350,7 +1350,7 @@ describe('Node', () => {
       });
       describe('when source is not a Node', () => {
         it('returns false for invalid source', () => {
-          const invalidSource = ({ some: 'object' } as unknown) as Node;
+          const invalidSource = { some: 'object' } as unknown as Node;
           expect(node1.isProjectedBy(invalidSource)).toBe(false);
         });
       });
@@ -1424,7 +1424,7 @@ describe('Node', () => {
       it('serializes squash function name', () => {
         const expectedSquashName = Object.keys(Activation).find(
           (key) =>
-            Activation[key as keyof typeof Activation] === Activation.relu
+            Activation[key as keyof typeof Activation] === Activation.relu,
         );
         expect(json.squash).toBe(expectedSquashName || 'relu');
       });
@@ -1482,17 +1482,15 @@ describe('Node', () => {
     it('isProjectingTo should return false for non-node target', () => {
       const node1 = new Node();
       const invalidTarget: Record<string, unknown> = { some: 'object' };
-      expect(node1.isProjectingTo((invalidTarget as unknown) as Node)).toBe(
-        false
+      expect(node1.isProjectingTo(invalidTarget as unknown as Node)).toBe(
+        false,
       );
     });
 
     it('isProjectedBy should return false for non-node source', () => {
       const node1 = new Node();
       const invalidSource: Record<string, unknown> = { some: 'object' };
-      expect(node1.isProjectedBy((invalidSource as unknown) as Node)).toBe(
-        false
-      );
+      expect(node1.isProjectedBy(invalidSource as unknown as Node)).toBe(false);
     });
 
     it('isProjectingTo should return true for self', () => {
@@ -1543,7 +1541,7 @@ describe('Node', () => {
       } catch {
         // If propagation fails with extreme values, that's acceptable
         console.warn(
-          'Propagation failed with extreme value, which is expected behavior'
+          'Propagation failed with extreme value, which is expected behavior',
         );
       }
     });

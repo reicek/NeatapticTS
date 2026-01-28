@@ -87,6 +87,58 @@ Strict rules to enforce (apply to any suggestion touching `src/` or `test/`)
 
 7. Types: avoid `any` and `unknown` in `src/` and `test/`. Use precise types or `// eslint-disable-next-line @typescript-eslint/no-explicit-any` with a short justification comment.
 
+8. Local helper structure preference:
+   - For new or refactored functions that introduce internal helpers, order the function as:
+       1) Local variables/constants at top
+       2) Declarative logic (calls to helpers)
+       3) Return (fold)
+       4) Internal helper function declarations at the end of the parent function
+    - Helpers should be small and pure where practical, with step-level inline comments and JSDoc.
+
+9. Mandatory implementation pattern (always; keep cognitive complexity low):
+   - Applies to all new code and any modified/refactored code in `src/` and `test/`.
+   - Prefer a *declarative top-level flow* ("collect → transform → fold/return") over deeply nested control flow.
+   - Avoid ternary chains (especially nested) for multi-branch fallback logic; use named resolver helpers with early returns instead.
+   - When normalizing legacy/loose data, isolate type assertions/casting into a single helper and keep the rest strongly typed.
+   - Keep helpers after the fold, and give each helper a single responsibility (SOLID: SRP). If the logic reads like a decision tree, it likely wants 2–4 small helpers.
+
+Example (ideal structure)
+-------------------------
+```ts
+export function exampleMethod(input: Input) {
+   const constants = /* ... */;
+   const locals = /* ... */;
+
+   if (/* guard */) return /* fold */;
+
+   const stepOne = helperOne(input, locals, constants);
+   const stepTwo = helperTwo(stepOne, locals, constants);
+   return helperThree(stepTwo, locals, constants);
+
+   /** @param value - Input. @returns Intermediate. */
+   function helperOne(value: Input, _locals: unknown, _constants: unknown): Intermediate {
+      // Step 1: ...
+      return /* ... */;
+   }
+
+   /** @param value - Intermediate. @returns Intermediate. */
+   function helperTwo(value: Intermediate, _locals: unknown, _constants: unknown): Intermediate {
+      // Step 1: ...
+      return /* ... */;
+   }
+
+   /** @param value - Intermediate. @returns Output. */
+   function helperThree(value: Intermediate, _locals: unknown, _constants: unknown): Output {
+      // Step 1: Fold/return.
+      return /* ... */;
+   }
+}
+
+type Input = unknown;
+type Intermediate = unknown;
+type Output = unknown;
+```
+
 Automated validations to run before finalizing a suggestion
 -------------------------------------------------------
 When you modify or create files under `src/` or `test/`, run (or advise running) these quick validations. If you cannot run them, still make sure your suggestion would pass them.

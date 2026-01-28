@@ -167,7 +167,7 @@ import type {
  */
 export const checkCancellation = (
   options: EvolutionOptions,
-  bestResult?: IMazeRunResult
+  bestResult?: IMazeRunResult,
 ): string | undefined => {
   try {
     // Step 1: Check legacy cancellation object first (if present).
@@ -232,7 +232,7 @@ export const checkCancellation = (
  */
 export const prepareLoopHelpers = (
   opts: EvolutionOptions,
-  scratchBundle: ScratchBundle
+  scratchBundle: ScratchBundle,
 ): LoopHelpers => {
   // Step 1: Create the lightweight host-yield helper first.
   const flushToFrame = makeFlushToFrame();
@@ -329,7 +329,7 @@ export const checkStopConditions = async (
   stopOnlyOnSolve: boolean,
   stagnantGenerations: number,
   maxStagnantGenerations: number,
-  maxGenerations: number
+  maxGenerations: number,
 ): Promise<string | undefined> => {
   // Local convenience aliases for small, hot checks.
   const hasBest = Boolean(bestResult);
@@ -344,7 +344,7 @@ export const checkStopConditions = async (
         bestResult,
         bestNetwork as INetwork | null,
         completedGenerations,
-        neat
+        neat,
       );
     } catch {
       // Swallow dashboard update errors
@@ -369,7 +369,7 @@ export const checkStopConditions = async (
                   generations: completedGenerations,
                   progress: bestResult?.progress,
                 },
-              })
+              }),
             );
           } catch {
             // Swallow event dispatch errors
@@ -396,7 +396,7 @@ export const checkStopConditions = async (
         bestResult,
         bestNetwork as INetwork | null,
         completedGenerations,
-        neat
+        neat,
       );
     } catch {
       // Swallow dashboard update errors
@@ -496,19 +496,19 @@ export const persistSnapshotIfNeeded = (
   collectTelemetryTailFn: (
     state: EngineState,
     neat: NeatInstance,
-    count: number
+    count: number,
   ) => unknown,
   getSortedIndicesByScoreFn: (
     state: EngineState,
-    population: NetworkInstance[]
+    population: NetworkInstance[],
   ) => number[],
   isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
   profilingStartTimestampFn: (state: EngineState) => number,
   accumulateProfilingDurationFn: (
     state: EngineState,
     label: string,
-    duration: number
-  ) => void
+    duration: number,
+  ) => void,
 ) => {
   // Step 1: Defensive validation & scheduling cadence.
   if (
@@ -556,7 +556,7 @@ export const persistSnapshotIfNeeded = (
       getSortedIndicesByScoreFn(engineState, populationRef) ?? [];
     const normalizedTopK = Math.max(
       0,
-      Math.floor(Number.isFinite(persistTopK) ? persistTopK : 0)
+      Math.floor(Number.isFinite(persistTopK) ? persistTopK : 0),
     );
     const topLimit = Math.min(normalizedTopK, sortedIndices.length);
 
@@ -585,7 +585,7 @@ export const persistSnapshotIfNeeded = (
     // Step 5: Serialize compact JSON and write to disk using provided path/FS.
     const snapshotFilePath = pathModule.join(
       persistDir,
-      `snapshot_gen${completedGenerations}.json`
+      `snapshot_gen${completedGenerations}.json`,
     );
     fs.writeFileSync(snapshotFilePath, JSON.stringify(snapshot));
 
@@ -594,7 +594,7 @@ export const persistSnapshotIfNeeded = (
       accumulateProfilingDurationFn(
         engineState,
         'snapshot',
-        profilingStartTimestampFn(engineState) - profileStart || 0
+        profilingStartTimestampFn(engineState) - profileStart || 0,
       );
     }
   } catch {
@@ -644,7 +644,7 @@ export const updateDashboardAndMaybeFlush = async (
   completedGenerations: number,
   neat: NeatInstance,
   dashboardManager: IDashboardManager | undefined,
-  flushToFrame?: () => Promise<void>
+  flushToFrame?: () => Promise<void>,
 ) => {
   // Step 0: Defensive local aliases with descriptive names to improve readability in hot paths.
   const manager = dashboardManager;
@@ -660,7 +660,7 @@ export const updateDashboardAndMaybeFlush = async (
         result,
         network as INetwork | null,
         completedGenerations,
-        neat
+        neat,
       );
     } catch {
       // Swallow dashboard errors — telemetry/UI must not break evolution.
@@ -728,7 +728,7 @@ export const updateDashboardPeriodic = async (
   completedGenerations: number,
   neat: NeatInstance,
   dashboardManager: IDashboardManager | undefined,
-  flushToFrame?: () => Promise<void>
+  flushToFrame?: () => Promise<void>,
 ) => {
   // Step 0: create descriptive local aliases to clarify intent and keep hot-path refs short.
   const dashboard = dashboardManager;
@@ -747,9 +747,9 @@ export const updateDashboardPeriodic = async (
       dashboard,
       maze,
       bestResult,
-      (bestNetwork as unknown) as INetwork,
+      bestNetwork as unknown as INetwork,
       completedGenerations,
-      neat
+      neat,
     );
   } catch {
     // Intentionally ignore update errors — dashboard should not crash the engine.
@@ -811,7 +811,7 @@ export const emitProfileSummary = (
   totalLamarckMs: number,
   totalSimMs: number,
   isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
-  getProfilingAccumulatorsFn: (state: EngineState) => ProfilingAccumulators
+  getProfilingAccumulatorsFn: (state: EngineState) => ProfilingAccumulators,
 ) => {
   try {
     // Step 1: Normalise inputs and guard against divide-by-zero.
@@ -845,7 +845,7 @@ export const emitProfileSummary = (
     const avgTotalPerGenStr = profilingBuffer[3].toFixed(2);
 
     safeWrite(
-      `\n[PROFILE] Generations=${generations} avg(ms): evolve=${avgEvolveStr} lamarck=${avgLamarckStr} sim=${avgSimStr} totalPerGen=${avgTotalPerGenStr}\n`
+      `\n[PROFILE] Generations=${generations} avg(ms): evolve=${avgEvolveStr} lamarck=${avgLamarckStr} sim=${avgSimStr} totalPerGen=${avgTotalPerGenStr}\n`,
     );
 
     // Step 5: If the engine accumulates detailed profiling, print averaged detail line.
@@ -866,7 +866,7 @@ export const emitProfileSummary = (
         ? ((detailAccum.prune ?? 0) / denom).toFixed(2)
         : '0.00';
       safeWrite(
-        `[PROFILE_DETAIL] avgTelemetry=${avgTelemetry} avgSimplify=${avgSimplify} avgSnapshot=${avgSnapshot} avgPrune=${avgPrune}\n`
+        `[PROFILE_DETAIL] avgTelemetry=${avgTelemetry} avgSimplify=${avgSimplify} avgSnapshot=${avgSnapshot} avgPrune=${avgPrune}\n`,
       );
     }
   } catch {
@@ -964,7 +964,7 @@ export const runGeneration = async (
   emptyVec: NetworkInstance[],
   scratchNodeIdx: Int32Array,
   getNodeIndicesByType: (nodes: NetworkNode[], type: string) => number,
-  constants: TrainingConstants
+  constants: TrainingConstants,
 ) => {
   // Step 0: Local descriptive aliases and profiling setup.
   const profileEnabled = Boolean(doProfile);
@@ -1027,7 +1027,7 @@ export const runGeneration = async (
       dynamicPopExpandInterval,
       dynamicPopExpandFactor,
       dynamicPopPlateauSlack,
-      safeWrite
+      safeWrite,
     );
   } catch {
     try {
@@ -1072,9 +1072,9 @@ export const runGeneration = async (
               DEFAULT_STD_ADJUST_MULT: constants.DEFAULT_STD_ADJUST_MULT,
             },
             scratchNodeIdx,
-            getNodeIndicesByType
+            getNodeIndicesByType,
           );
-        }
+        },
       );
     }
   } catch {
@@ -1181,18 +1181,18 @@ export const simulateAndPostprocess = (
   collectHiddenToOutputConns: (
     hiddenNode: NetworkNode,
     nodesRef: NetworkNode[],
-    outputCount: number
-  ) => NetworkConnection[]
+    outputCount: number,
+  ) => NetworkConnection[],
 ): SimulationResult => {
   // Step 1: Run simulator and optionally capture elapsed time.
   const startTime = doProfile ? readHighResolutionTime() : 0;
   const simResult = MazeMovement.simulateAgent(
-    (fittest as unknown) as INetwork,
+    fittest as unknown as INetwork,
     encodedMaze,
     startPosition,
     exitPosition,
     distanceMap,
-    maxSteps
+    maxSteps,
   );
 
   // Best-effort: attach legacy buffer refs and compact telemetry onto the genome.
@@ -1261,7 +1261,7 @@ export const simulateAndPostprocess = (
           Atomics.store(
             atomicIndexView,
             0,
-            (Atomics.load(atomicIndexView, 0) + 1) & 0x7fffffff
+            (Atomics.load(atomicIndexView, 0) + 1) & 0x7fffffff,
           );
         }
       } else {
@@ -1301,7 +1301,7 @@ export const simulateAndPostprocess = (
         engineState,
         fittest,
         getNodeIndicesByType,
-        collectHiddenToOutputConns
+        collectHiddenToOutputConns,
       );
     }
   } catch {
@@ -1331,12 +1331,12 @@ export const simulateAndPostprocess = (
             neat,
             completedGenerations,
             safeWrite,
-            sampleSegmentIntoScratch
+            sampleSegmentIntoScratch,
           );
         },
         isProfilingDetailsEnabled,
         profilingStartTimestamp,
-        accumulateProfilingDuration
+        accumulateProfilingDuration,
       );
     }
   } catch {
@@ -1427,7 +1427,7 @@ export const runEvolutionLoop = async (
   collectHiddenToOutputConns: (
     hiddenNode: NetworkNode,
     nodesRef: NetworkNode[],
-    outputCount: number
+    outputCount: number,
   ) => NetworkConnection[],
   constants: TrainingConstants & {
     DEFAULT_TRAIN_BATCH_LARGE: number;
@@ -1438,7 +1438,7 @@ export const runEvolutionLoop = async (
     REDUCED_TELEMETRY: boolean;
     DISABLE_BALDWIN: boolean;
   },
-  speciesHistoryRef: number[]
+  speciesHistoryRef: number[],
 ) => {
   const { flushToFrame, fs, path, safeWrite } = helpers;
 
@@ -1505,7 +1505,7 @@ export const runEvolutionLoop = async (
         DEFAULT_TRAIN_BATCH_SMALL: constants.DEFAULT_TRAIN_BATCH_SMALL,
         DEFAULT_STD_SMALL: constants.DEFAULT_STD_SMALL,
         DEFAULT_STD_ADJUST_MULT: constants.DEFAULT_STD_ADJUST_MULT,
-      }
+      },
     );
 
     const fittest = generationOutcome.fittest;
@@ -1539,7 +1539,7 @@ export const runEvolutionLoop = async (
       fitnessScore,
       lastBestFitnessForPlateau,
       plateauCounter,
-      opts.plateauImprovementThreshold ?? 1e-6
+      opts.plateauImprovementThreshold ?? 1e-6,
     ));
 
     ({ simplifyMode, simplifyRemaining, plateauCounter } = handleSimplifyState(
@@ -1551,7 +1551,7 @@ export const runEvolutionLoop = async (
       simplifyMode,
       simplifyRemaining,
       opts.simplifyStrategy ?? 'weakWeight',
-      opts.simplifyPruneFraction ?? 0
+      opts.simplifyPruneFraction ?? 0,
     ));
 
     // Step 5: simulate the fittest genome and optionally capture sim time
@@ -1581,7 +1581,7 @@ export const runEvolutionLoop = async (
       constants.RECENT_WINDOW,
       constants.REDUCED_TELEMETRY,
       getNodeIndicesByType,
-      collectHiddenToOutputConns
+      collectHiddenToOutputConns,
     );
     const generationResult = simulationResult.generationResult;
     if (doProfile) profileScratch[2] += Number(simulationResult.simTime ?? 0);
@@ -1607,7 +1607,7 @@ export const runEvolutionLoop = async (
           completedGenerations,
           neat,
           opts.reportingConfig?.dashboardManager,
-          flushToFrame
+          flushToFrame,
         );
       } catch {
         // best-effort: ignore dashboard errors
@@ -1623,7 +1623,7 @@ export const runEvolutionLoop = async (
             completedGenerations,
             neat,
             opts.reportingConfig?.dashboardManager,
-            flushToFrame
+            flushToFrame,
           );
         } catch {
           // best-effort
@@ -1650,7 +1650,7 @@ export const runEvolutionLoop = async (
       getSortedIndicesByScore,
       isProfilingDetailsEnabled,
       profilingStartTimestamp,
-      accumulateProfilingDuration
+      accumulateProfilingDuration,
     );
 
     // Step 8: check stop conditions
@@ -1667,7 +1667,7 @@ export const runEvolutionLoop = async (
       opts.stopOnlyOnSolve ?? false,
       stagnantGenerationsCount,
       opts.maxStagnantGenerations ?? 0,
-      opts.maxGenerations ?? 0
+      opts.maxGenerations ?? 0,
     );
     if (stopReason) break;
 
@@ -1684,7 +1684,7 @@ export const runEvolutionLoop = async (
           : 0;
         maybeShrinkScratch(engineState, currentPopulationSize);
         safeWrite(
-          `[COMPACT] gen=${completedGenerations} removedDisabledConns=${removedDisabled}\n`
+          `[COMPACT] gen=${completedGenerations} removedDisabledConns=${removedDisabled}\n`,
         );
       }
       lastCompactionGeneration = completedGenerations;

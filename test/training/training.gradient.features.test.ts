@@ -17,9 +17,11 @@ describe('training.gradient.features', () => {
       for (let i = 0; i < netA.connections.length; i++)
         netB.connections[i].weight = netA.connections[i].weight;
       for (let n = 0; n < netA.nodes.length; n++)
-        (netB.nodes[n] as { bias?: number }).bias = (netA.nodes[n] as {
-          bias?: number;
-        }).bias;
+        (netB.nodes[n] as { bias?: number }).bias = (
+          netA.nodes[n] as {
+            bias?: number;
+          }
+        ).bias;
       const origWeight = netA.connections[0].weight;
       const subset = data.slice(0, 4);
       netA.train(subset, {

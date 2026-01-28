@@ -425,15 +425,22 @@ describe('Neat advanced coverage', () => {
         // Verify genome has connections that can be mutated
         expect(genome.connections.length).toBeGreaterThan(0);
 
-        // Record initial weight to verify mutation
-        const initialWeight = genome.connections[0].weight;
+        // Record initial weights to verify mutation
+        const initialWeights = genome.connections.map(
+          (connection) => connection.weight,
+        );
 
         // Act
         await neat.mutate();
 
         // Assert: verify mutation actually occurred by checking weight changed
-        const finalWeight = genome.connections[0].weight;
-        expect(finalWeight).not.toBe(initialWeight);
+        const finalWeights = genome.connections.map(
+          (connection) => connection.weight,
+        );
+        const weightChanged = finalWeights.some(
+          (weight, index) => weight !== initialWeights[index],
+        );
+        expect(weightChanged).toBe(true);
       });
     });
     describe('when mutationMethod is null', () => {

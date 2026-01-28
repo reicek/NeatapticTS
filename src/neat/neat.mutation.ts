@@ -1,128 +1,17 @@
 import type { NeatLike } from './neat.types';
-import { EXTRA_CONNECTION_PROBABILITY, EPSILON } from './neat.constants';
+import type {
+  GenomeWithMetadata,
+  MutationMethod,
+  NeatControllerForMutation,
+} from './neat.mutation.types';
+import * as MutateHelpers from './neat.mutation.utils';
 
-/**
- * Runtime interface for a genome with mutation-related metadata.
- * Avoids circular dependencies by defining only the properties accessed in this module.
- */
-interface GenomeWithMetadata {
-  nodes: NodeWithMetadata[];
-  connections: ConnectionWithMetadata[];
-  gates: unknown[];
-  input: number;
-  output: number;
-  _enforceAcyclic?: boolean;
-  _mutRate?: number;
-  _mutAmount?: number;
-  mutate?: (method: MutationMethod) => void;
-  connect?: (
-    from: NodeWithMetadata,
-    to: NodeWithMetadata,
-    weight?: number
-  ) => ConnectionWithMetadata[];
-  disconnect?: (from: NodeWithMetadata, to: NodeWithMetadata) => void;
-}
-
-/**
- * Runtime interface for a node within a genome.
- */
-interface NodeWithMetadata {
-  type: 'input' | 'output' | 'hidden';
-  geneId?: number;
-  connections: {
-    in: ConnectionWithMetadata[];
-    out: ConnectionWithMetadata[];
-  };
-  isProjectingTo?: (target: NodeWithMetadata) => boolean;
-}
-
-/**
- * Runtime interface for a connection within a genome.
- */
-interface ConnectionWithMetadata {
-  from: NodeWithMetadata;
-  to: NodeWithMetadata;
-  weight: number;
-  enabled?: boolean;
-  innovation?: number;
-}
-
-/**
- * Runtime interface for a mutation method descriptor.
- */
-interface MutationMethod {
-  name: string;
-  min?: number;
-  max?: number;
-  keep_gates?: boolean;
-  mutateOutput?: boolean;
-  allowed?: Array<(x: number) => number>;
-}
-
-/**
- * Runtime interface for operator statistics tracking.
- */
-interface OperatorStats {
-  success: number;
-  attempts: number;
-}
-
-/**
- * Runtime interface for node-split innovation records.
- */
-interface NodeSplitRecord {
-  newNodeGeneId: number;
-  inInnov: number;
-  outInnov: number;
-}
-
-/**
- * Runtime interface for the NEAT controller used in mutation operations.
- * Avoids circular dependencies by defining only properties accessed in this module.
- */
-interface NeatControllerForMutation {
-  population: GenomeWithMetadata[];
-  options: {
-    adaptiveMutation?: {
-      enabled?: boolean;
-      initialRate?: number;
-      adaptAmount?: boolean;
-    };
-    mutationRate?: number;
-    mutationAmount?: number;
-    mutation?: MutationMethod[] | unknown;
-    phasedComplexity?: {
-      enabled?: boolean;
-    };
-    operatorAdaptation?: {
-      enabled?: boolean;
-      boost?: number;
-    };
-    operatorBandit?: {
-      enabled?: boolean;
-      c?: number;
-      minAttempts?: number;
-    };
-    maxNodes?: number;
-    maxGates?: number;
-    maxConns?: number;
-    allowRecurrent?: boolean;
-  };
-  _getRNG: () => () => number;
-  selectMutationMethod: (
-    genome: GenomeWithMetadata,
-    crossover: boolean
-  ) => MutationMethod | MutationMethod[];
-  _mutateAddNodeReuse: (genome: GenomeWithMetadata) => void;
-  _mutateAddConnReuse: (genome: GenomeWithMetadata) => void;
-  _invalidateGenomeCaches: (genome: GenomeWithMetadata) => void;
-  _operatorStats: Map<string, OperatorStats>;
-  _nodeSplitInnovations: Map<string, NodeSplitRecord>;
-  _connInnovations: Map<string, number>;
-  _nextGlobalInnovation: number;
-  _phase?: 'simplify' | 'complexify';
-  getMinimumHiddenSize?: (multiplierOverride?: number) => number;
-}
+/** Default connection weight used for bootstrap and split in-edges. */
+export const DEFAULT_CONNECTION_WEIGHT = 1;
+/** Default gene id value when a node has no gene id. */
+export const DEFAULT_GENE_ID = 0;
+/** Default innovation id value when a connection has none. */
+export const DEFAULT_INNOVATION_ID = 0;
 
 /**
  * Mutate every genome in the population according to configured policies.
@@ -148,159 +37,12 @@ interface NeatControllerForMutation {
  * @this NeatLike - instance of a Neat controller with population and options
  */
 export async function mutate(this: NeatLike): Promise<void> {
-  const internal = (this as unknown) as NeatControllerForMutation;
-
-  /**
-   * Methods module — collection of mutation operator descriptors used to map
-   * symbolic operator names to concrete handlers.
-   */
+  const internal = this as unknown as NeatControllerForMutation;
   const methods = await import('../methods/methods');
+  const population = internal.population;
 
-  for (const genome of internal.population) {
-    // Initialize adaptive mutation parameters lazily per-genome.
-    if (internal.options.adaptiveMutation?.enabled) {
-      if (genome._mutRate === undefined) {
-        genome._mutRate =
-          internal.options.mutationRate !== undefined
-            ? internal.options.mutationRate
-            : internal.options.adaptiveMutation.initialRate ??
-              (internal.options.mutationRate || 0.7);
-        if (internal.options.adaptiveMutation.adaptAmount) {
-          genome._mutAmount = internal.options.mutationAmount || 1;
-        }
-      }
-    }
-
-    // Resolve effective mutation rate and amount for this genome.
-    const effectiveRate =
-      internal.options.mutationRate !== undefined
-        ? internal.options.mutationRate
-        : internal.options.adaptiveMutation?.enabled
-        ? genome._mutRate ?? 0.7
-        : internal.options.mutationRate || 0.7;
-    const effectiveAmount =
-      internal.options.adaptiveMutation?.enabled &&
-      internal.options.adaptiveMutation.adaptAmount
-        ? genome._mutAmount ?? (internal.options.mutationAmount || 1)
-        : internal.options.mutationAmount || 1;
-
-    // Decide whether to mutate this genome at all.
-    if (internal._getRNG()() <= effectiveRate) {
-      for (let iteration = 0; iteration < effectiveAmount; iteration++) {
-        // Pick an operator using selection logic that respects phased and
-        // adaptive operator policies.
-        let mutationMethod = await internal.selectMutationMethod(genome, false);
-
-        // If selection returned the full FFW array (legacy/testing path),
-        // sample a concrete operator from it deterministically using RNG.
-        if (Array.isArray(mutationMethod)) {
-          /**
-           * When mutation pool is the FFW array, we temporarily hold the full
-           * operator array here and later sample a concrete operator.
-           */
-          const operatorArray = mutationMethod as MutationMethod[];
-          mutationMethod =
-            operatorArray[
-              Math.floor(internal._getRNG()() * operatorArray.length)
-            ];
-        }
-
-        if (mutationMethod && mutationMethod.name) {
-          // Track structural size before mutation to evaluate operator success
-          /** Number of nodes before applying this operator (used to record success). */
-          const beforeNodes = genome.nodes.length;
-          /** Number of connections before applying this operator (used to record success). */
-          const beforeConns = genome.connections.length;
-
-          // Use specialized reuse helpers for structural ops to preserve
-
-          /**
-           * Select a mutation method respecting structural constraints and adaptive controllers.
-           * Mirrors legacy implementation from `neat.ts` to preserve test expectations.
-           * `rawReturnForTest` retains historical behavior where the full FFW array is
-           * returned for identity checks in tests.
-           *
-           * Educational notes:
-           * - Operator pools can be nested (e.g. [FFW]) and this function handles
-           *   legacy patterns to remain backwards compatible.
-           * - Phased complexity and operator adaptation affect sampling probabilities.
-           * - OperatorBandit implements an exploration/exploitation heuristic similar
-           *   to a UCB1-style bandit to prioritize promising mutation operators.
-           *
-           * Example:
-           * ```ts
-           * const op = neat.selectMutationMethod(genome);
-           * genome.mutate(op);
-           * ```
-           *
-           * @this NeatLike - instance with options and operator statistics
-           * @param genome - genome considered for mutation (may constrain operators)
-           * @param rawReturnForTest - when true, may return the raw FFW array for tests
-           */
-          // innovation ids across genomes when possible.
-          if (mutationMethod === methods.mutation.ADD_NODE) {
-            internal._mutateAddNodeReuse(genome);
-            // Trigger a small weight mutation to make change observable in tests.
-            try {
-              genome.mutate?.(methods.mutation.MOD_WEIGHT as MutationMethod);
-            } catch {
-              // Intentionally ignore: mutation may fail if genome structure is invalid.
-            }
-            internal._invalidateGenomeCaches(genome);
-          } else if (mutationMethod === methods.mutation.ADD_CONN) {
-            internal._mutateAddConnReuse(genome);
-            try {
-              genome.mutate?.(methods.mutation.MOD_WEIGHT as MutationMethod);
-            } catch {
-              // Intentionally ignore: mutation may fail if genome structure is invalid.
-            }
-            internal._invalidateGenomeCaches(genome);
-          } else {
-            // For other mutation operators defer to genome.mutate implementation.
-            genome.mutate?.(mutationMethod);
-            // Invalidate caches on likely structural changes.
-            if (
-              mutationMethod === methods.mutation.ADD_GATE ||
-              mutationMethod === methods.mutation.SUB_NODE ||
-              mutationMethod === methods.mutation.SUB_CONN ||
-              mutationMethod === methods.mutation.ADD_SELF_CONN ||
-              mutationMethod === methods.mutation.ADD_BACK_CONN
-            ) {
-              internal._invalidateGenomeCaches(genome);
-            }
-          }
-
-          // Opportunistically add an extra connection half the time to increase
-          // connectivity and exploration.
-          if (internal._getRNG()() < EXTRA_CONNECTION_PROBABILITY) {
-            internal._mutateAddConnReuse(genome);
-          }
-
-          // Update operator adaptation statistics if enabled.
-          if (internal.options.operatorAdaptation?.enabled) {
-            /**
-             * Lookup or initialize the operator statistics record for the
-             * selected mutation operator (used to adapt operator frequencies).
-             */
-            const statsRecord = internal._operatorStats.get(
-              mutationMethod.name
-            ) || {
-              success: 0,
-              attempts: 0,
-            };
-            statsRecord.attempts++;
-            /** Number of nodes after applying the operator (used to detect growth). */
-            const afterNodes = genome.nodes.length;
-            /** Number of connections after applying the operator (used to detect growth). */
-            const afterConns = genome.connections.length;
-            if (afterNodes > beforeNodes || afterConns > beforeConns) {
-              statsRecord.success++;
-            }
-            internal._operatorStats.set(mutationMethod.name, statsRecord);
-          }
-        }
-      }
-    }
+  for (const genome of population) {
+    await MutateHelpers.mutateGenome(genome, internal, methods);
   }
 }
 
@@ -332,102 +74,49 @@ export async function mutate(this: NeatLike): Promise<void> {
  */
 export async function mutateAddNodeReuse(
   this: NeatLike,
-  genome: GenomeWithMetadata
+  genome: GenomeWithMetadata,
 ): Promise<void> {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
-  // If genome lacks any connections, try to create a simple input->output link
-  if (genome.connections.length === 0) {
-    /** First available input node (bootstrap connection target). */
-    const inputNode = genome.nodes.find((n) => n.type === 'input');
-    /** First available output node (bootstrap connection source). */
-    const outputNode = genome.nodes.find((n) => n.type === 'output');
-    if (inputNode && outputNode) {
-      try {
-        genome.connect?.(inputNode, outputNode, 1);
-      } catch {
-        // Intentionally ignore: connection may fail if nodes are incompatible.
-      }
-    }
-  }
+  // Step 1: bootstrap connectivity when no connections exist.
+  MutateHelpers.ensureBootstrapConnection(genome, internal);
 
-  // Choose an enabled (not disabled) connection at random
-  /** All connections that are currently enabled on the genome. */
-  const enabledConnections = genome.connections.filter(
-    (connection) => connection.enabled !== false
+  // Step 2: pick an enabled connection to split.
+  const enabledConnections = MutateHelpers.collectEnabledConnections(genome);
+  const chosenConnection = MutateHelpers.chooseConnectionForSplit(
+    enabledConnections,
+    internal,
   );
-  if (!enabledConnections.length) return;
-  /** Randomly selected connection to split. */
-  const chosenConn =
-    enabledConnections[
-      Math.floor(internal._getRNG()() * enabledConnections.length)
-    ];
+  if (!chosenConnection) return;
 
-  // Build a stable key (fromGene->toGene) used to lookup node-split innovations
-  /** Gene id of the connection source node (used in split-key). */
-  const fromGeneId = chosenConn.from.geneId;
-  /** Gene id of the connection target node (used in split-key). */
-  const toGeneId = chosenConn.to.geneId;
-  /** Stable key representing this directed split (from->to). */
-  const splitKey = fromGeneId + '->' + toGeneId;
-  /** Weight of the original connection preserved for the new out-connection. */
-  const originalWeight = chosenConn.weight;
+  // Step 3: compute split metadata and remove the original connection.
+  const splitDescriptor = MutateHelpers.buildSplitDescriptor(chosenConnection);
+  MutateHelpers.disconnectOriginalConnection(genome, chosenConnection);
 
-  // Remove the original connection before inserting the split node
-  genome.disconnect?.(chosenConn.from, chosenConn.to);
-  /** Historical record for this split (if present) retrieved from the controller. */
-  let splitRecord = internal._nodeSplitInnovations.get(splitKey);
-  /** Node class constructor used to create new hidden nodes. */
+  // Step 4: resolve split record and create split node.
+  const splitRecord = internal._nodeSplitInnovations.get(
+    splitDescriptor.splitKey,
+  );
   const { default: NodeClass } = await import('../architecture/node');
 
-  if (!splitRecord) {
-    // No historical split; create a new hidden node and two connecting edges
-    /** Newly created hidden node instance for the split. */
-    const newNode = (new NodeClass('hidden') as unknown) as NodeWithMetadata;
-    /** Connection object from original source to new node. */
-    const inConn = genome.connect?.(chosenConn.from, newNode, 1)?.[0];
-    /** Connection object from new node to original target. */
-    const outConn = genome.connect?.(
-      newNode,
-      chosenConn.to,
-      originalWeight
-    )?.[0];
-    if (inConn) inConn.innovation = internal._nextGlobalInnovation++;
-    if (outConn) outConn.innovation = internal._nextGlobalInnovation++;
-    splitRecord = {
-      newNodeGeneId: newNode.geneId ?? 0,
-      inInnov: inConn?.innovation ?? 0,
-      outInnov: outConn?.innovation ?? 0,
-    };
-    internal._nodeSplitInnovations.set(splitKey, splitRecord);
-
-    // Insert the new node just before the original 'to' node index but
-    // ensure outputs remain at the end of the node list
-    /** Index of the original 'to' node to determine insertion position. */
-    const toIndex = genome.nodes.indexOf(chosenConn.to);
-    /** Final insertion index ensuring output nodes stay at the end. */
-    const insertIndex = Math.min(toIndex, genome.nodes.length - genome.output);
-    genome.nodes.splice(insertIndex, 0, newNode);
-  } else {
-    // Reuse a historical split: create a new node instance but assign the
-    // historical geneId and innovation numbers so the split is aligned
-    /** New node instance (reusing historical gene id for alignment). */
-    const newNode = (new NodeClass('hidden') as unknown) as NodeWithMetadata;
-    newNode.geneId = splitRecord.newNodeGeneId;
-    const toIndex = genome.nodes.indexOf(chosenConn.to);
-    const insertIndex = Math.min(toIndex, genome.nodes.length - genome.output);
-    genome.nodes.splice(insertIndex, 0, newNode);
-    /** Newly created incoming connection to the reused node. */
-    const inConn = genome.connect?.(chosenConn.from, newNode, 1)?.[0];
-    /** Newly created outgoing connection from the reused node. */
-    const outConn = genome.connect?.(
-      newNode,
-      chosenConn.to,
-      originalWeight
-    )?.[0];
-    if (inConn) inConn.innovation = splitRecord.inInnov;
-    if (outConn) outConn.innovation = splitRecord.outInnov;
+  if (splitRecord) {
+    MutateHelpers.applySplitWithExistingRecord(
+      genome,
+      chosenConnection,
+      splitDescriptor,
+      splitRecord,
+      NodeClass,
+    );
+    return;
   }
+
+  MutateHelpers.applySplitWithNewRecord(
+    genome,
+    chosenConnection,
+    splitDescriptor,
+    NodeClass,
+    internal,
+  );
 }
 
 /**
@@ -457,121 +146,36 @@ export async function mutateAddNodeReuse(
  */
 export function mutateAddConnReuse(
   this: NeatLike,
-  genome: GenomeWithMetadata
+  genome: GenomeWithMetadata,
 ): void {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
-  /** Candidate (from,to) node pairs that are not currently connected. */
-  const candidatePairs: Array<[NodeWithMetadata, NodeWithMetadata]> = [];
-  // Build candidate pairs (respect node ordering: inputs first, outputs last)
-  for (
-    let nodeIndex = 0;
-    nodeIndex < genome.nodes.length - genome.output;
-    nodeIndex++
-  ) {
-    /** Candidate source node for connection.
-     * (Iteration-scoped local variable referencing genome.nodes[nodeIndex]) */
-    const fromNode = genome.nodes[nodeIndex];
-    for (
-      let targetIndex = Math.max(nodeIndex + 1, genome.input);
-      targetIndex < genome.nodes.length;
-      targetIndex++
-    ) {
-      /** Candidate target node for connection.
-       * (Iteration-scoped local variable referencing genome.nodes[targetIndex]) */
-      const toNode = genome.nodes[targetIndex];
-      if (!fromNode.isProjectingTo?.(toNode)) {
-        candidatePairs.push([fromNode, toNode]);
-      }
-    }
-  }
+  // Step 1: build candidate node pairs.
+  const candidatePairs = MutateHelpers.collectCandidatePairsForConn(genome);
   if (!candidatePairs.length) return;
 
-  // Prefer pairs with existing innovation ids to maximize reuse
-  /** Pairs for which we already have a historical innovation id (preferred). */
-  const reuseCandidates = candidatePairs.filter((pair) => {
-    const idA = pair[0].geneId;
-    const idB = pair[1].geneId;
-    const symmetricKey =
-      (idA ?? 0) < (idB ?? 0) ? idA + '::' + idB : idB + '::' + idA;
-    return internal._connInnovations.has(symmetricKey);
-  });
-  /**
-   * Selection pool construction.
-   * Order of preference:
-   * 1. Pairs with existing innovation ids (reuseCandidates) to maximize historical reuse.
-   * 2. Hidden↔hidden pairs when present (provides more meaningful structural exploration early
-   *    and matches test expectation that inserting two hidden nodes yields a single "viable" forward add).
-   * 3. Fallback to all candidate pairs.
-   *
-   * Rationale for hidden-hidden preference: The test suite constructs a scenario with two newly
-   * inserted hidden nodes and expects the only forward add to be between them. Under the broader
-   * candidate enumeration (which also includes input→hidden, hidden→output, etc.) the selection
-   * could nondeterministically choose a different pair causing missing innovation reuse coverage.
-   * Narrowing when possible keeps global behavior stable while restoring determinism for that case.
-   */
-  const hiddenPairs = reuseCandidates.length
-    ? []
-    : candidatePairs.filter(
-        (pair) => pair[0].type === 'hidden' && pair[1].type === 'hidden'
-      );
-  const pool = reuseCandidates.length
-    ? reuseCandidates
-    : hiddenPairs.length
-    ? hiddenPairs
-    : candidatePairs;
+  // Step 2: choose the candidate pool based on reuse and hidden-pair rules.
+  const reuseCandidates = MutateHelpers.filterPairsWithInnovations(
+    candidatePairs,
+    internal,
+  );
+  const selectionPool = MutateHelpers.selectPairPool(
+    candidatePairs,
+    reuseCandidates,
+  );
 
-  // Deterministic selection when only one pair exists (important for tests)
-  /** The pair chosen to be connected (deterministic if only one candidate). */
-  const chosenPair =
-    pool.length === 1
-      ? pool[0]
-      : pool[Math.floor(internal._getRNG()() * pool.length)];
-  /** Source node for the chosen pair. */
-  const fromNode = chosenPair[0];
-  /** Target node for the chosen pair. */
-  const toNode = chosenPair[1];
-  /** Gene ids used to compute a symmetric innovation key for the pair. */
-  const idA = fromNode.geneId ?? 0;
-  const idB = toNode.geneId ?? 0;
-  const symmetricKey = idA < idB ? idA + '::' + idB : idB + '::' + idA;
+  // Step 3: pick a concrete pair to connect.
+  const chosenPair = MutateHelpers.choosePairForConn(selectionPool, internal);
+  if (!chosenPair) return;
 
-  // If the genome enforces acyclic topologies, check whether this connection
-  // would create a cycle (simple DFS)
-  if (genome._enforceAcyclic) {
-    const createsCycle = (() => {
-      const stack = [toNode];
-      const seen = new Set<NodeWithMetadata>();
-      while (stack.length) {
-        const currentNode = stack.pop()!;
-        if (currentNode === fromNode) return true;
-        if (seen.has(currentNode)) continue;
-        seen.add(currentNode);
-        for (const connection of currentNode.connections.out) {
-          stack.push(connection.to);
-        }
-      }
-      return false;
-    })();
-    if (createsCycle) return;
-  }
+  // Step 4: evaluate acyclic constraints if configured.
+  const pairNodes = MutateHelpers.resolvePairNodes(chosenPair);
+  if (MutateHelpers.shouldAbortForCycle(genome, pairNodes)) return;
 
-  /** Connection object created between the chosen nodes (or undefined). */
-  const conn = genome.connect?.(fromNode, toNode)?.[0];
-  if (!conn) return;
-  if (internal._connInnovations.has(symmetricKey)) {
-    conn.innovation = internal._connInnovations.get(symmetricKey)!;
-  } else {
-    /** Allocate a new global innovation id and store it for reuse. */
-    const innov = internal._nextGlobalInnovation++;
-    conn.innovation = innov;
-    // Save under symmetric key and legacy directional keys for compatibility
-    internal._connInnovations.set(symmetricKey, innov);
-    const legacyForward = idA + '::' + idB;
-    const legacyReverse = idB + '::' + idA;
-    internal._connInnovations.set(legacyForward, innov);
-    internal._connInnovations.set(legacyReverse, innov);
-  }
+  // Step 5: create the connection and assign an innovation id.
+  const connection = MutateHelpers.connectChosenPair(genome, pairNodes);
+  if (!connection) return;
+  MutateHelpers.assignInnovationForConnection(connection, pairNodes, internal);
 }
 
 /**
@@ -580,85 +184,44 @@ export function mutateAddConnReuse(
 export async function ensureMinHiddenNodes(
   this: NeatLike,
   network: GenomeWithMetadata,
-  multiplierOverride?: number
+  multiplierOverride?: number,
 ): Promise<void> {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
-  /** Maximum allowed nodes from configuration (or Infinity). */
-  const maxNodes = internal.options.maxNodes || Infinity;
-  /** Minimum number of hidden nodes required for this network (bounded by maxNodes). */
-  const minHidden = Math.min(
-    internal.getMinimumHiddenSize?.(multiplierOverride) ?? 0,
-    maxNodes - network.nodes.filter((node) => node.type !== 'hidden').length
+  // Step 1: resolve node groups and size constraints.
+  const nodeGroups = MutateHelpers.collectNodeGroupsForMinHidden(network);
+  const maxNodes = MutateHelpers.resolveMaxNodesForMinHidden(internal);
+  const minHidden = MutateHelpers.resolveMinHiddenForMinHidden(
+    network,
+    maxNodes,
+    multiplierOverride,
+    internal,
   );
 
-  /** Input nodes present in the network. */
-  const inputNodes = network.nodes.filter((node) => node.type === 'input');
-  /** Output nodes present in the network. */
-  const outputNodes = network.nodes.filter((node) => node.type === 'output');
-  /** Current hidden nodes present in the network. */
-  const hiddenNodes = network.nodes.filter((node) => node.type === 'hidden');
-
-  if (inputNodes.length === 0 || outputNodes.length === 0) {
-    try {
-      console.warn(
-        'Network is missing input or output nodes — skipping minHidden enforcement'
-      );
-    } catch {
-      // Intentionally ignore: console may not be available in all environments.
-    }
+  // Step 2: validate network inputs/outputs.
+  if (!MutateHelpers.hasRequiredEndpointsForMinHidden(nodeGroups)) {
+    MutateHelpers.warnMissingEndpointsForMinHidden();
     return;
   }
 
-  /** Number of hidden nodes already present before enforcement. */
-  const existingCount = hiddenNodes.length;
-  /** Node class constructor for creating hidden nodes. */
-  const { default: NodeClass } = await import('../architecture/node');
+  // Step 3: ensure the minimum number of hidden nodes exist.
+  await MutateHelpers.ensureHiddenNodeCountForMinHidden(
+    network,
+    nodeGroups,
+    minHidden,
+    maxNodes,
+  );
 
-  for (
-    let hiddenIndex = existingCount;
-    hiddenIndex < minHidden && network.nodes.length < maxNodes;
-    hiddenIndex++
-  ) {
-    /** Newly created hidden node to satisfy minimum hidden requirement. */
-    const newNode = (new NodeClass('hidden') as unknown) as NodeWithMetadata;
-    network.nodes.push(newNode);
-    hiddenNodes.push(newNode);
-  }
+  // Step 4: ensure hidden nodes have at least one incoming and outgoing edge.
+  MutateHelpers.ensureHiddenConnectivityForMinHidden(
+    network,
+    nodeGroups,
+    internal,
+  );
 
-  for (const hiddenNode of hiddenNodes) {
-    if (hiddenNode.connections.in.length === 0) {
-      const candidates = inputNodes.concat(
-        hiddenNodes.filter((node) => node !== hiddenNode)
-      );
-      if (candidates.length > 0) {
-        const rng = internal._getRNG();
-        const source = candidates[Math.floor(rng() * candidates.length)];
-        try {
-          network.connect?.(source, hiddenNode);
-        } catch {
-          // Intentionally ignore: connection may fail if nodes are incompatible.
-        }
-      }
-    }
-    if (hiddenNode.connections.out.length === 0) {
-      const candidates = outputNodes.concat(
-        hiddenNodes.filter((node) => node !== hiddenNode)
-      );
-      if (candidates.length > 0) {
-        const rng = internal._getRNG();
-        const target = candidates[Math.floor(rng() * candidates.length)];
-        try {
-          network.connect?.(hiddenNode, target);
-        } catch {
-          // Intentionally ignore: connection may fail if nodes are incompatible.
-        }
-      }
-    }
-  }
-  /** Network class used to rebuild cached connection structures after edits. */
-  const { default: NetworkClass } = await import('../architecture/network');
-  NetworkClass.rebuildConnections(network as never);
+  // Step 5: rebuild cached connection structures.
+  await MutateHelpers.rebuildNetworkConnectionsForMinHidden(network);
+  return;
 }
 
 /**
@@ -666,81 +229,34 @@ export async function ensureMinHiddenNodes(
  */
 export function ensureNoDeadEnds(
   this: NeatLike,
-  network: GenomeWithMetadata
+  network: GenomeWithMetadata,
 ): void {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
-  const inputNodes = network.nodes.filter((node) => node.type === 'input');
-  const outputNodes = network.nodes.filter((node) => node.type === 'output');
-  const hiddenNodes = network.nodes.filter((node) => node.type === 'hidden');
+  // Step 1: gather node groups for connectivity repair.
+  const nodeGroups = MutateHelpers.collectNodeGroupsForDeadEnds(network);
 
-  /** Predicate: does the node have any outgoing connections? */
-  const hasOutgoing = (node: NodeWithMetadata) =>
-    node.connections && node.connections.out && node.connections.out.length > 0;
-  /** Predicate: does the node have any incoming connections? */
-  const hasIncoming = (node: NodeWithMetadata) =>
-    node.connections && node.connections.in && node.connections.in.length > 0;
+  // Step 2: repair input nodes that lack outgoing connections.
+  MutateHelpers.ensureInputConnectivityForDeadEnds(
+    network,
+    nodeGroups,
+    internal,
+  );
 
-  for (const inputNode of inputNodes) {
-    if (!hasOutgoing(inputNode)) {
-      const candidates = hiddenNodes.length > 0 ? hiddenNodes : outputNodes;
-      if (candidates.length > 0) {
-        const rng = internal._getRNG();
-        const target = candidates[Math.floor(rng() * candidates.length)];
-        try {
-          network.connect?.(inputNode, target);
-        } catch {
-          // Intentionally ignore: connection may fail if nodes are incompatible.
-        }
-      }
-    }
-  }
+  // Step 3: repair output nodes that lack incoming connections.
+  MutateHelpers.ensureOutputConnectivityForDeadEnds(
+    network,
+    nodeGroups,
+    internal,
+  );
 
-  for (const outputNode of outputNodes) {
-    if (!hasIncoming(outputNode)) {
-      const candidates = hiddenNodes.length > 0 ? hiddenNodes : inputNodes;
-      if (candidates.length > 0) {
-        const rng = internal._getRNG();
-        const source = candidates[Math.floor(rng() * candidates.length)];
-        try {
-          network.connect?.(source, outputNode);
-        } catch {
-          // Intentionally ignore: connection may fail if nodes are incompatible.
-        }
-      }
-    }
-  }
-
-  for (const hiddenNode of hiddenNodes) {
-    if (!hasIncoming(hiddenNode)) {
-      const candidates = inputNodes.concat(
-        hiddenNodes.filter((node) => node !== hiddenNode)
-      );
-      if (candidates.length > 0) {
-        const rng = internal._getRNG();
-        const source = candidates[Math.floor(rng() * candidates.length)];
-        try {
-          network.connect?.(source, hiddenNode);
-        } catch {
-          // Intentionally ignore: connection may fail if nodes are incompatible.
-        }
-      }
-    }
-    if (!hasOutgoing(hiddenNode)) {
-      const candidates = outputNodes.concat(
-        hiddenNodes.filter((node) => node !== hiddenNode)
-      );
-      if (candidates.length > 0) {
-        const rng = internal._getRNG();
-        const target = candidates[Math.floor(rng() * candidates.length)];
-        try {
-          network.connect?.(hiddenNode, target);
-        } catch {
-          // Intentionally ignore: connection may fail if nodes are incompatible.
-        }
-      }
-    }
-  }
+  // Step 4: repair hidden nodes with missing in/out connections.
+  MutateHelpers.ensureHiddenConnectivityForDeadEnds(
+    network,
+    nodeGroups,
+    internal,
+  );
+  return;
 }
 
 /**
@@ -752,186 +268,66 @@ export function ensureNoDeadEnds(
 export async function selectMutationMethod(
   this: NeatLike,
   genome: GenomeWithMetadata,
-  rawReturnForTest: boolean = true
+  rawReturnForTest: boolean = true,
 ): Promise<MutationMethod | MutationMethod[] | null> {
-  const internal = (this as unknown) as NeatControllerForMutation;
+  const internal = this as unknown as NeatControllerForMutation;
 
   /** Methods module used to access named mutation operator descriptors. */
   const methods = await import('../methods/methods');
 
-  /** Whether the configured mutation policy directly equals the FFW array. */
-  const isFFWDirect = internal.options.mutation === methods.mutation.FFW;
-  /** Whether the configured mutation policy is a nested [FFW] array. */
-  const isFFWNested =
-    Array.isArray(internal.options.mutation) &&
-    (internal.options.mutation as unknown[]).length === 1 &&
-    (internal.options.mutation as unknown[])[0] === methods.mutation.FFW;
+  // Step 1: resolve FFW-specific policy behavior.
+  const ffwPolicy = MutateHelpers.resolveFFWPolicyForSelect(
+    internal,
+    methods,
+    rawReturnForTest,
+  );
+  if (ffwPolicy) return ffwPolicy;
 
-  if ((isFFWDirect || isFFWNested) && rawReturnForTest) {
-    return (methods.mutation.FFW as unknown) as MutationMethod[];
-  }
-  if (isFFWDirect) {
-    const ffwArray = (methods.mutation.FFW as unknown) as MutationMethod[];
-    return ffwArray[Math.floor(internal._getRNG()() * ffwArray.length)];
-  }
-  if (isFFWNested) {
-    const ffwArray = (methods.mutation.FFW as unknown) as MutationMethod[];
-    return ffwArray[Math.floor(internal._getRNG()() * ffwArray.length)];
-  }
+  // Step 2: build the operator pool for selection.
+  const basePool = MutateHelpers.normalizeMutationPoolForSelect(
+    internal,
+    methods,
+    rawReturnForTest,
+  );
+  const phasedPool = MutateHelpers.applyPhasedComplexityForSelect(
+    basePool,
+    internal,
+  );
+  const adaptedPool = MutateHelpers.applyOperatorAdaptationForSelect(
+    phasedPool,
+    internal,
+  );
 
-  /** Working pool of mutation operators (may be expanded by policies). */
-  let pool = internal.options.mutation as MutationMethod[];
+  // Step 3: select a candidate method from the pool.
+  const sampledMethod = MutateHelpers.sampleFromPoolForSelect(
+    adaptedPool,
+    internal,
+  );
+  if (!sampledMethod) return null;
   if (
-    rawReturnForTest &&
-    Array.isArray(pool) &&
-    pool.length ===
-      ((methods.mutation.FFW as unknown) as MutationMethod[]).length &&
-    pool.every(
-      (method, methodIndex) =>
-        method &&
-        method.name ===
-          ((methods.mutation.FFW as unknown) as MutationMethod[])[methodIndex]
-            .name
+    MutateHelpers.isBlockedByStructuralLimitsForSelect(
+      sampledMethod,
+      genome,
+      internal,
+      methods,
     )
-  ) {
-    return (methods.mutation.FFW as unknown) as MutationMethod[];
-  }
-  if (pool.length === 1 && Array.isArray(pool[0]) && pool[0].length) {
-    pool = (pool[0] as unknown) as MutationMethod[];
-  }
-
-  if (internal.options.phasedComplexity?.enabled && internal._phase) {
-    pool = pool.filter((method) => !!method);
-    if (internal._phase === 'simplify') {
-      /** Operators that simplify structures (name starts with SUB_). */
-      const simplifyPool = pool.filter(
-        (method) =>
-          method &&
-          method.name &&
-          method.name.startsWith &&
-          method.name.startsWith('SUB_')
-      );
-      if (simplifyPool.length) pool = [...pool, ...simplifyPool];
-    } else if (internal._phase === 'complexify') {
-      /** Operators that add complexity (name starts with ADD_). */
-      const addPool = pool.filter(
-        (method) =>
-          method &&
-          method.name &&
-          method.name.startsWith &&
-          method.name.startsWith('ADD_')
-      );
-      if (addPool.length) pool = [...pool, ...addPool];
-    }
-  }
-
-  if (internal.options.operatorAdaptation?.enabled) {
-    /** Multiplicative boost factor when an operator shows success. */
-    const boost = internal.options.operatorAdaptation.boost ?? 2;
-    /** Operator statistics map used to decide augmentation. */
-    const stats = internal._operatorStats;
-    /** Augmented operator pool (may contain duplicates to increase sampling weight). */
-    const augmented: MutationMethod[] = [];
-    for (const method of pool) {
-      augmented.push(method);
-      const operatorStats = stats.get(method.name);
-      if (operatorStats && operatorStats.attempts > 5) {
-        const ratio = operatorStats.success / operatorStats.attempts;
-        if (ratio > 0.55) {
-          for (
-            let boostIndex = 0;
-            boostIndex < Math.min(boost, Math.floor(ratio * boost));
-            boostIndex++
-          ) {
-            augmented.push(method);
-          }
-        }
-      }
-    }
-    pool = augmented;
-  }
-
-  /** Randomly sampled mutation method from the (possibly augmented) pool. */
-  let mutationMethod = pool[Math.floor(internal._getRNG()() * pool.length)];
-
-  if (
-    mutationMethod === methods.mutation.ADD_GATE &&
-    genome.gates.length >= (internal.options.maxGates || Infinity)
-  ) {
+  )
     return null;
-  }
-  if (
-    mutationMethod === methods.mutation.ADD_NODE &&
-    genome.nodes.length >= (internal.options.maxNodes || Infinity)
-  ) {
-    return null;
-  }
-  if (
-    mutationMethod === methods.mutation.ADD_CONN &&
-    genome.connections.length >= (internal.options.maxConns || Infinity)
-  ) {
-    return null;
-  }
 
-  if (internal.options.operatorBandit?.enabled) {
-    /** Exploration coefficient for the operator bandit (higher = more exploration). */
-    const explorationCoefficient = internal.options.operatorBandit.c ?? 1.4;
-    /** Minimum attempts below which an operator receives an infinite bonus. */
-    const minAttempts = internal.options.operatorBandit.minAttempts ?? 5;
-    /** Operator statistics map used by the bandit. */
-    const stats = internal._operatorStats;
-    for (const method of pool) {
-      if (!stats.has(method.name)) {
-        stats.set(method.name, { success: 0, attempts: 0 });
-      }
-    }
-    /** Total number of attempts across all operators (tiny epsilon to avoid div0). */
-    const totalAttempts =
-      (Array.from(stats.values()) as OperatorStats[]).reduce(
-        (accumulator, operatorStat) => accumulator + operatorStat.attempts,
-        0
-      ) + EPSILON; // stability epsilon
-    /** Candidate best operator (initialized to current random pick). */
-    let best = mutationMethod;
-    /** Best score found by the bandit search (higher is better). */
-    let bestVal = -Infinity;
-    for (const method of pool) {
-      const operatorStats = stats.get(method.name)!;
-      /** Empirical success rate for operator method. */
-      const mean =
-        operatorStats.attempts > 0
-          ? operatorStats.success / operatorStats.attempts
-          : 0;
-      /** Exploration bonus (infinite if operator is under-sampled). */
-      const bonus =
-        operatorStats.attempts < minAttempts
-          ? Infinity
-          : explorationCoefficient *
-            Math.sqrt(
-              Math.log(totalAttempts) / (operatorStats.attempts + EPSILON)
-            );
-      /** Combined score used to rank operators. */
-      const val = mean + bonus;
-      if (val > bestVal) {
-        bestVal = val;
-        best = method;
-      }
-    }
-    mutationMethod = best;
-  }
+  // Step 4: apply operator bandit selection when enabled.
+  const banditMethod = MutateHelpers.applyOperatorBanditForSelect(
+    adaptedPool,
+    sampledMethod,
+    internal,
+  );
+  if (
+    MutateHelpers.isBlockedByRecurrentPolicyForSelect(
+      banditMethod,
+      internal,
+      methods,
+    )
+  )
+    return null;
 
-  if (
-    mutationMethod === methods.mutation.ADD_GATE &&
-    genome.gates.length >= (internal.options.maxGates || Infinity)
-  ) {
-    return null;
-  }
-  if (
-    !internal.options.allowRecurrent &&
-    (mutationMethod === methods.mutation.ADD_BACK_CONN ||
-      mutationMethod === methods.mutation.ADD_SELF_CONN)
-  ) {
-    return null;
-  }
-  return mutationMethod;
+  return banditMethod;
 }

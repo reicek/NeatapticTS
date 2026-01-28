@@ -39,7 +39,7 @@ describe('Training Extensions', () => {
     net.enableDropConnect(0.9);
     net.activate([0, 0, 0], true);
     const dropped = net.connections.filter(
-      (c) => (c as { dcMask?: number }).dcMask === 0
+      (c) => (c as { dcMask?: number }).dcMask === 0,
     ).length;
     it('applies at least possible zero masks (>=0)', () => {
       expect(dropped >= 0).toBe(true);
