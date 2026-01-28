@@ -2,6 +2,10 @@
 
 ## neat/neat.adaptive.ts
 
+### ANNEAL_BASELINE_GENERATIONS
+
+### ANNEAL_PROGRESS_MAX
+
 ### applyAdaptiveMutation
 
 `() => void`
@@ -77,10 +81,751 @@ generations.
 
 Returns: Mutates `this._phase` and `this._phaseStartGeneration`.
 
+### DEFAULT_ADAPT_EVERY
+
+### DEFAULT_ANCESTOR_UNIQ_ADJUST
+
+### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
+
+### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
+
+### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
+
+### DEFAULT_INITIAL_MUTATION_RATE
+
+### DEFAULT_LINEAGE_PRESSURE_STRENGTH
+
+### DEFAULT_MAX_MUTATION_AMOUNT
+
+### DEFAULT_MAX_MUTATION_RATE
+
+### DEFAULT_MIN_MUTATION_AMOUNT
+
+### DEFAULT_MIN_MUTATION_RATE
+
+### DEFAULT_MUTATION_AMOUNT
+
+### DEFAULT_MUTATION_AMOUNT_SIGMA
+
+### DEFAULT_MUTATION_SIGMA
+
+### EXPLORE_LOW_DECREASE_MULTIPLIER
+
+### EXPLORE_LOW_INCREASE_MULTIPLIER
+
+### HALF_INDEX_DIVISOR
+
+### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
+
+### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
+
+### MUTATION_SIGMA_SCALE
+
+### MUTATION_STRATEGY_ANNEAL
+
+### MUTATION_STRATEGY_EXPLORE_LOW
+
+### MUTATION_STRATEGY_TWO_TIER
+
 ### NeatLikeWithAdaptive
 
 Minimal interface for NEAT instances with adaptive features.
 Exported for use in tests and type-safe function calls.
+
+### RNG_CENTER_OFFSET
+
+### RNG_SPREAD_MULTIPLIER
+
+## neat/neat.adaptive.utils.ts
+
+### adjustConnectionBudget
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, factors: { increaseFactor: number; stagnationFactor: number; }, noveltyFactor: number, history: number[]) => void`
+
+Adjust connection budget based on trends and factors.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Complexity budget configuration.
+- `trends` - - Improvement and slope metrics.
+- `factors` - - Adjustment factors.
+- `noveltyFactor` - - Novelty multiplier.
+- `history` - - Rolling history for window checks.
+
+### adjustNodeBudget
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, factors: { increaseFactor: number; stagnationFactor: number; }, noveltyFactor: number, history: number[]) => void`
+
+Adjust node budget based on trends and factors.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Complexity budget configuration.
+- `trends` - - Improvement and slope metrics.
+- `factors` - - Adjustment factors.
+- `noveltyFactor` - - Novelty multiplier.
+- `history` - - Rolling history for window checks.
+
+### ANNEAL_BASELINE_GENERATIONS
+
+### ANNEAL_PROGRESS_MAX
+
+### applyAdaptiveSchedule
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+
+Apply adaptive complexity budget scheduling.
+
+Parameters:
+- `engine` - - NEAT engine instance with adaptive state.
+- `config` - - Complexity budget configuration.
+
+### applyAnnealDelta
+
+`(baseDelta: number, settings: MutationSettings) => number`
+
+Apply annealing adjustments to a delta.
+
+Parameters:
+- `baseDelta` - - Base random delta.
+- `settings` - - Resolved settings.
+
+Returns: Adjusted delta.
+
+### applyComplexityBudgetSchedule
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+
+Apply the complexity budget schedule for the configured mode.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Complexity budget configuration.
+
+### applyEpsilonAdjustment
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }, adjustMagnitude: number) => void`
+
+Apply dominance-epsilon adjustments when configured.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `ancestorUniq` - - Current ancestor uniqueness metric.
+- `thresholds` - - Threshold bounds for decisions.
+- `adjustMagnitude` - - Adjustment magnitude.
+
+### applyExploreLowDelta
+
+`(baseDelta: number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
+
+Apply explore-low adjustments to a delta.
+
+Parameters:
+- `baseDelta` - - Base random delta.
+- `genome` - - Current genome.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
+
+Returns: Adjusted delta.
+
+### applyLineagePressureAdjustment
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }) => void`
+
+Apply lineage pressure strength adjustments.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `ancestorUniq` - - Current ancestor uniqueness metric.
+- `thresholds` - - Threshold bounds for decisions.
+
+### applyLinearSchedule
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+
+Apply linear complexity budget scheduling.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Complexity budget configuration.
+
+### applyMutationAmount
+
+`(genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, settings: MutationSettings, randomSource: () => number, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => void`
+
+Apply mutation-amount adjustments to a genome.
+
+Parameters:
+- `genome` - - Current genome.
+- `settings` - - Resolved settings.
+- `randomSource` - - Random number provider.
+- `genomeIndex` - - Genome index.
+- `topHalfSet` - - Lookup for top-half genomes.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
+
+### applyMutationsToPopulation
+
+`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[], partitions: MutationPartitions, settings: MutationSettings, randomSource: () => number) => MutationOutcome`
+
+Apply mutation updates to the population.
+
+Parameters:
+- `population` - - Full population to mutate.
+- `partitions` - - Scored partitions.
+- `settings` - - Resolved settings.
+- `randomSource` - - Random number provider.
+
+Returns: Mutation outcome flags.
+
+### applyOperatorDecay
+
+`(stats: Map<string, { success: number; attempts: number; }>, entries: [string, { success: number; attempts: number; }][], decay: number) => void`
+
+Apply exponential decay to each operator statistic entry.
+
+Parameters:
+- `stats` - - Operator statistics map.
+- `entries` - - Operator stat entries to update.
+- `decay` - - Decay factor.
+
+### applyRejection
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, threshold: number) => void`
+
+Zero scores below the final threshold.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `threshold` - - Final MC threshold.
+
+### applyTwoTierAmountDelta
+
+`(baseDelta: number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
+
+Apply two-tier adjustments to amount delta.
+
+Parameters:
+- `baseDelta` - - Base random delta.
+- `genome` - - Current genome.
+- `genomeIndex` - - Genome index.
+- `topHalfSet` - - Lookup for top-half genomes.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
+
+Returns: Adjusted delta.
+
+### applyTwoTierDelta
+
+`(baseDelta: number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
+
+Apply two-tier adjustments to a delta.
+
+Parameters:
+- `baseDelta` - - Base random delta.
+- `genome` - - Current genome.
+- `genomeIndex` - - Genome index.
+- `topHalfSet` - - Lookup for top-half genomes.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
+
+Returns: Adjusted delta.
+
+### applyTwoTierFallback
+
+`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[], settings: MutationSettings) => void`
+
+Apply two-tier fallback balancing.
+
+Parameters:
+- `population` - - Population of genomes.
+- `settings` - - Resolved settings.
+
+### applyUniquenessAdjustment
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }, adjustMagnitude: number) => void`
+
+Apply an adjustment for the configured mode.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Ancestor uniqueness adaptive configuration.
+- `ancestorUniq` - - Current ancestor uniqueness metric.
+- `thresholds` - - Threshold bounds for decisions.
+- `adjustMagnitude` - - Adjustment magnitude.
+
+### clampNodeBudget
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+
+Clamp node budget to configured minimum.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Complexity budget configuration.
+
+### clampValue
+
+`(value: number, min: number, max: number) => number`
+
+Clamp a value between min and max bounds.
+
+Parameters:
+- `value` - - Value to clamp.
+- `min` - - Minimum bound.
+- `max` - - Maximum bound.
+
+Returns: Clamped value.
+
+### collectOperatorStatsEntries
+
+`(stats: Map<string, { success: number; attempts: number; }>) => [string, { success: number; attempts: number; }][]`
+
+Collect operator statistic entries for processing.
+
+Parameters:
+- `stats` - - Operator statistics map.
+
+Returns: Array of operator stat entries.
+
+### collectScoredGenomes
+
+`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]) => { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]`
+
+Collect genomes with numeric scores.
+
+Parameters:
+- `population` - - Population of genomes.
+
+Returns: Scored genomes.
+
+### collectScores
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive) => number[]`
+
+Collect population scores into a snapshot array.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+
+Returns: Array of scores (missing scores treated as 0).
+
+### computeAcceptance
+
+`(scores: number[], threshold: number) => number`
+
+Compute acceptance metrics for the current threshold.
+
+Parameters:
+- `scores` - - Population score snapshot.
+- `threshold` - - Current MC threshold.
+
+Returns: Acceptance proportion.
+
+### computeAdjustmentFactors
+
+`(config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, history: number[]) => { increaseFactor: number; stagnationFactor: number; }`
+
+Compute adjustment factors for budget growth and decay.
+
+Parameters:
+- `config` - - Complexity budget configuration.
+- `trends` - - Improvement and slope metrics.
+- `history` - - Rolling history of best scores.
+
+Returns: Adjustment factors (increase and stagnation multipliers).
+
+### computeNoveltyFactor
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive) => number`
+
+Compute novelty factor based on archive size.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+
+Returns: Novelty multiplier (0.9 if archive small, 1.0 otherwise).
+
+### computeSlope
+
+`(history: number[]) => number`
+
+Compute linear regression slope using ordinary least squares.
+
+Parameters:
+- `history` - - Rolling history of best scores.
+
+Returns: OLS slope estimate.
+
+### computeTrends
+
+`(history: number[]) => { improvement: number; slope: number; }`
+
+Compute improvement and slope trends from score history.
+
+Parameters:
+- `history` - - Rolling history of best scores.
+
+Returns: Trend metrics (improvement and slope).
+
+### createRandomDelta
+
+`(sigmaBase: number, randomSource: () => number) => number`
+
+Create a signed random delta scaled by sigma.
+
+Parameters:
+- `sigmaBase` - - Sigma scaling factor.
+- `randomSource` - - Random number provider.
+
+Returns: Signed delta.
+
+### decayOperatorStat
+
+`(operatorStat: { success: number; attempts: number; }, decay: number) => { success: number; attempts: number; }`
+
+Apply decay to a single operator statistic record.
+
+Parameters:
+- `operatorStat` - - Operator statistic record.
+- `decay` - - Decay factor.
+
+Returns: Decayed operator statistic record.
+
+### DEFAULT_ADAPT_EVERY
+
+### DEFAULT_ANCESTOR_UNIQ_ADJUST
+
+### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
+
+### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
+
+### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
+
+### DEFAULT_INITIAL_MUTATION_RATE
+
+### DEFAULT_LINEAGE_PRESSURE_STRENGTH
+
+### DEFAULT_MAX_MUTATION_AMOUNT
+
+### DEFAULT_MAX_MUTATION_RATE
+
+### DEFAULT_MIN_MUTATION_AMOUNT
+
+### DEFAULT_MIN_MUTATION_RATE
+
+### DEFAULT_MUTATION_AMOUNT
+
+### DEFAULT_MUTATION_AMOUNT_SIGMA
+
+### DEFAULT_MUTATION_SIGMA
+
+### ensureLineagePressureState
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive) => { enabled?: boolean | undefined; mode?: string | undefined; strength?: number | undefined; }`
+
+Ensure lineage pressure state is available.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+
+Returns: Lineage pressure configuration object.
+
+### EXPLORE_LOW_DECREASE_MULTIPLIER
+
+### EXPLORE_LOW_INCREASE_MULTIPLIER
+
+### extractAncestorUniqueness
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive) => number | undefined`
+
+Extract the latest ancestor-uniqueness metric from telemetry.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+
+Returns: Ancestor uniqueness value or undefined when missing.
+
+### HALF_INDEX_DIVISOR
+
+### initializeConnectionBudget
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+
+Initialize connection budget if undefined.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Complexity budget configuration.
+
+### initializeNodeBudget
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+
+Initialize node budget if undefined.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Complexity budget configuration.
+
+### initializePhaseState
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; }) => void`
+
+Ensure phase state is initialized.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Phased complexity configuration.
+
+### initializeThreshold
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; }) => void`
+
+Initialize MC threshold if missing.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Minimal-criterion adaptive configuration.
+
+### isCooldownSatisfied
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }) => boolean`
+
+Determine whether the cooldown window has elapsed.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Ancestor uniqueness adaptive configuration.
+
+Returns: True when adjustment is allowed.
+
+### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
+
+### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
+
+### MUTATION_SIGMA_SCALE
+
+### MUTATION_STRATEGY_ANNEAL
+
+### MUTATION_STRATEGY_EXPLORE_LOW
+
+### MUTATION_STRATEGY_TWO_TIER
+
+### NeatLikeWithAdaptive
+
+Minimal interface for NEAT instances with adaptive features.
+Exported for use in tests and type-safe function calls.
+
+### normalizeSlope
+
+`(slope: number, initialScore: number) => number`
+
+Normalize slope magnitude relative to initial score.
+
+Parameters:
+- `slope` - - Raw OLS slope.
+- `initialScore` - - First score in history window.
+
+Returns: Normalized slope clamped to [-2, 2].
+
+### recordAdjustment
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive) => void`
+
+Record the generation when an adjustment is applied.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+
+### resolveAdjustmentMagnitude
+
+`(config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }) => number`
+
+Resolve adjustment magnitude for nudging controlled parameters.
+
+Parameters:
+- `config` - - Ancestor uniqueness adaptive configuration.
+
+Returns: Adjustment magnitude.
+
+### resolveAmountDelta
+
+`(settings: MutationSettings, randomSource: () => number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
+
+Resolve mutation-amount delta based on strategy.
+
+Parameters:
+- `settings` - - Resolved settings.
+- `randomSource` - - Random number provider.
+- `genome` - - Current genome.
+- `genomeIndex` - - Genome index.
+- `topHalfSet` - - Lookup for top-half genomes.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
+
+Returns: Signed mutation amount delta.
+
+### resolveMutationSettings
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; }) => MutationSettings`
+
+Resolve mutation settings derived from configuration and engine state.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Adaptive mutation configuration.
+
+Returns: Resolved mutation settings.
+
+### resolveNextPhase
+
+`(currentPhase: string) => string`
+
+Resolve next phase name.
+
+Parameters:
+- `currentPhase` - - Current phase label.
+
+Returns: Next phase label.
+
+### resolveOperatorDecay
+
+`(config: { enabled?: boolean | undefined; learningRate?: number | undefined; alpha?: number | undefined; decay?: number | undefined; }) => number`
+
+Resolve the decay factor for operator statistics.
+
+Parameters:
+- `config` - - Operator adaptation configuration.
+
+Returns: Decay factor for exponential smoothing.
+
+### resolveRandomSource
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive) => () => number`
+
+Resolve a random source that matches the legacy RNG usage.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+
+Returns: Random number provider.
+
+### resolveRateDelta
+
+`(settings: MutationSettings, randomSource: () => number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
+
+Resolve mutation-rate delta based on strategy.
+
+Parameters:
+- `settings` - - Resolved settings.
+- `randomSource` - - Random number provider.
+- `genome` - - Current genome.
+- `genomeIndex` - - Genome index.
+- `topHalfSet` - - Lookup for top-half genomes.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
+
+Returns: Signed mutation rate delta.
+
+### resolveTargetSettings
+
+`(config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; }) => { targetAcceptance: number; adjustRate: number; }`
+
+Resolve target acceptance and adjust rate settings.
+
+Parameters:
+- `config` - - Minimal-criterion adaptive configuration.
+
+Returns: Target settings.
+
+### resolveUniquenessThresholds
+
+`(config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }) => { lowThreshold: number; highThreshold: number; }`
+
+Resolve thresholds for ancestor-uniqueness decisions.
+
+Parameters:
+- `config` - - Ancestor uniqueness adaptive configuration.
+
+Returns: Threshold bounds.
+
+### RNG_CENTER_OFFSET
+
+### RNG_SPREAD_MULTIPLIER
+
+### shouldAdaptThisGeneration
+
+`(generation: number, config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; }) => boolean`
+
+Check whether mutation adaptation should run this generation.
+
+Parameters:
+- `generation` - - Current generation index.
+- `config` - - Adaptive mutation configuration.
+
+Returns: True if adaptation should run.
+
+### shouldApplyTwoTierFallback
+
+`(strategy: string, outcome: MutationOutcome) => boolean`
+
+Determine whether a two-tier fallback is needed.
+
+Parameters:
+- `strategy` - - Mutation strategy identifier.
+- `outcome` - - Mutation outcome flags.
+
+Returns: True if fallback should run.
+
+### sortScoredGenomes
+
+`(scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]) => { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]`
+
+Sort scored genomes in ascending score order.
+
+Parameters:
+- `scoredGenomes` - - Scored genomes.
+
+Returns: Sorted genomes.
+
+### splitScoredGenomes
+
+`(scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]) => MutationPartitions`
+
+Split scored genomes into top and bottom halves.
+
+Parameters:
+- `scoredGenomes` - - Sorted scored genomes.
+
+Returns: Partitions used by strategy rules.
+
+### togglePhaseIfNeeded
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; }) => void`
+
+Toggle phase if the current phase has exceeded its length.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Phased complexity configuration.
+
+### updateScoreHistory
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => number[]`
+
+Update rolling score history with current best score.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Complexity budget configuration.
+
+Returns: Rolling history array after update.
+
+### updateThreshold
+
+`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.utils").NeatLikeWithAdaptive, acceptance: number, tuning: { targetAcceptance: number; adjustRate: number; }) => void`
+
+Update the MC threshold based on acceptance proportion.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `acceptance` - - Observed acceptance proportion.
+- `tuning` - - Target acceptance and adjustment settings.
 
 ## neat/neat.compat.ts
 
