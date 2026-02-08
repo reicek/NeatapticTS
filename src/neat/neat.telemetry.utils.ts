@@ -9,3 +9,4 @@ export * from './neat.telemetry.rng.utils';
 export * from './neat.telemetry.lineage.utils';
 export * from './neat.telemetry.complexity.utils';
 export * from './neat.telemetry.performance.utils';
+export * from './neat.telemetry.accessors.utils';

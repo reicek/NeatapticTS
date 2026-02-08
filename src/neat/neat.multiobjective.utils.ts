@@ -7,3 +7,4 @@ export * from './neat.multiobjective.dominance.utils';
 export * from './neat.multiobjective.fronts.utils';
 export * from './neat.multiobjective.crowding.utils';
 export * from './neat.multiobjective.archive.utils';
+export * from './neat.multiobjective.metrics.utils';

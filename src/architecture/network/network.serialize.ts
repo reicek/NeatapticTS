@@ -2,6 +2,7 @@ import type Network from '../network';
 import Node from '../node';
 import Connection from '../connection';
 import * as methods from '../../methods/methods';
+import type { ActivationFunction } from '../../methods/activation.utils';
 
 /**
  * Runtime interface for accessing Network internal properties.
@@ -127,7 +128,8 @@ export function serialize(
   // states[] represent the pre-activation internal sum (or evolving state for recurrent / gated constructs).
   /** Squash (activation function) names per node for later rehydration. */
   const squashes = networkInternal.nodes.map(
-    (nodeRef) => (nodeRef as unknown as NodeInternals).squash.name,
+    (nodeRef) =>
+      resolveActivationKey((nodeRef as unknown as NodeInternals).squash),
   );
   // Instead of serializing function references we store the human-readable name; on import we map name->fn.
   /** Combined forward + self connections flattened to plain indices + weights. */
@@ -208,16 +210,11 @@ export const deserialize = (
     nodeInternal.activation = activation;
     nodeInternal.state = states[nodeIndex];
     /** Activation function name captured during serialization. */
-    const squashName = squashes[nodeIndex] as keyof typeof methods.Activation;
-    if (!methods.Activation[squashName]) {
-      console.warn(
-        `Unknown squash function '${String(
-          squashName,
-        )}' encountered during deserialize. Falling back to identity.`,
-      );
-    }
-    nodeInternal.squash =
-      methods.Activation[squashName] || methods.Activation.identity;
+    const squashName = squashes[nodeIndex];
+    const resolvedSquash = resolveActivationFunction(
+      typeof squashName === 'string' ? squashName : undefined,
+    );
+    nodeInternal.squash = resolvedSquash;
     nodeInternal.index = nodeIndex;
     netInternal.nodes.push(node);
   });
@@ -287,10 +284,11 @@ export function toJSONImpl(this: Network): NetworkJSON {
       connections: { self: Connection[] };
     };
     nodeInternal.index = nodeIndex; // refresh index for safety
+    const squashKey = resolveActivationKey(nodeInternal.squash);
     json.nodes.push({
       type: node.type,
       bias: nodeInternal.bias,
-      squash: nodeInternal.squash.name,
+      squash: squashKey,
       index: nodeIndex,
       geneId: nodeInternal.geneId,
     });
@@ -363,9 +361,8 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
       geneId?: number;
     };
     nodeInternal.bias = nodeJson.bias;
-    const squashName = nodeJson.squash as keyof typeof methods.Activation;
-    nodeInternal.squash =
-      methods.Activation[squashName] || methods.Activation.identity;
+    const resolvedSquash = resolveActivationFunction(nodeJson.squash);
+    nodeInternal.squash = resolvedSquash;
     nodeInternal.index = nodeIndex;
     if (typeof nodeJson.geneId === 'number')
       nodeInternal.geneId = nodeJson.geneId;
@@ -423,5 +420,32 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
   // As with deserialize(), we defer recalculating any cached orderings until first operational use.
   return net;
 };
+
+function resolveActivationKey(squashFn: ActivationFunction): string {
+  const matchedEntry = Object.entries(methods.Activation).find(
+    ([, activationFn]) => activationFn === squashFn,
+  );
+  if (matchedEntry) return matchedEntry[0];
+  if (typeof squashFn?.name === 'string' && squashFn.name.length > 0)
+    return squashFn.name;
+  return 'identity';
+}
+
+function resolveActivationFunction(
+  squashName: string | undefined,
+): ActivationFunction {
+  if (squashName && methods.Activation[squashName])
+    return methods.Activation[squashName];
+  const matchedEntry = Object.entries(methods.Activation).find(
+    ([, activationFn]) => activationFn.name === squashName,
+  );
+  if (matchedEntry) return matchedEntry[1];
+  console.warn(
+    `Unknown squash function '${String(
+      squashName,
+    )}' encountered during deserialization. Falling back to identity.`,
+  );
+  return methods.Activation.identity;
+}
 
 export { Connection }; // re-export for potential external tooling needing innovation IDs

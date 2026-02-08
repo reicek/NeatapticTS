@@ -699,21 +699,21 @@ Returns: The proportion of misclassified samples (error rate, between 0 and 1).
 
 #### cosineAnnealing
 
-`(period: number, minRate: number) => (baseRate: number, iteration: number) => number`
+`(period: number, minimumRate: number) => (baseRate: number, iteration: number) => number`
 
 Implements a Cosine Annealing learning rate schedule.
 
 This schedule varies the learning rate cyclically according to a cosine function.
-It starts at the `baseRate` and smoothly anneals down to `minRate` over a
+It starts at the `baseRate` and smoothly anneals down to `minimumRate` over a
 specified `period` of iterations, then potentially repeats. This can help
 the model escape local minima and explore the loss landscape more effectively.
 Often used with "warm restarts" where the cycle repeats.
 
-Formula: `learning_rate = minRate + 0.5 * (baseRate - minRate) * (1 + cos(pi * current_cycle_iteration / period))`
+Formula: `learning_rate = minimumRate + 0.5 * (baseRate - minimumRate) * (1 + cos(pi * current_cycle_iteration / period))`
 
 Parameters:
-- `period` - The number of iterations over which the learning rate anneals from `baseRate` to `minRate` in one cycle. Defaults to 1000.
-- `minRate` - The minimum learning rate value at the end of a cycle. Defaults to 0.
+- `period` - The number of iterations over which the learning rate anneals from `baseRate` to `minimumRate` in one cycle. Defaults to 1000.
+- `minimumRate` - The minimum learning rate value at the end of a cycle. Defaults to 0.
 - `baseRate` - The initial (maximum) learning rate for the cycle.
 - `iteration` - The current training iteration.
 
@@ -721,14 +721,14 @@ Returns: A function that calculates the learning rate for a given iteration base
 
 #### cosineAnnealingWarmRestarts
 
-`(initialPeriod: number, minRate: number, tMult: number) => (baseRate: number, iteration: number) => number`
+`(initialPeriod: number, minimumRate: number, periodGrowthMultiplier: number) => (baseRate: number, iteration: number) => number`
 
-Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier (tMult) after each restart.
+Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier after each restart.
 
 Parameters:
 - `initialPeriod` - Length of the first cycle in iterations.
-- `minRate` - Minimum learning rate at valley.
-- `tMult` - Factor to multiply the period after each restart (>=1).
+- `minimumRate` - Minimum learning rate at valley.
+- `periodGrowthMultiplier` - Factor to multiply the period after each restart (>=1).
 
 #### crossEntropy
 
@@ -751,18 +751,18 @@ Returns: The mean cross-entropy error over all samples.
 
 #### exp
 
-`(gamma: number) => (baseRate: number, iteration: number) => number`
+`(decayFactor: number) => (baseRate: number, iteration: number) => number`
 
 Implements an exponential decay learning rate schedule.
 
 The learning rate decreases exponentially after each iteration, multiplying
-by the decay factor `gamma`. This provides a smooth, continuous reduction
+by the decay factor `decayFactor`. This provides a smooth, continuous reduction
 in the learning rate over time.
 
-Formula: `learning_rate = baseRate * gamma ^ iteration`
+Formula: `learning_rate = baseRate * decayFactor ^ iteration`
 
 Parameters:
-- `gamma` - The decay factor applied at each iteration. Should be less than 1. Defaults to 0.999.
+- `decayFactor` - The decay factor applied at each iteration. Should be less than 1. Defaults to 0.999.
 - `baseRate` - The initial learning rate.
 - `iteration` - The current training iteration.
 
@@ -818,19 +818,19 @@ Returns: The mean hinge loss.
 
 #### inv
 
-`(gamma: number, power: number) => (baseRate: number, iteration: number) => number`
+`(decayFactor: number, decayPower: number) => (baseRate: number, iteration: number) => number`
 
 Implements an inverse decay learning rate schedule.
 
 The learning rate decreases as the inverse of the iteration number,
-controlled by the decay factor `gamma` and exponent `power`. The rate
+controlled by the decay factor `decayFactor` and exponent `decayPower`. The rate
 decreases more slowly over time compared to exponential decay.
 
-Formula: `learning_rate = baseRate / (1 + gamma * Math.pow(iteration, power))`
+Formula: `learning_rate = baseRate / (1 + decayFactor * iteration ** decayPower)`
 
 Parameters:
-- `gamma` - Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.
-- `power` - The exponent controlling the shape of the decay curve. Defaults to 2.
+- `decayFactor` - Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.
+- `decayPower` - The exponent controlling the shape of the decay curve. Defaults to 2.
 - `baseRate` - The initial learning rate.
 - `iteration` - The current training iteration.
 
@@ -852,16 +852,16 @@ Returns: The mean cross-entropy loss with label smoothing.
 
 #### linearWarmupDecay
 
-`(totalSteps: number, warmupSteps: number | undefined, endRate: number) => (baseRate: number, iteration: number) => number`
+`(totalStepCount: number, warmupStepCount: number | undefined, endRate: number) => (baseRate: number, iteration: number) => number`
 
 Linear Warmup followed by Linear Decay to an end rate.
-Warmup linearly increases LR from near 0 up to baseRate over warmupSteps, then linearly decays to endRate at totalSteps.
-Iterations beyond totalSteps clamp to endRate.
+Warmup linearly increases LR from near 0 up to baseRate over warmupStepCount, then linearly decays to endRate at totalStepCount.
+Iterations beyond totalStepCount clamp to endRate.
 
 Parameters:
-- `totalSteps` - Total steps for full schedule (must be > 0).
-- `warmupSteps` - Steps for warmup (< totalSteps). Defaults to 10% of totalSteps.
-- `endRate` - Final rate at totalSteps.
+- `totalStepCount` - Total steps for full schedule (must be > 0).
+- `warmupStepCount` - Steps for warmup (< totalStepCount). Defaults to 10% of totalStepCount.
+- `endRate` - Final rate at totalStepCount.
 
 #### mae
 
@@ -948,19 +948,19 @@ Targets may be soft labels and are expected to sum to 1 (will be re-normalized i
 
 #### step
 
-`(gamma: number, stepSize: number) => (baseRate: number, iteration: number) => number`
+`(decayFactor: number, decayStepSize: number) => (baseRate: number, iteration: number) => number`
 
 Implements a step decay learning rate schedule.
 
-The learning rate is reduced by a multiplicative factor (`gamma`)
-at predefined intervals (`stepSize` iterations). This allows for
+The learning rate is reduced by a multiplicative factor (`decayFactor`)
+at predefined intervals (`decayStepSize` iterations). This allows for
 faster initial learning, followed by finer adjustments as training progresses.
 
-Formula: `learning_rate = baseRate * gamma ^ floor(iteration / stepSize)`
+Formula: `learning_rate = baseRate * decayFactor ^ floor(iteration / decayStepSize)`
 
 Parameters:
-- `gamma` - The factor by which the learning rate is multiplied at each step. Should be less than 1. Defaults to 0.9.
-- `stepSize` - The number of iterations after which the learning rate decays. Defaults to 100.
+- `decayFactor` - The factor by which the learning rate is multiplied at each step. Should be less than 1. Defaults to 0.9.
+- `decayStepSize` - The number of iterations after which the learning rate decays. Defaults to 100.
 - `baseRate` - The initial learning rate.
 - `iteration` - The current training iteration.
 
@@ -1002,21 +1002,21 @@ offer different strategies to balance exploration and exploitation during traini
 
 #### cosineAnnealing
 
-`(period: number, minRate: number) => (baseRate: number, iteration: number) => number`
+`(period: number, minimumRate: number) => (baseRate: number, iteration: number) => number`
 
 Implements a Cosine Annealing learning rate schedule.
 
 This schedule varies the learning rate cyclically according to a cosine function.
-It starts at the `baseRate` and smoothly anneals down to `minRate` over a
+It starts at the `baseRate` and smoothly anneals down to `minimumRate` over a
 specified `period` of iterations, then potentially repeats. This can help
 the model escape local minima and explore the loss landscape more effectively.
 Often used with "warm restarts" where the cycle repeats.
 
-Formula: `learning_rate = minRate + 0.5 * (baseRate - minRate) * (1 + cos(pi * current_cycle_iteration / period))`
+Formula: `learning_rate = minimumRate + 0.5 * (baseRate - minimumRate) * (1 + cos(pi * current_cycle_iteration / period))`
 
 Parameters:
-- `period` - The number of iterations over which the learning rate anneals from `baseRate` to `minRate` in one cycle. Defaults to 1000.
-- `minRate` - The minimum learning rate value at the end of a cycle. Defaults to 0.
+- `period` - The number of iterations over which the learning rate anneals from `baseRate` to `minimumRate` in one cycle. Defaults to 1000.
+- `minimumRate` - The minimum learning rate value at the end of a cycle. Defaults to 0.
 - `baseRate` - The initial (maximum) learning rate for the cycle.
 - `iteration` - The current training iteration.
 
@@ -1024,29 +1024,29 @@ Returns: A function that calculates the learning rate for a given iteration base
 
 #### cosineAnnealingWarmRestarts
 
-`(initialPeriod: number, minRate: number, tMult: number) => (baseRate: number, iteration: number) => number`
+`(initialPeriod: number, minimumRate: number, periodGrowthMultiplier: number) => (baseRate: number, iteration: number) => number`
 
-Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier (tMult) after each restart.
+Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier after each restart.
 
 Parameters:
 - `initialPeriod` - Length of the first cycle in iterations.
-- `minRate` - Minimum learning rate at valley.
-- `tMult` - Factor to multiply the period after each restart (>=1).
+- `minimumRate` - Minimum learning rate at valley.
+- `periodGrowthMultiplier` - Factor to multiply the period after each restart (>=1).
 
 #### exp
 
-`(gamma: number) => (baseRate: number, iteration: number) => number`
+`(decayFactor: number) => (baseRate: number, iteration: number) => number`
 
 Implements an exponential decay learning rate schedule.
 
 The learning rate decreases exponentially after each iteration, multiplying
-by the decay factor `gamma`. This provides a smooth, continuous reduction
+by the decay factor `decayFactor`. This provides a smooth, continuous reduction
 in the learning rate over time.
 
-Formula: `learning_rate = baseRate * gamma ^ iteration`
+Formula: `learning_rate = baseRate * decayFactor ^ iteration`
 
 Parameters:
-- `gamma` - The decay factor applied at each iteration. Should be less than 1. Defaults to 0.999.
+- `decayFactor` - The decay factor applied at each iteration. Should be less than 1. Defaults to 0.999.
 - `baseRate` - The initial learning rate.
 - `iteration` - The current training iteration.
 
@@ -1070,19 +1070,19 @@ Returns: A function that takes the base learning rate and the current iteration 
 
 #### inv
 
-`(gamma: number, power: number) => (baseRate: number, iteration: number) => number`
+`(decayFactor: number, decayPower: number) => (baseRate: number, iteration: number) => number`
 
 Implements an inverse decay learning rate schedule.
 
 The learning rate decreases as the inverse of the iteration number,
-controlled by the decay factor `gamma` and exponent `power`. The rate
+controlled by the decay factor `decayFactor` and exponent `decayPower`. The rate
 decreases more slowly over time compared to exponential decay.
 
-Formula: `learning_rate = baseRate / (1 + gamma * Math.pow(iteration, power))`
+Formula: `learning_rate = baseRate / (1 + decayFactor * iteration ** decayPower)`
 
 Parameters:
-- `gamma` - Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.
-- `power` - The exponent controlling the shape of the decay curve. Defaults to 2.
+- `decayFactor` - Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.
+- `decayPower` - The exponent controlling the shape of the decay curve. Defaults to 2.
 - `baseRate` - The initial learning rate.
 - `iteration` - The current training iteration.
 
@@ -1090,16 +1090,16 @@ Returns: A function that calculates the inversely decayed learning rate for a gi
 
 #### linearWarmupDecay
 
-`(totalSteps: number, warmupSteps: number | undefined, endRate: number) => (baseRate: number, iteration: number) => number`
+`(totalStepCount: number, warmupStepCount: number | undefined, endRate: number) => (baseRate: number, iteration: number) => number`
 
 Linear Warmup followed by Linear Decay to an end rate.
-Warmup linearly increases LR from near 0 up to baseRate over warmupSteps, then linearly decays to endRate at totalSteps.
-Iterations beyond totalSteps clamp to endRate.
+Warmup linearly increases LR from near 0 up to baseRate over warmupStepCount, then linearly decays to endRate at totalStepCount.
+Iterations beyond totalStepCount clamp to endRate.
 
 Parameters:
-- `totalSteps` - Total steps for full schedule (must be > 0).
-- `warmupSteps` - Steps for warmup (< totalSteps). Defaults to 10% of totalSteps.
-- `endRate` - Final rate at totalSteps.
+- `totalStepCount` - Total steps for full schedule (must be > 0).
+- `warmupStepCount` - Steps for warmup (< totalStepCount). Defaults to 10% of totalStepCount.
+- `endRate` - Final rate at totalStepCount.
 
 #### reduceOnPlateau
 
@@ -1112,23 +1112,163 @@ NOTE: Requires the training loop to call with signature (baseRate, iteration, la
 
 #### step
 
-`(gamma: number, stepSize: number) => (baseRate: number, iteration: number) => number`
+`(decayFactor: number, decayStepSize: number) => (baseRate: number, iteration: number) => number`
 
 Implements a step decay learning rate schedule.
 
-The learning rate is reduced by a multiplicative factor (`gamma`)
-at predefined intervals (`stepSize` iterations). This allows for
+The learning rate is reduced by a multiplicative factor (`decayFactor`)
+at predefined intervals (`decayStepSize` iterations). This allows for
 faster initial learning, followed by finer adjustments as training progresses.
 
-Formula: `learning_rate = baseRate * gamma ^ floor(iteration / stepSize)`
+Formula: `learning_rate = baseRate * decayFactor ^ floor(iteration / decayStepSize)`
 
 Parameters:
-- `gamma` - The factor by which the learning rate is multiplied at each step. Should be less than 1. Defaults to 0.9.
-- `stepSize` - The number of iterations after which the learning rate decays. Defaults to 100.
+- `decayFactor` - The factor by which the learning rate is multiplied at each step. Should be less than 1. Defaults to 0.9.
+- `decayStepSize` - The number of iterations after which the learning rate decays. Defaults to 100.
 - `baseRate` - The initial learning rate.
 - `iteration` - The current training iteration.
 
 Returns: A function that calculates the decayed learning rate for a given iteration.
+
+## methods/rate.utils.ts
+
+### createCosineAnnealingRateSchedule
+
+`(period: number, minimumRate: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+
+Returns a cosine annealing learning rate schedule.
+
+Parameters:
+- `period` - Length of a full cosine cycle.
+- `minimumRate` - Minimum rate reached at the end of a cycle.
+
+Returns: A learning rate schedule implementing cosine annealing.
+
+### createCosineAnnealingWarmRestartsSchedule
+
+`(initialPeriod: number, minimumRate: number, periodGrowthMultiplier: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+
+Returns a cosine annealing schedule with warm restarts and growing cycles.
+
+Parameters:
+- `initialPeriod` - Length of the initial cycle.
+- `minimumRate` - Minimum learning rate reached at the end of each cycle.
+- `periodGrowthMultiplier` - Multiplier applied to the period after each restart.
+
+Returns: A learning rate schedule implementing SGDR-style warm restarts.
+
+### createExponentialRateSchedule
+
+`(decayFactor: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+
+Returns an exponential decay learning rate schedule.
+
+Parameters:
+- `decayFactor` - Multiplicative decay applied every iteration.
+
+Returns: A learning rate schedule implementing exponential decay.
+
+### createFixedRateSchedule
+
+`() => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+
+Returns a schedule that always yields the base learning rate.
+
+Returns: A learning rate schedule that ignores iteration and returns baseRate.
+
+### createInverseRateSchedule
+
+`(decayFactor: number, decayPower: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+
+Returns an inverse decay learning rate schedule.
+
+Parameters:
+- `decayFactor` - Decay factor controlling the decay rate.
+- `decayPower` - Exponent that shapes the decay curve.
+
+Returns: A learning rate schedule implementing inverse decay.
+
+### createLinearWarmupDecaySchedule
+
+`(totalStepCount: number, warmupStepCount: number | undefined, endRate: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+
+Returns a linear warmup followed by linear decay schedule.
+
+Parameters:
+- `totalStepCount` - Total number of steps in the schedule (must be positive).
+- `warmupStepCount` - Optional number of warmup steps; defaults to 10% of total steps.
+- `endRate` - Final rate once decay completes.
+
+Returns: A learning rate schedule implementing warmup then decay.
+
+### createReduceOnPlateauSchedule
+
+`(options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined) => import("C:/NeatapticTS/src/methods/rate.utils").ReduceOnPlateauSchedule`
+
+Returns a ReduceLROnPlateau-style schedule that lowers the rate when no improvement is seen.
+
+Parameters:
+- `options` - Optional configuration for factor, patience, minDelta, cooldown, and minimum rate.
+
+Returns: A stateful schedule that reacts to lack of improvement.
+
+### createStepRateSchedule
+
+`(decayFactor: number, decayStepSize: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+
+Returns a step decay learning rate schedule.
+
+Parameters:
+- `decayFactor` - Multiplicative decay applied at each decay step.
+- `decayStepSize` - Number of iterations before applying another decay step.
+
+Returns: A learning rate schedule implementing step decay.
+
+### DEFAULT_COSINE_PERIOD
+
+### DEFAULT_DECAY_STEP_SIZE
+
+### DEFAULT_EXPONENTIAL_DECAY_FACTOR
+
+### DEFAULT_INITIAL_PERIOD
+
+### DEFAULT_INVERSE_DECAY_FACTOR
+
+### DEFAULT_INVERSE_POWER
+
+### DEFAULT_LINEAR_END_RATE
+
+### DEFAULT_MINIMUM_RATE
+
+### DEFAULT_PERIOD_GROWTH_MULTIPLIER
+
+### DEFAULT_REDUCE_ON_PLATEAU_COOLDOWN
+
+### DEFAULT_REDUCE_ON_PLATEAU_FACTOR
+
+### DEFAULT_REDUCE_ON_PLATEAU_MIN_DELTA
+
+### DEFAULT_REDUCE_ON_PLATEAU_MIN_RATE
+
+### DEFAULT_REDUCE_ON_PLATEAU_PATIENCE
+
+### DEFAULT_STEP_DECAY_FACTOR
+
+### DEFAULT_WARMUP_RATIO
+
+### RateSchedule
+
+`(baseRate: number, iteration: number) => number`
+
+Learning rate schedule signature that maps a base rate and iteration index to a rate value.
+Useful for any stateless schedule strategy.
+
+### ReduceOnPlateauSchedule
+
+`(baseRate: number, iteration: number, lastError: number | undefined) => number`
+
+Stateful ReduceLROnPlateau schedule signature that can react to a loss signal.
+The third argument is optional and only needed when monitoring validation error.
 
 ## methods/selection.ts
 
