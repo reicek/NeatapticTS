@@ -77,6 +77,8 @@ Strict rules to enforce (apply to any suggestion touching `src/` or `test/`)
 
 2. JSDoc: exported classes/functions/constants and public methods must have JSDoc with `@param` and `@returns` where appropriate. Add short `@example` when behavior is non-obvious.
 
+   JSDoc-for-constants rule: All exported or shared default constants in `src/` and `test/` must include a concise educational JSDoc explaining what the value controls (e.g., decay factor meaning, floor rates). Keep descriptions short and clarifying.
+
 3. Tests: follow the single-expect rule. Each `it()` (or `test()`) must have exactly one top-level `expect(...)` statement. If multiple assertions are needed, split into multiple `it()` cases or use helper assertions.
 
 4. Constants: replace magic numbers with named `export const` or class-private `static #` constants with a short JSDoc.

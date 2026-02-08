@@ -1,3 +1,24 @@
+import {
+  DEFAULT_COSINE_PERIOD,
+  DEFAULT_DECAY_STEP_SIZE,
+  DEFAULT_EXPONENTIAL_DECAY_FACTOR,
+  DEFAULT_INITIAL_PERIOD,
+  DEFAULT_INVERSE_DECAY_FACTOR,
+  DEFAULT_INVERSE_POWER,
+  DEFAULT_LINEAR_END_RATE,
+  DEFAULT_MINIMUM_RATE,
+  DEFAULT_PERIOD_GROWTH_MULTIPLIER,
+  DEFAULT_STEP_DECAY_FACTOR,
+  createCosineAnnealingRateSchedule,
+  createCosineAnnealingWarmRestartsSchedule,
+  createExponentialRateSchedule,
+  createFixedRateSchedule,
+  createInverseRateSchedule,
+  createLinearWarmupDecaySchedule,
+  createReduceOnPlateauSchedule,
+  createStepRateSchedule,
+} from './rate.utils';
+
 /**
  * Provides various methods for implementing learning rate schedules.
  *
@@ -11,6 +32,7 @@
  * @see {@link https://en.wikipedia.org/wiki/Learning_rate Learning Rate on Wikipedia}
  * @see {@link https://towardsdatascience.com/understanding-learning-rates-and-how-it-improves-performance-in-deep-learning-d0d4059c1c10 Understanding Learning Rates}
  */
+
 export default class Rate {
   /**
    * Implements a fixed learning rate schedule.
@@ -24,184 +46,136 @@ export default class Rate {
    * @param iteration The current training iteration (unused in this method, but included for consistency).
    */
   static fixed(): (baseRate: number, iteration: number) => number {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const func = (baseRate: number, iteration: number): number => {
-      return baseRate;
-    };
-
-    return func;
+    return createFixedRateSchedule();
   }
 
   /**
    * Implements a step decay learning rate schedule.
    *
-   * The learning rate is reduced by a multiplicative factor (`gamma`)
-   * at predefined intervals (`stepSize` iterations). This allows for
+   * The learning rate is reduced by a multiplicative factor (`decayFactor`)
+   * at predefined intervals (`decayStepSize` iterations). This allows for
    * faster initial learning, followed by finer adjustments as training progresses.
    *
-   * Formula: `learning_rate = baseRate * gamma ^ floor(iteration / stepSize)`
+   * Formula: `learning_rate = baseRate * decayFactor ^ floor(iteration / decayStepSize)`
    *
-   * @param gamma The factor by which the learning rate is multiplied at each step. Should be less than 1. Defaults to 0.9.
-   * @param stepSize The number of iterations after which the learning rate decays. Defaults to 100.
+   * @param decayFactor The factor by which the learning rate is multiplied at each step. Should be less than 1. Defaults to 0.9.
+   * @param decayStepSize The number of iterations after which the learning rate decays. Defaults to 100.
    * @returns A function that calculates the decayed learning rate for a given iteration.
    * @param baseRate The initial learning rate.
    * @param iteration The current training iteration.
    */
   static step(
-    gamma: number = 0.9,
-    stepSize: number = 100,
+    decayFactor: number = DEFAULT_STEP_DECAY_FACTOR,
+    decayStepSize: number = DEFAULT_DECAY_STEP_SIZE,
   ): (baseRate: number, iteration: number) => number {
-    const func = (baseRate: number, iteration: number): number => {
-      return Math.max(
-        0,
-        baseRate * Math.pow(gamma, Math.floor(iteration / stepSize)),
-      );
-    };
-
-    return func;
+    return createStepRateSchedule(decayFactor, decayStepSize);
   }
 
   /**
    * Implements an exponential decay learning rate schedule.
    *
    * The learning rate decreases exponentially after each iteration, multiplying
-   * by the decay factor `gamma`. This provides a smooth, continuous reduction
+   * by the decay factor `decayFactor`. This provides a smooth, continuous reduction
    * in the learning rate over time.
    *
-   * Formula: `learning_rate = baseRate * gamma ^ iteration`
+   * Formula: `learning_rate = baseRate * decayFactor ^ iteration`
    *
-   * @param gamma The decay factor applied at each iteration. Should be less than 1. Defaults to 0.999.
+   * @param decayFactor The decay factor applied at each iteration. Should be less than 1. Defaults to 0.999.
    * @returns A function that calculates the exponentially decayed learning rate for a given iteration.
    * @param baseRate The initial learning rate.
    * @param iteration The current training iteration.
    */
   static exp(
-    gamma: number = 0.999,
+    decayFactor: number = DEFAULT_EXPONENTIAL_DECAY_FACTOR,
   ): (baseRate: number, iteration: number) => number {
-    const func = (baseRate: number, iteration: number): number => {
-      return baseRate * Math.pow(gamma, iteration);
-    };
-
-    return func;
+    return createExponentialRateSchedule(decayFactor);
   }
 
   /**
    * Implements an inverse decay learning rate schedule.
    *
    * The learning rate decreases as the inverse of the iteration number,
-   * controlled by the decay factor `gamma` and exponent `power`. The rate
+   * controlled by the decay factor `decayFactor` and exponent `decayPower`. The rate
    * decreases more slowly over time compared to exponential decay.
    *
-   * Formula: `learning_rate = baseRate / (1 + gamma * Math.pow(iteration, power))`
+   * Formula: `learning_rate = baseRate / (1 + decayFactor * iteration ** decayPower)`
    *
-   * @param gamma Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.
-   * @param power The exponent controlling the shape of the decay curve. Defaults to 2.
+   * @param decayFactor Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.
+   * @param decayPower The exponent controlling the shape of the decay curve. Defaults to 2.
    * @returns A function that calculates the inversely decayed learning rate for a given iteration.
    * @param baseRate The initial learning rate.
    * @param iteration The current training iteration.
    */
   static inv(
-    gamma: number = 0.001,
-    power: number = 2,
+    decayFactor: number = DEFAULT_INVERSE_DECAY_FACTOR,
+    decayPower: number = DEFAULT_INVERSE_POWER,
   ): (baseRate: number, iteration: number) => number {
-    const func = (baseRate: number, iteration: number): number => {
-      // Use formula expected by tests: baseRate / (1 + gamma * Math.pow(iteration, power))
-      return baseRate / (1 + gamma * Math.pow(iteration, power));
-    };
-
-    return func;
+    return createInverseRateSchedule(decayFactor, decayPower);
   }
 
   /**
    * Implements a Cosine Annealing learning rate schedule.
    *
    * This schedule varies the learning rate cyclically according to a cosine function.
-   * It starts at the `baseRate` and smoothly anneals down to `minRate` over a
+   * It starts at the `baseRate` and smoothly anneals down to `minimumRate` over a
    * specified `period` of iterations, then potentially repeats. This can help
    * the model escape local minima and explore the loss landscape more effectively.
    * Often used with "warm restarts" where the cycle repeats.
    *
-   * Formula: `learning_rate = minRate + 0.5 * (baseRate - minRate) * (1 + cos(pi * current_cycle_iteration / period))`
+   * Formula: `learning_rate = minimumRate + 0.5 * (baseRate - minimumRate) * (1 + cos(pi * current_cycle_iteration / period))`
    *
-   * @param period The number of iterations over which the learning rate anneals from `baseRate` to `minRate` in one cycle. Defaults to 1000.
-   * @param minRate The minimum learning rate value at the end of a cycle. Defaults to 0.
+   * @param period The number of iterations over which the learning rate anneals from `baseRate` to `minimumRate` in one cycle. Defaults to 1000.
+   * @param minimumRate The minimum learning rate value at the end of a cycle. Defaults to 0.
    * @returns A function that calculates the learning rate for a given iteration based on the cosine annealing schedule.
    * @param baseRate The initial (maximum) learning rate for the cycle.
    * @param iteration The current training iteration.
    * @see {@link https://arxiv.org/abs/1608.03983 SGDR: Stochastic Gradient Descent with Warm Restarts} - The paper introducing this technique.
    */
   static cosineAnnealing(
-    period: number = 1000,
-    minRate: number = 0,
+    period: number = DEFAULT_COSINE_PERIOD,
+    minimumRate: number = DEFAULT_MINIMUM_RATE,
   ): (baseRate: number, iteration: number) => number {
-    const func = (baseRate: number, iteration: number): number => {
-      // Calculate the current position within the cycle
-      const currentCycleIteration = iteration % period;
-      // Calculate the cosine decay factor (ranges from 1 down to 0)
-      const cosineDecay =
-        0.5 * (1 + Math.cos((currentCycleIteration / period) * Math.PI));
-      // Apply the decay to the range between baseRate and minRate
-      return minRate + (baseRate - minRate) * cosineDecay;
-    };
-    return func;
+    return createCosineAnnealingRateSchedule(period, minimumRate);
   }
 
   /**
-   * Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier (tMult) after each restart.
+   * Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier after each restart.
    *
    * @param initialPeriod Length of the first cycle in iterations.
-   * @param minRate Minimum learning rate at valley.
-   * @param tMult Factor to multiply the period after each restart (>=1).
+   * @param minimumRate Minimum learning rate at valley.
+   * @param periodGrowthMultiplier Factor to multiply the period after each restart (>=1).
    */
   static cosineAnnealingWarmRestarts(
-    initialPeriod: number = 1000,
-    minRate: number = 0,
-    tMult: number = 1,
+    initialPeriod: number = DEFAULT_INITIAL_PERIOD,
+    minimumRate: number = DEFAULT_MINIMUM_RATE,
+    periodGrowthMultiplier: number = DEFAULT_PERIOD_GROWTH_MULTIPLIER,
   ): (baseRate: number, iteration: number) => number {
-    let period = initialPeriod;
-    let cycleStart = 0;
-    let cycleEnd = period;
-    return (baseRate: number, iteration: number): number => {
-      // Advance cycles if iteration beyond current
-      while (iteration >= cycleEnd) {
-        cycleStart = cycleEnd;
-        period = Math.max(1, Math.round(period * tMult));
-        cycleEnd = cycleStart + period;
-      }
-      const cyclePos = iteration - cycleStart;
-      const cosineDecay = 0.5 * (1 + Math.cos((cyclePos / period) * Math.PI));
-      return minRate + (baseRate - minRate) * cosineDecay;
-    };
+    return createCosineAnnealingWarmRestartsSchedule(
+      initialPeriod,
+      minimumRate,
+      periodGrowthMultiplier,
+    );
   }
 
   /**
    * Linear Warmup followed by Linear Decay to an end rate.
-   * Warmup linearly increases LR from near 0 up to baseRate over warmupSteps, then linearly decays to endRate at totalSteps.
-   * Iterations beyond totalSteps clamp to endRate.
+   * Warmup linearly increases LR from near 0 up to baseRate over warmupStepCount, then linearly decays to endRate at totalStepCount.
+   * Iterations beyond totalStepCount clamp to endRate.
    *
-   * @param totalSteps Total steps for full schedule (must be > 0).
-   * @param warmupSteps Steps for warmup (< totalSteps). Defaults to 10% of totalSteps.
-   * @param endRate Final rate at totalSteps.
+   * @param totalStepCount Total steps for full schedule (must be > 0).
+   * @param warmupStepCount Steps for warmup (< totalStepCount). Defaults to 10% of totalStepCount.
+   * @param endRate Final rate at totalStepCount.
    */
   static linearWarmupDecay(
-    totalSteps: number,
-    warmupSteps?: number,
-    endRate: number = 0,
+    totalStepCount: number,
+    warmupStepCount?: number,
+    endRate: number = DEFAULT_LINEAR_END_RATE,
   ): (baseRate: number, iteration: number) => number {
-    if (totalSteps <= 0) throw new Error('totalSteps must be > 0');
-    const warm = Math.min(
-      warmupSteps ?? Math.max(1, Math.floor(totalSteps * 0.1)),
-      totalSteps - 1,
+    return createLinearWarmupDecaySchedule(
+      totalStepCount,
+      warmupStepCount,
+      endRate,
     );
-    return (baseRate: number, iteration: number): number => {
-      if (iteration <= warm) {
-        return baseRate * (iteration / Math.max(1, warm));
-      }
-      if (iteration >= totalSteps) return endRate;
-      const decaySteps = totalSteps - warm;
-      const progress = (iteration - warm) / decaySteps; // 0..1
-      return endRate + (baseRate - endRate) * (1 - progress);
-    };
   }
 
   /**
@@ -218,42 +192,6 @@ export default class Rate {
     minRate?: number; // floor rate
     verbose?: boolean;
   }): (baseRate: number, iteration: number, lastError?: number) => number {
-    const {
-      factor = 0.5,
-      patience = 10,
-      minDelta = 1e-4,
-      cooldown = 0,
-      minRate = 0,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      verbose = false,
-    } = options || {};
-    let currentRate: number | undefined; // lazily initialize to baseRate first call
-    let bestError: number | undefined;
-    let lastImprovementIter = 0;
-    let cooldownUntil = -1;
-    return (
-      baseRate: number,
-      iteration: number,
-      lastError?: number,
-    ): number => {
-      if (currentRate === undefined) currentRate = baseRate;
-      if (lastError !== undefined) {
-        if (bestError === undefined || lastError < bestError - minDelta) {
-          bestError = lastError;
-          lastImprovementIter = iteration;
-        } else if (
-          iteration - lastImprovementIter >= patience &&
-          iteration >= cooldownUntil
-        ) {
-          const newRate = Math.max(minRate, currentRate * factor);
-          if (newRate < currentRate) {
-            currentRate = newRate;
-            cooldownUntil = iteration + cooldown;
-            lastImprovementIter = iteration; // reset wait after reduction
-          }
-        }
-      }
-      return currentRate;
-    };
+    return createReduceOnPlateauSchedule(options);
   }
 }
