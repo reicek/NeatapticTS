@@ -1,3 +1,27 @@
+import {
+  absoluteActivation,
+  bentIdentityActivation,
+  bipolarActivation,
+  bipolarSigmoidActivation,
+  geluActivation,
+  gaussianActivation,
+  hardTanhActivation,
+  identityActivation,
+  inverseActivation,
+  logisticActivation,
+  mishActivation,
+  reluActivation,
+  seluActivation,
+  sigmoidActivation,
+  sinusoidActivation,
+  softplusActivation,
+  softsignActivation,
+  stepActivation,
+  swishActivation,
+  tanhActivation,
+  type ActivationFunction,
+} from './activation.utils';
+
 /**
  * Provides a collection of common activation functions used in neural networks.
  *
@@ -15,21 +39,16 @@
  * @see {@link https://en.wikipedia.org/wiki/Universal_approximation_theorem}
  * @see {@link https://en.wikipedia.org/wiki/Rectifier_(neural_networks)}
  */
-export const Activation: {
-  [key: string]: (x: number, derivate?: boolean) => number;
-} = {
+export const Activation: Record<string, ActivationFunction> = {
   /**
    * Logistic (Sigmoid) activation function.
    * Outputs values between 0 and 1. Commonly used in older network architectures
    * and for output layers in binary classification tasks.
-   * @param {number} x - The input value.
-   * @param {boolean} [derivate=false] - Whether to compute the derivative.
+   * @param {number} inputValue - The input value.
+   * @param {boolean} [shouldComputeDerivative=false] - Whether to compute the derivative.
    * @returns {number} The result of the logistic function or its derivative.
    */
-  logistic: (x: number, derivate: boolean = false): number => {
-    const fx = 1 / (1 + Math.exp(-x));
-    return !derivate ? fx : fx * (1 - fx);
-  },
+  logistic: logisticActivation,
 
   /**
    * Alias for Logistic (Sigmoid) activation function.
@@ -39,10 +58,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the logistic function or its derivative.
    */
-  sigmoid: (x: number, derivate: boolean = false): number => {
-    const fx = 1 / (1 + Math.exp(-x));
-    return !derivate ? fx : fx * (1 - fx);
-  },
+  sigmoid: sigmoidActivation,
 
   /**
    * Hyperbolic tangent (tanh) activation function.
@@ -52,9 +68,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the tanh function or its derivative.
    */
-  tanh: (x: number, derivate: boolean = false): number => {
-    return derivate ? 1 - Math.pow(Math.tanh(x), 2) : Math.tanh(x);
-  },
+  tanh: tanhActivation,
 
   /**
    * Identity activation function (Linear).
@@ -64,9 +78,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the identity function (x) or its derivative (1).
    */
-  identity: (x: number, derivate: boolean = false): number => {
-    return derivate ? 1 : x;
-  },
+  identity: identityActivation,
 
   /**
    * Step activation function (Binary Step).
@@ -77,9 +89,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the step function (0 or 1) or its derivative (0).
    */
-  step: (x: number, derivate: boolean = false): number => {
-    return derivate ? 0 : x > 0 ? 1 : 0;
-  },
+  step: stepActivation,
 
   /**
    * Rectified Linear Unit (ReLU) activation function.
@@ -94,9 +104,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the ReLU function or its derivative (0 or 1).
    */
-  relu: (x: number, derivate: boolean = false): number => {
-    return derivate ? (x > 0 ? 1 : 0) : x > 0 ? x : 0;
-  },
+  relu: reluActivation,
 
   /**
    * Softsign activation function.
@@ -106,11 +114,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the softsign function or its derivative.
    */
-  softsign: (x: number, derivate: boolean = false): number => {
-    const d = 1 + Math.abs(x);
-    // Derivative: 1 / (1 + |x|)^2
-    return derivate ? 1 / Math.pow(d, 2) : x / d;
-  },
+  softsign: softsignActivation,
 
   /**
    * Sinusoid activation function.
@@ -120,9 +124,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the sinusoid function or its derivative (cos(x)).
    */
-  sinusoid: (x: number, derivate: boolean = false): number => {
-    return derivate ? Math.cos(x) : Math.sin(x);
-  },
+  sinusoid: sinusoidActivation,
 
   /**
    * Gaussian activation function.
@@ -132,11 +134,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the Gaussian function or its derivative.
    */
-  gaussian: (x: number, derivate: boolean = false): number => {
-    const d = Math.exp(-Math.pow(x, 2));
-    // Derivative: -2x * exp(-x^2)
-    return derivate ? -2 * x * d : d;
-  },
+  gaussian: gaussianActivation,
 
   /**
    * Bent Identity activation function.
@@ -146,11 +144,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the bent identity function or its derivative.
    */
-  bentIdentity: (x: number, derivate: boolean = false): number => {
-    const d = Math.sqrt(Math.pow(x, 2) + 1);
-    // Derivative: x / (2 * sqrt(x^2 + 1)) + 1
-    return derivate ? x / (2 * d) + 1 : (d - 1) / 2 + x;
-  },
+  bentIdentity: bentIdentityActivation,
 
   /**
    * Bipolar activation function (Sign function).
@@ -160,9 +154,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the bipolar function (-1 or 1) or its derivative (0).
    */
-  bipolar: (x: number, derivate: boolean = false): number => {
-    return derivate ? 0 : x > 0 ? 1 : -1;
-  },
+  bipolar: bipolarActivation,
 
   /**
    * Bipolar Sigmoid activation function.
@@ -174,11 +166,7 @@ export const Activation: {
    * @returns {number} The result of the bipolar sigmoid function or its derivative.
    * @see {@link Activation.tanh}
    */
-  bipolarSigmoid: (x: number, derivate: boolean = false): number => {
-    const d = 2 / (1 + Math.exp(-x)) - 1;
-    // Derivative: 0.5 * (1 + f(x)) * (1 - f(x))
-    return derivate ? (1 / 2) * (1 + d) * (1 - d) : d;
-  },
+  bipolarSigmoid: bipolarSigmoidActivation,
 
   /**
    * Hard Tanh activation function.
@@ -188,10 +176,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the hard tanh function or its derivative (0 or 1).
    */
-  hardTanh: (x: number, derivate: boolean = false): number => {
-    // Derivative is 1 between -1 and 1, and 0 otherwise.
-    return derivate ? (x > -1 && x < 1 ? 1 : 0) : Math.max(-1, Math.min(1, x));
-  },
+  hardTanh: hardTanhActivation,
 
   /**
    * Absolute activation function.
@@ -204,10 +189,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the absolute function or its derivative (sign of x).
    */
-  absolute: (x: number, derivate: boolean = false): number => {
-    // Derivative is -1 for x < 0, 1 for x > 0. (Derivative at x=0 is undefined, commonly set to 1 or 0).
-    return derivate ? (x < 0 ? -1 : 1) : Math.abs(x);
-  },
+  absolute: absoluteActivation,
 
   /**
    * Inverse activation function.
@@ -216,9 +198,7 @@ export const Activation: {
    * @param {boolean} [derivate=false] - Whether to compute the derivative.
    * @returns {number} The result of the inverse function or its derivative (-1).
    */
-  inverse: (x: number, derivate: boolean = false): number => {
-    return derivate ? -1 : 1 - x;
-  },
+  inverse: inverseActivation,
 
   /**
    * Scaled Exponential Linear Unit (SELU) activation function.
@@ -234,18 +214,7 @@ export const Activation: {
    * @see {@link https://arxiv.org/abs/1706.02515} - Self-Normalizing Neural Networks paper
    * @see {@link https://github.com/wagenaartje/neataptic/wiki/Activation#selu} - Neataptic context
    */
-  selu: (x: number, derivate: boolean = false): number => {
-    // SELU constants from the original paper (Klambauer et al., 2017)
-    // These precise values ensure self-normalizing properties
-    // eslint-disable-next-line no-loss-of-precision
-    const alpha = 1.6732632423543772848170429916717;
-    // eslint-disable-next-line no-loss-of-precision
-    const scale = 1.0507009873554804934193349852946;
-    const fx = x > 0 ? x : alpha * Math.exp(x) - alpha;
-    // Derivative: scale * (x > 0 ? 1 : alpha * exp(x))
-    // Simplified derivative using fx: scale * (x > 0 ? 1 : fx + alpha)
-    return derivate ? (x > 0 ? scale : (fx + alpha) * scale) : fx * scale;
-  },
+  selu: seluActivation,
 
   /**
    * Softplus activation function.
@@ -257,24 +226,7 @@ export const Activation: {
    * @returns {number} The result of the softplus function or its derivative (logistic sigmoid).
    * @see {@link https://en.wikipedia.org/wiki/Rectifier_(neural_networks)#Softplus}
    */
-  softplus: (x: number, derivate: boolean = false): number => {
-    const fx = 1 / (1 + Math.exp(-x)); // Logistic sigmoid
-    if (derivate) {
-      return fx; // Derivative of softplus is logistic sigmoid
-    } else {
-      // Numerically stable softplus calculation:
-      // log(1 + exp(x)) = log(exp(x)*(exp(-x) + 1)) = x + log(1 + exp(-x))
-      // Choose calculation based on x to avoid large positive exponents causing overflow.
-      if (x > 30) {
-        return x; // For large positive x, softplus(x) ≈ x
-      } else if (x < -30) {
-        return Math.exp(x); // For large negative x, softplus(x) ≈ exp(x)
-      }
-      // Use the alternative stable formula for intermediate values:
-      // max(0, x) + log(1 + exp(-abs(x)))
-      return Math.max(0, x) + Math.log(1 + Math.exp(-Math.abs(x)));
-    }
-  },
+  softplus: softplusActivation,
 
   /**
    * Swish activation function (SiLU - Sigmoid Linear Unit).
@@ -285,18 +237,7 @@ export const Activation: {
    * @returns {number} The result of the swish function or its derivative.
    * @see {@link https://arxiv.org/abs/1710.05941} - Swish paper
    */
-  swish: (x: number, derivate: boolean = false): number => {
-    const sigmoid_x = 1 / (1 + Math.exp(-x));
-    if (derivate) {
-      // Derivative: sigmoid(x) + x * sigmoid(x) * (1 - sigmoid(x))
-      // Can be rewritten using swish(x) = x * sigmoid(x):
-      // swish'(x) = swish(x) + sigmoid(x) * (1 - swish(x))
-      const swish_x = x * sigmoid_x;
-      return swish_x + sigmoid_x * (1 - swish_x);
-    } else {
-      return x * sigmoid_x;
-    }
-  },
+  swish: swishActivation,
 
   /**
    * Gaussian Error Linear Unit (GELU) activation function.
@@ -308,23 +249,7 @@ export const Activation: {
    * @returns {number} The result of the GELU function or its derivative.
    * @see {@link https://arxiv.org/abs/1606.08415}
    */
-  gelu: (x: number, derivate: boolean = false): number => {
-    const cdf =
-      0.5 *
-      (1.0 +
-        Math.tanh(Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3))));
-    if (derivate) {
-      // Derivative of the GELU approximation:
-      const intermediate = Math.sqrt(2.0 / Math.PI) * (1.0 + 0.134145 * x * x);
-      const sech_arg =
-        Math.sqrt(2.0 / Math.PI) * (x + 0.044715 * Math.pow(x, 3));
-      const sech_val = 1.0 / Math.cosh(sech_arg);
-      const sech_sq = sech_val * sech_val;
-      return cdf + x * 0.5 * intermediate * sech_sq;
-    } else {
-      return x * cdf;
-    }
-  },
+  gelu: geluActivation,
 
   /**
    * Mish activation function.
@@ -335,42 +260,19 @@ export const Activation: {
    * @returns {number} The result of the Mish function or its derivative.
    * @see {@link https://arxiv.org/abs/1908.08681}
    */
-  mish: (x: number, derivate: boolean = false): number => {
-    // Use stable softplus calculation
-    // softplus(x) = log(1 + exp(x))
-    let sp_x: number;
-    if (x > 30) {
-      sp_x = x;
-    } else if (x < -30) {
-      sp_x = Math.exp(x);
-    } else {
-      sp_x = Math.max(0, x) + Math.log(1 + Math.exp(-Math.abs(x)));
-    }
-
-    const tanh_sp_x = Math.tanh(sp_x);
-
-    if (derivate) {
-      // Derivative of Mish: tanh(softplus(x)) + x * sech^2(softplus(x)) * sigmoid(x)
-      const sigmoid_x = 1 / (1 + Math.exp(-x)); // Derivative of softplus
-      const sech_sp_x = 1.0 / Math.cosh(sp_x); // sech(x) = 1 / cosh(x)
-      const sech_sq_sp_x = sech_sp_x * sech_sp_x;
-      return tanh_sp_x + x * sech_sq_sp_x * sigmoid_x;
-    } else {
-      return x * tanh_sp_x;
-    }
-  },
+  mish: mishActivation,
 };
 
 /**
  * Register a custom activation function at runtime.
- * @param {string} name - Name for the custom activation.
- * @param {(x: number, derivate?: boolean) => number} fn - The activation function (should handle derivative if needed).
+ * @param {string} activationName - Name for the custom activation.
+ * @param {ActivationFunction} activationFunction - The activation function (should handle derivative if needed).
  */
 export const registerCustomActivation = (
-  name: string,
-  fn: (x: number, derivate?: boolean) => number,
+  activationName: string,
+  activationFunction: ActivationFunction,
 ): void => {
-  Activation[name] = fn;
+  Activation[activationName] = activationFunction;
 };
 
 export default Activation;

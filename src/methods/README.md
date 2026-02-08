@@ -6,7 +6,261 @@
 
 ### registerCustomActivation
 
-`(name: string, fn: (x: number, derivate?: boolean | undefined) => number) => void`
+`(activationName: string, activationFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => void`
+
+## methods/activation.utils.ts
+
+### absoluteActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Absolute activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Absolute output or derivative.
+
+### ActivationFunction
+
+`(inputValue: number, shouldComputeDerivative: boolean | undefined) => number`
+
+Activation function implementation type.
+
+Parameters:
+- `inputValue` - - Input to the activation function.
+- `shouldComputeDerivative` - - Whether to compute the derivative instead of the value.
+
+Returns: Activation output or derivative at the input.
+
+### bentIdentityActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Bent identity activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Bent identity output or derivative.
+
+### bipolarActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Bipolar activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Bipolar output or derivative.
+
+### bipolarSigmoidActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Bipolar sigmoid activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Bipolar sigmoid output or derivative.
+
+### gaussianActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Gaussian activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Gaussian output or derivative.
+
+### geluActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Gaussian Error Linear Unit (GELU) activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: GELU output or derivative.
+
+### hardTanhActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Hard tanh activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Hard tanh output or derivative.
+
+### identityActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Identity activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Identity output or derivative.
+
+### inverseActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Inverse activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Inverse output or derivative.
+
+### logisticActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Logistic (sigmoid) activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Logistic output or derivative.
+
+### mishActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Mish activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Mish output or derivative.
+
+### reluActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Rectified Linear Unit (ReLU) activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: ReLU output or derivative.
+
+### seluActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Scaled Exponential Linear Unit (SELU) activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: SELU output or derivative.
+
+### sigmoidActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Sigmoid alias activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Sigmoid output or derivative.
+
+### sinusoidActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Sinusoid activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Sinusoid output or derivative.
+
+### softplusActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Softplus activation implementation with stability guards.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Softplus output or derivative.
+
+### softsignActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Softsign activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Softsign output or derivative.
+
+### stepActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Step activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Step output or derivative.
+
+### swishActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Swish activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Swish output or derivative.
+
+### tanhActivation
+
+`(inputValue: number, shouldComputeDerivative: boolean) => number`
+
+Hyperbolic tangent activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Tanh output or derivative.
 
 ## methods/connection.ts
 
@@ -60,7 +314,7 @@ Returns: The mean cross-entropy error over all samples.
 
 #### focalLoss
 
-`(targets: number[], outputs: number[], gamma: number, alpha: number) => number`
+`(targets: number[], outputs: number[], focalGamma: number, focalAlpha: number) => number`
 
 Calculates the Focal Loss, which is useful for addressing class imbalance in classification tasks.
 Focal loss down-weights easy examples and focuses training on hard negatives.
@@ -92,7 +346,7 @@ Returns: The mean hinge loss.
 
 #### labelSmoothing
 
-`(targets: number[], outputs: number[], smoothing: number) => number`
+`(targets: number[], outputs: number[], smoothingFactor: number) => number`
 
 Calculates the Cross Entropy with Label Smoothing.
 Label smoothing prevents the model from becoming overconfident by softening the targets.
@@ -177,6 +431,219 @@ Returns: The mean squared logarithmic error.
 Softmax Cross Entropy for mutually exclusive multi-class outputs given raw (pre-softmax or arbitrary) scores.
 Applies a numerically stable softmax to the outputs internally then computes -sum(target * log(prob)).
 Targets may be soft labels and are expected to sum to 1 (will be re-normalized if not).
+
+## methods/cost.utils.ts
+
+### BINARY_CLASSIFICATION_THRESHOLD
+
+### clampProbability
+
+`(probability: number) => number`
+
+Clamps a probability into the inclusive bounds defined by PROBABILITY_LOWER_BOUND and PROBABILITY_UPPER_BOUND.
+
+Parameters:
+- `probability` - - Raw probability value to bound.
+
+Returns: Probability constrained to the numeric stability range.
+
+### classifyBinary
+
+`(probability: number) => number`
+
+Converts a probability into a binary class label using the configured threshold.
+
+Parameters:
+- `probability` - - Probability to classify.
+
+Returns: POSITIVE_CLASS_LABEL when above or equal to threshold; otherwise NEGATIVE_CLASS_LABEL.
+
+### computeBinaryError
+
+`(targets: number[], outputs: number[]) => number`
+
+Computes binary classification error rate.
+
+Parameters:
+- `targets` - - Target labels (0 or 1).
+- `outputs` - - Predicted probabilities.
+
+Returns: Proportion of misclassified samples.
+
+### computeCrossEntropy
+
+`(targets: number[], outputs: number[]) => number`
+
+Computes the Cross Entropy error over the provided targets and outputs.
+
+Parameters:
+- `targets` - - Desired target probabilities (may be soft labels between 0 and 1).
+- `outputs` - - Model output probabilities.
+
+Returns: Mean cross-entropy error across all samples.
+
+### computeFocalLoss
+
+`(targets: number[], outputs: number[], gamma: number, alpha: number) => number`
+
+Computes focal loss for imbalanced classification tasks.
+
+Parameters:
+- `targets` - - Target labels (0 or 1) or soft labels.
+- `outputs` - - Predicted probabilities.
+- `gamma` - - Focusing parameter controlling hard example emphasis.
+- `alpha` - - Balancing parameter for class weighting.
+
+Returns: Mean focal loss.
+
+### computeHingeLoss
+
+`(targets: number[], outputs: number[]) => number`
+
+Computes hinge loss for margin-based classification.
+
+Parameters:
+- `targets` - - Target labels encoded as -1 or 1.
+- `outputs` - - Model outputs (raw scores).
+
+Returns: Mean hinge loss.
+
+### computeLabelSmoothingLoss
+
+`(targets: number[], outputs: number[], smoothing: number) => number`
+
+Computes cross entropy with label smoothing applied to targets.
+
+Parameters:
+- `targets` - - Target labels (0 or 1) or soft labels.
+- `outputs` - - Predicted probabilities.
+- `smoothing` - - Smoothing factor between 0 and 1.
+
+Returns: Mean cross-entropy loss with smoothed targets.
+
+### computeMeanAbsoluteError
+
+`(targets: number[], outputs: number[]) => number`
+
+Computes mean absolute error between targets and outputs.
+
+Parameters:
+- `targets` - - Desired target values.
+- `outputs` - - Model outputs.
+
+Returns: Mean absolute error.
+
+### computeMeanAbsolutePercentageError
+
+`(targets: number[], outputs: number[]) => number`
+
+Computes mean absolute percentage error between targets and outputs.
+
+Parameters:
+- `targets` - - Desired target values.
+- `outputs` - - Model outputs.
+
+Returns: Mean absolute percentage error (fractional form).
+
+### computeMeanSquaredError
+
+`(targets: number[], outputs: number[]) => number`
+
+Computes mean squared error between targets and outputs.
+
+Parameters:
+- `targets` - - Desired target values.
+- `outputs` - - Model outputs.
+
+Returns: Mean squared error.
+
+### computeMeanSquaredLogarithmicError
+
+`(targets: number[], outputs: number[]) => number`
+
+Computes mean squared logarithmic error between targets and outputs.
+
+Parameters:
+- `targets` - - Desired non-negative target values.
+- `outputs` - - Model outputs (expected non-negative).
+
+Returns: Mean squared logarithmic error.
+
+### computeSoftmaxCrossEntropy
+
+`(targets: number[], outputs: number[]) => number`
+
+Computes the softmax cross entropy given targets and raw score outputs.
+
+Parameters:
+- `targets` - - Desired target probabilities that should sum to 1 (will be normalized if not).
+- `outputs` - - Raw logits or scores for each class.
+
+Returns: Total (non-averaged) softmax cross-entropy loss.
+
+### crossEntropyTerm
+
+`(targetProbability: number, clampedProbability: number) => number`
+
+Computes the cross-entropy contribution for a single target/output pair.
+
+Parameters:
+- `targetProbability` - - Target probability for the sample (may be soft).
+- `clampedProbability` - - Output probability already clamped for stability.
+
+Returns: Cross-entropy term for the sample.
+
+### DEFAULT_FOCAL_ALPHA
+
+### DEFAULT_FOCAL_GAMMA
+
+### DEFAULT_LABEL_SMOOTHING
+
+### HINGE_MARGIN
+
+### LABEL_SMOOTHING_BASELINE
+
+### LENGTH_MISMATCH_MESSAGE
+
+### NEGATIVE_CLASS_LABEL
+
+### normalizeTargets
+
+`(targets: number[]) => number[]`
+
+Normalizes target probabilities so they sum to 1 when possible.
+
+Parameters:
+- `targets` - - Raw target probabilities.
+
+Returns: Normalized target probabilities; returns a shallow copy when the sum is zero.
+
+### POSITIVE_CLASS_LABEL
+
+### smoothTarget
+
+`(targetProbability: number, smoothing: number) => number`
+
+Applies label smoothing to a target probability.
+
+Parameters:
+- `targetProbability` - - Original target probability.
+- `smoothing` - - Smoothing factor between 0 and 1.
+
+Returns: Smoothed target probability.
+
+### SOFTMAX_SUM_GUARD
+
+### stableSoftmax
+
+`(outputs: number[]) => number[]`
+
+Computes a numerically stable softmax from raw output scores.
+
+Parameters:
+- `outputs` - - Raw logits or scores.
+
+Returns: Softmax probabilities corresponding to the inputs.
 
 ## methods/crossover.ts
 
@@ -319,7 +786,7 @@ Returns: A function that takes the base learning rate and the current iteration 
 
 #### focalLoss
 
-`(targets: number[], outputs: number[], gamma: number, alpha: number) => number`
+`(targets: number[], outputs: number[], focalGamma: number, focalAlpha: number) => number`
 
 Calculates the Focal Loss, which is useful for addressing class imbalance in classification tasks.
 Focal loss down-weights easy examples and focuses training on hard negatives.
@@ -371,7 +838,7 @@ Returns: A function that calculates the inversely decayed learning rate for a gi
 
 #### labelSmoothing
 
-`(targets: number[], outputs: number[], smoothing: number) => number`
+`(targets: number[], outputs: number[], smoothingFactor: number) => number`
 
 Calculates the Cross Entropy with Label Smoothing.
 Label smoothing prevents the model from becoming overconfident by softening the targets.
