@@ -12,15 +12,15 @@ pnpm-debug.log*
 /*.tgz
 *.tsbuildinfo
 
+# Generated documentation output (CI builds & deploys)
+/docs/
+/dist-docs/
+
 # Coverage and test output
 /coverage/
 /nyc_output/
 /test-results/
 /ascii_maze_snapshots/
-
-# Transpiled docs scripts (optional - keep if you want the compiled helper scripts checked in)
-# dist-docs/ is included in the repo intentionally to allow running docs without a build step; remove this entry if you prefer it ignored.
-# /dist-docs/
 
 # Environment/secret files
 .env
