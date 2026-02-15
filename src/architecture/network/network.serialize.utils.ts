@@ -127,9 +127,8 @@ export function serialize(
   );
   // states[] represent the pre-activation internal sum (or evolving state for recurrent / gated constructs).
   /** Squash (activation function) names per node for later rehydration. */
-  const squashes = networkInternal.nodes.map(
-    (nodeRef) =>
-      resolveActivationKey((nodeRef as unknown as NodeInternals).squash),
+  const squashes = networkInternal.nodes.map((nodeRef) =>
+    resolveActivationKey((nodeRef as unknown as NodeInternals).squash),
   );
   // Instead of serializing function references we store the human-readable name; on import we map name->fn.
   /** Combined forward + self connections flattened to plain indices + weights. */

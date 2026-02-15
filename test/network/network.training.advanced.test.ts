@@ -2,7 +2,7 @@ import Network from '../../src/architecture/network';
 import {
   trainImpl,
   applyGradientClippingImpl,
-} from '../../src/architecture/network/network.training';
+} from '../../src/architecture/network/network.training.utils';
 
 type TrainingDataset = Parameters<typeof trainImpl>[1];
 

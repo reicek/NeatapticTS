@@ -1,6 +1,6 @@
 import Network from '../../src/architecture/network';
 import { exportToONNX } from '../../src/architecture/onnx';
-import type { OnnxModel } from '../../src/architecture/network/network.onnx';
+import type { OnnxModel } from '../../src/architecture/network/network.onnx.utils';
 
 /**
  * Phase 4 tests: pooling emission + conv weight sharing validation metadata.
@@ -79,7 +79,8 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
       });
       const onnxModel = onnx as OnnxModel;
       const verified = (onnxModel.metadata_props || []).find(
-        (m) => m.key === 'conv2d_sharing_verified',
+        (metaEntry: { key: string }) =>
+          metaEntry.key === 'conv2d_sharing_verified',
       );
       // Assert
       expect(!!verified).toBe(true);
@@ -133,7 +134,8 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
       });
       const onnxModel = onnx as OnnxModel;
       const mismatch = (onnxModel.metadata_props || []).find(
-        (m) => m.key === 'conv2d_sharing_mismatch',
+        (metaEntry: { key: string }) =>
+          metaEntry.key === 'conv2d_sharing_mismatch',
       );
       expect(!!mismatch).toBe(true);
     });
@@ -164,7 +166,7 @@ describe('ONNX Conv2D + Pooling Validation (Phase 4)', () => {
       });
       const onnxModel = onnx as OnnxModel;
       const meta = (onnxModel.metadata_props || []).find(
-        (m) => m.key === 'pool2d_layers',
+        (metaEntry: { key: string }) => metaEntry.key === 'pool2d_layers',
       );
       expect(!!meta).toBe(true);
     });

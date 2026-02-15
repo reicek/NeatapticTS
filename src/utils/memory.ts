@@ -15,7 +15,7 @@
  */
 import { config } from '../config';
 import { nodePoolStats } from '../architecture/nodePool';
-import { getSlabAllocationStats as _getSlabAllocationStats } from '../architecture/network/network.slab';
+import { getSlabAllocationStats as _getSlabAllocationStats } from '../architecture/network/network.slab.utils';
 import {
   HEURISTIC_BYTES,
   aggregateNetworkStats,

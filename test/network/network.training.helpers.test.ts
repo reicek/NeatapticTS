@@ -1,4 +1,4 @@
-import { __trainingInternals } from '../../src/architecture/network/network.training';
+import { __trainingInternals } from '../../src/architecture/network/network.training.utils';
 
 /**
  * Direct helper tests for computeMonitoredError / computePlateauMetric covering fast path and each branch.

@@ -1,6 +1,6 @@
 import Network from '../../src/architecture/network';
 import { exportToONNX, importFromONNX } from '../../src/architecture/onnx';
-import type { OnnxModel } from '../../src/architecture/network/network.onnx';
+import type { OnnxModel } from '../../src/architecture/network/network.onnx.utils';
 
 /**
  * Tests heuristic conv inference metadata + pooling metadata attachment on import.
@@ -14,7 +14,7 @@ describe('ONNX Conv Inference & Pool Import Attachment', () => {
       const onnx = exportToONNX(net, { includeMetadata: true });
       const onnxModel = onnx as OnnxModel;
       const inferred = (onnxModel.metadata_props || []).find(
-        (m) => m.key === 'conv2d_inferred_layers',
+        (m: { key: string }) => m.key === 'conv2d_inferred_layers',
       );
       expect(!!inferred).toBe(true);
     });

@@ -2,7 +2,15 @@ import Network from '../../src/architecture/network';
 import Node from '../../src/architecture/node';
 import * as methods from '../../src/methods/methods';
 import { exportToONNX } from '../../src/architecture/onnx';
-import type { OnnxModel } from '../../src/architecture/network/network.onnx';
+import type { OnnxModel } from '../../src/architecture/network/network.onnx.utils';
+
+type OnnxAttribute = { name?: string; f?: number; i?: number };
+type OnnxGraphNode = {
+  op_type: string;
+  input?: string[];
+  output: string[];
+  attributes?: OnnxAttribute[];
+};
 
 /**
  * Suppresses console.warn output during execution of a function that is
@@ -101,8 +109,9 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        const actNode = (onnx as OnnxModel).graph.node.find((n) =>
-          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type),
+        const actNode = (onnx as OnnxModel).graph.node.find(
+          (graphNode: OnnxGraphNode) =>
+            ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(graphNode.op_type),
         );
         expect(actNode?.op_type).toBe('Tanh');
       });
@@ -115,8 +124,9 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        const actNode = (onnx as OnnxModel).graph.node.find((n) =>
-          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type),
+        const actNode = (onnx as OnnxModel).graph.node.find(
+          (graphNode: OnnxGraphNode) =>
+            ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(graphNode.op_type),
         );
         expect(actNode?.op_type).toBe('Sigmoid');
       });
@@ -129,8 +139,9 @@ describe('ONNX Export', () => {
         // Act
         const onnx = exportToONNX(net);
         // Assert
-        const actNode = (onnx as OnnxModel).graph.node.find((n) =>
-          ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type),
+        const actNode = (onnx as OnnxModel).graph.node.find(
+          (graphNode: OnnxGraphNode) =>
+            ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(graphNode.op_type),
         );
         expect(actNode?.op_type).toBe('Relu');
       });
@@ -143,8 +154,8 @@ describe('ONNX Export', () => {
         // Act / Assert
         suppressConsoleWarn(() => {
           const onnx = exportToONNX(net) as OnnxModel;
-          const actNode = onnx.graph.node.find((n) =>
-            ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(n.op_type),
+          const actNode = onnx.graph.node.find((graphNode: OnnxGraphNode) =>
+            ['Tanh', 'Sigmoid', 'Relu', 'Identity'].includes(graphNode.op_type),
           );
           expect(actNode?.op_type).toBe('Identity');
         });
@@ -230,8 +241,8 @@ describe('ONNX Export', () => {
       beforeEach(() => {
         // Arrange
         net = new Network(1, 1, {});
-        net.nodes.forEach((n: Node) => {
-          n.index = undefined;
+        net.nodes.forEach((nodeEntry: Node) => {
+          nodeEntry.index = undefined;
         });
       });
       it('assigns numeric indices to all nodes', () => {
@@ -239,7 +250,7 @@ describe('ONNX Export', () => {
         exportToONNX(net);
         // Assert
         const allIndexed = net.nodes.every(
-          (n: Node) => typeof n.index === 'number',
+          (nodeEntry: Node) => typeof nodeEntry.index === 'number',
         );
         expect(allIndexed).toBe(true);
       });
@@ -269,7 +280,9 @@ describe('ONNX Export', () => {
         const net = Network.createMLP(3, [3, 2], 1);
         // Act
         const onnx = exportToONNX(net) as OnnxModel;
-        gemmNodes = onnx.graph.node.filter((n) => n.op_type === 'Gemm');
+        gemmNodes = onnx.graph.node.filter(
+          (graphNode: OnnxGraphNode) => graphNode.op_type === 'Gemm',
+        );
         nodes = onnx.graph.node;
       });
       it('emits at least one Gemm node', () => {
@@ -278,41 +291,45 @@ describe('ONNX Export', () => {
         expect(hasGemm).toBe(true);
       });
       it('all Gemm nodes have alpha=1', () => {
-        const allAlphaOne = gemmNodes.every(
-          (g) =>
-            (g.attributes || []).find(
-              (a) => (a as { name?: string }).name === 'alpha',
-            )?.f === 1,
-        );
+        const allAlphaOne = gemmNodes.every((graphNode) => {
+          const attribute = (graphNode.attributes ?? []).find(
+            (attributeEntry?: OnnxAttribute) =>
+              attributeEntry?.name === 'alpha',
+          );
+          return attribute?.f === 1;
+        });
         expect(allAlphaOne).toBe(true);
       });
       it('all Gemm nodes have beta=1', () => {
-        const allBetaOne = gemmNodes.every(
-          (g) =>
-            (g.attributes || []).find(
-              (a) => (a as { name?: string }).name === 'beta',
-            )?.f === 1,
-        );
+        const allBetaOne = gemmNodes.every((graphNode) => {
+          const attribute = (graphNode.attributes ?? []).find(
+            (attributeEntry?: OnnxAttribute) => attributeEntry?.name === 'beta',
+          );
+          return attribute?.f === 1;
+        });
         expect(allBetaOne).toBe(true);
       });
       it('all Gemm nodes have transB=1', () => {
-        const allTransBOne = gemmNodes.every(
-          (g) =>
-            (g.attributes || []).find(
-              (a) => (a as { name?: string }).name === 'transB',
-            )?.i === 1,
-        );
+        const allTransBOne = gemmNodes.every((graphNode) => {
+          const attribute = (graphNode.attributes ?? []).find(
+            (attributeEntry?: OnnxAttribute) =>
+              attributeEntry?.name === 'transB',
+          );
+          return attribute?.i === 1;
+        });
         expect(allTransBOne).toBe(true);
       });
       it('each Gemm node is followed by activation referencing its output', () => {
-        const orderingValid = gemmNodes.every((g) => {
-          const idxG = nodes.indexOf(g);
-          const act = nodes.find(
-            (n) =>
-              (n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm') ??
+        const orderingValid = gemmNodes.every((gemmNode) => {
+          const gemmIndex = nodes.indexOf(gemmNode);
+          const activationNode = nodes.find(
+            (graphNode) =>
+              (graphNode.input &&
+                graphNode.input[0] === gemmNode.output[0] &&
+                graphNode.op_type !== 'Gemm') ??
               false,
           );
-          return act && nodes.indexOf(act) > idxG;
+          return activationNode && nodes.indexOf(activationNode) > gemmIndex;
         });
         expect(orderingValid).toBe(true);
       });
@@ -327,14 +344,18 @@ describe('ONNX Export', () => {
           legacyNodeOrdering: true,
         }) as OnnxModel;
         const nodes = onnx.graph.node;
-        const gemmNodes = nodes.filter((n) => n.op_type === 'Gemm');
-        orderingValid = gemmNodes.every((g) => {
-          const idxG = nodes.indexOf(g);
-          const act = nodes.find(
-            (n) =>
-              n.input && n.input[0] === g.output[0] && n.op_type !== 'Gemm',
+        const gemmNodes = nodes.filter(
+          (graphNode: OnnxGraphNode) => graphNode.op_type === 'Gemm',
+        );
+        orderingValid = gemmNodes.every((gemmNode) => {
+          const gemmIndex = nodes.indexOf(gemmNode);
+          const activationNode = nodes.find(
+            (graphNode) =>
+              graphNode.input &&
+              graphNode.input[0] === gemmNode.output[0] &&
+              graphNode.op_type !== 'Gemm',
           );
-          return act && nodes.indexOf(act) < idxG;
+          return activationNode && nodes.indexOf(activationNode) < gemmIndex;
         });
       });
       it('places activation before gemm in legacy mode', () => {

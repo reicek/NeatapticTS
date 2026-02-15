@@ -1,5 +1,5 @@
 import Network from '../../src/architecture/network';
-import { mutateImpl } from '../../src/architecture/network/network.mutate';
+import { mutateImpl } from '../../src/architecture/network/network.mutate.utils';
 import mutation from '../../src/methods/mutation';
 
 /**

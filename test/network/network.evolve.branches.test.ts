@@ -5,7 +5,7 @@
  *  - adoption else branch when no best genome captured
  */
 import Network from '../../src/architecture/network';
-import { evolveNetwork } from '../../src/architecture/network/network.evolve';
+import { evolveNetwork } from '../../src/architecture/network/network.evolve.utils';
 
 type TrainingSet = Parameters<typeof evolveNetwork>[0];
 

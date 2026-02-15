@@ -1,5 +1,5 @@
 import Network from '../../src/architecture/network';
-import type { OptimizerConfigBase } from '../../src/architecture/network/network.training';
+import type { OptimizerConfigBase } from '../../src/architecture/network/network.training.utils';
 
 // Deterministic tiny dataset y = 2x
 const trainingData = Array.from({ length: 3 }, (_, sampleIndex) => ({
