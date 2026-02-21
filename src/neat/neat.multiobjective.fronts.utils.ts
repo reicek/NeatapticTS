@@ -1,5 +1,5 @@
 import type Network from '../architecture/network';
-import type { NetworkWithMOAnnotations } from './neat.multiobjective.types.utils';
+import type { NetworkWithMOAnnotations } from './neat.multiobjective.utils.types';
 import type { DominanceState } from './neat.multiobjective.dominance.utils';
 
 /**

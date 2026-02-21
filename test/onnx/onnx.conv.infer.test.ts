@@ -1,6 +1,6 @@
 import Network from '../../src/architecture/network';
 import { exportToONNX, importFromONNX } from '../../src/architecture/onnx';
-import type { OnnxModel } from '../../src/architecture/network/network.onnx.utils';
+import type { OnnxModel } from '../../src/architecture/network/network.types';
 
 /**
  * Tests heuristic conv inference metadata + pooling metadata attachment on import.

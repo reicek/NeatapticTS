@@ -1,6 +1,6 @@
 import Network from '../../src/architecture/network';
 import { exportToONNX } from '../../src/architecture/onnx';
-import type { OnnxModel } from '../../src/architecture/network/network.onnx.utils';
+import type { OnnxModel } from '../../src/architecture/network/network.types';
 
 /**
  * Phase 4 groundwork tests: explicit Conv2D mapping export scaffolding.

@@ -1,5 +1,5 @@
 import Network from '../../src/architecture/network';
-import type { RNGSnapshot } from '../../src/architecture/network/network.deterministic.utils';
+import type { RNGSnapshot } from '../../src/architecture/network/network.types';
 
 type NetworkSnapshot = RNGSnapshot;
 type InternalRand = () => number;

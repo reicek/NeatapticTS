@@ -1,7 +1,7 @@
 /**
  * Barrel exports for multi-objective utilities.
  */
-export * from './neat.multiobjective.types.utils';
+export * from './neat.multiobjective.utils.types';
 export * from './neat.multiobjective.objectives.utils';
 export * from './neat.multiobjective.dominance.utils';
 export * from './neat.multiobjective.fronts.utils';

@@ -1,4 +1,4 @@
-import type { NeatControllerForEval } from './neat.evaluate.types.utils';
+import type { NeatControllerForEval } from './neat.evaluate.utils.types';
 import {
   COMPAT_MAX_THRESHOLD_DEFAULT,
   COMPAT_MIN_THRESHOLD_DEFAULT,

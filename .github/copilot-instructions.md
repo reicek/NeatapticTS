@@ -104,6 +104,19 @@ Strict rules to enforce (apply to any suggestion touching `src/` or `test/`)
    - When normalizing legacy/loose data, isolate type assertions/casting into a single helper and keep the rest strongly typed.
    - Keep helpers after the fold, and give each helper a single responsibility (SOLID: SRP). If the logic reads like a decision tree, it likely wants 2–4 small helpers.
 
+10. General multi-pass decomposition requirements (apply to all medium/large refactors):
+   - Perform refactors in explicit passes, in this order unless unsafe:
+       1) Stabilize current behavior and identify seams
+       2) Extract pure helpers by responsibility
+       3) Introduce typed context/result objects to reduce parameter sprawl
+       4) Simplify top-level flow to orchestration only
+       5) Fold repeated logic into collect/transform/fold helpers
+   - Keep the top-level method declarative and linear, with numbered inline comments (`Step 1`, `Step 2`, ...).
+   - Ensure each helper has one reason to change (SRP), very low cognitive complexity, and descriptive naming.
+   - Place helper declarations after the top-level return/fold where language/style allows.
+   - Prefer immutable pass-style transforms (`map`, `filter`, `reduce`, index-collection helpers) over mixed mutation-heavy loops.
+   - When passing more than 3-4 arguments repeatedly, introduce a typed context object and shared result types.
+
 Example (ideal structure)
 -------------------------
 ```ts
@@ -183,4 +196,37 @@ When you modify or create files under `src/` or `test/`, run (or advise running)
    3. Validate TypeScript compilation with `npx tsc --noEmit -p tsconfig.test.json`
    4. ONLY run `npm test` after all planned fixes are complete
    5. Analyze results and iterate on remaining issues
+
+
+Refactor format: large-file split (step-by-step, user-confirmed)
+---------------------------------------------------------------
+When splitting a large module into submodules, follow this exact execution format:
+
+1. Plan first
+   - Propose a file map (main orchestration file + helper/type modules).
+   - Keep exported APIs in the main file unless explicitly requested otherwise.
+   - Define boundaries clearly (types, pool, rebuild helpers, fast-path helpers, adjacency helpers).
+
+2. Create a TODO checklist
+   - Add ordered steps with one active item at a time.
+   - Track progress visibly (mark completed items as soon as each step finishes).
+
+3. Execute in strict passes (one step at a time)
+   - Step A: create empty target files (skeletons only).
+   - Step B: move one category at a time (types first, then helper groups).
+   - Step C: after moving a category, delete the original source from the main file immediately.
+   - Never batch multiple categories in one pass.
+
+4. Require user confirmation between steps
+   - After each completed step, stop and request confirmation before continuing.
+   - Do not proceed to the next step without explicit user approval.
+
+5. Keep the main file as high-level orchestration
+   - Exported functions should show step-level flow (`Step 1`, `Step 2`, ...).
+   - Avoid trivial re-export wrappers or single-helper pass-through exports.
+   - Main file may retain shared constants and orchestration-level guards.
+
+6. Validate only after all planned moves
+   - Run `npx tsc --noEmit -p tsconfig.json` after completing all migration steps.
+   - Report concise validation summary and any unresolved follow-ups.
 

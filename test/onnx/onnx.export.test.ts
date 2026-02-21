@@ -2,7 +2,7 @@ import Network from '../../src/architecture/network';
 import Node from '../../src/architecture/node';
 import * as methods from '../../src/methods/methods';
 import { exportToONNX } from '../../src/architecture/onnx';
-import type { OnnxModel } from '../../src/architecture/network/network.onnx.utils';
+import type { OnnxModel } from '../../src/architecture/network/network.types';
 
 type OnnxAttribute = { name?: string; f?: number; i?: number };
 type OnnxGraphNode = {

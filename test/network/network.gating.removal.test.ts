@@ -1,7 +1,7 @@
 import Network from '../../src/architecture/network';
 import Node from '../../src/architecture/node';
 import mutation from '../../src/methods/mutation';
-import { removeNode as gatingRemoveNode } from '../../src/architecture/network/network.gating.utils';
+import { gatingRemoveNode } from '../../src/architecture/network/network.utils';
 
 const getNetworkRng = (network: Network): (() => number) =>
   Reflect.get(network, '_rand') as () => number;

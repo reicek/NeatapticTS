@@ -1,5 +1,5 @@
 import type Network from '../architecture/network';
-import type { ObjectiveDescriptor } from './neat.multiobjective.types.utils';
+import type { ObjectiveDescriptor } from './neat.multiobjective.utils.types';
 
 /**
  * Safely reads a single objective value for a given genome.

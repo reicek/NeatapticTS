@@ -748,17 +748,7 @@ Parameters:
 
 ## architecture/network.ts
 
-### ConnectionWeightNoiseProps
-
-Internal runtime properties attached to Connection instances.
-These properties are dynamically managed for weight noise and DropConnect.
-
 ### network
-
-### NetworkRuntimeProps
-
-Internal runtime properties attached to Network instances.
-These properties are dynamically managed and not part of the formal class interface.
 
 ### default
 
@@ -976,7 +966,7 @@ Consolidated training stats snapshot.
 
 #### mutate
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod) => void`
+`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => void`
 
 Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
@@ -1071,7 +1061,7 @@ Should be called after training to ensure inference is unaffected by previous dr
 
 #### serialize
 
-`() => [number[], number[], string[], import("C:/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number]`
+`() => [number[], number[], string[], import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection[], number, number]`
 
 Lightweight tuple serializer delegating to network.serialize.ts
 
@@ -1118,7 +1108,7 @@ Returns: A JSON-compatible object representing the network.
 
 #### toONNX
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
+`() => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
 Exports the network to ONNX format (JSON object, minimal MLP support).
 Only standard feedforward architectures and standard activations are supported.
@@ -1541,49 +1531,29 @@ Options bag for acquiring a node.
 ### Conv2DMapping
 
 Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
-This assumes the dense layer was originally synthesized from a convolution with weight sharing; we reconstitute spatial metadata.
-Each mapping references an export-layer index (1-based across hidden layers, output layer would be hiddenCount+1) and supplies spatial/kernel hyperparameters.
-Validation ensures that input spatial * channels product equals the previous layer width and that output channels * output spatial equals the current layer width.
 
 ### exportToONNX
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, options: import("C:/NeatapticTS/src/architecture/network/network.onnx").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
+`(network: import("C:/NeatapticTS/src/architecture/network").default, options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
-Export a minimal multilayer perceptron Network to a lightweight ONNX JSON object.
+Export a Neataptic network to a minimal ONNX-like JSON model structure.
 
-Steps:
- 1. Rebuild connection cache ensuring up-to-date adjacency.
- 2. Index nodes for error messaging.
- 3. Infer strict layer ordering (throws if structure unsupported).
- 4. Validate homogeneity & full connectivity layer-to-layer.
- 5. Build initializer tensors (weights + biases) and node list (Gemm + activation pairs).
+Parameters:
+- `network` - Source network.
+- `options` - Optional export flags.
 
-Constraints: See module doc. Throws descriptive errors when assumptions violated.
+Returns: ONNX-like model.
 
 ### importFromONNX
 
-`(onnx: import("C:/NeatapticTS/src/architecture/network/network.onnx").OnnxModel) => import("C:/NeatapticTS/src/architecture/network").default`
+`(onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("C:/NeatapticTS/src/architecture/network").default`
 
-Import a model previously produced by {@link exportToONNX} into a fresh Network instance.
+Import an ONNX-like JSON model into a Neataptic network instance.
 
-Core Steps:
- 1. Parse input/output tensor shapes (supports optional symbolic batch dim).
- 2. Derive hidden layer sizes (prefer `layer_sizes` metadata; fallback to weight tensor grouping heuristic).
- 3. Instantiate matching layered MLP (inputs -> hidden[] -> outputs); remove placeholder hidden nodes for single layer perceptrons.
- 4. Assign weights & biases (aggregated or per-neuron) from W/B initializers.
- 5. Reconstruct activation functions from Activation node op_types (layer or per-neuron).
- 6. Restore recurrent self connections from recorded diagonal Rk matrices if `recurrent_single_step` metadata present.
- 7. Experimental: Reconstruct LSTM / GRU layers when fused initializers & metadata (`lstm_emitted_layers`, `gru_emitted_layers`) detected
-    by replacing the corresponding hidden node block with a freshly constructed Layer.lstm / Layer.gru instance and remapping weights.
- 8. Rebuild flat connection array for downstream invariants.
+Parameters:
+- `onnx` - ONNX-like model.
 
-Experimental Behavior:
- - LSTM/GRU reconstruction is best-effort; inconsistencies in tensor shapes or gate counts result in silent skip (import still succeeds).
- - Recurrent biases (Rb) absent; self-connection diagonal only restored for cell/candidate groups.
-
-Limitations:
- - Only guaranteed for self-produced models; arbitrary ONNX graphs or differing op orderings are unsupported.
- - Fused recurrent node emission currently leaves original unfused Gemm/Activation path in exported model (import ignores duplicates).
+Returns: Reconstructed network.
 
 ### OnnxExportOptions
 

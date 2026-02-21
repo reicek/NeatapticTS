@@ -6,7 +6,7 @@
 import Network from '../../src/architecture/network';
 import Node from '../../src/architecture/node';
 import { config } from '../../src/config';
-import { rebuildConnectionSlabAsync } from '../../src/architecture/network/network.slab.utils';
+import { rebuildConnectionSlabAsync } from '../../src/architecture/network/network.utils';
 import { memoryStats } from '../../src/utils/memory';
 import type { SlabAllocStats } from '../../src/utils/memory';
 

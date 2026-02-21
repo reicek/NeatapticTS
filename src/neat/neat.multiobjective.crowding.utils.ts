@@ -2,7 +2,7 @@ import type Network from '../architecture/network';
 import type {
   NetworkWithMOAnnotations,
   ObjectiveDescriptor,
-} from './neat.multiobjective.types.utils';
+} from './neat.multiobjective.utils.types';
 
 /**
  * Builds a stable mapping from genome object references to their population

@@ -2,12 +2,12 @@ import Network from '../../src/architecture/network';
 import {
   trainImpl,
   applyGradientClippingImpl,
-} from '../../src/architecture/network/network.training.utils';
+} from '../../src/architecture/network/network.utils';
 import type {
   CheckpointConfig,
   MetricsHook,
   ScheduleConfig,
-} from '../../src/architecture/network/network.training.utils';
+} from '../../src/architecture/network/network.types';
 
 type TrainingDataset = Parameters<typeof trainImpl>[1];
 

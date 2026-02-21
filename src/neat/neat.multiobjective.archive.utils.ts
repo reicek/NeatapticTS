@@ -2,7 +2,7 @@ import type Network from '../architecture/network';
 import type {
   NeatLikeWithMultiObjective,
   NetworkWithMOAnnotations,
-} from './neat.multiobjective.types.utils';
+} from './neat.multiobjective.utils.types';
 
 /**
  * Maximum number of top Pareto fronts to retain per archive snapshot.

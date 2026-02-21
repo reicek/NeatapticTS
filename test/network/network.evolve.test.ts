@@ -1,7 +1,7 @@
 import Network from '../../src/architecture/network';
 import Multi from '../../src/multithreading/multi';
 import { Workers } from '../../src/multithreading/workers/workers';
-import { evolveNetwork } from '../../src/architecture/network/network.evolve.utils';
+import { evolveNetwork } from '../../src/architecture/network/network.utils';
 
 type TrainingSet = Parameters<typeof evolveNetwork>[0];
 

@@ -1,7 +1,7 @@
 import Network from '../../src/architecture/network';
 import * as methods from '../../src/methods/methods';
 import { importFromONNX } from '../../src/architecture/onnx';
-import type { OnnxModel } from '../../src/architecture/network/network.onnx.utils';
+import type { OnnxModel } from '../../src/architecture/network/network.types';
 
 /**
  * Tests for importing ONNX-serialized networks.

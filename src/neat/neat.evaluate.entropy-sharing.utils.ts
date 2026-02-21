@@ -1,4 +1,4 @@
-import type { NeatControllerForEval } from './neat.evaluate.types.utils';
+import type { NeatControllerForEval } from './neat.evaluate.utils.types';
 import {
   ENTROPY_VAR_ADJUST_DEFAULT,
   ENTROPY_VAR_HIGH_BAND,

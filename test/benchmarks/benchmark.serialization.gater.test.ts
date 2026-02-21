@@ -12,7 +12,7 @@ import {
   deserialize as deserializeTuple,
   toJSONImpl,
   fromJSONImpl,
-} from '../../src/architecture/network/network.serialize.utils';
+} from '../../src/architecture/network/network.utils';
 
 /**
  * Runtime interface for Network with internal properties and methods.

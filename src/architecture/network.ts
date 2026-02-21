@@ -10,79 +10,48 @@ import { config } from '../config'; // Import configuration settings
 import { activationArrayPool } from './activationArrayPool';
 import type { ActivationArray } from './activationArrayPool';
 import { exportToONNX } from './onnx';
-import { generateStandalone } from './network/network.standalone.utils';
 import {
+  generateStandalone,
   computeTopoOrder as _computeTopoOrder,
   hasPath as _hasPath,
-} from './network/network.topology.utils';
-import {
   rebuildConnectionSlab as _rebuildConnectionSlab,
   fastSlabActivate as _fastSlabActivate,
   canUseFastSlab as _canUseFastSlab,
   getConnectionSlab as _getConnectionSlab,
-} from './network/network.slab.utils';
-import {
   maybePrune as _maybePrune,
   pruneToSparsity as _pruneToSparsity,
   getCurrentSparsity as _getCurrentSparsity,
-} from './network/network.prune.utils';
-import {
   gate as _gate,
   ungate as _ungate,
-} from './network/network.gating.utils';
-import {
   setSeed as _setSeed,
   snapshotRNG as _snapshotRNG,
   restoreRNG as _restoreRNG,
   getRNGState as _getRNGState,
   setRNGState as _setRNGState,
-} from './network/network.deterministic.utils';
-import { getRegularizationStats as _getRegularizationStats } from './network/network.stats.utils';
-import { removeNode as _removeNodeStandalone } from './network/network.remove.utils';
-import {
+  getRegularizationStats as _getRegularizationStats,
+  removeNode as _removeNodeStandalone,
   connect as _connect,
   disconnect as _disconnect,
-} from './network/network.connect.utils';
-import {
   serialize as _serialize,
   deserialize as _deserialize,
   toJSONImpl as _toJSONImpl,
   fromJSONImpl as _fromJSONImpl,
-} from './network/network.serialize.utils';
-import {
   noTraceActivate as _noTraceActivate,
   activateRaw as _activateRaw,
   activateBatch as _activateBatch,
-} from './network/network.activate.utils';
-import type { MutationMethod } from './network/network.mutate.utils';
-import { mutateImpl as _mutateImpl } from './network/network.mutate.utils';
-import type { TrainingOptions } from './network/network.training.utils';
-import {
+  mutateImpl as _mutateImpl,
   applyGradientClippingImpl as _applyGradientClippingImpl,
   trainImpl as _trainImpl,
-} from './network/network.training.utils';
-import { crossOver as _crossOver } from './network/network.genetic.utils';
-
-/**
- * Internal runtime properties attached to Network instances.
- * These properties are dynamically managed and not part of the formal class interface.
- */
-interface NetworkRuntimeProps {
-  _lastSkippedLayers?: number[];
-  _lastStats?: unknown;
-  layers?: unknown[];
-}
-
-/**
- * Internal runtime properties attached to Connection instances.
- * These properties are dynamically managed for weight noise and DropConnect.
- */
-interface ConnectionWeightNoiseProps {
-  _origWeightNoise?: number;
-  _wnLast?: number;
-  _origWeight?: number;
-  dcMask?: number;
-}
+  crossOver as _crossOver,
+} from './network/network.utils';
+import type {
+  ConnectionWeightNoiseProps,
+  MutationMethod,
+  NetworkRuntimeProps,
+  RNGSnapshot,
+  SerializedConnection,
+  TrainingOptions,
+} from './network/network.types';
 
 /**
  * Network (Evolvable / Trainable Graph)
@@ -448,7 +417,7 @@ export default class Network implements NetworkView {
   get lastSkippedLayers(): number[] {
     return (this as unknown as NetworkRuntimeProps)._lastSkippedLayers || [];
   }
-  snapshotRNG(): import('./network/network.deterministic.utils').RNGSnapshot {
+  snapshotRNG(): RNGSnapshot {
     return _snapshotRNG.call(this);
   }
   restoreRNG(fn: () => number) {
@@ -1178,7 +1147,7 @@ export default class Network implements NetworkView {
     set: { input: number[]; output: number[] }[],
     options: Record<string, unknown> | undefined,
   ): Promise<{ error: number; iterations: number; time: number }> {
-    const { evolveNetwork } = await import('./network/network.evolve.utils');
+    const { evolveNetwork } = await import('./network/network.utils');
     return evolveNetwork.call(this, set, options as never);
   }
 
@@ -1255,7 +1224,7 @@ export default class Network implements NetworkView {
     number[],
     number[],
     string[],
-    import('./network/network.serialize.utils').SerializedConnection[],
+    SerializedConnection[],
     number,
     number,
   ] {

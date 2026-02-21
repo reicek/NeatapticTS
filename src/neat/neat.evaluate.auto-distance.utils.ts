@@ -1,4 +1,4 @@
-import type { NeatControllerForEval } from './neat.evaluate.types.utils';
+import type { NeatControllerForEval } from './neat.evaluate.utils.types';
 import {
   AUTO_COEFF_ADJUST_DEFAULT,
   AUTO_COEFF_MAX_DEFAULT,

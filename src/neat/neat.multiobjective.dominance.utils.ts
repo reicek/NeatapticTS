@@ -1,4 +1,4 @@
-import type { ObjectiveDescriptor } from './neat.multiobjective.types.utils';
+import type { ObjectiveDescriptor } from './neat.multiobjective.utils.types';
 
 /**
  * Determines whether vector A Pareto-dominates vector B.
