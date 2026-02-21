@@ -1,19 +1,50 @@
-# Hyper MorphoNEAT (ant-brain aligned draft)
+# HyperEvoDevo MorphoNEAT (ant-brain aligned plan)
 
-Hyper MorphoNEAT is an evo-devo extension for NEAT inspired by how small brains (e.g., ants) emerge and adapt:
+HyperEvoDevo MorphoNEAT is an evo-devo extension for NEAT inspired by how small brains (e.g., ants) emerge and adapt:
 
-1) **DNA builds a small brain deterministically** (development).
-2) **Experience gates where capacity grows** (usage-driven local expansion).
-3) **Unused / costly wiring is pruned and compacted** (energy/wiring economy).
-4) **Once stable, DNA is slowly updated** so future generations start closer to the discovered useful structure (structural assimilation; **no weight inheritance**).
+1. **DNA builds a small brain deterministically** (development).
+2. **Experience gates where capacity grows** (usage-driven local expansion).
+3. **Unused / costly wiring is pruned and compacted** (energy/wiring economy).
+4. **Once stable, DNA is slowly updated** so future generations start closer to the discovered useful structure (structural assimilation; **no weight inheritance**).
 
 This plan is intentionally constrained by the repo’s memory roadmap in [plans/Memory_Optimization.md](plans/Memory_Optimization.md). If the concept conflicts with that roadmap, the roadmap wins.
 
-Positioning (for readers familiar with existing algorithms): Hyper MorphoNEAT sits between **HyperNEAT** and a **small developmental language**. It keeps HyperNEAT’s compact spatial patterns (CPPN fields over a substrate), but adds a deterministic rule layer and a staged lifetime policy so evolution can propose macro motifs while experience drives local growth/prune decisions.
+Positioning (for readers familiar with existing algorithms): HyperEvoDevo MorphoNEAT sits between **HyperNEAT** and a **small developmental language**. It keeps HyperNEAT’s compact spatial patterns (CPPN fields over a substrate), but adds a deterministic rule layer and a staged lifetime policy so evolution can propose macro motifs while experience drives local growth/prune decisions.
 
 This draft is deliberately pragmatic: hyper features are opt-in, deterministic-by-default, budgeted, and reversible; when disabled, classic NEAT/Network behavior must remain unchanged.
 
----
+## Scope and maturity
+
+This is a **concept and architecture plan**, not an implementation-complete spec.
+
+- **In scope:** lifecycle model, deterministic contracts, DNA composition, budget policy, cache boundaries, and acceptance criteria.
+- **Out of scope (for now):** full operator-level API details, final data schemas, and low-level benchmark harness implementation.
+- **Authority rule:** if this plan conflicts with `plans/Memory_Optimization.md`, the memory plan remains authoritative.
+
+## Execution alignment (numbered tracks)
+
+This plan executes as **Track 2** in the memory roadmap and is intentionally sequenced **after core implementation phases** that benefit the current library.
+
+- Track 1 (Memory foundation): phases 0–10 in `plans/Memory_Optimization.md`
+- Track 2 (Hyper algorithm): phases 11–16 in `plans/Memory_Optimization.md`
+
+Authoritative mapping for this plan:
+
+- Phase A -> Phase 11
+- Phase B -> Phase 12
+- Phase C -> Phase 13
+- Phase D -> Phase 14
+- Phase E -> Phase 15
+- Phase F -> Phase 16
+
+This preserves conceptual labels (A–F) while keeping execution tracking numeric across both plans.
+
+## Explicit Evo-Devo positioning (naming + scope)
+
+This plan is explicitly **Evo-Devo**:
+
+- **Evo (evolution):** selection, crossover/mutation, and speciation optimize compact developmental DNA across generations.
+- **Devo (development):** each lifetime deterministically constructs a phenotype from DNA rules/programs before experience-driven local edits.
 
 ## Design Pillars
 
@@ -29,15 +60,15 @@ This draft is deliberately pragmatic: hyper features are opt-in, deterministic-b
 
 This table is shared vocabulary (conceptual), not an implementation spec.
 
-| Stage | Biological inspiration | Hyper MorphoNEAT engineering analog |
-| --- | --- | --- |
-| Embryonic seed | Few stem cells | Minimal DNA scaffold + input/output anchors + initial module archetypes |
-| Patterning gradients | Morphogens / HOX genes | Substrate coordinates + CPPN fields + deterministic tagging (module/zone ids) |
-| Proliferation | Cell division | DNA-driven replicate/hierarchy rules under explicit growth budgets |
-| Differentiation | Neurons specialize | Per-module archetype params (activation family, plasticity policy, wiring-cost zone weights) |
-| Axon guidance | Growth cones follow gradients | Cost-aware CPPN adjacency realization + locality bias + sparsity-first thresholds |
-| Pruning & refinement | Synaptic pruning | Experience-gated prune/compact (prefer long/inter-module edges; protect reward-critical wiring) |
-| Lifelong plasticity | Hebbian remodeling | Optional plasticity (weights adapt often); structural edits are slower, local, cooldown-limited |
+| Stage                   | Biological inspiration                        | HyperEvoDevo MorphoNEAT engineering analog                                                              |
+| ----------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Embryonic seed          | Few stem cells                                | Minimal DNA scaffold + input/output anchors + initial module archetypes                                 |
+| Patterning gradients    | Morphogens / HOX genes                        | Substrate coordinates + CPPN fields + deterministic tagging (module/zone ids)                           |
+| Proliferation           | Cell division                                 | DNA-driven replicate/hierarchy rules under explicit growth budgets                                      |
+| Differentiation         | Neurons specialize                            | Per-module archetype params (activation family, plasticity policy, wiring-cost zone weights)            |
+| Axon guidance           | Growth cones follow gradients                 | Cost-aware CPPN adjacency realization + locality bias + sparsity-first thresholds                       |
+| Pruning & refinement    | Synaptic pruning                              | Experience-gated prune/compact (prefer long/inter-module edges; protect reward-critical wiring)         |
+| Lifelong plasticity     | Hebbian remodeling                            | Optional plasticity (weights adapt often); structural edits are slower, local, cooldown-limited         |
 | Epigenetic assimilation | Stabilized development biases next generation | Slow per-module DNA updates after equilibrium (update programs/templates/budgets; no weights inherited) |
 
 ---
@@ -61,14 +92,14 @@ This table is shared vocabulary (conceptual), not an implementation spec.
 
 This is the core “rule-first” pipeline retained from the original draft, reframed to fit the ant-brain lifecycle:
 
-1) **Substrate:** deterministically assign coordinates and zone/module tags.
-2) **Rule passes (development):** apply prioritized, deterministic rules to expand a virtual node/module plan.
-3) **Indirect connectivity:** evaluate CPPN programs selectively to realize sparse edges with wiring-cost awareness.
-4) **Materialize:** instantiate slab-backed runtime structures (pooling + slabs) and attach optional policy hooks.
+1. **Substrate:** deterministically assign coordinates and zone/module tags.
+2. **Rule passes (development):** apply prioritized, deterministic rules to expand a virtual node/module plan.
+3. **Indirect connectivity:** evaluate CPPN programs selectively to realize sparse edges with wiring-cost awareness.
+4. **Materialize:** instantiate slab-backed runtime structures (pooling + slabs) and attach optional policy hooks.
 
 Cache boundaries are explicit (memory plan L7): adjacency cache and phenotype slab reuse are the intended wins; anything else must be heavily gated.
 
-### What Hyper MorphoNEAT is (and is not)
+### What HyperEvoDevo MorphoNEAT is (and is not)
 
 Is:
 
@@ -196,27 +227,27 @@ Recommended conceptual rules:
 
 ### Compressed payloads (ideas that scale)
 
-When DNA must encode more detail without exploding size, prefer encodings that compress *patterns*:
+When DNA must encode more detail without exploding size, prefer encodings that compress _patterns_:
 
-1) **Dictionary-coded archetypes**
+1. **Dictionary-coded archetypes**
    - Store a small dictionary of archetype definitions; modules store small indices + a few deltas.
 
-2) **Quantized parameter blocks (lossy optional)**
+2. **Quantized parameter blocks (lossy optional)**
    - Quantize floats (e.g., CPPN weights, rule coefficients) into `int8/int16` blocks.
    - Store a scale/offset header per block so decoding is deterministic within a `compatibilityVersion`.
 
-3) **Sparse SoA hints (lossless, compact)**
+3. **Sparse SoA hints (lossless, compact)**
    - Store sparse local hints (e.g., “preferred local wiring bumps” or “mask biases”) as small SoA lists.
 
-4) **Run-length / delta coding for tables**
+4. **Run-length / delta coding for tables**
    - For any per-module table, prefer RLE of repeated values and delta coding of monotone sequences.
 
-5) **String-level encodings (transport-friendly)**
+5. **String-level encodings (transport-friendly)**
    - Hex for very small payloads (debuggable).
    - Base64 for larger byte blocks.
    - Keep decoding rules fixed under `compatibilityVersion`.
 
-Important constraint: compressed payloads may help *bias* connectivity, but the canonical large-scale structure should still come from CPPNs/rules + sparsity + budgets; this keeps DNA size small relative to phenotype.
+Important constraint: compressed payloads may help _bias_ connectivity, but the canonical large-scale structure should still come from CPPNs/rules + sparsity + budgets; this keeps DNA size small relative to phenotype.
 
 ### “OR parts” decode (viability-first) — what it means
 
@@ -224,9 +255,9 @@ The “OR parts” mechanism is how DNA can stay expressive but still fit budget
 
 - DNA may carry multiple alternative representations for a part.
 - Decoding chooses the first option that is:
-  1) compatible with the runtime (`compatibilityVersion`)
-  2) within current budgets (nodes/edges/bytes/time)
-  3) consistent with determinism/variability mode (`encodingMode`)
+  1. compatible with the runtime (`compatibilityVersion`)
+  2. within current budgets (nodes/edges/bytes/time)
+  3. consistent with determinism/variability mode (`encodingMode`)
 
 This is especially useful for large CPPN blocks or per-module directives: lossless is preferred, but a compact/lossy alternative can be selected when budgets demand.
 
@@ -269,15 +300,15 @@ Rather than store explicit edges, DNA should store **generators** and **template
 
 Prefer one of these representations per module (or module archetype):
 
-1) **Template + parameters**
+1. **Template + parameters**
    - “This module is archetype A with parameters θ”
    - Best for compression and evolution stability
 
-2) **Sparse matrix (SoA) hints**
+2. **Sparse matrix (SoA) hints**
    - Store a compact list of (local coordinate, weight seed/scale, mask bias)
    - Can be encoded as hex/base64 for compactness
 
-3) **Quantized parameter blocks (lossy optional)**
+3. **Quantized parameter blocks (lossy optional)**
    - Quantize floats into int8/int16 blocks
    - Accept mild variability at scale; document encoding mode
 
@@ -295,13 +326,13 @@ Decode picks the first option that fits current budgets and compatibility constr
 
 HyperDNA crossover must align heterogeneous families. This keeps the original draft’s clarity without locking in implementation details.
 
-| DNA part | Alignment key | Match rule | Crossover outcome |
-| --- | --- | --- | --- |
-| Rules | (kind + canonical param signature) | same kind + normalized params | uniform pick or parameter-wise blend |
-| CPPN program | topology hash + activation sequence | identical topology | weight-block crossover (uniform/arithmetic) or select fitter |
-| Substrate modifier | (type + axis) | same type/axis | numeric blend + deterministic tie-break |
-| Module archetype | archetype id | id equality | inherit or blend parameters |
-| Budgets / schedule | field key | same field | blend within safe bounds, then clamp to global caps |
+| DNA part           | Alignment key                       | Match rule                    | Crossover outcome                                            |
+| ------------------ | ----------------------------------- | ----------------------------- | ------------------------------------------------------------ |
+| Rules              | (kind + canonical param signature)  | same kind + normalized params | uniform pick or parameter-wise blend                         |
+| CPPN program       | topology hash + activation sequence | identical topology            | weight-block crossover (uniform/arithmetic) or select fitter |
+| Substrate modifier | (type + axis)                       | same type/axis                | numeric blend + deterministic tie-break                      |
+| Module archetype   | archetype id                        | id equality                   | inherit or blend parameters                                  |
+| Budgets / schedule | field key                           | same field                    | blend within safe bounds, then clamp to global caps          |
 
 Excess/disjoint DNA parts follow a fitter-biased rule, but must pass a budget/viability normalization step.
 
@@ -342,19 +373,19 @@ The lifecycle is a **state machine**. Each stage has 4 substages; each substage 
 Notes:
 
 - “Life events” = plateau events and scheduled probe checkpoints.
-- Budgets are part of DNA (per your preference). If missing, default budgets are sampled around a conservative baseline.
+- Budgets are part of DNA. If missing, default budgets are derived from a conservative baseline.
 
 ### Lifecycle timeline (artifacts & rollback boundaries)
 
 This table is a reviewer-friendly view of “what mutates where” and what artifacts are produced.
 
-| Step | Mutates | Produces | Rollback boundary |
-| --- | --- | --- | --- |
-| Development (Embryo) | Phenotype only | virtual plan + realized adjacency + materialized slabs | abort build on budget/invalid refs (no commit) |
-| Observe/Probe (Juvenile/Adult) | metrics buffers only | focus scores + probe results | drop metrics on failure; no structural commit |
-| Morph cycle (Grow/Prune/Compact) | Phenotype only | delta edits + trace entries | dry-run validate then commit; rollback on constraint violation |
-| Equilibrium validation | none (decision step) | “stable” decision + candidate assimilation set | if unstable, return to Adult cycles |
-| Assimilation (between generations) | DNA only (slow) | updated per-module DNA parts | if invalid/off-budget, keep prior DNA |
+| Step                               | Mutates              | Produces                                               | Rollback boundary                                              |
+| ---------------------------------- | -------------------- | ------------------------------------------------------ | -------------------------------------------------------------- |
+| Development (Embryo)               | Phenotype only       | virtual plan + realized adjacency + materialized slabs | abort build on budget/invalid refs (no commit)                 |
+| Observe/Probe (Juvenile/Adult)     | metrics buffers only | focus scores + probe results                           | drop metrics on failure; no structural commit                  |
+| Morph cycle (Grow/Prune/Compact)   | Phenotype only       | delta edits + trace entries                            | dry-run validate then commit; rollback on constraint violation |
+| Equilibrium validation             | none (decision step) | “stable” decision + candidate assimilation set         | if unstable, return to Adult cycles                            |
+| Assimilation (between generations) | DNA only (slow)      | updated per-module DNA parts                           | if invalid/off-budget, keep prior DNA                          |
 
 ---
 
@@ -408,9 +439,9 @@ Structural edits are allowed but must be:
 
 Preferred edit order under stagnation:
 
-1) edge densification in high-focus modules
-2) node additions (rare; only when marginal returns justify)
-3) larger structural templates (replication/hierarchy changes) via DNA assimilation rather than rapid lifetime edits
+1. edge densification in high-focus modules
+2. node additions (rare; only when marginal returns justify)
+3. larger structural templates (replication/hierarchy changes) via DNA assimilation rather than rapid lifetime edits
 
 ---
 
@@ -430,8 +461,8 @@ This section stays compatible with [plans/Memory_Optimization.md](plans/Memory_O
 
 Caching priorities (authoritative):
 
-1) **Adjacency cache** (L7): keyed by genotype/substrate/program signatures; stores SoA edge lists.
-2) **Phenotype slab reuse** (L7): reuse typed array slabs and avoid rebuild churn.
+1. **Adjacency cache** (L7): keyed by genotype/substrate/program signatures; stores SoA edge lists.
+2. **Phenotype slab reuse** (L7): reuse typed array slabs and avoid rebuild churn.
 
 Optional (niche, strongly gated):
 
@@ -441,7 +472,7 @@ Optional (niche, strongly gated):
 
 ## Alignment with the Memory Optimization Plan (authoritative)
 
-Hyper MorphoNEAT depends on the completed memory foundations:
+HyperEvoDevo MorphoNEAT depends on the completed memory foundations:
 
 - L2 pooling + L3 slabs for churn
 - L4 sparsity + budgets for the primary bytes/connection improvements
@@ -488,7 +519,13 @@ Optional “assisted biasing” (conceptual): DNA may carry a parent-snapshot hi
 
 ## Budget defaults (when DNA omits them)
 
-Budgets are part of topology. If DNA omits a budget field, resolve it by sampling conservative defaults around a baseline (e.g., near 0.5 of configured maxima) and record the resolved values in telemetry so experiments remain auditable.
+Budgets are part of topology. If DNA omits a budget field, resolve it via a **deterministic seeded policy**:
+
+1. Use the child seed and `compatibilityVersion` as deterministic inputs.
+2. Derive conservative defaults around a baseline (for example, near `0.5` of configured maxima).
+3. Persist resolved values into telemetry/checkpoints for auditability.
+
+This preserves reproducibility while still allowing controlled diversity between siblings.
 
 ---
 
@@ -537,3 +574,14 @@ Phase F — Scale & stress validation
 - Caching: adjacency cache hit ratio target > 70% in repeated-evaluation scenarios (bench-defined).
 - Churn safety: pool high-water mark stabilizes under repeated grow/prune cycles.
 - Wiring economy: long/inter-module edges are preferentially pruned under cost pressure.
+
+## Readiness checklist (for implementation start)
+
+Before coding begins, this plan should have all items below marked complete:
+
+- [ ] Canonical `HyperDNA` schema draft with explicit versioning fields.
+- [ ] Deterministic ordering contract for module IDs, rule order, and edge realization.
+- [ ] Budget resolution algorithm defined as deterministic (seeded) and testable.
+- [ ] Lifecycle transition guards defined with measurable thresholds.
+- [ ] Telemetry contract finalized for reproducibility warnings (`encodingMode`, compatibility, lossy flags).
+- [ ] Memory-plan alignment review completed for L2/L3/L4/L7 dependencies.
