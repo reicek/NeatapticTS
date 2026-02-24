@@ -1,6 +1,98 @@
 # architecture/network/standalone
 
+## architecture/network/standalone/network.standalone.utils.types.ts
+
+### network.standalone.utils.types
+
+Output node discriminator used for standalone precondition checks.
+
+### ACTIVATION_PRECISION_F32
+
+### ARROW_TOKEN
+
+### BUILTIN_ACTIVATION_SNIPPETS
+
+### COVERAGE_CALL_REGEX
+
+### COVERAGE_COUNTER_REGEX
+
+### COVERAGE_REPLACEMENT
+
+### EMPTY_TOKEN_REGEX
+
+### FALLBACK_IDENTITY_BODY
+
+### FLOAT32_ARRAY_TYPE
+
+### FLOAT64_ARRAY_TYPE
+
+### FUNCTION_PREFIX
+
+### INPUT_LOOP_LINE
+
+### INVALID_INPUT_SIZE_ERROR_MIDDLE
+
+### INVALID_INPUT_SIZE_ERROR_PREFIX
+
+### ISTANBUL_IGNORE_BLOCK_REGEX
+
+### MASK_MULTIPLIER_IDENTITY
+
+### NO_OUTPUT_NODES_ERROR
+
+### OUTPUT_NODE_TYPE
+
+### REPEATED_SEMICOLON_REGEX
+
+### SINGLE_TERM_FALLBACK
+
+### SOLITARY_SEMICOLON_REGEX
+
+### SOURCE_MAP_REGEX
+
+### StandaloneSquashFunction
+
+`(inputValue: number, derivate: boolean | undefined) => number`
+
+Activation function shape used by standalone source generation helpers.
+
+### STRAY_COMMA_CLOSE_REGEX
+
+### STRAY_COMMA_OPEN_REGEX
+
 ## architecture/network/standalone/network.standalone.utils.ts
+
+### generateStandalone
+
+`(net: import("C:/NeatapticTS/src/architecture/network").default) => string`
+
+Standalone forward pass code generator.
+
+Purpose:
+ Transforms a dynamic Network instance (object graph with Nodes / Connections / gating metadata)
+ into a self-contained JavaScript function string that, when evaluated, returns an `activate(input)`
+ function capable of performing forward propagation without the original library runtime.
+
+Why generate code?
+ - Deployment: Embed a compact, dependency‑free inference function in environments where bundling
+   the full evolutionary framework is unnecessary (e.g. model cards, edge scripts, CI sanity checks).
+ - Performance: Remove dynamic indirection (property lookups, virtual dispatch) by specializing
+   the computation graph into straight‑line code and simple loops; JS engines can optimize this.
+ - Readability: Emitted source is human-readable so users can inspect weighted sums and activations.
+
+Features Supported:
+ - Standard feed‑forward connections with optional gating (multiplicative modulation).
+ - Single self-connection per node (handled as recurrent term S[i] * weight before activation).
+ - Arbitrary activation functions: built‑in ones are emitted via canonical snippets; custom user
+   functions are stringified and sanitized via stripCoverage(). Arrow or anonymous functions are
+   normalized into named `function <name>(...)` forms for clarity and stable ordering.
+
+Not Supported / Simplifications:
+ - No dynamic dropout, noise injection, or stochastic depth—those would require runtime randomness.
+ - Assumes all node indices are stable and sequential (enforced prior to generation).
+ - Gradient / backprop logic intentionally omitted (forward inference only).
+
+## architecture/network/standalone/network.standalone.utils.loop.ts
 
 ### appendActivationLine
 
@@ -26,18 +118,6 @@ Parameters:
 - `generationContext` - Mutable generation context.
 
 Returns: Void.
-
-### appendGateMultiplier
-
-`(connectionTerm: string, gateNode: import("C:/NeatapticTS/src/architecture/node").default | null) => string`
-
-Append a gate activation multiplier to a connection term when a gate exists.
-
-Parameters:
-- `connectionTerm` - Base connection term.
-- `gateNode` - Optional gate node.
-
-Returns: Term with optional gate multiplier.
 
 ### appendInputSeedLine
 
@@ -88,50 +168,6 @@ Parameters:
 
 Returns: Void.
 
-### assembleStandaloneSource
-
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => string`
-
-Assemble the final standalone IIFE source string.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-
-Returns: Final generated source string.
-
-### asStandaloneProps
-
-`(net: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkStandaloneProps`
-
-Cast a network instance to the internal standalone generation view.
-
-Parameters:
-- `net` - Network instance to cast.
-
-Returns: Internal network properties used by the standalone generator.
-
-### buildActivationArrayLiteral
-
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => string`
-
-Build deterministic activation function array literal by function index ordering.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-
-Returns: Comma-separated activation function names.
-
-### buildInputGuardLine
-
-`(expectedInputSize: number) => string`
-
-Build generated input length guard line.
-
-Parameters:
-- `expectedInputSize` - Required input vector size.
-
-Returns: Guard statement line including trailing newline.
-
 ### buildMaskSuffix
 
 `(maskValue: number) => string`
@@ -142,6 +178,20 @@ Parameters:
 - `maskValue` - Multiplicative mask value.
 
 Returns: Empty suffix for identity, otherwise multiplicative fragment.
+
+## architecture/network/standalone/network.standalone.utils.graph.ts
+
+### appendGateMultiplier
+
+`(connectionTerm: string, gateNode: import("C:/NeatapticTS/src/architecture/node").default | null) => string`
+
+Append a gate activation multiplier to a connection term when a gate exists.
+
+Parameters:
+- `connectionTerm` - Base connection term.
+- `gateNode` - Optional gate node.
+
+Returns: Term with optional gate multiplier.
 
 ### buildNodeSumExpression
 
@@ -189,66 +239,6 @@ Parameters:
 
 Returns: Zero or one recurrent term expressions.
 
-### convertArrowToNamedFunction
-
-`(sourceCode: string, squashName: string) => string`
-
-Convert an arrow-function source string into a named function declaration source.
-
-Parameters:
-- `sourceCode` - Arrow-function source.
-- `squashName` - Required function name.
-
-Returns: Named function source.
-
-### createGenerationContext
-
-`(standaloneProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkStandaloneProps) => import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext`
-
-Create a fresh generation context used across orchestration steps.
-
-Parameters:
-- `standaloneProps` - Internal standalone network view.
-
-Returns: Initialized generation context.
-
-### ensureActivationFunctionIndex
-
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext, squashName: string, squashFunction: (inputValue: number, derivate?: boolean | undefined) => number, nodeTraversalIndex: number) => number`
-
-Ensure an activation function is registered and return its table index.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-- `squashName` - Activation function name.
-- `squashFunction` - Activation function implementation.
-- `nodeTraversalIndex` - Current node index for fallback naming.
-
-Returns: Activation function index within generated `F` array.
-
-### ensureNamedFunctionSource
-
-`(sourceCode: string, squashName: string) => string`
-
-Ensure generated function source starts with the required named signature.
-
-Parameters:
-- `sourceCode` - Function source.
-- `squashName` - Required function name.
-
-Returns: Named function source.
-
-### ensureOutputNodesExist
-
-`(standaloneProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkStandaloneProps) => void`
-
-Validate that the network has at least one output node.
-
-Parameters:
-- `standaloneProps` - Internal standalone network view.
-
-Returns: Void.
-
 ### foldTermsIntoExpression
 
 `(allTerms: string[]) => string`
@@ -270,28 +260,6 @@ Parameters:
 - `outputIndexes` - Output node indexes.
 
 Returns: Comma-separated `A[index]` selector list.
-
-### generateStandalone
-
-`(net: import("C:/NeatapticTS/src/architecture/network").default) => string`
-
-Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.
-
-Implementation Steps:
- 1. Validate presence of output nodes (must produce something observable).
- 2. Assign stable sequential indices to nodes (used as array offsets in generated code).
- 3. Collect initial activation/state values into typed array initializers for warm starting.
- 4. For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
-    (post-activation output). Gating multiplies activation by gate activations; self-connection adds
-    recurrent term S[i] * weight before activation.
- 5. De-duplicate activation functions: each unique squash name is emitted once; references become
-    indices into array F of function references for compactness.
- 6. Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).
-
-Parameters:
-- `net` - Network instance to snapshot.
-
-Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.
 
 ### getOptionalNodeIndex
 
@@ -315,6 +283,151 @@ Parameters:
 - `secondTerms` - Second term collection.
 
 Returns: Combined term collection.
+
+## architecture/network/standalone/network.standalone.utils.setup.ts
+
+### asStandaloneProps
+
+`(net: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkStandaloneProps`
+
+Cast a network instance to the internal standalone generation view.
+
+Parameters:
+- `net` - Network instance to cast.
+
+Returns: Internal network properties used by the standalone generator.
+
+### createGenerationContext
+
+`(standaloneProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkStandaloneProps) => import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext`
+
+Create a fresh generation context used across orchestration steps.
+
+Parameters:
+- `standaloneProps` - Internal standalone network view.
+
+Returns: Initialized generation context.
+
+### ensureOutputNodesExist
+
+`(standaloneProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkStandaloneProps) => void`
+
+Validate that the network has at least one output node.
+
+Parameters:
+- `standaloneProps` - Internal standalone network view.
+
+Returns: Void.
+
+### seedNodeIndexesAndState
+
+`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => void`
+
+Seed index, activation, and state arrays from network nodes.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+
+Returns: Void.
+
+## architecture/network/standalone/network.standalone.utils.coverage.ts
+
+### stripCoverage
+
+`(code: string) => string`
+
+Remove instrumentation artifacts and formatting detritus from function sources.
+
+Parameters:
+- `code` - Source text potentially containing coverage wrappers.
+
+Returns: Cleaned source text suitable for deterministic standalone emission.
+
+## architecture/network/standalone/network.standalone.utils.finalize.ts
+
+### assembleStandaloneSource
+
+`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => string`
+
+Assemble the final standalone IIFE source string.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+
+Returns: Final generated source string.
+
+### buildActivationArrayLiteral
+
+`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => string`
+
+Build deterministic activation function array literal by function index ordering.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+
+Returns: Comma-separated activation function names.
+
+### buildInputGuardLine
+
+`(expectedInputSize: number) => string`
+
+Build generated input length guard line.
+
+Parameters:
+- `expectedInputSize` - Required input vector size.
+
+Returns: Guard statement line including trailing newline.
+
+### resolveActivationArrayType
+
+`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => string`
+
+Resolve typed-array constructor name based on configured activation precision.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+
+Returns: Constructor name used in generated source.
+
+## architecture/network/standalone/network.standalone.utils.activation.ts
+
+### convertArrowToNamedFunction
+
+`(sourceCode: string, squashName: string) => string`
+
+Convert an arrow-function source string into a named function declaration source.
+
+Parameters:
+- `sourceCode` - Arrow-function source.
+- `squashName` - Required function name.
+
+Returns: Named function source.
+
+### ensureActivationFunctionIndex
+
+`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext, squashName: string, squashFunction: import("C:/NeatapticTS/src/architecture/network/standalone/network.standalone.utils.types").StandaloneSquashFunction, nodeTraversalIndex: number) => number`
+
+Ensure an activation function is registered and return its table index.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+- `squashName` - Activation function name.
+- `squashFunction` - Activation function implementation.
+- `nodeTraversalIndex` - Current node index for fallback naming.
+
+Returns: Activation function index within generated `F` array.
+
+### ensureNamedFunctionSource
+
+`(sourceCode: string, squashName: string) => string`
+
+Ensure generated function source starts with the required named signature.
+
+Parameters:
+- `sourceCode` - Function source.
+- `squashName` - Required function name.
+
+Returns: Named function source.
 
 ### normalizeArrowBody
 
@@ -376,20 +489,9 @@ Parameters:
 
 Returns: Void.
 
-### resolveActivationArrayType
-
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => string`
-
-Resolve typed-array constructor name based on configured activation precision.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-
-Returns: Constructor name used in generated source.
-
 ### resolveActivationFunctionSource
 
-`(squashName: string, squashFunction: (inputValue: number, derivate?: boolean | undefined) => number, nodeTraversalIndex: number) => string`
+`(squashName: string, squashFunction: import("C:/NeatapticTS/src/architecture/network/standalone/network.standalone.utils.types").StandaloneSquashFunction, nodeTraversalIndex: number) => string`
 
 Resolve emitted source for built-in or custom activation functions.
 
@@ -411,44 +513,3 @@ Parameters:
 - `nodeTraversalIndex` - Node index for anonymous-name fallback.
 
 Returns: Activation function identifier.
-
-### seedNodeIndexesAndState
-
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => void`
-
-Seed index, activation, and state arrays from network nodes.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-
-Returns: Void.
-
-### stripCoverage
-
-`(code: string) => string`
-
-Standalone forward pass code generator.
-
-Purpose:
- Transforms a dynamic Network instance (object graph with Nodes / Connections / gating metadata)
- into a self-contained JavaScript function string that, when evaluated, returns an `activate(input)`
- function capable of performing forward propagation without the original library runtime.
-
-Why generate code?
- - Deployment: Embed a compact, dependency‑free inference function in environments where bundling
-   the full evolutionary framework is unnecessary (e.g. model cards, edge scripts, CI sanity checks).
- - Performance: Remove dynamic indirection (property lookups, virtual dispatch) by specializing
-   the computation graph into straight‑line code and simple loops; JS engines can optimize this.
- - Pedagogy: Emitted source is readable—users can inspect how weighted sums + activations compose.
-
-Features Supported:
- - Standard feed‑forward connections with optional gating (multiplicative modulation).
- - Single self-connection per node (handled as recurrent term S[i] * weight before activation).
- - Arbitrary activation functions: built‑in ones are emitted via canonical snippets; custom user
-   functions are stringified and sanitized via stripCoverage(). Arrow or anonymous functions are
-   normalized into named `function <name>(...)` forms for clarity and stable ordering.
-
-Not Supported / Simplifications:
- - No dynamic dropout, noise injection, or stochastic depth—those would require runtime randomness.
- - Assumes all node indices are stable and sequential (enforced prior to generation).
- - Gradient / backprop logic intentionally omitted (forward inference only).

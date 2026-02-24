@@ -1,7 +1,19 @@
 import type Network from '../../network';
 import Node from '../../node';
 import Connection from '../../connection';
-import type { ConnectNetworkInternals as NetworkInternals } from '../network.types';
+import type { NetworkInternals } from './network.connect.utils.types';
+import {
+  createConnectionsFromSourceNode,
+  markConnectionCachesDirtyWhenNeeded,
+  registerCreatedConnections,
+  shouldRejectConnectionForAcyclicMode,
+} from './network.connect.create.utils';
+import {
+  disconnectNodes,
+  markStructureCachesDirty,
+  removeFirstMatchingConnection,
+  selectConnectionCollection,
+} from './network.connect.remove.utils';
 
 /**
  * Create and register one (or multiple) directed connection objects between two nodes.
@@ -29,7 +41,7 @@ import type { ConnectNetworkInternals as NetworkInternals } from '../network.typ
  *  - Self‑connections are skipped entirely when acyclicity is enforced.
  *  - Weight initialization policy is delegated to Node.connect if not explicitly provided.
  *
- * @param this - Bound {@link Network} instance.
+ * @param this - Bound Network instance.
  * @param from - Source node (emits signal).
  * @param to - Target node (receives signal).
  * @param weight - Optional explicit initial weight value.
@@ -69,112 +81,6 @@ export function connect(
   );
 
   return createdConnections;
-
-  /**
-   * Determine whether an edge must be rejected to preserve acyclic ordering.
-   *
-   * @param network - Network instance owning node ordering.
-   * @param internalState - Runtime network internals used by connection pipeline.
-   * @param sourceNode - Candidate source node.
-   * @param targetNode - Candidate target node.
-   * @returns True when edge should be rejected.
-   */
-  function shouldRejectConnectionForAcyclicMode(
-    network: Network,
-    internalState: NetworkInternals,
-    sourceNode: Node,
-    targetNode: Node,
-  ): boolean {
-    if (!internalState._enforceAcyclic) return false;
-    return (
-      network.nodes.indexOf(sourceNode) > network.nodes.indexOf(targetNode)
-    );
-  }
-
-  /**
-   * Build one or more low-level connection objects from source node to target node.
-   *
-   * @param sourceNode - Source node.
-   * @param targetNode - Target node.
-   * @param initialWeight - Optional explicit initial weight.
-   * @returns Created low-level connection objects.
-   */
-  function createConnectionsFromSourceNode(
-    sourceNode: Node,
-    targetNode: Node,
-    initialWeight?: number,
-  ): Connection[] {
-    return sourceNode.connect(targetNode, initialWeight);
-  }
-
-  /**
-   * Register created connections in either normal-connection or self-connection storage.
-   *
-   * @param network - Network instance owning connection collections.
-   * @param internalState - Runtime network internals used by connection pipeline.
-   * @param sourceNode - Source node used during connection creation.
-   * @param targetNode - Target node used during connection creation.
-   * @param createdConnections - Created low-level connection objects.
-   * @returns Nothing.
-   */
-  function registerCreatedConnections(
-    network: Network,
-    internalState: NetworkInternals,
-    sourceNode: Node,
-    targetNode: Node,
-    createdConnections: Connection[],
-  ): void {
-    const isSelfConnection = sourceNode === targetNode;
-
-    createdConnections.forEach((createdConnection) => {
-      registerSingleCreatedConnection(
-        network,
-        internalState,
-        isSelfConnection,
-        createdConnection,
-      );
-    });
-  }
-
-  /**
-   * Register one created connection in the appropriate collection.
-   *
-   * @param network - Network instance owning connection collections.
-   * @param internalState - Runtime network internals used by connection pipeline.
-   * @param isSelfConnection - Whether source and target nodes are the same.
-   * @param createdConnection - Created low-level connection object.
-   * @returns Nothing.
-   */
-  function registerSingleCreatedConnection(
-    network: Network,
-    internalState: NetworkInternals,
-    isSelfConnection: boolean,
-    createdConnection: Connection,
-  ): void {
-    if (!isSelfConnection) {
-      network.connections.push(createdConnection);
-      return;
-    }
-
-    if (internalState._enforceAcyclic) return;
-    network.selfconns.push(createdConnection);
-  }
-
-  /**
-   * Mark topology and slab caches dirty when connection creation occurred.
-   *
-   * @param internalState - Runtime network internals used by connection pipeline.
-   * @param createdConnectionCount - Number of created low-level connections.
-   * @returns Nothing.
-   */
-  function markConnectionCachesDirtyWhenNeeded(
-    internalState: NetworkInternals,
-    createdConnectionCount: number,
-  ): void {
-    if (!createdConnectionCount) return;
-    internalState._topoDirty = true;
-    internalState._slabDirty = true;
-  }
 }
 
 /**
@@ -200,7 +106,7 @@ export function connect(
  * Idempotence: If no such edge exists we still perform node-level disconnect and flag caches dirty –
  * this conservative approach simplifies callers (they need not pre‑check existence).
  *
- * @param this - Bound {@link Network} instance.
+ * @param this - Bound Network instance.
  * @param from - Source node.
  * @param to - Target node.
  * @example
@@ -221,109 +127,4 @@ export function disconnect(this: Network, from: Node, to: Node): void {
 
   // Step 4: Invalidate structural caches after disconnect flow.
   markStructureCachesDirty(networkInternal);
-
-  /**
-   * Select the relevant collection to search for the edge.
-   *
-   * @param network - Network instance owning connection collections.
-   * @param sourceNode - Source node.
-   * @param targetNode - Target node.
-   * @returns Candidate connection collection.
-   */
-  function selectConnectionCollection(
-    network: Network,
-    sourceNode: Node,
-    targetNode: Node,
-  ): Connection[] {
-    return sourceNode === targetNode ? network.selfconns : network.connections;
-  }
-
-  /**
-   * Remove first connection that matches source and target nodes.
-   *
-   * @param network - Network instance used for ungating.
-   * @param candidateConnections - Candidate collection to search.
-   * @param sourceNode - Source node.
-   * @param targetNode - Target node.
-   * @returns Nothing.
-   */
-  function removeFirstMatchingConnection(
-    network: Network,
-    candidateConnections: Connection[],
-    sourceNode: Node,
-    targetNode: Node,
-  ): void {
-    const targetConnectionIndex = findConnectionIndex(
-      candidateConnections,
-      sourceNode,
-      targetNode,
-    );
-
-    if (targetConnectionIndex < 0) return;
-    removeConnectionAtIndex(
-      network,
-      candidateConnections,
-      targetConnectionIndex,
-    );
-  }
-
-  /**
-   * Find index of the first connection matching source and target nodes.
-   *
-   * @param candidateConnections - Candidate collection to search.
-   * @param sourceNode - Source node.
-   * @param targetNode - Target node.
-   * @returns Matching index or -1 when no edge is found.
-   */
-  function findConnectionIndex(
-    candidateConnections: Connection[],
-    sourceNode: Node,
-    targetNode: Node,
-  ): number {
-    return candidateConnections.findIndex(
-      (candidateConnection) =>
-        candidateConnection.from === sourceNode &&
-        candidateConnection.to === targetNode,
-    );
-  }
-
-  /**
-   * Remove one connection by index, ungating first if required.
-   *
-   * @param network - Network instance used for ungating.
-   * @param candidateConnections - Candidate collection containing target index.
-   * @param targetConnectionIndex - Index to remove.
-   * @returns Nothing.
-   */
-  function removeConnectionAtIndex(
-    network: Network,
-    candidateConnections: Connection[],
-    targetConnectionIndex: number,
-  ): void {
-    const targetConnection = candidateConnections[targetConnectionIndex];
-    if (targetConnection.gater) network.ungate(targetConnection);
-    candidateConnections.splice(targetConnectionIndex, 1);
-  }
-
-  /**
-   * Delegate per-node disconnect cleanup.
-   *
-   * @param sourceNode - Source node.
-   * @param targetNode - Target node.
-   * @returns Nothing.
-   */
-  function disconnectNodes(sourceNode: Node, targetNode: Node): void {
-    sourceNode.disconnect(targetNode);
-  }
-
-  /**
-   * Mark topology/slab caches dirty after structural mutation.
-   *
-   * @param internalState - Runtime network internals used by connection pipeline.
-   * @returns Nothing.
-   */
-  function markStructureCachesDirty(internalState: NetworkInternals): void {
-    internalState._topoDirty = true;
-    internalState._slabDirty = true;
-  }
 }

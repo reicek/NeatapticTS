@@ -1,4 +1,4 @@
-import Node from './node';
+﻿import Node from './node';
 import Layer from './layer';
 import {
   acquireNode as _acquireNode,
@@ -57,20 +57,20 @@ import type {
  * Network (Evolvable / Trainable Graph)
  * =====================================
  * Represents a directed neural computation graph used both as a NEAT genome
- * phenotype and (optionally) as a gradient‑trainable model. The class binds
+ * phenotype and (optionally) as a gradientΓÇætrainable model. The class binds
  * together specialized modules (topology, pruning, serialization, slab packing)
  * to keep the core surface approachable for learners.
  *
  * Educational Highlights:
  *  - Structural Mutation: functions like `addNodeBetween()` and evolutionary
  *    helpers (in higher-level `Neat`) mutate topology to explore architectures.
- *  - Fast Execution Paths: a Structure‑of‑Arrays (SoA) slab (`rebuildConnectionSlab`)
+ *  - Fast Execution Paths: a StructureΓÇæofΓÇæArrays (SoA) slab (`rebuildConnectionSlab`)
  *    packs connection data into typed arrays to improve cache locality.
  *  - Memory Optimization: node pooling & typed array pooling demonstrate how
  *    allocation patterns affect performance and GC pressure.
  *  - Determinism: RNG snapshot/restore methods allow reproducible experiments.
  *  - Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
- *    illustrate gradient‑era regularization applied to evolved topologies.
+ *    illustrate gradientΓÇæera regularization applied to evolved topologies.
  *
  * Typical Usage:
  * ```ts
@@ -82,9 +82,9 @@ import type {
  * ```
  *
  * Performance Guidance:
- *  - Invoke `activate()` normally; the class auto‑selects slab vs object path.
+ *  - Invoke `activate()` normally; the class autoΓÇæselects slab vs object path.
  *  - Batch structural mutations then call `rebuildConnectionSlab(true)` if you
- *    need an immediate fast‑path (it is invoked lazily otherwise).
+ *    need an immediate fastΓÇæpath (it is invoked lazily otherwise).
  *  - Keep input array length exactly equal to `input`; mismatches throw early.
  *
  * Serialization:
@@ -94,35 +94,41 @@ import type {
 import type { NetworkView } from '../utils/memory';
 
 export default class Network implements NetworkView {
-  [key: string]: unknown; // Index signature for adaptive features compatibility
-  input: number;
-  output: number;
-  score?: number;
-  nodes: Node[];
-  connections: Connection[];
-  gates: Connection[];
-  selfconns: Connection[];
-  dropout: number = 0;
+  /** DropConnect probability. */
   protected _dropConnectProb: number = 0;
+  /** Last recorded gradient norm. */
   private _lastGradNorm?: number;
+  /** Optimizer step counter. */
   private _optimizerStep: number = 0;
+  /** Global weight-noise standard deviation. */
   private _weightNoiseStd: number = 0;
+  /** Per-hidden-layer weight-noise standard deviations. */
   private _weightNoisePerHidden: number[] = [];
+  /** Dynamic weight-noise schedule function. */
   private _weightNoiseSchedule?: (step: number) => number;
+  /** Stochastic depth schedule values. */
   private _stochasticDepth: number[] = [];
+  /** Original weights captured for weight-noise recovery. */
   private _wnOrig?: number[];
+  /** Training step counter. */
   private _trainingStep: number = 0;
+  /** Random number generator used for stochastic operations. */
   private _rand: () => number = Math.random;
+  /** Raw RNG state word. */
   private _rngState?: number;
+  /** Last recorded stats payload. */
   private _lastStats: unknown = null;
+  /** Dynamic stochastic depth schedule. */
   private _stochasticDepthSchedule?: (
     step: number,
     current: number[],
   ) => number[];
+  /** Mixed precision runtime configuration. */
   private _mixedPrecision: { enabled: boolean; lossScale: number } = {
     enabled: false,
     lossScale: 1,
   };
+  /** Mixed precision state counters. */
   private _mixedPrecisionState: {
     goodSteps: number;
     badSteps: number;
@@ -140,18 +146,27 @@ export default class Network implements NetworkView {
     scaleUpEvents: 0,
     scaleDownEvents: 0,
   };
+  /** Accumulated micro-batch counter. */
   private _gradAccumMicroBatches: number = 0;
+  /** Gradient clip configuration for the current step. */
   private _currentGradClip?: {
     mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
     maxNorm?: number;
     percentile?: number;
   };
+  /** Last recorded raw (pre-update) gradient norm. */
   private _lastRawGradNorm: number = 0;
+  /** Accumulation reduction mode. */
   private _accumulationReduction: 'average' | 'sum' = 'average';
+  /** Whether to apply separate bias clipping. */
   private _gradClipSeparateBias: boolean = false;
+  /** Last gradient clipping group count. */
   private _lastGradClipGroupCount: number = 0;
+  /** Last overflow training step index. */
   private _lastOverflowStep: number = -1;
+  /** Flag to force a mixed-precision overflow path. */
   private _forceNextOverflow: boolean = false;
+  /** Pruning configuration for scheduled pruning. */
   private _pruningConfig?: {
     start: number;
     end: number;
@@ -161,57 +176,79 @@ export default class Network implements NetworkView {
     method: 'magnitude' | 'snip';
     lastPruneIter?: number;
   };
+  /** Initial connection count used for pruning baselines. */
   private _initialConnectionCount?: number;
+  /** Whether to enforce acyclic connectivity. */
   private _enforceAcyclic: boolean = false;
+  /** Cached topological order. */
   private _topoOrder: Node[] | null = null;
+  /** Topology dirty marker. */
   private _topoDirty: boolean = true;
+  /** Global epoch counter. */
   private _globalEpoch: number = 0;
-  layers?: Layer[];
-  private _evoInitialConnCount?: number; // baseline for evolution-time pruning
-  private _activationPrecision: 'f64' | 'f32' = 'f64'; // typed array precision for compiled path
-  private _reuseActivationArrays: boolean = false; // reuse pooled output arrays
-  private _returnTypedActivations: boolean = false; // if true and reuse enabled, return typed array directly
-  private _activationPool?: Float32Array | Float64Array; // pooled output array
-  // Packed connection slab fields (for memory + cache efficiency when iterating connections)
-  public _connWeights?: Float32Array | Float64Array;
-  public _connFrom?: Uint32Array;
-  public _connTo?: Uint32Array;
-  public _slabDirty: boolean = true;
-  public _useFloat32Weights: boolean = true;
-  // Cached node.index maintenance (avoids repeated this.nodes.indexOf in hot paths like slab rebuild)
-  public _nodeIndexDirty: boolean = true; // when true, node.index values must be reassigned sequentially
-  // Fast slab forward path structures
+  /** Baseline connection count used by evolution-time pruning. */
+  private _evoInitialConnCount?: number;
+  /** Typed-array precision used by compiled activation paths. */
+  private _activationPrecision: 'f64' | 'f32' = 'f64';
+  /** Whether pooled activation arrays are reused across activations. */
+  private _reuseActivationArrays: boolean = false;
+  /** Whether pooled typed activations can be returned directly. */
+  private _returnTypedActivations: boolean = false;
+  /** Cached pooled activation output array. */
+  private _activationPool?: Float32Array | Float64Array;
+  /** Output-start array for slab forward pass. */
   private _outStart?: Uint32Array;
+  /** Output-order array for slab forward pass. */
   private _outOrder?: Uint32Array;
+  /** Adjacency dirty marker for slab structures. */
   private _adjDirty: boolean = true;
-  // Cached typed arrays for fast slab forward pass
-  public _fastA?: Float32Array | Float64Array;
-  public _fastS?: Float32Array | Float64Array;
-  // Internal hint: track a preferred linear chain edge to split on subsequent ADD_NODE mutations
-  // to encourage deep path formation even in stochastic modes. Updated each time we split it.
+  /** Preferred linear-chain edge for node-split mutations. */
   private _preferredChainEdge?: Connection;
 
-  // Slab helpers delegated to network.slab.ts
-  private _canUseFastSlab(training: boolean) {
-    return _canUseFastSlab.call(this, training);
-  }
-  private _fastSlabActivate(input: number[]) {
-    return _fastSlabActivate.call(this, input);
-  }
-  rebuildConnectionSlab(force = false) {
-    return _rebuildConnectionSlab.call(this, force);
-  }
-  getConnectionSlab() {
-    return _getConnectionSlab.call(this);
-  }
+  /** Index signature for adaptive features compatibility. */
+  [key: string]: unknown;
+  /** Input node count. */
+  input: number;
+  /** Output node count. */
+  output: number;
+  /** Optional fitness score. */
+  score?: number;
+  /** Network node collection. */
+  nodes: Node[];
+  /** Connection list. */
+  connections: Connection[];
+  /** Network gates collection. */
+  gates: Connection[];
+  /** Self-connection list. */
+  selfconns: Connection[];
+  /** Dropout probability. */
+  dropout: number = 0;
+  /** Optional layered view cache. */
+  layers?: Layer[];
+  /** Packed connection slab weights. */
+  public _connWeights?: Float32Array | Float64Array;
+  /** Packed connection slab source indices. */
+  public _connFrom?: Uint32Array;
+  /** Packed connection slab target indices. */
+  public _connTo?: Uint32Array;
+  /** Slab dirty marker. */
+  public _slabDirty: boolean = true;
+  /** Whether to store slab weights in float32. */
+  public _useFloat32Weights: boolean = true;
+  /** Node index dirty marker. */
+  public _nodeIndexDirty: boolean = true;
+  /** Cached fast activation array A. */
+  public _fastA?: Float32Array | Float64Array;
+  /** Cached fast activation array S. */
+  public _fastS?: Float32Array | Float64Array;
+
   /**
-   * Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
-   * Prefer using standard activate(); it will auto dispatch when eligible.
-   * Falls back internally if prerequisites not met.
+   * Create a network instance.
+   *
+   * @param input Number of input nodes.
+   * @param output Number of output nodes.
+   * @param options Optional constructor options.
    */
-  fastSlabActivate(input: number[]) {
-    return this._fastSlabActivate(input);
-  }
   constructor(
     input: number,
     output: number,
@@ -285,7 +322,118 @@ export default class Network implements NetworkView {
     }
   }
 
-  // --- Changed: made public (was private) for deterministic pooling stress harness ---
+  /**
+   * Check if fast-slab activation can be used.
+   *
+   * @param training Whether training mode is active.
+   * @returns True when fast-slab activation can be used.
+   */
+  private _canUseFastSlab(training: boolean) {
+    return _canUseFastSlab.call(this, training);
+  }
+
+  /**
+   * Execute the fast slab activation path.
+   *
+   * @param input Input vector.
+   * @returns Activation output.
+   */
+  private _fastSlabActivate(input: number[]) {
+    return _fastSlabActivate.call(this, input);
+  }
+
+  /**
+   * Recompute and cache topological node ordering.
+   *
+   * @returns Topological order payload from the delegate.
+   */
+  private _computeTopoOrder() {
+    return _computeTopoOrder.call(this);
+  }
+
+  /**
+   * Check whether a directed path exists between two nodes.
+   *
+   * @param from Source node.
+   * @param to Target node.
+   * @returns True when a path exists.
+   */
+  private _hasPath(from: Node, to: Node) {
+    return _hasPath.call(this, from, to);
+  }
+
+  /**
+   * Apply scheduled pruning if current iteration matches pruning policy.
+   *
+   * @param iteration Current training iteration.
+   * @returns Delegate result for pruning attempt.
+   */
+  private _maybePrune(iteration: number) {
+    return _maybePrune.call(this, iteration);
+  }
+
+  /**
+   * Apply gradient clipping configuration.
+   *
+   * @param cfg Gradient clipping configuration.
+   */
+  private _applyGradientClipping(cfg: {
+    mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
+    maxNorm?: number;
+    percentile?: number;
+  }): void {
+    _applyGradientClippingImpl(this, cfg);
+  }
+
+  /**
+   * Sample a Gaussian random value with an optional RNG.
+   *
+   * @param rng RNG function.
+   * @returns Gaussian random value.
+   */
+  private static _gaussianRand(rng: () => number = Math.random): number {
+    let uniformSampleOne = 0;
+    let uniformSampleTwo = 0;
+    while (uniformSampleOne === 0) uniformSampleOne = rng();
+    while (uniformSampleTwo === 0) uniformSampleTwo = rng();
+    return (
+      Math.sqrt(-2.0 * Math.log(uniformSampleOne)) *
+      Math.cos(2.0 * Math.PI * uniformSampleTwo)
+    );
+  }
+
+  /**
+   * Rebuild slab structures for fast activation.
+   *
+   * @param force Whether to force a rebuild.
+   * @returns Slab rebuild result.
+   */
+  rebuildConnectionSlab(force = false) {
+    return _rebuildConnectionSlab.call(this, force);
+  }
+
+  /**
+   * Read slab structures for fast activation.
+   *
+   * @returns Slab connection structures.
+   */
+  getConnectionSlab() {
+    return _getConnectionSlab.call(this);
+  }
+
+  /**
+   * Public wrapper for fast slab forward pass.
+   *
+   * @param input Input vector.
+   * @returns Activation output.
+   */
+  fastSlabActivate(input: number[]) {
+    return this._fastSlabActivate(input);
+  }
+
+  /**
+   * Split a random existing connection by inserting one hidden node.
+   */
   addNodeBetween(): void {
     if (this.connections.length === 0) return;
     const idx = Math.floor(this._rand() * this.connections.length);
@@ -302,28 +450,35 @@ export default class Network implements NetworkView {
     this._nodeIndexDirty = true;
   }
 
-  // --- DropConnect API (re-added for tests) ---
+  /**
+   * Enable DropConnect with a probability in $[0,1)$.
+   *
+   * @param p DropConnect probability.
+   */
   enableDropConnect(p: number) {
     if (p < 0 || p >= 1)
       throw new Error('DropConnect probability must be in [0,1)');
     this._dropConnectProb = p;
   }
+  /** Disable DropConnect. */
   disableDropConnect() {
     this._dropConnectProb = 0;
   }
 
-  // --- Acyclic enforcement toggle (used by tests) ---
+  /**
+   * Enable or disable acyclic topology enforcement.
+   *
+   * @param flag Whether to enforce acyclic connectivity.
+   */
   setEnforceAcyclic(flag: boolean) {
     this._enforceAcyclic = !!flag;
   }
-  private _computeTopoOrder() {
-    return _computeTopoOrder.call(this);
-  }
-  private _hasPath(from: Node, to: Node) {
-    return _hasPath.call(this, from, to);
-  }
 
-  // --- Pruning configuration & helpers ---
+  /**
+   * Configure scheduled pruning during training.
+   *
+   * @param cfg Pruning schedule and strategy configuration.
+   */
   configurePruning(cfg: {
     start: number;
     end: number;
@@ -348,11 +503,13 @@ export default class Network implements NetworkView {
     };
     this._initialConnectionCount = this.connections.length;
   }
+  /**
+   * Compute the current connection sparsity ratio.
+   *
+   * @returns Current sparsity in $[0,1]$.
+   */
   getCurrentSparsity(): number {
     return _getCurrentSparsity.call(this);
-  }
-  private _maybePrune(iteration: number) {
-    return _maybePrune.call(this, iteration);
   }
 
   /**
@@ -368,7 +525,11 @@ export default class Network implements NetworkView {
     return _pruneToSparsity.call(this, targetSparsity, method);
   }
 
-  /** Enable weight noise. Provide a single std dev number or { perHiddenLayer: number[] }. */
+  /**
+   * Enable weight noise using either a global standard deviation or per-hidden-layer values.
+   *
+   * @param stdDev Global standard deviation or hidden-layer schedule.
+   */
   enableWeightNoise(stdDev: number | { perHiddenLayer: number[] }) {
     if (typeof stdDev === 'number') {
       if (stdDev < 0) throw new Error('Weight noise stdDev must be >= 0');
@@ -392,56 +553,111 @@ export default class Network implements NetworkView {
       throw new Error('Invalid weight noise configuration');
     }
   }
+  /** Disable all weight-noise settings. */
   disableWeightNoise() {
     this._weightNoiseStd = 0;
     this._weightNoisePerHidden = [];
   }
+  /**
+   * Set a dynamic scheduler for global weight noise.
+   *
+   * @param fn Function mapping training step to noise standard deviation.
+   */
   setWeightNoiseSchedule(fn: (step: number) => number) {
     this._weightNoiseSchedule = fn;
   }
+  /** Clear the dynamic global weight-noise schedule. */
   clearWeightNoiseSchedule() {
     this._weightNoiseSchedule = undefined;
   }
+  /**
+   * Replace the network random number generator.
+   *
+   * @param fn RNG function returning values in $[0,1)$.
+   */
   setRandom(fn: () => number) {
     this._rand = fn;
   }
+  /**
+   * Seed the internal deterministic RNG.
+   *
+   * @param seed Seed value.
+   */
   setSeed(seed: number) {
     _setSeed.call(this, seed);
   }
+  /** Force the next mixed-precision overflow path (test utility). */
   testForceOverflow() {
     this._forceNextOverflow = true;
   }
+  /** Current training step counter. */
   get trainingStep() {
     return this._trainingStep;
   }
+  /** Last skipped stochastic-depth layers from activation runtime state. */
   get lastSkippedLayers(): number[] {
     return (this as unknown as NetworkRuntimeProps)._lastSkippedLayers || [];
   }
+  /**
+   * Snapshot deterministic RNG runtime state.
+   *
+   * @returns Current RNG snapshot.
+   */
   snapshotRNG(): RNGSnapshot {
     return _snapshotRNG.call(this);
   }
+  /**
+   * Restore deterministic RNG function from a snapshot source.
+   *
+   * @param fn RNG function to restore.
+   */
   restoreRNG(fn: () => number) {
     _restoreRNG.call(this, fn);
   }
+  /**
+   * Read the raw deterministic RNG state word.
+   *
+   * @returns RNG state value when present.
+   */
   getRNGState(): number | undefined {
     return _getRNGState.call(this);
   }
+  /**
+   * Set the raw deterministic RNG state word.
+   *
+   * @param state RNG state value.
+   */
   setRNGState(state: number) {
     _setRNGState.call(this, state);
   }
+  /**
+   * Set stochastic-depth schedule function.
+   *
+   * @param fn Function mapping step and current schedule to next schedule.
+   */
   setStochasticDepthSchedule(
     fn: (step: number, current: number[]) => number[],
   ) {
     this._stochasticDepthSchedule = fn;
   }
+  /** Clear stochastic-depth schedule function. */
   clearStochasticDepthSchedule() {
     this._stochasticDepthSchedule = undefined;
   }
+  /**
+   * Read regularization statistics collected during training.
+   *
+   * @returns Regularization stats payload.
+   */
   getRegularizationStats() {
     return _getRegularizationStats.call(this);
   }
 
-  /** Configure stochastic depth with survival probabilities per hidden layer (length must match hidden layer count when using layered network). */
+  /**
+   * Configure stochastic depth with survival probabilities per hidden layer.
+   *
+   * @param survival Survival probabilities for hidden layers.
+   */
   setStochasticDepth(survival: number[]) {
     if (!Array.isArray(survival)) throw new Error('survival must be an array');
     if (survival.some((p) => p <= 0 || p > 1))
@@ -456,6 +672,7 @@ export default class Network implements NetworkView {
       );
     this._stochasticDepth = survival.slice();
   }
+  /** Disable stochastic depth. */
   disableStochasticDepth() {
     this._stochasticDepth = [];
   }
@@ -820,14 +1037,6 @@ export default class Network implements NetworkView {
     return result;
   }
 
-  private static _gaussianRand(rng: () => number = Math.random): number {
-    let u = 0,
-      v = 0;
-    while (u === 0) u = rng();
-    while (v === 0) v = rng();
-    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-  }
-
   /**
    * Activates the network without calculating eligibility traces.
    * This is a performance optimization for scenarios where backpropagation is not needed,
@@ -847,6 +1056,11 @@ export default class Network implements NetworkView {
   /**
    * Raw activation that can return a typed array when pooling is enabled (zero-copy).
    * If reuseActivationArrays=false falls back to standard activate().
+   *
+   * @param input Input vector.
+   * @param training Whether to enable training-time stochastic paths.
+   * @param maxActivationDepth Maximum graph depth for activation.
+   * @returns Output activations (typed array when pooling is enabled).
    */
   activateRaw(
     input: number[],
@@ -1036,7 +1250,7 @@ export default class Network implements NetworkView {
       try {
         _releaseNode(node);
       } catch {
-        /* swallow – defensive: never let pooling failure break functional remove */
+        /* swallow ΓÇô defensive: never let pooling failure break functional remove */
       }
     }
     return result;
@@ -1056,8 +1270,6 @@ export default class Network implements NetworkView {
     return _disconnect.call(this, from, to);
   }
 
-  // slab rebuild + accessor moved to network.slab.ts
-
   /**
    * Removes the gate from a specified connection.
    * The connection will no longer be modulated by its gater node.
@@ -1070,28 +1282,6 @@ export default class Network implements NetworkView {
    */
   ungate(connection: Connection) {
     return _ungate.call(this, connection);
-  }
-
-  /**
-   * Trains the network on a given dataset subset for one pass (epoch or batch).
-   * Performs activation and backpropagation for each item in the set.
-   * Updates weights based on batch size configuration.
-   *
-   * @param {{ input: number[]; output: number[] }[]} set - The training dataset subset (e.g., a batch or the full set for one epoch).
-   * @param {number} batchSize - The number of samples to process before updating weights.
-   * @param {number} currentRate - The learning rate to use for this training pass.
-   * @param {number} momentum - The momentum factor to use.
-   * @param {any} regularization - The regularization configuration (L1, L2, or custom function).
-   * @param {(target: number[], output: number[]) => number} costFunction - The function used to calculate the error between target and output.
-   * @returns {number} The average error calculated over the provided dataset subset.
-   * @private Internal method used by `train`.
-   */
-  private _applyGradientClipping(cfg: {
-    mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
-    maxNorm?: number;
-    percentile?: number;
-  }): void {
-    _applyGradientClippingImpl(this, cfg);
   }
 
   // Training is implemented in network.training.ts; this wrapper keeps public API stable.

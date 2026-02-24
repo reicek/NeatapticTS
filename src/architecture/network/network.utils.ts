@@ -1,4 +1,6 @@
 export {
+  activate,
+  gaussianRand,
   noTraceActivate,
   activateRaw,
   activateBatch,
@@ -36,10 +38,22 @@ export {
   getSlabAllocationStats,
 } from './slab/network.slab.utils';
 export { generateStandalone } from './standalone/network.standalone.utils';
-export { getRegularizationStats } from './stats/network.stats.utils';
-export { computeTopoOrder, hasPath } from './topology/network.topology.utils';
+export {
+  getRegularizationStats,
+  testNetwork,
+} from './stats/network.stats.utils';
+export {
+  computeTopoOrder,
+  hasPath,
+  createMLP,
+  rebuildConnections,
+} from './topology/network.topology.utils';
+
 export {
   applyGradientClippingImpl,
+  propagate,
+  clearState,
+  trainSetImpl,
   trainImpl,
   __trainingInternals,
 } from './training/network.training.utils';

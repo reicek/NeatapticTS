@@ -2,6 +2,10 @@
 
 ## multithreading/workers/workers.ts
 
+### workers
+
+Utility class for managing workers in both Node.js and browser environments.
+
 ### Workers
 
 Utility class for managing workers in both Node.js and browser environments.

@@ -29,6 +29,7 @@ export const DEFAULT_INNOVATION_ID = 0;
  *   helper routines that preserve innovation ids across the population.
  *
  * Example:
+ *
  * ```ts
  * // called on a Neat instance after a generation completes
  * neat.mutate();
@@ -65,6 +66,7 @@ export async function mutate(this: NeatLike): Promise<void> {
  *   deterministic position to preserve ordering for downstream algorithms.
  *
  * Example:
+ *
  * ```ts
  * neat._mutateAddNodeReuse(genome);
  * ```

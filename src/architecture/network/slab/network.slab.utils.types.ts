@@ -3,6 +3,31 @@ import type Connection from '../../connection';
 import type Node from '../../node';
 
 /**
+ * Numeric zero sentinel used across slab orchestration and helper pipelines.
+ */
+export const SLAB_ZERO = 0;
+
+/**
+ * Numeric one sentinel used for neutral gain defaults and index math.
+ */
+export const SLAB_ONE = 1;
+
+/**
+ * Capacity growth factor for Node.js slab allocations.
+ */
+export const SLAB_GROWTH_FACTOR_NODE = 1.75;
+
+/**
+ * Capacity growth factor for browser slab allocations.
+ */
+export const SLAB_GROWTH_FACTOR_BROWSER = 1.25;
+
+/**
+ * Default async slab rebuild chunk size when no override is provided.
+ */
+export const SLAB_DEFAULT_ASYNC_CHUNK_SIZE = 50_000;
+
+/**
  * Internal Connection properties accessed during slab operations.
  */
 export interface ConnectionInternals {

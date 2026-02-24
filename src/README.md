@@ -1,35 +1,8 @@
 # 
 
-## config.ts
-
-### config
-
-### NeatapticConfig
-
-Global NeatapticTS configuration contract & default instance.
-
-WHY THIS EXISTS
---------------
-A central `config` object offers a convenient, documented surface for end-users (and tests)
-to tweak library behaviour without digging through scattered constants. Centralization also
-lets us validate & evolve feature flags in a single place.
-
-USAGE PATTERN
-------------
-  import { config } from 'neataptic-ts';
-  config.warnings = true;              // enable runtime warnings
-  config.deterministicChainMode = true // opt into deterministic deep path construction
-
-Adjust BEFORE constructing networks / invoking evolutionary loops so that subsystems read
-the intended values while initializing internal buffers / metadata.
-
-DESIGN NOTES
-------------
-- We intentionally avoid setters / proxies to keep this a plain serializable object.
-- Optional flags are conservative by default (disabled) to preserve legacy stochastic
-  behaviour unless a test or user explicitly opts in.
-
 ## neat.ts
+
+### neat
 
 ### buildEmptyDiversityStats
 
@@ -71,8 +44,6 @@ Returns: DiversityStats with zeroed aggregates.
 ### DEFAULT_PROVENANCE
 
 ### DEFAULT_WEIGHT_DIFF_COEFF
-
-### neat
 
 ### NeatOptions
 
@@ -619,6 +590,58 @@ Spawn a new genome derived from a single parent while preserving Neat bookkeepin
 
 Serialize NEAT meta (without population) for persistence of innovation history.
 
+## config.ts
+
+### config
+
+Global NeatapticTS configuration contract & default instance.
+
+WHY THIS EXISTS
+--------------
+A central `config` object offers a convenient, documented surface for end-users (and tests)
+to tweak library behaviour without digging through scattered constants. Centralization also
+lets us validate & evolve feature flags in a single place.
+
+USAGE PATTERN
+------------
+  import { config } from 'neataptic-ts';
+  config.warnings = true;              // enable runtime warnings
+  config.deterministicChainMode = true // opt into deterministic deep path construction
+
+Adjust BEFORE constructing networks / invoking evolutionary loops so that subsystems read
+the intended values while initializing internal buffers / metadata.
+
+DESIGN NOTES
+------------
+- We intentionally avoid setters / proxies to keep this a plain serializable object.
+- Optional flags are conservative by default (disabled) to preserve legacy stochastic
+  behaviour unless a test or user explicitly opts in.
+
+### NeatapticConfig
+
+Global NeatapticTS configuration contract & default instance.
+
+WHY THIS EXISTS
+--------------
+A central `config` object offers a convenient, documented surface for end-users (and tests)
+to tweak library behaviour without digging through scattered constants. Centralization also
+lets us validate & evolve feature flags in a single place.
+
+USAGE PATTERN
+------------
+  import { config } from 'neataptic-ts';
+  config.warnings = true;              // enable runtime warnings
+  config.deterministicChainMode = true // opt into deterministic deep path construction
+
+Adjust BEFORE constructing networks / invoking evolutionary loops so that subsystems read
+the intended values while initializing internal buffers / metadata.
+
+DESIGN NOTES
+------------
+- We intentionally avoid setters / proxies to keep this a plain serializable object.
+- Optional flags are conservative by default (disabled) to preserve legacy stochastic
+  behaviour unless a test or user explicitly opts in.
+
 ## neataptic.ts
 
 ### neataptic
@@ -638,6 +661,10 @@ using the traced activation path (`activate`) vs `noTraceActivate` (inference fa
 
 ### default
 
+#### _accumulationReduction
+
+Accumulation reduction mode.
+
 #### _activateCore
 
 `(withTrace: boolean, input: number | undefined) => number`
@@ -647,6 +674,18 @@ Internal shared implementation for activate/noTraceActivate.
 Parameters:
 - `withTrace` - Whether to update eligibility traces.
 - `input` - Optional externally supplied activation (bypasses weighted sum if provided).
+
+#### _activationPool
+
+Cached pooled activation output array.
+
+#### _activationPrecision
+
+Typed-array precision used by compiled activation paths.
+
+#### _adjDirty
+
+Adjacency dirty marker for slab structures.
 
 #### _applyFitnessSharing
 
@@ -660,19 +699,21 @@ Returns: Adjusted species fitness data.
 
 `(cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; }) => void`
 
-Trains the network on a given dataset subset for one pass (epoch or batch).
-Performs activation and backpropagation for each item in the set.
-Updates weights based on batch size configuration.
+Apply gradient clipping configuration.
 
 Parameters:
-- `` - - The training dataset subset (e.g., a batch or the full set for one epoch).
-- `` - - The number of samples to process before updating weights.
-- `` - - The learning rate to use for this training pass.
-- `` - - The momentum factor to use.
-- `` - - The regularization configuration (L1, L2, or custom function).
-- `` - - The function used to calculate the error between target and output.
+- `cfg` - Gradient clipping configuration.
 
-Returns: The average error calculated over the provided dataset subset.
+#### _canUseFastSlab
+
+`(training: boolean) => boolean`
+
+Check if fast-slab activation can be used.
+
+Parameters:
+- `training` - Whether training mode is active.
+
+Returns: True when fast-slab activation can be used.
 
 #### _compatibilityDistance
 
@@ -694,9 +735,45 @@ Compute and cache diversity statistics used by telemetry and tests.
 
 Returns: Cached diversity statistics snapshot.
 
+#### _computeTopoOrder
+
+`() => void`
+
+Recompute and cache topological node ordering.
+
+Returns: Topological order payload from the delegate.
+
+#### _connFrom
+
+Packed connection slab source indices.
+
+#### _connTo
+
+Packed connection slab target indices.
+
+#### _connWeights
+
+Packed connection slab weights.
+
+#### _currentGradClip
+
+Gradient clip configuration for the current step.
+
 #### _diversityStats
 
 Cached diversity metrics (computed lazily).
+
+#### _dropConnectProb
+
+DropConnect probability.
+
+#### _enforceAcyclic
+
+Whether to enforce acyclic connectivity.
+
+#### _evoInitialConnCount
+
+Baseline connection count used by evolution-time pruning.
 
 #### _fallbackInnov
 
@@ -709,6 +786,25 @@ Parameters:
 
 Returns: Innovation id for the connection.
 
+#### _fastA
+
+Cached fast activation array A.
+
+#### _fastS
+
+Cached fast activation array S.
+
+#### _fastSlabActivate
+
+`(input: number[]) => number[]`
+
+Execute the fast slab activation path.
+
+Parameters:
+- `input` - Input vector.
+
+Returns: Activation output.
+
 #### _flags
 
 Packed state flags (private for future-proofing hidden class):
@@ -717,6 +813,21 @@ bit1 => DropConnect active mask (1 = not dropped this forward pass)
 bit2 => hasGater (1 = symbol field present)
 bit3 => plastic (plasticityRate > 0)
 bits4+ reserved.
+
+#### _forceNextOverflow
+
+Flag to force a mixed-precision overflow path.
+
+#### _gaussianRand
+
+`(rng: () => number) => number`
+
+Sample a Gaussian random value with an optional RNG.
+
+Parameters:
+- `rng` - RNG function.
+
+Returns: Gaussian random value.
 
 #### _getObjectives
 
@@ -734,9 +845,37 @@ Provide a memoized RNG function, initializing from internal state if needed.
 
 Returns: RNG function bound to this instance.
 
+#### _globalEpoch
+
+Global epoch counter.
+
 #### _globalNodeIndex
 
 Global index counter for assigning unique indices to nodes.
+
+#### _gradAccumMicroBatches
+
+Accumulated micro-batch counter.
+
+#### _gradClipSeparateBias
+
+Whether to apply separate bias clipping.
+
+#### _hasPath
+
+`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+
+Check whether a directed path exists between two nodes.
+
+Parameters:
+- `from` - Source node.
+- `to` - Target node.
+
+Returns: True when a path exists.
+
+#### _initialConnectionCount
+
+Initial connection count used for pruning baselines.
 
 #### _invalidateGenomeCaches
 
@@ -755,13 +894,52 @@ Duration of the last evaluation run (ms).
 
 Duration of the last evolve run (ms).
 
+#### _lastGradClipGroupCount
+
+Last gradient clipping group count.
+
+#### _lastGradNorm
+
+Last recorded gradient norm.
+
 #### _lastInbreedingCount
 
 Last observed count of inbreeding (used for detecting excessive cloning).
 
+#### _lastOverflowStep
+
+Last overflow training step index.
+
+#### _lastRawGradNorm
+
+Last recorded raw (pre-update) gradient norm.
+
+#### _lastStats
+
+Last recorded stats payload.
+
 #### _lineageEnabled
 
 Whether lineage metadata should be recorded on genomes.
+
+#### _maybePrune
+
+`(iteration: number) => void`
+
+Apply scheduled pruning if current iteration matches pruning policy.
+
+Parameters:
+- `iteration` - Current training iteration.
+
+Returns: Delegate result for pruning attempt.
+
+#### _mixedPrecision
+
+Mixed precision runtime configuration.
+
+#### _mixedPrecisionState
+
+Mixed precision state counters.
 
 #### _mutateAddConnReuse
 
@@ -789,6 +967,10 @@ Returns: Mutated genome with added node.
 
 Counter for assigning unique genome ids.
 
+#### _nodeIndexDirty
+
+Node index dirty marker.
+
 #### _noveltyArchive
 
 Novelty archive used by novelty search (behavior representatives).
@@ -801,6 +983,18 @@ Queue of recent objective activation/deactivation events for telemetry.
 
 Operator statistics used by adaptive operator selection.
 
+#### _optimizerStep
+
+Optimizer step counter.
+
+#### _outOrder
+
+Output-order array for slab forward pass.
+
+#### _outStart
+
+Output-start array for slab forward pass.
+
 #### _paretoArchive
 
 Archive of Pareto front metadata for multi-objective tracking.
@@ -808,6 +1002,28 @@ Archive of Pareto front metadata for multi-objective tracking.
 #### _paretoObjectivesArchive
 
 Archive storing Pareto objectives snapshots.
+
+#### _preferredChainEdge
+
+Preferred linear-chain edge for node-split mutations.
+
+#### _pruningConfig
+
+Pruning configuration for scheduled pruning.
+
+#### _rand
+
+`() => number`
+
+Random number generator used for stochastic operations.
+
+#### _returnTypedActivations
+
+Whether pooled typed activations can be returned directly.
+
+#### _reuseActivationArrays
+
+Whether pooled activation arrays are reused across activations.
 
 #### _rng
 
@@ -822,6 +1038,10 @@ Internal numeric state for the deterministic xorshift RNG when no user RNG is pr
 `(connection: import("C:/NeatapticTS/src/architecture/connection").default, delta: number) => void`
 
 Internal helper to safely update a connection weight with clipping and NaN checks.
+
+#### _slabDirty
+
+Slab dirty marker.
 
 #### _sortSpeciesMembers
 
@@ -846,6 +1066,14 @@ Returns: Updated species assignments.
 
 Time-series history of species stats (for exports/telemetry).
 
+#### _stochasticDepth
+
+Stochastic depth schedule values.
+
+#### _stochasticDepthSchedule
+
+Dynamic stochastic depth schedule.
+
 #### _structuralEntropy
 
 `(genome: import("C:/NeatapticTS/src/architecture/network").default) => number`
@@ -861,6 +1089,18 @@ Returns: Structural entropy score for the genome.
 
 Telemetry buffer storing diagnostic snapshots per generation.
 
+#### _topoDirty
+
+Topology dirty marker.
+
+#### _topoOrder
+
+Cached topological order.
+
+#### _trainingStep
+
+Training step counter.
+
 #### _updateSpeciesStagnation
 
 `() => void`
@@ -869,11 +1109,31 @@ Update stagnation metrics per species to inform pruning and selection.
 
 Returns: Updated stagnation state.
 
+#### _useFloat32Weights
+
+Whether to store slab weights in float32.
+
 #### _warnIfNoBestGenome
 
 `() => void`
 
 Emit a standardized warning when evolution loop finds no valid best genome (test hook).
+
+#### _weightNoisePerHidden
+
+Per-hidden-layer weight-noise standard deviations.
+
+#### _weightNoiseSchedule
+
+Dynamic weight-noise schedule function.
+
+#### _weightNoiseStd
+
+Global weight-noise standard deviation.
+
+#### _wnOrig
+
+Original weights captured for weight-noise recovery.
 
 #### acquire
 
@@ -982,6 +1242,13 @@ Returns: Array of output vectors, each length equals this.output
 Raw activation that can return a typed array when pooling is enabled (zero-copy).
 If reuseActivationArrays=false falls back to standard activate().
 
+Parameters:
+- `input` - Input vector.
+- `training` - Whether to enable training-time stochastic paths.
+- `maxActivationDepth` - Maximum graph depth for activation.
+
+Returns: Output activations (typed array when pooling is enabled).
+
 #### activation
 
 The output value of the node after applying the activation function. This is the value transmitted to connected nodes.
@@ -991,6 +1258,12 @@ The output value of the node after applying the activation function. This is the
 `(genome: import("C:/NeatapticTS/src/architecture/network").default, parents: number[] | undefined) => void`
 
 Register an externally-created genome into the `Neat` population.
+
+#### addNodeBetween
+
+`() => void`
+
+Split a random existing connection by inserting one hidden node.
 
 #### adjustRateForAccumulation
 
@@ -1118,11 +1391,23 @@ Clear all registered multi-objective objectives.
 
 Clear the Pareto archive.
 
+#### clearStochasticDepthSchedule
+
+`() => void`
+
+Clear stochastic-depth schedule function.
+
 #### clearTelemetry
 
 `() => void`
 
 Clear telemetry buffer and cached entries.
+
+#### clearWeightNoiseSchedule
+
+`() => void`
+
+Clear the dynamic global weight-noise schedule.
 
 #### clone
 
@@ -1131,6 +1416,15 @@ Clear telemetry buffer and cached entries.
 Creates a deep copy of the network.
 
 Returns: A new Network instance that is a clone of the current network.
+
+#### configurePruning
+
+`(cfg: { start: number; end: number; targetSparsity: number; regrowFraction?: number | undefined; frequency?: number | undefined; method?: "magnitude" | "snip" | undefined; }) => void`
+
+Configure scheduled pruning during training.
+
+Parameters:
+- `cfg` - Pruning schedule and strategy configuration.
 
 #### connect
 
@@ -1161,7 +1455,7 @@ Returns: An array containing the newly created Connection object(s).
 
 #### connect
 
-`(target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/layer").default | import("C:/NeatapticTS/src/architecture/group").default, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/group").default | import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
 
 Connects this layer's output to a target component (Layer, Group, or Node).
 
@@ -1173,13 +1467,26 @@ Parameters:
 - `target` - - The destination Layer, Group, or Node to connect to.
 - `method` - - The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
 - `weight` - - An optional fixed weight to assign to all created connections.
-- `` - - The destination entity (Group, Layer, or Node) to connect to.
 
 Returns: An array containing the newly created connection objects.
 
+#### connect
+
+`(target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/layer").default | import("C:/NeatapticTS/src/architecture/group").default, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+
+Establishes connections from all nodes in this group to a target Group, Layer, or Node.
+The connection pattern (e.g., all-to-all, one-to-one) can be specified.
+
+Parameters:
+- `` - - The destination entity (Group, Layer, or Node) to connect to.
+- `` - - The connection method/type (e.g., `methods.groupConnection.ALL_TO_ALL`, `methods.groupConnection.ONE_TO_ONE`). Defaults depend on the target type and whether it's the same group.
+- `` - - An optional fixed weight to assign to all created connections. If not provided, weights might be initialized randomly or based on node defaults.
+
+Returns: An array containing all the connection objects created.
+
 #### connections
 
-Stores incoming, outgoing, gated, and self-connections for this node.
+Connection list.
 
 #### construct
 
@@ -1285,6 +1592,24 @@ Parameters:
 
 Returns: A new Network instance reconstructed from the serialized data.
 
+#### disableDropConnect
+
+`() => void`
+
+Disable DropConnect.
+
+#### disableStochasticDepth
+
+`() => void`
+
+Disable stochastic depth.
+
+#### disableWeightNoise
+
+`() => void`
+
+Disable all weight-noise settings.
+
 #### disconnect
 
 `(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => void`
@@ -1333,8 +1658,7 @@ Convenience alias for DropConnect mask with clearer naming.
 
 #### dropout
 
-Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
-Layer-level dropout takes precedence over node-level dropout for nodes in this layer.
+Dropout probability.
 
 #### eligibility
 
@@ -1344,11 +1668,23 @@ Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment).
 
 Whether the gene (connection) is currently expressed (participates in forward pass).
 
+#### enableDropConnect
+
+`(p: number) => void`
+
+Enable DropConnect with a probability in $[0,1)$.
+
+Parameters:
+- `p` - DropConnect probability.
+
 #### enableWeightNoise
 
 `(stdDev: number | { perHiddenLayer: number[]; }) => void`
 
-Enable weight noise. Provide a single std dev number or { perHiddenLayer: number[] }.
+Enable weight noise using either a global standard deviation or per-hidden-layer values.
+
+Parameters:
+- `stdDev` - Global standard deviation or hidden-layer schedule.
 
 #### enforceMinimumHiddenLayerSizes
 
@@ -1448,9 +1784,12 @@ Export telemetry as JSON Lines (one JSON object per line).
 
 `(input: number[]) => number[]`
 
-Public wrapper for fast slab forward pass (primarily for tests / benchmarking).
-Prefer using standard activate(); it will auto dispatch when eligible.
-Falls back internally if prerequisites not met.
+Public wrapper for fast slab forward pass.
+
+Parameters:
+- `input` - Input vector.
+
+Returns: Activation output.
 
 #### firstMoment
 
@@ -1539,6 +1878,10 @@ Parameters:
 
 Optional gating node whose activation can modulate effective weight (symbol-backed).
 
+#### gates
+
+Network gates collection.
+
 #### geneId
 
 Stable per-node gene identifier for NEAT innovation reuse
@@ -1548,6 +1891,22 @@ Stable per-node gene identifier for NEAT innovation reuse
 `() => number`
 
 Calculates the average fitness score of the population.
+
+#### getConnectionSlab
+
+`() => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
+
+Read slab structures for fast activation.
+
+Returns: Slab connection structures.
+
+#### getCurrentSparsity
+
+`() => number`
+
+Compute the current connection sparsity ratio.
+
+Returns: Current sparsity in $[0,1]$.
 
 #### getDiversityStats
 
@@ -1662,6 +2021,22 @@ Return recent performance statistics for the most recent evaluation and evolve o
 `() => number`
 
 Returns last recorded raw (pre-update) gradient L2 norm.
+
+#### getRegularizationStats
+
+`() => Record<string, unknown> | null`
+
+Read regularization statistics collected during training.
+
+Returns: Regularization stats payload.
+
+#### getRNGState
+
+`() => number | undefined`
+
+Read the raw deterministic RNG state word.
+
+Returns: RNG state value when present.
 
 #### getSpeciesHistory
 
@@ -1791,7 +2166,11 @@ Returns: Unique non-negative integer derived from the ordered pair.
 
 #### input
 
-`(from: import("C:/NeatapticTS/src/architecture/layer").default | import("C:/NeatapticTS/src/architecture/group").default, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+Input node count.
+
+#### input
+
+`(from: import("C:/NeatapticTS/src/architecture/group").default | import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
 
 Handles the connection logic when this layer is the *target* of a connection.
 
@@ -1821,21 +2200,6 @@ Parameters:
 
 Returns: True if connected, otherwise false.
 
-#### isGroup
-
-`(obj: unknown) => boolean`
-
-Type guard to check if an object is likely a `Group`.
-
-This is a duck-typing check based on the presence of expected properties
-(`set` method and `nodes` array). Used internally where `layer.nodes`
-might contain `Group` instances (e.g., in `Memory` layers).
-
-Parameters:
-- `obj` - - The object to inspect.
-
-Returns: `true` if the object has `set` and `nodes` properties matching a Group, `false` otherwise.
-
 #### isProjectedBy
 
 `(node: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
@@ -1860,6 +2224,10 @@ Parameters:
 
 Returns: True if this node projects to the target node, false otherwise.
 
+#### lastSkippedLayers
+
+Last skipped stochastic-depth layers from activation runtime state.
+
 #### layerNorm
 
 `(size: number) => import("C:/NeatapticTS/src/architecture/layer").default`
@@ -1871,6 +2239,10 @@ Parameters:
 - `size` - - The number of nodes in this layer.
 
 Returns: A new Layer instance configured as a layer normalization layer.
+
+#### layers
+
+Optional layered view cache.
 
 #### lookaheadShadowWeight
 
@@ -1984,8 +2356,7 @@ Returns: The constructed NARX network.
 
 #### nodes
 
-An array containing all the nodes (neurons or groups) that constitute this layer.
-The order of nodes might be relevant depending on the layer type and its connections.
+Network node collection.
 
 #### noTraceActivate
 
@@ -2020,9 +2391,7 @@ The node's state from the previous activation cycle. Used for recurrent self-con
 
 #### output
 
-Represents the primary output group of nodes for this layer.
-This group is typically used when connecting this layer *to* another layer or group.
-It might be null if the layer is not yet fully constructed or is an input layer.
+Output node count.
 
 #### perceptron
 
@@ -2160,6 +2529,17 @@ Parameters:
 Returns: Example usage:
   Network.rebuildConnections(net);
 
+#### rebuildConnectionSlab
+
+`(force: boolean) => void`
+
+Rebuild slab structures for fast activation.
+
+Parameters:
+- `force` - Whether to force a rebuild.
+
+Returns: Slab rebuild result.
+
 #### registerObjective
 
 `(key: string, direction: "max" | "min", accessor: (g: any) => number) => void`
@@ -2217,6 +2597,15 @@ Parameters:
 
 Reset the novelty archive (clear entries).
 
+#### restoreRNG
+
+`(fn: () => number) => void`
+
+Restore deterministic RNG function from a snapshot source.
+
+Parameters:
+- `fn` - RNG function to restore.
+
 #### restoreRNGState
 
 `(state: any) => void`
@@ -2238,6 +2627,10 @@ Parameters:
 
 Returns: Array of deterministic random samples.
 
+#### score
+
+Optional fitness score.
+
 #### secondMoment
 
 Second raw moment estimate (Adam family) (was opt_v).
@@ -2251,6 +2644,10 @@ Secondary momentum (Lion variant) (was opt_m2).
 `(genome: import("C:/NeatapticTS/src/architecture/network").default, rawReturnForTest: boolean) => any`
 
 Selects a mutation method for a given genome based on constraints.
+
+#### selfconns
+
+Self-connection list.
 
 #### serialize
 
@@ -2295,11 +2692,76 @@ Sets a custom activation function for this node at runtime.
 Parameters:
 - `fn` - The activation function (should handle derivative if needed).
 
+#### setEnforceAcyclic
+
+`(flag: boolean) => void`
+
+Enable or disable acyclic topology enforcement.
+
+Parameters:
+- `flag` - Whether to enforce acyclic connectivity.
+
+#### setRandom
+
+`(fn: () => number) => void`
+
+Replace the network random number generator.
+
+Parameters:
+- `fn` - RNG function returning values in $[0,1)$.
+
+#### setRNGState
+
+`(state: number) => void`
+
+Set the raw deterministic RNG state word.
+
+Parameters:
+- `state` - RNG state value.
+
+#### setSeed
+
+`(seed: number) => void`
+
+Seed the internal deterministic RNG.
+
+Parameters:
+- `seed` - Seed value.
+
 #### setStochasticDepth
 
 `(survival: number[]) => void`
 
-Configure stochastic depth with survival probabilities per hidden layer (length must match hidden layer count when using layered network).
+Configure stochastic depth with survival probabilities per hidden layer.
+
+Parameters:
+- `survival` - Survival probabilities for hidden layers.
+
+#### setStochasticDepthSchedule
+
+`(fn: (step: number, current: number[]) => number[]) => void`
+
+Set stochastic-depth schedule function.
+
+Parameters:
+- `fn` - Function mapping step and current schedule to next schedule.
+
+#### setWeightNoiseSchedule
+
+`(fn: (step: number) => number) => void`
+
+Set a dynamic scheduler for global weight noise.
+
+Parameters:
+- `fn` - Function mapping training step to noise standard deviation.
+
+#### snapshotRNG
+
+`() => import("C:/NeatapticTS/src/architecture/network/network.types").RNGSnapshot`
+
+Snapshot deterministic RNG runtime state.
+
+Returns: Current RNG snapshot.
 
 #### snapshotRNGState
 
@@ -2351,6 +2813,12 @@ Parameters:
 - `` - - The cost function to evaluate the error. Defaults to Mean Squared Error.
 
 Returns: An object containing the calculated average error over the dataset and the time taken for the test in milliseconds.
+
+#### testForceOverflow
+
+`() => void`
+
+Force the next mixed-precision overflow path (test utility).
 
 #### to
 
@@ -2417,6 +2885,10 @@ Accumulates changes in bias over a mini-batch during batch training. Reset after
 #### totalDeltaWeight
 
 Accumulated (batched) delta weight awaiting an apply step.
+
+#### trainingStep
+
+Current training step counter.
 
 #### type
 

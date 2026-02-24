@@ -1,4 +1,5 @@
 import type Network from '../../network';
+export { testNetwork } from './network.stats.test.utils';
 import type {
   GlobalThisWithStructuredClone,
   StatsNetworkProps as NetworkStatsProps,

@@ -1,651 +1,177 @@
 # architecture/network/serialize
 
+## architecture/network/serialize/network.serialize.utils.types.ts
+
+### CompactConnectionRebuildContext
+
+Context for compact-connection reconstruction.
+
+Connection rows are processed independently so malformed entries can be skipped without aborting import.
+
+### CompactNodeRebuildContext
+
+Context for compact-node reconstruction.
+
+Arrays are expected to be index-aligned so each node can be hydrated deterministically.
+
+### CompactPayloadContext
+
+Context carrying compact payload fields.
+
+This named-object form replaces tuple index access in internal orchestration code.
+
+### CompactSerializedNetworkTuple
+
+Compact tuple payload used by `serialize` output.
+
+Tuple slots are intentionally positional to reduce payload size:
+0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size.
+
+### ConnectionInternalsWithEnabled
+
+Connection view with optional enabled flag.
+
+Some serialized formats preserve per-edge enablement, while others treat missing values
+as implicitly enabled.
+
+### DEFAULT_NUMERIC_VALUE
+
+### ERROR_INVALID_NETWORK_JSON
+
+### FALLBACK_ACTIVATION_KEY
+
+### FIRST_CONNECTION_INDEX
+
+### JsonConnectionRebuildContext
+
+Context for JSON-connection reconstruction.
+
+Connection rows may include optional gater and enabled metadata.
+
+### JsonNodeRebuildContext
+
+Context for JSON-node reconstruction.
+
+Node entries are rebuilt in order and pushed into mutable runtime internals.
+
+### NETWORK_JSON_FORMAT_VERSION
+
+### NETWORK_MODULE_PATH
+
+### NetworkInternalsWithDropout
+
+Serialize internals with optional dropout field.
+
+Verbose JSON snapshots normalize this value so readers can treat dropout as numeric data.
+
+### NetworkJSON
+
+Verbose JSON payload representation used by `toJSONImpl` and `fromJSONImpl`.
+
+`formatVersion` enables compatibility checks and migration handling.
+
+### NetworkJSONConnection
+
+Verbose JSON connection representation.
+
+Includes optional gater and explicit enabled state for portability.
+
+### NetworkJSONNode
+
+Verbose JSON node representation.
+
+Node entries are self-describing and intended for readable, versioned snapshots.
+
+### NODE_TYPE_HIDDEN
+
+### NODE_TYPE_INPUT
+
+### NODE_TYPE_OUTPUT
+
+### ResolvedNetworkSizeContext
+
+Resolved input/output sizes for rebuild.
+
+Values reflect override-first resolution semantics used during deserialization.
+
+### SerializedConnection
+
+Serialized connection representation used by compact and JSON formats.
+
+Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
+
+### SerializeNetworkInternals
+
+Runtime interface for accessing network internals during serialization.
+
+This is an internal bridge type used by serializer helpers to read and rebuild
+topology without exposing private implementation details in public APIs.
+
+### SerializeNodeInternals
+
+Runtime node internals needed for serialization workflows.
+
+These fields are the minimal node state required to round-trip compact and JSON payloads.
+
+### WARNING_INVALID_CONNECTION_DURING_DESERIALIZE
+
+### WARNING_INVALID_CONNECTION_DURING_FROM_JSON
+
+### WARNING_INVALID_GATER_DURING_DESERIALIZE
+
+### WARNING_INVALID_GATER_DURING_FROM_JSON
+
+### WARNING_UNKNOWN_FORMAT_VERSION
+
+### WARNING_UNKNOWN_SQUASH_PREFIX
+
+### WARNING_UNKNOWN_SQUASH_SUFFIX
+
 ## architecture/network/serialize/network.serialize.utils.ts
 
-### appendJsonForwardConnections
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, networkJson: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
-
-Appends JSON entries for forward connection list.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `networkJson` - - JSON accumulator.
-
-Returns: Nothing.
-
-### appendJsonNodesAndSelfConnections
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, networkJson: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
-
-Appends JSON nodes and their optional self-connections.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `networkJson` - - Target JSON accumulator.
-
-Returns: Nothing.
-
-### appendJsonSelfConnectionWhenPresent
-
-`(nodeInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNodeInternals, nodeIndex: number, networkJson: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
-
-Appends JSON self-connection when node has one.
-
-Parameters:
-- `nodeInternals` - - Node internals.
-- `nodeIndex` - - Node index.
-- `networkJson` - - JSON accumulator.
-
-Returns: Nothing.
-
-### asNetworkInternals
-
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals`
-
-Casts network instance to internal runtime shape.
-
-Parameters:
-- `network` - - Network instance.
-
-Returns: Runtime internals.
-
-### asNetworkInternalsWithDropout
-
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkInternalsWithDropout`
-
-Casts network instance to internals with optional dropout.
-
-Parameters:
-- `network` - - Network instance.
-
-Returns: Runtime internals with optional dropout.
-
-### asNodeInternals
-
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNodeInternals`
-
-Casts node to internal runtime shape.
-
-Parameters:
-- `node` - - Node instance.
-
-Returns: Node internals.
-
-### assignCompactGaterWhenValid
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, gaterIndex: number | null, createdConnection: import("C:/NeatapticTS/src/architecture/connection").default | undefined) => void`
-
-Assigns compact gater when both connection and gater index are valid.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `gaterIndex` - - Optional gater index.
-- `createdConnection` - - Created connection.
-
-Returns: Nothing.
-
-### assignJsonEnabledFlagWhenProvided
-
-`(createdConnection: import("C:/NeatapticTS/src/architecture/connection").default | undefined, enabled: boolean) => void`
-
-Assigns enabled flag when value is provided.
-
-Parameters:
-- `createdConnection` - - Created connection.
-- `enabled` - - Optional enabled value.
-
-Returns: Nothing.
-
-### assignJsonGaterWhenValid
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, gaterIndex: number | null, createdConnection: import("C:/NeatapticTS/src/architecture/connection").default | undefined) => void`
-
-Assigns JSON gater when connection and gater index are valid.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `gaterIndex` - - Optional gater index.
-- `createdConnection` - - Created connection.
-
-Returns: Nothing.
-
-### collectAllConnections
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals) => import("C:/NeatapticTS/src/architecture/connection").default[]`
-
-Collects all runtime connections into a single list.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-
-Returns: Combined connections.
-
-### collectNodeActivations
-
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => number[]`
-
-Collects node activation values in positional order.
-
-Parameters:
-- `nodes` - - Node list.
-
-Returns: Activation list.
-
-### collectNodeSquashKeys
-
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => string[]`
-
-Collects node squash keys in positional order.
-
-Parameters:
-- `nodes` - - Node list.
-
-Returns: Squash-key list.
-
-### collectNodeStates
-
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => number[]`
-
-Collects node state values in positional order.
-
-Parameters:
-- `nodes` - - Node list.
-
-Returns: State list.
-
-### collectSerializedConnections
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection[]`
-
-Collects serialized connections from forward and self groups.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-
-Returns: Serialized connection list.
-
-### createCompactPayloadContext
-
-`(data: import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple) => import("C:/NeatapticTS/src/architecture/network/network.types").CompactPayloadContext`
-
-Creates compact payload context from tuple input.
-
-Parameters:
-- `data` - - Compact tuple payload.
-
-Returns: Normalized payload context.
-
-### createConnection
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default, weight: number) => import("C:/NeatapticTS/src/architecture/connection").default | undefined`
-
-Creates one connection and returns first created instance.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `sourceNode` - - Source node.
-- `targetNode` - - Target node.
-- `weight` - - Connection weight.
-
-Returns: Created connection or undefined.
-
-### createEmptyNetworkJson
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkInternalsWithDropout) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON`
-
-Creates empty JSON shell from runtime internals.
-
-Parameters:
-- `networkInternals` - - Runtime internals with optional dropout.
-
-Returns: Empty JSON shell.
-
-### createJsonConnection
-
-`(from: number, to: number, weight: number, gater: number | null, enabled: boolean) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection`
-
-Creates one JSON connection entry.
-
-Parameters:
-- `from` - - Source index.
-- `to` - - Target index.
-- `weight` - - Connection weight.
-- `gater` - - Optional gater index.
-- `enabled` - - Enabled status.
-
-Returns: JSON connection entry.
-
-### createJsonNode
-
-`(node: import("C:/NeatapticTS/src/architecture/node").default, nodeInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNodeInternals, nodeIndex: number) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONNode`
-
-Creates one JSON node entry.
-
-Parameters:
-- `node` - - Runtime node.
-- `nodeInternals` - - Node internals.
-- `nodeIndex` - - Canonical index.
-
-Returns: JSON node entry.
-
-### createNetworkInstance
-
-`(input: number, output: number) => import("C:/NeatapticTS/src/architecture/network").default`
-
-Creates a network instance using runtime constructor loading.
-
-Parameters:
-- `input` - - Input size.
-- `output` - - Output size.
-
-Returns: New network instance.
-
-### createNodeWithType
-
-`(nodeType: string) => import("C:/NeatapticTS/src/architecture/node").default`
-
-Creates one node with provided type.
-
-Parameters:
-- `nodeType` - - Node type.
-
-Returns: New node.
+### network.serialize.utils
 
 ### deserialize
 
 `(data: import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("C:/NeatapticTS/src/architecture/network").default`
 
-### findActivationByFunctionName
-
-`(squashName: string | undefined) => import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction | undefined`
-
-Resolves activation by matching function.name.
-
-Parameters:
-- `squashName` - - Activation function name.
-
-Returns: Activation function or undefined.
-
-### findActivationByKey
-
-`(squashName: string | undefined) => import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction | undefined`
-
-Resolves activation by direct key lookup.
-
-Parameters:
-- `squashName` - - Activation key.
-
-Returns: Activation function or undefined.
-
-### findActivationEntryByReference
-
-`(squashFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => [string, import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction] | undefined`
-
-Finds activation entry by function reference.
-
-Parameters:
-- `squashFunction` - - Activation function instance.
-
-Returns: Activation entry or undefined.
-
 ### fromJSONImpl
 
 `(json: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => import("C:/NeatapticTS/src/architecture/network").default`
-
-### hydrateNodeFromJsonEntry
-
-`(rebuiltNode: import("C:/NeatapticTS/src/architecture/node").default, nodeJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONNode, nodeIndex: number) => void`
-
-Hydrates one node from JSON node entry.
-
-Parameters:
-- `rebuiltNode` - - Node to hydrate.
-- `nodeJsonEntry` - - JSON node entry.
-- `nodeIndex` - - Canonical node index.
-
-Returns: Nothing.
-
-### hydrateNodeStateFromCompactPayload
-
-`(rebuiltNode: import("C:/NeatapticTS/src/architecture/node").default, activation: number, state: number, squashName: string | undefined, nodeIndex: number) => void`
-
-Hydrates node runtime state from compact tuple values.
-
-Parameters:
-- `rebuiltNode` - - Node to hydrate.
-- `activation` - - Activation value.
-- `state` - - State value.
-- `squashName` - - Activation key.
-- `nodeIndex` - - Canonical node index.
-
-Returns: Nothing.
-
-### isConnectionEnabled
-
-`(connectionInstance: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
-
-Resolves enabled status from optional connection flag.
-
-Parameters:
-- `connectionInstance` - - Connection instance.
-
-Returns: True when connection is enabled.
-
-### isFiniteIndex
-
-`(index: number) => boolean`
-
-Checks whether value is a finite index.
-
-Parameters:
-- `index` - - Candidate index value.
-
-Returns: True when finite number.
-
-### isJsonConnectionInNodeBounds
-
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], connectionJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection) => boolean`
-
-Checks JSON connection indices against node list bounds.
-
-Parameters:
-- `nodes` - - Node list.
-- `connectionJsonEntry` - - JSON connection entry.
-
-Returns: True when both indices are valid.
-
-### isJsonConnectionShapeValid
-
-`(connectionJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection) => boolean`
-
-Checks that JSON connection has numeric endpoint fields.
-
-Parameters:
-- `connectionJsonEntry` - - JSON connection entry.
-
-Returns: True when endpoint fields are numbers.
-
-### isNodeIndexInBounds
-
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], index: number) => boolean`
-
-Checks whether index is within array bounds.
-
-Parameters:
-- `nodes` - - Node list.
-- `index` - - Candidate index.
-
-Returns: True when index is valid.
-
-### isSerializedConnectionInNodeBounds
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, serializedConnection: import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection) => boolean`
-
-Checks compact connection bounds against current node list.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `serializedConnection` - - Serialized connection record.
-
-Returns: True when endpoints are valid.
-
-### network.serialize.utils
-
-### rebuildConnectionsFromCompactPayload
-
-`(compactConnectionContext: import("C:/NeatapticTS/src/architecture/network/network.types").CompactConnectionRebuildContext) => void`
-
-Rebuilds connections from compact payload records.
-
-Parameters:
-- `compactConnectionContext` - - Compact connection rebuild context.
-
-Returns: Nothing.
-
-### rebuildConnectionsFromJsonPayload
-
-`(jsonConnectionContext: import("C:/NeatapticTS/src/architecture/network/network.types").JsonConnectionRebuildContext) => void`
-
-Rebuilds connections from verbose JSON payload.
-
-Parameters:
-- `jsonConnectionContext` - - JSON connection rebuild context.
-
-Returns: Nothing.
-
-### rebuildNodesFromCompactPayload
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, compactNodeContext: import("C:/NeatapticTS/src/architecture/network/network.types").CompactNodeRebuildContext) => void`
-
-Rebuilds nodes from compact payload.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `compactNodeContext` - - Compact node rebuild context.
-
-Returns: Nothing.
-
-### rebuildNodesFromJsonPayload
-
-`(jsonNodeContext: import("C:/NeatapticTS/src/architecture/network/network.types").JsonNodeRebuildContext) => void`
-
-Rebuilds nodes from verbose JSON payload.
-
-Parameters:
-- `jsonNodeContext` - - JSON node rebuild context.
-
-Returns: Nothing.
-
-### rebuildOneCompactConnection
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, serializedConnection: import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection) => void`
-
-Rebuilds one compact serialized connection.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `serializedConnection` - - Serialized connection record.
-
-Returns: Nothing.
-
-### rebuildOneJsonConnection
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, connectionJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection) => void`
-
-Rebuilds one verbose JSON connection entry.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `connectionJsonEntry` - - JSON connection entry.
-
-Returns: Nothing.
-
-### refreshNodeIndices
-
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => void`
-
-Refreshes node.index for every node in list.
-
-Parameters:
-- `nodes` - - Node list.
-
-Returns: Nothing.
-
-### resetMutableRuntimeCollections
-
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals) => void`
-
-Clears mutable runtime collections before reconstruction.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-
-Returns: Nothing.
-
-### resolveActivationFunction
-
-`(squashName: string | undefined) => import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction`
-
-Resolves activation function from stored key or function name.
-
-Parameters:
-- `squashName` - - Activation key or function name.
-
-Returns: Activation function.
-
-### resolveActivationKey
-
-`(squashFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => string`
-
-Resolves canonical activation key from function reference.
-
-Parameters:
-- `squashFunction` - - Activation function instance.
-
-Returns: Activation key.
-
-### resolveDropout
-
-`(dropout: number | undefined) => number`
-
-Resolves dropout value with numeric fallback.
-
-Parameters:
-- `dropout` - - Optional dropout value.
-
-Returns: Effective dropout.
-
-### resolveGaterIndex
-
-`(gaterNode: import("C:/NeatapticTS/src/architecture/node").default | null) => number | null`
-
-Resolves gater node index from gater reference.
-
-Parameters:
-- `gaterNode` - - Optional gater node.
-
-Returns: Gater index or null.
-
-### resolveNamedActivationFromFunction
-
-`(squashFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => string | undefined`
-
-Resolves activation name from function.name when non-empty.
-
-Parameters:
-- `squashFunction` - - Activation function instance.
-
-Returns: Activation name or undefined.
-
-### resolveNetworkSize
-
-`(compactPayload: import("C:/NeatapticTS/src/architecture/network/network.types").CompactPayloadContext, inputSizeOverride: number | undefined, outputSizeOverride: number | undefined) => import("C:/NeatapticTS/src/architecture/network/network.types").ResolvedNetworkSizeContext`
-
-Resolves effective input/output dimensions with optional overrides.
-
-Parameters:
-- `compactPayload` - - Compact payload context.
-- `inputSizeOverride` - - Optional input override.
-- `outputSizeOverride` - - Optional output override.
-
-Returns: Resolved network size context.
-
-### resolveNodeTypeFromCompactIndex
-
-`(nodeIndex: number, totalNodeCount: number, input: number, output: number) => string`
-
-Resolves node type from compact tuple position.
-
-Parameters:
-- `nodeIndex` - - Node index.
-- `totalNodeCount` - - Total node count.
-- `input` - - Input size.
-- `output` - - Output size.
-
-Returns: Node type string.
-
-### resolveSizeOverride
-
-`(overrideValue: number | undefined, serializedValue: number) => number`
-
-Resolves one size value preferring explicit override.
-
-Parameters:
-- `overrideValue` - - Optional explicit override.
-- `serializedValue` - - Serialized fallback value.
-
-Returns: Effective size.
 
 ### serialize
 
 `() => import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple`
 
-Instance-level lightweight serializer used primarily for fast inter-thread transfer.
+Serializes a network instance into the compact tuple format.
+
+Use this format when payload size and serialization speed matter more than readability.
+The tuple layout is positional and optimized for transport/storage efficiency.
 
 Parameters:
 - `this` - - Bound network instance.
 
-Returns: Compact serialized tuple payload.
+Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
 
 ### SerializedConnection
 
-Serialized connection representation.
+Serialized connection representation used by compact and JSON formats.
 
-### serializeOneConnection
-
-`(connectionInstance: import("C:/NeatapticTS/src/architecture/connection").default) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection`
-
-Serializes one connection into compact indexed form.
-
-Parameters:
-- `connectionInstance` - - Runtime connection.
-
-Returns: Serialized connection record.
+Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
 
 ### toJSONImpl
 
 `() => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON`
 
-Verbose JSON export (stable formatVersion).
+Serializes a network instance into the verbose JSON format.
+
+Use this format when you need human-readable snapshots, explicit schema versioning,
+and better forward/backward compatibility handling.
 
 Parameters:
 - `this` - - Bound network instance.
 
-Returns: Verbose structural JSON payload.
-
-### validateNetworkJsonOrThrow
-
-`(json: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
-
-Validates verbose JSON payload and throws on invalid root shape.
-
-Parameters:
-- `json` - - Payload candidate.
-
-Returns: Nothing.
-
-### warnUnknownSquashName
-
-`(squashName: string | undefined) => void`
-
-Warns about unknown activation and fallback to identity.
-
-Parameters:
-- `squashName` - - Unknown activation name.
-
-Returns: Nothing.
-
-### warnWhenJsonFormatVersionIsUnknown
-
-`(formatVersion: number) => void`
-
-Warns when verbose format version differs from expected.
-
-Parameters:
-- `formatVersion` - - Incoming format version.
-
-Returns: Nothing.
+Returns: Versioned JSON payload with shape metadata, nodes, and connections.
 
 ### default
 
@@ -812,3 +338,678 @@ Scalar multiplier applied to the source activation (prior to gain modulation).
 #### xtrace
 
 Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration.
+
+## architecture/network/serialize/network.serialize.json.utils.ts
+
+### appendJsonForwardConnections
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, networkJson: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
+
+Appends JSON entries for forward connections.
+
+Non-finite endpoint indices are ignored to prevent malformed output records.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `networkJson` - - JSON accumulator.
+
+Returns: Nothing.
+
+### appendJsonNodesAndSelfConnections
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, networkJson: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
+
+Appends JSON node entries and optional self-connections.
+
+Node indices are refreshed during this step so connection records can reference
+stable numeric endpoints.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `networkJson` - - Target JSON accumulator.
+
+Returns: Nothing.
+
+### appendJsonSelfConnectionWhenPresent
+
+`(nodeInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNodeInternals, nodeIndex: number, networkJson: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
+
+Appends JSON self-connection when node has one.
+
+Parameters:
+- `nodeInternals` - - Node internals.
+- `nodeIndex` - - Node index.
+- `networkJson` - - JSON accumulator.
+
+Returns: Nothing.
+
+### assignJsonEnabledFlagWhenProvided
+
+`(createdConnection: import("C:/NeatapticTS/src/architecture/connection").default | undefined, enabled: boolean) => void`
+
+Assigns enabled flag when value is provided.
+
+Parameters:
+- `createdConnection` - - Created connection.
+- `enabled` - - Optional enabled value.
+
+Returns: Nothing.
+
+### assignJsonGaterWhenValid
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, gaterIndex: number | null, createdConnection: import("C:/NeatapticTS/src/architecture/connection").default | undefined) => void`
+
+Assigns JSON gater when connection and gater index are valid.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `gaterIndex` - - Optional gater index.
+- `createdConnection` - - Created connection.
+
+Returns: Nothing.
+
+### createConnection
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default, weight: number) => import("C:/NeatapticTS/src/architecture/connection").default | undefined`
+
+Creates one connection and returns first created instance.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `sourceNode` - - Source node.
+- `targetNode` - - Target node.
+- `weight` - - Connection weight.
+
+Returns: Created connection or undefined.
+
+### createEmptyNetworkJson
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkInternalsWithDropout) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON`
+
+Creates an empty verbose JSON shell from runtime internals.
+
+The shell includes format and shape metadata and is filled in by subsequent
+node and connection append steps.
+
+Parameters:
+- `networkInternals` - - Runtime internals with optional dropout.
+
+Returns: Empty JSON shell with `formatVersion` and scalar metadata initialized.
+
+### createJsonConnection
+
+`(from: number, to: number, weight: number, gater: number | null, enabled: boolean) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection`
+
+Creates one JSON connection entry.
+
+Parameters:
+- `from` - - Source index.
+- `to` - - Target index.
+- `weight` - - Connection weight.
+- `gater` - - Optional gater index.
+- `enabled` - - Enabled status.
+
+Returns: JSON connection entry.
+
+### createJsonNode
+
+`(node: import("C:/NeatapticTS/src/architecture/node").default, nodeInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNodeInternals, nodeIndex: number) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONNode`
+
+Creates one JSON node entry.
+
+Parameters:
+- `node` - - Runtime node.
+- `nodeInternals` - - Node internals.
+- `nodeIndex` - - Canonical index.
+
+Returns: JSON node entry.
+
+### createNodeWithType
+
+`(nodeType: string) => import("C:/NeatapticTS/src/architecture/node").default`
+
+Creates one node with provided type.
+
+Parameters:
+- `nodeType` - - Node type.
+
+Returns: New node.
+
+### hydrateNodeFromJsonEntry
+
+`(rebuiltNode: import("C:/NeatapticTS/src/architecture/node").default, nodeJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONNode, nodeIndex: number) => void`
+
+Hydrates one node from JSON node entry.
+
+Parameters:
+- `rebuiltNode` - - Node to hydrate.
+- `nodeJsonEntry` - - JSON node entry.
+- `nodeIndex` - - Canonical node index.
+
+Returns: Nothing.
+
+### isConnectionEnabled
+
+`(connectionInstance: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+
+Resolves enabled status from optional connection flag.
+
+Parameters:
+- `connectionInstance` - - Connection instance.
+
+Returns: True when connection is enabled.
+
+### isJsonConnectionInNodeBounds
+
+`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], connectionJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection) => boolean`
+
+Checks JSON connection indices against node list bounds.
+
+Parameters:
+- `nodes` - - Node list.
+- `connectionJsonEntry` - - JSON connection entry.
+
+Returns: True when both indices are valid.
+
+### isJsonConnectionShapeValid
+
+`(connectionJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection) => boolean`
+
+Checks that JSON connection has numeric endpoint fields.
+
+Parameters:
+- `connectionJsonEntry` - - JSON connection entry.
+
+Returns: True when endpoint fields are numbers.
+
+### rebuildConnectionsFromJsonPayload
+
+`(jsonConnectionContext: import("C:/NeatapticTS/src/architecture/network/network.types").JsonConnectionRebuildContext) => void`
+
+Rebuilds runtime connections from verbose JSON entries.
+
+Invalid entries are skipped with warnings so import continues for valid records.
+
+Parameters:
+- `jsonConnectionContext` - - JSON connection rebuild context.
+
+Returns: Nothing.
+
+### rebuildNodesFromJsonPayload
+
+`(jsonNodeContext: import("C:/NeatapticTS/src/architecture/network/network.types").JsonNodeRebuildContext) => void`
+
+Rebuilds runtime nodes from verbose JSON entries.
+
+Parameters:
+- `jsonNodeContext` - - JSON node rebuild context.
+
+Returns: Nothing.
+
+### rebuildOneJsonConnection
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, connectionJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection) => void`
+
+Rebuilds one verbose JSON connection entry.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `connectionJsonEntry` - - JSON connection entry.
+
+Returns: Nothing.
+
+### resolveDropout
+
+`(dropout: number | undefined) => number`
+
+Resolves dropout with a numeric fallback when the value is absent.
+
+Parameters:
+- `dropout` - - Optional dropout value.
+
+Returns: Effective dropout.
+
+### resolveGaterIndex
+
+`(gaterNode: import("C:/NeatapticTS/src/architecture/node").default | null) => number | null`
+
+Resolves gater node index from gater reference.
+
+Parameters:
+- `gaterNode` - - Optional gater node.
+
+Returns: Gater index or null.
+
+### validateNetworkJsonOrThrow
+
+`(json: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
+
+Validates the verbose JSON payload root shape.
+
+Parameters:
+- `json` - - Payload candidate.
+
+Returns: Nothing.
+
+### warnWhenJsonFormatVersionIsUnknown
+
+`(formatVersion: number) => void`
+
+Warns when incoming verbose format version differs from the expected one.
+
+Parameters:
+- `formatVersion` - - Incoming format version.
+
+Returns: Nothing.
+
+## architecture/network/serialize/network.serialize.compact.utils.ts
+
+### assignCompactGaterWhenValid
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, gaterIndex: number | null, createdConnection: import("C:/NeatapticTS/src/architecture/connection").default | undefined) => void`
+
+Assigns compact gater when both connection and gater index are valid.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `gaterIndex` - - Optional gater index.
+- `createdConnection` - - Created connection.
+
+Returns: Nothing.
+
+### collectAllConnections
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+
+Collects all runtime connections into a single list.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+
+Returns: Combined connections.
+
+### collectNodeActivations
+
+`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => number[]`
+
+Collects node activation values in positional order.
+
+Parameters:
+- `nodes` - - Node list.
+
+Returns: Activation list aligned to node indices.
+
+### collectNodeSquashKeys
+
+`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => string[]`
+
+Collects node activation keys in positional order.
+
+Each function reference is normalized to a string key for compact transfer.
+
+Parameters:
+- `nodes` - - Node list.
+
+Returns: Squash-key list aligned to node indices.
+
+### collectNodeStates
+
+`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => number[]`
+
+Collects node state values in positional order.
+
+Parameters:
+- `nodes` - - Node list.
+
+Returns: State list aligned to node indices.
+
+### collectSerializedConnections
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection[]`
+
+Collects compact connection records from forward and self connection groups.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+
+Returns: Serialized connection list.
+
+### createConnection
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default, weight: number) => import("C:/NeatapticTS/src/architecture/connection").default | undefined`
+
+Creates one connection and returns first created instance.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `sourceNode` - - Source node.
+- `targetNode` - - Target node.
+- `weight` - - Connection weight.
+
+Returns: Created connection or undefined.
+
+### createNodeWithType
+
+`(nodeType: string) => import("C:/NeatapticTS/src/architecture/node").default`
+
+Creates one node with provided type.
+
+Parameters:
+- `nodeType` - - Node type.
+
+Returns: New node.
+
+### hydrateNodeStateFromCompactPayload
+
+`(rebuiltNode: import("C:/NeatapticTS/src/architecture/node").default, activation: number, state: number, squashName: string | undefined, nodeIndex: number) => void`
+
+Hydrates node runtime state from compact tuple values.
+
+Parameters:
+- `rebuiltNode` - - Node to hydrate.
+- `activation` - - Activation value.
+- `state` - - State value.
+- `squashName` - - Activation key.
+- `nodeIndex` - - Canonical node index.
+
+Returns: Nothing.
+
+### isSerializedConnectionInNodeBounds
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, serializedConnection: import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection) => boolean`
+
+Checks compact connection bounds against current node list.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `serializedConnection` - - Serialized connection record.
+
+Returns: True when endpoints are valid.
+
+### rebuildConnectionsFromCompactPayload
+
+`(compactConnectionContext: import("C:/NeatapticTS/src/architecture/network/network.types").CompactConnectionRebuildContext) => void`
+
+Rebuilds runtime connections from compact connection records.
+
+Invalid endpoint or gater indices are skipped with warnings to preserve import flow.
+
+Parameters:
+- `compactConnectionContext` - - Compact connection rebuild context.
+
+Returns: Nothing.
+
+### rebuildNodesFromCompactPayload
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, compactNodeContext: import("C:/NeatapticTS/src/architecture/network/network.types").CompactNodeRebuildContext) => void`
+
+Rebuilds runtime nodes from compact payload arrays.
+
+Node type is inferred from index position relative to input/output boundaries.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `compactNodeContext` - - Compact node rebuild context.
+
+Returns: Nothing.
+
+### rebuildOneCompactConnection
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, serializedConnection: import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection) => void`
+
+Rebuilds one compact serialized connection.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `serializedConnection` - - Serialized connection record.
+
+Returns: Nothing.
+
+### refreshNodeIndices
+
+`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => void`
+
+Refreshes `node.index` for each node in list order.
+
+Canonical indices are required so compact connection records can store endpoints
+and gaters as stable numeric positions.
+
+Parameters:
+- `nodes` - - Node list.
+
+Returns: Nothing.
+
+### resolveNodeTypeFromCompactIndex
+
+`(nodeIndex: number, totalNodeCount: number, input: number, output: number) => string`
+
+Resolves node type from compact tuple position.
+
+Parameters:
+- `nodeIndex` - - Node index.
+- `totalNodeCount` - - Total node count.
+- `input` - - Input size.
+- `output` - - Output size.
+
+Returns: Node type string.
+
+### serializeOneConnection
+
+`(connectionInstance: import("C:/NeatapticTS/src/architecture/connection").default) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection`
+
+Serializes one connection into compact indexed form.
+
+Parameters:
+- `connectionInstance` - - Runtime connection.
+
+Returns: Serialized connection record.
+
+## architecture/network/serialize/network.serialize.runtime.utils.ts
+
+### asNetworkInternals
+
+`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals`
+
+Casts a network instance to the internal runtime shape used by serializer helpers.
+
+Parameters:
+- `network` - - Network instance.
+
+Returns: Runtime internals.
+
+### asNetworkInternalsWithDropout
+
+`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkInternalsWithDropout`
+
+Casts a network instance to internals that include optional dropout metadata.
+
+Parameters:
+- `network` - - Network instance.
+
+Returns: Runtime internals with optional dropout.
+
+### asNodeInternals
+
+`(node: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNodeInternals`
+
+Casts a node instance to its internal runtime representation.
+
+Parameters:
+- `node` - - Node instance.
+
+Returns: Node internals.
+
+### createCompactPayloadContext
+
+`(data: import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple) => import("C:/NeatapticTS/src/architecture/network/network.types").CompactPayloadContext`
+
+Normalizes a compact tuple payload into a named object context.
+
+This improves readability in orchestration code by replacing positional tuple access
+with semantically named fields.
+
+Parameters:
+- `data` - - Compact tuple payload.
+
+Returns: Normalized payload context.
+
+### createNetworkInstance
+
+`(input: number, output: number) => import("C:/NeatapticTS/src/architecture/network").default`
+
+Creates a network instance using runtime constructor loading.
+
+Dynamic loading avoids static circular dependency issues between serializer and
+network implementation modules.
+
+Parameters:
+- `input` - - Input size.
+- `output` - - Output size.
+
+Returns: New network instance.
+
+### isFiniteIndex
+
+`(index: number) => boolean`
+
+Checks whether a candidate index value is a finite number.
+
+Parameters:
+- `index` - - Candidate index value.
+
+Returns: True when finite number.
+
+### isNodeIndexInBounds
+
+`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], index: number) => boolean`
+
+Checks whether an index is inside the bounds of a node array.
+
+Parameters:
+- `nodes` - - Node list.
+- `index` - - Candidate index.
+
+Returns: True when index is valid.
+
+### resetMutableRuntimeCollections
+
+`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals) => void`
+
+Clears mutable runtime collections before reconstruction.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+
+Returns: Nothing.
+
+### resolveNetworkSize
+
+`(compactPayload: import("C:/NeatapticTS/src/architecture/network/network.types").CompactPayloadContext, inputSizeOverride: number | undefined, outputSizeOverride: number | undefined) => import("C:/NeatapticTS/src/architecture/network/network.types").ResolvedNetworkSizeContext`
+
+Resolves effective input/output dimensions using optional explicit overrides.
+
+When an override is provided, it takes precedence over serialized values.
+
+Parameters:
+- `compactPayload` - - Compact payload context.
+- `inputSizeOverride` - - Optional input override.
+- `outputSizeOverride` - - Optional output override.
+
+Returns: Resolved network size context.
+
+### resolveSizeOverride
+
+`(overrideValue: number | undefined, serializedValue: number) => number`
+
+Resolves one size value with override-first semantics.
+
+Parameters:
+- `overrideValue` - - Optional explicit override.
+- `serializedValue` - - Serialized fallback value.
+
+Returns: Effective size.
+
+## architecture/network/serialize/network.serialize.activation.utils.ts
+
+### findActivationByFunctionName
+
+`(squashName: string | undefined) => import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction | undefined`
+
+Resolves activation by matching function.name.
+
+Parameters:
+- `squashName` - - Activation function name.
+
+Returns: Activation function or undefined.
+
+### findActivationByKey
+
+`(squashName: string | undefined) => import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction | undefined`
+
+Resolves activation by direct key lookup.
+
+Parameters:
+- `squashName` - - Activation key.
+
+Returns: Activation function or undefined.
+
+### findActivationEntryByReference
+
+`(squashFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => [string, import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction] | undefined`
+
+Finds activation entry by function reference.
+
+Parameters:
+- `squashFunction` - - Activation function instance.
+
+Returns: Activation entry or undefined.
+
+### resolveActivationFunction
+
+`(squashName: string | undefined) => import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction`
+
+Resolves an activation function from a stored key or function name.
+
+Unknown values produce a warning and return the identity activation to keep
+deserialization deterministic and non-throwing.
+
+Parameters:
+- `squashName` - - Activation key or function name.
+
+Returns: Activation function.
+
+### resolveActivationKey
+
+`(squashFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => string`
+
+Resolves a canonical activation key from a runtime activation function reference.
+
+Resolution order is: direct registry reference match, then the function name,
+then a stable identity fallback key.
+
+Parameters:
+- `squashFunction` - - Activation function instance.
+
+Returns: Activation key.
+
+### resolveNamedActivationFromFunction
+
+`(squashFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => string | undefined`
+
+Resolves activation name from function.name when non-empty.
+
+Parameters:
+- `squashFunction` - - Activation function instance.
+
+Returns: Activation name or undefined.
+
+### warnUnknownSquashName
+
+`(squashName: string | undefined) => void`
+
+Warns about unknown activation and fallback to identity.
+
+Parameters:
+- `squashName` - - Unknown activation name.
+
+Returns: Nothing.

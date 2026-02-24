@@ -12,6 +12,19 @@ Runtime interface for activation internals.
 
 Runtime activation function signature used by ONNX activation import/export paths.
 
+Neataptic-style activations support a dual-purpose call pattern:
+- `derivate === false | undefined`: return activation output $f(x)$
+- `derivate === true`: return derivative $f'(x)$
+
+This matches historical Neataptic semantics and keeps ONNX import/export compatible.
+
+Example:
+
+```ts
+const y = activation(x);
+const dy = activation(x, true);
+```
+
 ### ActivationSquashFunction
 
 `(x: number, derivate: boolean | undefined) => number`
@@ -30,21 +43,33 @@ Shared immutable inputs used across the adjacency build pipeline.
 
 Checkpoint callback configuration.
 
+Training can periodically call `save(...)` with a serialized network snapshot.
+You can persist these snapshots to disk, upload them, or keep them in-memory.
+
 ### CompactConnectionRebuildContext
 
 Context for compact-connection reconstruction.
+
+Connection rows are processed independently so malformed entries can be skipped without aborting import.
 
 ### CompactNodeRebuildContext
 
 Context for compact-node reconstruction.
 
+Arrays are expected to be index-aligned so each node can be hydrated deterministically.
+
 ### CompactPayloadContext
 
 Context carrying compact payload fields.
 
+This named-object form replaces tuple index access in internal orchestration code.
+
 ### CompactSerializedNetworkTuple
 
-Compact tuple payload used by binary-like serialize output.
+Compact tuple payload used by `serialize` output.
+
+Tuple slots are intentionally positional to reduce payload size:
+0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size.
 
 ### ConnectionGene
 
@@ -70,6 +95,9 @@ Internal Connection properties accessed during slab operations.
 
 Connection view with optional enabled flag.
 
+Some serialized formats preserve per-edge enablement, while others treat missing values
+as implicitly enabled.
+
 ### ConnectionSlabView
 
 Shape returned by getConnectionSlab describing the packed SoA view.
@@ -89,6 +117,15 @@ Runtime interface for connect internals.
 ### Conv2DMapping
 
 Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
+
+This does **not** magically turn an MLP into a convolutional network at runtime.
+It annotates a particular export-layer index with a conv interpretation so that:
+- The exported graph uses conv-shaped tensors/operators, and
+- Import can re-attach pooling/flatten metadata appropriately.
+
+Pitfall: mappings must match the actual layer sizes. If `inHeight * inWidth * inChannels`
+does not correspond to the prior layer width (and similarly for outputs), export or import
+may reject the model.
 
 ### ConvInferenceEvaluationContext
 
@@ -134,7 +171,27 @@ Result of Conv sharing validation across declared mappings.
 
 `(target: number[], output: number[]) => number`
 
-Cost function signature used by training utilities.
+Cost / loss function used during supervised training.
+
+A cost function compares an expected `target` vector with the network's produced `output`
+vector, returning a scalar error where **lower is better**.
+
+Design notes:
+- This is called frequently (often once per training sample), so implementations should be
+  **pure** and **allocation-light**.
+- Most built-in training loops assume the returned value is non-negative.
+
+Example (mean squared error):
+
+```ts
+export const mse: CostFunction = (target, output) => {
+  const sum = target.reduce((acc, targetValue, index) => {
+    const diff = targetValue - (output[index] ?? 0);
+    return acc + diff * diff;
+  }, 0);
+  return sum / Math.max(1, target.length);
+};
+```
 
 ### CostFunctionOrObject
 
@@ -324,6 +381,14 @@ GlobalThis extension exposing optional structuredClone.
 
 Gradient clipping configuration.
 
+Clipping prevents rare large gradients from causing unstable weight updates.
+It is most useful for recurrent networks and noisy datasets.
+
+Conceptual modes:
+- `norm`: clip by a global $L_2$ norm threshold.
+- `percentile`: clip using a running percentile estimate (robust to outliers).
+- `layerwise*`: apply the same idea per-layer (useful when layers have very different scales).
+
 ### GruEmissionContext
 
 Context for heuristic GRU emission when a layer matches expected shape.
@@ -348,9 +413,13 @@ Required endpoint pair for input/output edge seeding.
 
 Context for JSON-connection reconstruction.
 
+Connection rows may include optional gater and enabled metadata.
+
 ### JsonNodeRebuildContext
 
 Context for JSON-node reconstruction.
+
+Node entries are rebuilt in order and pushed into mutable runtime internals.
 
 ### LayerActivationContext
 
@@ -410,13 +479,22 @@ Heuristic LSTM pattern stub for metadata output.
 
 Metrics hook signature.
 
+If provided, this callback receives summarized metrics after each iteration.
+It is designed for lightweight telemetry, not heavy data export.
+
 ### MixedPrecisionConfig
 
 Mixed-precision configuration.
 
+Mixed precision can improve throughput by running some math in lower precision while
+keeping a stable FP32 master copy of parameters when needed.
+
 ### MixedPrecisionDynamicConfig
 
 Dynamic mixed-precision configuration.
+
+When enabled, training uses a loss-scaling heuristic that attempts to keep gradients
+in a numerically stable range. If an overflow is detected, the scale is reduced.
 
 ### MonitoredSmoothingConfig
 
@@ -425,6 +503,9 @@ Config for monitored smoothing computation.
 ### MovingAverageType
 
 Moving-average strategy identifier.
+
+These strategies are used to smooth the monitored error curve during training.
+Smoothing can make early stopping and progress logging less noisy.
 
 ### MutationHandler
 
@@ -460,17 +541,25 @@ Runtime properties used during genetic operations.
 
 Serialize internals with optional dropout field.
 
+Verbose JSON snapshots normalize this value so readers can treat dropout as numeric data.
+
 ### NetworkJSON
 
-Verbose JSON payload representation.
+Verbose JSON payload representation used by `toJSONImpl` and `fromJSONImpl`.
+
+`formatVersion` enables compatibility checks and migration handling.
 
 ### NetworkJSONConnection
 
 Verbose JSON connection representation.
 
+Includes optional gater and explicit enabled state for portability.
+
 ### NetworkJSONNode
 
 Verbose JSON node representation.
+
+Node entries are self-describing and intended for readable, versioned snapshots.
 
 ### NetworkMutationProps
 
@@ -511,7 +600,10 @@ Snapshot of node adjacency prior to removal.
 ### NodeInternals
 
 Runtime interface for accessing node internal properties.
-Nodes have runtime properties for connections, bias, and squash that aren't in the public interface.
+
+This is intentionally "internal": it exposes mutable fields that the ONNX exporter/importer
+needs (connections, bias, squash). Regular library users should generally interact with
+the public `Node` API instead.
 
 ### NodeInternalsWithExportIndex
 
@@ -591,7 +683,27 @@ ONNX tensor type shape dimension.
 
 ### OnnxExportOptions
 
-Options controlling ONNX export behavior (Phase 1).
+Options controlling ONNX-like export.
+
+These options trade off strictness, portability, and fidelity:
+
+- **Strict (default-ish)** export tries to keep the graph easy to interpret:
+  layered topology, homogeneous activations per layer, and fully-connected layers.
+
+- **Relaxed** export (`allowPartialConnectivity` / `allowMixedActivations`) can represent
+  more networks, but it may generate graphs that are primarily meant for NeatapticTS’s
+  importer (and may be less friendly to external ONNX tooling).
+
+- **Recurrent export** (`allowRecurrent`) is intentionally conservative and currently
+  focuses on a constrained single-step representation and optional fused heuristics.
+
+Key fields (high-level):
+- `includeMetadata`: includes `metadata_props` with architecture hints.
+- `opset`: numeric opset version stored in the exported model metadata (default is
+  resolved by the exporter; commonly 18 in this codebase).
+- `legacyNodeOrdering`: keeps older node ordering for backward compatibility.
+- `conv2dMappings` / `pool2dMappings`: encode conv/pool semantics for fully-connected
+  layers via explicit mapping declarations.
 
 ### OnnxFusedGateApplicationContext
 
@@ -769,6 +881,23 @@ Canonical metadata key-value pair used in ONNX model metadata_props.
 
 ### OnnxModel
 
+ONNX-like model container (JSON-serializable).
+
+This is the main “wire format” object in this folder. Persist it as JSON text:
+
+```ts
+const jsonText = JSON.stringify(model);
+const restoredModel = JSON.parse(jsonText) as OnnxModel;
+```
+
+Notes:
+- `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
+  conv/pool mappings, etc.). This is where most round-trip hints live.
+- Initializers currently store floating-point weights in `float_data`.
+
+Security/trust boundary:
+- Treat this as untrusted input if it comes from outside your process.
+
 ### OnnxModelMetadataContext
 
 Context for applying optional ONNX model metadata.
@@ -807,21 +936,36 @@ Traversal context for one hidden layer during recurrent-input collection.
 
 Runtime factories consumed during ONNX import network reconstruction.
 
+These factories let the importer reconstruct runtime objects (network + layers)
+while keeping the ONNX parser itself mostly pure.
+
 ### OnnxRuntimeLayerFactory
 
 `(size: number) => import("C:/NeatapticTS/src/architecture/layer").default`
 
 Runtime layer-constructor signature used for recurrent layer reconstruction.
 
+ONNX import can optionally reconstruct higher-level recurrent layers (like LSTM/GRU)
+from exported metadata. This factory provides the concrete layer implementation.
+
+### OnnxRuntimeLayerFactoryMap
+
+Runtime layer module shape widened for fused-recurrent reconstruction wiring.
+
 ### OnnxRuntimeLayerModule
 
 Runtime layer module shape consumed by ONNX import orchestration.
+
+This is the minimal set of recurrent factories needed by the importer.
 
 ### OnnxRuntimePerceptronFactory
 
 `(sizes: number[]) => import("C:/NeatapticTS/src/architecture/network").default`
 
 Runtime perceptron factory signature used by ONNX import orchestration.
+
+This factory is injected so the ONNX import path can rebuild an MLP without taking a
+hard dependency on a specific constructor shape.
 
 ### OnnxShape
 
@@ -840,6 +984,24 @@ ONNX value info (input/output description).
 ### OptimizerConfigBase
 
 Base optimizer configuration.
+
+Training accepts either an optimizer name (`"adam"`, `"sgd"`, ...) or an object.
+This object form is useful when you want to pin numeric hyperparameters or wrap a base
+optimizer (e.g. lookahead).
+
+Example:
+
+```ts
+net.train(set, {
+  iterations: 1_000,
+  rate: 0.001,
+  optimizer: { type: 'adamw', beta1: 0.9, beta2: 0.999, eps: 1e-8, weightDecay: 0.01 },
+});
+```
+
+Notes:
+- Exact supported `type` values are validated by training utilities.
+- Unspecified fields fall back to sensible defaults per optimizer.
 
 ### OptionalLayerOutputParams
 
@@ -912,6 +1074,10 @@ Mutable smoothing state for plateau metric.
 ### Pool2DMapping
 
 Mapping describing a pooling operation inserted after a given export-layer index.
+
+This is represented as metadata and optional graph nodes during export.
+Import uses it to attach pooling-related runtime metadata back onto the reconstructed
+network (when supported).
 
 ### PoolingAttributes
 
@@ -1039,6 +1205,8 @@ L1/L2 regularization configuration.
 
 Resolved input/output sizes for rebuild.
 
+Values reflect override-first resolution semantics used during deserialization.
+
 ### RNGSnapshot
 
 Snapshot payload for RNG state restore flows.
@@ -1046,6 +1214,9 @@ Snapshot payload for RNG state restore flows.
 ### ScheduleConfig
 
 Schedule callback configuration.
+
+A schedule callback is a simple "tick hook" that runs every N iterations.
+Typical uses include logging, custom learning-rate schedules, or diagnostics.
 
 ### ScheduledTargetContext
 
@@ -1057,19 +1228,29 @@ Result of scheduled-pruning target computation.
 
 ### SerializedConnection
 
-Serialized connection representation.
+Serialized connection representation used by compact and JSON formats.
+
+Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
 
 ### SerializedNetwork
 
 Serialized network payload used in checkpoint callbacks.
 
+This is intentionally loose: serialization formats evolve and may include nested
+structures. Treat this as an opaque snapshot blob.
+
 ### SerializeNetworkInternals
 
 Runtime interface for accessing network internals during serialization.
 
+This is an internal bridge type used by serializer helpers to read and rebuild
+topology without exposing private implementation details in public APIs.
+
 ### SerializeNodeInternals
 
 Runtime node internals needed for serialization workflows.
+
+These fields are the minimal node state required to round-trip compact and JSON payloads.
 
 ### SharedActivationNodeBuildParams
 
@@ -1084,6 +1265,16 @@ Shared parameters for constructing a Gemm node payload.
 `(genome: import("C:/NeatapticTS/src/architecture/network").default) => number`
 
 Fitness signature evaluating one genome.
+
+### SLAB_DEFAULT_ASYNC_CHUNK_SIZE
+
+### SLAB_GROWTH_FACTOR_BROWSER
+
+### SLAB_GROWTH_FACTOR_NODE
+
+### SLAB_ONE
+
+### SLAB_ZERO
 
 ### SlabBuildContext
 
@@ -1147,7 +1338,28 @@ Runtime node view used by training internals.
 
 ### TrainingOptions
 
-Public training options shape.
+Public training options accepted by the high-level training orchestration.
+
+Training in this codebase is conceptually:
+1) forward activation
+2) backward propagation
+3) optimizer update
+repeated until a stopping condition is met.
+
+Minimal example:
+
+```ts
+net.train(set, {
+  iterations: 500,
+  rate: 0.3,
+  batchSize: 16,
+  gradientClip: { mode: 'norm', maxNorm: 1 },
+});
+```
+
+Stopping conditions:
+- Provide at least one of `iterations` or `error`.
+- `earlyStopPatience` adds an additional "stop when no improvement" guard.
 
 ### TrainingSample
 
@@ -1177,6 +1389,19 @@ Worker-local traversal context.
 
 ### __trainingInternals
 
+### activate
+
+`(input: number[], training: boolean) => number[]`
+
+Execute the main activation routine and return plain numeric outputs.
+
+Parameters:
+- `this` - Bound network instance.
+- `input` - Input values with length matching network input count.
+- `training` - Whether training-time stochastic behavior is enabled.
+
+Returns: Output activation values.
+
 ### activateBatch
 
 `(inputs: number[][], training: boolean) => number[][]`
@@ -1191,8 +1416,7 @@ vectorized backend that exploits SIMD, GPU kernels, or parallel workers.
 Input validation occurs per row to surface the earliest mismatch with a descriptive index.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `inputs` - - Array of input vectors; each must have length == network.input.
 - `training` - - Whether each activation should keep training traces.
 
@@ -1210,8 +1434,7 @@ At present this simply forwards to {@link Network.activate}. The indirection is 
  - Providing a stable exported symbol for external tooling / instrumentation.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `input` - - Input vector (length == network.input).
 - `training` - - Whether to retain training traces / gradients (delegated downstream).
 - `maxActivationDepth` - - Guard against runaway recursion / cyclic activation attempts.
@@ -1220,7 +1443,15 @@ Returns: Implementation-defined result of Network.activate (typically an output 
 
 ### applyGradientClippingImpl
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; }) => void`
+`(net: import("C:/NeatapticTS/src/architecture/network").default, cfg: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
+
+Apply gradient clipping to a network using a normalized runtime configuration.
+
+This is a small wrapper that forwards to the concrete implementation used by training.
+
+Parameters:
+- `net` - - Network instance to update.
+- `cfg` - - Normalized clipping settings.
 
 ### canUseFastSlab
 
@@ -1233,6 +1464,15 @@ Parameters:
 - `training` - Whether caller is performing training (disables fast path if true).
 
 Returns: True when slab fast path predicates hold.
+
+### clearState
+
+`() => void`
+
+Clear all node runtime traces and states.
+
+Parameters:
+- `this` - Bound network instance.
 
 ### computeTopoOrder
 
@@ -1283,11 +1523,24 @@ Edge cases & invariants:
  - Weight initialization policy is delegated to Node.connect if not explicitly provided.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `from` - - Source node (emits signal).
 - `to` - - Target node (receives signal).
 - `weight` - - Optional explicit initial weight value.
+
+### createMLP
+
+`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("C:/NeatapticTS/src/architecture/network").default`
+
+Build a strictly layered and fully connected MLP network.
+
+Parameters:
+- `this` - Network constructor.
+- `inputCount` - Number of input nodes.
+- `hiddenCounts` - Hidden-layer node counts.
+- `outputCount` - Number of output nodes.
+
+Returns: Newly created MLP network.
 
 ### crossOver
 
@@ -1296,8 +1549,15 @@ Parameters:
 Genetic operator: NEAT‑style crossover (legacy merge operator removed).
 
 This module now focuses solely on producing recombinant offspring via {@link crossOver}.
-The previous experimental Network.merge has been removed to reduce maintenance surface area
-and avoid implying a misleading “sequential composition” guarantee.
+The previous experimental `Network.merge` flow has been removed to reduce maintenance
+surface area and avoid implying a misleading sequential-composition guarantee.
+
+Design notes:
+- The implementation favors deterministic, inspectable orchestration at the top level.
+- Gene-selection details are delegated to setup/materialization helpers so the public
+  crossover API stays compact and predictable.
+- The resulting offspring preserves the same input/output interface as both parents,
+  which keeps downstream evaluation and training pipelines compatible.
 
 ### deserialize
 
@@ -1330,8 +1590,7 @@ Idempotence: If no such edge exists we still perform node-level disconnect and f
 this conservative approach simplifies callers (they need not pre‑check existence).
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `from` - - Source node.
 - `to` - - Target node.
 
@@ -1339,46 +1598,25 @@ Parameters:
 
 `(set: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingSample[], options: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
 
-Evolve (optimize) the current network's topology and weights using a NEAT-like evolutionary loop
-until a stopping criterion (target error or max iterations) is met.
+Evolves a network with a NEAT-style search loop until an error target or generation limit is reached.
 
-High-level process:
- 1. Validate dataset shape (input/output vector sizes must match network I/O counts).
- 2. Normalize / default option values and construct an internal configuration summary.
- 3. Build appropriate fitness evaluation function (single or multi-thread).
- 4. Initialize a Neat population (optionally with speciation) seeded by this network.
- 5. Iteratively call neat.evolve():
-      - Retrieve fittest genome + its fitness.
-      - Derive an error metric from fitness (inverse relationship considering complexity penalty).
-      - Track best genome overall (elitism) and perform logging/scheduling callbacks.
-      - Break if error criterion satisfied or iterations exceeded.
- 6. Replace this network's internal structural arrays with the best discovered genome's (in-place upgrade).
- 7. Cleanup any worker threads and report final statistics.
+Overview:
+- This method treats the current network as a *seed genome* and explores better variants.
+- Candidate genomes are scored by prediction error plus a structural complexity penalty.
+- The best discovered genome is copied back into the current instance (in-place upgrade).
 
-Fitness / Error relationship:
-  fitness = -error - complexityPenalty  =>  error = -(fitness - complexityPenalty)
-We recompute error from the stored fitness plus penalty to ensure consistent reporting.
-
-Resilience strategies:
- - Guard against infinite / NaN errors; after MAX_INF consecutive invalid errors we abort.
- - Fallback for tiny populations: increase mutation aggressiveness to prevent premature convergence.
+Typical usage guidance:
+- Use `error` when you care about reaching a quality threshold.
+- Use `iterations` when you need deterministic runtime bounds.
+- Use both when you want "stop when good enough, otherwise cap time" behavior.
+- Increase `threads` only when worker support exists and dataset evaluation is expensive.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance being evolved in-place.
- *
-- `set` - - Supervised dataset (array of {input, output}).
-- `options` - - Evolution options (see README / docs). Key fields include:
-- iterations: maximum generations (if omitted must supply error target)
-- error: target error threshold (if omitted must supply iterations)
-- growth: complexity penalty scaling
-- amount: number of score evaluations (averaged) per genome
-- threads: desired worker count (>=2 enables multi-thread path if available)
-- popsize / populationSize: population size
-- schedule: { iterations: number, function: (ctx) => void } periodic callback
-- log: generation interval for console logging
-- clear: whether to call network.clear() after adopting best genome
+- `this` - - Bound Network instance that receives the best evolved structure.
+- `set` - - Supervised samples; sample input/output dimensions must match network I/O.
+- `options` - - Evolution hyperparameters and stop conditions.
 
-Returns: Summary object { error, iterations, time(ms) }.
+Returns: Final summary containing best error estimate, generations processed, and elapsed milliseconds.
 
 ### fastSlabActivate
 
@@ -1419,32 +1657,50 @@ Validation / invariants:
 Complexity: O(1)
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `node` - - Candidate gater node (must belong to network).
 - `connection` - - Connection to gate.
+
+### gaussianRand
+
+`(rng: () => number) => number`
+
+Produce a normally distributed random sample using the Box-Muller transform.
+
+Parameters:
+- `rng` - Pseudo-random source in the interval [0, 1).
+
+Returns: Standard normal sample with mean 0 and variance 1.
 
 ### generateStandalone
 
 `(net: import("C:/NeatapticTS/src/architecture/network").default) => string`
 
-Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.
+Standalone forward pass code generator.
 
-Implementation Steps:
- 1. Validate presence of output nodes (must produce something observable).
- 2. Assign stable sequential indices to nodes (used as array offsets in generated code).
- 3. Collect initial activation/state values into typed array initializers for warm starting.
- 4. For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
-    (post-activation output). Gating multiplies activation by gate activations; self-connection adds
-    recurrent term S[i] * weight before activation.
- 5. De-duplicate activation functions: each unique squash name is emitted once; references become
-    indices into array F of function references for compactness.
- 6. Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).
+Purpose:
+ Transforms a dynamic Network instance (object graph with Nodes / Connections / gating metadata)
+ into a self-contained JavaScript function string that, when evaluated, returns an `activate(input)`
+ function capable of performing forward propagation without the original library runtime.
 
-Parameters:
-- `net` - Network instance to snapshot.
+Why generate code?
+ - Deployment: Embed a compact, dependency‑free inference function in environments where bundling
+   the full evolutionary framework is unnecessary (e.g. model cards, edge scripts, CI sanity checks).
+ - Performance: Remove dynamic indirection (property lookups, virtual dispatch) by specializing
+   the computation graph into straight‑line code and simple loops; JS engines can optimize this.
+ - Readability: Emitted source is human-readable so users can inspect weighted sums and activations.
 
-Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.
+Features Supported:
+ - Standard feed‑forward connections with optional gating (multiplicative modulation).
+ - Single self-connection per node (handled as recurrent term S[i] * weight before activation).
+ - Arbitrary activation functions: built‑in ones are emitted via canonical snippets; custom user
+   functions are stringified and sanitized via stripCoverage(). Arrow or anonymous functions are
+   normalized into named `function <name>(...)` forms for clarity and stable ordering.
+
+Not Supported / Simplifications:
+ - No dynamic dropout, noise injection, or stochastic depth—those would require runtime randomness.
+ - Assumes all node indices are stable and sequential (enforced prior to generation).
+ - Gradient / backprop logic intentionally omitted (forward inference only).
 
 ### getConnectionSlab
 
@@ -1464,6 +1720,8 @@ Returns: Read‑only style view (do not mutate) containing typed arrays + metada
 
 Current sparsity fraction relative to the training-time pruning baseline.
 
+Returns: Current sparsity in the [0,1] range when baseline is available.
+
 ### getRegularizationStats
 
 `() => Record<string, unknown> | null`
@@ -1480,28 +1738,51 @@ Returns: A deep-cloned stats object or null if no stats have been recorded yet.
 
 `() => number | undefined`
 
-Get the current internal 32‑bit RNG state value.
+Returns the current deterministic RNG numeric state, when available.
+
+Overview:
+- Use this for lightweight checkpointing when full lifecycle snapshots are unnecessary.
+- The value can be persisted and later reapplied through `setRNGState`.
+- This is commonly used by tests that assert deterministic continuity across operations.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound network instance queried for deterministic RNG numeric state.
 
-Returns: Unsigned 32‑bit state integer or undefined if generator not yet seeded or was reset.
+Returns: Numeric RNG state value, or `undefined` when no deterministic state exists yet.
 
 ### getSlabAllocationStats
 
 `() => { pool: { [x: string]: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
 
-Allocation statistics snapshot for slab typed arrays.
+Slab Packing / Structure‑of‑Arrays Backend (Educational Module)
+==============================================================
+Packs per‑connection data into parallel typed arrays (SoA) to accelerate
+forward passes and to illustrate memory/layout optimizations.
 
-Includes:
- - fresh: number of newly constructed typed arrays since process start / metrics reset.
- - pooled: number of arrays served from the pool.
- - pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
+Why SoA?
+ - Locality & fewer cache misses.
+ - Predictable tight numeric loops (JIT / SIMD friendly).
+ - Easy instrumentation (single contiguous blocks to measure & diff).
 
-NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.
+Key Arrays (logical length = `used`): weights | from | to | flags | (optional) gain | (optional) plastic.
+Adjacency (CSR style): outStart (nodeCount+1), outOrder (per‑source permutation) enabling fast fan‑out.
 
-Returns: Plain object copy (safe to serialize) of current allocator counters.
+On‑Demand & Omission:
+ - Gain/plastic slabs allocated only when a non‑neutral value appears; freed if neutrality returns.
+ - `getConnectionSlab()` synthesizes a neutral gain view if omitted internally (keeps teaching tools simple).
+
+Capacity Strategy: geometric growth (1.25x browser / 1.75x Node) amortizes realloc cost.
+Pooling (config gated) reuses typed arrays (see `getSlabAllocationStats`).
+
+Rebuild Steps (sync): reindex nodes → grow/allocate if needed → single pass populate → optional slabs → version++.
+Async variant slices the population loop into microtasks to reduce long main‑thread blocks.
+
+Example (inspection):
+```ts
+const slab = (net as any).getConnectionSlab();
+console.log('Edges', slab.used, 'Version', slab.version, 'Cap', slab.capacity);
+console.log('First weight from->to', slab.weights[0], slab.from[0], slab.to[0]);
+```
 
 ### hasPath
 
@@ -1536,6 +1817,16 @@ Internal State Fields (attached to Network via `any` casting):
 `(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
 
 Public entry point: apply a single mutation operator to the network.
+
+Runtime flow:
+1. Validate mutation input.
+2. Resolve the mutation key from string/object/reference forms.
+3. Resolve a concrete handler from the dispatch table.
+4. Delegate execution and mark topology-derived caches dirty.
+
+Error and warning behavior:
+- Throws when no method is provided.
+- Emits a warning and no-ops when an unknown method key is received.
 
 Parameters:
 - `this` - - Network instance.
@@ -1575,11 +1866,25 @@ Complexity considerations:
  - Space: O(O) transient (O = number of outputs) due to the pooled output buffer.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `input` - - Flat numeric vector whose length must equal network.input.
 
 Returns: Array of output neuron activations (length == network.output).
+
+### propagate
+
+`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
+
+Propagate output and hidden errors backward through the network.
+
+Parameters:
+- `this` - Bound network instance.
+- `rate` - Learning rate.
+- `momentum` - Momentum factor.
+- `update` - Whether to apply updates immediately.
+- `target` - Output target values.
+- `regularization` - L2 regularization factor.
+- `costDerivative` - Optional output-node derivative override.
 
 ### pruneToSparsity
 
@@ -1588,6 +1893,21 @@ Returns: Array of output neuron activations (length == network.output).
 Evolutionary (generation-based) pruning toward a target sparsity baseline.
 Unlike maybePrune this operates immediately relative to the first invocation's connection count
 (stored separately as _evoInitialConnCount) and does not implement scheduling or regrowth.
+
+Parameters:
+- `targetSparsity` - - Requested target sparsity.
+- `method` - - Connection ranking heuristic.
+
+Returns: Nothing.
+
+### rebuildConnections
+
+`(networkInstance: import("C:/NeatapticTS/src/architecture/network").default) => void`
+
+Rebuild the canonical connection array from per-node outgoing lists.
+
+Parameters:
+- `networkInstance` - Target network.
 
 ### rebuildConnectionSlab
 
@@ -1660,111 +1980,153 @@ Notes / Limitations:
    structures.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `node` - - Hidden node to remove.
 
 ### restoreRNG
 
 `(fn: () => number) => void`
 
-Restore a previously captured RNG function implementation (advanced usage).
+Restores deterministic RNG lifecycle behavior from a provided RNG function.
 
-This does NOT rehydrate _rngState (it explicitly sets it to undefined). Intended for scenarios
-where a caller has customly serialized a full RNG closure or wants to inject a deterministic stub.
-If you only need to restore the raw state word produced by {@link snapshotRNG}, prefer
-{@link setRNGState} instead.
+Overview:
+- Use this when replaying deterministic flows after custom serialization, hydration, or test setup.
+- The restored RNG function becomes the active random source used by the network lifecycle helpers.
+- This keeps deterministic plumbing explicit when external code owns RNG reconstruction.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
-- `fn` - - Function returning a pseudo‑random number in [0,1). Caller guarantees determinism if required.
+- `this` - - Bound network instance receiving the restored RNG lifecycle function.
+- `fn` - - Deterministic RNG function to install (expected to return values in `[0, 1)`).
+
+Returns: Nothing.
 
 ### serialize
 
 `() => import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple`
 
-Instance-level lightweight serializer used primarily for fast inter-thread transfer.
+Serializes a network instance into the compact tuple format.
+
+Use this format when payload size and serialization speed matter more than readability.
+The tuple layout is positional and optimized for transport/storage efficiency.
 
 Parameters:
 - `this` - - Bound network instance.
 
-Returns: Compact serialized tuple payload.
+Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
 
 ### setRNGState
 
 `(state: number) => void`
 
-Explicitly set (override) the internal 32‑bit RNG state without changing the generator function.
+Applies a deterministic RNG numeric state to continue from a known checkpoint.
 
-This is a low‑level operation; typical clients should call {@link setSeed}. Provided for advanced
-replay functionality where the same PRNG algorithm is assumed but you want to resume exactly at a
-known state word.
+Overview:
+- Pair this with `getRNGState` to pause/resume deterministic sequences.
+- Useful for reproducible tests, multi-stage training workflows, and deterministic replay.
+- Delegation keeps the write path consistent with the rest of deterministic state utilities.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
-- `state` - - Any finite number (only low 32 bits used). Ignored if not numeric.
+- `this` - - Bound network instance receiving deterministic RNG state.
+- `state` - - Numeric RNG state checkpoint to install.
+
+Returns: Nothing.
 
 ### setSeed
 
 `(seed: number) => void`
 
-Deterministic pseudo‑random number generation (PRNG) utilities for {@link Network}.
+Sets deterministic randomness for a network by installing a seed-backed RNG.
 
-Why this module exists:
- - Facilitates reproducible evolutionary runs / gradient training by allowing explicit seeding.
- - Centralizes RNG state management & snapshot/restore operations (useful for rollbacks or
-   deterministic tests around mutation sequences).
- - Keeps the core Network class focused by extracting ancillary RNG concerns.
+Overview:
+- Use this before training, mutation, or any stochastic operation when you need repeatable runs.
+- The same seed and operation order produce the same random sequence and reproducible outcomes.
+- This method delegates to setup utilities so behavior stays centralized across deterministic APIs.
 
-Implementation notes:
- - Uses a small, fast 32‑bit xorshift / mix style generator (same semantics as the legacy inline version)
-   combining an additive Weyl sequence step plus a few avalanche-style integer mixes.
- - Not cryptographically secure. Do not use for security / fairness sensitive applications.
- - Produces floating point numbers in [0,1) with 2^32 (~4.29e9) discrete possible mantissa states.
+Parameters:
+- `this` - - Bound network instance whose RNG state is being initialized.
+- `seed` - - Seed value used to derive deterministic RNG state (low 32 bits are applied).
 
-Public surface:
- - {@link setSeed}: Initialize deterministic generator with a numeric seed.
- - {@link snapshotRNG}: Capture current training step + raw internal RNG state.
- - {@link restoreRNG}: Provide an externally saved RNG function (advanced) & clear stored state.
- - {@link getRNGState} / {@link setRNGState}: Low-level accessors for the internal 32‑bit state word.
- - {@link getRandomFn}: Retrieve the active random() function reference (primarily for tests / tooling).
-
-Design rationale:
- - Storing both a state integer (_rngState) and a function (_rand) allows hot-swapping alternative
-   RNG implementations (e.g., for benchmarking or pluggable randomness strategies) without rewriting
-   callsites inside Network algorithms.
+Returns: Nothing.
 
 ### snapshotRNG
 
 `() => import("C:/NeatapticTS/src/architecture/network/network.types").RNGSnapshot`
 
-Capture a snapshot of the RNG state together with the network's training step.
+Captures the current deterministic RNG lifecycle state as a portable snapshot.
 
-Useful for implementing speculative evolutionary mutations where you may revert both the
-structural change and the randomness timeline if accepting/rejecting a candidate.
+Overview:
+- Use this before temporary experiments, branching simulations, or stateful debug sessions.
+- The snapshot preserves enough information to resume from the same deterministic point later.
+- This is useful when comparing alternate algorithm branches from an identical random timeline.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound network instance whose RNG lifecycle state is captured.
 
-Returns: Object containing current training step & 32‑bit RNG state (both possibly undefined if unseeded).
+Returns: Snapshot containing deterministic progress metadata and RNG state payload.
+
+### testNetwork
+
+`(set: TestSample[], cost: CostFunction | undefined) => TestNetworkResult`
+
+Evaluate a dataset and return average error and elapsed time.
+
+Parameters:
+- `this` - Bound network instance.
+- `set` - Evaluation samples.
+- `cost` - Optional cost function override.
+
+Returns: Mean error and evaluation duration.
 
 ### toJSONImpl
 
 `() => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON`
 
-Verbose JSON export (stable formatVersion).
+Serializes a network instance into the verbose JSON format.
+
+Use this format when you need human-readable snapshots, explicit schema versioning,
+and better forward/backward compatibility handling.
 
 Parameters:
 - `this` - - Bound network instance.
 
-Returns: Verbose structural JSON payload.
+Returns: Versioned JSON payload with shape metadata, nodes, and connections.
 
 ### trainImpl
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], options: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
+`(net: import("C:/NeatapticTS/src/architecture/network").default, set: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").TrainingSample[], options: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
+
+High-level training orchestration with early stopping, smoothing & callbacks.
+
+This is the main entrypoint used by `Network.train(...)`-style APIs.
+
+Parameters:
+- `net` - - Network instance to train.
+- `set` - - Training dataset.
+- `options` - - Training options (stopping conditions, optimizer, hooks, etc.).
+
+Returns: Summary payload containing final error, iteration count, and elapsed time.
+
+### trainSetImpl
+
+`(net: import("C:/NeatapticTS/src/architecture/network").default, set: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("C:/NeatapticTS/src/architecture/network/network.types").RegularizationConfig, costFunction: import("C:/NeatapticTS/src/architecture/network/network.types").CostFunction | import("C:/NeatapticTS/src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("C:/NeatapticTS/src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
+
+Execute one full pass over dataset (epoch) with optional accumulation & adaptive optimizer.
+Returns mean cost across processed samples.
+
+This is the core "one epoch" primitive used by higher-level training orchestration.
+
+Parameters:
+- `net` - - Network instance receiving training updates.
+- `set` - - Training samples.
+- `batchSize` - - Mini-batch size (use 1 for pure SGD).
+- `accumulationSteps` - - Micro-batch accumulation steps.
+- `currentRate` - - Current learning rate (may be scheduled by caller).
+- `momentum` - - Momentum used by some optimizers (when applicable).
+- `regularization` - - Regularization configuration passed down to nodes.
+- `costFunction` - - Cost function selector (function or compatible object).
+- `optimizer` - - Optional optimizer configuration.
+
+Returns: Mean cost across the processed samples.
 
 ### ungate
 
@@ -1779,6 +2141,5 @@ without modulation by a gater activation.
 Complexity: O(n) where n = number of gated connections (indexOf lookup) – typically small.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `connection` - - Connection to ungate.

@@ -18,6 +18,7 @@ import {
  * telemetry for UIs, dashboards, or logging.
  *
  * Example:
+ *
  * ```ts
  * const stats = neat.getSpeciesStats();
  * // stats => [{ id: 1, size: 12, bestScore: 0.85, lastImproved: 42 }, ...]
@@ -67,6 +68,7 @@ export function getSpeciesStats(
  * still useful for analysis.
  *
  * Example:
+ *
  * ```ts
  * const history = neat.getSpeciesHistory();
  * // history => [{ generation: 0, stats: [{ id:1, size:10, innovationRange:5, enabledRatio:0.9 }, ...] }, ...]

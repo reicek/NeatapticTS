@@ -336,7 +336,12 @@ export interface EvolutionaryTargetResult {
   excessConnectionCount: number;
 }
 
-/** Runtime interface for accessing network internals during serialization. */
+/**
+ * Runtime interface for accessing network internals during serialization.
+ *
+ * This is an internal bridge type used by serializer helpers to read and rebuild
+ * topology without exposing private implementation details in public APIs.
+ */
 export interface SerializeNetworkInternals {
   /** Network node list. */
   nodes: Node[];
@@ -356,13 +361,21 @@ export interface SerializeNetworkInternals {
   gate: (gater: Node, connection: Connection) => void;
 }
 
-/** Serialize internals with optional dropout field. */
+/**
+ * Serialize internals with optional dropout field.
+ *
+ * Verbose JSON snapshots normalize this value so readers can treat dropout as numeric data.
+ */
 export interface NetworkInternalsWithDropout extends SerializeNetworkInternals {
   /** Optional dropout probability. */
   dropout?: number;
 }
 
-/** Runtime node internals needed for serialization workflows. */
+/**
+ * Runtime node internals needed for serialization workflows.
+ *
+ * These fields are the minimal node state required to round-trip compact and JSON payloads.
+ */
 export interface SerializeNodeInternals {
   /** Node index in network ordering. */
   index: number;
@@ -380,13 +393,22 @@ export interface SerializeNodeInternals {
   squash: ((x: number, derivate?: boolean) => number) & { name: string };
 }
 
-/** Connection view with optional enabled flag. */
+/**
+ * Connection view with optional enabled flag.
+ *
+ * Some serialized formats preserve per-edge enablement, while others treat missing values
+ * as implicitly enabled.
+ */
 export type ConnectionInternalsWithEnabled = Connection & {
   /** Optional enabled marker used by some formats. */
   enabled?: boolean;
 };
 
-/** Serialized connection representation. */
+/**
+ * Serialized connection representation used by compact and JSON formats.
+ *
+ * Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
+ */
 export interface SerializedConnection {
   /** Source node index. */
   from: number;
@@ -398,7 +420,27 @@ export interface SerializedConnection {
   gater: number | null;
 }
 
-/** Compact tuple payload used by binary-like serialize output. */
+/**
+ * Compact tuple payload used by `serialize` output.
+ *
+ * Tuple slots are intentionally positional to reduce payload size:
+ * 0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size.
+ *
+ * @remarks
+ * This format is efficient but less self-describing than JSON.
+ * Prefer `NetworkJSON` for long-lived persistence and manual inspection.
+ * @example
+ * ```ts
+ * const compactTuple: CompactSerializedNetworkTuple = [
+ *   [0.1, 0.2],
+ *   [0, 0],
+ *   ['identity', 'tanh'],
+ *   [{ from: 0, to: 1, weight: 0.5, gater: null }],
+ *   1,
+ *   1,
+ * ];
+ * ```
+ */
 export type CompactSerializedNetworkTuple = [
   number[],
   number[],
@@ -408,7 +450,11 @@ export type CompactSerializedNetworkTuple = [
   number,
 ];
 
-/** Verbose JSON node representation. */
+/**
+ * Verbose JSON node representation.
+ *
+ * Node entries are self-describing and intended for readable, versioned snapshots.
+ */
 export interface NetworkJSONNode {
   /** Node type discriminator. */
   type: string;
@@ -422,7 +468,11 @@ export interface NetworkJSONNode {
   geneId?: number;
 }
 
-/** Verbose JSON connection representation. */
+/**
+ * Verbose JSON connection representation.
+ *
+ * Includes optional gater and explicit enabled state for portability.
+ */
 export interface NetworkJSONConnection {
   /** Source node index. */
   from: number;
@@ -436,7 +486,22 @@ export interface NetworkJSONConnection {
   enabled: boolean;
 }
 
-/** Verbose JSON payload representation. */
+/**
+ * Verbose JSON payload representation used by `toJSONImpl` and `fromJSONImpl`.
+ *
+ * `formatVersion` enables compatibility checks and migration handling.
+ * @example
+ * ```ts
+ * const payload: NetworkJSON = {
+ *   formatVersion: 2,
+ *   input: 2,
+ *   output: 1,
+ *   dropout: 0,
+ *   nodes: [{ type: 'input', bias: 0, squash: 'identity', index: 0 }],
+ *   connections: [],
+ * };
+ * ```
+ */
 export interface NetworkJSON {
   /** Serialization format version. */
   formatVersion: number;
@@ -452,7 +517,11 @@ export interface NetworkJSON {
   connections: NetworkJSONConnection[];
 }
 
-/** Context carrying compact payload fields. */
+/**
+ * Context carrying compact payload fields.
+ *
+ * This named-object form replaces tuple index access in internal orchestration code.
+ */
 export interface CompactPayloadContext {
   /** Serialized node activations. */
   activations: number[];
@@ -468,7 +537,11 @@ export interface CompactPayloadContext {
   serializedOutput: number;
 }
 
-/** Resolved input/output sizes for rebuild. */
+/**
+ * Resolved input/output sizes for rebuild.
+ *
+ * Values reflect override-first resolution semantics used during deserialization.
+ */
 export interface ResolvedNetworkSizeContext {
   /** Input count. */
   input: number;
@@ -476,7 +549,11 @@ export interface ResolvedNetworkSizeContext {
   output: number;
 }
 
-/** Context for compact-node reconstruction. */
+/**
+ * Context for compact-node reconstruction.
+ *
+ * Arrays are expected to be index-aligned so each node can be hydrated deterministically.
+ */
 export interface CompactNodeRebuildContext {
   /** Activation values. */
   activations: number[];
@@ -490,7 +567,11 @@ export interface CompactNodeRebuildContext {
   output: number;
 }
 
-/** Context for compact-connection reconstruction. */
+/**
+ * Context for compact-connection reconstruction.
+ *
+ * Connection rows are processed independently so malformed entries can be skipped without aborting import.
+ */
 export interface CompactConnectionRebuildContext {
   /** Internal mutable network view. */
   networkInternals: SerializeNetworkInternals;
@@ -498,7 +579,11 @@ export interface CompactConnectionRebuildContext {
   serializedConnections: SerializedConnection[];
 }
 
-/** Context for JSON-node reconstruction. */
+/**
+ * Context for JSON-node reconstruction.
+ *
+ * Node entries are rebuilt in order and pushed into mutable runtime internals.
+ */
 export interface JsonNodeRebuildContext {
   /** Internal mutable network view. */
   networkInternals: SerializeNetworkInternals;
@@ -506,7 +591,11 @@ export interface JsonNodeRebuildContext {
   nodeJsonEntries: NetworkJSONNode[];
 }
 
-/** Context for JSON-connection reconstruction. */
+/**
+ * Context for JSON-connection reconstruction.
+ *
+ * Connection rows may include optional gater and enabled metadata.
+ */
 export interface JsonConnectionRebuildContext {
   /** Internal mutable network view. */
   networkInternals: SerializeNetworkInternals;
@@ -514,10 +603,42 @@ export interface JsonConnectionRebuildContext {
   connectionJsonEntries: NetworkJSONConnection[];
 }
 
-/** Cost function signature used by training utilities. */
+/**
+ * Cost / loss function used during supervised training.
+ *
+ * A cost function compares an expected `target` vector with the network's produced `output`
+ * vector, returning a scalar error where **lower is better**.
+ *
+ * Design notes:
+ * - This is called frequently (often once per training sample), so implementations should be
+ *   **pure** and **allocation-light**.
+ * - Most built-in training loops assume the returned value is non-negative.
+ *
+ * Example (mean squared error):
+ *
+ * ```ts
+ * export const mse: CostFunction = (target, output) => {
+ *   const sum = target.reduce((acc, targetValue, index) => {
+ *     const diff = targetValue - (output[index] ?? 0);
+ *     return acc + diff * diff;
+ *   }, 0);
+ *   return sum / Math.max(1, target.length);
+ * };
+ * ```
+ */
 export type CostFunction = (target: number[], output: number[]) => number;
 
-/** Gradient clipping configuration. */
+/**
+ * Gradient clipping configuration.
+ *
+ * Clipping prevents rare large gradients from causing unstable weight updates.
+ * It is most useful for recurrent networks and noisy datasets.
+ *
+ * Conceptual modes:
+ * - `norm`: clip by a global $L_2$ norm threshold.
+ * - `percentile`: clip using a running percentile estimate (robust to outliers).
+ * - `layerwise*`: apply the same idea per-layer (useful when layers have very different scales).
+ */
 export interface GradientClipConfig {
   /** Clipping strategy mode. */
   mode?: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
@@ -529,7 +650,12 @@ export interface GradientClipConfig {
   separateBias?: boolean;
 }
 
-/** Dynamic mixed-precision configuration. */
+/**
+ * Dynamic mixed-precision configuration.
+ *
+ * When enabled, training uses a loss-scaling heuristic that attempts to keep gradients
+ * in a numerically stable range. If an overflow is detected, the scale is reduced.
+ */
 export interface MixedPrecisionDynamicConfig {
   /** Minimum dynamic loss scale. */
   minScale?: number;
@@ -541,7 +667,12 @@ export interface MixedPrecisionDynamicConfig {
   stableStepsForIncrease?: number;
 }
 
-/** Mixed-precision configuration. */
+/**
+ * Mixed-precision configuration.
+ *
+ * Mixed precision can improve throughput by running some math in lower precision while
+ * keeping a stable FP32 master copy of parameters when needed.
+ */
 export interface MixedPrecisionConfig {
   /** Initial loss scale. */
   lossScale?: number;
@@ -549,7 +680,27 @@ export interface MixedPrecisionConfig {
   dynamic?: MixedPrecisionDynamicConfig;
 }
 
-/** Base optimizer configuration. */
+/**
+ * Base optimizer configuration.
+ *
+ * Training accepts either an optimizer name (`"adam"`, `"sgd"`, ...) or an object.
+ * This object form is useful when you want to pin numeric hyperparameters or wrap a base
+ * optimizer (e.g. lookahead).
+ *
+ * Example:
+ *
+ * ```ts
+ * net.train(set, {
+ *   iterations: 1_000,
+ *   rate: 0.001,
+ *   optimizer: { type: 'adamw', beta1: 0.9, beta2: 0.999, eps: 1e-8, weightDecay: 0.01 },
+ * });
+ * ```
+ *
+ * Notes:
+ * - Exact supported `type` values are validated by training utilities.
+ * - Unspecified fields fall back to sensible defaults per optimizer.
+ */
 export interface OptimizerConfigBase {
   /** Optimizer identifier. */
   type: string;
@@ -571,10 +722,20 @@ export interface OptimizerConfigBase {
   la_alpha?: number;
 }
 
-/** Serialized network payload used in checkpoint callbacks. */
+/**
+ * Serialized network payload used in checkpoint callbacks.
+ *
+ * This is intentionally loose: serialization formats evolve and may include nested
+ * structures. Treat this as an opaque snapshot blob.
+ */
 export type SerializedNetwork = Record<string, any>;
 
-/** Checkpoint callback configuration. */
+/**
+ * Checkpoint callback configuration.
+ *
+ * Training can periodically call `save(...)` with a serialized network snapshot.
+ * You can persist these snapshots to disk, upload them, or keep them in-memory.
+ */
 export interface CheckpointConfig {
   /** Save latest state flag. */
   last?: boolean;
@@ -593,7 +754,12 @@ export interface CheckpointConfig {
   }) => void;
 }
 
-/** Schedule callback configuration. */
+/**
+ * Schedule callback configuration.
+ *
+ * A schedule callback is a simple "tick hook" that runs every N iterations.
+ * Typical uses include logging, custom learning-rate schedules, or diagnostics.
+ */
 export interface ScheduleConfig {
   /** Callback frequency in iterations. */
   iterations: number;
@@ -601,7 +767,12 @@ export interface ScheduleConfig {
   function: (info: { error: number; iteration: number }) => void;
 }
 
-/** Metrics hook signature. */
+/**
+ * Metrics hook signature.
+ *
+ * If provided, this callback receives summarized metrics after each iteration.
+ * It is designed for lightweight telemetry, not heavy data export.
+ */
 export type MetricsHook = (m: {
   /** Iteration number. */
   iteration: number;
@@ -613,7 +784,12 @@ export type MetricsHook = (m: {
   gradNorm: number;
 }) => void;
 
-/** Moving-average strategy identifier. */
+/**
+ * Moving-average strategy identifier.
+ *
+ * These strategies are used to smooth the monitored error curve during training.
+ * Smoothing can make early stopping and progress logging less noisy.
+ */
 export type MovingAverageType =
   | 'sma'
   | 'ema'
@@ -623,7 +799,30 @@ export type MovingAverageType =
   | 'trimmed'
   | 'wma';
 
-/** Public training options shape. */
+/**
+ * Public training options accepted by the high-level training orchestration.
+ *
+ * Training in this codebase is conceptually:
+ * 1) forward activation
+ * 2) backward propagation
+ * 3) optimizer update
+ * repeated until a stopping condition is met.
+ *
+ * Minimal example:
+ *
+ * ```ts
+ * net.train(set, {
+ *   iterations: 500,
+ *   rate: 0.3,
+ *   batchSize: 16,
+ *   gradientClip: { mode: 'norm', maxNorm: 1 },
+ * });
+ * ```
+ *
+ * Stopping conditions:
+ * - Provide at least one of `iterations` or `error`.
+ * - `earlyStopPatience` adds an additional "stop when no improvement" guard.
+ */
 export interface TrainingOptions {
   /** Max iterations stopping condition. */
   iterations?: number;

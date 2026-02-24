@@ -1,38 +1,325 @@
 # architecture/network/evolve
 
+## architecture/network/evolve/network.evolve.utils.types.ts
+
+### network.evolve.utils.types
+
+Shared dataset compatibility error message.
+
+### DATASET_COMPATIBILITY_ERROR_MESSAGE
+
+### DEFAULT_EVALUATION_AMOUNT
+
+### DEFAULT_GROWTH
+
+### DEFAULT_LOG_INTERVAL
+
+### DEFAULT_TARGET_ERROR
+
+### DEFAULT_THREAD_COUNT
+
+### DISABLED_TARGET_ERROR
+
+### EvolutionSummary
+
+Shared evolution summary payload.
+
+### GenomeStructureCounts
+
+Structural counts used by complexity heuristics.
+
+### MAX_CONSECUTIVE_INVALID_ERRORS
+
+### SMALL_POPULATION_MUTATION_AMOUNT
+
+### SMALL_POPULATION_MUTATION_RATE
+
+### SMALL_POPULATION_THRESHOLD
+
+### STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE
+
+### ZERO_ITERATIONS
+
 ## architecture/network/evolve/network.evolve.utils.ts
+
+### evolveNetwork
+
+`(set: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingSample[], options: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
+
+Evolves a network with a NEAT-style search loop until an error target or generation limit is reached.
+
+Overview:
+- This method treats the current network as a *seed genome* and explores better variants.
+- Candidate genomes are scored by prediction error plus a structural complexity penalty.
+- The best discovered genome is copied back into the current instance (in-place upgrade).
+
+Typical usage guidance:
+- Use `error` when you care about reaching a quality threshold.
+- Use `iterations` when you need deterministic runtime bounds.
+- Use both when you want "stop when good enough, otherwise cap time" behavior.
+- Increase `threads` only when worker support exists and dataset evaluation is expensive.
+
+Parameters:
+- `this` - - Bound Network instance that receives the best evolved structure.
+- `set` - - Supervised samples; sample input/output dimensions must match network I/O.
+- `options` - - Evolution hyperparameters and stop conditions.
+
+Returns: Final summary containing best error estimate, generations processed, and elapsed milliseconds.
+
+## architecture/network/evolve/network.evolve.loop.utils.ts
+
+### applyEvolutionStep
+
+`(state: import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionLoopState, evolvedGenome: import("C:/NeatapticTS/src/architecture/network").default, growth: number) => void`
+
+Applies one evolve() result to loop state.
+
+Parameters:
+- `state` - - Mutable loop state.
+- `evolvedGenome` - - Genome returned by NEAT evolve step.
+- `growth` - - Complexity growth scalar.
+
+Returns: Nothing.
+
+### createInitialLoopState
+
+`() => import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionLoopState`
+
+Creates initial loop state snapshot.
+
+Returns: Initial loop state.
+
+### deriveErrorFromFitness
+
+`(fitness: number, genome: import("C:/NeatapticTS/src/architecture/network").default, growth: number) => number`
+
+Derive error from fitness by inverting score composition.
+
+Parameters:
+- `fitness` - - Fitness value from fittest genome.
+- `genome` - - Fittest genome.
+- `growth` - - Complexity growth scalar.
+
+Returns: Derived error value.
+
+### runEvolutionLoop
+
+`(neatInstance: import("C:/NeatapticTS/src/architecture/network/network.types").NeatRuntime, resolvedSettings: import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionSettings, targetError: number, iterations: number | undefined) => Promise<{ error: number; bestGenome: import("C:/NeatapticTS/src/architecture/network").default | undefined; }>`
+
+Run core evolution loop until stop condition is met.
+
+Parameters:
+- `neatInstance` - - Active NEAT instance.
+- `resolvedSettings` - - Scalar evolution settings.
+- `targetError` - - Effective target error (-1 means disabled).
+- `iterations` - - Optional max iteration count.
+
+Returns: Loop result snapshot.
+
+### runScheduleCallbackSafely
+
+`(scheduleConfig: { iterations: number; function: (stats: { fitness: number; error: number; iteration: number; }) => void; } | undefined, generation: number, bestFitness: number, error: number) => void`
+
+Run schedule callback if schedule trigger is reached.
+
+Parameters:
+- `scheduleConfig` - - Optional schedule configuration.
+- `generation` - - Current generation.
+- `bestFitness` - - Current best fitness.
+- `error` - - Current error.
+
+Returns: Nothing.
+
+### shouldAbortForInvalidErrors
+
+`(state: import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionLoopState) => boolean`
+
+Determines whether loop must abort due to invalid-error streak.
+
+Parameters:
+- `state` - - Mutable loop state.
+
+Returns: True when invalid-error threshold is reached.
+
+### shouldContinueEvolution
+
+`(currentError: number, targetError: number, iterationsSpecified: boolean, currentGeneration: number, maxIterations: number | undefined) => boolean`
+
+Determine whether evolution loop should continue.
+
+Parameters:
+- `currentError` - - Current derived error value.
+- `targetError` - - Effective target error (-1 means disabled).
+- `iterationsSpecified` - - Whether iterations limit is active.
+- `currentGeneration` - - Current NEAT generation index.
+- `maxIterations` - - Maximum iteration limit.
+
+Returns: True when loop should continue.
+
+### updateBestGenomeIfImproved
+
+`(currentBestFitness: number, currentBestGenome: import("C:/NeatapticTS/src/architecture/network").default | undefined, candidateFitness: number, candidateGenome: import("C:/NeatapticTS/src/architecture/network").default) => { bestFitness: number; bestGenome: import("C:/NeatapticTS/src/architecture/network").default | undefined; }`
+
+Update best fitness/genome snapshot when improved.
+
+Parameters:
+- `currentBestFitness` - - Current best fitness.
+- `currentBestGenome` - - Current best genome.
+- `candidateFitness` - - Candidate fitness.
+- `candidateGenome` - - Candidate genome.
+
+Returns: Updated best snapshot.
+
+### updateInvalidErrorCounter
+
+`(currentCount: number, currentError: number) => number`
+
+Update invalid-error counter.
+
+Parameters:
+- `currentCount` - - Current consecutive invalid-error count.
+- `currentError` - - Current derived error value.
+
+Returns: Updated guard state.
+
+## architecture/network/evolve/network.evolve.setup.utils.ts
+
+### applySmallPopulationHeuristics
+
+`(neatInstance: import("C:/NeatapticTS/src/architecture/network/network.types").NeatRuntime, evolveOptions: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => void`
+
+Increase mutation aggressiveness for tiny populations.
+
+Parameters:
+- `neatInstance` - - Active NEAT instance.
+- `evolveOptions` - - Evolve options object.
+
+Returns: Nothing.
+
+### assertEvolutionDatasetCompatibility
+
+`(network: import("C:/NeatapticTS/src/architecture/network").default, dataSet: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingSample[]) => void`
+
+Validate dataset existence and dimensional compatibility with network I/O.
+
+Parameters:
+- `network` - - Network being evolved.
+- `dataSet` - - Supervised dataset.
+
+Returns: Nothing.
+
+### configureNeatOptions
+
+`(network: import("C:/NeatapticTS/src/architecture/network").default, evolveOptions: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => void`
+
+Normalize options used by NEAT constructor.
+
+Parameters:
+- `network` - - Network instance being evolved.
+- `evolveOptions` - - Evolve options object.
+
+Returns: Nothing.
+
+### createEvolutionConfig
+
+`(settingsToSummarize: import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionSettings) => import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionConfig | undefined`
+
+Build optional structured evolution config summary.
+
+Parameters:
+- `settingsToSummarize` - - Scalar evolution settings.
+
+Returns: Optional summary config.
+
+### createNeatInstance
+
+`(network: import("C:/NeatapticTS/src/architecture/network").default, fitnessFunction: import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionFitnessFunction, evolveOptions: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => Promise<import("C:/NeatapticTS/src/architecture/network/network.types").NeatRuntime>`
+
+Lazy-load and create NEAT instance.
+
+Parameters:
+- `network` - - Network instance being evolved.
+- `fitnessFunction` - - Prepared fitness evaluator.
+- `evolveOptions` - - Evolve options object.
+
+Returns: Constructed NEAT instance.
+
+### getNormalizedOptions
+
+`(evolveOptions: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions`
+
+Ensure options object exists.
+
+Parameters:
+- `evolveOptions` - - Incoming evolve options.
+
+Returns: Safe options object.
+
+### prepareFitnessFunction
+
+`(dataSet: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingSample[], resolvedSettings: import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionSettings, evolveOptions: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => Promise<import("C:/NeatapticTS/src/architecture/network/network.types").FitnessSetup>`
+
+Build fitness function according to threading configuration.
+
+Parameters:
+- `dataSet` - - Supervised dataset.
+- `resolvedSettings` - - Scalar evolution settings.
+- `evolveOptions` - - Evolve options object.
+
+Returns: Fitness function and resolved thread count.
+
+### resolveEvolutionSettings
+
+`(evolveOptions: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionSettings`
+
+Resolve normalized scalar settings with defaults.
+
+Parameters:
+- `evolveOptions` - - Evolve options object.
+
+Returns: Normalized scalar settings.
+
+### resolveStopConditions
+
+`(evolveOptions: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions, initialTargetError: number) => import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionStopConditions`
+
+Resolve stopping-condition semantics while preserving legacy behavior.
+
+Parameters:
+- `evolveOptions` - - Evolve options object.
+- `initialTargetError` - - Target error resolved from options.
+
+Returns: Final stop conditions.
+
+### warnIfNoBestGenomeMayOccur
+
+`(neatInstance: import("C:/NeatapticTS/src/architecture/network/network.types").NeatRuntime, evolveOptions: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => void`
+
+Emit warning when zero-iteration configuration may produce no best genome.
+
+Parameters:
+- `neatInstance` - - Active NEAT instance.
+- `evolveOptions` - - Evolve options object.
+
+Returns: Nothing.
+
+## architecture/network/evolve/network.evolve.fitness.utils.ts
 
 ### buildMultiThreadFitness
 
 `(set: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingSample[], cost: import("C:/NeatapticTS/src/architecture/network/network.types").CostFunctionOrRef, amount: number, growth: number, threads: number, options: Record<string, unknown>) => Promise<import("C:/NeatapticTS/src/architecture/network/network.types").FitnessSetup>`
 
-Build a multi-threaded (worker-based) population fitness evaluator if worker infrastructure is available.
-
-Strategy:
- - Attempt to dynamically obtain a Worker constructor (node or browser variant).
- - If not possible, gracefully fall back to single-thread evaluation.
- - Spawn N workers (threads) each capable of evaluating genomes by calling worker.evaluate(genome).
- - Provide a fitness function that takes the whole population and returns a Promise that resolves
-   when all queued genomes have been processed. Each genome's score is written in-place.
-
-Implementation details:
- - Queue: simple FIFO (array shift) suffices because ordering is not critical.
- - Robustness: Each worker evaluation is wrapped with error handling to prevent a single failure
-   from stalling the batch; failed evaluations simply proceed to next genome.
- - Complexity penalty applied after raw result retrieval: genome.score = -result - penalty.
-
-Returned metadata sets options.fitnessPopulation=true so downstream NEAT logic treats the fitness
-function as operating over the entire population at once (rather than per-genome).
+Build worker-based population fitness setup.
 
 Parameters:
 - `set` - - Dataset.
-- `cost` - - Cost function.
-- `amount` - - Repetition count (unused directly here; assumed handled inside worker.evaluate result metric if needed).
+- `cost` - - Cost function or reference.
+- `amount` - - Repetition count.
 - `growth` - - Complexity penalty scalar.
 - `threads` - - Desired worker count.
-- `options` - - Evolution options object (mutated to add cleanup hooks & flags).
+- `options` - - Evolution options object.
 
-Returns: Object with fitnessFunction (population evaluator) and resolved thread count.
+Returns: Population fitness setup.
 
 ### buildPopulationWorkerFitnessFunction
 
@@ -50,28 +337,19 @@ Returns: Population-level fitness function.
 
 `(set: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingSample[], cost: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveCostFunction, amount: number, growth: number) => import("C:/NeatapticTS/src/architecture/network/network.types").SingleGenomeFitnessFunction`
 
-Build a single-threaded fitness evaluation function (classic NEAT style) evaluating a genome
-over the provided dataset and returning a scalar score where higher is better.
-
-Fitness Definition:
-  fitness = -averageError - complexityPenalty
-We accumulate negative error (so lower error => higher fitness) over `amount` independent
-evaluations (amount>1 can smooth stochastic evaluation noise) then subtract complexity penalty.
-
-Error handling: If evaluation throws (numerical instability, internal error) we return -Infinity
-so such genomes are strongly disfavored.
+Build a single-threaded genome fitness evaluator.
 
 Parameters:
 - `set` - - Dataset of training samples.
-- `cost` - - Cost function reference (should expose error computation in genome.test).
-- `amount` - - Number of repeated evaluations to average.
+- `cost` - - Cost function reference.
+- `amount` - - Number of repeated evaluations.
 - `growth` - - Complexity penalty scalar.
 
-Returns: Function mapping a Network genome to a numeric fitness.
+Returns: Single-genome fitness function.
 
 ### cacheComplexityBase
 
-`(genome: import("C:/NeatapticTS/src/architecture/network").default, structureCounts: { nodeCount: number; connectionCount: number; gateCount: number; }, complexityBase: number) => void`
+`(genome: import("C:/NeatapticTS/src/architecture/network").default, structureCounts: import("C:/NeatapticTS/src/architecture/network/evolve/network.evolve.utils.types").GenomeStructureCounts, complexityBase: number) => void`
 
 Store complexity base cache entry for future reuse.
 
@@ -82,9 +360,20 @@ Parameters:
 
 Returns: Nothing.
 
+### claimNextGenome
+
+`(context: import("C:/NeatapticTS/src/architecture/network/network.types").PopulationWorkerEvaluationContext) => import("C:/NeatapticTS/src/architecture/network").default | undefined`
+
+Claims the next genome index from shared queue state.
+
+Parameters:
+- `context` - - Population evaluation context.
+
+Returns: Next genome, or undefined when queue is exhausted.
+
 ### computeComplexityBase
 
-`(genome: import("C:/NeatapticTS/src/architecture/network").default, structureCounts: { nodeCount: number; connectionCount: number; gateCount: number; }) => number`
+`(genome: import("C:/NeatapticTS/src/architecture/network").default, structureCounts: import("C:/NeatapticTS/src/architecture/network/evolve/network.evolve.utils.types").GenomeStructureCounts) => number`
 
 Compute non-scaled complexity base from structural counts.
 
@@ -98,25 +387,27 @@ Returns: Base complexity value before growth scaling.
 
 `(genome: import("C:/NeatapticTS/src/architecture/network").default, growth: number) => number`
 
-Compute a structural complexity penalty scaled by a growth factor.
-
-Complexity heuristic:
-  (hidden nodes) + (connections) + (gates)
-hidden nodes = total nodes - input - output (to avoid penalizing fixed I/O interface size).
-
-Rationale: Encourages minimal / parsimonious networks by subtracting a term from fitness
-proportional to network size, counteracting bloat. Growth hyper‑parameter tunes pressure.
-
-Caching strategy: We memoize the base complexity (pre‑growth scaling) per genome when its
-structural counts (nodes / connections / gates) are unchanged. This is safe because only
-structural mutations alter these counts, and those invalidate earlier entries naturally
-(since mutated genomes are distinct object references in typical NEAT flows).
+Compute structural complexity penalty scaled by growth.
 
 Parameters:
 - `genome` - - Candidate network whose complexity to measure.
-- `growth` - - Positive scalar controlling strength of parsimony pressure.
+- `growth` - - Positive scalar controlling parsimony pressure.
 
-Returns: Complexity * growth (used directly to subtract from fitness score).
+Returns: Complexity penalty.
+
+### createPopulationWorkerEvaluationContext
+
+`(sourceWorkers: import("C:/NeatapticTS/src/multithreading/types").TestWorkerInstance[], sourcePopulation: import("C:/NeatapticTS/src/architecture/network").default[], sourceGrowth: number, sourceResolve: () => void) => import("C:/NeatapticTS/src/architecture/network/network.types").PopulationWorkerEvaluationContext`
+
+Creates the shared evaluation context for one population run.
+
+Parameters:
+- `sourceWorkers` - - Worker pool.
+- `sourcePopulation` - - Population to evaluate.
+- `sourceGrowth` - - Complexity penalty scalar.
+- `sourceResolve` - - Promise resolver.
+
+Returns: Population evaluation context.
 
 ### createSingleThreadFallbackFitness
 
@@ -131,6 +422,18 @@ Parameters:
 - `growth` - - Complexity penalty scalar.
 
 Returns: Single-thread fitness setup.
+
+### createWorkerTraversalContext
+
+`(context: import("C:/NeatapticTS/src/architecture/network/network.types").PopulationWorkerEvaluationContext, worker: import("C:/NeatapticTS/src/multithreading/types").TestWorkerInstance) => import("C:/NeatapticTS/src/architecture/network/network.types").WorkerTraversalContext`
+
+Creates traversal context for one worker.
+
+Parameters:
+- `context` - - Population evaluation context.
+- `worker` - - Worker instance.
+
+Returns: Worker traversal context.
 
 ### evaluateGenomeAmountTimes
 
@@ -170,56 +473,22 @@ Parameters:
 - `genome` - - Genome under evaluation.
 - `growth` - - Complexity penalty scalar.
 
-Returns: Promise resolving once score assignment completes.
+Returns: Promise resolving when score assignment completes.
 
-### evolveNetwork
+### finalizeWorker
 
-`(set: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingSample[], options: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
+`(context: import("C:/NeatapticTS/src/architecture/network/network.types").PopulationWorkerEvaluationContext) => void`
 
-Evolve (optimize) the current network's topology and weights using a NEAT-like evolutionary loop
-until a stopping criterion (target error or max iterations) is met.
-
-High-level process:
- 1. Validate dataset shape (input/output vector sizes must match network I/O counts).
- 2. Normalize / default option values and construct an internal configuration summary.
- 3. Build appropriate fitness evaluation function (single or multi-thread).
- 4. Initialize a Neat population (optionally with speciation) seeded by this network.
- 5. Iteratively call neat.evolve():
-      - Retrieve fittest genome + its fitness.
-      - Derive an error metric from fitness (inverse relationship considering complexity penalty).
-      - Track best genome overall (elitism) and perform logging/scheduling callbacks.
-      - Break if error criterion satisfied or iterations exceeded.
- 6. Replace this network's internal structural arrays with the best discovered genome's (in-place upgrade).
- 7. Cleanup any worker threads and report final statistics.
-
-Fitness / Error relationship:
-  fitness = -error - complexityPenalty  =>  error = -(fitness - complexityPenalty)
-We recompute error from the stored fitness plus penalty to ensure consistent reporting.
-
-Resilience strategies:
- - Guard against infinite / NaN errors; after MAX_INF consecutive invalid errors we abort.
- - Fallback for tiny populations: increase mutation aggressiveness to prevent premature convergence.
+Marks one worker as completed and resolves when all workers finish.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance being evolved in-place.
- *
-- `set` - - Supervised dataset (array of {input, output}).
-- `options` - - Evolution options (see README / docs). Key fields include:
-- iterations: maximum generations (if omitted must supply error target)
-- error: target error threshold (if omitted must supply iterations)
-- growth: complexity penalty scaling
-- amount: number of score evaluations (averaged) per genome
-- threads: desired worker count (>=2 enables multi-thread path if available)
-- popsize / populationSize: population size
-- schedule: { iterations: number, function: (ctx) => void } periodic callback
-- log: generation interval for console logging
-- clear: whether to call network.clear() after adopting best genome
+- `context` - - Population evaluation context.
 
-Returns: Summary object { error, iterations, time(ms) }.
+Returns: Nothing.
 
 ### getCachedComplexityBase
 
-`(genome: import("C:/NeatapticTS/src/architecture/network").default, structureCounts: { nodeCount: number; connectionCount: number; gateCount: number; }) => number | null`
+`(genome: import("C:/NeatapticTS/src/architecture/network").default, structureCounts: import("C:/NeatapticTS/src/architecture/network/evolve/network.evolve.utils.types").GenomeStructureCounts) => number | null`
 
 Retrieve cached complexity base if cached structure counts still match.
 
@@ -231,7 +500,7 @@ Returns: Cached complexity base or null when cache miss occurs.
 
 ### getGenomeStructureCounts
 
-`(genome: import("C:/NeatapticTS/src/architecture/network").default) => { nodeCount: number; connectionCount: number; gateCount: number; }`
+`(genome: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/evolve/network.evolve.utils.types").GenomeStructureCounts`
 
 Get structural counts used by complexity heuristic.
 
@@ -239,6 +508,17 @@ Parameters:
 - `genome` - - Candidate network whose structure is being measured.
 
 Returns: Structural counts used for complexity computation.
+
+### hasNoWorkers
+
+`(context: import("C:/NeatapticTS/src/architecture/network/network.types").PopulationWorkerEvaluationContext) => boolean`
+
+Checks whether there are workers available to process genomes.
+
+Parameters:
+- `context` - - Population evaluation context.
+
+Returns: True when worker pool is empty.
 
 ### installWorkerTerminationHook
 
@@ -263,6 +543,17 @@ Parameters:
 
 Returns: Cost name string.
 
+### resolveEvaluation
+
+`(context: import("C:/NeatapticTS/src/architecture/network/network.types").PopulationWorkerEvaluationContext) => void`
+
+Resolves the population evaluation promise.
+
+Parameters:
+- `context` - - Population evaluation context.
+
+Returns: Nothing.
+
 ### resolveTestWorkerConstructor
 
 `() => Promise<import("C:/NeatapticTS/src/multithreading/types").TestWorkerConstructor | null>`
@@ -271,6 +562,17 @@ Resolve worker constructor for current runtime environment.
 
 Returns: Worker constructor or null when unavailable.
 
+### runWorkerTraversalStep
+
+`(traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").WorkerTraversalContext) => void`
+
+Runs one asynchronous traversal step for a worker.
+
+Parameters:
+- `traversalContext` - - Worker traversal context.
+
+Returns: Nothing.
+
 ### spawnTestWorkers
 
 `(workerConstructor: import("C:/NeatapticTS/src/multithreading/types").TestWorkerConstructor, serializedSet: number[], cost: import("C:/NeatapticTS/src/architecture/network/network.types").CostFunctionOrRef, threads: number) => import("C:/NeatapticTS/src/multithreading/types").TestWorkerInstance[]`
@@ -278,12 +580,23 @@ Returns: Worker constructor or null when unavailable.
 Spawn worker instances up to requested thread count.
 
 Parameters:
-- `workerConstructor` - - Worker constructor resolved for current runtime.
+- `workerConstructor` - - Worker constructor resolved for runtime.
 - `serializedSet` - - Serialized dataset shared with workers.
 - `cost` - - Cost function or cost reference.
 - `threads` - - Requested worker count.
 
 Returns: Spawned worker instances.
+
+### startWorkerTraversal
+
+`(context: import("C:/NeatapticTS/src/architecture/network/network.types").PopulationWorkerEvaluationContext) => void`
+
+Starts traversal loops for all workers.
+
+Parameters:
+- `context` - - Population evaluation context.
+
+Returns: Nothing.
 
 ### warnGenomeEvaluationFailure
 
@@ -293,5 +606,45 @@ Emit warning when genome evaluation fails.
 
 Parameters:
 - `error` - - Unknown evaluation error.
+
+Returns: Nothing.
+
+## architecture/network/evolve/network.evolve.finalize.utils.ts
+
+### adoptBestGenomeOrWarn
+
+`(network: import("C:/NeatapticTS/src/architecture/network").default, neatInstance: import("C:/NeatapticTS/src/architecture/network/network.types").NeatRuntime, bestGenome: import("C:/NeatapticTS/src/architecture/network").default | undefined, clearState: boolean) => void`
+
+Adopt best genome structure or emit warning when unavailable.
+
+Parameters:
+- `network` - - Network instance being evolved.
+- `neatInstance` - - Active NEAT instance.
+- `bestGenome` - - Best genome snapshot.
+- `clearState` - - Whether to clear network after adoption.
+
+Returns: Nothing.
+
+### buildEvolutionSummary
+
+`(error: number, iterations: number, loopStartTime: number) => import("C:/NeatapticTS/src/architecture/network/evolve/network.evolve.utils.types").EvolutionSummary`
+
+Build final evolve return payload.
+
+Parameters:
+- `error` - - Final loop error.
+- `iterations` - - Final generation count.
+- `loopStartTime` - - Loop start timestamp.
+
+Returns: Evolution summary object.
+
+### terminateWorkersSafely
+
+`(evolveOptions: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => void`
+
+Terminate worker resources registered in options.
+
+Parameters:
+- `evolveOptions` - - Evolve options object.
 
 Returns: Nothing.

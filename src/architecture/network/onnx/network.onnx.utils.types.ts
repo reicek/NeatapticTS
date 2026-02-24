@@ -1,21 +1,59 @@
+/**
+ * Types for NeatapticTS’s ONNX-like JSON export/import.
+ *
+ * The exporter produces an `OnnxModel` (a JSON-serializable object) and the importer
+ * reconstructs a `Network` from that object.
+ *
+ * Practical notes:
+ * - These types intentionally resemble ONNX’s `ModelProto`/`GraphProto` concepts, but they
+ *   are *not* a full ONNX protobuf implementation.
+ * - `opset` and `ir_version` are recorded as metadata for inspection/compat bookkeeping.
+ *   They are not a promise of universal ONNX-runtime compatibility.
+ *
+ * Stability & compatibility expectations:
+ * - This repo’s importer is only guaranteed to accept models produced by this repo’s
+ *   exporter.
+ * - The schema is JSON-first and may evolve; prefer re-exporting/importing through the
+ *   library rather than hand-editing blobs.
+ */
+
 import Connection from '../../connection';
 import type Layer from '../../layer';
 import type Network from '../../network';
 import type NeatapticNode from '../../node';
 
-/** Runtime perceptron factory signature used by ONNX import orchestration. */
+/**
+ * Runtime perceptron factory signature used by ONNX import orchestration.
+ *
+ * This factory is injected so the ONNX import path can rebuild an MLP without taking a
+ * hard dependency on a specific constructor shape.
+ */
 export type OnnxRuntimePerceptronFactory = (...sizes: number[]) => Network;
 
-/** Runtime layer-constructor signature used for recurrent layer reconstruction. */
+/**
+ * Runtime layer-constructor signature used for recurrent layer reconstruction.
+ *
+ * ONNX import can optionally reconstruct higher-level recurrent layers (like LSTM/GRU)
+ * from exported metadata. This factory provides the concrete layer implementation.
+ */
 export type OnnxRuntimeLayerFactory = (size: number) => Layer;
 
-/** Runtime layer module shape consumed by ONNX import orchestration. */
+/**
+ * Runtime layer module shape consumed by ONNX import orchestration.
+ *
+ * This is the minimal set of recurrent factories needed by the importer.
+ */
 export type OnnxRuntimeLayerModule = {
   lstm: OnnxRuntimeLayerFactory;
   gru: OnnxRuntimeLayerFactory;
 };
 
-/** Runtime factories consumed during ONNX import network reconstruction. */
+/**
+ * Runtime factories consumed during ONNX import network reconstruction.
+ *
+ * These factories let the importer reconstruct runtime objects (network + layers)
+ * while keeping the ONNX parser itself mostly pure.
+ */
 export type OnnxRuntimeFactories = {
   perceptronFactory: OnnxRuntimePerceptronFactory;
   layerModule: OnnxRuntimeLayerModule;
@@ -39,7 +77,10 @@ export type OnnxPerceptronBuildContext = {
 
 /**
  * Runtime interface for accessing node internal properties.
- * Nodes have runtime properties for connections, bias, and squash that aren't in the public interface.
+ *
+ * This is intentionally "internal": it exposes mutable fields that the ONNX exporter/importer
+ * needs (connections, bias, squash). Regular library users should generally interact with
+ * the public `Node` API instead.
  */
 export interface NodeInternals {
   connections: {
@@ -56,7 +97,22 @@ export type NodeInternalsWithExportIndex = NodeInternals & {
   index?: number;
 };
 
-/** Runtime activation function signature used by ONNX activation import/export paths. */
+/**
+ * Runtime activation function signature used by ONNX activation import/export paths.
+ *
+ * Neataptic-style activations support a dual-purpose call pattern:
+ * - `derivate === false | undefined`: return activation output $f(x)$
+ * - `derivate === true`: return derivative $f'(x)$
+ *
+ * This matches historical Neataptic semantics and keeps ONNX import/export compatible.
+ *
+ * Example:
+ *
+ * ```ts
+ * const y = activation(x);
+ * const dy = activation(x, true);
+ * ```
+ */
 export type ActivationFunction = NodeInternals['squash'];
 
 /** Node partitions used by ONNX layered-ordering inference traversal. */
@@ -200,7 +256,29 @@ export type ConvInferenceResult = {
   inferredSpecs: (Conv2DMapping & { note?: string })[];
 };
 
-/** Options controlling ONNX export behavior (Phase 1). */
+/**
+ * Options controlling ONNX-like export.
+ *
+ * These options trade off strictness, portability, and fidelity:
+ *
+ * - **Strict (default-ish)** export tries to keep the graph easy to interpret:
+ *   layered topology, homogeneous activations per layer, and fully-connected layers.
+ *
+ * - **Relaxed** export (`allowPartialConnectivity` / `allowMixedActivations`) can represent
+ *   more networks, but it may generate graphs that are primarily meant for NeatapticTS’s
+ *   importer (and may be less friendly to external ONNX tooling).
+ *
+ * - **Recurrent export** (`allowRecurrent`) is intentionally conservative and currently
+ *   focuses on a constrained single-step representation and optional fused heuristics.
+ *
+ * Key fields (high-level):
+ * - `includeMetadata`: includes `metadata_props` with architecture hints.
+ * - `opset`: numeric opset version stored in the exported model metadata (default is
+ *   resolved by the exporter; commonly 18 in this codebase).
+ * - `legacyNodeOrdering`: keeps older node ordering for backward compatibility.
+ * - `conv2dMappings` / `pool2dMappings`: encode conv/pool semantics for fully-connected
+ *   layers via explicit mapping declarations.
+ */
 export interface OnnxExportOptions {
   opset?: number;
   includeMetadata?: boolean;
@@ -595,7 +673,18 @@ export type OnnxConvKernelCoordinate = {
   kernelColumnIndex: number;
 };
 
-/** Mapping declaration for treating a fully-connected layer as a 2D convolution during export. */
+/**
+ * Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
+ *
+ * This does **not** magically turn an MLP into a convolutional network at runtime.
+ * It annotates a particular export-layer index with a conv interpretation so that:
+ * - The exported graph uses conv-shaped tensors/operators, and
+ * - Import can re-attach pooling/flatten metadata appropriately.
+ *
+ * Pitfall: mappings must match the actual layer sizes. If `inHeight * inWidth * inChannels`
+ * does not correspond to the prior layer width (and similarly for outputs), export or import
+ * may reject the model.
+ */
 export interface Conv2DMapping {
   layerIndex: number;
   inHeight: number;
@@ -615,7 +704,13 @@ export interface Conv2DMapping {
   activation?: string;
 }
 
-/** Mapping describing a pooling operation inserted after a given export-layer index. */
+/**
+ * Mapping describing a pooling operation inserted after a given export-layer index.
+ *
+ * This is represented as metadata and optional graph nodes during export.
+ * Import uses it to attach pooling-related runtime metadata back onto the reconstructed
+ * network (when supported).
+ */
 export interface Pool2DMapping {
   afterLayerIndex: number;
   type: 'MaxPool' | 'AveragePool';
@@ -669,6 +764,24 @@ export type OnnxAttribute = {
   strings?: string[];
 };
 
+/**
+ * ONNX-like model container (JSON-serializable).
+ *
+ * This is the main “wire format” object in this folder. Persist it as JSON text:
+ *
+ * ```ts
+ * const jsonText = JSON.stringify(model);
+ * const restoredModel = JSON.parse(jsonText) as OnnxModel;
+ * ```
+ *
+ * Notes:
+ * - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
+ *   conv/pool mappings, etc.). This is where most round-trip hints live.
+ * - Initializers currently store floating-point weights in `float_data`.
+ *
+ * Security/trust boundary:
+ * - Treat this as untrusted input if it comes from outside your process.
+ */
 export type OnnxModel = {
   ir_version?: number;
   opset_import?: { version: number; domain: string }[];
@@ -948,6 +1061,10 @@ export type PerNeuronConcatNodePayload = {
 
 /** Runtime factory map used to construct dynamic recurrent layer modules. */
 export type OnnxLayerFactory = Record<string, (...args: unknown[]) => unknown>;
+
+/** Runtime layer module shape widened for fused-recurrent reconstruction wiring. */
+export type OnnxRuntimeLayerFactoryMap = OnnxRuntimeLayerModule &
+  OnnxLayerFactory;
 
 /** Supported fused recurrent operator families recognized during ONNX import. */
 export type OnnxFusedRecurrentKind = 'LSTM' | 'GRU';

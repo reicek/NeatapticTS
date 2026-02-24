@@ -14,23 +14,22 @@ import {
   _finalizeSyncSlabRebuild,
   _finalizeAsyncSlabRebuild,
 } from './network.slab.rebuild.helpers.utils';
-import {
-  _canUseFastSlab,
-  _tryFastSlabFallbackForGating,
-  _tryFastSlabFallbackForMissingPrerequisites,
-  _prepareFastSlabRuntime,
-  _resolveFastTopoOrder,
-  _ensureFastSlabBuffers,
-  _seedFastInputLayer,
-  _propagateFastSlabActivations,
-  _collectFastSlabOutput,
-} from './network.slab.fast-path.helpers.utils';
+import { _canUseFastSlab } from './network.slab.fast-path.helpers.utils';
 import { _buildAdjacency } from './network.slab.adjacency.helpers.utils';
-import { _reindexNodes } from './network.slab.shared.helpers.utils';
+import { _prepareSlabBuildPreconditions } from './network.slab.setup.utils';
+import {
+  _createConnectionSlabView,
+  _readSlabVersion,
+} from './network.slab.view.utils';
+import { _activateFastSlab } from './network.slab.activate.utils';
 import type {
-  NetworkSlabProps,
-  SlabBuildContext,
   ConnectionSlabView,
+  NetworkSlabProps,
+} from './network.slab.utils.types';
+import {
+  SLAB_GROWTH_FACTOR_BROWSER,
+  SLAB_GROWTH_FACTOR_NODE,
+  SLAB_DEFAULT_ASYNC_CHUNK_SIZE,
 } from './network.slab.utils.types';
 
 export type { ConnectionSlabView } from './network.slab.utils.types';
@@ -67,12 +66,6 @@ export type { ConnectionSlabView } from './network.slab.utils.types';
  * ```
  */
 
-const ZERO = 0;
-const ONE = 1;
-const GROWTH_FACTOR_NODE = 1.75;
-const GROWTH_FACTOR_BROWSER = 1.25;
-const DEFAULT_ASYNC_CHUNK_SIZE = 50_000;
-
 /**
  * Allocation statistics snapshot for slab typed arrays.
  *
@@ -90,19 +83,6 @@ export function getSlabAllocationStats() {
 
   // Step 2: Return snapshot for diagnostics tooling.
   return allocatorSnapshot;
-}
-
-/**
- * Applies prerequisite normalization for slab rebuild passes.
- *
- * @param buildContext - Slab build context.
- * @returns Nothing.
- */
-function _prepareSlabBuildPreconditions(buildContext: SlabBuildContext): void {
-  // Step 1: Rebuild node indices when structural mutations invalidated ordering.
-  if (buildContext.internalNet._nodeIndexDirty) {
-    _reindexNodes(buildContext.network);
-  }
 }
 
 /**
@@ -126,7 +106,9 @@ function _prepareSlabBuildPreconditions(buildContext: SlabBuildContext): void {
 export function rebuildConnectionSlab(this: Network, force = false): void {
   const buildContext = _createSlabBuildContext(
     this,
-    typeof window === 'undefined' ? GROWTH_FACTOR_NODE : GROWTH_FACTOR_BROWSER,
+    typeof window === 'undefined'
+      ? SLAB_GROWTH_FACTOR_NODE
+      : SLAB_GROWTH_FACTOR_BROWSER,
   );
 
   // Step 1: Exit early when slabs are already clean unless forced.
@@ -167,13 +149,16 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
  */
 export async function rebuildConnectionSlabAsync(
   this: Network,
-  chunkSize = DEFAULT_ASYNC_CHUNK_SIZE,
+  chunkSize = SLAB_DEFAULT_ASYNC_CHUNK_SIZE,
 ): Promise<void> {
   if (typeof window === 'undefined') {
     return rebuildConnectionSlab.call(this, true);
   }
 
-  const buildContext = _createSlabBuildContext(this, GROWTH_FACTOR_BROWSER);
+  const buildContext = _createSlabBuildContext(
+    this,
+    SLAB_GROWTH_FACTOR_BROWSER,
+  );
 
   // Step 1: Exit early when slabs are already current.
   if (_shouldSkipSlabRebuild(buildContext.internalNet, false)) {
@@ -214,40 +199,11 @@ export async function rebuildConnectionSlabAsync(
  * @returns Read‑only style view (do not mutate) containing typed arrays + metadata.
  */
 export function getConnectionSlab(this: Network): ConnectionSlabView {
-  rebuildConnectionSlab.call(this); // Lazy rebuild if needed.
-  const internalNet = this as unknown as NetworkSlabProps;
-  let gain: Float32Array | Float64Array | null = internalNet._connGain || null;
-  if (!gain) {
-    // Provide a synthetic neutral gain view for educational/tests expecting parity while preserving omission semantics.
-    const cap =
-      internalNet._connCapacity ||
-      (internalNet._connWeights && internalNet._connWeights.length) ||
-      ZERO;
-    gain = internalNet._useFloat32Weights
-      ? new Float32Array(cap)
-      : new Float64Array(cap);
-    for (
-      let connectionIndex = ZERO;
-      connectionIndex < (internalNet._connCount || ZERO);
-      connectionIndex++
-    ) {
-      gain[connectionIndex] = ONE;
-    }
-  }
-  return {
-    weights: internalNet._connWeights!,
-    from: internalNet._connFrom!,
-    to: internalNet._connTo!,
-    flags: internalNet._connFlags!,
-    gain,
-    plastic: internalNet._connPlastic || null,
-    version: internalNet._slabVersion || ZERO,
-    used: internalNet._connCount || ZERO,
-    capacity:
-      internalNet._connCapacity ||
-      (internalNet._connWeights && internalNet._connWeights.length) ||
-      ZERO,
-  };
+  // Step 1: Ensure slab view reflects current network structure.
+  rebuildConnectionSlab.call(this);
+
+  // Step 2: Build and return packed slab view.
+  return _createConnectionSlabView(this);
 }
 
 /**
@@ -267,43 +223,17 @@ export function getConnectionSlab(this: Network): ConnectionSlabView {
  * @returns Output activations (detached plain array) of length `network.output`.
  */
 export function fastSlabActivate(this: Network, input: number[]): number[] {
-  const internalNet = this as unknown as NetworkSlabProps;
+  // Step 1: Ensure connection slab arrays are current.
   rebuildConnectionSlab.call(this);
+
+  // Step 2: Ensure adjacency slabs are current.
+  const internalNet = this as unknown as NetworkSlabProps;
   if (internalNet._adjDirty) {
     _buildAdjacency(this);
   }
 
-  const gatedFallback = _tryFastSlabFallbackForGating(this, input);
-  if (gatedFallback) {
-    return gatedFallback;
-  }
-
-  const missingPrerequisiteFallback =
-    _tryFastSlabFallbackForMissingPrerequisites(this, internalNet, input);
-  if (missingPrerequisiteFallback) {
-    return missingPrerequisiteFallback;
-  }
-
-  _prepareFastSlabRuntime(this, internalNet, (network) => {
-    _reindexNodes(network);
-  });
-  const topoOrder = _resolveFastTopoOrder(this, internalNet);
-  const nodeCount = this.nodes.length;
-
-  _ensureFastSlabBuffers(internalNet, nodeCount);
-  const activationBuffer = internalNet._fastA as Float32Array | Float64Array;
-  const stateBuffer = internalNet._fastS as Float32Array | Float64Array;
-  stateBuffer.fill(ZERO);
-
-  _seedFastInputLayer(this, input, activationBuffer);
-  _propagateFastSlabActivations(
-    this,
-    internalNet,
-    topoOrder,
-    activationBuffer,
-    stateBuffer,
-  );
-  return _collectFastSlabOutput(this, activationBuffer, nodeCount);
+  // Step 3: Delegate fast activation execution.
+  return _activateFastSlab(this, input);
 }
 
 /**
@@ -312,7 +242,7 @@ export function fastSlabActivate(this: Network, input: number[]): number[] {
  * @param training Whether caller is performing training (disables fast path if true).
  * @returns True when slab fast path predicates hold.
  */
-export function canUseFastSlab(this: Network, training: boolean) {
+export function canUseFastSlab(this: Network, training: boolean): boolean {
   // Step 1: Delegate to fast-path predicate helper.
   return _canUseFastSlab.call(this, training);
 }
@@ -322,7 +252,6 @@ export function canUseFastSlab(this: Network, training: boolean) {
  * @returns Non‑negative integer (0 if slab never built yet).
  */
 export function getSlabVersion(this: Network): number {
-  // Step 1: Read monotonic slab version with zero fallback.
-  const internalNet = this as unknown as NetworkSlabProps;
-  return internalNet._slabVersion || 0;
+  // Step 1: Delegate slab version read to view helper.
+  return _readSlabVersion(this);
 }

@@ -2,6 +2,22 @@
 
 ## utils/memory.ts
 
+### memory
+
+Memory instrumentation utilities (Phase 0).
+
+Educational overview:
+These helpers expose a *heuristic* snapshot of memory usage for the
+evolutionary population and internal pools. The goal is to help learners
+reason about how design choices (slab storage, pooling, typed arrays)
+influence memory footprint *without* incurring heavy introspection costs.
+
+Design principles:
+- Lightweight: Avoid deep graph walks or JSON serialization.
+- Pay-for-use: If no networks are registered the function returns a small, fast object.
+- Cross‑environment: Works in both Browser and Node via feature detection.
+- Extensible: Shape deliberately includes draft sections for later precise accounting phases.
+
 ### memoryStats
 
 `(targetNetworks: import("C:/NeatapticTS/src/utils/memory").NetworkView | import("C:/NeatapticTS/src/utils/memory").NetworkView[] | undefined) => import("C:/NeatapticTS/src/utils/memory").MemoryStats`

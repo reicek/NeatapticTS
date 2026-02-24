@@ -273,6 +273,26 @@ Returns: The average error.
 
 Workers for multi-threading
 
+## multithreading/types.ts
+
+### types
+
+Shared types for multithreading helpers and test workers.
+
+### ActivationFn
+
+`(x: number) => number`
+
+Shared types for multithreading helpers and test workers.
+
+### SerializableNetwork
+
+### SerializedSample
+
+### TestWorkerConstructor
+
+### TestWorkerInstance
+
 ## multithreading/multi.utils.ts
 
 ### absoluteActivation
@@ -473,19 +493,3 @@ Parameters:
 - `activationFunctions` - - Activation functions to apply.
 
 Returns: Average cost or NaN when invalid input.
-
-## multithreading/types.ts
-
-### ActivationFn
-
-`(x: number) => number`
-
-Shared types for multithreading helpers and test workers.
-
-### SerializableNetwork
-
-### SerializedSample
-
-### TestWorkerConstructor
-
-### TestWorkerInstance

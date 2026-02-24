@@ -1,12 +1,161 @@
 # architecture/network/mutate
 
+## architecture/network/mutate/network.mutate.utils.types.ts
+
+### BATCH_NORM_FLAG_KEY
+
+### DEFAULT_MUTATION_MAX
+
+### DEFAULT_MUTATION_MIN
+
+### ERROR_NO_MUTATE_METHOD
+
+### GATE_REASSIGN_THRESHOLD
+
+### LAYER_MODULE_PATH
+
+### MIN_REDUNDANT_CONNECTION_COUNT
+
+### MIN_SWAPPABLE_NODE_COUNT
+
+### NODE_TYPE_HIDDEN
+
+### NODE_TYPE_INPUT
+
+### NODE_TYPE_OUTPUT
+
+### RECURRENT_BLOCK_GRU
+
+### RECURRENT_BLOCK_LSTM
+
+### SINGLE_UNIT_RECURRENT_BLOCK_WIDTH
+
+### SUB_NODE_STABILITY_WEIGHT_DELTA
+
+### UNKNOWN_MUTATION_WARNING_PREFIX
+
+### WARNING_ALL_CONNECTIONS_GATED
+
+### WARNING_NO_ACTIVATION_MUTATION_TARGETS
+
+### WARNING_NO_GATED_CONNECTIONS_TO_REMOVE
+
+### WARNING_NO_HIDDEN_NODES_TO_REMOVE
+
+### WARNING_NO_SELF_CONNECTIONS_TO_REMOVE
+
+### WARNING_SELF_CONNECTIONS_ALREADY_PRESENT
+
 ## architecture/network/mutate/network.mutate.utils.ts
+
+### mutateImpl
+
+`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+
+Public entry point: apply a single mutation operator to the network.
+
+Runtime flow:
+1. Validate mutation input.
+2. Resolve the mutation key from string/object/reference forms.
+3. Resolve a concrete handler from the dispatch table.
+4. Delegate execution and mark topology-derived caches dirty.
+
+Error and warning behavior:
+- Throws when no method is provided.
+- Emits a warning and no-ops when an unknown method key is received.
+
+Parameters:
+- `this` - - Network instance.
+- `method` - - Mutation enum value or descriptor object.
+
+Returns: Nothing.
+
+### MutationMethod
+
+Mutation method descriptor shape.
+
+## architecture/network/mutate/network.mutate.dispatch.utils.ts
+
+### findMutationKeyByIdentityReference
+
+`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => string | undefined`
+
+Resolves a mutation key by direct identity-reference comparison.
+
+Parameters:
+- `method` - - Mutation object reference.
+
+Returns: Matching mutation key or undefined.
+
+### isMutationMethodKeyString
+
+`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => boolean`
+
+Checks whether mutation input is already a direct key string.
+
+Parameters:
+- `method` - - Mutation method input.
+
+Returns: True when method is a key string.
+
+### resolveDirectMutationKey
+
+`(methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }) => string | undefined`
+
+Resolves direct object fields that can represent a mutation key.
+
+Parameters:
+- `methodObject` - - Mutation method object.
+
+Returns: Direct key or undefined.
+
+### resolveMutationKey
+
+`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => string | undefined`
+
+Mutation-key normalization and warning helpers used by the mutate orchestrator.
+
+Responsibilities:
+- Normalize string/object/reference mutation inputs into a dispatch key.
+- Emit unknown-mutation warnings when warning mode is enabled.
+
+The helpers in this module are intentionally side-effect-light, except for optional
+warning emission, so orchestration code can remain deterministic and easy to inspect.
+
+### resolveMutationKeyFromObject
+
+`(methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }) => string | undefined`
+
+Resolves mutation key from object-form descriptor.
+
+Parameters:
+- `methodObject` - - Mutation method object.
+
+Returns: Dispatch key or undefined.
+
+### warnUnknownMutation
+
+`(mutationKey: string | undefined) => void`
+
+Emits unknown-mutation warning when configured.
+
+This helper intentionally no-ops when warnings are disabled so callers can invoke it
+without repeating feature-flag checks.
+
+Parameters:
+- `mutationKey` - - Resolved mutation key.
+
+Returns: Nothing.
+
+## architecture/network/mutate/network.mutate.handlers.utils.ts
 
 ### addBackConn
 
 `() => void`
 
-ADD_BACK_CONN mutation.
+Adds one backward (recurrent) connection between eligible node pairs.
+
+This operation is skipped in acyclic mode.
 
 Parameters:
 - `this` - - Bound network.
@@ -17,7 +166,9 @@ Returns: Nothing.
 
 `() => void`
 
-ADD_CONN mutation.
+Adds one forward connection between currently unconnected eligible node pairs.
+
+Candidate generation respects node ordering so the added edge is feed-forward.
 
 Parameters:
 - `this` - - Bound network.
@@ -28,7 +179,9 @@ Returns: Nothing.
 
 `() => void`
 
-ADD_GATE mutation.
+Assigns a random eligible node as gater for a random ungated connection.
+
+Candidate pool includes normal and self-connections.
 
 Parameters:
 - `this` - - Bound network.
@@ -39,7 +192,7 @@ Returns: Nothing.
 
 `() => void`
 
-ADD_GRU_NODE mutation.
+Replaces one connection by inserting a minimal GRU recurrent block.
 
 Parameters:
 - `this` - - Bound network.
@@ -50,7 +203,7 @@ Returns: Nothing.
 
 `() => void`
 
-ADD_LSTM_NODE mutation.
+Replaces one connection by inserting a minimal LSTM recurrent block.
 
 Parameters:
 - `this` - - Bound network.
@@ -61,7 +214,11 @@ Returns: Nothing.
 
 `() => void`
 
-ADD_NODE mutation orchestrator.
+Adds one hidden node by splitting an existing connection.
+
+Execution modes:
+- Deterministic chain mode grows a linear input→...→output chain.
+- Standard mode splits a randomly selected forward connection.
 
 Parameters:
 - `this` - - Bound network.
@@ -108,7 +265,9 @@ Returns: Nothing.
 
 `() => void`
 
-ADD_SELF_CONN mutation.
+Adds one self-connection on an eligible node that does not already have one.
+
+This operation is skipped in acyclic mode.
 
 Parameters:
 - `this` - - Bound network.
@@ -166,18 +325,24 @@ Returns: Nothing.
 
 `(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkMutationProps`
 
-Converts a network to its internal mutation runtime shape.
+Concrete mutation handler implementations used by the network mutate orchestrator.
 
-Parameters:
-- `network` - - Network to convert.
+Organization:
+- Exported functions represent public mutation operations mapped by dispatch key.
+- Internal helpers encapsulate candidate collection, validation, and graph rewiring.
+- Shared constants and warning strings are imported from `network.mutate.utils.types.ts`
+  to keep cross-file contracts explicit and avoid circular dependencies.
 
-Returns: Runtime mutation props.
+Behavioral notes:
+- Handlers preserve fail-soft semantics where possible (return early when no candidate exists).
+- Acyclic mode checks are enforced in handlers that could introduce recurrence.
+- Randomness is sourced from network mutation internals for reproducible deterministic flows.
 
 ### batchNorm
 
 `() => void`
 
-BATCH_NORM mutation.
+Enables the internal batch-normalization flag on one random hidden node.
 
 Parameters:
 - `this` - - Bound network.
@@ -665,17 +830,6 @@ Parameters:
 
 Returns: Matching node or undefined.
 
-### findMutationKeyByIdentityReference
-
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => string | undefined`
-
-Resolves a mutation key by direct identity-reference comparison.
-
-Parameters:
-- `method` - - Mutation object reference.
-
-Returns: Matching mutation key or undefined.
-
 ### hasRedundantEndpoints
 
 `(candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
@@ -772,17 +926,6 @@ Parameters:
 - `directionContext` - - Directional context.
 
 Returns: True when forward.
-
-### isMutationMethodKeyString
-
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => boolean`
-
-Checks whether mutation input is already a direct key string.
-
-Parameters:
-- `method` - - Mutation method input.
-
-Returns: True when method is a key string.
 
 ### isNodeWithoutSelfLoop
 
@@ -882,7 +1025,9 @@ Returns: Nothing.
 
 `(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
 
-MOD_ACTIVATION mutation.
+Mutates activation function on one random non-input node.
+
+Output-node eligibility is controlled by `method.mutateOutput` when provided.
 
 Parameters:
 - `this` - - Bound network.
@@ -894,7 +1039,9 @@ Returns: Nothing.
 
 `(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
 
-MOD_BIAS mutation.
+Mutates bias parameters on one random non-input node.
+
+Output nodes remain eligible for this operator.
 
 Parameters:
 - `this` - - Bound network.
@@ -906,29 +1053,15 @@ Returns: Nothing.
 
 `(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
 
-MOD_WEIGHT mutation.
+Perturbs one connection weight using a uniform delta sampled from configured bounds.
+
+The candidate pool includes standard and self-connections.
 
 Parameters:
 - `this` - - Bound network.
 - `method` - - Optional method descriptor.
 
 Returns: Nothing.
-
-### mutateImpl
-
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
-
-Public entry point: apply a single mutation operator to the network.
-
-Parameters:
-- `this` - - Network instance.
-- `method` - - Mutation enum value or descriptor object.
-
-Returns: Nothing.
-
-### MutationMethod
-
-Mutation method descriptor shape.
 
 ### pickDistinctNodePair
 
@@ -1024,7 +1157,9 @@ Returns: Nothing.
 
 `(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
 
-REINIT_WEIGHT mutation.
+Reinitializes incoming, outgoing, and self-connection weights for one target node.
+
+Weight sampling bounds come from method overrides or default mutation bounds.
 
 Parameters:
 - `this` - - Bound network.
@@ -1055,17 +1190,6 @@ Parameters:
 - `mutationProps` - - Runtime mutation props.
 
 Returns: Deterministic context or undefined when any prerequisite fails.
-
-### resolveDirectMutationKey
-
-`(methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }) => string | undefined`
-
-Resolves direct object fields that can represent a mutation key.
-
-Parameters:
-- `methodObject` - - Mutation method object.
-
-Returns: Direct key or undefined.
 
 ### resolveDistinctPairWithKnownFirstNode
 
@@ -1114,28 +1238,6 @@ Parameters:
 - `method` - - Optional mutation method.
 
 Returns: Method object view.
-
-### resolveMutationKey
-
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => string | undefined`
-
-Resolves a mutation dispatch key from user-provided method input.
-
-Parameters:
-- `method` - - Mutation method input.
-
-Returns: Dispatch key or undefined.
-
-### resolveMutationKeyFromObject
-
-`(methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }) => string | undefined`
-
-Resolves mutation key from object-form descriptor.
-
-Parameters:
-- `methodObject` - - Mutation method object.
-
-Returns: Dispatch key or undefined.
 
 ### resolveSelectedBackwardConnectionPair
 
@@ -1226,7 +1328,7 @@ Returns: Split result values.
 
 `() => void`
 
-SUB_BACK_CONN mutation.
+Removes one backward connection that satisfies redundancy constraints.
 
 Parameters:
 - `this` - - Bound network.
@@ -1237,7 +1339,9 @@ Returns: Nothing.
 
 `() => void`
 
-SUB_CONN mutation.
+Removes one forward connection when structural redundancy constraints are satisfied.
+
+Constraints require endpoint redundancy and avoid disconnecting peer-layer groups.
 
 Parameters:
 - `this` - - Bound network.
@@ -1248,7 +1352,7 @@ Returns: Nothing.
 
 `() => void`
 
-SUB_GATE mutation.
+Removes gating from one randomly selected gated connection.
 
 Parameters:
 - `this` - - Bound network.
@@ -1259,7 +1363,10 @@ Returns: Nothing.
 
 `() => void`
 
-SUB_NODE mutation.
+Removes one hidden node and applies a tiny weight nudge for numerical continuity.
+
+The stability nudge helps keep downstream mutation effects observable in edge cases
+where node removal substantially changes effective signal flow.
 
 Parameters:
 - `this` - - Bound network.
@@ -1270,7 +1377,7 @@ Returns: Nothing.
 
 `() => void`
 
-SUB_SELF_CONN mutation.
+Removes one existing self-connection chosen at random.
 
 Parameters:
 - `this` - - Bound network.
@@ -1293,7 +1400,10 @@ Returns: Nothing.
 
 `(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
 
-SWAP_NODES mutation.
+Swaps bias and activation squash functions between two distinct mutable nodes.
+
+This provides a lightweight structural-parameter recombination without changing
+graph connectivity.
 
 Parameters:
 - `this` - - Bound network.
@@ -1336,17 +1446,6 @@ Parameters:
 - `network` - - Target network.
 - `randomValue` - - Random generator.
 - `splitResult` - - Split result values.
-
-Returns: Nothing.
-
-### warnUnknownMutation
-
-`(mutationKey: string | undefined) => void`
-
-Emits unknown-mutation warning when configured.
-
-Parameters:
-- `mutationKey` - - Resolved mutation key.
 
 Returns: Nothing.
 

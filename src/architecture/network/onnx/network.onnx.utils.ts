@@ -39,7 +39,7 @@
  *  - Multi-time-step sequence handling (currently single-step recurrent representation only).
  *  - Richer recurrence (off-diagonal intra-layer connectivity) and gating reconstruction fidelity.
  *
- * NOTE: Import is only guaranteed to work for models produced by {@link exportToONNX}; arbitrary ONNX graphs are
+ * NOTE: Import is only guaranteed to work for models produced by `exportToONNX()`; arbitrary ONNX graphs are
  * NOT supported. Experimental fused recurrent nodes are best-effort and may silently degrade if shapes mismatch.
  */
 
@@ -53,6 +53,8 @@ export {
   rebuildConnectionsLocal,
   validateLayerHomogeneityAndConnectivity,
 } from './network.onnx.layer-analysis.utils';
+export { runOnnxExportFlow } from './network.onnx.export-flow.utils';
+export { runOnnxImportFlow } from './network.onnx.import-flow.utils';
 import { buildOnnxModel as buildOnnxModelImpl } from './network.onnx.export-build.utils';
 export { assignActivationFunctions } from './network.onnx.import-activations.utils';
 export {
@@ -76,12 +78,35 @@ export {
 // ---------------------------------------------------------------------------
 
 /**
- * Build ONNX graph for validated layered network (barrel forwarder).
+ * Build an ONNX-like model from a validated layered network view.
  *
- * @param network Source network.
- * @param layers Layered nodes.
- * @param options Export options.
- * @returns ONNX model.
+ * Role in the ONNX pipeline:
+ * - This function is a thin, stable orchestration boundary used by higher-level exporters.
+ * - It forwards to the implementation module while preserving a predictable public API
+ *   for callers that import from this compatibility barrel.
+ * - Keeping this wrapper explicit helps isolate call sites from internal file splits
+ *   and phased refactors in export internals.
+ *
+ * Expected preconditions:
+ * - `layers` has already been inferred from the same `network` instance.
+ * - Structural validation (layer homogeneity/connectivity and option gates) is complete.
+ * - Export options are normalized by the caller according to project defaults.
+ *
+ * High-level behavior:
+ *  1. Receive network, ordered layer matrix, and export options.
+ *  2. Delegate model construction to the concrete builder implementation.
+ *  3. Return the resulting ONNX-like JSON graph container unchanged.
+ *
+ * @param network - Source network to serialize.
+ * @param layers - Ordered layer matrix produced by layer inference utilities.
+ * @param options - Export options controlling metadata/recurrent/partial-connectivity behavior.
+ * @returns ONNX-like model object representing graph nodes, tensors, and metadata.
+ *
+ * @example
+ * ```ts
+ * const layers = inferLayerOrdering(network);
+ * const model = buildOnnxModel(network, layers, { includeMetadata: true });
+ * ```
  */
 export function buildOnnxModel(
   network: Network,
