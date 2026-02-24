@@ -22,7 +22,7 @@ emphasis on efficient evaluation and mutation of neural networks in parallel env
 
 #### absolute
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Absolute activation function.
 
@@ -33,7 +33,7 @@ Returns: The activated value.
 
 #### activateSerializedNetwork
 
-`(input: number[], A: number[], S: number[], data: number[], F: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number[]`
+`(inputValues: number[], activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number[]`
 
 Activates a serialized network.
 
@@ -52,7 +52,7 @@ A list of compiled activation functions in a specific order.
 
 #### bentIdentity
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Bent Identity activation function.
 
@@ -63,7 +63,7 @@ Returns: The activated value.
 
 #### bipolar
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Bipolar activation function.
 
@@ -74,7 +74,7 @@ Returns: The activated value.
 
 #### bipolarSigmoid
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Bipolar Sigmoid activation function.
 
@@ -96,7 +96,7 @@ Returns: The deserialized dataset as an array of input-output pairs.
 
 #### gaussian
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Gaussian activation function.
 
@@ -123,7 +123,7 @@ Returns: The node test worker.
 
 #### hardTanh
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Hard Tanh activation function.
 
@@ -134,7 +134,7 @@ Returns: The activated value.
 
 #### identity
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Identity activation function.
 
@@ -145,7 +145,7 @@ Returns: The activated value.
 
 #### inverse
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Inverse activation function.
 
@@ -156,7 +156,7 @@ Returns: The activated value.
 
 #### logistic
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Logistic activation function.
 
@@ -167,7 +167,7 @@ Returns: The activated value.
 
 #### relu
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Rectified Linear Unit (ReLU) activation function.
 
@@ -178,7 +178,7 @@ Returns: The activated value.
 
 #### selu
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Scaled Exponential Linear Unit (SELU) activation function.
 
@@ -200,7 +200,7 @@ Returns: The serialized dataset.
 
 #### sinusoid
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Sinusoid activation function.
 
@@ -211,7 +211,7 @@ Returns: The activated value.
 
 #### softplus
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Softplus activation function. - Added
 
@@ -222,7 +222,7 @@ Returns: The activated value.
 
 #### softsign
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Softsign activation function.
 
@@ -233,7 +233,7 @@ Returns: The activated value.
 
 #### step
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Step activation function.
 
@@ -244,7 +244,7 @@ Returns: The activated value.
 
 #### tanh
 
-`(x: number) => number`
+`(inputValue: number) => number`
 
 Hyperbolic tangent activation function.
 
@@ -255,7 +255,7 @@ Returns: The activated value.
 
 #### testSerializedSet
 
-`(set: import("C:/NeatapticTS/src/multithreading/types").SerializedSample[], cost: (expected: number[], actual: number[]) => number, A: number[], S: number[], data: number[], F: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number`
+`(serializedSampleSet: import("C:/NeatapticTS/src/multithreading/types").SerializedSample[], cost: (expected: number[], actual: number[]) => number, activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number`
 
 Tests a serialized dataset using a cost function.
 
@@ -275,6 +275,10 @@ Workers for multi-threading
 
 ## multithreading/types.ts
 
+### types
+
+Shared types for multithreading helpers and test workers.
+
 ### ActivationFn
 
 `(x: number) => number`
@@ -288,3 +292,204 @@ Shared types for multithreading helpers and test workers.
 ### TestWorkerConstructor
 
 ### TestWorkerInstance
+
+## multithreading/multi.utils.ts
+
+### absoluteActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Absolute activation.
+
+### activateSerializedNetwork
+
+`(inputValues: number[], activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number[]`
+
+Activates a serialized network and produces outputs.
+
+Parameters:
+- `inputValues` - - Inputs to feed into the network.
+- `activationValues` - - Mutable activation register shared across runs.
+- `stateValues` - - Mutable state register shared across runs.
+- `serializedNetwork` - - Flat encoded network data.
+- `activationFunctions` - - Ordered activation functions.
+
+Returns: Activated outputs.
+
+### ACTIVATION_FUNCTIONS
+
+### bentIdentityActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Bent identity activation.
+
+### bipolarActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Bipolar activation.
+
+### bipolarSigmoidActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Bipolar sigmoid activation.
+
+### deserializeDataSet
+
+`(serializedSet: number[]) => import("C:/NeatapticTS/src/multithreading/types").SerializedSample[]`
+
+Deserializes a dataset from its flat representation.
+
+Parameters:
+- `serializedSet` - - Flat serialized dataset array.
+
+Returns: Array of input/output sample pairs.
+
+### gaussianActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Gaussian activation.
+
+### hardTanhActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Hard tanh activation.
+
+### identityActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Identity activation.
+
+### inverseActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Inverse activation.
+
+### logisticActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Logistic activation.
+
+### reluActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: ReLU activation.
+
+### seluActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: SELU activation.
+
+### serializeDataSet
+
+`(dataSet: { input: number[]; output: number[]; }[]) => number[]`
+
+Serializes a dataset into a flat numeric array.
+
+Parameters:
+- `dataSet` - - Collection of samples with input and output arrays.
+
+Returns: Flat serialized representation [inputCount, outputCount, ...samples].
+
+### sinusoidActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Sinusoid activation.
+
+### softplusActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Softplus activation.
+
+### softsignActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Softsign activation.
+
+### stepActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Step activation.
+
+### tanhActivation
+
+`(value: number) => number`
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Hyperbolic tangent activation.
+
+### testSerializedSet
+
+`(serializedSampleSet: import("C:/NeatapticTS/src/multithreading/types").SerializedSample[], costFunction: (expected: number[], actual: number[]) => number, activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number`
+
+Tests a serialized dataset using a cost function.
+
+Parameters:
+- `serializedSampleSet` - - Serialized dataset samples.
+- `costFunction` - - Cost function comparing expected and actual outputs.
+- `activationValues` - - Mutable activation register.
+- `stateValues` - - Mutable state register.
+- `serializedNetwork` - - Serialized network data.
+- `activationFunctions` - - Activation functions to apply.
+
+Returns: Average cost or NaN when invalid input.

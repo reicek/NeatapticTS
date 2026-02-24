@@ -59,14 +59,14 @@ jobs:
         if: ${{ env.LOOP_SKIP == 'false' }}
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Setup Node (npmjs)
         if: ${{ env.LOOP_SKIP == 'false' }}
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org
           always-auth: true
         env:
@@ -143,7 +143,7 @@ jobs:
         if: ${{ env.LOOP_SKIP == 'false' }}
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://npm.pkg.github.com/
           always-auth: true
         env:

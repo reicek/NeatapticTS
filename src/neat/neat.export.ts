@@ -111,6 +111,7 @@ export interface NeatStateJSON {
  * innovation counters or hyper‑parameters.
  *
  * Example:
+ *
  * ```ts
  * // Assuming `neat` is an instance exposing this helper
  * const popSnapshot = neat.exportPopulation();
@@ -131,6 +132,7 @@ export function exportPopulation(this: NeatLike): GenomeJSON[] {
  * population array and implied `popsize` are updated.
  *
  * Example:
+ *
  * ```ts
  * const populationData: GenomeJSON[] = JSON.parse(fs.readFileSync('population.json','utf8'));
  * neat.importPopulation(populationData); // population replaced
@@ -164,6 +166,7 @@ export async function importPopulation(
  * truly *pause‑and‑resume* capability including innovation bookkeeping.
  *
  * Example:
+ *
  * ```ts
  * const state = neat.exportState();
  * fs.writeFileSync('state.json', JSON.stringify(state));
@@ -195,6 +198,7 @@ export function exportState(this: NeatLike): NeatStateJSON {
  * - Silently skips population import if `population` is missing or not an array.
  *
  * Example:
+ *
  * ```ts
  * const bundle: NeatStateJSON = JSON.parse(fs.readFileSync('state.json','utf8'));
  * const neat = Neat.importStateImpl(bundle, fitnessFn);
@@ -240,6 +244,7 @@ export async function importStateImpl(
  * later with a saved population.
  *
  * Example:
+ *
  * ```ts
  * const meta = neat.toJSONImpl();
  * fs.writeFileSync('neat-meta.json', JSON.stringify(meta));
@@ -270,6 +275,7 @@ export function toJSONImpl(this: NeatLike): NeatMetaJSON {
  * {@link importStateImpl} for a complete restore.
  *
  * Example:
+ *
  * ```ts
  * const meta: NeatMetaJSON = JSON.parse(fs.readFileSync('neat-meta.json','utf8'));
  * const neat = Neat.fromJSONImpl(meta, fitnessFn); // empty population, same innovations

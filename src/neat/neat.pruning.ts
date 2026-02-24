@@ -68,6 +68,7 @@ export function applyEvolutionPruning(this: NeatLikeForPruning) {
  * is required.
  *
  * Example:
+ *
  * ```ts
  * // options.adaptivePruning = { enabled: true, metric: 'connections', targetSparsity: 0.6 }
  * neat.applyAdaptivePruning();

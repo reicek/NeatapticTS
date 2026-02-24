@@ -1,5 +1,5 @@
 import Network from '../../src/architecture/network';
-import { evolveNetwork } from '../../src/architecture/network/network.evolve';
+import { evolveNetwork } from '../../src/architecture/network/network.utils';
 import Multi from '../../src/multithreading/multi';
 import { Workers } from '../../src/multithreading/workers/workers';
 import type { TestWorker } from '../../src/multithreading/workers/node/testworker';

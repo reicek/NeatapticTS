@@ -1,3 +1,3 @@
 // Backward compatibility shim: logic moved to network/network.onnx.ts
-export * from './network/network.onnx';
-export { default } from './network/network.onnx';
+export * from './network/onnx/network.onnx';
+export { default } from './network/onnx/network.onnx';

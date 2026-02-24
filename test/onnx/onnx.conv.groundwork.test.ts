@@ -1,6 +1,6 @@
 import Network from '../../src/architecture/network';
 import { exportToONNX } from '../../src/architecture/onnx';
-import type { OnnxModel } from '../../src/architecture/network/network.onnx';
+import type { OnnxModel } from '../../src/architecture/network/network.types';
 
 /**
  * Phase 4 groundwork tests: explicit Conv2D mapping export scaffolding.
@@ -62,9 +62,11 @@ describe('ONNX Conv2D Groundwork Export', () => {
       });
       // Assert (single expectation): ensure Conv node present & metadata recorded
       const onnxModel = onnx as OnnxModel;
-      const hasConv = onnxModel.graph.node.some((n) => n.op_type === 'Conv');
+      const hasConv = onnxModel.graph.node.some(
+        (graphNode: { op_type: string }) => graphNode.op_type === 'Conv',
+      );
       const metaConvLayers = (onnx.metadata_props || []).find(
-        (m: { key?: string }) => m.key === 'conv2d_layers',
+        (metaEntry: { key?: string }) => metaEntry.key === 'conv2d_layers',
       );
       expect(hasConv && !!metaConvLayers).toBe(true);
     });
@@ -94,7 +96,9 @@ describe('ONNX Conv2D Groundwork Export', () => {
         conv2dMappings: badMapping,
       }) as OnnxModel;
       // Assert
-      const hasConv = onnx.graph.node.some((n) => n.op_type === 'Conv');
+      const hasConv = onnx.graph.node.some(
+        (graphNode: { op_type: string }) => graphNode.op_type === 'Conv',
+      );
       expect(hasConv).toBe(false);
     });
   });

@@ -18,3 +18,18 @@ export function computeOperatorStatsSnapshot(
     }),
   );
 }
+
+/**
+ * Convert operator stats map into the public accessor shape.
+ */
+export function readOperatorStats(
+  operatorStats: OperatorStatsMap | undefined,
+): { name: string; success: number; attempts: number }[] {
+  return Array.from((operatorStats ?? new Map()).entries()).map(
+    ([operationName, stats]) => ({
+      name: operationName,
+      success: stats.success,
+      attempts: stats.attempts,
+    }),
+  );
+}

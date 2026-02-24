@@ -1,7 +1,7 @@
 import type {
   GenomeForEvaluation,
   NeatControllerForEval,
-} from './neat.evaluate.types.utils';
+} from './neat.evaluate.utils.types';
 
 /**
  * @param controller - NEAT controller instance for evaluation.

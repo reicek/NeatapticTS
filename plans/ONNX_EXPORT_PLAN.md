@@ -1,6 +1,6 @@
 # ONNX Export / Import Plan for NeatapticTS
 
-_Last updated: 2025-09-06 (Phase 4 initial increment complete; Phase 3 deep testing finalizing)_
+_Last updated: 2026-02-20 (Phase 4 groundwork in progress; Phase 3 deep parity tests still finalizing)_
 
 ## 0. Purpose
 
@@ -27,17 +27,17 @@ Original plan suggested a per-node mapping (Add / MatMul explicit). Implementati
 
 ## 3. Known Limitations (Current)
 
-- No model metadata (IR version, opset_import, producer_name, doc_string) — output is a lightweight partial ONNX-like JSON, not a spec-complete protobuf structure.
-- Node ordering is atypical (Activation before Gemm) — may confuse external tooling performing simple sequential execution assumptions.
-- Only float32 dense MLPs; no batching dimension (shape is 1D feature vector, no dynamic axes).
-- Homogeneous activation constraint per layer (cannot mix activations inside a layer; output layer forced homogeneous too).
-- No support for: sparsity, dropout, batch norm, residual/skip connections, concatenations, branching graphs, shared weights (tying), or partial connectivity.
-- Recurrent architectures (Elman/Jordan, LSTM/GRU, arbitrary recurrent links) unsupported.
-- Convolutional, pooling, normalization, attention/transformer ops unsupported.
+- Export remains a lightweight ONNX-like JSON model, not a full protobuf `ModelProto` binary.
+- Numeric payload is effectively float32; quantized/half export is not yet production-ready.
+- Dynamic sequence/batch semantics remain limited despite optional batch-dimension metadata.
+- Mixed activations and partial connectivity are supported, but can expand graph size due to decomposition (`Gemm+Activation` per neuron + `Concat`).
+- No support for: sparse tensor encoding, dropout, batch norm, residual/skip branching graphs, or shared-weight tying semantics.
+- Recurrent support is partial: single-step self-recurrence and heuristic LSTM/GRU emission/import exist, but dense/arbitrary recurrent topologies and true `Scan`-style temporal graphs are incomplete.
+- Convolution/pooling support is currently groundwork-level (mapping + metadata + approximate import path), not full spatial execution fidelity.
 - No quantization, mixed precision, or half/INT8 export.
 - Gating & NEAT-specific structural innovations ignored (cannot serialize gating semantics into ONNX yet).
 - Custom activations degrade silently to Identity (warning only); no FunctionProto / custom domain registration.
-- Import path assumes naming convention `W{idx}`, `B{idx}`, activation node count == layer count; fragile if altered.
+- Import path still relies on several naming conventions and best-effort heuristics; robustness against externally generated arbitrary ONNX graphs is limited.
 - No graph-level validation suite or ONNX Runtime compatibility tests; only internal structural guarantees.
 
 ## 4. Design Principles Going Forward
@@ -296,27 +296,6 @@ Backward compatibility: default options reproduce current behavior except correc
 
 ---
 
-Historical reference: See `network.onnx.ts` for the current implementation baseline. Update this document when phases or APIs land.
+Historical reference: See `network.onnx.ts` for the current implementation baseline. Update this document whenever phases or APIs land.
 
-Note:
-
-```
-Testing requirements:
-- all tests should have a single expectation.
-- follow AAA pattern (arrange, act, assert)
-- group tests into scenarios with describe(), nest scenarios as needed, no limit on layers.
-- when possible, define common testing data directly on the describe() and then write the assertions for it, this also applies for nested scenarios as they each represent more specific cases as it goes down into sub branches.
-- aim for 100% testing coverage
-- make sure to check existing files before creating/updating one, to be sure you are using the right file, in the right folder, for example `test/neat/` and also to be following the same file pattern inside that folder.
-
-describe(() => {
-  describe(() => {
-    it('should...');
-  });
-});
-
-Also:
-- Always add JSDocs to all methods, classes, const, let
-- Add or update inline comments within methods to explain each step or detail.
-- This is an educative NN library, keep the docs detailed and educative
-```
+Repository-wide testing and style conventions are defined in the main project guidance and should be applied to ONNX-related changes.

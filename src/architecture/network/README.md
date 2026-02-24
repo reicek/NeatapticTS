@@ -1,6 +1,1406 @@
 # architecture/network
 
-## architecture/network/network.activate.ts
+## architecture/network/network.types.ts
+
+### ActivateNetworkInternals
+
+Runtime interface for activation internals.
+
+### ActivationFunction
+
+`(x: number, derivate: boolean | undefined) => number`
+
+Runtime activation function signature used by ONNX activation import/export paths.
+
+Neataptic-style activations support a dual-purpose call pattern:
+- `derivate === false | undefined`: return activation output $f(x)$
+- `derivate === true`: return derivative $f'(x)$
+
+This matches historical Neataptic semantics and keeps ONNX import/export compatible.
+
+Example:
+
+```ts
+const y = activation(x);
+const dy = activation(x, true);
+```
+
+### ActivationSquashFunction
+
+`(x: number, derivate: boolean | undefined) => number`
+
+Activation function signature used by ONNX layer emission helpers.
+
+### BackwardCandidateTraversalContext
+
+Immutable context for backward candidate traversal.
+
+### BuildAdjacencyContext
+
+Shared immutable inputs used across the adjacency build pipeline.
+
+### CheckpointConfig
+
+Checkpoint callback configuration.
+
+Training can periodically call `save(...)` with a serialized network snapshot.
+You can persist these snapshots to disk, upload them, or keep them in-memory.
+
+### CompactConnectionRebuildContext
+
+Context for compact-connection reconstruction.
+
+Connection rows are processed independently so malformed entries can be skipped without aborting import.
+
+### CompactNodeRebuildContext
+
+Context for compact-node reconstruction.
+
+Arrays are expected to be index-aligned so each node can be hydrated deterministically.
+
+### CompactPayloadContext
+
+Context carrying compact payload fields.
+
+This named-object form replaces tuple index access in internal orchestration code.
+
+### CompactSerializedNetworkTuple
+
+Compact tuple payload used by `serialize` output.
+
+Tuple slots are intentionally positional to reduce payload size:
+0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size.
+
+### ConnectionGene
+
+Crossover connection-gene descriptor.
+
+### ConnectionGeneSelectionContext
+
+Immutable context for selecting inherited genes.
+
+### ConnectionGeneticProps
+
+Extended connection shape used during genetic crossover.
+
+### ConnectionGroupReinitContext
+
+Context for reinitializing connection group weights.
+
+### ConnectionInternals
+
+Internal Connection properties accessed during slab operations.
+
+### ConnectionInternalsWithEnabled
+
+Connection view with optional enabled flag.
+
+Some serialized formats preserve per-edge enablement, while others treat missing values
+as implicitly enabled.
+
+### ConnectionSlabView
+
+Shape returned by getConnectionSlab describing the packed SoA view.
+
+### ConnectionSplitResult
+
+Result of replacing a connection with split hidden node.
+
+### ConnectionWeightNoiseProps
+
+Internal runtime properties attached to Connection instances.
+
+### ConnectNetworkInternals
+
+Runtime interface for connect internals.
+
+### Conv2DMapping
+
+Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
+
+This does **not** magically turn an MLP into a convolutional network at runtime.
+It annotates a particular export-layer index with a conv interpretation so that:
+- The exported graph uses conv-shaped tensors/operators, and
+- Import can re-attach pooling/flatten metadata appropriately.
+
+Pitfall: mappings must match the actual layer sizes. If `inHeight * inWidth * inChannels`
+does not correspond to the prior layer width (and similarly for outputs), export or import
+may reject the model.
+
+### ConvInferenceEvaluationContext
+
+Width and shape evaluation context used by Conv inference helpers.
+
+### ConvInferenceKernelEvaluationContext
+
+Kernel candidate context for one Conv inference evaluation pass.
+
+### ConvInferenceResult
+
+Collected inferred Conv metadata payload.
+
+### ConvInferenceTraversalContext
+
+Traversal context for one hidden layer during Conv inference.
+
+### ConvKernelConsistencyContext
+
+Context for kernel-coordinate consistency checks at one output position.
+
+### ConvLayerPairContext
+
+Context for one resolved Conv mapping layer pair.
+
+### ConvOutputCoordinate
+
+Coordinate for one Conv output neuron position.
+
+### ConvRepresentativeKernelContext
+
+Context for representative Conv kernel collection per output channel.
+
+### ConvSharingValidationContext
+
+Context for validating Conv sharing across all declared mappings.
+
+### ConvSharingValidationResult
+
+Result of Conv sharing validation across declared mappings.
+
+### CostFunction
+
+`(target: number[], output: number[]) => number`
+
+Cost / loss function used during supervised training.
+
+A cost function compares an expected `target` vector with the network's produced `output`
+vector, returning a scalar error where **lower is better**.
+
+Design notes:
+- This is called frequently (often once per training sample), so implementations should be
+  **pure** and **allocation-light**.
+- Most built-in training loops assume the returned value is non-negative.
+
+Example (mean squared error):
+
+```ts
+export const mse: CostFunction = (target, output) => {
+  const sum = target.reduce((acc, targetValue, index) => {
+    const diff = targetValue - (output[index] ?? 0);
+    return acc + diff * diff;
+  }, 0);
+  return sum / Math.max(1, target.length);
+};
+```
+
+### CostFunctionOrObject
+
+Cost function object compatibility shape.
+
+### CostFunctionOrRef
+
+Evolve-side serializable cost-function reference.
+
+### CrossoverContext
+
+Immutable baseline context for one crossover run.
+
+### CrossoverNodeBuildContext
+
+Node-build context derived from crossover baseline.
+
+### DenseActivationContext
+
+Dense activation emission context.
+
+### DenseActivationNodePayload
+
+Strongly typed activation node payload used by dense export helpers.
+
+### DenseGemmNodePayload
+
+Strongly typed Gemm node payload used by dense export helpers.
+
+### DenseGraphNames
+
+Dense graph tensor names.
+
+### DenseInitializerValues
+
+Dense initializer value arrays.
+
+### DenseLayerContext
+
+Dense layer context enriched with resolved activation function.
+
+### DenseLayerParams
+
+Parameters for dense layer emission.
+
+### DenseOrderedNodePayload
+
+Dense node payload union used by ordered append helpers.
+
+### DenseTensorNames
+
+Dense initializer tensor names.
+
+### DenseWeightBuildContext
+
+Context for building dense layer initializers from two adjacent layers.
+
+### DenseWeightBuildResult
+
+Dense layer initializer fold output.
+
+### DenseWeightRow
+
+One collected dense row before fold to flattened initializers.
+
+### DenseWeightRowCollectionContext
+
+Context for collecting one dense row.
+
+### DeterministicChainMutationContext
+
+Context for deterministic-chain add-node mutation.
+
+### DeterministicNetworkInternals
+
+Runtime interface for deterministic internals.
+
+### DiagonalRecurrentBuildContext
+
+Context for building a diagonal recurrent matrix from self-connections.
+
+### DirectionalConnectionContext
+
+Indexed context for directional connection metadata.
+
+### DistinctNodePair
+
+Selected distinct node pair for swap mutation.
+
+### EvolutionaryTargetContext
+
+Context for evolutionary sparsity target computation.
+
+### EvolutionaryTargetResult
+
+Result of evolutionary sparsity target computation.
+
+### EvolutionConfig
+
+Internal normalized evolution config.
+
+### EvolutionFitnessFunction
+
+`(arg0: import("C:/NeatapticTS/src/architecture/network").default & import("C:/NeatapticTS/src/architecture/network").default[]) => number | Promise<void>`
+
+Unified evolution fitness callback shape.
+
+### EvolutionLoopState
+
+Mutable state tracked during evolution loop.
+
+### EvolutionSettings
+
+Scalar evolution settings used by orchestration.
+
+### EvolutionStopConditions
+
+Effective evolution stopping conditions.
+
+### EvolveCostFunction
+
+`(target: number[], output: number[]) => number`
+
+Evolve-side cost function signature.
+
+### EvolveOptions
+
+Evolve options bag.
+
+### ExportNodeIndexAssignmentContext
+
+Context for assigning a stable export index to one node.
+
+### FanOutCollectionContext
+
+Context for fan-out collection: build inputs plus the output count buffer.
+
+### FastSlabNodeRuntime
+
+Node shape required by fast slab activation kernels.
+
+### FitnessSetup
+
+Result of fitness-strategy setup.
+
+### FlattenAfterPoolingContext
+
+Flatten emission context after optional pooling.
+
+### ForwardCandidateTraversalContext
+
+Immutable context for forward candidate traversal.
+
+### FusedRecurrentEmissionExecutionContext
+
+Shared execution context for emitting one fused recurrent layer payload.
+
+### FusedRecurrentGraphNames
+
+Context for ONNX fused recurrent node payload names.
+
+### FusedRecurrentInitializerNames
+
+Context for ONNX fused recurrent initializer names.
+
+### GatingNetworkProps
+
+Internal network properties accessed during gating operations.
+
+### GeneEndpointsContext
+
+Endpoints for one gene traversal step.
+
+### GeneticNetwork
+
+Runtime network shape used by crossover internals.
+
+### GeneTraversalContext
+
+Traversal context for one connection gene.
+
+### GlobalThisWithStructuredClone
+
+GlobalThis extension exposing optional structuredClone.
+
+### GradientClipConfig
+
+Gradient clipping configuration.
+
+Clipping prevents rare large gradients from causing unstable weight updates.
+It is most useful for recurrent networks and noisy datasets.
+
+Conceptual modes:
+- `norm`: clip by a global $L_2$ norm threshold.
+- `percentile`: clip using a running percentile estimate (robust to outliers).
+- `layerwise*`: apply the same idea per-layer (useful when layers have very different scales).
+
+### GruEmissionContext
+
+Context for heuristic GRU emission when a layer matches expected shape.
+
+### HiddenLayerActivationTraversalContext
+
+Hidden-layer traversal context for assigning imported activation functions.
+
+### HiddenLayerHeuristicContext
+
+Context for one hidden layer during heuristic recurrent emission.
+
+### IndexedMetadataAppendContext
+
+Append-an-index metadata context for JSON-array metadata keys.
+
+### InputOutputEndpoints
+
+Required endpoint pair for input/output edge seeding.
+
+### JsonConnectionRebuildContext
+
+Context for JSON-connection reconstruction.
+
+Connection rows may include optional gater and enabled metadata.
+
+### JsonNodeRebuildContext
+
+Context for JSON-node reconstruction.
+
+Node entries are rebuilt in order and pushed into mutable runtime internals.
+
+### LayerActivationContext
+
+Activation analysis context for one layer.
+
+### LayerActivationValidationContext
+
+Activation-homogeneity decision context for one current layer.
+
+### LayerBuildContext
+
+Layer build context used while emitting one ONNX graph layer segment.
+
+### LayerConnectivityValidationContext
+
+Connectivity decision context for one source-target node pair.
+
+### LayerOrderingNodeGroups
+
+Node partitions used by ONNX layered-ordering inference traversal.
+
+### LayerOrderingResolutionContext
+
+Mutable traversal state while resolving hidden-layer ordering.
+
+### LayerRecurrentDecisionContext
+
+Context used to decide recurrent emission branch usage.
+
+### LayerTraversalContext
+
+Layer traversal context with adjacent layers and output classification.
+
+### LayerValidationTraversalContext
+
+Layer-wise validation context for activation and connectivity checks.
+
+### LstmCandidateContext
+
+Candidate context for validating one LSTM-like hidden layer pattern.
+
+### LstmEmissionContext
+
+Context for heuristic LSTM emission when a layer matches expected shape.
+
+### LstmLayerTraversalContext
+
+Traversal context for one hidden layer during LSTM stub collection.
+
+### LstmPatternStub
+
+Heuristic LSTM pattern stub for metadata output.
+
+### MetricsHook
+
+`(m: { iteration: number; error: number; plateauError?: number | undefined; gradNorm: number; }) => void`
+
+Metrics hook signature.
+
+If provided, this callback receives summarized metrics after each iteration.
+It is designed for lightweight telemetry, not heavy data export.
+
+### MixedPrecisionConfig
+
+Mixed-precision configuration.
+
+Mixed precision can improve throughput by running some math in lower precision while
+keeping a stable FP32 master copy of parameters when needed.
+
+### MixedPrecisionDynamicConfig
+
+Dynamic mixed-precision configuration.
+
+When enabled, training uses a loss-scaling heuristic that attempts to keep gradients
+in a numerically stable range. If an overflow is detected, the scale is reduced.
+
+### MonitoredSmoothingConfig
+
+Config for monitored smoothing computation.
+
+### MovingAverageType
+
+Moving-average strategy identifier.
+
+These strategies are used to smooth the monitored error curve during training.
+Smoothing can make early stopping and progress logging less noisy.
+
+### MutationHandler
+
+`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+
+Mutation handler function contract.
+
+### MutationMethod
+
+Mutation method descriptor shape.
+
+### MutationMethodObject
+
+Object-only form of mutation method descriptor.
+
+### NeatRuntime
+
+Minimal runtime contract consumed from NEAT in evolve utilities.
+
+### NetworkActivationRuntime
+
+Runtime activation contract used by slab-based execution paths.
+
+### NetworkConstructor
+
+Constructor signature for runtime Network import.
+
+### NetworkGeneticProps
+
+Runtime properties used during genetic operations.
+
+### NetworkInternalsWithDropout
+
+Serialize internals with optional dropout field.
+
+Verbose JSON snapshots normalize this value so readers can treat dropout as numeric data.
+
+### NetworkJSON
+
+Verbose JSON payload representation used by `toJSONImpl` and `fromJSONImpl`.
+
+`formatVersion` enables compatibility checks and migration handling.
+
+### NetworkJSONConnection
+
+Verbose JSON connection representation.
+
+Includes optional gater and explicit enabled state for portability.
+
+### NetworkJSONNode
+
+Verbose JSON node representation.
+
+Node entries are self-describing and intended for readable, versioned snapshots.
+
+### NetworkMutationProps
+
+Internal network properties accessed during mutations.
+
+### NetworkPruningProps
+
+Internal network properties accessed during pruning operations.
+
+### NetworkRemoveProps
+
+Internal network properties accessed during remove operations.
+
+### NetworkRuntimeProps
+
+Internal runtime properties attached to Network instances.
+
+### NetworkSlabProps
+
+Internal Network properties for slab operations.
+
+### NetworkStandaloneProps
+
+Internal standalone generation network view.
+
+### NetworkTopoRuntime
+
+Runtime topology contract used to lazily rebuild topological order.
+
+### NetworkWithOnnxImportPooling
+
+Network instance augmented with optional imported ONNX pooling metadata.
+
+### NodeConnectionSnapshotContext
+
+Snapshot of node adjacency prior to removal.
+
+### NodeInternals
+
+Runtime interface for accessing node internal properties.
+
+This is intentionally "internal": it exposes mutable fields that the ONNX exporter/importer
+needs (connections, bias, squash). Regular library users should generally interact with
+the public `Node` API instead.
+
+### NodeInternalsWithExportIndex
+
+Runtime node internals augmented with optional export index metadata.
+
+### NodePair
+
+Canonical source-target node pair tuple.
+
+### NodeRemovalContext
+
+Immutable context for validated node-removal request.
+
+### NodeWithIndex
+
+Node with generated index for standalone-code emission.
+
+### OffspringMaterializationContext
+
+Immutable context for offspring materialization.
+
+### OnnxActivationAssignmentContext
+
+Shared activation-assignment context for hidden and output traversal.
+
+### OnnxActivationLayerOperations
+
+Layer-indexed activation operator lookup extracted from ONNX graph nodes.
+
+### OnnxActivationOperation
+
+Supported ONNX activation operators recognized during activation import.
+
+### OnnxActivationOperationResolutionContext
+
+Activation operation resolution context for one neuron or layer default.
+
+### OnnxActivationParseResult
+
+Parsed ONNX activation-node naming payload.
+
+### OnnxAttribute
+
+ONNX node attribute.
+
+### OnnxBaseModelBuildContext
+
+Context for constructing a base ONNX model shell.
+
+### OnnxBuildResolvedOptions
+
+Resolved options used by ONNX model build orchestration.
+
+### OnnxConvEmissionContext
+
+Context used after resolving Conv mapping for one layer.
+
+### OnnxConvEmissionParams
+
+Parameters accepted by Conv layer emission.
+
+### OnnxConvKernelCoordinate
+
+Coordinate for one Conv kernel weight lookup.
+
+### OnnxConvParameters
+
+Flattened Conv parameters for ONNX initializers.
+
+### OnnxConvTensorNames
+
+Tensor names generated for Conv parameters.
+
+### OnnxDimension
+
+ONNX tensor type shape dimension.
+
+### OnnxExportOptions
+
+Options controlling ONNX-like export.
+
+These options trade off strictness, portability, and fidelity:
+
+- **Strict (default-ish)** export tries to keep the graph easy to interpret:
+  layered topology, homogeneous activations per layer, and fully-connected layers.
+
+- **Relaxed** export (`allowPartialConnectivity` / `allowMixedActivations`) can represent
+  more networks, but it may generate graphs that are primarily meant for NeatapticTS’s
+  importer (and may be less friendly to external ONNX tooling).
+
+- **Recurrent export** (`allowRecurrent`) is intentionally conservative and currently
+  focuses on a constrained single-step representation and optional fused heuristics.
+
+Key fields (high-level):
+- `includeMetadata`: includes `metadata_props` with architecture hints.
+- `opset`: numeric opset version stored in the exported model metadata (default is
+  resolved by the exporter; commonly 18 in this codebase).
+- `legacyNodeOrdering`: keeps older node ordering for backward compatibility.
+- `conv2dMappings` / `pool2dMappings`: encode conv/pool semantics for fully-connected
+  layers via explicit mapping declarations.
+
+### OnnxFusedGateApplicationContext
+
+Gate-weight application context for one reconstructed fused layer.
+
+### OnnxFusedGateRowAssignmentContext
+
+Context for assigning one gate-neuron row from flattened ONNX tensors.
+
+### OnnxFusedLayerNeighborhood
+
+Hidden-layer neighborhood slices around a reconstructed fused layer.
+
+### OnnxFusedLayerReconstructionContext
+
+Execution context for one fused recurrent layer reconstruction.
+
+### OnnxFusedLayerRuntime
+
+Runtime interface of a reconstructed fused recurrent layer instance.
+
+### OnnxFusedRecurrentKind
+
+Supported fused recurrent operator families recognized during ONNX import.
+
+### OnnxFusedRecurrentSpec
+
+Fused recurrent family specification used during import reconstruction.
+
+### OnnxFusedTensorPayload
+
+Fused recurrent tensor payload read from ONNX initializers.
+
+### OnnxGraph
+
+### OnnxGraphDimensionBuildContext
+
+Context for constructing input/output ONNX graph dimensions.
+
+### OnnxGraphDimensions
+
+Output dimensions used by ONNX graph input/output value info payloads.
+
+### OnnxImportAggregatedLayerAssignmentContext
+
+Context for assigning aggregated dense tensors for one layer.
+
+### OnnxImportAggregatedNeuronAssignmentContext
+
+Context for assigning one aggregated dense target neuron row.
+
+### OnnxImportArchitectureContext
+
+Shared architecture extraction context with resolved graph dimensions.
+
+### OnnxImportArchitectureResult
+
+Parsed architecture dimensions extracted from ONNX import graph payloads.
+
+### OnnxImportConvCoordinateAssignmentContext
+
+Context for applying Conv weights/bias at one output coordinate.
+
+### OnnxImportConvKernelAssignmentContext
+
+Context for assigning one concrete Conv kernel connection weight.
+
+### OnnxImportConvLayerContext
+
+Context for reconstructing one Conv layer's imported connectivity.
+
+### OnnxImportConvLayerContextBuildParams
+
+Build params for creating one Conv reconstruction layer context.
+
+### OnnxImportConvMetadata
+
+Parsed Conv metadata payload used for optional reconstruction pass.
+
+### OnnxImportConvNodeSlices
+
+Layer node slices used while applying Conv reconstruction assignments.
+
+### OnnxImportConvOutputCoordinate
+
+Coordinate for one Conv output neuron traversal position.
+
+### OnnxImportConvTensorContext
+
+Resolved Conv initializer tensors and dimensions for one layer.
+
+### OnnxImportDimensionRecord
+
+Loose ONNX shape-dimension record used by legacy import payload access.
+
+### OnnxImportHiddenLayerSpan
+
+Hidden-layer span payload with one-based layer numbering and global offset.
+
+### OnnxImportHiddenSizeDerivationContext
+
+Context for deriving hidden layer sizes from initializer tensors and metadata.
+
+### OnnxImportInboundConnectionMap
+
+Inbound connection lookup map keyed by source node for one target neuron.
+
+### OnnxImportLayerConnectionContext
+
+Execution context for assigning one hidden-layer recurrent diagonal tensor.
+
+### OnnxImportLayerNodePair
+
+Node slices for one sequential imported layer assignment pass.
+
+### OnnxImportLayerNodePairBuildParams
+
+Build params for one sequential layer node-pair slice operation.
+
+### OnnxImportLayerTensorNames
+
+Weight tensor names for one imported layer index.
+
+### OnnxImportLayerWeightBucket
+
+Bucketed ONNX dense/per-neuron tensors for one exported layer index.
+
+### OnnxImportPerNeuronAssignmentContext
+
+Context for assigning one per-neuron imported target node.
+
+### OnnxImportPerNeuronLayerAssignmentContext
+
+Context for assigning per-neuron tensors for one layer.
+
+### OnnxImportPoolingMetadata
+
+Parsed pooling metadata payload attached to imported network instances.
+
+### OnnxImportRecurrentRestorationContext
+
+Context for recurrent self-connection restoration from ONNX metadata and tensors.
+
+### OnnxImportSelfConnectionUpsertContext
+
+Context for upserting one hidden node self-connection from recurrent weight.
+
+### OnnxImportWeightAssignmentBuildParams
+
+Build params for creating shared ONNX import weight-assignment context.
+
+### OnnxImportWeightAssignmentContext
+
+Shared weight-assignment context built once per ONNX import.
+
+### OnnxIncomingWeightAssignmentContext
+
+Context for assigning dense incoming weights for one gate-neuron row.
+
+### OnnxLayerEmissionContext
+
+Context for emitting non-input layers during model build.
+
+### OnnxLayerEmissionResult
+
+Result of emitting non-input export layers.
+
+### OnnxLayerFactory
+
+Runtime factory map used to construct dynamic recurrent layer modules.
+
+### OnnxMetadataProperty
+
+Canonical metadata key-value pair used in ONNX model metadata_props.
+
+### OnnxModel
+
+ONNX-like model container (JSON-serializable).
+
+This is the main “wire format” object in this folder. Persist it as JSON text:
+
+```ts
+const jsonText = JSON.stringify(model);
+const restoredModel = JSON.parse(jsonText) as OnnxModel;
+```
+
+Notes:
+- `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
+  conv/pool mappings, etc.). This is where most round-trip hints live.
+- Initializers currently store floating-point weights in `float_data`.
+
+Security/trust boundary:
+- Treat this as untrusted input if it comes from outside your process.
+
+### OnnxModelMetadataContext
+
+Context for applying optional ONNX model metadata.
+
+### OnnxNode
+
+### OnnxPerceptronBuildContext
+
+Build context for mapping ONNX layer sizes into a Neataptic MLP factory call.
+
+### OnnxPerceptronSizeValidationContext
+
+Validation context for perceptron size-list checks during ONNX import.
+
+### OnnxPostProcessingContext
+
+Context for post-processing and export metadata finalization.
+
+### OnnxRecurrentCollectionContext
+
+Context for collecting recurrent layer indices during model build.
+
+### OnnxRecurrentInputValueInfoContext
+
+Context for constructing one recurrent previous-state graph input payload.
+
+### OnnxRecurrentLayerProcessingContext
+
+Execution context for processing one hidden recurrent layer.
+
+### OnnxRecurrentLayerTraversalContext
+
+Traversal context for one hidden layer during recurrent-input collection.
+
+### OnnxRuntimeFactories
+
+Runtime factories consumed during ONNX import network reconstruction.
+
+These factories let the importer reconstruct runtime objects (network + layers)
+while keeping the ONNX parser itself mostly pure.
+
+### OnnxRuntimeLayerFactory
+
+`(size: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+
+Runtime layer-constructor signature used for recurrent layer reconstruction.
+
+ONNX import can optionally reconstruct higher-level recurrent layers (like LSTM/GRU)
+from exported metadata. This factory provides the concrete layer implementation.
+
+### OnnxRuntimeLayerFactoryMap
+
+Runtime layer module shape widened for fused-recurrent reconstruction wiring.
+
+### OnnxRuntimeLayerModule
+
+Runtime layer module shape consumed by ONNX import orchestration.
+
+This is the minimal set of recurrent factories needed by the importer.
+
+### OnnxRuntimePerceptronFactory
+
+`(sizes: number[]) => import("C:/NeatapticTS/src/architecture/network").default`
+
+Runtime perceptron factory signature used by ONNX import orchestration.
+
+This factory is injected so the ONNX import path can rebuild an MLP without taking a
+hard dependency on a specific constructor shape.
+
+### OnnxShape
+
+ONNX tensor type shape.
+
+### OnnxTensor
+
+### OnnxTensorType
+
+ONNX tensor type.
+
+### OnnxValueInfo
+
+ONNX value info (input/output description).
+
+### OptimizerConfigBase
+
+Base optimizer configuration.
+
+Training accepts either an optimizer name (`"adam"`, `"sgd"`, ...) or an object.
+This object form is useful when you want to pin numeric hyperparameters or wrap a base
+optimizer (e.g. lookahead).
+
+Example:
+
+```ts
+net.train(set, {
+  iterations: 1_000,
+  rate: 0.001,
+  optimizer: { type: 'adamw', beta1: 0.9, beta2: 0.999, eps: 1e-8, weightDecay: 0.01 },
+});
+```
+
+Notes:
+- Exact supported `type` values are validated by training utilities.
+- Unspecified fields fall back to sensible defaults per optimizer.
+
+### OptionalLayerOutputParams
+
+Shared parameters for optional pooling/flatten output emission.
+
+### OptionalPoolingAndFlattenParams
+
+Parameters for optional pooling + flatten emission after a layer output.
+
+### OutgoingOrderBuildContext
+
+Context for constructing source-grouped outgoing connection order.
+
+### OutputLayerActivationContext
+
+Output-layer activation assignment context.
+
+### Parent1GeneTraversalContext
+
+Traversal state for parent-1 innovation walk.
+
+### Parent1TraversalSelectionResult
+
+Fold result for parent-1 traversal selection.
+
+### ParentMetrics
+
+Compact parent metrics summary.
+
+### PathSearchContext
+
+Mutable context used while running iterative path search.
+
+### PerNeuronConcatNodePayload
+
+Per-neuron concat node payload.
+
+### PerNeuronGraphNames
+
+Per-neuron graph tensor names.
+
+### PerNeuronLayerContext
+
+Per-neuron layer context alias.
+
+### PerNeuronLayerParams
+
+Parameters for per-neuron layer emission.
+
+### PerNeuronNodeContext
+
+Per-neuron normalized node context.
+
+### PerNeuronSubgraphContext
+
+Per-neuron subgraph emission context.
+
+### PerNeuronTensorNames
+
+Per-neuron initializer tensor names.
+
+### PlateauSmoothingConfig
+
+Config for plateau smoothing computation.
+
+### PlateauSmoothingState
+
+Mutable smoothing state for plateau metric.
+
+### Pool2DMapping
+
+Mapping describing a pooling operation inserted after a given export-layer index.
+
+This is represented as metadata and optional graph nodes during export.
+Import uses it to attach pooling-related runtime metadata back onto the reconstructed
+network (when supported).
+
+### PoolingAttributes
+
+Pooling tensor attributes for ONNX node payloads.
+
+### PoolingEmissionContext
+
+Pooling emission context resolved for one layer output.
+
+### PoolKeyMetrics
+
+Per-pool-key allocation & reuse counters (educational / diagnostics).
+
+### PopulationFitnessFunction
+
+`(population: import("C:/NeatapticTS/src/architecture/network").default[]) => Promise<void>`
+
+Fitness signature evaluating full population asynchronously.
+
+### PopulationWorkerEvaluationContext
+
+Shared context for one population worker evaluation run.
+
+### PrimarySmoothingState
+
+Mutable smoothing state for monitored error.
+
+### PruneSelectionContext
+
+Context for selecting prune candidates.
+
+### PruneSelectionResult
+
+Result of prune candidate selection.
+
+### PruningMethod
+
+Pruning strategy identifiers.
+
+### PublishAdjacencyContext
+
+Context for publishing fully built adjacency slabs to internal network state.
+
+### ReconnectEndpointPairContext
+
+Endpoint pair for reconnecting bridged paths.
+
+### RecurrentActivationEmissionContext
+
+Context for selecting and emitting recurrent activation node payload.
+
+### RecurrentGateBlockCollectionContext
+
+Context for collecting one gate parameter block.
+
+### RecurrentGateParameterCollectionResult
+
+Flattened recurrent gate parameter vectors for one fused operator.
+
+### RecurrentGateRow
+
+One recurrent gate row payload before flatten fold.
+
+### RecurrentGateRowCollectionContext
+
+Context for collecting one recurrent gate row (one neuron).
+
+### RecurrentGemmEmissionContext
+
+Context for emitting one Gemm node for recurrent single-step export.
+
+### RecurrentGraphNames
+
+Derived graph names for one recurrent single-step layer payload.
+
+### RecurrentHeuristicEmissionContext
+
+Context for heuristic recurrent operator emission traversal.
+
+### RecurrentInitializerEmissionContext
+
+Context for pushing recurrent initializers into ONNX graph state.
+
+### RecurrentInitializerNames
+
+Initializer tensor names for one single-step recurrent layer.
+
+### RecurrentInitializerValues
+
+Collected initializer vectors for one single-step recurrent layer.
+
+### RecurrentLayerEmissionContext
+
+Derived execution context for single-step recurrent layer emission.
+
+### RecurrentLayerEmissionParams
+
+Parameters for single-step recurrent layer emission.
+
+### RecurrentLayerShape
+
+Minimal recurrent-layer shape used by mutation expanders.
+
+### RecurrentRowCollectionContext
+
+Context for collecting one recurrent matrix row.
+
+### RegrowthExecutionContext
+
+Context for regrowth execution routine.
+
+### RegrowthPlan
+
+Derived regrowth execution plan.
+
+### RegrowthPlanContext
+
+Context for deriving regrowth plan.
+
+### RegularizationConfig
+
+L1/L2 regularization configuration.
+
+### ResolvedNetworkSizeContext
+
+Resolved input/output sizes for rebuild.
+
+Values reflect override-first resolution semantics used during deserialization.
+
+### RNGSnapshot
+
+Snapshot payload for RNG state restore flows.
+
+### ScheduleConfig
+
+Schedule callback configuration.
+
+A schedule callback is a simple "tick hook" that runs every N iterations.
+Typical uses include logging, custom learning-rate schedules, or diagnostics.
+
+### ScheduledTargetContext
+
+Context for scheduled-pruning target computation.
+
+### ScheduledTargetResult
+
+Result of scheduled-pruning target computation.
+
+### SerializedConnection
+
+Serialized connection representation used by compact and JSON formats.
+
+Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
+
+### SerializedNetwork
+
+Serialized network payload used in checkpoint callbacks.
+
+This is intentionally loose: serialization formats evolve and may include nested
+structures. Treat this as an opaque snapshot blob.
+
+### SerializeNetworkInternals
+
+Runtime interface for accessing network internals during serialization.
+
+This is an internal bridge type used by serializer helpers to read and rebuild
+topology without exposing private implementation details in public APIs.
+
+### SerializeNodeInternals
+
+Runtime node internals needed for serialization workflows.
+
+These fields are the minimal node state required to round-trip compact and JSON payloads.
+
+### SharedActivationNodeBuildParams
+
+Shared parameters for constructing an activation node payload.
+
+### SharedGemmNodeBuildParams
+
+Shared parameters for constructing a Gemm node payload.
+
+### SingleGenomeFitnessFunction
+
+`(genome: import("C:/NeatapticTS/src/architecture/network").default) => number`
+
+Fitness signature evaluating one genome.
+
+### SLAB_DEFAULT_ASYNC_CHUNK_SIZE
+
+### SLAB_GROWTH_FACTOR_BROWSER
+
+### SLAB_GROWTH_FACTOR_NODE
+
+### SLAB_ONE
+
+### SLAB_ZERO
+
+### SlabBuildContext
+
+Immutable inputs required to build or grow connection slab buffers.
+
+### SlabPopulateResult
+
+Result of scanning and populating optional gain/plastic slab arrays.
+
+### SlabWriteArrays
+
+Writable slab arrays targeted during connection serialization.
+
+### SourcePeerConnectionCountContext
+
+Context for source-to-peer connection counting.
+
+### SpecMetadataAppendContext
+
+Append-a-spec metadata context for JSON-array metadata keys.
+
+### StandaloneGenerationContext
+
+Shared mutable state for standalone source generation.
+
+### StartIndicesBuildContext
+
+Context for constructing CSR start offsets from precomputed fan-out counts.
+
+### StatsNetworkProps
+
+Internal network properties used by stats operations.
+
+### SubNodeMutationConfig
+
+Mutation keep-gates option surface used by sub-node removal logic.
+
+### TargetLayerPeerContext
+
+Context for target-layer peer traversal.
+
+### TopologyBuildContext
+
+Mutable context used while building topological ordering.
+
+### TopologyNetworkProps
+
+Internal topology state carrier.
+
+### TrainingConnectionInternals
+
+Runtime connection view used by training internals.
+
+### TrainingNetworkInternals
+
+Runtime network view used by training internals.
+
+### TrainingNodeInternals
+
+Runtime node view used by training internals.
+
+### TrainingOptions
+
+Public training options accepted by the high-level training orchestration.
+
+Training in this codebase is conceptually:
+1) forward activation
+2) backward propagation
+3) optimizer update
+repeated until a stopping condition is met.
+
+Minimal example:
+
+```ts
+net.train(set, {
+  iterations: 500,
+  rate: 0.3,
+  batchSize: 16,
+  gradientClip: { mode: 'norm', maxNorm: 1 },
+});
+```
+
+Stopping conditions:
+- Provide at least one of `iterations` or `error`.
+- `earlyStopPatience` adds an additional "stop when no improvement" guard.
+
+### TrainingSample
+
+A single supervised training sample used in evolution scoring.
+
+### TypedArray
+
+Union of slab typed array element container types.
+
+### TypedArrayConstructor
+
+Constructor type for typed arrays used in slabs.
+
+### WeightSamplingRangeContext
+
+Context for sampling one random weight value.
+
+### WeightToleranceComparisonContext
+
+Context for comparing two scalar weights with numeric tolerance.
+
+### WorkerTraversalContext
+
+Worker-local traversal context.
+
+## architecture/network/network.utils.ts
+
+### __trainingInternals
+
+### activate
+
+`(input: number[], training: boolean) => number[]`
+
+Execute the main activation routine and return plain numeric outputs.
+
+Parameters:
+- `this` - Bound network instance.
+- `input` - Input values with length matching network input count.
+- `training` - Whether training-time stochastic behavior is enabled.
+
+Returns: Output activation values.
 
 ### activateBatch
 
@@ -16,8 +1416,7 @@ vectorized backend that exploits SIMD, GPU kernels, or parallel workers.
 Input validation occurs per row to surface the earliest mismatch with a descriptive index.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `inputs` - - Array of input vectors; each must have length == network.input.
 - `training` - - Whether each activation should keep training traces.
 
@@ -35,68 +1434,134 @@ At present this simply forwards to {@link Network.activate}. The indirection is 
  - Providing a stable exported symbol for external tooling / instrumentation.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `input` - - Input vector (length == network.input).
 - `training` - - Whether to retain training traces / gradients (delegated downstream).
 - `maxActivationDepth` - - Guard against runaway recursion / cyclic activation attempts.
 
 Returns: Implementation-defined result of Network.activate (typically an output vector).
 
-### NetworkInternals
+### applyGradientClippingImpl
 
-Runtime interface for accessing Network internal properties during activation.
+`(net: import("C:/NeatapticTS/src/architecture/network").default, cfg: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
 
-### noTraceActivate
+Apply gradient clipping to a network using a normalized runtime configuration.
 
-`(input: number[]) => number[]`
+This is a small wrapper that forwards to the concrete implementation used by training.
 
-Network activation helpers (forward pass utilities).
+Parameters:
+- `net` - - Network instance to update.
+- `cfg` - - Normalized clipping settings.
 
-This module provides progressively lower–overhead entry points for performing
-forward propagation through a {@link Network}. The emphasis is on:
- 1. Educative clarity – each step is documented so newcomers can follow the
-    life‑cycle of a forward pass in a neural network graph.
- 2. Performance – fast paths avoid unnecessary allocation and bookkeeping when
-    gradients / evolution traces are not needed.
- 3. Safety – pooled buffers are never exposed directly to the public API.
+### canUseFastSlab
 
-Exported functions:
- - {@link noTraceActivate}: ultra‑light inference (no gradients, minimal allocation).
- - {@link activateRaw}: thin semantic alias around the canonical Network.activate path.
- - {@link activateBatch}: simple mini‑batch loop utility.
+`(training: boolean) => boolean`
 
-Design terminology used below:
- - Topological order: a sequence of nodes such that all directed connections flow forward.
- - Slab: a contiguous typed‑array structure packing node activations for vectorized math.
- - Trace / gradient bookkeeping: auxiliary data (e.g. eligibility traces, derivative caches)
-   required for training algorithms; skipped in inference‑only modes.
- - Pool: an object managing reusable arrays to reduce garbage collection pressure.
+Public convenience wrapper exposing fast path eligibility.
+Mirrors `_canUseFastSlab` internal predicate.
 
-## architecture/network/network.connect.ts
+Parameters:
+- `training` - Whether caller is performing training (disables fast path if true).
+
+Returns: True when slab fast path predicates hold.
+
+### clearState
+
+`() => void`
+
+Clear all node runtime traces and states.
+
+Parameters:
+- `this` - Bound network instance.
+
+### computeTopoOrder
+
+`() => void`
+
+Topology utilities.
+
+Provides:
+ - computeTopoOrder: Kahn-style topological sorting with graceful fallback when cycles detected.
+ - hasPath: depth-first reachability query (used to prevent cycle introduction when acyclicity enforced).
+
+Design Notes:
+ - We deliberately tolerate cycles by falling back to raw node ordering instead of throwing; this
+   allows callers performing interim structural mutations to proceed (e.g. during evolve phases)
+   while signaling that the fast acyclic optimizations should not be used.
+ - Input nodes are seeded into the queue immediately regardless of in-degree to keep them early in
+   the ordering even if an unusual inbound edge was added (defensive redundancy).
+ - Self loops are ignored for in-degree accounting and queue progression (they neither unlock new
+   nodes nor should they block ordering completion).
 
 ### connect
 
 `(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
 
-Network structural mutation helpers (connect / disconnect).
+Create and register one (or multiple) directed connection objects between two nodes.
 
-This module centralizes the logic for adding and removing edges (connections) between
-nodes in a {@link Network}. By isolating the book‑keeping here we keep the primary
-Network class lean and ensure consistent handling of:
- - Acyclic constraints
- - Multiple low‑level connections returned by composite node operations
- - Gating & self‑connection invariants
- - Cache invalidation (topological order + packed activation slabs)
+Some node types (or future composite structures) may return several low‑level connections when
+their {@link Node.connect} is invoked (e.g., expanded recurrent templates). For that reason this
+function always treats the result as an array and appends each edge to the appropriate collection.
 
-Exported functions:
- - {@link connect}: Create one or more connections from a source node to a target node.
- - {@link disconnect}: Remove (at most) one direct connection from source to target.
+Algorithm outline:
+ 1. (Acyclic guard) If acyclicity is enforced and the source node appears after the target node in
+    the network's node ordering, abort early and return an empty array (prevents back‑edge creation).
+ 2. Delegate to sourceNode.connect(targetNode, weight) to build the raw Connection object(s).
+ 3. For each created connection:
+      a. If it's a self‑connection: either ignore (acyclic mode) or store in selfconns.
+      b. Otherwise store in standard connections array.
+ 4. If any connection was added, mark structural caches dirty (_topoDirty & _slabDirty) so lazy
+    rebuild can occur before the next forward pass.
 
-Key terminology:
- - Self‑connection: An edge where from === to (loop). Usually disallowed under acyclicity.
- - Gating: A mechanism where a third node modulates (gates) the weight / influence of a connection.
- - Slab: Packed typed‑array representation of connections for vectorized forward passes.
+Complexity:
+ - Time: O(k) where k is the number of low‑level connections returned (typically 1).
+ - Space: O(k) new Connection instances (delegated to Node.connect).
+
+Edge cases & invariants:
+ - Acyclic mode silently refuses back‑edges instead of throwing (makes evolutionary search easier).
+ - Self‑connections are skipped entirely when acyclicity is enforced.
+ - Weight initialization policy is delegated to Node.connect if not explicitly provided.
+
+Parameters:
+- `this` - - Bound Network instance.
+- `from` - - Source node (emits signal).
+- `to` - - Target node (receives signal).
+- `weight` - - Optional explicit initial weight value.
+
+### createMLP
+
+`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("C:/NeatapticTS/src/architecture/network").default`
+
+Build a strictly layered and fully connected MLP network.
+
+Parameters:
+- `this` - Network constructor.
+- `inputCount` - Number of input nodes.
+- `hiddenCounts` - Hidden-layer node counts.
+- `outputCount` - Number of output nodes.
+
+Returns: Newly created MLP network.
+
+### crossOver
+
+`(parentNetwork1: import("C:/NeatapticTS/src/architecture/network").default, parentNetwork2: import("C:/NeatapticTS/src/architecture/network").default, equal: boolean) => import("C:/NeatapticTS/src/architecture/network").default`
+
+Genetic operator: NEAT‑style crossover (legacy merge operator removed).
+
+This module now focuses solely on producing recombinant offspring via {@link crossOver}.
+The previous experimental `Network.merge` flow has been removed to reduce maintenance
+surface area and avoid implying a misleading sequential-composition guarantee.
+
+Design notes:
+- The implementation favors deterministic, inspectable orchestration at the top level.
+- Gene-selection details are delegated to setup/materialization helpers so the public
+  crossover API stays compact and predictable.
+- The resulting offspring preserves the same input/output interface as both parents,
+  which keeps downstream evaluation and training pipelines compatible.
+
+### deserialize
+
+`(data: import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("C:/NeatapticTS/src/architecture/network").default`
 
 ### disconnect
 
@@ -125,921 +1590,33 @@ Idempotence: If no such edge exists we still perform node-level disconnect and f
 this conservative approach simplifies callers (they need not pre‑check existence).
 
 Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
+- `this` - - Bound Network instance.
 - `from` - - Source node.
 - `to` - - Target node.
 
-### NetworkInternals
-
-Runtime interface for accessing Network internal properties during connection operations.
-
-## architecture/network/network.deterministic.ts
-
-### getRandomFn
-
-`() => (() => number) | undefined`
-
-Retrieve the active random function reference (for testing, instrumentation, or swapping).
-
-Mutating the returned function's closure variables (if any) is not recommended; prefer using
-higher-level APIs (setSeed / restoreRNG) to manage state.
-
-Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
-
-Returns: Function producing numbers in [0,1). May be undefined if never seeded (call setSeed first).
-
-### getRNGState
-
-`() => number | undefined`
-
-Get the current internal 32‑bit RNG state value.
-
-Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
-
-Returns: Unsigned 32‑bit state integer or undefined if generator not yet seeded or was reset.
-
-### network.deterministic
-
-Default export bundle for convenient named imports.
-
-### NetworkInternals
-
-Runtime properties accessed for deterministic PRNG operations.
-Local interface to avoid circular dependencies.
-
-### restoreRNG
-
-`(fn: () => number) => void`
-
-Restore a previously captured RNG function implementation (advanced usage).
-
-This does NOT rehydrate _rngState (it explicitly sets it to undefined). Intended for scenarios
-where a caller has customly serialized a full RNG closure or wants to inject a deterministic stub.
-If you only need to restore the raw state word produced by {@link snapshotRNG}, prefer
-{@link setRNGState} instead.
-
-Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
-- `fn` - - Function returning a pseudo‑random number in [0,1). Caller guarantees determinism if required.
-
-### RNGSnapshot
-
-Deterministic pseudo‑random number generation (PRNG) utilities for {@link Network}.
-
-Why this module exists:
- - Facilitates reproducible evolutionary runs / gradient training by allowing explicit seeding.
- - Centralizes RNG state management & snapshot/restore operations (useful for rollbacks or
-   deterministic tests around mutation sequences).
- - Keeps the core Network class focused by extracting ancillary RNG concerns.
-
-Implementation notes:
- - Uses a small, fast 32‑bit xorshift / mix style generator (same semantics as the legacy inline version)
-   combining an additive Weyl sequence step plus a few avalanche-style integer mixes.
- - Not cryptographically secure. Do not use for security / fairness sensitive applications.
- - Produces floating point numbers in [0,1) with 2^32 (~4.29e9) discrete possible mantissa states.
-
-Public surface:
- - {@link setSeed}: Initialize deterministic generator with a numeric seed.
- - {@link snapshotRNG}: Capture current training step + raw internal RNG state.
- - {@link restoreRNG}: Provide an externally saved RNG function (advanced) & clear stored state.
- - {@link getRNGState} / {@link setRNGState}: Low-level accessors for the internal 32‑bit state word.
- - {@link getRandomFn}: Retrieve the active random() function reference (primarily for tests / tooling).
-
-Design rationale:
- - Storing both a state integer (_rngState) and a function (_rand) allows hot-swapping alternative
-   RNG implementations (e.g., for benchmarking or pluggable randomness strategies) without rewriting
-   callsites inside Network algorithms.
-
-### setRNGState
-
-`(state: number) => void`
-
-Explicitly set (override) the internal 32‑bit RNG state without changing the generator function.
-
-This is a low‑level operation; typical clients should call {@link setSeed}. Provided for advanced
-replay functionality where the same PRNG algorithm is assumed but you want to resume exactly at a
-known state word.
-
-Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
-- `state` - - Any finite number (only low 32 bits used). Ignored if not numeric.
-
-### setSeed
-
-`(seed: number) => void`
-
-Seed the internal PRNG and install a deterministic random() implementation on the Network instance.
-
-Process:
- 1. Coerce the provided seed to an unsigned 32‑bit integer (>>> 0) for predictable wraparound behavior.
- 2. Define an inline closure that advances an internal 32‑bit state using:
-      a. A Weyl increment (adding constant 0x6D2B79F5 each call) ensuring full-period traversal of
-         the 32‑bit space when combined with mixing.
-      b. Two rounds of xorshift / integer mixing (xor, shifts, multiplications) to decorrelate bits.
-      c. Normalization to [0,1) by dividing the final 32‑bit unsigned integer by 2^32.
-
-Bit-mixing explanation (rough intuition):
- - XOR with shifted versions spreads high-order entropy to lower bits.
- - Multiplication (Math.imul) with carefully chosen odd constants introduces non-linear mixing.
- - The final right shift & xor avalanche aims to reduce sequential correlation.
-
-Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
-- `seed` - - Any finite number; only its lower 32 bits are used.
-
-### snapshotRNG
-
-`() => import("C:/NeatapticTS/src/architecture/network/network.deterministic").RNGSnapshot`
-
-Capture a snapshot of the RNG state together with the network's training step.
-
-Useful for implementing speculative evolutionary mutations where you may revert both the
-structural change and the randomness timeline if accepting/rejecting a candidate.
-
-Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
-
-Returns: Object containing current training step & 32‑bit RNG state (both possibly undefined if unseeded).
-
-## architecture/network/network.evolve.ts
-
-### CostFunction
-
-`(target: number[], output: number[]) => number`
-
-Cost function type: takes target and output arrays, returns error scalar.
-
-### CostFunctionOrRef
-
-Cost function OR a serializable reference with just the name (for worker threads).
-
-### EvolutionConfig
-
-Internal evolution configuration summary (for potential logging / debugging)
-capturing normalized option values used by the local evolutionary loop.
-
 ### evolveNetwork
 
-`(set: TrainingSample[], options: EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
+`(set: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingSample[], options: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
 
-Evolve (optimize) the current network's topology and weights using a NEAT-like evolutionary loop
-until a stopping criterion (target error or max iterations) is met.
+Evolves a network with a NEAT-style search loop until an error target or generation limit is reached.
 
-High-level process:
- 1. Validate dataset shape (input/output vector sizes must match network I/O counts).
- 2. Normalize / default option values and construct an internal configuration summary.
- 3. Build appropriate fitness evaluation function (single or multi-thread).
- 4. Initialize a Neat population (optionally with speciation) seeded by this network.
- 5. Iteratively call neat.evolve():
-      - Retrieve fittest genome + its fitness.
-      - Derive an error metric from fitness (inverse relationship considering complexity penalty).
-      - Track best genome overall (elitism) and perform logging/scheduling callbacks.
-      - Break if error criterion satisfied or iterations exceeded.
- 6. Replace this network's internal structural arrays with the best discovered genome's (in-place upgrade).
- 7. Cleanup any worker threads and report final statistics.
+Overview:
+- This method treats the current network as a *seed genome* and explores better variants.
+- Candidate genomes are scored by prediction error plus a structural complexity penalty.
+- The best discovered genome is copied back into the current instance (in-place upgrade).
 
-Fitness / Error relationship:
-  fitness = -error - complexityPenalty  =>  error = -(fitness - complexityPenalty)
-We recompute error from the stored fitness plus penalty to ensure consistent reporting.
-
-Resilience strategies:
- - Guard against infinite / NaN errors; after MAX_INF consecutive invalid errors we abort.
- - Fallback for tiny populations: increase mutation aggressiveness to prevent premature convergence.
+Typical usage guidance:
+- Use `error` when you care about reaching a quality threshold.
+- Use `iterations` when you need deterministic runtime bounds.
+- Use both when you want "stop when good enough, otherwise cap time" behavior.
+- Increase `threads` only when worker support exists and dataset evaluation is expensive.
 
 Parameters:
-- `this` - - Bound  {@link Network} instance being evolved in-place.
- *
-- `set` - - Supervised dataset (array of {input, output}).
-- `options` - - Evolution options (see README / docs). Key fields include:
-- iterations: maximum generations (if omitted must supply error target)
-- error: target error threshold (if omitted must supply iterations)
-- growth: complexity penalty scaling
-- amount: number of score evaluations (averaged) per genome
-- threads: desired worker count (>=2 enables multi-thread path if available)
-- popsize / populationSize: population size
-- schedule: { iterations: number, function: (ctx) => void } periodic callback
-- log: generation interval for console logging
-- clear: whether to call network.clear() after adopting best genome
-
-Returns: Summary object { error, iterations, time(ms) }.
-
-### EvolveOptions
-
-Evolution options for the evolveNetwork method.
-Includes core evolution parameters plus NEAT-specific options passed through.
-
-### TrainingSample
-
-A single supervised training example used to evaluate fitness.
-
-## architecture/network/network.gating.ts
-
-### gate
-
-`(node: import("C:/NeatapticTS/src/architecture/node").default, connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
-
-Gating & node removal utilities for {@link Network}.
-
-Gating concept:
- - A "gater" node modulates the effective weight of a target connection. Conceptually the raw
-   connection weight w is multiplied (or otherwise transformed) by a function of the gater node's
-   activation a_g (actual math lives in {@link Node.gate}). This enables dynamic, context-sensitive
-   routing (similar in spirit to attention mechanisms or LSTM-style gates) within an evolved topology.
-
-Removal strategy (removeNode):
- - When excising a hidden node we attempt to preserve overall connectivity by creating bridging
-   connections from each of its predecessors to each of its successors if such edges do not already
-   exist. Optional logic reassigns previous gater nodes to these new edges (best-effort) to preserve
-   modulation diversity.
-
-Mutation interplay:
- - The flag `mutation.SUB_NODE.keep_gates` determines whether gating nodes associated with edges
-   passing through the removed node should be retained and reassigned.
-
-Determinism note:
- - Bridging gate reassignment currently uses Math.random directly; for fully deterministic runs
-   you may consider replacing with the network's seeded RNG (if provided) in future refactors.
-
-Exported functions:
- - {@link gate}: Attach a gater to a connection.
- - {@link ungate}: Remove gating from a connection.
- - {@link removeNode}: Remove a hidden node while attempting to preserve connectivity & gating.
-
-### NetworkGatingProps
-
-Internal Network properties accessed during gating operations.
-
-### removeNode
-
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
-
-Remove a hidden node from the network while attempting to preserve functional connectivity.
-
-Algorithm outline:
- 1. Reject removal if node is input/output (structural invariants) or absent (error).
- 2. Optionally collect gating nodes (if keep_gates flag) from inbound & outbound connections.
- 3. Remove self-loop (if present) to simplify subsequent edge handling.
- 4. Disconnect all inbound edges (record their source nodes) and all outbound edges (record targets).
- 5. For every (input predecessor, output successor) pair create a new connection unless:
-      a. input === output (avoid trivial self loops) OR
-      b. an existing projection already connects them.
- 6. Reassign preserved gater nodes randomly onto newly created bridging connections.
- 7. Ungate any connections that were gated BY this node (where node acted as gater).
- 8. Remove node from network node list and flag node index cache as dirty.
-
-Complexity summary:
- - Let I = number of inbound edges, O = number of outbound edges.
- - Disconnect phase: O(I + O)
- - Bridging phase: O(I * O) connection existence checks (isProjectingTo) + potential additions.
- - Gater reassignment: O(min(G, newConnections)) where G is number of preserved gaters.
-
-Preservation rationale:
- - Reassigning gaters maintains some of the dynamic modulation capacity that would otherwise
-   be lost, aiding continuity during topology simplification.
-
-Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
-- `node` - - Hidden node to remove.
-
-### ungate
-
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
-
-Remove gating from a connection, restoring its static weight contribution.
-
-Idempotent: If the connection is not currently gated, the call performs no structural changes
-(and optionally logs a warning). After ungating, the connection's weight will be used directly
-without modulation by a gater activation.
-
-Complexity: O(n) where n = number of gated connections (indexOf lookup) – typically small.
-
-Parameters:
-- `this` - - Bound  {@link Network} instance.
- *
-- `connection` - - Connection to ungate.
-
-## architecture/network/network.genetic.ts
-
-### ConnectionGene
-
-Connection gene descriptor used during crossover.
-
-### ConnectionGeneticProps
-
-Extended Connection properties for genetic operations.
-
-### crossOver
-
-`(network1: import("C:/NeatapticTS/src/architecture/network").default, network2: import("C:/NeatapticTS/src/architecture/network").default, equal: boolean) => import("C:/NeatapticTS/src/architecture/network").default`
-
-### NetworkGeneticProps
-
-Internal runtime properties used during genetic operations.
-These properties are accessed dynamically and not part of the formal Network interface.
-
-## architecture/network/network.mutate.ts
-
-### _addBackConn
-
-`() => void`
-
-ADD_BACK_CONN: Add a backward (recurrent) connection (acyclic mode must be off).
-
-### _addConn
-
-`() => void`
-
-ADD_CONN: Add a new forward (acyclic) connection between two previously unconnected nodes.
-Recurrent edges are handled separately by ADD_BACK_CONN.
-
-### _addGate
-
-`() => void`
-
-ADD_GATE: Assign a random (hidden/output) node to gate a random ungated connection.
-
-### _addGRUNode
-
-`() => void`
-
-ADD_GRU_NODE: Replace a random connection with a minimal 1‑unit GRU block.
-
-### _addLSTMNode
-
-`() => void`
-
-ADD_LSTM_NODE: Replace a random connection with a minimal 1‑unit LSTM block (macro mutation).
-
-### _addNode
-
-`() => void`
-
-ADD_NODE: Insert a new hidden node by splitting an existing connection.
-
-Deterministic test mode (config.deterministicChainMode):
- - Maintain an internal linear chain (input → hidden* → output).
- - Always split the chain's terminal edge, guaranteeing depth +1 per call.
- - Prune side edges from chain nodes to keep depth measurement unambiguous.
-
-Standard evolutionary mode:
- - Sample a random existing connection and perform the classical NEAT split.
-
-Core algorithm (stochastic variant):
- 1. Pick connection (random).
- 2. Disconnect it (preserve any gater reference).
- 3. Create hidden node (random activation mutation).
- 4. Insert before output tail to preserve ordering invariants.
- 5. Connect source→hidden and hidden→target.
- 6. Reassign gater uniformly to one of the new edges.
-
-### _addSelfConn
-
-`() => void`
-
-ADD_SELF_CONN: Add a self loop to a random eligible node (only when cycles allowed).
-
-### _batchNorm
-
-`() => void`
-
-BATCH_NORM: Placeholder mutation – marks a random hidden node with a flag for potential
-future batch normalization integration. Currently a no-op beyond tagging.
-
-### _modActivation
-
-`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
-
-MOD_ACTIVATION: Swap activation (squash) of a random eligible node; may exclude outputs.
-
-### _modBias
-
-`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
-
-MOD_BIAS: Delegate to node.mutate to adjust bias of a random non‑input node.
-
-### _modWeight
-
-`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
-
-MOD_WEIGHT: Perturb a single (possibly self) connection weight by uniform delta in [min,max].
-
-### _reinitWeight
-
-`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
-
-REINIT_WEIGHT: Reinitialize all incoming/outgoing/self connection weights for a random node.
-Useful as a heavy mutation to escape local minima. Falls back silently if no eligible node.
-
-### _subBackConn
-
-`() => void`
-
-SUB_BACK_CONN: Remove a backward connection meeting redundancy heuristics.
-
-### _subConn
-
-`() => void`
-
-SUB_CONN: Remove a forward connection chosen under redundancy heuristics to avoid disconnects.
-
-### _subGate
-
-`() => void`
-
-SUB_GATE: Remove gating from a random previously gated connection.
-
-### _subNode
-
-`() => void`
-
-SUB_NODE: Remove a random hidden node (if any remain).
-After removal a tiny deterministic weight nudge encourages observable phenotype change in tests.
-
-### _subSelfConn
-
-`() => void`
-
-SUB_SELF_CONN: Remove a random existing self loop.
-
-### _swapNodes
-
-`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
-
-SWAP_NODES: Exchange bias & activation function between two random eligible nodes.
-
-### mutateImpl
-
-`(method: import("C:/NeatapticTS/src/architecture/network/network.mutate").MutationMethod | undefined) => void`
-
-Public entry point: apply a single mutation operator to the network.
-
-Steps:
- 1. Validate the supplied method (enum value or descriptor object).
- 2. Resolve helper implementation from the dispatch map (supports objects exposing name/type/identity).
- 3. Invoke helper (passing through method for parameterized operators).
- 4. Flag topology caches dirty so ordering / slabs rebuild lazily.
-
-Accepts either the raw enum value (e.g. `mutation.ADD_NODE`) or an object carrying an
-identifying `name | type | identity` field allowing future parameterization without breaking call sites.
-
-Parameters:
-- `this` - Network instance (bound).
-- `method` - Mutation enum value or descriptor object.
-
-### MutationMethod
-
-Mutation method descriptor (can be string enum value or object with identity).
-
-### NetworkMutationProps
-
-Internal Network properties accessed during mutations.
-
-## architecture/network/network.onnx.ts
-
-### Conv2DMapping
-
-Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
-This assumes the dense layer was originally synthesized from a convolution with weight sharing; we reconstitute spatial metadata.
-Each mapping references an export-layer index (1-based across hidden layers, output layer would be hiddenCount+1) and supplies spatial/kernel hyperparameters.
-Validation ensures that input spatial * channels product equals the previous layer width and that output channels * output spatial equals the current layer width.
-
-### exportToONNX
-
-`(network: import("C:/NeatapticTS/src/architecture/network").default, options: import("C:/NeatapticTS/src/architecture/network/network.onnx").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/network.onnx").OnnxModel`
-
-Export a minimal multilayer perceptron Network to a lightweight ONNX JSON object.
-
-Steps:
- 1. Rebuild connection cache ensuring up-to-date adjacency.
- 2. Index nodes for error messaging.
- 3. Infer strict layer ordering (throws if structure unsupported).
- 4. Validate homogeneity & full connectivity layer-to-layer.
- 5. Build initializer tensors (weights + biases) and node list (Gemm + activation pairs).
-
-Constraints: See module doc. Throws descriptive errors when assumptions violated.
-
-### importFromONNX
-
-`(onnx: import("C:/NeatapticTS/src/architecture/network/network.onnx").OnnxModel) => import("C:/NeatapticTS/src/architecture/network").default`
-
-Import a model previously produced by {@link exportToONNX} into a fresh Network instance.
-
-Core Steps:
- 1. Parse input/output tensor shapes (supports optional symbolic batch dim).
- 2. Derive hidden layer sizes (prefer `layer_sizes` metadata; fallback to weight tensor grouping heuristic).
- 3. Instantiate matching layered MLP (inputs -> hidden[] -> outputs); remove placeholder hidden nodes for single layer perceptrons.
- 4. Assign weights & biases (aggregated or per-neuron) from W/B initializers.
- 5. Reconstruct activation functions from Activation node op_types (layer or per-neuron).
- 6. Restore recurrent self connections from recorded diagonal Rk matrices if `recurrent_single_step` metadata present.
- 7. Experimental: Reconstruct LSTM / GRU layers when fused initializers & metadata (`lstm_emitted_layers`, `gru_emitted_layers`) detected
-    by replacing the corresponding hidden node block with a freshly constructed Layer.lstm / Layer.gru instance and remapping weights.
- 8. Rebuild flat connection array for downstream invariants.
-
-Experimental Behavior:
- - LSTM/GRU reconstruction is best-effort; inconsistencies in tensor shapes or gate counts result in silent skip (import still succeeds).
- - Recurrent biases (Rb) absent; self-connection diagonal only restored for cell/candidate groups.
-
-Limitations:
- - Only guaranteed for self-produced models; arbitrary ONNX graphs or differing op orderings are unsupported.
- - Fused recurrent node emission currently leaves original unfused Gemm/Activation path in exported model (import ignores duplicates).
-
-### NodeInternals
-
-Runtime interface for accessing node internal properties.
-Nodes have runtime properties for connections, bias, and squash that aren't in the public interface.
-
-### OnnxAttribute
-
-ONNX node attribute.
-
-### OnnxDimension
-
-ONNX tensor type shape dimension.
-
-### OnnxExportOptions
-
-Options controlling ONNX export behavior (Phase 1).
-
-### OnnxModel
-
-### OnnxShape
-
-ONNX tensor type shape.
-
-### OnnxTensorType
-
-ONNX tensor type.
-
-### OnnxValueInfo
-
-ONNX value info (input/output description).
-
-### Pool2DMapping
-
-Mapping describing a pooling operation inserted after a given export-layer index.
-
-## architecture/network/network.prune.ts
-
-### getCurrentSparsity
-
-`() => number`
-
-Current sparsity fraction relative to the training-time pruning baseline.
-
-### maybePrune
-
-`(iteration: number) => void`
-
-Opportunistically perform scheduled pruning during gradient-based training.
-
-Scheduling model:
- - start / end define an iteration window (inclusive) during which pruning may occur
- - frequency defines cadence (every N iterations inside the window)
- - targetSparsity is linearly annealed from 0 to its final value across the window
- - method chooses ranking heuristic (magnitude | snip)
- - optional regrowFraction allows dynamic sparse training: after removing edges we probabilistically regrow
-   a fraction of them at random unused positions (respecting acyclic constraint if enforced)
-
-SNIP heuristic:
- - Uses |w * grad| style saliency approximation (here reusing stored delta stats as gradient proxy)
- - Falls back to pure magnitude if gradient stats absent.
-
-### NetworkPruningProps
-
-Internal Network properties accessed during pruning operations.
-
-### pruneToSparsity
-
-`(targetSparsity: number, method: "magnitude" | "snip") => void`
-
-Evolutionary (generation-based) pruning toward a target sparsity baseline.
-Unlike maybePrune this operates immediately relative to the first invocation's connection count
-(stored separately as _evoInitialConnCount) and does not implement scheduling or regrowth.
-
-## architecture/network/network.remove.ts
-
-### NetworkRemoveProps
-
-Internal Network properties accessed during node removal operations.
-
-### removeNode
-
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
-
-Node removal utilities.
-
-This module provides a focused implementation for removing a single hidden node from a network
-while attempting to preserve overall functional connectivity. The removal procedure mirrors the
-legacy Neataptic logic but augments it with clearer documentation and explicit invariants.
-
-High‑level algorithm (removeNode):
- 1. Guard: ensure the node exists and is not an input or output (those are structural anchors).
- 2. Ungate: detach any connections gated BY the node (we don't currently reassign gater roles).
- 3. Snapshot inbound / outbound connections (before mutation of adjacency lists).
- 4. Disconnect all inbound, outbound, and self connections.
- 5. Physically remove the node from the network's node array.
- 6. Simple path repair heuristic: for every former inbound source and outbound target, add a
-    direct connection if (a) both endpoints still exist, (b) they are distinct, and (c) no
-    direct connection already exists. This keeps forward information flow possibilities.
- 7. Mark topology / caches dirty so that subsequent activation / ordering passes rebuild state.
-
-Notes / Limitations:
- - We do NOT attempt to clone weights or distribute the removed node's function across new
-   connections (more sophisticated strategies could average or compose weights).
- - Gating effects involving the removed node as a gater are dropped; downstream behavior may
-   change—callers relying heavily on gating may want a custom remap strategy.
- - Self connections are simply removed; no attempt is made to emulate recursion via alternative
-   structures.
-
-## architecture/network/network.serialize.ts
-
-### deserialize
-
-`(data: [number[], number[], string[], import("C:/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number], inputSize: number | undefined, outputSize: number | undefined) => import("C:/NeatapticTS/src/architecture/network").default`
-
-### fromJSONImpl
-
-`(json: NetworkJSON) => import("C:/NeatapticTS/src/architecture/network").default`
-
-### network.serialize
-
-### NetworkInternals
-
-Runtime interface for accessing Network internal properties.
-
-### NetworkJSON
-
-Verbose JSON format for network serialization.
-
-### NodeInternals
-
-Runtime interface for accessing Node internal properties.
-
-### serialize
-
-`() => [number[], number[], string[], import("C:/NeatapticTS/src/architecture/network/network.serialize").SerializedConnection[], number, number]`
-
-Serialization & deserialization helpers for Network instances.
-
-Provides two independent formats:
- 1. Compact tuple (serialize/deserialize): optimized for fast structured clone / worker transfer.
- 2. Verbose JSON (toJSONImpl/fromJSONImpl): stable, versioned representation retaining structural genes.
-
-Compact tuple format layout:
- [ activations: number[], states: number[], squashes: string[],
-   connections: { from:number; to:number; weight:number; gater:number|null }[],
-   inputSize: number, outputSize: number ]
-
-Design Principles:
- - Avoid deep nested objects to reduce serialization overhead.
- - Use current node ordering as canonical index mapping (caller must keep ordering stable between peers).
- - Include current activation/state for scenarios resuming partially evaluated populations.
- - Self connections placed in the same array as normal connections for uniform reconstruction.
-
-Verbose JSON (formatVersion = 2) adds:
- - Enabled flag for connections (innovation toggling).
- - Stable geneId (if tracked) on nodes.
- - Dropout probability.
-
-Future Ideas:
- - Delta / patch serialization for large evolving populations.
- - Compressed binary packing (e.g., Float32Array segments) for WASM pipelines.
-
-### SerializedConnection
-
-Serialized connection representation.
-
-### toJSONImpl
-
-`() => NetworkJSON`
-
-Verbose JSON export (stable formatVersion). Omits transient runtime fields but keeps structural genetics.
-formatVersion=2 adds: enabled flags, stable geneId (if present), dropout value.
-
-### default
-
-#### _flags
-
-Packed state flags (private for future-proofing hidden class):
-bit0 => enabled gene expression (1 = active)
-bit1 => DropConnect active mask (1 = not dropped this forward pass)
-bit2 => hasGater (1 = symbol field present)
-bit3 => plastic (plasticityRate > 0)
-bits4+ reserved.
-
-#### acquire
-
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default`
-
-Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
-a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
-topology frequently to reduce GC pressure.
-
-Parameters:
-- `from` - Source node.
-- `to` - Target node.
-- `weight` - Optional initial weight.
-
-Returns: Reinitialized connection instance.
-
-#### dcMask
-
-DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass.
-
-#### dropConnectActiveMask
-
-Convenience alias for DropConnect mask with clearer naming.
-
-#### eligibility
-
-Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment).
-
-#### enabled
-
-Whether the gene (connection) is currently expressed (participates in forward pass).
-
-#### firstMoment
-
-First moment estimate (Adam / AdamW) (was opt_m).
-
-#### from
-
-The source (pre-synaptic) node supplying activation.
-
-#### gain
-
-Multiplicative modulation applied *after* weight. Default is `1` (neutral). We only store an
-internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
-large populations where most connections are ungated.
-
-#### gater
-
-Optional gating node whose activation can modulate effective weight (symbol-backed).
-
-#### gradientAccumulator
-
-Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).
-
-#### hasGater
-
-Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.
-
-#### infinityNorm
-
-Adamax: Exponential moving infinity norm (was opt_u).
-
-#### innovation
-
-Unique historical marking (auto-increment) for evolutionary alignment.
-
-#### innovationID
-
-`(sourceNodeId: number, targetNodeId: number) => number`
-
-Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
-Useful when you want a stable innovation id without relying on global mutable counters
-(e.g., for hashing or reproducible experiments).
-
-NOTE: For large indices this can overflow 53-bit safe integer space; keep node indices reasonable.
-
-Parameters:
-- `sourceNodeId` - Source node integer id / index.
-- `targetNodeId` - Target node integer id / index.
-
-Returns: Unique non-negative integer derived from the ordered pair.
-
-#### lookaheadShadowWeight
-
-Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).
-
-#### maxSecondMoment
-
-AMSGrad: Maximum of past second moment (was opt_vhat).
-
-#### plastic
-
-Whether this connection participates in plastic adaptation (rate > 0).
-
-#### plasticityRate
-
-Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag.
-
-#### previousDeltaWeight
-
-Last applied delta weight (used by classic momentum).
-
-#### release
-
-`(conn: import("C:/NeatapticTS/src/architecture/connection").default) => void`
-
-Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
-afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
-scrubbed here (they're overwritten during `acquire`).
-
-Parameters:
-- `conn` - The connection instance to recycle.
-
-#### resetInnovationCounter
-
-`(value: number) => void`
-
-Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
-You normally only call this at the start of an experiment or when deserializing a full population.
-
-Parameters:
-- `value` - New starting value (default 1).
-
-#### secondMoment
-
-Second raw moment estimate (Adam family) (was opt_v).
-
-#### secondMomentum
-
-Secondary momentum (Lion variant) (was opt_m2).
-
-#### to
-
-The target (post-synaptic) node receiving activation.
-
-#### toJSON
-
-`() => { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }`
-
-Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
-Undefined indices are preserved as `undefined` to allow later resolution / remapping.
-
-Returns: Object with node indices, weight, gain, gater index (if any), innovation id & enabled flag.
-
-#### totalDeltaWeight
-
-Accumulated (batched) delta weight awaiting an apply step.
-
-#### weight
-
-Scalar multiplier applied to the source activation (prior to gain modulation).
-
-#### xtrace
-
-Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration.
-
-## architecture/network/network.slab.ts
-
-### _buildAdjacency
-
-`() => void`
-
-Build / refresh CSR‑style adjacency (outStart + outOrder) enabling fast fan‑out traversal.
-Only rebuilds when marked dirty. Stores arrays on internal network instance.
-
-### _canUseFastSlab
-
-`(training: boolean) => boolean`
-
-Predicate gating usage of high‑performance slab forward pass.
-Disallows training / stochastic / dynamic edge behaviours (gating, dropout, noise, self‑connections).
-
-Parameters:
-- `training` - Whether caller is in training mode (disables fast path for gradient/time reasons).
-
-Returns: True if fast path can be safely used for deterministic forward activation.
-
-### _reindexNodes
-
-`() => void`
-
-Assign sequential indices to each node (stable ordering prerequisite for slab packing).
-Clears `_nodeIndexDirty` flag.
-
-### canUseFastSlab
-
-`(training: boolean) => boolean`
-
-Public convenience wrapper exposing fast path eligibility.
-Mirrors `_canUseFastSlab` internal predicate.
-
-Parameters:
-- `training` - Whether caller is performing training (disables fast path if true).
-
-Returns: True when slab fast path predicates hold.
-
-### ConnectionInternals
-
-Internal Connection properties accessed during slab operations.
-
-### ConnectionSlabView
-
-Shape returned by `getConnectionSlab()` describing the packed SoA view.
-Note: The arrays SHOULD NOT be mutated by callers; treat as read‑only.
+- `this` - - Bound Network instance that receives the best evolved structure.
+- `set` - - Supervised samples; sample input/output dimensions must match network I/O.
+- `options` - - Evolution hyperparameters and stop conditions.
+
+Returns: Final summary containing best error estimate, generations processed, and elapsed milliseconds.
 
 ### fastSlabActivate
 
@@ -1062,9 +1639,72 @@ Parameters:
 
 Returns: Output activations (detached plain array) of length `network.output`.
 
+### fromJSONImpl
+
+`(json: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => import("C:/NeatapticTS/src/architecture/network").default`
+
+### gate
+
+`(node: import("C:/NeatapticTS/src/architecture/node").default, connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+
+Attach a gater node to a connection so that the connection's effective weight
+becomes dynamically modulated by the gater's activation (see {@link Node.gate} for exact math).
+
+Validation / invariants:
+ - Throws if the gater node is not part of this network (prevents cross-network corruption).
+ - If the connection is already gated, function is a no-op (emits warning when enabled).
+
+Complexity: O(1)
+
+Parameters:
+- `this` - - Bound Network instance.
+- `node` - - Candidate gater node (must belong to network).
+- `connection` - - Connection to gate.
+
+### gaussianRand
+
+`(rng: () => number) => number`
+
+Produce a normally distributed random sample using the Box-Muller transform.
+
+Parameters:
+- `rng` - Pseudo-random source in the interval [0, 1).
+
+Returns: Standard normal sample with mean 0 and variance 1.
+
+### generateStandalone
+
+`(net: import("C:/NeatapticTS/src/architecture/network").default) => string`
+
+Standalone forward pass code generator.
+
+Purpose:
+ Transforms a dynamic Network instance (object graph with Nodes / Connections / gating metadata)
+ into a self-contained JavaScript function string that, when evaluated, returns an `activate(input)`
+ function capable of performing forward propagation without the original library runtime.
+
+Why generate code?
+ - Deployment: Embed a compact, dependency‑free inference function in environments where bundling
+   the full evolutionary framework is unnecessary (e.g. model cards, edge scripts, CI sanity checks).
+ - Performance: Remove dynamic indirection (property lookups, virtual dispatch) by specializing
+   the computation graph into straight‑line code and simple loops; JS engines can optimize this.
+ - Readability: Emitted source is human-readable so users can inspect weighted sums and activations.
+
+Features Supported:
+ - Standard feed‑forward connections with optional gating (multiplicative modulation).
+ - Single self-connection per node (handled as recurrent term S[i] * weight before activation).
+ - Arbitrary activation functions: built‑in ones are emitted via canonical snippets; custom user
+   functions are stringified and sanitized via stripCoverage(). Arrow or anonymous functions are
+   normalized into named `function <name>(...)` forms for clarity and stable ordering.
+
+Not Supported / Simplifications:
+ - No dynamic dropout, noise injection, or stochastic depth—those would require runtime randomness.
+ - Assumes all node indices are stable and sequential (enforced prior to generation).
+ - Gradient / backprop logic intentionally omitted (forward inference only).
+
 ### getConnectionSlab
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.slab").ConnectionSlabView`
+`() => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
 
 Obtain (and lazily rebuild if dirty) the current packed SoA view of connections.
 
@@ -1074,29 +1714,200 @@ tooling branch‑free while preserving omission memory savings internally.
 
 Returns: Read‑only style view (do not mutate) containing typed arrays + metadata.
 
-### getSlabAllocationStats
-
-`() => { pool: Record<string, PoolKeyMetrics>; fresh: number; pooled: number; }`
-
-### getSlabVersion
+### getCurrentSparsity
 
 `() => number`
 
-Retrieve current monotonic slab version (increments on each successful rebuild).
+Current sparsity fraction relative to the training-time pruning baseline.
 
-Returns: Non‑negative integer (0 if slab never built yet).
+Returns: Current sparsity in the [0,1] range when baseline is available.
 
-### NetworkSlabProps
+### getRegularizationStats
 
-Internal Network properties for slab operations.
+`() => Record<string, unknown> | null`
 
-### PoolKeyMetrics
+Obtain the last recorded regularization / stochastic statistics snapshot.
 
-Per-pool-key allocation & reuse counters (educational / diagnostics).
-Tracks how many slabs were freshly created vs reused plus the high‑water
-mark (maxRetained) of simultaneously retained arrays for the key. Exposed
-indirectly via `getSlabAllocationStats()` so users can introspect the
-effectiveness of pooling under their workload.
+Returns a defensive deep copy so callers can inspect metrics without risking mutation of the
+internal `_lastStats` object maintained by the training loop (e.g., during pruning, dropout, or
+noise scheduling updates).
+
+Returns: A deep-cloned stats object or null if no stats have been recorded yet.
+
+### getRNGState
+
+`() => number | undefined`
+
+Returns the current deterministic RNG numeric state, when available.
+
+Overview:
+- Use this for lightweight checkpointing when full lifecycle snapshots are unnecessary.
+- The value can be persisted and later reapplied through `setRNGState`.
+- This is commonly used by tests that assert deterministic continuity across operations.
+
+Parameters:
+- `this` - - Bound network instance queried for deterministic RNG numeric state.
+
+Returns: Numeric RNG state value, or `undefined` when no deterministic state exists yet.
+
+### getSlabAllocationStats
+
+`() => { pool: { [x: string]: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
+
+Slab Packing / Structure‑of‑Arrays Backend (Educational Module)
+==============================================================
+Packs per‑connection data into parallel typed arrays (SoA) to accelerate
+forward passes and to illustrate memory/layout optimizations.
+
+Why SoA?
+ - Locality & fewer cache misses.
+ - Predictable tight numeric loops (JIT / SIMD friendly).
+ - Easy instrumentation (single contiguous blocks to measure & diff).
+
+Key Arrays (logical length = `used`): weights | from | to | flags | (optional) gain | (optional) plastic.
+Adjacency (CSR style): outStart (nodeCount+1), outOrder (per‑source permutation) enabling fast fan‑out.
+
+On‑Demand & Omission:
+ - Gain/plastic slabs allocated only when a non‑neutral value appears; freed if neutrality returns.
+ - `getConnectionSlab()` synthesizes a neutral gain view if omitted internally (keeps teaching tools simple).
+
+Capacity Strategy: geometric growth (1.25x browser / 1.75x Node) amortizes realloc cost.
+Pooling (config gated) reuses typed arrays (see `getSlabAllocationStats`).
+
+Rebuild Steps (sync): reindex nodes → grow/allocate if needed → single pass populate → optional slabs → version++.
+Async variant slices the population loop into microtasks to reduce long main‑thread blocks.
+
+Example (inspection):
+```ts
+const slab = (net as any).getConnectionSlab();
+console.log('Edges', slab.used, 'Version', slab.version, 'Cap', slab.capacity);
+console.log('First weight from->to', slab.weights[0], slab.from[0], slab.to[0]);
+```
+
+### hasPath
+
+`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+
+Depth-first reachability test (avoids infinite loops via visited set).
+
+### maybePrune
+
+`(iteration: number) => void`
+
+Structured and dynamic pruning utilities for networks.
+
+Features:
+ - Scheduled pruning during gradient-based training ({@link maybePrune}) with linear sparsity ramp.
+ - Evolutionary generation pruning toward a target sparsity ({@link pruneToSparsity}).
+ - Two ranking heuristics:
+     magnitude: |w|
+     snip: |w * g| approximation (g approximated via accumulated delta stats; falls back to |w|)
+ - Optional stochastic regrowth during scheduled pruning (dynamic sparse training), preserving acyclic constraints.
+
+Internal State Fields (attached to Network via `any` casting):
+ - _pruningConfig: user-specified schedule & options (start, end, frequency, targetSparsity, method, regrowFraction, lastPruneIter)
+ - _initialConnectionCount: baseline connection count captured outside (first training iteration)
+ - _evoInitialConnCount: baseline for evolutionary pruning (first invocation of pruneToSparsity)
+ - _rand: deterministic RNG function
+ - _enforceAcyclic: boolean flag enforcing forward-only connectivity ordering
+ - _topoDirty: topology order invalidation flag consumed by activation fast path / topological sorting
+
+### mutateImpl
+
+`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+
+Public entry point: apply a single mutation operator to the network.
+
+Runtime flow:
+1. Validate mutation input.
+2. Resolve the mutation key from string/object/reference forms.
+3. Resolve a concrete handler from the dispatch table.
+4. Delegate execution and mark topology-derived caches dirty.
+
+Error and warning behavior:
+- Throws when no method is provided.
+- Emits a warning and no-ops when an unknown method key is received.
+
+Parameters:
+- `this` - - Network instance.
+- `method` - - Mutation enum value or descriptor object.
+
+Returns: Nothing.
+
+### noTraceActivate
+
+`(input: number[]) => number[]`
+
+Perform a forward pass without creating or updating any training / gradient traces.
+
+This is the most allocation‑sensitive activation path. Internally it will attempt
+to leverage a compact "fast slab" routine (an optimized, vectorized broadcast over
+contiguous activation buffers) when the Network instance indicates that such a path
+is currently valid. If that attempt fails (for instance because the slab is stale
+after a structural mutation) execution gracefully falls back to a node‑by‑node loop.
+
+Algorithm outline:
+ 1. (Optional) Refresh cached topological order if the network enforces acyclicity
+    and a structural change marked the order as dirty.
+ 2. Validate the input dimensionality.
+ 3. Try the fast slab path; if it throws, continue with the standard path.
+ 4. Acquire a pooled output buffer sized to the number of output neurons.
+ 5. Iterate all nodes in their internal order:
+      - Input nodes: directly assign provided input values.
+      - Hidden nodes: compute activation via Node.noTraceActivate (no bookkeeping).
+      - Output nodes: compute activation and store it (in sequence) inside the
+        pooled output buffer.
+ 6. Copy the pooled buffer into a fresh array (detaches user from the pool) and
+    release the pooled buffer back to the pool.
+
+Complexity considerations:
+ - Time: O(N + E) where N = number of nodes, E = number of inbound edges processed
+   inside each Node.noTraceActivate call (not explicit here but inside the node).
+ - Space: O(O) transient (O = number of outputs) due to the pooled output buffer.
+
+Parameters:
+- `this` - - Bound Network instance.
+- `input` - - Flat numeric vector whose length must equal network.input.
+
+Returns: Array of output neuron activations (length == network.output).
+
+### propagate
+
+`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
+
+Propagate output and hidden errors backward through the network.
+
+Parameters:
+- `this` - Bound network instance.
+- `rate` - Learning rate.
+- `momentum` - Momentum factor.
+- `update` - Whether to apply updates immediately.
+- `target` - Output target values.
+- `regularization` - L2 regularization factor.
+- `costDerivative` - Optional output-node derivative override.
+
+### pruneToSparsity
+
+`(targetSparsity: number, method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod) => void`
+
+Evolutionary (generation-based) pruning toward a target sparsity baseline.
+Unlike maybePrune this operates immediately relative to the first invocation's connection count
+(stored separately as _evoInitialConnCount) and does not implement scheduling or regrowth.
+
+Parameters:
+- `targetSparsity` - - Requested target sparsity.
+- `method` - - Connection ranking heuristic.
+
+Returns: Nothing.
+
+### rebuildConnections
+
+`(networkInstance: import("C:/NeatapticTS/src/architecture/network").default) => void`
+
+Rebuild the canonical connection array from per-node outgoing lists.
+
+Parameters:
+- `networkInstance` - Target network.
 
 ### rebuildConnectionSlab
 
@@ -1139,184 +1950,196 @@ Parameters:
 
 Returns: Promise resolving once rebuild completes.
 
-### TypedArray
+### removeNode
 
-Union of slab typed array element container types. We purposefully restrict
-to the specific constructors actually used by this module so TypeScript can
-narrow accurately and editors display concise hover info.
+`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
 
-### TypedArrayConstructor
+Node removal utilities.
 
-Constructor type for typed arrays used in slabs.
+This module provides a focused implementation for removing a single hidden node from a network
+while attempting to preserve overall functional connectivity. The removal procedure mirrors the
+legacy Neataptic logic but augments it with clearer documentation and explicit invariants.
 
-## architecture/network/network.standalone.ts
+High‑level algorithm (removeNode):
+ 1. Guard: ensure the node exists and is not an input or output (those are structural anchors).
+ 2. Ungate: detach any connections gated BY the node (we don't currently reassign gater roles).
+ 3. Snapshot inbound / outbound connections (before mutation of adjacency lists).
+ 4. Disconnect all inbound, outbound, and self connections.
+ 5. Physically remove the node from the network's node array.
+ 6. Simple path repair heuristic: for every former inbound source and outbound target, add a
+    direct connection if (a) both endpoints still exist, (b) they are distinct, and (c) no
+    direct connection already exists. This keeps forward information flow possibilities.
+ 7. Mark topology / caches dirty so that subsequent activation / ordering passes rebuild state.
 
-### generateStandalone
+Notes / Limitations:
+ - We do NOT attempt to clone weights or distribute the removed node's function across new
+   connections (more sophisticated strategies could average or compose weights).
+ - Gating effects involving the removed node as a gater are dropped; downstream behavior may
+   change—callers relying heavily on gating may want a custom remap strategy.
+ - Self connections are simply removed; no attempt is made to emulate recursion via alternative
+   structures.
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default) => string`
+Parameters:
+- `this` - - Bound Network instance.
+- `node` - - Hidden node to remove.
 
-### NetworkStandaloneProps
+### restoreRNG
 
-Internal Network properties accessed during standalone code generation.
+`(fn: () => number) => void`
 
-### NodeWithIndex
+Restores deterministic RNG lifecycle behavior from a provided RNG function.
 
-Internal Node properties with assigned indices for code generation.
+Overview:
+- Use this when replaying deterministic flows after custom serialization, hydration, or test setup.
+- The restored RNG function becomes the active random source used by the network lifecycle helpers.
+- This keeps deterministic plumbing explicit when external code owns RNG reconstruction.
 
-## architecture/network/network.stats.ts
+Parameters:
+- `this` - - Bound network instance receiving the restored RNG lifecycle function.
+- `fn` - - Deterministic RNG function to install (expected to return values in `[0, 1)`).
 
-### getRegularizationStats
+Returns: Nothing.
 
-`() => Record<string, unknown> | null`
+### serialize
 
-Obtain the last recorded regularization / stochastic statistics snapshot.
+`() => import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple`
 
-Returns a defensive deep copy so callers can inspect metrics without risking mutation of the
-internal `_lastStats` object maintained by the training loop (e.g., during pruning, dropout, or
-noise scheduling updates).
+Serializes a network instance into the compact tuple format.
 
-Returns: A deep-cloned stats object or null if no stats have been recorded yet.
+Use this format when payload size and serialization speed matter more than readability.
+The tuple layout is positional and optimized for transport/storage efficiency.
 
-### GlobalThisWithStructuredClone
+Parameters:
+- `this` - - Bound network instance.
 
-GlobalThis interface with optional structuredClone.
+Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
 
-### NetworkStatsProps
+### setRNGState
 
-Internal Network properties accessed during stats operations.
+`(state: number) => void`
 
-## architecture/network/network.topology.ts
+Applies a deterministic RNG numeric state to continue from a known checkpoint.
 
-### computeTopoOrder
+Overview:
+- Pair this with `getRNGState` to pause/resume deterministic sequences.
+- Useful for reproducible tests, multi-stage training workflows, and deterministic replay.
+- Delegation keeps the write path consistent with the rest of deterministic state utilities.
 
-`() => void`
+Parameters:
+- `this` - - Bound network instance receiving deterministic RNG state.
+- `state` - - Numeric RNG state checkpoint to install.
 
-Topology utilities.
+Returns: Nothing.
 
-Provides:
- - computeTopoOrder: Kahn-style topological sorting with graceful fallback when cycles detected.
- - hasPath: depth-first reachability query (used to prevent cycle introduction when acyclicity enforced).
+### setSeed
 
-Design Notes:
- - We deliberately tolerate cycles by falling back to raw node ordering instead of throwing; this
-   allows callers performing interim structural mutations to proceed (e.g. during evolve phases)
-   while signaling that the fast acyclic optimizations should not be used.
- - Input nodes are seeded into the queue immediately regardless of in-degree to keep them early in
-   the ordering even if an unusual inbound edge was added (defensive redundancy).
- - Self loops are ignored for in-degree accounting and queue progression (they neither unlock new
-   nodes nor should they block ordering completion).
+`(seed: number) => void`
 
-### hasPath
+Sets deterministic randomness for a network by installing a seed-backed RNG.
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+Overview:
+- Use this before training, mutation, or any stochastic operation when you need repeatable runs.
+- The same seed and operation order produce the same random sequence and reproducible outcomes.
+- This method delegates to setup utilities so behavior stays centralized across deterministic APIs.
 
-Depth-first reachability test (avoids infinite loops via visited set).
+Parameters:
+- `this` - - Bound network instance whose RNG state is being initialized.
+- `seed` - - Seed value used to derive deterministic RNG state (low 32 bits are applied).
 
-### NetworkTopologyProps
+Returns: Nothing.
 
-Internal Network properties accessed during topology operations.
+### snapshotRNG
 
-## architecture/network/network.training.ts
+`() => import("C:/NeatapticTS/src/architecture/network/network.types").RNGSnapshot`
 
-### __trainingInternals
+Captures the current deterministic RNG lifecycle state as a portable snapshot.
 
-### applyGradientClippingImpl
+Overview:
+- Use this before temporary experiments, branching simulations, or stateful debug sessions.
+- The snapshot preserves enough information to resume from the same deterministic point later.
+- This is useful when comparing alternate algorithm branches from an identical random timeline.
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; }) => void`
+Parameters:
+- `this` - - Bound network instance whose RNG lifecycle state is captured.
 
-### CheckpointConfig
+Returns: Snapshot containing deterministic progress metadata and RNG state payload.
 
-Checkpoint callback spec.
+### testNetwork
 
-### ConnectionInternals
+`(set: TestSample[], cost: CostFunction | undefined) => TestNetworkResult`
 
-Runtime interface for accessing Connection internal properties during training.
+Evaluate a dataset and return average error and elapsed time.
 
-### CostFunction
+Parameters:
+- `this` - Bound network instance.
+- `set` - Evaluation samples.
+- `cost` - Optional cost function override.
 
-`(target: number[], output: number[]) => number`
+Returns: Mean error and evaluation duration.
 
------------------------------------------------------------------------------
-Internal Type Definitions (documentation only; optional for callers)
------------------------------------------------------------------------------
+### toJSONImpl
 
-### CostFunctionOrObject
+`() => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON`
 
-Cost function or cost object interface.
+Serializes a network instance into the verbose JSON format.
 
-### GradientClipConfig
+Use this format when you need human-readable snapshots, explicit schema versioning,
+and better forward/backward compatibility handling.
 
-Gradient clipping configuration accepted by options.gradientClip.
+Parameters:
+- `this` - - Bound network instance.
 
-### MetricsHook
-
-`(m: { iteration: number; error: number; plateauError?: number | undefined; gradNorm: number; }) => void`
-
-Metrics hook signature.
-
-### MixedPrecisionConfig
-
-### MixedPrecisionDynamicConfig
-
-Mixed precision configuration.
-
-### MonitoredSmoothingConfig
-
-Configuration passed to monitored (primary) smoothing computation.
-
-### MovingAverageType
-
-Moving average strategy identifiers.
-
-### NetworkInternals
-
-Runtime interface for accessing Network internal properties during training.
-
-### NodeInternals
-
-Runtime interface for accessing Node internal properties during training.
-
-### OptimizerConfigBase
-
-Optimizer configuration (subset – delegated to node.applyBatchUpdatesWithOptimizer).
-
-### PlateauSmoothingConfig
-
-Configuration for plateau smoothing computation.
-
-### PlateauSmoothingState
-
-State container for plateau EMA smoothing.
-
-### PrimarySmoothingState
-
----------------------------------------------------------------------------
-Internal Helper Utilities (non-exported)
----------------------------------------------------------------------------
-These functions encapsulate cohesive sub-steps of the training pipeline so the
-main exported functions remain readable while preserving original behavior.
-Each helper is intentionally pure where reasonable or documents its side-effects.
-
-### RegularizationConfig
-
-Regularization configuration (used internally during training).
-
-### ScheduleConfig
-
-Schedule hook executed every N iterations.
-
-### SerializedNetwork
-
-Serialized network structure (used in checkpoint callbacks).
+Returns: Versioned JSON payload with shape metadata, nodes, and connections.
 
 ### trainImpl
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], options: import("C:/NeatapticTS/src/architecture/network/network.training").TrainingOptions) => { error: number; iterations: number; time: number; }`
+`(net: import("C:/NeatapticTS/src/architecture/network").default, set: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").TrainingSample[], options: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
 
-### TrainingOptions
+High-level training orchestration with early stopping, smoothing & callbacks.
 
-Primary training options object (public shape).
+This is the main entrypoint used by `Network.train(...)`-style APIs.
+
+Parameters:
+- `net` - - Network instance to train.
+- `set` - - Training dataset.
+- `options` - - Training options (stopping conditions, optimizer, hooks, etc.).
+
+Returns: Summary payload containing final error, iteration count, and elapsed time.
 
 ### trainSetImpl
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: RegularizationConfig, costFunction: import("C:/NeatapticTS/src/architecture/network/network.training").CostFunction | CostFunctionOrObject, optimizer: import("C:/NeatapticTS/src/architecture/network/network.training").OptimizerConfigBase | undefined) => number`
+`(net: import("C:/NeatapticTS/src/architecture/network").default, set: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("C:/NeatapticTS/src/architecture/network/network.types").RegularizationConfig, costFunction: import("C:/NeatapticTS/src/architecture/network/network.types").CostFunction | import("C:/NeatapticTS/src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("C:/NeatapticTS/src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
+
+Execute one full pass over dataset (epoch) with optional accumulation & adaptive optimizer.
+Returns mean cost across processed samples.
+
+This is the core "one epoch" primitive used by higher-level training orchestration.
+
+Parameters:
+- `net` - - Network instance receiving training updates.
+- `set` - - Training samples.
+- `batchSize` - - Mini-batch size (use 1 for pure SGD).
+- `accumulationSteps` - - Micro-batch accumulation steps.
+- `currentRate` - - Current learning rate (may be scheduled by caller).
+- `momentum` - - Momentum used by some optimizers (when applicable).
+- `regularization` - - Regularization configuration passed down to nodes.
+- `costFunction` - - Cost function selector (function or compatible object).
+- `optimizer` - - Optional optimizer configuration.
+
+Returns: Mean cost across the processed samples.
+
+### ungate
+
+`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+
+Remove gating from a connection, restoring its static weight contribution.
+
+Idempotent: If the connection is not currently gated, the call performs no structural changes
+(and optionally logs a warning). After ungating, the connection's weight will be used directly
+without modulation by a gater activation.
+
+Complexity: O(n) where n = number of gated connections (indexOf lookup) – typically small.
+
+Parameters:
+- `this` - - Bound Network instance.
+- `connection` - - Connection to ungate.

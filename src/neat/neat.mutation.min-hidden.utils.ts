@@ -172,6 +172,35 @@ export function ensureHiddenConnectivityForMinHidden(
   }
 }
 
+/** Baseline minimum hidden nodes when no configuration is provided. */
+export const MINIMUM_HIDDEN_BASELINE = 0;
+
+/**
+ * Compute the minimum hidden node count using explicit or multiplier-based settings.
+ *
+ * @param inputCount - Number of input nodes in the network.
+ * @param outputCount - Number of output nodes in the network.
+ * @param explicitMinimumHidden - Optional explicit minimum hidden count.
+ * @param hiddenMultiplier - Optional multiplier used when explicit minimum is absent.
+ * @returns Minimum hidden node requirement.
+ */
+export function computeMinimumHiddenSize(
+  inputCount: number,
+  outputCount: number,
+  explicitMinimumHidden?: number,
+  hiddenMultiplier?: number,
+): number {
+  if (typeof explicitMinimumHidden === 'number') return explicitMinimumHidden;
+  if (
+    typeof hiddenMultiplier === 'number' &&
+    Number.isFinite(hiddenMultiplier)
+  ) {
+    const weightedNodeTotal = hiddenMultiplier * (inputCount + outputCount);
+    return Math.max(MINIMUM_HIDDEN_BASELINE, Math.round(weightedNodeTotal));
+  }
+  return MINIMUM_HIDDEN_BASELINE;
+}
+
 /**
  * Ensure a hidden node has at least one incoming connection.
  *

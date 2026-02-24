@@ -1,5 +1,23 @@
 # multithreading/workers/node
 
+## multithreading/workers/node/worker.ts
+
+### WorkerMessage
+
+Handles messages sent to the worker process.
+
+This function listens for messages sent to the worker process and performs one of two actions:
+1. If the message contains serialized activations, states, and connections, it evaluates the network using the dataset.
+2. If the message contains a dataset and cost function, it initializes the worker with the provided data.
+
+Parameters:
+- `e` - - The message object sent to the worker process. It can contain:
+- `set`: Serialized dataset to initialize the worker. This is an array of objects with `input` and `output` properties.
+- `cost`: The name of the cost function to use. This should match a key in the `methods.Cost` object.
+- `activations`: Serialized activation values for the network.
+- `states`: Serialized state values for the network.
+- `conns`: Serialized connection data for the network.
+
 ## multithreading/workers/node/testworker.ts
 
 ### CostFunction
@@ -39,21 +57,3 @@ Returns: A promise that resolves to the evaluation result.
 Terminates the worker process.
 
 This method ensures that the worker process is properly terminated to free up system resources.
-
-## multithreading/workers/node/worker.ts
-
-### WorkerMessage
-
-Handles messages sent to the worker process.
-
-This function listens for messages sent to the worker process and performs one of two actions:
-1. If the message contains serialized activations, states, and connections, it evaluates the network using the dataset.
-2. If the message contains a dataset and cost function, it initializes the worker with the provided data.
-
-Parameters:
-- `e` - - The message object sent to the worker process. It can contain:
-- `set`: Serialized dataset to initialize the worker. This is an array of objects with `input` and `output` properties.
-- `cost`: The name of the cost function to use. This should match a key in the `methods.Cost` object.
-- `activations`: Serialized activation values for the network.
-- `states`: Serialized state values for the network.
-- `conns`: Serialized connection data for the network.

@@ -1,4 +1,4 @@
-export * from './neat.evaluate.types.utils';
+export * from './neat.evaluate.utils.types';
 export * from './neat.evaluate.constants.utils';
 export * from './neat.evaluate.fitness.utils';
 export * from './neat.evaluate.novelty.utils';

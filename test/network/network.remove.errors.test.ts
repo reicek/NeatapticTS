@@ -1,5 +1,5 @@
 import Network from '../../src/architecture/network';
-import { removeNode } from '../../src/architecture/network/network.remove';
+import { removeNode } from '../../src/architecture/network/network.utils';
 
 /**
  * Standalone removeNode error path coverage.

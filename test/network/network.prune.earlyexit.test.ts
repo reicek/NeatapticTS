@@ -1,5 +1,5 @@
 import Network from '../../src/architecture/network';
-import { maybePrune } from '../../src/architecture/network/network.prune';
+import { maybePrune } from '../../src/architecture/network/network.utils';
 
 interface PruningConfigSnapshot {
   start: number;

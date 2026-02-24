@@ -13,6 +13,18 @@
  * - Cross‑environment: Works in both Browser and Node via feature detection.
  * - Extensible: Shape deliberately includes draft sections for later precise accounting phases.
  */
+import { config } from '../config';
+import { nodePoolStats } from '../architecture/nodePool';
+import { getSlabAllocationStats as _getSlabAllocationStats } from '../architecture/network/network.utils';
+import {
+  HEURISTIC_BYTES,
+  aggregateNetworkStats,
+  buildFlagSnapshot,
+  buildMemoryStatsSnapshot,
+  captureEnvironmentMetrics,
+  normalizeNetworks,
+  safeGetSlabAllocationStats,
+} from './memory.utils';
 
 /**
  * Detailed statistics describing the current estimated memory footprint of
@@ -91,33 +103,6 @@ export interface MemoryStats {
   };
 }
 
-/**
- * Capture heuristic memory statistics for one or more networks and active config flags.
- *
- * Usage examples:
- * ```ts
- * import { memoryStats, registerTrackedNetwork } from '../utils/memory';
- * registerTrackedNetwork(myNetwork);
- * const snap = memoryStats();
- * console.log('Approx MB', (snap.estimatedTotalBytes / 1e6).toFixed(2));
- * ```
- * ```ts
- * // Ad-hoc comparison between two networks (no need to register globally)
- * const before = memoryStats(netA);
- * const after = memoryStats(netB);
- * console.log('Δ bytes', after.estimatedTotalBytes - before.estimatedTotalBytes);
- * ```
- *
- * Notes:
- * - Passing an explicit network (or array) bypasses the internal registry.
- * - Fields marked nullable are omitted when the implementation cannot infer
- *   capacity or allocator stats (e.g. early phases or when slabs disabled).
- * - Fragmentation percent is interpreted as (reserved - used)/reserved * 100.
- */
-import { config } from '../config';
-import { nodePoolStats } from '../architecture/nodePool';
-import { getSlabAllocationStats as _getSlabAllocationStats } from '../architecture/network/network.slab';
-
 /** Minimal view of a network used for memory heuristics. Only properties
  * accessed by this module are declared. This keeps coupling light while
  * enabling typed local variables instead of `any` everywhere. */
@@ -145,227 +130,41 @@ export interface NetworkView {
 export type SlabAllocStats = { fresh: number; pooled: number } | null;
 
 /**
- * Capture heuristic memory statistics for one or more networks with snapshot of active config flags.
- * @param targetNetworks Optional single network or array. If omitted, uses registered networks.
- */
-/**
- * Capture heuristic memory statistics for one or more networks with a
- * snapshot of active config flags.
+ * Capture heuristic memory statistics for one or more networks with a snapshot of active config flags.
  *
- * @param targetNetworks Optional single network or array. If omitted, uses registered networks.
+ * @param targetNetworks - Optional single network or array. If omitted, uses registered networks.
  * @returns MemoryStats heuristic snapshot.
  */
 export const memoryStats = (
   targetNetworks?: NetworkView | NetworkView[],
 ): MemoryStats => {
-  const networks: NetworkView[] = Array.isArray(targetNetworks)
-    ? targetNetworks
-    : targetNetworks
-      ? [targetNetworks]
-      : _trackedNetworks;
+  const networks = normalizeNetworks(targetNetworks, _trackedNetworks);
+  const slabAllocationStats = safeGetSlabAllocationStats(
+    _getSlabAllocationStats,
+  );
+  const networkAccumulators = aggregateNetworkStats(networks, HEURISTIC_BYTES);
+  const environmentMetrics = captureEnvironmentMetrics();
+  const flagSnapshot = buildFlagSnapshot(config, slabAllocationStats);
+  const nodePoolSnapshot =
+    typeof nodePoolStats === 'function' ? nodePoolStats() : null;
 
-  let totalConnections = 0;
-  let totalNodes = 0;
-  let slabBytes = 0;
-  let slabArrayCount = 0;
-  let totalReservedBytes = 0; // capacity * elementSize per array
-  let totalUsedBytes = 0; // logical used slice
-  let objectConnOverheadBytes = 0;
-
-  /** Heuristic per-connection JS object overhead (fields / hidden class). Tuned later. */
-  const JS_OBJECT_CONN_BYTES = 64; // conservative heuristic
-  /** Heuristic per-node JS object overhead. */
-  const JS_OBJECT_NODE_BYTES = 72; // includes bias, activation caches, refs
-
-  for (const network of networks) {
-    if (!network) continue;
-    const connCount = Array.isArray(network.connections)
-      ? network.connections.length
-      : 0;
-    const nodeCount = Array.isArray(network.nodes) ? network.nodes.length : 0;
-    totalConnections += connCount;
-    totalNodes += nodeCount;
-
-    // Estimate object overhead (will be partly replaced once slabs dominate representation)
-    objectConnOverheadBytes += connCount * JS_OBJECT_CONN_BYTES;
-
-    // Examine slab typed arrays (private fields guarded by feature detection)
-    const weightSlab = network._connWeights;
-    const fromSlab = network._connFrom;
-    const toSlab = network._connTo;
-    const flagsSlab = network._connFlags; // Phase 3 flags
-    const gainSlab = network._connGain; // optional with omission optimization
-    const plasticSlab = network._connPlastic;
-    const fastA = network._fastA;
-    const fastS = network._fastS;
-
-    const typedArrays: Array<
-      Float32Array | Float64Array | Uint32Array | Uint8Array | Int32Array
-    > = [];
-    if (weightSlab) typedArrays.push(weightSlab);
-    if (fromSlab) typedArrays.push(fromSlab);
-    if (toSlab) typedArrays.push(toSlab);
-    if (flagsSlab) typedArrays.push(flagsSlab);
-    if (gainSlab) typedArrays.push(gainSlab);
-    if (plasticSlab)
-      typedArrays.push(plasticSlab as Float32Array | Float64Array);
-    if (fastA) typedArrays.push(fastA);
-    if (fastS) typedArrays.push(fastS);
-    for (const ta of typedArrays) {
-      slabArrayCount++;
-      slabBytes += ta.byteLength;
-    }
-    // Capacity vs used (only for connection slabs when capacity tracked)
-    const capacity = network._connCapacity;
-    const used = network._connCount;
-    if (capacity && used !== undefined && used <= capacity) {
-      // Approximate per-connection bytes across parallel arrays we manage (weights/from/to/flags/gain)
-      // Determine element sizes
-      const weightBytes = network._useFloat32Weights ? 4 : 8;
-      const gainBytes = gainSlab ? weightBytes : 0;
-      const fromBytes = 4;
-      const toBytes = 4;
-      const flagBytes = 1;
-      const plasticBytes = plasticSlab ? weightBytes : 0; // plastic slab mirrors weight precision
-      const perConn =
-        weightBytes +
-        gainBytes +
-        fromBytes +
-        toBytes +
-        flagBytes +
-        plasticBytes;
-      totalReservedBytes += perConn * capacity;
-      totalUsedBytes += perConn * used;
-    }
-  }
-
-  // Aggregate estimated totals
-  const nodeBytes = totalNodes * JS_OBJECT_NODE_BYTES;
-  const estimatedTotalBytes = nodeBytes + objectConnOverheadBytes + slabBytes;
-  const bytesPerConnection = totalConnections
-    ? Math.round(estimatedTotalBytes / totalConnections)
-    : 0;
-
-  // Environment metrics (feature-detected)
-  const env: MemoryStats['env'] = {
-    isBrowser: typeof window !== 'undefined',
-  } as MemoryStats['env'];
-  try {
-    // Guarded access to browser performance.memory (non-standard in some envs)
-    if (typeof performance !== 'undefined' && 'memory' in performance) {
-      const mem = (
-        performance as Performance & {
-          memory?: {
-            usedJSHeapSize: number;
-            totalJSHeapSize: number;
-            jsHeapSizeLimit: number;
-          };
-        }
-      ).memory;
-      if (mem) {
-        env.usedJSHeapSize = mem.usedJSHeapSize;
-        env.totalJSHeapSize = mem.totalJSHeapSize;
-        env.jsHeapSizeLimit = mem.jsHeapSizeLimit;
-      }
-    }
-  } catch (error: unknown) {
-    // Ignore instrumentation errors; this should not crash consumer code.
-    void error;
-  }
-  try {
-    // Node.js environment: use globalThis.process to avoid bundler shims
-    const maybeProcess = (
-      globalThis as unknown as {
-        process?: { memoryUsage?: () => NodeJS.MemoryUsage };
-      }
-    ).process;
-    if (maybeProcess && typeof maybeProcess.memoryUsage === 'function') {
-      const mu = maybeProcess.memoryUsage();
-      env.rss = mu.rss;
-      env.heapUsed = mu.heapUsed;
-      env.heapTotal = mu.heapTotal;
-      env.external = mu.external;
-    }
-  } catch (error: unknown) {
-    // Ignore instrumentation errors; this should not crash consumer code.
-    void error;
-  }
-
-  const stats: MemoryStats = {
-    timestamp: Date.now(),
-    connections: totalConnections,
-    nodes: totalNodes,
-    bytesPerConnection,
-    estimatedTotalBytes,
-    slabs: {
-      slabBytes,
-      slabArrayCount,
-      fragmentationPct:
-        totalReservedBytes > 0
-          ? Math.round(
-              (100 * (totalReservedBytes - totalUsedBytes)) /
-                totalReservedBytes,
-            )
-          : null,
-      reservedBytes: totalReservedBytes || null,
-      usedBytes: totalUsedBytes || null,
-      slabVersion:
-        (networks[0] as NetworkView | undefined)?._slabVersion ?? null, // example version (Phase 3 edu)
-      asyncBuilds:
-        (networks[0] as NetworkView | undefined)?._slabAsyncBuilds ?? 0,
-      pooledFraction: (() => {
-        try {
-          const stats = _getSlabAllocationStats() as SlabAllocStats;
-          if (!stats) return null;
-          const denom = stats.fresh + stats.pooled;
-          return denom > 0 ? Number((stats.pooled / denom).toFixed(4)) : null;
-        } catch (error: unknown) {
-          void error;
-          return null;
-        }
-      })(),
-    },
-    pools: {
-      nodePool: typeof nodePoolStats === 'function' ? nodePoolStats() : null,
-      // future: connectionPool, slabAllocators, activation array pool etc.
-    },
-    flags: {
-      snapshot: {
-        warnings: config.warnings,
-        float32Mode: config.float32Mode,
-        deterministicChainMode: config.deterministicChainMode,
-        enableGatingTraces: config.enableGatingTraces,
-        poolMaxPerBucket: config.poolMaxPerBucket ?? null,
-        poolPrewarmCount: config.poolPrewarmCount ?? null,
-        enableNodePooling:
-          (config as unknown as { enableNodePooling?: boolean })
-            .enableNodePooling ?? false, // Phase 2 addition
-        allocStats: (() => {
-          try {
-            return _getSlabAllocationStats();
-          } catch (error: unknown) {
-            void error;
-            return null;
-          }
-        })(),
-      },
-    },
-    env,
-  };
-  return stats;
+  return buildMemoryStatsSnapshot({
+    networks,
+    accumulators: networkAccumulators,
+    env: environmentMetrics,
+    heuristics: HEURISTIC_BYTES,
+    allocationStats: slabAllocationStats,
+    nodePoolSnapshot,
+    flagSnapshot,
+  });
 };
 
-/**
- * Reset internal tracking registry (and, in later phases, ancillary counters).
- *
- * Educational: Calling this does NOT free memory — it simply clears the list
- * of networks that will be included when `memoryStats()` is invoked without
- * arguments. Use it between benchmark runs to isolate scenarios.
- */
 /**
  * Clear the internal list of networks tracked by `memoryStats()` when no
  * explicit networks are provided. This does NOT free memory; it only
  * removes references held by the registry.
+ *
+ * @returns void
  */
 export const resetMemoryTracking = (): void => {
   _trackedNetworks.length = 0; // clear registered networks
@@ -378,13 +177,8 @@ export const resetMemoryTracking = (): void => {
  * Duplicate registrations are ignored; insertion order is preserved which is
  * useful for deterministic test snapshots.
  *
- * @param network Network instance (loosely typed to defer strict coupling).
- */
-/**
- * Register a network instance for future anonymous `memoryStats()` calls.
- * Duplicate registrations are ignored.
- *
  * @param network Network instance (loose shape, validated at runtime).
+ * @returns void
  */
 export const registerTrackedNetwork = (
   network: NetworkView | null | undefined,
@@ -398,17 +192,13 @@ export const registerTrackedNetwork = (
  * Remove a previously registered network from the tracking registry.
  * No-op if the network is not currently registered.
  *
- * @param network Network instance.
- */
-/**
- * Unregister a previously registered network. No-op when not found.
  * @param network Network instance to remove.
+ * @returns void
  */
 export const unregisterTrackedNetwork = (network: NetworkView): void => {
   const index = _trackedNetworks.indexOf(network);
   if (index >= 0) _trackedNetworks.splice(index, 1);
 };
 
-// Internal registry (simple array to preserve insertion order for deterministic summaries)
 // Internal registry (simple array to preserve insertion order for deterministic summaries)
 const _trackedNetworks: NetworkView[] = [];

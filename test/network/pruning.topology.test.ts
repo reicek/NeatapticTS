@@ -4,11 +4,11 @@ import {
   maybePrune,
   pruneToSparsity,
   getCurrentSparsity,
-} from '../../src/architecture/network/network.prune';
+} from '../../src/architecture/network/network.utils';
 import {
   computeTopoOrder,
   hasPath,
-} from '../../src/architecture/network/network.topology';
+} from '../../src/architecture/network/network.utils';
 
 type PruningMethod = 'magnitude' | 'snip';
 

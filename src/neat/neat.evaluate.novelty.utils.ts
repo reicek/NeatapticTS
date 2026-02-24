@@ -1,7 +1,7 @@
 import type {
   GenomeForEvaluation,
   NeatControllerForEval,
-} from './neat.evaluate.types.utils';
+} from './neat.evaluate.utils.types';
 import {
   NOVELTY_ARCHIVE_CAP,
   NOVELTY_DEFAULT_BLEND,

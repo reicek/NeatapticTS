@@ -5,3 +5,6 @@ export * from './neat.evolve.population.utils';
 export * from './neat.evolve.objectives.utils';
 export * from './neat.evolve.telemetry.utils';
 export * from './neat.multiobjective.category.utils';
+export * from './neat.evolve.offspring.utils';
+export * from './neat.evolve.warnings.utils';
+export * from './neat.evolve.offspring.constants';

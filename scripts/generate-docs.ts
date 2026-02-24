@@ -34,6 +34,29 @@ const project = new Project({
   skipAddingFilesFromTsConfig: true
 });
 
+function extractLeadingFileJsDocDescription(sf: SourceFile): string | undefined {
+  // ts-morph doesn't consistently expose a top-of-file documentation block via
+  // `SourceFile.getJsDocs()`.
+  //
+  // We treat the very first `/** ... */` block in the file as the module/file
+  // overview, and emit it as a synthetic `__file_summary__` symbol so it can be
+  // rendered before the file's declarations.
+  const text = sf.getFullText();
+  const match = text.match(/^\s*(?:\uFEFF)?\/\*\*([\s\S]*?)\*\//);
+  if (!match) return undefined;
+
+  const body = match[1];
+  const cleaned = body
+    .split(/\r?\n/)
+    .map(line => line.replace(/^\s*\*\s?/, ''))
+    .join('\n')
+    .trim();
+
+  if (!cleaned) return undefined;
+  if (cleaned.split('\n').some(line => line.trim().startsWith('@internal'))) return undefined;
+  return cleaned;
+}
+
 async function main() {
   await fs.ensureDir(DOCS_DIR);
   // Copy root README (manual) into docs
@@ -58,9 +81,9 @@ async function main() {
   for (const sf of sourceFiles) {
       const exported = sf.getExportedDeclarations();
       // capture file-level/module JSDoc if present
-      const fileJsDocs = (sf as any).getJsDocs?.() || [];
-      const fileDocPrimary = fileJsDocs[0];
-      const fileDocDesc = fileDocPrimary?.getDescription?.()?.trim();
+    const fileDocDesc =
+      extractLeadingFileJsDocDescription(sf) ||
+      ((sf as any).getJsDocs?.()?.[0]?.getDescription?.()?.trim() as string | undefined);
 
       // ensure fileMap exists early so we can add file-level doc
       const dir = path.dirname(sf.getFilePath());
@@ -386,11 +409,30 @@ function buildDirectoryReadme(relDir: string, fileMap: Map<string, RenderedSymbo
     `# ${title}`,
     ''
   ];
-  const filesSorted = [...fileMap.keys()].sort();
+
+  const filesSorted = [...fileMap.keys()].toSorted((left, right) => {
+    const leftRank = rankFileForDirectoryReadme(left, fileMap);
+    const rightRank = rankFileForDirectoryReadme(right, fileMap);
+
+    for (let idx = 0; idx < Math.max(leftRank.length, rightRank.length); idx++) {
+      const leftValue = leftRank[idx] ?? 0;
+      const rightValue = rightRank[idx] ?? 0;
+      if (leftValue !== rightValue) return leftValue - rightValue;
+    }
+
+    return left.localeCompare(right);
+  });
+
   for (const file of filesSorted) {
     const relFile = path.relative(SRC_DIR, file).replace(/\\/g, '/');
     lines.push(`## ${relFile}`, '');
-  const symbols = fileMap.get(file)!.toSorted((a, b) => (a.parent || a.name).localeCompare(b.parent || b.name) || a.name.localeCompare(b.name));
+    const fileBaseName = path.basename(file, '.ts');
+    const symbols = fileMap.get(file)!.toSorted((a, b) => {
+      const aIsFilePrimary = !a.parent && a.name === fileBaseName;
+      const bIsFilePrimary = !b.parent && b.name === fileBaseName;
+      if (aIsFilePrimary !== bIsFilePrimary) return aIsFilePrimary ? -1 : 1;
+      return (a.parent || a.name).localeCompare(b.parent || b.name) || a.name.localeCompare(b.name);
+    });
 
     // extract file summary if present
     const fileSummaryIdx = symbols.findIndex(s => s.name === '__file_summary__' && s.kind === 'File');
@@ -460,6 +502,35 @@ function buildDirectoryReadme(relDir: string, fileMap: Map<string, RenderedSymbo
     }
   }
   return lines.join('\n').trim() + '\n';
+}
+
+function rankFileForDirectoryReadme(filePath: string, fileMap: Map<string, RenderedSymbol[]>) {
+  const fileName = path.basename(filePath).toLowerCase();
+  const symbols = fileMap.get(filePath) ?? [];
+
+  const hasFileSummary = symbols.some(s => {
+    if (s.kind !== 'File' || s.name !== '__file_summary__') return false;
+    return Boolean(s.jsdoc.description?.trim());
+  });
+
+  const isIndexFile = fileName === 'index.ts';
+  const isTypesFile = fileName.includes('.types.') || fileName.endsWith('.types.ts');
+  const isUtilityLike = /(\.utils\.|\.export-|\.import-|\.internal\.|\.private\.)/i.test(fileName);
+  const isEntrypointLike = !isUtilityLike;
+
+  // Rank tuple (lower is earlier):
+  // 1) index.ts first
+  // 2) files with file-level docs next (directory overview / entrypoints)
+  // 3) entrypoint-like (non-utils) before helpers
+  // 4) types early (after entrypoints)
+  // 5) shorter file names tend to be higher-level modules
+  return [
+    isIndexFile ? 0 : 1,
+    hasFileSummary ? 0 : 1,
+    isEntrypointLike ? 0 : 1,
+    isTypesFile ? 0 : 1,
+    fileName.length,
+  ];
 }
 
 async function writeIfChanged(file: string, content: string) {

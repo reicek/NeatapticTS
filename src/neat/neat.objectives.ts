@@ -19,6 +19,7 @@ import {
  * evaluate and whether each objective should be maximized or minimized.
  *
  * Example:
+ *
  * ```ts
  * const objectives = neatInstance._getObjectives();
  * // objectives: Array<ObjectiveDescriptor>
@@ -65,6 +66,7 @@ export function _getObjectives(
  * `accessor` function that maps a genome to a numeric objective value.
  *
  * Example:
+ *
  * ```ts
  * // register an objective that measures model sparsity (lower is better)
  * neat.registerObjective('sparsity', 'min', genome => computeSparsity(genome));
@@ -115,6 +117,7 @@ export function registerObjective(
  * cleared state.
  *
  * Example:
+ *
  * ```ts
  * neat.clearObjectives();
  * // now only the default fitness objective (unless suppressed) will remain

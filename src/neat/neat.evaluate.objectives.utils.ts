@@ -1,4 +1,4 @@
-import type { NeatControllerForEval } from './neat.evaluate.types.utils';
+import type { NeatControllerForEval } from './neat.evaluate.utils.types';
 
 /**
  * @param controller - NEAT controller instance for evaluation.
