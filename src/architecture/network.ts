@@ -40,11 +40,13 @@ import {
   activateRaw as _activateRaw,
   activateBatch as _activateBatch,
   mutateImpl as _mutateImpl,
+  describeArchitecture as _describeArchitecture,
   applyGradientClippingImpl as _applyGradientClippingImpl,
   trainImpl as _trainImpl,
   crossOver as _crossOver,
 } from './network/network.utils';
 import type {
+  NetworkArchitectureDescriptor,
   ConnectionWeightNoiseProps,
   MutationMethod,
   NetworkRuntimeProps,
@@ -1460,6 +1462,34 @@ export default class Network implements NetworkView {
   /** Verbose JSON serializer delegate */
   toJSON(): Record<string, unknown> {
     return _toJSONImpl.call(this) as unknown as Record<string, unknown>;
+  }
+
+  /**
+   * Resolves a stable architecture descriptor for telemetry/UI consumers.
+   *
+   * Prefers live graph analysis and only falls back to hydrated serialization
+   * metadata when graph-based resolution is purely inferred.
+   *
+   * @returns Architecture descriptor with hidden-layer widths and provenance.
+   */
+  describeArchitecture(): NetworkArchitectureDescriptor {
+    const liveDescriptor = _describeArchitecture(this);
+    const runtimeProps = this as unknown as NetworkRuntimeProps;
+    const hydratedDescriptor = runtimeProps._serializedArchitectureDescriptor;
+
+    if (
+      liveDescriptor.source === 'inferred' &&
+      hydratedDescriptor &&
+      hydratedDescriptor.hiddenLayerSizes.length > 0
+    ) {
+      return {
+        ...hydratedDescriptor,
+        totalNodes: this.nodes.length,
+        totalConnections: this.connections.length,
+      };
+    }
+
+    return liveDescriptor;
   }
 
   /**

@@ -359,10 +359,13 @@ function distributeRemainingSlots(
       fraction: share - Math.floor(share),
     }))
     .toSorted((left, right) => right.fraction - left.fraction);
-  for (const remainder of remainders) {
-    if (slotsLeft <= 0) break;
-    allocation[remainder.speciesIndex]++;
+  if (remainders.length === 0) return;
+  let remainderIndex = 0;
+  while (slotsLeft > 0) {
+    const targetSpeciesIndex = remainders[remainderIndex].speciesIndex;
+    allocation[targetSpeciesIndex]++;
     slotsLeft--;
+    remainderIndex = (remainderIndex + 1) % remainders.length;
   }
 }
 
@@ -390,11 +393,17 @@ function trimOversubscription(
   const order = allocation
     .map((value, speciesIndex) => ({ speciesIndex, value }))
     .toSorted((left, right) => right.value - left.value);
-  for (const entry of order) {
-    if (slotsLeft === 0) break;
-    if (allocation[entry.speciesIndex] > minOffspring) {
-      allocation[entry.speciesIndex]--;
-      slotsLeft++;
+  if (order.length === 0) return;
+  let didTrim = true;
+  while (slotsLeft < 0 && didTrim) {
+    didTrim = false;
+    for (const entry of order) {
+      if (slotsLeft === 0) break;
+      if (allocation[entry.speciesIndex] > minOffspring) {
+        allocation[entry.speciesIndex]--;
+        slotsLeft++;
+        didTrim = true;
+      }
     }
   }
 }

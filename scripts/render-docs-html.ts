@@ -8,6 +8,16 @@ import fs from 'fs-extra';
 import { marked } from 'marked';
 
 const DOCS_DIR = path.resolve('docs');
+const THEME_CSS_SOURCE_PATH = path.resolve('scripts', 'assets', 'theme.css');
+const THEME_CSS_OUTPUT_PATH = path.join(DOCS_DIR, 'assets', 'theme.css');
+
+async function ensureThemeCss(): Promise<void> {
+  // Step 1: Ensure destination directory exists.
+  await fs.ensureDir(path.dirname(THEME_CSS_OUTPUT_PATH));
+
+  // Step 2: Copy static theme stylesheet used by generated docs pages.
+  await fs.copyFile(THEME_CSS_SOURCE_PATH, THEME_CSS_OUTPUT_PATH);
+}
 
 function slugify(s: string): string {
   return s
@@ -18,6 +28,7 @@ function slugify(s: string): string {
 }
 
 async function main() {
+  await ensureThemeCss();
   const readmes = await fg(['**/README.md'], { cwd: DOCS_DIR, absolute: true });
 
   // Collect metadata for navigation
@@ -71,29 +82,32 @@ async function main() {
         isCurrent ? ' class="current"' : ''
       }><a href="${href}">${label}${isCurrent ? '' : ''}</a></li>`;
     };
-    // Add asciiMaze example explicitly if present
-    const asciiExample = () => {
-      try {
-        const copiedExampleAbs = path.resolve(
-          DOCS_DIR,
-          'examples',
-          'asciiMaze',
-          'index.html'
-        );
-        if (fs.existsSync(copiedExampleAbs)) {
-          const relTargetDir = 'examples/asciiMaze';
-          const relLink =
-            path.posix.relative(currentDir || '.', relTargetDir) || '.';
-          const href = (relLink === '.' ? '.' : relLink) + '/index.html';
-          return `<li><a href="${href}">examples/asciiMaze</a></li>`;
-        }
-      } catch {
-        /* ignore */
-      }
-      return '';
-    };
-    const groupsHtml = Array.from(groupsMap.values())
-      .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
+    const exampleDemos = [
+      { dir: 'examples/asciiMaze', label: 'examples/asciiMaze' },
+      { dir: 'examples/flappy_bird', label: 'examples/flappy_bird' },
+    ];
+    const demoLinksHtml = exampleDemos
+      .map((entry) => {
+        const copiedExampleAbs = path.resolve(DOCS_DIR, entry.dir, 'index.html');
+        if (!fs.existsSync(copiedExampleAbs)) return '';
+        const relLink = path.posix.relative(currentDir || '.', entry.dir) || '.';
+        const href = (relLink === '.' ? '.' : relLink) + '/index.html';
+        return `<li><a href="${href}">${entry.label}</a></li>`;
+      })
+      .filter(Boolean)
+      .join('');
+    const groups = Array.from(groupsMap.values());
+    if (demoLinksHtml && !groupsMap.has('examples')) {
+      groups.push({ name: 'examples', items: [] });
+    }
+    const groupsHtml = groups
+      .sort((a, b) => {
+        const leftOrder = order.indexOf(a.name);
+        const rightOrder = order.indexOf(b.name);
+        const leftRank = leftOrder === -1 ? Number.MAX_SAFE_INTEGER : leftOrder;
+        const rightRank = rightOrder === -1 ? Number.MAX_SAFE_INTEGER : rightOrder;
+        return leftRank - rightRank || a.name.localeCompare(b.name);
+      })
       .map((g) => {
         const items = g.items.sort((a, b) => a.relDir.localeCompare(b.relDir));
         if (g.name === 'root')
@@ -101,7 +115,7 @@ async function main() {
         return `<li class="group"><div class="g-head">${
           g.name
         }</div><ul>${items.map(makeLink).join('')}${
-          g.name === 'examples' ? asciiExample() : ''
+          g.name === 'examples' ? demoLinksHtml : ''
         }</ul></li>`;
       })
       .join('');

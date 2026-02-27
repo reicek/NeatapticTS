@@ -1305,6 +1305,17 @@ Parameters:
 
 Returns: A new Network instance representing the offspring.
 
+#### describeArchitecture
+
+`() => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor`
+
+Resolves a stable architecture descriptor for telemetry/UI consumers.
+
+Prefers live graph analysis and only falls back to hydrated serialization
+metadata when graph-based resolution is purely inferred.
+
+Returns: Architecture descriptor with hidden-layer widths and provenance.
+
 #### deserialize
 
 `(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) => import("C:/NeatapticTS/src/architecture/network").default`

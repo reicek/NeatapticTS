@@ -18,4 +18,20 @@ describe('refined offspring allocation', () => {
     // We can't directly read per-species allocation post-hoc, but ensure no species collapsed to 0 members unexpectedly
     expect(speciesStats.every((s) => s.size >= 1)).toBe(true);
   });
+
+  test('speciated evolve keeps population size at configured popsize', async () => {
+    const configuredPopulationSize = 100;
+    const neat = new Neat(3, 2, fitness, {
+      popsize: configuredPopulationSize,
+      elitism: 10,
+      targetSpecies: 34,
+      speciation: true,
+      speciesAllocation: { minOffspring: 1, extendedHistory: false },
+    });
+
+    await neat.evaluate();
+    await neat.evolve();
+
+    expect(neat.population.length).toBe(configuredPopulationSize);
+  });
 });

@@ -175,14 +175,6 @@ Parameters:
 
 Returns: Output candidate node.
 
-### getNetworkConstructor
-
-`() => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkConstructor`
-
-Dynamically resolves the Network constructor to avoid circular import issues.
-
-Returns: Network constructor.
-
 ### getRandomGenerator
 
 `(parentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator`

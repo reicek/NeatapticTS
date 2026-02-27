@@ -529,6 +529,16 @@ Minimal runtime contract consumed from NEAT in evolve utilities.
 
 Runtime activation contract used by slab-based execution paths.
 
+### NetworkArchitectureDescriptor
+
+Stable architecture descriptor for UI/telemetry consumers.
+
+Hidden-layer sizes are ordered from input-side to output-side.
+
+### NetworkArchitectureSource
+
+Provenance of hidden-layer architecture information.
+
 ### NetworkConstructor
 
 Constructor signature for runtime Network import.
@@ -1558,6 +1568,22 @@ Design notes:
   crossover API stays compact and predictable.
 - The resulting offspring preserves the same input/output interface as both parents,
   which keeps downstream evaluation and training pipelines compatible.
+
+### describeArchitecture
+
+`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor`
+
+Describes network architecture for diagnostics, telemetry, and UI rendering.
+
+Resolution priority is intentionally explicit:
+1) node `layer` metadata (factual when present)
+2) graph-derived feed-forward depth layering (factual for acyclic graphs)
+3) hidden-node count fallback (heuristic inference)
+
+Parameters:
+- `network` - - Runtime network instance.
+
+Returns: Stable architecture descriptor.
 
 ### deserialize
 

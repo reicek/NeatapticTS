@@ -5,6 +5,8 @@ import type {
   NetworkJSON,
 } from './network.serialize.utils.types';
 export type { SerializedConnection } from '../network.types';
+import type { NetworkArchitectureDescriptor } from '../network.types';
+import { describeArchitecture } from '../topology/network.topology.architecture.utils';
 import {
   collectNodeActivations,
   collectNodeSquashKeys,
@@ -187,6 +189,9 @@ export function toJSONImpl(this: Network): NetworkJSON {
   // Step 3: Append non-self connections.
   appendJsonForwardConnections(networkInternals, networkJson);
 
+  // Step 4: Attach optional architecture metadata for diagnostics consumers.
+  networkJson.architecture = describeArchitecture(this);
+
   return networkJson;
 }
 
@@ -236,8 +241,55 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
     connectionJsonEntries: json.connections,
   });
 
+  // Step 5: Hydrate optional architecture metadata when valid.
+  applyHydratedArchitectureDescriptor(rebuiltNetwork, json.architecture);
+
   return rebuiltNetwork;
 };
+
+/**
+ * Applies hydrated architecture metadata to runtime network when shape is valid.
+ *
+ * @param network - Rebuilt network instance.
+ * @param architectureDescriptor - Optional serialized descriptor.
+ * @returns Nothing.
+ */
+function applyHydratedArchitectureDescriptor(
+  network: Network,
+  architectureDescriptor: NetworkArchitectureDescriptor | undefined,
+): void {
+  if (!isArchitectureDescriptorShapeValid(architectureDescriptor)) {
+    return;
+  }
+
+  const runtimeNetwork = network as unknown as {
+    _serializedArchitectureDescriptor?: NetworkArchitectureDescriptor;
+  };
+  runtimeNetwork._serializedArchitectureDescriptor = architectureDescriptor;
+}
+
+/**
+ * @param architectureDescriptor - Optional descriptor candidate.
+ * @returns True when minimal descriptor shape is valid.
+ */
+function isArchitectureDescriptorShapeValid(
+  architectureDescriptor: NetworkArchitectureDescriptor | undefined,
+): architectureDescriptor is NetworkArchitectureDescriptor {
+  if (!architectureDescriptor || typeof architectureDescriptor !== 'object') {
+    return false;
+  }
+
+  if (!Array.isArray(architectureDescriptor.hiddenLayerSizes)) {
+    return false;
+  }
+
+  const hasValidSource =
+    architectureDescriptor.source === 'layer-metadata' ||
+    architectureDescriptor.source === 'graph-topology' ||
+    architectureDescriptor.source === 'inferred';
+
+  return hasValidSource;
+}
 
 /**
  * Re-exported connection constructor used by tooling that needs to inspect connection internals.

@@ -18,6 +18,32 @@ export interface NetworkRuntimeProps {
   _lastStats?: unknown;
   /** Optional runtime layers cache. */
   layers?: unknown[];
+  /** Optional architecture descriptor hydrated from serialization metadata. */
+  _serializedArchitectureDescriptor?: NetworkArchitectureDescriptor;
+}
+
+/** Provenance of hidden-layer architecture information. */
+export type NetworkArchitectureSource =
+  | 'layer-metadata'
+  | 'graph-topology'
+  | 'inferred';
+
+/**
+ * Stable architecture descriptor for UI/telemetry consumers.
+ *
+ * Hidden-layer sizes are ordered from input-side to output-side.
+ */
+export interface NetworkArchitectureDescriptor {
+  /** Hidden-layer widths in forward order. */
+  hiddenLayerSizes: number[];
+  /** True when the graph contains at least one directed cycle. */
+  hasCycles: boolean;
+  /** Source used to resolve hidden-layer sizing. */
+  source: NetworkArchitectureSource;
+  /** Total runtime node count. */
+  totalNodes: number;
+  /** Total runtime connection count. */
+  totalConnections: number;
 }
 
 /** Internal runtime properties attached to Connection instances. */
@@ -515,6 +541,8 @@ export interface NetworkJSON {
   nodes: NetworkJSONNode[];
   /** Serialized connections. */
   connections: NetworkJSONConnection[];
+  /** Optional architecture metadata for diagnostics/UI consumers. */
+  architecture?: NetworkArchitectureDescriptor;
 }
 
 /**

@@ -1508,7 +1508,20 @@ export const runEvolutionLoop = async (
       },
     );
 
-    const fittest = generationOutcome.fittest;
+    const fallbackFittest =
+      generationOutcome.fittest ??
+      (typeof (neat as unknown as { getFittest?: () => NetworkInstance | null })
+        .getFittest === 'function'
+        ? (neat as unknown as { getFittest: () => NetworkInstance | null })
+            .getFittest()
+        : null) ??
+      ((neat as unknown as { population?: NetworkInstance[] }).population?.[0] ??
+        null);
+    const fittest = fallbackFittest;
+    if (!fittest) {
+      safeWrite('[evolutionLoop] No fittest genome available for generation; stopping loop safely.');
+      break;
+    }
     if (doProfile) {
       // Use pooled scratch to accumulate totals (avoid creating new numbers/objects)
       profileScratch[0] += Number(generationOutcome.tEvolve ?? 0);

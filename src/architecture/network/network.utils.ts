@@ -48,6 +48,7 @@ export {
   createMLP,
   rebuildConnections,
 } from './topology/network.topology.utils';
+export { describeArchitecture } from './topology/network.topology.architecture.utils';
 
 export {
   applyGradientClippingImpl,

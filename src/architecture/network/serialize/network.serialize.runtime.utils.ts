@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import Network from '../../network';
 import Node from '../../node';
 import type {
   CompactPayloadContext,
@@ -8,10 +8,7 @@ import type {
   NodeInternals,
   ResolvedNetworkSizeContext,
 } from './network.serialize.utils.types';
-import {
-  DEFAULT_NUMERIC_VALUE,
-  NETWORK_MODULE_PATH,
-} from './network.serialize.utils.types';
+import { DEFAULT_NUMERIC_VALUE } from './network.serialize.utils.types';
 
 /**
  * Casts a network instance to the internal runtime shape used by serializer helpers.
@@ -138,22 +135,16 @@ export function resolveSizeOverride(
 }
 
 /**
- * Creates a network instance using runtime constructor loading.
- *
- * Dynamic loading avoids static circular dependency issues between serializer and
- * network implementation modules.
+ * Creates a new network instance for deserialize workflows.
  *
  * @param input - Input size.
  * @param output - Output size.
  * @returns New network instance.
- * @throws Error When the runtime module cannot be loaded or constructor invocation fails.
  * @remarks
- * This helper loads code from the local package path only and never executes serialized payload content.
+ * This helper does not execute serialized payload code; it only calls the local `Network` constructor.
  */
 export function createNetworkInstance(input: number, output: number): Network {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Dynamic require needed to avoid circular dependency
-  const { default: NetworkConstructor } = require(NETWORK_MODULE_PATH);
-  return new NetworkConstructor(input, output) as Network;
+  return new Network(input, output);
 }
 
 /**

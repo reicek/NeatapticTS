@@ -50,4 +50,5 @@ Thumbs.db
 *.results.json
 jest-dev.dev.bundle.*
 jest-prod.prod.bundle.*
-test/benchmarks/asciiMaze.benchmark.results.json
+test/benchmarks/asciiMaze.benchmark.results.
+.tmp_liquidcarrot_flappy

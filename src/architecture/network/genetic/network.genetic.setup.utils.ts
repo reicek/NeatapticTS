@@ -1,11 +1,10 @@
-import type Network from '../../network';
+import Network from '../../network';
 import Node from '../../node';
 import type {
   ConnectionGene,
   CrossoverContext,
   CrossoverNodeBuildContext,
   GeneticNetwork,
-  NetworkConstructor,
   ParentMetrics,
 } from '../network.types';
 import {
@@ -162,16 +161,6 @@ function asGeneticNetwork(network: Network): GeneticNetwork {
 }
 
 /**
- * Dynamically resolves the Network constructor to avoid circular import issues.
- *
- * @returns Network constructor.
- */
-function getNetworkConstructor(): NetworkConstructor {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('../../network').default as NetworkConstructor;
-}
-
-/**
  * Creates an empty offspring scaffold with reset runtime arrays.
  *
  * @param inputSize - Input count.
@@ -183,11 +172,7 @@ function createOffspringScaffold(
   outputSize: number,
 ): GeneticNetwork {
   // Step 1: Build a fresh Network instance.
-  const DynamicNetworkConstructor = getNetworkConstructor();
-  const offspring = new DynamicNetworkConstructor(
-    inputSize,
-    outputSize,
-  ) as GeneticNetwork;
+  const offspring = new Network(inputSize, outputSize) as GeneticNetwork;
 
   // Step 2: Reset mutable runtime arrays used by genetic operators.
   offspring.connections = [];
