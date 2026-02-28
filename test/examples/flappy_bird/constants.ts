@@ -23,7 +23,7 @@ export const FLAPPY_BIRD_RADIUS_PX = 4;
  * Slightly increased so birds settle faster after each flap and can make
  * finer vertical corrections around narrow targets.
  */
-export const FLAPPY_GRAVITY_PX_PER_FRAME2 = 0.56;
+export const FLAPPY_GRAVITY_PX_PER_FRAME2 = 0.25;
 
 /**
  * Instantaneous upward velocity applied on flap (pixels/frame).
@@ -38,6 +38,36 @@ export const FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME = 5;
 
 /** Pipe width (pixels). */
 export const FLAPPY_PIPE_WIDTH_PX = 60;
+
+/** Visual gap between the pipe body and its outline on the sides (pixels). */
+export const FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX = 2;
+
+/** Visual gap between the pipe body and its outline at the pipe entrance rim (pixels). */
+export const FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX = 5;
+
+/** Stroke width used for the pipe outline (pixels). */
+export const FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX = 2;
+
+/**
+ * Effective side expansion used for pipe collision checks (pixels).
+ *
+ * Includes the visual side gap and half the outline stroke so collision
+ * matches the visible outer line thickness.
+ */
+export const FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX = Math.round(
+  FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX + FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX * 0.5,
+);
+
+/**
+ * Effective gap-rim expansion used for pipe collision checks (pixels).
+ *
+ * Includes the visual entrance gap and half the outline stroke so collision
+ * matches the visible outer line around the gap opening.
+ */
+export const FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX = Math.round(
+  FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX +
+    FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX * 0.5,
+);
 
 /** Vertical opening size of each pipe gap (pixels). */
 export const FLAPPY_PIPE_GAP_PX = 150;
@@ -75,7 +105,7 @@ export const FLAPPY_BIRD_HEIGHT_PX = FLAPPY_BIRD_RADIUS_PX * 2;
 export const FLAPPY_TARGET_FLAP_INTERVAL_FRAMES = 2;
 
 /** Small geometric buffer so "barely possible" remains physically solvable. */
-export const FLAPPY_MIN_CLEARANCE_MARGIN_PX = 30;
+export const FLAPPY_MIN_CLEARANCE_MARGIN_PX = 50;
 
 /**
  * Hard floor on time between pipes at max speed so controllers can recover.
@@ -96,10 +126,10 @@ export const FLAPPY_MIN_EDGE_TO_EDGE_PIPE_SPACING_PX =
   FLAPPY_MIN_CLEARANCE_MARGIN_PX;
 
 /** Minimum allowed gap center height (pixels). */
-export const FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX = 90;
+export const FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX = 100;
 
 /** Maximum allowed gap center height (pixels). */
-export const FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX = FLAPPY_WORLD_HEIGHT_PX - 90;
+export const FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX = FLAPPY_WORLD_HEIGHT_PX - 100;
 
 /** Episode terminates after this many frames even if still alive. */
 export const FLAPPY_MAX_FRAMES_PER_EPISODE = 5_000;
@@ -170,10 +200,10 @@ export const FLAPPY_PIPE_GAP_MIN_PX =
 export const FLAPPY_PIPE_GAP_START_MULTIPLIER = 2.15;
 
 /** Per-pipe gap shrink step toward the current hardest target gap (pixels). */
-export const FLAPPY_PIPE_GAP_SHRINK_PER_PIPE_PX = 4;
+export const FLAPPY_PIPE_GAP_SHRINK_PER_PIPE_PX = 5;
 
 /** Random jitter range applied to each spawned pipe gap (pixels). */
-export const FLAPPY_PIPE_GAP_RANDOM_JITTER_PX = 6;
+export const FLAPPY_PIPE_GAP_RANDOM_JITTER_PX = 10;
 
 /**
  * Maximum allowed vertical jump between consecutive pipe gap centers (pixels).
@@ -181,7 +211,7 @@ export const FLAPPY_PIPE_GAP_RANDOM_JITTER_PX = 6;
  * This reduces abrupt zig-zag transitions that are often unrecoverable once
  * spacing tightens at higher difficulty.
  */
-export const FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX = 72;
+export const FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX = 100;
 
 /** Maximum pipe speed used at peak adaptive difficulty. */
 export const FLAPPY_PIPE_SPEED_MAX_PX_PER_FRAME = 3;

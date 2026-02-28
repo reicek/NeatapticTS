@@ -214,6 +214,16 @@ function createPopulationFitnessEvaluator(
     const aggregateByGenome = new Map<
       FlappyTrainerNetwork,
       FlappySeedBatchEvaluation
+    >();
+
+    evaluatePopulationQuickStage(
+      population,
+      generationEvaluationPlan,
+      aggregateByGenome,
+      provisionalScoresByGenome,
+    );
+
+    evaluatePopulationFullStage(
       population,
       generationEvaluationPlan,
       aggregateByGenome,
@@ -866,16 +876,6 @@ function compareNumbersAscending(
   rightValue: number,
 ): number {
   return leftValue - rightValue;
-}
-
-/**
- * @param value - Scalar value.
- * @param min - Lower bound.
- * @param max - Upper bound.
- * @returns Clamped scalar.
- */
-function clampValue(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 /**

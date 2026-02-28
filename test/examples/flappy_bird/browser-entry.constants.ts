@@ -2,6 +2,11 @@ import type {
   FlappyStatsKey,
   FlappyStatsRowDescriptor,
 } from './browser-entry.types';
+import {
+  FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX as SHARED_FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX,
+  FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX as SHARED_FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX,
+  FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX as SHARED_FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX,
+} from './constants';
 
 /** Default host container id for the browser demo mount point. */
 export const DEFAULT_CONTAINER_ID = 'flappy-bird-output';
@@ -19,12 +24,15 @@ export const FLAPPY_SCREEN_PADDING_PX = 24;
 export const FLAPPY_NEON_PALETTE = {
   background: '#060b14',
   pipeFill: '#00ff66',
-  pipeEdgeOuter: '#8bffb7',
-  pipeEdgeInner: '#d8ffe9',
-  championBird: '#ff3b3b',
+  pipeEdgeOuter: '#2dff78',
+  pipeEdgeInner: '#bfffd4',
+  // Champion bird red matching ANSI xterm color 196 (rgb(255, 0, 0)).
+  championBird: '#ff0000',
   nonChampionBird: '#ffe94d',
-  leaderRing: '#9fffff',
-  trail: '#00e5ff',
+  // Champion outline ring matching ANSI xterm color 231 (rgb(255, 255, 255)).
+  leaderRing: '#ffffff',
+  // Indigo trail matching ANSI xterm color 99 (rgb(135, 95, 255)).
+  trail: '#875fff',
   currentRunText: '#00ff66',
   bestRunText: '#ff9a2e',
   statusText: '#ff5cff',
@@ -57,7 +65,19 @@ export const FLAPPY_STATS_KEYS = [
 ] as const;
 
 /** Default population size for browser playback worker initialization. */
-export const FLAPPY_BROWSER_POPULATION_SIZE = 100;
+export const FLAPPY_BROWSER_POPULATION_SIZE = 50;
+
+/**
+ * Horizontal viewport anchor for the bird.
+ *
+ * This is used to keep the bird at a stable on-screen x-position while pipes
+ * enter from the right and drift left.
+ *
+ * A value of `0.33` places the bird roughly one-third of the way from the left
+ * edge of the visible world, leaving extra screen space to preview incoming
+ * pipes while still showing a long trail behind.
+ */
+export const FLAPPY_BIRD_VIEWPORT_X_RATIO = 0.33;
 
 /** Default elitism count for browser playback worker initialization. */
 export const FLAPPY_BROWSER_ELITISM_COUNT = 20;
@@ -67,7 +87,7 @@ export const FLAPPY_FRAME_MONOSPACE_FONT =
   '16px Consolas, Menlo, Monaco, monospace';
 
 /** Title rendered inside the standalone header box. */
-export const FLAPPY_HEADER_TITLE_TEXT = ' Flappy Bird (NeatapticTS) ';
+export const FLAPPY_HEADER_TITLE_TEXT = ' Astro Bird (NeatapticTS) ';
 
 /** Header canvas fixed height (pixels). */
 export const FLAPPY_HEADER_CANVAS_HEIGHT_PX = 64;
@@ -176,6 +196,9 @@ export const FLAPPY_UI_NETWORK_CANVAS_BACKGROUND = '#02050c';
 export const FLAPPY_UI_UNIFIED_INSET_SHADOW =
   'inset 0 0 0 1px rgba(15,181,255,0.16), 0 0 12px rgba(15,181,255,0.12)';
 
+/** Shared double-line border style matching title-box aesthetics. */
+export const FLAPPY_UI_DOUBLE_PANEL_BORDER = '3px double rgba(15,181,255,0.92)';
+
 /** Thin inset shadow used on canvases for subtle neon depth. */
 export const FLAPPY_UI_CANVAS_INSET_SHADOW =
   'inset 0 0 0 1px rgba(15,181,255,0.12)';
@@ -184,10 +207,10 @@ export const FLAPPY_UI_CANVAS_INSET_SHADOW =
 export const FLAPPY_UI_SPLIT_BRIDGE_COLOR = 'rgba(15,181,255,0.55)';
 
 /** Border style for regular stats rows. */
-export const FLAPPY_UI_STATS_ROW_BORDER = '1px solid rgba(15,181,255,0.2)';
+export const FLAPPY_UI_STATS_ROW_BORDER = '1px double rgba(15,181,255,0.3)';
 
 /** Border style for stats section headers. */
-export const FLAPPY_UI_STATS_SECTION_BORDER = '1px solid rgba(15,181,255,0.35)';
+export const FLAPPY_UI_STATS_SECTION_BORDER = '2px double rgba(15,181,255,0.4)';
 
 /** Regular neon ramp used for strong positive/baseline scales. */
 export const FLAPPY_REGULAR_NEON_RAMP = [
@@ -496,6 +519,9 @@ export const FLAPPY_TRAIL_MAX_POINTS = 40;
 /** Stroke width used for per-bird trail line rendering. */
 export const FLAPPY_TRAIL_LINE_WIDTH_PX = 1.5;
 
+/** Distance from world edge over which trails fade to transparent (pixels). */
+export const FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX = 48;
+
 /** Opacity used for non-champion bird fills and trails. */
 export const FLAPPY_NON_CHAMPION_OPACITY = 0.1;
 
@@ -508,14 +534,34 @@ export const FLAPPY_BIRD_SHINE_INSET_RATIO = 0.2;
 /** Fill style used for the bird shine highlight. */
 export const FLAPPY_BIRD_SHINE_FILL_STYLE = 'rgba(255, 255, 255, 0.7)';
 
+/** Fill style used for the champion bird shine highlight (xterm 196 red). */
+export const FLAPPY_BIRD_CHAMPION_SHINE_FILL_STYLE = 'rgba(255, 0, 0, 0.7)';
+
 /** Neon glow color used for the condensed white highlight shine. */
 export const FLAPPY_BIRD_WHITE_SHINE_GLOW_COLOR = '#ffffff';
+
+/** Neon glow color used for the champion shine highlight (xterm 196 red). */
+export const FLAPPY_BIRD_CHAMPION_SHINE_GLOW_COLOR = '#ff0000';
 
 /** Neon blur radius used for the condensed white highlight shine. */
 export const FLAPPY_BIRD_WHITE_SHINE_GLOW_BLUR_PX = 2;
 
 /** Base neon blur radius used for bird body glow. */
 export const FLAPPY_BIRD_BODY_GLOW_BLUR_PX = 10;
+
+/**
+ * Opacity used for the extra Radiant-style aura around each bird.
+ *
+ * This is intentionally subtle: it should read as a soft bloom that lifts the
+ * bird off the background, without turning the bird into a big glowing blob.
+ */
+export const FLAPPY_BIRD_AURA_ALPHA = 0.16;
+
+/** Pixel expansion used for the Radiant-style bird aura plate. */
+export const FLAPPY_BIRD_AURA_EXPAND_PX = 3;
+
+/** Blur multiplier used for the Radiant-style bird aura plate. */
+export const FLAPPY_BIRD_AURA_BLUR_MULTIPLIER = 2.6;
 
 /** Additional blur radius applied to the champion red body glow. */
 export const FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX = 7;
@@ -541,32 +587,34 @@ export const FLAPPY_LEADER_RING_LINE_WIDTH_PX = 2;
 /** Neon blur radius used when drawing the champion outline stroke. */
 export const FLAPPY_LEADER_RING_GLOW_BLUR_PX = 10;
 
-/** Pipe outline separator color between outer and inner neon strokes. */
-export const FLAPPY_PIPE_OUTLINE_SEPARATOR_COLOR = 'rgba(2, 4, 12, 0.9)';
+/** Visual gap between the pipe body and its outline on the sides (pixels). */
+export const FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX =
+  SHARED_FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX;
 
-/** Outer glow color applied to pipe outline stroke. */
-export const FLAPPY_PIPE_OUTLINE_OUTER_GLOW_COLOR = 'rgba(0, 255, 170, 0.7)';
+/** Visual gap between the pipe body and its outline at the pipe entrance rim (pixels). */
+export const FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX =
+  SHARED_FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX;
 
-/** Outer glow blur radius for pipe outline stroke. */
-export const FLAPPY_PIPE_OUTLINE_OUTER_GLOW_BLUR_PX = 10;
+/** Stroke width used for the pipe outline (pixels). */
+export const FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX =
+  SHARED_FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX;
 
-/** Wide aura glow color for the outer neon pipe outline pass. */
-export const FLAPPY_PIPE_OUTLINE_AURA_GLOW_COLOR = 'rgba(0, 210, 255, 0.55)';
+/** Opacity used for the soft pipe glow stroke pass. */
+export const FLAPPY_PIPE_OUTLINE_GLOW_ALPHA = 0.45;
 
-/** Wide aura glow blur radius for the outer neon pipe outline pass. */
-export const FLAPPY_PIPE_OUTLINE_AURA_GLOW_BLUR_PX = 18;
+/** Stroke width used for the soft pipe glow stroke pass (pixels). */
+export const FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX = 8;
 
-/** Inner glow color applied to inset pipe outline stroke. */
-export const FLAPPY_PIPE_OUTLINE_INNER_GLOW_COLOR = 'rgba(255, 77, 214, 0.75)';
+/**
+ * Cyan neon glow used for pipe outline shadow.
+ *
+ * This intentionally matches the asciiMaze `neonCyan` ANSI color (`\x1b[38;5;87m`)
+ * which maps to xterm color 87 ~= rgb(95, 255, 255) / hex `#5fffff`.
+ */
+export const FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR = 'rgba(95, 255, 255, 0.95)';
 
-/** Inner glow blur radius for inset pipe outline stroke. */
-export const FLAPPY_PIPE_OUTLINE_INNER_GLOW_BLUR_PX = 7;
-
-/** Bright core glow color used for the final neon pipe outline pass. */
-export const FLAPPY_PIPE_OUTLINE_CORE_GLOW_COLOR = 'rgba(255, 255, 255, 0.98)';
-
-/** Bright core glow blur radius used for the final neon pipe outline pass. */
-export const FLAPPY_PIPE_OUTLINE_CORE_GLOW_BLUR_PX = 4;
-
-/** Pixel inset/expansion used when drawing layered pipe neon outlines. */
-export const FLAPPY_PIPE_OUTLINE_INSET_PX = 2;
+/** Blur radius used for the cyan pipe outline glow (pixels). */
+export const FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX = Math.max(
+  24,
+  Math.round(FLAPPY_BIRD_BODY_GLOW_BLUR_PX * 3.2),
+);

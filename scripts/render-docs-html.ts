@@ -10,6 +10,13 @@ import { marked } from 'marked';
 const DOCS_DIR = path.resolve('docs');
 const THEME_CSS_SOURCE_PATH = path.resolve('scripts', 'assets', 'theme.css');
 const THEME_CSS_OUTPUT_PATH = path.join(DOCS_DIR, 'assets', 'theme.css');
+const NN_IMAGE_SOURCE_PATH = path.resolve('nn.jpg');
+const NN_IMAGE_FALLBACK_SOURCE_PATH = path.resolve('scripts', 'assets', 'nn.jpg');
+const NN_IMAGE_OUTPUT_PATH = path.join(DOCS_DIR, 'nn.jpg');
+const EXAMPLE_DEMOS = [
+  { dir: 'examples/asciiMaze', label: 'asciiMaze' },
+  { dir: 'examples/flappy_bird', label: 'flappy_bird' },
+];
 
 async function ensureThemeCss(): Promise<void> {
   // Step 1: Ensure destination directory exists.
@@ -17,6 +24,25 @@ async function ensureThemeCss(): Promise<void> {
 
   // Step 2: Copy static theme stylesheet used by generated docs pages.
   await fs.copyFile(THEME_CSS_SOURCE_PATH, THEME_CSS_OUTPUT_PATH);
+}
+
+async function ensureStaticDocsAssets(): Promise<void> {
+  // Step 1: Ensure core theme assets are present.
+  await ensureThemeCss();
+
+  // Step 2: Ensure the README hero image resolves when served from `/docs/`.
+  // The root README is copied into `docs/README.md`, so `<img src="nn.jpg">`
+  // becomes a request for `/docs/nn.jpg` when hosted under that base path.
+  const hasRootImage = await fs.pathExists(NN_IMAGE_SOURCE_PATH);
+  const hasFallbackImage = await fs.pathExists(NN_IMAGE_FALLBACK_SOURCE_PATH);
+  const sourcePath = hasRootImage
+    ? NN_IMAGE_SOURCE_PATH
+    : hasFallbackImage
+      ? NN_IMAGE_FALLBACK_SOURCE_PATH
+      : undefined;
+
+  if (!sourcePath) return;
+  await fs.copyFile(sourcePath, NN_IMAGE_OUTPUT_PATH);
 }
 
 function slugify(s: string): string {
@@ -27,8 +53,21 @@ function slugify(s: string): string {
     .replace(/-{2,}/g, '-');
 }
 
+function buildExamplesLinksHtml(currentDir: string): string {
+  return EXAMPLE_DEMOS.map((entry) => {
+    const copiedExampleAbs = path.resolve(DOCS_DIR, entry.dir, 'index.html');
+    if (!fs.existsSync(copiedExampleAbs)) return '';
+
+    const relLink = path.posix.relative(currentDir || '.', entry.dir) || '.';
+    const href = (relLink === '.' ? '.' : relLink) + '/index.html';
+    return `<li><a href="${href}">${entry.label}</a></li>`;
+  })
+    .filter(Boolean)
+    .join('');
+}
+
 async function main() {
-  await ensureThemeCss();
+  await ensureStaticDocsAssets();
   const readmes = await fg(['**/README.md'], { cwd: DOCS_DIR, absolute: true });
 
   // Collect metadata for navigation
@@ -82,20 +121,7 @@ async function main() {
         isCurrent ? ' class="current"' : ''
       }><a href="${href}">${label}${isCurrent ? '' : ''}</a></li>`;
     };
-    const exampleDemos = [
-      { dir: 'examples/asciiMaze', label: 'examples/asciiMaze' },
-      { dir: 'examples/flappy_bird', label: 'examples/flappy_bird' },
-    ];
-    const demoLinksHtml = exampleDemos
-      .map((entry) => {
-        const copiedExampleAbs = path.resolve(DOCS_DIR, entry.dir, 'index.html');
-        if (!fs.existsSync(copiedExampleAbs)) return '';
-        const relLink = path.posix.relative(currentDir || '.', entry.dir) || '.';
-        const href = (relLink === '.' ? '.' : relLink) + '/index.html';
-        return `<li><a href="${href}">${entry.label}</a></li>`;
-      })
-      .filter(Boolean)
-      .join('');
+    const demoLinksHtml = buildExamplesLinksHtml(currentDir);
     const groups = Array.from(groupsMap.values());
     if (demoLinksHtml && !groupsMap.has('examples')) {
       groups.push({ name: 'examples', items: [] });
@@ -166,6 +192,7 @@ async function main() {
     };
     marked.use({ renderer });
     const htmlBody = marked.parse(md, { async: false });
+    const rootExamplesTocHtml = buildExamplesLinksHtml(meta.relDir);
     const toc = fileHeadings.length
       ? `<div class="page-toc"><h2>Files</h2>${fileHeadings
           .map(
@@ -179,7 +206,9 @@ async function main() {
               }</div>`
           )
           .join('')}</div>`
-      : '';
+            : meta.relDir === '' && rootExamplesTocHtml
+            ? `<div class="page-toc"><h2>Examples</h2><div class="toc-file"><ul>${rootExamplesTocHtml}</ul></div></div>`
+            : '';
     const outFile = path.join(path.dirname(meta.abs), 'index.html');
     const relToRoot = path
       .relative(path.dirname(meta.abs), DOCS_DIR)

@@ -20,9 +20,12 @@ import {
   resolvePipeSpawnXPx,
   sampleGapCenterY,
 } from './browser-entry.utils';
+import { FLAPPY_BIRD_VIEWPORT_X_RATIO } from './browser-entry.constants';
 import {
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_BIRD_X_PX,
+  FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX,
+  FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX,
   FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,
   FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION,
   FLAPPY_FLAP_VELOCITY_PX_PER_FRAME,
@@ -82,6 +85,24 @@ interface WorkerFramePipeSnapshot {
   xPx: number;
   gapCenterYPx: number;
   gapSizePx: number;
+}
+
+/**
+ * Resolves the current left-edge of the visible world in world-space pixels.
+ *
+ * The browser renderer anchors the bird at a fixed viewport ratio, which
+ * effectively shifts the camera. The simulation must use the same camera-left
+ * when deciding when pipes have fully exited the screen; otherwise pipes will
+ * disappear early when the camera-left becomes negative.
+ *
+ * @param visibleWorldWidthPx - Current visible world width.
+ * @returns Left edge x-position in world coordinates.
+ */
+function resolveCameraLeftXPx(visibleWorldWidthPx: number): number {
+  const clampedVisibleWorldWidthPx = Math.max(1, visibleWorldWidthPx);
+  const desiredBirdScreenXPx =
+    clampedVisibleWorldWidthPx * FLAPPY_BIRD_VIEWPORT_X_RATIO;
+  return FLAPPY_BIRD_X_PX - desiredBirdScreenXPx;
 }
 
 interface WorkerPlaybackFrameSnapshot {
@@ -562,8 +583,10 @@ function stepPopulationFrame(
     renderState.pipes.forEach((pipe) => {
       pipe.xPx -= difficultyProfile.pipeSpeedPxPerFrame * controlSubstepDelta;
     });
+
+    const cameraLeftXPx = resolveCameraLeftXPx(renderState.visibleWorldWidthPx);
     renderState.pipes = renderState.pipes.filter(
-      (pipe) => pipe.xPx + FLAPPY_PIPE_WIDTH_PX > 0,
+      (pipe) => pipe.xPx + FLAPPY_PIPE_WIDTH_PX > cameraLeftXPx,
     );
 
     renderState.framesUntilNextPipeSpawn -= controlSubstepDelta;
@@ -609,15 +632,24 @@ function stepPopulationFrame(
       const birdRight = FLAPPY_BIRD_X_PX + FLAPPY_BIRD_RADIUS_PX;
 
       for (const pipe of renderState.pipes) {
-        const pipeLeft = pipe.xPx;
-        const pipeRight = pipe.xPx + FLAPPY_PIPE_WIDTH_PX;
+        const pipeLeft = pipe.xPx - FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX;
+        const pipeRight =
+          pipe.xPx +
+          FLAPPY_PIPE_WIDTH_PX +
+          FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX;
         const overlapsHorizontally =
           birdRight >= pipeLeft && birdLeft <= pipeRight;
 
         if (overlapsHorizontally) {
           const gapHalf = pipe.gapSizePx * 0.5;
-          const gapTop = pipe.gapCenterYPx - gapHalf;
-          const gapBottom = pipe.gapCenterYPx + gapHalf;
+          const gapTop =
+            pipe.gapCenterYPx -
+            gapHalf +
+            FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX;
+          const gapBottom =
+            pipe.gapCenterYPx +
+            gapHalf -
+            FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX;
           const isInsideGap = birdTop >= gapTop && birdBottom <= gapBottom;
 
           if (!isInsideGap) {

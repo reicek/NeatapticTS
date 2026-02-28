@@ -9,11 +9,17 @@ import {
 import { requestWorkerPlaybackStep } from './browser-entry.worker-channel.utils';
 import {
   FLAPPY_EMULATION_SPEED_MULTIPLIER,
+  FLAPPY_BIRD_VIEWPORT_X_RATIO,
+  FLAPPY_BIRD_CHAMPION_SHINE_FILL_STYLE,
+  FLAPPY_BIRD_CHAMPION_SHINE_GLOW_COLOR,
   FLAPPY_BIRD_SHINE_FILL_STYLE,
   FLAPPY_BIRD_SHINE_INSET_RATIO,
   FLAPPY_BIRD_SHINE_SIZE_RATIO,
   FLAPPY_BIRD_WHITE_SHINE_GLOW_COLOR,
   FLAPPY_BIRD_WHITE_SHINE_GLOW_BLUR_PX,
+  FLAPPY_BIRD_AURA_ALPHA,
+  FLAPPY_BIRD_AURA_BLUR_MULTIPLIER,
+  FLAPPY_BIRD_AURA_EXPAND_PX,
   FLAPPY_BIRD_BODY_GLOW_BLUR_PX,
   FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX,
   FLAPPY_BIRD_CHAMPION_RED_GLOW_ALPHA,
@@ -22,17 +28,15 @@ import {
   FLAPPY_LEADER_RING_GLOW_BLUR_PX,
   FLAPPY_LEADER_RING_RADIUS_OFFSET_PX,
   FLAPPY_NON_CHAMPION_OPACITY,
-  FLAPPY_PIPE_OUTLINE_INNER_GLOW_BLUR_PX,
-  FLAPPY_PIPE_OUTLINE_INNER_GLOW_COLOR,
-  FLAPPY_PIPE_OUTLINE_INSET_PX,
-  FLAPPY_PIPE_OUTLINE_AURA_GLOW_BLUR_PX,
-  FLAPPY_PIPE_OUTLINE_AURA_GLOW_COLOR,
-  FLAPPY_PIPE_OUTLINE_CORE_GLOW_BLUR_PX,
-  FLAPPY_PIPE_OUTLINE_CORE_GLOW_COLOR,
-  FLAPPY_PIPE_OUTLINE_OUTER_GLOW_BLUR_PX,
-  FLAPPY_PIPE_OUTLINE_OUTER_GLOW_COLOR,
-  FLAPPY_PIPE_OUTLINE_SEPARATOR_COLOR,
+  FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX,
+  FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR,
+  FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX,
+  FLAPPY_PIPE_OUTLINE_GLOW_ALPHA,
+  FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX,
+  FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX,
+  FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX,
   FLAPPY_TRAIL_LINE_WIDTH_PX,
+  FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX,
   FLAPPY_TRAIL_MIN_HORIZONTAL_SEGMENT_PX,
   FLAPPY_TRAIL_MIN_VERTICAL_SEGMENT_PX,
   FLAPPY_TRAIL_MAX_POINTS,
@@ -53,6 +57,22 @@ import {
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_TRAIL_OPACITY_FACTOR,
 } from './constants';
+
+type StarTile = {
+  image: CanvasImageSource;
+  tileWidthPx: number;
+  tileHeightPx: number;
+  scrollRatio: number;
+};
+
+const STARFIELD_TILE_WIDTH_PX = 512;
+const STARFIELD_TILE_HEIGHT_PX = FLAPPY_WORLD_HEIGHT_PX;
+const STARFIELD_CYAN_FILL_STYLE = 'rgba(95, 255, 255, 1)';
+const STARFIELD_FAR_SCROLL_RATIO = 0.08;
+const STARFIELD_MID_SCROLL_RATIO = 0.12;
+const STARFIELD_NEAR_SCROLL_RATIO = 0.18;
+
+let cachedStarfieldTiles: readonly StarTile[] | undefined;
 
 /**
  * Renders all birds from the current generation in one shared world.
@@ -211,7 +231,18 @@ function renderPopulationFrame(
 ): void {
   // Step 1: Resolve viewport transform and clear target canvas.
   const viewport = resolveWorldViewport(context.canvas);
-  const cameraLeftPx = 0;
+  const visibleWorldWidthPx = Math.max(1, renderState.visibleWorldWidthPx);
+  const desiredBirdScreenXPx =
+    visibleWorldWidthPx * FLAPPY_BIRD_VIEWPORT_X_RATIO;
+  const cameraLeftPx = FLAPPY_BIRD_X_PX - desiredBirdScreenXPx;
+
+  // Reset state that can suppress shadows between frames.
+  context.globalAlpha = 1;
+  context.globalCompositeOperation = 'source-over';
+  context.shadowBlur = 0;
+  context.shadowColor = 'transparent';
+  context.shadowOffsetX = 0;
+  context.shadowOffsetY = 0;
 
   context.clearRect(0, 0, context.canvas.width, context.canvas.height);
 
@@ -220,7 +251,10 @@ function renderPopulationFrame(
   context.scale(viewport.scale, viewport.scale);
   context.translate(-cameraLeftPx, 0);
 
-  // Step 2: Draw pipes with neon multi-pass outlines.
+  // Step 2: Draw Radiant-style parallax background.
+  drawParallaxBackground(context, renderState);
+
+  // Step 3: Draw pipes with neon outlines.
   for (const pipe of renderState.pipes) {
     const gapHalf = pipe.gapSizePx * 0.5;
     const pipeLeft = pipe.xPx;
@@ -245,7 +279,7 @@ function renderPopulationFrame(
     );
   }
 
-  // Step 3: Resolve champion bird and render bird bodies/shine/rings.
+  // Step 4: Resolve champion bird and render bird bodies/shine/rings.
   const leaderBirdIndex = resolveLeaderBirdIndex(renderState);
   const fallbackAliveBirdIndex = renderState.birds.findIndex(
     (bird) => !bird.done,
@@ -268,6 +302,28 @@ function renderPopulationFrame(
         ? FLAPPY_NEON_PALETTE.championBird
         : FLAPPY_NEON_PALETTE.nonChampionBird;
     const isChampionBird = birdIndex === championBirdIndex;
+
+    // Step 4.1: Add a soft Radiant-style aura plate behind the champion bird.
+    if (isChampionBird) {
+      const auraExpandPx = Math.round(FLAPPY_BIRD_AURA_EXPAND_PX);
+      const previousCompositeOperation = context.globalCompositeOperation;
+      context.globalCompositeOperation = 'lighter';
+      context.globalAlpha = birdOpacity * FLAPPY_BIRD_AURA_ALPHA;
+      context.fillStyle = birdRenderColor;
+      context.shadowColor = birdRenderColor;
+      context.shadowBlur = Math.round(
+        FLAPPY_BIRD_BODY_GLOW_BLUR_PX * FLAPPY_BIRD_AURA_BLUR_MULTIPLIER,
+      );
+      context.fillRect(
+        birdLeftPx - auraExpandPx,
+        birdTopPx - auraExpandPx,
+        birdSideLengthPx + auraExpandPx * 2,
+        birdSideLengthPx + auraExpandPx * 2,
+      );
+      context.shadowBlur = 0;
+      context.shadowColor = 'transparent';
+      context.globalCompositeOperation = previousCompositeOperation;
+    }
 
     if (isChampionBird) {
       const expandedGlowInsetPx = Math.round(
@@ -299,8 +355,12 @@ function renderPopulationFrame(
       1,
       birdSideLengthPx * FLAPPY_BIRD_SHINE_SIZE_RATIO,
     );
-    context.fillStyle = FLAPPY_BIRD_SHINE_FILL_STYLE;
-    context.shadowColor = FLAPPY_BIRD_WHITE_SHINE_GLOW_COLOR;
+    context.fillStyle = isChampionBird
+      ? FLAPPY_BIRD_CHAMPION_SHINE_FILL_STYLE
+      : FLAPPY_BIRD_SHINE_FILL_STYLE;
+    context.shadowColor = isChampionBird
+      ? FLAPPY_BIRD_CHAMPION_SHINE_GLOW_COLOR
+      : FLAPPY_BIRD_WHITE_SHINE_GLOW_COLOR;
     context.shadowBlur = FLAPPY_BIRD_WHITE_SHINE_GLOW_BLUR_PX;
     context.fillRect(
       Math.round(birdLeftPx + shineInsetPx),
@@ -328,7 +388,7 @@ function renderPopulationFrame(
     }
   });
 
-  // Step 4: Draw stepped trails for active birds.
+  // Step 5: Draw stepped trails for active birds.
   renderState.birds.forEach((bird, birdIndex) => {
     if (bird.done) {
       return;
@@ -343,24 +403,231 @@ function renderPopulationFrame(
       birdIndex === championBirdIndex ? 1 : FLAPPY_NON_CHAMPION_OPACITY;
     const birdTrailColor =
       birdIndex === championBirdIndex
-        ? FLAPPY_NEON_PALETTE.championBird
+        ? FLAPPY_NEON_PALETTE.trail
         : FLAPPY_NEON_PALETTE.nonChampionBird;
-    context.globalAlpha = parentBirdOpacity * FLAPPY_TRAIL_OPACITY_FACTOR;
+
     drawTrail(
       context,
       birdTrailPoints,
       birdTrailColor,
       FLAPPY_BIRD_X_PX - FLAPPY_BIRD_RADIUS_PX,
+      parentBirdOpacity * FLAPPY_TRAIL_OPACITY_FACTOR,
+      {
+        leftXPx: cameraLeftPx,
+        rightXPx: cameraLeftPx + visibleWorldWidthPx,
+        topYPx: 0,
+        bottomYPx: FLAPPY_WORLD_HEIGHT_PX,
+      },
     );
   });
 
   context.globalAlpha = 1;
-  // Step 5: Restore context to pre-viewport transform state.
+  // Step 6: Restore context to pre-viewport transform state.
   context.restore();
 }
 
+function drawParallaxBackground(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+): void {
+  const visibleWorldWidthPx = Math.max(
+    1,
+    Math.round(renderState.visibleWorldWidthPx),
+  );
+  const scrollBasePx = renderState.frameIndex * FLAPPY_PIPE_SPEED_PX_PER_FRAME;
+
+  // Step 1: Paint the background fill.
+  context.globalAlpha = 1;
+  context.globalCompositeOperation = 'source-over';
+  context.shadowBlur = 0;
+  context.shadowColor = 'transparent';
+  context.fillStyle = FLAPPY_NEON_PALETTE.background;
+  context.fillRect(0, 0, visibleWorldWidthPx, FLAPPY_WORLD_HEIGHT_PX);
+
+  // Step 2: Draw cached square-particle starfield layers with subtle parallax.
+  // Each layer is pre-rendered into a tile and repeated via drawImage, which is
+  // much faster than drawing dozens of blurred particles every frame.
+  context.globalCompositeOperation = 'lighter';
+  const starfieldTiles = resolveStarfieldTiles();
+  for (const tile of starfieldTiles) {
+    const scrollOffsetPx = scrollBasePx * tile.scrollRatio;
+    drawTiledImageRow(context, {
+      tile: tile.image,
+      tileWidthPx: tile.tileWidthPx,
+      visibleWidthPx: visibleWorldWidthPx,
+      offsetPx: scrollOffsetPx,
+    });
+  }
+  context.globalCompositeOperation = 'source-over';
+}
+
+function resolveStarfieldTiles(): readonly StarTile[] {
+  if (cachedStarfieldTiles) {
+    return cachedStarfieldTiles;
+  }
+
+  const farTile: StarTile = {
+    image: createStarTileCanvas({
+      seed: 1_337,
+      tileWidthPx: STARFIELD_TILE_WIDTH_PX,
+      tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
+      starCount: 35,
+      minSizePx: 1,
+      maxSizePx: 2,
+      minAlpha: 0.08,
+      maxAlpha: 0.22,
+      blurPx: 4,
+    }),
+    tileWidthPx: STARFIELD_TILE_WIDTH_PX,
+    tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
+    scrollRatio: STARFIELD_FAR_SCROLL_RATIO,
+  };
+  const midTile: StarTile = {
+    image: createStarTileCanvas({
+      seed: 2_777,
+      tileWidthPx: STARFIELD_TILE_WIDTH_PX,
+      tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
+      starCount: 28,
+      minSizePx: 1,
+      maxSizePx: 3,
+      minAlpha: 0.1,
+      maxAlpha: 0.28,
+      blurPx: 6,
+    }),
+    tileWidthPx: STARFIELD_TILE_WIDTH_PX,
+    tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
+    scrollRatio: STARFIELD_MID_SCROLL_RATIO,
+  };
+  const nearTile: StarTile = {
+    image: createStarTileCanvas({
+      seed: 4_242,
+      tileWidthPx: STARFIELD_TILE_WIDTH_PX,
+      tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
+      starCount: 23,
+      minSizePx: 2,
+      maxSizePx: 4,
+      minAlpha: 0.12,
+      maxAlpha: 0.34,
+      blurPx: 8,
+    }),
+    tileWidthPx: STARFIELD_TILE_WIDTH_PX,
+    tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
+    scrollRatio: STARFIELD_NEAR_SCROLL_RATIO,
+  };
+
+  cachedStarfieldTiles = [farTile, midTile, nearTile];
+  return cachedStarfieldTiles;
+}
+
+function drawTiledImageRow(
+  context: CanvasRenderingContext2D,
+  layer: {
+    tile: CanvasImageSource;
+    tileWidthPx: number;
+    visibleWidthPx: number;
+    offsetPx: number;
+  },
+): void {
+  const normalizedOffsetPx = positiveModulo(layer.offsetPx, layer.tileWidthPx);
+  const maxTileIndex = Math.ceil(layer.visibleWidthPx / layer.tileWidthPx) + 1;
+
+  for (let tileIndex = -1; tileIndex <= maxTileIndex; tileIndex += 1) {
+    const tileLeftPx = tileIndex * layer.tileWidthPx - normalizedOffsetPx;
+    context.drawImage(layer.tile, tileLeftPx, 0);
+  }
+}
+
+function createStarTileCanvas(options: {
+  seed: number;
+  tileWidthPx: number;
+  tileHeightPx: number;
+  starCount: number;
+  minSizePx: number;
+  maxSizePx: number;
+  minAlpha: number;
+  maxAlpha: number;
+  blurPx: number;
+}): CanvasImageSource {
+  const canvas = createCompatibleCanvas(
+    options.tileWidthPx,
+    options.tileHeightPx,
+  );
+  const tileContext = canvas.getContext('2d');
+  if (!tileContext) {
+    return canvas;
+  }
+
+  const seededRandom = createSeededRandom(options.seed);
+
+  tileContext.clearRect(0, 0, canvas.width, canvas.height);
+  tileContext.globalCompositeOperation = 'source-over';
+  tileContext.shadowColor = STARFIELD_CYAN_FILL_STYLE;
+  tileContext.shadowBlur = options.blurPx;
+
+  for (let starIndex = 0; starIndex < options.starCount; starIndex += 1) {
+    const xPx = Math.floor(seededRandom() * options.tileWidthPx);
+    const yPx = Math.floor(seededRandom() * options.tileHeightPx);
+    const sizePx =
+      options.minSizePx +
+      Math.floor(seededRandom() * (options.maxSizePx - options.minSizePx + 1));
+    const alpha =
+      options.minAlpha + seededRandom() * (options.maxAlpha - options.minAlpha);
+
+    tileContext.globalAlpha = alpha;
+    tileContext.fillStyle = STARFIELD_CYAN_FILL_STYLE;
+    tileContext.fillRect(xPx, yPx, sizePx, sizePx);
+  }
+
+  tileContext.shadowBlur = 0;
+  tileContext.shadowColor = 'transparent';
+  tileContext.globalAlpha = 1;
+  return canvas;
+}
+
+function createCompatibleCanvas(
+  widthPx: number,
+  heightPx: number,
+): HTMLCanvasElement | OffscreenCanvas {
+  const width = Math.max(1, Math.round(widthPx));
+  const height = Math.max(1, Math.round(heightPx));
+
+  if (typeof OffscreenCanvas !== 'undefined') {
+    return new OffscreenCanvas(width, height);
+  }
+
+  if (typeof document !== 'undefined') {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    return canvas;
+  }
+
+  // Fallback: non-browser environments won't render, but should not crash.
+  const canvas = { width, height } as unknown as HTMLCanvasElement;
+  return canvas;
+}
+
+function createSeededRandom(seed: number): () => number {
+  let randomState = seed >>> 0;
+  return () => {
+    // xorshift32
+    randomState ^= randomState << 13;
+    randomState >>>= 0;
+    randomState ^= randomState >> 17;
+    randomState >>>= 0;
+    randomState ^= randomState << 5;
+    randomState >>>= 0;
+    return randomState / 0x1_0000_0000;
+  };
+}
+
+function positiveModulo(value: number, modulo: number): number {
+  const remainder = value % modulo;
+  return remainder < 0 ? remainder + modulo : remainder;
+}
+
 /**
- * Draws multi-pass neon outline around a pipe rectangle.
+ * Draws a simplified neon outline around a pipe rectangle.
  *
  * @param context - Canvas 2D context.
  * @param rectangleLeftPx - Rectangle left position.
@@ -376,8 +643,10 @@ function drawPipeNeonOutline(
   rectangleWidthPx: number,
   rectangleHeightPx: number,
 ): void {
+  context.save();
   // Step 1: Guard degenerate rectangles.
   if (rectangleWidthPx <= 0 || rectangleHeightPx <= 0) {
+    context.restore();
     return;
   }
 
@@ -386,7 +655,31 @@ function drawPipeNeonOutline(
   const alignedWidthPx = Math.max(1, Math.round(rectangleWidthPx));
   const alignedHeightPx = Math.max(1, Math.round(rectangleHeightPx));
 
-  // Step 2: Define pixel-aligned stroke helper to avoid blurry edges.
+  // Step 2: Compute outline geometry.
+  // We want a small side gap and a larger "entrance" gap (top for bottom pipe,
+  // bottom for top pipe) to suggest a pipe rim.
+  const outlineStrokeWidthPx = FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX;
+  const outlineStrokeHalfPx = outlineStrokeWidthPx / 2;
+  const sideExpandPx = Math.round(
+    FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX + outlineStrokeHalfPx,
+  );
+  const entranceExpandPx = Math.round(
+    FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX + outlineStrokeHalfPx,
+  );
+
+  const isTopPipeSegment = alignedTopPx === 0;
+  const outlineTopExpandPx = isTopPipeSegment ? sideExpandPx : entranceExpandPx;
+  const outlineBottomExpandPx = isTopPipeSegment
+    ? entranceExpandPx
+    : sideExpandPx;
+
+  const outlineLeftPx = alignedLeftPx - sideExpandPx;
+  const outlineTopPx = alignedTopPx - outlineTopExpandPx;
+  const outlineWidthPx = alignedWidthPx + sideExpandPx * 2;
+  const outlineHeightPx =
+    alignedHeightPx + outlineTopExpandPx + outlineBottomExpandPx;
+
+  // Step 3: Define pixel-aligned stroke helper to avoid blurry edges.
   const strokeAlignedRect = (
     leftPx: number,
     topPx: number,
@@ -404,72 +697,39 @@ function drawPipeNeonOutline(
     );
   };
 
-  // Step 3: Draw outer aura pass.
-  context.strokeStyle = FLAPPY_PIPE_OUTLINE_AURA_GLOW_COLOR;
-  context.shadowColor = FLAPPY_PIPE_OUTLINE_AURA_GLOW_COLOR;
-  context.shadowBlur = FLAPPY_PIPE_OUTLINE_AURA_GLOW_BLUR_PX;
+  // Step 4: Draw neon-green outline with cyan neon glow.
+  const previousCompositeOperation = context.globalCompositeOperation;
+  context.globalCompositeOperation = 'lighter';
+  context.strokeStyle = FLAPPY_NEON_PALETTE.pipeFill;
+
+  // Step 4.1: Soft glow pass (thicker stroke + cyan shadow).
+  context.globalAlpha = FLAPPY_PIPE_OUTLINE_GLOW_ALPHA;
+  context.shadowColor = FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR;
+  context.shadowBlur = FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX;
+  context.shadowOffsetX = 0;
+  context.shadowOffsetY = 0;
   strokeAlignedRect(
-    alignedLeftPx - FLAPPY_PIPE_OUTLINE_INSET_PX * 2,
-    alignedTopPx - FLAPPY_PIPE_OUTLINE_INSET_PX * 2,
-    alignedWidthPx + FLAPPY_PIPE_OUTLINE_INSET_PX * 4,
-    alignedHeightPx + FLAPPY_PIPE_OUTLINE_INSET_PX * 4,
-    1,
+    outlineLeftPx,
+    outlineTopPx,
+    outlineWidthPx,
+    outlineHeightPx,
+    FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX,
   );
 
-  // Step 4: Draw outer bright pass.
-  context.strokeStyle = FLAPPY_NEON_PALETTE.pipeEdgeOuter;
-  context.shadowColor = FLAPPY_PIPE_OUTLINE_OUTER_GLOW_COLOR;
-  context.shadowBlur = FLAPPY_PIPE_OUTLINE_OUTER_GLOW_BLUR_PX;
-  strokeAlignedRect(
-    alignedLeftPx - FLAPPY_PIPE_OUTLINE_INSET_PX,
-    alignedTopPx - FLAPPY_PIPE_OUTLINE_INSET_PX,
-    alignedWidthPx + FLAPPY_PIPE_OUTLINE_INSET_PX * 2,
-    alignedHeightPx + FLAPPY_PIPE_OUTLINE_INSET_PX * 2,
-    1,
-  );
-
-  // Step 5: Draw separator/core structure pass.
-  context.strokeStyle = FLAPPY_PIPE_OUTLINE_SEPARATOR_COLOR;
+  // Step 4.2: Crisp outline pass (no shadow).
+  context.globalAlpha = 1;
   context.shadowBlur = 0;
   context.shadowColor = 'transparent';
   strokeAlignedRect(
-    alignedLeftPx,
-    alignedTopPx,
-    alignedWidthPx,
-    alignedHeightPx,
-    1,
+    outlineLeftPx,
+    outlineTopPx,
+    outlineWidthPx,
+    outlineHeightPx,
+    outlineStrokeWidthPx,
   );
 
-  // Step 6: Draw inner inset pass when enough area remains.
-  if (
-    alignedWidthPx > FLAPPY_PIPE_OUTLINE_INSET_PX * 2 &&
-    alignedHeightPx > FLAPPY_PIPE_OUTLINE_INSET_PX * 2
-  ) {
-    context.strokeStyle = FLAPPY_NEON_PALETTE.pipeEdgeInner;
-    context.shadowColor = FLAPPY_PIPE_OUTLINE_INNER_GLOW_COLOR;
-    context.shadowBlur = FLAPPY_PIPE_OUTLINE_INNER_GLOW_BLUR_PX;
-    strokeAlignedRect(
-      alignedLeftPx + FLAPPY_PIPE_OUTLINE_INSET_PX,
-      alignedTopPx + FLAPPY_PIPE_OUTLINE_INSET_PX,
-      alignedWidthPx - FLAPPY_PIPE_OUTLINE_INSET_PX * 2,
-      alignedHeightPx - FLAPPY_PIPE_OUTLINE_INSET_PX * 2,
-      1,
-    );
-  }
-
-  // Step 7: Draw final core glow pass and reset shadow state.
-  context.strokeStyle = FLAPPY_PIPE_OUTLINE_CORE_GLOW_COLOR;
-  context.shadowColor = FLAPPY_PIPE_OUTLINE_CORE_GLOW_COLOR;
-  context.shadowBlur = FLAPPY_PIPE_OUTLINE_CORE_GLOW_BLUR_PX;
-  strokeAlignedRect(
-    alignedLeftPx,
-    alignedTopPx,
-    alignedWidthPx,
-    alignedHeightPx,
-    1,
-  );
-  context.shadowBlur = 0;
-  context.shadowColor = 'transparent';
+  context.globalCompositeOperation = previousCompositeOperation;
+  context.restore();
 }
 
 /**
@@ -532,6 +792,13 @@ function drawTrail(
   trailPoints: TrailPoint[],
   color: string,
   anchorX: number,
+  baseOpacity: number,
+  edgeBounds: {
+    leftXPx: number;
+    rightXPx: number;
+    topYPx: number;
+    bottomYPx: number;
+  },
 ): void {
   // Step 1: Guard empty trails.
   if (trailPoints.length === 0) {
@@ -548,14 +815,15 @@ function drawTrail(
   let previousXPosition =
     anchorX - firstTrailFrameOffset * FLAPPY_PIPE_SPEED_PX_PER_FRAME;
   let previousYPosition = firstTrailPoint.yPx;
+  let previousFrameOffset = firstTrailFrameOffset;
+  const maxTrailFrameOffset = Math.max(1, firstTrailFrameOffset);
 
-  // Step 2: Start stepped polyline at earliest trail point.
+  // Step 2: Configure trail stroke style.
+  const previousGlobalAlpha = context.globalAlpha;
   context.strokeStyle = color;
   context.lineWidth = FLAPPY_TRAIL_LINE_WIDTH_PX;
-  context.beginPath();
-  context.moveTo(previousXPosition, previousYPosition);
 
-  // Step 3: Append horizontal-then-vertical stepped segments for each point.
+  // Step 3: Render stepped segments with edge-proximity alpha fading.
   trailPoints.slice(1).forEach((trailPoint) => {
     const frameOffset = Math.max(
       0,
@@ -573,7 +841,19 @@ function drawTrail(
     );
     const steppedHorizontalXPosition =
       previousXPosition + horizontalDirection * steppedHorizontalLengthPx;
-    context.lineTo(steppedHorizontalXPosition, previousYPosition);
+    drawTrailSegmentWithEdgeFade(
+      context,
+      previousXPosition,
+      previousYPosition,
+      steppedHorizontalXPosition,
+      previousYPosition,
+      baseOpacity,
+      edgeBounds,
+      previousFrameOffset,
+      frameOffset,
+      maxTrailFrameOffset,
+    );
+    previousXPosition = steppedHorizontalXPosition;
 
     const verticalDeltaPx = nextYPosition - previousYPosition;
     if (verticalDeltaPx !== 0) {
@@ -584,17 +864,193 @@ function drawTrail(
       );
       const steppedVerticalYPosition =
         previousYPosition + verticalDirection * steppedVerticalLengthPx;
-      context.lineTo(steppedHorizontalXPosition, steppedVerticalYPosition);
+      drawTrailSegmentWithEdgeFade(
+        context,
+        previousXPosition,
+        previousYPosition,
+        steppedHorizontalXPosition,
+        steppedVerticalYPosition,
+        baseOpacity,
+        edgeBounds,
+        previousFrameOffset,
+        frameOffset,
+        maxTrailFrameOffset,
+      );
+      previousYPosition = steppedVerticalYPosition;
     }
 
-    context.lineTo(steppedHorizontalXPosition, nextYPosition);
-    context.lineTo(nextXPosition, nextYPosition);
+    drawTrailSegmentWithEdgeFade(
+      context,
+      previousXPosition,
+      previousYPosition,
+      steppedHorizontalXPosition,
+      nextYPosition,
+      baseOpacity,
+      edgeBounds,
+      previousFrameOffset,
+      frameOffset,
+      maxTrailFrameOffset,
+    );
+    previousYPosition = nextYPosition;
+
+    drawTrailSegmentWithEdgeFade(
+      context,
+      previousXPosition,
+      previousYPosition,
+      nextXPosition,
+      nextYPosition,
+      baseOpacity,
+      edgeBounds,
+      previousFrameOffset,
+      frameOffset,
+      maxTrailFrameOffset,
+    );
     previousXPosition = nextXPosition;
     previousYPosition = nextYPosition;
+    previousFrameOffset = frameOffset;
   });
 
-  // Step 4: Flush stroke path.
+  // Step 4: Restore caller alpha state.
+  context.globalAlpha = previousGlobalAlpha;
+}
+
+/**
+ * Draws one trail segment with edge-aware alpha attenuation.
+ *
+ * @param context - Canvas 2D context.
+ * @param startXPx - Segment start x position.
+ * @param startYPx - Segment start y position.
+ * @param endXPx - Segment end x position.
+ * @param endYPx - Segment end y position.
+ * @param baseOpacity - Base trail opacity before edge fading.
+ * @param edgeBounds - Visible world bounds used for edge distance checks.
+ * @param startFrameOffset - Age offset at segment start (frames from latest).
+ * @param endFrameOffset - Age offset at segment end (frames from latest).
+ * @param maxTrailFrameOffset - Oldest age offset currently retained by the trail.
+ * @returns Nothing.
+ */
+function drawTrailSegmentWithEdgeFade(
+  context: CanvasRenderingContext2D,
+  startXPx: number,
+  startYPx: number,
+  endXPx: number,
+  endYPx: number,
+  baseOpacity: number,
+  edgeBounds: {
+    leftXPx: number;
+    rightXPx: number;
+    topYPx: number;
+    bottomYPx: number;
+  },
+  startFrameOffset: number,
+  endFrameOffset: number,
+  maxTrailFrameOffset: number,
+): void {
+  const segmentLengthPx = Math.hypot(endXPx - startXPx, endYPx - startYPx);
+  if (segmentLengthPx === 0 || baseOpacity <= 0) {
+    return;
+  }
+
+  // Step 1: Resolve edge-fade factor from both segment endpoints.
+  const startOpacityFactor = resolveEdgeOpacityFactor(
+    startXPx,
+    startYPx,
+    edgeBounds,
+  );
+  const endOpacityFactor = resolveEdgeOpacityFactor(endXPx, endYPx, edgeBounds);
+  const edgeOpacityFactor = Math.min(startOpacityFactor, endOpacityFactor);
+
+  // Step 2: Resolve lifetime fade so older trail history fades near cutoff.
+  const startLifetimeOpacityFactor = resolveTrailLifetimeOpacityFactor(
+    startFrameOffset,
+    maxTrailFrameOffset,
+  );
+  const endLifetimeOpacityFactor = resolveTrailLifetimeOpacityFactor(
+    endFrameOffset,
+    maxTrailFrameOffset,
+  );
+  const lifetimeOpacityFactor = Math.min(
+    startLifetimeOpacityFactor,
+    endLifetimeOpacityFactor,
+  );
+
+  const segmentOpacity =
+    baseOpacity * edgeOpacityFactor * lifetimeOpacityFactor;
+  if (segmentOpacity <= 0) {
+    return;
+  }
+
+  // Step 3: Draw the segment with resolved opacity.
+  context.globalAlpha = segmentOpacity;
+  context.beginPath();
+  context.moveTo(startXPx, startYPx);
+  context.lineTo(endXPx, endYPx);
   context.stroke();
+}
+
+/**
+ * Converts distance-to-edge into a normalized opacity factor.
+ *
+ * Returns 0 exactly on or beyond an edge and rises to 1 once distance exceeds
+ * the configured fade band.
+ *
+ * @param pointXPx - Point x position.
+ * @param pointYPx - Point y position.
+ * @param edgeBounds - Visible world bounds used for edge distance checks.
+ * @returns Opacity multiplier in [0, 1].
+ */
+function resolveEdgeOpacityFactor(
+  pointXPx: number,
+  pointYPx: number,
+  edgeBounds: {
+    leftXPx: number;
+    rightXPx: number;
+    topYPx: number;
+    bottomYPx: number;
+  },
+): number {
+  const distanceToLeftEdgePx = pointXPx - edgeBounds.leftXPx;
+  const distanceToRightEdgePx = edgeBounds.rightXPx - pointXPx;
+  const distanceToTopEdgePx = pointYPx - edgeBounds.topYPx;
+  const distanceToBottomEdgePx = edgeBounds.bottomYPx - pointYPx;
+
+  const nearestEdgeDistancePx = Math.min(
+    distanceToLeftEdgePx,
+    distanceToRightEdgePx,
+    distanceToTopEdgePx,
+    distanceToBottomEdgePx,
+  );
+  const fadeProgress =
+    nearestEdgeDistancePx / FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX;
+  return clamp01(fadeProgress);
+}
+
+/**
+ * Converts trail age into a normalized opacity factor.
+ *
+ * Oldest retained history approaches 0 opacity; newest approaches 1.
+ *
+ * @param frameOffset - Frames between this point and newest trail point.
+ * @param maxTrailFrameOffset - Oldest age offset currently retained by trail.
+ * @returns Opacity multiplier in [0, 1].
+ */
+function resolveTrailLifetimeOpacityFactor(
+  frameOffset: number,
+  maxTrailFrameOffset: number,
+): number {
+  const normalizedLifetimeProgress =
+    1 - frameOffset / Math.max(1, maxTrailFrameOffset);
+  return clamp01(normalizedLifetimeProgress);
+}
+
+/**
+ * Clamps a number to the inclusive [0, 1] range.
+ *
+ * @param value - Candidate value.
+ * @returns Clamped value.
+ */
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
 
 /**

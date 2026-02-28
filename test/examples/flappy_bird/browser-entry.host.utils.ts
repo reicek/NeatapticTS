@@ -20,6 +20,7 @@ import {
   FLAPPY_MONOSPACE_FONT_FAMILY,
   FLAPPY_UI_CANVAS_INSET_SHADOW,
   FLAPPY_UI_CONTENT_COLUMN_TOP_PADDING_PX,
+  FLAPPY_UI_DOUBLE_PANEL_BORDER,
   FLAPPY_UI_NETWORK_CANVAS_BACKGROUND,
   FLAPPY_UI_NETWORK_HOST_INSET_PX,
   FLAPPY_UI_NETWORK_HOST_INITIAL_HEIGHT_PX,
@@ -27,7 +28,6 @@ import {
   FLAPPY_UI_OUTER_FRAME_MIN_SIDE_PADDING_PX,
   FLAPPY_UI_OUTER_FRAME_SIDE_PADDING_OFFSET_PX,
   FLAPPY_UI_OUTER_FRAME_BACKGROUND,
-  FLAPPY_UI_SPLIT_BRIDGE_COLOR,
   FLAPPY_UI_STATS_ROW_BORDER,
   FLAPPY_UI_UNIFIED_INSET_SHADOW,
   FLAPPY_NEON_PALETTE,
@@ -67,7 +67,7 @@ export function createCanvasHost(containerElement: HTMLElement): {
   containerElement.innerHTML = '';
 
   const outerFrame = document.createElement('section');
-  const unifiedBorder = `2px solid ${FLAPPY_NEON_PALETTE.hudPanelBorder}`;
+  const unifiedBorder = FLAPPY_UI_DOUBLE_PANEL_BORDER;
   const unifiedInsetShadow = FLAPPY_UI_UNIFIED_INSET_SHADOW;
 
   outerFrame.style.width = '100%';
@@ -135,7 +135,7 @@ export function createCanvasHost(containerElement: HTMLElement): {
   statsContainer.style.background = FLAPPY_NEON_PALETTE.hudPanelBackground;
   statsContainer.style.border = unifiedBorder;
   statsContainer.style.boxShadow = unifiedInsetShadow;
-  statsContainer.style.padding = '8px 10px';
+  statsContainer.style.padding = '8px';
   statsContainer.style.overflow = 'hidden';
   statsContainer.style.transition = 'max-height 120ms ease-out';
   statsContainer.style.minHeight = '500px';
@@ -144,29 +144,17 @@ export function createCanvasHost(containerElement: HTMLElement): {
   statsSplitContainer.style.display = 'flex';
   statsSplitContainer.style.flexDirection = 'row';
   statsSplitContainer.style.alignItems = 'flex-start';
-  statsSplitContainer.style.gap = '0';
+  statsSplitContainer.style.gap = '8px';
   statsSplitContainer.style.width = '100%';
-  statsSplitContainer.style.position = 'relative';
   statsSplitContainer.style.boxSizing = 'border-box';
 
-  const centeredSplitBridge = document.createElement('div');
-  centeredSplitBridge.style.position = 'absolute';
-  centeredSplitBridge.style.left = '50%';
-  centeredSplitBridge.style.top = '0';
-  centeredSplitBridge.style.bottom = '0';
-  centeredSplitBridge.style.width = '1px';
-  centeredSplitBridge.style.transform = 'translateX(-0.5px)';
-  centeredSplitBridge.style.background = FLAPPY_UI_SPLIT_BRIDGE_COLOR;
-  centeredSplitBridge.style.pointerEvents = 'none';
-
   const statsTableHost = document.createElement('div');
-  statsTableHost.style.flex = '0 0 50%';
-  statsTableHost.style.maxWidth = '50%';
+  statsTableHost.style.flex = '1 1 0';
   statsTableHost.style.minWidth = '0';
   statsTableHost.style.overflow = 'hidden';
   statsTableHost.style.boxSizing = 'border-box';
   statsTableHost.style.border = unifiedBorder;
-  statsTableHost.style.padding = '4px 6px';
+  statsTableHost.style.padding = '6px 8px';
 
   // Step 6: Create stats table and initialize value cells.
   const statsTable = document.createElement('table');
@@ -240,14 +228,13 @@ export function createCanvasHost(containerElement: HTMLElement): {
 
   // Step 7: Create network visualization host + canvas.
   const networkCanvasHost = document.createElement('div');
-  networkCanvasHost.style.flex = '0 0 50%';
-  networkCanvasHost.style.maxWidth = '50%';
+  networkCanvasHost.style.flex = '1 1 0';
   networkCanvasHost.style.minWidth = '0';
   networkCanvasHost.style.height = `${FLAPPY_UI_NETWORK_HOST_INITIAL_HEIGHT_PX}px`;
   networkCanvasHost.style.background = FLAPPY_UI_NETWORK_HOST_BACKGROUND;
   networkCanvasHost.style.boxSizing = 'border-box';
   networkCanvasHost.style.border = unifiedBorder;
-  networkCanvasHost.style.padding = '4px';
+  networkCanvasHost.style.padding = '6px';
   networkCanvasHost.style.boxShadow = FLAPPY_UI_CANVAS_INSET_SHADOW;
 
   const networkCanvas = document.createElement('canvas');
@@ -258,7 +245,7 @@ export function createCanvasHost(containerElement: HTMLElement): {
   networkCanvas.style.height = '100%';
   networkCanvas.style.maxWidth = '100%';
   networkCanvas.style.background = FLAPPY_UI_NETWORK_CANVAS_BACKGROUND;
-  networkCanvas.style.border = unifiedBorder;
+  networkCanvas.style.border = 'none';
   networkCanvas.style.boxSizing = 'border-box';
   networkCanvasHost.appendChild(networkCanvas);
 
@@ -331,7 +318,6 @@ export function createCanvasHost(containerElement: HTMLElement): {
   // Step 9: Mount host DOM tree in final order.
   statsSplitContainer.appendChild(statsTableHost);
   statsSplitContainer.appendChild(networkCanvasHost);
-  statsSplitContainer.appendChild(centeredSplitBridge);
   statsContainer.appendChild(statsSplitContainer);
 
   contentColumn.appendChild(headerCanvas);

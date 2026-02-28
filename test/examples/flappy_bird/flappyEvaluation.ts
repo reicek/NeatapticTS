@@ -532,13 +532,3 @@ function computePercentile(
   const upperValue = sortedValues[upperIndex] ?? lowerValue;
   return lowerValue + (upperValue - lowerValue) * interpolation;
 }
-
-/**
- * @param value - Scalar input.
- * @param min - Lower bound.
- * @param max - Upper bound.
- * @returns Clamped scalar.
- */
-function clampValue(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}

@@ -2,6 +2,8 @@ import {
   FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_BIRD_X_PX,
+  FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX,
+  FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX,
   FLAPPY_FLAP_VELOCITY_PX_PER_FRAME,
   FLAPPY_GRAVITY_PX_PER_FRAME2,
   FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
@@ -298,15 +300,24 @@ export function stepFlappyStateWithControlSubsteps(
       const birdRight = FLAPPY_BIRD_X_PX + FLAPPY_BIRD_RADIUS_PX;
 
       for (const pipe of state.pipes) {
-        const pipeLeft = pipe.xPx;
-        const pipeRight = pipe.xPx + FLAPPY_PIPE_WIDTH_PX;
+        const pipeLeft = pipe.xPx - FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX;
+        const pipeRight =
+          pipe.xPx +
+          FLAPPY_PIPE_WIDTH_PX +
+          FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX;
 
         const overlapsHorizontally =
           birdRight >= pipeLeft && birdLeft <= pipeRight;
         if (overlapsHorizontally) {
           const gapHalf = pipe.gapSizePx * 0.5;
-          const gapTop = pipe.gapCenterYPx - gapHalf;
-          const gapBottom = pipe.gapCenterYPx + gapHalf;
+          const gapTop =
+            pipe.gapCenterYPx -
+            gapHalf +
+            FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX;
+          const gapBottom =
+            pipe.gapCenterYPx +
+            gapHalf -
+            FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX;
 
           const birdTop = state.bird.yPx - FLAPPY_BIRD_RADIUS_PX;
           const birdBottom = state.bird.yPx + FLAPPY_BIRD_RADIUS_PX;

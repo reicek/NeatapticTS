@@ -7,6 +7,8 @@ HyperEvoDevo MorphoNEAT is an evo-devo extension for NEAT inspired by how small 
 3. **Unused / costly wiring is pruned and compacted** (energy/wiring economy).
 4. **Once stable, DNA is slowly updated** so future generations start closer to the discovered useful structure (structural assimilation; **no weight inheritance**).
 
+Optional extension in this plan: offspring may use **epigenetic reference priors** (weak, two-parent anchors for parameter initialization/mutation guidance) without inheriting parent runtime weights as fixed genotype state.
+
 This plan is intentionally constrained by the repo’s memory roadmap in [plans/Memory_Optimization.md](plans/Memory_Optimization.md). If the concept conflicts with that roadmap, the roadmap wins.
 
 Positioning (for readers familiar with existing algorithms): HyperEvoDevo MorphoNEAT sits between **HyperNEAT** and a **small developmental language**. It keeps HyperNEAT’s compact spatial patterns (CPPN fields over a substrate), but adds a deterministic rule layer and a staged lifetime policy so evolution can propose macro motifs while experience drives local growth/prune decisions.
@@ -52,6 +54,7 @@ This plan is explicitly **Evo-Devo**:
 - **Pay-for-use:** no memory/time overhead unless enabled (mirrors the memory plan).
 - **Budgeted growth:** every build/morph action obeys explicit caps (nodes/edges/bytes) and must be rollbackable.
 - **Deterministic by default:** same DNA + seed + same experience stream ⇒ same result.
+- **Epigenetic guidance is weak + optional:** parent references can nudge search early, but cannot force convergence or replace exploration.
 - **Biology-inspired realism (optional):** at extreme scales, **DNA may use lossy compression** for topology/program data to stay compact. This can slightly relax determinism (documented, opt-in), similar to biological variability.
 
 ---
@@ -336,6 +339,28 @@ HyperDNA crossover must align heterogeneous families. This keeps the original dr
 
 Excess/disjoint DNA parts follow a fitter-biased rule, but must pass a budget/viability normalization step.
 
+### Epigenetic reference priors (two-parent, no inheritance)
+
+This plan supports an opt-in epigenetic mechanism where offspring receive **two soft reference anchors** derived from both parents:
+
+- a reference can be formed for homologous parameters (for example aligned rule coefficients, CPPN block parameters, or weight/bias initializers)
+- offspring remain free to explore; references are weak priors, not hard constraints
+- references are applied at birth-time initialization or mutation-time biasing, then decay over early lifecycle stages unless still beneficial
+
+Design intent:
+
+- preserve the core rule: **no direct weight inheritance as genotype state**
+- allow both parents to influence offspring in different regions, increasing alternative trajectories instead of collapsing diversity
+- keep this feature deterministic and budgeted when enabled
+
+Conceptual mutation-time form (small $\lambda$):
+
+$$
+	heta \leftarrow \theta + \Delta\theta_{mutation} + \lambda\,\left(\theta^* - \theta\right)
+$$
+
+Where $\theta^*$ is a two-parent reference (for example blend/select across homologous parent values) and $\lambda$ is intentionally small.
+
 ---
 
 ## Lifecycle: 4 stages × 4 substages (goal-gated)
@@ -485,6 +510,7 @@ All memory flags, constants, and accounting must be sourced from the “Centrali
 ## Agreed defaults (so readers don’t guess)
 
 - **No weight inheritance:** weights are lifetime state; DNA encodes structure + policies.
+- **Epigenetic priors are allowed but weak:** two-parent references may guide initialization/mutation; they are not persistent inherited weights.
 - **Per-module assimilation:** equilibrium triggers per-module DNA updates (templates/rules/CPPN programs/budgets/schedules).
 - **Siblings differ by seed (default):** reproduction yields the same DNA with different child seed values.
   - **Twins are allowed:** identical DNA + identical seed.
@@ -514,6 +540,12 @@ Per-module assimilation should prefer updating **generators** over storing expli
 - Update lifecycle schedule knobs (growth vs prune emphasis, probe cadence).
 
 Optional “assisted biasing” (conceptual): DNA may carry a parent-snapshot hint used to bias early development until plateau, then abandon the bias if stagnant.
+
+Epigenetic references should prefer **parameter priors** over explicit adjacency snapshots:
+
+- store compact parent-derived priors (for example archetype deltas, CPPN block priors, initializer moments)
+- apply priors with a decay schedule across early lifecycle stages
+- disable/anneal priors when they reduce reward deltas or novelty contribution
 
 ---
 
@@ -559,6 +591,7 @@ Phase E — Evolution integration
 
 - Multi-family crossover and mutation for DNA parts (rules/CPPN topology/substrate modifiers/budgets/schedules).
 - Speciation distance extends to DNA programs and wiring-cost preferences.
+- Optional epigenetic prior operator: two-parent weak anchors for initialization/mutation-time biasing with deterministic decay.
 
 Phase F — Scale & stress validation
 

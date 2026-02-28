@@ -137,6 +137,19 @@ export function buildCenteredTitleBoxLines(
   const resolvedHalfSpan = Math.min(halfSpan, maximumHalfSpan);
   const boxLeftIndex = centerIndex - resolvedHalfSpan;
   const boxRightIndex = centerIndex + resolvedHalfSpan;
+  const textInnerStartIndex = boxLeftIndex + FLAPPY_FRAME_RESERVED_COLUMNS;
+  const textInnerEndIndex = boxRightIndex - FLAPPY_FRAME_RESERVED_COLUMNS;
+  const availableTextColumns = Math.max(
+    0,
+    textInnerEndIndex - textInnerStartIndex + FLAPPY_FRAME_RESERVED_COLUMNS,
+  );
+  const normalizedTitleText = titleText.trim();
+  const clippedTitleText = normalizedTitleText.slice(0, availableTextColumns);
+  const centeredTitleOffset = Math.max(
+    0,
+    Math.floor((availableTextColumns - clippedTitleText.length) * FLAPPY_HALF),
+  );
+  const centeredTitleStartIndex = textInnerStartIndex + centeredTitleOffset;
 
   const topRow = Array.from({ length: safeColumns }, () => FLAPPY_GLYPH_SPACE);
   const textRow = Array.from({ length: safeColumns }, () => FLAPPY_GLYPH_SPACE);
@@ -165,9 +178,14 @@ export function buildCenteredTitleBoxLines(
 
     topRow[columnIndex] = FLAPPY_GLYPH_HORIZONTAL;
     bottomRow[columnIndex] = FLAPPY_GLYPH_HORIZONTAL;
-    const titleIndex =
-      columnIndex - boxLeftIndex - FLAPPY_FRAME_RESERVED_COLUMNS;
-    textRow[columnIndex] = titleText[titleIndex] ?? FLAPPY_GLYPH_SPACE;
+    if (
+      columnIndex >= centeredTitleStartIndex &&
+      columnIndex < centeredTitleStartIndex + clippedTitleText.length
+    ) {
+      const centeredTitleIndex = columnIndex - centeredTitleStartIndex;
+      textRow[columnIndex] =
+        clippedTitleText[centeredTitleIndex] ?? FLAPPY_GLYPH_SPACE;
+    }
   }
 
   return [topRow.join(''), textRow.join(''), bottomRow.join('')];

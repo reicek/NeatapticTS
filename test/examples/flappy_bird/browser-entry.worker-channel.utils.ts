@@ -12,7 +12,7 @@ import type {
 export function createEvolutionWorker(): Worker {
   // Step 1: Locate the currently loaded browser bundle script element.
   const scriptElements = document.querySelectorAll('script[src]');
-  const currentBundleScript = [...scriptElements]
+  const currentBundleScript = Array.from(scriptElements)
     .map((scriptElement) => scriptElement as HTMLScriptElement)
     .find((scriptElement) =>
       scriptElement.src.includes('flappy-bird.bundle.js'),
