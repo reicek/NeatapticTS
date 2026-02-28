@@ -9,4 +9,3 @@ export * from './constants.ts';
 export * from './rng.ts';
 export * from './flappyEnvironment.ts';
 export * from './flappyEvaluation.ts';
-

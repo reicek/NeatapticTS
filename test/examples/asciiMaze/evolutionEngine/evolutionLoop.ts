@@ -1512,14 +1512,17 @@ export const runEvolutionLoop = async (
       generationOutcome.fittest ??
       (typeof (neat as unknown as { getFittest?: () => NetworkInstance | null })
         .getFittest === 'function'
-        ? (neat as unknown as { getFittest: () => NetworkInstance | null })
-            .getFittest()
+        ? (
+            neat as unknown as { getFittest: () => NetworkInstance | null }
+          ).getFittest()
         : null) ??
-      ((neat as unknown as { population?: NetworkInstance[] }).population?.[0] ??
-        null);
+      (neat as unknown as { population?: NetworkInstance[] }).population?.[0] ??
+      null;
     const fittest = fallbackFittest;
     if (!fittest) {
-      safeWrite('[evolutionLoop] No fittest genome available for generation; stopping loop safely.');
+      safeWrite(
+        '[evolutionLoop] No fittest genome available for generation; stopping loop safely.',
+      );
       break;
     }
     if (doProfile) {

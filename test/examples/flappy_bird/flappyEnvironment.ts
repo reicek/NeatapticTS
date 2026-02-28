@@ -1,31 +1,29 @@
 import {
   FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,
-  FLAPPY_DIFFICULTY_RAMP_PIPES,
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_BIRD_X_PX,
   FLAPPY_FLAP_VELOCITY_PX_PER_FRAME,
   FLAPPY_GRAVITY_PX_PER_FRAME2,
   FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
   FLAPPY_MAX_FRAMES_PER_EPISODE,
-  FLAPPY_PIPE_GAP_RANDOM_JITTER_PX,
-  FLAPPY_PIPE_GAP_SHRINK_PER_PIPE_PX,
-  FLAPPY_PIPE_GAP_START_MULTIPLIER,
-  FLAPPY_PIPE_GAP_MIN_PX,
-  FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
-  FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
-  FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
   FLAPPY_PIPE_GAP_PX,
-  FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES,
-  FLAPPY_PIPE_SPAWN_INTERVAL_SHRINK_PER_PIPE_FRAMES,
-  FLAPPY_PIPE_SPAWN_INTERVAL_START_MULTIPLIER,
-  FLAPPY_PIPE_SPAWN_INTERVAL_FRAMES,
-  FLAPPY_PIPE_SPEED_MAX_PX_PER_FRAME,
-  FLAPPY_PIPE_SPEED_PX_PER_FRAME,
   FLAPPY_PIPE_WIDTH_PX,
   FLAPPY_WORLD_HEIGHT_PX,
   FLAPPY_WORLD_WIDTH_PX,
 } from './constants.ts';
 import type { FlappyRng } from './rng.ts';
+import {
+  clampValue,
+  type SharedDifficultyProfile,
+  resolveAdaptiveDifficultyProfile,
+  resolveNextSpawnGapCenterY as resolveSharedNextSpawnGapCenterY,
+  resolveNextSpawnGapSize as resolveSharedNextSpawnGapSize,
+  resolveNextSpawnIntervalFrames as resolveSharedNextSpawnIntervalFrames,
+  resolveObservationFeatures,
+  resolveObservationVectorFromFeatures,
+  resolveUpcomingPipes as resolveSharedUpcomingPipes,
+  sampleGapCenterY as sampleSharedGapCenterY,
+} from './flappy.simulation.shared.utils.ts';
 
 /** Pipe obstacle definition. */
 export interface FlappyPipe {
@@ -242,8 +240,9 @@ export function stepFlappyStateWithControlSubsteps(
       state.bird.velocityYPxPerFrame = FLAPPY_FLAP_VELOCITY_PX_PER_FRAME;
     }
 
-    state.bird.velocityYPxPerFrame = clamp(
-      state.bird.velocityYPxPerFrame + FLAPPY_GRAVITY_PX_PER_FRAME2 * substepDelta,
+    state.bird.velocityYPxPerFrame = clampValue(
+      state.bird.velocityYPxPerFrame +
+        FLAPPY_GRAVITY_PX_PER_FRAME2 * substepDelta,
       -Infinity,
       FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
     );
@@ -287,7 +286,8 @@ export function stepFlappyStateWithControlSubsteps(
       state.done = true;
       state.doneReason = 'out_of_bounds';
     } else if (
-      state.bird.yPx + FLAPPY_BIRD_RADIUS_PX >= FLAPPY_WORLD_HEIGHT_PX
+      state.bird.yPx + FLAPPY_BIRD_RADIUS_PX >=
+      FLAPPY_WORLD_HEIGHT_PX
     ) {
       state.done = true;
       state.doneReason = 'out_of_bounds';
@@ -333,15 +333,6 @@ export function stepFlappyStateWithControlSubsteps(
     state.done = true;
     state.doneReason = 'timeout';
   }
-
-  /**
-   * @param value - Value to clamp.
-   * @param min - Lower bound.
-   * @param max - Upper bound.
-   */
-  function clamp(value: number, min: number, max: number): number {
-    return Math.min(max, Math.max(min, value));
-  }
 }
 
 /**
@@ -361,63 +352,7 @@ function resolveDifficultyProfile(
   pipeSpeedPxPerFrame: number;
   pipeSpawnIntervalFrames: number;
 } {
-  const normalizedDifficultyScale = clampValue(difficultyScale, 0, 1);
-  const normalizedDifficultyProgress = clampValue(
-    (pipesPassed / Math.max(1, FLAPPY_DIFFICULTY_RAMP_PIPES)) *
-      normalizedDifficultyScale,
-    0,
-    1,
-  );
-
-  return {
-    pipeGapPx: Math.round(
-      interpolateValue(
-        FLAPPY_PIPE_GAP_PX,
-        FLAPPY_PIPE_GAP_MIN_PX,
-        normalizedDifficultyProgress,
-      ),
-    ),
-    pipeSpeedPxPerFrame: interpolateValue(
-      FLAPPY_PIPE_SPEED_PX_PER_FRAME,
-      FLAPPY_PIPE_SPEED_MAX_PX_PER_FRAME,
-      normalizedDifficultyProgress,
-    ),
-    pipeSpawnIntervalFrames: Math.round(
-      interpolateValue(
-        FLAPPY_PIPE_SPAWN_INTERVAL_FRAMES,
-        FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES,
-        normalizedDifficultyProgress,
-      ),
-    ),
-  };
-}
-
-/**
- * Linearly interpolates between two scalar values.
- *
- * @param startValue - Value at progress = 0.
- * @param endValue - Value at progress = 1.
- * @param progress - Interpolation progress in [0, 1].
- * @returns Interpolated value.
- */
-function interpolateValue(
-  startValue: number,
-  endValue: number,
-  progress: number,
-): number {
-  return startValue + (endValue - startValue) * progress;
-}
-
-/**
- * Clamps a scalar to the provided range.
- *
- * @param value - Input value.
- * @param min - Lower bound.
- * @param max - Upper bound.
- * @returns Clamped value.
- */
-function clampValue(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
+  return resolveAdaptiveDifficultyProfile(pipesPassed, difficultyScale);
 }
 
 /**
@@ -437,26 +372,11 @@ function resolveNextSpawnGapSize(
   },
   rng: FlappyRng,
 ): number {
-  const hardestGapPx = difficultyProfile.pipeGapPx;
-  const initialWideGapPx = Math.round(
-    hardestGapPx * FLAPPY_PIPE_GAP_START_MULTIPLIER,
+  return resolveSharedNextSpawnGapSize(
+    previousSpawnGapPx,
+    difficultyProfile as SharedDifficultyProfile,
+    rng,
   );
-
-  const progressiveGapPx =
-    previousSpawnGapPx == null
-      ? initialWideGapPx
-      : Math.max(
-          hardestGapPx,
-          previousSpawnGapPx - FLAPPY_PIPE_GAP_SHRINK_PER_PIPE_PX,
-        );
-
-  const randomJitterPx = rng.nextInt(
-    -FLAPPY_PIPE_GAP_RANDOM_JITTER_PX,
-    FLAPPY_PIPE_GAP_RANDOM_JITTER_PX + 1,
-  );
-  const randomizedGapPx = progressiveGapPx + randomJitterPx;
-
-  return Math.round(clampValue(randomizedGapPx, hardestGapPx, initialWideGapPx));
 }
 
 /**
@@ -474,26 +394,9 @@ function resolveNextSpawnIntervalFrames(
     pipeSpawnIntervalFrames: number;
   },
 ): number {
-  const hardestIntervalFrames = difficultyProfile.pipeSpawnIntervalFrames;
-  const initialWideIntervalFrames = Math.round(
-    hardestIntervalFrames * FLAPPY_PIPE_SPAWN_INTERVAL_START_MULTIPLIER,
-  );
-
-  const progressiveIntervalFrames =
-    previousSpawnIntervalFrames == null
-      ? initialWideIntervalFrames
-      : Math.max(
-          hardestIntervalFrames,
-          previousSpawnIntervalFrames -
-            FLAPPY_PIPE_SPAWN_INTERVAL_SHRINK_PER_PIPE_FRAMES,
-        );
-
-  return Math.round(
-    clampValue(
-      progressiveIntervalFrames,
-      hardestIntervalFrames,
-      initialWideIntervalFrames,
-    ),
+  return resolveSharedNextSpawnIntervalFrames(
+    previousSpawnIntervalFrames,
+    difficultyProfile as SharedDifficultyProfile,
   );
 }
 
@@ -522,24 +425,9 @@ export function getFlappyObservation(
   state: FlappyGameState,
   difficultyScale: FlappyDifficultyScale = 1,
 ): number[] {
-  const observationFeatures = getFlappyObservationFeatures(
-    state,
-    difficultyScale,
+  return resolveObservationVectorFromFeatures(
+    getFlappyObservationFeatures(state, difficultyScale),
   );
-  return [
-    observationFeatures.normalizedBirdY,
-    observationFeatures.normalizedVelocity,
-    observationFeatures.normalizedDistanceToNextPipe,
-    observationFeatures.normalizedDeltaToNextGap,
-    observationFeatures.normalizedNextGapTop,
-    observationFeatures.normalizedNextGapBottom,
-    observationFeatures.normalizedDistanceToSecondPipe,
-    observationFeatures.normalizedDeltaToSecondGap,
-    observationFeatures.normalizedTimeToNextPipe,
-    observationFeatures.normalizedNextGapClearance,
-    observationFeatures.normalizedRequiredVerticalVelocityToNextGap,
-    observationFeatures.normalizedNextToSecondGapTransition,
-  ];
 }
 
 /**
@@ -553,122 +441,28 @@ export function getFlappyObservationFeatures(
   state: FlappyGameState,
   difficultyScale: FlappyDifficultyScale = 1,
 ): FlappyObservationFeatures {
-  const [nextPipe, secondPipe] = findUpcomingPipes(state.pipes);
-  const birdYPx = state.bird.yPx;
-
-  const normalizedBirdY = clamp01(birdYPx / FLAPPY_WORLD_HEIGHT_PX);
-  const normalizedVelocity = clamp(
-    state.bird.velocityYPxPerFrame / FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
-    -1,
-    1,
-  );
-
-  const distanceToNextPipePx = nextPipe
-    ? nextPipe.xPx + FLAPPY_PIPE_WIDTH_PX - FLAPPY_BIRD_X_PX
-    : FLAPPY_WORLD_WIDTH_PX;
-  const normalizedDistanceToNextPipe = clamp01(
-    distanceToNextPipePx / FLAPPY_WORLD_WIDTH_PX,
-  );
-
-  const nextGapCenterYPx = nextPipe?.gapCenterYPx ?? FLAPPY_WORLD_HEIGHT_PX * 0.5;
-  const nextGapHalfPx = (nextPipe?.gapSizePx ?? FLAPPY_PIPE_GAP_PX) * 0.5;
-  const normalizedNextGapTop = clamp01(
-    (nextGapCenterYPx - nextGapHalfPx) / FLAPPY_WORLD_HEIGHT_PX,
-  );
-  const normalizedNextGapBottom = clamp01(
-    (nextGapCenterYPx + nextGapHalfPx) / FLAPPY_WORLD_HEIGHT_PX,
-  );
-  const normalizedDeltaToNextGap = clamp(
-    (birdYPx - nextGapCenterYPx) / FLAPPY_WORLD_HEIGHT_PX,
-    -1,
-    1,
-  );
-
-  const distanceToSecondPipePx = secondPipe
-    ? secondPipe.xPx + FLAPPY_PIPE_WIDTH_PX - FLAPPY_BIRD_X_PX
-    : FLAPPY_WORLD_WIDTH_PX;
-  const normalizedDistanceToSecondPipe = clamp01(
-    distanceToSecondPipePx / FLAPPY_WORLD_WIDTH_PX,
-  );
-
-  const secondGapCenterYPx = secondPipe?.gapCenterYPx ?? nextGapCenterYPx;
-  const normalizedDeltaToSecondGap = clamp(
-    (birdYPx - secondGapCenterYPx) / FLAPPY_WORLD_HEIGHT_PX,
-    -1,
-    1,
-  );
-
   const difficultyProfile = resolveDifficultyProfile(
     state.pipesPassed,
     difficultyScale,
   );
-  const activeSpawnIntervalFrames = Math.max(
-    1,
-    state.lastSpawnedPipeSpawnIntervalFrames,
-  );
-  const estimatedFramesToNextPipe =
-    distanceToNextPipePx / Math.max(0.001, difficultyProfile.pipeSpeedPxPerFrame);
-  const normalizedTimeToNextPipe = clamp01(
-    1 - estimatedFramesToNextPipe / activeSpawnIntervalFrames,
-  );
-
-  const distanceToNextGapCenterPx = Math.abs(birdYPx - nextGapCenterYPx);
-  const normalizedNextGapClearance = clamp(
-    (nextGapHalfPx - distanceToNextGapCenterPx) / Math.max(1, nextGapHalfPx),
-    -1,
-    1,
-  );
-
-  const requiredVerticalVelocityToNextGapPxPerFrame = clamp(
-    (nextGapCenterYPx - birdYPx) / Math.max(1, estimatedFramesToNextPipe),
-    -FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
-    FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
-  );
-  const normalizedRequiredVerticalVelocityToNextGap = clamp(
-    requiredVerticalVelocityToNextGapPxPerFrame /
-      FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
-    -1,
-    1,
-  );
-
-  const normalizedNextToSecondGapTransition = clamp(
-    (secondGapCenterYPx - nextGapCenterYPx) / FLAPPY_WORLD_HEIGHT_PX,
-    -1,
-    1,
-  );
-
-  return {
-    normalizedBirdY,
-    normalizedVelocity,
-    normalizedDistanceToNextPipe,
-    normalizedDeltaToNextGap,
-    normalizedNextGapTop,
-    normalizedNextGapBottom,
-    normalizedDistanceToSecondPipe,
-    normalizedDeltaToSecondGap,
-    normalizedTimeToNextPipe,
-    normalizedNextGapClearance,
-    normalizedRequiredVerticalVelocityToNextGap,
-    normalizedNextToSecondGapTransition,
-  };
-
-  function clamp01(value: number): number {
-    return Math.min(1, Math.max(0, value));
-  }
-
-  function clamp(value: number, min: number, max: number): number {
-    return Math.min(max, Math.max(min, value));
-  }
-
-  function findUpcomingPipes(
-    pipes: FlappyPipe[],
-  ): [FlappyPipe | undefined, FlappyPipe | undefined] {
-    const birdFrontX = FLAPPY_BIRD_X_PX - FLAPPY_BIRD_RADIUS_PX;
-    const upcomingPipes = pipes.filter(
-      (pipe) => pipe.xPx + FLAPPY_PIPE_WIDTH_PX >= birdFrontX,
-    );
-    return [upcomingPipes[0], upcomingPipes[1]];
-  }
+  return resolveObservationFeatures({
+    birdYPx: state.bird.yPx,
+    velocityYPxPerFrame: state.bird.velocityYPxPerFrame,
+    pipes: state.pipes,
+    visibleWorldWidthPx: FLAPPY_WORLD_WIDTH_PX,
+    difficultyProfile,
+    activeSpawnIntervalFrames: Math.max(
+      1,
+      state.lastSpawnedPipeSpawnIntervalFrames,
+    ),
+    defaultGapSizePx: FLAPPY_PIPE_GAP_PX,
+    birdCenterXPx: FLAPPY_BIRD_X_PX,
+    birdRadiusPx: FLAPPY_BIRD_RADIUS_PX,
+    pipeWidthPx: FLAPPY_PIPE_WIDTH_PX,
+    worldHeightPx: FLAPPY_WORLD_HEIGHT_PX,
+    maxFallSpeedPxPerFrame: FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
+    normalizationEpsilon: 0.001,
+  });
 }
 
 /**
@@ -678,10 +472,7 @@ export function getFlappyObservationFeatures(
  * @returns Gap center y coordinate (pixels).
  */
 export function sampleGapCenterY(rng: FlappyRng): number {
-  return rng.nextInt(
-    FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
-    FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
-  );
+  return sampleSharedGapCenterY(rng);
 }
 
 /**
@@ -695,18 +486,5 @@ export function resolveNextSpawnGapCenterY(
   previousGapCenterYPx: number,
   rng: FlappyRng,
 ): number {
-  const sampledGapCenterYPx = sampleGapCenterY(rng);
-  const minimumGapCenterYPx = Math.max(
-    FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
-    previousGapCenterYPx - FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
-  );
-  const maximumGapCenterYPx = Math.min(
-    FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
-    previousGapCenterYPx + FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
-  );
-  return clampValue(
-    sampledGapCenterYPx,
-    minimumGapCenterYPx,
-    maximumGapCenterYPx,
-  );
+  return resolveSharedNextSpawnGapCenterY(previousGapCenterYPx, rng);
 }

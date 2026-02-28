@@ -47,11 +47,11 @@ function writeExamplesLandingPage() {
   fs.mkdirSync(examplesDir, { recursive: true });
 
   const demoEntries = [
-    { dirName: 'asciiMaze', label: 'asciiMaze', title: 'ASCII Maze (NEAT demo)' },
+    { dirName: 'asciiMaze', label: 'asciiMaze', title: 'ASCII Maze (NeatapticTS)' },
     {
       dirName: 'flappy_bird',
       label: 'flappy_bird',
-      title: 'Flappy Bird (NEAT demo)',
+      title: 'Flappy Bird (NeatapticTS)',
     },
   ];
 

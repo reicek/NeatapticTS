@@ -27,12 +27,16 @@ interface RuntimeConnectionLike {
  * @param network - Runtime network instance.
  * @returns Stable architecture descriptor.
  */
-export function describeArchitecture(network: Network): NetworkArchitectureDescriptor {
+export function describeArchitecture(
+  network: Network,
+): NetworkArchitectureDescriptor {
   const runtimeNodes = (network.nodes ?? []) as RuntimeNodeLike[];
-  const runtimeConnections = (network.connections ?? []) as RuntimeConnectionLike[];
+  const runtimeConnections = (network.connections ??
+    []) as RuntimeConnectionLike[];
 
   // Step 1: Resolve hidden-layer widths from explicit per-node layer metadata.
-  const layerMetadataHiddenSizes = resolveHiddenLayerSizesFromLayerMetadata(runtimeNodes);
+  const layerMetadataHiddenSizes =
+    resolveHiddenLayerSizesFromLayerMetadata(runtimeNodes);
   if (layerMetadataHiddenSizes.length > 0) {
     return createArchitectureDescriptor(
       layerMetadataHiddenSizes,
@@ -106,7 +110,11 @@ function resolveHiddenLayerSizesFromLayerMetadata(
 
   runtimeNodes.forEach((runtimeNode) => {
     const runtimeNodeType = runtimeNode.type ?? '';
-    if (runtimeNodeType === 'input' || runtimeNodeType === 'output' || runtimeNodeType === 'constant') {
+    if (
+      runtimeNodeType === 'input' ||
+      runtimeNodeType === 'output' ||
+      runtimeNodeType === 'constant'
+    ) {
       return;
     }
 
@@ -121,7 +129,10 @@ function resolveHiddenLayerSizesFromLayerMetadata(
   });
 
   return [...layerCounts.entries()]
-    .toSorted((leftLayerEntry, rightLayerEntry) => leftLayerEntry[0] - rightLayerEntry[0])
+    .toSorted(
+      (leftLayerEntry, rightLayerEntry) =>
+        leftLayerEntry[0] - rightLayerEntry[0],
+    )
     .map((layerEntry) => layerEntry[1]);
 }
 
@@ -157,7 +168,10 @@ function resolveHiddenLayerSizesFromGraphTopology(
   );
 
   const hiddenLayerSizes = [...hiddenCountsByDepth.entries()]
-    .toSorted((leftDepthEntry, rightDepthEntry) => leftDepthEntry[0] - rightDepthEntry[0])
+    .toSorted(
+      (leftDepthEntry, rightDepthEntry) =>
+        leftDepthEntry[0] - rightDepthEntry[0],
+    )
     .map((depthEntry) => depthEntry[1]);
 
   return { hiddenLayerSizes, hasCycles: false };
@@ -174,7 +188,9 @@ function createNodeIndexMap(
 
   runtimeNodes.forEach((runtimeNode, runtimeNodeIndex) => {
     const stableNodeIndex =
-      typeof runtimeNode.index === 'number' ? runtimeNode.index : runtimeNodeIndex;
+      typeof runtimeNode.index === 'number'
+        ? runtimeNode.index
+        : runtimeNodeIndex;
     nodeByIndex.set(stableNodeIndex, runtimeNode);
   });
 
@@ -199,7 +215,10 @@ function createDirectedEdgeList(
       const fromNodeIndex = runtimeConnection.from?.index;
       const toNodeIndex = runtimeConnection.to?.index;
 
-      if (typeof fromNodeIndex !== 'number' || typeof toNodeIndex !== 'number') {
+      if (
+        typeof fromNodeIndex !== 'number' ||
+        typeof toNodeIndex !== 'number'
+      ) {
         return null;
       }
 
@@ -213,7 +232,9 @@ function createDirectedEdgeList(
 
       return { fromIndex: fromNodeIndex, toIndex: toNodeIndex };
     })
-    .filter((edge): edge is { fromIndex: number; toIndex: number } => edge !== null);
+    .filter(
+      (edge): edge is { fromIndex: number; toIndex: number } => edge !== null,
+    );
 }
 
 /**
@@ -238,7 +259,8 @@ function resolveCycleStateAndTopoOrder(
       directedEdge.toIndex,
       (incomingEdgeCountByNode.get(directedEdge.toIndex) ?? 0) + 1,
     );
-    const outgoingTargets = outgoingTargetsByNode.get(directedEdge.fromIndex) ?? [];
+    const outgoingTargets =
+      outgoingTargetsByNode.get(directedEdge.fromIndex) ?? [];
     outgoingTargets.push(directedEdge.toIndex);
     outgoingTargetsByNode.set(directedEdge.fromIndex, outgoingTargets);
   });
@@ -292,7 +314,8 @@ function resolveNodeDepthByIndex(
   });
 
   directedEdges.forEach((directedEdge) => {
-    const incomingSources = incomingSourcesByNode.get(directedEdge.toIndex) ?? [];
+    const incomingSources =
+      incomingSourcesByNode.get(directedEdge.toIndex) ?? [];
     incomingSources.push(directedEdge.fromIndex);
     incomingSourcesByNode.set(directedEdge.toIndex, incomingSources);
   });
@@ -313,7 +336,9 @@ function resolveNodeDepthByIndex(
     const incomingSources = incomingSourcesByNode.get(nodeIndex) ?? [];
     const parentDepths = incomingSources
       .map((sourceNodeIndex) => depthByNodeIndex.get(sourceNodeIndex))
-      .filter((parentDepth): parentDepth is number => typeof parentDepth === 'number');
+      .filter(
+        (parentDepth): parentDepth is number => typeof parentDepth === 'number',
+      );
 
     if (parentDepths.length === 0) {
       return;

@@ -9,6 +9,10 @@ import {
   type FlappySeedBatchEvaluation,
 } from './flappyEvaluation.ts';
 import {
+  clampValue,
+  interpolateValue,
+} from './flappy.simulation.shared.utils.ts';
+import {
   FLAPPY_MAX_FRAMES_PER_EPISODE,
   FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
   FLAPPY_NETWORK_INPUT_SIZE,
@@ -210,16 +214,6 @@ function createPopulationFitnessEvaluator(
     const aggregateByGenome = new Map<
       FlappyTrainerNetwork,
       FlappySeedBatchEvaluation
-    >();
-
-    evaluatePopulationQuickStage(
-      population,
-      generationEvaluationPlan,
-      aggregateByGenome,
-      provisionalScoresByGenome,
-    );
-
-    evaluatePopulationFullStage(
       population,
       generationEvaluationPlan,
       aggregateByGenome,
@@ -266,14 +260,17 @@ function resolveGenerationEvaluationPlan(
     reevaluationSeeds: buildSharedSeedBatch(generationIndex, 0xb8f3, 32),
     quickRolloutOptions: createQuickRolloutOptions(difficultyScale),
     fullRolloutOptions: createFullRolloutOptions(difficultyScale),
-    reevaluationRolloutOptions: createReevaluationRolloutOptions(difficultyScale),
+    reevaluationRolloutOptions:
+      createReevaluationRolloutOptions(difficultyScale),
   };
 }
 
 /**
  * Builds quick-screen rollout options.
  */
-function createQuickRolloutOptions(difficultyScale: number): FlappyRolloutOptions {
+function createQuickRolloutOptions(
+  difficultyScale: number,
+): FlappyRolloutOptions {
   return {
     difficultyScale,
     maxFrames: 1_500,
@@ -288,7 +285,9 @@ function createQuickRolloutOptions(difficultyScale: number): FlappyRolloutOption
 /**
  * Builds full-stage rollout options.
  */
-function createFullRolloutOptions(difficultyScale: number): FlappyRolloutOptions {
+function createFullRolloutOptions(
+  difficultyScale: number,
+): FlappyRolloutOptions {
   return {
     difficultyScale,
     maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
@@ -440,12 +439,18 @@ function commitPopulationScores(
  */
 function buildGenerationReport(
   population: readonly FlappyTrainerNetwork[],
-  aggregateByGenome: ReadonlyMap<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
+  aggregateByGenome: ReadonlyMap<
+    FlappyTrainerNetwork,
+    FlappySeedBatchEvaluation
+  >,
   generationEvaluationPlan: FlappyGenerationEvaluationPlan,
 ): FlappyGenerationReport {
   const finalScores = collectFiniteGenomeScores(population);
   const scoreMean = computeMean(finalScores);
-  const scoreStdDev = computePopulationStandardDeviation(finalScores, scoreMean);
+  const scoreStdDev = computePopulationStandardDeviation(
+    finalScores,
+    scoreMean,
+  );
   const bestGenome = resolveBestGenomeByScore(population);
   const bestAggregate = resolveBestAggregate(
     population,
@@ -516,7 +521,10 @@ function resolveBestGenomeByScore(
 function resolveBestAggregate(
   population: readonly FlappyTrainerNetwork[],
   bestGenome: FlappyTrainerNetwork | undefined,
-  aggregateByGenome: ReadonlyMap<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
+  aggregateByGenome: ReadonlyMap<
+    FlappyTrainerNetwork,
+    FlappySeedBatchEvaluation
+  >,
   fallbackSeeds: readonly number[],
   fallbackRolloutOptions: FlappyRolloutOptions,
 ): FlappySeedBatchEvaluation {
@@ -677,7 +685,8 @@ function logGenerationSummary(
     report?.bestRobustFitness ??
     (fittestGenome.score as number) ??
     fallbackEpisode.fitness;
-  const bestPipesPassed = report?.bestPipesPassed ?? fallbackEpisode.pipesPassed;
+  const bestPipesPassed =
+    report?.bestPipesPassed ?? fallbackEpisode.pipesPassed;
   const bestFramesSurvived =
     report?.bestFramesSurvived ?? fallbackEpisode.framesSurvived;
 
@@ -792,20 +801,6 @@ function mixSeed(generationIndex: number, stageSalt: number): number {
 }
 
 /**
- * @param startValue - Value at interpolation start.
- * @param endValue - Value at interpolation end.
- * @param progress - Progress in [0, 1].
- * @returns Interpolated scalar value.
- */
-function interpolateValue(
-  startValue: number,
-  endValue: number,
-  progress: number,
-): number {
-  return startValue + (endValue - startValue) * progress;
-}
-
-/**
  * @param values - Numeric samples.
  * @returns Arithmetic mean.
  */
@@ -843,7 +838,10 @@ function computePopulationStandardDeviation(
  * @param percentile - Percentile in [0, 1].
  * @returns Interpolated percentile value.
  */
-function computePercentile(values: readonly number[], percentile: number): number {
+function computePercentile(
+  values: readonly number[],
+  percentile: number,
+): number {
   if (values.length === 0) return Number.NaN;
 
   const sortedValues = [...values];
@@ -863,7 +861,10 @@ function computePercentile(values: readonly number[], percentile: number): numbe
 /**
  * Numeric ascending comparator.
  */
-function compareNumbersAscending(leftValue: number, rightValue: number): number {
+function compareNumbersAscending(
+  leftValue: number,
+  rightValue: number,
+): number {
   return leftValue - rightValue;
 }
 
@@ -882,7 +883,10 @@ function clampValue(value: number, min: number, max: number): number {
  */
 function assignFramePrimaryScores(
   population: readonly FlappyTrainerNetwork[],
-  aggregateByGenome: ReadonlyMap<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
+  aggregateByGenome: ReadonlyMap<
+    FlappyTrainerNetwork,
+    FlappySeedBatchEvaluation
+  >,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
 ): void {
   const aggregateValues = collectAggregateValues(population, aggregateByGenome);
@@ -907,7 +911,10 @@ function assignFramePrimaryScores(
  */
 function collectAggregateValues(
   population: readonly FlappyTrainerNetwork[],
-  aggregateByGenome: ReadonlyMap<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
+  aggregateByGenome: ReadonlyMap<
+    FlappyTrainerNetwork,
+    FlappySeedBatchEvaluation
+  >,
 ): FlappySeedBatchEvaluation[] {
   const aggregateValues: FlappySeedBatchEvaluation[] = [];
 
@@ -943,7 +950,8 @@ function scoreAggregateFramePrimary(
   maxMeanPipesPassed: number,
 ): number {
   const frameStabilityPenalty = aggregate.fitnessStdDev * 0.5;
-  const passesPipeFilter = aggregate.meanPipesPassed >= maxMeanPipesPassed - 0.05;
+  const passesPipeFilter =
+    aggregate.meanPipesPassed >= maxMeanPipesPassed - 0.05;
 
   if (passesPipeFilter) {
     return (
@@ -987,7 +995,10 @@ function selectTopGenomesByScore(
   scoredEntries.sort(compareScoredGenomeEntriesDescending);
 
   const selectedGenomes: FlappyTrainerNetwork[] = [];
-  const maxSelectionCount = Math.max(0, Math.min(targetCount, scoredEntries.length));
+  const maxSelectionCount = Math.max(
+    0,
+    Math.min(targetCount, scoredEntries.length),
+  );
 
   let selectedIndex = 0;
   while (selectedIndex < maxSelectionCount) {
@@ -1006,7 +1017,9 @@ function selectTopGenomesByScore(
  */
 function buildScoredGenomeEntries(
   population: readonly FlappyTrainerNetwork[],
-  provisionalScoresByGenome: ReadonlyMap<FlappyTrainerNetwork, number> | undefined,
+  provisionalScoresByGenome:
+    | ReadonlyMap<FlappyTrainerNetwork, number>
+    | undefined,
 ): ScoredGenomeEntry[] {
   const scoredEntries: ScoredGenomeEntry[] = [];
 
@@ -1023,7 +1036,9 @@ function buildScoredGenomeEntries(
  */
 function resolveGenomeScore(
   genome: FlappyTrainerNetwork,
-  provisionalScoresByGenome: ReadonlyMap<FlappyTrainerNetwork, number> | undefined,
+  provisionalScoresByGenome:
+    | ReadonlyMap<FlappyTrainerNetwork, number>
+    | undefined,
 ): number {
   if (provisionalScoresByGenome) {
     return provisionalScoresByGenome.get(genome) ?? Number.NEGATIVE_INFINITY;

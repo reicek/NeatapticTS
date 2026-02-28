@@ -34,19 +34,26 @@ export const FLAPPY_GRAVITY_PX_PER_FRAME2 = 0.56;
 export const FLAPPY_FLAP_VELOCITY_PX_PER_FRAME = -5.8;
 
 /** Maximum downward speed clamp (pixels/frame). */
-export const FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME = 8.8;
+export const FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME = 5;
 
 /** Pipe width (pixels). */
-export const FLAPPY_PIPE_WIDTH_PX = 40;
+export const FLAPPY_PIPE_WIDTH_PX = 60;
 
 /** Vertical opening size of each pipe gap (pixels). */
 export const FLAPPY_PIPE_GAP_PX = 150;
 
 /** Pipe horizontal speed (pixels/frame). */
-export const FLAPPY_PIPE_SPEED_PX_PER_FRAME = 4;
+export const FLAPPY_PIPE_SPEED_PX_PER_FRAME = 5;
 
 /** Frames between spawning new pipes. */
-export const FLAPPY_PIPE_SPAWN_INTERVAL_FRAMES = 100;
+export const FLAPPY_PIPE_SPAWN_INTERVAL_FRAMES = 50;
+
+/**
+ * Enables runtime telemetry counters used for profiling diagnostics.
+ *
+ * Keep disabled during normal demo runs to avoid instrumentation overhead.
+ */
+export const FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION = false;
 
 /**
  * Number of policy decision substeps executed inside each logical frame.
@@ -54,7 +61,7 @@ export const FLAPPY_PIPE_SPAWN_INTERVAL_FRAMES = 100;
  * Values > 1 give agents finer temporal control in tight scenarios by allowing
  * multiple react-and-integrate passes before the frame counter advances.
  */
-export const FLAPPY_CONTROL_SUBSTEPS_PER_FRAME = 6;
+export const FLAPPY_CONTROL_SUBSTEPS_PER_FRAME = 4;
 
 /** Bird collision height (diameter, pixels). */
 export const FLAPPY_BIRD_HEIGHT_PX = FLAPPY_BIRD_RADIUS_PX * 2;
@@ -68,7 +75,7 @@ export const FLAPPY_BIRD_HEIGHT_PX = FLAPPY_BIRD_RADIUS_PX * 2;
 export const FLAPPY_TARGET_FLAP_INTERVAL_FRAMES = 2;
 
 /** Small geometric buffer so "barely possible" remains physically solvable. */
-export const FLAPPY_MIN_CLEARANCE_MARGIN_PX = 20;
+export const FLAPPY_MIN_CLEARANCE_MARGIN_PX = 30;
 
 /**
  * Hard floor on time between pipes at max speed so controllers can recover.
@@ -92,8 +99,7 @@ export const FLAPPY_MIN_EDGE_TO_EDGE_PIPE_SPACING_PX =
 export const FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX = 90;
 
 /** Maximum allowed gap center height (pixels). */
-export const FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX =
-  FLAPPY_WORLD_HEIGHT_PX - 90;
+export const FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX = FLAPPY_WORLD_HEIGHT_PX - 90;
 
 /** Episode terminates after this many frames even if still alive. */
 export const FLAPPY_MAX_FRAMES_PER_EPISODE = 5_000;

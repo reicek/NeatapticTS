@@ -1,4 +1,4 @@
-# Flappy Bird (NEAT demo)
+# Flappy Bird (NeatapticTS)
 
 This is a tiny Flappy Bird–style neuroevolution demo built **only** with this repo’s NeatapticTS implementation.
 
@@ -20,9 +20,25 @@ You should see generation logs like:
 
 The trainer does not stop on a fixed generation count. It keeps evolving until you close it (`Ctrl+C` in terminal).
 
+## Run in browser (local)
+
+From the repo root:
+
+```bash
+npm run start:local-server
+```
+
+Then open:
+
+- `http://localhost:8080/test/examples/flappy_bird/index.html`
+
+Notes:
+- this page loads bundles from `docs/assets`, so run `npm run docs` after code changes,
+- if port `8080` is in use, adjust the script/port accordingly.
+
 ## How it works
 
-- Population is set to `100` to widen exploration while preserving strong winners (`elitism = 10`).
+- Population is set to `200` to widen exploration while preserving strong winners (`elitism = 20`).
 - Mutation now uses annealing (`0.70 -> 0.25` rate, `2 -> 1` amount over early generations):
   - early generations explore aggressively,
   - later generations refine and stabilize.
@@ -42,7 +58,7 @@ The trainer does not stop on a fixed generation count. It keeps evolving until y
   - smooth ramp,
   - full adaptive difficulty in later generations.
 - Pipe gaps are randomized but structured: each run starts around `40%` wider than the current hardest target, then each new spawned pipe shrinks a few pixels until reaching the current hardest gap.
-- Each genome’s network receives 10 inputs:
+- Each genome’s network receives 12 inputs:
   1. bird y position (normalized)
   2. bird vertical velocity (normalized)
   3. distance to next pipe (normalized)
@@ -53,6 +69,8 @@ The trainer does not stop on a fixed generation count. It keeps evolving until y
   8. delta to second upcoming gap center (normalized)
   9. time-to-next-pipe closeness (normalized)
   10. signed next-gap clearance (inside vs outside corridor)
+  11. required vertical velocity toward the next gap center (normalized)
+  12. transition from next gap center to second-gap center (normalized)
 - The network outputs 2 values (`no flap`, `flap`); we flap when `output[1] > output[0]`.
 - Fitness is now composed from normalized channels with caps to reduce domination by one term:
   - survival,
@@ -74,5 +92,20 @@ In browser playback, the demo renders the full generation population (not only t
 - only living birds are shown (eliminated birds are removed immediately),
 - each bird has a distinct color,
 - the current leader is highlighted.
+
+The stats panel is split horizontally:
+- left side shows current/best run metrics,
+- right side shows a full network drawing of the active best genome.
+
+Browser runtime behavior:
+- heavy evolution/evaluation and playback simulation run in a Web Worker,
+- the main thread focuses on rendering and lightweight snapshot handoff,
+- HUD counter updates are throttled (every 10 frames).
+
+Visualization semantics:
+- each node is a square, with the node bias printed inside,
+- each connection line is colored by connection weight range,
+- disabled connections are rendered as faint dashed lines,
+- an in-canvas neon legend explains both bias and weight color ranges.
 
 The episode runner remains deterministic when a seed is provided. Training now uses **shared seed batches per generation** (instead of per-genome private seeds) for fairer comparisons.

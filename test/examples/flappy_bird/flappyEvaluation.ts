@@ -20,6 +20,10 @@ import {
   stepFlappyStateWithControlSubsteps,
   type FlappyGameState,
 } from './flappyEnvironment.ts';
+import {
+  clampValue,
+  resolveFlapDecision,
+} from './flappy.simulation.shared.utils.ts';
 import { createXorshift32 } from './rng.ts';
 
 /** Minimal network contract required by Flappy evaluation. */
@@ -232,7 +236,8 @@ export function rolloutEpisode(
         currentObservationFeatures,
       );
       const earlyTerminationEligible =
-        state.pipesPassed === 0 && state.frameIndex >= earlyTerminationGraceFrames;
+        state.pipesPassed === 0 &&
+        state.frameIndex >= earlyTerminationGraceFrames;
 
       unrecoverableFrameCount =
         earlyTerminationEligible && birdLikelyUnrecoverable
@@ -286,29 +291,6 @@ export function rolloutEpisode(
   };
 
   /**
-   * @param rawOutputs - Output of `network.activate`.
-   * @returns Whether to flap this frame.
-   */
-  function resolveFlapDecision(rawOutputs: number[] | number): boolean {
-    if (
-      Array.isArray(rawOutputs) &&
-      typeof rawOutputs[0] === 'number' &&
-      typeof rawOutputs[1] === 'number'
-    ) {
-      return rawOutputs[1] > rawOutputs[0];
-    }
-
-    if (Array.isArray(rawOutputs) && typeof rawOutputs[0] === 'number') {
-      return rawOutputs[0] > 0.5;
-    }
-
-    if (typeof rawOutputs === 'number') return rawOutputs > 0.5;
-
-    // If the network returns an unexpected shape, default to "no flap".
-    return false;
-  }
-
-  /**
    * Computes dense reward shaping from consecutive observations.
    *
    * This gives the policy a gradient before it can reliably pass pipes.
@@ -322,7 +304,8 @@ export function rolloutEpisode(
     currentFeatures: FlappyObservationFeatures,
   ): number {
     // Step 1: Reward direct alignment with the active gap.
-    const nextGapAlignment = 1 - Math.abs(currentFeatures.normalizedDeltaToNextGap);
+    const nextGapAlignment =
+      1 - Math.abs(currentFeatures.normalizedDeltaToNextGap);
     const nextGapAlignmentReward =
       Math.max(0, nextGapAlignment) * FLAPPY_FITNESS_ALIGNMENT_WEIGHT_PER_FRAME;
 
@@ -350,7 +333,10 @@ export function rolloutEpisode(
       centeringImprovement * FLAPPY_FITNESS_CENTERING_PROGRESS_WEIGHT;
 
     // Step 4: Reward staying inside the corridor with positive clearance.
-    const positiveClearance = Math.max(0, currentFeatures.normalizedNextGapClearance);
+    const positiveClearance = Math.max(
+      0,
+      currentFeatures.normalizedNextGapClearance,
+    );
     const clearanceReward =
       positiveClearance * FLAPPY_FITNESS_CLEARANCE_WEIGHT_PER_FRAME;
 
@@ -383,20 +369,28 @@ export function rolloutEpisode(
    * @param episodeState - Final rollout state.
    * @returns Terminal shaping reward.
    */
-  function computeTerminalShapingFitness(episodeState: FlappyGameState): number {
+  function computeTerminalShapingFitness(
+    episodeState: FlappyGameState,
+  ): number {
     const finalObservationFeatures = getFlappyObservationFeatures(
       episodeState,
       difficultyScale,
     );
-    const finalAlignment = 1 - Math.abs(finalObservationFeatures.normalizedDeltaToNextGap);
+    const finalAlignment =
+      1 - Math.abs(finalObservationFeatures.normalizedDeltaToNextGap);
     const finalProgress =
       1 -
-      Math.max(0, Math.min(1, finalObservationFeatures.normalizedDistanceToNextPipe));
+      Math.max(
+        0,
+        Math.min(1, finalObservationFeatures.normalizedDistanceToNextPipe),
+      );
 
     const terminalAlignmentBonus =
-      Math.max(0, finalAlignment) * FLAPPY_FITNESS_TERMINAL_ALIGNMENT_BONUS_WEIGHT;
+      Math.max(0, finalAlignment) *
+      FLAPPY_FITNESS_TERMINAL_ALIGNMENT_BONUS_WEIGHT;
     const terminalProgressBonus =
-      Math.max(0, finalProgress) * FLAPPY_FITNESS_TERMINAL_PROGRESS_BONUS_WEIGHT;
+      Math.max(0, finalProgress) *
+      FLAPPY_FITNESS_TERMINAL_PROGRESS_BONUS_WEIGHT;
 
     return terminalAlignmentBonus + terminalProgressBonus;
   }
@@ -491,7 +485,10 @@ function mixSeed(genomeId: number): number {
  */
 function computeMean(values: readonly number[]): number {
   if (values.length === 0) return 0;
-  return values.reduce((accumulator, value) => accumulator + value, 0) / values.length;
+  return (
+    values.reduce((accumulator, value) => accumulator + value, 0) /
+    values.length
+  );
 }
 
 /**
@@ -517,9 +514,14 @@ function computePopulationStandardDeviation(
  * @param percentile - Percentile in [0, 1].
  * @returns Percentile value via nearest-rank interpolation.
  */
-function computePercentile(values: readonly number[], percentile: number): number {
+function computePercentile(
+  values: readonly number[],
+  percentile: number,
+): number {
   if (values.length === 0) return 0;
-  const sortedValues = values.toSorted((leftValue, rightValue) => leftValue - rightValue);
+  const sortedValues = values.toSorted(
+    (leftValue, rightValue) => leftValue - rightValue,
+  );
   const clampedPercentile = clampValue(percentile, 0, 1);
   const rawIndex = clampedPercentile * (sortedValues.length - 1);
   const lowerIndex = Math.floor(rawIndex);

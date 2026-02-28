@@ -16,7 +16,9 @@ describe('Network Architecture Descriptor', () => {
       architecture?: { hiddenLayerSizes?: number[] };
     };
 
-    expect(Array.isArray(jsonPayload.architecture?.hiddenLayerSizes)).toBe(true);
+    expect(Array.isArray(jsonPayload.architecture?.hiddenLayerSizes)).toBe(
+      true,
+    );
   });
 
   it('hydrates serialized descriptor when live graph is inferred-only', () => {
@@ -43,9 +45,9 @@ describe('Network Architecture Descriptor', () => {
       jsonPayload as unknown as Record<string, unknown>,
     );
 
-    expect(rebuiltNetwork.describeArchitecture().hiddenLayerSizes.join(' - ')).toBe(
-      '6 - 6',
-    );
+    expect(
+      rebuiltNetwork.describeArchitecture().hiddenLayerSizes.join(' - '),
+    ).toBe('6 - 6');
   });
 
   it('reports cycle presence in architecture descriptor', () => {
@@ -59,5 +61,50 @@ describe('Network Architecture Descriptor', () => {
     const architectureDescriptor = network.describeArchitecture();
 
     expect(architectureDescriptor.hasCycles).toBe(true);
+  });
+
+  it('refreshes runtime cache when factual descriptor is available', () => {
+    const network = Architect.perceptron(12, 6, 6, 2);
+    network.describeArchitecture();
+
+    const runtimeNetwork = network as unknown as {
+      _serializedArchitectureDescriptor?: {
+        source?: 'layer-metadata' | 'graph-topology' | 'inferred';
+      };
+    };
+
+    expect(runtimeNetwork._serializedArchitectureDescriptor?.source).not.toBe(
+      'inferred',
+    );
+  });
+
+  it('does not reuse stale hydrated descriptor after topology size changes', () => {
+    const baseNetwork = new Network(2, 1);
+    const jsonPayload = baseNetwork.toJSON() as {
+      architecture?: {
+        hiddenLayerSizes: number[];
+        hasCycles: boolean;
+        source: 'layer-metadata' | 'graph-topology' | 'inferred';
+        totalNodes: number;
+        totalConnections: number;
+      };
+    };
+
+    jsonPayload.architecture = {
+      hiddenLayerSizes: [6, 6],
+      hasCycles: false,
+      source: 'inferred',
+      totalNodes: baseNetwork.nodes.length,
+      totalConnections: baseNetwork.connections.length,
+    };
+
+    const rebuiltNetwork = Network.fromJSON(
+      jsonPayload as unknown as Record<string, unknown>,
+    );
+    rebuiltNetwork.mutate(methods.mutation.ADD_NODE);
+
+    expect(
+      rebuiltNetwork.describeArchitecture().hiddenLayerSizes.join(' - '),
+    ).not.toBe('6 - 6');
   });
 });

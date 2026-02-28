@@ -1477,16 +1477,19 @@ export default class Network implements NetworkView {
     const runtimeProps = this as unknown as NetworkRuntimeProps;
     const hydratedDescriptor = runtimeProps._serializedArchitectureDescriptor;
 
-    if (
-      liveDescriptor.source === 'inferred' &&
-      hydratedDescriptor &&
-      hydratedDescriptor.hiddenLayerSizes.length > 0
-    ) {
-      return {
-        ...hydratedDescriptor,
-        totalNodes: this.nodes.length,
-        totalConnections: this.connections.length,
-      };
+    if (liveDescriptor.source !== 'inferred') {
+      runtimeProps._serializedArchitectureDescriptor = liveDescriptor;
+      return liveDescriptor;
+    }
+
+    const hasCompatibleHydratedDescriptor =
+      hydratedDescriptor != null &&
+      hydratedDescriptor.hiddenLayerSizes.length > 0 &&
+      hydratedDescriptor.totalNodes === this.nodes.length &&
+      hydratedDescriptor.totalConnections === this.connections.length;
+
+    if (hasCompatibleHydratedDescriptor && hydratedDescriptor) {
+      return hydratedDescriptor;
     }
 
     return liveDescriptor;
