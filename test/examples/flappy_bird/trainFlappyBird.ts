@@ -96,7 +96,7 @@ interface ScoredGenomeEntry {
  * Flappy Bird neuroevolution demo.
  *
  * This script runs a small NEAT population where each genome controls a bird.
- * The network sees a compact observation (10 floats) and outputs two competing
+ * The network sees a temporal observation (26 floats) and outputs two competing
  * action scores (`no flap` vs `flap`).
  *
  * Run (from repo root):

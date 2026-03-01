@@ -8,9 +8,12 @@ import {
   FLAPPY_WORLD_HEIGHT_PX,
 } from './constants';
 import {
+  commitSharedObservationMemoryStep,
+  type SharedObservationFeatures,
+  type SharedObservationMemoryState,
   resolveFlapDecision as resolveSharedFlapDecision,
   resolveObservationFeatures,
-  resolveObservationVectorFromFeatures,
+  resolveTemporalObservationVector,
   resolveUpcomingPipes as resolveSharedUpcomingPipes,
 } from './flappy.simulation.shared.utils';
 import type {
@@ -37,7 +40,11 @@ export function resolveObservationVector(
   visibleWorldWidthPx: number,
   difficultyProfile: BrowserDifficultyProfile,
   activeSpawnIntervalFrames: number,
-): number[] {
+  observationMemoryState: SharedObservationMemoryState,
+): {
+  observationVector: number[];
+  observationFeatures: SharedObservationFeatures;
+} {
   const observationFeatures = resolveObservationFeatures({
     birdYPx,
     velocityYPxPerFrame,
@@ -54,7 +61,33 @@ export function resolveObservationVector(
     normalizationEpsilon: 0.001,
   });
 
-  return resolveObservationVectorFromFeatures(observationFeatures);
+  return {
+    observationVector: resolveTemporalObservationVector(
+      observationFeatures,
+      observationMemoryState,
+    ),
+    observationFeatures,
+  };
+}
+
+/**
+ * Commits one browser decision step into temporal memory.
+ *
+ * @param observationMemoryState - Mutable memory state for one bird.
+ * @param observationFeatures - Structured features used for this decision.
+ * @param shouldFlap - Action selected by the policy.
+ * @returns Nothing.
+ */
+export function commitObservationMemoryStep(
+  observationMemoryState: SharedObservationMemoryState,
+  observationFeatures: SharedObservationFeatures,
+  shouldFlap: boolean,
+): void {
+  commitSharedObservationMemoryStep(
+    observationMemoryState,
+    observationFeatures,
+    shouldFlap,
+  );
 }
 
 /**

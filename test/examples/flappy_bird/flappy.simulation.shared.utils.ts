@@ -2,6 +2,9 @@ import {
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_BIRD_X_PX,
   FLAPPY_DIFFICULTY_RAMP_PIPES,
+  FLAPPY_MEMORY_ACTION_WINDOW_STEPS,
+  FLAPPY_MEMORY_CORE_FEATURE_COUNT,
+  FLAPPY_MEMORY_STACKED_FRAME_COUNT,
   FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
   FLAPPY_MIN_PIPE_RECOVERY_FRAMES,
   FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
@@ -98,6 +101,21 @@ export interface SharedObservationFeatures {
   normalizedNextToSecondGapTransition: number;
 }
 
+/**
+ * Mutable temporal memory attached to one policy-controlled bird.
+ *
+ * The memory stores recent core observation frames and recent action history,
+ * allowing feedforward policies to consume short-term context without adding
+ * recurrent connections.
+ */
+export interface SharedObservationMemoryState {
+  /** Previous core frames, newest-first, excluding the current frame. */
+  previousCoreObservationFrames: number[][];
+
+  /** Recent flap actions, newest-first, encoded as `1` (flap) or `0` (no flap). */
+  recentFlapActions: number[];
+}
+
 /** Input shape for observation-feature synthesis. */
 export interface SharedObservationInput {
   /** Bird vertical position in world pixels. */
@@ -138,6 +156,18 @@ export interface SharedObservationInput {
 
   /** Division guard used for time-to-next-pipe estimate. */
   normalizationEpsilon?: number;
+}
+
+/**
+ * Creates an empty temporal observation memory state.
+ *
+ * @returns Fresh mutable memory buffers for one bird/controller.
+ */
+export function createSharedObservationMemoryState(): SharedObservationMemoryState {
+  return {
+    previousCoreObservationFrames: [],
+    recentFlapActions: [],
+  };
 }
 
 /**
@@ -446,6 +476,138 @@ export function resolveObservationVectorFromFeatures(
     features.normalizedRequiredVerticalVelocityToNextGap,
     features.normalizedNextToSecondGapTransition,
   ];
+}
+
+/**
+ * Resolves the compact core vector used for temporal stacking.
+ *
+ * The core intentionally keeps directly observed kinematic/geometric channels
+ * and drops derived one-step predictors that become redundant once temporal
+ * context is available.
+ *
+ * @param features - Structured observation features.
+ * @returns Core per-frame vector.
+ */
+export function resolveCoreObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[] {
+  return [
+    features.normalizedBirdY,
+    features.normalizedVelocity,
+    features.normalizedDistanceToNextPipe,
+    features.normalizedDeltaToNextGap,
+    features.normalizedNextGapTop,
+    features.normalizedNextGapBottom,
+    features.normalizedDistanceToSecondPipe,
+    features.normalizedDeltaToSecondGap,
+  ];
+}
+
+/**
+ * Builds the temporal policy input vector (stacked observation + action memory).
+ *
+ * Output layout:
+ * 1) current core observation frame
+ * 2) previous core frames (newest to oldest) with zero padding
+ * 3) last-action channel
+ * 4) recent flap-rate channel over a fixed window
+ *
+ * @param features - Structured observation features for the current decision step.
+ * @param observationMemoryState - Mutable temporal memory for the active bird.
+ * @returns Ordered temporal input vector for policy activation.
+ */
+export function resolveTemporalObservationVector(
+  features: SharedObservationFeatures,
+  observationMemoryState: SharedObservationMemoryState,
+): number[] {
+  const currentCoreObservationFrame =
+    resolveCoreObservationVectorFromFeatures(features);
+  const stackedFrames = [
+    currentCoreObservationFrame,
+    ...resolvePreviousCoreFramesWithPadding(observationMemoryState),
+  ];
+  const flattenedStackedFrames = stackedFrames.flat();
+  const lastActionChannel = observationMemoryState.recentFlapActions[0] ?? 0;
+  const recentFlapRateChannel =
+    observationMemoryState.recentFlapActions.length === 0
+      ? 0
+      : observationMemoryState.recentFlapActions.reduce(
+          (actionSum, actionValue) => actionSum + actionValue,
+          0,
+        ) / observationMemoryState.recentFlapActions.length;
+
+  return [...flattenedStackedFrames, lastActionChannel, recentFlapRateChannel];
+}
+
+/**
+ * Commits one observation-action step into temporal memory.
+ *
+ * @param observationMemoryState - Mutable temporal memory for the active bird.
+ * @param features - Structured observation features used for the decision.
+ * @param didFlap - Decision taken at this step.
+ * @returns Nothing.
+ */
+export function commitSharedObservationMemoryStep(
+  observationMemoryState: SharedObservationMemoryState,
+  features: SharedObservationFeatures,
+  didFlap: boolean,
+): void {
+  // Step 1: Persist current core frame for future stacked observations.
+  const currentCoreObservationFrame =
+    resolveCoreObservationVectorFromFeatures(features);
+  const previousFrameCapacity = Math.max(
+    0,
+    FLAPPY_MEMORY_STACKED_FRAME_COUNT - 1,
+  );
+  observationMemoryState.previousCoreObservationFrames = [
+    currentCoreObservationFrame,
+    ...observationMemoryState.previousCoreObservationFrames,
+  ].slice(0, previousFrameCapacity);
+
+  // Step 2: Persist latest action into a fixed-size action history window.
+  const actionScalar = didFlap ? 1 : 0;
+  observationMemoryState.recentFlapActions = [
+    actionScalar,
+    ...observationMemoryState.recentFlapActions,
+  ].slice(0, FLAPPY_MEMORY_ACTION_WINDOW_STEPS);
+}
+
+/**
+ * Resolves previous core frames (newest-first) with deterministic zero padding.
+ *
+ * @param observationMemoryState - Mutable temporal memory for the active bird.
+ * @returns Previous core frame list with fixed target length.
+ */
+function resolvePreviousCoreFramesWithPadding(
+  observationMemoryState: SharedObservationMemoryState,
+): number[][] {
+  const previousFrameTargetCount = Math.max(
+    0,
+    FLAPPY_MEMORY_STACKED_FRAME_COUNT - 1,
+  );
+  const previousCoreFrames =
+    observationMemoryState.previousCoreObservationFrames
+      .slice(0, previousFrameTargetCount)
+      .map((coreFrame) =>
+        coreFrame.length === FLAPPY_MEMORY_CORE_FEATURE_COUNT
+          ? coreFrame
+          : resolveZeroCoreObservationFrame(),
+      );
+
+  while (previousCoreFrames.length < previousFrameTargetCount) {
+    previousCoreFrames.push(resolveZeroCoreObservationFrame());
+  }
+
+  return previousCoreFrames;
+}
+
+/**
+ * Builds a zero-valued core frame with canonical length.
+ *
+ * @returns Zero core frame.
+ */
+function resolveZeroCoreObservationFrame(): number[] {
+  return Array.from({ length: FLAPPY_MEMORY_CORE_FEATURE_COUNT }, () => 0);
 }
 
 /**

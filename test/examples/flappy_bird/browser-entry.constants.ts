@@ -65,7 +65,7 @@ export const FLAPPY_STATS_KEYS = [
 ] as const;
 
 /** Default population size for browser playback worker initialization. */
-export const FLAPPY_BROWSER_POPULATION_SIZE = 50;
+export const FLAPPY_BROWSER_POPULATION_SIZE = 100;
 
 /**
  * Horizontal viewport anchor for the bird.
@@ -90,7 +90,7 @@ export const FLAPPY_FRAME_MONOSPACE_FONT =
 export const FLAPPY_HEADER_TITLE_TEXT = ' Astro Bird (NeatapticTS) ';
 
 /** Header canvas fixed height (pixels). */
-export const FLAPPY_HEADER_CANVAS_HEIGHT_PX = 64;
+export const FLAPPY_HEADER_CANVAS_HEIGHT_PX = 68;
 
 /** Glyph-row height used for box-drawing rows (pixels). */
 export const FLAPPY_FRAME_GLYPH_ROW_HEIGHT_PX = 16;
@@ -274,7 +274,7 @@ export const FLAPPY_TIER_ABOVE_COLOR = '#ff4a4a';
 export const FLAPPY_NETWORK_GRAPH_LEFT_PADDING_PX = 20;
 
 /** Graph-top padding for network visualization content. */
-export const FLAPPY_NETWORK_GRAPH_TOP_PADDING_PX = 34;
+export const FLAPPY_NETWORK_GRAPH_TOP_PADDING_PX = 0;
 
 /** Graph-right padding for network visualization content. */
 export const FLAPPY_NETWORK_GRAPH_RIGHT_PADDING_PX = 20;
@@ -286,13 +286,19 @@ export const FLAPPY_NETWORK_GRAPH_BOTTOM_PADDING_PX = 18;
 export const FLAPPY_NETWORK_LEGEND_GRAPH_GAP_PX = 10;
 
 /** Inner node-layout padding inside drawable network region. */
-export const FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX = 4;
+export const FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX = 2;
 
 /** Minimum node label height in pixels. */
-export const FLAPPY_NETWORK_MIN_LABEL_HEIGHT_PX = 10;
+export const FLAPPY_NETWORK_MIN_LABEL_HEIGHT_PX = 6;
 
 /** Minimum inner padding for node labels. */
-export const FLAPPY_NETWORK_MIN_NODE_INNER_PADDING_PX = 4;
+export const FLAPPY_NETWORK_MIN_NODE_INNER_PADDING_PX = 2;
+
+/** Preferred vertical spacing between input-layer nodes. */
+export const FLAPPY_NETWORK_INPUT_LAYER_TARGET_GAP_PX = 5;
+
+/** Fixed top margin for node stacks inside the network drawable area. */
+export const FLAPPY_NETWORK_NODE_TOP_MARGIN_PX = 10;
 
 /** Relative label-height ratio used when rendering node bias values. */
 export const FLAPPY_NETWORK_NODE_LABEL_SIZE_RATIO = 0.72;
@@ -472,7 +478,7 @@ export const FLAPPY_UI_OUTER_FRAME_MIN_SIDE_PADDING_PX = 8;
 export const FLAPPY_UI_OUTER_FRAME_SIDE_PADDING_OFFSET_PX = 10;
 
 /** Top padding for the vertical content column hosting canvases and stats. */
-export const FLAPPY_UI_CONTENT_COLUMN_TOP_PADDING_PX = 16;
+export const FLAPPY_UI_CONTENT_COLUMN_TOP_PADDING_PX = 0;
 
 /** Initial network panel height before topology-driven resizing runs. */
 export const FLAPPY_UI_NETWORK_HOST_INITIAL_HEIGHT_PX = 120;
@@ -493,10 +499,16 @@ export const FLAPPY_VIEWPORT_MINIMUM_SIMULATION_HEIGHT_RATIO = 0.08;
 export const FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX = 8;
 
 /** Additional bottom margin reserved during simulation canvas sizing. */
-export const FLAPPY_VIEWPORT_SIMULATION_BOTTOM_MARGIN_PX = 16;
+export const FLAPPY_VIEWPORT_SIMULATION_BOTTOM_MARGIN_PX = 0;
 
 /** Minimum network panel height budget for responsive viewport sizing. */
 export const FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX = 96;
+
+/** Width breakpoint below which stats pane is hidden and network gets full width. */
+export const FLAPPY_VIEWPORT_NETWORK_ONLY_BREAKPOINT_PX = 1_000;
+
+/** Width breakpoint below which network legend and architecture text are hidden. */
+export const FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX = 800;
 
 /** HUD sliding-window size used when computing updates-per-second metric. */
 export const FLAPPY_HUD_UPDATES_WINDOW_MS = 10_000;

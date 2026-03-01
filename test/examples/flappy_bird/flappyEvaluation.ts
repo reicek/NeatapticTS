@@ -14,7 +14,6 @@ import {
 } from './constants.ts';
 import {
   createInitialFlappyState,
-  getFlappyObservation,
   getFlappyObservationFeatures,
   type FlappyObservationFeatures,
   stepFlappyStateWithControlSubsteps,
@@ -22,7 +21,10 @@ import {
 } from './flappyEnvironment.ts';
 import {
   clampValue,
+  commitSharedObservationMemoryStep,
+  createSharedObservationMemoryState,
   resolveFlapDecision,
+  resolveTemporalObservationVector,
 } from './flappy.simulation.shared.utils.ts';
 import { createXorshift32 } from './rng.ts';
 
@@ -202,6 +204,7 @@ export function rolloutEpisode(
   const rng = createXorshift32(seed);
 
   const state = createInitialFlappyState(rng);
+  const observationMemoryState = createSharedObservationMemoryState();
   let denseShapingFitness = 0;
   let unrecoverableFrameCount = 0;
 
@@ -214,9 +217,22 @@ export function rolloutEpisode(
       state,
       rng,
       () => {
-        const observation = getFlappyObservation(state, difficultyScale);
+        const observationFeatures = getFlappyObservationFeatures(
+          state,
+          difficultyScale,
+        );
+        const observation = resolveTemporalObservationVector(
+          observationFeatures,
+          observationMemoryState,
+        );
         const outputs = network.activate(observation);
-        return resolveFlapDecision(outputs);
+        const shouldFlap = resolveFlapDecision(outputs);
+        commitSharedObservationMemoryStep(
+          observationMemoryState,
+          observationFeatures,
+          shouldFlap,
+        );
+        return shouldFlap;
       },
       difficultyScale,
       FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,

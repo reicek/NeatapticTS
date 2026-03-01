@@ -35,8 +35,8 @@ import {
   FLAPPY_STATS_KEYS,
   FLAPPY_VIEWPORT_MINIMUM_SIMULATION_HEIGHT_PX,
   FLAPPY_VIEWPORT_MINIMUM_SIMULATION_HEIGHT_RATIO,
-  FLAPPY_VIEWPORT_MINIMUM_STATS_HEIGHT_PX,
   FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
+  FLAPPY_VIEWPORT_NETWORK_ONLY_BREAKPOINT_PX,
   FLAPPY_VIEWPORT_SIMULATION_BOTTOM_MARGIN_PX,
   FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX,
 } from './browser-entry.constants';
@@ -138,7 +138,7 @@ export function createCanvasHost(containerElement: HTMLElement): {
   statsContainer.style.padding = '8px';
   statsContainer.style.overflow = 'hidden';
   statsContainer.style.transition = 'max-height 120ms ease-out';
-  statsContainer.style.minHeight = '500px';
+  statsContainer.style.minHeight = '0';
 
   const statsSplitContainer = document.createElement('div');
   statsSplitContainer.style.display = 'flex';
@@ -359,6 +359,8 @@ export function createCanvasHost(containerElement: HTMLElement): {
     canvas,
     contentColumn,
     statsContainer,
+    statsSplitContainer,
+    statsTableHost,
     networkCanvas,
     networkCanvasHost,
     () => {
@@ -426,6 +428,8 @@ function installResponsiveViewportSizing(
   canvas: HTMLCanvasElement,
   containerElement: HTMLElement,
   statsContainer: HTMLElement,
+  statsSplitContainer: HTMLElement,
+  statsTableHost: HTMLElement,
   networkCanvas: HTMLCanvasElement,
   networkCanvasHost: HTMLElement,
   onNetworkResize: () => void,
@@ -467,7 +471,6 @@ function installResponsiveViewportSizing(
     );
 
     // Step 2: Resolve stats/network panel sizing constraints.
-    const minimumStatsHeightPx = FLAPPY_VIEWPORT_MINIMUM_STATS_HEIGHT_PX;
     const preferredNetworkHeightPx = Number.parseInt(
       networkCanvasHost.dataset.preferredHeightPx ??
         `${networkCanvasHost.offsetHeight}`,
@@ -484,17 +487,45 @@ function installResponsiveViewportSizing(
         window.innerHeight * FLAPPY_VIEWPORT_MINIMUM_SIMULATION_HEIGHT_RATIO,
       ),
     );
+    const totalCanvasBudgetPx = Math.max(
+      1,
+      containerElement.clientHeight - headerHeightPx,
+    );
+    const viewportWidthPx = Math.max(1, containerElement.clientWidth);
+    const useNetworkOnlyPanel =
+      viewportWidthPx < FLAPPY_VIEWPORT_NETWORK_ONLY_BREAKPOINT_PX;
+
+    // Step 2.1: Toggle stats/network split layout for narrow viewports.
+    statsTableHost.style.display = useNetworkOnlyPanel ? 'none' : 'block';
+    statsSplitContainer.style.gap = useNetworkOnlyPanel ? '0' : '8px';
+    networkCanvasHost.style.flex = useNetworkOnlyPanel ? '1 1 100%' : '1 1 0';
+    networkCanvasHost.style.width = useNetworkOnlyPanel ? '100%' : 'auto';
+    networkCanvasHost.style.maxWidth = '100%';
+
+    const halfSplitTargetPx = Math.max(
+      FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
+      Math.floor(
+        (totalCanvasBudgetPx - FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX) * 0.5,
+      ),
+    );
     const maximumStatsHeightPx = Math.max(
-      minimumStatsHeightPx,
-      containerElement.clientHeight -
+      FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
+      totalCanvasBudgetPx -
         hardMinimumSimulationHeightPx -
         FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX,
+    );
+    const resolvedStatsPanelHeightPx = Math.floor(
+      clamp(
+        halfSplitTargetPx,
+        FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
+        maximumStatsHeightPx,
+      ),
     );
 
     // Step 3: Clamp network pane height and trigger redraw when height changed.
     const networkHeightBudgetPx = Math.max(
       FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
-      Math.floor(maximumStatsHeightPx - nonNetworkStatsHeightPx),
+      Math.floor(resolvedStatsPanelHeightPx - nonNetworkStatsHeightPx),
     );
     const resolvedNetworkHeightPx = Math.floor(
       clamp(
@@ -511,20 +542,17 @@ function installResponsiveViewportSizing(
       }
     }
 
-    statsContainer.style.maxHeight = `${Math.floor(maximumStatsHeightPx)}px`;
+    statsContainer.style.height = `${resolvedStatsPanelHeightPx}px`;
+    statsContainer.style.maxHeight = `${resolvedStatsPanelHeightPx}px`;
     statsContainer.style.overflowY = 'hidden';
 
     // Step 4: Resolve simulation canvas size from remaining vertical budget.
-    const effectiveStatsHeightPx = Math.min(
-      statsContainer.offsetHeight,
-      maximumStatsHeightPx,
-    );
     const availableWidthPx = Math.max(1, containerElement.clientWidth);
     const availableHeightPx = Math.max(
       1,
-      containerElement.clientHeight -
-        headerHeightPx -
-        Math.max(minimumStatsHeightPx, effectiveStatsHeightPx) -
+      totalCanvasBudgetPx -
+        resolvedStatsPanelHeightPx -
+        FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX -
         FLAPPY_VIEWPORT_SIMULATION_BOTTOM_MARGIN_PX,
     );
 

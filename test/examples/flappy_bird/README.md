@@ -58,19 +58,20 @@ Notes:
   - smooth ramp,
   - full adaptive difficulty in later generations.
 - Pipe gaps are randomized but structured: each run starts around `40%` wider than the current hardest target, then each new spawned pipe shrinks a few pixels until reaching the current hardest gap.
-- Each genome’s network receives 12 inputs:
-  1. bird y position (normalized)
-  2. bird vertical velocity (normalized)
-  3. distance to next pipe (normalized)
-  4. delta between bird y and next gap center (normalized)
-  5. next gap top (normalized)
-  6. next gap bottom (normalized)
-  7. distance to second upcoming pipe (normalized)
-  8. delta to second upcoming gap center (normalized)
-  9. time-to-next-pipe closeness (normalized)
-  10. signed next-gap clearance (inside vs outside corridor)
-  11. required vertical velocity toward the next gap center (normalized)
-  12. transition from next gap center to second-gap center (normalized)
+- Each genome’s network receives 26 inputs (temporal memory layout):
+  1. current frame core features (8 values):
+     - bird y, vertical velocity,
+     - distance/delta to next gap,
+     - next gap top/bottom,
+     - distance/delta to second gap.
+  2. previous frame core features (same 8 values).
+  3. two-frames-ago core features (same 8 values).
+  4. last action channel (`1` flap, `0` no flap).
+  5. recent flap-rate channel (mean action over a fixed recent window).
+
+  This replaces direct one-step predictor channels (time-to-next, signed clearance,
+  required vertical velocity, next-to-second transition), since temporal stacking
+  lets the policy infer these from short-term dynamics.
 - The network outputs 2 values (`no flap`, `flap`); we flap when `output[1] > output[0]`.
 - Fitness is now composed from normalized channels with caps to reduce domination by one term:
   - survival,

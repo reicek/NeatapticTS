@@ -48,6 +48,7 @@ import {
   FLAPPY_TIER_ABOVE_COLOR,
   FLAPPY_TIER_EDGE_COUNT,
   FLAPPY_TIER_LOGARITHMIC_STEEPNESS,
+  FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
 } from './browser-entry.constants';
 import { applyAlphaToHexColor, clamp } from './browser-entry.math.utils';
 import type {
@@ -437,7 +438,15 @@ export function drawNetworkVisualizationHeader(
  */
 export function drawNetworkColorLegend(
   context: CanvasRenderingContext2D,
+  architectureLabel: string,
 ): void {
+  const viewportWidthPx =
+    context.canvas.ownerDocument?.defaultView?.innerWidth ??
+    context.canvas.width;
+  if (viewportWidthPx < FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX) {
+    return;
+  }
+
   // Step 1: Build legend row models for connection and bias tiers.
   const connectionLegendRows = createColorLegendRows(
     CONNECTION_COLOR_TIERS,
@@ -468,6 +477,27 @@ export function drawNetworkColorLegend(
     legendSectionGapPx,
   } = legendLayout;
 
+  // Step 2: Draw architecture description directly above legend panel.
+  const architectureLines = architectureLabel.split('\n');
+  const architectureLineHeightPx = 12;
+  const architectureTextTopPx = Math.max(
+    4,
+    legendTopPx - architectureLines.length * architectureLineHeightPx - 4,
+  );
+
+  context.fillStyle = FLAPPY_NETWORK_HEADER_TEXT_COLOR;
+  context.font = `${FLAPPY_NETWORK_HEADER_FONT_SIZE_PX}px ${FLAPPY_MONOSPACE_FONT_FAMILY}`;
+  context.textAlign = 'left';
+  context.textBaseline = 'top';
+  architectureLines.forEach((architectureLine, lineIndex) => {
+    context.fillText(
+      architectureLine,
+      legendLeftPx + 8,
+      architectureTextTopPx + lineIndex * architectureLineHeightPx,
+    );
+  });
+
+  // Step 3: Draw legend panel frame and header.
   context.fillStyle = FLAPPY_NETWORK_LEGEND_BACKGROUND;
   context.strokeStyle = FLAPPY_NEON_PALETTE.statusText;
   context.lineWidth = 1;
@@ -480,7 +510,7 @@ export function drawNetworkColorLegend(
   context.textBaseline = 'top';
   context.fillText('Legend', legendLeftPx + 8, legendTopPx + 6);
 
-  // Step 3: Draw connection-weight section and row entries.
+  // Step 4: Draw connection-weight section and row entries.
   context.fillStyle = FLAPPY_NETWORK_LEGEND_CONNECTION_TITLE_COLOR;
   const connectionSectionTopPx = legendTopPx + legendHeaderHeightPx;
   context.fillText(
@@ -505,7 +535,7 @@ export function drawNetworkColorLegend(
     context.fillText(legendRow.label, legendLeftPx + 32, rowTopPx - 1);
   });
 
-  // Step 4: Draw node-bias section and row entries.
+  // Step 5: Draw node-bias section and row entries.
   context.fillStyle = FLAPPY_NETWORK_LEGEND_BIAS_TITLE_COLOR;
   const biasSectionTopPx =
     connectionSectionTopPx +

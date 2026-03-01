@@ -137,8 +137,18 @@ export const FLAPPY_MAX_FRAMES_PER_EPISODE = 5_000;
 /** Fitness bonus added per pipe successfully passed. */
 export const FLAPPY_FITNESS_BONUS_PER_PIPE = 1_000;
 
+/** Number of core per-frame observation features retained for temporal stacking. */
+export const FLAPPY_MEMORY_CORE_FEATURE_COUNT = 8;
+
+/** Number of temporal frames included in the stacked observation window. */
+export const FLAPPY_MEMORY_STACKED_FRAME_COUNT = 3;
+
+/** Number of past actions retained for the action-memory channel. */
+export const FLAPPY_MEMORY_ACTION_WINDOW_STEPS = 12;
+
 /** Number of observation features fed into each Flappy policy network. */
-export const FLAPPY_NETWORK_INPUT_SIZE = 12;
+export const FLAPPY_NETWORK_INPUT_SIZE =
+  FLAPPY_MEMORY_CORE_FEATURE_COUNT * FLAPPY_MEMORY_STACKED_FRAME_COUNT + 2;
 
 /** Number of output action scores emitted by each Flappy policy network. */
 export const FLAPPY_NETWORK_OUTPUT_SIZE = 2;

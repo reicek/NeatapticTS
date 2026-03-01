@@ -7,6 +7,7 @@ import { evaluateFlappyFitness } from './flappyEvaluation';
 import { createXorshift32 } from './rng';
 import {
   clamp,
+  commitObservationMemoryStep,
   createBirdColor,
   hasAliveBirds,
   resolveDifficultyProfile,
@@ -20,6 +21,10 @@ import {
   resolvePipeSpawnXPx,
   sampleGapCenterY,
 } from './browser-entry.utils';
+import {
+  createSharedObservationMemoryState,
+  type SharedObservationMemoryState,
+} from './flappy.simulation.shared.utils';
 import { FLAPPY_BIRD_VIEWPORT_X_RATIO } from './browser-entry.constants';
 import {
   FLAPPY_BIRD_RADIUS_PX,
@@ -51,6 +56,7 @@ interface WorkerPopulationPipe {
 interface WorkerPopulationBird {
   network: Network;
   color: string;
+  observationMemoryState: SharedObservationMemoryState;
   yPx: number;
   velocityYPxPerFrame: number;
   pipesPassed: number;
@@ -495,6 +501,7 @@ function createPopulationRenderState(
   const birds = networks.map((network, networkIndex) => ({
     network,
     color: createBirdColor(networkIndex, networks.length),
+    observationMemoryState: createSharedObservationMemoryState(),
     yPx: FLAPPY_WORLD_HEIGHT_PX * 0.5,
     velocityYPxPerFrame: 0,
     pipesPassed: 0,
@@ -556,12 +563,20 @@ function stepPopulationFrame(
         renderState.visibleWorldWidthPx,
         difficultyProfile,
         renderState.lastSpawnedPipeSpawnIntervalFrames,
+        bird.observationMemoryState,
       );
-      const outputs = bird.network.activate(observation) as unknown;
+      const outputs = bird.network.activate(
+        observation.observationVector,
+      ) as unknown;
       if (FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION) {
         activationCallsThisFrame += 1;
       }
       const shouldFlap = resolveFlapDecision(outputs);
+      commitObservationMemoryStep(
+        bird.observationMemoryState,
+        observation.observationFeatures,
+        shouldFlap,
+      );
 
       if (shouldFlap) {
         bird.velocityYPxPerFrame = FLAPPY_FLAP_VELOCITY_PX_PER_FRAME;

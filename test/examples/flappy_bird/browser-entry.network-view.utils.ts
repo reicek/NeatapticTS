@@ -3,7 +3,6 @@ import { clamp } from './browser-entry.math.utils';
 import {
   drawBiasNodesLayer as drawBiasNodes,
   drawNetworkColorLegend,
-  drawNetworkVisualizationHeader as drawVisualizationHeader,
   drawWeightedConnectionsLayer as drawWeightedConnections,
   resolveDefaultNetworkLegendLayout,
   resolveNetworkVisualizationLayers,
@@ -15,6 +14,7 @@ import {
   FLAPPY_NETWORK_GRAPH_LEFT_PADDING_PX,
   FLAPPY_NETWORK_GRAPH_RIGHT_PADDING_PX,
   FLAPPY_NETWORK_GRAPH_TOP_PADDING_PX,
+  FLAPPY_NETWORK_INPUT_LAYER_TARGET_GAP_PX,
   FLAPPY_NETWORK_LAYER_COMPLEXITY_HEIGHT_STEP_PX,
   FLAPPY_NETWORK_LEGEND_GRAPH_GAP_PX,
   FLAPPY_NETWORK_MAX_HEIGHT_PX,
@@ -28,6 +28,7 @@ import {
   FLAPPY_NETWORK_NODE_DENSITY_HEIGHT_STEP_PX,
   FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX,
   FLAPPY_UI_NETWORK_CANVAS_BACKGROUND,
+  FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
 } from './browser-entry.constants';
 import type {
   NetworkNodeDimensionsLike as NetworkNodeDimensions,
@@ -71,6 +72,10 @@ export function drawNetworkVisualization(
   const graphRightPaddingPx = FLAPPY_NETWORK_GRAPH_RIGHT_PADDING_PX;
   const graphBottomPaddingPx = FLAPPY_NETWORK_GRAPH_BOTTOM_PADDING_PX;
   const legendGraphGapPx = FLAPPY_NETWORK_LEGEND_GRAPH_GAP_PX;
+  const viewportWidthPx =
+    context.canvas.ownerDocument?.defaultView?.innerWidth ?? canvasWidthPx;
+  const hideNetworkOverlays =
+    viewportWidthPx < FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX;
   const nodeLayoutPaddingPx = FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX;
   const minimumLabelHeightPx = FLAPPY_NETWORK_MIN_LABEL_HEIGHT_PX;
   const minimumNodeInnerPaddingPx = FLAPPY_NETWORK_MIN_NODE_INNER_PADDING_PX;
@@ -79,22 +84,25 @@ export function drawNetworkVisualization(
   const minimumNodeWidthPx = FLAPPY_NETWORK_MIN_NODE_WIDTH_PX;
 
   // Step 3: Resolve legend layout and reserve horizontal graph space around it.
-  const legendLayout = resolveDefaultNetworkLegendLayout(context);
-
   let adjustedGraphLeftPaddingPx = graphLeftPaddingPx;
   let adjustedGraphRightPaddingPx = graphRightPaddingPx;
-  const legendMidpointPx =
-    legendLayout.legendLeftPx + legendLayout.legendWidthPx * 0.5;
-  if (legendMidpointPx >= canvasWidthPx * 0.5) {
-    adjustedGraphRightPaddingPx = Math.max(
-      graphRightPaddingPx,
-      canvasWidthPx - legendLayout.legendLeftPx + legendGraphGapPx,
-    );
-  } else {
-    adjustedGraphLeftPaddingPx = Math.max(
-      graphLeftPaddingPx,
-      legendLayout.legendLeftPx + legendLayout.legendWidthPx + legendGraphGapPx,
-    );
+  if (!hideNetworkOverlays) {
+    const legendLayout = resolveDefaultNetworkLegendLayout(context);
+    const legendMidpointPx =
+      legendLayout.legendLeftPx + legendLayout.legendWidthPx * 0.5;
+    if (legendMidpointPx >= canvasWidthPx * 0.5) {
+      adjustedGraphRightPaddingPx = Math.max(
+        graphRightPaddingPx,
+        canvasWidthPx - legendLayout.legendLeftPx + legendGraphGapPx,
+      );
+    } else {
+      adjustedGraphLeftPaddingPx = Math.max(
+        graphLeftPaddingPx,
+        legendLayout.legendLeftPx +
+          legendLayout.legendWidthPx +
+          legendGraphGapPx,
+      );
+    }
   }
 
   // Step 4: Resolve drawable graph bounds.
@@ -118,13 +126,26 @@ export function drawNetworkVisualization(
     ...networkLayers.map((layerNodes) => layerNodes.length),
   );
   const layerCount = Math.max(1, networkLayers.length);
-  const nodeHeightPx = Math.max(
+  const availableNodeStackHeightPx = Math.max(
+    1,
+    drawableHeightPx - nodeLayoutPaddingPx * 2,
+  );
+  const strictMaximumNodeHeightByFitPx = Math.max(
+    4,
+    availableNodeStackHeightPx / maxLayerNodeCount,
+  );
+  const effectiveMinimumNodeHeightPx = Math.min(
     minimumNodeHeightPx,
+    strictMaximumNodeHeightByFitPx,
+  );
+  const nodeHeightPx = Math.max(
+    effectiveMinimumNodeHeightPx,
     Math.min(
       FLAPPY_NETWORK_MAX_NODE_HEIGHT_PX,
       (drawableHeightPx - nodeLayoutPaddingPx * 2) /
         Math.max(4, maxLayerNodeCount * 1.6),
       drawableWidthPx / Math.max(8, layerCount * 3.6),
+      strictMaximumNodeHeightByFitPx,
     ),
   );
   const nodeWidthPx = Math.max(
@@ -160,11 +181,10 @@ export function drawNetworkVisualization(
   const runtimeConnections =
     ((network?.connections ?? []) as VisualNetworkConnectionLike[]) ?? [];
 
-  // Step 7: Draw connections, nodes, header, and legend.
+  // Step 7: Draw connections, nodes, and legend (with architecture text above it).
   drawWeightedConnections(context, runtimeConnections, positionByNodeIndex);
   drawBiasNodes(context, positionedNodes, nodeDimensions);
-  drawVisualizationHeader(context, architectureLabel);
-  drawNetworkColorLegend(context);
+  drawNetworkColorLegend(context, architectureLabel);
 }
 
 /**
@@ -299,6 +319,10 @@ function positionNetworkNodes(
   const lastLayerIndex = Math.max(0, networkLayers.length - 1);
   const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
   const halfNodeHeightPx = nodeDimensions.heightPx * 0.5;
+  const minimumNodeCenterYPx =
+    topPaddingPx + nodeLayoutPaddingPx + halfNodeHeightPx;
+  const maximumNodeCenterYPx =
+    topPaddingPx + drawableHeightPx - nodeLayoutPaddingPx - halfNodeHeightPx;
 
   // Step 2: Distribute layers horizontally and nodes vertically per layer.
   networkLayers.forEach((layerNodes, layerIndex) => {
@@ -315,20 +339,55 @@ function positionNetworkNodes(
         );
 
     const layerNodeCount = Math.max(1, layerNodes.length);
-    layerNodes.forEach((node, nodeInLayerIndex) => {
-      const verticalProgress =
-        layerNodeCount === 1 ? 0.5 : nodeInLayerIndex / (layerNodeCount - 1);
-      const layerYPx =
-        topPaddingPx +
-        nodeLayoutPaddingPx +
-        halfNodeHeightPx +
-        verticalProgress *
-          Math.max(
-            1,
-            drawableHeightPx -
-              nodeLayoutPaddingPx * 2 -
-              nodeDimensions.heightPx,
+    const availableLayerStackHeightPx = Math.max(
+      1,
+      drawableHeightPx - nodeLayoutPaddingPx * 2,
+    );
+    const baselineInterNodeGapPx =
+      layerNodeCount <= 1
+        ? 0
+        : Math.max(
+            0,
+            (availableLayerStackHeightPx -
+              nodeDimensions.heightPx * layerNodeCount) /
+              (layerNodeCount - 1),
           );
+    const preferredLayerInterNodeGapPx =
+      layerIndex === 0
+        ? FLAPPY_NETWORK_INPUT_LAYER_TARGET_GAP_PX
+        : baselineInterNodeGapPx * 0.5;
+    const maximumLayerInterNodeGapToFitPx =
+      layerNodeCount <= 1
+        ? 0
+        : Math.max(
+            0,
+            (availableLayerStackHeightPx -
+              nodeDimensions.heightPx * layerNodeCount) /
+              (layerNodeCount - 1),
+          );
+    const resolvedLayerInterNodeGapPx = Math.min(
+      preferredLayerInterNodeGapPx,
+      maximumLayerInterNodeGapToFitPx,
+    );
+    const layerStackHeightPx =
+      nodeDimensions.heightPx * layerNodeCount +
+      resolvedLayerInterNodeGapPx * Math.max(0, layerNodeCount - 1);
+    const centeredStackTopPx =
+      topPaddingPx +
+      nodeLayoutPaddingPx +
+      Math.max(0, (availableLayerStackHeightPx - layerStackHeightPx) * 0.5);
+
+    layerNodes.forEach((node, nodeInLayerIndex) => {
+      const unclampedLayerYPx =
+        centeredStackTopPx +
+        halfNodeHeightPx +
+        nodeInLayerIndex *
+          (nodeDimensions.heightPx + resolvedLayerInterNodeGapPx);
+      const layerYPx = clamp(
+        unclampedLayerYPx,
+        minimumNodeCenterYPx,
+        maximumNodeCenterYPx,
+      );
       positionedNodes.push({
         node,
         xPx: layerXPx,
