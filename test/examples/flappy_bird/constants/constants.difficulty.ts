@@ -14,7 +14,7 @@ import { FLAPPY_PIPE_WIDTH_PX } from './constants.pipes';
  */
 
 /** Small geometric buffer so "barely possible" remains physically solvable. */
-export const FLAPPY_MIN_CLEARANCE_MARGIN_PX = 50;
+export const FLAPPY_MIN_CLEARANCE_MARGIN_PX = 120;
 
 /**
  * Hard floor on time between pipes at max speed so controllers can recover.
@@ -44,7 +44,7 @@ export const FLAPPY_PIPE_GAP_MIN_PX =
 export const FLAPPY_PIPE_GAP_START_MULTIPLIER = 2.15;
 
 /** Per-pipe gap shrink step toward the current hardest target gap (pixels). */
-export const FLAPPY_PIPE_GAP_SHRINK_PER_PIPE_PX = 5;
+export const FLAPPY_PIPE_GAP_SHRINK_PER_PIPE_PX = 10;
 
 /** Random jitter range applied to each spawned pipe gap (pixels). */
 export const FLAPPY_PIPE_GAP_RANDOM_JITTER_PX = 10;
@@ -73,7 +73,7 @@ export const FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES = Math.max(
 export const FLAPPY_PIPE_SPAWN_INTERVAL_START_MULTIPLIER = 2.35;
 
 /** Per-pipe spawn-interval shrink step toward the current hardest interval target (frames). */
-export const FLAPPY_PIPE_SPAWN_INTERVAL_SHRINK_PER_PIPE_FRAMES = 1;
+export const FLAPPY_PIPE_SPAWN_INTERVAL_SHRINK_PER_PIPE_FRAMES = 2;
 
 /**
  * Pipe-pass count needed to reach maximum adaptive difficulty.

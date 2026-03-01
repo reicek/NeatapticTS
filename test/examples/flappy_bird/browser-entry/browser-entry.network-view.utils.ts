@@ -1,4 +1,4 @@
-import Network from '../../../src/architecture/network';
+import Network from '../../../../src/architecture/network';
 import { clamp } from './browser-entry.math.utils';
 import {
   drawBiasNodesLayer as drawBiasNodes,
@@ -8,12 +8,23 @@ import {
   resolveNetworkVisualizationLayers,
 } from './browser-entry.visualization.utils';
 import {
+  FLAPPY_LIGHT_NEON_RAMP,
+  FLAPPY_MEMORY_CORE_FEATURE_COUNT,
+  FLAPPY_MEMORY_STACKED_FRAME_COUNT,
+  FLAPPY_MONOSPACE_FONT_FAMILY,
   FLAPPY_NETWORK_BASELINE_HEIGHT_PX,
   FLAPPY_NETWORK_GRAPH_BOTTOM_PADDING_PX,
   FLAPPY_NETWORK_GRAPH_INNER_PADDING_PX,
   FLAPPY_NETWORK_GRAPH_LEFT_PADDING_PX,
   FLAPPY_NETWORK_GRAPH_RIGHT_PADDING_PX,
   FLAPPY_NETWORK_GRAPH_TOP_PADDING_PX,
+  FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX,
+  FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX,
+  FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_SIZE_PX,
+  FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_WEIGHT,
+  FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX,
+  FLAPPY_NETWORK_INPUT_GROUP_LABEL_RADIUS_PX,
+  FLAPPY_NETWORK_INPUT_GROUP_LABEL_TEXT_COLOR,
   FLAPPY_NETWORK_INPUT_LAYER_TARGET_GAP_PX,
   FLAPPY_NETWORK_LAYER_COMPLEXITY_HEIGHT_STEP_PX,
   FLAPPY_NETWORK_LEGEND_GRAPH_GAP_PX,
@@ -41,13 +52,29 @@ import {
   FLAPPY_UI_NETWORK_CANVAS_BACKGROUND,
   FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
   FLAPPY_NETWORK_LAYER_COMPLEXITY_BASELINE_COUNT,
-} from './constants';
+} from '../constants/constants';
 import type {
   NetworkNodeDimensionsLike as NetworkNodeDimensions,
   PositionedNetworkNodeLike as PositionedNetworkNode,
   VisualNetworkConnectionLike,
   VisualNetworkNodeLike,
 } from './browser-entry.types';
+
+interface InputGroupLabelBand {
+  label: string;
+  startNodeIndex: number;
+  endNodeIndex: number;
+  backgroundColor: string;
+  orientation: 'vertical' | 'horizontal';
+}
+
+const FLAPPY_INPUT_GROUP_LABELS: readonly string[] = [
+  'CURRENT FRAME',
+  'PREVIOUS FRAME',
+  'TWO FRAMES AGO',
+  'ACT',
+  'RATE',
+] as const;
 
 /**
  * Draws a complete, layer-based visualization of the active network.
@@ -79,7 +106,12 @@ export function drawNetworkVisualization(
     outputSize,
   );
 
-  const graphLeftPaddingPx = FLAPPY_NETWORK_GRAPH_LEFT_PADDING_PX;
+  const groupLabelBandReserveWidthPx =
+    FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX +
+    FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX +
+    FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX;
+  const graphLeftPaddingPx =
+    FLAPPY_NETWORK_GRAPH_LEFT_PADDING_PX + groupLabelBandReserveWidthPx;
   const graphTopPaddingPx = FLAPPY_NETWORK_GRAPH_TOP_PADDING_PX;
   const graphRightPaddingPx = FLAPPY_NETWORK_GRAPH_RIGHT_PADDING_PX;
   const graphBottomPaddingPx = FLAPPY_NETWORK_GRAPH_BOTTOM_PADDING_PX;
@@ -205,6 +237,9 @@ export function drawNetworkVisualization(
 
   // Step 7: Draw connections, nodes, and legend (with architecture text above it).
   drawWeightedConnections(context, runtimeConnections, positionByNodeIndex);
+  if (!hideNetworkOverlays) {
+    drawInputGroupLabelBands(context, positionedNodes, nodeDimensions);
+  }
   drawBiasNodes(context, positionedNodes, nodeDimensions);
   drawNetworkColorLegend(context, architectureLabel);
 }
@@ -317,6 +352,218 @@ export function resolveNetworkArchitectureLabel(
     architectureDescriptor.totalNodes,
     architectureDescriptor.totalConnections,
   );
+}
+
+/**
+ * Draws vertical neon bands that label semantic groups in the input layer.
+ *
+ * @param context - Canvas 2D rendering context.
+ * @param positionedNodes - Positioned nodes in graph coordinates.
+ * @param nodeDimensions - Resolved node dimensions.
+ * @returns Nothing.
+ */
+function drawInputGroupLabelBands(
+  context: CanvasRenderingContext2D,
+  positionedNodes: PositionedNetworkNode[],
+  nodeDimensions: NetworkNodeDimensions,
+): void {
+  // Step 1: Collect input/constant nodes in top-to-bottom order.
+  const inputNodes = positionedNodes
+    .filter(
+      (positionedNode) =>
+        positionedNode.node.type === 'input' ||
+        positionedNode.node.type === 'constant',
+    )
+    .toSorted((leftNode, rightNode) => leftNode.yPx - rightNode.yPx);
+
+  if (inputNodes.length === 0) {
+    return;
+  }
+
+  // Step 2: Resolve semantic range bands based on Flappy observation layout.
+  const labelBands = resolveInputGroupLabelBands(inputNodes.length);
+  if (labelBands.length === 0) {
+    return;
+  }
+
+  // Step 3: Anchor label bands to the left side of the input node column.
+  const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
+  const leftmostInputCenterXPx = Math.min(
+    ...inputNodes.map((inputNode) => inputNode.xPx),
+  );
+  const inputLeftEdgeXPx = leftmostInputCenterXPx - halfNodeWidthPx;
+  const labelBandRightXPx =
+    inputLeftEdgeXPx - FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX;
+  const labelBandLeftXPx =
+    labelBandRightXPx - FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX;
+
+  // Step 4: Render each grouped band with rotated black text on neon background.
+  labelBands.forEach((labelBand) => {
+    const startNode = inputNodes[labelBand.startNodeIndex];
+    const endNode = inputNodes[labelBand.endNodeIndex];
+    if (!startNode || !endNode) {
+      return;
+    }
+
+    const groupTopYPx = startNode.yPx - nodeDimensions.heightPx * 0.5;
+    const groupBottomYPx = endNode.yPx + nodeDimensions.heightPx * 0.5;
+    const desiredBandHeightPx =
+      labelBand.orientation === 'vertical'
+        ? Math.max(
+            FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX,
+            groupBottomYPx - groupTopYPx,
+          )
+        : Math.max(nodeDimensions.heightPx + 2, groupBottomYPx - groupTopYPx);
+    const labelBandCenterYPx = (groupTopYPx + groupBottomYPx) * 0.5;
+    const labelBandTopYPx = labelBandCenterYPx - desiredBandHeightPx * 0.5;
+
+    drawRoundedRect(
+      context,
+      labelBandLeftXPx,
+      labelBandTopYPx,
+      FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX,
+      desiredBandHeightPx,
+      FLAPPY_NETWORK_INPUT_GROUP_LABEL_RADIUS_PX,
+      labelBand.backgroundColor,
+    );
+
+    context.save();
+    context.translate(
+      labelBandLeftXPx + FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX * 0.5,
+      labelBandCenterYPx,
+    );
+    if (labelBand.orientation === 'vertical') {
+      context.rotate(-Math.PI / 2);
+    }
+    context.fillStyle = FLAPPY_NETWORK_INPUT_GROUP_LABEL_TEXT_COLOR;
+    context.font = `${FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_WEIGHT} ${FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_SIZE_PX}px ${FLAPPY_MONOSPACE_FONT_FAMILY}`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(labelBand.label, 0, 0);
+    context.restore();
+  });
+}
+
+/**
+ * Resolves input-layer semantic label bands for Flappy temporal observation channels.
+ *
+ * @param inputNodeCount - Input-layer node count.
+ * @returns Group label ranges with band colors.
+ */
+function resolveInputGroupLabelBands(
+  inputNodeCount: number,
+): InputGroupLabelBand[] {
+  // Step 1: Resolve expected grouped layout (12 + 12 + 12 + 1 + 1).
+  const perFrameFeatureCount = FLAPPY_MEMORY_CORE_FEATURE_COUNT;
+  const stackedFrameCount = FLAPPY_MEMORY_STACKED_FRAME_COUNT;
+  const temporalFeatureCount = perFrameFeatureCount * stackedFrameCount;
+  const actionChannelsCount = 2;
+  const expectedInputNodeCount = temporalFeatureCount + actionChannelsCount;
+  if (inputNodeCount !== expectedInputNodeCount) {
+    return [];
+  }
+
+  // Step 2: Build range map with distinct light-neon palette entries.
+  const groupedCounts = [
+    perFrameFeatureCount,
+    perFrameFeatureCount,
+    perFrameFeatureCount,
+    1,
+    1,
+  ];
+  const groupedColors = [
+    FLAPPY_LIGHT_NEON_RAMP[0],
+    FLAPPY_LIGHT_NEON_RAMP[2],
+    FLAPPY_LIGHT_NEON_RAMP[4],
+    FLAPPY_LIGHT_NEON_RAMP[6],
+    FLAPPY_LIGHT_NEON_RAMP[8],
+  ];
+  const groupedOrientations: Array<'vertical' | 'horizontal'> = [
+    'vertical',
+    'vertical',
+    'vertical',
+    'horizontal',
+    'horizontal',
+  ];
+
+  const groupBands: InputGroupLabelBand[] = [];
+  let runningNodeIndex = 0;
+  groupedCounts.forEach((groupCount, groupIndex) => {
+    const startNodeIndex = runningNodeIndex;
+    const endNodeIndex = runningNodeIndex + groupCount - 1;
+    groupBands.push({
+      label: FLAPPY_INPUT_GROUP_LABELS[groupIndex] ?? `GROUP ${groupIndex + 1}`,
+      startNodeIndex,
+      endNodeIndex,
+      backgroundColor:
+        groupedColors[groupIndex] ??
+        FLAPPY_LIGHT_NEON_RAMP.at(-1) ??
+        FLAPPY_LIGHT_NEON_RAMP[0],
+      orientation: groupedOrientations[groupIndex] ?? 'vertical',
+    });
+    runningNodeIndex += groupCount;
+  });
+
+  // Step 3: Return fully resolved semantic bands.
+  return groupBands;
+}
+
+/**
+ * Draws a filled rounded rectangle path.
+ *
+ * @param context - Canvas 2D rendering context.
+ * @param leftXPx - Left x coordinate.
+ * @param topYPx - Top y coordinate.
+ * @param widthPx - Rectangle width.
+ * @param heightPx - Rectangle height.
+ * @param radiusPx - Corner radius.
+ * @param fillColor - Fill color.
+ * @returns Nothing.
+ */
+function drawRoundedRect(
+  context: CanvasRenderingContext2D,
+  leftXPx: number,
+  topYPx: number,
+  widthPx: number,
+  heightPx: number,
+  radiusPx: number,
+  fillColor: string,
+): void {
+  // Step 1: Clamp radius so corners remain valid for thin rectangles.
+  const resolvedRadiusPx = Math.max(
+    0,
+    Math.min(radiusPx, widthPx * 0.5, heightPx * 0.5),
+  );
+
+  // Step 2: Trace rounded rectangle segments and fill.
+  context.beginPath();
+  context.moveTo(leftXPx + resolvedRadiusPx, topYPx);
+  context.lineTo(leftXPx + widthPx - resolvedRadiusPx, topYPx);
+  context.quadraticCurveTo(
+    leftXPx + widthPx,
+    topYPx,
+    leftXPx + widthPx,
+    topYPx + resolvedRadiusPx,
+  );
+  context.lineTo(leftXPx + widthPx, topYPx + heightPx - resolvedRadiusPx);
+  context.quadraticCurveTo(
+    leftXPx + widthPx,
+    topYPx + heightPx,
+    leftXPx + widthPx - resolvedRadiusPx,
+    topYPx + heightPx,
+  );
+  context.lineTo(leftXPx + resolvedRadiusPx, topYPx + heightPx);
+  context.quadraticCurveTo(
+    leftXPx,
+    topYPx + heightPx,
+    leftXPx,
+    topYPx + heightPx - resolvedRadiusPx,
+  );
+  context.lineTo(leftXPx, topYPx + resolvedRadiusPx);
+  context.quadraticCurveTo(leftXPx, topYPx, leftXPx + resolvedRadiusPx, topYPx);
+  context.closePath();
+  context.fillStyle = fillColor;
+  context.fill();
 }
 
 /**

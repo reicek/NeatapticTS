@@ -77,3 +77,11 @@ export const FLAPPY_VIEWPORT_NETWORK_ONLY_BREAKPOINT_PX = 1_000;
 
 /** Width breakpoint below which network legend and architecture text are hidden. */
 export const FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX = 800;
+
+/**
+ * Width breakpoint below which only title + main simulation canvas are shown.
+ *
+ * In this minimal mobile layout, stats and network-visualization panels are
+ * hidden to maximize readable gameplay area.
+ */
+export const FLAPPY_VIEWPORT_MOBILE_MINIMAL_UI_BREAKPOINT_PX = 860;

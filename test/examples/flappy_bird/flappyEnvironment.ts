@@ -13,8 +13,8 @@ import {
   FLAPPY_PIPE_WIDTH_PX,
   FLAPPY_WORLD_HEIGHT_PX,
   FLAPPY_WORLD_WIDTH_PX,
-} from './constants.ts';
-import type { FlappyRng } from './rng.ts';
+} from './constants/constants';
+import type { FlappyRng } from './rng';
 import {
   clampValue,
   type SharedDifficultyProfile,
@@ -27,7 +27,7 @@ import {
   resolveObservationVectorFromFeatures,
   resolveUpcomingPipes as resolveSharedUpcomingPipes,
   sampleGapCenterY as sampleSharedGapCenterY,
-} from './flappy.simulation.shared.utils.ts';
+} from './flappy.simulation.shared.utils';
 
 /** Pipe obstacle definition. */
 export interface FlappyPipe {

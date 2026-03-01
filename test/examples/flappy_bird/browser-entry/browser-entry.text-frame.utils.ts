@@ -18,7 +18,7 @@ import {
   FLAPPY_TITLE_BOX_MIN_OUTER_GAP_COLUMNS,
   FLAPPY_TITLE_BOX_MIN_WIDTH,
   FLAPPY_TITLE_BOX_WIDTH_RATIO,
-} from './constants';
+} from '../constants/constants';
 import type {
   RenderClosedOuterBoxInput,
   RenderStandaloneTitleBoxInput,

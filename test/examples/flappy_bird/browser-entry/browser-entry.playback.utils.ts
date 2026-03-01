@@ -47,7 +47,7 @@ import {
   FLAPPY_STARFIELD_NEAR_SCROLL_RATIO,
   FLAPPY_STARFIELD_TILE_HEIGHT_PX,
   FLAPPY_STARFIELD_TILE_WIDTH_PX,
-} from './constants';
+} from '../constants/constants';
 import type {
   EvolutionPlaybackStepSnapshot,
   PlaybackFrameStats,
@@ -62,7 +62,7 @@ import {
   FLAPPY_BIRD_X_PX,
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_TRAIL_OPACITY_FACTOR,
-} from './constants';
+} from '../constants/constants';
 
 type StarTile = {
   image: CanvasImageSource;

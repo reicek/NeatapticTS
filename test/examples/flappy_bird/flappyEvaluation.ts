@@ -11,7 +11,7 @@ import {
   FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME,
   FLAPPY_FITNESS_TERMINAL_ALIGNMENT_BONUS_WEIGHT,
   FLAPPY_FITNESS_TERMINAL_PROGRESS_BONUS_WEIGHT,
-} from './constants.ts';
+} from './constants/constants';
 import {
   createInitialFlappyState,
   getFlappyObservationFeatures,
@@ -25,8 +25,8 @@ import {
   createSharedObservationMemoryState,
   resolveFlapDecision,
   resolveTemporalObservationVector,
-} from './flappy.simulation.shared.utils.ts';
-import { createXorshift32 } from './rng.ts';
+} from './flappy.simulation.shared.utils';
+import { createXorshift32 } from './rng';
 
 /** Minimal network contract required by Flappy evaluation. */
 export interface FlappyNetworkLike {

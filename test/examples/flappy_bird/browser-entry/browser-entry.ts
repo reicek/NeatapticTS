@@ -1,4 +1,4 @@
-import Network from '../../../src/architecture/network';
+import Network from '../../../../src/architecture/network';
 import {
   createCanvasHost,
   updateStatsTableValues,
@@ -28,13 +28,13 @@ import {
   FLAPPY_MINOR_GC_WINDOW_MS,
   FLAPPY_STATUS_EVOLVING_TEXT,
   FLAPPY_STATUS_PLAYING_TEXT,
-} from './constants';
+} from '../constants/constants';
 import type { FlappyBirdRunHandle, RuntimeWindow } from './browser-entry.types';
 import {
   FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION,
   FLAPPY_NETWORK_INPUT_SIZE,
   FLAPPY_NETWORK_OUTPUT_SIZE,
-} from './constants';
+} from '../constants/constants';
 
 export type { FlappyBirdRunHandle } from './browser-entry.types';
 

@@ -1,4 +1,4 @@
-import Network from '../../../src/architecture/network';
+import Network from '../../../../src/architecture/network';
 import {
   FLAPPY_BIAS_TIER_CENTER_THRESHOLD,
   FLAPPY_BIAS_TIER_EDGE_START_ABS_VALUE,
@@ -48,7 +48,7 @@ import {
   FLAPPY_TIER_EDGE_COUNT,
   FLAPPY_TIER_LOGARITHMIC_STEEPNESS,
   FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
-} from './constants';
+} from '../constants/constants';
 import { applyAlphaToHexColor, clamp } from './browser-entry.math.utils';
 import type {
   ColorLegendRow,

@@ -1,4 +1,4 @@
-import Network from '../../../src/architecture/network';
+import type Network from '../../../../src/architecture/network';
 import { clamp } from './browser-entry.math.utils';
 import {
   createFlappyStatsTableRows,
@@ -33,13 +33,14 @@ import {
   FLAPPY_NEON_PALETTE,
   FLAPPY_SCREEN_PADDING_PX,
   FLAPPY_STATS_KEYS,
+  FLAPPY_VIEWPORT_MOBILE_MINIMAL_UI_BREAKPOINT_PX,
   FLAPPY_VIEWPORT_MINIMUM_SIMULATION_HEIGHT_PX,
   FLAPPY_VIEWPORT_MINIMUM_SIMULATION_HEIGHT_RATIO,
   FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
   FLAPPY_VIEWPORT_NETWORK_ONLY_BREAKPOINT_PX,
   FLAPPY_VIEWPORT_SIMULATION_BOTTOM_MARGIN_PX,
   FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX,
-} from './constants';
+} from '../constants/constants';
 import type {
   FlappyStatsKey,
   FlappyStatsTableCells,
@@ -49,7 +50,7 @@ import {
   FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION,
   FLAPPY_NETWORK_INPUT_SIZE,
   FLAPPY_NETWORK_OUTPUT_SIZE,
-} from './constants';
+} from '../constants/constants';
 
 /**
  * Builds the browser demo host tree and returns rendering handles.
@@ -492,10 +493,42 @@ function installResponsiveViewportSizing(
       containerElement.clientHeight - headerHeightPx,
     );
     const viewportWidthPx = Math.max(1, containerElement.clientWidth);
+    const useMinimalMobileLayout =
+      viewportWidthPx < FLAPPY_VIEWPORT_MOBILE_MINIMAL_UI_BREAKPOINT_PX;
     const useNetworkOnlyPanel =
       viewportWidthPx < FLAPPY_VIEWPORT_NETWORK_ONLY_BREAKPOINT_PX;
 
-    // Step 2.1: Toggle stats/network split layout for narrow viewports.
+    // Step 2.1: For mobile, hide stats/network panes and dedicate height to gameplay canvas.
+    if (useMinimalMobileLayout) {
+      statsContainer.style.display = 'none';
+      statsContainer.style.height = '0px';
+      statsContainer.style.maxHeight = '0px';
+      statsContainer.style.overflowY = 'hidden';
+
+      const mobileWidthPx = Math.max(
+        1,
+        Math.floor(containerElement.clientWidth),
+      );
+      const mobileHeightPx = Math.max(
+        1,
+        Math.floor(
+          totalCanvasBudgetPx - FLAPPY_VIEWPORT_SIMULATION_BOTTOM_MARGIN_PX,
+        ),
+      );
+
+      if (canvas.width !== mobileWidthPx || canvas.height !== mobileHeightPx) {
+        canvas.width = mobileWidthPx;
+        canvas.height = mobileHeightPx;
+        canvas.style.width = `${mobileWidthPx}px`;
+        canvas.style.height = `${mobileHeightPx}px`;
+      }
+      return;
+    }
+
+    // Step 2.2: Restore stats/network panes for non-mobile widths.
+    statsContainer.style.display = 'block';
+
+    // Step 2.3: Toggle stats/network split layout for narrow viewports.
     statsTableHost.style.display = useNetworkOnlyPanel ? 'none' : 'block';
     statsSplitContainer.style.gap = useNetworkOnlyPanel ? '0' : '8px';
     networkCanvasHost.style.flex = useNetworkOnlyPanel ? '1 1 100%' : '1 1 0';

@@ -1,5 +1,11 @@
-import { FLAPPY_HALF, FLAPPY_NORMALIZATION_EPSILON } from './constants';
-import { FLAPPY_WORLD_HEIGHT_PX, FLAPPY_PIPE_WIDTH_PX } from './constants';
+import {
+  FLAPPY_HALF,
+  FLAPPY_NORMALIZATION_EPSILON,
+} from '../constants/constants';
+import {
+  FLAPPY_WORLD_HEIGHT_PX,
+  FLAPPY_PIPE_WIDTH_PX,
+} from '../constants/constants';
 import type { ViewportInfo } from './browser-entry.types';
 
 /**

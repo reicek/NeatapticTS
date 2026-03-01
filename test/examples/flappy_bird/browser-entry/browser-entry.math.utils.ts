@@ -2,7 +2,7 @@ import {
   clamp01 as sharedClamp01,
   clampValue as sharedClampValue,
   interpolateValue as sharedInterpolateValue,
-} from './flappy.simulation.shared.utils';
+} from '../flappy.simulation.shared.utils';
 
 /**
  * Clamps a numeric value to the inclusive `[min, max]` interval.

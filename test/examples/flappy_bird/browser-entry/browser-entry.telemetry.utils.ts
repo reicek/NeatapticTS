@@ -1,7 +1,7 @@
 import {
   FLAPPY_HUD_UPDATES_WINDOW_SECONDS,
   FLAPPY_MINOR_GC_WINDOW_MS,
-} from './constants';
+} from '../constants/constants';
 
 /**
  * Trims timestamp samples to a sliding time window.

@@ -1,4 +1,4 @@
-import { FLAPPY_NEON_BIRD_PALETTE } from './constants';
+import { FLAPPY_NEON_BIRD_PALETTE } from '../constants/constants';
 import {
   type SharedDifficultyProfile,
   resolveAdaptiveDifficultyProfile,
@@ -6,7 +6,7 @@ import {
   resolveNextSpawnGapSize as resolveSharedNextSpawnGapSize,
   resolveNextSpawnIntervalFrames as resolveSharedNextSpawnIntervalFrames,
   sampleGapCenterY as sampleSharedGapCenterY,
-} from './flappy.simulation.shared.utils';
+} from '../flappy.simulation.shared.utils';
 import type { BrowserDifficultyProfile, RngLike } from './browser-entry.types';
 
 /**

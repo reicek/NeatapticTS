@@ -26,7 +26,7 @@ import {
   FLAPPY_PIPE_WIDTH_PX,
   FLAPPY_WORLD_HEIGHT_PX,
   FLAPPY_WORLD_WIDTH_PX,
-} from './constants';
+} from './constants/constants';
 
 /** Minimal deterministic random contract used by shared spawn helpers. */
 export interface SharedRngLike {

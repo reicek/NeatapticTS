@@ -7,18 +7,15 @@ import {
   type FlappyNetworkLike,
   type FlappyRolloutOptions,
   type FlappySeedBatchEvaluation,
-} from './flappyEvaluation.ts';
-import {
-  clampValue,
-  interpolateValue,
-} from './flappy.simulation.shared.utils.ts';
+} from './flappyEvaluation';
+import { clampValue, interpolateValue } from './flappy.simulation.shared.utils';
 import {
   FLAPPY_MAX_FRAMES_PER_EPISODE,
   FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
   FLAPPY_NETWORK_INPUT_SIZE,
   FLAPPY_NETWORK_OUTPUT_SIZE,
 } from './constants.ts';
-import { createXorshift32 } from './rng.ts';
+import { createXorshift32 } from './rng';
 
 /** Network shape expected by the Flappy trainer. */
 interface FlappyTrainerNetwork extends FlappyNetworkLike {

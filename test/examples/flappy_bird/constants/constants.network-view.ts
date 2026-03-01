@@ -194,3 +194,24 @@ export const FLAPPY_NETWORK_LAYER_COMPLEXITY_BASELINE_COUNT = 3;
 
 /** Additional multiplier used for topology-driven minimum host-height recommendation. */
 export const FLAPPY_NETWORK_TOPOLOGY_HEIGHT_MULTIPLIER = 1.45;
+
+/** Horizontal gap between input-node column and vertical group label band. */
+export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX = 6;
+
+/** Width of the vertical input-group label band. */
+export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX = 24;
+
+/** Minimum visual height for any input-group label band. */
+export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX = 22;
+
+/** Corner radius used by input-group label band backgrounds. */
+export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_RADIUS_PX = 5;
+
+/** Font size used for vertical input-group label text. */
+export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_SIZE_PX = 9;
+
+/** Font weight used for vertical input-group label text. */
+export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_WEIGHT = 700;
+
+/** Text color for vertical input-group labels on neon backgrounds. */
+export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_TEXT_COLOR = '#000000';

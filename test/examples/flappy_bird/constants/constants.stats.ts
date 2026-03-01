@@ -1,7 +1,7 @@
 import type {
   FlappyStatsKey,
   FlappyStatsRowDescriptor,
-} from './browser-entry.types';
+} from '../browser-entry/browser-entry.types';
 import { FLAPPY_NEON_PALETTE } from './constants.palette';
 
 /**

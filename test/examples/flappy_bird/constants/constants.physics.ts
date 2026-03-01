@@ -11,7 +11,7 @@
  * Slightly increased so birds settle faster after each flap and can make
  * finer vertical corrections around narrow targets.
  */
-export const FLAPPY_GRAVITY_PX_PER_FRAME2 = 0.25;
+export const FLAPPY_GRAVITY_PX_PER_FRAME2 = 0.22;
 
 /**
  * Instantaneous upward velocity applied on flap (pixels/frame).
@@ -19,14 +19,14 @@ export const FLAPPY_GRAVITY_PX_PER_FRAME2 = 0.25;
  * Reduced so each flap produces a smaller hop, improving precision when
  * threading tighter gaps.
  */
-export const FLAPPY_FLAP_VELOCITY_PX_PER_FRAME = -5.8;
+export const FLAPPY_FLAP_VELOCITY_PX_PER_FRAME = -5;
 
 /**
  * Maximum downward speed clamp (pixels/frame).
  *
  * This cap limits runaway fall acceleration and keeps trajectories learnable.
  */
-export const FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME = 5;
+export const FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME = 7;
 
 /**
  * Number of policy decision substeps executed inside each logical frame.
@@ -34,7 +34,7 @@ export const FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME = 5;
  * Values > 1 give agents finer temporal control in tight scenarios by allowing
  * multiple react-and-integrate passes before the frame counter advances.
  */
-export const FLAPPY_CONTROL_SUBSTEPS_PER_FRAME = 4;
+export const FLAPPY_CONTROL_SUBSTEPS_PER_FRAME = 5;
 
 /**
  * Target control cadence used for endgame reachability calculations.

@@ -1,7 +1,7 @@
 import {
   FLAPPY_FLAP_THRESHOLD,
   FLAPPY_NORMALIZATION_EPSILON,
-} from './constants';
+} from '../constants/constants';
 import {
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_BIRD_X_PX,
@@ -9,7 +9,7 @@ import {
   FLAPPY_PIPE_GAP_PX,
   FLAPPY_PIPE_WIDTH_PX,
   FLAPPY_WORLD_HEIGHT_PX,
-} from './constants';
+} from '../constants/constants';
 import {
   commitSharedObservationMemoryStep,
   type SharedObservationFeatures,
@@ -18,7 +18,7 @@ import {
   resolveObservationFeatures,
   resolveTemporalObservationVector,
   resolveUpcomingPipes as resolveSharedUpcomingPipes,
-} from './flappy.simulation.shared.utils';
+} from '../flappy.simulation.shared.utils';
 import type {
   BrowserDifficultyProfile,
   BrowserPopulationBirdLike,

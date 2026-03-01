@@ -1,4 +1,4 @@
-import type Network from '../../../src/architecture/network';
+import type Network from '../../../../src/architecture/network';
 
 /** Draw callback contract for network architecture panel updates. */
 export interface NetworkVisualizationHandle {

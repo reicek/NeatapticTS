@@ -5,7 +5,7 @@ import {
   FLAPPY_STATS_SECTION_KEYS,
   FLAPPY_UI_STATS_ROW_BORDER,
   FLAPPY_UI_STATS_SECTION_BORDER,
-} from './constants';
+} from '../constants/constants';
 import type {
   CreateFlappyStatsTableRowsInput,
   FlappyStatsKey,
