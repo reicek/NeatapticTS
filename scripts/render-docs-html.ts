@@ -18,6 +18,57 @@ const EXAMPLE_DEMOS = [
   { dir: 'examples/flappy_bird', label: 'flappy_bird' },
 ];
 
+const RETRIABLE_FILE_SYSTEM_ERROR_CODES = new Set([
+  'UNKNOWN',
+  'EPERM',
+  'EBUSY',
+  'EACCES',
+]);
+const DOCS_WRITE_MAX_ATTEMPTS = 6;
+const DOCS_WRITE_INITIAL_RETRY_DELAY_MS = 120;
+
+function isRetriableFileSystemError(error: unknown): error is NodeJS.ErrnoException {
+  if (!(error instanceof Error)) return false;
+  const code = (error as NodeJS.ErrnoException).code;
+  if (!code) return false;
+  return RETRIABLE_FILE_SYSTEM_ERROR_CODES.has(code);
+}
+
+async function waitForRetryDelay(delayMilliseconds: number): Promise<void> {
+  await new Promise((resolve) => {
+    setTimeout(resolve, delayMilliseconds);
+  });
+}
+
+async function writeFileWithRetry(
+  filePath: string,
+  content: string,
+  encoding: BufferEncoding,
+): Promise<void> {
+  let retryDelayMilliseconds = DOCS_WRITE_INITIAL_RETRY_DELAY_MS;
+
+  for (
+    let attemptNumber = 1;
+    attemptNumber <= DOCS_WRITE_MAX_ATTEMPTS;
+    attemptNumber += 1
+  ) {
+    try {
+      await fs.writeFile(filePath, content, encoding);
+      return;
+    } catch (error: unknown) {
+      const canRetry =
+        isRetriableFileSystemError(error) &&
+        attemptNumber < DOCS_WRITE_MAX_ATTEMPTS;
+      if (!canRetry) {
+        throw error;
+      }
+
+      await waitForRetryDelay(retryDelayMilliseconds);
+      retryDelayMilliseconds = Math.min(retryDelayMilliseconds * 2, 1_000);
+    }
+  }
+}
+
 async function ensureThemeCss(): Promise<void> {
   // Step 1: Ensure destination directory exists.
   await fs.ensureDir(path.dirname(THEME_CSS_OUTPUT_PATH));
@@ -232,7 +283,7 @@ async function main() {
     }/index.html"${docsActive}>Docs</a><a href="${examplesHref}"${examplesActive}>Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar">${navHtmlFor(
       meta.relDir
     )}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc">${toc}</aside></div></body></html>`;
-    await fs.writeFile(outFile, page, 'utf8');
+    await writeFileWithRetry(outFile, page, 'utf8');
   }
   console.log('HTML docs generated.');
 }

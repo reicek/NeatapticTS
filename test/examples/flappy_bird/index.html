@@ -17,7 +17,8 @@
     }
     main{height:100%;display:flex;flex-direction:column;padding:0;gap:8px;min-height:0;overflow:hidden}
     #flappy-bird-output{flex:1;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:0;overflow:hidden}
-    #status{min-height:1.25rem;font-size:.875rem;line-height:1.25rem}
+    #status{margin:0;font-size:.875rem;line-height:1.25rem}
+    #status:empty{display:none}
   </style>
 </head>
 <body>
@@ -44,14 +45,14 @@
           if (window.flappyBirdStart) {
             window.flappyBirdStart('flappy-bird-output');
             if (statusElement) {
-              statusElement.textContent = 'Ready';
+              statusElement.textContent = '';
             }
             return;
           }
           if (window.flappyBird?.start) {
             window.flappyBird.start('flappy-bird-output');
             if (statusElement) {
-              statusElement.textContent = 'Ready';
+              statusElement.textContent = '';
             }
             return;
           }
