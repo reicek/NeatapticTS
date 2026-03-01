@@ -31,6 +31,7 @@ export const FLAPPY_STATS_KEYS = [
   'bestMaxPipes',
   'bestArchitecture',
   'status',
+  'birds',
 ] as const;
 
 /** Ordered row descriptors rendered into the runtime stats table. */
@@ -53,6 +54,7 @@ export const FLAPPY_STATS_ROWS: readonly FlappyStatsRowDescriptor[] = [
   { key: 'bestMaxPipes', label: 'Max pipes' },
   { key: 'bestArchitecture', label: 'NN architecture' },
   { key: 'status', label: 'Status' },
+  { key: 'birds', label: 'Birds' },
 ] as const;
 
 /** Stats keys that are hidden when runtime instrumentation is disabled. */

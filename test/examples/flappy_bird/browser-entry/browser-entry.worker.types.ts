@@ -73,6 +73,7 @@ export type EvolutionWorkerMessage =
 /** Lightweight per-frame telemetry emitted to HUD update callback. */
 export interface PlaybackFrameStats {
   frameIndex: number;
+  activeBirdCount: number;
   leaderPipesPassed: number;
   leaderFramesSurvived: number;
   activationCallsPerFrame: number;

@@ -97,6 +97,7 @@ export const start = async (
   // Step 4: Paint initial status before worker bootstrapping starts.
   updateStatsTableValues(statsValueByKey, {
     status: FLAPPY_HUD_INITIALIZING_TEXT,
+    birds: `${FLAPPY_HUD_ZERO_TEXT}/${populationSize}`,
   });
 
   // Step 5: Create the evolution worker channel used by the orchestrator loop.
@@ -223,6 +224,7 @@ export const start = async (
         bestMaxPipes: String(bestRunPipes),
         bestArchitecture: bestArchitectureLabel,
         status: FLAPPY_STATUS_PLAYING_TEXT,
+        birds: `${FLAPPY_HUD_ZERO_TEXT}/${populationSize}`,
       });
 
       // Step 3.4: Render active network architecture in the side panel.
@@ -257,6 +259,7 @@ export const start = async (
 
           // Step 3.5.3: Publish current frame counters + instrumentation values.
           updateStatsTableValues(statsValueByKey, {
+            birds: `${frameStats.activeBirdCount}/${populationSize}`,
             currentFrames: String(frameStats.frameIndex),
             currentPipes: String(frameStats.leaderPipesPassed),
             currentMaxFrames: String(frameStats.leaderFramesSurvived),
@@ -292,6 +295,7 @@ export const start = async (
         bestMaxFrames: String(bestRunFrames),
         bestMaxPipes: String(bestRunPipes),
         status: FLAPPY_STATUS_EVOLVING_TEXT,
+        birds: `${FLAPPY_HUD_ZERO_TEXT}/${populationSize}`,
       });
 
       // Step 3.8: Emit compact generation summary to console (best-effort only).

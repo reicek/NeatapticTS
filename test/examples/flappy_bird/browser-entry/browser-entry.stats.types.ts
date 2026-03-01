@@ -17,7 +17,8 @@ export type FlappyStatsKey =
   | 'bestMaxFrames'
   | 'bestMaxPipes'
   | 'bestArchitecture'
-  | 'status';
+  | 'status'
+  | 'birds';
 
 /** Declarative row descriptor for the runtime stats table. */
 export interface FlappyStatsRowDescriptor {

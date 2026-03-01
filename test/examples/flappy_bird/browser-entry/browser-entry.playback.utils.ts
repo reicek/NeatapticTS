@@ -1,4 +1,5 @@
 import {
+  resolveAliveBirdCount,
   resolveFramePrimaryWinnerIndex,
   resolveLeaderPipesPassed,
 } from './browser-entry.observation.utils';
@@ -155,6 +156,7 @@ export async function animatePopulationEpisode(
     latestLeaderFramesSurvived = leaderFramesSurvived;
     onFrameStats({
       frameIndex: renderState.frameIndex,
+      activeBirdCount: resolveAliveBirdCount(renderState.birds),
       leaderPipesPassed,
       leaderFramesSurvived,
       activationCallsPerFrame:

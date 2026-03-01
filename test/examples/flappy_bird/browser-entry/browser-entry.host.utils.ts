@@ -179,6 +179,12 @@ export function createCanvasHost(containerElement: HTMLElement): {
           valueColor: FLAPPY_NEON_PALETTE.statusText,
         };
       }
+      if (statsKey === 'birds') {
+        return {
+          keyColor: FLAPPY_NEON_PALETTE.statusText,
+          valueColor: FLAPPY_NEON_PALETTE.statusText,
+        };
+      }
       if (statsKey.startsWith('current')) {
         return {
           keyColor: FLAPPY_NEON_PALETTE.currentRunText,
