@@ -5,7 +5,7 @@
  * training script that uses NeatapticTS (this repo) as the neuroevolution engine.
  */
 
-export * from './constants.ts';
+export * from './constants/constants';
 export * from './rng';
 export * from './flappyEnvironment';
 export * from './flappyEvaluation';

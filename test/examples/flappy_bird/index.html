@@ -17,16 +17,21 @@
     }
     main{height:100%;display:flex;flex-direction:column;padding:0;gap:8px;min-height:0;overflow:hidden}
     #flappy-bird-output{flex:1;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:0;overflow:hidden}
+    #status{min-height:1.25rem;font-size:.875rem;line-height:1.25rem}
   </style>
 </head>
 <body>
   <main>
+    <p id="status" role="status" aria-live="polite"></p>
     <div id="flappy-bird-output"></div>
   </main>
 
     <script>
       (function loadFlappyBundle() {
         const statusElement = document.getElementById('status');
+        if (statusElement) {
+          statusElement.textContent = 'Loading Flappy Bird...';
+        }
         const isTestExamplePath = window.location.pathname.includes('/test/examples/');
         const bundleSrc = isTestExamplePath
           ? '../../../docs/assets/flappy-bird.bundle.js?v=20260227-4'
@@ -38,10 +43,20 @@
         scriptElement.onload = () => {
           if (window.flappyBirdStart) {
             window.flappyBirdStart('flappy-bird-output');
+            if (statusElement) {
+              statusElement.textContent = 'Ready';
+            }
             return;
           }
           if (window.flappyBird?.start) {
             window.flappyBird.start('flappy-bird-output');
+            if (statusElement) {
+              statusElement.textContent = 'Ready';
+            }
+            return;
+          }
+          if (statusElement) {
+            statusElement.textContent = 'Bundle loaded, but no Flappy Bird start function was found.';
           }
         };
         scriptElement.onerror = () => {

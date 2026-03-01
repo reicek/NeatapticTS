@@ -14,7 +14,7 @@ import {
   FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
   FLAPPY_NETWORK_INPUT_SIZE,
   FLAPPY_NETWORK_OUTPUT_SIZE,
-} from './constants.ts';
+} from './constants/constants';
 import { createXorshift32 } from './rng';
 
 /** Network shape expected by the Flappy trainer. */

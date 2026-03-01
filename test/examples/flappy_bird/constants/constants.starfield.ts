@@ -1,4 +1,4 @@
-import { FLAPPY_WORLD_HEIGHT_PX } from './constants';
+import { FLAPPY_WORLD_HEIGHT_PX } from './constants.world';
 
 /**
  * Parallax starfield rendering constants.
