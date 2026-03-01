@@ -28,7 +28,7 @@ import {
   FLAPPY_MINOR_GC_WINDOW_MS,
   FLAPPY_STATUS_EVOLVING_TEXT,
   FLAPPY_STATUS_PLAYING_TEXT,
-} from './browser-entry.constants';
+} from './constants';
 import type { FlappyBirdRunHandle, RuntimeWindow } from './browser-entry.types';
 import {
   FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION,

@@ -25,7 +25,7 @@ import {
   createSharedObservationMemoryState,
   type SharedObservationMemoryState,
 } from './flappy.simulation.shared.utils';
-import { FLAPPY_BIRD_VIEWPORT_X_RATIO } from './browser-entry.constants';
+import { FLAPPY_BIRD_VIEWPORT_X_RATIO } from './constants';
 import {
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_BIRD_X_PX,

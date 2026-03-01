@@ -24,12 +24,24 @@ import {
   FLAPPY_NETWORK_MIN_INTER_NODE_GAP_PX,
   FLAPPY_NETWORK_MIN_LABEL_HEIGHT_PX,
   FLAPPY_NETWORK_MIN_NODE_INNER_PADDING_PX,
+  FLAPPY_NETWORK_MIN_NODE_HEIGHT_LABEL_EXTRA_PX,
   FLAPPY_NETWORK_MIN_NODE_WIDTH_PX,
   FLAPPY_NETWORK_NODE_DENSITY_HEIGHT_STEP_PX,
+  FLAPPY_NETWORK_NODE_DENSITY_BASELINE_COUNT,
+  FLAPPY_NETWORK_NODE_HEIGHT_DENSITY_DIVISOR,
+  FLAPPY_NETWORK_NODE_HEIGHT_DENSITY_MIN_DENOMINATOR,
+  FLAPPY_NETWORK_NODE_HEIGHT_LAYER_WIDTH_DIVISOR,
+  FLAPPY_NETWORK_NODE_HEIGHT_LAYER_WIDTH_MIN_DENOMINATOR,
   FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX,
+  FLAPPY_NETWORK_NODE_TOP_MARGIN_PX,
+  FLAPPY_NETWORK_NODE_WIDTH_LAYER_WIDTH_DIVISOR,
+  FLAPPY_NETWORK_NODE_WIDTH_LAYER_WIDTH_MIN_DENOMINATOR,
+  FLAPPY_NETWORK_NODE_WIDTH_TO_HEIGHT_RATIO,
+  FLAPPY_NETWORK_TOPOLOGY_HEIGHT_MULTIPLIER,
   FLAPPY_UI_NETWORK_CANVAS_BACKGROUND,
   FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
-} from './browser-entry.constants';
+  FLAPPY_NETWORK_LAYER_COMPLEXITY_BASELINE_COUNT,
+} from './constants';
 import type {
   NetworkNodeDimensionsLike as NetworkNodeDimensions,
   PositionedNetworkNodeLike as PositionedNetworkNode,
@@ -78,9 +90,8 @@ export function drawNetworkVisualization(
     viewportWidthPx < FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX;
   const nodeLayoutPaddingPx = FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX;
   const minimumLabelHeightPx = FLAPPY_NETWORK_MIN_LABEL_HEIGHT_PX;
-  const minimumNodeInnerPaddingPx = FLAPPY_NETWORK_MIN_NODE_INNER_PADDING_PX;
   const minimumNodeHeightPx =
-    minimumLabelHeightPx + minimumNodeInnerPaddingPx * 2;
+    minimumLabelHeightPx + FLAPPY_NETWORK_MIN_NODE_HEIGHT_LABEL_EXTRA_PX;
   const minimumNodeWidthPx = FLAPPY_NETWORK_MIN_NODE_WIDTH_PX;
 
   // Step 3: Resolve legend layout and reserve horizontal graph space around it.
@@ -143,8 +154,15 @@ export function drawNetworkVisualization(
     Math.min(
       FLAPPY_NETWORK_MAX_NODE_HEIGHT_PX,
       (drawableHeightPx - nodeLayoutPaddingPx * 2) /
-        Math.max(4, maxLayerNodeCount * 1.6),
-      drawableWidthPx / Math.max(8, layerCount * 3.6),
+        Math.max(
+          FLAPPY_NETWORK_NODE_HEIGHT_DENSITY_MIN_DENOMINATOR,
+          maxLayerNodeCount * FLAPPY_NETWORK_NODE_HEIGHT_DENSITY_DIVISOR,
+        ),
+      drawableWidthPx /
+        Math.max(
+          FLAPPY_NETWORK_NODE_HEIGHT_LAYER_WIDTH_MIN_DENOMINATOR,
+          layerCount * FLAPPY_NETWORK_NODE_HEIGHT_LAYER_WIDTH_DIVISOR,
+        ),
       strictMaximumNodeHeightByFitPx,
     ),
   );
@@ -152,8 +170,12 @@ export function drawNetworkVisualization(
     minimumNodeWidthPx,
     Math.min(
       FLAPPY_NETWORK_MAX_NODE_WIDTH_PX,
-      nodeHeightPx * 2.15,
-      drawableWidthPx / Math.max(4, layerCount * 1.45),
+      nodeHeightPx * FLAPPY_NETWORK_NODE_WIDTH_TO_HEIGHT_RATIO,
+      drawableWidthPx /
+        Math.max(
+          FLAPPY_NETWORK_NODE_WIDTH_LAYER_WIDTH_MIN_DENOMINATOR,
+          layerCount * FLAPPY_NETWORK_NODE_WIDTH_LAYER_WIDTH_DIVISOR,
+        ),
     ),
   );
   const nodeDimensions: NetworkNodeDimensions = {
@@ -235,13 +257,17 @@ export function resolveNetworkVisualizationHeightPx(
   // Step 3: Add complexity-based height adjustments and choose the max.
   const baselineHeightPx = FLAPPY_NETWORK_BASELINE_HEIGHT_PX;
   const nodeDensityHeightPx =
-    Math.max(0, maxLayerNodeCount - 6) *
-    FLAPPY_NETWORK_NODE_DENSITY_HEIGHT_STEP_PX;
+    Math.max(
+      0,
+      maxLayerNodeCount - FLAPPY_NETWORK_NODE_DENSITY_BASELINE_COUNT,
+    ) * FLAPPY_NETWORK_NODE_DENSITY_HEIGHT_STEP_PX;
   const layerComplexityHeightPx =
-    Math.max(0, layerCount - 3) *
+    Math.max(0, layerCount - FLAPPY_NETWORK_LAYER_COMPLEXITY_BASELINE_COUNT) *
     FLAPPY_NETWORK_LAYER_COMPLEXITY_HEIGHT_STEP_PX;
   const recommendedHeightPx = Math.max(
-    Math.ceil(topologyDrivenHeightPx * 1.45),
+    Math.ceil(
+      topologyDrivenHeightPx * FLAPPY_NETWORK_TOPOLOGY_HEIGHT_MULTIPLIER,
+    ),
     baselineHeightPx + nodeDensityHeightPx + layerComplexityHeightPx,
   );
 
@@ -316,6 +342,7 @@ function positionNetworkNodes(
 ): PositionedNetworkNode[] {
   // Step 1: Initialize positioning accumulators and reusable geometry values.
   const positionedNodes: PositionedNetworkNode[] = [];
+  const preferredFirstNodeTopGapPx = FLAPPY_NETWORK_NODE_TOP_MARGIN_PX;
   const lastLayerIndex = Math.max(0, networkLayers.length - 1);
   const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
   const halfNodeHeightPx = nodeDimensions.heightPx * 0.5;
@@ -376,10 +403,14 @@ function positionNetworkNodes(
       topPaddingPx +
       nodeLayoutPaddingPx +
       Math.max(0, (availableLayerStackHeightPx - layerStackHeightPx) * 0.5);
+    const clampedStackTopPx = Math.min(
+      centeredStackTopPx,
+      topPaddingPx + preferredFirstNodeTopGapPx,
+    );
 
     layerNodes.forEach((node, nodeInLayerIndex) => {
       const unclampedLayerYPx =
-        centeredStackTopPx +
+        clampedStackTopPx +
         halfNodeHeightPx +
         nodeInLayerIndex *
           (nodeDimensions.heightPx + resolvedLayerInterNodeGapPx);

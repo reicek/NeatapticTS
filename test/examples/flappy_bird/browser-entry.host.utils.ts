@@ -39,7 +39,7 @@ import {
   FLAPPY_VIEWPORT_NETWORK_ONLY_BREAKPOINT_PX,
   FLAPPY_VIEWPORT_SIMULATION_BOTTOM_MARGIN_PX,
   FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX,
-} from './browser-entry.constants';
+} from './constants';
 import type {
   FlappyStatsKey,
   FlappyStatsTableCells,

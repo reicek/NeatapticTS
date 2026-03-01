@@ -41,7 +41,13 @@ import {
   FLAPPY_TRAIL_MIN_VERTICAL_SEGMENT_PX,
   FLAPPY_TRAIL_MAX_POINTS,
   FLAPPY_NEON_PALETTE,
-} from './browser-entry.constants';
+  FLAPPY_STARFIELD_CYAN_FILL_STYLE,
+  FLAPPY_STARFIELD_FAR_SCROLL_RATIO,
+  FLAPPY_STARFIELD_MID_SCROLL_RATIO,
+  FLAPPY_STARFIELD_NEAR_SCROLL_RATIO,
+  FLAPPY_STARFIELD_TILE_HEIGHT_PX,
+  FLAPPY_STARFIELD_TILE_WIDTH_PX,
+} from './constants';
 import type {
   EvolutionPlaybackStepSnapshot,
   PlaybackFrameStats,
@@ -64,13 +70,6 @@ type StarTile = {
   tileHeightPx: number;
   scrollRatio: number;
 };
-
-const STARFIELD_TILE_WIDTH_PX = 512;
-const STARFIELD_TILE_HEIGHT_PX = FLAPPY_WORLD_HEIGHT_PX;
-const STARFIELD_CYAN_FILL_STYLE = 'rgba(95, 255, 255, 1)';
-const STARFIELD_FAR_SCROLL_RATIO = 0.08;
-const STARFIELD_MID_SCROLL_RATIO = 0.12;
-const STARFIELD_NEAR_SCROLL_RATIO = 0.18;
 
 let cachedStarfieldTiles: readonly StarTile[] | undefined;
 
@@ -469,8 +468,8 @@ function resolveStarfieldTiles(): readonly StarTile[] {
   const farTile: StarTile = {
     image: createStarTileCanvas({
       seed: 1_337,
-      tileWidthPx: STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
+      tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
+      tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
       starCount: 35,
       minSizePx: 1,
       maxSizePx: 2,
@@ -478,15 +477,15 @@ function resolveStarfieldTiles(): readonly StarTile[] {
       maxAlpha: 0.22,
       blurPx: 4,
     }),
-    tileWidthPx: STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
-    scrollRatio: STARFIELD_FAR_SCROLL_RATIO,
+    tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
+    tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
+    scrollRatio: FLAPPY_STARFIELD_FAR_SCROLL_RATIO,
   };
   const midTile: StarTile = {
     image: createStarTileCanvas({
       seed: 2_777,
-      tileWidthPx: STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
+      tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
+      tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
       starCount: 28,
       minSizePx: 1,
       maxSizePx: 3,
@@ -494,15 +493,15 @@ function resolveStarfieldTiles(): readonly StarTile[] {
       maxAlpha: 0.28,
       blurPx: 6,
     }),
-    tileWidthPx: STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
-    scrollRatio: STARFIELD_MID_SCROLL_RATIO,
+    tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
+    tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
+    scrollRatio: FLAPPY_STARFIELD_MID_SCROLL_RATIO,
   };
   const nearTile: StarTile = {
     image: createStarTileCanvas({
       seed: 4_242,
-      tileWidthPx: STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
+      tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
+      tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
       starCount: 23,
       minSizePx: 2,
       maxSizePx: 4,
@@ -510,9 +509,9 @@ function resolveStarfieldTiles(): readonly StarTile[] {
       maxAlpha: 0.34,
       blurPx: 8,
     }),
-    tileWidthPx: STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx: STARFIELD_TILE_HEIGHT_PX,
-    scrollRatio: STARFIELD_NEAR_SCROLL_RATIO,
+    tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
+    tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
+    scrollRatio: FLAPPY_STARFIELD_NEAR_SCROLL_RATIO,
   };
 
   cachedStarfieldTiles = [farTile, midTile, nearTile];
@@ -561,7 +560,7 @@ function createStarTileCanvas(options: {
 
   tileContext.clearRect(0, 0, canvas.width, canvas.height);
   tileContext.globalCompositeOperation = 'source-over';
-  tileContext.shadowColor = STARFIELD_CYAN_FILL_STYLE;
+  tileContext.shadowColor = FLAPPY_STARFIELD_CYAN_FILL_STYLE;
   tileContext.shadowBlur = options.blurPx;
 
   for (let starIndex = 0; starIndex < options.starCount; starIndex += 1) {
@@ -574,7 +573,7 @@ function createStarTileCanvas(options: {
       options.minAlpha + seededRandom() * (options.maxAlpha - options.minAlpha);
 
     tileContext.globalAlpha = alpha;
-    tileContext.fillStyle = STARFIELD_CYAN_FILL_STYLE;
+    tileContext.fillStyle = FLAPPY_STARFIELD_CYAN_FILL_STYLE;
     tileContext.fillRect(xPx, yPx, sizePx, sizePx);
   }
 

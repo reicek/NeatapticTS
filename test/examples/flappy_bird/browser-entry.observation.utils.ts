@@ -1,4 +1,7 @@
-import { FLAPPY_FLAP_THRESHOLD } from './browser-entry.constants';
+import {
+  FLAPPY_FLAP_THRESHOLD,
+  FLAPPY_NORMALIZATION_EPSILON,
+} from './constants';
 import {
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_BIRD_X_PX,
@@ -58,7 +61,7 @@ export function resolveObservationVector(
     pipeWidthPx: FLAPPY_PIPE_WIDTH_PX,
     worldHeightPx: FLAPPY_WORLD_HEIGHT_PX,
     maxFallSpeedPxPerFrame: FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
-    normalizationEpsilon: 0.001,
+    normalizationEpsilon: FLAPPY_NORMALIZATION_EPSILON,
   });
 
   return {

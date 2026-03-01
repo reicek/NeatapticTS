@@ -38,7 +38,7 @@ Notes:
 
 ## How it works
 
-- Population is set to `200` to widen exploration while preserving strong winners (`elitism = 20`).
+- Population is set to `50` to widen exploration while preserving strong winners (`elitism = 10`).
 - Mutation now uses annealing (`0.70 -> 0.25` rate, `2 -> 1` amount over early generations):
   - early generations explore aggressively,
   - later generations refine and stabilize.
@@ -58,20 +58,23 @@ Notes:
   - smooth ramp,
   - full adaptive difficulty in later generations.
 - Pipe gaps are randomized but structured: each run starts around `40%` wider than the current hardest target, then each new spawned pipe shrinks a few pixels until reaching the current hardest gap.
-- Each genome’s network receives 26 inputs (temporal memory layout):
-  1. current frame core features (8 values):
+- Each genome’s network receives 38 inputs (temporal memory layout):
+  1. current frame core features (12 values):
      - bird y, vertical velocity,
      - distance/delta to next gap,
      - next gap top/bottom,
-     - distance/delta to second gap.
-  2. previous frame core features (same 8 values).
-  3. two-frames-ago core features (same 8 values).
+     - distance/delta to second gap,
+     - next-gap clearance,
+     - required vertical velocity to next-gap center,
+     - entry urgency,
+     - one-flap reachability at entry.
+  2. previous frame core features (same 12 values).
+  3. two-frames-ago core features (same 12 values).
   4. last action channel (`1` flap, `0` no flap).
   5. recent flap-rate channel (mean action over a fixed recent window).
 
-  This replaces direct one-step predictor channels (time-to-next, signed clearance,
-  required vertical velocity, next-to-second transition), since temporal stacking
-  lets the policy infer these from short-term dynamics.
+  Temporal stacking still provides short-term memory, while the leaner core keeps
+  focus on centerline tracking and staying away from corridor edges.
 - The network outputs 2 values (`no flap`, `flap`); we flap when `output[1] > output[0]`.
 - Fitness is now composed from normalized channels with caps to reduce domination by one term:
   - survival,

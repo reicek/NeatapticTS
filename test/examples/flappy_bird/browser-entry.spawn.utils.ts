@@ -1,4 +1,4 @@
-import { FLAPPY_NEON_BIRD_PALETTE } from './browser-entry.constants';
+import { FLAPPY_NEON_BIRD_PALETTE } from './constants';
 import {
   type SharedDifficultyProfile,
   resolveAdaptiveDifficultyProfile,

@@ -38,7 +38,6 @@ import {
   FLAPPY_NETWORK_LEGEND_TARGET_TOP_PX,
   FLAPPY_NETWORK_LEGEND_TOP_LEFT_THRESHOLD_PX,
   FLAPPY_NETWORK_MIN_LABEL_HEIGHT_PX,
-  FLAPPY_NETWORK_MIN_NODE_INNER_PADDING_PX,
   FLAPPY_NETWORK_NODE_LABEL_FONT_WEIGHT,
   FLAPPY_NETWORK_NODE_LABEL_FILL_COLOR,
   FLAPPY_NETWORK_NODE_LABEL_SIZE_RATIO,
@@ -49,7 +48,7 @@ import {
   FLAPPY_TIER_EDGE_COUNT,
   FLAPPY_TIER_LOGARITHMIC_STEEPNESS,
   FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
-} from './browser-entry.constants';
+} from './constants';
 import { applyAlphaToHexColor, clamp } from './browser-entry.math.utils';
 import type {
   ColorLegendRow,
@@ -344,12 +343,12 @@ export function drawBiasNodesLayer(
   nodeDimensions: NetworkNodeDimensionsLike,
 ): void {
   const minimumLabelHeightPx = FLAPPY_NETWORK_MIN_LABEL_HEIGHT_PX;
-  const minimumNodeInnerPaddingPx = FLAPPY_NETWORK_MIN_NODE_INNER_PADDING_PX;
   const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
-  const halfNodeHeightPx = nodeDimensions.heightPx * 0.5;
+  const hiddenNodeVerticalPaddingPx = 2;
 
   positionedNodes.forEach((positionedNode) => {
     const nodeBias = positionedNode.node.bias;
+    const nodeLabel = formatNodeBiasLabel(nodeBias);
     const isOutputNode = positionedNode.node.type === 'output';
     const nodeFillColor = isOutputNode
       ? FLAPPY_NEON_PALETTE.currentRunText
@@ -358,6 +357,42 @@ export function drawBiasNodesLayer(
       ? FLAPPY_NETWORK_OUTPUT_NODE_STROKE_COLOR
       : FLAPPY_NETWORK_HIDDEN_NODE_STROKE_COLOR;
     const nodeStrokeWidthPx = isOutputNode ? 2.1 : 1.3;
+
+    const maximumReadableLabelHeightPx = Math.max(
+      minimumLabelHeightPx,
+      Math.floor(nodeDimensions.heightPx),
+    );
+    const computedLabelHeightPx = Math.floor(
+      nodeDimensions.heightPx * FLAPPY_NETWORK_NODE_LABEL_SIZE_RATIO,
+    );
+    const labelHeightPx = clamp(
+      computedLabelHeightPx,
+      minimumLabelHeightPx,
+      maximumReadableLabelHeightPx,
+    );
+    context.font = `${FLAPPY_NETWORK_NODE_LABEL_FONT_WEIGHT} ${labelHeightPx}px ${FLAPPY_MONOSPACE_FONT_FAMILY}`;
+    // Set baseline BEFORE measuring so actualBoundingBoxAscent/Descent are
+    // relative to the alphabetic baseline — not a stale 'top' from prior draws.
+    context.textBaseline = 'alphabetic';
+    const labelMetrics = context.measureText(nodeLabel);
+    const labelAscentPx =
+      labelMetrics.actualBoundingBoxAscent || labelHeightPx * 0.72;
+    const labelDescentPx =
+      labelMetrics.actualBoundingBoxDescent || labelHeightPx * 0.28;
+    const measuredLabelHeightPx = Math.max(
+      minimumLabelHeightPx,
+      Math.ceil(labelAscentPx + labelDescentPx),
+    );
+    const resolvedNodeHeightPx = isOutputNode
+      ? Math.max(4, nodeDimensions.heightPx - 2)
+      : Math.max(
+          4,
+          Math.min(
+            nodeDimensions.heightPx,
+            measuredLabelHeightPx + hiddenNodeVerticalPaddingPx,
+          ),
+        );
+    const halfNodeHeightPx = resolvedNodeHeightPx * 0.5;
 
     context.fillStyle = nodeFillColor;
     context.strokeStyle = nodeStrokeColor;
@@ -370,13 +405,13 @@ export function drawBiasNodesLayer(
       positionedNode.xPx - halfNodeWidthPx,
       positionedNode.yPx - halfNodeHeightPx,
       nodeDimensions.widthPx,
-      nodeDimensions.heightPx,
+      resolvedNodeHeightPx,
     );
     context.strokeRect(
       positionedNode.xPx - halfNodeWidthPx,
       positionedNode.yPx - halfNodeHeightPx,
       nodeDimensions.widthPx,
-      nodeDimensions.heightPx,
+      resolvedNodeHeightPx,
     );
     context.shadowBlur = 0;
     context.shadowColor = 'transparent';
@@ -386,26 +421,10 @@ export function drawBiasNodesLayer(
     }
 
     context.fillStyle = FLAPPY_NETWORK_NODE_LABEL_FILL_COLOR;
-    const maximumReadableLabelHeightPx = Math.max(
-      minimumLabelHeightPx,
-      Math.floor(nodeDimensions.heightPx - minimumNodeInnerPaddingPx * 2),
-    );
-    const computedLabelHeightPx = Math.floor(
-      nodeDimensions.heightPx * FLAPPY_NETWORK_NODE_LABEL_SIZE_RATIO,
-    );
-    const labelHeightPx = clamp(
-      computedLabelHeightPx,
-      minimumLabelHeightPx,
-      maximumReadableLabelHeightPx,
-    );
-    context.font = `${FLAPPY_NETWORK_NODE_LABEL_FONT_WEIGHT} ${labelHeightPx}px ${FLAPPY_MONOSPACE_FONT_FAMILY}`;
     context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillText(
-      formatNodeBiasLabel(nodeBias),
-      positionedNode.xPx,
-      positionedNode.yPx,
-    );
+    const labelBaselineYPx =
+      positionedNode.yPx + (labelAscentPx - labelDescentPx) * 0.5;
+    context.fillText(nodeLabel, positionedNode.xPx, labelBaselineYPx);
   });
 }
 

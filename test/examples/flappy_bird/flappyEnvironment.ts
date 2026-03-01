@@ -2,6 +2,7 @@ import {
   FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_BIRD_X_PX,
+  FLAPPY_NORMALIZATION_EPSILON,
   FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX,
   FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX,
   FLAPPY_FLAP_VELOCITY_PX_PER_FRAME,
@@ -17,6 +18,7 @@ import type { FlappyRng } from './rng.ts';
 import {
   clampValue,
   type SharedDifficultyProfile,
+  type SharedObservationFeatures,
   resolveAdaptiveDifficultyProfile,
   resolveNextSpawnGapCenterY as resolveSharedNextSpawnGapCenterY,
   resolveNextSpawnGapSize as resolveSharedNextSpawnGapSize,
@@ -91,44 +93,11 @@ export interface FlappyGameState {
 
 /**
  * Structured observation features used to build the neural-network input vector.
+ *
+ * Re-exported from shared simulation utilities so trainer and browser paths
+ * stay synchronized as the observation schema evolves.
  */
-export interface FlappyObservationFeatures {
-  /** Bird y position normalized to [0, 1]. */
-  normalizedBirdY: number;
-
-  /** Bird vertical velocity normalized to [-1, 1]. */
-  normalizedVelocity: number;
-
-  /** Distance from bird to next pipe normalized to [0, 1]. */
-  normalizedDistanceToNextPipe: number;
-
-  /** Delta from bird y to next gap center normalized to [-1, 1]. */
-  normalizedDeltaToNextGap: number;
-
-  /** Next pipe gap top normalized to [0, 1]. */
-  normalizedNextGapTop: number;
-
-  /** Next pipe gap bottom normalized to [0, 1]. */
-  normalizedNextGapBottom: number;
-
-  /** Distance from bird to second upcoming pipe normalized to [0, 1]. */
-  normalizedDistanceToSecondPipe: number;
-
-  /** Delta from bird y to second upcoming gap center normalized to [-1, 1]. */
-  normalizedDeltaToSecondGap: number;
-
-  /** Time-to-next-pipe closeness in [0, 1] (1 means imminent). */
-  normalizedTimeToNextPipe: number;
-
-  /** Signed clearance to next gap in [-1, 1] (positive inside gap). */
-  normalizedNextGapClearance: number;
-
-  /** Required vertical velocity toward next gap center normalized to [-1, 1]. */
-  normalizedRequiredVerticalVelocityToNextGap: number;
-
-  /** Next-to-second gap center transition normalized to [-1, 1]. */
-  normalizedNextToSecondGapTransition: number;
-}
+export type FlappyObservationFeatures = SharedObservationFeatures;
 
 /**
  * Difficulty scale used by the curriculum scheduler.
@@ -472,7 +441,7 @@ export function getFlappyObservationFeatures(
     pipeWidthPx: FLAPPY_PIPE_WIDTH_PX,
     worldHeightPx: FLAPPY_WORLD_HEIGHT_PX,
     maxFallSpeedPxPerFrame: FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
-    normalizationEpsilon: 0.001,
+    normalizationEpsilon: FLAPPY_NORMALIZATION_EPSILON,
   });
 }
 
