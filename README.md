@@ -5,7 +5,7 @@
   <a href="docs/index.html"><img src="https://img.shields.io/badge/docs-generated-2c3963.svg" alt="Docs"/></a>
 </div>
 
-<img src="https://cdn-images-1.medium.com/max/800/1*THG2__H9YHxYIt2sulzlTw.png" width="480"/>
+<img src="nn.jpg" width="480"/>
 
 > The unofficial modern, typed evolution of **Neataptic**.
 

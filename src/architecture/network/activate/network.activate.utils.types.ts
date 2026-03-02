@@ -112,28 +112,51 @@ export type BatchRowActivationContext = {
 };
 
 /**
- * Runtime internals consumed by the core activation helper orchestration.
+ * Runtime network view used by the object-graph activation pipeline.
+ *
+ * This intentionally describes the internal fields activation reads/writes
+ * (training step, RNG, regularization knobs, and slab fast-path hooks).
  */
-export interface ActivateRuntimeNetworkProps {
-  _enforceAcyclic: boolean;
+export type ActivateRuntimeNetworkProps = {
+  _enforceAcyclic?: boolean;
   _topoDirty: boolean;
-  _computeTopoOrder(): void;
-  _canUseFastSlab(training: boolean): boolean;
-  _fastSlabActivate(input: number[]): number[];
+  _computeTopoOrder: () => void;
+  _canUseFastSlab: (training: boolean) => boolean;
+  _fastSlabActivate: (input: number[]) => number[];
+  _rand: () => number;
+  _trainingStep: number;
+  _lastStats?: unknown;
   _weightNoiseStd: number;
   _weightNoisePerHidden: number[];
-  _weightNoiseSchedule?(step: number): number;
-  _trainingStep: number;
-  _rand(): number;
-  _stochasticDepth: number[];
-  _stochasticDepthSchedule?(step: number, current: number[]): number[];
+  _weightNoiseSchedule?: (step: number) => number;
   _wnOrig?: number[];
+  _stochasticDepth: number[];
+  _stochasticDepthSchedule?: (step: number, current: number[]) => number[];
   _dropConnectProb: number;
-  _lastStats: unknown;
+};
+
+/**
+ * Layer container type used by the layered activation paths.
+ */
+export type NetworkLayer = NonNullable<Network['layers']>[number];
+
+/**
+ * Node collection type attached to a single network layer.
+ */
+export type NetworkLayerNodes = NetworkLayer['nodes'];
+
+/**
+ * Weight-noise telemetry collected during a single activation pass.
+ */
+export interface WeightNoiseStats {
+  count: number;
+  sumAbs: number;
+  maxAbs: number;
+  meanAbs: number;
 }
 
 /**
- * Aggregated statistics produced by one activation pass.
+ * Activation telemetry collected during a single activation pass.
  */
 export interface ActivationStats {
   droppedHiddenNodes: number;
@@ -145,28 +168,8 @@ export interface ActivationStats {
 }
 
 /**
- * Summary metrics captured for temporary weight-noise effects.
- */
-export interface WeightNoiseStats {
-  count: number;
-  sumAbs: number;
-  maxAbs: number;
-  meanAbs: number;
-}
-
-/**
- * Return contract for weight-noise application helper.
+ * Marker returned by weight-noise application to drive safe restore logic.
  */
 export interface WeightNoiseApplyResult {
   appliedWeightNoise: boolean;
 }
-
-/**
- * Non-null layer item type extracted from the optional layered network definition.
- */
-export type NetworkLayer = NonNullable<Network['layers']>[number];
-
-/**
- * Node list type for one explicit layer.
- */
-export type NetworkLayerNodes = NetworkLayer['nodes'];

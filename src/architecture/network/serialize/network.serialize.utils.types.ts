@@ -91,16 +91,6 @@ export const NODE_TYPE_OUTPUT = 'output';
 export const FALLBACK_ACTIVATION_KEY = 'identity';
 
 /**
- * Dynamic module path used to load the Network constructor.
- *
- * Runtime loading avoids static import cycles between network and serializer modules.
- *
- * @remarks
- * The path is package-internal and not influenced by serialized payload data.
- */
-export const NETWORK_MODULE_PATH = '../../network';
-
-/**
  * Error text emitted for invalid verbose JSON payload roots.
  *
  * @remarks

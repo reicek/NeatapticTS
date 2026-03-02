@@ -8,6 +8,93 @@ import fs from 'fs-extra';
 import { marked } from 'marked';
 
 const DOCS_DIR = path.resolve('docs');
+const THEME_CSS_SOURCE_PATH = path.resolve('scripts', 'assets', 'theme.css');
+const THEME_CSS_OUTPUT_PATH = path.join(DOCS_DIR, 'assets', 'theme.css');
+const NN_IMAGE_SOURCE_PATH = path.resolve('nn.jpg');
+const NN_IMAGE_FALLBACK_SOURCE_PATH = path.resolve('scripts', 'assets', 'nn.jpg');
+const NN_IMAGE_OUTPUT_PATH = path.join(DOCS_DIR, 'nn.jpg');
+const EXAMPLE_DEMOS = [
+  { dir: 'examples/asciiMaze', label: 'asciiMaze' },
+  { dir: 'examples/flappy_bird', label: 'flappy_bird' },
+];
+
+const RETRIABLE_FILE_SYSTEM_ERROR_CODES = new Set([
+  'UNKNOWN',
+  'EPERM',
+  'EBUSY',
+  'EACCES',
+]);
+const DOCS_WRITE_MAX_ATTEMPTS = 6;
+const DOCS_WRITE_INITIAL_RETRY_DELAY_MS = 120;
+
+function isRetriableFileSystemError(error: unknown): error is NodeJS.ErrnoException {
+  if (!(error instanceof Error)) return false;
+  const code = (error as NodeJS.ErrnoException).code;
+  if (!code) return false;
+  return RETRIABLE_FILE_SYSTEM_ERROR_CODES.has(code);
+}
+
+async function waitForRetryDelay(delayMilliseconds: number): Promise<void> {
+  await new Promise((resolve) => {
+    setTimeout(resolve, delayMilliseconds);
+  });
+}
+
+async function writeFileWithRetry(
+  filePath: string,
+  content: string,
+  encoding: BufferEncoding,
+): Promise<void> {
+  let retryDelayMilliseconds = DOCS_WRITE_INITIAL_RETRY_DELAY_MS;
+
+  for (
+    let attemptNumber = 1;
+    attemptNumber <= DOCS_WRITE_MAX_ATTEMPTS;
+    attemptNumber += 1
+  ) {
+    try {
+      await fs.writeFile(filePath, content, encoding);
+      return;
+    } catch (error: unknown) {
+      const canRetry =
+        isRetriableFileSystemError(error) &&
+        attemptNumber < DOCS_WRITE_MAX_ATTEMPTS;
+      if (!canRetry) {
+        throw error;
+      }
+
+      await waitForRetryDelay(retryDelayMilliseconds);
+      retryDelayMilliseconds = Math.min(retryDelayMilliseconds * 2, 1_000);
+    }
+  }
+}
+
+async function ensureThemeCss(): Promise<void> {
+  // Step 1: Ensure destination directory exists.
+  await fs.ensureDir(path.dirname(THEME_CSS_OUTPUT_PATH));
+
+  // Step 2: Copy static theme stylesheet used by generated docs pages.
+  await fs.copyFile(THEME_CSS_SOURCE_PATH, THEME_CSS_OUTPUT_PATH);
+}
+
+async function ensureStaticDocsAssets(): Promise<void> {
+  // Step 1: Ensure core theme assets are present.
+  await ensureThemeCss();
+
+  // Step 2: Ensure the README hero image resolves when served from `/docs/`.
+  // The root README is copied into `docs/README.md`, so `<img src="nn.jpg">`
+  // becomes a request for `/docs/nn.jpg` when hosted under that base path.
+  const hasRootImage = await fs.pathExists(NN_IMAGE_SOURCE_PATH);
+  const hasFallbackImage = await fs.pathExists(NN_IMAGE_FALLBACK_SOURCE_PATH);
+  const sourcePath = hasRootImage
+    ? NN_IMAGE_SOURCE_PATH
+    : hasFallbackImage
+      ? NN_IMAGE_FALLBACK_SOURCE_PATH
+      : undefined;
+
+  if (!sourcePath) return;
+  await fs.copyFile(sourcePath, NN_IMAGE_OUTPUT_PATH);
+}
 
 function slugify(s: string): string {
   return s
@@ -17,7 +104,21 @@ function slugify(s: string): string {
     .replace(/-{2,}/g, '-');
 }
 
+function buildExamplesLinksHtml(currentDir: string): string {
+  return EXAMPLE_DEMOS.map((entry) => {
+    const copiedExampleAbs = path.resolve(DOCS_DIR, entry.dir, 'index.html');
+    if (!fs.existsSync(copiedExampleAbs)) return '';
+
+    const relLink = path.posix.relative(currentDir || '.', entry.dir) || '.';
+    const href = (relLink === '.' ? '.' : relLink) + '/index.html';
+    return `<li><a href="${href}">${entry.label}</a></li>`;
+  })
+    .filter(Boolean)
+    .join('');
+}
+
 async function main() {
+  await ensureStaticDocsAssets();
   const readmes = await fg(['**/README.md'], { cwd: DOCS_DIR, absolute: true });
 
   // Collect metadata for navigation
@@ -71,29 +172,19 @@ async function main() {
         isCurrent ? ' class="current"' : ''
       }><a href="${href}">${label}${isCurrent ? '' : ''}</a></li>`;
     };
-    // Add asciiMaze example explicitly if present
-    const asciiExample = () => {
-      try {
-        const copiedExampleAbs = path.resolve(
-          DOCS_DIR,
-          'examples',
-          'asciiMaze',
-          'index.html'
-        );
-        if (fs.existsSync(copiedExampleAbs)) {
-          const relTargetDir = 'examples/asciiMaze';
-          const relLink =
-            path.posix.relative(currentDir || '.', relTargetDir) || '.';
-          const href = (relLink === '.' ? '.' : relLink) + '/index.html';
-          return `<li><a href="${href}">examples/asciiMaze</a></li>`;
-        }
-      } catch {
-        /* ignore */
-      }
-      return '';
-    };
-    const groupsHtml = Array.from(groupsMap.values())
-      .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
+    const demoLinksHtml = buildExamplesLinksHtml(currentDir);
+    const groups = Array.from(groupsMap.values());
+    if (demoLinksHtml && !groupsMap.has('examples')) {
+      groups.push({ name: 'examples', items: [] });
+    }
+    const groupsHtml = groups
+      .sort((a, b) => {
+        const leftOrder = order.indexOf(a.name);
+        const rightOrder = order.indexOf(b.name);
+        const leftRank = leftOrder === -1 ? Number.MAX_SAFE_INTEGER : leftOrder;
+        const rightRank = rightOrder === -1 ? Number.MAX_SAFE_INTEGER : rightOrder;
+        return leftRank - rightRank || a.name.localeCompare(b.name);
+      })
       .map((g) => {
         const items = g.items.sort((a, b) => a.relDir.localeCompare(b.relDir));
         if (g.name === 'root')
@@ -101,7 +192,7 @@ async function main() {
         return `<li class="group"><div class="g-head">${
           g.name
         }</div><ul>${items.map(makeLink).join('')}${
-          g.name === 'examples' ? asciiExample() : ''
+          g.name === 'examples' ? demoLinksHtml : ''
         }</ul></li>`;
       })
       .join('');
@@ -152,6 +243,7 @@ async function main() {
     };
     marked.use({ renderer });
     const htmlBody = marked.parse(md, { async: false });
+    const rootExamplesTocHtml = buildExamplesLinksHtml(meta.relDir);
     const toc = fileHeadings.length
       ? `<div class="page-toc"><h2>Files</h2>${fileHeadings
           .map(
@@ -165,7 +257,9 @@ async function main() {
               }</div>`
           )
           .join('')}</div>`
-      : '';
+            : meta.relDir === '' && rootExamplesTocHtml
+            ? `<div class="page-toc"><h2>Examples</h2><div class="toc-file"><ul>${rootExamplesTocHtml}</ul></div></div>`
+            : '';
     const outFile = path.join(path.dirname(meta.abs), 'index.html');
     const relToRoot = path
       .relative(path.dirname(meta.abs), DOCS_DIR)
@@ -189,7 +283,7 @@ async function main() {
     }/index.html"${docsActive}>Docs</a><a href="${examplesHref}"${examplesActive}>Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar">${navHtmlFor(
       meta.relDir
     )}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc">${toc}</aside></div></body></html>`;
-    await fs.writeFile(outFile, page, 'utf8');
+    await writeFileWithRetry(outFile, page, 'utf8');
   }
   console.log('HTML docs generated.');
 }

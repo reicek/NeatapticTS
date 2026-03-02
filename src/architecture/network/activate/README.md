@@ -4,7 +4,10 @@
 
 ### ActivateRuntimeNetworkProps
 
-Runtime internals consumed by the core activation helper orchestration.
+Runtime network view used by the object-graph activation pipeline.
+
+This intentionally describes the internal fields activation reads/writes
+(training step, RNG, regularization knobs, and slab fast-path hooks).
 
 ### ActivationOutputBuffer
 
@@ -12,7 +15,7 @@ Pooled activation output array type acquired from the shared activation array po
 
 ### ActivationStats
 
-Aggregated statistics produced by one activation pass.
+Activation telemetry collected during a single activation pass.
 
 ### BATCH_INPUTS_COLLECTION_ERROR_MESSAGE
 
@@ -32,11 +35,11 @@ Shared state used while validating and activating one row in a batch.
 
 ### NetworkLayer
 
-Non-null layer item type extracted from the optional layered network definition.
+Layer container type used by the layered activation paths.
 
 ### NetworkLayerNodes
 
-Node list type for one explicit layer.
+Node collection type attached to a single network layer.
 
 ### NO_TRACE_FAST_SLAB_TRAINING_FLAG
 
@@ -64,11 +67,11 @@ Shared state used while activating one node during no-trace traversal.
 
 ### WeightNoiseApplyResult
 
-Return contract for weight-noise application helper.
+Marker returned by weight-noise application to drive safe restore logic.
 
 ### WeightNoiseStats
 
-Summary metrics captured for temporary weight-noise effects.
+Weight-noise telemetry collected during a single activation pass.
 
 ## architecture/network/activate/network.activate.utils.ts
 

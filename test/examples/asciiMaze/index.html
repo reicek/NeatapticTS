@@ -24,14 +24,35 @@
       <div id="ascii-maze-archive" style="margin-top:12px"></div>
     </div>
   <div id="ascii-maze-status" aria-live="polite" style="margin-top:8px;color:#f88"></div>
-  <!-- Deterministic script path (test environment -> docs assets) -->
-  <script
-  src="../../assets/ascii-maze.bundle.js"
-  data-ascii-maze-root="../../assets/"
-    defer
-    onload="(window.asciiMazeStart ? window.asciiMazeStart('ascii-maze-output') : (window.asciiMaze && window.asciiMaze.start && window.asciiMaze.start()))"
-    onerror="document.getElementById('ascii-maze-status').textContent='Failed to load ascii-maze.bundle.js';"
-  ></script>
+  <script>
+    (function loadAsciiMazeBundle() {
+      const statusElement = document.getElementById('ascii-maze-status');
+      const isTestExamplePath = window.location.pathname.includes('/test/examples/');
+      const bundleSrc = isTestExamplePath
+        ? '../../../docs/assets/ascii-maze.bundle.js'
+        : '../../assets/ascii-maze.bundle.js';
+
+      const scriptElement = document.createElement('script');
+      scriptElement.src = bundleSrc;
+      scriptElement.defer = true;
+      scriptElement.onload = () => {
+        if (window.asciiMazeStart) {
+          window.asciiMazeStart('ascii-maze-output');
+          return;
+        }
+        if (window.asciiMaze?.start) {
+          window.asciiMaze.start('ascii-maze-output');
+        }
+      };
+      scriptElement.onerror = () => {
+        if (statusElement) {
+          statusElement.textContent = `Failed to load ascii-maze.bundle.js from ${bundleSrc}`;
+        }
+      };
+
+      document.body.appendChild(scriptElement);
+    })();
+  </script>
   <script>
     // Minimal fallback status if start not invoked automatically (e.g., API change)
     window.addEventListener('DOMContentLoaded', () => {

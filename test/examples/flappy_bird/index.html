@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Flappy Bird (NeatapticTS)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html,body{height:100%;margin:0;overflow:hidden}
+    body{
+      font-family:system-ui,Segoe UI,Arial,sans-serif;
+      background:#060b14;
+      color:#9fdcff;
+      box-sizing:border-box;
+      min-height:100dvh;
+      padding:16px;
+      overflow:hidden;
+    }
+    main{height:100%;display:flex;flex-direction:column;padding:0;gap:8px;min-height:0;overflow:hidden}
+    #flappy-bird-output{flex:1;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:0;overflow:hidden}
+    #status{margin:0;font-size:.875rem;line-height:1.25rem}
+    #status:empty{display:none}
+  </style>
+</head>
+<body>
+  <main>
+    <p id="status" role="status" aria-live="polite"></p>
+    <div id="flappy-bird-output"></div>
+  </main>
+
+    <script>
+      (function loadFlappyBundle() {
+        const statusElement = document.getElementById('status');
+        if (statusElement) {
+          statusElement.textContent = 'Loading Flappy Bird...';
+        }
+        const isTestExamplePath = window.location.pathname.includes('/test/examples/');
+        const bundleSrc = isTestExamplePath
+          ? '../../../docs/assets/flappy-bird.bundle.js?v=20260227-4'
+          : '../../assets/flappy-bird.bundle.js?v=20260227-4';
+
+        const scriptElement = document.createElement('script');
+        scriptElement.src = bundleSrc;
+        scriptElement.defer = true;
+        scriptElement.onload = () => {
+          if (window.flappyBirdStart) {
+            window.flappyBirdStart('flappy-bird-output');
+            if (statusElement) {
+              statusElement.textContent = '';
+            }
+            return;
+          }
+          if (window.flappyBird?.start) {
+            window.flappyBird.start('flappy-bird-output');
+            if (statusElement) {
+              statusElement.textContent = '';
+            }
+            return;
+          }
+          if (statusElement) {
+            statusElement.textContent = 'Bundle loaded, but no Flappy Bird start function was found.';
+          }
+        };
+        scriptElement.onerror = () => {
+          if (statusElement) {
+            statusElement.textContent = `Failed to load flappy-bird.bundle.js from ${bundleSrc}`;
+          }
+        };
+
+        document.body.appendChild(scriptElement);
+      })();
+    </script>
+</body>
+</html>

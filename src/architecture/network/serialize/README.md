@@ -56,8 +56,6 @@ Node entries are rebuilt in order and pushed into mutable runtime internals.
 
 ### NETWORK_JSON_FORMAT_VERSION
 
-### NETWORK_MODULE_PATH
-
 ### NetworkInternalsWithDropout
 
 Serialize internals with optional dropout field.
@@ -131,6 +129,18 @@ These fields are the minimal node state required to round-trip compact and JSON 
 
 ### network.serialize.utils
 
+### applyHydratedArchitectureDescriptor
+
+`(network: import("C:/NeatapticTS/src/architecture/network").default, architectureDescriptor: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor | undefined) => void`
+
+Applies hydrated architecture metadata to runtime network when shape is valid.
+
+Parameters:
+- `network` - - Rebuilt network instance.
+- `architectureDescriptor` - - Optional serialized descriptor.
+
+Returns: Nothing.
+
 ### deserialize
 
 `(data: import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("C:/NeatapticTS/src/architecture/network").default`
@@ -138,6 +148,15 @@ These fields are the minimal node state required to round-trip compact and JSON 
 ### fromJSONImpl
 
 `(json: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => import("C:/NeatapticTS/src/architecture/network").default`
+
+### isArchitectureDescriptorShapeValid
+
+`(architectureDescriptor: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor | undefined) => boolean`
+
+Parameters:
+- `architectureDescriptor` - - Optional descriptor candidate.
+
+Returns: True when minimal descriptor shape is valid.
 
 ### serialize
 
@@ -857,10 +876,7 @@ Returns: Normalized payload context.
 
 `(input: number, output: number) => import("C:/NeatapticTS/src/architecture/network").default`
 
-Creates a network instance using runtime constructor loading.
-
-Dynamic loading avoids static circular dependency issues between serializer and
-network implementation modules.
+Creates a new network instance for deserialize workflows.
 
 Parameters:
 - `input` - - Input size.
