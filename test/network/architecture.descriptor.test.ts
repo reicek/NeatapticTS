@@ -52,9 +52,10 @@ describe('Network Architecture Descriptor', () => {
 
   it('reports cycle presence in architecture descriptor', () => {
     const network = new Network(2, 1);
-    network.mutate(methods.mutation.ADD_NODE);
-
-    const outputNode = network.nodes[network.input];
+    const outputNode = network.nodes.find((node) => node.type === 'output');
+    if (!outputNode) {
+      throw new Error('Expected at least one output node to construct cycle');
+    }
     const inputNode = network.nodes[0];
     network.connect(outputNode, inputNode, 0.1);
 
