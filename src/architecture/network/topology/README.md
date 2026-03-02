@@ -579,6 +579,11 @@ Parameters:
 
 `(hiddenLayerSizes: number[], hasCycles: boolean, source: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureSource, totalNodes: number, totalConnections: number) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor`
 
+Creates the final immutable descriptor shape used by telemetry and UI code.
+
+Keeping descriptor assembly in one place ensures every resolution strategy
+returns the same payload contract and avoids accidental field drift.
+
 Parameters:
 - `hiddenLayerSizes` - - Hidden-layer widths.
 - `hasCycles` - - Whether cycles were detected.
@@ -592,6 +597,11 @@ Returns: Descriptor object.
 
 `(runtimeConnections: RuntimeConnectionLike[], nodeByIndex: Map<number, RuntimeNodeLike>) => { fromIndex: number; toIndex: number; }[]`
 
+Produces a validated list of enabled directed edges.
+
+Invalid references, disabled connections, and self-loops are removed so the
+remaining edge list can be consumed safely by cycle and depth algorithms.
+
 Parameters:
 - `runtimeConnections` - - Runtime connections.
 - `nodeByIndex` - - Indexed nodes.
@@ -601,6 +611,11 @@ Returns: Valid directed edges.
 ### createNodeIndexMap
 
 `(runtimeNodes: RuntimeNodeLike[]) => Map<number, RuntimeNodeLike>`
+
+Builds a node lookup table keyed by stable index.
+
+Runtime objects may omit `index`; in that case the current array position is
+used as a deterministic fallback to keep downstream graph logic total.
 
 Parameters:
 - `runtimeNodes` - - Runtime nodes.
@@ -612,6 +627,10 @@ Returns: Node map keyed by stable node index.
 `(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor`
 
 Describes network architecture for diagnostics, telemetry, and UI rendering.
+
+This function prefers factual sources over heuristics so downstream tooling
+can rely on the descriptor while still receiving useful output for partially
+specified runtime graphs.
 
 Resolution priority is intentionally explicit:
 1) node `layer` metadata (factual when present)
@@ -627,6 +646,9 @@ Returns: Stable architecture descriptor.
 
 `(runtimeNode: RuntimeNodeLike) => boolean`
 
+Identifies whether a runtime node should be treated as hidden for topology
+reconstruction and fallback inference.
+
 Parameters:
 - `runtimeNode` - - Candidate node.
 
@@ -635,6 +657,12 @@ Returns: True when node type is hidden.
 ### resolveCycleStateAndTopoOrder
 
 `(nodeByIndex: Map<number, RuntimeNodeLike>, directedEdges: { fromIndex: number; toIndex: number; }[]) => { topologicalOrder: number[]; hasCycles: boolean; }`
+
+Resolves cycle presence and, when possible, returns a topological order
+using Kahn's algorithm.
+
+A complete topological ordering implies an acyclic graph. If some nodes
+remain unprocessed, at least one cycle exists.
 
 Parameters:
 - `nodeByIndex` - - Indexed nodes.
@@ -646,6 +674,11 @@ Returns: Topological order and cycle status.
 
 `(nodeByIndex: Map<number, RuntimeNodeLike>, depthByNodeIndex: Map<number, number>) => Map<number, number>`
 
+Aggregates hidden-node counts per derived depth.
+
+This is the final transformation before emitting architecture widths:
+hidden nodes are grouped by depth and counted in insertion-safe maps.
+
 Parameters:
 - `nodeByIndex` - - Indexed nodes.
 - `depthByNodeIndex` - - Derived depths.
@@ -655,6 +688,13 @@ Returns: Hidden-node counts by depth.
 ### resolveHiddenLayerSizesFromGraphTopology
 
 `(runtimeNodes: RuntimeNodeLike[], runtimeConnections: RuntimeConnectionLike[]) => { hiddenLayerSizes: number[]; hasCycles: boolean; }`
+
+Derives hidden-layer widths from graph topology when no explicit layer
+metadata is available.
+
+The method computes a topological depth model for acyclic graphs; cyclic
+graphs are flagged and intentionally return no width inference because depth
+is not well-defined in recurrent loops.
 
 Parameters:
 - `runtimeNodes` - - Runtime nodes.
@@ -666,6 +706,12 @@ Returns: Hidden-layer widths derived from acyclic topology and cycle flag.
 
 `(runtimeNodes: RuntimeNodeLike[]) => number[]`
 
+Resolves hidden-layer widths from explicit `node.layer` metadata.
+
+This is treated as the most trustworthy source because layer assignment is
+usually produced by architecture-aware builders and does not depend on
+topological reconstruction.
+
 Parameters:
 - `runtimeNodes` - - Runtime nodes.
 
@@ -674,6 +720,11 @@ Returns: Hidden-layer widths from explicit node.layer metadata.
 ### resolveNodeDepthByIndex
 
 `(nodeByIndex: Map<number, RuntimeNodeLike>, directedEdges: { fromIndex: number; toIndex: number; }[], topologicalOrder: number[]) => Map<number, number>`
+
+Computes node depth (feed-forward distance from inputs) for an acyclic graph.
+
+Depth assignment is parent-driven: each node depth is one plus the maximum
+resolved parent depth. Nodes with no resolved parents are skipped.
 
 Parameters:
 - `nodeByIndex` - - Indexed nodes.

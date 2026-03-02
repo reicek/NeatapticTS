@@ -1575,6 +1575,10 @@ Design notes:
 
 Describes network architecture for diagnostics, telemetry, and UI rendering.
 
+This function prefers factual sources over heuristics so downstream tooling
+can rely on the descriptor while still receiving useful output for partially
+specified runtime graphs.
+
 Resolution priority is intentionally explicit:
 1) node `layer` metadata (factual when present)
 2) graph-derived feed-forward depth layering (factual for acyclic graphs)

@@ -44,6 +44,10 @@ export function describeArchitecture(
   const runtimeNodes = (network.nodes ?? []) as RuntimeNodeLike[];
   const runtimeConnections = (network.connections ??
     []) as RuntimeConnectionLike[];
+  const graphTopologyResult = resolveHiddenLayerSizesFromGraphTopology(
+    runtimeNodes,
+    runtimeConnections,
+  );
 
   // Step 1: Resolve hidden-layer widths from explicit per-node layer metadata.
   const layerMetadataHiddenSizes =
@@ -51,7 +55,7 @@ export function describeArchitecture(
   if (layerMetadataHiddenSizes.length > 0) {
     return createArchitectureDescriptor(
       layerMetadataHiddenSizes,
-      false,
+      graphTopologyResult.hasCycles,
       'layer-metadata',
       runtimeNodes.length,
       runtimeConnections.length,
@@ -59,10 +63,6 @@ export function describeArchitecture(
   }
 
   // Step 2: Resolve hidden-layer widths from graph topology when acyclic.
-  const graphTopologyResult = resolveHiddenLayerSizesFromGraphTopology(
-    runtimeNodes,
-    runtimeConnections,
-  );
   if (graphTopologyResult.hiddenLayerSizes.length > 0) {
     return createArchitectureDescriptor(
       graphTopologyResult.hiddenLayerSizes,
