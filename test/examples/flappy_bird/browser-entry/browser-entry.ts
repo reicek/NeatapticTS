@@ -3,8 +3,8 @@ import {
   createCanvasHost,
   updateStatsTableValues,
 } from './browser-entry.host.utils';
-import { resolveNetworkArchitectureLabel } from './browser-entry.network-view.utils';
-import { animatePopulationEpisode } from './browser-entry.playback.utils';
+import { resolveNetworkArchitectureLabel } from './network-view/network-view';
+import { animatePopulationEpisode } from './playback/playback';
 import {
   createMinorGcObserver,
   resolveEventsPerMinute,

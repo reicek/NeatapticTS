@@ -1,6 +1,6 @@
 import Network from '../../../../../src/architecture/network';
 import type { VisualNetworkNodeLike } from '../browser-entry.types';
-import { resolveNetworkVisualizationLayersInternal } from '../browser-entry.visualization.utils';
+import { resolveNetworkVisualizationLayers as resolveNetworkVisualizationLayersFromTopology } from './visualization.topology.utils';
 
 /**
  * Public visualization entry for resolving layered network node groups.
@@ -15,9 +15,5 @@ export function resolveNetworkVisualizationLayers(
   inputSize: number,
   outputSize: number,
 ): VisualNetworkNodeLike[][] {
-  return resolveNetworkVisualizationLayersInternal(
-    network,
-    inputSize,
-    outputSize,
-  );
+  return resolveNetworkVisualizationLayersFromTopology(network, inputSize, outputSize);
 }

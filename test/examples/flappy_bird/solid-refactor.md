@@ -113,11 +113,11 @@ Target files:
 - `-DONE- browser-entry/visualization/visualization.ts`
 - `-DONE- browser-entry/visualization/visualization.types.ts`
 - `-DONE- browser-entry/visualization/visualization.constants.ts`
-- `browser-entry/visualization/visualization.errors.ts`
-- `browser-entry/visualization/visualization.colors.utils.ts`
-- `browser-entry/visualization/visualization.legend.utils.ts`
-- `browser-entry/visualization/visualization.topology.utils.ts`
-- `browser-entry/visualization/visualization.draw.service.ts`
+- `-DONE- browser-entry/visualization/visualization.errors.ts`
+- `-DONE- browser-entry/visualization/visualization.colors.utils.ts`
+- `-DONE- browser-entry/visualization/visualization.legend.utils.ts`
+- `-DONE- browser-entry/visualization/visualization.topology.utils.ts`
+- `-DONE- browser-entry/visualization/visualization.draw.service.ts`
 
 Outcome:
 
@@ -130,8 +130,9 @@ Create folder: `browser-entry/network-view/`
 Target files:
 
 - `browser-entry/network-view/network-view.ts`
-- `browser-entry/network-view/network-view.types.ts`
-- `browser-entry/network-view/network-view.constants.ts`
+- `-DONE- browser-entry/network-view/network-view.ts`
+- `-DONE- browser-entry/network-view/network-view.types.ts`
+- `-DONE- browser-entry/network-view/network-view.constants.ts`
 - `browser-entry/network-view/network-view.layout.utils.ts`
 - `browser-entry/network-view/network-view.labels.utils.ts`
 - `browser-entry/network-view/network-view.draw.service.ts`

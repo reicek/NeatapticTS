@@ -1,13 +1,15 @@
 import Network from '../../../../src/architecture/network';
 import { clamp } from './browser-entry.math.utils';
 import {
+  resolveNetworkVisualizationColorScales,
+} from './browser-entry.visualization.utils';
+import {
   drawBiasNodesLayer as drawBiasNodes,
   drawNetworkColorLegend,
   drawWeightedConnectionsLayer as drawWeightedConnections,
-  resolveDefaultNetworkLegendLayout,
-  resolveNetworkVisualizationColorScales,
-  resolveNetworkVisualizationLayers,
-} from './browser-entry.visualization.utils';
+} from './visualization/visualization.draw.service';
+import { resolveDefaultNetworkLegendLayout } from './visualization/visualization.legend.utils';
+import { resolveNetworkVisualizationLayers } from './visualization/visualization';
 import {
   FLAPPY_LIGHT_NEON_RAMP,
   FLAPPY_MEMORY_CORE_FEATURE_COUNT,
@@ -59,22 +61,8 @@ import type {
   VisualNetworkConnectionLike,
   VisualNetworkNodeLike,
 } from './browser-entry.types';
-
-interface InputGroupLabelBand {
-  label: string;
-  startNodeIndex: number;
-  endNodeIndex: number;
-  backgroundColor: string;
-  orientation: 'vertical' | 'horizontal';
-}
-
-const FLAPPY_INPUT_GROUP_LABELS: readonly string[] = [
-  'CURRENT FRAME',
-  'PREVIOUS FRAME',
-  'TWO FRAMES AGO',
-  'ACT',
-  'RATE',
-] as const;
+import type { InputGroupLabelBand } from './network-view/network-view.types';
+import { FLAPPY_INPUT_GROUP_LABELS } from './network-view/network-view.constants';
 
 /**
  * Draws a complete, layer-based visualization of the active network.
@@ -85,7 +73,7 @@ const FLAPPY_INPUT_GROUP_LABELS: readonly string[] = [
  * @param outputSize - Output-layer size.
  * @returns Nothing.
  */
-export function drawNetworkVisualization(
+export function drawNetworkVisualizationInternal(
   context: CanvasRenderingContext2D,
   network: Network | undefined,
   inputSize: number,
@@ -100,7 +88,7 @@ export function drawNetworkVisualization(
   context.fillRect(0, 0, canvasWidthPx, canvasHeightPx);
 
   // Step 2: Resolve architecture label and base graph paddings.
-  const architectureLabel = resolveNetworkArchitectureLabel(
+  const architectureLabel = resolveNetworkArchitectureLabelInternal(
     network,
     inputSize,
     outputSize,
@@ -272,7 +260,7 @@ export function drawNetworkVisualization(
  * @param outputSize - Output-layer size.
  * @returns Recommended height in pixels.
  */
-export function resolveNetworkVisualizationHeightPx(
+export function resolveNetworkVisualizationHeightPxInternal(
   network: Network | undefined,
   inputSize: number,
   outputSize: number,
@@ -344,7 +332,7 @@ export function resolveNetworkVisualizationHeightPx(
  * @param outputSize - Configured output size.
  * @returns Readable architecture label.
  */
-export function resolveNetworkArchitectureLabel(
+export function resolveNetworkArchitectureLabelInternal(
   network: Network | undefined,
   inputSize: number,
   outputSize: number,

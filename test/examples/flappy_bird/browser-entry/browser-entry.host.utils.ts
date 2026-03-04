@@ -8,7 +8,7 @@ import { renderStandaloneTitleBox } from './browser-entry.text-frame.utils';
 import {
   drawNetworkVisualization,
   resolveNetworkVisualizationHeightPx,
-} from './browser-entry.network-view.utils';
+} from './network-view/network-view';
 import {
   FLAPPY_FRAME_MONOSPACE_FONT,
   FLAPPY_HEADER_TITLE_TEXT,
