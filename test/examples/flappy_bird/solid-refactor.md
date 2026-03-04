@@ -87,17 +87,17 @@ Create folder: `browser-entry/playback/`
 
 Target files:
 
-- `browser-entry/playback/playback.ts` (public entry)
+- `-DONE- browser-entry/playback/playback.ts` (public entry)
 - `-DONE- browser-entry/playback/playback.types.ts`
 - `-DONE- browser-entry/playback/playback.constants.ts` (only local playback-specific constants)
 - `-DONE- browser-entry/playback/playback.errors.ts`
 - `-DONE- browser-entry/playback/playback.worker-channel.utils.ts` (pure request payload builders/parsers)
 - `-DONE- browser-entry/playback/playback.render.utils.ts` (pure geometry/color selection)
-- `browser-entry/playback/playback.render.service.ts` (canvas drawing side effects)
-- `browser-entry/playback/playback.starfield.utils.ts` (pure star layout math)
-- `browser-entry/playback/playback.starfield.service.ts` (canvas/offscreen tile creation cache)
-- `browser-entry/playback/playback.trail.utils.ts` (pure trail transformations)
-- `browser-entry/playback/playback.loop.service.ts` (RAF loop + worker step orchestration)
+- `-DONE- browser-entry/playback/playback.render.service.ts` (canvas drawing side effects)
+- `-DONE- browser-entry/playback/playback.starfield.utils.ts` (pure star layout math)
+- `-DONE- browser-entry/playback/playback.starfield.service.ts` (canvas/offscreen tile creation cache)
+- `-DONE- browser-entry/playback/playback.trail.utils.ts` (pure trail transformations)
+- `-DONE- browser-entry/playback/playback.loop.service.ts` (RAF loop + worker step orchestration)
 
 Outcome:
 
@@ -110,9 +110,9 @@ Create folder: `browser-entry/visualization/`
 
 Target files:
 
-- `browser-entry/visualization/visualization.ts`
-- `browser-entry/visualization/visualization.types.ts`
-- `browser-entry/visualization/visualization.constants.ts`
+- `-DONE- browser-entry/visualization/visualization.ts`
+- `-DONE- browser-entry/visualization/visualization.types.ts`
+- `-DONE- browser-entry/visualization/visualization.constants.ts`
 - `browser-entry/visualization/visualization.errors.ts`
 - `browser-entry/visualization/visualization.colors.utils.ts`
 - `browser-entry/visualization/visualization.legend.utils.ts`

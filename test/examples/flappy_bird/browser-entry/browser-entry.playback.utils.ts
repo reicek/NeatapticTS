@@ -29,24 +29,10 @@ import {
   FLAPPY_LEADER_RING_GLOW_BLUR_PX,
   FLAPPY_LEADER_RING_RADIUS_OFFSET_PX,
   FLAPPY_NON_CHAMPION_OPACITY,
-  FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX,
-  FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR,
-  FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX,
-  FLAPPY_PIPE_OUTLINE_GLOW_ALPHA,
-  FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX,
-  FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX,
-  FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX,
   FLAPPY_TRAIL_LINE_WIDTH_PX,
-  FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX,
   FLAPPY_TRAIL_MIN_HORIZONTAL_SEGMENT_PX,
   FLAPPY_TRAIL_MIN_VERTICAL_SEGMENT_PX,
-  FLAPPY_TRAIL_MAX_POINTS,
   FLAPPY_NEON_PALETTE,
-  FLAPPY_STARFIELD_CYAN_FILL_STYLE,
-  FLAPPY_STARFIELD_FAR_SCROLL_RATIO,
-  FLAPPY_STARFIELD_MID_SCROLL_RATIO,
-  FLAPPY_STARFIELD_NEAR_SCROLL_RATIO,
-  FLAPPY_STARFIELD_TILE_WIDTH_PX,
 } from '../constants/constants';
 import type {
   EvolutionPlaybackStepSnapshot,
@@ -62,9 +48,17 @@ import {
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_TRAIL_OPACITY_FACTOR,
 } from '../constants/constants';
-import { cachedStarfieldTilesByHeight } from './playback/playback.constants';
-import { PlaybackAnimationFrameUnavailableError } from './playback/playback.errors';
-import type { PlaybackEdgeBounds, StarTile } from './playback/playback.types';
+import { nextAnimationFrame } from './playback/playback.loop.service';
+import {
+  resolveStarfieldTiles,
+} from './playback/playback.starfield.service';
+import { positiveModulo } from './playback/playback.starfield.utils';
+import {
+  pushTrailPoint,
+  resolveEdgeOpacityFactor,
+  resolveTrailLifetimeOpacityFactor,
+} from './playback/playback.trail.utils';
+import type { PlaybackEdgeBounds } from './playback/playback.types';
 import {
   resolvePlaybackCompletionSummary,
   resolvePlaybackFrameStats,
@@ -74,6 +68,7 @@ import {
   resolveBirdRenderStyle,
   resolveChampionBirdIndex,
 } from './playback/playback.render.utils';
+import { drawPipeNeonOutline } from './playback/playback.render.service';
 
 /**
  * Renders all birds from the current generation in one shared world.
@@ -84,7 +79,7 @@ import {
  * @param onFrameStats - Frame telemetry callback.
  * @returns Aggregate playback summary.
  */
-export async function animatePopulationEpisode(
+export async function animatePopulationEpisodeInternal(
   canvas: HTMLCanvasElement,
   context: CanvasRenderingContext2D,
   evolutionWorker: Worker,
@@ -465,69 +460,6 @@ function drawParallaxBackground(
   context.globalCompositeOperation = 'source-over';
 }
 
-function resolveStarfieldTiles(
-  visibleWorldHeightPx: number,
-): readonly StarTile[] {
-  const tileHeightPx = Math.max(1, Math.round(visibleWorldHeightPx));
-  const cachedTilesForHeight = cachedStarfieldTilesByHeight.get(tileHeightPx);
-  if (cachedTilesForHeight) {
-    return cachedTilesForHeight;
-  }
-
-  const farTile: StarTile = {
-    image: createStarTileCanvas({
-      seed: 1_337,
-      tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx,
-      starCount: 35,
-      minSizePx: 1,
-      maxSizePx: 2,
-      minAlpha: 0.08,
-      maxAlpha: 0.22,
-      blurPx: 4,
-    }),
-    tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx,
-    scrollRatio: FLAPPY_STARFIELD_FAR_SCROLL_RATIO,
-  };
-  const midTile: StarTile = {
-    image: createStarTileCanvas({
-      seed: 2_777,
-      tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx,
-      starCount: 28,
-      minSizePx: 1,
-      maxSizePx: 3,
-      minAlpha: 0.1,
-      maxAlpha: 0.28,
-      blurPx: 6,
-    }),
-    tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx,
-    scrollRatio: FLAPPY_STARFIELD_MID_SCROLL_RATIO,
-  };
-  const nearTile: StarTile = {
-    image: createStarTileCanvas({
-      seed: 4_242,
-      tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx,
-      starCount: 23,
-      minSizePx: 2,
-      maxSizePx: 4,
-      minAlpha: 0.12,
-      maxAlpha: 0.34,
-      blurPx: 8,
-    }),
-    tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx,
-    scrollRatio: FLAPPY_STARFIELD_NEAR_SCROLL_RATIO,
-  };
-
-  const resolvedTiles = [farTile, midTile, nearTile] as const;
-  cachedStarfieldTilesByHeight.set(tileHeightPx, resolvedTiles);
-  return resolvedTiles;
-}
-
 function drawTiledImageRow(
   context: CanvasRenderingContext2D,
   layer: {
@@ -544,201 +476,6 @@ function drawTiledImageRow(
     const tileLeftPx = tileIndex * layer.tileWidthPx - normalizedOffsetPx;
     context.drawImage(layer.tile, tileLeftPx, 0);
   }
-}
-
-function createStarTileCanvas(options: {
-  seed: number;
-  tileWidthPx: number;
-  tileHeightPx: number;
-  starCount: number;
-  minSizePx: number;
-  maxSizePx: number;
-  minAlpha: number;
-  maxAlpha: number;
-  blurPx: number;
-}): CanvasImageSource {
-  const canvas = createCompatibleCanvas(
-    options.tileWidthPx,
-    options.tileHeightPx,
-  );
-  const tileContext = canvas.getContext('2d');
-  if (!tileContext) {
-    return canvas;
-  }
-
-  const seededRandom = createSeededRandom(options.seed);
-
-  tileContext.clearRect(0, 0, canvas.width, canvas.height);
-  tileContext.globalCompositeOperation = 'source-over';
-  tileContext.shadowColor = FLAPPY_STARFIELD_CYAN_FILL_STYLE;
-  tileContext.shadowBlur = options.blurPx;
-
-  for (let starIndex = 0; starIndex < options.starCount; starIndex += 1) {
-    const xPx = Math.floor(seededRandom() * options.tileWidthPx);
-    const yPx = Math.floor(seededRandom() * options.tileHeightPx);
-    const sizePx =
-      options.minSizePx +
-      Math.floor(seededRandom() * (options.maxSizePx - options.minSizePx + 1));
-    const alpha =
-      options.minAlpha + seededRandom() * (options.maxAlpha - options.minAlpha);
-
-    tileContext.globalAlpha = alpha;
-    tileContext.fillStyle = FLAPPY_STARFIELD_CYAN_FILL_STYLE;
-    tileContext.fillRect(xPx, yPx, sizePx, sizePx);
-  }
-
-  tileContext.shadowBlur = 0;
-  tileContext.shadowColor = 'transparent';
-  tileContext.globalAlpha = 1;
-  return canvas;
-}
-
-function createCompatibleCanvas(
-  widthPx: number,
-  heightPx: number,
-): HTMLCanvasElement | OffscreenCanvas {
-  const width = Math.max(1, Math.round(widthPx));
-  const height = Math.max(1, Math.round(heightPx));
-
-  if (typeof OffscreenCanvas !== 'undefined') {
-    return new OffscreenCanvas(width, height);
-  }
-
-  if (typeof document !== 'undefined') {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    return canvas;
-  }
-
-  // Fallback: non-browser environments won't render, but should not crash.
-  const canvas = { width, height } as unknown as HTMLCanvasElement;
-  return canvas;
-}
-
-function createSeededRandom(seed: number): () => number {
-  let randomState = seed >>> 0;
-  return () => {
-    // xorshift32
-    randomState ^= randomState << 13;
-    randomState >>>= 0;
-    randomState ^= randomState >> 17;
-    randomState >>>= 0;
-    randomState ^= randomState << 5;
-    randomState >>>= 0;
-    return randomState / 0x1_0000_0000;
-  };
-}
-
-function positiveModulo(value: number, modulo: number): number {
-  const remainder = value % modulo;
-  return remainder < 0 ? remainder + modulo : remainder;
-}
-
-/**
- * Draws a simplified neon outline around a pipe rectangle.
- *
- * @param context - Canvas 2D context.
- * @param rectangleLeftPx - Rectangle left position.
- * @param rectangleTopPx - Rectangle top position.
- * @param rectangleWidthPx - Rectangle width.
- * @param rectangleHeightPx - Rectangle height.
- * @returns Nothing.
- */
-function drawPipeNeonOutline(
-  context: CanvasRenderingContext2D,
-  rectangleLeftPx: number,
-  rectangleTopPx: number,
-  rectangleWidthPx: number,
-  rectangleHeightPx: number,
-): void {
-  context.save();
-  // Step 1: Guard degenerate rectangles.
-  if (rectangleWidthPx <= 0 || rectangleHeightPx <= 0) {
-    context.restore();
-    return;
-  }
-
-  const alignedLeftPx = Math.round(rectangleLeftPx);
-  const alignedTopPx = Math.round(rectangleTopPx);
-  const alignedWidthPx = Math.max(1, Math.round(rectangleWidthPx));
-  const alignedHeightPx = Math.max(1, Math.round(rectangleHeightPx));
-
-  // Step 2: Compute outline geometry.
-  // We want a small side gap and a larger "entrance" gap (top for bottom pipe,
-  // bottom for top pipe) to suggest a pipe rim.
-  const outlineStrokeWidthPx = FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX;
-  const outlineStrokeHalfPx = outlineStrokeWidthPx / 2;
-  const sideExpandPx = Math.round(
-    FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX + outlineStrokeHalfPx,
-  );
-  const entranceExpandPx = Math.round(
-    FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX + outlineStrokeHalfPx,
-  );
-
-  const isTopPipeSegment = alignedTopPx === 0;
-  const outlineTopExpandPx = isTopPipeSegment ? sideExpandPx : entranceExpandPx;
-  const outlineBottomExpandPx = isTopPipeSegment
-    ? entranceExpandPx
-    : sideExpandPx;
-
-  const outlineLeftPx = alignedLeftPx - sideExpandPx;
-  const outlineTopPx = alignedTopPx - outlineTopExpandPx;
-  const outlineWidthPx = alignedWidthPx + sideExpandPx * 2;
-  const outlineHeightPx =
-    alignedHeightPx + outlineTopExpandPx + outlineBottomExpandPx;
-
-  // Step 3: Define pixel-aligned stroke helper to avoid blurry edges.
-  const strokeAlignedRect = (
-    leftPx: number,
-    topPx: number,
-    widthPx: number,
-    heightPx: number,
-    lineWidthPx: number,
-  ): void => {
-    const oddLineAlignmentOffsetPx = lineWidthPx % 2 === 1 ? 0.5 : 0;
-    context.lineWidth = lineWidthPx;
-    context.strokeRect(
-      Math.round(leftPx) + oddLineAlignmentOffsetPx,
-      Math.round(topPx) + oddLineAlignmentOffsetPx,
-      Math.max(1, Math.round(widthPx)),
-      Math.max(1, Math.round(heightPx)),
-    );
-  };
-
-  // Step 4: Draw neon-green outline with cyan neon glow.
-  const previousCompositeOperation = context.globalCompositeOperation;
-  context.globalCompositeOperation = 'lighter';
-  context.strokeStyle = FLAPPY_NEON_PALETTE.pipeFill;
-
-  // Step 4.1: Soft glow pass (thicker stroke + cyan shadow).
-  context.globalAlpha = FLAPPY_PIPE_OUTLINE_GLOW_ALPHA;
-  context.shadowColor = FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR;
-  context.shadowBlur = FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX;
-  context.shadowOffsetX = 0;
-  context.shadowOffsetY = 0;
-  strokeAlignedRect(
-    outlineLeftPx,
-    outlineTopPx,
-    outlineWidthPx,
-    outlineHeightPx,
-    FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX,
-  );
-
-  // Step 4.2: Crisp outline pass (no shadow).
-  context.globalAlpha = 1;
-  context.shadowBlur = 0;
-  context.shadowColor = 'transparent';
-  strokeAlignedRect(
-    outlineLeftPx,
-    outlineTopPx,
-    outlineWidthPx,
-    outlineHeightPx,
-    outlineStrokeWidthPx,
-  );
-
-  context.globalCompositeOperation = previousCompositeOperation;
-  context.restore();
 }
 
 /**
@@ -765,26 +502,6 @@ function updateTrailState(
 
     pushTrailPoint(birdTrail, renderState.frameIndex, bird.yPx);
   });
-}
-
-/**
- * Appends one trail point while enforcing max history length.
- *
- * @param trailPoints - Mutable trail collection.
- * @param frameIndex - Source frame index.
- * @param yPosition - Bird y position.
- * @returns Nothing.
- */
-function pushTrailPoint(
-  trailPoints: TrailPoint[],
-  frameIndex: number,
-  yPosition: number,
-): void {
-  trailPoints.push({ frameIndex, yPx: yPosition });
-  const maxTrailPoints = FLAPPY_TRAIL_MAX_POINTS;
-  if (trailPoints.length > maxTrailPoints) {
-    trailPoints.splice(0, trailPoints.length - maxTrailPoints);
-  }
 }
 
 /**
@@ -988,66 +705,6 @@ function drawTrailSegmentWithEdgeFade(
 }
 
 /**
- * Converts distance-to-edge into a normalized opacity factor.
- *
- * Returns 0 exactly on or beyond an edge and rises to 1 once distance exceeds
- * the configured fade band.
- *
- * @param pointXPx - Point x position.
- * @param pointYPx - Point y position.
- * @param edgeBounds - Visible world bounds used for edge distance checks.
- * @returns Opacity multiplier in [0, 1].
- */
-function resolveEdgeOpacityFactor(
-  pointXPx: number,
-  pointYPx: number,
-  edgeBounds: PlaybackEdgeBounds,
-): number {
-  const distanceToLeftEdgePx = pointXPx - edgeBounds.leftXPx;
-  const distanceToRightEdgePx = edgeBounds.rightXPx - pointXPx;
-  const distanceToTopEdgePx = pointYPx - edgeBounds.topYPx;
-  const distanceToBottomEdgePx = edgeBounds.bottomYPx - pointYPx;
-
-  const nearestEdgeDistancePx = Math.min(
-    distanceToLeftEdgePx,
-    distanceToRightEdgePx,
-    distanceToTopEdgePx,
-    distanceToBottomEdgePx,
-  );
-  const fadeProgress =
-    nearestEdgeDistancePx / FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX;
-  return clamp01(fadeProgress);
-}
-
-/**
- * Converts trail age into a normalized opacity factor.
- *
- * Oldest retained history approaches 0 opacity; newest approaches 1.
- *
- * @param frameOffset - Frames between this point and newest trail point.
- * @param maxTrailFrameOffset - Oldest age offset currently retained by trail.
- * @returns Opacity multiplier in [0, 1].
- */
-function resolveTrailLifetimeOpacityFactor(
-  frameOffset: number,
-  maxTrailFrameOffset: number,
-): number {
-  const normalizedLifetimeProgress =
-    1 - frameOffset / Math.max(1, maxTrailFrameOffset);
-  return clamp01(normalizedLifetimeProgress);
-}
-
-/**
- * Clamps a number to the inclusive [0, 1] range.
- *
- * @param value - Candidate value.
- * @returns Clamped value.
- */
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
-
-/**
  * Resolves the maximum survived-frame count in the current render state.
  *
  * @param renderState - Current render state.
@@ -1061,17 +718,4 @@ function resolveLeaderFramesSurvived(
       Math.max(maximumFramesSurvived, bird.framesSurvived),
     0,
   );
-}
-
-/**
- * Yields until the next browser animation frame.
- *
- * @returns Promise resolved on next animation frame.
- */
-function nextAnimationFrame(): Promise<void> {
-  if (typeof requestAnimationFrame !== 'function') {
-    throw new PlaybackAnimationFrameUnavailableError();
-  }
-
-  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }

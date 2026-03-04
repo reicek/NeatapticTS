@@ -50,18 +50,16 @@ import type {
   VisualNetworkConnectionLike,
   VisualNetworkNodeLike,
 } from './browser-entry.types';
-
-interface DynamicColorScale {
-  minimumValue: number;
-  maximumValue: number;
-  tiers: ColorTier[];
-  aboveTierColor: string;
-}
-
-interface NetworkVisualizationColorScales {
-  connectionScale: DynamicColorScale;
-  biasScale: DynamicColorScale;
-}
+import type {
+  DynamicColorScale,
+  NetworkVisualizationColorScales,
+} from './visualization/visualization.types';
+import {
+  FLAPPY_NETWORK_DOTTED_CONNECTION_ALIGNMENT_EPSILON,
+  FLAPPY_NETWORK_DOTTED_CONNECTION_SQUARE_SIDE_PX,
+  FLAPPY_NETWORK_DOTTED_CONNECTION_STEP_COMPACT_RATIO,
+  FLAPPY_NETWORK_DOTTED_CONNECTION_WIDTH_SPACING_RATIO,
+} from './visualization/visualization.constants';
 
 /**
  * Builds logarithmic diverging color tiers with a center band and edge extension.
@@ -337,10 +335,11 @@ function drawSquareDottedConnection(
     return;
   }
 
-  const squareSidePx = 2;
+  const squareSidePx = FLAPPY_NETWORK_DOTTED_CONNECTION_SQUARE_SIDE_PX;
   const stepDistancePx = Math.max(
-    (squareSidePx + 2) * 0.8,
-    (input.lineWidthPx * 2.6) * 0.8,
+    (squareSidePx + 2) * FLAPPY_NETWORK_DOTTED_CONNECTION_STEP_COMPACT_RATIO,
+    (input.lineWidthPx * FLAPPY_NETWORK_DOTTED_CONNECTION_WIDTH_SPACING_RATIO) *
+      FLAPPY_NETWORK_DOTTED_CONNECTION_STEP_COMPACT_RATIO,
   );
   const directionXPx = deltaXPx / segmentLengthPx;
   const directionYPx = deltaYPx / segmentLengthPx;
@@ -359,11 +358,21 @@ function drawSquareDottedConnection(
     const centerYPx = input.fromYPx + directionYPx * traveledDistancePx;
 
     const axisAlignedCenterXPx =
-      Math.round(centerXPx + directionXPx * 0.01) -
-      Math.round(directionXPx * 0.01);
+      Math.round(
+        centerXPx +
+          directionXPx * FLAPPY_NETWORK_DOTTED_CONNECTION_ALIGNMENT_EPSILON,
+      ) -
+      Math.round(
+        directionXPx * FLAPPY_NETWORK_DOTTED_CONNECTION_ALIGNMENT_EPSILON,
+      );
     const axisAlignedCenterYPx =
-      Math.round(centerYPx + directionYPx * 0.01) -
-      Math.round(directionYPx * 0.01);
+      Math.round(
+        centerYPx +
+          directionYPx * FLAPPY_NETWORK_DOTTED_CONNECTION_ALIGNMENT_EPSILON,
+      ) -
+      Math.round(
+        directionYPx * FLAPPY_NETWORK_DOTTED_CONNECTION_ALIGNMENT_EPSILON,
+      );
 
     context.fillRect(
       axisAlignedCenterXPx - halfSquareSidePx,
@@ -878,7 +887,7 @@ export function formatNodeBiasLabel(nodeBias: number): string {
  * @param outputSize - Output count fallback.
  * @returns Layered nodes for rendering.
  */
-export function resolveNetworkVisualizationLayers(
+export function resolveNetworkVisualizationLayersInternal(
   network: Network | undefined,
   inputSize: number,
   outputSize: number,
