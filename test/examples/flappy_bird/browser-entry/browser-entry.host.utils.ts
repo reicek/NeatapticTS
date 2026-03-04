@@ -22,6 +22,7 @@ import {
   FLAPPY_UI_CONTENT_COLUMN_TOP_PADDING_PX,
   FLAPPY_UI_DOUBLE_PANEL_BORDER,
   FLAPPY_UI_NETWORK_CANVAS_BACKGROUND,
+  FLAPPY_UI_NETWORK_HOST_FIXED_HEIGHT_PX,
   FLAPPY_UI_NETWORK_HOST_INSET_PX,
   FLAPPY_UI_NETWORK_HOST_INITIAL_HEIGHT_PX,
   FLAPPY_UI_NETWORK_HOST_BACKGROUND,
@@ -84,7 +85,7 @@ export function createCanvasHost(containerElement: HTMLElement): {
   outerFrame.style.boxShadow = unifiedInsetShadow;
   outerFrame.style.position = 'relative';
 
-  // Step 2: Create top-level layout containers (content column + header/canvas/stats).
+  // Step 2: Create top-level layout containers (content column + responsive main split).
   const contentColumn = document.createElement('div');
   contentColumn.style.width = '100%';
   contentColumn.style.height = '100%';
@@ -94,6 +95,15 @@ export function createCanvasHost(containerElement: HTMLElement): {
   contentColumn.style.alignItems = 'stretch';
   contentColumn.style.overflow = 'hidden';
   contentColumn.style.paddingTop = `${FLAPPY_UI_CONTENT_COLUMN_TOP_PADDING_PX}px`;
+
+  const mainSplitContainer = document.createElement('div');
+  mainSplitContainer.style.width = '100%';
+  mainSplitContainer.style.flex = '1 1 0';
+  mainSplitContainer.style.minHeight = '0';
+  mainSplitContainer.style.display = 'flex';
+  mainSplitContainer.style.flexDirection = 'column';
+  mainSplitContainer.style.alignItems = 'stretch';
+  mainSplitContainer.style.gap = `${FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX}px`;
 
   // Step 3: Create header canvas used by the text-frame title renderer.
   const headerCanvas = document.createElement('canvas');
@@ -120,6 +130,9 @@ export function createCanvasHost(containerElement: HTMLElement): {
   canvas.style.display = 'block';
   canvas.style.maxWidth = '100%';
   canvas.style.boxSizing = 'border-box';
+  canvas.style.flex = '0 0 auto';
+  canvas.style.alignSelf = 'flex-start';
+  canvas.style.imageRendering = 'pixelated';
   canvas.style.background = FLAPPY_NEON_PALETTE.background;
   canvas.style.border = unifiedBorder;
   canvas.style.boxShadow = FLAPPY_UI_CANVAS_INSET_SHADOW;
@@ -151,6 +164,7 @@ export function createCanvasHost(containerElement: HTMLElement): {
 
   const statsTableHost = document.createElement('div');
   statsTableHost.style.flex = '1 1 0';
+  statsTableHost.style.minHeight = '120px';
   statsTableHost.style.minWidth = '0';
   statsTableHost.style.overflow = 'hidden';
   statsTableHost.style.boxSizing = 'border-box';
@@ -309,10 +323,11 @@ export function createCanvasHost(containerElement: HTMLElement): {
       // Step 1: Resolve recommended panel height from architecture complexity.
       const recommendedNetworkCanvasHeightPx =
         resolveNetworkVisualizationHeightPx(network, inputSize, outputSize);
+      const fixedNetworkPanelHeightPx = FLAPPY_UI_NETWORK_HOST_FIXED_HEIGHT_PX;
       networkCanvasHost.dataset.preferredHeightPx = String(
-        recommendedNetworkCanvasHeightPx,
+        fixedNetworkPanelHeightPx,
       );
-      networkCanvasHost.style.height = `${recommendedNetworkCanvasHeightPx}px`;
+      networkCanvasHost.style.height = `${fixedNetworkPanelHeightPx}px`;
       // Step 2: Resize canvas backing store and render current payload.
       resizeNetworkCanvasToHost();
 
@@ -328,8 +343,9 @@ export function createCanvasHost(containerElement: HTMLElement): {
   statsContainer.appendChild(statsSplitContainer);
 
   contentColumn.appendChild(headerCanvas);
-  contentColumn.appendChild(canvas);
-  contentColumn.appendChild(statsContainer);
+  mainSplitContainer.appendChild(canvas);
+  mainSplitContainer.appendChild(statsContainer);
+  contentColumn.appendChild(mainSplitContainer);
   outerFrame.appendChild(contentColumn);
   containerElement.appendChild(outerFrame);
 
@@ -365,6 +381,7 @@ export function createCanvasHost(containerElement: HTMLElement): {
   installResponsiveViewportSizing(
     canvas,
     contentColumn,
+    mainSplitContainer,
     statsContainer,
     statsSplitContainer,
     statsTableHost,
@@ -434,6 +451,7 @@ export function updateStatsTableValues(
 function installResponsiveViewportSizing(
   canvas: HTMLCanvasElement,
   containerElement: HTMLElement,
+  mainSplitContainer: HTMLElement,
   statsContainer: HTMLElement,
   statsSplitContainer: HTMLElement,
   statsTableHost: HTMLElement,
@@ -499,13 +517,24 @@ function installResponsiveViewportSizing(
       containerElement.clientHeight - headerHeightPx,
     );
     const viewportWidthPx = Math.max(1, containerElement.clientWidth);
+    const viewportHeightPx = Math.max(1, containerElement.clientHeight);
     const useMinimalMobileLayout =
       viewportWidthPx < FLAPPY_VIEWPORT_MOBILE_MINIMAL_UI_BREAKPOINT_PX;
+    const useLandscapeSplitLayout = viewportWidthPx > viewportHeightPx;
     const useNetworkOnlyPanel =
+      !useLandscapeSplitLayout &&
       viewportWidthPx < FLAPPY_VIEWPORT_NETWORK_ONLY_BREAKPOINT_PX;
 
     // Step 2.1: For mobile, hide stats/network panes and dedicate height to gameplay canvas.
     if (useMinimalMobileLayout) {
+      mainSplitContainer.style.flexDirection = 'column';
+      mainSplitContainer.style.gap = `${FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX}px`;
+      statsSplitContainer.style.flexDirection = 'row';
+      statsSplitContainer.style.alignItems = 'flex-start';
+      statsSplitContainer.style.height = 'auto';
+      statsTableHost.style.order = '0';
+      networkCanvasHost.style.order = '1';
+
       statsContainer.style.display = 'none';
       statsContainer.style.height = '0px';
       statsContainer.style.maxHeight = '0px';
@@ -534,10 +563,32 @@ function installResponsiveViewportSizing(
     // Step 2.2: Restore stats/network panes for non-mobile widths.
     statsContainer.style.display = 'block';
 
-    // Step 2.3: Toggle stats/network split layout for narrow viewports.
-    statsTableHost.style.display = useNetworkOnlyPanel ? 'none' : 'block';
+    // Step 2.3: Toggle top-level split orientation and inner panel ordering.
+    mainSplitContainer.style.flexDirection = useLandscapeSplitLayout
+      ? 'row'
+      : 'column';
+    mainSplitContainer.style.gap = `${FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX}px`;
+
+    statsSplitContainer.style.flexDirection = useLandscapeSplitLayout
+      ? 'column'
+      : 'row';
+    statsSplitContainer.style.alignItems = useLandscapeSplitLayout
+      ? 'stretch'
+      : 'flex-start';
+    statsSplitContainer.style.height = useLandscapeSplitLayout ? '100%' : 'auto';
     statsSplitContainer.style.gap = useNetworkOnlyPanel ? '0' : '8px';
-    networkCanvasHost.style.flex = useNetworkOnlyPanel ? '1 1 100%' : '1 1 0';
+
+    if (useLandscapeSplitLayout) {
+      networkCanvasHost.style.order = '0';
+      statsTableHost.style.order = '1';
+    } else {
+      statsTableHost.style.order = '0';
+      networkCanvasHost.style.order = '1';
+    }
+
+    statsTableHost.style.display = useNetworkOnlyPanel ? 'none' : 'block';
+    statsTableHost.style.flex = useNetworkOnlyPanel ? '0 0 auto' : '1 1 0';
+    networkCanvasHost.style.flex = useNetworkOnlyPanel ? '1 1 100%' : '0 0 auto';
     networkCanvasHost.style.width = useNetworkOnlyPanel ? '100%' : 'auto';
     networkCanvasHost.style.maxWidth = '100%';
 
@@ -553,26 +604,43 @@ function installResponsiveViewportSizing(
         hardMinimumSimulationHeightPx -
         FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX,
     );
-    const resolvedStatsPanelHeightPx = Math.floor(
+    const resolvedStatsPanelHeightPx = useLandscapeSplitLayout
+      ? totalCanvasBudgetPx
+      : Math.floor(
+          clamp(
+            halfSplitTargetPx,
+            FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
+            maximumStatsHeightPx,
+          ),
+        );
+    const minimumStatsPanelHeightPx =
+      nonNetworkStatsHeightPx + FLAPPY_UI_NETWORK_HOST_FIXED_HEIGHT_PX;
+    const adjustedStatsPanelHeightPx = useLandscapeSplitLayout
+      ? resolvedStatsPanelHeightPx
+      : Math.max(resolvedStatsPanelHeightPx, minimumStatsPanelHeightPx);
+
+    const halfSplitTargetWidthPx = Math.max(
+      FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
+      Math.floor(
+        (viewportWidthPx - FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX) * 0.5,
+      ),
+    );
+    const maximumStatsWidthPx = Math.max(
+      FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
+      viewportWidthPx -
+        FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX -
+        FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX,
+    );
+    const resolvedStatsPanelWidthPx = Math.floor(
       clamp(
-        halfSplitTargetPx,
+        halfSplitTargetWidthPx,
         FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
-        maximumStatsHeightPx,
+        maximumStatsWidthPx,
       ),
     );
 
     // Step 3: Clamp network pane height and trigger redraw when height changed.
-    const networkHeightBudgetPx = Math.max(
-      FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
-      Math.floor(resolvedStatsPanelHeightPx - nonNetworkStatsHeightPx),
-    );
-    const resolvedNetworkHeightPx = Math.floor(
-      clamp(
-        preferredNetworkHeightPx,
-        FLAPPY_VIEWPORT_MIN_NETWORK_HEIGHT_BUDGET_PX,
-        networkHeightBudgetPx,
-      ),
-    );
+    const resolvedNetworkHeightPx = FLAPPY_UI_NETWORK_HOST_FIXED_HEIGHT_PX;
     const previousNetworkHostHeightPx = networkCanvasHost.offsetHeight;
     if (networkCanvasHost.offsetHeight !== resolvedNetworkHeightPx) {
       networkCanvasHost.style.height = `${resolvedNetworkHeightPx}px`;
@@ -581,19 +649,37 @@ function installResponsiveViewportSizing(
       }
     }
 
-    statsContainer.style.height = `${resolvedStatsPanelHeightPx}px`;
-    statsContainer.style.maxHeight = `${resolvedStatsPanelHeightPx}px`;
-    statsContainer.style.overflowY = 'hidden';
+    statsContainer.style.height = `${adjustedStatsPanelHeightPx}px`;
+    statsContainer.style.maxHeight = `${adjustedStatsPanelHeightPx}px`;
+    statsContainer.style.width = useLandscapeSplitLayout
+      ? `${resolvedStatsPanelWidthPx}px`
+      : '100%';
+    statsContainer.style.maxWidth = useLandscapeSplitLayout
+      ? `${resolvedStatsPanelWidthPx}px`
+      : '100%';
+    statsContainer.style.overflowY = useLandscapeSplitLayout ? 'auto' : 'hidden';
 
     // Step 4: Resolve simulation canvas size from remaining vertical budget.
-    const availableWidthPx = Math.max(1, containerElement.clientWidth);
-    const availableHeightPx = Math.max(
-      1,
-      totalCanvasBudgetPx -
-        resolvedStatsPanelHeightPx -
-        FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX -
-        FLAPPY_VIEWPORT_SIMULATION_BOTTOM_MARGIN_PX,
-    );
+    const availableWidthPx = useLandscapeSplitLayout
+      ? Math.max(
+          1,
+          containerElement.clientWidth -
+            resolvedStatsPanelWidthPx -
+            FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX,
+        )
+      : Math.max(1, containerElement.clientWidth);
+    const availableHeightPx = useLandscapeSplitLayout
+      ? Math.max(
+          1,
+          totalCanvasBudgetPx - FLAPPY_VIEWPORT_SIMULATION_BOTTOM_MARGIN_PX,
+        )
+      : Math.max(
+          1,
+          totalCanvasBudgetPx -
+            adjustedStatsPanelHeightPx -
+            FLAPPY_VIEWPORT_VERTICAL_LAYOUT_GUTTER_PX -
+            FLAPPY_VIEWPORT_SIMULATION_BOTTOM_MARGIN_PX,
+        );
 
     // Step 5: Apply simulation canvas backing size.
     const nextWidthPx = Math.max(1, Math.floor(availableWidthPx));
@@ -604,6 +690,10 @@ function installResponsiveViewportSizing(
       canvas.height = nextHeightPx;
       canvas.style.width = `${nextWidthPx}px`;
       canvas.style.height = `${nextHeightPx}px`;
+      canvas.style.minWidth = `${nextWidthPx}px`;
+      canvas.style.maxWidth = `${nextWidthPx}px`;
+      canvas.style.minHeight = `${nextHeightPx}px`;
+      canvas.style.maxHeight = `${nextHeightPx}px`;
     }
 
     // Step 6: Apply network canvas backing size and redraw when changed.
@@ -631,7 +721,7 @@ function installResponsiveViewportSizing(
       onNetworkResize();
     }
 
-    statsContainer.style.overflowY = 'hidden';
+    statsContainer.style.overflowY = useLandscapeSplitLayout ? 'auto' : 'hidden';
   };
 
   // Step 1: Initial sizing pass.

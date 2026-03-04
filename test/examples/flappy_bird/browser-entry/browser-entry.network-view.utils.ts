@@ -5,6 +5,7 @@ import {
   drawNetworkColorLegend,
   drawWeightedConnectionsLayer as drawWeightedConnections,
   resolveDefaultNetworkLegendLayout,
+  resolveNetworkVisualizationColorScales,
   resolveNetworkVisualizationLayers,
 } from './browser-entry.visualization.utils';
 import {
@@ -44,7 +45,6 @@ import {
   FLAPPY_NETWORK_NODE_HEIGHT_LAYER_WIDTH_DIVISOR,
   FLAPPY_NETWORK_NODE_HEIGHT_LAYER_WIDTH_MIN_DENOMINATOR,
   FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX,
-  FLAPPY_NETWORK_NODE_TOP_MARGIN_PX,
   FLAPPY_NETWORK_NODE_WIDTH_LAYER_WIDTH_DIVISOR,
   FLAPPY_NETWORK_NODE_WIDTH_LAYER_WIDTH_MIN_DENOMINATOR,
   FLAPPY_NETWORK_NODE_WIDTH_TO_HEIGHT_RATIO,
@@ -125,12 +125,13 @@ export function drawNetworkVisualization(
   const minimumNodeHeightPx =
     minimumLabelHeightPx + FLAPPY_NETWORK_MIN_NODE_HEIGHT_LABEL_EXTRA_PX;
   const minimumNodeWidthPx = FLAPPY_NETWORK_MIN_NODE_WIDTH_PX;
+  const colorScales = resolveNetworkVisualizationColorScales(network);
 
   // Step 3: Resolve legend layout and reserve horizontal graph space around it.
   let adjustedGraphLeftPaddingPx = graphLeftPaddingPx;
   let adjustedGraphRightPaddingPx = graphRightPaddingPx;
   if (!hideNetworkOverlays) {
-    const legendLayout = resolveDefaultNetworkLegendLayout(context);
+    const legendLayout = resolveDefaultNetworkLegendLayout(context, network);
     const legendMidpointPx =
       legendLayout.legendLeftPx + legendLayout.legendWidthPx * 0.5;
     if (legendMidpointPx >= canvasWidthPx * 0.5) {
@@ -225,8 +226,17 @@ export function drawNetworkVisualization(
     nodeLayoutPaddingPx,
     nodeDimensions,
   );
+  const centeredPositionedNodes = centerPositionedNodesInDrawableArea(
+    positionedNodes,
+    adjustedGraphLeftPaddingPx,
+    graphTopPaddingPx,
+    drawableWidthPx,
+    drawableHeightPx,
+    nodeLayoutPaddingPx,
+    nodeDimensions,
+  );
   const positionByNodeIndex = new Map<number, PositionedNetworkNode>(
-    positionedNodes.map((positionedNode) => [
+    centeredPositionedNodes.map((positionedNode) => [
       positionedNode.node.index,
       positionedNode,
     ]),
@@ -236,12 +246,22 @@ export function drawNetworkVisualization(
     ((network?.connections ?? []) as VisualNetworkConnectionLike[]) ?? [];
 
   // Step 7: Draw connections, nodes, and legend (with architecture text above it).
-  drawWeightedConnections(context, runtimeConnections, positionByNodeIndex);
+  drawWeightedConnections(
+    context,
+    runtimeConnections,
+    positionByNodeIndex,
+    colorScales.connectionScale,
+  );
   if (!hideNetworkOverlays) {
-    drawInputGroupLabelBands(context, positionedNodes, nodeDimensions);
+    drawInputGroupLabelBands(context, centeredPositionedNodes, nodeDimensions);
   }
-  drawBiasNodes(context, positionedNodes, nodeDimensions);
-  drawNetworkColorLegend(context, architectureLabel);
+  drawBiasNodes(
+    context,
+    centeredPositionedNodes,
+    nodeDimensions,
+    colorScales.biasScale,
+  );
+  drawNetworkColorLegend(context, architectureLabel, colorScales);
 }
 
 /**
@@ -589,7 +609,6 @@ function positionNetworkNodes(
 ): PositionedNetworkNode[] {
   // Step 1: Initialize positioning accumulators and reusable geometry values.
   const positionedNodes: PositionedNetworkNode[] = [];
-  const preferredFirstNodeTopGapPx = FLAPPY_NETWORK_NODE_TOP_MARGIN_PX;
   const lastLayerIndex = Math.max(0, networkLayers.length - 1);
   const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
   const halfNodeHeightPx = nodeDimensions.heightPx * 0.5;
@@ -650,14 +669,21 @@ function positionNetworkNodes(
       topPaddingPx +
       nodeLayoutPaddingPx +
       Math.max(0, (availableLayerStackHeightPx - layerStackHeightPx) * 0.5);
-    const clampedStackTopPx = Math.min(
+    const minimumStackTopPx = topPaddingPx + nodeLayoutPaddingPx;
+    const maximumStackTopPx =
+      topPaddingPx +
+      drawableHeightPx -
+      nodeLayoutPaddingPx -
+      layerStackHeightPx;
+    const resolvedStackTopPx = clamp(
       centeredStackTopPx,
-      topPaddingPx + preferredFirstNodeTopGapPx,
+      minimumStackTopPx,
+      Math.max(minimumStackTopPx, maximumStackTopPx),
     );
 
     layerNodes.forEach((node, nodeInLayerIndex) => {
       const unclampedLayerYPx =
-        clampedStackTopPx +
+        resolvedStackTopPx +
         halfNodeHeightPx +
         nodeInLayerIndex *
           (nodeDimensions.heightPx + resolvedLayerInterNodeGapPx);
@@ -676,6 +702,85 @@ function positionNetworkNodes(
 
   // Step 3: Return flattened positioned node list.
   return positionedNodes;
+}
+
+/**
+ * Centers positioned nodes within the drawable graph area.
+ *
+ * @param positionedNodes - Positioned nodes before centering.
+ * @param leftPaddingPx - Left graph padding.
+ * @param topPaddingPx - Top graph padding.
+ * @param drawableWidthPx - Drawable graph width.
+ * @param drawableHeightPx - Drawable graph height.
+ * @param nodeLayoutPaddingPx - Inner graph padding.
+ * @param nodeDimensions - Node dimensions.
+ * @returns Center-aligned positioned nodes.
+ */
+function centerPositionedNodesInDrawableArea(
+  positionedNodes: PositionedNetworkNode[],
+  leftPaddingPx: number,
+  topPaddingPx: number,
+  drawableWidthPx: number,
+  drawableHeightPx: number,
+  nodeLayoutPaddingPx: number,
+  nodeDimensions: NetworkNodeDimensions,
+): PositionedNetworkNode[] {
+  if (positionedNodes.length === 0) {
+    return positionedNodes;
+  }
+
+  // Step 1: Resolve current positioned-node bounds.
+  const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
+  const halfNodeHeightPx = nodeDimensions.heightPx * 0.5;
+  const currentLeftPx = Math.min(
+    ...positionedNodes.map((positionedNode) => positionedNode.xPx - halfNodeWidthPx),
+  );
+  const currentRightPx = Math.max(
+    ...positionedNodes.map((positionedNode) => positionedNode.xPx + halfNodeWidthPx),
+  );
+  const currentTopPx = Math.min(
+    ...positionedNodes.map((positionedNode) => positionedNode.yPx - halfNodeHeightPx),
+  );
+  const currentBottomPx = Math.max(
+    ...positionedNodes.map((positionedNode) => positionedNode.yPx + halfNodeHeightPx),
+  );
+
+  // Step 2: Resolve target centered bounds inside drawable area.
+  const minimumLeftPx = leftPaddingPx + nodeLayoutPaddingPx;
+  const maximumRightPx =
+    leftPaddingPx + drawableWidthPx - nodeLayoutPaddingPx;
+  const minimumTopPx = topPaddingPx + nodeLayoutPaddingPx;
+  const maximumBottomPx = topPaddingPx + drawableHeightPx - nodeLayoutPaddingPx;
+
+  const currentCenterXPx = (currentLeftPx + currentRightPx) * 0.5;
+  const targetCenterXPx = (minimumLeftPx + maximumRightPx) * 0.5;
+  const currentCenterYPx = (currentTopPx + currentBottomPx) * 0.5;
+  const targetCenterYPx = (minimumTopPx + maximumBottomPx) * 0.5;
+
+  const desiredShiftXPx = targetCenterXPx - currentCenterXPx;
+  const minimumShiftXPx = minimumLeftPx - currentLeftPx;
+  const maximumShiftXPx = maximumRightPx - currentRightPx;
+  const resolvedShiftXPx = clamp(
+    desiredShiftXPx,
+    minimumShiftXPx,
+    maximumShiftXPx,
+  );
+
+  const desiredShiftYPx = targetCenterYPx - currentCenterYPx;
+  const minimumShiftYPx = minimumTopPx - currentTopPx;
+  const maximumShiftYPx = maximumBottomPx - currentBottomPx;
+  const resolvedShiftYPx = clamp(
+    desiredShiftYPx,
+    minimumShiftYPx,
+    maximumShiftYPx,
+  );
+
+  // Step 3: Return translated positioned nodes.
+  return positionedNodes.map((positionedNode) => ({
+    ...positionedNode,
+    xPx: positionedNode.xPx + resolvedShiftXPx,
+    yPx: positionedNode.yPx + resolvedShiftYPx,
+  }));
 }
 
 /**

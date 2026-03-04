@@ -34,7 +34,7 @@ export const FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME = 7;
  * Values > 1 give agents finer temporal control in tight scenarios by allowing
  * multiple react-and-integrate passes before the frame counter advances.
  */
-export const FLAPPY_CONTROL_SUBSTEPS_PER_FRAME = 5;
+export const FLAPPY_CONTROL_SUBSTEPS_PER_FRAME = 4;
 
 /**
  * Target control cadence used for endgame reachability calculations.

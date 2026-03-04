@@ -94,6 +94,7 @@ export function requestWorkerPlaybackStep(
   playbackStepRequest: {
     simulationSteps: number;
     visibleWorldWidthPx: number;
+    visibleWorldHeightPx: number;
   },
 ): Promise<EvolutionPlaybackStepMessage['payload']> {
   return new Promise((resolve, reject) => {

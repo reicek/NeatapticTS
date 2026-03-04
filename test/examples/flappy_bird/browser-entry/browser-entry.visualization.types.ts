@@ -19,6 +19,8 @@ export interface ColorTier {
 export interface ColorLegendRow {
   label: string;
   color: string;
+  minimumValue: number;
+  maximumValue: number;
 }
 
 /** Precomputed legend panel layout used by visualization renderer. */

@@ -1,11 +1,14 @@
 import { FLAPPY_NEON_BIRD_PALETTE } from '../constants/constants';
 import {
+  FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
+  FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+  FLAPPY_WORLD_HEIGHT_PX,
+} from '../constants/constants';
+import {
   type SharedDifficultyProfile,
   resolveAdaptiveDifficultyProfile,
-  resolveNextSpawnGapCenterY as resolveSharedNextSpawnGapCenterY,
   resolveNextSpawnGapSize as resolveSharedNextSpawnGapSize,
   resolveNextSpawnIntervalFrames as resolveSharedNextSpawnIntervalFrames,
-  sampleGapCenterY as sampleSharedGapCenterY,
 } from '../flappy.simulation.shared.utils';
 import type { BrowserDifficultyProfile, RngLike } from './browser-entry.types';
 
@@ -15,8 +18,16 @@ import type { BrowserDifficultyProfile, RngLike } from './browser-entry.types';
  * @param rng - Deterministic RNG.
  * @returns Sampled y-position.
  */
-export function sampleGapCenterY(rng: RngLike): number {
-  return sampleSharedGapCenterY(rng);
+export function sampleGapCenterY(
+  rng: RngLike,
+  worldHeightPx: number = FLAPPY_WORLD_HEIGHT_PX,
+): number {
+  const lowerBoundGapCenterYPx = FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX;
+  const upperBoundGapCenterYPx = Math.max(
+    lowerBoundGapCenterYPx,
+    worldHeightPx - FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+  );
+  return rng.nextInt(lowerBoundGapCenterYPx, upperBoundGapCenterYPx + 1);
 }
 
 /**
@@ -29,8 +40,21 @@ export function sampleGapCenterY(rng: RngLike): number {
 export function resolveNextSpawnGapCenterY(
   previousGapCenterYPx: number,
   rng: RngLike,
+  worldHeightPx: number = FLAPPY_WORLD_HEIGHT_PX,
 ): number {
-  return resolveSharedNextSpawnGapCenterY(previousGapCenterYPx, rng);
+  const sampledGapCenterYPx = sampleGapCenterY(rng, worldHeightPx);
+  const minimumGapCenterYPx = Math.max(
+    FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+    previousGapCenterYPx - FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
+  );
+  const maximumGapCenterYPx = Math.min(
+    Math.max(FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX, worldHeightPx - FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX),
+    previousGapCenterYPx + FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
+  );
+  return Math.max(
+    minimumGapCenterYPx,
+    Math.min(sampledGapCenterYPx, maximumGapCenterYPx),
+  );
 }
 
 /**

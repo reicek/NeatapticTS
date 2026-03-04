@@ -1,12 +1,6 @@
 import Network from '../../../../src/architecture/network';
 import {
-  FLAPPY_BIAS_TIER_CENTER_THRESHOLD,
-  FLAPPY_BIAS_TIER_EDGE_START_ABS_VALUE,
-  FLAPPY_BIAS_TIER_MAX_ABS_VALUE,
   FLAPPY_CENTER_BLUE_RAMP,
-  FLAPPY_CONNECTION_TIER_CENTER_THRESHOLD,
-  FLAPPY_CONNECTION_TIER_EDGE_START_ABS_VALUE,
-  FLAPPY_CONNECTION_TIER_MAX_ABS_VALUE,
   FLAPPY_LIGHT_NEON_RAMP,
   FLAPPY_MONOSPACE_FONT_FAMILY,
   FLAPPY_NEON_PALETTE,
@@ -44,9 +38,6 @@ import {
   FLAPPY_NETWORK_OUTPUT_NODE_GLOW_COLOR,
   FLAPPY_NETWORK_OUTPUT_NODE_STROKE_COLOR,
   FLAPPY_REGULAR_NEON_RAMP,
-  FLAPPY_TIER_ABOVE_COLOR,
-  FLAPPY_TIER_EDGE_COUNT,
-  FLAPPY_TIER_LOGARITHMIC_STEEPNESS,
   FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
 } from '../constants/constants';
 import { applyAlphaToHexColor, clamp } from './browser-entry.math.utils';
@@ -59,6 +50,18 @@ import type {
   VisualNetworkConnectionLike,
   VisualNetworkNodeLike,
 } from './browser-entry.types';
+
+interface DynamicColorScale {
+  minimumValue: number;
+  maximumValue: number;
+  tiers: ColorTier[];
+  aboveTierColor: string;
+}
+
+interface NetworkVisualizationColorScales {
+  connectionScale: DynamicColorScale;
+  biasScale: DynamicColorScale;
+}
 
 /**
  * Builds logarithmic diverging color tiers with a center band and edge extension.
@@ -156,31 +159,21 @@ export function resolveTierColor(
  * @returns Legend rows.
  */
 export function createColorLegendRows(
-  tiers: ColorTier[],
-  aboveTierColor: string,
+  scale: DynamicColorScale,
   symbol: 'w' | 'b',
 ): ColorLegendRow[] {
-  const allRows = tiers.map((tier, tierIndex) => {
-    if (tierIndex === 0) {
-      return {
-        label: `${symbol} <= ${formatLegendBound(tier.upperBound)}`,
-        color: tier.color,
-      };
-    }
-
-    const previousTier = tiers[tierIndex - 1];
+  return scale.tiers.map((tier, tierIndex) => {
+    const lowerBound =
+      tierIndex === 0
+        ? scale.minimumValue
+        : scale.tiers[tierIndex - 1].upperBound;
     return {
-      label: `${formatLegendBound(previousTier.upperBound)} < ${symbol} <= ${formatLegendBound(tier.upperBound)}`,
+      label: `${formatLegendBound(lowerBound)} <= ${symbol} <= ${formatLegendBound(tier.upperBound)}`,
       color: tier.color,
+      minimumValue: lowerBound,
+      maximumValue: tier.upperBound,
     };
   });
-
-  allRows.push({
-    label: `${symbol} > ${formatLegendBound(tiers.at(-1)?.upperBound ?? 0)}`,
-    color: aboveTierColor,
-  });
-
-  return compressLegendRowsAroundZero(allRows);
 }
 
 /**
@@ -256,31 +249,6 @@ export function resolveNetworkLegendLayout(
   };
 }
 
-const CONNECTION_COLOR_TIERS = createLogDivergingColorTiers({
-  maxAbsValue: FLAPPY_CONNECTION_TIER_MAX_ABS_VALUE,
-  centerBlueThreshold: FLAPPY_CONNECTION_TIER_CENTER_THRESHOLD,
-  negativePalette: FLAPPY_LIGHT_NEON_RAMP,
-  centerBluePalette: FLAPPY_CENTER_BLUE_RAMP,
-  positivePalette: FLAPPY_REGULAR_NEON_RAMP,
-  logarithmicSteepness: FLAPPY_TIER_LOGARITHMIC_STEEPNESS,
-  edgeStartAbsValue: FLAPPY_CONNECTION_TIER_EDGE_START_ABS_VALUE,
-  edgeTierCount: FLAPPY_TIER_EDGE_COUNT,
-});
-
-const BIAS_COLOR_TIERS = createLogDivergingColorTiers({
-  maxAbsValue: FLAPPY_BIAS_TIER_MAX_ABS_VALUE,
-  centerBlueThreshold: FLAPPY_BIAS_TIER_CENTER_THRESHOLD,
-  negativePalette: FLAPPY_LIGHT_NEON_RAMP,
-  centerBluePalette: FLAPPY_CENTER_BLUE_RAMP,
-  positivePalette: FLAPPY_REGULAR_NEON_RAMP,
-  logarithmicSteepness: FLAPPY_TIER_LOGARITHMIC_STEEPNESS,
-  edgeStartAbsValue: FLAPPY_BIAS_TIER_EDGE_START_ABS_VALUE,
-  edgeTierCount: FLAPPY_TIER_EDGE_COUNT,
-});
-
-const CONNECTION_COLOR_ABOVE_TIER = FLAPPY_TIER_ABOVE_COLOR;
-const BIAS_COLOR_ABOVE_TIER = FLAPPY_TIER_ABOVE_COLOR;
-
 /**
  * Draws weighted connection lines.
  *
@@ -293,6 +261,7 @@ export function drawWeightedConnectionsLayer(
   context: CanvasRenderingContext2D,
   runtimeConnections: VisualNetworkConnectionLike[],
   positionByNodeIndex: Map<number, PositionedNetworkNodeLike>,
+  connectionScale: DynamicColorScale,
 ): void {
   runtimeConnections.forEach((runtimeConnection) => {
     const fromNodeIndex = runtimeConnection.from?.index;
@@ -309,16 +278,30 @@ export function drawWeightedConnectionsLayer(
 
     const connectionWeight = runtimeConnection.weight ?? 0;
     const connectionEnabled = runtimeConnection.enabled !== false;
-    const absoluteWeight = Math.abs(connectionWeight);
+    const isNegativeConnection = connectionWeight < 0;
     const baseColor = resolveTierColor(
       connectionWeight,
-      CONNECTION_COLOR_TIERS,
-      CONNECTION_COLOR_ABOVE_TIER,
+      connectionScale.tiers,
+      connectionScale.aboveTierColor,
     );
     const alphaValue = connectionEnabled ? 0.95 : 0.2;
+    const connectionColor = applyAlphaToHexColor(baseColor, alphaValue);
+    const resolvedLineWidthPx = FLAPPY_NETWORK_LEGEND_CONNECTION_LINE_WIDTH_PX;
 
-    context.strokeStyle = applyAlphaToHexColor(baseColor, alphaValue);
-    context.lineWidth = 0.75 + Math.min(2.75, absoluteWeight * 1.3);
+    if (isNegativeConnection) {
+      drawSquareDottedConnection(context, {
+        fromXPx: fromPosition.xPx,
+        fromYPx: fromPosition.yPx,
+        toXPx: toPosition.xPx,
+        toYPx: toPosition.yPx,
+        color: connectionColor,
+        lineWidthPx: resolvedLineWidthPx,
+      });
+      return;
+    }
+
+    context.strokeStyle = connectionColor;
+    context.lineWidth = resolvedLineWidthPx;
     context.setLineDash(connectionEnabled ? [] : [5, 4]);
     context.beginPath();
     context.moveTo(fromPosition.xPx, fromPosition.yPx);
@@ -327,6 +310,78 @@ export function drawWeightedConnectionsLayer(
   });
 
   context.setLineDash([]);
+}
+
+/**
+ * Draws one connection as square dots along the segment.
+ *
+ * @param context - Render context.
+ * @param input - Segment and style input.
+ * @returns Nothing.
+ */
+function drawSquareDottedConnection(
+  context: CanvasRenderingContext2D,
+  input: {
+    fromXPx: number;
+    fromYPx: number;
+    toXPx: number;
+    toYPx: number;
+    color: string;
+    lineWidthPx: number;
+  },
+): void {
+  const deltaXPx = input.toXPx - input.fromXPx;
+  const deltaYPx = input.toYPx - input.fromYPx;
+  const segmentLengthPx = Math.hypot(deltaXPx, deltaYPx);
+  if (segmentLengthPx <= 0) {
+    return;
+  }
+
+  const squareSidePx = 2;
+  const stepDistancePx = Math.max(
+    (squareSidePx + 2) * 0.8,
+    (input.lineWidthPx * 2.6) * 0.8,
+  );
+  const directionXPx = deltaXPx / segmentLengthPx;
+  const directionYPx = deltaYPx / segmentLengthPx;
+  const halfSquareSidePx = squareSidePx * 0.5;
+
+  context.fillStyle = input.color;
+
+  // Step 1: Stamp dots at fixed step distances so spacing is consistent
+  // regardless of segment length.
+  for (
+    let traveledDistancePx = 0;
+    traveledDistancePx <= segmentLengthPx;
+    traveledDistancePx += stepDistancePx
+  ) {
+    const centerXPx = input.fromXPx + directionXPx * traveledDistancePx;
+    const centerYPx = input.fromYPx + directionYPx * traveledDistancePx;
+
+    const axisAlignedCenterXPx =
+      Math.round(centerXPx + directionXPx * 0.01) -
+      Math.round(directionXPx * 0.01);
+    const axisAlignedCenterYPx =
+      Math.round(centerYPx + directionYPx * 0.01) -
+      Math.round(directionYPx * 0.01);
+
+    context.fillRect(
+      axisAlignedCenterXPx - halfSquareSidePx,
+      axisAlignedCenterYPx - halfSquareSidePx,
+      squareSidePx,
+      squareSidePx,
+    );
+  }
+
+  // Step 2: Ensure the segment endpoint is always represented.
+  if (segmentLengthPx > 0) {
+    context.fillRect(
+      Math.round(input.toXPx - halfSquareSidePx),
+      Math.round(input.toYPx - halfSquareSidePx),
+      squareSidePx,
+      squareSidePx,
+    );
+  }
 }
 
 /**
@@ -341,6 +396,7 @@ export function drawBiasNodesLayer(
   context: CanvasRenderingContext2D,
   positionedNodes: PositionedNetworkNodeLike[],
   nodeDimensions: NetworkNodeDimensionsLike,
+  biasScale: DynamicColorScale,
 ): void {
   const minimumLabelHeightPx = FLAPPY_NETWORK_MIN_LABEL_HEIGHT_PX;
   const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
@@ -352,7 +408,11 @@ export function drawBiasNodesLayer(
     const isOutputNode = positionedNode.node.type === 'output';
     const nodeFillColor = isOutputNode
       ? FLAPPY_NEON_PALETTE.currentRunText
-      : resolveTierColor(nodeBias, BIAS_COLOR_TIERS, BIAS_COLOR_ABOVE_TIER);
+      : resolveTierColor(
+          nodeBias,
+          biasScale.tiers,
+          biasScale.aboveTierColor,
+        );
     const nodeStrokeColor = isOutputNode
       ? FLAPPY_NETWORK_OUTPUT_NODE_STROKE_COLOR
       : FLAPPY_NETWORK_HIDDEN_NODE_STROKE_COLOR;
@@ -458,6 +518,7 @@ export function drawNetworkVisualizationHeader(
 export function drawNetworkColorLegend(
   context: CanvasRenderingContext2D,
   architectureLabel: string,
+  colorScales: NetworkVisualizationColorScales,
 ): void {
   const viewportWidthPx =
     context.canvas.ownerDocument?.defaultView?.innerWidth ??
@@ -468,13 +529,11 @@ export function drawNetworkColorLegend(
 
   // Step 1: Build legend row models for connection and bias tiers.
   const connectionLegendRows = createColorLegendRows(
-    CONNECTION_COLOR_TIERS,
-    CONNECTION_COLOR_ABOVE_TIER,
+    colorScales.connectionScale,
     'w',
   );
   const biasLegendRows = createColorLegendRows(
-    BIAS_COLOR_TIERS,
-    BIAS_COLOR_ABOVE_TIER,
+    colorScales.biasScale,
     'b',
   );
   const legendLayout = resolveNetworkLegendLayout(
@@ -543,12 +602,27 @@ export function drawNetworkColorLegend(
       connectionSectionTopPx +
       legendSectionTitleHeightPx +
       legendRowIndex * legendRowHeightPx;
-    context.strokeStyle = legendRow.color;
-    context.lineWidth = FLAPPY_NETWORK_LEGEND_CONNECTION_LINE_WIDTH_PX;
-    context.beginPath();
-    context.moveTo(legendLeftPx + 8, rowTopPx + 4);
-    context.lineTo(legendLeftPx + 28, rowTopPx + 4);
-    context.stroke();
+    const sampleStartXPx = legendLeftPx + 8;
+    const sampleEndXPx = legendLeftPx + 28;
+    const sampleYPx = rowTopPx + 4;
+
+    if (legendRow.maximumValue <= 0) {
+      drawSquareDottedConnection(context, {
+        fromXPx: sampleStartXPx,
+        fromYPx: sampleYPx,
+        toXPx: sampleEndXPx,
+        toYPx: sampleYPx,
+        color: legendRow.color,
+        lineWidthPx: FLAPPY_NETWORK_LEGEND_CONNECTION_LINE_WIDTH_PX,
+      });
+    } else {
+      context.strokeStyle = legendRow.color;
+      context.lineWidth = FLAPPY_NETWORK_LEGEND_CONNECTION_LINE_WIDTH_PX;
+      context.beginPath();
+      context.moveTo(sampleStartXPx, sampleYPx);
+      context.lineTo(sampleEndXPx, sampleYPx);
+      context.stroke();
+    }
 
     context.fillStyle = FLAPPY_NETWORK_LEGEND_ROW_TEXT_COLOR;
     context.fillText(legendRow.label, legendLeftPx + 32, rowTopPx - 1);
@@ -586,15 +660,15 @@ export function drawNetworkColorLegend(
  */
 export function resolveDefaultNetworkLegendLayout(
   context: CanvasRenderingContext2D,
+  network: Network | undefined,
 ): NetworkLegendLayout {
+  const colorScales = resolveNetworkVisualizationColorScales(network);
   const connectionLegendRows = createColorLegendRows(
-    CONNECTION_COLOR_TIERS,
-    CONNECTION_COLOR_ABOVE_TIER,
+    colorScales.connectionScale,
     'w',
   );
   const biasLegendRows = createColorLegendRows(
-    BIAS_COLOR_TIERS,
-    BIAS_COLOR_ABOVE_TIER,
+    colorScales.biasScale,
     'b',
   );
   return resolveNetworkLegendLayout(
@@ -611,10 +685,14 @@ export function resolveDefaultNetworkLegendLayout(
  * @returns Tier color.
  */
 export function resolveConnectionRangeColor(connectionWeight: number): string {
+  const connectionScale = createDynamicColorScale([connectionWeight], {
+    minimumValue: -1,
+    maximumValue: 1,
+  });
   return resolveTierColor(
     connectionWeight,
-    CONNECTION_COLOR_TIERS,
-    CONNECTION_COLOR_ABOVE_TIER,
+    connectionScale.tiers,
+    connectionScale.aboveTierColor,
   );
 }
 
@@ -625,7 +703,160 @@ export function resolveConnectionRangeColor(connectionWeight: number): string {
  * @returns Tier color.
  */
 export function resolveBiasRangeColor(nodeBias: number): string {
-  return resolveTierColor(nodeBias, BIAS_COLOR_TIERS, BIAS_COLOR_ABOVE_TIER);
+  const biasScale = createDynamicColorScale([nodeBias], {
+    minimumValue: -1,
+    maximumValue: 1,
+  });
+  return resolveTierColor(nodeBias, biasScale.tiers, biasScale.aboveTierColor);
+}
+
+/**
+ * Resolves dynamic connection/bias color scales from the active network range.
+ *
+ * @param network - Active network.
+ * @returns Dynamic scales used by graph drawing and legend rows.
+ */
+export function resolveNetworkVisualizationColorScales(
+  network: Network | undefined,
+): NetworkVisualizationColorScales {
+  const connectionValues = ((network?.connections ?? []) as Array<{
+    weight?: number;
+  }>)
+    .map((connection) => Number(connection.weight ?? 0))
+    .filter((weight) => Number.isFinite(weight));
+
+  const biasValues = ((network?.nodes ?? []) as Array<{
+    type?: string;
+    bias?: number;
+  }>)
+    .filter((node) => node.type !== 'output')
+    .map((node) => Number(node.bias ?? 0))
+    .filter((bias) => Number.isFinite(bias));
+
+  return {
+    connectionScale: createDynamicColorScale(connectionValues, {
+      minimumValue: -1,
+      maximumValue: 1,
+    }),
+    biasScale: createDynamicColorScale(biasValues, {
+      minimumValue: -1,
+      maximumValue: 1,
+    }),
+  };
+}
+
+/**
+ * Creates a linear color scale that spans the observed value range.
+ *
+ * @param values - Runtime values to map.
+ * @param fallbackRange - Fallback range when values are empty/non-finite.
+ * @returns Dynamic color scale.
+ */
+function createDynamicColorScale(
+  values: number[],
+  fallbackRange: { minimumValue: number; maximumValue: number },
+): DynamicColorScale {
+  const finiteValues = values.filter((value) => Number.isFinite(value));
+  const observedMinimumValue =
+    finiteValues.length > 0
+      ? Math.min(...finiteValues)
+      : fallbackRange.minimumValue;
+  const observedMaximumValue =
+    finiteValues.length > 0
+      ? Math.max(...finiteValues)
+      : fallbackRange.maximumValue;
+  const hasRange = observedMaximumValue > observedMinimumValue;
+
+  const minimumValue = hasRange
+    ? observedMinimumValue
+    : observedMinimumValue - Math.max(1e-6, Math.abs(observedMinimumValue) * 0.01);
+  const maximumValue = hasRange
+    ? observedMaximumValue
+    : observedMaximumValue + Math.max(1e-6, Math.abs(observedMaximumValue) * 0.01);
+
+  const dynamicTiers = resolveSignedDynamicTiers(minimumValue, maximumValue);
+  const aboveTierColor =
+    dynamicTiers.at(-1)?.color ?? FLAPPY_NEON_PALETTE.currentRunText;
+
+  return {
+    minimumValue,
+    maximumValue,
+    tiers: dynamicTiers,
+    aboveTierColor,
+  };
+}
+
+/**
+ * Resolves tier colors by sign so negative and positive sides use distinct ramps.
+ *
+ * @param minimumValue - Observed minimum value.
+ * @param maximumValue - Observed maximum value.
+ * @returns Ordered dynamic tiers.
+ */
+function resolveSignedDynamicTiers(
+  minimumValue: number,
+  maximumValue: number,
+): ColorTier[] {
+  const negativePaletteLowToHigh = [
+    ...FLAPPY_LIGHT_NEON_RAMP.toReversed(),
+    ...FLAPPY_CENTER_BLUE_RAMP,
+  ] as const;
+  const positivePaletteLowToHigh = [
+    ...FLAPPY_CENTER_BLUE_RAMP,
+    ...FLAPPY_REGULAR_NEON_RAMP,
+  ] as const;
+
+  if (minimumValue >= 0) {
+    return createLinearColorTiers({
+      minimumValue,
+      maximumValue,
+      palette: positivePaletteLowToHigh,
+    });
+  }
+
+  if (maximumValue <= 0) {
+    return createLinearColorTiers({
+      minimumValue,
+      maximumValue,
+      palette: negativePaletteLowToHigh,
+    });
+  }
+
+  const negativeTiers = createLinearColorTiers({
+    minimumValue,
+    maximumValue: 0,
+    palette: negativePaletteLowToHigh,
+  });
+  const positiveTiers = createLinearColorTiers({
+    minimumValue: 0,
+    maximumValue,
+    palette: positivePaletteLowToHigh,
+  });
+  return [...negativeTiers, ...positiveTiers];
+}
+
+/**
+ * Creates linearly spaced color tiers between observed min and max.
+ *
+ * @param input - Tier creation options.
+ * @returns Ordered tier list.
+ */
+function createLinearColorTiers(input: {
+  minimumValue: number;
+  maximumValue: number;
+  palette: readonly string[];
+}): ColorTier[] {
+  const paletteSize = Math.max(1, input.palette.length);
+  const range = Math.max(1e-12, input.maximumValue - input.minimumValue);
+  const step = range / paletteSize;
+
+  return input.palette.map((color, colorIndex) => ({
+    upperBound:
+      colorIndex === paletteSize - 1
+        ? input.maximumValue
+        : input.minimumValue + step * (colorIndex + 1),
+    color,
+  }));
 }
 
 /**
@@ -1004,54 +1235,6 @@ function mapLogarithmicProgress(
     Math.log1p(logarithmicSteepness * normalizedPosition) /
     Math.log1p(logarithmicSteepness)
   );
-}
-
-/**
- * Compresses legend rows while preserving center and edge zones.
- *
- * @param rows - Full legend rows.
- * @returns Compressed row set.
- */
-function compressLegendRowsAroundZero(
-  rows: ColorLegendRow[],
-): ColorLegendRow[] {
-  // Step 1: Return early when row count is already compact enough.
-  const maximumLegendRows = 14;
-  if (rows.length <= maximumLegendRows) {
-    return rows;
-  }
-
-  // Step 2: Select boundary rows and centered window around zero.
-  const centerIndex = Math.floor(rows.length / 2);
-  const selectedIndexes = new Set<number>([
-    0,
-    1,
-    rows.length - 2,
-    rows.length - 1,
-  ]);
-
-  const centerWindowRadius = 4;
-  for (
-    let rowIndex = Math.max(0, centerIndex - centerWindowRadius);
-    rowIndex <= Math.min(rows.length - 1, centerIndex + centerWindowRadius);
-    rowIndex++
-  ) {
-    selectedIndexes.add(rowIndex);
-  }
-
-  // Step 3: Add two extra evenly-spaced representatives from both sides.
-  const evenlySpacedExtraIndexes = [
-    Math.floor(rows.length * 0.2),
-    Math.floor(rows.length * 0.8),
-  ];
-  evenlySpacedExtraIndexes.forEach((extraIndex) => {
-    selectedIndexes.add(clamp(extraIndex, 0, rows.length - 1));
-  });
-
-  // Step 4: Return selected rows in ascending original order.
-  return [...selectedIndexes]
-    .toSorted((leftIndex, rightIndex) => leftIndex - rightIndex)
-    .map((rowIndex) => rows[rowIndex]);
 }
 
 /**

@@ -51,6 +51,9 @@ export const FLAPPY_UI_CONTENT_COLUMN_TOP_PADDING_PX = 0;
 /** Initial network panel height before topology-driven resizing runs. */
 export const FLAPPY_UI_NETWORK_HOST_INITIAL_HEIGHT_PX = 120;
 
+/** Fixed network panel height used by responsive browser layout. */
+export const FLAPPY_UI_NETWORK_HOST_FIXED_HEIGHT_PX = 600;
+
 /** Inner host padding subtracted from measured network canvas dimensions. */
 export const FLAPPY_UI_NETWORK_HOST_INSET_PX = 8;
 

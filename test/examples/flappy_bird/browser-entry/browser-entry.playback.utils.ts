@@ -4,6 +4,7 @@ import {
   resolveLeaderPipesPassed,
 } from './browser-entry.observation.utils';
 import {
+  resolveVisibleWorldHeightPx,
   resolveVisibleWorldWidthPx,
   resolveWorldViewport,
 } from './browser-entry.viewport.utils';
@@ -46,7 +47,6 @@ import {
   FLAPPY_STARFIELD_FAR_SCROLL_RATIO,
   FLAPPY_STARFIELD_MID_SCROLL_RATIO,
   FLAPPY_STARFIELD_NEAR_SCROLL_RATIO,
-  FLAPPY_STARFIELD_TILE_HEIGHT_PX,
   FLAPPY_STARFIELD_TILE_WIDTH_PX,
 } from '../constants/constants';
 import type {
@@ -59,7 +59,6 @@ import type {
 import {
   FLAPPY_PIPE_SPEED_PX_PER_FRAME,
   FLAPPY_PIPE_WIDTH_PX,
-  FLAPPY_WORLD_HEIGHT_PX,
   FLAPPY_BIRD_X_PX,
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_TRAIL_OPACITY_FACTOR,
@@ -72,7 +71,7 @@ type StarTile = {
   scrollRatio: number;
 };
 
-let cachedStarfieldTiles: readonly StarTile[] | undefined;
+const cachedStarfieldTilesByHeight = new Map<number, readonly StarTile[]>();
 
 /**
  * Renders all birds from the current generation in one shared world.
@@ -99,6 +98,7 @@ export async function animatePopulationEpisode(
     type: 'start-playback',
     payload: {
       visibleWorldWidthPx: resolveVisibleWorldWidthPx(canvas),
+      visibleWorldHeightPx: resolveVisibleWorldHeightPx(canvas),
     },
   });
 
@@ -106,6 +106,7 @@ export async function animatePopulationEpisode(
   const renderState: PopulationRenderState = {
     frameIndex: 0,
     visibleWorldWidthPx: resolveVisibleWorldWidthPx(canvas),
+    visibleWorldHeightPx: resolveVisibleWorldHeightPx(canvas),
     nextPipeId: 0,
     lastSpawnedPipeGapPx: 0,
     lastSpawnedPipeGapCenterYPx: 0,
@@ -130,6 +131,7 @@ export async function animatePopulationEpisode(
   while (!finished) {
     // Step 3.1: Resolve frame budget and request one playback step batch.
     renderState.visibleWorldWidthPx = resolveVisibleWorldWidthPx(canvas);
+    renderState.visibleWorldHeightPx = resolveVisibleWorldHeightPx(canvas);
     simulationFrameBudget += FLAPPY_EMULATION_SPEED_MULTIPLIER;
     const simulationStepsThisRender = Math.max(
       1,
@@ -142,6 +144,7 @@ export async function animatePopulationEpisode(
       {
         simulationSteps: simulationStepsThisRender,
         visibleWorldWidthPx: renderState.visibleWorldWidthPx,
+        visibleWorldHeightPx: renderState.visibleWorldHeightPx,
       },
     );
 
@@ -207,6 +210,7 @@ function applyPlaybackSnapshot(
 ): void {
   renderState.frameIndex = snapshot.frameIndex;
   renderState.visibleWorldWidthPx = snapshot.visibleWorldWidthPx;
+  renderState.visibleWorldHeightPx = snapshot.visibleWorldHeightPx;
   renderState.pipes = snapshot.pipes;
   renderState.birds = snapshot.birds.map((birdSnapshot) => ({
     color: birdSnapshot.color,
@@ -233,6 +237,7 @@ function renderPopulationFrame(
   // Step 1: Resolve viewport transform and clear target canvas.
   const viewport = resolveWorldViewport(context.canvas);
   const visibleWorldWidthPx = Math.max(1, renderState.visibleWorldWidthPx);
+  const visibleWorldHeightPx = Math.max(1, renderState.visibleWorldHeightPx);
   const desiredBirdScreenXPx =
     visibleWorldWidthPx * FLAPPY_BIRD_VIEWPORT_X_RATIO;
   const cameraLeftPx = FLAPPY_BIRD_X_PX - desiredBirdScreenXPx;
@@ -269,14 +274,14 @@ function renderPopulationFrame(
       pipeLeft,
       gapBottom,
       FLAPPY_PIPE_WIDTH_PX,
-      FLAPPY_WORLD_HEIGHT_PX - gapBottom,
+      visibleWorldHeightPx - gapBottom,
     );
     drawPipeNeonOutline(
       context,
       pipeLeft,
       gapBottom,
       FLAPPY_PIPE_WIDTH_PX,
-      FLAPPY_WORLD_HEIGHT_PX - gapBottom,
+      visibleWorldHeightPx - gapBottom,
     );
   }
 
@@ -417,7 +422,7 @@ function renderPopulationFrame(
         leftXPx: cameraLeftPx,
         rightXPx: cameraLeftPx + visibleWorldWidthPx,
         topYPx: 0,
-        bottomYPx: FLAPPY_WORLD_HEIGHT_PX,
+        bottomYPx: visibleWorldHeightPx,
       },
     );
   });
@@ -443,13 +448,17 @@ function drawParallaxBackground(
   context.shadowBlur = 0;
   context.shadowColor = 'transparent';
   context.fillStyle = FLAPPY_NEON_PALETTE.background;
-  context.fillRect(0, 0, visibleWorldWidthPx, FLAPPY_WORLD_HEIGHT_PX);
+  const visibleWorldHeightPx = Math.max(
+    1,
+    Math.round(renderState.visibleWorldHeightPx),
+  );
+  context.fillRect(0, 0, visibleWorldWidthPx, visibleWorldHeightPx);
 
   // Step 2: Draw cached square-particle starfield layers with subtle parallax.
   // Each layer is pre-rendered into a tile and repeated via drawImage, which is
   // much faster than drawing dozens of blurred particles every frame.
   context.globalCompositeOperation = 'lighter';
-  const starfieldTiles = resolveStarfieldTiles();
+  const starfieldTiles = resolveStarfieldTiles(visibleWorldHeightPx);
   for (const tile of starfieldTiles) {
     const scrollOffsetPx = scrollBasePx * tile.scrollRatio;
     drawTiledImageRow(context, {
@@ -462,16 +471,20 @@ function drawParallaxBackground(
   context.globalCompositeOperation = 'source-over';
 }
 
-function resolveStarfieldTiles(): readonly StarTile[] {
-  if (cachedStarfieldTiles) {
-    return cachedStarfieldTiles;
+function resolveStarfieldTiles(
+  visibleWorldHeightPx: number,
+): readonly StarTile[] {
+  const tileHeightPx = Math.max(1, Math.round(visibleWorldHeightPx));
+  const cachedTilesForHeight = cachedStarfieldTilesByHeight.get(tileHeightPx);
+  if (cachedTilesForHeight) {
+    return cachedTilesForHeight;
   }
 
   const farTile: StarTile = {
     image: createStarTileCanvas({
       seed: 1_337,
       tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
+      tileHeightPx,
       starCount: 35,
       minSizePx: 1,
       maxSizePx: 2,
@@ -480,14 +493,14 @@ function resolveStarfieldTiles(): readonly StarTile[] {
       blurPx: 4,
     }),
     tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
+    tileHeightPx,
     scrollRatio: FLAPPY_STARFIELD_FAR_SCROLL_RATIO,
   };
   const midTile: StarTile = {
     image: createStarTileCanvas({
       seed: 2_777,
       tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
+      tileHeightPx,
       starCount: 28,
       minSizePx: 1,
       maxSizePx: 3,
@@ -496,14 +509,14 @@ function resolveStarfieldTiles(): readonly StarTile[] {
       blurPx: 6,
     }),
     tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
+    tileHeightPx,
     scrollRatio: FLAPPY_STARFIELD_MID_SCROLL_RATIO,
   };
   const nearTile: StarTile = {
     image: createStarTileCanvas({
       seed: 4_242,
       tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
+      tileHeightPx,
       starCount: 23,
       minSizePx: 2,
       maxSizePx: 4,
@@ -512,12 +525,13 @@ function resolveStarfieldTiles(): readonly StarTile[] {
       blurPx: 8,
     }),
     tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
+    tileHeightPx,
     scrollRatio: FLAPPY_STARFIELD_NEAR_SCROLL_RATIO,
   };
 
-  cachedStarfieldTiles = [farTile, midTile, nearTile];
-  return cachedStarfieldTiles;
+  const resolvedTiles = [farTile, midTile, nearTile] as const;
+  cachedStarfieldTilesByHeight.set(tileHeightPx, resolvedTiles);
+  return resolvedTiles;
 }
 
 function drawTiledImageRow(

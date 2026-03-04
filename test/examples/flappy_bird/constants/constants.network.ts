@@ -27,4 +27,4 @@ export const FLAPPY_NETWORK_OUTPUT_SIZE = 2;
  * Using at least two hidden layers improves representational flexibility for
  * precise vertical control near narrow, fast-changing pipe targets.
  */
-export const FLAPPY_NETWORK_HIDDEN_LAYER_SIZES = [16, 8, 4, 2] as const;
+export const FLAPPY_NETWORK_HIDDEN_LAYER_SIZES = [6, 5, 4, 3] as const;

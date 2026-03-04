@@ -17,10 +17,10 @@ export const FLAPPY_EMULATION_SPEED_MULTIPLIER = 1.5;
 export const FLAPPY_HUD_UPDATE_INTERVAL_FRAMES = 10;
 
 /** Default population size for browser playback worker initialization. */
-export const FLAPPY_BROWSER_POPULATION_SIZE = 20;
+export const FLAPPY_BROWSER_POPULATION_SIZE = 10;
 
 /** Default elitism count for browser playback worker initialization. */
-export const FLAPPY_BROWSER_ELITISM_COUNT = 2;
+export const FLAPPY_BROWSER_ELITISM_COUNT = 1;
 
 /** Normalized decision threshold used for scalar output flap policies. */
 export const FLAPPY_FLAP_THRESHOLD = 0.5;

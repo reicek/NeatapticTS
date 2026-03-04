@@ -209,7 +209,7 @@ export function renderStandaloneTitleBox(
 
   const glyphWidthPx = Math.max(
     FLAPPY_FRAME_MIN_GLYPH_WIDTH_PX,
-    Math.floor(input.context.measureText(FLAPPY_GLYPH_HORIZONTAL).width),
+    input.context.measureText(FLAPPY_GLYPH_HORIZONTAL).width,
   );
   const frameMetrics = resolveTextFrameMetrics(
     input.widthPx,

@@ -70,6 +70,7 @@ interface WorkerPopulationBird {
 interface WorkerPlaybackState {
   frameIndex: number;
   visibleWorldWidthPx: number;
+  visibleWorldHeightPx: number;
   nextPipeId: number;
   lastSpawnedPipeGapPx: number;
   lastSpawnedPipeGapCenterYPx: number;
@@ -120,6 +121,7 @@ function resolveCameraLeftXPx(visibleWorldWidthPx: number): number {
 interface WorkerPlaybackFrameSnapshot {
   frameIndex: number;
   visibleWorldWidthPx: number;
+  visibleWorldHeightPx: number;
   pipes: WorkerFramePipeSnapshot[];
   birds: WorkerFrameBirdSnapshot[];
 }
@@ -141,6 +143,7 @@ interface WorkerStartPlaybackMessage {
   type: 'start-playback';
   payload: {
     visibleWorldWidthPx: number;
+    visibleWorldHeightPx: number;
   };
 }
 
@@ -149,6 +152,7 @@ interface WorkerRequestPlaybackStepMessage {
   payload: {
     simulationSteps: number;
     visibleWorldWidthPx: number;
+    visibleWorldHeightPx: number;
   };
 }
 
@@ -297,6 +301,7 @@ self.onmessage = (event: MessageEvent<WorkerRequestMessage>) => {
       currentPopulation,
       createXorshift32(0xabcdef01),
       workerMessage.payload.visibleWorldWidthPx,
+      workerMessage.payload.visibleWorldHeightPx,
     );
     currentPlaybackRng = createXorshift32(0xabcdef01);
     playbackWinnerIndex = -1;
@@ -545,6 +550,7 @@ function buildHeuristicPretrainSet(
       velocityYPxPerFrame,
       pipes,
       FLAPPY_GEN0_PRETRAIN_VISIBLE_WORLD_WIDTH_PX,
+      FLAPPY_WORLD_HEIGHT_PX,
       difficultyProfile,
       difficultyProfile.pipeSpawnIntervalFrames,
       observationMemoryState,
@@ -694,6 +700,8 @@ function processPlaybackStep(
   // Step 2: Apply host viewport and normalize requested simulation-step count.
   currentPlaybackState.visibleWorldWidthPx =
     playbackStepPayload.visibleWorldWidthPx;
+  currentPlaybackState.visibleWorldHeightPx =
+    playbackStepPayload.visibleWorldHeightPx;
   const simulationSteps = Math.max(
     1,
     Math.trunc(playbackStepPayload.simulationSteps),
@@ -822,6 +830,7 @@ function createPlaybackSnapshot(
   return {
     frameIndex: playbackState.frameIndex,
     visibleWorldWidthPx: playbackState.visibleWorldWidthPx,
+    visibleWorldHeightPx: playbackState.visibleWorldHeightPx,
     pipes: playbackState.pipes.map((pipe) => ({
       id: pipe.id,
       xPx: pipe.xPx,
@@ -859,16 +868,21 @@ function postWorkerMessage(workerMessage: WorkerResponseMessage): void {
  * @param networks - Population to visualize.
  * @param rng - Deterministic random source.
  * @param initialVisibleWorldWidthPx - Initial viewport width from host.
+ * @param initialVisibleWorldHeightPx - Initial viewport height from host.
  * @returns Fresh mutable playback state.
  */
 function createPopulationRenderState(
   networks: Network[],
   rng: ReturnType<typeof createXorshift32>,
   initialVisibleWorldWidthPx: number,
+  initialVisibleWorldHeightPx: number,
 ): WorkerPlaybackState {
   // Step 1: Resolve initial difficulty-dependent spawn characteristics.
   const initialDifficultyProfile = resolveDifficultyProfile(0);
-  const initialGapCenterYPx = sampleGapCenterY(rng);
+  const initialGapCenterYPx = sampleGapCenterY(
+    rng,
+    initialVisibleWorldHeightPx,
+  );
   const initialGapSizePx = resolveNextSpawnGapSize(
     undefined,
     initialDifficultyProfile,
@@ -884,7 +898,7 @@ function createPopulationRenderState(
     network,
     color: createBirdColor(networkIndex, networks.length),
     observationMemoryState: createSharedObservationMemoryState(),
-    yPx: FLAPPY_WORLD_HEIGHT_PX * 0.5,
+    yPx: initialVisibleWorldHeightPx * 0.5,
     velocityYPxPerFrame: 0,
     pipesPassed: 0,
     framesSurvived: 0,
@@ -896,6 +910,7 @@ function createPopulationRenderState(
   return {
     frameIndex: 0,
     visibleWorldWidthPx: initialVisibleWorldWidthPx,
+    visibleWorldHeightPx: initialVisibleWorldHeightPx,
     nextPipeId: 2,
     lastSpawnedPipeGapPx: initialGapSizePx,
     lastSpawnedPipeGapCenterYPx: initialGapCenterYPx,
@@ -961,6 +976,7 @@ function stepPopulationFrame(
         bird.velocityYPxPerFrame,
         renderState.pipes,
         renderState.visibleWorldWidthPx,
+        renderState.visibleWorldHeightPx,
         difficultyProfile,
         renderState.lastSpawnedPipeSpawnIntervalFrames,
         bird.observationMemoryState,
@@ -1022,6 +1038,7 @@ function stepPopulationFrame(
       const nextGapCenterYPx = resolveNextSpawnGapCenterY(
         renderState.lastSpawnedPipeGapCenterYPx,
         rng,
+        renderState.visibleWorldHeightPx,
       );
       renderState.pipes.push({
         id: renderState.nextPipeId++,
@@ -1042,7 +1059,7 @@ function stepPopulationFrame(
       const birdTop = bird.yPx - FLAPPY_BIRD_RADIUS_PX;
       const birdBottom = bird.yPx + FLAPPY_BIRD_RADIUS_PX;
 
-      if (birdTop <= 0 || birdBottom >= FLAPPY_WORLD_HEIGHT_PX) {
+      if (birdTop <= 0 || birdBottom >= renderState.visibleWorldHeightPx) {
         bird.done = true;
         bird.doneReason = 'out_of_bounds';
         return;
