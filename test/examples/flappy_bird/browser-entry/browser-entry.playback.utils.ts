@@ -63,13 +63,7 @@ import {
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_TRAIL_OPACITY_FACTOR,
 } from '../constants/constants';
-
-type StarTile = {
-  image: CanvasImageSource;
-  tileWidthPx: number;
-  tileHeightPx: number;
-  scrollRatio: number;
-};
+import type { PlaybackEdgeBounds, StarTile } from './playback/playback.types';
 
 const cachedStarfieldTilesByHeight = new Map<number, readonly StarTile[]>();
 
@@ -808,12 +802,7 @@ function drawTrail(
   color: string,
   anchorX: number,
   baseOpacity: number,
-  edgeBounds: {
-    leftXPx: number;
-    rightXPx: number;
-    topYPx: number;
-    bottomYPx: number;
-  },
+  edgeBounds: PlaybackEdgeBounds,
 ): void {
   // Step 1: Guard empty trails.
   if (trailPoints.length === 0) {
@@ -951,12 +940,7 @@ function drawTrailSegmentWithEdgeFade(
   endXPx: number,
   endYPx: number,
   baseOpacity: number,
-  edgeBounds: {
-    leftXPx: number;
-    rightXPx: number;
-    topYPx: number;
-    bottomYPx: number;
-  },
+  edgeBounds: PlaybackEdgeBounds,
   startFrameOffset: number,
   endFrameOffset: number,
   maxTrailFrameOffset: number,
@@ -1017,12 +1001,7 @@ function drawTrailSegmentWithEdgeFade(
 function resolveEdgeOpacityFactor(
   pointXPx: number,
   pointYPx: number,
-  edgeBounds: {
-    leftXPx: number;
-    rightXPx: number;
-    topYPx: number;
-    bottomYPx: number;
-  },
+  edgeBounds: PlaybackEdgeBounds,
 ): number {
   const distanceToLeftEdgePx = pointXPx - edgeBounds.leftXPx;
   const distanceToRightEdgePx = edgeBounds.rightXPx - pointXPx;

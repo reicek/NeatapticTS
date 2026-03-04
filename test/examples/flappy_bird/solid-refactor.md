@@ -88,7 +88,7 @@ Create folder: `browser-entry/playback/`
 Target files:
 
 - `browser-entry/playback/playback.ts` (public entry)
-- `browser-entry/playback/playback.types.ts`
+- `-DONE- browser-entry/playback/playback.types.ts`
 - `browser-entry/playback/playback.constants.ts` (only local playback-specific constants)
 - `browser-entry/playback/playback.errors.ts`
 - `browser-entry/playback/playback.worker-channel.utils.ts` (pure request payload builders/parsers)
