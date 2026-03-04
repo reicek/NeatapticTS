@@ -1,6 +1,5 @@
 import {
   resolveAliveBirdCount,
-  resolveFramePrimaryWinnerIndex,
   resolveLeaderPipesPassed,
 } from './browser-entry.observation.utils';
 import {
@@ -63,9 +62,18 @@ import {
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_TRAIL_OPACITY_FACTOR,
 } from '../constants/constants';
+import { cachedStarfieldTilesByHeight } from './playback/playback.constants';
+import { PlaybackAnimationFrameUnavailableError } from './playback/playback.errors';
 import type { PlaybackEdgeBounds, StarTile } from './playback/playback.types';
-
-const cachedStarfieldTilesByHeight = new Map<number, readonly StarTile[]>();
+import {
+  resolvePlaybackCompletionSummary,
+  resolvePlaybackFrameStats,
+  resolvePlaybackStepRequest,
+} from './playback/playback.worker-channel.utils';
+import {
+  resolveBirdRenderStyle,
+  resolveChampionBirdIndex,
+} from './playback/playback.render.utils';
 
 /**
  * Renders all birds from the current generation in one shared world.
@@ -126,20 +134,20 @@ export async function animatePopulationEpisode(
     // Step 3.1: Resolve frame budget and request one playback step batch.
     renderState.visibleWorldWidthPx = resolveVisibleWorldWidthPx(canvas);
     renderState.visibleWorldHeightPx = resolveVisibleWorldHeightPx(canvas);
-    simulationFrameBudget += FLAPPY_EMULATION_SPEED_MULTIPLIER;
-    const simulationStepsThisRender = Math.max(
-      1,
-      Math.floor(simulationFrameBudget),
-    );
-    simulationFrameBudget -= simulationStepsThisRender;
+    const {
+      simulationFrameBudgetRemainder,
+      playbackStepRequest,
+    } = resolvePlaybackStepRequest({
+      simulationFrameBudget,
+      visibleWorldWidthPx: renderState.visibleWorldWidthPx,
+      visibleWorldHeightPx: renderState.visibleWorldHeightPx,
+      emulationSpeedMultiplier: FLAPPY_EMULATION_SPEED_MULTIPLIER,
+    });
+    simulationFrameBudget = simulationFrameBudgetRemainder;
 
     const playbackStepPayload = await requestWorkerPlaybackStep(
       evolutionWorker,
-      {
-        simulationSteps: simulationStepsThisRender,
-        visibleWorldWidthPx: renderState.visibleWorldWidthPx,
-        visibleWorldHeightPx: renderState.visibleWorldHeightPx,
-      },
+      playbackStepRequest,
     );
 
     // Step 3.2: Apply state snapshot and update visual trail cache.
@@ -151,26 +159,28 @@ export async function animatePopulationEpisode(
     const leaderFramesSurvived = resolveLeaderFramesSurvived(renderState);
     latestLeaderPipesPassed = leaderPipesPassed;
     latestLeaderFramesSurvived = leaderFramesSurvived;
-    onFrameStats({
-      frameIndex: renderState.frameIndex,
-      activeBirdCount: resolveAliveBirdCount(renderState.birds),
-      leaderPipesPassed,
-      leaderFramesSurvived,
-      activationCallsPerFrame:
-        playbackStepPayload.instrumentation?.activationCallsPerFrame ?? 0,
-      simulationStepsPerRaf:
-        playbackStepPayload.instrumentation?.simulationStepsPerRaf ?? 0,
-    });
+    onFrameStats(
+      resolvePlaybackFrameStats(
+        playbackStepPayload,
+        renderState.frameIndex,
+        resolveAliveBirdCount(renderState.birds),
+        leaderPipesPassed,
+        leaderFramesSurvived,
+      ),
+    );
 
     // Step 3.4: Fold end-of-playback aggregates when worker signals done.
     if (playbackStepPayload.done) {
+      const playbackCompletionSummary = resolvePlaybackCompletionSummary(
+        playbackStepPayload,
+        latestLeaderPipesPassed,
+        latestLeaderFramesSurvived,
+      );
       finished = true;
-      averagePipesPassed = playbackStepPayload.averagePipesPassed ?? 0;
-      p90FramesSurvived = playbackStepPayload.p90FramesSurvived ?? 0;
-      winnerPipesPassed =
-        playbackStepPayload.winnerPipesPassed ?? latestLeaderPipesPassed;
-      winnerFramesSurvived =
-        playbackStepPayload.winnerFramesSurvived ?? latestLeaderFramesSurvived;
+      averagePipesPassed = playbackCompletionSummary.averagePipesPassed;
+      p90FramesSurvived = playbackCompletionSummary.p90FramesSurvived;
+      winnerPipesPassed = playbackCompletionSummary.winnerPipesPassed;
+      winnerFramesSurvived = playbackCompletionSummary.winnerFramesSurvived;
     }
 
     // Step 3.5: Render frame and yield to browser RAF when still active.
@@ -280,12 +290,7 @@ function renderPopulationFrame(
   }
 
   // Step 4: Resolve champion bird and render bird bodies/shine/rings.
-  const leaderBirdIndex = resolveLeaderBirdIndex(renderState);
-  const fallbackAliveBirdIndex = renderState.birds.findIndex(
-    (bird) => !bird.done,
-  );
-  const championBirdIndex =
-    leaderBirdIndex >= 0 ? leaderBirdIndex : fallbackAliveBirdIndex;
+  const championBirdIndex = resolveChampionBirdIndex(renderState);
 
   renderState.birds.forEach((bird, birdIndex) => {
     if (bird.done) {
@@ -295,13 +300,8 @@ function renderPopulationFrame(
     const birdSideLengthPx = Math.max(1, Math.round(FLAPPY_BIRD_RADIUS_PX * 2));
     const birdLeftPx = Math.round(FLAPPY_BIRD_X_PX - FLAPPY_BIRD_RADIUS_PX);
     const birdTopPx = Math.round(bird.yPx - FLAPPY_BIRD_RADIUS_PX);
-    const birdOpacity =
-      birdIndex === championBirdIndex ? 1 : FLAPPY_NON_CHAMPION_OPACITY;
-    const birdRenderColor =
-      birdIndex === championBirdIndex
-        ? FLAPPY_NEON_PALETTE.championBird
-        : FLAPPY_NEON_PALETTE.nonChampionBird;
-    const isChampionBird = birdIndex === championBirdIndex;
+    const { birdOpacity, birdRenderColor, isChampionBird } =
+      resolveBirdRenderStyle(birdIndex, championBirdIndex);
 
     // Step 4.1: Add a soft Radiant-style aura plate behind the champion bird.
     if (isChampionBird) {
@@ -1048,16 +1048,6 @@ function clamp01(value: number): number {
 }
 
 /**
- * Resolves the current leader index among alive birds.
- *
- * @param renderState - Current render state.
- * @returns Leader index or `-1`.
- */
-function resolveLeaderBirdIndex(renderState: PopulationRenderState): number {
-  return resolveFramePrimaryWinnerIndex(renderState.birds, true);
-}
-
-/**
  * Resolves the maximum survived-frame count in the current render state.
  *
  * @param renderState - Current render state.
@@ -1079,5 +1069,9 @@ function resolveLeaderFramesSurvived(
  * @returns Promise resolved on next animation frame.
  */
 function nextAnimationFrame(): Promise<void> {
+  if (typeof requestAnimationFrame !== 'function') {
+    throw new PlaybackAnimationFrameUnavailableError();
+  }
+
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }

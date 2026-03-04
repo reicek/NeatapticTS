@@ -89,10 +89,10 @@ Target files:
 
 - `browser-entry/playback/playback.ts` (public entry)
 - `-DONE- browser-entry/playback/playback.types.ts`
-- `browser-entry/playback/playback.constants.ts` (only local playback-specific constants)
-- `browser-entry/playback/playback.errors.ts`
-- `browser-entry/playback/playback.worker-channel.utils.ts` (pure request payload builders/parsers)
-- `browser-entry/playback/playback.render.utils.ts` (pure geometry/color selection)
+- `-DONE- browser-entry/playback/playback.constants.ts` (only local playback-specific constants)
+- `-DONE- browser-entry/playback/playback.errors.ts`
+- `-DONE- browser-entry/playback/playback.worker-channel.utils.ts` (pure request payload builders/parsers)
+- `-DONE- browser-entry/playback/playback.render.utils.ts` (pure geometry/color selection)
 - `browser-entry/playback/playback.render.service.ts` (canvas drawing side effects)
 - `browser-entry/playback/playback.starfield.utils.ts` (pure star layout math)
 - `browser-entry/playback/playback.starfield.service.ts` (canvas/offscreen tile creation cache)
