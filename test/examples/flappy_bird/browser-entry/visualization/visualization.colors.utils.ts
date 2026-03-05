@@ -129,16 +129,20 @@ export function resolveBiasRangeColor(nodeBias: number): string {
 export function resolveNetworkVisualizationColorScales(
   network: Network | undefined,
 ): NetworkVisualizationColorScales {
-  const connectionValues = ((network?.connections ?? []) as Array<{
-    weight?: number;
-  }>)
+  const connectionValues = (
+    (network?.connections ?? []) as Array<{
+      weight?: number;
+    }>
+  )
     .map((connection) => Number(connection.weight ?? 0))
     .filter((weight) => Number.isFinite(weight));
 
-  const biasValues = ((network?.nodes ?? []) as Array<{
-    type?: string;
-    bias?: number;
-  }>)
+  const biasValues = (
+    (network?.nodes ?? []) as Array<{
+      type?: string;
+      bias?: number;
+    }>
+  )
     .filter((node) => node.type !== 'output')
     .map((node) => Number(node.bias ?? 0))
     .filter((bias) => Number.isFinite(bias));
@@ -172,10 +176,12 @@ function createDynamicColorScale(
 
   const minimumValue = hasRange
     ? observedMinimumValue
-    : observedMinimumValue - Math.max(1e-6, Math.abs(observedMinimumValue) * 0.01);
+    : observedMinimumValue -
+      Math.max(1e-6, Math.abs(observedMinimumValue) * 0.01);
   const maximumValue = hasRange
     ? observedMaximumValue
-    : observedMaximumValue + Math.max(1e-6, Math.abs(observedMaximumValue) * 0.01);
+    : observedMaximumValue +
+      Math.max(1e-6, Math.abs(observedMaximumValue) * 0.01);
 
   const dynamicTiers = resolveSignedDynamicTiers(minimumValue, maximumValue);
   const aboveTierColor =
@@ -310,7 +316,11 @@ function mapLogarithmicProgress(
   totalPositions: number,
   logarithmicSteepness: number,
 ): number {
-  const normalizedPosition = clamp(position / Math.max(1, totalPositions), 0, 1);
+  const normalizedPosition = clamp(
+    position / Math.max(1, totalPositions),
+    0,
+    1,
+  );
   return (
     Math.log1p(logarithmicSteepness * normalizedPosition) /
     Math.log1p(logarithmicSteepness)

@@ -48,7 +48,10 @@ export function resolveNextSpawnGapCenterY(
     previousGapCenterYPx - FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
   );
   const maximumGapCenterYPx = Math.min(
-    Math.max(FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX, worldHeightPx - FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX),
+    Math.max(
+      FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+      worldHeightPx - FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+    ),
     previousGapCenterYPx + FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
   );
   return Math.max(

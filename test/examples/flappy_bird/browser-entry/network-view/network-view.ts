@@ -42,5 +42,9 @@ export function resolveNetworkArchitectureLabel(
   inputSize: number,
   outputSize: number,
 ): string {
-  return resolveNetworkArchitectureLabelInternal(network, inputSize, outputSize);
+  return resolveNetworkArchitectureLabelInternal(
+    network,
+    inputSize,
+    outputSize,
+  );
 }

@@ -1,0 +1,210 @@
+import {
+  FLAPPY_FLAP_VELOCITY_PX_PER_FRAME,
+  FLAPPY_GRAVITY_PX_PER_FRAME2,
+  FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
+  FLAPPY_PIPE_WIDTH_PX,
+  FLAPPY_WORLD_WIDTH_PX,
+} from '../constants/constants';
+import type { FlappyRng } from '../rng';
+import {
+  clampValue,
+  resolveAdaptiveDifficultyProfile,
+  resolveNextSpawnGapCenterY,
+  resolveNextSpawnGapSize,
+  resolveNextSpawnIntervalFrames,
+  type SharedDifficultyProfile,
+} from '../flappy.simulation.shared.utils';
+import {
+  FLAPPY_ENVIRONMENT_DEFAULT_CONTROL_SUBSTEPS_PER_FRAME,
+  FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE,
+  FLAPPY_ENVIRONMENT_MAX_FRAMES_PER_EPISODE,
+} from './environment.constants';
+import { updateCollisionAndProgressState } from './environment.collision.utils';
+import type {
+  FlappyDifficultyScale,
+  FlappyGameState,
+} from './environment.types';
+
+/**
+ * Advance the simulation by one frame.
+ *
+ * @param state - Mutable state object to update in-place.
+ * @param rng - Random source used to spawn pipes.
+ * @param flap - If true, applies an upward velocity impulse.
+ * @param difficultyScale - Curriculum difficulty scale in [0, 1].
+ */
+export function stepFlappyState(
+  state: FlappyGameState,
+  rng: FlappyRng,
+  flap: boolean,
+  difficultyScale: FlappyDifficultyScale = FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE,
+): void {
+  stepFlappyStateWithControlSubsteps(
+    state,
+    rng,
+    () => flap,
+    difficultyScale,
+    1,
+  );
+}
+
+/**
+ * Advance one logical frame using multiple control/physics substeps.
+ *
+ * This allows policies to react multiple times before `frameIndex` advances,
+ * improving responsiveness in high-difficulty scenarios.
+ *
+ * @param state - Mutable state object to update in-place.
+ * @param rng - Random source used to spawn pipes.
+ * @param shouldFlapForSubstep - Callback deciding flap action per substep.
+ * @param difficultyScale - Curriculum difficulty scale in [0, 1].
+ * @param controlSubstepsPerFrame - Number of substeps to run this frame.
+ * @returns Nothing.
+ */
+export function stepFlappyStateWithControlSubsteps(
+  state: FlappyGameState,
+  rng: FlappyRng,
+  shouldFlapForSubstep: () => boolean,
+  difficultyScale: FlappyDifficultyScale = FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE,
+  controlSubstepsPerFrame: number = FLAPPY_ENVIRONMENT_DEFAULT_CONTROL_SUBSTEPS_PER_FRAME,
+): void {
+  if (state.done) return;
+
+  const difficultyProfile = resolveDifficultyProfile(
+    state.pipesPassed,
+    difficultyScale,
+  );
+  const substepCount = Math.max(1, Math.trunc(controlSubstepsPerFrame));
+  const substepDelta = 1 / substepCount;
+
+  // Step 1: Run high-frequency control/physics substeps.
+  for (
+    let controlSubstepIndex = 0;
+    controlSubstepIndex < substepCount && !state.done;
+    controlSubstepIndex++
+  ) {
+    const flap = shouldFlapForSubstep();
+    if (flap) {
+      state.bird.velocityYPxPerFrame = FLAPPY_FLAP_VELOCITY_PX_PER_FRAME;
+    }
+
+    state.bird.velocityYPxPerFrame = clampValue(
+      state.bird.velocityYPxPerFrame +
+        FLAPPY_GRAVITY_PX_PER_FRAME2 * substepDelta,
+      -Infinity,
+      FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
+    );
+    state.bird.yPx += state.bird.velocityYPxPerFrame * substepDelta;
+
+    for (const pipe of state.pipes) {
+      pipe.xPx -= difficultyProfile.pipeSpeedPxPerFrame * substepDelta;
+    }
+    state.pipes = state.pipes.filter(
+      (pipe) => pipe.xPx + FLAPPY_PIPE_WIDTH_PX > 0,
+    );
+
+    state.framesUntilNextPipeSpawn -= substepDelta;
+    if (state.framesUntilNextPipeSpawn <= 0) {
+      const nextGapSizePx = resolveLocalNextSpawnGapSize(
+        state.lastSpawnedPipeGapPx,
+        difficultyProfile,
+        rng,
+      );
+      const nextSpawnIntervalFrames = resolveLocalNextSpawnIntervalFrames(
+        state.lastSpawnedPipeSpawnIntervalFrames,
+        difficultyProfile,
+      );
+      const nextGapCenterYPx = resolveNextSpawnGapCenterY(
+        state.lastSpawnedPipeGapCenterYPx,
+        rng,
+      );
+      state.pipes.push({
+        xPx: FLAPPY_WORLD_WIDTH_PX + FLAPPY_PIPE_WIDTH_PX,
+        gapCenterYPx: nextGapCenterYPx,
+        gapSizePx: nextGapSizePx,
+        passed: false,
+      });
+      state.lastSpawnedPipeGapPx = nextGapSizePx;
+      state.lastSpawnedPipeGapCenterYPx = nextGapCenterYPx;
+      state.lastSpawnedPipeSpawnIntervalFrames = nextSpawnIntervalFrames;
+      state.framesUntilNextPipeSpawn += nextSpawnIntervalFrames;
+    }
+
+    if (!state.done) {
+      updateCollisionAndProgressState(state);
+    }
+  }
+
+  // Step 2: Frame accounting and timeout.
+  state.frameIndex++;
+  if (
+    !state.done &&
+    state.frameIndex >= FLAPPY_ENVIRONMENT_MAX_FRAMES_PER_EPISODE
+  ) {
+    state.done = true;
+    state.doneReason = 'timeout';
+  }
+}
+
+/**
+ * Resolves adaptive difficulty parameters from current progress.
+ *
+ * @param pipesPassed - Number of pipes passed by the active bird.
+ * @param difficultyScale - Curriculum difficulty scale in [0, 1].
+ * @returns Runtime difficulty profile.
+ */
+function resolveDifficultyProfile(
+  pipesPassed: number,
+  difficultyScale: FlappyDifficultyScale = FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE,
+): {
+  pipeGapPx: number;
+  pipeSpeedPxPerFrame: number;
+  pipeSpawnIntervalFrames: number;
+} {
+  return resolveAdaptiveDifficultyProfile(pipesPassed, difficultyScale);
+}
+
+/**
+ * Resolve the next spawned pipe gap with progressive wide-to-hard shrink and jitter.
+ *
+ * @param previousSpawnGapPx - Most recently spawned gap size.
+ * @param difficultyProfile - Current adaptive profile.
+ * @param rng - Random source.
+ * @returns Gap size for the next pipe.
+ */
+function resolveLocalNextSpawnGapSize(
+  previousSpawnGapPx: number | undefined,
+  difficultyProfile: {
+    pipeGapPx: number;
+    pipeSpeedPxPerFrame: number;
+    pipeSpawnIntervalFrames: number;
+  },
+  rng: FlappyRng,
+): number {
+  return resolveNextSpawnGapSize(
+    previousSpawnGapPx,
+    difficultyProfile as SharedDifficultyProfile,
+    rng,
+  );
+}
+
+/**
+ * Resolve the next spawned pipe interval with progressive wide-to-hard shrink.
+ *
+ * @param previousSpawnIntervalFrames - Most recently spawned interval.
+ * @param difficultyProfile - Current adaptive profile.
+ * @returns Spawn interval for the next pipe.
+ */
+function resolveLocalNextSpawnIntervalFrames(
+  previousSpawnIntervalFrames: number | undefined,
+  difficultyProfile: {
+    pipeGapPx: number;
+    pipeSpeedPxPerFrame: number;
+    pipeSpawnIntervalFrames: number;
+  },
+): number {
+  return resolveNextSpawnIntervalFrames(
+    previousSpawnIntervalFrames,
+    difficultyProfile as SharedDifficultyProfile,
+  );
+}

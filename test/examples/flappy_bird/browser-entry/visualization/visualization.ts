@@ -15,5 +15,9 @@ export function resolveNetworkVisualizationLayers(
   inputSize: number,
   outputSize: number,
 ): VisualNetworkNodeLike[][] {
-  return resolveNetworkVisualizationLayersFromTopology(network, inputSize, outputSize);
+  return resolveNetworkVisualizationLayersFromTopology(
+    network,
+    inputSize,
+    outputSize,
+  );
 }

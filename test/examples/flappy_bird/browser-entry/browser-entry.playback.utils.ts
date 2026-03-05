@@ -7,7 +7,7 @@ import {
   resolveVisibleWorldWidthPx,
   resolveWorldViewport,
 } from './browser-entry.viewport.utils';
-import { requestWorkerPlaybackStep } from './browser-entry.worker-channel.utils';
+import { requestWorkerPlaybackStep } from './worker-channel/worker-channel';
 import {
   FLAPPY_EMULATION_SPEED_MULTIPLIER,
   FLAPPY_BIRD_VIEWPORT_X_RATIO,
@@ -49,9 +49,7 @@ import {
   FLAPPY_TRAIL_OPACITY_FACTOR,
 } from '../constants/constants';
 import { nextAnimationFrame } from './playback/playback.loop.service';
-import {
-  resolveStarfieldTiles,
-} from './playback/playback.starfield.service';
+import { resolveStarfieldTiles } from './playback/playback.starfield.service';
 import { positiveModulo } from './playback/playback.starfield.utils';
 import {
   pushTrailPoint,
@@ -129,15 +127,13 @@ export async function animatePopulationEpisodeInternal(
     // Step 3.1: Resolve frame budget and request one playback step batch.
     renderState.visibleWorldWidthPx = resolveVisibleWorldWidthPx(canvas);
     renderState.visibleWorldHeightPx = resolveVisibleWorldHeightPx(canvas);
-    const {
-      simulationFrameBudgetRemainder,
-      playbackStepRequest,
-    } = resolvePlaybackStepRequest({
-      simulationFrameBudget,
-      visibleWorldWidthPx: renderState.visibleWorldWidthPx,
-      visibleWorldHeightPx: renderState.visibleWorldHeightPx,
-      emulationSpeedMultiplier: FLAPPY_EMULATION_SPEED_MULTIPLIER,
-    });
+    const { simulationFrameBudgetRemainder, playbackStepRequest } =
+      resolvePlaybackStepRequest({
+        simulationFrameBudget,
+        visibleWorldWidthPx: renderState.visibleWorldWidthPx,
+        visibleWorldHeightPx: renderState.visibleWorldHeightPx,
+        emulationSpeedMultiplier: FLAPPY_EMULATION_SPEED_MULTIPLIER,
+      });
     simulationFrameBudget = simulationFrameBudgetRemainder;
 
     const playbackStepPayload = await requestWorkerPlaybackStep(

@@ -1,4 +1,7 @@
-import { FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX, FLAPPY_TRAIL_MAX_POINTS } from '../../constants/constants';
+import {
+  FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX,
+  FLAPPY_TRAIL_MAX_POINTS,
+} from '../../constants/constants';
 import type { PlaybackEdgeBounds } from './playback.types';
 import type { TrailPoint } from '../browser-entry.types';
 
@@ -49,7 +52,8 @@ export function resolveEdgeOpacityFactor(
     distanceToTopEdgePx,
     distanceToBottomEdgePx,
   );
-  const fadeProgress = nearestEdgeDistancePx / FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX;
+  const fadeProgress =
+    nearestEdgeDistancePx / FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX;
   return clamp01(fadeProgress);
 }
 

@@ -26,7 +26,10 @@ export interface PlaybackBirdRenderStyle {
 export function resolveChampionBirdIndex(
   renderState: PopulationRenderState,
 ): number {
-  const leaderBirdIndex = resolveFramePrimaryWinnerIndex(renderState.birds, true);
+  const leaderBirdIndex = resolveFramePrimaryWinnerIndex(
+    renderState.birds,
+    true,
+  );
   if (leaderBirdIndex >= 0) {
     return leaderBirdIndex;
   }

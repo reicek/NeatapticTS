@@ -261,7 +261,8 @@ function drawSquareDottedConnection(
   const squareSidePx = FLAPPY_NETWORK_DOTTED_CONNECTION_SQUARE_SIDE_PX;
   const stepDistancePx = Math.max(
     (squareSidePx + 2) * FLAPPY_NETWORK_DOTTED_CONNECTION_STEP_COMPACT_RATIO,
-    (input.lineWidthPx * FLAPPY_NETWORK_DOTTED_CONNECTION_WIDTH_SPACING_RATIO) *
+    input.lineWidthPx *
+      FLAPPY_NETWORK_DOTTED_CONNECTION_WIDTH_SPACING_RATIO *
       FLAPPY_NETWORK_DOTTED_CONNECTION_STEP_COMPACT_RATIO,
   );
   const directionXPx = deltaXPx / segmentLengthPx;
@@ -340,11 +341,7 @@ export function drawBiasNodesLayerInternal(
     const isOutputNode = positionedNode.node.type === 'output';
     const nodeFillColor = isOutputNode
       ? FLAPPY_NEON_PALETTE.currentRunText
-      : resolveTierColor(
-          nodeBias,
-          biasScale.tiers,
-          biasScale.aboveTierColor,
-        );
+      : resolveTierColor(nodeBias, biasScale.tiers, biasScale.aboveTierColor);
     const nodeStrokeColor = isOutputNode
       ? FLAPPY_NETWORK_OUTPUT_NODE_STROKE_COLOR
       : FLAPPY_NETWORK_HIDDEN_NODE_STROKE_COLOR;
@@ -464,10 +461,7 @@ export function drawNetworkColorLegendInternal(
     colorScales.connectionScale,
     'w',
   );
-  const biasLegendRows = createColorLegendRows(
-    colorScales.biasScale,
-    'b',
-  );
+  const biasLegendRows = createColorLegendRows(colorScales.biasScale, 'b');
   const legendLayout = resolveNetworkLegendLayout(
     context,
     connectionLegendRows,
@@ -599,10 +593,7 @@ export function resolveDefaultNetworkLegendLayoutInternal(
     colorScales.connectionScale,
     'w',
   );
-  const biasLegendRows = createColorLegendRows(
-    colorScales.biasScale,
-    'b',
-  );
+  const biasLegendRows = createColorLegendRows(colorScales.biasScale, 'b');
   return resolveNetworkLegendLayout(
     context,
     connectionLegendRows,

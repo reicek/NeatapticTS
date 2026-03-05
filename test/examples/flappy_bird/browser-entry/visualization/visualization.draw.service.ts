@@ -40,7 +40,12 @@ export function drawBiasNodesLayer(
   nodeDimensions: NetworkNodeDimensionsLike,
   biasScale: DynamicColorScale,
 ): void {
-  drawBiasNodesLayerInternal(context, positionedNodes, nodeDimensions, biasScale);
+  drawBiasNodesLayerInternal(
+    context,
+    positionedNodes,
+    nodeDimensions,
+    biasScale,
+  );
 }
 
 /**
