@@ -1,3 +1,5 @@
+import { FLAPPY_DEFAULT_RNG_SEED } from '../constants/constants';
+
 /** Default population size used by the Flappy trainer NEAT run. */
 export const FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE = 200;
 
@@ -5,7 +7,7 @@ export const FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE = 200;
 export const FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT = 20;
 
 /** Deterministic trainer RNG seed used for reproducible training runs. */
-export const FLAPPY_TRAINER_DEFAULT_RNG_SEED = 0x1234abcd;
+export const FLAPPY_TRAINER_DEFAULT_RNG_SEED = FLAPPY_DEFAULT_RNG_SEED;
 
 /** Log message emitted when trainer loop exits cleanly. */
 export const FLAPPY_TRAINER_STOPPED_MESSAGE =

@@ -27,7 +27,7 @@ export function sampleGapCenterY(
     lowerBoundGapCenterYPx,
     worldHeightPx - FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
   );
-  return rng.nextInt(lowerBoundGapCenterYPx, upperBoundGapCenterYPx + 1);
+  return rng.nextInt(lowerBoundGapCenterYPx, upperBoundGapCenterYPx);
 }
 
 /**

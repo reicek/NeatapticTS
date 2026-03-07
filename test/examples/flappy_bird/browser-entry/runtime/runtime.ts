@@ -114,9 +114,9 @@ export const start = async (
   };
 
   /**
-   * Reports whether the demo loop is currently active.
+   * Reports whether the demo loop has been stopped.
    *
-   * @returns `true` when not stopped.
+   * @returns `true` when stopped.
    */
   const isStopped = () => stopped;
 

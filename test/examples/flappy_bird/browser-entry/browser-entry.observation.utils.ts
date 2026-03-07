@@ -32,8 +32,10 @@ import type {
  * @param velocityYPxPerFrame - Bird vertical velocity.
  * @param pipes - Current pipe list.
  * @param visibleWorldWidthPx - Current visible world width.
+ * @param worldHeightPx - Current world height used for normalization and bounds.
  * @param difficultyProfile - Active difficulty profile.
  * @param activeSpawnIntervalFrames - Current spawn interval.
+ * @param observationMemoryState - Temporal memory state for recurrent observation features.
  * @returns Ordered normalized observation vector.
  */
 export function resolveObservationVector(

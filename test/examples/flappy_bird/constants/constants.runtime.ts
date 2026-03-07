@@ -22,6 +22,9 @@ export const FLAPPY_BROWSER_POPULATION_SIZE = 10;
 /** Default elitism count for browser playback worker initialization. */
 export const FLAPPY_BROWSER_ELITISM_COUNT = 1;
 
+/** Deterministic default RNG seed shared by browser runtime and trainer flows. */
+export const FLAPPY_DEFAULT_RNG_SEED = 0x1234abcd;
+
 /** Normalized decision threshold used for scalar output flap policies. */
 export const FLAPPY_FLAP_THRESHOLD = 0.5;
 

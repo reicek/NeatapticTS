@@ -6,6 +6,7 @@ import { requestWorkerGeneration } from '../worker-channel/worker-channel';
 import {
   FLAPPY_HUD_UPDATE_INTERVAL_FRAMES,
   FLAPPY_HUD_ZERO_TEXT,
+  FLAPPY_DEFAULT_RNG_SEED,
   FLAPPY_STATUS_EVOLVING_TEXT,
   FLAPPY_STATUS_PLAYING_TEXT,
 } from '../../constants/constants';
@@ -69,7 +70,7 @@ export async function runRuntimeEvolutionLoop(
     payload: {
       populationSize,
       elitismCount,
-      rngSeed: 0x1234abcd,
+      rngSeed: FLAPPY_DEFAULT_RNG_SEED,
     },
   });
 

@@ -1,7 +1,4 @@
-import {
-  FLAPPY_HALF,
-  FLAPPY_NORMALIZATION_EPSILON,
-} from '../constants/constants';
+import { FLAPPY_HALF } from '../constants/constants';
 import { FLAPPY_PIPE_WIDTH_PX } from '../constants/constants';
 import type { ViewportInfo } from './browser-entry.types';
 
@@ -25,23 +22,29 @@ export function resolveWorldViewport(canvas: HTMLCanvasElement): ViewportInfo {
 /**
  * Resolves visible world width represented by the current canvas.
  *
+ * Educational note:
+ * The current viewport model uses a 1:1 mapping between canvas pixels and
+ * world-space pixels, so visible width is the canvas width directly.
+ *
  * @param canvas - Playback canvas.
  * @returns Visible width in world-space pixels.
  */
 export function resolveVisibleWorldWidthPx(canvas: HTMLCanvasElement): number {
-  const viewportScale = 1;
-  return canvas.width / Math.max(FLAPPY_NORMALIZATION_EPSILON, viewportScale);
+  return canvas.width;
 }
 
 /**
  * Resolves visible world height represented by the current canvas.
  *
+ * Educational note:
+ * The current viewport model uses a 1:1 mapping between canvas pixels and
+ * world-space pixels, so visible height is the canvas height directly.
+ *
  * @param canvas - Playback canvas.
  * @returns Visible height in world-space pixels.
  */
 export function resolveVisibleWorldHeightPx(canvas: HTMLCanvasElement): number {
-  const viewportScale = 1;
-  return canvas.height / Math.max(FLAPPY_NORMALIZATION_EPSILON, viewportScale);
+  return canvas.height;
 }
 
 /**

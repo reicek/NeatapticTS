@@ -39,13 +39,13 @@ export function computePopulationStandardDeviation(
  *
  * @param values - Numeric samples.
  * @param percentile - Percentile in [0, 1].
- * @returns Percentile value.
+ * @returns Percentile value, or `Number.NaN` when `values` is empty.
  */
 export function computePercentile(
   values: readonly number[],
   percentile: number,
 ): number {
-  if (values.length === 0) return 0;
+  if (values.length === 0) return Number.NaN;
   const sortedValues = values.toSorted(
     (leftValue, rightValue) => leftValue - rightValue,
   );
@@ -55,7 +55,7 @@ export function computePercentile(
   const upperIndex = Math.ceil(rawIndex);
   const interpolation = rawIndex - lowerIndex;
 
-  const lowerValue = sortedValues[lowerIndex] ?? sortedValues[0] ?? 0;
+  const lowerValue = sortedValues[lowerIndex] ?? sortedValues[0] ?? Number.NaN;
   const upperValue = sortedValues[upperIndex] ?? lowerValue;
   return lowerValue + (upperValue - lowerValue) * interpolation;
 }

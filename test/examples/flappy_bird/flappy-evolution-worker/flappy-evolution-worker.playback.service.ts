@@ -48,7 +48,7 @@ export function beginWorkerPlaybackSession(options: {
       payload.visibleWorldWidthPx,
       payload.visibleWorldHeightPx,
     ),
-    currentPlaybackRng: createXorshift32(0xabcdef01),
+    currentPlaybackRng: playbackRng,
     playbackWinnerIndex: -1,
   };
 }

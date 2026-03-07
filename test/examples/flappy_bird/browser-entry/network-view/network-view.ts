@@ -24,13 +24,11 @@ export function resolveNetworkVisualizationHeightPx(
   network: Network | undefined,
   inputSize: number,
   outputSize: number,
-  viewportWidthPx?: number,
 ): number {
   return resolveNetworkVisualizationHeightPxInternal(
     network,
     inputSize,
     outputSize,
-    viewportWidthPx,
   );
 }
 

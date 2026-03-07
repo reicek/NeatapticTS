@@ -3,10 +3,10 @@ import Architect from '../../../../src/architecture/architect';
 import { evaluateFlappyFitness } from '../flappyEvaluation';
 import type { WorkerInitMessage } from './flappy-evolution-worker.types';
 import {
+  FLAPPY_MAX_FRAMES_PER_EPISODE,
   FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
   FLAPPY_NETWORK_INPUT_SIZE,
   FLAPPY_NETWORK_OUTPUT_SIZE,
-  FLAPPY_PIPE_SPAWN_INTERVAL_FRAMES,
 } from '../constants/constants';
 
 /**
@@ -40,7 +40,7 @@ export function createInitializedWorkerRuntime(
   neatRuntime.fitness = (network) =>
     evaluateFlappyFitness(network, {
       enableEarlyTermination: true,
-      maxFrames: FLAPPY_PIPE_SPAWN_INTERVAL_FRAMES,
+      maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
     });
 
   neatRuntime.restoreRNGState(initPayload.rngSeed);
