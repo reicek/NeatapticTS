@@ -1,8 +1,11 @@
 import type {
-  EvolutionGenerationPayload,
-  EvolutionPlaybackStepMessage,
-  EvolutionWorkerMessage,
-} from './browser-entry.types';
+  WorkerChannelGenerationPayload,
+  WorkerChannelPlaybackStepPayload,
+  WorkerChannelPlaybackStepRequest,
+} from './worker-channel/worker-channel.types';
+import { resolveEvolutionWorkerBundleUrl } from './worker-channel/worker-channel.url.service';
+import { requestWorkerGeneration as requestWorkerGenerationService } from './worker-channel/worker-channel.generation.service';
+import { requestWorkerPlaybackStep as requestWorkerPlaybackStepService } from './worker-channel/worker-channel.playback.service';
 
 /**
  * Creates the evolution worker used to keep heavy NEAT compute off the UI thread.
@@ -10,21 +13,9 @@ import type {
  * @returns Initialized worker instance.
  */
 export function createEvolutionWorker(): Worker {
-  // Step 1: Locate the currently loaded browser bundle script element.
-  const scriptElements = document.querySelectorAll('script[src]');
-  const currentBundleScript = Array.from(scriptElements)
-    .map((scriptElement) => scriptElement as HTMLScriptElement)
-    .find((scriptElement) =>
-      scriptElement.src.includes('flappy-bird.bundle.js'),
-    );
-
-  // Step 2: Resolve worker URL relative to current bundle (or page URL fallback).
-  const workerBaseUrl = currentBundleScript?.src ?? window.location.href;
-  const workerUrl = new URL(
-    'flappy-evolution.worker.bundle.js',
-    workerBaseUrl,
-  ).toString();
-  // Step 3: Create worker instance from resolved URL.
+  // Step 1: Resolve worker URL from active bundle context.
+  const workerUrl = resolveEvolutionWorkerBundleUrl();
+  // Step 2: Create worker instance from resolved URL.
   return new Worker(workerUrl);
 }
 
@@ -36,50 +27,8 @@ export function createEvolutionWorker(): Worker {
  */
 export function requestWorkerGeneration(
   evolutionWorker: Worker,
-): Promise<EvolutionGenerationPayload> {
-  return new Promise((resolve, reject) => {
-    // Step 1: Handle worker messages and route by message type.
-    const handleMessage = (
-      event: MessageEvent<EvolutionWorkerMessage>,
-    ): void => {
-      const workerMessage = event.data;
-      if (workerMessage.type === 'generation-ready') {
-        cleanup();
-        resolve(workerMessage.payload);
-        return;
-      }
-
-      if (workerMessage.type === 'error') {
-        cleanup();
-        reject(new Error(workerMessage.payload.message));
-      }
-    };
-
-    // Step 2: Handle worker-level execution errors.
-    const handleError = (event: ErrorEvent): void => {
-      cleanup();
-      reject(
-        event.error instanceof Error ? event.error : new Error(event.message),
-      );
-    };
-
-    // Step 3: Remove transient listeners once request settles.
-    const cleanup = (): void => {
-      evolutionWorker.removeEventListener(
-        'message',
-        handleMessage as EventListener,
-      );
-      evolutionWorker.removeEventListener(
-        'error',
-        handleError as EventListener,
-      );
-    };
-
-    // Step 4: Register listeners and issue generation request.
-    evolutionWorker.addEventListener('message', handleMessage as EventListener);
-    evolutionWorker.addEventListener('error', handleError as EventListener);
-    evolutionWorker.postMessage({ type: 'request-generation' });
-  });
+): Promise<WorkerChannelGenerationPayload> {
+  return requestWorkerGenerationService(evolutionWorker);
 }
 
 /**
@@ -91,55 +40,7 @@ export function requestWorkerGeneration(
  */
 export function requestWorkerPlaybackStep(
   evolutionWorker: Worker,
-  playbackStepRequest: {
-    simulationSteps: number;
-    visibleWorldWidthPx: number;
-  },
-): Promise<EvolutionPlaybackStepMessage['payload']> {
-  return new Promise((resolve, reject) => {
-    // Step 1: Handle worker messages and route by message type.
-    const handleMessage = (
-      event: MessageEvent<EvolutionWorkerMessage>,
-    ): void => {
-      const workerMessage = event.data;
-      if (workerMessage.type === 'playback-step') {
-        cleanup();
-        resolve(workerMessage.payload);
-        return;
-      }
-
-      if (workerMessage.type === 'error') {
-        cleanup();
-        reject(new Error(workerMessage.payload.message));
-      }
-    };
-
-    // Step 2: Handle worker-level execution errors.
-    const handleError = (event: ErrorEvent): void => {
-      cleanup();
-      reject(
-        event.error instanceof Error ? event.error : new Error(event.message),
-      );
-    };
-
-    // Step 3: Remove transient listeners once request settles.
-    const cleanup = (): void => {
-      evolutionWorker.removeEventListener(
-        'message',
-        handleMessage as EventListener,
-      );
-      evolutionWorker.removeEventListener(
-        'error',
-        handleError as EventListener,
-      );
-    };
-
-    // Step 4: Register listeners and issue playback-step request.
-    evolutionWorker.addEventListener('message', handleMessage as EventListener);
-    evolutionWorker.addEventListener('error', handleError as EventListener);
-    evolutionWorker.postMessage({
-      type: 'request-playback-step',
-      payload: playbackStepRequest,
-    });
-  });
+  playbackStepRequest: WorkerChannelPlaybackStepRequest,
+): Promise<WorkerChannelPlaybackStepPayload> {
+  return requestWorkerPlaybackStepService(evolutionWorker, playbackStepRequest);
 }

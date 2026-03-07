@@ -43,6 +43,7 @@ export interface EvolutionWorkerErrorMessage {
 export interface EvolutionPlaybackStepSnapshot {
   frameIndex: number;
   visibleWorldWidthPx: number;
+  visibleWorldHeightPx: number;
   pipes: PopulationPipe[];
   birds: PopulationBird[];
 }

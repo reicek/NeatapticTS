@@ -32,8 +32,10 @@ import type {
  * @param velocityYPxPerFrame - Bird vertical velocity.
  * @param pipes - Current pipe list.
  * @param visibleWorldWidthPx - Current visible world width.
+ * @param worldHeightPx - Current world height used for normalization and bounds.
  * @param difficultyProfile - Active difficulty profile.
  * @param activeSpawnIntervalFrames - Current spawn interval.
+ * @param observationMemoryState - Temporal memory state for recurrent observation features.
  * @returns Ordered normalized observation vector.
  */
 export function resolveObservationVector(
@@ -41,6 +43,7 @@ export function resolveObservationVector(
   velocityYPxPerFrame: number,
   pipes: BrowserPopulationPipeLike[],
   visibleWorldWidthPx: number,
+  worldHeightPx: number,
   difficultyProfile: BrowserDifficultyProfile,
   activeSpawnIntervalFrames: number,
   observationMemoryState: SharedObservationMemoryState,
@@ -59,7 +62,7 @@ export function resolveObservationVector(
     birdCenterXPx: FLAPPY_BIRD_X_PX,
     birdRadiusPx: FLAPPY_BIRD_RADIUS_PX,
     pipeWidthPx: FLAPPY_PIPE_WIDTH_PX,
-    worldHeightPx: FLAPPY_WORLD_HEIGHT_PX,
+    worldHeightPx,
     maxFallSpeedPxPerFrame: FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
     normalizationEpsilon: FLAPPY_NORMALIZATION_EPSILON,
   });

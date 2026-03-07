@@ -207,10 +207,7 @@ export function renderStandaloneTitleBox(
   input.context.shadowColor = 'transparent';
   input.context.shadowBlur = 0;
 
-  const glyphWidthPx = Math.max(
-    FLAPPY_FRAME_MIN_GLYPH_WIDTH_PX,
-    Math.floor(input.context.measureText(FLAPPY_GLYPH_HORIZONTAL).width),
-  );
+  const glyphWidthPx = resolveGlyphWidthPx(input.context);
   const frameMetrics = resolveTextFrameMetrics(
     input.widthPx,
     input.heightPx,
@@ -249,10 +246,7 @@ export function renderClosedOuterBox(input: RenderClosedOuterBoxInput): void {
   input.context.textAlign = 'left';
   input.context.fillStyle = input.glyphColor;
 
-  const glyphWidthPx = Math.max(
-    FLAPPY_FRAME_MIN_GLYPH_WIDTH_PX,
-    Math.floor(input.context.measureText(FLAPPY_GLYPH_HORIZONTAL).width),
-  );
+  const glyphWidthPx = resolveGlyphWidthPx(input.context);
   const frameMetrics = resolveTextFrameMetrics(
     input.widthPx,
     input.heightPx,
@@ -276,4 +270,17 @@ export function renderClosedOuterBox(input: RenderClosedOuterBoxInput): void {
       offsetYPx + rowIndex * frameMetrics.rowHeightPx,
     );
   });
+}
+
+/**
+ * Resolves a stable glyph width used for frame-column math.
+ *
+ * @param context - Rendering context used to measure text.
+ * @returns Floored glyph width clamped to a minimum pixel value.
+ */
+function resolveGlyphWidthPx(context: CanvasRenderingContext2D): number {
+  return Math.max(
+    FLAPPY_FRAME_MIN_GLYPH_WIDTH_PX,
+    Math.floor(context.measureText(FLAPPY_GLYPH_HORIZONTAL).width),
+  );
 }

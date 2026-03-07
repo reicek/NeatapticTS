@@ -1,13 +1,13 @@
 import {
   resolveAliveBirdCount,
-  resolveFramePrimaryWinnerIndex,
   resolveLeaderPipesPassed,
 } from './browser-entry.observation.utils';
 import {
+  resolveVisibleWorldHeightPx,
   resolveVisibleWorldWidthPx,
   resolveWorldViewport,
 } from './browser-entry.viewport.utils';
-import { requestWorkerPlaybackStep } from './browser-entry.worker-channel.utils';
+import { requestWorkerPlaybackStep } from './worker-channel/worker-channel';
 import {
   FLAPPY_EMULATION_SPEED_MULTIPLIER,
   FLAPPY_BIRD_VIEWPORT_X_RATIO,
@@ -29,25 +29,10 @@ import {
   FLAPPY_LEADER_RING_GLOW_BLUR_PX,
   FLAPPY_LEADER_RING_RADIUS_OFFSET_PX,
   FLAPPY_NON_CHAMPION_OPACITY,
-  FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX,
-  FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR,
-  FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX,
-  FLAPPY_PIPE_OUTLINE_GLOW_ALPHA,
-  FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX,
-  FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX,
-  FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX,
   FLAPPY_TRAIL_LINE_WIDTH_PX,
-  FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX,
   FLAPPY_TRAIL_MIN_HORIZONTAL_SEGMENT_PX,
   FLAPPY_TRAIL_MIN_VERTICAL_SEGMENT_PX,
-  FLAPPY_TRAIL_MAX_POINTS,
   FLAPPY_NEON_PALETTE,
-  FLAPPY_STARFIELD_CYAN_FILL_STYLE,
-  FLAPPY_STARFIELD_FAR_SCROLL_RATIO,
-  FLAPPY_STARFIELD_MID_SCROLL_RATIO,
-  FLAPPY_STARFIELD_NEAR_SCROLL_RATIO,
-  FLAPPY_STARFIELD_TILE_HEIGHT_PX,
-  FLAPPY_STARFIELD_TILE_WIDTH_PX,
 } from '../constants/constants';
 import type {
   EvolutionPlaybackStepSnapshot,
@@ -59,20 +44,29 @@ import type {
 import {
   FLAPPY_PIPE_SPEED_PX_PER_FRAME,
   FLAPPY_PIPE_WIDTH_PX,
-  FLAPPY_WORLD_HEIGHT_PX,
   FLAPPY_BIRD_X_PX,
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_TRAIL_OPACITY_FACTOR,
 } from '../constants/constants';
-
-type StarTile = {
-  image: CanvasImageSource;
-  tileWidthPx: number;
-  tileHeightPx: number;
-  scrollRatio: number;
-};
-
-let cachedStarfieldTiles: readonly StarTile[] | undefined;
+import { nextAnimationFrame } from './playback/playback.loop.service';
+import { resolveStarfieldTiles } from './playback/playback.starfield.service';
+import { positiveModulo } from './playback/playback.starfield.utils';
+import {
+  pushTrailPoint,
+  resolveEdgeOpacityFactor,
+  resolveTrailLifetimeOpacityFactor,
+} from './playback/playback.trail.utils';
+import type { PlaybackEdgeBounds } from './playback/playback.types';
+import {
+  resolvePlaybackCompletionSummary,
+  resolvePlaybackFrameStats,
+  resolvePlaybackStepRequest,
+} from './playback/playback.worker-channel.utils';
+import {
+  resolveBirdRenderStyle,
+  resolveChampionBirdIndex,
+} from './playback/playback.render.utils';
+import { drawPipeNeonOutline } from './playback/playback.render.service';
 
 /**
  * Renders all birds from the current generation in one shared world.
@@ -83,7 +77,7 @@ let cachedStarfieldTiles: readonly StarTile[] | undefined;
  * @param onFrameStats - Frame telemetry callback.
  * @returns Aggregate playback summary.
  */
-export async function animatePopulationEpisode(
+export async function animatePopulationEpisodeInternal(
   canvas: HTMLCanvasElement,
   context: CanvasRenderingContext2D,
   evolutionWorker: Worker,
@@ -99,6 +93,7 @@ export async function animatePopulationEpisode(
     type: 'start-playback',
     payload: {
       visibleWorldWidthPx: resolveVisibleWorldWidthPx(canvas),
+      visibleWorldHeightPx: resolveVisibleWorldHeightPx(canvas),
     },
   });
 
@@ -106,6 +101,7 @@ export async function animatePopulationEpisode(
   const renderState: PopulationRenderState = {
     frameIndex: 0,
     visibleWorldWidthPx: resolveVisibleWorldWidthPx(canvas),
+    visibleWorldHeightPx: resolveVisibleWorldHeightPx(canvas),
     nextPipeId: 0,
     lastSpawnedPipeGapPx: 0,
     lastSpawnedPipeGapCenterYPx: 0,
@@ -130,19 +126,19 @@ export async function animatePopulationEpisode(
   while (!finished) {
     // Step 3.1: Resolve frame budget and request one playback step batch.
     renderState.visibleWorldWidthPx = resolveVisibleWorldWidthPx(canvas);
-    simulationFrameBudget += FLAPPY_EMULATION_SPEED_MULTIPLIER;
-    const simulationStepsThisRender = Math.max(
-      1,
-      Math.floor(simulationFrameBudget),
-    );
-    simulationFrameBudget -= simulationStepsThisRender;
+    renderState.visibleWorldHeightPx = resolveVisibleWorldHeightPx(canvas);
+    const { simulationFrameBudgetRemainder, playbackStepRequest } =
+      resolvePlaybackStepRequest({
+        simulationFrameBudget,
+        visibleWorldWidthPx: renderState.visibleWorldWidthPx,
+        visibleWorldHeightPx: renderState.visibleWorldHeightPx,
+        emulationSpeedMultiplier: FLAPPY_EMULATION_SPEED_MULTIPLIER,
+      });
+    simulationFrameBudget = simulationFrameBudgetRemainder;
 
     const playbackStepPayload = await requestWorkerPlaybackStep(
       evolutionWorker,
-      {
-        simulationSteps: simulationStepsThisRender,
-        visibleWorldWidthPx: renderState.visibleWorldWidthPx,
-      },
+      playbackStepRequest,
     );
 
     // Step 3.2: Apply state snapshot and update visual trail cache.
@@ -154,26 +150,28 @@ export async function animatePopulationEpisode(
     const leaderFramesSurvived = resolveLeaderFramesSurvived(renderState);
     latestLeaderPipesPassed = leaderPipesPassed;
     latestLeaderFramesSurvived = leaderFramesSurvived;
-    onFrameStats({
-      frameIndex: renderState.frameIndex,
-      activeBirdCount: resolveAliveBirdCount(renderState.birds),
-      leaderPipesPassed,
-      leaderFramesSurvived,
-      activationCallsPerFrame:
-        playbackStepPayload.instrumentation?.activationCallsPerFrame ?? 0,
-      simulationStepsPerRaf:
-        playbackStepPayload.instrumentation?.simulationStepsPerRaf ?? 0,
-    });
+    onFrameStats(
+      resolvePlaybackFrameStats(
+        playbackStepPayload,
+        renderState.frameIndex,
+        resolveAliveBirdCount(renderState.birds),
+        leaderPipesPassed,
+        leaderFramesSurvived,
+      ),
+    );
 
     // Step 3.4: Fold end-of-playback aggregates when worker signals done.
     if (playbackStepPayload.done) {
+      const playbackCompletionSummary = resolvePlaybackCompletionSummary(
+        playbackStepPayload,
+        latestLeaderPipesPassed,
+        latestLeaderFramesSurvived,
+      );
       finished = true;
-      averagePipesPassed = playbackStepPayload.averagePipesPassed ?? 0;
-      p90FramesSurvived = playbackStepPayload.p90FramesSurvived ?? 0;
-      winnerPipesPassed =
-        playbackStepPayload.winnerPipesPassed ?? latestLeaderPipesPassed;
-      winnerFramesSurvived =
-        playbackStepPayload.winnerFramesSurvived ?? latestLeaderFramesSurvived;
+      averagePipesPassed = playbackCompletionSummary.averagePipesPassed;
+      p90FramesSurvived = playbackCompletionSummary.p90FramesSurvived;
+      winnerPipesPassed = playbackCompletionSummary.winnerPipesPassed;
+      winnerFramesSurvived = playbackCompletionSummary.winnerFramesSurvived;
     }
 
     // Step 3.5: Render frame and yield to browser RAF when still active.
@@ -207,6 +205,7 @@ function applyPlaybackSnapshot(
 ): void {
   renderState.frameIndex = snapshot.frameIndex;
   renderState.visibleWorldWidthPx = snapshot.visibleWorldWidthPx;
+  renderState.visibleWorldHeightPx = snapshot.visibleWorldHeightPx;
   renderState.pipes = snapshot.pipes;
   renderState.birds = snapshot.birds.map((birdSnapshot) => ({
     color: birdSnapshot.color,
@@ -233,6 +232,7 @@ function renderPopulationFrame(
   // Step 1: Resolve viewport transform and clear target canvas.
   const viewport = resolveWorldViewport(context.canvas);
   const visibleWorldWidthPx = Math.max(1, renderState.visibleWorldWidthPx);
+  const visibleWorldHeightPx = Math.max(1, renderState.visibleWorldHeightPx);
   const desiredBirdScreenXPx =
     visibleWorldWidthPx * FLAPPY_BIRD_VIEWPORT_X_RATIO;
   const cameraLeftPx = FLAPPY_BIRD_X_PX - desiredBirdScreenXPx;
@@ -269,24 +269,19 @@ function renderPopulationFrame(
       pipeLeft,
       gapBottom,
       FLAPPY_PIPE_WIDTH_PX,
-      FLAPPY_WORLD_HEIGHT_PX - gapBottom,
+      visibleWorldHeightPx - gapBottom,
     );
     drawPipeNeonOutline(
       context,
       pipeLeft,
       gapBottom,
       FLAPPY_PIPE_WIDTH_PX,
-      FLAPPY_WORLD_HEIGHT_PX - gapBottom,
+      visibleWorldHeightPx - gapBottom,
     );
   }
 
   // Step 4: Resolve champion bird and render bird bodies/shine/rings.
-  const leaderBirdIndex = resolveLeaderBirdIndex(renderState);
-  const fallbackAliveBirdIndex = renderState.birds.findIndex(
-    (bird) => !bird.done,
-  );
-  const championBirdIndex =
-    leaderBirdIndex >= 0 ? leaderBirdIndex : fallbackAliveBirdIndex;
+  const championBirdIndex = resolveChampionBirdIndex(renderState);
 
   renderState.birds.forEach((bird, birdIndex) => {
     if (bird.done) {
@@ -296,13 +291,8 @@ function renderPopulationFrame(
     const birdSideLengthPx = Math.max(1, Math.round(FLAPPY_BIRD_RADIUS_PX * 2));
     const birdLeftPx = Math.round(FLAPPY_BIRD_X_PX - FLAPPY_BIRD_RADIUS_PX);
     const birdTopPx = Math.round(bird.yPx - FLAPPY_BIRD_RADIUS_PX);
-    const birdOpacity =
-      birdIndex === championBirdIndex ? 1 : FLAPPY_NON_CHAMPION_OPACITY;
-    const birdRenderColor =
-      birdIndex === championBirdIndex
-        ? FLAPPY_NEON_PALETTE.championBird
-        : FLAPPY_NEON_PALETTE.nonChampionBird;
-    const isChampionBird = birdIndex === championBirdIndex;
+    const { birdOpacity, birdRenderColor, isChampionBird } =
+      resolveBirdRenderStyle(birdIndex, championBirdIndex);
 
     // Step 4.1: Add a soft Radiant-style aura plate behind the champion bird.
     if (isChampionBird) {
@@ -417,7 +407,7 @@ function renderPopulationFrame(
         leftXPx: cameraLeftPx,
         rightXPx: cameraLeftPx + visibleWorldWidthPx,
         topYPx: 0,
-        bottomYPx: FLAPPY_WORLD_HEIGHT_PX,
+        bottomYPx: visibleWorldHeightPx,
       },
     );
   });
@@ -443,13 +433,17 @@ function drawParallaxBackground(
   context.shadowBlur = 0;
   context.shadowColor = 'transparent';
   context.fillStyle = FLAPPY_NEON_PALETTE.background;
-  context.fillRect(0, 0, visibleWorldWidthPx, FLAPPY_WORLD_HEIGHT_PX);
+  const visibleWorldHeightPx = Math.max(
+    1,
+    Math.round(renderState.visibleWorldHeightPx),
+  );
+  context.fillRect(0, 0, visibleWorldWidthPx, visibleWorldHeightPx);
 
   // Step 2: Draw cached square-particle starfield layers with subtle parallax.
   // Each layer is pre-rendered into a tile and repeated via drawImage, which is
   // much faster than drawing dozens of blurred particles every frame.
   context.globalCompositeOperation = 'lighter';
-  const starfieldTiles = resolveStarfieldTiles();
+  const starfieldTiles = resolveStarfieldTiles(visibleWorldHeightPx);
   for (const tile of starfieldTiles) {
     const scrollOffsetPx = scrollBasePx * tile.scrollRatio;
     drawTiledImageRow(context, {
@@ -460,64 +454,6 @@ function drawParallaxBackground(
     });
   }
   context.globalCompositeOperation = 'source-over';
-}
-
-function resolveStarfieldTiles(): readonly StarTile[] {
-  if (cachedStarfieldTiles) {
-    return cachedStarfieldTiles;
-  }
-
-  const farTile: StarTile = {
-    image: createStarTileCanvas({
-      seed: 1_337,
-      tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
-      starCount: 35,
-      minSizePx: 1,
-      maxSizePx: 2,
-      minAlpha: 0.08,
-      maxAlpha: 0.22,
-      blurPx: 4,
-    }),
-    tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
-    scrollRatio: FLAPPY_STARFIELD_FAR_SCROLL_RATIO,
-  };
-  const midTile: StarTile = {
-    image: createStarTileCanvas({
-      seed: 2_777,
-      tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
-      starCount: 28,
-      minSizePx: 1,
-      maxSizePx: 3,
-      minAlpha: 0.1,
-      maxAlpha: 0.28,
-      blurPx: 6,
-    }),
-    tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
-    scrollRatio: FLAPPY_STARFIELD_MID_SCROLL_RATIO,
-  };
-  const nearTile: StarTile = {
-    image: createStarTileCanvas({
-      seed: 4_242,
-      tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-      tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
-      starCount: 23,
-      minSizePx: 2,
-      maxSizePx: 4,
-      minAlpha: 0.12,
-      maxAlpha: 0.34,
-      blurPx: 8,
-    }),
-    tileWidthPx: FLAPPY_STARFIELD_TILE_WIDTH_PX,
-    tileHeightPx: FLAPPY_STARFIELD_TILE_HEIGHT_PX,
-    scrollRatio: FLAPPY_STARFIELD_NEAR_SCROLL_RATIO,
-  };
-
-  cachedStarfieldTiles = [farTile, midTile, nearTile];
-  return cachedStarfieldTiles;
 }
 
 function drawTiledImageRow(
@@ -536,201 +472,6 @@ function drawTiledImageRow(
     const tileLeftPx = tileIndex * layer.tileWidthPx - normalizedOffsetPx;
     context.drawImage(layer.tile, tileLeftPx, 0);
   }
-}
-
-function createStarTileCanvas(options: {
-  seed: number;
-  tileWidthPx: number;
-  tileHeightPx: number;
-  starCount: number;
-  minSizePx: number;
-  maxSizePx: number;
-  minAlpha: number;
-  maxAlpha: number;
-  blurPx: number;
-}): CanvasImageSource {
-  const canvas = createCompatibleCanvas(
-    options.tileWidthPx,
-    options.tileHeightPx,
-  );
-  const tileContext = canvas.getContext('2d');
-  if (!tileContext) {
-    return canvas;
-  }
-
-  const seededRandom = createSeededRandom(options.seed);
-
-  tileContext.clearRect(0, 0, canvas.width, canvas.height);
-  tileContext.globalCompositeOperation = 'source-over';
-  tileContext.shadowColor = FLAPPY_STARFIELD_CYAN_FILL_STYLE;
-  tileContext.shadowBlur = options.blurPx;
-
-  for (let starIndex = 0; starIndex < options.starCount; starIndex += 1) {
-    const xPx = Math.floor(seededRandom() * options.tileWidthPx);
-    const yPx = Math.floor(seededRandom() * options.tileHeightPx);
-    const sizePx =
-      options.minSizePx +
-      Math.floor(seededRandom() * (options.maxSizePx - options.minSizePx + 1));
-    const alpha =
-      options.minAlpha + seededRandom() * (options.maxAlpha - options.minAlpha);
-
-    tileContext.globalAlpha = alpha;
-    tileContext.fillStyle = FLAPPY_STARFIELD_CYAN_FILL_STYLE;
-    tileContext.fillRect(xPx, yPx, sizePx, sizePx);
-  }
-
-  tileContext.shadowBlur = 0;
-  tileContext.shadowColor = 'transparent';
-  tileContext.globalAlpha = 1;
-  return canvas;
-}
-
-function createCompatibleCanvas(
-  widthPx: number,
-  heightPx: number,
-): HTMLCanvasElement | OffscreenCanvas {
-  const width = Math.max(1, Math.round(widthPx));
-  const height = Math.max(1, Math.round(heightPx));
-
-  if (typeof OffscreenCanvas !== 'undefined') {
-    return new OffscreenCanvas(width, height);
-  }
-
-  if (typeof document !== 'undefined') {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    return canvas;
-  }
-
-  // Fallback: non-browser environments won't render, but should not crash.
-  const canvas = { width, height } as unknown as HTMLCanvasElement;
-  return canvas;
-}
-
-function createSeededRandom(seed: number): () => number {
-  let randomState = seed >>> 0;
-  return () => {
-    // xorshift32
-    randomState ^= randomState << 13;
-    randomState >>>= 0;
-    randomState ^= randomState >> 17;
-    randomState >>>= 0;
-    randomState ^= randomState << 5;
-    randomState >>>= 0;
-    return randomState / 0x1_0000_0000;
-  };
-}
-
-function positiveModulo(value: number, modulo: number): number {
-  const remainder = value % modulo;
-  return remainder < 0 ? remainder + modulo : remainder;
-}
-
-/**
- * Draws a simplified neon outline around a pipe rectangle.
- *
- * @param context - Canvas 2D context.
- * @param rectangleLeftPx - Rectangle left position.
- * @param rectangleTopPx - Rectangle top position.
- * @param rectangleWidthPx - Rectangle width.
- * @param rectangleHeightPx - Rectangle height.
- * @returns Nothing.
- */
-function drawPipeNeonOutline(
-  context: CanvasRenderingContext2D,
-  rectangleLeftPx: number,
-  rectangleTopPx: number,
-  rectangleWidthPx: number,
-  rectangleHeightPx: number,
-): void {
-  context.save();
-  // Step 1: Guard degenerate rectangles.
-  if (rectangleWidthPx <= 0 || rectangleHeightPx <= 0) {
-    context.restore();
-    return;
-  }
-
-  const alignedLeftPx = Math.round(rectangleLeftPx);
-  const alignedTopPx = Math.round(rectangleTopPx);
-  const alignedWidthPx = Math.max(1, Math.round(rectangleWidthPx));
-  const alignedHeightPx = Math.max(1, Math.round(rectangleHeightPx));
-
-  // Step 2: Compute outline geometry.
-  // We want a small side gap and a larger "entrance" gap (top for bottom pipe,
-  // bottom for top pipe) to suggest a pipe rim.
-  const outlineStrokeWidthPx = FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX;
-  const outlineStrokeHalfPx = outlineStrokeWidthPx / 2;
-  const sideExpandPx = Math.round(
-    FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX + outlineStrokeHalfPx,
-  );
-  const entranceExpandPx = Math.round(
-    FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX + outlineStrokeHalfPx,
-  );
-
-  const isTopPipeSegment = alignedTopPx === 0;
-  const outlineTopExpandPx = isTopPipeSegment ? sideExpandPx : entranceExpandPx;
-  const outlineBottomExpandPx = isTopPipeSegment
-    ? entranceExpandPx
-    : sideExpandPx;
-
-  const outlineLeftPx = alignedLeftPx - sideExpandPx;
-  const outlineTopPx = alignedTopPx - outlineTopExpandPx;
-  const outlineWidthPx = alignedWidthPx + sideExpandPx * 2;
-  const outlineHeightPx =
-    alignedHeightPx + outlineTopExpandPx + outlineBottomExpandPx;
-
-  // Step 3: Define pixel-aligned stroke helper to avoid blurry edges.
-  const strokeAlignedRect = (
-    leftPx: number,
-    topPx: number,
-    widthPx: number,
-    heightPx: number,
-    lineWidthPx: number,
-  ): void => {
-    const oddLineAlignmentOffsetPx = lineWidthPx % 2 === 1 ? 0.5 : 0;
-    context.lineWidth = lineWidthPx;
-    context.strokeRect(
-      Math.round(leftPx) + oddLineAlignmentOffsetPx,
-      Math.round(topPx) + oddLineAlignmentOffsetPx,
-      Math.max(1, Math.round(widthPx)),
-      Math.max(1, Math.round(heightPx)),
-    );
-  };
-
-  // Step 4: Draw neon-green outline with cyan neon glow.
-  const previousCompositeOperation = context.globalCompositeOperation;
-  context.globalCompositeOperation = 'lighter';
-  context.strokeStyle = FLAPPY_NEON_PALETTE.pipeFill;
-
-  // Step 4.1: Soft glow pass (thicker stroke + cyan shadow).
-  context.globalAlpha = FLAPPY_PIPE_OUTLINE_GLOW_ALPHA;
-  context.shadowColor = FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR;
-  context.shadowBlur = FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX;
-  context.shadowOffsetX = 0;
-  context.shadowOffsetY = 0;
-  strokeAlignedRect(
-    outlineLeftPx,
-    outlineTopPx,
-    outlineWidthPx,
-    outlineHeightPx,
-    FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX,
-  );
-
-  // Step 4.2: Crisp outline pass (no shadow).
-  context.globalAlpha = 1;
-  context.shadowBlur = 0;
-  context.shadowColor = 'transparent';
-  strokeAlignedRect(
-    outlineLeftPx,
-    outlineTopPx,
-    outlineWidthPx,
-    outlineHeightPx,
-    outlineStrokeWidthPx,
-  );
-
-  context.globalCompositeOperation = previousCompositeOperation;
-  context.restore();
 }
 
 /**
@@ -760,26 +501,6 @@ function updateTrailState(
 }
 
 /**
- * Appends one trail point while enforcing max history length.
- *
- * @param trailPoints - Mutable trail collection.
- * @param frameIndex - Source frame index.
- * @param yPosition - Bird y position.
- * @returns Nothing.
- */
-function pushTrailPoint(
-  trailPoints: TrailPoint[],
-  frameIndex: number,
-  yPosition: number,
-): void {
-  trailPoints.push({ frameIndex, yPx: yPosition });
-  const maxTrailPoints = FLAPPY_TRAIL_MAX_POINTS;
-  if (trailPoints.length > maxTrailPoints) {
-    trailPoints.splice(0, trailPoints.length - maxTrailPoints);
-  }
-}
-
-/**
  * Renders a stepped trail polyline.
  *
  * @param context - Canvas 2D context.
@@ -794,12 +515,7 @@ function drawTrail(
   color: string,
   anchorX: number,
   baseOpacity: number,
-  edgeBounds: {
-    leftXPx: number;
-    rightXPx: number;
-    topYPx: number;
-    bottomYPx: number;
-  },
+  edgeBounds: PlaybackEdgeBounds,
 ): void {
   // Step 1: Guard empty trails.
   if (trailPoints.length === 0) {
@@ -937,12 +653,7 @@ function drawTrailSegmentWithEdgeFade(
   endXPx: number,
   endYPx: number,
   baseOpacity: number,
-  edgeBounds: {
-    leftXPx: number;
-    rightXPx: number;
-    topYPx: number;
-    bottomYPx: number;
-  },
+  edgeBounds: PlaybackEdgeBounds,
   startFrameOffset: number,
   endFrameOffset: number,
   maxTrailFrameOffset: number,
@@ -990,81 +701,6 @@ function drawTrailSegmentWithEdgeFade(
 }
 
 /**
- * Converts distance-to-edge into a normalized opacity factor.
- *
- * Returns 0 exactly on or beyond an edge and rises to 1 once distance exceeds
- * the configured fade band.
- *
- * @param pointXPx - Point x position.
- * @param pointYPx - Point y position.
- * @param edgeBounds - Visible world bounds used for edge distance checks.
- * @returns Opacity multiplier in [0, 1].
- */
-function resolveEdgeOpacityFactor(
-  pointXPx: number,
-  pointYPx: number,
-  edgeBounds: {
-    leftXPx: number;
-    rightXPx: number;
-    topYPx: number;
-    bottomYPx: number;
-  },
-): number {
-  const distanceToLeftEdgePx = pointXPx - edgeBounds.leftXPx;
-  const distanceToRightEdgePx = edgeBounds.rightXPx - pointXPx;
-  const distanceToTopEdgePx = pointYPx - edgeBounds.topYPx;
-  const distanceToBottomEdgePx = edgeBounds.bottomYPx - pointYPx;
-
-  const nearestEdgeDistancePx = Math.min(
-    distanceToLeftEdgePx,
-    distanceToRightEdgePx,
-    distanceToTopEdgePx,
-    distanceToBottomEdgePx,
-  );
-  const fadeProgress =
-    nearestEdgeDistancePx / FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX;
-  return clamp01(fadeProgress);
-}
-
-/**
- * Converts trail age into a normalized opacity factor.
- *
- * Oldest retained history approaches 0 opacity; newest approaches 1.
- *
- * @param frameOffset - Frames between this point and newest trail point.
- * @param maxTrailFrameOffset - Oldest age offset currently retained by trail.
- * @returns Opacity multiplier in [0, 1].
- */
-function resolveTrailLifetimeOpacityFactor(
-  frameOffset: number,
-  maxTrailFrameOffset: number,
-): number {
-  const normalizedLifetimeProgress =
-    1 - frameOffset / Math.max(1, maxTrailFrameOffset);
-  return clamp01(normalizedLifetimeProgress);
-}
-
-/**
- * Clamps a number to the inclusive [0, 1] range.
- *
- * @param value - Candidate value.
- * @returns Clamped value.
- */
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
-
-/**
- * Resolves the current leader index among alive birds.
- *
- * @param renderState - Current render state.
- * @returns Leader index or `-1`.
- */
-function resolveLeaderBirdIndex(renderState: PopulationRenderState): number {
-  return resolveFramePrimaryWinnerIndex(renderState.birds, true);
-}
-
-/**
  * Resolves the maximum survived-frame count in the current render state.
  *
  * @param renderState - Current render state.
@@ -1078,13 +714,4 @@ function resolveLeaderFramesSurvived(
       Math.max(maximumFramesSurvived, bird.framesSurvived),
     0,
   );
-}
-
-/**
- * Yields until the next browser animation frame.
- *
- * @returns Promise resolved on next animation frame.
- */
-function nextAnimationFrame(): Promise<void> {
-  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }

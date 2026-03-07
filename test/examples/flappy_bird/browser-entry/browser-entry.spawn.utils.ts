@@ -1,11 +1,15 @@
 import { FLAPPY_NEON_BIRD_PALETTE } from '../constants/constants';
 import {
+  FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
+  FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
+  FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+  FLAPPY_WORLD_HEIGHT_PX,
+} from '../constants/constants';
+import {
   type SharedDifficultyProfile,
   resolveAdaptiveDifficultyProfile,
-  resolveNextSpawnGapCenterY as resolveSharedNextSpawnGapCenterY,
   resolveNextSpawnGapSize as resolveSharedNextSpawnGapSize,
   resolveNextSpawnIntervalFrames as resolveSharedNextSpawnIntervalFrames,
-  sampleGapCenterY as sampleSharedGapCenterY,
 } from '../flappy.simulation.shared.utils';
 import type { BrowserDifficultyProfile, RngLike } from './browser-entry.types';
 
@@ -13,10 +17,16 @@ import type { BrowserDifficultyProfile, RngLike } from './browser-entry.types';
  * Samples a random gap center y-position.
  *
  * @param rng - Deterministic RNG.
+ * @param worldHeightPx - World height used to derive valid gap-center bounds.
  * @returns Sampled y-position.
  */
-export function sampleGapCenterY(rng: RngLike): number {
-  return sampleSharedGapCenterY(rng);
+export function sampleGapCenterY(
+  rng: RngLike,
+  worldHeightPx: number = FLAPPY_WORLD_HEIGHT_PX,
+): number {
+  const lowerBoundGapCenterYPx = FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX;
+  const upperBoundGapCenterYPx = resolveGapCenterUpperBoundYPx(worldHeightPx);
+  return rng.nextInt(lowerBoundGapCenterYPx, upperBoundGapCenterYPx);
 }
 
 /**
@@ -24,13 +34,50 @@ export function sampleGapCenterY(rng: RngLike): number {
  *
  * @param previousGapCenterYPx - Previous spawn gap center.
  * @param rng - Deterministic RNG.
+ * @param worldHeightPx - World height used to clamp candidate gap centers.
  * @returns Next gap center y-position.
  */
 export function resolveNextSpawnGapCenterY(
   previousGapCenterYPx: number,
   rng: RngLike,
+  worldHeightPx: number = FLAPPY_WORLD_HEIGHT_PX,
 ): number {
-  return resolveSharedNextSpawnGapCenterY(previousGapCenterYPx, rng);
+  const sampledGapCenterYPx = sampleGapCenterY(rng, worldHeightPx);
+  const minimumGapCenterYPx = Math.max(
+    FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+    previousGapCenterYPx - FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
+  );
+  const maximumGapCenterYPx = Math.min(
+    resolveGapCenterUpperBoundYPx(worldHeightPx),
+    previousGapCenterYPx + FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
+  );
+  return Math.max(
+    minimumGapCenterYPx,
+    Math.min(sampledGapCenterYPx, maximumGapCenterYPx),
+  );
+}
+
+/**
+ * Resolves the exclusive upper bound used for gap-center sampling.
+ *
+ * Educational note:
+ * We cap dynamic viewport-derived bounds at the shared simulation maximum to
+ * keep browser playback distribution aligned with trainer/evaluation defaults,
+ * while still supporting smaller world heights.
+ *
+ * @param worldHeightPx - Current world height.
+ * @returns Exclusive upper bound for `nextInt(minInclusive, maxExclusive)`.
+ */
+function resolveGapCenterUpperBoundYPx(worldHeightPx: number): number {
+  const lowerBoundGapCenterYPx = FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX;
+  const viewportDerivedUpperBound = Math.max(
+    lowerBoundGapCenterYPx,
+    worldHeightPx - FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+  );
+  return Math.max(
+    lowerBoundGapCenterYPx,
+    Math.min(FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX, viewportDerivedUpperBound),
+  );
 }
 
 /**

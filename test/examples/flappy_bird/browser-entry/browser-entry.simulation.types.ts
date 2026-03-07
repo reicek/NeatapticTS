@@ -28,6 +28,7 @@ export interface BrowserDifficultyProfile {
 export interface PopulationRenderState {
   frameIndex: number;
   visibleWorldWidthPx: number;
+  visibleWorldHeightPx: number;
   nextPipeId: number;
   lastSpawnedPipeGapPx: number;
   lastSpawnedPipeGapCenterYPx: number;

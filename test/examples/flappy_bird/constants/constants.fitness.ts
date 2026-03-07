@@ -14,7 +14,7 @@ export const FLAPPY_FITNESS_BONUS_PER_PIPE = 1_000;
  * Lower values reduce the incentive to merely stay alive and increase pressure
  * to center on gaps and pass pipes cleanly.
  */
-export const FLAPPY_FITNESS_SURVIVAL_WEIGHT = 0.65;
+export const FLAPPY_FITNESS_SURVIVAL_WEIGHT = 0.45;
 
 /** Per-frame reward weight for staying vertically aligned with the next gap. */
 export const FLAPPY_FITNESS_ALIGNMENT_WEIGHT_PER_FRAME = 0.9;

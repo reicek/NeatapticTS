@@ -33,6 +33,7 @@ Then open:
 - `http://localhost:8080/test/examples/flappy_bird/index.html`
 
 Notes:
+
 - this page loads bundles from `docs/assets`, so run `npm run docs` after code changes,
 - if port `8080` is in use, adjust the script/port accordingly.
 
@@ -75,6 +76,7 @@ Notes:
 
   Temporal stacking still provides short-term memory, while the leaner core keeps
   focus on centerline tracking and staying away from corridor edges.
+
 - The network outputs 2 values (`no flap`, `flap`); we flap when `output[1] > output[0]`.
 - Fitness is now composed from normalized channels with caps to reduce domination by one term:
   - survival,
@@ -83,6 +85,7 @@ Notes:
   - terminal shaping.
 
 Dense shaping rewards still include:
+
 - staying aligned with the next gap,
 - reducing horizontal distance to the next pipe,
 - improving centering toward the gap,
@@ -93,20 +96,24 @@ Dense shaping rewards still include:
 The trainer logs robust distribution statistics each generation (`mean`, `median`, `p90`, `std`) in addition to best score.
 
 In browser playback, the demo renders the full generation population (not only the top bird):
+
 - only living birds are shown (eliminated birds are removed immediately),
 - each bird has a distinct color,
 - the current leader is highlighted.
 
 The stats panel is split horizontally:
+
 - left side shows current/best run metrics,
 - right side shows a full network drawing of the active best genome.
 
 Browser runtime behavior:
+
 - heavy evolution/evaluation and playback simulation run in a Web Worker,
 - the main thread focuses on rendering and lightweight snapshot handoff,
 - HUD counter updates are throttled (every 10 frames).
 
 Visualization semantics:
+
 - each node is a square, with the node bias printed inside,
 - each connection line is colored by connection weight range,
 - disabled connections are rendered as faint dashed lines,
