@@ -13,12 +13,18 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 
 ## Phase 0 — Hygiene + Refactor Baseline
 
-**Outcome:** keep iteration speed high and reduce refactor risk.
+**Outcome:** keep iteration speed high, reduce refactor risk, and finish the structural cleanup needed before broad mechanical modernization.
 
-- ES2023 modernization (ongoing, mechanical refactors + CI enforcement)
+- Demo refinement and learnability hardening (active now)
+  - Current focus: stabilize and refine the `flappy_bird` demo so it remains the reference quality bar for later example work.
+- asciiMaze SOLID split before ES2023 modernization
+  - Finish a maintainable split of `test/examples/asciiMaze` and any touched orchestration surfaces under `src/` so responsibilities are narrow, substitutable, and DRY.
+  - The target shape is the stronger modular style already emerging in `test/examples/flappy_bird`: explicit boundaries, LSP-safe abstractions, and smaller units that make caching and later performance work easier to target precisely.
+- ES2023 modernization (after the demo-structure pass; mechanical refactors + CI enforcement)
   - Plan: [ES2023 migration](ES2023%20migration)
+  - Scope note: this phase is syntax/module modernization plus CI enforcement. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
 
-**Gate to Phase 1:** `npx tsc --noEmit -p tsconfig.json` and `npm test` are green after the refactor split.
+**Gate to Phase 1:** `flappy_bird` refinement is stable, the `asciiMaze` SOLID split is complete, and `npx tsc --noEmit -p tsconfig.json` plus `npm test` are green after the refactor pass.
 
 ## Phase 1 — Core Correctness + Determinism Foundations (Critical Path)
 
@@ -62,6 +68,9 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 
 **Notes:**
 
+- Phase 3 examples are the starter set only: Node hello/evolve flows plus one minimal browser quickstart once the browser bundle exists.
+- Examples that depend on standalone export or worker execution are follow-on additions in Phase 4 after those capabilities land.
+- Before expanding the examples catalog, choose the canonical examples home and decide whether `bench-browser/` is the browser-example host so demo work does not fragment.
 - Visualization can be implemented slightly earlier, but it becomes much more valuable once primitives/builders provide stable labels/roles.
 
 ## Phase 4 — Deployment + Parallel Evaluation (Inference Artifacts, Workers, Checkpoints)
@@ -84,6 +93,7 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 - Standalone export and worker payloads share an “inference IR” concept; building that once reduces duplication.
 - Multithread evaluation becomes straightforward after payloads exist.
 - Checkpointing and hybrid evaluation benefit from deterministic scheduling and a clear parameter/vector mapping.
+- Evolution-training parameter vectors are a later unification seam, not a blocker for standalone export or worker payloads unless that contract is deliberately split into an earlier mini-phase.
 
 ## Phase 5 — Scale & Performance (Memory Optimization Track)
 
@@ -98,6 +108,7 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 - Start / continue Track 1 after Phase 1 is stable.
 - Prioritize improvements that directly benefit the worker payload + inference export paths (typed arrays, slabs, reuse) so Phase 4 gets faster “for free”.
+- If a detailed memory-plan subsection implies Hyper work can begin immediately after an intermediate Track 1 checkpoint, treat that as stale wording; Hyper remains gated by the Track 1 conditions below.
 
 **Gate to Phase 7 (Hyper):** Track 1 gates in `Memory_Optimization.md` are met (especially Phase 4–7 stability + variance/hardening).
 
@@ -123,6 +134,8 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 **Why last:** this work depends heavily on the Memory Optimization track (Track 2 in that plan) and benefits from stable NEAT correctness, deterministic activation semantics, and robust serialization/checkpointing.
 
 ## Summary: Critical Path vs Parallel Lanes
+
+Current status: the project is still in **Phase 0**, with demo refinement active now and the `asciiMaze` SOLID split scheduled before repository-wide ES2023 modernization.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes

@@ -5,17 +5,26 @@ Objective
 ---------
 Aggressively modernize the codebase to idiomatic ES2023, leveraging the latest TypeScript and JavaScript features to improve code clarity, expressiveness, and maintainability. As an educational library, it should serve as an example of modern coding practices.
 
+Roadmap status
+--------------
+This plan is part of `plans/Roadmap.md` Phase 0, but it starts after the current demo-structure work is complete.
+
+Current prerequisite work before broad mechanical modernization:
+- refine the active demo surfaces, especially `test/examples/flappy_bird`,
+- finish the SOLID split of `test/examples/asciiMaze`,
+- keep touched orchestration in `src/` strict about responsibility boundaries, substitutability, and DRY reuse.
+
 Guiding Principles
 ------------------
 1.  **Modern First**: Always prefer the most modern and expressive ES2023+ features where they improve clarity.
 2.  **Test-Driven Refactoring**: All changes will be validated against the existing comprehensive test suite (909+ tests). No new features will be added, but refactoring will be done with confidence that the public API and behavior remain unchanged.
 3.  **API Stability**: Maintain the existing public API contract. Syntactic changes must be behavior-preserving, as confirmed by passing tests.
-4.  **Memory Diligence**: Proactively use memory-saving techniques like memory pools and object reuse where appropriate.
+4.  **Scope Discipline**: Keep this plan focused on syntax, modules, and enforcement. Memory-management features and performance architecture belong in `plans/Memory_Optimization.md`.
 
 Phase Roadmap
 -------------
 *   **Phase 0: Baseline & Tooling**
-    *   **Status**: Not Started
+    *   **Status**: Queued behind current demo refactor work
     *   **Description**: Set up and configure linting and code style validation tools to enforce modern syntax.
 
 *   **Phase 1: Mechanical Syntax Upgrades**
@@ -30,15 +39,11 @@ Phase Roadmap
     *   **Status**: Not Started
     *   **Description**: Convert CommonJS `require()` statements to ES modules (`import`/`export`) and audit for import cycles.
 
-*   **Phase 4: Advanced Memory Management**
-    *   **Status**: Not Started
-    *   **Description**: Implement an optional `WeakRef`-based tracking system for large network populations to reduce memory pressure.
-
-*   **Phase 5: Automation & CI**
+*   **Phase 4: Automation & CI**
     *   **Status**: Not Started
     *   **Description**: Implement CI checks to enforce ES2023 style and prevent regressions.
 
-*   **Phase 6: Documentation**
+*   **Phase 5: Documentation**
     *   **Status**: Not Started
     *   **Description**: Update all project documentation, including `README.md` and contributor guidelines, to reflect the modernized codebase.
 
