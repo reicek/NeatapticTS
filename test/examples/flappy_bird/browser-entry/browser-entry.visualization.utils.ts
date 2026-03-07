@@ -74,8 +74,7 @@ export {
 /**
  * Creates legend rows from ordered tiers.
  *
- * @param tiers - Ordered color tiers.
- * @param aboveTierColor - Color for values above top tier.
+ * @param scale - Dynamic color scale containing bounds, tiers, and overflow color.
  * @param symbol - Label symbol.
  * @returns Legend rows.
  */

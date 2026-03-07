@@ -8,6 +8,7 @@ import {
   FLAPPY_PIPE_SPAWN_INTERVAL_SHRINK_PER_PIPE_FRAMES,
   FLAPPY_PIPE_SPAWN_INTERVAL_START_MULTIPLIER,
 } from '../constants/constants';
+import { clampValue } from './simulation-shared.math.utils';
 import type {
   SharedDifficultyProfile,
   SharedRngLike,
@@ -46,7 +47,11 @@ export function resolveNextSpawnGapCenterY(
     FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
     previousGapCenterYPx + FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
   );
-  return clamp(sampledGapCenterYPx, minimumGapCenterYPx, maximumGapCenterYPx);
+  return clampValue(
+    sampledGapCenterYPx,
+    minimumGapCenterYPx,
+    maximumGapCenterYPx,
+  );
 }
 
 /**
@@ -81,7 +86,9 @@ export function resolveNextSpawnGapSize(
   );
   const randomizedGapPx = progressiveGapPx + randomJitterPx;
 
-  return Math.round(clamp(randomizedGapPx, hardestGapPx, initialWideGapPx));
+  return Math.round(
+    clampValue(randomizedGapPx, hardestGapPx, initialWideGapPx),
+  );
 }
 
 /**
@@ -110,22 +117,10 @@ export function resolveNextSpawnIntervalFrames(
         );
 
   return Math.round(
-    clamp(
+    clampValue(
       progressiveIntervalFrames,
       hardestIntervalFrames,
       initialWideIntervalFrames,
     ),
   );
-}
-
-/**
- * Clamps a number between bounds.
- *
- * @param value - Input value.
- * @param minimum - Lower bound.
- * @param maximum - Upper bound.
- * @returns Bounded value.
- */
-function clamp(value: number, minimum: number, maximum: number): number {
-  return Math.max(minimum, Math.min(maximum, value));
 }

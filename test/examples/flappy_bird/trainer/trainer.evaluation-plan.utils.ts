@@ -143,18 +143,15 @@ function buildSharedSeedBatch(
 ): number[] {
   const mixedSeed = mixSeed(generationIndex, stageSalt);
   const deterministicRandom = createXorshift32(mixedSeed);
-  const sharedSeeds: number[] = [];
 
-  let seedIndex = 0;
-  while (seedIndex < seedCount) {
-    sharedSeeds.push(deterministicRandom.nextInt(1, 0x7fffffff));
-    seedIndex++;
-  }
-
-  return sharedSeeds;
+  return Array.from({ length: seedCount }, () =>
+    deterministicRandom.nextInt(1, 0x7fff_ffff),
+  );
 }
 
 /**
+ * Mixes generation and stage salts into a deterministic uint32 RNG seed.
+ *
  * @param generationIndex - Current generation index.
  * @param stageSalt - Stage-specific salt.
  * @returns Mixed uint32 seed.

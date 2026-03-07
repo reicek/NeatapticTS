@@ -16,6 +16,7 @@ import type { BrowserDifficultyProfile, RngLike } from './browser-entry.types';
  * Samples a random gap center y-position.
  *
  * @param rng - Deterministic RNG.
+ * @param worldHeightPx - World height used to derive valid gap-center bounds.
  * @returns Sampled y-position.
  */
 export function sampleGapCenterY(
@@ -35,6 +36,7 @@ export function sampleGapCenterY(
  *
  * @param previousGapCenterYPx - Previous spawn gap center.
  * @param rng - Deterministic RNG.
+ * @param worldHeightPx - World height used to clamp candidate gap centers.
  * @returns Next gap center y-position.
  */
 export function resolveNextSpawnGapCenterY(

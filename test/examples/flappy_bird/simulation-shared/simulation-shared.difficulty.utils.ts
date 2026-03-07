@@ -7,6 +7,7 @@ import {
   FLAPPY_PIPE_SPAWN_INTERVAL_FRAMES,
   FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES,
 } from '../constants/constants';
+import { clampValue, interpolateValue } from './simulation-shared.math.utils';
 import { FLAPPY_SHARED_DEFAULT_DIFFICULTY_SCALE } from './simulation-shared.constants';
 import type { SharedDifficultyProfile } from './simulation-shared.types';
 
@@ -21,8 +22,8 @@ export function resolveAdaptiveDifficultyProfile(
   pipesPassed: number,
   difficultyScale = FLAPPY_SHARED_DEFAULT_DIFFICULTY_SCALE,
 ): SharedDifficultyProfile {
-  const normalizedDifficultyScale = clamp(difficultyScale, 0, 1);
-  const normalizedDifficultyProgress = clamp(
+  const normalizedDifficultyScale = clampValue(difficultyScale, 0, 1);
+  const normalizedDifficultyProgress = clampValue(
     (pipesPassed / Math.max(1, FLAPPY_DIFFICULTY_RAMP_PIPES)) *
       normalizedDifficultyScale,
     0,
@@ -50,32 +51,4 @@ export function resolveAdaptiveDifficultyProfile(
       ),
     ),
   };
-}
-
-/**
- * Clamps a number between bounds.
- *
- * @param value - Input value.
- * @param minimum - Lower bound.
- * @param maximum - Upper bound.
- * @returns Bounded value.
- */
-function clamp(value: number, minimum: number, maximum: number): number {
-  return Math.max(minimum, Math.min(maximum, value));
-}
-
-/**
- * Linear interpolation helper.
- *
- * @param startValue - Start value.
- * @param endValue - End value.
- * @param interpolationFactor - Blend factor in `[0, 1]`.
- * @returns Interpolated value.
- */
-function interpolateValue(
-  startValue: number,
-  endValue: number,
-  interpolationFactor: number,
-): number {
-  return startValue + (endValue - startValue) * interpolationFactor;
 }
