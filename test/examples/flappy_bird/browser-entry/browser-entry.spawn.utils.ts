@@ -1,5 +1,6 @@
 import { FLAPPY_NEON_BIRD_PALETTE } from '../constants/constants';
 import {
+  FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
   FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
   FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
   FLAPPY_WORLD_HEIGHT_PX,
@@ -24,10 +25,7 @@ export function sampleGapCenterY(
   worldHeightPx: number = FLAPPY_WORLD_HEIGHT_PX,
 ): number {
   const lowerBoundGapCenterYPx = FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX;
-  const upperBoundGapCenterYPx = Math.max(
-    lowerBoundGapCenterYPx,
-    worldHeightPx - FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
-  );
+  const upperBoundGapCenterYPx = resolveGapCenterUpperBoundYPx(worldHeightPx);
   return rng.nextInt(lowerBoundGapCenterYPx, upperBoundGapCenterYPx);
 }
 
@@ -50,15 +48,35 @@ export function resolveNextSpawnGapCenterY(
     previousGapCenterYPx - FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
   );
   const maximumGapCenterYPx = Math.min(
-    Math.max(
-      FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
-      worldHeightPx - FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
-    ),
+    resolveGapCenterUpperBoundYPx(worldHeightPx),
     previousGapCenterYPx + FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
   );
   return Math.max(
     minimumGapCenterYPx,
     Math.min(sampledGapCenterYPx, maximumGapCenterYPx),
+  );
+}
+
+/**
+ * Resolves the exclusive upper bound used for gap-center sampling.
+ *
+ * Educational note:
+ * We cap dynamic viewport-derived bounds at the shared simulation maximum to
+ * keep browser playback distribution aligned with trainer/evaluation defaults,
+ * while still supporting smaller world heights.
+ *
+ * @param worldHeightPx - Current world height.
+ * @returns Exclusive upper bound for `nextInt(minInclusive, maxExclusive)`.
+ */
+function resolveGapCenterUpperBoundYPx(worldHeightPx: number): number {
+  const lowerBoundGapCenterYPx = FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX;
+  const viewportDerivedUpperBound = Math.max(
+    lowerBoundGapCenterYPx,
+    worldHeightPx - FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+  );
+  return Math.max(
+    lowerBoundGapCenterYPx,
+    Math.min(FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX, viewportDerivedUpperBound),
   );
 }
 
