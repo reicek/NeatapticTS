@@ -5,6 +5,20 @@ import {
   interpolateValue,
 } from '../flappy.simulation.shared.utils';
 import { createXorshift32 } from '../rng';
+import {
+  FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES,
+  FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
+  FLAPPY_TRAINER_FULL_ROLLOUT_PIPE_PROGRESS_TARGET,
+  FLAPPY_TRAINER_MUTATION_AMOUNT_END,
+  FLAPPY_TRAINER_MUTATION_AMOUNT_START,
+  FLAPPY_TRAINER_MUTATION_ANNEAL_GENERATIONS,
+  FLAPPY_TRAINER_MUTATION_RATE_END,
+  FLAPPY_TRAINER_MUTATION_RATE_START,
+  FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES,
+  FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
+  FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES,
+  FLAPPY_TRAINER_QUICK_ROLLOUT_PIPE_PROGRESS_TARGET,
+} from './trainer.constants';
 import type { FlappyGenerationEvaluationPlan } from './trainer.types';
 
 /**
@@ -51,10 +65,22 @@ export function resolveGenerationEvaluationPlan(
 export function resolveMutationSchedule(
   generationIndex: number,
 ): FlappyMutationSchedule {
-  const annealProgress = clampValue(generationIndex / 120, 0, 1);
+  const annealProgress = clampValue(
+    generationIndex / FLAPPY_TRAINER_MUTATION_ANNEAL_GENERATIONS,
+    0,
+    1,
+  );
   return {
-    mutationRate: interpolateValue(0.7, 0.25, annealProgress),
-    mutationAmount: interpolateValue(2, 1, annealProgress),
+    mutationRate: interpolateValue(
+      FLAPPY_TRAINER_MUTATION_RATE_START,
+      FLAPPY_TRAINER_MUTATION_RATE_END,
+      annealProgress,
+    ),
+    mutationAmount: interpolateValue(
+      FLAPPY_TRAINER_MUTATION_AMOUNT_START,
+      FLAPPY_TRAINER_MUTATION_AMOUNT_END,
+      annealProgress,
+    ),
   };
 }
 
@@ -69,12 +95,14 @@ function createQuickRolloutOptions(
 ): FlappyRolloutOptions {
   return {
     difficultyScale,
-    maxFrames: 1_500,
+    maxFrames: FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES,
     enableEarlyTermination: true,
-    earlyTerminationGraceFrames: 120,
-    earlyTerminationConsecutiveFrames: 18,
+    earlyTerminationGraceFrames:
+      FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
+    earlyTerminationConsecutiveFrames:
+      FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES,
     normalizeFitness: true,
-    pipeProgressTarget: 12,
+    pipeProgressTarget: FLAPPY_TRAINER_QUICK_ROLLOUT_PIPE_PROGRESS_TARGET,
   };
 }
 
@@ -91,10 +119,12 @@ function createFullRolloutOptions(
     difficultyScale,
     maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
     enableEarlyTermination: true,
-    earlyTerminationGraceFrames: 220,
-    earlyTerminationConsecutiveFrames: 28,
+    earlyTerminationGraceFrames:
+      FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
+    earlyTerminationConsecutiveFrames:
+      FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES,
     normalizeFitness: true,
-    pipeProgressTarget: 20,
+    pipeProgressTarget: FLAPPY_TRAINER_FULL_ROLLOUT_PIPE_PROGRESS_TARGET,
   };
 }
 
@@ -112,7 +142,7 @@ function createReevaluationRolloutOptions(
     maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
     enableEarlyTermination: false,
     normalizeFitness: true,
-    pipeProgressTarget: 20,
+    pipeProgressTarget: FLAPPY_TRAINER_FULL_ROLLOUT_PIPE_PROGRESS_TARGET,
   };
 }
 

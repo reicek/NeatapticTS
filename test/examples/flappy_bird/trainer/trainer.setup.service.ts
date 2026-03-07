@@ -8,6 +8,8 @@ import {
 } from '../constants/constants';
 import {
   FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT,
+  FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_AMOUNT,
+  FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE,
   FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE,
 } from './trainer.constants';
 import type {
@@ -58,8 +60,8 @@ export function createNeatController(
     {
       popsize: trainerSetup.populationSize,
       elitism: trainerSetup.elitismCount,
-      mutationRate: 0.75,
-      mutationAmount: 2,
+      mutationRate: FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE,
+      mutationAmount: FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_AMOUNT,
       mutation: methods.mutation.FFW,
       network: Architect.perceptron(
         trainerSetup.inputSize,

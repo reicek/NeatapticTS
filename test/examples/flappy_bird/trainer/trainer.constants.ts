@@ -22,6 +22,48 @@ export const FLAPPY_TRAINER_SCORE_MEDIAN_PERCENTILE = 0.5;
 /** Percentile used when reporting high-end population score (P90). */
 export const FLAPPY_TRAINER_SCORE_P90_PERCENTILE = 0.9;
 
+/** Generation count used to fully anneal mutation schedule from start to end values. */
+export const FLAPPY_TRAINER_MUTATION_ANNEAL_GENERATIONS = 120;
+
+/** Initial mutation rate at generation 0 before annealing. */
+export const FLAPPY_TRAINER_MUTATION_RATE_START = 0.7;
+
+/** Final mutation rate reached after annealing window completes. */
+export const FLAPPY_TRAINER_MUTATION_RATE_END = 0.25;
+
+/** Initial mutation amount at generation 0 before annealing. */
+export const FLAPPY_TRAINER_MUTATION_AMOUNT_START = 2;
+
+/** Final mutation amount reached after annealing window completes. */
+export const FLAPPY_TRAINER_MUTATION_AMOUNT_END = 1;
+
+/** Initial NEAT mutation rate before generation schedule annealing is applied. */
+export const FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE = 0.75;
+
+/** Initial NEAT mutation amount before generation schedule annealing is applied. */
+export const FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_AMOUNT = 2;
+
+/** Frame cap used during quick screening rollout stage. */
+export const FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES = 1_500;
+
+/** Early-termination grace frames used during quick screening rollout stage. */
+export const FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES = 120;
+
+/** Consecutive unrecoverable frames needed to stop quick screening rollout early. */
+export const FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES = 18;
+
+/** Pipe-progress target used to normalize quick screening rollout fitness. */
+export const FLAPPY_TRAINER_QUICK_ROLLOUT_PIPE_PROGRESS_TARGET = 12;
+
+/** Early-termination grace frames used during full rollout stage. */
+export const FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES = 220;
+
+/** Consecutive unrecoverable frames needed to stop full rollout early. */
+export const FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES = 28;
+
+/** Pipe-progress target used to normalize full and reevaluation rollout fitness. */
+export const FLAPPY_TRAINER_FULL_ROLLOUT_PIPE_PROGRESS_TARGET = 20;
+
 /** Penalty multiplier applied to fitness standard deviation in frame-primary scoring. */
 export const FLAPPY_TRAINER_FRAME_STABILITY_STDDEV_WEIGHT = 0.5;
 
