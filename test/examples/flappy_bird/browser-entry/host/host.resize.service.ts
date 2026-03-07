@@ -225,12 +225,9 @@ export function installResponsiveViewportSizing(
 
     // Step 3: Clamp network pane height and trigger redraw when height changed.
     const resolvedNetworkHeightPx = FLAPPY_UI_NETWORK_HOST_FIXED_HEIGHT_PX;
-    const previousNetworkHostHeightPx = networkCanvasHost.offsetHeight;
     if (networkCanvasHost.offsetHeight !== resolvedNetworkHeightPx) {
       networkCanvasHost.style.height = `${resolvedNetworkHeightPx}px`;
-      if (previousNetworkHostHeightPx !== resolvedNetworkHeightPx) {
-        requestNetworkRedrawAfterLayout();
-      }
+      requestNetworkRedrawAfterLayout();
     }
 
     statsContainer.style.height = `${adjustedStatsPanelHeightPx}px`;
@@ -278,10 +275,6 @@ export function installResponsiveViewportSizing(
     if (applyCanvasBackingSize(networkCanvas, widthPx, heightPx)) {
       onNetworkResize();
     }
-
-    statsContainer.style.overflowY = useLandscapeSplitLayout
-      ? 'auto'
-      : 'hidden';
   };
 
   // Step 1: Initial sizing pass.

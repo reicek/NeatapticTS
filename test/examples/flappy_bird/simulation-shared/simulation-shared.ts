@@ -13,4 +13,3 @@ export * from './simulation-shared.memory.utils';
 export * from './simulation-shared.observation.utils';
 export * from './simulation-shared.spawn.utils';
 export * from './simulation-shared.types';
-export * from '../flappy.simulation.shared.utils';
