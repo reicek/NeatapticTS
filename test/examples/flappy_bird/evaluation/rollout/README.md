@@ -41,7 +41,6 @@ public evaluation-level service remains a stable compatibility facade.
 Roll out an episode and return details.
 
 Parameters:
-
 - `network` - - Genome/network to evaluate.
 - `rolloutOptions` - - Optional rollout controls.
 
@@ -63,7 +62,6 @@ and early-termination behavior for rollout execution.
 Applies the optional early-termination heuristic for unrecoverable starts.
 
 Parameters:
-
 - `rolloutEpisodeContext` - - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - - Mutable runtime state.
 - `currentObservationFeatures` - - Post-step observation features.
@@ -77,7 +75,6 @@ Returns: Nothing.
 Creates mutable runtime state for one rollout episode.
 
 Parameters:
-
 - `rolloutEpisodeContext` - - Normalized rollout configuration.
 
 Returns: Mutable runtime state.
@@ -89,7 +86,6 @@ Returns: Mutable runtime state.
 Finalizes episode state after the main rollout loop exits.
 
 Parameters:
-
 - `rolloutEpisodeContext` - - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - - Mutable runtime state.
 
@@ -102,7 +98,6 @@ Returns: Nothing.
 Resolves normalized rollout configuration from user options.
 
 Parameters:
-
 - `network` - - Genome/network to evaluate.
 - `rolloutOptions` - - Optional rollout controls.
 
@@ -115,7 +110,6 @@ Returns: Normalized rollout configuration.
 Resolves the flap decision for one control substep and commits memory state.
 
 Parameters:
-
 - `network` - - Genome/network to evaluate.
 - `rolloutEpisodeContext` - - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - - Mutable runtime state.
@@ -129,7 +123,6 @@ Returns: Whether the bird should flap.
 Runs one rollout frame including control, shaping, and early termination.
 
 Parameters:
-
 - `network` - - Genome/network to evaluate.
 - `rolloutEpisodeContext` - - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - - Mutable runtime state.
@@ -143,7 +136,6 @@ Returns: Nothing.
 Runs the main rollout loop until termination or frame-budget exhaustion.
 
 Parameters:
-
 - `network` - - Genome/network to evaluate.
 - `rolloutEpisodeContext` - - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - - Mutable runtime state.
@@ -189,7 +181,6 @@ and terminal result assembly helpers.
 Normalize and cap fitness channels so no single reward term dominates.
 
 Parameters:
-
 - `framesValue` - - Frames survived for the episode.
 - `pipesPassedValue` - - Pipes passed during the episode.
 - `denseShapingValue` - - Accumulated dense shaping reward.
@@ -206,7 +197,6 @@ Returns: Normalized composite fitness.
 Composes the final rollout result from the terminal game state.
 
 Parameters:
-
 - `rolloutEpisodeContext` - - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - - Mutable runtime state.
 
@@ -219,7 +209,6 @@ Returns: Episode result details.
 Computes dense reward shaping from consecutive observations.
 
 Parameters:
-
 - `previousFeatures` - - Observation before stepping the environment.
 - `currentFeatures` - - Observation after stepping the environment.
 
@@ -232,7 +221,6 @@ Returns: Per-step shaped reward.
 Adds small terminal bonuses from final progress/alignment signals.
 
 Parameters:
-
 - `episodeState` - - Final rollout state.
 - `difficultyScale` - - Active rollout difficulty scale.
 
@@ -245,7 +233,6 @@ Returns: Terminal shaping reward.
 Detects trajectories that are usually irrecoverable in early warmup.
 
 Parameters:
-
 - `observationFeatures` - - Post-step observation features.
 
 Returns: Whether the current trajectory appears unrecoverable.
@@ -257,7 +244,6 @@ Returns: Whether the current trajectory appears unrecoverable.
 Resolves every dense-shaping reward component from consecutive observations.
 
 Parameters:
-
 - `previousFeatures` - - Observation before stepping the environment.
 - `currentFeatures` - - Observation after stepping the environment.
 
@@ -270,7 +256,6 @@ Returns: Dense-shaping reward components.
 Resolves the raw fitness channels from the final episode state.
 
 Parameters:
-
 - `rolloutEpisodeContext` - - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - - Mutable runtime state.
 - `framesSurvived` - - Final frame count.
@@ -285,7 +270,6 @@ Returns: Fitness-channel breakdown.
 Resolves raw fitness by summing every fitness channel.
 
 Parameters:
-
 - `rolloutFitnessBreakdown` - - Fitness-channel breakdown.
 
 Returns: Raw unnormalized fitness.

@@ -19,6 +19,9 @@ Current read
 
 - `asciiMaze` is already meaningfully decomposed compared with an older flat layout.
 - The remaining work is concentrated in a small number of large coordination and policy-heavy modules.
+- Confirmed current runtime orchestration order: `browser-entry.ts` bootstraps host services and invokes `EvolutionEngine.runMazeEvolution()`, `evolutionEngine.ts` normalizes and prepares the run, `evolutionEngine/evolutionLoop.ts` owns generation orchestration, `mazeMovement.ts` executes per-agent simulation, and `dashboardManager.ts` emits telemetry back to browser listeners and host globals.
+- The existing Step 2-8 order still matches that flow: split simulation policy first, then presentation, then browser host glue, then shared contracts, and only then collapse the remaining engine-side reporting and runtime adapter seams.
+- Step 2 is now finalized around the dedicated `mazeMovement/` folder boundary: shared simulation types live in `mazeMovement.types.ts`, constants in `mazeMovement.constants.ts`, reusable helpers in `mazeMovement.utils.ts`, pooled mutable infrastructure in `mazeMovement.services.ts`, runtime primitives in `mazeMovement/runtime/mazeMovement.runtime.ts`, action policy in `mazeMovement/policy/mazeMovement.policy.ts`, reward shaping in `mazeMovement/shaping/mazeMovement.shaping.ts`, result assembly in `mazeMovement/finalization/mazeMovement.finalization.ts`, and the public class facade now lives in `mazeMovement/mazeMovement.ts` with the old top-level file reduced to a compatibility re-export.
 
 Split standard
 
@@ -92,8 +95,8 @@ High-level gaps
 - This should not be replaced by another giant shared file; it should be decomposed into narrower `*.types.ts` surfaces owned by the modules that use them.
 
 - Engine-layer stop handling still contains browser-facing side effects.
-- `evolutionEngine/evolutionLoop.ts` still reaches into browser event behavior for solve handling.
-- Host notifications should sit behind a narrower reporting or host adapter boundary.
+- `evolutionEngine/evolutionLoop.ts` still reaches into browser event behavior for solve handling, and `evolutionEngine/setupHelpers.ts` still polls browser pause globals.
+- Host notifications and pause control should sit behind a narrower reporting or host adapter boundary.
 
 - Runtime shape adapters are still scattered.
 - Multiple files define local `Runtime*` interfaces to compensate for loose concrete runtime shapes.
@@ -109,12 +112,12 @@ High-level gaps
 
 Execution steps
 
-- [] Step 1: Audit the remaining `asciiMaze` coordination-heavy surfaces and confirm the execution order across `mazeMovement`, `dashboardManager`, `browser-entry`, shared contracts, and engine-side reporting seams.
-- [] Step 2: Split `mazeMovement.ts` into a dedicated `mazeMovement/` module boundary so simulation state, pooled buffers, action policy, exploration heuristics, reward shaping, saturation handling, and result finalization stop accumulating in one file.
+- [DONE] Step 1: Audit the remaining `asciiMaze` coordination-heavy surfaces and confirm the execution order across `mazeMovement`, `dashboardManager`, `browser-entry`, shared contracts, and engine-side reporting seams.
+- [DONE] Step 2: Split `mazeMovement.ts` into a dedicated `mazeMovement/` module boundary so simulation state, pooled buffers, action policy, exploration heuristics, reward shaping, saturation handling, and result finalization stop accumulating in one file.
 - [] Step 3: Split `dashboardManager.ts` into a dedicated `dashboardManager/` module boundary so live rendering, solved-archive rendering, telemetry aggregation, bounded history storage, event emission, and formatting evolve behind focused files.
 - [] Step 4: Thin `browser-entry.ts` into a dedicated `browser-entry/` module boundary so host bootstrap, runtime orchestration, globals compatibility, and resize behavior evolve independently.
 - [] Step 5: Decompose `interfaces.ts` into focused module-owned `*.types.ts` files and leave behind only the smallest shared contract surface that is still truly cross-cutting.
-- [] Step 6: Remove browser-facing solve and stop side effects from engine internals so `evolutionEngine` reports through a narrower adapter or reporting boundary instead of touching host behavior directly.
+- [] Step 6: Remove browser-facing solve, stop, and pause side effects from engine internals so `evolutionEngine` reports through a narrower adapter or reporting boundary instead of touching host behavior directly.
 - [] Step 7: Consolidate scattered runtime shape adapters and presentation seams so browser and non-browser paths depend on clearer shared contracts rather than ad hoc local `Runtime*` compensating interfaces.
 - [] Step 8: Recheck refinement, curriculum, and evolution boundaries so follow-up changes do not reintroduce cross-cutting orchestration drift after the earlier splits.
 - [] Step 9: Validate the final shape by checking naming consistency, folder ownership, generated-doc expectations, and TypeScript/build health.

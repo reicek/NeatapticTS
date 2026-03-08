@@ -74,6 +74,23 @@ const DOCS_TARGETS: Record<string, DocsTargetConfig> = {
     rootReadmeDestination: path.join(DOCS_DIR, 'README.md'),
     includeFolderIndex: true,
   },
+  asciiMaze: {
+    name: 'asciiMaze',
+    sourceDir: path.resolve('test', 'examples', 'asciiMaze'),
+    docsDir: path.join(DOCS_DIR, 'examples', 'asciiMaze', 'docs'),
+    rootDocsDir: path.join(DOCS_DIR, 'examples', 'asciiMaze', 'docs'),
+    rootReadmeSource: path.resolve('test', 'examples', 'asciiMaze', 'README.md'),
+    rootReadmeDestination: path.join(
+      DOCS_DIR,
+      'examples',
+      'asciiMaze',
+      'docs',
+      'README.md',
+    ),
+    excludeRootSourceFiles: true,
+    publishedRootDir: path.join(DOCS_DIR, 'examples', 'asciiMaze'),
+    preservePublishedEntries: ['index.html'],
+  },
   'flappy-bird': {
     name: 'flappy-bird',
     sourceDir: path.resolve('test', 'examples', 'flappy_bird'),

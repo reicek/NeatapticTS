@@ -23,7 +23,6 @@ details.
 Commits provisional scores to genome score fields.
 
 Parameters:
-
 - `population` - - Current population.
 - `provisionalScoresByGenome` - - Final provisional score map.
 
@@ -36,7 +35,6 @@ Returns: Nothing.
 Executes the full evaluation stage over the top provisional candidates.
 
 Parameters:
-
 - `population` - - Current population.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
@@ -52,7 +50,6 @@ Returns: Nothing.
 Executes the quick evaluation stage over the full population.
 
 Parameters:
-
 - `population` - - Current population.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
@@ -67,7 +64,6 @@ Returns: Nothing.
 Executes the large-seed reevaluation stage over top candidates.
 
 Parameters:
-
 - `population` - - Current population.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
@@ -83,7 +79,6 @@ Returns: Nothing.
 Resolves how many genomes should advance to the full-pass stage.
 
 Parameters:
-
 - `populationSize` - - Population size.
 - `elitismCount` - - Configured elitism count.
 
@@ -98,7 +93,6 @@ Returns: Full-pass candidate count.
 Evaluates a selected candidate subset for a population stage.
 
 Parameters:
-
 - `population` - - Current population.
 - `populationStageEvaluationRequest` - - Candidate-stage evaluation request.
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
@@ -113,7 +107,6 @@ Returns: Nothing.
 Evaluates a specific genome subset across shared seeds.
 
 Parameters:
-
 - `genomes` - - Genomes selected for evaluation.
 - `sharedSeeds` - - Shared deterministic seeds.
 - `rolloutOptions` - - Rollout options for this stage.
@@ -140,7 +133,6 @@ Fallback score assigned to genomes that have not yet been evaluated.
 Assigns refreshed frame-primary scores to the current population.
 
 Parameters:
-
 - `population` - - Current population.
 - `aggregateByGenome` - - Aggregate cache keyed by genome.
 - `provisionalScoresByGenome` - - Mutable provisional score map.
@@ -154,7 +146,6 @@ Returns: Nothing.
 Collects all currently available aggregate values.
 
 Parameters:
-
 - `population` - - Current population.
 - `aggregateByGenome` - - Aggregate cache keyed by genome.
 
@@ -167,7 +158,6 @@ Returns: Collected aggregate values.
 Resolves the leading mean pipe-progress value across available aggregates.
 
 Parameters:
-
 - `aggregateValues` - - Aggregate values currently available.
 
 Returns: Highest mean pipe-progress value.
@@ -179,7 +169,6 @@ Returns: Highest mean pipe-progress value.
 Resolves the aggregate scoring context used by frame-primary scoring.
 
 Parameters:
-
 - `population` - - Current population.
 - `aggregateByGenome` - - Aggregate cache keyed by genome.
 
@@ -192,7 +181,6 @@ Returns: Aggregate scoring context.
 Scores one aggregate using the frame-primary heuristic.
 
 Parameters:
-
 - `aggregate` - - Aggregate evaluation result.
 - `maximumMeanPipesPassed` - - Best mean pipe progress in the population.
 
