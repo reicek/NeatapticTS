@@ -49,6 +49,7 @@ starfield, leaves the lower third intentionally empty for a future ground
 parallax, and separates them with a glowing horizon divider.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `request` - - Narrow render input required for background composition.
 
@@ -63,6 +64,7 @@ Returns: Nothing.
 Draws the glowing horizon divider across the visible viewport.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `sceneContext` - - Derived scene geometry and style contract.
 
@@ -75,6 +77,7 @@ Returns: Nothing.
 Draws the starfield parallax clipped to the upper sky band.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `sceneContext` - - Derived scene geometry and style contract.
 - `request` - - Narrow render input required for background composition.
@@ -88,6 +91,7 @@ Returns: Nothing.
 Draws the glowing horizon divider using the provided neon style.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `request` - - Width, aligned y-position, and style for the divider.
 
@@ -100,6 +104,7 @@ Returns: Nothing.
 Draws a horizontally tiled image strip across the visible width.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `row` - - Tile image and wrap parameters.
 
@@ -112,6 +117,7 @@ Returns: Nothing.
 Paints the base background fill for the currently visible viewport.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `sceneContext` - - Derived scene geometry and style contract.
 
@@ -124,6 +130,7 @@ Returns: Nothing.
 Resolves the derived scene contract required by the background passes.
 
 Parameters:
+
 - `request` - - Narrow render input required for background composition.
 
 Returns: Immutable scene context shared by the private render helpers.
@@ -172,6 +179,7 @@ layer can take over the lower strip without competing with the stars.
 Resolves pixel-snapped horizon positioning for crisp canvas strokes.
 
 Parameters:
+
 - `horizonYPx` - - Logical horizon centerline in pixels.
 - `lineThicknessPx` - - Stroke thickness in pixels.
 
@@ -184,6 +192,7 @@ Returns: Pixel-snapped y-position for the stroke.
 Resolves the vertical split between the starfield sky and the future ground.
 
 Parameters:
+
 - `visibleWorldHeightPx` - - Current visible world height in pixels.
 
 Returns: Stable scene layout for the current frame.
@@ -203,6 +212,7 @@ Returns: Reusable draw style for both the glow and crisp line passes.
 Clamps a background dimension into a render-safe positive integer.
 
 Parameters:
+
 - `dimensionPx` - - Candidate viewport dimension in pixels.
 
 Returns: Positive integer dimension suitable for canvas math.

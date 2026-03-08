@@ -7,6 +7,7 @@
 Sampling and history helpers extracted from the ASCII maze evolution façade.
 
 Responsibilities:
+
 1. Provide allocation-light array sampling utilities that reuse the shared `EngineState` scratch pools.
 2. Expose history helpers that mirror the façade behaviour while keeping pooled buffers centralised.
 3. Centralise RNG parameter resolution for sampling paths to keep behaviour deterministic under shared state.
@@ -38,6 +39,7 @@ Responsibilities:
 Centralised shared state for the ASCII maze evolution façade.
 
 Responsibilities:
+
 1. Define the scratch-buffer schema consumed by telemetry, population, and inspection helpers.
 2. Expose runtime toggle state (`EngineToggleState`) that drives optional phases and telemetry density.
 3. Provide factory and maintenance helpers (`createEngineState`, `initialiseTelemetryScratch`, `ensureVisitedHashCapacity`, `ensureRngCacheBatch`, `reseedRngState`) that size buffers and keep deterministic RNG state in sync.
@@ -74,6 +76,7 @@ Aggregated profiling configuration and accumulators shared across the evolution 
 Centralised shared state for the ASCII maze evolution façade.
 
 Responsibilities:
+
 1. Define the scratch-buffer schema consumed by telemetry, population, and inspection helpers.
 2. Expose runtime toggle state (`EngineToggleState`) that drives optional phases and telemetry density.
 3. Provide factory and maintenance helpers (`createEngineState`, `initialiseTelemetryScratch`, `ensureVisitedHashCapacity`, `ensureRngCacheBatch`, `reseedRngState`) that size buffers and keep deterministic RNG state in sync.
@@ -243,28 +246,29 @@ Parameters passed when attempting to initialise the shared logits ring buffers.
 setupHelpers.ts
 
 Environment and setup utilities for the evolution engine.
-   // Return  return async (): Promise<void> => {
-    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
-    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
-    while (true) {
-      await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
-      // otherwise continue and await another tick before re-checking
-    }
-  };
+// Return return async (): Promise<void> => {
+// Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
+// This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
+while (true) {
+await preferredTick();
+// Note: using a permissive read of the global pause flag; undefined => not paused.
+if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
+// otherwise continue and await another tick before re-checking
+}
+};
 };flush function used by the evolution loop.
-  return async (): Promise<void> => {
-    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
-    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
-    while (true) {
-      await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
-      // otherwise continue and await another tick before re-checking
-    }
-  };
+return async (): Promise<void> => {
+// Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
+// This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
+while (true) {
+await preferredTick();
+// Note: using a permissive read of the global pause flag; undefined => not paused.
+if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
+// otherwise continue and await another tick before re-checking
+}
+};
 };ibilities:
+
 - Create cooperative frame-yielding functions for async evolution loops
 - Initialize Node.js filesystem persistence helpers (fs, path)
 - Build resilient logging writers with fallback chains
@@ -282,28 +286,29 @@ Dashboard manager shape for logging (optional log function).
 setupHelpers.ts
 
 Environment and setup utilities for the evolution engine.
-   // Return  return async (): Promise<void> => {
-    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
-    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
-    while (true) {
-      await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
-      // otherwise continue and await another tick before re-checking
-    }
-  };
+// Return return async (): Promise<void> => {
+// Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
+// This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
+while (true) {
+await preferredTick();
+// Note: using a permissive read of the global pause flag; undefined => not paused.
+if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
+// otherwise continue and await another tick before re-checking
+}
+};
 };flush function used by the evolution loop.
-  return async (): Promise<void> => {
-    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
-    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
-    while (true) {
-      await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
-      // otherwise continue and await another tick before re-checking
-    }
-  };
+return async (): Promise<void> => {
+// Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
+// This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
+while (true) {
+await preferredTick();
+// Note: using a permissive read of the global pause flag; undefined => not paused.
+if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
+// otherwise continue and await another tick before re-checking
+}
+};
 };ibilities:
+
 - Create cooperative frame-yielding functions for async evolution loops
 - Initialize Node.js filesystem persistence helpers (fs, path)
 - Build resilient logging writers with fallback chains
@@ -332,19 +337,20 @@ Minimal path module shape for type safety (Node.js path module subset).
 
 Evolution Loop Module
 
-Purpose:
--------
+## Purpose:
+
 Provides utilities for running the main NEAT evolution loop, including
 generation orchestration, cancellation checking, and loop helper preparation.
 
 This module encapsulates:
- - Cancellation detection (AbortSignal and legacy cancellation API)
- - Loop helper preparation (frame flushing, persistence, logging)
- - Generation execution and orchestration
- - Stop condition evaluation
 
-ES2023 Policy:
--------------
+- Cancellation detection (AbortSignal and legacy cancellation API)
+- Loop helper preparation (frame flushing, persistence, logging)
+- Generation execution and orchestration
+- Stop condition evaluation
+
+## ES2023 Policy:
+
 - Uses nullish coalescing `??` and optional chaining `?.`
 - Descriptive variable names (no short identifiers)
 - Async/await for generation loops
@@ -376,19 +382,20 @@ Generation outcome with profiling timings
 
 Evolution Loop Module
 
-Purpose:
--------
+## Purpose:
+
 Provides utilities for running the main NEAT evolution loop, including
 generation orchestration, cancellation checking, and loop helper preparation.
 
 This module encapsulates:
- - Cancellation detection (AbortSignal and legacy cancellation API)
- - Loop helper preparation (frame flushing, persistence, logging)
- - Generation execution and orchestration
- - Stop condition evaluation
 
-ES2023 Policy:
--------------
+- Cancellation detection (AbortSignal and legacy cancellation API)
+- Loop helper preparation (frame flushing, persistence, logging)
+- Generation execution and orchestration
+- Stop condition evaluation
+
+## ES2023 Policy:
+
 - Uses nullish coalescing `??` and optional chaining `?.`
 - Descriptive variable names (no short identifiers)
 - Async/await for generation loops
@@ -444,18 +451,19 @@ Simulation result with profiling and ring state
 
 Options and Setup Module
 
-Purpose:
--------
+## Purpose:
+
 Provides utilities for normalizing run options, preparing maze environment,
 and orchestrating NEAT driver creation with population seeding.
 
 This module encapsulates:
- - Run options validation and normalization with sensible defaults
- - Environment preparation (maze encoding, distance maps, I/O sizing)
- - NEAT driver creation and population seeding orchestration
 
-ES2023 Policy:
--------------
+- Run options validation and normalization with sensible defaults
+- Environment preparation (maze encoding, distance maps, I/O sizing)
+- NEAT driver creation and population seeding orchestration
+
+## ES2023 Policy:
+
 - Uses nullish coalescing `??` for default values (never `||`)
 - Descriptive variable names (no short identifiers)
 - Optional chaining `?.` for safe property access
@@ -592,18 +600,19 @@ Writer signature reused across telemetry helpers.
 
 NEAT Configuration Module
 
-Purpose:
--------
+## Purpose:
+
 Provides utilities for instantiating and seeding NEAT (NeuroEvolution of Augmenting Topologies)
 instances with standardized configuration and optional initial populations.
 
 This module encapsulates:
- - NEAT driver creation with opinionated defaults (elitism, provenance, mutation operators)
- - Population seeding with defensive cloning and best-effort error handling
- - Configuration normalization and validation
 
-ES2023 Policy:
--------------
+- NEAT driver creation with opinionated defaults (elitism, provenance, mutation operators)
+- Population seeding with defensive cloning and best-effort error handling
+- Configuration normalization and validation
+
+## ES2023 Policy:
+
 - Uses nullish coalescing `??` for default values (never `||`)
 - Descriptive variable names (no short identifiers like `i`, `c`, `p`)
 - Optional chaining `?.` for safe property access
@@ -629,20 +638,21 @@ NEAT configuration object shape for type safety.
 
 Network Inspection Module
 
-Purpose:
--------
+## Purpose:
+
 Provides utilities for inspecting and analyzing neural network topology,
 including node classification, activation function detection, and connection
 analysis (recurrent/gated detection).
 
 This module encapsulates:
- - Node classification (input/hidden/output buckets)
- - Activation function name gathering
- - Recurrent and gated connection detection
- - Network structure printing for debugging
 
-ES2023 Policy:
--------------
+- Node classification (input/hidden/output buckets)
+- Activation function name gathering
+- Recurrent and gated connection detection
+- Network structure printing for debugging
+
+## ES2023 Policy:
+
 - Uses nullish coalescing `??` and optional chaining `?.`
 - Descriptive variable names (no short identifiers)
 - Pooled scratch buffers to avoid allocations
@@ -669,6 +679,7 @@ and warm-start initialization logic. All helpers operate on the shared {@link En
 buffers to avoid per-call allocations while keeping pruning logic modular and testable.
 
 Responsibilities:
+
 1. Apply simplify-phase pruning to entire populations via strategy-driven connection disabling.
 2. Collect, sort, and selectively disable weak connections based on absolute weight.
 3. Initialize compass warm-start wiring for directional inputs.
@@ -710,6 +721,7 @@ trainingWarmStart.ts
 Lamarckian warm-start and population pretraining subsystem.
 
 Responsibilities:
+
 - Build supervised training datasets for compass-guided navigation
 - Apply Lamarckian backpropagation training to populations
 - Adjust output biases after training to maintain exploration
@@ -751,6 +763,7 @@ population expansion/compaction, mutation application, sorting, species tracking
 and anti-collapse recovery.
 
 Responsibilities:
+
 - Plateau detection and simplify-phase orchestration
 - Population expansion with parent sampling and mutation
 - Genome sorting by fitness (iterative quicksort with pooled scratch)

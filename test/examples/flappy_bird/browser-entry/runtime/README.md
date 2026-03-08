@@ -49,6 +49,7 @@ Public run handle returned by the browser runtime entrypoint.
 Resolves and validates the browser runtime host element.
 
 Parameters:
+
 - `container` - - Element id or HTMLElement provided to runtime start.
 
 Returns: Resolved host element.
@@ -60,6 +61,7 @@ Returns: Resolved host element.
 Formats unknown runtime failures into a stable HUD status string.
 
 Parameters:
+
 - `error` - - Unknown runtime exception value.
 
 Returns: Normalized status string for HUD output.
@@ -85,6 +87,7 @@ Returns: Runtime configuration derived from shared constants.
 Creates the shared runtime startup dependencies used by the entry orchestration.
 
 Parameters:
+
 - `container` - - Element id or HTMLElement to host the demo.
 
 Returns: Shared runtime start context for setup and loop launch.
@@ -96,6 +99,7 @@ Returns: Shared runtime start context for setup and loop launch.
 Paints the initial runtime HUD values before the evolution loop starts.
 
 Parameters:
+
 - `runtimeStartContext` - - Shared runtime start context.
 
 Returns: Nothing.
@@ -117,6 +121,7 @@ Returns: Mutable lifecycle state used by the run handle.
 Builds the public run handle and binds it to runtime teardown behavior.
 
 Parameters:
+
 - `runtimeStartContext` - - Shared runtime start context.
 - `runtimeLifecycleState` - - Mutable lifecycle state for stop semantics.
 
@@ -139,6 +144,7 @@ Returns: Initialized telemetry state.
 Disconnects runtime telemetry observers.
 
 Parameters:
+
 - `telemetryState` - - Runtime telemetry state.
 
 Returns: Nothing.
@@ -158,6 +164,7 @@ Returns: Initial telemetry field values.
 Resolves per-frame telemetry HUD values and updates rolling windows.
 
 Parameters:
+
 - `frameStats` - - Playback frame stats for the current frame.
 - `telemetryState` - - Runtime telemetry mutable state.
 
@@ -176,6 +183,7 @@ Runtime telemetry mutable state used for rolling HUD metrics.
 Runs generation orchestration and playback until a stop signal is observed.
 
 Parameters:
+
 - `options` - - Runtime evolution dependencies and mutable state accessors.
 
 Returns: Nothing.
@@ -193,11 +201,13 @@ Dependencies required to run the browser runtime evolution loop.
 Publishes browser globals for demo auto-start and host-driven control.
 
 This keeps parity with the asciiMaze entry style:
+
 - `window.flappyBird.start(...)` for explicit invocation,
 - `window.flappyBirdStart(...)` for compatibility,
 - one guarded auto-start for standalone HTML usage.
 
 Parameters:
+
 - `startRuntime` - - Runtime entry function.
 
 Returns: Nothing.
@@ -217,6 +227,7 @@ Runtime start function signature used by browser-global wiring.
 Starts the runtime evolution loop and routes unexpected failures to the HUD.
 
 Parameters:
+
 - `runtimeStartContext` - - Shared runtime start context.
 - `runtimeLifecycleState` - - Mutable lifecycle state used for stop checks.
 - `stop` - - Idempotent stop function bound to the current runtime handle.

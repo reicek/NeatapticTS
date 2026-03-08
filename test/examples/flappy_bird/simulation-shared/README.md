@@ -49,6 +49,7 @@ Prefix used when formatting unexpected shared-simulation errors.
 Formats unknown shared-simulation errors for stable logs.
 
 Parameters:
+
 - `error` - - Unknown error value.
 
 Returns: Readable error message.
@@ -83,6 +84,7 @@ Clamps a numeric value to the inclusive `[min, max]` interval.
 Internal clamp primitive.
 
 Parameters:
+
 - `value` - - Candidate value.
 - `min` - - Inclusive lower bound.
 - `max` - - Inclusive upper bound.
@@ -96,6 +98,7 @@ Returns: Clamped value.
 Clamps a numeric value to the inclusive `[0, 1]` interval.
 
 Parameters:
+
 - `value` - - Candidate value.
 
 Returns: Value clamped between 0 and 1.
@@ -107,6 +110,7 @@ Returns: Value clamped between 0 and 1.
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
 Parameters:
+
 - `value` - - Candidate value.
 - `min` - - Inclusive lower bound.
 - `max` - - Inclusive upper bound.
@@ -120,6 +124,7 @@ Returns: Clamped value.
 Linear interpolation helper.
 
 Parameters:
+
 - `startValue` - - Start value at progress `0`.
 - `endValue` - - End value at progress `1`.
 - `progress` - - Normalized interpolation progress.
@@ -135,6 +140,7 @@ Returns: Interpolated value.
 Resolves next gap center with bounded per-pipe delta.
 
 Parameters:
+
 - `previousGapCenterYPx` - - Previous spawn gap center.
 - `rng` - - Deterministic RNG.
 - `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
@@ -148,6 +154,7 @@ Returns: Next gap center y-position.
 Resolves next spawn gap size using progressive shrink and jitter.
 
 Parameters:
+
 - `previousSpawnGapPx` - - Previous spawn gap size.
 - `difficultyProfile` - - Active difficulty profile.
 - `rng` - - Deterministic RNG.
@@ -161,6 +168,7 @@ Returns: Next spawn gap size.
 Resolves next spawn interval using progressive shrink.
 
 Parameters:
+
 - `previousSpawnIntervalFrames` - - Previous spawn interval.
 - `difficultyProfile` - - Active difficulty profile.
 
@@ -173,6 +181,7 @@ Returns: Next spawn interval in frames.
 Samples a random gap center y-position.
 
 Parameters:
+
 - `rng` - - Deterministic RNG.
 - `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
 
@@ -187,6 +196,7 @@ Returns: Sampled y-position.
 Commits one observation-action step into temporal memory.
 
 Parameters:
+
 - `observationMemoryState` - - Mutable temporal memory for the active bird.
 - `features` - - Structured observation features used for the decision.
 - `didFlap` - - Decision taken at this step.
@@ -208,6 +218,7 @@ Returns: Fresh mutable memory buffers for one bird/controller.
 Resolves previous core frames (newest-first) with deterministic zero padding.
 
 Parameters:
+
 - `observationMemoryState` - - Mutable temporal memory for the active bird.
 
 Returns: Previous core frame list with fixed target length.
@@ -219,12 +230,14 @@ Returns: Previous core frame list with fixed target length.
 Builds the temporal policy input vector (stacked observation + action memory).
 
 Output layout:
-1) current core observation frame
-2) previous core frames (newest to oldest) with zero padding
-3) last-action channel
-4) recent flap-rate channel over a fixed window
+
+1. current core observation frame
+2. previous core frames (newest to oldest) with zero padding
+3. last-action channel
+4. recent flap-rate channel over a fixed window
 
 Parameters:
+
 - `features` - - Structured observation features for the current decision step.
 - `observationMemoryState` - - Mutable temporal memory for the active bird.
 
@@ -255,6 +268,7 @@ Resolves flap/no-flap decision from network outputs.
 Resolves flap/no-flap decision from network outputs.
 
 Parameters:
+
 - `rawOutputs` - - Activation output payload.
 - `flapThreshold` - - Scalar threshold for single-output policies.
 
@@ -269,6 +283,7 @@ Returns: True when flap should trigger.
 Resolves adaptive difficulty profile from passed-pipe progress.
 
 Parameters:
+
 - `pipesPassed` - - Number of passed pipes.
 - `difficultyScale` - - Curriculum scale in `[0, 1]`.
 
@@ -283,6 +298,7 @@ Returns: Active difficulty profile.
 Compares two numeric values in ascending order.
 
 Parameters:
+
 - `leftValue` - - Left numeric value.
 - `rightValue` - - Right numeric value.
 
@@ -295,6 +311,7 @@ Returns: Comparator delta for `Array.prototype.toSorted`.
 Computes arithmetic mean for numeric samples.
 
 Parameters:
+
 - `values` - - Numeric samples.
 
 Returns: Arithmetic mean.
@@ -306,6 +323,7 @@ Returns: Arithmetic mean.
 Computes percentile value via linear interpolation between nearest ranks.
 
 Parameters:
+
 - `values` - - Numeric samples.
 - `percentile` - - Percentile in [0, 1].
 
@@ -318,6 +336,7 @@ Returns: Percentile value, or `Number.NaN` when `values` is empty.
 Computes population standard deviation.
 
 Parameters:
+
 - `values` - - Numeric samples.
 - `meanValue` - - Precomputed mean.
 
@@ -344,6 +363,7 @@ channels while dropping derived one-step predictors that become redundant
 once short-term temporal memory is available.
 
 Parameters:
+
 - `features` - - Structured observation features.
 
 Returns: Core per-frame vector.
@@ -360,6 +380,7 @@ the canonical network vectors now lives in the neighboring vector module so
 observation policy and network-shape concerns can evolve independently.
 
 Parameters:
+
 - `input` - - Observation input bundle.
 
 Returns: Structured observation features.
@@ -375,6 +396,7 @@ This module owns the network-shape projection so feature semantics can change
 independently from how the policy input is ordered.
 
 Parameters:
+
 - `features` - - Structured feature object.
 
 Returns: Ordered feature vector.
@@ -386,6 +408,7 @@ Returns: Ordered feature vector.
 Resolves the next two upcoming pipes in front of the bird.
 
 Parameters:
+
 - `pipes` - - Current pipe list.
 - `birdCenterXPx` - - Bird center x-position.
 - `birdRadiusPx` - - Bird radius.

@@ -8,45 +8,45 @@
 
 import type { INetwork } from '../interfaces';
 import type {
-	MazeMovementBufferPools,
-	MazeMovementRunServiceState,
+  MazeMovementBufferPools,
+  MazeMovementRunServiceState,
 } from './mazeMovement.types';
 import {
-	isFiniteNumberArray,
-	materializePath,
-	nextPowerOfTwo,
+  isFiniteNumberArray,
+  materializePath,
+  nextPowerOfTwo,
 } from './mazeMovement.utils';
 
 interface InternalMazeMovementBufferPools {
-	visitedFlags: Uint8Array | null;
-	visitCounts: Uint16Array | null;
-	pathX: Int32Array | null;
-	pathY: Int32Array | null;
-	gridCapacity: number;
-	pathCapacity: number;
-	cachedWidth: number;
-	cachedHeight: number;
+  visitedFlags: Uint8Array | null;
+  visitCounts: Uint16Array | null;
+  pathX: Int32Array | null;
+  pathY: Int32Array | null;
+  gridCapacity: number;
+  pathCapacity: number;
+  cachedWidth: number;
+  cachedHeight: number;
 }
 
 const BUFFER_POOLS: InternalMazeMovementBufferPools = {
-	visitedFlags: null,
-	visitCounts: null,
-	pathX: null,
-	pathY: null,
-	gridCapacity: 0,
-	pathCapacity: 0,
-	cachedWidth: 0,
-	cachedHeight: 0,
+  visitedFlags: null,
+  visitCounts: null,
+  pathX: null,
+  pathY: null,
+  gridCapacity: 0,
+  pathCapacity: 0,
+  cachedWidth: 0,
+  cachedHeight: 0,
 };
 
 const RUN_SERVICE_STATE: MazeMovementRunServiceState = {
-	saturations: 0,
-	noMoveStreak: 0,
-	prevDistanceStep: undefined,
+  saturations: 0,
+  noMoveStreak: 0,
+  prevDistanceStep: undefined,
 };
 
 const PRNG_STATE = {
-	value: null as Uint32Array | null,
+  value: null as Uint32Array | null,
 };
 
 /**
@@ -55,7 +55,7 @@ const PRNG_STATE = {
  * @returns The singleton mutable run-state object for the current process.
  */
 export function getMazeMovementRunServiceState(): MazeMovementRunServiceState {
-	return RUN_SERVICE_STATE;
+  return RUN_SERVICE_STATE;
 }
 
 /**
@@ -64,10 +64,10 @@ export function getMazeMovementRunServiceState(): MazeMovementRunServiceState {
  * @returns The reused singleton state after reset.
  */
 export function resetMazeMovementRunServiceState(): MazeMovementRunServiceState {
-	RUN_SERVICE_STATE.saturations = 0;
-	RUN_SERVICE_STATE.noMoveStreak = 0;
-	RUN_SERVICE_STATE.prevDistanceStep = undefined;
-	return RUN_SERVICE_STATE;
+  RUN_SERVICE_STATE.saturations = 0;
+  RUN_SERVICE_STATE.noMoveStreak = 0;
+  RUN_SERVICE_STATE.prevDistanceStep = undefined;
+  return RUN_SERVICE_STATE;
 }
 
 /**
@@ -79,40 +79,40 @@ export function resetMazeMovementRunServiceState(): MazeMovementRunServiceState 
  * @returns The initialized pooled buffer surface.
  */
 export function initializeMazeMovementBufferPools(
-	width: number,
-	height: number,
-	maxSteps: number,
+  width: number,
+  height: number,
+  maxSteps: number,
 ): MazeMovementBufferPools {
-	const requiredCellCount = width * height;
+  const requiredCellCount = width * height;
 
-	if (
-		BUFFER_POOLS.visitedFlags == null ||
-		requiredCellCount > BUFFER_POOLS.gridCapacity
-	) {
-		const newCellCapacity = nextPowerOfTwo(requiredCellCount);
-		BUFFER_POOLS.visitedFlags = new Uint8Array(newCellCapacity);
-		BUFFER_POOLS.visitCounts = new Uint16Array(newCellCapacity);
-		BUFFER_POOLS.gridCapacity = newCellCapacity;
-	} else {
-		BUFFER_POOLS.visitedFlags.fill(0, 0, requiredCellCount);
-		BUFFER_POOLS.visitCounts!.fill(0, 0, requiredCellCount);
-	}
+  if (
+    BUFFER_POOLS.visitedFlags == null ||
+    requiredCellCount > BUFFER_POOLS.gridCapacity
+  ) {
+    const newCellCapacity = nextPowerOfTwo(requiredCellCount);
+    BUFFER_POOLS.visitedFlags = new Uint8Array(newCellCapacity);
+    BUFFER_POOLS.visitCounts = new Uint16Array(newCellCapacity);
+    BUFFER_POOLS.gridCapacity = newCellCapacity;
+  } else {
+    BUFFER_POOLS.visitedFlags.fill(0, 0, requiredCellCount);
+    BUFFER_POOLS.visitCounts!.fill(0, 0, requiredCellCount);
+  }
 
-	const requiredPathEntries = maxSteps + 1;
-	if (
-		BUFFER_POOLS.pathX == null ||
-		requiredPathEntries > BUFFER_POOLS.pathCapacity
-	) {
-		const newPathCapacity = nextPowerOfTwo(requiredPathEntries);
-		BUFFER_POOLS.pathX = new Int32Array(newPathCapacity);
-		BUFFER_POOLS.pathY = new Int32Array(newPathCapacity);
-		BUFFER_POOLS.pathCapacity = newPathCapacity;
-	}
+  const requiredPathEntries = maxSteps + 1;
+  if (
+    BUFFER_POOLS.pathX == null ||
+    requiredPathEntries > BUFFER_POOLS.pathCapacity
+  ) {
+    const newPathCapacity = nextPowerOfTwo(requiredPathEntries);
+    BUFFER_POOLS.pathX = new Int32Array(newPathCapacity);
+    BUFFER_POOLS.pathY = new Int32Array(newPathCapacity);
+    BUFFER_POOLS.pathCapacity = newPathCapacity;
+  }
 
-	BUFFER_POOLS.cachedWidth = width;
-	BUFFER_POOLS.cachedHeight = height;
+  BUFFER_POOLS.cachedWidth = width;
+  BUFFER_POOLS.cachedHeight = height;
 
-	return requireMazeMovementBufferPools();
+  return requireMazeMovementBufferPools();
 }
 
 /**
@@ -122,16 +122,18 @@ export function initializeMazeMovementBufferPools(
  * @throws Error when a caller reaches the pools before initialization.
  */
 export function requireMazeMovementBufferPools(): MazeMovementBufferPools {
-	if (
-		BUFFER_POOLS.visitedFlags == null ||
-		BUFFER_POOLS.visitCounts == null ||
-		BUFFER_POOLS.pathX == null ||
-		BUFFER_POOLS.pathY == null
-	) {
-		throw new Error('Maze movement buffer pools were used before initialization.');
-	}
+  if (
+    BUFFER_POOLS.visitedFlags == null ||
+    BUFFER_POOLS.visitCounts == null ||
+    BUFFER_POOLS.pathX == null ||
+    BUFFER_POOLS.pathY == null
+  ) {
+    throw new Error(
+      'Maze movement buffer pools were used before initialization.',
+    );
+  }
 
-	return BUFFER_POOLS as MazeMovementBufferPools;
+  return BUFFER_POOLS as MazeMovementBufferPools;
 }
 
 /**
@@ -140,13 +142,13 @@ export function requireMazeMovementBufferPools(): MazeMovementBufferPools {
  * @returns Cached width and height for the active pooled buffers.
  */
 export function getMazeMovementBufferMetadata(): {
-	cachedWidth: number;
-	cachedHeight: number;
+  cachedWidth: number;
+  cachedHeight: number;
 } {
-	return {
-		cachedWidth: BUFFER_POOLS.cachedWidth,
-		cachedHeight: BUFFER_POOLS.cachedHeight,
-	};
+  return {
+    cachedWidth: BUFFER_POOLS.cachedWidth,
+    cachedHeight: BUFFER_POOLS.cachedHeight,
+  };
 }
 
 /**
@@ -157,7 +159,7 @@ export function getMazeMovementBufferMetadata(): {
  * @returns Linearized index used by pooled grid buffers.
  */
 export function indexMazeMovementCell(x: number, y: number): number {
-	return Math.imul(y, BUFFER_POOLS.cachedWidth) + x;
+  return Math.imul(y, BUFFER_POOLS.cachedWidth) + x;
 }
 
 /**
@@ -166,21 +168,21 @@ export function indexMazeMovementCell(x: number, y: number): number {
  * @returns A deterministic or host-random unit float for exploration logic.
  */
 export function randomMazeMovementUnit(): number {
-	const pooledState = PRNG_STATE.value;
-	if (pooledState == null || pooledState.length === 0) {
-		return Math.random();
-	}
+  const pooledState = PRNG_STATE.value;
+  if (pooledState == null || pooledState.length === 0) {
+    return Math.random();
+  }
 
-	const current = (pooledState[0] + 0x6d2b79f5) >>> 0;
-	pooledState[0] = current;
+  const current = (pooledState[0] + 0x6d2b79f5) >>> 0;
+  pooledState[0] = current;
 
-	let mixed = current;
-	mixed = Math.imul(mixed ^ (mixed >>> 15), mixed | 1) >>> 0;
-	mixed =
-		(mixed ^ (mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61))) >>> 0;
+  let mixed = current;
+  mixed = Math.imul(mixed ^ (mixed >>> 15), mixed | 1) >>> 0;
+  mixed =
+    (mixed ^ (mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61))) >>> 0;
 
-	const final32 = (mixed ^ (mixed >>> 14)) >>> 0;
-	return final32 / 4_294_967_296;
+  const final32 = (mixed ^ (mixed >>> 14)) >>> 0;
+  return final32 / 4_294_967_296;
 }
 
 /**
@@ -190,13 +192,13 @@ export function randomMazeMovementUnit(): number {
  * @returns Sanitized output history or `undefined` when absent or invalid.
  */
 export function readMazeMovementOutputHistory(
-	network: INetwork,
+  network: INetwork,
 ): number[][] | undefined {
-	const historyCandidate = Reflect.get(network as object, '_lastStepOutputs');
-	if (!Array.isArray(historyCandidate)) return undefined;
-	return historyCandidate.every(isFiniteNumberArray)
-		? (historyCandidate as number[][])
-		: undefined;
+  const historyCandidate = Reflect.get(network as object, '_lastStepOutputs');
+  if (!Array.isArray(historyCandidate)) return undefined;
+  return historyCandidate.every(isFiniteNumberArray)
+    ? (historyCandidate as number[][])
+    : undefined;
 }
 
 /**
@@ -206,10 +208,10 @@ export function readMazeMovementOutputHistory(
  * @param history - Bounded output-history payload to persist.
  */
 export function writeMazeMovementOutputHistory(
-	network: INetwork,
-	history: number[][],
+  network: INetwork,
+  history: number[][],
 ): void {
-	Reflect.set(network as object, '_lastStepOutputs', history);
+  Reflect.set(network as object, '_lastStepOutputs', history);
 }
 
 /**
@@ -219,10 +221,10 @@ export function writeMazeMovementOutputHistory(
  * @returns A newly allocated materialized path snapshot.
  */
 export function materializeMazeMovementPath(
-	length: number,
+  length: number,
 ): [number, number][] {
-	const bufferPools = requireMazeMovementBufferPools();
-	return materializePath(length, bufferPools.pathX, bufferPools.pathY);
+  const bufferPools = requireMazeMovementBufferPools();
+  return materializePath(length, bufferPools.pathX, bufferPools.pathY);
 }
 
 export {};

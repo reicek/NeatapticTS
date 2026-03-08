@@ -14,4 +14,3 @@ export type {
   MazeMovementSimulationResult,
   SimulationState,
 } from './mazeMovement/mazeMovement.types';
-

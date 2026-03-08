@@ -8,10 +8,13 @@
 
 import { MazeUtils } from '../../mazeUtils';
 import { MAZE_MOVEMENT_CONSTANTS } from '../mazeMovement.constants';
-import { materializeMazeMovementPath, randomMazeMovementUnit } from '../mazeMovement.services';
+import {
+  materializeMazeMovementPath,
+  randomMazeMovementUnit,
+} from '../mazeMovement.services';
 import type {
-	MazeMovementSimulationResult,
-	SimulationState,
+  MazeMovementSimulationResult,
+  SimulationState,
 } from '../mazeMovement.types';
 import { computeActionEntropyFromCounts } from '../mazeMovement.utils';
 
@@ -26,32 +29,33 @@ const ACTION_ENTROPY_SCRATCH = new Int32Array(1);
  * @returns Success result with fitness, path, and diagnostic summaries.
  */
 export function finalizeSuccessfulMazeMovementRun(
-	state: SimulationState,
-	maxSteps: number,
+  state: SimulationState,
+  maxSteps: number,
 ): MazeMovementSimulationResult {
-	const stepsTaken = state.steps | 0;
-	const stepEfficiency = (maxSteps | 0) - stepsTaken;
-	const actionEntropy = computeMazeMovementActionEntropy(state.directionCounts);
-	const baseFitness =
-		C.SUCCESS_BASE_FITNESS +
-		stepEfficiency * C.STEP_EFFICIENCY_SCALE +
-		state.progressReward +
-		state.newCellExplorationBonus +
-		state.invalidMovePenalty;
-	const totalFitness =
-		baseFitness + actionEntropy * C.SUCCESS_ACTION_ENTROPY_SCALE;
-	const pathSnapshot = materializeMazeMovementPath(state.pathLength);
-	const saturationFraction = stepsTaken > 0 ? state.saturatedSteps / stepsTaken : 0;
+  const stepsTaken = state.steps | 0;
+  const stepEfficiency = (maxSteps | 0) - stepsTaken;
+  const actionEntropy = computeMazeMovementActionEntropy(state.directionCounts);
+  const baseFitness =
+    C.SUCCESS_BASE_FITNESS +
+    stepEfficiency * C.STEP_EFFICIENCY_SCALE +
+    state.progressReward +
+    state.newCellExplorationBonus +
+    state.invalidMovePenalty;
+  const totalFitness =
+    baseFitness + actionEntropy * C.SUCCESS_ACTION_ENTROPY_SCALE;
+  const pathSnapshot = materializeMazeMovementPath(state.pathLength);
+  const saturationFraction =
+    stepsTaken > 0 ? state.saturatedSteps / stepsTaken : 0;
 
-	return {
-		success: true,
-		steps: stepsTaken,
-		path: pathSnapshot,
-		fitness: Math.max(C.MIN_SUCCESS_FITNESS, totalFitness),
-		progress: 100,
-		saturationFraction,
-		actionEntropy,
-	};
+  return {
+    success: true,
+    steps: stepsTaken,
+    path: pathSnapshot,
+    fitness: Math.max(C.MIN_SUCCESS_FITNESS, totalFitness),
+    progress: 100,
+    saturationFraction,
+    actionEntropy,
+  };
 }
 
 /**
@@ -65,48 +69,58 @@ export function finalizeSuccessfulMazeMovementRun(
  * @returns Failure result with shaped fitness, path, and diagnostic summaries.
  */
 export function finalizeFailedMazeMovementRun(
-	state: SimulationState,
-	encodedMaze: number[][],
-	startPos: readonly [number, number],
-	exitPos: readonly [number, number],
-	distanceMap?: number[][],
+  state: SimulationState,
+  encodedMaze: number[][],
+  startPos: readonly [number, number],
+  exitPos: readonly [number, number],
+  distanceMap?: number[][],
 ): MazeMovementSimulationResult {
-	const progress = distanceMap
-		? MazeUtils.calculateProgressFromDistanceMap(distanceMap, state.position, startPos)
-		: MazeUtils.calculateProgress(encodedMaze, state.position, startPos, exitPos);
-	const progressFraction = progress / 100;
-	const shapedProgress =
-		Math.pow(progressFraction, C.PROGRESS_POWER) * C.PROGRESS_SCALE;
-	const explorationScore = state.visitedUniqueCount;
-	const actionEntropy = computeMazeMovementActionEntropy(state.directionCounts);
-	const entropyBonus = actionEntropy * C.ENTROPY_BONUS_WEIGHT;
-	const baseFitness =
-		shapedProgress +
-		explorationScore +
-		state.progressReward +
-		state.newCellExplorationBonus +
-		state.invalidMovePenalty +
-		entropyBonus +
-		state.localAreaPenalty;
-	const randomizedFitness =
-		baseFitness + randomMazeMovementUnit() * C.FITNESS_RANDOMNESS;
-	const stabilizedFitness =
-		randomizedFitness >= 0
-			? randomizedFitness
-			: -Math.log1p(1 - randomizedFitness);
-	const pathSnapshot = materializeMazeMovementPath(state.pathLength);
-	const stepsTaken = state.steps | 0;
-	const saturationFraction = stepsTaken > 0 ? state.saturatedSteps / stepsTaken : 0;
+  const progress = distanceMap
+    ? MazeUtils.calculateProgressFromDistanceMap(
+        distanceMap,
+        state.position,
+        startPos,
+      )
+    : MazeUtils.calculateProgress(
+        encodedMaze,
+        state.position,
+        startPos,
+        exitPos,
+      );
+  const progressFraction = progress / 100;
+  const shapedProgress =
+    Math.pow(progressFraction, C.PROGRESS_POWER) * C.PROGRESS_SCALE;
+  const explorationScore = state.visitedUniqueCount;
+  const actionEntropy = computeMazeMovementActionEntropy(state.directionCounts);
+  const entropyBonus = actionEntropy * C.ENTROPY_BONUS_WEIGHT;
+  const baseFitness =
+    shapedProgress +
+    explorationScore +
+    state.progressReward +
+    state.newCellExplorationBonus +
+    state.invalidMovePenalty +
+    entropyBonus +
+    state.localAreaPenalty;
+  const randomizedFitness =
+    baseFitness + randomMazeMovementUnit() * C.FITNESS_RANDOMNESS;
+  const stabilizedFitness =
+    randomizedFitness >= 0
+      ? randomizedFitness
+      : -Math.log1p(1 - randomizedFitness);
+  const pathSnapshot = materializeMazeMovementPath(state.pathLength);
+  const stepsTaken = state.steps | 0;
+  const saturationFraction =
+    stepsTaken > 0 ? state.saturatedSteps / stepsTaken : 0;
 
-	return {
-		success: false,
-		steps: stepsTaken,
-		path: pathSnapshot,
-		fitness: stabilizedFitness,
-		progress,
-		saturationFraction,
-		actionEntropy,
-	};
+  return {
+    success: false,
+    steps: stepsTaken,
+    path: pathSnapshot,
+    fitness: stabilizedFitness,
+    progress,
+    saturationFraction,
+    actionEntropy,
+  };
 }
 
 /**
@@ -116,9 +130,9 @@ export function finalizeFailedMazeMovementRun(
  * @returns Normalized entropy in the range `[0, 1]`.
  */
 function computeMazeMovementActionEntropy(directionCounts: number[]): number {
-	return computeActionEntropyFromCounts(
-		directionCounts,
-		C.LOG_ACTIONS,
-		ACTION_ENTROPY_SCRATCH,
-	);
+  return computeActionEntropyFromCounts(
+    directionCounts,
+    C.LOG_ACTIONS,
+    ACTION_ENTROPY_SCRATCH,
+  );
 }
