@@ -15,7 +15,7 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 
 **Outcome:** keep iteration speed high, reduce refactor risk, and finish the structural cleanup needed before broad mechanical modernization.
 
-- Demo refinement and learnability hardening (active now)
+- Demo refinement and learnability hardening [DONE]
   - Current focus: stabilize and refine the `flappy_bird` demo so it remains the reference quality bar for later example work.
 - asciiMaze SOLID split before ES2023 modernization
   - Finish a maintainable split of `test/examples/asciiMaze` and any touched orchestration surfaces under `src/` so responsibilities are narrow, substitutable, and DRY.

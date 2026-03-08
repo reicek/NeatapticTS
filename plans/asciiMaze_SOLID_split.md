@@ -2,8 +2,18 @@
 
 Purpose
 
-- Track only the high-level structural gaps that still keep `test/examples/asciiMaze` from a strict SOLID, DRY, maintainable end state.
+- Keep `test/examples/asciiMaze` aligned with the stronger modular example direction established by `test/examples/flappy_bird`.
+- Track only the durable, high-level structural work still needed to reach a strict SOLID, DRY, maintainable end state.
+- Keep this document resumable across sessions.
 - Keep this document short; detailed split design belongs in the implementation step.
+
+Progress rules
+
+- Use `[]` for a step that is not yet completed.
+- Use `[DONE]` immediately after finishing a step.
+- Update this document whenever the step order changes, a step is added, a step is removed, or the overall plan shifts.
+- Keep completed steps in place so progress is visible when resuming later.
+- Do not expand this file with temporary implementation detail; only record durable high-level progress.
 
 Current read
 
@@ -97,13 +107,17 @@ High-level gaps
 - The example still blends local training, curriculum carry-over, and evolutionary orchestration closely enough that future changes could cross-cut too many files.
 - A stricter separation between evolution flow, refinement policy, and curriculum policy would improve maintainability.
 
-Priority order
+Execution steps
 
-- First: split `mazeMovement.ts` by simulation, action policy, shaping, and run-state responsibilities.
-- Second: split `dashboardManager.ts` into rendering, archive, and telemetry snapshot responsibilities.
-- Third: thin `browser-entry.ts` into bootstrap and runtime orchestration only.
-- Fourth: break `interfaces.ts` into focused contract files.
-- Fifth: remove browser-specific side effects from engine internals.
+- [] Step 1: Audit the remaining `asciiMaze` coordination-heavy surfaces and confirm the execution order across `mazeMovement`, `dashboardManager`, `browser-entry`, shared contracts, and engine-side reporting seams.
+- [] Step 2: Split `mazeMovement.ts` into a dedicated `mazeMovement/` module boundary so simulation state, pooled buffers, action policy, exploration heuristics, reward shaping, saturation handling, and result finalization stop accumulating in one file.
+- [] Step 3: Split `dashboardManager.ts` into a dedicated `dashboardManager/` module boundary so live rendering, solved-archive rendering, telemetry aggregation, bounded history storage, event emission, and formatting evolve behind focused files.
+- [] Step 4: Thin `browser-entry.ts` into a dedicated `browser-entry/` module boundary so host bootstrap, runtime orchestration, globals compatibility, and resize behavior evolve independently.
+- [] Step 5: Decompose `interfaces.ts` into focused module-owned `*.types.ts` files and leave behind only the smallest shared contract surface that is still truly cross-cutting.
+- [] Step 6: Remove browser-facing solve and stop side effects from engine internals so `evolutionEngine` reports through a narrower adapter or reporting boundary instead of touching host behavior directly.
+- [] Step 7: Consolidate scattered runtime shape adapters and presentation seams so browser and non-browser paths depend on clearer shared contracts rather than ad hoc local `Runtime*` compensating interfaces.
+- [] Step 8: Recheck refinement, curriculum, and evolution boundaries so follow-up changes do not reintroduce cross-cutting orchestration drift after the earlier splits.
+- [] Step 9: Validate the final shape by checking naming consistency, folder ownership, generated-doc expectations, and TypeScript/build health.
 
 Execution expectation
 
