@@ -26,7 +26,7 @@ import {
   isProfilingDetailsEnabled,
   profilingStartTimestamp,
 } from './rngAndTiming';
-import type { NetworkNode, NetworkConnection } from '../interfaces';
+import type { NetworkConnection, NetworkNode } from './evolutionEngine.types';
 
 /** Shared empty array to avoid repeated allocations for missing/invalid arrays. */
 // Type assertion: Empty array for generic fallback when arrays are invalid

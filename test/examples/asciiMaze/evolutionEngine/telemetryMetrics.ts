@@ -7,8 +7,8 @@
  */
 import type { Neat, Network } from '../../../../src/neataptic';
 import type { GenomeDetailed } from '../../../../src/neat/neat.types';
+import type { EngineState } from './engineState.types';
 import {
-  EngineState,
   ensureVisitedHashCapacity,
   initialiseTelemetryScratch,
 } from './engineState';

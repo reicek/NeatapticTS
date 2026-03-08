@@ -17,8 +17,8 @@
 
 import type { Neat, Network } from '../../../../src/neataptic';
 import { methods } from '../../../../src/neataptic';
-import type { RngCacheParameters } from './engineState';
-import { EngineState, initialiseTelemetryScratch } from './engineState';
+import type { EngineState, RngCacheParameters } from './engineState.types';
+import { initialiseTelemetryScratch } from './engineState';
 import { drawFastRandom, readHighResolutionTime } from './rngAndTiming';
 import { sampleArray } from './sampling';
 

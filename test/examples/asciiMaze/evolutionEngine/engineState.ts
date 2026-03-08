@@ -1,3 +1,61 @@
+import type {
+  EngineProfilingState,
+  EngineScratchState,
+  EngineState,
+  EngineToggleState,
+  RngCacheHandles,
+  RngCacheParameters,
+  TelemetryScratchHandles,
+  TelemetryScratchRequest,
+  VisitedHashScratchHandles,
+} from './engineState.types';
+import {
+  ACTION_OUTPUT_DIMENSION,
+  DEFAULT_CONNECTION_FLAG_CAPACITY,
+  DEFAULT_HISTORY_BUFFER_CAPACITY,
+  DEFAULT_NODE_INDEX_BUFFER_CAPACITY,
+  DEFAULT_QUICKSORT_STACK_CAPACITY,
+  DEFAULT_RNG_CACHE_BATCH_SIZE,
+  DEFAULT_SAMPLE_POOL_SIZE,
+  DEFAULT_SMALL_EXPLORE_TABLE_CAPACITY,
+  DEFAULT_SORTED_INDEX_CAPACITY,
+  DEFAULT_SPECIES_SCRATCH_CAPACITY,
+  DEFAULT_STRING_BUFFER_CAPACITY,
+  DEFAULT_VISITED_HASH_LOAD_FACTOR,
+  RNG_GOLDEN_RATIO_SEED,
+} from './engineState.constants';
+import {
+  buildTelemetryHandles,
+  createLogitsRing,
+  createProfilingAccumulators,
+  createSnapshotReusableObject,
+  ensureTelemetryFloatPools,
+  ensureTelemetryStringBuffer,
+  normaliseRngBatchSize,
+  normaliseRngSeed,
+  normaliseTelemetryCapacityHints,
+  normaliseVisitedHashEntries,
+  normaliseVisitedHashLoad,
+  nextPowerOfTwo,
+  resolveProfilingEnabled,
+} from './engineState.utils';
+
+export type {
+  EngineProfilingState,
+  EngineScratchState,
+  EngineState,
+  EngineToggleState,
+  RngCacheHandles,
+  RngCacheParameters,
+  TelemetryScratchHandles,
+  TelemetryScratchRequest,
+  VisitedHashScratchHandles,
+} from './engineState.types';
+export {
+  DEFAULT_RNG_CACHE_BATCH_SIZE,
+  DEFAULT_VISITED_HASH_LOAD_FACTOR,
+} from './engineState.constants';
+
 /**
  * Centralised shared state for the ASCII maze evolution façade.
  *
@@ -9,220 +67,6 @@
  *
  * Callers mutate the returned scratch instances in place to avoid per-generation allocations; higher-level modules should treat the helpers as the sole entry point for sizing or resetting shared buffers.
  */
-export interface EngineScratchState {
-  /** Softmax exponent scratch reused by telemetry entropy calculations. */
-  exps: Float64Array;
-  /** Mean accumulator reused for output bias statistics. */
-  means: Float64Array;
-  /** Standard deviation accumulator shared by telemetry computations. */
-  standardDeviations: Float64Array;
-  /** Bias scratch workspace reused for output-bias telemetry calculations. */
-  biasTelemetryScratch: Float64Array;
-  /** Optional kurtosis accumulator allocated when full telemetry is enabled. */
-  kurtosis?: Float64Array;
-  /** Second raw moment buffer for variance calculations. */
-  secondMomentRaw: Float64Array;
-  /** Optional third raw moment buffer for skewness metrics. */
-  thirdMomentRaw?: Float64Array;
-  /** Optional fourth raw moment buffer for kurtosis metrics. */
-  fourthMomentRaw?: Float64Array;
-  /** Directional move counters reused during exploration stats. */
-  moveCounts: Int32Array;
-  /** Open-address hash table used for visited coordinate detection. */
-  visitedHashTable: Int32Array;
-  /** Current load factor threshold guiding visited-hash resizes. */
-  visitedHashLoadFactor: number;
-  /** Species id scratch array reused by population sorting. */
-  speciesIds: Int32Array;
-  /** Species count scratch array kept parallel to {@link speciesIds}. */
-  speciesCounts: Int32Array;
-  /** Candidate connection objects pooled for pruning heuristics. */
-  connectionCandidates: Record<string, unknown>[];
-  /** Hidden-to-output connection list reused during inspection. */
-  hiddenToOutputConnections: Record<string, unknown>[];
-  /** Bit flags for connection enable/disable states. */
-  connectionFlags: Uint8Array;
-  /** Bitmap reused when detecting recurrent or gated connections. */
-  connectionFlagBitmap?: Int8Array;
-  /** Maze tail history reused to avoid reallocating per telemetry call. */
-  tailHistoryBuffer: Array<unknown>;
-  /** Sampled result buffer reused by array sampling helpers. */
-  sampleResultBuffer: Array<unknown>;
-  /** Sorted index scratch reused when ranking genomes. */
-  sortedIndexBuffer: number[];
-  /** Optional typed view of {@link sortedIndexBuffer} for faster sorts. */
-  sortedIndexTypedArray?: Int32Array;
-  /** Quicksort stack storing pending index ranges. */
-  quicksortStack: Int32Array;
-  /** Temporary population clone array used during expansion. */
-  populationCloneBuffer: Record<string, unknown>[];
-  /** Activation name buffer reused by inspection routines. */
-  activationNameBuffer: string[];
-  /** Node classification buckets reused by inspection routines. */
-  nodeBuckets: [
-    Record<string, unknown>[],
-    Record<string, unknown>[],
-    Record<string, unknown>[],
-  ];
-  /** Top entry objects reused when generating snapshots. */
-  snapshotTopEntries: Record<string, unknown>[];
-  /** Snapshot metadata object reused per persistence write. */
-  snapshotReusableObject: Record<string, unknown>;
-  /** Mutation operator index buffer shuffled each generation. */
-  mutationOperatorIndices: Uint16Array;
-  /** Object pool used when sampling individuals for telemetry. */
-  samplePool: Array<unknown>;
-  /** Character array reused when assembling debug strings. */
-  stringAssemblyBuffer: string[];
-  /** Small exploration table for low-cost duplicate detection. */
-  smallExploreTable: Int32Array;
-  /** Non-shared logits ring storing recent action logits. */
-  logitsRing: Float32Array[];
-  /** Write cursor for the non-shared logits ring. */
-  logitsRingWriteCursor: number;
-  /** Shared float buffer backing the logits ring when SAB is available. */
-  sharedLogits?: Float32Array;
-  /** Shared atomic write index for the SAB-backed logits ring. */
-  sharedLogitsWriteIndex?: Int32Array;
-  /** Scratch node index pool reused by topology inspection. */
-  nodeIndexBuffer: Int32Array;
-  /** Small profiling scratch buffer reused during timing accumulation. */
-  profilingScratch?: Float64Array;
-  /** Linear congruential RNG state preserved across cache refills. */
-  rngState: number;
-  /** Cached batch of uniform random numbers reused by the façade. */
-  rngCache: Float64Array;
-  /** Next unread index within {@link rngCache}. */
-  rngCacheIndex: number;
-  /** Allow additional properties for extensibility */
-  [key: string]: unknown;
-}
-
-/** Default logits ring length used when allocating pooled softmax buffers. */
-const DEFAULT_LOGITS_RING_CAPACITY = 512;
-/** Number of action outputs (N, E, S, W) represented in each logits row. */
-const ACTION_OUTPUT_DIMENSION = 4;
-/** Default load factor target for the visited coordinate hash table. */
-export const DEFAULT_VISITED_HASH_LOAD_FACTOR = 0.7;
-/** Minimum safe load factor applied when normalising visited-hash configuration. */
-const MIN_VISITED_HASH_LOAD_FACTOR = 0.1;
-/** Maximum safe load factor applied when normalising visited-hash configuration. */
-const MAX_VISITED_HASH_LOAD_FACTOR = 0.95;
-/** Default RNG cache batch size mirroring the façade constant. */
-export const DEFAULT_RNG_CACHE_BATCH_SIZE = 4;
-
-/** Default capacity reserved for species identifier scratch arrays. */
-const DEFAULT_SPECIES_SCRATCH_CAPACITY = 64;
-/** Default capacity reserved for connection flag buffers. */
-const DEFAULT_CONNECTION_FLAG_CAPACITY = 128;
-/** Default capacity reused by history and sampling scratch arrays. */
-const DEFAULT_HISTORY_BUFFER_CAPACITY = 64;
-/** Default capacity reserved for sorted index scratch arrays. */
-const DEFAULT_SORTED_INDEX_CAPACITY = 512;
-/** Default stack depth reserved for quicksort range storage. */
-const DEFAULT_QUICKSORT_STACK_CAPACITY = 128;
-/** Default pool size for telemetry sampling helpers. */
-const DEFAULT_SAMPLE_POOL_SIZE = 40;
-/** Default capacity for telemetry string assembly buffers. */
-const DEFAULT_STRING_BUFFER_CAPACITY = 64;
-/** Default capacity for the small exploration table scratch. */
-const DEFAULT_SMALL_EXPLORE_TABLE_CAPACITY = 64;
-/** Default capacity for the node index buffer used during inspection. */
-const DEFAULT_NODE_INDEX_BUFFER_CAPACITY = 64;
-/** Knuth-derived 32-bit constant used when seeding the RNG state. */
-const RNG_GOLDEN_RATIO_SEED = 0x9e3779b9;
-
-/**
- * Build a logits ring sized to the default capacity.
- * @returns Array of Float32Array rows sized to {@link ACTION_OUTPUT_DIMENSION}.
- */
-const createLogitsRing = (): Float32Array[] => {
-  const rows = new Array<Float32Array>(DEFAULT_LOGITS_RING_CAPACITY);
-  for (let ringIndex = 0; ringIndex < DEFAULT_LOGITS_RING_CAPACITY; ringIndex++)
-    rows[ringIndex] = new Float32Array(ACTION_OUTPUT_DIMENSION);
-  return rows;
-};
-
-/**
- * Runtime switches that adjust telemetry verbosity and optional training phases.
- */
-export interface EngineToggleState {
-  /** Softens telemetry to a reduced metric set. */
-  reducedTelemetry: boolean;
-  /** Enables the most compact telemetry output footprint. */
-  telemetryMinimal: boolean;
-  /** Disables the Baldwin (Lamarckian) warm-start phase. */
-  disableBaldwinPhase: boolean;
-}
-
-/**
- * Aggregated profiling configuration and accumulators shared across the evolution run.
- */
-export interface EngineProfilingState {
-  /** Indicates whether detailed profiling accumulation is active. */
-  detailsEnabled: boolean;
-  /** Rolling millisecond totals grouped by profiling segment key. */
-  accumulators: Record<string, number>;
-}
-
-/** Compute whether detailed profiling is enabled via the environment flag. */
-const resolveProfilingEnabled = (): boolean => {
-  try {
-    return (
-      typeof process !== 'undefined' &&
-      process?.env?.ASCII_MAZE_PROFILE_DETAILS === '1'
-    );
-  } catch {
-    return false;
-  }
-};
-
-/**
- * Build a fresh profiling accumulator map seeded with zero totals.
- * @returns Accumulator record keyed by profiling segment name.
- */
-const createProfilingAccumulators = (): Record<string, number> => ({
-  telemetry: 0,
-  simplify: 0,
-  snapshot: 0,
-  prune: 0,
-});
-
-/**
- * Shared engine state instance combining pooled scratch buffers with toggle flags.
- */
-export interface EngineState {
-  /** Bundle of pooled scratch buffers shared by the façade. */
-  scratch: EngineScratchState;
-  /** Runtime toggles influencing telemetry and training behaviour. */
-  toggles: EngineToggleState;
-  /** Profiling configuration and accumulated timings. */
-  profiling: EngineProfilingState;
-  /** Indicates whether deterministic RNG mode is enabled. */
-  deterministicMode: boolean;
-}
-
-/**
- * Build the reusable snapshot metadata payload consumed by persistence helpers.
- * @returns Snapshot placeholder populated with neutral defaults.
- */
-const createSnapshotReusableObject = () => ({
-  /** Snapshot generation index. */
-  generation: 0,
-  /** Snapshot best fitness value. */
-  bestFitness: 0,
-  /** Flag indicating simplify mode state. */
-  simplifyMode: false,
-  /** Plateau counter for simplify heuristics. */
-  plateauCounter: 0,
-  /** Snapshot timestamp. */
-  timestamp: 0,
-  /** Telemetry tail cache. */
-  telemetryTail: undefined,
-  /** Top entry payload. */
-  top: undefined,
-});
-
 /**
  * Fabricates the default pooled scratch buffers shared by the evolution façade.
  * @returns Scratch bundle sized for the baseline maze curriculum workload.
@@ -353,76 +197,6 @@ export const createEngineState = (): EngineState => ({
 });
 
 /**
- * Configuration describing which telemetry scratch buffers require capacity guarantees.
- */
-export interface TelemetryScratchRequest {
-  /** Desired action dimensionality for logit statistics helpers. */
-  actionDimension?: number;
-  /** When true ensure higher-moment buffers (M3/M4/kurtosis) are allocated. */
-  includeHigherMoments?: boolean;
-  /** Number of output biases expected when formatting telemetry strings. */
-  biasCount?: number;
-  /** String assembly buffer length requirement (defaults to {@link biasCount}). */
-  stringBufferLength?: number;
-}
-
-/**
- * Collection of scratch buffers handed back after initialisation for convenience.
- */
-export interface TelemetryScratchHandles {
-  /** Float64 scratch used for exponentiation during entropy calculations. */
-  exponentScratch: Float64Array;
-  /** Running mean accumulator workspace. */
-  meanScratch: Float64Array;
-  /** Population standard deviation workspace. */
-  standardDeviationScratch: Float64Array;
-  /** Second raw moment workspace. */
-  secondMomentScratch: Float64Array;
-  /** Optional third raw moment workspace (present when higher moments requested). */
-  thirdMomentScratch?: Float64Array;
-  /** Optional fourth raw moment workspace (present when higher moments requested). */
-  fourthMomentScratch?: Float64Array;
-  /** Optional kurtosis workspace (present when higher moments requested). */
-  kurtosisScratch?: Float64Array;
-  /** Bias accumulator buffer used by output-bias telemetry helpers. */
-  biasScratch: Float64Array;
-  /** Shared string assembly buffer reused across telemetry loggers. */
-  stringBuffer: string[];
-}
-
-/** Parameters controlling the RNG cache refill process. */
-export interface RngCacheParameters {
-  /** Number of samples generated per congruential batch. */
-  batchSize: number;
-  /** Linear congruential multiplier component. */
-  multiplier: number;
-  /** Linear congruential increment component. */
-  increment: number;
-  /** Bit shift applied before scaling floats into [0,1). */
-  shift: number;
-  /** Scalar applied to produce [0,1) floats from shifted integers. */
-  scale: number;
-}
-
-/** Handles returned after ensuring the RNG cache is ready for consumption. */
-export interface RngCacheHandles {
-  /** Cached uniform samples ready for reuse. */
-  cache: Float64Array;
-  /** Batch size associated with the cache. */
-  batchSize: number;
-}
-
-/**
- * Handles exposed after ensuring the visited-coordinate hash table capacity.
- */
-export interface VisitedHashScratchHandles {
-  /** Cleared Int32Array hash table ready for inserts. */
-  table: Int32Array;
-  /** Bitmask used for wraparound during linear probing (table.length - 1). */
-  slotMask: number;
-}
-
-/**
  * Ensure the visited-coordinate hash table can store the requested entry count.
  *
  * Growth policy:
@@ -546,235 +320,6 @@ export const reseedRngState = (
   scratch.rngState = normalisedSeed;
   scratch.rngCacheIndex = scratch.rngCache.length;
   return normalisedSeed;
-};
-
-interface TelemetryCapacityHints {
-  actionDimension: number;
-  requiresHigherMoments: boolean;
-  biasCount: number;
-  stringLength: number;
-}
-
-/**
- * Derive normalised capacity hints from the raw telemetry scratch request.
- * @param request Raw capacity request supplied by callers.
- * @returns Sanitised capacity values used during buffer initialisation.
- */
-const normaliseTelemetryCapacityHints = (
-  request: TelemetryScratchRequest,
-): TelemetryCapacityHints => {
-  const normaliseSize = (value: number | undefined, fallback = 0): number => {
-    if (!Number.isFinite(value as number))
-      return Math.max(0, Math.floor(fallback));
-    return Math.max(0, Math.floor(value as number));
-  };
-
-  const biasCount = normaliseSize(request.biasCount);
-  return {
-    actionDimension: normaliseSize(request.actionDimension),
-    requiresHigherMoments: Boolean(request.includeHigherMoments),
-    biasCount,
-    stringLength: normaliseSize(request.stringBufferLength, biasCount),
-  };
-};
-
-/**
- * Ensure all Float64 scratch pools required for telemetry are adequately sized.
- * @param scratch Shared scratch state mutated in place.
- * @param hints Normalised capacity hints (action dimension, bias count, etc.).
- */
-const ensureTelemetryFloatPools = (
-  scratch: EngineScratchState,
-  hints: TelemetryCapacityHints,
-): void => {
-  const minActionDim = Math.max(4, hints.actionDimension);
-  scratch.exps = ensureFloat64Pool(
-    scratch.exps,
-    minActionDim,
-    4,
-  ); /* exponent scratch for entropy */
-  scratch.means = ensureFloat64Pool(
-    scratch.means,
-    hints.actionDimension,
-    1,
-  ); /* running mean per action */
-  scratch.standardDeviations = ensureFloat64Pool(
-    scratch.standardDeviations,
-    hints.actionDimension,
-    1,
-  ); /* std aggregation buffer */
-  scratch.secondMomentRaw = ensureFloat64Pool(
-    scratch.secondMomentRaw,
-    hints.actionDimension,
-    1,
-  ); /* Welford M2 accumulator */
-  scratch.biasTelemetryScratch = ensureFloat64Pool(
-    scratch.biasTelemetryScratch,
-    hints.biasCount,
-    1,
-  ); /* bias stats workspace */
-
-  if (!hints.requiresHigherMoments) return;
-
-  scratch.thirdMomentRaw = ensureOptionalFloat64Pool(
-    scratch.thirdMomentRaw,
-    hints.actionDimension,
-  ); /* optional skewness (M3) */
-  scratch.fourthMomentRaw = ensureOptionalFloat64Pool(
-    scratch.fourthMomentRaw,
-    hints.actionDimension,
-  ); /* optional kurtosis (M4) */
-  scratch.kurtosis = ensureOptionalFloat64Pool(
-    scratch.kurtosis,
-    hints.actionDimension,
-  ); /* derived excess kurtosis */
-};
-
-/**
- * Ensure the reusable string assembly buffer has sufficient capacity.
- * @param buffer Existing string buffer instance.
- * @param required Minimum number of slots needed for upcoming telemetry joins.
- * @returns Original buffer when large enough, otherwise a grown copy.
- */
-const ensureTelemetryStringBuffer = (
-  buffer: string[],
-  required: number,
-): string[] => ensureArrayCapacity(buffer, required);
-
-/**
- * Build typed handles referencing the ensured telemetry scratch buffers.
- * @param scratch Scratch state containing the prepared buffers.
- * @returns Structured handles consumed by telemetry helpers.
- */
-const buildTelemetryHandles = (
-  scratch: EngineScratchState,
-): TelemetryScratchHandles => ({
-  exponentScratch: scratch.exps,
-  meanScratch: scratch.means,
-  standardDeviationScratch: scratch.standardDeviations,
-  secondMomentScratch: scratch.secondMomentRaw,
-  thirdMomentScratch: scratch.thirdMomentRaw,
-  fourthMomentScratch: scratch.fourthMomentRaw,
-  kurtosisScratch: scratch.kurtosis,
-  biasScratch: scratch.biasTelemetryScratch,
-  stringBuffer: scratch.stringAssemblyBuffer,
-});
-
-/**
- * Ensure a required Float64Array pool satisfies the requested capacity using power-of-two growth.
- * @param buffer Existing Float64Array instance reused by the engine.
- * @param required Minimum length the caller needs.
- * @param minimum Optional lower bound applied before comparison.
- * @returns Buffer with sufficient capacity (original or grown).
- */
-const ensureFloat64Pool = (
-  buffer: Float64Array,
-  required: number,
-  minimum = 0,
-): Float64Array => {
-  const target = Math.max(required, minimum);
-  if (target <= 0 || buffer.length >= target) return buffer;
-  const nextSize = nextPowerOfTwo(target);
-  const next = new Float64Array(nextSize);
-  if (buffer.length > 0) {
-    next.set(buffer.subarray(0, Math.min(buffer.length, nextSize)));
-  }
-  return next;
-};
-
-/**
- * Ensure an optional Float64Array is present and sized appropriately.
- * @param buffer Optional Float64Array reference to validate.
- * @param required Minimum required capacity; zero preserves the existing buffer.
- * @returns Buffer with sufficient capacity or undefined when no allocation is required.
- */
-const ensureOptionalFloat64Pool = (
-  buffer: Float64Array | undefined,
-  required: number,
-): Float64Array | undefined => {
-  if (required <= 0) return buffer;
-  if (!buffer) return new Float64Array(nextPowerOfTwo(required));
-  if (buffer.length >= required) return buffer;
-  const nextSize = nextPowerOfTwo(required);
-  const next = new Float64Array(nextSize);
-  next.set(buffer.subarray(0, Math.min(buffer.length, nextSize)));
-  return next;
-};
-
-/**
- * Ensure a generic Array buffer has enough slots, reusing existing entries when grown.
- * @param buffer Buffer instance to validate.
- * @param required Minimum number of elements required.
- * @returns Buffer with sufficient capacity (original or grown).
- */
-const ensureArrayCapacity = <T>(buffer: T[], required: number): T[] => {
-  if (required <= 0 || buffer.length >= required) return buffer;
-  const nextSize = nextPowerOfTwo(required);
-  const grown = new Array<T>(nextSize);
-  for (let index = 0; index < buffer.length; index++) {
-    grown[index] = buffer[index];
-  }
-  return grown;
-};
-
-/**
- * Compute the next power-of-two for geometric growth.
- * @param candidate Raw size candidate.
- * @returns Smallest power-of-two >= candidate.
- */
-const nextPowerOfTwo = (candidate: number): number => {
-  if (candidate <= 1) return 1;
-  return 1 << Math.ceil(Math.log2(candidate));
-};
-
-/**
- * Clamp the requested target entry count to a non-negative integer.
- * @param requestedEntries Raw target entry count supplied by callers.
- * @returns Sanitised entry count used for capacity planning.
- */
-const normaliseVisitedHashEntries = (requestedEntries: number): number => {
-  if (!Number.isFinite(requestedEntries)) return 0;
-  return Math.max(0, Math.floor(requestedEntries));
-};
-
-/**
- * Ensure the visited hash load factor falls within a sensible (0,1) range.
- * @param requestedLoadFactor Proposed load factor from configuration or state.
- * @returns Clamped load factor with a fallback to the project default.
- */
-const normaliseVisitedHashLoad = (requestedLoadFactor: number): number => {
-  if (!Number.isFinite(requestedLoadFactor)) {
-    return DEFAULT_VISITED_HASH_LOAD_FACTOR;
-  }
-  if (
-    requestedLoadFactor <= MIN_VISITED_HASH_LOAD_FACTOR ||
-    requestedLoadFactor >= MAX_VISITED_HASH_LOAD_FACTOR
-  ) {
-    return DEFAULT_VISITED_HASH_LOAD_FACTOR;
-  }
-  return requestedLoadFactor;
-};
-
-/**
- * Clamp the RNG cache batch size to a positive integer.
- * @param requestedBatchSize Raw batch size requested by callers.
- * @returns Valid batch size (minimum of one sample per refill).
- */
-const normaliseRngBatchSize = (requestedBatchSize: number): number => {
-  if (!Number.isFinite(requestedBatchSize)) {
-    return DEFAULT_RNG_CACHE_BATCH_SIZE;
-  }
-  return Math.max(1, Math.floor(requestedBatchSize));
-};
-
-/**
- * Normalise a raw numeric seed into an unsigned 32-bit value (remapping zero).
- * @param rawSeed Raw seed provided by the caller.
- * @returns Unsigned 32-bit seed suitable for the congruential generator.
- */
-const normaliseRngSeed = (rawSeed: number): number => {
-  const candidate = rawSeed >>> 0;
-  return candidate === 0 ? 0x9e3779b9 : candidate;
 };
 
 /**

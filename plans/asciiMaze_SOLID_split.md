@@ -24,6 +24,7 @@ Current read
 - Step 2 is now finalized around the dedicated `mazeMovement/` folder boundary: shared simulation types live in `mazeMovement.types.ts`, constants in `mazeMovement.constants.ts`, reusable helpers in `mazeMovement.utils.ts`, pooled mutable infrastructure in `mazeMovement.services.ts`, runtime primitives in `mazeMovement/runtime/mazeMovement.runtime.ts`, action policy in `mazeMovement/policy/mazeMovement.policy.ts`, reward shaping in `mazeMovement/shaping/mazeMovement.shaping.ts`, result assembly in `mazeMovement/finalization/mazeMovement.finalization.ts`, and the public class facade now lives in `mazeMovement/mazeMovement.ts` with the old top-level file reduced to a compatibility re-export.
 - Step 3 is now finalized around the dedicated `dashboardManager/` folder boundary: shared dashboard types live in `dashboardManager.types.ts`, constants in `dashboardManager.constants.ts`, reusable formatting and calculation helpers live in `dashboardManager.utils.ts`, rendering/archive/telemetry orchestration now lives in `dashboardManager.services.ts`, and the public class facade now lives in `dashboardManager/dashboardManager.ts` with the old top-level file reduced to a compatibility re-export.
 - Step 4 is now finalized around the dedicated `browser-entry/` folder boundary: shared browser host contracts live in `browser-entry.types.ts`, host and curriculum constants live in `browser-entry.constants.ts`, DOM resolution and curriculum helpers live in `browser-entry.utils.ts`, host bootstrap/resize wiring/abort composition/globals compatibility/runtime orchestration now live in `browser-entry.services.ts`, and the public browser facade now lives in `browser-entry/browser-entry.ts` with the old top-level file reduced to a compatibility re-export.
+- Step 5 is now finalized around focused contract owners instead of the old `interfaces.ts` dependency bucket: evolution run/configuration and engine-internal helper contracts now live in `evolutionEngine/evolutionEngine.types.ts`, fitness evaluation contracts now live in `fitness.types.ts`, existing browser-entry/dashboardManager/mazeMovement module-owned `*.types.ts` files remain the primary owners for their split boundaries, and the top-level `interfaces.ts` file is now reduced to a narrow shared/core compatibility layer that re-exports moved contracts while retaining only the genuinely cross-cutting network, dashboard-abstraction, maze-run-result, and terminal-result shapes.
 
 Split standard
 
@@ -86,11 +87,6 @@ High-level gaps
 - This should be split into smaller host/runtime/bootstrap services so the browser entry becomes thin orchestration only.
 - When split, prefer a dedicated `browser-entry/` folder with runtime, host, globals, and resize sub-areas.
 
-- `interfaces.ts` is too broad and acts like a dependency bucket.
-- It currently mixes runtime contracts, dashboard contracts, network contracts, run options, visualization DTOs, and other shared shapes in one file.
-- This weakens interface segregation and creates an avoidable coupling hub.
-- This should not be replaced by another giant shared file; it should be decomposed into narrower `*.types.ts` surfaces owned by the modules that use them.
-
 - Engine-layer stop handling still contains browser-facing side effects.
 - `evolutionEngine/evolutionLoop.ts` still reaches into browser event behavior for solve handling, and `evolutionEngine/setupHelpers.ts` still polls browser pause globals.
 - Host notifications and pause control should sit behind a narrower reporting or host adapter boundary.
@@ -113,7 +109,7 @@ Execution steps
 - [DONE] Step 2: Split `mazeMovement.ts` into a dedicated `mazeMovement/` module boundary so simulation state, pooled buffers, action policy, exploration heuristics, reward shaping, saturation handling, and result finalization stop accumulating in one file.
 - [DONE] Step 3: Split `dashboardManager.ts` into a dedicated `dashboardManager/` module boundary so live rendering, solved-archive rendering, telemetry aggregation, bounded history storage, event emission, and formatting evolve behind focused files.
 - [DONE] Step 4: Thin `browser-entry.ts` into a dedicated `browser-entry/` module boundary so host bootstrap, runtime orchestration, globals compatibility, and resize behavior evolve independently.
-- [] Step 5: Decompose `interfaces.ts` into focused module-owned `*.types.ts` files and leave behind only the smallest shared contract surface that is still truly cross-cutting.
+- [DONE] Step 5: Decompose `interfaces.ts` into focused module-owned `*.types.ts` files and leave behind only the smallest shared contract surface that is still truly cross-cutting.
 - [] Step 6: Remove browser-facing solve, stop, and pause side effects from engine internals so `evolutionEngine` reports through a narrower adapter or reporting boundary instead of touching host behavior directly.
 - [] Step 7: Consolidate scattered runtime shape adapters and presentation seams so browser and non-browser paths depend on clearer shared contracts rather than ad hoc local `Runtime*` compensating interfaces.
 - [] Step 8: Recheck refinement, curriculum, and evolution boundaries so follow-up changes do not reintroduce cross-cutting orchestration drift after the earlier splits.

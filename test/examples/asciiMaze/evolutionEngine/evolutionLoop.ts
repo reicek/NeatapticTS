@@ -113,20 +113,22 @@ import {
 } from './rngAndTiming';
 import type { EngineState } from './engineState';
 import type {
+  LoopHelpers,
+  NetworkConnection,
+  NetworkInstance,
+  NetworkNode,
+  NeatInstance,
+  ProfilingAccumulators,
+  ScratchBundle,
+  SimulationResult,
+  SnapshotEntry,
+  TrainingConstants,
   EvolutionOptions,
+} from './evolutionEngine.types';
+import type {
+  IDashboardManager,
   IMazeRunResult,
   INetwork,
-  NetworkInstance,
-  NeatInstance,
-  IDashboardManager,
-  LoopHelpers,
-  ScratchBundle,
-  SnapshotEntry,
-  ProfilingAccumulators,
-  TrainingConstants,
-  NetworkNode,
-  NetworkConnection,
-  SimulationResult,
 } from '../interfaces';
 
 /**

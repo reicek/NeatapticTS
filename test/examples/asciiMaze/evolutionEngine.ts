@@ -30,7 +30,8 @@ import {
   emitProfileSummary,
 } from './evolutionEngine/evolutionLoop';
 import { printNetworkStructure } from './evolutionEngine/networkInspection';
-import { INetwork, IRunMazeEvolutionOptions } from './interfaces';
+import type { INetwork } from './interfaces';
+import type { IRunMazeEvolutionOptions } from './evolutionEngine/evolutionEngine.types';
 import type Network from '../../../src/architecture/network';
 
 /**

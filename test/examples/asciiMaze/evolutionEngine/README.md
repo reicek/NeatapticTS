@@ -1,5 +1,163 @@
 # evolutionEngine
 
+## evolutionEngine/engineState.types.ts
+
+### engineState.types
+
+Shared contracts for the ASCII maze evolution engine state boundary.
+
+This file owns the exported type surface consumed by the engine-state facade,
+telemetry helpers, sampling utilities, and RNG/timing adapters.
+
+### EngineProfilingState
+
+Aggregated profiling configuration and accumulators shared across the evolution run.
+
+### EngineScratchState
+
+Shared contracts for the ASCII maze evolution engine state boundary.
+
+This file owns the exported type surface consumed by the engine-state facade,
+telemetry helpers, sampling utilities, and RNG/timing adapters.
+
+### EngineState
+
+Shared engine state instance combining pooled scratch buffers with toggle flags.
+
+### EngineToggleState
+
+Runtime switches that adjust telemetry verbosity and optional training phases.
+
+### RngCacheHandles
+
+Handles returned after ensuring the RNG cache is ready for consumption.
+
+### RngCacheParameters
+
+Parameters controlling the RNG cache refill process.
+
+### TelemetryScratchHandles
+
+Collection of scratch buffers handed back after initialisation for convenience.
+
+### TelemetryScratchRequest
+
+Configuration describing which telemetry scratch buffers require capacity guarantees.
+
+### VisitedHashScratchHandles
+
+Handles exposed after ensuring the visited-coordinate hash table capacity.
+
+## evolutionEngine/evolutionEngine.types.ts
+
+### DistanceMap
+
+Distance map for maze navigation.
+
+### EncodedMaze
+
+Encoded maze representation with cell values.
+
+### EncodedMazeData
+
+Encoded maze for simulation.
+
+### EvolutionHelpers
+
+Helper functions object passed to evolution loop orchestration.
+
+### EvolutionLoopHelpers
+
+Helper functions for evolution.
+
+### EvolutionOptions
+
+Options object passed to evolution functions.
+
+### FileSystem
+
+Node.js fs module type for file operations.
+
+### IAgentSimulationConfig
+
+Agent simulation configuration.
+
+### IEvolutionAlgorithmConfig
+
+Configuration options for the evolutionary algorithm used in the ASCII Maze demos.
+
+### IMazeConfig
+
+Maze configuration used by the ASCII Maze evolution helpers.
+
+### IReportingConfig
+
+Reporting configuration used to control logging, dashboard updates and UI pacing.
+
+### IRunMazeEvolutionOptions
+
+Main options for running a single maze-evolution experiment.
+
+### LogitsRingState
+
+Ring state for logits tracking.
+
+### LoopHelpers
+
+Loop helpers returned by prepareLoopHelpers.
+
+### MazeDistanceMap
+
+Distance map for pathfinding.
+
+### MazePosition
+
+Position in maze.
+
+### NeatInstance
+
+Type for Neat class instance from the neataptic library.
+
+### NetworkConnection
+
+Network connection representation used by engine-side runtime adaptation helpers.
+
+### NetworkInstance
+
+Type for Network class instance from the neataptic library.
+
+### NetworkNode
+
+Network node representation used by engine-side runtime adaptation helpers.
+
+### PathModule
+
+Node.js path module type.
+
+### Position
+
+2D position in maze coordinates.
+
+### ProfilingAccumulators
+
+Profiling accumulator structure.
+
+### ScratchBundle
+
+Scratch bundle containing reusable buffers.
+
+### SimulationResult
+
+Simulation result returned by generation evaluation helpers.
+
+### SnapshotEntry
+
+Snapshot entry for persistence.
+
+### TrainingConstants
+
+Training constants used by Lamarckian warm-start and refinement helpers.
+
 ## evolutionEngine/sampling.ts
 
 ### sampling
@@ -13,7 +171,7 @@ Responsibilities:
 
 ### getTail
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, source: T[] | undefined, count: number) => T[]`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, source: T[] | undefined, count: number) => T[]`
 
 ### pushHistory
 
@@ -21,45 +179,35 @@ Responsibilities:
 
 ### sampleArray
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, source: T[], sampleCount: number) => T[]`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, source: T[], sampleCount: number) => T[]`
 
 ### sampleIntoScratch
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, source: T[], sampleCount: number) => number`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, source: T[], sampleCount: number) => number`
 
 ### sampleSegmentIntoScratch
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, source: T[], segmentStart: number, sampleCount: number) => number`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, source: T[], segmentStart: number, sampleCount: number) => number`
 
 ## evolutionEngine/engineState.ts
 
 ### engineState
 
-Centralised shared state for the ASCII maze evolution façade.
-
-Responsibilities:
-1. Define the scratch-buffer schema consumed by telemetry, population, and inspection helpers.
-2. Expose runtime toggle state (`EngineToggleState`) that drives optional phases and telemetry density.
-3. Provide factory and maintenance helpers (`createEngineState`, `initialiseTelemetryScratch`, `ensureVisitedHashCapacity`, `ensureRngCacheBatch`, `reseedRngState`) that size buffers and keep deterministic RNG state in sync.
-4. Export the project-wide singleton `engineState` so extracted modules can share the façade’s pooled resources while still accepting injected state for testing.
-
-Callers mutate the returned scratch instances in place to avoid per-generation allocations; higher-level modules should treat the helpers as the sole entry point for sizing or resetting shared buffers.
-
 ### createEngineState
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState`
+`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState`
 
 ### createProfilingState
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineProfilingState`
+`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineProfilingState`
 
 ### createScratchState
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineScratchState`
+`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineScratchState`
 
 ### createToggleState
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineToggleState`
+`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineToggleState`
 
 ### DEFAULT_RNG_CACHE_BATCH_SIZE
 
@@ -71,15 +219,10 @@ Aggregated profiling configuration and accumulators shared across the evolution 
 
 ### EngineScratchState
 
-Centralised shared state for the ASCII maze evolution façade.
+Shared contracts for the ASCII maze evolution engine state boundary.
 
-Responsibilities:
-1. Define the scratch-buffer schema consumed by telemetry, population, and inspection helpers.
-2. Expose runtime toggle state (`EngineToggleState`) that drives optional phases and telemetry density.
-3. Provide factory and maintenance helpers (`createEngineState`, `initialiseTelemetryScratch`, `ensureVisitedHashCapacity`, `ensureRngCacheBatch`, `reseedRngState`) that size buffers and keep deterministic RNG state in sync.
-4. Export the project-wide singleton `engineState` so extracted modules can share the façade’s pooled resources while still accepting injected state for testing.
-
-Callers mutate the returned scratch instances in place to avoid per-generation allocations; higher-level modules should treat the helpers as the sole entry point for sizing or resetting shared buffers.
+This file owns the exported type surface consumed by the engine-state facade,
+telemetry helpers, sampling utilities, and RNG/timing adapters.
 
 ### EngineState
 
@@ -91,19 +234,19 @@ Runtime switches that adjust telemetry verbosity and optional training phases.
 
 ### ensureRngCacheBatch
 
-`(parameters: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").RngCacheParameters, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").RngCacheHandles`
+`(parameters: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").RngCacheParameters, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").RngCacheHandles`
 
 ### ensureVisitedHashCapacity
 
-`(targetEntryCount: number, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").VisitedHashScratchHandles`
+`(targetEntryCount: number, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").VisitedHashScratchHandles`
 
 ### initialiseTelemetryScratch
 
-`(request: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").TelemetryScratchRequest, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").TelemetryScratchHandles`
+`(request: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").TelemetryScratchRequest, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").TelemetryScratchHandles`
 
 ### reseedRngState
 
-`(seed: number, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => number`
+`(seed: number, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => number`
 
 ### RngCacheHandles
 
@@ -148,27 +291,27 @@ shared state without relying on class statics.
 
 ### accumulateProfilingDuration
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, category: string, deltaMs: number) => void`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, category: string, deltaMs: number) => void`
 
 ### clearDeterministicMode
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => void`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => void`
 
 ### drawFastRandom
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, parameters: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").RngCacheParameters) => number`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, parameters: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").RngCacheParameters) => number`
 
 ### getProfilingAccumulators
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => Record<string, number>`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => Record<string, number>`
 
 ### isDeterministicModeEnabled
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => boolean`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => boolean`
 
 ### isProfilingDetailsEnabled
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => boolean`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => boolean`
 
 ### profilingStartTimestamp
 
@@ -180,11 +323,11 @@ shared state without relying on class statics.
 
 ### resolveRngParameters
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").RngCacheParameters`
+`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").RngCacheParameters`
 
 ### setDeterministicMode
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, seed: number | undefined) => void`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, seed: number | undefined) => void`
 
 ## evolutionEngine/scratchPools.ts
 
@@ -202,7 +345,7 @@ ring sizing, telemetry scratch sizing, and connection flag pooling.
 
 ### ensureConnFlagsCapacity
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, minimumCapacity: number) => Int8Array<ArrayBufferLike> | null`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, minimumCapacity: number) => Int8Array<ArrayBufferLike> | null`
 
 ### ensureLogitsRingCapacity
 
@@ -210,11 +353,11 @@ ring sizing, telemetry scratch sizing, and connection flag pooling.
 
 ### ensureScratchCapacity
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, request: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/scratchPools").ScratchCapacityRequest) => void`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, request: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/scratchPools").ScratchCapacityRequest) => void`
 
 ### initialiseSharedLogitsRing
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, config: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/scratchPools").SharedLogitsConfig) => boolean`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, config: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/scratchPools").SharedLogitsConfig) => boolean`
 
 ### LogitsRingCapacityOptions
 
@@ -226,7 +369,7 @@ Result returned after resizing the logits ring.
 
 ### maybeShrinkScratch
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, populationSize: number) => void`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, populationSize: number) => void`
 
 ### ScratchCapacityRequest
 
@@ -354,7 +497,7 @@ ES2023 Policy:
 
 ### checkCancellation
 
-`(options: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").EvolutionOptions, bestResult: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IMazeRunResult | undefined) => string | undefined`
+`(options: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionOptions, bestResult: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IMazeRunResult | undefined) => string | undefined`
 
 ### checkStopConditions
 
@@ -362,7 +505,7 @@ ES2023 Policy:
 
 ### emitProfileSummary
 
-`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, safeWrite: (msg: string) => void, completedGenerations: number, totalEvolveMs: number, totalLamarckMs: number, totalSimMs: number, isProfilingDetailsEnabledFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => boolean, getProfilingAccumulatorsFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").ProfilingAccumulators) => void`
+`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, safeWrite: (msg: string) => void, completedGenerations: number, totalEvolveMs: number, totalLamarckMs: number, totalSimMs: number, isProfilingDetailsEnabledFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => boolean, getProfilingAccumulatorsFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").ProfilingAccumulators) => void`
 
 ### EvolutionLoopResult
 
@@ -400,19 +543,19 @@ Mutable result object with exitReason field
 
 ### persistSnapshotIfNeeded
 
-`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, fs: { writeFileSync?: ((path: string, data: string) => void) | undefined; } | null, pathModule: { join?: ((...paths: string[]) => string) | undefined; } | null, persistDir: string | undefined, persistTopK: number, completedGenerations: number, persistEvery: number, neat: import("C:/NeatapticTS/src/neat").default, bestFitness: number, simplifyMode: boolean, plateauCounter: number, scratchSnapshotObj: Record<string, unknown>, scratchSnapshotTop: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").SnapshotEntry[], collectTelemetryTailFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: import("C:/NeatapticTS/src/neat").default, count: number) => unknown, getSortedIndicesByScoreFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, population: import("C:/NeatapticTS/src/architecture/network").default[]) => number[], isProfilingDetailsEnabledFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => boolean, profilingStartTimestampFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => number, accumulateProfilingDurationFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, label: string, duration: number) => void) => void`
+`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, fs: { writeFileSync?: ((path: string, data: string) => void) | undefined; } | null, pathModule: { join?: ((...paths: string[]) => string) | undefined; } | null, persistDir: string | undefined, persistTopK: number, completedGenerations: number, persistEvery: number, neat: import("C:/NeatapticTS/src/neat").default, bestFitness: number, simplifyMode: boolean, plateauCounter: number, scratchSnapshotObj: Record<string, unknown>, scratchSnapshotTop: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").SnapshotEntry[], collectTelemetryTailFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("C:/NeatapticTS/src/neat").default, count: number) => unknown, getSortedIndicesByScoreFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, population: import("C:/NeatapticTS/src/architecture/network").default[]) => number[], isProfilingDetailsEnabledFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => boolean, profilingStartTimestampFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => number, accumulateProfilingDurationFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, label: string, duration: number) => void) => void`
 
 ### prepareLoopHelpers
 
-`(opts: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").EvolutionOptions, scratchBundle: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").ScratchBundle) => import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").LoopHelpers`
+`(opts: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionOptions, scratchBundle: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").ScratchBundle) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LoopHelpers`
 
 ### runEvolutionLoop
 
-`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: import("C:/NeatapticTS/src/neat").default, opts: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").EvolutionOptions, lamarckianTrainingSet: { input: number[]; output: number[]; }[], encodedMaze: number[][], startPosition: readonly [number, number], exitPosition: readonly [number, number], distanceMap: number[][], helpers: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").LoopHelpers, doProfile: boolean, scratchLogitsRing: Float32Array<ArrayBufferLike>[], logitsRingCap: number, logitsRingCapMax: number, actionDim: number, logitsRingShared: boolean, scratchLogitsShared: Float32Array<ArrayBufferLike> | undefined, scratchLogitsSharedW: Int32Array<ArrayBufferLike> | undefined, scratchLogitsRingW: number, emptyVec: import("C:/NeatapticTS/src/architecture/network").default[], scratchNodeIdx: Int32Array<ArrayBufferLike>, scratchSnapshotObj: Record<string, unknown>, scratchSnapshotTop: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").SnapshotEntry[], getNodeIndicesByType: (nodes: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkNode[], type: string) => number, collectHiddenToOutputConns: (hiddenNode: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkNode, nodesRef: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkNode[], outputCount: number) => import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkConnection[], constants: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").TrainingConstants & { DEFAULT_TRAIN_BATCH_LARGE: number; FITTEST_TRAIN_ITERATIONS: number; TELEMETRY_MINIMAL: boolean; SATURATION_PRUNE_THRESHOLD: number; RECENT_WINDOW: number; REDUCED_TELEMETRY: boolean; DISABLE_BALDWIN: boolean; }, speciesHistoryRef: number[]) => Promise<EvolutionLoopResult>`
+`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("C:/NeatapticTS/src/neat").default, opts: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionOptions, lamarckianTrainingSet: { input: number[]; output: number[]; }[], encodedMaze: number[][], startPosition: readonly [number, number], exitPosition: readonly [number, number], distanceMap: number[][], helpers: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LoopHelpers, doProfile: boolean, scratchLogitsRing: Float32Array<ArrayBufferLike>[], logitsRingCap: number, logitsRingCapMax: number, actionDim: number, logitsRingShared: boolean, scratchLogitsShared: Float32Array<ArrayBufferLike> | undefined, scratchLogitsSharedW: Int32Array<ArrayBufferLike> | undefined, scratchLogitsRingW: number, emptyVec: import("C:/NeatapticTS/src/architecture/network").default[], scratchNodeIdx: Int32Array<ArrayBufferLike>, scratchSnapshotObj: Record<string, unknown>, scratchSnapshotTop: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").SnapshotEntry[], getNodeIndicesByType: (nodes: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], type: string) => number, collectHiddenToOutputConns: (hiddenNode: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode, nodesRef: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], outputCount: number) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkConnection[], constants: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").TrainingConstants & { DEFAULT_TRAIN_BATCH_LARGE: number; FITTEST_TRAIN_ITERATIONS: number; TELEMETRY_MINIMAL: boolean; SATURATION_PRUNE_THRESHOLD: number; RECENT_WINDOW: number; REDUCED_TELEMETRY: boolean; DISABLE_BALDWIN: boolean; }, speciesHistoryRef: number[]) => Promise<EvolutionLoopResult>`
 
 ### runGeneration
 
-`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: import("C:/NeatapticTS/src/neat").default, doProfile: boolean, lamarckianIterations: number, lamarckianTrainingSet: { input: number[]; output: number[]; }[], lamarckianSampleSize: number | undefined, safeWrite: (msg: string) => void, completedGenerations: number, dynamicPopEnabled: boolean, dynamicPopMax: number, plateauGenerations: number, plateauCounter: number, dynamicPopExpandInterval: number, dynamicPopExpandFactor: number, dynamicPopPlateauSlack: number, speciesHistoryRef: number[], emptyVec: import("C:/NeatapticTS/src/architecture/network").default[], scratchNodeIdx: Int32Array<ArrayBufferLike>, getNodeIndicesByType: (nodes: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkNode[], type: string) => number, constants: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").TrainingConstants) => Promise<GenerationOutcome>`
+`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("C:/NeatapticTS/src/neat").default, doProfile: boolean, lamarckianIterations: number, lamarckianTrainingSet: { input: number[]; output: number[]; }[], lamarckianSampleSize: number | undefined, safeWrite: (msg: string) => void, completedGenerations: number, dynamicPopEnabled: boolean, dynamicPopMax: number, plateauGenerations: number, plateauCounter: number, dynamicPopExpandInterval: number, dynamicPopExpandFactor: number, dynamicPopPlateauSlack: number, speciesHistoryRef: number[], emptyVec: import("C:/NeatapticTS/src/architecture/network").default[], scratchNodeIdx: Int32Array<ArrayBufferLike>, getNodeIndicesByType: (nodes: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], type: string) => number, constants: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").TrainingConstants) => Promise<GenerationOutcome>`
 
 ### RuntimeNetworkInstance
 
@@ -424,7 +567,7 @@ Simulation result with step outputs
 
 ### simulateAndPostprocess
 
-`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, fittest: import("C:/NeatapticTS/src/architecture/network").default, encodedMaze: number[][], startPosition: readonly [number, number], exitPosition: readonly [number, number], distanceMap: number[][], maxSteps: number | undefined, doProfile: boolean, safeWrite: (msg: string) => void, logEvery: number, completedGenerations: number, neat: import("C:/NeatapticTS/src/neat").default, scratchLogitsRing: Float32Array<ArrayBufferLike>[], logitsRingCap: number, logitsRingCapMax: number, actionDim: number, logitsRingShared: boolean, scratchLogitsShared: Float32Array<ArrayBufferLike> | undefined, scratchLogitsSharedW: Int32Array<ArrayBufferLike> | undefined, scratchLogitsRingW: number, telemetryMinimal: boolean, saturationPruneThreshold: number, recentWindow: number, reducedTelemetry: boolean, getNodeIndicesByType: (nodes: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkNode[], type: string) => number, collectHiddenToOutputConns: (hiddenNode: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkNode, nodesRef: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkNode[], outputCount: number) => import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkConnection[]) => import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").SimulationResult`
+`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, fittest: import("C:/NeatapticTS/src/architecture/network").default, encodedMaze: number[][], startPosition: readonly [number, number], exitPosition: readonly [number, number], distanceMap: number[][], maxSteps: number | undefined, doProfile: boolean, safeWrite: (msg: string) => void, logEvery: number, completedGenerations: number, neat: import("C:/NeatapticTS/src/neat").default, scratchLogitsRing: Float32Array<ArrayBufferLike>[], logitsRingCap: number, logitsRingCapMax: number, actionDim: number, logitsRingShared: boolean, scratchLogitsShared: Float32Array<ArrayBufferLike> | undefined, scratchLogitsSharedW: Int32Array<ArrayBufferLike> | undefined, scratchLogitsRingW: number, telemetryMinimal: boolean, saturationPruneThreshold: number, recentWindow: number, reducedTelemetry: boolean, getNodeIndicesByType: (nodes: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], type: string) => number, collectHiddenToOutputConns: (hiddenNode: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode, nodesRef: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], outputCount: number) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkConnection[]) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").SimulationResult`
 
 ### SimulationOutcome
 
@@ -465,11 +608,11 @@ ES2023 Policy:
 
 ### createAndSeedNeat
 
-`(opts: any, inputSize: number, outputSize: number, fitnessContext: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IFitnessEvaluationContext, scratchPopClone: any[], scratchSample: any[]) => any`
+`(opts: any, inputSize: number, outputSize: number, fitnessContext: import("C:/NeatapticTS/test/examples/asciiMaze/fitness.types").IFitnessEvaluationContext, scratchPopClone: any[], scratchSample: any[]) => any`
 
 ### normalizeRunOptions
 
-`(options: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IRunMazeEvolutionOptions, setDeterministic: (seed: number) => void, setReducedTelemetry: (enabled: boolean) => void, setMinimalTelemetry: (enabled: boolean) => void, setDisableBaldwin: (disabled: boolean) => void) => any`
+`(options: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").IRunMazeEvolutionOptions, setDeterministic: (seed: number) => void, setReducedTelemetry: (enabled: boolean) => void, setMinimalTelemetry: (enabled: boolean) => void, setDisableBaldwin: (disabled: boolean) => void) => any`
 
 ### prepareEnvironmentForRun
 
@@ -491,7 +634,7 @@ Structure describing the result of action-entropy computation.
 
 ### collectTelemetryTail
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: unknown, tailLength: number) => unknown`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: unknown, tailLength: number) => unknown`
 
 ### GenerationResult
 
@@ -530,7 +673,7 @@ Parameters required to emit exploration telemetry.
 
 ### logGenerationTelemetry
 
-`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: import("C:/NeatapticTS/src/neat").default, fittest: import("C:/NeatapticTS/src/architecture/network").default | undefined, genResult: GenerationResult | undefined, generationIndex: number, writeLog: (msg: string) => void, actionDimension: number, recentWindow: number, reducedTelemetry: boolean, telemetryMinimal: boolean, onCollapseRecovery: () => void, isProfilingDetailsEnabledFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => boolean, profilingStartTimestampFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => number, accumulateProfilingDurationFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, label: string, duration: number) => void) => void`
+`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("C:/NeatapticTS/src/neat").default, fittest: import("C:/NeatapticTS/src/architecture/network").default | undefined, genResult: GenerationResult | undefined, generationIndex: number, writeLog: (msg: string) => void, actionDimension: number, recentWindow: number, reducedTelemetry: boolean, telemetryMinimal: boolean, onCollapseRecovery: () => void, isProfilingDetailsEnabledFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => boolean, profilingStartTimestampFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => number, accumulateProfilingDurationFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, label: string, duration: number) => void) => void`
 
 ### LogitStatsParams
 
@@ -652,7 +795,7 @@ ES2023 Policy:
 
 ### printNetworkStructure
 
-`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork) => void`
+`(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork) => void`
 
 ### swallowError
 
@@ -722,15 +865,15 @@ Mutations are limited to NEAT population networks and engine scratch buffers.
 
 ### adjustOutputBiasesAfterTraining
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, constants: { DEFAULT_STD_SMALL: number; DEFAULT_STD_ADJUST_MULT: number; }, scratchNodeIdx: Int32Array<ArrayBufferLike>, getNodeIndicesByType: (nodes: any[], nodeType: string) => number) => void`
+`(network: import("C:/NeatapticTS/src/architecture/network").default, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, constants: { DEFAULT_STD_SMALL: number; DEFAULT_STD_ADJUST_MULT: number; }, scratchNodeIdx: Int32Array<ArrayBufferLike>, getNodeIndicesByType: (nodes: any[], nodeType: string) => number) => void`
 
 ### applyLamarckianTraining
 
-`(neat: import("C:/NeatapticTS/src/neat").default, trainingSet: any[], iterations: number, sampleSize: number | undefined, safeWrite: (msg: string) => void, profileEnabled: boolean, completedGenerations: number, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, constants: { DEFAULT_TRAIN_ERROR: number; DEFAULT_TRAIN_RATE: number; DEFAULT_TRAIN_MOMENTUM: number; DEFAULT_TRAIN_BATCH_SMALL: number; }, adjustOutputBiases: (network: any) => void) => number`
+`(neat: import("C:/NeatapticTS/src/neat").default, trainingSet: any[], iterations: number, sampleSize: number | undefined, safeWrite: (msg: string) => void, profileEnabled: boolean, completedGenerations: number, state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, constants: { DEFAULT_TRAIN_ERROR: number; DEFAULT_TRAIN_RATE: number; DEFAULT_TRAIN_MOMENTUM: number; DEFAULT_TRAIN_BATCH_SMALL: number; }, adjustOutputBiases: (network: any) => void) => number`
 
 ### buildLamarckianTrainingSet
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, constants: { TRAIN_OUT_PROB_HIGH: number; TRAIN_OUT_PROB_LOW: number; PROGRESS_MEDIUM: number; PROGRESS_STRONG: number; PROGRESS_JUNCTION: number; PROGRESS_FOURWAY: number; PROGRESS_REGRESS: number; PROGRESS_MIN_SIGNAL: number; PROGRESS_MILD_REGRESS: number; DEFAULT_JITTER_PROB: number; AUGMENT_JITTER_BASE: number; AUGMENT_JITTER_RANGE: number; AUGMENT_PROGRESS_JITTER_PROB: number; AUGMENT_PROGRESS_DELTA_RANGE: number; AUGMENT_PROGRESS_DELTA_HALF: number; RNG_PARAMETERS: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").RngCacheParameters; }) => { input: number[]; output: number[]; }[]`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, constants: { TRAIN_OUT_PROB_HIGH: number; TRAIN_OUT_PROB_LOW: number; PROGRESS_MEDIUM: number; PROGRESS_STRONG: number; PROGRESS_JUNCTION: number; PROGRESS_FOURWAY: number; PROGRESS_REGRESS: number; PROGRESS_MIN_SIGNAL: number; PROGRESS_MILD_REGRESS: number; DEFAULT_JITTER_PROB: number; AUGMENT_JITTER_BASE: number; AUGMENT_JITTER_RANGE: number; AUGMENT_PROGRESS_JITTER_PROB: number; AUGMENT_PROGRESS_DELTA_RANGE: number; AUGMENT_PROGRESS_DELTA_HALF: number; RNG_PARAMETERS: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").RngCacheParameters; }) => { input: number[]; output: number[]; }[]`
 
 ### pretrainPopulationWarmStart
 
@@ -738,7 +881,7 @@ Mutations are limited to NEAT population networks and engine scratch buffers.
 
 ### warmStartPopulationIfNeeded
 
-`(neat: import("C:/NeatapticTS/src/neat").default, trainingSet: any[], state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, pretrainPopulation: (neat: any, trainingSet: any[]) => void) => void`
+`(neat: import("C:/NeatapticTS/src/neat").default, trainingSet: any[], state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, pretrainPopulation: (neat: any, trainingSet: any[]) => void) => void`
 
 ## evolutionEngine/populationDynamics.ts
 
@@ -762,11 +905,11 @@ Follows ES2023 idioms: `toSorted`, `.at(-1)`, numeric separators, etc.
 
 ### antiCollapseRecovery
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: any, completedGenerations: number, safeWrite: (msg: string) => void, sampleSegmentIntoScratchFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, array: any[], startIdx: number, count: number) => number) => void`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, completedGenerations: number, safeWrite: (msg: string) => void, sampleSegmentIntoScratchFn: (state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, array: any[], startIdx: number, count: number) => number) => void`
 
 ### applyMutationsToClone
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, clone: any, neat: any, mutateCount: number) => void`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, clone: any, neat: any, mutateCount: number) => void`
 
 ### compactGenomeConnections
 
@@ -774,15 +917,15 @@ Follows ES2023 idioms: `toSorted`, `.at(-1)`, numeric separators, etc.
 
 ### compactPopulation
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: any) => number`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any) => number`
 
 ### createChildFromParent
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: any, parent: any) => any`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, parent: any) => any`
 
 ### determineMutateCount
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState) => number`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => number`
 
 ### ensureOutputIdentity
 
@@ -790,19 +933,19 @@ Follows ES2023 idioms: `toSorted`, `.at(-1)`, numeric separators, etc.
 
 ### expandPopulation
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: any, targetAdd: number, safeWrite: (msg: string) => void, completedGenerations: number) => void`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, targetAdd: number, safeWrite: (msg: string) => void, completedGenerations: number) => void`
 
 ### getSortedIndicesByScore
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, population: any[]) => number[]`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, population: any[]) => number[]`
 
 ### handleSimplifyState
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: any, plateauCounter: number, plateauGenerations: number, simplifyDuration: number, simplifyMode: boolean, simplifyRemaining: number, simplifyStrategy: string, simplifyPruneFraction: number) => { simplifyMode: boolean; simplifyRemaining: number; plateauCounter: number; }`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, plateauCounter: number, plateauGenerations: number, simplifyDuration: number, simplifyMode: boolean, simplifyRemaining: number, simplifyStrategy: string, simplifyPruneFraction: number) => { simplifyMode: boolean; simplifyRemaining: number; plateauCounter: number; }`
 
 ### handleSpeciesHistory
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: any, speciesHistory: number[]) => boolean`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, speciesHistory: number[]) => boolean`
 
 ### IndexBuffer
 
@@ -810,7 +953,7 @@ Typed or array-based index buffer for sorting
 
 ### maybeExpandPopulation
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: any, dynamicPopEnabled: boolean, completedGenerations: number, dynamicPopMax: number, plateauGenerations: number, plateauCounter: number, dynamicPopExpandInterval: number, dynamicPopExpandFactor: number, dynamicPopPlateauSlack: number, safeWrite: (msg: string) => void) => void`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, dynamicPopEnabled: boolean, completedGenerations: number, dynamicPopMax: number, plateauGenerations: number, plateauCounter: number, dynamicPopExpandInterval: number, dynamicPopExpandFactor: number, dynamicPopPlateauSlack: number, safeWrite: (msg: string) => void) => void`
 
 ### maybeStartSimplify
 
@@ -822,11 +965,11 @@ Mutation operation from NEAT driver
 
 ### prepareExpansion
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: any) => { populationRef: any[]; sortedIdx: number[]; parentPoolSize: number; }`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any) => { populationRef: any[]; sortedIdx: number[]; parentPoolSize: number; }`
 
 ### pruneSaturatedHiddenOutputs
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, genome: unknown, getNodeIndicesByType: (nodes: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkNode[], nodeType: string) => number, collectHiddenToOutputConns: (hiddenNode: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkNode, nodes: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkNode[], outputCount: number) => import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").NetworkConnection[]) => void`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, genome: unknown, getNodeIndicesByType: (nodes: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], nodeType: string) => number, collectHiddenToOutputConns: (hiddenNode: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode, nodes: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], outputCount: number) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkConnection[]) => void`
 
 ### registerClone
 
@@ -834,11 +977,11 @@ Mutation operation from NEAT driver
 
 ### reinitializeGenomeOutputsAndWeights
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, genome: unknown) => { connReset: number; biasReset: number; }`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, genome: unknown) => { connReset: number; biasReset: number; }`
 
 ### runSimplifyCycle
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState").EngineState, neat: any, simplifyRemaining: number, simplifyStrategy: string, simplifyPruneFraction: number) => number`
+`(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, simplifyRemaining: number, simplifyStrategy: string, simplifyPruneFraction: number) => number`
 
 ### RuntimeGenome
 
@@ -847,3 +990,99 @@ Network genome with dynamic runtime properties
 ### updatePlateauState
 
 `(fitness: number, lastBestFitnessForPlateau: number, plateauCounter: number, plateauImprovementThreshold: number) => { plateauCounter: number; lastBestFitnessForPlateau: number; }`
+
+## evolutionEngine/engineState.constants.ts
+
+### engineState.constants
+
+Constant values shared by the ASCII maze engine-state facade and its helper utilities.
+
+### ACTION_OUTPUT_DIMENSION
+
+### DEFAULT_CONNECTION_FLAG_CAPACITY
+
+### DEFAULT_HISTORY_BUFFER_CAPACITY
+
+### DEFAULT_LOGITS_RING_CAPACITY
+
+### DEFAULT_NODE_INDEX_BUFFER_CAPACITY
+
+### DEFAULT_QUICKSORT_STACK_CAPACITY
+
+### DEFAULT_RNG_CACHE_BATCH_SIZE
+
+### DEFAULT_SAMPLE_POOL_SIZE
+
+### DEFAULT_SMALL_EXPLORE_TABLE_CAPACITY
+
+### DEFAULT_SORTED_INDEX_CAPACITY
+
+### DEFAULT_SPECIES_SCRATCH_CAPACITY
+
+### DEFAULT_STRING_BUFFER_CAPACITY
+
+### DEFAULT_VISITED_HASH_LOAD_FACTOR
+
+### MAX_VISITED_HASH_LOAD_FACTOR
+
+### MIN_VISITED_HASH_LOAD_FACTOR
+
+### RNG_GOLDEN_RATIO_SEED
+
+## evolutionEngine/engineState.utils.ts
+
+### engineState.utils
+
+Pure utility helpers shared by the ASCII maze engine-state facade.
+
+### buildTelemetryHandles
+
+`(scratch: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineScratchState) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").TelemetryScratchHandles`
+
+### createLogitsRing
+
+`() => Float32Array<ArrayBufferLike>[]`
+
+### createProfilingAccumulators
+
+`() => Record<string, number>`
+
+### createSnapshotReusableObject
+
+`() => { generation: number; bestFitness: number; simplifyMode: boolean; plateauCounter: number; timestamp: number; telemetryTail: undefined; top: undefined; }`
+
+### ensureTelemetryFloatPools
+
+`(scratch: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineScratchState, hints: TelemetryCapacityHints) => void`
+
+### ensureTelemetryStringBuffer
+
+`(buffer: string[], required: number) => string[]`
+
+### nextPowerOfTwo
+
+`(candidate: number) => number`
+
+### normaliseRngBatchSize
+
+`(requestedBatchSize: number) => number`
+
+### normaliseRngSeed
+
+`(rawSeed: number) => number`
+
+### normaliseTelemetryCapacityHints
+
+`(request: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").TelemetryScratchRequest) => TelemetryCapacityHints`
+
+### normaliseVisitedHashEntries
+
+`(requestedEntries: number) => number`
+
+### normaliseVisitedHashLoad
+
+`(requestedLoadFactor: number) => number`
+
+### resolveProfilingEnabled
+
+`() => boolean`
