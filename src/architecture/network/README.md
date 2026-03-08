@@ -1538,6 +1538,9 @@ Parameters:
 - `to` - - Target node (receives signal).
 - `weight` - - Optional explicit initial weight value.
 
+Returns: Array of created  {@link Connection} objects (possibly empty if acyclicity rejected the edge).
+ *
+
 ### createMLP
 
 `(inputCount: number, hiddenCounts: number[], outputCount: number) => import("C:/NeatapticTS/src/architecture/network").default`

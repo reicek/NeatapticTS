@@ -70,7 +70,7 @@ export function stepFlappyStateWithControlSubsteps(
 ): void {
   if (state.done) return;
 
-  const difficultyProfile = resolveDifficultyProfile(
+  const difficultyProfile = resolveAdaptiveDifficultyProfile(
     state.pipesPassed,
     difficultyScale,
   );
@@ -105,12 +105,12 @@ export function stepFlappyStateWithControlSubsteps(
 
     state.framesUntilNextPipeSpawn -= substepDelta;
     if (state.framesUntilNextPipeSpawn <= 0) {
-      const nextGapSizePx = resolveLocalNextSpawnGapSize(
+      const nextGapSizePx = resolveNextSpawnGapSize(
         state.lastSpawnedPipeGapPx,
         difficultyProfile,
         rng,
       );
-      const nextSpawnIntervalFrames = resolveLocalNextSpawnIntervalFrames(
+      const nextSpawnIntervalFrames = resolveNextSpawnIntervalFrames(
         state.lastSpawnedPipeSpawnIntervalFrames,
         difficultyProfile,
       );
@@ -144,67 +144,4 @@ export function stepFlappyStateWithControlSubsteps(
     state.done = true;
     state.doneReason = 'timeout';
   }
-}
-
-/**
- * Resolves adaptive difficulty parameters from current progress.
- *
- * @param pipesPassed - Number of pipes passed by the active bird.
- * @param difficultyScale - Curriculum difficulty scale in [0, 1].
- * @returns Runtime difficulty profile.
- */
-function resolveDifficultyProfile(
-  pipesPassed: number,
-  difficultyScale: FlappyDifficultyScale = FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE,
-): {
-  pipeGapPx: number;
-  pipeSpeedPxPerFrame: number;
-  pipeSpawnIntervalFrames: number;
-} {
-  return resolveAdaptiveDifficultyProfile(pipesPassed, difficultyScale);
-}
-
-/**
- * Resolve the next spawned pipe gap with progressive wide-to-hard shrink and jitter.
- *
- * @param previousSpawnGapPx - Most recently spawned gap size.
- * @param difficultyProfile - Current adaptive profile.
- * @param rng - Random source.
- * @returns Gap size for the next pipe.
- */
-function resolveLocalNextSpawnGapSize(
-  previousSpawnGapPx: number | undefined,
-  difficultyProfile: {
-    pipeGapPx: number;
-    pipeSpeedPxPerFrame: number;
-    pipeSpawnIntervalFrames: number;
-  },
-  rng: FlappyRng,
-): number {
-  return resolveNextSpawnGapSize(
-    previousSpawnGapPx,
-    difficultyProfile as SharedDifficultyProfile,
-    rng,
-  );
-}
-
-/**
- * Resolve the next spawned pipe interval with progressive wide-to-hard shrink.
- *
- * @param previousSpawnIntervalFrames - Most recently spawned interval.
- * @param difficultyProfile - Current adaptive profile.
- * @returns Spawn interval for the next pipe.
- */
-function resolveLocalNextSpawnIntervalFrames(
-  previousSpawnIntervalFrames: number | undefined,
-  difficultyProfile: {
-    pipeGapPx: number;
-    pipeSpeedPxPerFrame: number;
-    pipeSpawnIntervalFrames: number;
-  },
-): number {
-  return resolveNextSpawnIntervalFrames(
-    previousSpawnIntervalFrames,
-    difficultyProfile as SharedDifficultyProfile,
-  );
 }

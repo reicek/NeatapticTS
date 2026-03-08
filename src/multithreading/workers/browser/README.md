@@ -24,9 +24,6 @@ computationally expensive tasks, such as network evaluation, to separate threads
 
 Creates a string representation of the worker's blob.
 
-Parameters:
-- `` - - The cost function to be used by the worker.
-
 Returns: The blob string.
 
 #### evaluate
@@ -34,9 +31,6 @@ Returns: The blob string.
 `(network: SerializableNetwork) => Promise<number>`
 
 Evaluates a network using the worker process.
-
-Parameters:
-- `` - - The network to evaluate.
 
 Returns: A promise that resolves to the evaluation result.
 

@@ -43,6 +43,9 @@ Parameters:
 - `to` - - Target node (receives signal).
 - `weight` - - Optional explicit initial weight value.
 
+Returns: Array of created  {@link Connection} objects (possibly empty if acyclicity rejected the edge).
+ *
+
 ### disconnect
 
 `(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => void`

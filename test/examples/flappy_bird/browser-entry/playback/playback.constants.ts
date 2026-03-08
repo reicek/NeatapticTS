@@ -1,4 +1,4 @@
-import type { StarTile } from './playback.types';
+import type { StarTile } from './playback.starfield.types';
 
 /**
  * Shared in-memory cache for pre-rendered parallax starfield tiles.

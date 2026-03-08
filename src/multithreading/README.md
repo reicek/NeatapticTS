@@ -26,9 +26,6 @@ emphasis on efficient evaluation and mutation of neural networks in parallel env
 
 Absolute activation function.
 
-Parameters:
-- `` - - The input value.
-
 Returns: The activated value.
 
 #### activateSerializedNetwork
@@ -36,13 +33,6 @@ Returns: The activated value.
 `(inputValues: number[], activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number[]`
 
 Activates a serialized network.
-
-Parameters:
-- `` - - The input values.
-- `` - - The activations array.
-- `` - - The states array.
-- `` - - The serialized network data.
-- `` - - The activation functions.
 
 Returns: The output values.
 
@@ -56,9 +46,6 @@ A list of compiled activation functions in a specific order.
 
 Bent Identity activation function.
 
-Parameters:
-- `` - - The input value.
-
 Returns: The activated value.
 
 #### bipolar
@@ -66,9 +53,6 @@ Returns: The activated value.
 `(inputValue: number) => number`
 
 Bipolar activation function.
-
-Parameters:
-- `` - - The input value.
 
 Returns: The activated value.
 
@@ -78,9 +62,6 @@ Returns: The activated value.
 
 Bipolar Sigmoid activation function.
 
-Parameters:
-- `` - - The input value.
-
 Returns: The activated value.
 
 #### deserializeDataSet
@@ -89,9 +70,6 @@ Returns: The activated value.
 
 Deserializes a dataset from a flat array.
 
-Parameters:
-- `` - - The serialized dataset.
-
 Returns: The deserialized dataset as an array of input-output pairs.
 
 #### gaussian
@@ -99,9 +77,6 @@ Returns: The deserialized dataset as an array of input-output pairs.
 `(inputValue: number) => number`
 
 Gaussian activation function.
-
-Parameters:
-- `` - - The input value.
 
 Returns: The activated value.
 
@@ -127,9 +102,6 @@ Returns: The node test worker.
 
 Hard Tanh activation function.
 
-Parameters:
-- `` - - The input value.
-
 Returns: The activated value.
 
 #### identity
@@ -137,9 +109,6 @@ Returns: The activated value.
 `(inputValue: number) => number`
 
 Identity activation function.
-
-Parameters:
-- `` - - The input value.
 
 Returns: The activated value.
 
@@ -149,9 +118,6 @@ Returns: The activated value.
 
 Inverse activation function.
 
-Parameters:
-- `` - - The input value.
-
 Returns: The activated value.
 
 #### logistic
@@ -159,9 +125,6 @@ Returns: The activated value.
 `(inputValue: number) => number`
 
 Logistic activation function.
-
-Parameters:
-- `` - - The input value.
 
 Returns: The activated value.
 
@@ -171,9 +134,6 @@ Returns: The activated value.
 
 Rectified Linear Unit (ReLU) activation function.
 
-Parameters:
-- `` - - The input value.
-
 Returns: The activated value.
 
 #### selu
@@ -181,9 +141,6 @@ Returns: The activated value.
 `(inputValue: number) => number`
 
 Scaled Exponential Linear Unit (SELU) activation function.
-
-Parameters:
-- `` - - The input value.
 
 Returns: The activated value.
 
@@ -193,9 +150,6 @@ Returns: The activated value.
 
 Serializes a dataset into a flat array.
 
-Parameters:
-- `` - - The dataset to serialize.
-
 Returns: The serialized dataset.
 
 #### sinusoid
@@ -203,9 +157,6 @@ Returns: The serialized dataset.
 `(inputValue: number) => number`
 
 Sinusoid activation function.
-
-Parameters:
-- `` - - The input value.
 
 Returns: The activated value.
 
@@ -215,9 +166,6 @@ Returns: The activated value.
 
 Softplus activation function. - Added
 
-Parameters:
-- `` - - The input value.
-
 Returns: The activated value.
 
 #### softsign
@@ -225,9 +173,6 @@ Returns: The activated value.
 `(inputValue: number) => number`
 
 Softsign activation function.
-
-Parameters:
-- `` - - The input value.
 
 Returns: The activated value.
 
@@ -237,9 +182,6 @@ Returns: The activated value.
 
 Step activation function.
 
-Parameters:
-- `` - - The input value.
-
 Returns: The activated value.
 
 #### tanh
@@ -248,9 +190,6 @@ Returns: The activated value.
 
 Hyperbolic tangent activation function.
 
-Parameters:
-- `` - - The input value.
-
 Returns: The activated value.
 
 #### testSerializedSet
@@ -258,14 +197,6 @@ Returns: The activated value.
 `(serializedSampleSet: import("C:/NeatapticTS/src/multithreading/types").SerializedSample[], cost: (expected: number[], actual: number[]) => number, activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number`
 
 Tests a serialized dataset using a cost function.
-
-Parameters:
-- `` - - The serialized dataset as an array of input-output pairs.
-- `` - - The cost function.
-- `` - - The activations array.
-- `` - - The states array.
-- `` - - The serialized network data.
-- `` - - The activation functions.
 
 Returns: The average error.
 

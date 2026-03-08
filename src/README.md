@@ -1,4 +1,4 @@
-# 
+# src
 
 ## neat.ts
 
@@ -1157,11 +1157,6 @@ Returns: Reinitialized connection instance.
 Activates the network using the given input array.
 Performs a forward pass through the network, calculating the activation of each node.
 
-Parameters:
-- `` - - An array of numerical values corresponding to the network's input nodes.
-- `` - - Flag indicating if the activation is part of a training process.
-- `` - - Maximum allowed activation depth to prevent infinite loops/cycles.
-
 Returns: An array of numerical values representing the activations of the network's output nodes.
 
 #### activate
@@ -1213,9 +1208,6 @@ Returns: An array containing the activation value of each node in the layer afte
 Activates all nodes in the group. If input values are provided, they are assigned
 sequentially to the nodes before activation. Otherwise, nodes activate based on their
 existing states and incoming connections.
-
-Parameters:
-- `` - - An optional array of input values. If provided, its length must match the number of nodes in the group.
 
 Returns: An array containing the activation value of each node in the group, in order.
 
@@ -1434,11 +1426,6 @@ Creates a connection between two nodes in the network.
 Handles both regular connections and self-connections.
 Adds the new connection object(s) to the appropriate network list (`connections` or `selfconns`).
 
-Parameters:
-- `` - - The source node of the connection.
-- `` - - The target node of the connection.
-- `` - - Optional weight for the connection. If not provided, a random weight is usually assigned by the underlying `Node.connect` method.
-
 Returns: An array containing the newly created connection object(s). Typically contains one connection, but might be empty or contain more in specialized node types.
 
 #### connect
@@ -1477,11 +1464,6 @@ Returns: An array containing the newly created connection objects.
 Establishes connections from all nodes in this group to a target Group, Layer, or Node.
 The connection pattern (e.g., all-to-all, one-to-one) can be specified.
 
-Parameters:
-- `` - - The destination entity (Group, Layer, or Node) to connect to.
-- `` - - The connection method/type (e.g., `methods.groupConnection.ALL_TO_ALL`, `methods.groupConnection.ONE_TO_ONE`). Defaults depend on the target type and whether it's the same group.
-- `` - - An optional fixed weight to assign to all created connections. If not provided, weights might be initialized randomly or based on node defaults.
-
 Returns: An array containing all the connection objects created.
 
 #### connections
@@ -1498,9 +1480,6 @@ This method processes the input list, extracts all unique nodes, identifies conn
 gates, and self-connections, and determines the network's input and output sizes based
 on the `type` property ('input' or 'output') set on the nodes. It uses Sets internally
 for efficient handling of unique elements during construction.
-
-Parameters:
-- `` - - An array containing the building blocks (Nodes, Layers, Groups) of the network, assumed to be already interconnected.
 
 Returns: A Network object representing the constructed architecture.
 
@@ -1524,11 +1503,6 @@ Returns: A new Layer instance representing a 1D convolutional layer.
 
 Creates a fully connected, strictly layered MLP network.
 
-Parameters:
-- `` - - Number of input nodes
-- `` - - Array of hidden layer sizes (e.g. [2,3] for two hidden layers)
-- `` - - Number of output nodes
-
 Returns: A new, fully connected, layered MLP
 
 #### createPool
@@ -1546,12 +1520,6 @@ This method implements the crossover mechanism inspired by the NEAT algorithm an
 in the Instinct paper, combining genes (nodes and connections) from both parents.
 Fitness scores can influence the inheritance process. Matching genes are inherited randomly,
 while disjoint/excess genes are typically inherited from the fitter parent (or randomly if fitness is equal or `equal` flag is set).
-
-Parameters:
-- `` - - The first parent network.
-- `` - - The second parent network.
-- `` - - If true, disjoint and excess genes are inherited randomly regardless of fitness.
-   If false (default), they are inherited from the fitter parent.
 
 Returns: A new Network instance representing the offspring.
 
@@ -1595,12 +1563,6 @@ Returns: Architecture descriptor with hidden-layer widths and provenance.
 Creates a Network instance from serialized data produced by `serialize()`.
 Reconstructs the network structure and state based on the provided arrays.
 
-Parameters:
-- `` - - The serialized network data array, typically obtained from `network.serialize()`.
-  Expected format: `[activations, states, squashNames, connectionData, inputSize, outputSize]`.
-- `` - - Optional input size override.
-- `` - - Optional output size override.
-
 Returns: A new Network instance reconstructed from the serialized data.
 
 #### disableDropConnect
@@ -1629,10 +1591,6 @@ Disconnects two nodes, removing the connection between them.
 Handles both regular connections and self-connections.
 If the connection being removed was gated, it is also ungated.
 
-Parameters:
-- `` - - The source node of the connection to remove.
-- `` - - The target node of the connection to remove.
-
 #### disconnect
 
 `(target: import("C:/NeatapticTS/src/architecture/node").default, twosided: boolean) => void`
@@ -1658,10 +1616,6 @@ Parameters:
 `(target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/group").default, twosided: boolean) => void`
 
 Removes connections between nodes in this group and a target Group or Node.
-
-Parameters:
-- `` - - The Group or Node to disconnect from.
-- `` - - If true, also removes connections originating from the `target` and ending in this group. Defaults to false (only removes connections from this group to the target).
 
 #### dropConnectActiveMask
 
@@ -1705,9 +1659,6 @@ Enforces the minimum hidden layer size rule on a network.
 
 This ensures that all hidden layers have at least min(input, output) + 1 nodes,
 which is a common heuristic to ensure networks have adequate representation capacity.
-
-Parameters:
-- `` - - The network to enforce minimum hidden layer sizes on
 
 Returns: The same network with properly sized hidden layers
 
@@ -1817,9 +1768,6 @@ The source (pre-synaptic) node supplying activation.
 Reconstructs a network from a JSON object (latest standard).
 Handles formatVersion, robust error handling, and index-based references.
 
-Parameters:
-- `` - - The JSON object representing the network.
-
 Returns: The reconstructed network.
 
 #### fromJSON
@@ -1846,10 +1794,6 @@ large populations where most connections are ungated.
 Gates a connection with a specified node.
 The activation of the `node` (gater) will modulate the weight of the `connection`.
 Adds the connection to the network's `gates` list.
-
-Parameters:
-- `` - - The node that will act as the gater. Must be part of this network.
-- `` - - The connection to be gated.
 
 #### gate
 
@@ -1880,10 +1824,6 @@ Parameters:
 
 Configures nodes within this group to act as gates for the specified connection(s).
 Gating allows the output of a node in this group to modulate the flow of signal through the gated connection.
-
-Parameters:
-- `` - - A single connection object or an array of connection objects to be gated.
-- `` - - The gating mechanism to use (e.g., `methods.gating.INPUT`, `methods.gating.OUTPUT`, `methods.gating.SELF`). Specifies which part of the connection is influenced by the gater node.
 
 #### gater
 
@@ -2100,9 +2040,6 @@ Creates a Gated Recurrent Unit (GRU) network.
 GRUs are another type of recurrent neural network, similar to LSTMs but often simpler.
 This constructor uses `Layer.gru` to create the core GRU blocks.
 
-Parameters:
-- `` - - A sequence of numbers representing the size (number of units) of each layer: input layer size, hidden GRU layer sizes..., output layer size. Must include at least input, one hidden, and output layer sizes.
-
 Returns: The constructed GRU network.
 
 #### hasGater
@@ -2116,9 +2053,6 @@ Whether a gater node is assigned (modulates gain); true if the gater symbol fiel
 Creates a Hopfield network.
 Hopfield networks are a form of recurrent neural network often used for associative memory tasks.
 This implementation creates a simple, fully connected structure.
-
-Parameters:
-- `` - - The number of nodes in the network (input and output layers will have this size).
 
 Returns: The constructed Hopfield network.
 
@@ -2282,12 +2216,6 @@ Creates a Long Short-Term Memory (LSTM) network.
 LSTMs are a type of recurrent neural network (RNN) capable of learning long-range dependencies.
 This constructor uses `Layer.lstm` to create the core LSTM blocks.
 
-Parameters:
-- `` - - A sequence of arguments defining the network structure:
-- Numbers represent the size (number of units) of each layer: input layer size, hidden LSTM layer sizes..., output layer size.
-- An optional configuration object can be provided as the last argument.
-- `` - - Configuration options (if passed as the last argument).
-
 Returns: The constructed LSTM network.
 
 #### mask
@@ -2356,13 +2284,6 @@ NARX networks are recurrent networks often used for time series prediction.
 They predict the next value of a time series based on previous values of the series
 and previous values of external (exogenous) input series.
 
-Parameters:
-- `` - - The number of input nodes for the exogenous inputs at each time step.
-- `` - - The size of the hidden layer(s). Can be a single number for one hidden layer, or an array of numbers for multiple hidden layers. Use 0 or [] for no hidden layers.
-- `` - - The number of output nodes (predicting the time series).
-- `` - - The number of past time steps of the exogenous input to feed back into the network.
-- `` - - The number of past time steps of the network's own output to feed back into the network (autoregressive part).
-
 Returns: The constructed NARX network.
 
 #### nodes
@@ -2376,10 +2297,6 @@ Network node collection.
 Activates the network without calculating eligibility traces.
 This is a performance optimization for scenarios where backpropagation is not needed,
 such as during testing, evaluation, or deployment (inference).
-
-Parameters:
-- `` - - An array of numerical values corresponding to the network's input nodes.
-  The length must match the network's `input` size.
 
 Returns: An array of numerical values representing the activations of the network's output nodes.
 
@@ -2412,9 +2329,6 @@ Creates a standard Multi-Layer Perceptron (MLP) network.
 An MLP consists of an input layer, one or more hidden layers, and an output layer,
 fully connected layer by layer.
 
-Parameters:
-- `` - - A sequence of numbers representing the size (number of nodes) of each layer, starting with the input layer, followed by hidden layers, and ending with the output layer. Must include at least input, one hidden, and output layer sizes.
-
 Returns: The constructed MLP network.
 
 #### plastic
@@ -2443,15 +2357,6 @@ If `update` is true, it adjusts the weights and biases based on the calculated g
 learning rate, momentum, and optional L2 regularization.
 
 The process starts from the output nodes and moves backward layer by layer (or topologically for recurrent nets).
-
-Parameters:
-- `` - - The learning rate (controls the step size of weight adjustments).
-- `` - - The momentum factor (helps overcome local minima and speeds up convergence). Typically between 0 and 1.
-- `` - - If true, apply the calculated weight and bias updates. If false, only calculate gradients (e.g., for batch accumulation).
-- `` - - An array of target values corresponding to the network's output nodes.
-  The length must match the network's `output` size.
-- `` - - The L2 regularization factor (lambda). Helps prevent overfitting by penalizing large weights.
-- `` - - Optional derivative of the cost function for output nodes.
 
 #### propagate
 
@@ -2494,7 +2399,6 @@ Parameters:
 - `rate` - - The learning rate, controlling the step size of weight adjustments.
 - `momentum` - - The momentum factor, used to smooth weight updates and escape local minima.
 - `target` - - An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
-- `` - - The learning rate to apply during weight updates.
 
 #### pruneToSparsity
 
@@ -2518,12 +2422,6 @@ It initializes a network with input and output nodes and then iteratively adds h
 and various types of connections (forward, backward, self) and gates using mutation methods.
 This approach is inspired by neuro-evolution techniques where network topology evolves.
 
-Parameters:
-- `` - - The number of input nodes.
-- `` - - The number of hidden nodes to add.
-- `` - - The number of output nodes.
-- `` - - Optional configuration for the network structure.
-
 Returns: The constructed network with a randomized topology.
 
 #### rebuildConnections
@@ -2533,9 +2431,6 @@ Returns: The constructed network with a randomized topology.
 Rebuilds the network's connections array from all per-node connections.
 This ensures that the network.connections array is consistent with the actual
 outgoing connections of all nodes. Useful after manual wiring or node manipulation.
-
-Parameters:
-- `` - - The network instance to rebuild connections for.
 
 Returns: Example usage:
   Network.rebuildConnections(net);
@@ -2581,9 +2476,6 @@ This involves:
    to maintain network flow, if possible and configured.
 5. Handling gates involving the removed node (ungating connections gated *by* this node,
    and potentially re-gating connections that were gated *by other nodes* onto the removed node's connections).
-
-Parameters:
-- `` - - The node instance to remove. Must exist within the network's `nodes` list.
 
 #### resetDropoutMasks
 
@@ -2673,9 +2565,6 @@ Lightweight tuple serializer delegating to network.serialize.ts
 Sets specified properties (e.g., bias, squash function) for all nodes in the network.
 Useful for initializing or resetting node properties uniformly.
 
-Parameters:
-- `` - - An object containing the properties and values to set.
-
 #### set
 
 `(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; type?: string | undefined; }) => void`
@@ -2689,10 +2578,6 @@ the configuration is applied recursively to the nodes within that group.
 Parameters:
 - `values` - - An object containing the properties and their values to set.
   Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
-- `` - - An object containing the properties and their new values. Only provided properties are updated.
-`bias`: Sets the bias term for all nodes.
-`squash`: Sets the activation function (squashing function) for all nodes.
-`type`: Sets the node type (e.g., 'input', 'hidden', 'output') for all nodes.
 
 #### setActivation
 
@@ -2819,10 +2704,6 @@ Calculates the average error over the dataset using a specified cost function.
 Uses `noTraceActivate` for efficiency as gradients are not needed.
 Handles dropout scaling if dropout was used during training.
 
-Parameters:
-- `` - - The test dataset, an array of objects with `input` and `output` arrays.
-- `` - - The cost function to evaluate the error. Defaults to Mean Squared Error.
-
 Returns: An object containing the calculated average error over the dataset and the time taken for the test in milliseconds.
 
 #### testForceOverflow
@@ -2913,9 +2794,6 @@ Determines behavior (e.g., input nodes don't have biases modified typically, out
 Removes the gate from a specified connection.
 The connection will no longer be modulated by its gater node.
 Removes the connection from the network's `gates` list.
-
-Parameters:
-- `` - - The connection object to ungate.
 
 #### ungate
 

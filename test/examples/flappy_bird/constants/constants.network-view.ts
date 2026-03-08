@@ -41,8 +41,14 @@ export const FLAPPY_NETWORK_GRAPH_RIGHT_PADDING_PX = 20;
 /** Graph-bottom padding for network visualization content. */
 export const FLAPPY_NETWORK_GRAPH_BOTTOM_PADDING_PX = 18;
 
+/** Minimum drawable graph dimension after padding is removed. */
+export const FLAPPY_NETWORK_MIN_DRAWABLE_SIZE_PX = 1;
+
 /** Gap between graph body and floating legend panel. */
 export const FLAPPY_NETWORK_LEGEND_GRAPH_GAP_PX = 10;
+
+/** Ratio used to decide whether the legend occupies the right half of the canvas. */
+export const FLAPPY_NETWORK_LEGEND_RIGHT_SIDE_THRESHOLD_RATIO = 0.5;
 
 /** Inner node-layout padding inside drawable network region. */
 export const FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX = 2;
@@ -161,6 +167,9 @@ export const FLAPPY_NETWORK_HEADER_FONT_SIZE_PX = 11;
 /** Extra pixel allowance above label baseline for minimum node-height readability. */
 export const FLAPPY_NETWORK_MIN_NODE_HEIGHT_LABEL_EXTRA_PX = 4;
 
+/** Minimum fit-based node height before width and label constraints are applied. */
+export const FLAPPY_NETWORK_MIN_NODE_FIT_HEIGHT_PX = 4;
+
 /**
  * Layer-fit divisor used when deriving max node height from dense layer stacks.
  *
@@ -215,3 +224,18 @@ export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_WEIGHT = 700;
 
 /** Text color for vertical input-group labels on neon backgrounds. */
 export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_TEXT_COLOR = '#000000';
+
+/** Placeholder label used when the network has no hidden layers. */
+export const FLAPPY_NETWORK_EMPTY_HIDDEN_LAYER_LABEL = '-';
+
+/** Prefix used when hidden-layer counts are inferred rather than declared. */
+export const FLAPPY_NETWORK_INFERRED_HIDDEN_LAYER_PREFIX = '~';
+
+/** Separator used between hidden-layer sizes inside architecture labels. */
+export const FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR = ' - ';
+
+/** Separator used between architecture columns in the compact header label. */
+export const FLAPPY_NETWORK_ARCHITECTURE_COLUMN_SEPARATOR = ' | ';
+
+/** Line separator used by the two-line architecture label block. */
+export const FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR = '\n';

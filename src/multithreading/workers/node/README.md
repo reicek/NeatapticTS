@@ -45,9 +45,6 @@ Evaluates a neural network using the worker process.
 The network is serialized and sent to the worker for evaluation. The worker
 sends back the evaluation result, which is returned as a promise.
 
-Parameters:
-- `` - - The neural network to evaluate. It must implement a `serialize` method.
-
 Returns: A promise that resolves to the evaluation result.
 
 #### terminate

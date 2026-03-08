@@ -224,6 +224,7 @@ Strict rules to enforce (apply to any suggestion touching `src/` or `test/`)
        3) Introduce typed context/result objects to reduce parameter sprawl
        4) Simplify top-level flow to orchestration only
        5) Fold repeated logic into collect/transform/fold helpers
+   - All new complex methods should follow a declarative above-the-fold structure: keep the exported or top-level method as step-oriented orchestration, and place the actual logic in small SRP private helpers below the fold.
    - Keep the top-level method declarative and linear, with numbered inline comments (`Step 1`, `Step 2`, ...).
    - Ensure each helper has one reason to change (SRP), very low cognitive complexity, and descriptive naming.
    - Place helper declarations after the top-level return/fold where language/style allows.

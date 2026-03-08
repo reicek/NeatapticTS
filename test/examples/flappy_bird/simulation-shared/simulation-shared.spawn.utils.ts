@@ -18,12 +18,20 @@ import type {
  * Samples a random gap center y-position.
  *
  * @param rng - Deterministic RNG.
+ * @param maximumGapCenterYPx - Optional inclusive upper bound for smaller viewports.
  * @returns Sampled y-position.
  */
-export function sampleGapCenterY(rng: SharedRngLike): number {
+export function sampleGapCenterY(
+  rng: SharedRngLike,
+  maximumGapCenterYPx: number = FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
+): number {
+  const boundedMaximumGapCenterYPx = Math.max(
+    FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+    maximumGapCenterYPx,
+  );
   return rng.nextInt(
     FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
-    FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
+    boundedMaximumGapCenterYPx,
   );
 }
 
@@ -32,25 +40,31 @@ export function sampleGapCenterY(rng: SharedRngLike): number {
  *
  * @param previousGapCenterYPx - Previous spawn gap center.
  * @param rng - Deterministic RNG.
+ * @param maximumGapCenterYPx - Optional inclusive upper bound for smaller viewports.
  * @returns Next gap center y-position.
  */
 export function resolveNextSpawnGapCenterY(
   previousGapCenterYPx: number,
   rng: SharedRngLike,
+  maximumGapCenterYPx: number = FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
 ): number {
-  const sampledGapCenterYPx = sampleGapCenterY(rng);
+  const boundedMaximumGapCenterYPx = Math.max(
+    FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
+    maximumGapCenterYPx,
+  );
+  const sampledGapCenterYPx = sampleGapCenterY(rng, boundedMaximumGapCenterYPx);
   const minimumGapCenterYPx = Math.max(
     FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
     previousGapCenterYPx - FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
   );
-  const maximumGapCenterYPx = Math.min(
-    FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
+  const clampedMaximumGapCenterYPx = Math.min(
+    boundedMaximumGapCenterYPx,
     previousGapCenterYPx + FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
   );
   return clampValue(
     sampledGapCenterYPx,
     minimumGapCenterYPx,
-    maximumGapCenterYPx,
+    clampedMaximumGapCenterYPx,
   );
 }
 

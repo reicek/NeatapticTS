@@ -56,10 +56,10 @@ function buildVariantDeltaTable(artifact: any): string {
   const ordered = Array.from(sizes).sort((a, b) => parseInt(a) - parseInt(b));
   const rows: string[] = [];
   rows.push(
-    'Size    Metric            Src Mean      Dist Mean     Δ Abs         Δ %        Flag          Result'
+    'Size    Metric            Src Mean      Dist Mean     Δ Abs         Δ %        Flag          Result',
   );
   rows.push(
-    '------  ----------------- ------------- ------------- ------------- ---------- ------------- ------------------------------------------------------------'
+    '------  ----------------- ------------- ------------- ------------- ---------- ------------- ------------------------------------------------------------',
   );
   const metrics = ['buildMs', 'fwdAvgMs', 'bytesPerConn'];
   for (const size of ordered) {
@@ -89,8 +89,8 @@ function buildVariantDeltaTable(artifact: any): string {
             ? 'Dist bytes divergence'
             : 'Parity'
           : flag === '(REG)'
-          ? `Dist ${dAbs! > 0 ? 'slower' : 'faster'} ${metric}`
-          : 'Parity';
+            ? `Dist ${dAbs! > 0 ? 'slower' : 'faster'} ${metric}`
+            : 'Parity';
       rows.push(
         cell(size, 6) +
           '  ' +
@@ -104,19 +104,19 @@ function buildVariantDeltaTable(artifact: any): string {
             typeof dAbs === 'number'
               ? (dAbs >= 0 ? '+' : '') + fmtNum(dAbs, 4)
               : '',
-            13
+            13,
           ) +
           ' ' +
           cell(
             typeof dPct === 'number'
               ? (dPct >= 0 ? '+' : '') + fmtNum(dPct, 2)
               : '',
-            10
+            10,
           ) +
           ' ' +
           cell(flag, 13) +
           ' ' +
-          note
+          note,
       );
     }
   }
@@ -129,10 +129,10 @@ function buildHeapTable(artifact: any): string {
   const ordered = Array.from(sizes).sort((a, b) => parseInt(a) - parseInt(b));
   const rows: string[] = [];
   rows.push(
-    'Size    Metric         Src Bytes    Dist Bytes    Src MB    Dist MB   Δ Bytes      Δ %     Note'
+    'Size    Metric         Src Bytes    Dist Bytes    Src MB    Dist MB   Δ Bytes      Δ %     Note',
   );
   rows.push(
-    '------  -------------- ------------ ------------ --------- --------- ----------- ------- -------------------------------------------------'
+    '------  -------------- ------------ ------------ --------- --------- ----------- ------- -------------------------------------------------',
   );
   for (const size of ordered) {
     for (const metric of ['heapUsed', 'rss']) {
@@ -158,7 +158,7 @@ function buildHeapTable(artifact: any): string {
           ' ' +
           cell((dPct >= 0 ? '+' : '') + dPct.toFixed(2), 7) +
           ' ' +
-          'Informational'
+          'Informational',
       );
     }
   }

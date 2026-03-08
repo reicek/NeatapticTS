@@ -1,25 +1,24 @@
 import {
-  evaluateFlappyFitnessAcrossSeeds,
   rolloutEpisode,
-  type FlappyRolloutOptions,
   type FlappySeedBatchEvaluation,
 } from '../flappyEvaluation';
 import {
-  FLAPPY_TRAINER_DUMMY_FLAP_OUTPUT,
-  FLAPPY_TRAINER_DUMMY_NETWORK_ID,
-  FLAPPY_TRAINER_DUMMY_NO_FLAP_OUTPUT,
   FLAPPY_TRAINER_LOG_PARTS_DELIMITER,
   FLAPPY_TRAINER_SCORE_MEDIAN_PERCENTILE,
   FLAPPY_TRAINER_SCORE_P90_PERCENTILE,
 } from './trainer.constants';
 import type { FlappyMutationSchedule } from './trainer.evaluation-plan.utils';
+import {
+  collectFiniteGenomeScores,
+  resolveBestGenerationDetails,
+} from './trainer.report.service.services';
 import { buildGenerationLogParts } from './trainer.reporting.utils';
 import { resolveBestGenomeByScore } from './trainer.selection.utils';
 import {
   computeMean,
   computePercentile,
   computePopulationStandardDeviation,
-} from './trainer.statistics.utils';
+} from '../flappy.simulation.shared.utils';
 import type {
   FlappyGenerationEvaluationPlan,
   FlappyGenerationReport,
@@ -42,27 +41,25 @@ export function buildGenerationReport(
   >,
   generationEvaluationPlan: FlappyGenerationEvaluationPlan,
 ): FlappyGenerationReport {
+  // Step 1: Collect stable numeric inputs for distribution statistics.
   const finalScores = collectFiniteGenomeScores(population);
   const scoreMean = computeMean(finalScores);
   const scoreStdDev = computePopulationStandardDeviation(
     finalScores,
     scoreMean,
   );
+
+  // Step 2: Resolve best-genome derived metrics through the report helper boundary.
   const bestGenome = resolveBestGenomeByScore(population);
-  const bestAggregate = resolveBestAggregate(
+  const { bestAggregate, bestEpisode } = resolveBestGenerationDetails(
     population,
     bestGenome,
     aggregateByGenome,
     generationEvaluationPlan.reevaluationSeeds,
     generationEvaluationPlan.reevaluationRolloutOptions,
   );
-  const bestEpisode = resolveBestEpisode(
-    population,
-    bestGenome,
-    generationEvaluationPlan.reevaluationSeeds,
-    generationEvaluationPlan.reevaluationRolloutOptions,
-  );
 
+  // Step 3: Fold the resolved metrics into the compact generation report.
   return {
     generationIndex: generationEvaluationPlan.generationIndex,
     difficultyScale: generationEvaluationPlan.difficultyScale,
@@ -126,98 +123,4 @@ export function logGenerationSummary(
 
   // eslint-disable-next-line no-console
   console.log(logParts.join(FLAPPY_TRAINER_LOG_PARTS_DELIMITER));
-}
-
-function collectFiniteGenomeScores(
-  population: readonly FlappyTrainerNetwork[],
-): number[] {
-  const finiteScores: number[] = [];
-
-  for (const genome of population) {
-    const genomeScore = genome.score ?? Number.NEGATIVE_INFINITY;
-    if (Number.isFinite(genomeScore)) {
-      finiteScores.push(genomeScore);
-    }
-  }
-
-  return finiteScores;
-}
-
-function resolveBestAggregate(
-  population: readonly FlappyTrainerNetwork[],
-  bestGenome: FlappyTrainerNetwork | undefined,
-  aggregateByGenome: ReadonlyMap<
-    FlappyTrainerNetwork,
-    FlappySeedBatchEvaluation
-  >,
-  fallbackSeeds: readonly number[],
-  fallbackRolloutOptions: FlappyRolloutOptions,
-): FlappySeedBatchEvaluation {
-  const fallbackGenome = resolveFallbackGenome(population, bestGenome);
-  if (!fallbackGenome) {
-    return buildEmptySeedBatchEvaluation();
-  }
-
-  const cachedAggregate = aggregateByGenome.get(fallbackGenome);
-  if (cachedAggregate) {
-    return cachedAggregate;
-  }
-
-  return evaluateFlappyFitnessAcrossSeeds(
-    fallbackGenome,
-    fallbackSeeds,
-    fallbackRolloutOptions,
-  );
-}
-
-function resolveBestEpisode(
-  population: readonly FlappyTrainerNetwork[],
-  bestGenome: FlappyTrainerNetwork | undefined,
-  fallbackSeeds: readonly number[],
-  fallbackRolloutOptions: FlappyRolloutOptions,
-): ReturnType<typeof rolloutEpisode> {
-  const fallbackGenome = resolveFallbackGenome(population, bestGenome);
-  if (!fallbackGenome) {
-    return rolloutEpisode(resolveDummyNetwork(), fallbackRolloutOptions);
-  }
-
-  const episodeSeed = fallbackSeeds[0];
-  return rolloutEpisode(fallbackGenome, {
-    ...fallbackRolloutOptions,
-    seed: episodeSeed,
-  });
-}
-
-function resolveFallbackGenome(
-  population: readonly FlappyTrainerNetwork[],
-  bestGenome: FlappyTrainerNetwork | undefined,
-): FlappyTrainerNetwork | undefined {
-  return bestGenome ?? population[0];
-}
-
-function buildEmptySeedBatchEvaluation(): FlappySeedBatchEvaluation {
-  return {
-    seedCount: 0,
-    meanFitness: 0,
-    medianFitness: 0,
-    p90Fitness: 0,
-    fitnessStdDev: 0,
-    robustFitness: 0,
-    meanPipesPassed: 0,
-    meanFramesSurvived: 0,
-  };
-}
-
-function resolveDummyNetwork(): FlappyTrainerNetwork {
-  return {
-    activate: activateWithoutFlap,
-    _id: FLAPPY_TRAINER_DUMMY_NETWORK_ID,
-  };
-}
-
-function activateWithoutFlap(): number[] {
-  return [
-    FLAPPY_TRAINER_DUMMY_NO_FLAP_OUTPUT,
-    FLAPPY_TRAINER_DUMMY_FLAP_OUTPUT,
-  ];
 }

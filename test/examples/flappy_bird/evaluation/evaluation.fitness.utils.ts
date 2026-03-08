@@ -9,7 +9,7 @@ import {
   computeMean,
   computePercentile,
   computePopulationStandardDeviation,
-} from './evaluation.statistics.utils';
+} from '../flappy.simulation.shared.utils';
 
 /**
  * Evaluate a network on a single deterministic Flappy Bird episode.

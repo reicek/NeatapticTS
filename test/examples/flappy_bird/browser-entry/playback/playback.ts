@@ -16,7 +16,7 @@ import { FLAPPY_EMULATION_SPEED_MULTIPLIER } from '../../constants/constants';
 import {
   renderPopulationFrame,
   updateTrailState,
-} from './playback.frame-render.service';
+} from './frame-render/playback.frame-render.service';
 import { nextAnimationFrame } from './playback.loop.service';
 import {
   applyPlaybackSnapshot,
@@ -27,6 +27,31 @@ import {
   resolvePlaybackFrameStats,
   resolvePlaybackStepRequest,
 } from './playback.worker-channel.utils';
+
+type PlaybackMutableSummary = PlaybackEpisodeSummary & {
+  latestLeaderPipesPassed: number;
+  latestLeaderFramesSurvived: number;
+};
+
+type PlaybackLoopState = {
+  simulationFrameBudget: number;
+  finished: boolean;
+  summary: PlaybackMutableSummary;
+};
+
+type PlaybackSessionContext = {
+  renderState: PopulationRenderState;
+  trailState: TrailState;
+  loopState: PlaybackLoopState;
+};
+
+type PlaybackIterationContext = {
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+  evolutionWorker: Worker;
+  onFrameStats: (stats: PlaybackFrameStats) => void;
+  sessionContext: PlaybackSessionContext;
+};
 
 export type PlaybackEpisodeSummary = {
   averagePipesPassed: number;
@@ -73,20 +98,150 @@ export async function animatePopulationEpisodeInternal(
   evolutionWorker: Worker,
   onFrameStats: (stats: PlaybackFrameStats) => void,
 ): Promise<PlaybackEpisodeSummary> {
-  // Step 1: Initialize worker playback state with current viewport size.
-  evolutionWorker.postMessage({
-    type: 'start-playback',
-    payload: {
-      visibleWorldWidthPx: resolveVisibleWorldWidthPx(canvas),
-      visibleWorldHeightPx: resolveVisibleWorldHeightPx(canvas),
-    },
+  // Step 1: Initialize worker playback state and local render mirrors.
+  const sessionContext = initializePlaybackSessionContext(
+    canvas,
+    evolutionWorker,
+  );
+
+  // Step 2: Run playback iterations until the worker reports completion.
+  await runPlaybackLoop({
+    canvas,
+    context,
+    evolutionWorker,
+    onFrameStats,
+    sessionContext,
   });
 
-  // Step 2: Initialize local render and trail state mirrors.
-  const renderState: PopulationRenderState = {
-    frameIndex: 0,
+  // Step 3: Render the final settled frame for the completed episode.
+  renderPopulationFrame(
+    context,
+    sessionContext.renderState,
+    sessionContext.trailState,
+  );
+
+  // Step 4: Fold the mutable loop summary into the public return shape.
+  return resolvePlaybackEpisodeSummary(sessionContext.loopState.summary);
+}
+
+/**
+ * Initializes worker playback and local state mirrors for one episode.
+ *
+ * @param canvas - Target playback canvas.
+ * @param evolutionWorker - Worker owning playback simulation state.
+ * @returns Session context shared across the playback loop.
+ */
+function initializePlaybackSessionContext(
+  canvas: HTMLCanvasElement,
+  evolutionWorker: Worker,
+): PlaybackSessionContext {
+  // Step 1: Resolve the current viewport dimensions.
+  const viewportDimensions = resolvePlaybackViewportDimensions(canvas);
+
+  // Step 2: Start playback in the worker using the current viewport.
+  evolutionWorker.postMessage({
+    type: 'start-playback',
+    payload: viewportDimensions,
+  });
+
+  // Step 3: Build local render, trail, and loop state mirrors.
+  return {
+    renderState: createInitialRenderState(viewportDimensions),
+    trailState: createInitialTrailState(),
+    loopState: createInitialPlaybackLoopState(),
+  };
+}
+
+/**
+ * Runs playback iterations until the worker reports that the episode is done.
+ *
+ * @param iterationContext - Shared loop dependencies and mutable playback state.
+ * @returns Nothing.
+ */
+async function runPlaybackLoop(
+  iterationContext: PlaybackIterationContext,
+): Promise<void> {
+  // Step 1: Continue iterating until the mutable loop state reports completion.
+  while (!iterationContext.sessionContext.loopState.finished) {
+    await runPlaybackIteration(iterationContext);
+  }
+}
+
+/**
+ * Executes one playback iteration from viewport sync through render pacing.
+ *
+ * @param iterationContext - Shared loop dependencies and mutable playback state.
+ * @returns Nothing.
+ */
+async function runPlaybackIteration(
+  iterationContext: PlaybackIterationContext,
+): Promise<void> {
+  // Step 1: Sync viewport size and request the next worker playback step.
+  syncPlaybackViewportDimensions(
+    iterationContext.canvas,
+    iterationContext.sessionContext.renderState,
+  );
+  const playbackStepPayload =
+    await requestPlaybackStepPayload(iterationContext);
+
+  // Step 2: Fold the worker snapshot into local render and trail state.
+  applyPlaybackStepSnapshot(
+    iterationContext.sessionContext,
+    playbackStepPayload.snapshot,
+  );
+
+  // Step 3: Resolve telemetry metrics and emit the frame stats callback.
+  emitPlaybackFrameStats(iterationContext, playbackStepPayload);
+
+  // Step 4: Update loop completion state when the worker marks playback done.
+  updatePlaybackLoopCompletion(
+    iterationContext.sessionContext.loopState,
+    playbackStepPayload,
+  );
+
+  // Step 5: Render the frame and yield to the browser when playback continues.
+  renderPopulationFrame(
+    iterationContext.context,
+    iterationContext.sessionContext.renderState,
+    iterationContext.sessionContext.trailState,
+  );
+  if (!iterationContext.sessionContext.loopState.finished) {
+    await nextAnimationFrame();
+  }
+}
+
+/**
+ * Resolves the current visible playback viewport dimensions from the canvas.
+ *
+ * @param canvas - Target playback canvas.
+ * @returns Visible world width and height in pixels.
+ */
+function resolvePlaybackViewportDimensions(canvas: HTMLCanvasElement): {
+  visibleWorldWidthPx: number;
+  visibleWorldHeightPx: number;
+} {
+  // Step 1: Read the current world-space viewport dimensions.
+  return {
     visibleWorldWidthPx: resolveVisibleWorldWidthPx(canvas),
     visibleWorldHeightPx: resolveVisibleWorldHeightPx(canvas),
+  };
+}
+
+/**
+ * Creates the initial render state used before the first worker snapshot.
+ *
+ * @param viewportDimensions - Current visible world dimensions.
+ * @returns Initialized population render state.
+ */
+function createInitialRenderState(viewportDimensions: {
+  visibleWorldWidthPx: number;
+  visibleWorldHeightPx: number;
+}): PopulationRenderState {
+  // Step 1: Seed render fields with viewport dimensions and empty entities.
+  return {
+    frameIndex: 0,
+    visibleWorldWidthPx: viewportDimensions.visibleWorldWidthPx,
+    visibleWorldHeightPx: viewportDimensions.visibleWorldHeightPx,
     nextPipeId: 0,
     lastSpawnedPipeGapPx: 0,
     lastSpawnedPipeGapCenterYPx: 0,
@@ -95,84 +250,182 @@ export async function animatePopulationEpisodeInternal(
     pipes: [],
     birds: [],
   };
-  const trailState: TrailState = {
+}
+
+/**
+ * Creates the initial trail state used before any snapshots have been applied.
+ *
+ * @returns Empty trail state for all birds.
+ */
+function createInitialTrailState(): TrailState {
+  // Step 1: Initialize the trail cache as empty arrays.
+  return {
     birdTrailsY: [],
   };
-  let simulationFrameBudget = 0;
-  let finished = false;
-  let averagePipesPassed = 0;
-  let p90FramesSurvived = 0;
-  let winnerPipesPassed = 0;
-  let winnerFramesSurvived = 0;
-  let latestLeaderPipesPassed = 0;
-  let latestLeaderFramesSurvived = 0;
+}
 
-  // Step 3: Run playback batches until the worker reports completion.
-  while (!finished) {
-    // Step 3.1: Resolve frame budget and request one playback step batch.
-    renderState.visibleWorldWidthPx = resolveVisibleWorldWidthPx(canvas);
-    renderState.visibleWorldHeightPx = resolveVisibleWorldHeightPx(canvas);
-    const { simulationFrameBudgetRemainder, playbackStepRequest } =
-      resolvePlaybackStepRequest({
-        simulationFrameBudget,
-        visibleWorldWidthPx: renderState.visibleWorldWidthPx,
-        visibleWorldHeightPx: renderState.visibleWorldHeightPx,
-        emulationSpeedMultiplier: FLAPPY_EMULATION_SPEED_MULTIPLIER,
-      });
-    simulationFrameBudget = simulationFrameBudgetRemainder;
+/**
+ * Creates the mutable loop state used while processing playback steps.
+ *
+ * @returns Initialized loop state and aggregate summary values.
+ */
+function createInitialPlaybackLoopState(): PlaybackLoopState {
+  // Step 1: Initialize frame-budget and completion tracking.
+  return {
+    simulationFrameBudget: 0,
+    finished: false,
+    summary: {
+      averagePipesPassed: 0,
+      p90FramesSurvived: 0,
+      winnerPipesPassed: 0,
+      winnerFramesSurvived: 0,
+      latestLeaderPipesPassed: 0,
+      latestLeaderFramesSurvived: 0,
+    },
+  };
+}
 
-    const playbackStepPayload = await requestWorkerPlaybackStep(
-      evolutionWorker,
-      playbackStepRequest,
-    );
+/**
+ * Synchronizes the render state viewport fields with the current canvas size.
+ *
+ * @param canvas - Target playback canvas.
+ * @param renderState - Mutable render state updated in place.
+ * @returns Nothing.
+ */
+function syncPlaybackViewportDimensions(
+  canvas: HTMLCanvasElement,
+  renderState: PopulationRenderState,
+): void {
+  // Step 1: Resolve current viewport dimensions from the canvas.
+  const viewportDimensions = resolvePlaybackViewportDimensions(canvas);
 
-    // Step 3.2: Apply worker snapshot and refresh local trail state.
-    applyPlaybackSnapshot(renderState, playbackStepPayload.snapshot);
-    updateTrailState(trailState, renderState);
+  // Step 2: Store the current viewport dimensions on the mutable render state.
+  renderState.visibleWorldWidthPx = viewportDimensions.visibleWorldWidthPx;
+  renderState.visibleWorldHeightPx = viewportDimensions.visibleWorldHeightPx;
+}
 
-    // Step 3.3: Resolve leader metrics and emit frame telemetry.
-    const leaderPipesPassed = resolveLeaderPipesPassed(renderState.birds);
-    const leaderFramesSurvived = resolveLeaderFramesSurvived(renderState);
-    latestLeaderPipesPassed = leaderPipesPassed;
-    latestLeaderFramesSurvived = leaderFramesSurvived;
-    onFrameStats(
-      resolvePlaybackFrameStats(
-        playbackStepPayload,
-        renderState.frameIndex,
-        resolveAliveBirdCount(renderState.birds),
-        leaderPipesPassed,
-        leaderFramesSurvived,
-      ),
-    );
+/**
+ * Requests one playback step batch from the evolution worker.
+ *
+ * @param iterationContext - Shared loop dependencies and mutable playback state.
+ * @returns Worker playback step payload for the current iteration.
+ */
+async function requestPlaybackStepPayload(
+  iterationContext: PlaybackIterationContext,
+) {
+  // Step 1: Resolve the worker request from the current loop budget and viewport.
+  const { renderState, loopState } = iterationContext.sessionContext;
+  const { simulationFrameBudgetRemainder, playbackStepRequest } =
+    resolvePlaybackStepRequest({
+      simulationFrameBudget: loopState.simulationFrameBudget,
+      visibleWorldWidthPx: renderState.visibleWorldWidthPx,
+      visibleWorldHeightPx: renderState.visibleWorldHeightPx,
+      emulationSpeedMultiplier: FLAPPY_EMULATION_SPEED_MULTIPLIER,
+    });
+  loopState.simulationFrameBudget = simulationFrameBudgetRemainder;
 
-    // Step 3.4: Fold final playback aggregates when the worker is done.
-    if (playbackStepPayload.done) {
-      const playbackCompletionSummary = resolvePlaybackCompletionSummary(
-        playbackStepPayload,
-        latestLeaderPipesPassed,
-        latestLeaderFramesSurvived,
-      );
-      finished = true;
-      averagePipesPassed = playbackCompletionSummary.averagePipesPassed;
-      p90FramesSurvived = playbackCompletionSummary.p90FramesSurvived;
-      winnerPipesPassed = playbackCompletionSummary.winnerPipesPassed;
-      winnerFramesSurvived = playbackCompletionSummary.winnerFramesSurvived;
-    }
+  // Step 2: Request the next playback step from the worker.
+  return requestWorkerPlaybackStep(
+    iterationContext.evolutionWorker,
+    playbackStepRequest,
+  );
+}
 
-    // Step 3.5: Render the current frame and yield to RAF while active.
-    renderPopulationFrame(context, renderState, trailState);
-    if (!finished) {
-      await nextAnimationFrame();
-    }
+/**
+ * Applies the latest worker snapshot to render state and trail caches.
+ *
+ * @param sessionContext - Shared mutable playback session state.
+ * @param snapshot - Worker snapshot for the current playback batch.
+ * @returns Nothing.
+ */
+function applyPlaybackStepSnapshot(
+  sessionContext: PlaybackSessionContext,
+  snapshot: Parameters<typeof applyPlaybackSnapshot>[1],
+): void {
+  // Step 1: Fold the worker snapshot into the mutable render state.
+  applyPlaybackSnapshot(sessionContext.renderState, snapshot);
+
+  // Step 2: Refresh the bird trail cache from the updated render state.
+  updateTrailState(sessionContext.trailState, sessionContext.renderState);
+}
+
+/**
+ * Resolves leader telemetry and emits the public frame-stats callback.
+ *
+ * @param iterationContext - Shared loop dependencies and mutable playback state.
+ * @param playbackStepPayload - Worker playback result for the current iteration.
+ * @returns Nothing.
+ */
+function emitPlaybackFrameStats(
+  iterationContext: PlaybackIterationContext,
+  playbackStepPayload: Awaited<ReturnType<typeof requestWorkerPlaybackStep>>,
+): void {
+  // Step 1: Resolve leader metrics from the updated render state.
+  const { renderState, loopState } = iterationContext.sessionContext;
+  const leaderPipesPassed = resolveLeaderPipesPassed(renderState.birds);
+  const leaderFramesSurvived = resolveLeaderFramesSurvived(renderState);
+  loopState.summary.latestLeaderPipesPassed = leaderPipesPassed;
+  loopState.summary.latestLeaderFramesSurvived = leaderFramesSurvived;
+
+  // Step 2: Emit frame telemetry for HUD and runtime consumers.
+  iterationContext.onFrameStats(
+    resolvePlaybackFrameStats(
+      playbackStepPayload,
+      renderState.frameIndex,
+      resolveAliveBirdCount(renderState.birds),
+      leaderPipesPassed,
+      leaderFramesSurvived,
+    ),
+  );
+}
+
+/**
+ * Updates the loop summary when the worker reports playback completion.
+ *
+ * @param loopState - Mutable playback loop state.
+ * @param playbackStepPayload - Worker playback result for the current iteration.
+ * @returns Nothing.
+ */
+function updatePlaybackLoopCompletion(
+  loopState: PlaybackLoopState,
+  playbackStepPayload: Awaited<ReturnType<typeof requestWorkerPlaybackStep>>,
+): void {
+  // Step 1: Skip summary folding until the worker marks playback complete.
+  if (!playbackStepPayload.done) {
+    return;
   }
 
-  // Step 4: Render the final settled frame and return aggregate summary.
-  renderPopulationFrame(context, renderState, trailState);
+  // Step 2: Fold the final aggregate summary into the mutable loop state.
+  const playbackCompletionSummary = resolvePlaybackCompletionSummary(
+    playbackStepPayload,
+    loopState.summary.latestLeaderPipesPassed,
+    loopState.summary.latestLeaderFramesSurvived,
+  );
+  loopState.finished = true;
+  loopState.summary.averagePipesPassed =
+    playbackCompletionSummary.averagePipesPassed;
+  loopState.summary.p90FramesSurvived =
+    playbackCompletionSummary.p90FramesSurvived;
+  loopState.summary.winnerPipesPassed =
+    playbackCompletionSummary.winnerPipesPassed;
+  loopState.summary.winnerFramesSurvived =
+    playbackCompletionSummary.winnerFramesSurvived;
+}
 
+/**
+ * Folds the mutable loop summary into the public playback summary shape.
+ *
+ * @param summary - Mutable loop summary accumulated during playback.
+ * @returns Public playback episode summary.
+ */
+function resolvePlaybackEpisodeSummary(
+  summary: PlaybackMutableSummary,
+): PlaybackEpisodeSummary {
+  // Step 1: Return only the public aggregate fields.
   return {
-    averagePipesPassed,
-    p90FramesSurvived,
-    winnerPipesPassed,
-    winnerFramesSurvived,
+    averagePipesPassed: summary.averagePipesPassed,
+    p90FramesSurvived: summary.p90FramesSurvived,
+    winnerPipesPassed: summary.winnerPipesPassed,
+    winnerFramesSurvived: summary.winnerFramesSurvived,
   };
 }

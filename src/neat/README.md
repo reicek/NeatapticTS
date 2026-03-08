@@ -525,6 +525,8 @@ const raw = JSON.parse(fs.readFileSync('state.json','utf8')) as NeatStateJSON;
 const neat2 = Neat.importState(raw, fitnessFn); // identical evolutionary context
 ```
 
+Returns: A  {@link NeatStateJSON} bundle containing meta + population.
+
 ### fromJSONImpl
 
 `(neatJSON: import("C:/NeatapticTS/src/neat/neat.export").NeatMetaJSON, fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>) => NeatControllerForExport`
@@ -1581,11 +1583,6 @@ Notes:
   enabled.
 - Registering an objective replaces any previous objective with the same
   `key`.
-
-Parameters:
-- `` - Unique name for the objective (used for sorting/lookup)
-- `` - Whether the objective should be minimized or maximized
-- `` - Function to extract a numeric value from a genome
 
 ## neat/neat.speciation.ts
 

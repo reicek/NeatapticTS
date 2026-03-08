@@ -5,8 +5,11 @@ import {
   resolveFramePrimaryWinnerIndex,
   resolveLeaderPipesPassed,
 } from '../browser-entry/browser-entry.observation.utils';
-import { resolveDifficultyProfile } from '../browser-entry/browser-entry.spawn.utils';
 import { FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION } from '../constants/constants';
+import {
+  resolveAdaptiveDifficultyProfile,
+  type SharedDifficultyProfile,
+} from '../flappy.simulation.shared.utils';
 import type {
   WorkerPlaybackFrameSnapshot,
   WorkerPlaybackState,
@@ -68,11 +71,7 @@ export function processWorkerPlaybackStep(options: {
   stepPopulationFrame: (
     renderState: WorkerPlaybackState,
     rng: ReturnType<typeof createXorshift32>,
-    difficultyProfile: {
-      pipeGapPx: number;
-      pipeSpeedPxPerFrame: number;
-      pipeSpawnIntervalFrames: number;
-    },
+    difficultyProfile: SharedDifficultyProfile,
   ) => number;
   createPlaybackSnapshot: (
     playbackState: WorkerPlaybackState,
@@ -112,8 +111,9 @@ export function processWorkerPlaybackStep(options: {
     hasAliveBirds(currentPlaybackState.birds);
     simulationStepIndex++
   ) {
-    const difficultyProfile = resolveDifficultyProfile(
+    const difficultyProfile = resolveAdaptiveDifficultyProfile(
       resolveLeaderPipesPassed(currentPlaybackState.birds),
+      1,
     );
     totalActivationCalls += stepPopulationFrame(
       currentPlaybackState,

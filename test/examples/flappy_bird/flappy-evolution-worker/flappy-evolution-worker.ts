@@ -9,6 +9,7 @@ import type {
   WorkerRequestMessage,
   WorkerRequestPlaybackStepMessage,
   WorkerResponseMessage,
+  WorkerStartPlaybackMessage,
 } from './flappy-evolution-worker.types';
 import { createInitializedWorkerRuntime } from './flappy-evolution-worker.runtime.service';
 import { FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION } from '../constants/constants';
@@ -24,21 +25,26 @@ import {
   processWorkerPlaybackStep,
 } from './flappy-evolution-worker.playback.service';
 import { createWorkerPlaybackSnapshot } from './flappy-evolution-worker.snapshot.utils';
-import {
-  createWorkerPopulationRenderState,
-  stepWorkerPopulationFrame,
-} from './flappy-evolution-worker.simulation.utils';
+import { createWorkerPopulationRenderState } from './flappy-evolution-worker.simulation.utils';
+import { stepWorkerPopulationFrame } from './flappy-evolution-worker.simulation.frame.service';
 import { warmStartWorkerGenerationZeroIfNeeded } from './flappy-evolution-worker.warm-start.service';
 
-let stopped = false;
-let neatRuntime: Neat | undefined;
-let currentPopulation: Network[] = [];
-let currentPlaybackState: WorkerPlaybackState | undefined;
-let currentPlaybackRng: ReturnType<typeof createXorshift32> | undefined;
-let playbackWinnerIndex = -1;
-let initializationPromise: Promise<void> | undefined;
-let workerInitSeed = 0;
-let generationZeroWarmStartApplied = false;
+const FLAPPY_WORKER_INITIAL_SEED = 0;
+const FLAPPY_WORKER_INITIAL_WINNER_INDEX = -1;
+
+type WorkerMutableRuntimeState = {
+  stopped: boolean;
+  neatRuntime: Neat | undefined;
+  currentPopulation: Network[];
+  currentPlaybackState: WorkerPlaybackState | undefined;
+  currentPlaybackRng: ReturnType<typeof createXorshift32> | undefined;
+  playbackWinnerIndex: number;
+  initializationPromise: Promise<void> | undefined;
+  workerInitSeed: number;
+  generationZeroWarmStartApplied: boolean;
+};
+
+const workerMutableRuntimeState = createWorkerMutableRuntimeState();
 
 /**
  * Main worker message router.
@@ -55,50 +61,84 @@ let generationZeroWarmStartApplied = false;
  * - `request-playback-step`: advance playback and stream telemetry snapshots.
  * - `stop`: mark worker as stopped (future generation requests fail fast).
  */
-self.onmessage = (event: MessageEvent<WorkerRequestMessage>) => {
-  // Step 1: Decode the incoming discriminated-union message.
-  const workerMessage = event.data;
+self.onmessage = createWorkerMessageHandler(workerMutableRuntimeState);
 
-  // Step 2: Route inbound protocol message to worker lifecycle handlers.
-  routeWorkerProtocolMessage(workerMessage, {
-    markStopped: () => {
-      stopped = true;
+/**
+ * Creates the mutable worker runtime state container.
+ *
+ * @returns Mutable worker runtime state.
+ */
+function createWorkerMutableRuntimeState(): WorkerMutableRuntimeState {
+  // Step 1: Initialize the worker state with empty runtime and playback fields.
+  return {
+    stopped: false,
+    neatRuntime: undefined,
+    currentPopulation: [],
+    currentPlaybackState: undefined,
+    currentPlaybackRng: undefined,
+    playbackWinnerIndex: FLAPPY_WORKER_INITIAL_WINNER_INDEX,
+    initializationPromise: undefined,
+    workerInitSeed: FLAPPY_WORKER_INITIAL_SEED,
+    generationZeroWarmStartApplied: false,
+  };
+}
+
+/**
+ * Creates the top-level worker message handler.
+ *
+ * @param workerMutableRuntimeState - Mutable worker runtime state.
+ * @returns Worker message handler.
+ */
+function createWorkerMessageHandler(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+): (event: MessageEvent<WorkerRequestMessage>) => void {
+  // Step 1: Capture the protocol handlers so each message reuses the same stateful callbacks.
+  const workerProtocolHandlers = createWorkerProtocolHandlers(
+    workerMutableRuntimeState,
+  );
+
+  // Step 2: Return the thin orchestration handler used by `self.onmessage`.
+  return (event: MessageEvent<WorkerRequestMessage>): void => {
+    const workerMessage = event.data;
+    routeWorkerProtocolMessage(workerMessage, workerProtocolHandlers);
+  };
+}
+
+/**
+ * Creates protocol handlers bound to the mutable worker runtime state.
+ *
+ * @param workerMutableRuntimeState - Mutable worker runtime state.
+ * @returns Protocol handler bundle.
+ */
+function createWorkerProtocolHandlers(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+) {
+  // Step 1: Bind each protocol operation to the shared mutable runtime state.
+  return {
+    markStopped: (): void => {
+      workerMutableRuntimeState.stopped = true;
     },
-    beginInitialization: (payload) => {
-      initializationPromise = initializeRuntime(payload).catch(
-        (error: unknown) => {
-          postWorkerMessage(createWorkerErrorMessageFromUnknown(error));
-          throw error;
-        },
-      );
-      void initializationPromise.catch(() => {
-        postWorkerMessage(
-          createWorkerErrorMessage(FLAPPY_WORKER_INIT_FAILED_ERROR_MESSAGE),
-        );
-      });
+    beginInitialization: (payload: WorkerInitMessage['payload']): void => {
+      beginWorkerInitialization(workerMutableRuntimeState, payload);
     },
-    beginGenerationRequest: () => {
-      void evolveAndPublishGeneration().catch((error: unknown) => {
-        postWorkerMessage(createWorkerErrorMessageFromUnknown(error));
-      });
+    beginGenerationRequest: (): void => {
+      beginWorkerGenerationRequest(workerMutableRuntimeState);
     },
-    hasPopulation: () =>
-      Array.isArray(currentPopulation) && currentPopulation.length > 0,
-    startPlayback: (payload) => {
-      const nextPlaybackSessionState = beginWorkerPlaybackSession({
-        currentPopulation,
-        payload,
-        createPopulationRenderState: createWorkerPopulationRenderState,
-      });
-      currentPlaybackState = nextPlaybackSessionState.currentPlaybackState;
-      currentPlaybackRng = nextPlaybackSessionState.currentPlaybackRng;
-      playbackWinnerIndex = nextPlaybackSessionState.playbackWinnerIndex;
+    hasPopulation: (): boolean =>
+      workerMutableRuntimeState.currentPopulation.length > 0,
+    startPlayback: (payload: WorkerStartPlaybackMessage['payload']): void => {
+      beginWorkerPlayback(workerMutableRuntimeState, payload);
     },
-    hasPlaybackState: () => currentPlaybackState != null,
-    processPlaybackStep,
+    hasPlaybackState: (): boolean =>
+      workerMutableRuntimeState.currentPlaybackState != null,
+    processPlaybackStep: (
+      payload: WorkerRequestPlaybackStepMessage['payload'],
+    ): void => {
+      processWorkerPlaybackStepRequest(workerMutableRuntimeState, payload);
+    },
     postWorkerMessage,
-  });
-};
+  };
+}
 
 /**
  * Initializes the worker-local NEAT runtime used by browser evolution playback.
@@ -112,13 +152,15 @@ self.onmessage = (event: MessageEvent<WorkerRequestMessage>) => {
  * @returns Promise resolved when runtime setup is complete.
  */
 async function initializeRuntime(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
   initPayload: WorkerInitMessage['payload'],
 ): Promise<void> {
   // Step 1: Persist the worker seed so warm-start logic can reuse it deterministically.
-  workerInitSeed = initPayload.rngSeed;
+  workerMutableRuntimeState.workerInitSeed = initPayload.rngSeed;
 
   // Step 2: Build and configure the NEAT runtime controller.
-  neatRuntime = createInitializedWorkerRuntime(initPayload);
+  workerMutableRuntimeState.neatRuntime =
+    createInitializedWorkerRuntime(initPayload);
 }
 
 /**
@@ -131,24 +173,99 @@ async function initializeRuntime(
  *
  * @returns Promise resolved after generation payload is posted.
  */
-async function evolveAndPublishGeneration(): Promise<void> {
+async function evolveAndPublishGeneration(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+): Promise<void> {
   const generationPayload = await evolveAndBuildGenerationReadyMessage({
-    initializationPromise,
-    neatRuntime,
-    isStopped: () => stopped,
+    initializationPromise: workerMutableRuntimeState.initializationPromise,
+    neatRuntime: workerMutableRuntimeState.neatRuntime,
+    isStopped: () => workerMutableRuntimeState.stopped,
     warmStartGenerationZeroIfNeeded: (neatController) =>
       warmStartWorkerGenerationZeroIfNeeded(neatController, {
-        workerInitSeed,
-        generationZeroWarmStartApplied,
+        workerInitSeed: workerMutableRuntimeState.workerInitSeed,
+        generationZeroWarmStartApplied:
+          workerMutableRuntimeState.generationZeroWarmStartApplied,
       }).then(() => {
-        generationZeroWarmStartApplied = true;
+        workerMutableRuntimeState.generationZeroWarmStartApplied = true;
       }),
     setCurrentPopulation: (nextPopulation) => {
-      currentPopulation = nextPopulation;
+      workerMutableRuntimeState.currentPopulation = nextPopulation;
     },
   });
 
   postWorkerMessage(generationPayload);
+}
+
+/**
+ * Begins worker initialization and captures asynchronous failures.
+ *
+ * @param workerMutableRuntimeState - Mutable worker runtime state.
+ * @param initPayload - Initialization payload.
+ * @returns Nothing.
+ */
+function beginWorkerInitialization(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+  initPayload: WorkerInitMessage['payload'],
+): void {
+  // Step 1: Start initialization and retain the promise for later generation requests.
+  workerMutableRuntimeState.initializationPromise = initializeRuntime(
+    workerMutableRuntimeState,
+    initPayload,
+  ).catch((error: unknown) => {
+    postWorkerMessage(createWorkerErrorMessageFromUnknown(error));
+    throw error;
+  });
+
+  // Step 2: Emit a stable init-failed error if the initialization promise rejects.
+  void workerMutableRuntimeState.initializationPromise.catch(() => {
+    postWorkerMessage(
+      createWorkerErrorMessage(FLAPPY_WORKER_INIT_FAILED_ERROR_MESSAGE),
+    );
+  });
+}
+
+/**
+ * Begins one asynchronous generation request and captures failures.
+ *
+ * @param workerMutableRuntimeState - Mutable worker runtime state.
+ * @returns Nothing.
+ */
+function beginWorkerGenerationRequest(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+): void {
+  // Step 1: Run the generation pipeline and publish worker errors on failure.
+  void evolveAndPublishGeneration(workerMutableRuntimeState).catch(
+    (error: unknown) => {
+      postWorkerMessage(createWorkerErrorMessageFromUnknown(error));
+    },
+  );
+}
+
+/**
+ * Begins a new playback session from the current evolved population.
+ *
+ * @param workerMutableRuntimeState - Mutable worker runtime state.
+ * @param payload - Playback start payload.
+ * @returns Nothing.
+ */
+function beginWorkerPlayback(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+  payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number },
+): void {
+  // Step 1: Create the next playback session from the current population snapshot.
+  const nextPlaybackSessionState = beginWorkerPlaybackSession({
+    currentPopulation: workerMutableRuntimeState.currentPopulation,
+    payload,
+    createPopulationRenderState: createWorkerPopulationRenderState,
+  });
+
+  // Step 2: Persist the next playback state, RNG, and winner index.
+  workerMutableRuntimeState.currentPlaybackState =
+    nextPlaybackSessionState.currentPlaybackState;
+  workerMutableRuntimeState.currentPlaybackRng =
+    nextPlaybackSessionState.currentPlaybackRng;
+  workerMutableRuntimeState.playbackWinnerIndex =
+    nextPlaybackSessionState.playbackWinnerIndex;
 }
 
 /**
@@ -162,30 +279,41 @@ async function evolveAndPublishGeneration(): Promise<void> {
  * @param playbackStepPayload - Host-selected simulation-step budget and viewport.
  * @returns Nothing.
  */
-function processPlaybackStep(
+function processWorkerPlaybackStepRequest(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
   playbackStepPayload: WorkerRequestPlaybackStepMessage['payload'],
 ): void {
-  if (!currentPlaybackState || !currentPlaybackRng) {
+  // Step 1: Guard against playback-step requests before playback state exists.
+  if (
+    !workerMutableRuntimeState.currentPlaybackState ||
+    !workerMutableRuntimeState.currentPlaybackRng
+  ) {
     throw new Error(
       'Playback random source is unavailable. Start playback first.',
     );
   }
 
+  // Step 2: Advance playback and build the next compact snapshot payload.
   const nextPlaybackStepState = processWorkerPlaybackStep({
     playbackStepPayload,
-    currentPlaybackState,
-    currentPlaybackRng,
-    currentPopulation,
-    neatRuntime,
+    currentPlaybackState: workerMutableRuntimeState.currentPlaybackState,
+    currentPlaybackRng: workerMutableRuntimeState.currentPlaybackRng,
+    currentPopulation: workerMutableRuntimeState.currentPopulation,
+    neatRuntime: workerMutableRuntimeState.neatRuntime,
     stepPopulationFrame: stepWorkerPopulationFrame,
     createPlaybackSnapshot: createWorkerPlaybackSnapshot,
     postWorkerMessage,
   });
 
-  currentPlaybackState = nextPlaybackStepState.currentPlaybackState;
-  currentPlaybackRng = nextPlaybackStepState.currentPlaybackRng;
-  currentPopulation = nextPlaybackStepState.currentPopulation;
-  playbackWinnerIndex = nextPlaybackStepState.playbackWinnerIndex;
+  // Step 3: Persist the advanced playback state for the next host request.
+  workerMutableRuntimeState.currentPlaybackState =
+    nextPlaybackStepState.currentPlaybackState;
+  workerMutableRuntimeState.currentPlaybackRng =
+    nextPlaybackStepState.currentPlaybackRng;
+  workerMutableRuntimeState.currentPopulation =
+    nextPlaybackStepState.currentPopulation;
+  workerMutableRuntimeState.playbackWinnerIndex =
+    nextPlaybackStepState.playbackWinnerIndex;
 }
 
 /**

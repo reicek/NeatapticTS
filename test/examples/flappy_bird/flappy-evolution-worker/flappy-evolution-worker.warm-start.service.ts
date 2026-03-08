@@ -8,7 +8,6 @@ import {
 } from '../browser-entry/browser-entry.observation.utils';
 import {
   createBirdColor,
-  resolveDifficultyProfile,
   sampleGapCenterY,
 } from '../browser-entry/browser-entry.spawn.utils';
 import type {
@@ -37,7 +36,10 @@ import {
   FLAPPY_WORKER_GEN0_PRETRAIN_VISIBLE_WORLD_WIDTH_PX,
   FLAPPY_WORKER_GEN0_PRETRAIN_WEIGHT_NOISE_STDDEV,
 } from './flappy-evolution-worker.constants';
-import { createSharedObservationMemoryState } from '../flappy.simulation.shared.utils';
+import {
+  createSharedObservationMemoryState,
+  resolveAdaptiveDifficultyProfile,
+} from '../flappy.simulation.shared.utils';
 
 /**
  * State carried between generation requests for one worker runtime.
@@ -139,7 +141,7 @@ function buildHeuristicPretrainSet(
 ): Array<{ input: number[]; output: number[] }> {
   // Step 1: Resolve bounded sample count and a baseline difficulty profile.
   const clampedSampleCount = Math.max(8, Math.trunc(sampleCount));
-  const difficultyProfile = resolveDifficultyProfile(0);
+  const difficultyProfile = resolveAdaptiveDifficultyProfile(0, 1);
   const trainingSet: Array<{ input: number[]; output: number[] }> = [];
 
   // Step 2: Sample state tuples, encode observations, and attach heuristic labels.

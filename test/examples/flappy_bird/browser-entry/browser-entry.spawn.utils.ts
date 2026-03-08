@@ -1,15 +1,15 @@
 import { FLAPPY_NEON_BIRD_PALETTE } from '../constants/constants';
 import {
   FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX,
-  FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
   FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
   FLAPPY_WORLD_HEIGHT_PX,
 } from '../constants/constants';
 import {
-  type SharedDifficultyProfile,
   resolveAdaptiveDifficultyProfile,
+  resolveNextSpawnGapCenterY as resolveSharedNextSpawnGapCenterY,
   resolveNextSpawnGapSize as resolveSharedNextSpawnGapSize,
   resolveNextSpawnIntervalFrames as resolveSharedNextSpawnIntervalFrames,
+  sampleGapCenterY as sampleSharedGapCenterY,
 } from '../flappy.simulation.shared.utils';
 import type { BrowserDifficultyProfile, RngLike } from './browser-entry.types';
 
@@ -24,9 +24,10 @@ export function sampleGapCenterY(
   rng: RngLike,
   worldHeightPx: number = FLAPPY_WORLD_HEIGHT_PX,
 ): number {
-  const lowerBoundGapCenterYPx = FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX;
-  const upperBoundGapCenterYPx = resolveGapCenterUpperBoundYPx(worldHeightPx);
-  return rng.nextInt(lowerBoundGapCenterYPx, upperBoundGapCenterYPx);
+  return sampleSharedGapCenterY(
+    rng,
+    resolveGapCenterUpperBoundYPx(worldHeightPx),
+  );
 }
 
 /**
@@ -42,18 +43,10 @@ export function resolveNextSpawnGapCenterY(
   rng: RngLike,
   worldHeightPx: number = FLAPPY_WORLD_HEIGHT_PX,
 ): number {
-  const sampledGapCenterYPx = sampleGapCenterY(rng, worldHeightPx);
-  const minimumGapCenterYPx = Math.max(
-    FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX,
-    previousGapCenterYPx - FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
-  );
-  const maximumGapCenterYPx = Math.min(
+  return resolveSharedNextSpawnGapCenterY(
+    previousGapCenterYPx,
+    rng,
     resolveGapCenterUpperBoundYPx(worldHeightPx),
-    previousGapCenterYPx + FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX,
-  );
-  return Math.max(
-    minimumGapCenterYPx,
-    Math.min(sampledGapCenterYPx, maximumGapCenterYPx),
   );
 }
 
@@ -107,7 +100,7 @@ export function resolveNextSpawnGapSize(
 ): number {
   return resolveSharedNextSpawnGapSize(
     previousSpawnGapPx,
-    difficultyProfile as SharedDifficultyProfile,
+    difficultyProfile,
     rng,
   );
 }
@@ -125,18 +118,6 @@ export function resolveNextSpawnIntervalFrames(
 ): number {
   return resolveSharedNextSpawnIntervalFrames(
     previousSpawnIntervalFrames,
-    difficultyProfile as SharedDifficultyProfile,
+    difficultyProfile,
   );
-}
-
-/**
- * Resolves current difficulty profile from pipes-passed progress.
- *
- * @param pipesPassed - Current pipes passed.
- * @returns Difficulty profile.
- */
-export function resolveDifficultyProfile(
-  pipesPassed: number,
-): BrowserDifficultyProfile {
-  return resolveAdaptiveDifficultyProfile(pipesPassed, 1);
 }

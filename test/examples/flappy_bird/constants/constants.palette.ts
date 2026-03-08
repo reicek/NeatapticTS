@@ -22,6 +22,8 @@ export const FLAPPY_NEON_PALETTE = {
   hudAccent: '#ff9a2e',
   hudPanelBackground: '#000000',
   hudPanelBorder: '#0fb5ff',
+  horizonLine: '#0a8ea0',
+  horizonGlow: 'rgba(10, 142, 160, 0.95)',
 } as const;
 
 /** Neon bird palette for per-agent render color assignment. */

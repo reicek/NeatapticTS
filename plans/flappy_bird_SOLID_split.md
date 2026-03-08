@@ -53,6 +53,10 @@ Execution steps
 - [DONE] Step 8: Continue splitting `simulation-shared` observation assembly so shared observation logic does not reform into a broad policy hub.
 - [DONE] Step 9: Recheck the browser visualization and network-view path for responsibility drift after the earlier splits, and realign any overlap back into explicit module boundaries.
 - [DONE] Step 10: Validate the final shape by checking naming consistency, folder ownership, generated-doc expectations, and TypeScript/build health.
+- [DONE] Step 11: Extract playback background composition into a dedicated background submodule so sky, horizon, and future ground parallax can evolve independently.
+- [DONE] Step 12: Extract host resize orchestration, layout math, and DOM mutation helpers into a dedicated `host/resize/` submodule so responsive layout policies evolve without bloating the host root.
+- [DONE] Step 13: Extract playback starfield contracts and tile-render mechanics into dedicated starfield-owned files so cache orchestration stays thin and reusable.
+- [] Step 14: Extract evaluation rollout orchestration into a dedicated `evaluation/rollout/` submodule so runtime state, policy, shaping helpers, and rollout-local contracts evolve behind one stable public entry.
 
 Done criteria
 

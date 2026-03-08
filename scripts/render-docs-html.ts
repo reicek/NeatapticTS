@@ -11,7 +11,11 @@ const DOCS_DIR = path.resolve('docs');
 const THEME_CSS_SOURCE_PATH = path.resolve('scripts', 'assets', 'theme.css');
 const THEME_CSS_OUTPUT_PATH = path.join(DOCS_DIR, 'assets', 'theme.css');
 const NN_IMAGE_SOURCE_PATH = path.resolve('nn.jpg');
-const NN_IMAGE_FALLBACK_SOURCE_PATH = path.resolve('scripts', 'assets', 'nn.jpg');
+const NN_IMAGE_FALLBACK_SOURCE_PATH = path.resolve(
+  'scripts',
+  'assets',
+  'nn.jpg',
+);
 const NN_IMAGE_OUTPUT_PATH = path.join(DOCS_DIR, 'nn.jpg');
 const EXAMPLE_DEMOS = [
   { dir: 'examples/asciiMaze', label: 'asciiMaze' },
@@ -27,7 +31,9 @@ const RETRIABLE_FILE_SYSTEM_ERROR_CODES = new Set([
 const DOCS_WRITE_MAX_ATTEMPTS = 6;
 const DOCS_WRITE_INITIAL_RETRY_DELAY_MS = 120;
 
-function isRetriableFileSystemError(error: unknown): error is NodeJS.ErrnoException {
+function isRetriableFileSystemError(
+  error: unknown,
+): error is NodeJS.ErrnoException {
   if (!(error instanceof Error)) return false;
   const code = (error as NodeJS.ErrnoException).code;
   if (!code) return false;
@@ -182,7 +188,8 @@ async function main() {
         const leftOrder = order.indexOf(a.name);
         const rightOrder = order.indexOf(b.name);
         const leftRank = leftOrder === -1 ? Number.MAX_SAFE_INTEGER : leftOrder;
-        const rightRank = rightOrder === -1 ? Number.MAX_SAFE_INTEGER : rightOrder;
+        const rightRank =
+          rightOrder === -1 ? Number.MAX_SAFE_INTEGER : rightOrder;
         return leftRank - rightRank || a.name.localeCompare(b.name);
       })
       .map((g) => {
@@ -254,12 +261,12 @@ async function main() {
                       .map((s) => `<li><a href=#${s.anchor}>${s.name}</a></li>`)
                       .join('')}</ul>`
                   : ''
-              }</div>`
+              }</div>`,
           )
           .join('')}</div>`
-            : meta.relDir === '' && rootExamplesTocHtml
-            ? `<div class="page-toc"><h2>Examples</h2><div class="toc-file"><ul>${rootExamplesTocHtml}</ul></div></div>`
-            : '';
+      : meta.relDir === '' && rootExamplesTocHtml
+        ? `<div class="page-toc"><h2>Examples</h2><div class="toc-file"><ul>${rootExamplesTocHtml}</ul></div></div>`
+        : '';
     const outFile = path.join(path.dirname(meta.abs), 'index.html');
     const relToRoot = path
       .relative(path.dirname(meta.abs), DOCS_DIR)
@@ -281,7 +288,7 @@ async function main() {
     }/index.html">Home</a><a href="${
       relToRoot || '.'
     }/index.html"${docsActive}>Docs</a><a href="${examplesHref}"${examplesActive}>Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar">${navHtmlFor(
-      meta.relDir
+      meta.relDir,
     )}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc">${toc}</aside></div></body></html>`;
     await writeFileWithRetry(outFile, page, 'utf8');
   }
