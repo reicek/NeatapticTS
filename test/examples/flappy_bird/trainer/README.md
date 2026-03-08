@@ -66,7 +66,6 @@ Prefix used when rendering unexpected trainer failures to stderr.
 Formats unknown trainer failures into a stable human-readable message.
 
 Parameters:
-
 - `error` - - Unknown rejection reason from trainer execution.
 
 Returns: Formatted error string for CLI logging.
@@ -148,7 +147,6 @@ Returns: Formatted error string for CLI logging.
 Applies mutation schedule values to the NEAT controller options.
 
 Parameters:
-
 - `neatController` - - Trainer NEAT controller.
 - `mutationSchedule` - - Mutation schedule for current generation.
 
@@ -165,7 +163,6 @@ Callback signature for one-line generation logging.
 Runs the outer evolution loop until runtime stop is requested.
 
 Parameters:
-
 - `neatController` - - Trainer NEAT controller.
 - `trainerRuntimeState` - - Mutable trainer runtime state.
 - `logGenerationSummary` - - Callback that emits compact generation logs.
@@ -179,7 +176,6 @@ Parameters:
 Builds the NEAT controller with baseline options.
 
 Parameters:
-
 - `trainerSetup` - - Immutable trainer setup values.
 
 Returns: Typed NEAT controller used by the trainer loop.
@@ -217,7 +213,6 @@ Returns: Constant zero fitness.
 Builds a compact report for the current generation.
 
 Parameters:
-
 - `population` - - Current population.
 - `aggregateByGenome` - - Aggregate evaluation results keyed by genome.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
@@ -231,7 +226,6 @@ Returns: Aggregated generation report.
 Emits one compact generation log line.
 
 Parameters:
-
 - `generationLabel` - - Current generation label.
 - `mutationSchedule` - - Active mutation schedule.
 - `report` - - Optional aggregated generation report.
@@ -249,7 +243,6 @@ Returns: Nothing.
 Attaches population-level staged evaluator to the NEAT controller.
 
 Parameters:
-
 - `neatController` - - Trainer NEAT controller.
 - `trainerRuntimeState` - - Mutable trainer runtime state.
 - `elitismCount` - - Number of elite genomes preserved each generation.
@@ -262,7 +255,6 @@ Parameters:
 Creates the asynchronous population fitness evaluator.
 
 Parameters:
-
 - `neatController` - - Trainer NEAT controller.
 - `trainerRuntimeState` - - Mutable trainer runtime state.
 - `elitismCount` - - Number of elite genomes preserved each generation.
@@ -283,7 +275,6 @@ Callback dependencies required by the trainer fitness orchestration service.
 Handles one stop signal update.
 
 Parameters:
-
 - `trainerRuntimeState` - - Mutable trainer runtime state.
 
 ### registerTrainerStopSignals
@@ -293,7 +284,6 @@ Parameters:
 Registers graceful stop signal handlers.
 
 Parameters:
-
 - `trainerRuntimeState` - - Mutable trainer runtime state.
 
 ## trainer/trainer.evaluation.service.ts
@@ -313,7 +303,6 @@ contracts, and sub-services can evolve behind a focused boundary.
 Commits provisional scores to genome score fields.
 
 Parameters:
-
 - `population` - - Current population.
 - `provisionalScoresByGenome` - - Final provisional score map.
 
@@ -326,7 +315,6 @@ Returns: Nothing.
 Executes the full evaluation stage over the top provisional candidates.
 
 Parameters:
-
 - `population` - - Current population.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
@@ -342,7 +330,6 @@ Returns: Nothing.
 Executes the quick evaluation stage over the full population.
 
 Parameters:
-
 - `population` - - Current population.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
@@ -357,7 +344,6 @@ Returns: Nothing.
 Executes the large-seed reevaluation stage over top candidates.
 
 Parameters:
-
 - `population` - - Current population.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
@@ -378,7 +364,6 @@ Unevaluated or invalid scores are intentionally skipped so percentile and
 standard deviation calculations operate on stable numeric inputs only.
 
 Parameters:
-
 - `population` - - Current population.
 
 Returns: Finite scores in population order.
@@ -394,7 +379,6 @@ episode. This helper centralizes the fallback rules so the service facade can
 remain a thin orchestration layer.
 
 Parameters:
-
 - `population` - - Current population.
 - `bestGenome` - - Genome selected as generation best.
 - `aggregateByGenome` - - Cached aggregate evaluations keyed by genome.
@@ -419,7 +403,6 @@ orchestration while this helper module owns cache fallback behavior.
 Builds one-line generation log tokens.
 
 Parameters:
-
 - `generationLabel` - - Generation label shown in logs.
 - `bestFitness` - - Best resolved fitness value for this generation.
 - `bestPipesPassed` - - Best resolved pipes passed value.
@@ -438,7 +421,6 @@ Returns: Ordered log tokens for compact console output.
 Resolves the best genome by current score.
 
 Parameters:
-
 - `population` - - Current trainer population.
 
 Returns: Highest-scoring genome or `undefined` when population is empty.
@@ -450,7 +432,6 @@ Returns: Highest-scoring genome or `undefined` when population is empty.
 Returns top genomes ordered by current provisional score.
 
 Parameters:
-
 - `population` - - Current trainer population.
 - `provisionalScoresByGenome` - - Optional map of staged provisional scores.
 - `targetCount` - - Maximum number of genomes to return.
@@ -466,7 +447,6 @@ Returns: Highest-scoring genomes in descending score order.
 Build deterministic shared seeds for one generation stage.
 
 Parameters:
-
 - `generationIndex` - - Zero-based generation index.
 - `stageSalt` - - Constant stage-specific salt.
 - `seedCount` - - Number of seeds to produce.
@@ -480,7 +460,6 @@ Returns: Deterministic shared seed list.
 Builds full-stage rollout options.
 
 Parameters:
-
 - `difficultyScale` - - Difficulty scale for this generation.
 
 Returns: Full stage rollout options.
@@ -492,7 +471,6 @@ Returns: Full stage rollout options.
 Builds quick-screen rollout options.
 
 Parameters:
-
 - `difficultyScale` - - Difficulty scale for this generation.
 
 Returns: Quick stage rollout options.
@@ -504,7 +482,6 @@ Returns: Quick stage rollout options.
 Builds high-confidence reevaluation rollout options.
 
 Parameters:
-
 - `difficultyScale` - - Difficulty scale for this generation.
 
 Returns: Reevaluation stage rollout options.
@@ -520,7 +497,6 @@ Mutation schedule used by generation planning and outer loop logging.
 Mixes generation and stage salts into a deterministic uint32 RNG seed.
 
 Parameters:
-
 - `generationIndex` - - Current generation index.
 - `stageSalt` - - Stage-specific salt.
 
@@ -533,7 +509,6 @@ Returns: Mixed uint32 seed.
 Resolve curriculum difficulty scale for the current generation.
 
 Parameters:
-
 - `generationIndex` - - Zero-based generation index.
 
 Returns: Difficulty scale in [0, 1].
@@ -545,7 +520,6 @@ Returns: Difficulty scale in [0, 1].
 Resolves all per-generation evaluation controls.
 
 Parameters:
-
 - `generationIndex` - - Zero-based generation index.
 
 Returns: Full staged evaluation plan for the generation.
@@ -557,7 +531,6 @@ Returns: Full staged evaluation plan for the generation.
 Resolve a smooth mutation annealing schedule.
 
 Parameters:
-
 - `generationIndex` - - Zero-based generation index.
 
 Returns: Mutation rate and mutation amount for this generation.

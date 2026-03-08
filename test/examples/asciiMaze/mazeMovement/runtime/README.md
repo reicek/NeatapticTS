@@ -17,7 +17,6 @@ bookkeeping, and perception-state updates.
 Build the current perception vector and update distance-tracking state.
 
 Parameters:
-
 - `state` - - Mutable simulation state for the active run.
 - `encodedMaze` - - Maze grid used for perception and distance lookup.
 - `exitPos` - - Goal coordinate for the current run.
@@ -30,7 +29,6 @@ Parameters:
 Create the initial run-state object for one simulation episode.
 
 Parameters:
-
 - `encodedMaze` - - Maze grid used by the run.
 - `startPos` - - Starting coordinate.
 - `distanceMap` - - Optional precomputed distance map.
@@ -45,7 +43,6 @@ Returns: Fresh simulation state backed by the shared buffer pools.
 Resolve the current distance value for a maze coordinate.
 
 Parameters:
-
 - `encodedMaze` - - Maze grid aligned with the optional distance map.
 - `coordinates` - - Zero-based `[x, y]` coordinate tuple.
 - `distanceMap` - - Optional precomputed distance map.
@@ -59,7 +56,6 @@ Returns: Finite distance when present, otherwise `Infinity`.
 Return the `nth` most recent cell index from the visit-history ring.
 
 Parameters:
-
 - `state` - - Mutable simulation state containing the ring buffer.
 - `nth` - - One-based index from the history tail.
 
@@ -72,7 +68,6 @@ Returns: The requested cell index or `undefined` when out of range.
 Determine whether a maze cell is inside bounds and not a wall.
 
 Parameters:
-
 - `encodedMaze` - - Maze grid to inspect.
 - `x` - - Zero-based maze column.
 - `y` - - Zero-based maze row.
@@ -87,7 +82,6 @@ Returns: True when the target cell is within bounds and open.
 Push a cell index into the circular visit-history ring.
 
 Parameters:
-
 - `state` - - Mutable simulation state containing the ring buffer.
 - `cellIndex` - - Linearized cell index to append.
 
@@ -98,5 +92,4 @@ Parameters:
 Record the current cell visit and update visit-driven penalties.
 
 Parameters:
-
 - `state` - - Mutable simulation state for the active run.

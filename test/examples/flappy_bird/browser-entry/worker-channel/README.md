@@ -35,7 +35,6 @@ Returns: Initialized worker instance.
 Waits for the next generation payload emitted by the evolution worker.
 
 Parameters:
-
 - `evolutionWorker` - - Worker emitting generation-ready messages.
 
 Returns: Next generation payload.
@@ -47,7 +46,6 @@ Returns: Next generation payload.
 Requests one playback batch step from the worker.
 
 Parameters:
-
 - `evolutionWorker` - - Worker that owns playback simulation state.
 - `playbackStepRequest` - - Requested simulation budget and viewport width.
 
@@ -66,7 +64,6 @@ Error raised when the evolution worker responds with an explicit protocol error 
 Converts worker protocol error payloads into typed worker-channel errors.
 
 Parameters:
-
 - `message` - - Message supplied by the worker error payload.
 
 Returns: Typed worker-channel protocol error.
@@ -78,7 +75,6 @@ Returns: Typed worker-channel protocol error.
 Resolves a worker `ErrorEvent` into a normalized `Error` instance.
 
 Parameters:
-
 - `errorLike` - - Optional `event.error` payload.
 - `fallbackMessage` - - Fallback message from `event.message`.
 
@@ -113,7 +109,6 @@ Returns: Absolute URL string for `flappy-evolution.worker.bundle.js`.
 Sends one request to the worker and resolves with the first matching response payload.
 
 Parameters:
-
 - `options` - - Worker request options and response resolver callback.
 
 Returns: Promise resolving with the matched worker response payload.
@@ -135,7 +130,6 @@ Configuration used for one worker request/response lifecycle.
 Requests one playback batch step from the worker channel.
 
 Parameters:
-
 - `evolutionWorker` - - Worker that owns playback simulation state.
 - `playbackStepRequest` - - Requested simulation budget and viewport size.
 
@@ -150,7 +144,6 @@ Returns: Playback-step payload including snapshot and completion marker.
 Requests the next evolved generation payload from the worker channel.
 
 Parameters:
-
 - `evolutionWorker` - - Worker emitting generation-ready messages.
 
 Returns: Next generation payload.

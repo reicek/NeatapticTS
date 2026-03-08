@@ -89,7 +89,6 @@ Shared mutable inputs for one worker playback frame simulation pass.
 Begins one asynchronous generation request and captures failures.
 
 Parameters:
-
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 
 Returns: Nothing.
@@ -101,7 +100,6 @@ Returns: Nothing.
 Begins worker initialization and captures asynchronous failures.
 
 Parameters:
-
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 - `initPayload` - - Initialization payload.
 
@@ -114,7 +112,6 @@ Returns: Nothing.
 Begins a new playback session from the current evolved population.
 
 Parameters:
-
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 - `payload` - - Playback start payload.
 
@@ -127,7 +124,6 @@ Returns: Nothing.
 Creates the top-level worker message handler.
 
 Parameters:
-
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 
 Returns: Worker message handler.
@@ -147,7 +143,6 @@ Returns: Mutable worker runtime state.
 Creates protocol handlers bound to the mutable worker runtime state.
 
 Parameters:
-
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 
 Returns: Protocol handler bundle.
@@ -177,7 +172,6 @@ early-termination fitness rollout. Keeping this setup centralized helps ensure
 reproducibility between runs and keeps host<->worker contracts simple.
 
 Parameters:
-
 - `initPayload` - - Initialization values from the browser host.
 
 Returns: Promise resolved when runtime setup is complete.
@@ -189,7 +183,6 @@ Returns: Promise resolved when runtime setup is complete.
 Posts a typed message from worker to host.
 
 Parameters:
-
 - `workerMessage` - - Outbound worker response payload.
 
 Returns: Nothing.
@@ -206,7 +199,6 @@ smoothness against throughput. This function keeps that loop deterministic and
 emits one compact snapshot payload per request.
 
 Parameters:
-
 - `playbackStepPayload` - - Host-selected simulation-step budget and viewport.
 
 Returns: Nothing.
@@ -220,7 +212,6 @@ Returns: Nothing.
 Creates a typed worker error response payload from a message string.
 
 Parameters:
-
 - `message` - - Error message text.
 
 Returns: Worker error response message.
@@ -232,7 +223,6 @@ Returns: Worker error response message.
 Creates a typed worker error response payload from an unknown thrown value.
 
 Parameters:
-
 - `error` - - Unknown thrown value.
 
 Returns: Worker error response message.
@@ -250,7 +240,6 @@ Returns: Worker error response message.
 Resolves unknown error-like values into display-safe worker error messages.
 
 Parameters:
-
 - `error` - - Unknown error value thrown by worker logic.
 
 Returns: Normalized error message string.
@@ -284,7 +273,6 @@ Synthetic sample count used for generation-0 warm-start pretraining.
 Creates and configures the worker-local NEAT runtime used by browser evolution playback.
 
 Parameters:
-
 - `initPayload` - - Initialization values from the browser host.
 
 Returns: Initialized NEAT runtime.
@@ -298,7 +286,6 @@ Returns: Initialized NEAT runtime.
 Creates a fresh worker playback session state from the current evolved population.
 
 Parameters:
-
 - `currentPopulation` - - Current evolved population.
 - `payload` - - Playback start viewport payload.
 - `createPopulationRenderState` - - Callback that builds initial simulation state.
@@ -312,7 +299,6 @@ Returns: Playback runtime state and deterministic RNG.
 Processes one worker playback-step request including completion/finalization logic.
 
 Parameters:
-
 - `options` - - Playback step dependencies and mutable runtime state.
 
 Returns: Updated playback runtime state after processing this step.
@@ -326,7 +312,6 @@ Returns: Updated playback runtime state after processing this step.
 Routes one inbound worker request message to the corresponding runtime action.
 
 Parameters:
-
 - `workerMessage` - - Inbound worker request payload.
 - `handlers` - - Runtime action callbacks and state probes.
 
@@ -345,7 +330,6 @@ Callback bundle used by worker protocol routing.
 Evolves one generation and creates the compact generation-ready response payload.
 
 Parameters:
-
 - `options` - - Evolution dependencies and runtime state accessors.
 
 Returns: Generation-ready worker response payload.
@@ -363,7 +347,6 @@ Dependencies required to evolve one generation and prepare host payload output.
 Copies template parameters into a genome and injects small Gaussian noise.
 
 Parameters:
-
 - `genome` - - Target genome to mutate in-place.
 - `template` - - Trained template source network.
 - `rng` - - Deterministic random source for noise sampling.
@@ -378,7 +361,6 @@ Returns: Nothing.
 Builds synthetic supervised samples for generation-0 behavior cloning.
 
 Parameters:
-
 - `rng` - - Deterministic random source.
 - `sampleCount` - - Requested number of synthetic samples.
 
@@ -391,7 +373,6 @@ Returns: Supervised dataset of input/output pairs.
 Heuristic teacher policy used to label synthetic pretraining samples.
 
 Parameters:
-
 - `features` - - Structured observation features for one synthetic state.
 
 Returns: True when the teacher says to flap.
@@ -403,7 +384,6 @@ Returns: True when the teacher says to flap.
 Samples one standard-normal value using the Box-Muller transform.
 
 Parameters:
-
 - `rng` - - Deterministic random source.
 
 Returns: One approximately standard-normal random value.
@@ -420,7 +400,6 @@ supervised bootstrap pass that nudges generation 0 away from pure noise while
 preserving the later NEAT-driven search loop.
 
 Parameters:
-
 - `neatController` - - Initialized NEAT runtime.
 - `warmStartState` - - Mutable warm-start lifecycle state.
 
@@ -439,7 +418,6 @@ State carried between generation requests for one worker runtime.
 Integrates bird velocity and vertical motion for one control substep.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -451,7 +429,6 @@ Returns: Nothing.
 Advances all visible pipes and culls those that have left the camera window.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -463,7 +440,6 @@ Returns: Nothing.
 Commits one passed-pipe progress increment for a bird when eligible.
 
 Parameters:
-
 - `bird` - - Mutable bird state.
 - `pipe` - - Pipe candidate to mark as passed.
 
@@ -476,7 +452,6 @@ Returns: Nothing.
 Increments survival counters for birds that remain active at frame start.
 
 Parameters:
-
 - `renderState` - - Mutable playback state.
 
 Returns: Nothing.
@@ -488,7 +463,6 @@ Returns: Nothing.
 Resolves whether a bird collides with one pipe corridor during this substep.
 
 Parameters:
-
 - `bird` - - Mutable bird state.
 - `pipe` - - Pipe candidate to test.
 - `frameContext` - - Shared frame context for this logical frame.
@@ -502,7 +476,6 @@ Returns: `true` when the bird overlaps the pipe body instead of the gap.
 Runs policy evaluation and commits the resulting observation memory updates.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Number of activation calls performed in the substep.
@@ -514,7 +487,6 @@ Returns: Number of activation calls performed in the substep.
 Resolves whether a bird has exceeded the vertical play area.
 
 Parameters:
-
 - `bird` - - Mutable bird state.
 - `visibleWorldHeightPx` - - Current visible world height.
 
@@ -527,7 +499,6 @@ Returns: `true` when the bird is outside the vertical bounds.
 Resolves bird deaths and passed-pipe progress after motion is applied.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -539,7 +510,6 @@ Returns: Nothing.
 Resolves the current left-edge of the visible world in world-space pixels.
 
 Parameters:
-
 - `visibleWorldWidthPx` - - Current visible world width.
 
 Returns: Left edge x-position in world coordinates.
@@ -551,7 +521,6 @@ Returns: Left edge x-position in world coordinates.
 Advances one control substep of the worker playback simulation.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Number of activation calls performed in the substep.
@@ -563,7 +532,6 @@ Returns: Number of activation calls performed in the substep.
 Spawns a new pipe when the substep budget crosses the spawn boundary.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -575,7 +543,6 @@ Returns: Nothing.
 Advances the whole population simulation by one logical frame.
 
 Parameters:
-
 - `renderState` - - Mutable simulation state.
 - `rng` - - Deterministic random source for spawn variation.
 - `difficultyProfile` - - Active dynamic difficulty profile.
@@ -595,7 +562,6 @@ runtime-only references (e.g., network instances, sets) and keeps only
 renderer-relevant fields.
 
 Parameters:
-
 - `playbackState` - - Current mutable playback state.
 
 Returns: Immutable frame snapshot for the host.
@@ -609,7 +575,6 @@ Returns: Immutable frame snapshot for the host.
 Creates initial playback state for a population of networks.
 
 Parameters:
-
 - `networks` - - Population to visualize.
 - `rng` - - Deterministic random source.
 - `initialVisibleWorldWidthPx` - - Initial viewport width from host.

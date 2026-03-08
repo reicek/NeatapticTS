@@ -77,7 +77,6 @@ rollout-owned module boundary.
 Roll out an episode and return details.
 
 Parameters:
-
 - `network` - - Genome/network to evaluate.
 - `rolloutOptions` - - Optional rollout controls.
 
@@ -95,7 +94,6 @@ This keeps evaluation deterministic per genome while still spreading nearby
 genome ids across the RNG state space to reduce correlated rollouts.
 
 Parameters:
-
 - `genomeId` - - Genome id from NEAT bookkeeping.
 
 Returns: Mixed uint32 seed.
@@ -109,7 +107,6 @@ Returns: Mixed uint32 seed.
 Evaluate a network on a single deterministic Flappy Bird episode.
 
 Parameters:
-
 - `network` - - Genome/network to evaluate.
 - `rolloutOptions` - - Optional rollout controls.
 
@@ -122,7 +119,6 @@ Returns: Fitness score (higher is better).
 Evaluate a network on a shared batch of deterministic seeds.
 
 Parameters:
-
 - `network` - - Genome/network to evaluate.
 - `sharedSeeds` - - Shared deterministic seeds used for all genomes.
 - `rolloutOptions` - - Optional rollout controls.
