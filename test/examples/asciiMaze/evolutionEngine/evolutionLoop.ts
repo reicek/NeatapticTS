@@ -22,11 +22,6 @@
  * @module evolutionEngine/evolutionLoop
  */
 
-/** Extended Window interface for maze-specific global state */
-interface MazeWindow extends Window {
-  asciiMazePaused?: boolean;
-}
-
 /** Mutable result object with exitReason field */
 interface MutableMazeResult extends IMazeRunResult {
   exitReason?: string;
@@ -113,6 +108,8 @@ import {
 } from './rngAndTiming';
 import type { EngineState } from './engineState';
 import type {
+  EvolutionHostAdapter,
+  EvolutionStopReason,
   LoopHelpers,
   NetworkConnection,
   NetworkInstance,
@@ -237,7 +234,7 @@ export const prepareLoopHelpers = (
   scratchBundle: ScratchBundle,
 ): LoopHelpers => {
   // Step 1: Create the lightweight host-yield helper first.
-  const flushToFrame = makeFlushToFrame();
+  const flushToFrame = makeFlushToFrame(opts?.reportingConfig?.hostAdapter);
 
   // Step 2: Initialise persistence handles (best-effort; may be null in browsers).
   const { fs, path } = initPersistence(opts?.persistDir);
@@ -286,8 +283,7 @@ export const prepareLoopHelpers = (
  * Side Effects (Best-Effort):
  *  - Updates dashboard manager when stopping
  *  - Awaits flushToFrame to yield to host
- *  - Sets `window.asciiMazePaused` flag on solve (if autoPauseOnSolve)
- *  - Dispatches 'asciiMazeSolved' CustomEvent on solve
+ *  - Reports stop events through the optional host adapter
  *  - Annotates `bestResult.exitReason` with canonical reason string
  *
  * Parameters:
@@ -298,8 +294,9 @@ export const prepareLoopHelpers = (
  * @param neat - NEAT driver instance (passed to dashboard update)
  * @param dashboardManager - Optional manager exposing `update(maze, result, network, gen, neat)`
  * @param flushToFrame - Async function to yield to host renderer (e.g. requestAnimationFrame)
+ * @param hostAdapter - Optional host adapter that owns host-side stop behavior
  * @param minProgressToPass - Numeric threshold to consider a run 'solved'
- * @param autoPauseOnSolve - When truthy set cooperative pause flag and emit event on solve
+ * @param autoPauseOnSolve - When truthy request host-side pause handling on solve
  * @param stopOnlyOnSolve - When true ignore stagnation/maxGenerations as stop reasons
  * @param stagnantGenerations - Current count of stagnant generations observed
  * @param maxStagnantGenerations - Max allowed stagnant generations before stopping
@@ -326,6 +323,7 @@ export const checkStopConditions = async (
   neat: NeatInstance,
   dashboardManager: IDashboardManager | undefined,
   flushToFrame: () => Promise<void>,
+  hostAdapter: EvolutionHostAdapter | undefined,
   minProgressToPass: number,
   autoPauseOnSolve: boolean,
   stopOnlyOnSolve: boolean,
@@ -358,29 +356,14 @@ export const checkStopConditions = async (
       // Swallow frame flush errors
     }
 
-    // Optionally set a cooperative pause and emit a small event for UIs to react to.
-    if (autoPauseOnSolve) {
-      try {
-        if (typeof window !== 'undefined') {
-          (window as MazeWindow).asciiMazePaused = true;
-          try {
-            window.dispatchEvent(
-              new CustomEvent('asciiMazeSolved', {
-                detail: {
-                  maze,
-                  generations: completedGenerations,
-                  progress: bestResult?.progress,
-                },
-              }),
-            );
-          } catch {
-            // Swallow event dispatch errors
-          }
-        }
-      } catch {
-        // Swallow window access errors
-      }
-    }
+    await notifyHostAboutStop(hostAdapter, {
+      reason: 'solved',
+      maze,
+      completedGenerations,
+      result: bestResult,
+      progress: bestResult?.progress,
+      requestHostPause: autoPauseOnSolve,
+    });
 
     if (hasBest) (bestResult as MutableMazeResult).exitReason = 'solved';
     return 'solved';
@@ -408,6 +391,14 @@ export const checkStopConditions = async (
     } catch {
       // Swallow frame flush errors
     }
+    await notifyHostAboutStop(hostAdapter, {
+      reason: 'stagnation',
+      maze,
+      completedGenerations,
+      result: bestResult,
+      progress: bestResult?.progress,
+      requestHostPause: false,
+    });
     if (hasBest) (bestResult as MutableMazeResult).exitReason = 'stagnation';
     return 'stagnation';
   }
@@ -418,6 +409,14 @@ export const checkStopConditions = async (
     isFinite(maxGenerations) &&
     completedGenerations >= maxGenerations
   ) {
+    await notifyHostAboutStop(hostAdapter, {
+      reason: 'maxGenerations',
+      maze,
+      completedGenerations,
+      result: bestResult,
+      progress: bestResult?.progress,
+      requestHostPause: false,
+    });
     if (hasBest)
       (bestResult as MutableMazeResult).exitReason = 'maxGenerations';
     return 'maxGenerations';
@@ -425,6 +424,31 @@ export const checkStopConditions = async (
 
   // No stop condition matched.
   return undefined;
+};
+
+/**
+ * Report a concrete stop event through the optional host adapter.
+ *
+ * @param hostAdapter - Optional host adapter supplied by the embedding host.
+ * @param event - Canonical stop event payload.
+ * @returns Nothing.
+ */
+const notifyHostAboutStop = async (
+  hostAdapter: EvolutionHostAdapter | undefined,
+  event: {
+    reason: EvolutionStopReason;
+    maze: string[];
+    completedGenerations: number;
+    result?: IMazeRunResult;
+    progress?: number;
+    requestHostPause?: boolean;
+  },
+): Promise<void> => {
+  try {
+    await hostAdapter?.handleStop?.(event);
+  } catch {
+    // Host-side effects must never break the engine loop.
+  }
 };
 
 /**
@@ -1477,7 +1501,17 @@ export const runEvolutionLoop = async (
   while (true) {
     // Step 1: cooperative cancellation check (non-allocating, safe)
     const cancelReason = checkCancellation(opts, bestRunResult);
-    if (cancelReason) break;
+    if (cancelReason) {
+      await notifyHostAboutStop(opts.reportingConfig?.hostAdapter, {
+        reason: cancelReason as EvolutionStopReason,
+        maze: opts.mazeConfig.maze,
+        completedGenerations,
+        result: bestRunResult,
+        progress: bestRunResult?.progress,
+        requestHostPause: false,
+      });
+      break;
+    }
 
     // Step 2: perform one generation and collect per-stage timings when enabled
     const generationOutcome = await runGeneration(
@@ -1680,6 +1714,7 @@ export const runEvolutionLoop = async (
       neat,
       opts.reportingConfig?.dashboardManager,
       flushToFrame,
+      opts.reportingConfig?.hostAdapter,
       opts.minProgressToPass ?? 0,
       opts.autoPauseOnSolve ?? false,
       opts.stopOnlyOnSolve ?? false,

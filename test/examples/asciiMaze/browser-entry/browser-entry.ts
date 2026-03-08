@@ -9,6 +9,7 @@
 import { BROWSER_ENTRY_CONSTANTS as C } from './browser-entry.constants';
 import {
   composeBrowserEntryAbortSignal,
+  createBrowserEntryEvolutionHostAdapter,
   createBrowserEntryHostServices,
   installBrowserEntryGlobals,
   runBrowserEntryCurriculum,
@@ -45,6 +46,7 @@ export const start = async (
   // Step 1: Resolve host elements and attach browser-specific services.
   const hostElements = resolveBrowserEntryHostElements(container);
   const hostServices = createBrowserEntryHostServices(hostElements);
+  const hostAdapter = createBrowserEntryEvolutionHostAdapter();
 
   // Step 2: Create lifecycle state and compose cooperative cancellation.
   let cancelled = false;
@@ -95,6 +97,7 @@ export const start = async (
       combinedSignal,
       isCancelled: () => cancelled,
       finish: finalizeRun,
+      hostAdapter,
     });
   }
 

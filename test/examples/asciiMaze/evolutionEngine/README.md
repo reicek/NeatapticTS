@@ -66,6 +66,14 @@ Encoded maze for simulation.
 
 Helper functions object passed to evolution loop orchestration.
 
+### EvolutionHostAdapter
+
+Narrow host adapter used by the engine for pause polling and stop notifications.
+
+### EvolutionHostStopEvent
+
+Host-facing stop event emitted by the engine when a run finishes for a concrete reason.
+
 ### EvolutionLoopHelpers
 
 Helper functions for evolution.
@@ -73,6 +81,10 @@ Helper functions for evolution.
 ### EvolutionOptions
 
 Options object passed to evolution functions.
+
+### EvolutionStopReason
+
+Canonical stop reasons reported by the engine to host adapters.
 
 ### FileSystem
 
@@ -381,85 +393,37 @@ Parameters passed when attempting to initialise the shared logits ring buffers.
 
 ## evolutionEngine/setupHelpers.ts
 
-### setupHelpers
-
-setupHelpers.ts
-
-Environment and setup utilities for the evolution engine.
-   // Return  return async (): Promise<void> => {
-    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
-    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
-    while (true) {
-      await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
-      // otherwise continue and await another tick before re-checking
-    }
-  };
-};flush function used by the evolution loop.
-  return async (): Promise<void> => {
-    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
-    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
-    while (true) {
-      await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
-      // otherwise continue and await another tick before re-checking
-    }
-  };
-};ibilities:
-- Create cooperative frame-yielding functions for async evolution loops
-- Initialize Node.js filesystem persistence helpers (fs, path)
-- Build resilient logging writers with fallback chains
-
-All functions are pure/side-effect-free except where explicitly documented.
-
-@module setupHelpers
-
 ### DashboardManagerLike
 
 Dashboard manager shape for logging (optional log function).
 
 ### FilesystemModule
 
-setupHelpers.ts
+Setup helpers for the ASCII maze evolution engine.
 
-Environment and setup utilities for the evolution engine.
-   // Return  return async (): Promise<void> => {
-    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
-    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
-    while (true) {
-      await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
-      // otherwise continue and await another tick before re-checking
-    }
-  };
-};flush function used by the evolution loop.
-  return async (): Promise<void> => {
-    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
-    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
-    while (true) {
-      await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
-      // otherwise continue and await another tick before re-checking
-    }
-  };
-};ibilities:
-- Create cooperative frame-yielding functions for async evolution loops
-- Initialize Node.js filesystem persistence helpers (fs, path)
-- Build resilient logging writers with fallback chains
-
-All functions are pure/side-effect-free except where explicitly documented.
+Responsibilities:
+- Create cooperative frame-yielding helpers for async evolution loops.
+- Initialize Node.js persistence helpers when available.
+- Build resilient logging writers with dashboard and console fallbacks.
 
 ### initPersistence
 
 `(persistDir: string | undefined) => { fs: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/setupHelpers").FilesystemModule | null; path: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/setupHelpers").PathModule | null; }`
 
+### isPauseRequested
+
+`(hostAdapter: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter | undefined) => boolean`
+
+Read host-controlled pause state without letting host errors break the engine.
+
+Parameters:
+- `hostAdapter` - - Optional host adapter implementing pause polling.
+
+Returns: True when the host asks the engine to remain paused.
+
 ### makeFlushToFrame
 
-`() => () => Promise<void>`
+`(hostAdapter: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter | undefined) => () => Promise<void>`
 
 ### makeSafeWriter
 
@@ -501,7 +465,7 @@ ES2023 Policy:
 
 ### checkStopConditions
 
-`(bestResult: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IMazeRunResult | undefined, bestNetwork: import("C:/NeatapticTS/src/architecture/network").default | null, maze: string[], completedGenerations: number, neat: import("C:/NeatapticTS/src/neat").default, dashboardManager: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IDashboardManager | undefined, flushToFrame: () => Promise<void>, minProgressToPass: number, autoPauseOnSolve: boolean, stopOnlyOnSolve: boolean, stagnantGenerations: number, maxStagnantGenerations: number, maxGenerations: number) => Promise<string | undefined>`
+`(bestResult: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IMazeRunResult | undefined, bestNetwork: import("C:/NeatapticTS/src/architecture/network").default | null, maze: string[], completedGenerations: number, neat: import("C:/NeatapticTS/src/neat").default, dashboardManager: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IDashboardManager | undefined, flushToFrame: () => Promise<void>, hostAdapter: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter | undefined, minProgressToPass: number, autoPauseOnSolve: boolean, stopOnlyOnSolve: boolean, stagnantGenerations: number, maxStagnantGenerations: number, maxGenerations: number) => Promise<string | undefined>`
 
 ### emitProfileSummary
 
@@ -515,7 +479,7 @@ Evolution loop result
 
 Generation outcome with profiling timings
 
-### MazeWindow
+### MutableMazeResult
 
 Evolution Loop Module
 
@@ -536,10 +500,6 @@ ES2023 Policy:
 - Descriptive variable names (no short identifiers)
 - Async/await for generation loops
 - Best-effort error handling (swallow non-fatal errors)
-
-### MutableMazeResult
-
-Mutable result object with exitReason field
 
 ### persistSnapshotIfNeeded
 

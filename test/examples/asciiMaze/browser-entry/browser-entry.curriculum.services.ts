@@ -63,6 +63,7 @@ export const runBrowserEntryCurriculum = (
         },
         reportingConfig: {
           dashboardManager: context.dashboard,
+          hostAdapter: context.hostAdapter,
           logEvery: C.PER_GENERATION_LOG_FREQUENCY,
           label: `browser-procedural-${currentDimension}x${currentDimension}`,
           paceEveryGeneration: true,

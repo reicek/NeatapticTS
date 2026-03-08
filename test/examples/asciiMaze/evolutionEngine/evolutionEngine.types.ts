@@ -52,6 +52,59 @@ export interface IEvolutionAlgorithmConfig {
   disableBaldwinianRefinement?: boolean;
 }
 
+/** Canonical stop reasons reported by the engine to host adapters. */
+export type EvolutionStopReason =
+  | 'solved'
+  | 'stagnation'
+  | 'maxGenerations'
+  | 'cancelled'
+  | 'aborted';
+
+/**
+ * Host-facing stop event emitted by the engine when a run finishes for a concrete reason.
+ *
+ * @remarks
+ * The engine uses this narrow payload so browser or terminal hosts can react to
+ * solve, stop, and pause-adjacent lifecycle events without the engine depending
+ * on browser globals or DOM APIs.
+ */
+export interface EvolutionHostStopEvent {
+  /** Canonical reason that caused the run to stop. */
+  reason: EvolutionStopReason;
+  /** Maze layout associated with the stopping run. */
+  maze: string[];
+  /** Number of generations completed before the stop reason fired. */
+  completedGenerations: number;
+  /** Latest best result available at stop time, when one exists. */
+  result?: IMazeRunResult;
+  /** Convenience progress mirror from the latest result. */
+  progress?: number;
+  /** Whether the host should cooperatively enter a paused state. */
+  requestHostPause?: boolean;
+}
+
+/**
+ * Narrow host adapter used by the engine for pause polling and stop notifications.
+ *
+ * @remarks
+ * Browser-entry and other host boundaries should implement this contract when
+ * they need host-specific pause control or solve/stop side effects.
+ *
+ * @example
+ * ```ts
+ * const hostAdapter: EvolutionHostAdapter = {
+ *   isPauseRequested: () => window.asciiMazePaused === true,
+ *   handleStop: ({ reason }) => console.log('maze run stopped because', reason),
+ * };
+ * ```
+ */
+export interface EvolutionHostAdapter {
+  /** Return true while the host wants cooperative frame flushing to stay paused. */
+  isPauseRequested?: () => boolean;
+  /** React to a solved, aborted, or otherwise stopped run. */
+  handleStop?: (event: EvolutionHostStopEvent) => void | Promise<void>;
+}
+
 /** Reporting configuration used to control logging, dashboard updates and UI pacing. */
 export interface IReportingConfig {
   /** How frequently, in generations, to emit logs or telemetry updates. */
@@ -62,6 +115,8 @@ export interface IReportingConfig {
   label?: string;
   /** When true, yield to the host after each generation. */
   paceEveryGeneration?: boolean;
+  /** Optional host adapter that owns pause polling and stop side effects. */
+  hostAdapter?: EvolutionHostAdapter;
 }
 
 /** Main options for running a single maze-evolution experiment. */
@@ -124,6 +179,7 @@ export interface EvolutionOptions {
     dashboardManager?: IDashboardManager;
     logEvery?: number;
     paceEveryGeneration?: boolean;
+    hostAdapter?: EvolutionHostAdapter;
     [key: string]: unknown;
   };
   mazeConfig: {

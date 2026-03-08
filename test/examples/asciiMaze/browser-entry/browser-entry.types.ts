@@ -1,4 +1,5 @@
 import type { DashboardManager } from '../dashboardManager';
+import type { EvolutionHostAdapter } from '../evolutionEngine/evolutionEngine.types';
 import type { INetwork } from '../interfaces';
 
 /**
@@ -85,6 +86,7 @@ export interface RuntimeWindow extends Window {
     _autoStarted?: boolean;
     [key: string]: unknown;
   };
+  asciiMazePaused?: boolean;
   asciiMazeStart?: (containerElement?: unknown) => unknown;
   [key: string]: unknown;
 }
@@ -130,4 +132,5 @@ export interface BrowserEntryCurriculumContext {
   combinedSignal: AbortSignal;
   isCancelled: () => boolean;
   finish: () => void;
+  hostAdapter: EvolutionHostAdapter;
 }

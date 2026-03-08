@@ -3,6 +3,7 @@ import type {
   BrowserEntryStartFunction,
   RuntimeWindow,
 } from './browser-entry.types';
+import type { EvolutionHostAdapter } from '../evolutionEngine/evolutionEngine.types';
 
 /**
  * Browser globals-compatibility service boundary for the ASCII Maze browser entry.
@@ -10,6 +11,57 @@ import type {
  * This module isolates script-loader compatibility and guarded auto-start
  * behavior so runtime orchestration can stay focused on session lifecycle.
  */
+
+/**
+ * Create the browser-owned engine host adapter used for pause polling and solve notifications.
+ *
+ * @returns Host adapter that keeps browser globals and DOM events out of engine internals.
+ */
+export const createBrowserEntryEvolutionHostAdapter =
+  (): EvolutionHostAdapter => ({
+    isPauseRequested: (): boolean => {
+      if (typeof window === 'undefined') {
+        return false;
+      }
+
+      return (window as RuntimeWindow).asciiMazePaused === true;
+    },
+    handleStop: ({
+      reason,
+      maze,
+      completedGenerations,
+      progress,
+      requestHostPause,
+    }): void => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      const globalWindow = window as RuntimeWindow;
+
+      if (reason === 'solved' && requestHostPause) {
+        globalWindow.asciiMazePaused = true;
+      }
+
+      if (reason !== 'solved') {
+        return;
+      }
+
+      try {
+        window.dispatchEvent(
+          new CustomEvent('asciiMazeSolved', {
+            detail: {
+              maze,
+              generations: completedGenerations,
+              progress,
+            },
+          }),
+        );
+      } catch {
+        // Ignore CustomEvent dispatch failures in restricted browser runtimes.
+      }
+    },
+  });
 
 /**
  * Install browser globals and one-time auto-start compatibility hooks.

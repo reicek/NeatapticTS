@@ -25,6 +25,7 @@ Current read
 - Step 3 is now finalized around the dedicated `dashboardManager/` folder boundary: shared dashboard types live in `dashboardManager.types.ts`, constants in `dashboardManager.constants.ts`, reusable formatting and calculation helpers live in `dashboardManager.utils.ts`, rendering/archive/telemetry orchestration now lives in `dashboardManager.services.ts`, and the public class facade now lives in `dashboardManager/dashboardManager.ts` with the old top-level file reduced to a compatibility re-export.
 - Step 4 is now finalized around the dedicated `browser-entry/` folder boundary: shared browser host contracts live in `browser-entry.types.ts`, host and curriculum constants live in `browser-entry.constants.ts`, DOM resolution and curriculum helpers live in `browser-entry.utils.ts`, host bootstrap/resize wiring/abort composition/globals compatibility/runtime orchestration now live in `browser-entry.services.ts`, and the public browser facade now lives in `browser-entry/browser-entry.ts` with the old top-level file reduced to a compatibility re-export.
 - Step 5 is now finalized around focused contract owners instead of the old `interfaces.ts` dependency bucket: evolution run/configuration and engine-internal helper contracts now live in `evolutionEngine/evolutionEngine.types.ts`, fitness evaluation contracts now live in `fitness.types.ts`, existing browser-entry/dashboardManager/mazeMovement module-owned `*.types.ts` files remain the primary owners for their split boundaries, and the top-level `interfaces.ts` file is now reduced to a narrow shared/core compatibility layer that re-exports moved contracts while retaining only the genuinely cross-cutting network, dashboard-abstraction, maze-run-result, and terminal-result shapes.
+- Step 6 is now finalized around a narrow engine-owned host adapter boundary: `evolutionEngine/evolutionEngine.types.ts` owns the `EvolutionHostAdapter` and stop-event contracts, `evolutionEngine/setupHelpers.ts` now reads cooperative pause state through that adapter instead of polling browser globals directly, `evolutionEngine/evolutionLoop.ts` now reports solve and stop outcomes through the adapter instead of dispatching browser behavior itself, and `browser-entry/browser-entry.globals.services.ts` owns the browser implementation that maps those engine events back to browser globals and solved-event compatibility behavior.
 
 Split standard
 
@@ -87,10 +88,6 @@ High-level gaps
 - This should be split into smaller host/runtime/bootstrap services so the browser entry becomes thin orchestration only.
 - When split, prefer a dedicated `browser-entry/` folder with runtime, host, globals, and resize sub-areas.
 
-- Engine-layer stop handling still contains browser-facing side effects.
-- `evolutionEngine/evolutionLoop.ts` still reaches into browser event behavior for solve handling, and `evolutionEngine/setupHelpers.ts` still polls browser pause globals.
-- Host notifications and pause control should sit behind a narrower reporting or host adapter boundary.
-
 - Runtime shape adapters are still scattered.
 - Multiple files define local `Runtime*` interfaces to compensate for loose concrete runtime shapes.
 - These are pragmatic, but they signal incomplete contract centralization and weak abstraction seams.
@@ -110,7 +107,7 @@ Execution steps
 - [DONE] Step 3: Split `dashboardManager.ts` into a dedicated `dashboardManager/` module boundary so live rendering, solved-archive rendering, telemetry aggregation, bounded history storage, event emission, and formatting evolve behind focused files.
 - [DONE] Step 4: Thin `browser-entry.ts` into a dedicated `browser-entry/` module boundary so host bootstrap, runtime orchestration, globals compatibility, and resize behavior evolve independently.
 - [DONE] Step 5: Decompose `interfaces.ts` into focused module-owned `*.types.ts` files and leave behind only the smallest shared contract surface that is still truly cross-cutting.
-- [] Step 6: Remove browser-facing solve, stop, and pause side effects from engine internals so `evolutionEngine` reports through a narrower adapter or reporting boundary instead of touching host behavior directly.
+- [DONE] Step 6: Remove browser-facing solve, stop, and pause side effects from engine internals so `evolutionEngine` reports through a narrower adapter or reporting boundary instead of touching host behavior directly.
 - [] Step 7: Consolidate scattered runtime shape adapters and presentation seams so browser and non-browser paths depend on clearer shared contracts rather than ad hoc local `Runtime*` compensating interfaces.
 - [] Step 8: Recheck refinement, curriculum, and evolution boundaries so follow-up changes do not reintroduce cross-cutting orchestration drift after the earlier splits.
 - [] Step 9: Validate the final shape by checking naming consistency, folder ownership, generated-doc expectations, and TypeScript/build health.

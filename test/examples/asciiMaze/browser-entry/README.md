@@ -97,6 +97,10 @@ importing from this stable boundary while internals evolve independently.
 
 `(internalController: AbortController, externalSignal: AbortSignal | undefined) => AbortSignal`
 
+### createBrowserEntryEvolutionHostAdapter
+
+`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter`
+
 ### createBrowserEntryHostServices
 
 `(hostElements: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostElements) => import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostServices`
@@ -162,6 +166,10 @@ Parameters:
 `(internalController: AbortController, externalSignal: AbortSignal | undefined) => AbortSignal`
 
 ## browser-entry/browser-entry.globals.services.ts
+
+### createBrowserEntryEvolutionHostAdapter
+
+`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter`
 
 ### installBrowserEntryGlobals
 
