@@ -38,13 +38,13 @@ Public run handle returned by the browser runtime entrypoint.
 
 ### start
 
-`(container: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => Promise<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle>`
+`(container: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle>`
 
 ## browser-entry/runtime/runtime.errors.ts
 
 ### resolveRequiredRuntimeHostElement
 
-`(container: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => HTMLElement`
+`(container: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => HTMLElement`
 
 Resolves and validates the browser runtime host element.
 
@@ -72,7 +72,7 @@ Error raised when the browser runtime host container cannot be resolved.
 
 ### createRuntimeStartConfig
 
-`() => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartConfig`
+`() => import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartConfig`
 
 Resolves the static runtime configuration used during browser startup.
 
@@ -80,7 +80,7 @@ Returns: Runtime configuration derived from shared constants.
 
 ### createRuntimeStartContext
 
-`(container: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext`
+`(container: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext`
 
 Creates the shared runtime startup dependencies used by the entry orchestration.
 
@@ -91,7 +91,7 @@ Returns: Shared runtime start context for setup and loop launch.
 
 ### initializeRuntimeHud
 
-`(runtimeStartContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext) => void`
+`(runtimeStartContext: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext) => void`
 
 Paints the initial runtime HUD values before the evolution loop starts.
 
@@ -104,7 +104,7 @@ Returns: Nothing.
 
 ### createRuntimeLifecycleState
 
-`() => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeMutableLifecycleState`
+`() => import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeMutableLifecycleState`
 
 Creates mutable lifecycle state for stop semantics and completion signaling.
 
@@ -112,7 +112,7 @@ Returns: Mutable lifecycle state used by the run handle.
 
 ### createRuntimeRunHandle
 
-`(runtimeStartContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext, runtimeLifecycleState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeMutableLifecycleState) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle`
+`(runtimeStartContext: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext, runtimeLifecycleState: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeMutableLifecycleState) => import("test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle`
 
 Builds the public run handle and binds it to runtime teardown behavior.
 
@@ -126,7 +126,7 @@ Returns: Public run handle exposed to callers.
 
 ### createRuntimeTelemetryState
 
-`() => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.telemetry.service").RuntimeTelemetryState`
+`() => import("test/examples/flappy_bird/browser-entry/runtime/runtime.telemetry.service").RuntimeTelemetryState`
 
 Creates telemetry state and attaches optional minor-GC observer.
 
@@ -134,7 +134,7 @@ Returns: Initialized telemetry state.
 
 ### disconnectRuntimeTelemetry
 
-`(telemetryState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.telemetry.service").RuntimeTelemetryState) => void`
+`(telemetryState: import("test/examples/flappy_bird/browser-entry/runtime/runtime.telemetry.service").RuntimeTelemetryState) => void`
 
 Disconnects runtime telemetry observers.
 
@@ -153,7 +153,7 @@ Returns: Initial telemetry field values.
 
 ### resolveRuntimeTelemetryHudValues
 
-`(frameStats: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats, telemetryState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.telemetry.service").RuntimeTelemetryState) => { telemetryActivationsPerFrame: string; telemetrySimulationStepsPerRaf: string; telemetryHudUpdatesPerSecond: string; telemetryMinorGcPerMinute: string; }`
+`(frameStats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats, telemetryState: import("test/examples/flappy_bird/browser-entry/runtime/runtime.telemetry.service").RuntimeTelemetryState) => { telemetryActivationsPerFrame: string; telemetrySimulationStepsPerRaf: string; telemetryHudUpdatesPerSecond: string; telemetryMinorGcPerMinute: string; }`
 
 Resolves per-frame telemetry HUD values and updates rolling windows.
 
@@ -171,7 +171,7 @@ Runtime telemetry mutable state used for rolling HUD metrics.
 
 ### runRuntimeEvolutionLoop
 
-`(options: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.evolution-loop.service").RuntimeEvolutionLoopOptions) => Promise<void>`
+`(options: import("test/examples/flappy_bird/browser-entry/runtime/runtime.evolution-loop.service").RuntimeEvolutionLoopOptions) => Promise<void>`
 
 Runs generation orchestration and playback until a stop signal is observed.
 
@@ -188,7 +188,7 @@ Dependencies required to run the browser runtime evolution loop.
 
 ### installRuntimeBrowserGlobals
 
-`(startRuntime: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.browser-globals.service").RuntimeStartFunction) => void`
+`(startRuntime: import("test/examples/flappy_bird/browser-entry/runtime/runtime.browser-globals.service").RuntimeStartFunction) => void`
 
 Publishes browser globals for demo auto-start and host-driven control.
 
@@ -204,7 +204,7 @@ Returns: Nothing.
 
 ### RuntimeStartFunction
 
-`(container: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget | undefined) => Promise<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle>`
+`(container: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget | undefined) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle>`
 
 Runtime start function signature used by browser-global wiring.
 
@@ -212,7 +212,7 @@ Runtime start function signature used by browser-global wiring.
 
 ### launchRuntimeEvolution
 
-`(runtimeStartContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext, runtimeLifecycleState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeMutableLifecycleState, stop: () => void) => void`
+`(runtimeStartContext: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext, runtimeLifecycleState: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeMutableLifecycleState, stop: () => void) => void`
 
 Starts the runtime evolution loop and routes unexpected failures to the HUD.
 

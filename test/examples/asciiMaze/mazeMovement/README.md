@@ -76,7 +76,7 @@ Reused integer coordinate scratch for hot-path movement helpers.
 
 #### #hasReachedExit
 
-`(simulationState: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, exitPos: readonly [number, number]) => boolean`
+`(simulationState: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, exitPos: readonly [number, number]) => boolean`
 
 Determine whether the current state has reached the maze exit.
 
@@ -88,7 +88,7 @@ Returns: True when the agent position matches the exit coordinate.
 
 #### #processMovementAndShaping
 
-`(simulationState: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], distanceMap: number[][] | undefined) => boolean`
+`(simulationState: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], distanceMap: number[][] | undefined) => boolean`
 
 Execute the selected move, apply post-action shaping, and evaluate stop rules.
 
@@ -101,7 +101,7 @@ Returns: True when the episode should stop after this step.
 
 #### #processPerceptionAndPolicy
 
-`(simulationState: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork, encodedMaze: number[][], exitPos: readonly [number, number], distanceMap: number[][] | undefined) => void`
+`(simulationState: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, network: import("test/examples/asciiMaze/interfaces").INetwork, encodedMaze: number[][], exitPos: readonly [number, number], distanceMap: number[][] | undefined) => void`
 
 Refresh visit bookkeeping, perception state, and direction policy.
 
@@ -127,7 +127,7 @@ Returns: New position when the move is valid, otherwise the original position.
 
 #### selectDirection
 
-`(outputs: number[]) => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").DirectionSelectionStats`
+`(outputs: number[]) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").DirectionSelectionStats`
 
 Convert raw network outputs into a chosen action plus diagnostics.
 
@@ -138,7 +138,7 @@ Returns: Chosen direction plus softmax and entropy diagnostics.
 
 #### simulateAgent
 
-`(network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork, encodedMaze: number[][], startPos: readonly [number, number], exitPos: readonly [number, number], distanceMap: number[][] | undefined, maxSteps: number) => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
+`(network: import("test/examples/asciiMaze/interfaces").INetwork, encodedMaze: number[][], startPos: readonly [number, number], exitPos: readonly [number, number], distanceMap: number[][] | undefined, maxSteps: number) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
 
 Simulate one full maze episode for a network-controlled agent.
 
@@ -172,7 +172,7 @@ Returns: Cached width and height for the active pooled buffers.
 
 ### getMazeMovementRunServiceState
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementRunServiceState`
+`() => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementRunServiceState`
 
 Expose the shared mutable run-scoped state used across helper categories.
 
@@ -192,7 +192,7 @@ Returns: Linearized index used by pooled grid buffers.
 
 ### initializeMazeMovementBufferPools
 
-`(width: number, height: number, maxSteps: number) => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementBufferPools`
+`(width: number, height: number, maxSteps: number) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementBufferPools`
 
 Ensure the pooled grid and path buffers are initialized for a run.
 
@@ -224,7 +224,7 @@ Returns: A deterministic or host-random unit float for exploration logic.
 
 ### readMazeMovementOutputHistory
 
-`(network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork) => number[][] | undefined`
+`(network: import("test/examples/asciiMaze/interfaces").INetwork) => number[][] | undefined`
 
 Read the reflected `_lastStepOutputs` network history when present.
 
@@ -235,7 +235,7 @@ Returns: Sanitized output history or `undefined` when absent or invalid.
 
 ### requireMazeMovementBufferPools
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementBufferPools`
+`() => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementBufferPools`
 
 Return the initialized pooled buffer surface for the current run.
 
@@ -243,7 +243,7 @@ Returns: The shared buffer pools.
 
 ### resetMazeMovementRunServiceState
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementRunServiceState`
+`() => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementRunServiceState`
 
 Reset the shared mutable run-scoped state before a new simulation begins.
 
@@ -251,7 +251,7 @@ Returns: The reused singleton state after reset.
 
 ### writeMazeMovementOutputHistory
 
-`(network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork, history: number[][]) => void`
+`(network: import("test/examples/asciiMaze/interfaces").INetwork, history: number[][]) => void`
 
 Persist the reflected `_lastStepOutputs` network history.
 
@@ -274,14 +274,14 @@ tables in one place so the public facade can stay focused on orchestration.
 
 ### computeActionEntropyFromCounts
 
-`(directionCounts: number[], logActions: number, scratch: Int32Array<ArrayBufferLike>) => number`
+`(directionCounts: number[], logActions: number, scratch: Float64Array<ArrayBufferLike>) => number`
 
 Compute normalized action entropy from direction counts.
 
 Parameters:
 - `directionCounts` - - Number of moves taken in each direction.
 - `logActions` - - Precomputed normalization factor for the action space.
-- `scratch` - - Single-value scratch buffer reused by the caller.
+- `scratch` - - Single-value floating-point scratch buffer reused by the caller.
 
 Returns: Normalized entropy in the range `[0, 1]`.
 
@@ -322,7 +322,7 @@ Returns: The smallest power of two greater than or equal to `n`.
 
 ### readOutputHistory
 
-`(network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork) => number[][] | undefined`
+`(network: import("test/examples/asciiMaze/interfaces").INetwork) => number[][] | undefined`
 
 Read the optional `_lastStepOutputs` history stored on a network.
 
@@ -347,7 +347,7 @@ Returns: Numeric sum of the selected group.
 
 ### writeOutputHistory
 
-`(network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork, history: number[][]) => void`
+`(network: import("test/examples/asciiMaze/interfaces").INetwork, history: number[][]) => void`
 
 Persist a bounded outputs history on the network via reflection.
 

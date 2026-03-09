@@ -4,7 +4,7 @@
 
 ### createDetailedStatsSnapshot
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState, neat: unknown) => import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeDetailedStats | null`
+`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState, neat: unknown) => import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeDetailedStats | null`
 
 Build the rich telemetry detail snapshot shown in browser hooks and exported snapshots.
 
@@ -16,7 +16,7 @@ Returns: Detailed telemetry snapshot or `null` when no data is available.
 
 ### emitTelemetryPayload
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState, generation: number, telemetryHook: ((payload: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardTelemetryPayload) => void) | undefined) => void`
+`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState, generation: number, telemetryHook: ((payload: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardTelemetryPayload) => void) | undefined) => void`
 
 Emit the structured telemetry payload used by browser hosts and runtime hooks.
 
@@ -27,7 +27,7 @@ Parameters:
 
 ### getDashboardLastTelemetry
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState) => import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeTelemetrySnapshot`
+`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState) => import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeTelemetrySnapshot`
 
 Produce the latest public telemetry snapshot from current dashboard state.
 
@@ -38,7 +38,7 @@ Returns: Public telemetry snapshot used by browser hosts.
 
 ### updateTelemetryHistory
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState, neatInstance: { getTelemetry?: (() => unknown[]) | undefined; } | undefined) => void`
+`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState, neatInstance: { getTelemetry?: (() => unknown[]) | undefined; } | undefined) => void`
 
 Pull the latest NEAT telemetry snapshot and update bounded dashboard histories.
 

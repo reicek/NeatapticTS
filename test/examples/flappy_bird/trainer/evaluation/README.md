@@ -18,7 +18,7 @@ details.
 
 ### commitPopulationScores
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], provisionalScoresByGenome: ReadonlyMap<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], provisionalScoresByGenome: ReadonlyMap<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
 
 Commits provisional scores to genome score fields.
 
@@ -30,7 +30,7 @@ Returns: Nothing.
 
 ### evaluatePopulationFullStage
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>, elitismCount: number) => void`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>, elitismCount: number) => void`
 
 Executes the full evaluation stage over the top provisional candidates.
 
@@ -45,7 +45,7 @@ Returns: Nothing.
 
 ### evaluatePopulationQuickStage
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
 
 Executes the quick evaluation stage over the full population.
 
@@ -59,7 +59,7 @@ Returns: Nothing.
 
 ### evaluatePopulationReevaluationStage
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>, elitismCount: number) => void`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>, elitismCount: number) => void`
 
 Executes the large-seed reevaluation stage over top candidates.
 
@@ -88,7 +88,7 @@ Returns: Full-pass candidate count.
 
 ### evaluatePopulationSelectedCandidateStage
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], populationStageEvaluationRequest: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/evaluation/trainer.evaluation.service.types").PopulationStageEvaluationRequest, aggregateByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], populationStageEvaluationRequest: import("test/examples/flappy_bird/trainer/evaluation/trainer.evaluation.service.types").PopulationStageEvaluationRequest, aggregateByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
 
 Evaluates a selected candidate subset for a population stage.
 
@@ -102,7 +102,7 @@ Returns: Nothing.
 
 ### evaluateSpecificGenomesAcrossSeeds
 
-`(genomes: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], sharedSeeds: readonly number[], rolloutOptions: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions, aggregateByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>) => void`
+`(genomes: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], sharedSeeds: readonly number[], rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions, aggregateByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>) => void`
 
 Evaluates a specific genome subset across shared seeds.
 
@@ -128,7 +128,7 @@ Fallback score assigned to genomes that have not yet been evaluated.
 
 ### assignFramePrimaryScores
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], aggregateByGenome: ReadonlyMap<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], aggregateByGenome: ReadonlyMap<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
 
 Assigns refreshed frame-primary scores to the current population.
 
@@ -141,7 +141,7 @@ Returns: Nothing.
 
 ### collectAggregateValues
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], aggregateByGenome: ReadonlyMap<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>) => import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation[]`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], aggregateByGenome: ReadonlyMap<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation[]`
 
 Collects all currently available aggregate values.
 
@@ -153,7 +153,7 @@ Returns: Collected aggregate values.
 
 ### resolveMaximumMeanPipesPassed
 
-`(aggregateValues: readonly import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation[]) => number`
+`(aggregateValues: readonly import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation[]) => number`
 
 Resolves the leading mean pipe-progress value across available aggregates.
 
@@ -164,7 +164,7 @@ Returns: Highest mean pipe-progress value.
 
 ### resolvePopulationAggregateScoringContext
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], aggregateByGenome: ReadonlyMap<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>) => import("C:/NeatapticTS/test/examples/flappy_bird/trainer/evaluation/trainer.evaluation.service.types").PopulationAggregateScoringContext`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], aggregateByGenome: ReadonlyMap<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>) => import("test/examples/flappy_bird/trainer/evaluation/trainer.evaluation.service.types").PopulationAggregateScoringContext`
 
 Resolves the aggregate scoring context used by frame-primary scoring.
 
@@ -176,7 +176,7 @@ Returns: Aggregate scoring context.
 
 ### scoreAggregateFramePrimary
 
-`(aggregate: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation, maximumMeanPipesPassed: number) => number`
+`(aggregate: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation, maximumMeanPipesPassed: number) => number`
 
 Scores one aggregate using the frame-primary heuristic.
 

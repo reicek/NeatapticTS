@@ -256,6 +256,9 @@ function rentInt32(requestedLength: number): Int32Array {
 
 function releaseInt32(buffer: Int32Array): void {
   if (int32ScratchPool.length < 8) {
-    int32ScratchPool.push(buffer);
+    const isFullView =
+      buffer.byteOffset === 0 && buffer.byteLength === buffer.buffer.byteLength;
+    const pooledBuffer = isFullView ? buffer : new Int32Array(buffer.buffer);
+    int32ScratchPool.push(pooledBuffer);
   }
 }

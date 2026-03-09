@@ -56,7 +56,7 @@ Internal State Fields (attached to Network via `any` casting):
 
 ### pruneToSparsity
 
-`(targetSparsity: number, method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod) => void`
+`(targetSparsity: number, method: import("src/architecture/network/network.types").PruningMethod) => void`
 
 Evolutionary (generation-based) pruning toward a target sparsity baseline.
 Unlike maybePrune this operates immediately relative to the first invocation's connection count
@@ -72,7 +72,7 @@ Returns: Nothing.
 
 ### buildRegrowthCandidatePair
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => { sourceNode: import("C:/NeatapticTS/src/architecture/node").default; targetNode: import("C:/NeatapticTS/src/architecture/node").default; } | null`
+`(currentNetwork: import("src/architecture/network").default) => { sourceNode: import("src/architecture/node").default; targetNode: import("src/architecture/node").default; } | null`
 
 Build one random regrowth candidate pair if valid.
 
@@ -83,7 +83,7 @@ Returns: Candidate node pair or null when invalid.
 
 ### buildRegrowthPlan
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").RegrowthPlanContext) => import("C:/NeatapticTS/src/architecture/network/network.types").RegrowthPlan | null`
+`(context: import("src/architecture/network/network.types").RegrowthPlanContext) => import("src/architecture/network/network.types").RegrowthPlan | null`
 
 Convert regrowth intent into a bounded execution plan.
 
@@ -94,7 +94,7 @@ Returns: A plan when regrowth is meaningful; otherwise null.
 
 ### connectionAlreadyExists
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(currentNetwork: import("src/architecture/network").default, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => boolean`
 
 Check whether a connection already exists.
 
@@ -107,7 +107,7 @@ Returns: True when the edge already exists.
 
 ### executeRegrowthAttempts
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").RegrowthExecutionContext) => void`
+`(context: import("src/architecture/network/network.types").RegrowthExecutionContext) => void`
 
 Execute bounded stochastic regrowth attempts.
 
@@ -118,7 +118,7 @@ Returns: Nothing.
 
 ### isInvalidRegrowthPair
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(currentNetwork: import("src/architecture/network").default, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => boolean`
 
 Validate whether a candidate regrowth pair is acceptable.
 
@@ -131,7 +131,7 @@ Returns: True when the pair must be rejected.
 
 ### maybeRunRegrowth
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default, context: import("C:/NeatapticTS/src/architecture/network/network.types").RegrowthPlanContext) => void`
+`(currentNetwork: import("src/architecture/network").default, context: import("src/architecture/network/network.types").RegrowthPlanContext) => void`
 
 Build and execute a regrowth plan when enabled.
 
@@ -143,7 +143,7 @@ Returns: Nothing.
 
 ### pickRandomNode
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(currentNetwork: import("src/architecture/network").default) => import("src/architecture/node").default | undefined`
 
 Pick a random node using the network RNG.
 
@@ -154,7 +154,7 @@ Returns: Random node or undefined when the node list is empty.
 
 ### shouldContinueRegrowth
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default, desiredRemainingConnections: number, attemptedRegrowthCount: number, maxAttempts: number) => boolean`
+`(currentNetwork: import("src/architecture/network").default, desiredRemainingConnections: number, attemptedRegrowthCount: number, maxAttempts: number) => boolean`
 
 Decide whether another regrowth attempt is allowed.
 
@@ -168,7 +168,7 @@ Returns: True when another attempt should run.
 
 ### tryRegrowConnection
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(currentNetwork: import("src/architecture/network").default) => void`
 
 Attempt one random valid connection addition.
 
@@ -179,7 +179,7 @@ Returns: Nothing.
 
 ### violatesAcyclicConstraint
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(currentNetwork: import("src/architecture/network").default, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => boolean`
 
 Check whether a pair violates forward-only acyclic ordering.
 
@@ -194,7 +194,7 @@ Returns: True when acyclic ordering would be violated.
 
 ### alreadyPrunedThisIteration
 
-`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
+`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
 
 Check whether this iteration was already pruned.
 
@@ -206,7 +206,7 @@ Returns: True when pruning already happened for this iteration.
 
 ### buildPruneSelection
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").PruneSelectionContext) => import("C:/NeatapticTS/src/architecture/network/network.types").PruneSelectionResult`
+`(context: import("src/architecture/network/network.types").PruneSelectionContext) => import("src/architecture/network/network.types").PruneSelectionResult`
 
 Build a connection removal selection from current ranking context.
 
@@ -217,7 +217,7 @@ Returns: Connections selected for pruning.
 
 ### buildScheduledTarget
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").ScheduledTargetContext, currentConnectionCount: number) => import("C:/NeatapticTS/src/architecture/network/network.types").ScheduledTargetResult`
+`(context: import("src/architecture/network/network.types").ScheduledTargetContext, currentConnectionCount: number) => import("src/architecture/network/network.types").ScheduledTargetResult`
 
 Build current scheduled pruning targets from schedule context.
 
@@ -242,7 +242,7 @@ Returns: Clamped normalized progress.
 
 ### calculateSnipSaliency
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => number`
+`(connection: import("src/architecture/connection").default) => number`
 
 Compute saliency for SNIP-like ranking.
 
@@ -266,7 +266,7 @@ Returns: Clamped value.
 
 ### disconnectConnections
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default, connectionsToDisconnect: import("C:/NeatapticTS/src/architecture/connection").default[]) => void`
+`(currentNetwork: import("src/architecture/network").default, connectionsToDisconnect: import("src/architecture/connection").default[]) => void`
 
 Disconnect all selected connections from the network.
 
@@ -278,7 +278,7 @@ Returns: Nothing.
 
 ### getInitialConnectionBaseline
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => number | undefined`
+`(currentNetwork: import("src/architecture/network").default) => number | undefined`
 
 Read the scheduled-pruning baseline connection count.
 
@@ -289,7 +289,7 @@ Returns: Baseline count when captured; otherwise undefined.
 
 ### getPruningConfig
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => { start: number; end: number; frequency: number; targetSparsity: number; method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; } | undefined`
+`(currentNetwork: import("src/architecture/network").default) => { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; } | undefined`
 
 Read the active pruning schedule from network internals.
 
@@ -300,7 +300,7 @@ Returns: Pruning configuration when enabled; otherwise undefined.
 
 ### isOutsidePruningWindow
 
-`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
+`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
 
 Check whether an iteration is outside the pruning window.
 
@@ -312,7 +312,7 @@ Returns: True when the iteration is out of range.
 
 ### isScheduledPruningIteration
 
-`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
+`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
 
 Check frequency cadence for scheduled pruning.
 
@@ -324,7 +324,7 @@ Returns: True when this iteration matches the schedule cadence.
 
 ### markPruneIteration
 
-`(currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }, currentIteration: number) => void`
+`(currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }, currentIteration: number) => void`
 
 Persist the iteration that last performed pruning.
 
@@ -336,7 +336,7 @@ Returns: Nothing.
 
 ### markTopologyDirty
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(currentNetwork: import("src/architecture/network").default) => void`
 
 Mark topology cache as dirty after structural updates.
 
@@ -347,7 +347,7 @@ Returns: Nothing.
 
 ### rankConnectionsByMagnitude
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default[]) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(connections: import("src/architecture/connection").default[]) => import("src/architecture/connection").default[]`
 
 Rank connections by absolute weight magnitude.
 
@@ -358,7 +358,7 @@ Returns: Connections sorted by ascending absolute weight.
 
 ### rankConnectionsByRemovalPriority
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default[], method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(connections: import("src/architecture/connection").default[], method: import("src/architecture/network/network.types").PruningMethod) => import("src/architecture/connection").default[]`
 
 Route ranking to the configured pruning heuristic.
 
@@ -370,7 +370,7 @@ Returns: Connections sorted by ascending removal priority.
 
 ### rankConnectionsBySnipSaliency
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default[]) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(connections: import("src/architecture/connection").default[]) => import("src/architecture/connection").default[]`
 
 Rank connections by SNIP-like saliency approximation.
 
@@ -381,7 +381,7 @@ Returns: Connections sorted by ascending saliency.
 
 ### resolveGradientMagnitude
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => number`
+`(connection: import("src/architecture/connection").default) => number`
 
 Resolve a stable gradient-magnitude proxy from connection delta statistics.
 
@@ -392,7 +392,7 @@ Returns: Absolute gradient magnitude proxy.
 
 ### resolvePruningMethod
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod | undefined) => import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod`
+`(method: import("src/architecture/network/network.types").PruningMethod | undefined) => import("src/architecture/network/network.types").PruningMethod`
 
 Normalize optional pruning method to a concrete value.
 
@@ -403,7 +403,7 @@ Returns: Concrete pruning method.
 
 ### shouldRunScheduledPrune
 
-`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
+`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
 
 Determine whether scheduled pruning should run at this iteration.
 
@@ -429,7 +429,7 @@ Returns: Sparsity ratio in [0,1] for valid baselines.
 
 ### readInitialSparsityBaseline
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => number | undefined`
+`(currentNetwork: import("src/architecture/network").default) => number | undefined`
 
 Read baseline used for sparsity reporting.
 
@@ -442,7 +442,7 @@ Returns: Baseline connection count when available.
 
 ### buildEvolutionaryPruneSelection
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").PruneSelectionContext) => import("C:/NeatapticTS/src/architecture/network/network.types").PruneSelectionResult`
+`(context: import("src/architecture/network/network.types").PruneSelectionContext) => import("src/architecture/network/network.types").PruneSelectionResult`
 
 Build evolutionary pruning connection selection.
 
@@ -453,7 +453,7 @@ Returns: Connections selected for removal.
 
 ### buildEvolutionaryTarget
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionaryTargetContext, currentConnectionCount: number) => import("C:/NeatapticTS/src/architecture/network/network.types").EvolutionaryTargetResult`
+`(context: import("src/architecture/network/network.types").EvolutionaryTargetContext, currentConnectionCount: number) => import("src/architecture/network/network.types").EvolutionaryTargetResult`
 
 Compute evolutionary pruning target counts.
 
@@ -465,7 +465,7 @@ Returns: Desired remaining and excess connection counts.
 
 ### calculateEvolutionarySnipSaliency
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => number`
+`(connection: import("src/architecture/connection").default) => number`
 
 Compute evolutionary SNIP-like saliency for one connection.
 
@@ -476,7 +476,7 @@ Returns: Saliency score.
 
 ### disconnectEvolutionaryConnections
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default, connectionsToDisconnect: import("C:/NeatapticTS/src/architecture/connection").default[]) => void`
+`(currentNetwork: import("src/architecture/network").default, connectionsToDisconnect: import("src/architecture/connection").default[]) => void`
 
 Disconnect selected evolutionary pruning edges.
 
@@ -488,7 +488,7 @@ Returns: Nothing.
 
 ### getOrCaptureEvolutionaryBaseline
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(currentNetwork: import("src/architecture/network").default) => number`
 
 Capture evolutionary baseline once and reuse it for subsequent pruning calls.
 
@@ -499,7 +499,7 @@ Returns: Evolutionary baseline connection count.
 
 ### markEvolutionaryTopologyDirty
 
-`(currentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(currentNetwork: import("src/architecture/network").default) => void`
 
 Mark topology cache as dirty after evolutionary pruning.
 
@@ -521,7 +521,7 @@ Returns: Normalized target sparsity.
 
 ### rankEvolutionaryConnections
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default[], pruningMethod: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(connections: import("src/architecture/connection").default[], pruningMethod: import("src/architecture/network/network.types").PruningMethod) => import("src/architecture/connection").default[]`
 
 Route evolutionary ranking to selected heuristic.
 
@@ -533,7 +533,7 @@ Returns: Connections sorted by ascending removal priority.
 
 ### rankEvolutionaryConnectionsByMagnitude
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default[]) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(connections: import("src/architecture/connection").default[]) => import("src/architecture/connection").default[]`
 
 Rank connections by magnitude for evolutionary pruning.
 
@@ -544,7 +544,7 @@ Returns: Connections sorted by ascending absolute weight.
 
 ### rankEvolutionaryConnectionsBySnip
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default[]) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(connections: import("src/architecture/connection").default[]) => import("src/architecture/connection").default[]`
 
 Rank connections by SNIP-like saliency for evolutionary pruning.
 
@@ -555,7 +555,7 @@ Returns: Connections sorted by ascending saliency.
 
 ### resolveEvolutionaryGradientMagnitude
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => number`
+`(connection: import("src/architecture/connection").default) => number`
 
 Resolve gradient proxy for evolutionary SNIP ranking.
 

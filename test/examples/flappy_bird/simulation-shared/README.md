@@ -130,7 +130,7 @@ Returns: Interpolated value.
 
 ### resolveNextSpawnGapCenterY
 
-`(previousGapCenterYPx: number, rng: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike, maximumGapCenterYPx: number) => number`
+`(previousGapCenterYPx: number, rng: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike, maximumGapCenterYPx: number) => number`
 
 Resolves next gap center with bounded per-pipe delta.
 
@@ -143,7 +143,7 @@ Returns: Next gap center y-position.
 
 ### resolveNextSpawnGapSize
 
-`(previousSpawnGapPx: number | undefined, difficultyProfile: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile, rng: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike) => number`
+`(previousSpawnGapPx: number | undefined, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile, rng: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike) => number`
 
 Resolves next spawn gap size using progressive shrink and jitter.
 
@@ -156,7 +156,7 @@ Returns: Next spawn gap size.
 
 ### resolveNextSpawnIntervalFrames
 
-`(previousSpawnIntervalFrames: number | undefined, difficultyProfile: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile) => number`
+`(previousSpawnIntervalFrames: number | undefined, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile) => number`
 
 Resolves next spawn interval using progressive shrink.
 
@@ -168,7 +168,7 @@ Returns: Next spawn interval in frames.
 
 ### sampleGapCenterY
 
-`(rng: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike, maximumGapCenterYPx: number) => number`
+`(rng: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike, maximumGapCenterYPx: number) => number`
 
 Samples a random gap center y-position.
 
@@ -182,7 +182,7 @@ Returns: Sampled y-position.
 
 ### commitSharedObservationMemoryStep
 
-`(observationMemoryState: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState, features: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, didFlap: boolean) => void`
+`(observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState, features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, didFlap: boolean) => void`
 
 Commits one observation-action step into temporal memory.
 
@@ -195,7 +195,7 @@ Returns: Nothing.
 
 ### createSharedObservationMemoryState
 
-`() => import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState`
+`() => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState`
 
 Creates an empty temporal observation memory state.
 
@@ -203,7 +203,7 @@ Returns: Fresh mutable memory buffers for one bird/controller.
 
 ### resolvePreviousCoreFramesWithPadding
 
-`(observationMemoryState: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => number[][]`
+`(observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => number[][]`
 
 Resolves previous core frames (newest-first) with deterministic zero padding.
 
@@ -214,7 +214,7 @@ Returns: Previous core frame list with fixed target length.
 
 ### resolveTemporalObservationVector
 
-`(features: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, observationMemoryState: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => number[]`
+`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => number[]`
 
 Builds the temporal policy input vector (stacked observation + action memory).
 
@@ -264,7 +264,7 @@ Returns: True when flap should trigger.
 
 ### resolveAdaptiveDifficultyProfile
 
-`(pipesPassed: number, difficultyScale: number) => import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile`
+`(pipesPassed: number, difficultyScale: number) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile`
 
 Resolves adaptive difficulty profile from passed-pipe progress.
 
@@ -335,7 +335,7 @@ boundary. This file stays as the stable import path for existing callers.
 
 ### resolveCoreObservationVectorFromFeatures
 
-`(features: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
 
 Resolves the compact core vector used for temporal stacking.
 
@@ -350,7 +350,7 @@ Returns: Core per-frame vector.
 
 ### resolveObservationFeatures
 
-`(input: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
+`(input: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
 
 Builds the shared normalized observation feature set consumed by policies.
 
@@ -366,7 +366,7 @@ Returns: Structured observation features.
 
 ### resolveObservationVectorFromFeatures
 
-`(features: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
 
 Converts observation features to the canonical 12-value network input vector.
 
@@ -381,7 +381,7 @@ Returns: Ordered feature vector.
 
 ### resolveUpcomingPipes
 
-`(pipes: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
+`(pipes: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
 
 Resolves the next two upcoming pipes in front of the bird.
 

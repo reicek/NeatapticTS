@@ -179,7 +179,7 @@ Returns: Array of output neuron activations (length == network.output).
 
 ### activateViaNetworkDelegate
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
 
 Delegate raw activation to the core network activation implementation.
 
@@ -190,7 +190,7 @@ Returns: Activation output vector.
 
 ### activateWithSelectedReusePath
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
 
 Select the raw activation execution path based on runtime reuse configuration.
 
@@ -201,7 +201,7 @@ Returns: Activation output vector.
 
 ### executeRawActivation
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
 
 Execute raw activation through the network delegate using a compact orchestration flow.
 
@@ -217,7 +217,7 @@ Returns: Activation output vector from the network delegate.
 
 ### acquireOutputBuffer
 
-`(outputSize: number) => import("C:/NeatapticTS/src/architecture/activationArrayPool").ActivationArray`
+`(outputSize: number) => import("src/architecture/activationArrayPool").ActivationArray`
 
 Acquire a pooled activation output buffer for the current output width.
 
@@ -241,7 +241,7 @@ Returns: Output activation values.
 
 ### activateLayer
 
-`(currentLayer: import("C:/NeatapticTS/src/architecture/layer").default, layerIndex: number, inputVector: number[], isTraining: boolean) => number[]`
+`(currentLayer: import("src/architecture/layer").default, layerIndex: number, inputVector: number[], isTraining: boolean) => number[]`
 
 Activate one layer, routing input only for the first layer.
 
@@ -255,7 +255,7 @@ Returns: Layer activations.
 
 ### activateLayeredNetworkWithDropout
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("C:/NeatapticTS/src/architecture/activationArrayPool").ActivationArray, stats: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("src/architecture/activationArrayPool").ActivationArray, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
 
 Run layered activation with dropout masks and no stochastic-depth skips.
 
@@ -271,7 +271,7 @@ Returns: Nothing.
 
 ### activateLayeredNetworkWithStochasticDepth
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("C:/NeatapticTS/src/architecture/activationArrayPool").ActivationArray, stats: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("src/architecture/activationArrayPool").ActivationArray, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
 
 Run layered activation with stochastic-depth skipping and inverse-survival scaling.
 
@@ -287,7 +287,7 @@ Returns: Nothing.
 
 ### activateNodeNetworkFallback
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("C:/NeatapticTS/src/architecture/activationArrayPool").ActivationArray, stats: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("src/architecture/activationArrayPool").ActivationArray, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
 
 Run fallback node-by-node activation for networks without explicit layer definitions.
 
@@ -303,7 +303,7 @@ Returns: Nothing.
 
 ### activateNodesAndCollectOutputs
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], inputVector: number[], outputBuffer: import("C:/NeatapticTS/src/architecture/activationArrayPool").ActivationArray) => void`
+`(nodes: import("src/architecture/node").default[], inputVector: number[], outputBuffer: import("src/architecture/activationArrayPool").ActivationArray) => void`
 
 Activate raw nodes in order and collect output-node activations into output buffer.
 
@@ -316,7 +316,7 @@ Returns: Nothing.
 
 ### applyDropConnect
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean, stats: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
 
 Apply drop-connect masking and restore original weights where required.
 
@@ -330,7 +330,7 @@ Returns: Nothing.
 
 ### applyFallbackHiddenDropout
 
-`(hiddenNodes: import("C:/NeatapticTS/src/architecture/node").default[], runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, dropoutProbability: number, isTraining: boolean, stats: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+`(hiddenNodes: import("src/architecture/node").default[], runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, dropoutProbability: number, isTraining: boolean, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
 
 Apply fallback dropout for hidden nodes in raw node traversal mode.
 
@@ -345,7 +345,7 @@ Returns: Nothing.
 
 ### applyFallbackWeightNoise
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean) => void`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean) => void`
 
 Apply raw fallback weight noise to all connections using global standard deviation.
 
@@ -358,7 +358,7 @@ Returns: Nothing.
 
 ### applyHiddenLayerDropout
 
-`(layer: import("C:/NeatapticTS/src/architecture/layer").default, rawActivations: number[], runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, dropoutProbability: number, isTraining: boolean, stats: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+`(layer: import("src/architecture/layer").default, rawActivations: number[], runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, dropoutProbability: number, isTraining: boolean, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
 
 Apply dropout masks to hidden layer nodes and enforce at least one active node.
 
@@ -374,7 +374,7 @@ Returns: Nothing.
 
 ### applyTrainingDropConnect
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, stats: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
 
 Apply training-time drop-connect masks to each connection.
 
@@ -387,7 +387,7 @@ Returns: Nothing.
 
 ### applyTrainingWeightNoise
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean) => import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").WeightNoiseApplyResult`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean) => import("src/architecture/network/activate/network.activate.utils.types").WeightNoiseApplyResult`
 
 Apply per-connection training noise for the main activation flow.
 
@@ -400,7 +400,7 @@ Returns: Applied-state information for downstream restore logic.
 
 ### collectHiddenNodes
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(nodes: import("src/architecture/node").default[]) => import("src/architecture/node").default[]`
 
 Collect hidden nodes from a raw node list.
 
@@ -422,7 +422,7 @@ Returns: True when any probability is invalid.
 
 ### createActivationStats
 
-`(totalConnections: number) => import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats`
+`(totalConnections: number) => import("src/architecture/network/activate/network.activate.utils.types").ActivationStats`
 
 Create activation statistics container for the current pass.
 
@@ -433,7 +433,7 @@ Returns: Initialized activation stats object.
 
 ### createWeightNoiseStats
 
-`() => import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").WeightNoiseStats`
+`() => import("src/architecture/network/activate/network.activate.utils.types").WeightNoiseStats`
 
 Create the weight-noise statistics record with zeroed aggregates.
 
@@ -441,7 +441,7 @@ Returns: Zero-initialized weight-noise stats.
 
 ### decideLayerSkip
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, currentLayerNodeCount: number, layerIndex: number, isTraining: boolean, previousLayerActivations: number[] | undefined) => { shouldSkipLayer: boolean; surviveProbability: number; }`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, currentLayerNodeCount: number, layerIndex: number, isTraining: boolean, previousLayerActivations: number[] | undefined) => { shouldSkipLayer: boolean; surviveProbability: number; }`
 
 Decide whether a hidden layer should be skipped in stochastic-depth mode.
 
@@ -457,7 +457,7 @@ Returns: Skip decision and survival probability for the layer.
 
 ### executeActivationPath
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("C:/NeatapticTS/src/architecture/activationArrayPool").ActivationArray, stats: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("src/architecture/activationArrayPool").ActivationArray, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
 
 Execute one of the three activation branches: stochastic layers, standard layers, or raw nodes.
 
@@ -473,7 +473,7 @@ Returns: Nothing.
 
 ### finalizeNodePathWeightNoiseRestore
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, isTraining: boolean, appliedWeightNoise: boolean) => void`
+`(network: import("src/architecture/network").default, isTraining: boolean, appliedWeightNoise: boolean) => void`
 
 Restore temporary weight-noise values for fallback node path only.
 
@@ -486,7 +486,7 @@ Returns: Nothing.
 
 ### finalizeTrainingStepAndStats
 
-`(runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, stats: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats, isTraining: boolean) => void`
+`(runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats, isTraining: boolean) => void`
 
 Finalize training counters and attach activation statistics to runtime state.
 
@@ -499,7 +499,7 @@ Returns: Nothing.
 
 ### findSourceLayerIndex
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, connection: import("C:/NeatapticTS/src/architecture/connection").default) => number`
+`(network: import("src/architecture/network").default, connection: import("src/architecture/connection").default) => number`
 
 Find the layer index containing a connection source node.
 
@@ -534,7 +534,7 @@ Returns: True when pass-through activations are compatible.
 
 ### hasLayeredNetwork
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => boolean`
+`(network: import("src/architecture/network").default) => boolean`
 
 Check whether the network has at least one explicit layer.
 
@@ -545,7 +545,7 @@ Returns: True when layered activation path should run.
 
 ### hasLayeredNetworkWithStochasticDepth
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps) => boolean`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps) => boolean`
 
 Check whether the network has layers and stochastic-depth configuration for layer skipping path.
 
@@ -557,7 +557,7 @@ Returns: True when stochastic-depth layer path should run.
 
 ### hasOriginalWeightNoise
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+`(connection: import("src/architecture/connection").default) => boolean`
 
 Check whether a connection already has an original weight-noise snapshot.
 
@@ -580,7 +580,7 @@ Returns: True when the layer is hidden.
 
 ### persistOriginalWeightNoise
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(connection: import("src/architecture/connection").default) => void`
 
 Store current connection weight before applying temporary weight-noise modifications.
 
@@ -591,7 +591,7 @@ Returns: Nothing.
 
 ### prepareTopologyForActivation
 
-`(runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps) => void`
+`(runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps) => void`
 
 Ensure topological order is refreshed before activation when acyclic mode requires it.
 
@@ -602,7 +602,7 @@ Returns: Nothing.
 
 ### recordSkippedLayer
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, stats: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivationStats, layerIndex: number) => void`
+`(network: import("src/architecture/network").default, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats, layerIndex: number) => void`
 
 Record a skipped layer in runtime and stats trackers.
 
@@ -615,7 +615,7 @@ Returns: Nothing.
 
 ### releaseBufferAndCreateResult
 
-`(outputBuffer: import("C:/NeatapticTS/src/architecture/activationArrayPool").ActivationArray) => number[]`
+`(outputBuffer: import("src/architecture/activationArrayPool").ActivationArray) => number[]`
 
 Release pooled output buffer and return a detached plain array copy.
 
@@ -626,7 +626,7 @@ Returns: Plain array of output values.
 
 ### resetSkippedLayers
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(network: import("src/architecture/network").default) => void`
 
 Clear the runtime list of skipped layers before current activation pass.
 
@@ -637,7 +637,7 @@ Returns: Nothing.
 
 ### resolveConnectionNoiseStd
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, connection: import("C:/NeatapticTS/src/architecture/connection").default, fallbackStandardDeviation: number) => number`
+`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, connection: import("src/architecture/connection").default, fallbackStandardDeviation: number) => number`
 
 Resolve connection-specific weight-noise standard deviation, including per-hidden overrides.
 
@@ -651,7 +651,7 @@ Returns: Effective standard deviation for this connection.
 
 ### resolveDynamicWeightNoiseStd
 
-`(runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps) => number`
+`(runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps) => number`
 
 Resolve the training-step adjusted global weight-noise standard deviation.
 
@@ -662,7 +662,7 @@ Returns: Effective weight-noise standard deviation for current training step.
 
 ### restoreDropConnectWeights
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(network: import("src/architecture/network").default) => void`
 
 Restore drop-connect modified weights and normalize all masks back to one.
 
@@ -673,7 +673,7 @@ Returns: Nothing.
 
 ### restoreOriginalDropConnectWeight
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(connection: import("src/architecture/connection").default) => void`
 
 Restore and clear original connection weight after drop-connect.
 
@@ -684,7 +684,7 @@ Returns: Nothing.
 
 ### restoreOriginalWeightNoise
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(connection: import("src/architecture/connection").default) => void`
 
 Restore and clear the original weight-noise snapshot for a connection.
 
@@ -707,7 +707,7 @@ Returns: Scaled activation vector.
 
 ### setAllMasksToOne
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => void`
+`(nodes: import("src/architecture/node").default[]) => void`
 
 Set mask value to one for every node in a layer.
 
@@ -718,7 +718,7 @@ Returns: Nothing.
 
 ### setDropConnectMask
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default, dropConnectMask: number) => void`
+`(connection: import("src/architecture/connection").default, dropConnectMask: number) => void`
 
 Set drop-connect mask value for a connection.
 
@@ -730,7 +730,7 @@ Returns: Nothing.
 
 ### setLastSampledNoise
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default, sampledNoise: number) => void`
+`(connection: import("src/architecture/connection").default, sampledNoise: number) => void`
 
 Persist last sampled weight-noise value for a connection.
 
@@ -742,7 +742,7 @@ Returns: Nothing.
 
 ### stashOriginalDropConnectWeight
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(connection: import("src/architecture/connection").default) => void`
 
 Store original connection weight before drop-connect zeroing.
 
@@ -753,7 +753,7 @@ Returns: Nothing.
 
 ### tryFastSlabActivation
 
-`(runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean) => number[] | undefined`
+`(runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean) => number[] | undefined`
 
 Attempt fast slab activation and safely fall back to regular activation on failure.
 
@@ -766,7 +766,7 @@ Returns: Fast slab output when available, otherwise undefined.
 
 ### updateStochasticDepthFromSchedule
 
-`(runtimeNetwork: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean) => void`
+`(runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean) => void`
 
 Update stochastic depth probabilities using a training schedule when valid.
 
@@ -778,7 +778,7 @@ Returns: Nothing.
 
 ### validateInputVector
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, inputVector: number[]) => void`
+`(network: import("src/architecture/network").default, inputVector: number[]) => void`
 
 Validate that the incoming input vector exists and matches expected input size.
 
@@ -790,7 +790,7 @@ Returns: Nothing.
 
 ### validateNetworkNodes
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(network: import("src/architecture/network").default) => void`
 
 Assert that the network contains nodes before executing activation routines.
 
@@ -801,7 +801,7 @@ Returns: Nothing.
 
 ### writeLayerActivationsToOutput
 
-`(layerActivations: number[] | undefined, outputBuffer: import("C:/NeatapticTS/src/architecture/activationArrayPool").ActivationArray, outputSize: number) => void`
+`(layerActivations: number[] | undefined, outputBuffer: import("src/architecture/activationArrayPool").ActivationArray, outputSize: number) => void`
 
 Copy final layer activations into the pooled network output buffer.
 
@@ -816,7 +816,7 @@ Returns: Nothing.
 
 ### activateSingleBatchRow
 
-`(rowActivationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => number[]`
+`(rowActivationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => number[]`
 
 Validate and activate one batch row.
 
@@ -827,7 +827,7 @@ Returns: Activation output vector for the row.
 
 ### activateValidatedBatchRows
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").BatchActivationContext) => number[][]`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchActivationContext) => number[][]`
 
 Activate each row in a validated batch matrix.
 
@@ -849,7 +849,7 @@ Returns: Nothing.
 
 ### assertBatchRowInputSize
 
-`(rowActivationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => void`
+`(rowActivationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => void`
 
 Validate one batch row dimensionality.
 
@@ -860,7 +860,7 @@ Returns: Nothing.
 
 ### buildBatchRowInputSizeMismatchMessage
 
-`(rowActivationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => string`
+`(rowActivationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => string`
 
 Build a descriptive mismatch message for invalid batch row input dimensions.
 
@@ -871,7 +871,7 @@ Returns: Formatted error message for invalid row dimensionality.
 
 ### executeBatchActivation
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").BatchActivationContext) => number[][]`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchActivationContext) => number[][]`
 
 Execute mini-batch activation with top-level shape validation and per-row checks.
 
@@ -896,7 +896,7 @@ Returns: Numeric length as string or predefined undefined text.
 
 ### isBatchRowInputSizeValid
 
-`(rowActivationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => boolean`
+`(rowActivationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => boolean`
 
 Determine whether one batch row matches the expected input dimensionality.
 
@@ -909,7 +909,7 @@ Returns: True when row size is valid.
 
 ### createBatchActivationContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, batchInputs: number[][], isTraining: boolean) => import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").BatchActivationContext`
+`(network: import("src/architecture/network").default, batchInputs: number[][], isTraining: boolean) => import("src/architecture/network/activate/network.activate.utils.types").BatchActivationContext`
 
 Build shared batch activation context for helper orchestration.
 
@@ -922,7 +922,7 @@ Returns: Fully populated batch activation context.
 
 ### createNoTraceActivationContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, inputVector: number[]) => import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext`
+`(network: import("src/architecture/network").default, inputVector: number[]) => import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext`
 
 Build shared no-trace activation context for helper orchestration.
 
@@ -934,7 +934,7 @@ Returns: Fully populated no-trace activation context.
 
 ### createRawActivationContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, inputVector: number[], isTraining: boolean, maximumActivationDepth: number) => import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").RawActivationContext`
+`(network: import("src/architecture/network").default, inputVector: number[], isTraining: boolean, maximumActivationDepth: number) => import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext`
 
 Build shared raw activation context for helper orchestration.
 
@@ -948,7 +948,7 @@ Returns: Fully populated raw activation context.
 
 ### executeBatchActivation
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").BatchActivationContext) => number[][]`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchActivationContext) => number[][]`
 
 Execute mini-batch activation with top-level shape validation and per-row checks.
 
@@ -962,7 +962,7 @@ Returns: Matrix of activation outputs.
 
 ### executeNoTraceActivation
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[]`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[]`
 
 Execute no-trace activation with a fast-path attempt and deterministic fallback traversal.
 
@@ -976,7 +976,7 @@ Returns: Output activation vector detached from pooled storage.
 
 ### executeRawActivation
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
 
 Execute raw activation through the network delegate using a compact orchestration flow.
 
@@ -992,7 +992,7 @@ Returns: Activation output vector from the network delegate.
 
 ### activateWithoutTraceUsingNodeIteration
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[]`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[]`
 
 Execute no-trace activation through node traversal and pooled output collection.
 
@@ -1003,7 +1003,7 @@ Returns: Detached output activation vector.
 
 ### assertInputMatchesNetworkInputSize
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => void`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => void`
 
 Validate that the input vector length matches expected network input dimensionality.
 
@@ -1014,7 +1014,7 @@ Returns: Nothing.
 
 ### buildInputSizeMismatchMessage
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => string`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => string`
 
 Build a descriptive input mismatch message for activation validation errors.
 
@@ -1025,7 +1025,7 @@ Returns: Formatted mismatch error message.
 
 ### canUseNoTraceFastSlab
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => boolean`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => boolean`
 
 Determine whether fast slab activation is available for no-trace execution mode.
 
@@ -1036,7 +1036,7 @@ Returns: True when slab execution is available for inference mode.
 
 ### detachPooledOutputBuffer
 
-`(pooledOutputBuffer: import("C:/NeatapticTS/src/architecture/activationArrayPool").ActivationArray) => number[]`
+`(pooledOutputBuffer: import("src/architecture/activationArrayPool").ActivationArray) => number[]`
 
 Clone pooled output storage into a detached plain array.
 
@@ -1047,7 +1047,7 @@ Returns: Detached output activation vector.
 
 ### executeNoTraceActivation
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[]`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[]`
 
 Execute no-trace activation with a fast-path attempt and deterministic fallback traversal.
 
@@ -1072,7 +1072,7 @@ Returns: Numeric length as string or predefined undefined text.
 
 ### isInputVectorLengthValid
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => boolean`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => boolean`
 
 Check whether the input vector has a valid length for activation.
 
@@ -1083,7 +1083,7 @@ Returns: True when the input vector is an array with expected length.
 
 ### refreshTopologicalOrderWhenRequired
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => void`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => void`
 
 Refresh cached topological order when acyclic mode is active and marked dirty.
 
@@ -1094,7 +1094,7 @@ Returns: Nothing.
 
 ### tryActivateWithFastSlab
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[] | null`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[] | null`
 
 Attempt fast slab activation and return null when slab execution is unavailable or fails.
 
@@ -1107,7 +1107,7 @@ Returns: Fast slab output when successful, otherwise null.
 
 ### createBatchActivationContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, batchInputs: number[][], isTraining: boolean) => import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").BatchActivationContext`
+`(network: import("src/architecture/network").default, batchInputs: number[][], isTraining: boolean) => import("src/architecture/network/activate/network.activate.utils.types").BatchActivationContext`
 
 Build shared batch activation context for helper orchestration.
 
@@ -1120,7 +1120,7 @@ Returns: Fully populated batch activation context.
 
 ### createNoTraceActivationContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, inputVector: number[]) => import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext`
+`(network: import("src/architecture/network").default, inputVector: number[]) => import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext`
 
 Build shared no-trace activation context for helper orchestration.
 
@@ -1132,7 +1132,7 @@ Returns: Fully populated no-trace activation context.
 
 ### createRawActivationContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, inputVector: number[], isTraining: boolean, maximumActivationDepth: number) => import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").RawActivationContext`
+`(network: import("src/architecture/network").default, inputVector: number[], isTraining: boolean, maximumActivationDepth: number) => import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext`
 
 Build shared raw activation context for helper orchestration.
 
@@ -1146,7 +1146,7 @@ Returns: Fully populated raw activation context.
 
 ### toNetworkInternals
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").ActivateNetworkInternals`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").ActivateNetworkInternals`
 
 Convert a network instance into the activation internals interface used by helper modules.
 
@@ -1159,7 +1159,7 @@ Returns: Network internals view used by activation helper modules.
 
 ### activateHiddenNode
 
-`(networkNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(networkNode: import("src/architecture/node").default) => void`
 
 Activate a hidden node without trace bookkeeping.
 
@@ -1170,7 +1170,7 @@ Returns: Nothing.
 
 ### activateInputNode
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").SingleNodeNoTraceActivationContext) => void`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").SingleNodeNoTraceActivationContext) => void`
 
 Activate an input node using the matching input vector value.
 
@@ -1181,7 +1181,7 @@ Returns: Nothing.
 
 ### activateOutputNodeAndAdvanceIndex
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").SingleNodeNoTraceActivationContext) => number`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").SingleNodeNoTraceActivationContext) => number`
 
 Activate an output node, write the activation value, and advance the output index.
 
@@ -1192,7 +1192,7 @@ Returns: Next output write index.
 
 ### activateSingleNodeWithoutTrace
 
-`(activationContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").SingleNodeNoTraceActivationContext) => number`
+`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").SingleNodeNoTraceActivationContext) => number`
 
 Activate one node and return the next output write index.
 
@@ -1203,7 +1203,7 @@ Returns: Updated output write index.
 
 ### isInputNode
 
-`(networkNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(networkNode: import("src/architecture/node").default) => boolean`
 
 Determine whether a node is an input-role node.
 
@@ -1214,7 +1214,7 @@ Returns: True when node role is input.
 
 ### isOutputNode
 
-`(networkNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(networkNode: import("src/architecture/node").default) => boolean`
 
 Determine whether a node is an output-role node.
 
@@ -1225,7 +1225,7 @@ Returns: True when node role is output.
 
 ### populatePooledOutputBufferFromNodes
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/activate/network.activate.utils.types").NoTraceNodeTraversalContext) => void`
+`(traversalContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceNodeTraversalContext) => void`
 
 Traverse nodes in activation order and write output activations into pooled storage.
 

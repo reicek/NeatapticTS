@@ -11,7 +11,7 @@ overrides, and saturation-driven bias control.
 
 ### applyMazeMovementEpsilonExploration
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Apply epsilon-greedy exploration to the current action choice.
 
@@ -22,7 +22,7 @@ Parameters:
 
 ### applyMazeMovementForcedExploration
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Force a random valid move when the policy has stalled with repeated no-move outputs.
 
@@ -33,7 +33,7 @@ Parameters:
 
 ### applyMazeMovementProximityGreedy
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], distanceMap: number[][] | undefined, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], distanceMap: number[][] | undefined, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Apply the short-horizon proximity-greedy override near the maze exit.
 
@@ -45,7 +45,7 @@ Parameters:
 
 ### applyMazeMovementSaturationAndBiasAdjust
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, outputs: number[], network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, outputs: number[], network: import("test/examples/asciiMaze/interfaces").INetwork, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Detect saturation and optionally damp output-node biases.
 
@@ -71,7 +71,7 @@ Returns: Exploration epsilon in the range `[0, 1]`.
 
 ### decideMazeMovementDirection
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, network: import("test/examples/asciiMaze/interfaces").INetwork, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Activate the network, record output history, and choose the next direction.
 
@@ -81,7 +81,7 @@ Parameters:
 
 ### selectMazeMovementDirection
 
-`(outputs: number[]) => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").DirectionSelectionStats`
+`(outputs: number[]) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").DirectionSelectionStats`
 
 Convert raw network outputs into a chosen direction plus diagnostics.
 

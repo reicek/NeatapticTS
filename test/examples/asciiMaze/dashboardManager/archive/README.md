@@ -4,7 +4,7 @@
 
 ### recordSolvedMaze
 
-`(context: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, maze: string[], result: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IMazeRunResult, network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork, generation: number) => void`
+`(context: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, maze: string[], result: import("test/examples/asciiMaze/interfaces").IMazeRunResult, network: import("test/examples/asciiMaze/interfaces").INetwork, generation: number) => void`
 
 Record and emit a newly solved maze archive block when the layout has not been seen before.
 

@@ -34,7 +34,7 @@ Endpoint pair for reconnecting bridged paths.
 
 ### removeNode
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(node: import("src/architecture/node").default) => void`
 
 Node removal utilities.
 
@@ -65,7 +65,7 @@ Notes / Limitations:
 
 ### clearConnectionGater
 
-`(candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(candidateConnection: import("src/architecture/connection").default) => void`
 
 Clears gater reference so legacy checks treat connection as ungated.
 
@@ -76,7 +76,7 @@ Returns: Nothing.
 
 ### detachGatesOwnedByNode
 
-`(removalContext: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext) => void`
+`(removalContext: import("src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext) => void`
 
 Removes gate records gated by target node and nulls their gater field.
 
@@ -87,7 +87,7 @@ Returns: Nothing.
 
 ### isGatedByRemovedNode
 
-`(candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default, removedNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(candidateConnection: import("src/architecture/connection").default, removedNode: import("src/architecture/node").default) => boolean`
 
 Checks whether a gate candidate is currently gated by removed node.
 
@@ -99,7 +99,7 @@ Returns: True when removed node is gater.
 
 ### keepGateConnectionAfterNodeRemoval
 
-`(candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default, removedNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(candidateConnection: import("src/architecture/connection").default, removedNode: import("src/architecture/node").default) => boolean`
 
 Filters one gate connection while clearing removed-node gater ownership.
 
@@ -113,7 +113,7 @@ Returns: True when gate should remain in list.
 
 ### markNetworkRemovalDirtyFlags
 
-`(internalNetwork: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NetworkRemoveProps) => void`
+`(internalNetwork: import("src/architecture/network/remove/network.remove.utils.types").NetworkRemoveProps) => void`
 
 Marks all cached removal-sensitive structures as dirty.
 
@@ -124,7 +124,7 @@ Returns: Nothing.
 
 ### releaseRemovedNodeWhenPoolingEnabled
 
-`(removedNode: import("C:/NeatapticTS/src/architecture/node").default | undefined) => void`
+`(removedNode: import("src/architecture/node").default | undefined) => void`
 
 Releases removed node to object pool when pooling is enabled.
 
@@ -135,7 +135,7 @@ Returns: Nothing.
 
 ### removeNodeFromNetworkStorage
 
-`(removalContext: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext) => void`
+`(removalContext: import("src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext) => void`
 
 Removes node from network storage and conditionally releases it to pool.
 
@@ -146,7 +146,7 @@ Returns: Nothing.
 
 ### spliceNodeFromNetwork
 
-`(removalContext: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(removalContext: import("src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext) => import("src/architecture/node").default | undefined`
 
 Splices node out of network list using validated index.
 
@@ -159,7 +159,7 @@ Returns: Removed node or undefined.
 
 ### cloneInboundConnections
 
-`(targetNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(targetNode: import("src/architecture/node").default) => import("src/architecture/connection").default[]`
 
 Clones inbound connections for safe traversal after mutation.
 
@@ -170,7 +170,7 @@ Returns: Inbound connection snapshot.
 
 ### cloneOutboundConnections
 
-`(targetNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(targetNode: import("src/architecture/node").default) => import("src/architecture/connection").default[]`
 
 Clones outbound connections for safe traversal after mutation.
 
@@ -181,7 +181,7 @@ Returns: Outbound connection snapshot.
 
 ### countSelfConnections
 
-`(targetNode: import("C:/NeatapticTS/src/architecture/node").default) => number`
+`(targetNode: import("src/architecture/node").default) => number`
 
 Counts self-loop connections currently attached to node.
 
@@ -192,7 +192,7 @@ Returns: Self-loop count.
 
 ### createNodeConnectionSnapshot
 
-`(removalContext: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext) => import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeConnectionSnapshotContext`
+`(removalContext: import("src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext) => import("src/architecture/network/remove/network.remove.utils.types").NodeConnectionSnapshotContext`
 
 Creates immutable snapshots of node adjacency lists before mutation.
 
@@ -203,7 +203,7 @@ Returns: Snapshot context.
 
 ### disconnectAllNodeConnections
 
-`(removalContext: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext, snapshotContext: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeConnectionSnapshotContext) => void`
+`(removalContext: import("src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext, snapshotContext: import("src/architecture/network/remove/network.remove.utils.types").NodeConnectionSnapshotContext) => void`
 
 Disconnects all inbound, outbound, and self-loop edges for removed node.
 
@@ -215,7 +215,7 @@ Returns: Nothing.
 
 ### disconnectConnectionGroup
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, connectionsToDisconnect: import("C:/NeatapticTS/src/architecture/connection").default[]) => void`
+`(network: import("src/architecture/network").default, connectionsToDisconnect: import("src/architecture/connection").default[]) => void`
 
 Disconnects each connection in a single connection list.
 
@@ -227,7 +227,7 @@ Returns: Nothing.
 
 ### disconnectSelfLoops
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default, selfConnectionCount: number) => void`
+`(network: import("src/architecture/network").default, targetNode: import("src/architecture/node").default, selfConnectionCount: number) => void`
 
 Disconnects node self-loop connections using deterministic count traversal.
 
@@ -242,7 +242,7 @@ Returns: Nothing.
 
 ### collectReconnectEndpointPairs
 
-`(snapshotContext: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeConnectionSnapshotContext) => import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").ReconnectEndpointPairContext[]`
+`(snapshotContext: import("src/architecture/network/remove/network.remove.utils.types").NodeConnectionSnapshotContext) => import("src/architecture/network/remove/network.remove.utils.types").ReconnectEndpointPairContext[]`
 
 Collects all valid source/target reconnect endpoint pairs.
 
@@ -253,7 +253,7 @@ Returns: Valid reconnect endpoint pairs.
 
 ### connectPairWhenMissing
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, reconnectPair: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").ReconnectEndpointPairContext) => void`
+`(network: import("src/architecture/network").default, reconnectPair: import("src/architecture/network/remove/network.remove.utils.types").ReconnectEndpointPairContext) => void`
 
 Connects one endpoint pair only when direct edge does not already exist.
 
@@ -265,7 +265,7 @@ Returns: Nothing.
 
 ### createReconnectEndpointPair
 
-`(inboundConnection: import("C:/NeatapticTS/src/architecture/connection").default, outboundConnection: import("C:/NeatapticTS/src/architecture/connection").default) => import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").ReconnectEndpointPairContext | undefined`
+`(inboundConnection: import("src/architecture/connection").default, outboundConnection: import("src/architecture/connection").default) => import("src/architecture/network/remove/network.remove.utils.types").ReconnectEndpointPairContext | undefined`
 
 Creates one reconnect endpoint pair when endpoints are valid.
 
@@ -277,7 +277,7 @@ Returns: Reconnect pair or undefined.
 
 ### doesDirectConnectionExist
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, reconnectPair: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").ReconnectEndpointPairContext) => boolean`
+`(network: import("src/architecture/network").default, reconnectPair: import("src/architecture/network/remove/network.remove.utils.types").ReconnectEndpointPairContext) => boolean`
 
 Checks whether a direct connection already exists for reconnect pair.
 
@@ -289,7 +289,7 @@ Returns: True when direct edge already exists.
 
 ### isReconnectPairValid
 
-`(inboundConnection: import("C:/NeatapticTS/src/architecture/connection").default, outboundConnection: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+`(inboundConnection: import("src/architecture/connection").default, outboundConnection: import("src/architecture/connection").default) => boolean`
 
 Validates reconnect pair endpoints.
 
@@ -301,7 +301,7 @@ Returns: True when reconnect pair should be attempted.
 
 ### reconnectBridgedPaths
 
-`(removalContext: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext, snapshotContext: import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeConnectionSnapshotContext) => void`
+`(removalContext: import("src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext, snapshotContext: import("src/architecture/network/remove/network.remove.utils.types").NodeConnectionSnapshotContext) => void`
 
 Reconnects paths from former inbound sources to former outbound targets.
 
@@ -315,7 +315,7 @@ Returns: Nothing.
 
 ### createValidatedNodeRemovalContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext`
+`(network: import("src/architecture/network").default, targetNode: import("src/architecture/node").default) => import("src/architecture/network/remove/network.remove.utils.types").NodeRemovalContext`
 
 Creates validated immutable context for a node-removal operation.
 
@@ -327,7 +327,7 @@ Returns: Validated removal context.
 
 ### ensureNodeIsNotStructuralAnchor
 
-`(targetNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(targetNode: import("src/architecture/node").default) => void`
 
 Ensures removal target is not an input/output anchor node.
 
@@ -338,7 +338,7 @@ Returns: Nothing.
 
 ### isStructuralAnchorNode
 
-`(targetNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(targetNode: import("src/architecture/node").default) => boolean`
 
 Checks whether node is an input/output structural anchor.
 
@@ -349,7 +349,7 @@ Returns: True when node is an anchor.
 
 ### resolveNodeIndexOrThrow
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => number`
+`(network: import("src/architecture/network").default, targetNode: import("src/architecture/node").default) => number`
 
 Resolves node index and throws when missing.
 

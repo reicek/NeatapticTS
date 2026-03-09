@@ -12,7 +12,7 @@ depend on a smaller, clearer public surface.
 
 ### resolveCoreObservationVectorFromFeatures
 
-`(features: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
 
 Resolves the compact core vector used for temporal stacking.
 
@@ -27,7 +27,7 @@ Returns: Core per-frame vector.
 
 ### resolveObservationFeatures
 
-`(input: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
+`(input: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
 
 Builds the shared normalized observation feature set consumed by policies.
 
@@ -43,7 +43,7 @@ Returns: Structured observation features.
 
 ### resolveObservationVectorFromFeatures
 
-`(features: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
 
 Converts observation features to the canonical 12-value network input vector.
 
@@ -58,7 +58,7 @@ Returns: Ordered feature vector.
 
 ### resolveUpcomingPipes
 
-`(pipes: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
+`(pipes: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
 
 Resolves the next two upcoming pipes in front of the bird.
 
@@ -74,7 +74,7 @@ Returns: Tuple of first and second upcoming pipes.
 
 ### resolveCoreObservationVectorFromFeatures
 
-`(features: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
 
 Resolves the compact core vector used for temporal stacking.
 
@@ -89,7 +89,7 @@ Returns: Core per-frame vector.
 
 ### resolveObservationVectorFromFeatures
 
-`(features: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
 
 Converts observation features to the canonical 12-value network input vector.
 
@@ -130,7 +130,7 @@ Returns: Value clamped between 0 and 1.
 
 ### resolveObservationFeatures
 
-`(input: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
+`(input: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
 
 Builds the shared normalized observation feature set consumed by policies.
 
@@ -159,7 +159,7 @@ Returns: Predicted y-position.
 
 ### resolveUpcomingPipes
 
-`(pipes: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
+`(pipes: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
 
 Resolves the next two upcoming pipes in front of the bird.
 

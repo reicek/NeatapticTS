@@ -625,7 +625,7 @@ but can slow down the search process.
 
 ### registerCustomActivation
 
-`(activationName: string, activationFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => void`
+`(activationName: string, activationFunction: import("src/methods/activation.utils").ActivationFunction) => void`
 
 ## methods/connection.ts
 
@@ -857,7 +857,7 @@ Useful for any stateless schedule strategy.
 
 ### createCosineAnnealingRateSchedule
 
-`(period: number, minimumRate: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(period: number, minimumRate: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns a cosine annealing learning rate schedule.
 
@@ -869,7 +869,7 @@ Returns: A learning rate schedule implementing cosine annealing.
 
 ### createCosineAnnealingWarmRestartsSchedule
 
-`(initialPeriod: number, minimumRate: number, periodGrowthMultiplier: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(initialPeriod: number, minimumRate: number, periodGrowthMultiplier: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns a cosine annealing schedule with warm restarts and growing cycles.
 
@@ -882,7 +882,7 @@ Returns: A learning rate schedule implementing SGDR-style warm restarts.
 
 ### createExponentialRateSchedule
 
-`(decayFactor: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(decayFactor: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns an exponential decay learning rate schedule.
 
@@ -893,7 +893,7 @@ Returns: A learning rate schedule implementing exponential decay.
 
 ### createFixedRateSchedule
 
-`() => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`() => import("src/methods/rate.utils").RateSchedule`
 
 Returns a schedule that always yields the base learning rate.
 
@@ -901,7 +901,7 @@ Returns: A learning rate schedule that ignores iteration and returns baseRate.
 
 ### createInverseRateSchedule
 
-`(decayFactor: number, decayPower: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(decayFactor: number, decayPower: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns an inverse decay learning rate schedule.
 
@@ -913,7 +913,7 @@ Returns: A learning rate schedule implementing inverse decay.
 
 ### createLinearWarmupDecaySchedule
 
-`(totalStepCount: number, warmupStepCount: number | undefined, endRate: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(totalStepCount: number, warmupStepCount: number | undefined, endRate: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns a linear warmup followed by linear decay schedule.
 
@@ -926,7 +926,7 @@ Returns: A learning rate schedule implementing warmup then decay.
 
 ### createReduceOnPlateauSchedule
 
-`(options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined) => import("C:/NeatapticTS/src/methods/rate.utils").ReduceOnPlateauSchedule`
+`(options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined) => import("src/methods/rate.utils").ReduceOnPlateauSchedule`
 
 Returns a ReduceLROnPlateau-style schedule that lowers the rate when no improvement is seen.
 
@@ -937,7 +937,7 @@ Returns: A stateful schedule that reacts to lack of improvement.
 
 ### createStepRateSchedule
 
-`(decayFactor: number, decayStepSize: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(decayFactor: number, decayStepSize: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns a step decay learning rate schedule.
 

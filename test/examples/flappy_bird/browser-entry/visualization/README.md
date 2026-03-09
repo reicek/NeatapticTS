@@ -14,7 +14,7 @@ Grouped color scales for connection and bias channels.
 
 ### resolveNetworkVisualizationLayers
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
 Resolves layered node groups for network-view layout and rendering.
 
@@ -128,7 +128,7 @@ Returns: Nothing.
 
 ### drawBiasNodesLayer
 
-`(context: CanvasRenderingContext2D, positionedNodes: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, biasScale: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
+`(context: CanvasRenderingContext2D, positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, biasScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
 
 Draws all network nodes with bias labels.
 
@@ -166,7 +166,7 @@ Returns: Nothing.
 
 ### drawLegendBiasRow
 
-`(context: CanvasRenderingContext2D, legendSceneContext: LegendSceneContext, biasLegendRow: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow, biasRowTopPx: number) => void`
+`(context: CanvasRenderingContext2D, legendSceneContext: LegendSceneContext, biasLegendRow: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow, biasRowTopPx: number) => void`
 
 Draws a single bias legend row.
 
@@ -192,7 +192,7 @@ Returns: Nothing.
 
 ### drawLegendConnectionRow
 
-`(context: CanvasRenderingContext2D, legendSceneContext: LegendSceneContext, connectionLegendRow: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow, connectionRowTopPx: number) => void`
+`(context: CanvasRenderingContext2D, legendSceneContext: LegendSceneContext, connectionLegendRow: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow, connectionRowTopPx: number) => void`
 
 Draws a single connection legend row.
 
@@ -242,7 +242,7 @@ Returns: Nothing.
 
 ### drawNetworkColorLegend
 
-`(context: CanvasRenderingContext2D, architectureLabel: string, colorScales: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales) => void`
+`(context: CanvasRenderingContext2D, architectureLabel: string, colorScales: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales) => void`
 
 Draws the color legend for connections and node bias values.
 
@@ -291,7 +291,7 @@ Returns: Nothing.
 
 ### drawWeightedConnectionsLayer
 
-`(context: CanvasRenderingContext2D, runtimeConnections: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[], positionByNodeIndex: Map<number, import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>, connectionScale: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
+`(context: CanvasRenderingContext2D, runtimeConnections: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[], positionByNodeIndex: Map<number, import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>, connectionScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
 
 Draws weighted connection lines.
 
@@ -305,7 +305,7 @@ Returns: Nothing.
 
 ### resolveBiasNodeHeightPx
 
-`(nodeDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, biasNodeLabelMetrics: BiasNodeLabelMetrics, isOutputNode: boolean) => number`
+`(nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, biasNodeLabelMetrics: BiasNodeLabelMetrics, isOutputNode: boolean) => number`
 
 Resolves node rectangle height from label metrics and node role.
 
@@ -318,7 +318,7 @@ Returns: Render height for the node rectangle.
 
 ### resolveBiasNodeLabelMetrics
 
-`(context: CanvasRenderingContext2D, nodeLabel: string, nodeDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => BiasNodeLabelMetrics`
+`(context: CanvasRenderingContext2D, nodeLabel: string, nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => BiasNodeLabelMetrics`
 
 Measures a bias label and resolves its font declaration.
 
@@ -331,7 +331,7 @@ Returns: Measured label metrics.
 
 ### resolveBiasNodePaintStyle
 
-`(positionedNode: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike, biasScale: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => BiasNodePaintStyle`
+`(positionedNode: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike, biasScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => BiasNodePaintStyle`
 
 Resolves node fill, stroke, and glow styling.
 
@@ -343,7 +343,7 @@ Returns: Node paint style.
 
 ### resolveBiasNodeScene
 
-`(context: CanvasRenderingContext2D, positionedNode: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike, nodeDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, halfNodeWidthPx: number, biasScale: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => BiasNodeScene`
+`(context: CanvasRenderingContext2D, positionedNode: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike, nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, halfNodeWidthPx: number, biasScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => BiasNodeScene`
 
 Resolves all paint attributes needed to render a single node.
 
@@ -358,7 +358,7 @@ Returns: Paint-ready node scene.
 
 ### resolveLegendSceneContext
 
-`(context: CanvasRenderingContext2D, architectureLabel: string, colorScales: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales) => LegendSceneContext`
+`(context: CanvasRenderingContext2D, architectureLabel: string, colorScales: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales) => LegendSceneContext`
 
 Resolves the legend rows, layout, and architecture label bounds.
 
@@ -371,7 +371,7 @@ Returns: Legend scene context.
 
 ### resolveWeightedConnectionScene
 
-`(runtimeConnection: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike, positionByNodeIndex: Map<number, import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>, connectionScale: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => WeightedConnectionScene | undefined`
+`(runtimeConnection: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike, positionByNodeIndex: Map<number, import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>, connectionScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => WeightedConnectionScene | undefined`
 
 Resolves a renderable connection scene from runtime data and node positions.
 
@@ -397,7 +397,7 @@ Returns: True when the legend should be omitted.
 
 ### createLogDivergingColorTiers
 
-`(input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; }) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[]`
+`(input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; }) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[]`
 
 Builds logarithmic diverging color tiers with a center band and edge extension.
 
@@ -430,7 +430,7 @@ Returns: Tier color.
 
 ### resolveNetworkVisualizationColorScales
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales`
+`(network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales`
 
 Resolves dynamic connection/bias color scales from the active network range.
 
@@ -441,7 +441,7 @@ Returns: Dynamic scales used by graph drawing and legend rows.
 
 ### resolveTierColor
 
-`(value: number, tiers: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[], aboveTierColor: string) => string`
+`(value: number, tiers: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[], aboveTierColor: string) => string`
 
 Resolves a color from ordered tier definitions.
 
@@ -456,7 +456,7 @@ Returns: Resolved color string.
 
 ### createColorLegendRows
 
-`(scale: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale, symbol: "w" | "b") => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]`
+`(scale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale, symbol: "w" | "b") => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]`
 
 Creates legend rows from ordered tiers.
 
@@ -468,7 +468,7 @@ Returns: Legend rows.
 
 ### resolveDefaultNetworkLegendLayout
 
-`(context: CanvasRenderingContext2D, network: import("C:/NeatapticTS/src/architecture/network").default | undefined) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
+`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
 
 Resolves default legend layout from internal tier definitions.
 
@@ -480,7 +480,7 @@ Returns: Legend layout.
 
 ### resolveNetworkLegendLayout
 
-`(context: CanvasRenderingContext2D, connectionLegendRows: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[], biasLegendRows: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
+`(context: CanvasRenderingContext2D, connectionLegendRows: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[], biasLegendRows: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
 
 Resolves network legend layout from canvas constraints.
 
@@ -506,7 +506,7 @@ Returns: Label text.
 
 ### resolveNetworkVisualizationLayers
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
 Resolves layered node groups for network-view layout and rendering.
 

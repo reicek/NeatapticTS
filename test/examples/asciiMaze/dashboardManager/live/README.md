@@ -4,7 +4,7 @@
 
 ### redrawDashboard
 
-`(context: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, currentMaze: string[], neat: unknown) => void`
+`(context: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, currentMaze: string[], neat: unknown) => void`
 
 Repaint the live dashboard from current state and refresh the detailed snapshot.
 

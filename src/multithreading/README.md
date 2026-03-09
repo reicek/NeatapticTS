@@ -30,7 +30,7 @@ Returns: The activated value.
 
 #### activateSerializedNetwork
 
-`(inputValues: number[], activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number[]`
+`(inputValues: number[], activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("src/multithreading/types").ActivationFn[]) => number[]`
 
 Activates a serialized network.
 
@@ -66,7 +66,7 @@ Returns: The activated value.
 
 #### deserializeDataSet
 
-`(serializedSet: number[]) => import("C:/NeatapticTS/src/multithreading/types").SerializedSample[]`
+`(serializedSet: number[]) => import("src/multithreading/types").SerializedSample[]`
 
 Deserializes a dataset from a flat array.
 
@@ -82,7 +82,7 @@ Returns: The activated value.
 
 #### getBrowserTestWorker
 
-`() => Promise<import("C:/NeatapticTS/src/multithreading/types").TestWorkerConstructor>`
+`() => Promise<import("src/multithreading/types").TestWorkerConstructor>`
 
 Gets the browser test worker.
 
@@ -90,7 +90,7 @@ Returns: The browser test worker.
 
 #### getNodeTestWorker
 
-`() => Promise<import("C:/NeatapticTS/src/multithreading/types").TestWorkerConstructor>`
+`() => Promise<import("src/multithreading/types").TestWorkerConstructor>`
 
 Gets the node test worker.
 
@@ -194,7 +194,7 @@ Returns: The activated value.
 
 #### testSerializedSet
 
-`(serializedSampleSet: import("C:/NeatapticTS/src/multithreading/types").SerializedSample[], cost: (expected: number[], actual: number[]) => number, activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number`
+`(serializedSampleSet: import("src/multithreading/types").SerializedSample[], cost: (expected: number[], actual: number[]) => number, activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("src/multithreading/types").ActivationFn[]) => number`
 
 Tests a serialized dataset using a cost function.
 
@@ -237,7 +237,7 @@ Returns: Absolute activation.
 
 ### activateSerializedNetwork
 
-`(inputValues: number[], activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number[]`
+`(inputValues: number[], activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("src/multithreading/types").ActivationFn[]) => number[]`
 
 Activates a serialized network and produces outputs.
 
@@ -281,7 +281,7 @@ Returns: Bipolar sigmoid activation.
 
 ### deserializeDataSet
 
-`(serializedSet: number[]) => import("C:/NeatapticTS/src/multithreading/types").SerializedSample[]`
+`(serializedSet: number[]) => import("src/multithreading/types").SerializedSample[]`
 
 Deserializes a dataset from its flat representation.
 
@@ -411,7 +411,7 @@ Returns: Hyperbolic tangent activation.
 
 ### testSerializedSet
 
-`(serializedSampleSet: import("C:/NeatapticTS/src/multithreading/types").SerializedSample[], costFunction: (expected: number[], actual: number[]) => number, activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("C:/NeatapticTS/src/multithreading/types").ActivationFn[]) => number`
+`(serializedSampleSet: import("src/multithreading/types").SerializedSample[], costFunction: (expected: number[], actual: number[]) => number, activationValues: number[], stateValues: number[], serializedNetwork: number[], activationFunctions: import("src/multithreading/types").ActivationFn[]) => number`
 
 Tests a serialized dataset using a cost function.
 

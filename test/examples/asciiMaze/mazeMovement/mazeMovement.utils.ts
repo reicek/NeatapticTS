@@ -125,13 +125,13 @@ export function sumVisionGroup(
  *
  * @param directionCounts - Number of moves taken in each direction.
  * @param logActions - Precomputed normalization factor for the action space.
- * @param scratch - Single-value scratch buffer reused by the caller.
+ * @param scratch - Single-value floating-point scratch buffer reused by the caller.
  * @returns Normalized entropy in the range `[0, 1]`.
  */
 export function computeActionEntropyFromCounts(
   directionCounts: number[],
   logActions: number,
-  scratch: Int32Array,
+  scratch: Float64Array,
 ): number {
   const totalCount =
     directionCounts.reduce((sum, value) => sum + (value | 0), 0) || 1;

@@ -58,7 +58,7 @@ Raw telemetry shape received from NEAT dashboard integrations.
 
 ### DashboardTelemetryHook
 
-`(payload: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardTelemetryPayload) => void`
+`(payload: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardTelemetryPayload) => void`
 
 ### DashboardTelemetryPayload
 
@@ -108,7 +108,7 @@ Rich ASCII maze dashboard used by browser and terminal example hosts.
 
 #### getLastTelemetry
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeTelemetrySnapshot`
+`() => import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeTelemetrySnapshot`
 
 Return the latest public telemetry snapshot, including rich detail history when available.
 
@@ -136,7 +136,7 @@ Clear archive, current best, and telemetry state so the instance can be reused.
 
 #### update
 
-`(maze: string[], result: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IMazeRunResult | undefined, network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork | null, generation: number, neatInstance: import("C:/NeatapticTS/src/neat").default | undefined) => void`
+`(maze: string[], result: import("test/examples/asciiMaze/interfaces").IMazeRunResult | undefined, network: import("test/examples/asciiMaze/interfaces").INetwork | null, generation: number, neatInstance: import("src/neat").default | undefined) => void`
 
 Ingest one evolution update, refresh the live dashboard, and emit telemetry.
 
@@ -151,7 +151,7 @@ Parameters:
 
 ### applyDashboardUpdate
 
-`(context: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, args: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerUpdateArgs) => void`
+`(context: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, args: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerUpdateArgs) => void`
 
 Ingest one engine update, refresh the live view, and emit external telemetry.
 
@@ -161,7 +161,7 @@ Parameters:
 
 ### getDashboardLastTelemetry
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState) => import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeTelemetrySnapshot`
+`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState) => import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeTelemetrySnapshot`
 
 Produce the latest public telemetry snapshot from current dashboard state.
 
@@ -172,7 +172,7 @@ Returns: Public telemetry snapshot used by browser hosts.
 
 ### redrawDashboard
 
-`(context: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, currentMaze: string[], neat: unknown) => void`
+`(context: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, currentMaze: string[], neat: unknown) => void`
 
 Repaint the live dashboard from current state and refresh the detailed snapshot.
 
@@ -183,7 +183,7 @@ Parameters:
 
 ### resetDashboardState
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState) => void`
+`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState) => void`
 
 Clear retained archive, best-candidate, and history state for a fresh run.
 
@@ -217,7 +217,7 @@ Returns: Unicode sparkline string.
 
 ### computeDashboardPathMetrics
 
-`(maze: string[], result: Pick<import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IMazeRunResult, "path" | "steps" | "fitness">) => { optimalLength: number; pathLength: number; efficiencyPct: string; overheadPct: string; uniqueCellsVisited: number; revisitedCells: number; totalSteps: number; fitnessValue: number; }`
+`(maze: string[], result: Pick<import("test/examples/asciiMaze/interfaces").IMazeRunResult, "path" | "steps" | "fitness">) => { optimalLength: number; pathLength: number; efficiencyPct: string; overheadPct: string; uniqueCellsVisited: number; revisitedCells: number; totalSteps: number; fitnessValue: number; }`
 
 Compute solved-path efficiency and visitation metrics for archive output.
 
@@ -229,7 +229,7 @@ Returns: Derived path metrics used by solved archive formatting.
 
 ### deriveDashboardArchitecture
 
-`(networkInstance: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork | null | undefined) => string`
+`(networkInstance: import("test/examples/asciiMaze/interfaces").INetwork | null | undefined) => string`
 
 Infer a compact architecture string from a network-like runtime object.
 

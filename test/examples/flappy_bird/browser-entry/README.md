@@ -326,13 +326,13 @@ Handle returned by `start` for controlling demo execution lifecycle.
 
 ### start
 
-`(container: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => Promise<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle>`
+`(container: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle>`
 
 ## browser-entry/browser-entry.host.utils.ts
 
 ### createCanvasHostInternal
 
-`(containerElement: HTMLElement) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
+`(containerElement: HTMLElement) => import("test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
 
 Builds the browser demo host tree and returns rendering handles.
 
@@ -343,7 +343,7 @@ Returns: Canvas handles, stats cells and network render callback.
 
 ### updateStatsTableValues
 
-`(statsValueByKey: Partial<Record<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
+`(statsValueByKey: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
 
 Applies partial stat updates to the rendered stats table.
 
@@ -436,7 +436,7 @@ Returns: Exclusive upper bound for `nextInt(minInclusive, maxExclusive)`.
 
 ### resolveNextSpawnGapCenterY
 
-`(previousGapCenterYPx: number, rng: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike, worldHeightPx: number) => number`
+`(previousGapCenterYPx: number, rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike, worldHeightPx: number) => number`
 
 Resolves next gap center with bounded per-pipe delta.
 
@@ -449,7 +449,7 @@ Returns: Next gap center y-position.
 
 ### resolveNextSpawnGapSize
 
-`(previousSpawnGapPx: number | undefined, difficultyProfile: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile, rng: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike) => number`
+`(previousSpawnGapPx: number | undefined, difficultyProfile: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile, rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike) => number`
 
 Resolves next spawn gap size using progressive shrink and jitter.
 
@@ -462,7 +462,7 @@ Returns: Next spawn gap size.
 
 ### resolveNextSpawnIntervalFrames
 
-`(previousSpawnIntervalFrames: number | undefined, difficultyProfile: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile) => number`
+`(previousSpawnIntervalFrames: number | undefined, difficultyProfile: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile) => number`
 
 Resolves next spawn interval using progressive shrink.
 
@@ -474,7 +474,7 @@ Returns: Next spawn interval in frames.
 
 ### sampleGapCenterY
 
-`(rng: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike, worldHeightPx: number) => number`
+`(rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike, worldHeightPx: number) => number`
 
 Samples a random gap center y-position.
 
@@ -488,7 +488,7 @@ Returns: Sampled y-position.
 
 ### createFlappyStatsTableRows
 
-`(input: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.stats.types").CreateFlappyStatsTableRowsInput) => Partial<Record<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>`
+`(input: import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").CreateFlappyStatsTableRowsInput) => Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>`
 
 Builds stats table rows and returns value-cell lookup by key.
 
@@ -512,7 +512,7 @@ Returns: Line-broken label value.
 
 ### animatePopulationEpisodeInternal
 
-`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary>`
+`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary>`
 
 Internal playback orchestration entry retained for compatibility re-exports.
 
@@ -569,7 +569,7 @@ Returns: Visible width in world-space pixels.
 
 ### resolveWorldViewport
 
-`(canvas: HTMLCanvasElement) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.render.types").ViewportInfo`
+`(canvas: HTMLCanvasElement) => import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").ViewportInfo`
 
 Resolves world viewport transformation based on canvas size.
 
@@ -654,7 +654,7 @@ Returns: Frame lines.
 
 ### renderClosedOuterBox
 
-`(input: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.render.types").RenderClosedOuterBoxInput) => void`
+`(input: import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").RenderClosedOuterBoxInput) => void`
 
 Renders a complete closed outer glyph box.
 
@@ -665,7 +665,7 @@ Returns: Nothing.
 
 ### renderStandaloneTitleBox
 
-`(input: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.render.types").RenderStandaloneTitleBoxInput) => void`
+`(input: import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").RenderStandaloneTitleBoxInput) => void`
 
 Renders only the centered title box.
 
@@ -687,7 +687,7 @@ Returns: Floored glyph width clamped to a minimum pixel value.
 
 ### resolveTextFrameMetrics
 
-`(frameWidthPx: number, frameHeightPx: number, glyphWidthPx: number, rowHeightPx: number, minimumColumns: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.render.types").TextFrameMetrics`
+`(frameWidthPx: number, frameHeightPx: number, glyphWidthPx: number, rowHeightPx: number, minimumColumns: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").TextFrameMetrics`
 
 Resolves core text-frame metrics for glyph box rendering.
 
@@ -704,7 +704,7 @@ Returns: Text frame metrics.
 
 ### commitObservationMemoryStep
 
-`(observationMemoryState: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState, observationFeatures: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, shouldFlap: boolean) => void`
+`(observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState, observationFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, shouldFlap: boolean) => void`
 
 Commits one browser decision step into temporal memory.
 
@@ -717,7 +717,7 @@ Returns: Nothing.
 
 ### hasAliveBirds
 
-`(birds: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => boolean`
+`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => boolean`
 
 Checks whether at least one bird remains alive.
 
@@ -728,7 +728,7 @@ Returns: True when any bird is alive.
 
 ### resolveAliveBirdCount
 
-`(birds: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => number`
+`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => number`
 
 Counts birds that are still alive.
 
@@ -750,7 +750,7 @@ Returns: True when flap should trigger.
 
 ### resolveFramePrimaryWinnerIndex
 
-`(birds: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[], includeAliveOnly: boolean) => number`
+`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[], includeAliveOnly: boolean) => number`
 
 Resolves winner index for current frame.
 
@@ -762,7 +762,7 @@ Returns: Winner index, or `-1` when unavailable.
 
 ### resolveLeaderPipesPassed
 
-`(birds: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => number`
+`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => number`
 
 Resolves leading pipes-passed score in the population.
 
@@ -773,7 +773,7 @@ Returns: Maximum pipes passed.
 
 ### resolveObservationVector
 
-`(birdYPx: number, velocityYPxPerFrame: number, pipes: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike[], visibleWorldWidthPx: number, worldHeightPx: number, difficultyProfile: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile, activeSpawnIntervalFrames: number, observationMemoryState: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => { observationVector: number[]; observationFeatures: import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures; }`
+`(birdYPx: number, velocityYPxPerFrame: number, pipes: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike[], visibleWorldWidthPx: number, worldHeightPx: number, difficultyProfile: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile, activeSpawnIntervalFrames: number, observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => { observationVector: number[]; observationFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures; }`
 
 Builds the normalized observation vector consumed by bird networks.
 
@@ -791,7 +791,7 @@ Returns: Ordered normalized observation vector.
 
 ### resolveUpcomingPipes
 
-`(pipes: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike[]) => [import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike | undefined, import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike | undefined]`
+`(pipes: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike[]) => [import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike | undefined, import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike | undefined]`
 
 Resolves the next two upcoming pipes in front of the bird.
 
@@ -804,7 +804,7 @@ Returns: Tuple of first and second upcoming pipes.
 
 ### drawNetworkVisualization
 
-`(context: CanvasRenderingContext2D, network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void`
+`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void`
 
 Draws a complete, layer-based visualization of the active network.
 
@@ -818,7 +818,7 @@ Returns: Nothing.
 
 ### resolveNetworkArchitectureLabel
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => string`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => string`
 
 Resolves compact architecture label text for headers and HUD rows.
 
@@ -831,7 +831,7 @@ Returns: Readable architecture label.
 
 ### resolveNetworkVisualizationHeightPx
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => number`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => number`
 
 Resolves responsive visualization canvas height from network shape.
 
@@ -844,7 +844,7 @@ Returns: Recommended height in pixels.
 
 ### resolveNetworkVisualizationLayers
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
 Resolves layered node groups for network-view layout and rendering.
 
@@ -864,7 +864,7 @@ Returns: Layered nodes for rendering.
 
 ### createColorLegendRows
 
-`(scale: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale, symbol: "w" | "b") => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]`
+`(scale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale, symbol: "w" | "b") => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]`
 
 Creates legend rows from ordered tiers.
 
@@ -876,7 +876,7 @@ Returns: Legend rows.
 
 ### createLogDivergingColorTiers
 
-`(input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; }) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[]`
+`(input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; }) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[]`
 
 Builds logarithmic diverging color tiers with a center band and edge extension.
 
@@ -887,7 +887,7 @@ Returns: Ordered tier list.
 
 ### drawBiasNodesLayer
 
-`(context: CanvasRenderingContext2D, positionedNodes: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, biasScale: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
+`(context: CanvasRenderingContext2D, positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, biasScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
 
 Draws all network nodes with bias labels.
 
@@ -901,7 +901,7 @@ Returns: Nothing.
 
 ### drawNetworkColorLegend
 
-`(context: CanvasRenderingContext2D, architectureLabel: string, colorScales: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales) => void`
+`(context: CanvasRenderingContext2D, architectureLabel: string, colorScales: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales) => void`
 
 Draws the color legend for connections and node bias values.
 
@@ -926,7 +926,7 @@ Returns: Nothing.
 
 ### drawWeightedConnectionsLayer
 
-`(context: CanvasRenderingContext2D, runtimeConnections: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[], positionByNodeIndex: Map<number, import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>, connectionScale: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
+`(context: CanvasRenderingContext2D, runtimeConnections: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[], positionByNodeIndex: Map<number, import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>, connectionScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
 
 Draws weighted connection lines.
 
@@ -973,7 +973,7 @@ Returns: Tier color.
 
 ### resolveDefaultNetworkLegendLayout
 
-`(context: CanvasRenderingContext2D, network: import("C:/NeatapticTS/src/architecture/network").default | undefined) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
+`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
 
 Resolves default legend layout from internal tier definitions.
 
@@ -985,7 +985,7 @@ Returns: Legend layout.
 
 ### resolveNetworkLegendLayout
 
-`(context: CanvasRenderingContext2D, connectionLegendRows: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[], biasLegendRows: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
+`(context: CanvasRenderingContext2D, connectionLegendRows: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[], biasLegendRows: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
 
 Resolves network legend layout from canvas constraints.
 
@@ -998,7 +998,7 @@ Returns: Computed legend layout.
 
 ### resolveNetworkVisualizationColorScales
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales`
+`(network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales`
 
 Resolves dynamic connection/bias color scales from the active network range.
 
@@ -1009,7 +1009,7 @@ Returns: Dynamic scales used by graph drawing and legend rows.
 
 ### resolveNetworkVisualizationLayers
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
 Resolves layered node groups for network-view layout and rendering.
 
@@ -1027,7 +1027,7 @@ Returns: Layered nodes for rendering.
 
 ### resolveTierColor
 
-`(value: number, tiers: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[], aboveTierColor: string) => string`
+`(value: number, tiers: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[], aboveTierColor: string) => string`
 
 Resolves a color from ordered tier definitions.
 
@@ -1050,7 +1050,7 @@ Returns: Initialized worker instance.
 
 ### requestWorkerGeneration
 
-`(evolutionWorker: Worker) => Promise<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionGenerationPayload>`
+`(evolutionWorker: Worker) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionGenerationPayload>`
 
 Waits for the next generation payload emitted by the evolution worker.
 
@@ -1061,7 +1061,7 @@ Returns: Next generation payload.
 
 ### requestWorkerPlaybackStep
 
-`(evolutionWorker: Worker, playbackStepRequest: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/worker-channel/worker-channel.types").WorkerChannelPlaybackStepRequest) => Promise<{ snapshot: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>`
+`(evolutionWorker: Worker, playbackStepRequest: import("test/examples/flappy_bird/browser-entry/worker-channel/worker-channel.types").WorkerChannelPlaybackStepRequest) => Promise<{ snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>`
 
 Requests one playback batch step from the worker.
 

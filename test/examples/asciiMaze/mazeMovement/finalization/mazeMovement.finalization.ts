@@ -19,7 +19,7 @@ import type {
 import { computeActionEntropyFromCounts } from '../mazeMovement.utils';
 
 const C = MAZE_MOVEMENT_CONSTANTS;
-const ACTION_ENTROPY_SCRATCH = new Int32Array(1);
+const ACTION_ENTROPY_SCRATCH = new Float64Array(1);
 
 /**
  * Build the finalized payload for a successful maze run.

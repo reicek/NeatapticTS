@@ -46,7 +46,7 @@ Simplified path used by one visible pulse event.
 
 ### renderPlaybackBackgroundGroundGrid
 
-`(context: CanvasRenderingContext2D, sourceScene: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSourceScene, request: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridRequest) => void`
+`(context: CanvasRenderingContext2D, sourceScene: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSourceScene, request: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridRequest) => void`
 
 Draws the neon lower-band ground grid beneath the horizon.
 
@@ -65,7 +65,7 @@ Returns: Nothing.
 
 ### drawGroundGridFog
 
-`(context: CanvasRenderingContext2D, resolvedScene: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridResolvedScene) => void`
+`(context: CanvasRenderingContext2D, resolvedScene: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridResolvedScene) => void`
 
 Draws the lower-band atmospheric wash behind the neon line work.
 
@@ -77,7 +77,7 @@ Returns: Nothing.
 
 ### drawGroundGridPulse
 
-`(context: CanvasRenderingContext2D, pulse: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulse | null, fillColor: string, glowColor: string) => void`
+`(context: CanvasRenderingContext2D, pulse: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulse | null, fillColor: string, glowColor: string) => void`
 
 Draws one pulse square above the grid lines and below gameplay entities.
 
@@ -91,7 +91,7 @@ Returns: Nothing.
 
 ### drawGroundGridSegment
 
-`(context: CanvasRenderingContext2D, segment: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment, lineColor: string, glowColor: string) => void`
+`(context: CanvasRenderingContext2D, segment: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment, lineColor: string, glowColor: string) => void`
 
 Draws one neon line segment with a glow pass and crisp core line.
 
@@ -105,7 +105,7 @@ Returns: Nothing.
 
 ### drawGroundGridSegments
 
-`(context: CanvasRenderingContext2D, segments: readonly import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[], lineColor: string, glowColor: string) => void`
+`(context: CanvasRenderingContext2D, segments: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[], lineColor: string, glowColor: string) => void`
 
 Draws one ordered collection of neon line segments.
 
@@ -119,7 +119,7 @@ Returns: Nothing.
 
 ### drawPlaybackGroundGrid
 
-`(context: CanvasRenderingContext2D, resolvedScene: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridResolvedScene, geometry: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridGeometry) => void`
+`(context: CanvasRenderingContext2D, resolvedScene: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridResolvedScene, geometry: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridGeometry) => void`
 
 Draws the resolved neon ground grid inside the lower background band.
 
@@ -200,7 +200,7 @@ Number of horizontal depth bands used by the neon ground grid.
 
 ### interpolatePlaybackGroundGridPoint
 
-`(startXPx: number, startYPx: number, endXPx: number, endYPx: number, interpolationRatio: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.math.utils").PlaybackGroundGridPoint`
+`(startXPx: number, startYPx: number, endXPx: number, endYPx: number, interpolationRatio: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.math.utils").PlaybackGroundGridPoint`
 
 Interpolates one point along a perspective ray.
 
@@ -238,7 +238,7 @@ Returns: Normalized 0..1 depth where 0 is at the horizon and 1 is nearest.
 
 ### resolvePlaybackGroundGridGeometry
 
-`(sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext, frameIndex: number, scrollBasePx: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridGeometry`
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext, frameIndex: number, scrollBasePx: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridGeometry`
 
 Builds the line geometry for the neon ground grid.
 
@@ -283,7 +283,7 @@ Returns: Stroke width in pixels.
 
 ### resolvePlaybackGroundGridSceneContext
 
-`(sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext`
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext`
 
 Resolves the shared scene context used by the ground-grid renderer.
 
@@ -296,7 +296,7 @@ Returns: Narrow scene contract consumed by grid-specific helpers.
 
 ### interpolatePlaybackGroundGridPoint
 
-`(startXPx: number, startYPx: number, endXPx: number, endYPx: number, interpolationRatio: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.math.utils").PlaybackGroundGridPoint`
+`(startXPx: number, startYPx: number, endXPx: number, endYPx: number, interpolationRatio: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.math.utils").PlaybackGroundGridPoint`
 
 Interpolates one point along a perspective ray.
 
@@ -373,7 +373,7 @@ Returns: Stroke width in pixels.
 
 ### isPlaybackGroundGridHorizontalPulseLineEligible
 
-`(horizontalLine: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment) => boolean`
+`(horizontalLine: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment) => boolean`
 
 Resolves whether a horizontal line is thick enough to carry a visible pulse.
 
@@ -384,7 +384,7 @@ Returns: True when the line should be considered pulse-eligible.
 
 ### isPlaybackGroundGridVerticalPulsePathVisible
 
-`(pulsePath: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath, sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => boolean`
+`(pulsePath: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => boolean`
 
 Resolves whether one vertical pulse path is safely visible in the viewport.
 
@@ -396,7 +396,7 @@ Returns: True when the pulse midpoint stays inside the visible ground band.
 
 ### resolvePlaybackGroundGridHorizontalPulsePath
 
-`(horizontalLines: readonly import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[], pulseSlotIndex: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath | null`
+`(horizontalLines: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[], pulseSlotIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath | null`
 
 Selects one thick-enough horizontal band for the current pulse slot.
 
@@ -408,7 +408,7 @@ Returns: Horizontal pulse path, or null when none are suitable.
 
 ### resolvePlaybackGroundGridPreferredHorizontalPulseLines
 
-`(horizontalLines: readonly import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]) => readonly import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]`
+`(horizontalLines: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]) => readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]`
 
 Prefers the nearer, thicker horizontal tracks when picking a pulse lane.
 
@@ -419,7 +419,7 @@ Returns: Pulse-eligible horizontal lines biased toward the foreground.
 
 ### resolvePlaybackGroundGridPulse
 
-`(input: PlaybackGroundGridPulseInput) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulse | null`
+`(input: PlaybackGroundGridPulseInput) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulse | null`
 
 Resolves one rare, deterministic pulse square for the current frame.
 
@@ -430,7 +430,7 @@ Returns: Visible pulse square, or null when the current slot is inactive.
 
 ### resolvePlaybackGroundGridPulseOrientation
 
-`(pulseSlotIndex: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulseOrientation`
+`(pulseSlotIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulseOrientation`
 
 Resolves pulse orientation for one deterministic pulse slot.
 
@@ -475,7 +475,7 @@ Returns: Stable random value in the range 0..1.
 
 ### resolvePlaybackGroundGridVerticalPulsePath
 
-`(verticalPulsePaths: readonly import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath[], pulseSlotIndex: number, sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath | null`
+`(verticalPulsePaths: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath[], pulseSlotIndex: number, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath | null`
 
 Selects one sparse vertical pulse path for the current pulse slot.
 
@@ -512,7 +512,7 @@ Returns: Bottom-anchor bounds required to cover the full visible horizon.
 
 ### resolvePlaybackGroundGridHorizontalLines
 
-`(sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => readonly import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]`
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]`
 
 Builds the screen-horizontal depth bands for the lower neon plane.
 
@@ -523,7 +523,7 @@ Returns: Ordered far-to-near line segments.
 
 ### resolvePlaybackGroundGridVerticalLines
 
-`(sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext, scrollBasePx: number) => { verticalLines: readonly import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]; verticalPulsePaths: readonly import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath[]; }`
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext, scrollBasePx: number) => { verticalLines: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]; verticalPulsePaths: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath[]; }`
 
 Builds the perspective rays that converge to the centered horizon point.
 
@@ -535,7 +535,7 @@ Returns: Wrapped left-to-right perspective rays.
 
 ### resolvePlaybackGroundGridVerticalLineSegments
 
-`(input: PlaybackGroundGridVerticalSegmentsInput) => readonly import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]`
+`(input: PlaybackGroundGridVerticalSegmentsInput) => readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]`
 
 Builds tapered style segments for one perspective ray.
 

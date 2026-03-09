@@ -43,7 +43,7 @@ completely crosses the bird x-position.
 
 ### stepFlappyState
 
-`(state: import("C:/NeatapticTS/test/examples/flappy_bird/environment/environment.types").FlappyGameState, rng: import("C:/NeatapticTS/test/examples/flappy_bird/rng").FlappyRng, flap: boolean, difficultyScale: number) => void`
+`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, rng: import("test/examples/flappy_bird/rng").FlappyRng, flap: boolean, difficultyScale: number) => void`
 
 Advance the simulation by one frame.
 
@@ -55,7 +55,7 @@ Parameters:
 
 ### stepFlappyStateWithControlSubsteps
 
-`(state: import("C:/NeatapticTS/test/examples/flappy_bird/environment/environment.types").FlappyGameState, rng: import("C:/NeatapticTS/test/examples/flappy_bird/rng").FlappyRng, shouldFlapForSubstep: () => boolean, difficultyScale: number, controlSubstepsPerFrame: number) => void`
+`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, rng: import("test/examples/flappy_bird/rng").FlappyRng, shouldFlapForSubstep: () => boolean, difficultyScale: number, controlSubstepsPerFrame: number) => void`
 
 Advance one logical frame using multiple control/physics substeps.
 
@@ -75,7 +75,7 @@ Returns: Nothing.
 
 ### createInitialFlappyState
 
-`(rng: import("C:/NeatapticTS/test/examples/flappy_bird/rng").FlappyRng) => import("C:/NeatapticTS/test/examples/flappy_bird/environment/environment.types").FlappyGameState`
+`(rng: import("test/examples/flappy_bird/rng").FlappyRng) => import("test/examples/flappy_bird/environment/environment.types").FlappyGameState`
 
 Create a fresh Flappy Bird episode state.
 
@@ -88,7 +88,7 @@ Returns: Initial state for one deterministic rollout.
 
 ### updateCollisionAndProgressState
 
-`(state: import("C:/NeatapticTS/test/examples/flappy_bird/environment/environment.types").FlappyGameState) => void`
+`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState) => void`
 
 Apply out-of-bounds, pipe-collision, and pass-credit rules for one substep.
 
@@ -99,7 +99,7 @@ Parameters:
 
 ### getFlappyObservation
 
-`(state: import("C:/NeatapticTS/test/examples/flappy_bird/environment/environment.types").FlappyGameState, difficultyScale: number) => number[]`
+`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, difficultyScale: number) => number[]`
 
 Generate the network observation vector for the current state.
 
@@ -125,7 +125,7 @@ Returns: Input vector for the neural network.
 
 ### getFlappyObservationFeatures
 
-`(state: import("C:/NeatapticTS/test/examples/flappy_bird/environment/environment.types").FlappyGameState, difficultyScale: number) => import("C:/NeatapticTS/test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
+`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, difficultyScale: number) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
 
 Resolve structured observation features for policy input and reward shaping.
 

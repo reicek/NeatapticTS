@@ -56,7 +56,7 @@ parallax backgrounds during playback.
 
 ### animatePopulationEpisode
 
-`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary>`
+`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary>`
 
 Public playback entry point used by browser runtime orchestration.
 
@@ -70,7 +70,7 @@ Returns: Aggregate playback summary for the current episode.
 
 ### animatePopulationEpisodeInternal
 
-`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary>`
+`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary>`
 
 Internal playback orchestration entry retained for compatibility re-exports.
 
@@ -84,7 +84,7 @@ Returns: Aggregate playback summary for the current episode.
 
 ### applyPlaybackStepSnapshot
 
-`(sessionContext: PlaybackSessionContext, snapshot: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
+`(sessionContext: PlaybackSessionContext, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
 
 Applies the latest worker snapshot to render state and trail caches.
 
@@ -104,7 +104,7 @@ Returns: Initialized loop state and aggregate summary values.
 
 ### createInitialRenderState
 
-`(viewportDimensions: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState`
+`(viewportDimensions: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState`
 
 Creates the initial render state used before the first worker snapshot.
 
@@ -115,7 +115,7 @@ Returns: Initialized population render state.
 
 ### createInitialTrailState
 
-`() => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState`
+`() => import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState`
 
 Creates the initial trail state used before any snapshots have been applied.
 
@@ -123,7 +123,7 @@ Returns: Empty trail state for all birds.
 
 ### emitPlaybackFrameStats
 
-`(iterationContext: PlaybackIterationContext, playbackStepPayload: { snapshot: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }) => void`
+`(iterationContext: PlaybackIterationContext, playbackStepPayload: { snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }) => void`
 
 Resolves leader telemetry and emits the public frame-stats callback.
 
@@ -149,7 +149,7 @@ Returns: Session context shared across the playback loop.
 
 ### requestPlaybackStepPayload
 
-`(iterationContext: PlaybackIterationContext) => Promise<{ snapshot: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>`
+`(iterationContext: PlaybackIterationContext) => Promise<{ snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>`
 
 Requests one playback step batch from the evolution worker.
 
@@ -160,7 +160,7 @@ Returns: Worker playback step payload for the current iteration.
 
 ### resolvePlaybackEpisodeSummary
 
-`(summary: PlaybackMutableSummary) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary`
+`(summary: PlaybackMutableSummary) => import("test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary`
 
 Folds the mutable loop summary into the public playback summary shape.
 
@@ -204,7 +204,7 @@ Returns: Nothing.
 
 ### syncPlaybackViewportDimensions
 
-`(canvas: HTMLCanvasElement, renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => void`
+`(canvas: HTMLCanvasElement, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => void`
 
 Synchronizes the render state viewport fields with the current canvas size.
 
@@ -216,7 +216,7 @@ Returns: Nothing.
 
 ### updatePlaybackLoopCompletion
 
-`(loopState: PlaybackLoopState, playbackStepPayload: { snapshot: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }) => void`
+`(loopState: PlaybackLoopState, playbackStepPayload: { snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }) => void`
 
 Updates the loop summary when the worker reports playback completion.
 
@@ -273,7 +273,7 @@ Returns: Nothing.
 
 ### createStarTile
 
-`(layerSpec: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").PlaybackStarfieldLayerSpec, tileHeightPx: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTile`
+`(layerSpec: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").PlaybackStarfieldLayerSpec, tileHeightPx: number) => import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTile`
 
 Creates one cached tile layer from a declarative layer specification.
 
@@ -285,7 +285,7 @@ Returns: Cached tile metadata for parallax drawing.
 
 ### resolveStarfieldTiles
 
-`(visibleWorldHeightPx: number) => readonly import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTile[]`
+`(visibleWorldHeightPx: number) => readonly import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTile[]`
 
 Resolves (and lazily creates) cached starfield tile layers for the viewport.
 
@@ -298,7 +298,7 @@ Returns: Ordered far/mid/near starfield tiles.
 
 ### createCanvasSizeFallback
 
-`(canvasDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarfieldCanvasDimensions) => HTMLCanvasElement`
+`(canvasDimensions: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarfieldCanvasDimensions) => HTMLCanvasElement`
 
 Creates a size-only fallback so non-browser tests can skip rendering safely.
 
@@ -321,7 +321,7 @@ Returns: Offscreen canvas when supported, otherwise a DOM canvas fallback.
 
 ### createDocumentCanvasIfSupported
 
-`(canvasDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarfieldCanvasDimensions) => HTMLCanvasElement | null`
+`(canvasDimensions: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarfieldCanvasDimensions) => HTMLCanvasElement | null`
 
 Creates a DOM canvas when document APIs are available.
 
@@ -332,7 +332,7 @@ Returns: DOM canvas instance or `null` when unavailable.
 
 ### createOffscreenCanvasIfSupported
 
-`(canvasDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarfieldCanvasDimensions) => OffscreenCanvas | null`
+`(canvasDimensions: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarfieldCanvasDimensions) => OffscreenCanvas | null`
 
 Creates an offscreen canvas when the current runtime supports it.
 
@@ -343,7 +343,7 @@ Returns: Offscreen canvas instance or `null` when unavailable.
 
 ### createStarTileCanvas
 
-`(options: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").CreateStarTileCanvasOptions) => CanvasImageSource`
+`(options: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").CreateStarTileCanvasOptions) => CanvasImageSource`
 
 Pre-renders a deterministic tile that can be reused across animation frames.
 
@@ -365,7 +365,7 @@ Returns: Nothing. The provided context is mutated in place.
 
 ### normalizeCanvasDimensions
 
-`(widthPx: number, heightPx: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarfieldCanvasDimensions`
+`(widthPx: number, heightPx: number) => import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarfieldCanvasDimensions`
 
 Normalizes requested canvas dimensions into positive integer pixel sizes.
 
@@ -377,7 +377,7 @@ Returns: Clamped integer dimensions safe for canvas allocation.
 
 ### renderSeededStars
 
-`(options: { tileContext: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D; seededRandom: () => number; canvasOptions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").CreateStarTileCanvasOptions; }) => void`
+`(options: { tileContext: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D; seededRandom: () => number; canvasOptions: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").CreateStarTileCanvasOptions; }) => void`
 
 Draws all stars for one tile using a seeded random source.
 
@@ -399,7 +399,7 @@ Returns: Nothing. The provided context is mutated in place.
 
 ### resolveStarPlacement
 
-`(options: { seededRandom: () => number; tileWidthPx: number; tileHeightPx: number; minSizePx: number; maxSizePx: number; minAlpha: number; maxAlpha: number; }) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarPlacement`
+`(options: { seededRandom: () => number; tileWidthPx: number; tileHeightPx: number; minSizePx: number; maxSizePx: number; minAlpha: number; maxAlpha: number; }) => import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarPlacement`
 
 Resolves one deterministic star placement and appearance from the seeded RNG.
 
@@ -423,7 +423,7 @@ Returns: A 2D drawing context when rendering is supported.
 
 ### renderPopulationFrame
 
-`(context: CanvasRenderingContext2D, renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState) => void`
+`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState) => void`
 
 Draws one simulation frame for the current population state.
 
@@ -436,7 +436,7 @@ Returns: Nothing.
 
 ### updateTrailState
 
-`(trailState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState, renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => void`
+`(trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => void`
 
 Updates the trail cache from the latest frame snapshot.
 
@@ -461,7 +461,7 @@ Returns: Clamped value.
 
 ### pushTrailPoint
 
-`(trailPoints: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], frameIndex: number, yPosition: number) => void`
+`(trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], frameIndex: number, yPosition: number) => void`
 
 Appends one trail point while enforcing max retained history length.
 
@@ -474,7 +474,7 @@ Returns: Nothing.
 
 ### resolveEdgeOpacityFactor
 
-`(pointXPx: number, pointYPx: number, edgeBounds: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds) => number`
+`(pointXPx: number, pointYPx: number, edgeBounds: import("test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds) => number`
 
 Converts distance-to-edge into a normalized opacity factor.
 
@@ -510,7 +510,7 @@ Pure render-style result for one bird body draw pass.
 
 ### resolveBirdRenderStyle
 
-`(birdIndex: number, championBirdIndex: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle`
+`(birdIndex: number, championBirdIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle`
 
 Resolves opacity, body color, and champion marker for one bird.
 
@@ -522,7 +522,7 @@ Returns: Pure style payload used by the render service.
 
 ### resolveChampionBirdIndex
 
-`(renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => number`
+`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => number`
 
 Resolves the champion bird index for the current render frame.
 
@@ -538,7 +538,7 @@ Returns: Champion index or `-1` when no bird is alive.
 
 ### applyPlaybackSnapshot
 
-`(renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, snapshot: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
+`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
 
 Applies worker snapshot data to the mutable playback render state.
 
@@ -550,7 +550,7 @@ Returns: Nothing.
 
 ### resolveLeaderFramesSurvived
 
-`(renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => number`
+`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => number`
 
 Resolves the maximum survived-frame count in the current render state.
 
@@ -596,7 +596,7 @@ Request payload for one playback-step worker call.
 
 ### resolvePlaybackCompletionSummary
 
-`(playbackStepPayload: { snapshot: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }, latestLeaderPipesPassed: number, latestLeaderFramesSurvived: number) => { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; }`
+`(playbackStepPayload: { snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }, latestLeaderPipesPassed: number, latestLeaderFramesSurvived: number) => { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; }`
 
 Resolves final playback summary values when worker reports completion.
 
@@ -609,7 +609,7 @@ Returns: Final aggregate playback summary.
 
 ### resolvePlaybackFrameStats
 
-`(playbackStepPayload: { snapshot: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }, frameIndex: number, activeBirdCount: number, leaderPipesPassed: number, leaderFramesSurvived: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats`
+`(playbackStepPayload: { snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }, frameIndex: number, activeBirdCount: number, leaderPipesPassed: number, leaderFramesSurvived: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats`
 
 Resolves HUD playback frame stats from worker payload and leader metrics.
 
@@ -624,7 +624,7 @@ Returns: Normalized per-frame HUD telemetry payload.
 
 ### resolvePlaybackStepRequest
 
-`(input: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.worker-channel.utils").ResolvePlaybackStepRequestInput) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.worker-channel.utils").ResolvePlaybackStepRequestResult`
+`(input: import("test/examples/flappy_bird/browser-entry/playback/playback.worker-channel.utils").ResolvePlaybackStepRequestInput) => import("test/examples/flappy_bird/browser-entry/playback/playback.worker-channel.utils").ResolvePlaybackStepRequestResult`
 
 Resolves step count and request payload for the next worker playback batch.
 

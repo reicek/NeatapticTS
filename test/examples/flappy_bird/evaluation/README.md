@@ -72,7 +72,7 @@ rollout-owned module boundary.
 
 ### rolloutEpisode
 
-`(network: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutOptions: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyEpisodeResult`
+`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyEpisodeResult`
 
 Roll out an episode and return details.
 
@@ -102,7 +102,7 @@ Returns: Mixed uint32 seed.
 
 ### evaluateFlappyFitness
 
-`(network: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutOptions: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => number`
+`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => number`
 
 Evaluate a network on a single deterministic Flappy Bird episode.
 
@@ -114,7 +114,7 @@ Returns: Fitness score (higher is better).
 
 ### evaluateFlappyFitnessAcrossSeeds
 
-`(network: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, sharedSeeds: readonly number[], rolloutOptions: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation`
+`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, sharedSeeds: readonly number[], rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation`
 
 Evaluate a network on a shared batch of deterministic seeds.
 

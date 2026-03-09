@@ -11,7 +11,7 @@ bonuses, and other post-action fitness adjustments.
 
 ### applyMazeMovementEntropyGuidanceShaping
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Apply entropy-guided shaping based on confidence and perceptual guidance.
 
@@ -22,7 +22,7 @@ Parameters:
 
 ### applyMazeMovementExplorationVisitAdjustment
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Apply the per-cell exploration bonus or revisit penalty.
 
@@ -33,7 +33,7 @@ Parameters:
 
 ### applyMazeMovementGlobalDistanceImprovementBonus
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Apply the long-horizon global-distance improvement bonus.
 
@@ -45,7 +45,7 @@ Parameters:
 
 ### applyMazeMovementLocalAreaPenalty
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Apply a local-area stagnation penalty when the run oscillates in a tight window.
 
@@ -56,7 +56,7 @@ Parameters:
 
 ### applyMazeMovementPostActionPenalties
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Apply the post-action shaping and penalty aggregation phase.
 
@@ -66,7 +66,7 @@ Parameters:
 
 ### applyMazeMovementProgressShaping
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, distanceDelta: number, improved: boolean, worsened: boolean, rewardScale: number) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, distanceDelta: number, improved: boolean, worsened: boolean, rewardScale: number) => void`
 
 Apply progress and away-from-goal shaping after a move.
 
@@ -79,7 +79,7 @@ Parameters:
 
 ### applyMazeMovementRepetitionAndBacktrackPenalties
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Apply repetition and immediate-backtrack penalties.
 
@@ -90,7 +90,7 @@ Parameters:
 
 ### applyMazeMovementSaturationPenaltyCycle
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, rewardScale: number, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Apply the periodic saturation penalty cycle.
 
@@ -101,7 +101,7 @@ Parameters:
 
 ### executeMazeMovementAndRewards
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], distanceMap: number[][] | undefined, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], distanceMap: number[][] | undefined, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
 
 Execute the chosen move and apply the shaping terms tied to that move.
 
@@ -113,7 +113,7 @@ Parameters:
 
 ### maybeTerminateMazeMovementDeepStagnation
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, coordinateScratch: Int32Array<ArrayBufferLike>) => boolean`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, coordinateScratch: Int32Array<ArrayBufferLike>) => boolean`
 
 Apply the deep-stagnation termination penalty when appropriate.
 

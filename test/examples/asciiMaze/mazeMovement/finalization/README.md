@@ -23,7 +23,7 @@ Returns: Normalized entropy in the range `[0, 1]`.
 
 ### finalizeFailedMazeMovementRun
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], startPos: readonly [number, number], exitPos: readonly [number, number], distanceMap: number[][] | undefined) => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], startPos: readonly [number, number], exitPos: readonly [number, number], distanceMap: number[][] | undefined) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
 
 Build the finalized payload for a failed maze run.
 
@@ -38,7 +38,7 @@ Returns: Failure result with shaped fitness, path, and diagnostic summaries.
 
 ### finalizeSuccessfulMazeMovementRun
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, maxSteps: number) => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, maxSteps: number) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
 
 Build the finalized payload for a successful maze run.
 

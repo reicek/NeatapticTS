@@ -131,7 +131,7 @@ These fields are the minimal node state required to round-trip compact and JSON 
 
 ### applyHydratedArchitectureDescriptor
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, architectureDescriptor: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor | undefined) => void`
+`(network: import("src/architecture/network").default, architectureDescriptor: import("src/architecture/network/network.types").NetworkArchitectureDescriptor | undefined) => void`
 
 Applies hydrated architecture metadata to runtime network when shape is valid.
 
@@ -143,15 +143,15 @@ Returns: Nothing.
 
 ### deserialize
 
-`(data: import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("C:/NeatapticTS/src/architecture/network").default`
+`(data: import("src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
 
 ### fromJSONImpl
 
-`(json: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => import("C:/NeatapticTS/src/architecture/network").default`
+`(json: import("src/architecture/network/network.types").NetworkJSON) => import("src/architecture/network").default`
 
 ### isArchitectureDescriptorShapeValid
 
-`(architectureDescriptor: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor | undefined) => boolean`
+`(architectureDescriptor: import("src/architecture/network/network.types").NetworkArchitectureDescriptor | undefined) => boolean`
 
 Parameters:
 - `architectureDescriptor` - - Optional descriptor candidate.
@@ -160,7 +160,7 @@ Returns: True when minimal descriptor shape is valid.
 
 ### serialize
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple`
+`() => import("src/architecture/network/network.types").CompactSerializedNetworkTuple`
 
 Serializes a network instance into the compact tuple format.
 
@@ -180,7 +180,7 @@ Endpoints are canonical node indices, which keeps payloads deterministic and lan
 
 ### toJSONImpl
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON`
+`() => import("src/architecture/network/network.types").NetworkJSON`
 
 Serializes a network instance into the verbose JSON format.
 
@@ -205,7 +205,7 @@ bits4+ reserved.
 
 #### acquire
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default`
 
 Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
 a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
@@ -306,7 +306,7 @@ Last applied delta weight (used by classic momentum).
 
 #### release
 
-`(conn: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(conn: import("src/architecture/connection").default) => void`
 
 Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
 afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
@@ -362,7 +362,7 @@ Extended trace structure for modulatory / eligibility propagation algorithms. Pa
 
 ### appendJsonForwardConnections
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, networkJson: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, networkJson: import("src/architecture/network/network.types").NetworkJSON) => void`
 
 Appends JSON entries for forward connections.
 
@@ -376,7 +376,7 @@ Returns: Nothing.
 
 ### appendJsonNodesAndSelfConnections
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, networkJson: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, networkJson: import("src/architecture/network/network.types").NetworkJSON) => void`
 
 Appends JSON node entries and optional self-connections.
 
@@ -391,7 +391,7 @@ Returns: Nothing.
 
 ### appendJsonSelfConnectionWhenPresent
 
-`(nodeInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNodeInternals, nodeIndex: number, networkJson: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
+`(nodeInternals: import("src/architecture/network/network.types").SerializeNodeInternals, nodeIndex: number, networkJson: import("src/architecture/network/network.types").NetworkJSON) => void`
 
 Appends JSON self-connection when node has one.
 
@@ -404,7 +404,7 @@ Returns: Nothing.
 
 ### assignJsonEnabledFlagWhenProvided
 
-`(createdConnection: import("C:/NeatapticTS/src/architecture/connection").default | undefined, enabled: boolean) => void`
+`(createdConnection: import("src/architecture/connection").default | undefined, enabled: boolean) => void`
 
 Assigns enabled flag when value is provided.
 
@@ -416,7 +416,7 @@ Returns: Nothing.
 
 ### assignJsonGaterWhenValid
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, gaterIndex: number | null, createdConnection: import("C:/NeatapticTS/src/architecture/connection").default | undefined) => void`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, gaterIndex: number | null, createdConnection: import("src/architecture/connection").default | undefined) => void`
 
 Assigns JSON gater when connection and gater index are valid.
 
@@ -429,7 +429,7 @@ Returns: Nothing.
 
 ### createConnection
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default, weight: number) => import("C:/NeatapticTS/src/architecture/connection").default | undefined`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default, weight: number) => import("src/architecture/connection").default | undefined`
 
 Creates one connection and returns first created instance.
 
@@ -443,7 +443,7 @@ Returns: Created connection or undefined.
 
 ### createEmptyNetworkJson
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkInternalsWithDropout) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON`
+`(networkInternals: import("src/architecture/network/network.types").NetworkInternalsWithDropout) => import("src/architecture/network/network.types").NetworkJSON`
 
 Creates an empty verbose JSON shell from runtime internals.
 
@@ -457,7 +457,7 @@ Returns: Empty JSON shell with `formatVersion` and scalar metadata initialized.
 
 ### createJsonConnection
 
-`(from: number, to: number, weight: number, gater: number | null, enabled: boolean) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection`
+`(from: number, to: number, weight: number, gater: number | null, enabled: boolean) => import("src/architecture/network/network.types").NetworkJSONConnection`
 
 Creates one JSON connection entry.
 
@@ -472,7 +472,7 @@ Returns: JSON connection entry.
 
 ### createJsonNode
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default, nodeInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNodeInternals, nodeIndex: number) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONNode`
+`(node: import("src/architecture/node").default, nodeInternals: import("src/architecture/network/network.types").SerializeNodeInternals, nodeIndex: number) => import("src/architecture/network/network.types").NetworkJSONNode`
 
 Creates one JSON node entry.
 
@@ -485,7 +485,7 @@ Returns: JSON node entry.
 
 ### createNodeWithType
 
-`(nodeType: string) => import("C:/NeatapticTS/src/architecture/node").default`
+`(nodeType: string) => import("src/architecture/node").default`
 
 Creates one node with provided type.
 
@@ -496,7 +496,7 @@ Returns: New node.
 
 ### hydrateNodeFromJsonEntry
 
-`(rebuiltNode: import("C:/NeatapticTS/src/architecture/node").default, nodeJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONNode, nodeIndex: number) => void`
+`(rebuiltNode: import("src/architecture/node").default, nodeJsonEntry: import("src/architecture/network/network.types").NetworkJSONNode, nodeIndex: number) => void`
 
 Hydrates one node from JSON node entry.
 
@@ -509,7 +509,7 @@ Returns: Nothing.
 
 ### isConnectionEnabled
 
-`(connectionInstance: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+`(connectionInstance: import("src/architecture/connection").default) => boolean`
 
 Resolves enabled status from optional connection flag.
 
@@ -520,7 +520,7 @@ Returns: True when connection is enabled.
 
 ### isJsonConnectionInNodeBounds
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], connectionJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection) => boolean`
+`(nodes: import("src/architecture/node").default[], connectionJsonEntry: import("src/architecture/network/network.types").NetworkJSONConnection) => boolean`
 
 Checks JSON connection indices against node list bounds.
 
@@ -532,7 +532,7 @@ Returns: True when both indices are valid.
 
 ### isJsonConnectionShapeValid
 
-`(connectionJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection) => boolean`
+`(connectionJsonEntry: import("src/architecture/network/network.types").NetworkJSONConnection) => boolean`
 
 Checks that JSON connection has numeric endpoint fields.
 
@@ -543,7 +543,7 @@ Returns: True when endpoint fields are numbers.
 
 ### rebuildConnectionsFromJsonPayload
 
-`(jsonConnectionContext: import("C:/NeatapticTS/src/architecture/network/network.types").JsonConnectionRebuildContext) => void`
+`(jsonConnectionContext: import("src/architecture/network/network.types").JsonConnectionRebuildContext) => void`
 
 Rebuilds runtime connections from verbose JSON entries.
 
@@ -556,7 +556,7 @@ Returns: Nothing.
 
 ### rebuildNodesFromJsonPayload
 
-`(jsonNodeContext: import("C:/NeatapticTS/src/architecture/network/network.types").JsonNodeRebuildContext) => void`
+`(jsonNodeContext: import("src/architecture/network/network.types").JsonNodeRebuildContext) => void`
 
 Rebuilds runtime nodes from verbose JSON entries.
 
@@ -567,7 +567,7 @@ Returns: Nothing.
 
 ### rebuildOneJsonConnection
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, connectionJsonEntry: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSONConnection) => void`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, connectionJsonEntry: import("src/architecture/network/network.types").NetworkJSONConnection) => void`
 
 Rebuilds one verbose JSON connection entry.
 
@@ -590,7 +590,7 @@ Returns: Effective dropout.
 
 ### resolveGaterIndex
 
-`(gaterNode: import("C:/NeatapticTS/src/architecture/node").default | null) => number | null`
+`(gaterNode: import("src/architecture/node").default | null) => number | null`
 
 Resolves gater node index from gater reference.
 
@@ -601,7 +601,7 @@ Returns: Gater index or null.
 
 ### validateNetworkJsonOrThrow
 
-`(json: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => void`
+`(json: import("src/architecture/network/network.types").NetworkJSON) => void`
 
 Validates the verbose JSON payload root shape.
 
@@ -625,7 +625,7 @@ Returns: Nothing.
 
 ### assignCompactGaterWhenValid
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, gaterIndex: number | null, createdConnection: import("C:/NeatapticTS/src/architecture/connection").default | undefined) => void`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, gaterIndex: number | null, createdConnection: import("src/architecture/connection").default | undefined) => void`
 
 Assigns compact gater when both connection and gater index are valid.
 
@@ -638,7 +638,7 @@ Returns: Nothing.
 
 ### collectAllConnections
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals) => import("src/architecture/connection").default[]`
 
 Collects all runtime connections into a single list.
 
@@ -649,7 +649,7 @@ Returns: Combined connections.
 
 ### collectNodeActivations
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => number[]`
+`(nodes: import("src/architecture/node").default[]) => number[]`
 
 Collects node activation values in positional order.
 
@@ -660,7 +660,7 @@ Returns: Activation list aligned to node indices.
 
 ### collectNodeSquashKeys
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => string[]`
+`(nodes: import("src/architecture/node").default[]) => string[]`
 
 Collects node activation keys in positional order.
 
@@ -673,7 +673,7 @@ Returns: Squash-key list aligned to node indices.
 
 ### collectNodeStates
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => number[]`
+`(nodes: import("src/architecture/node").default[]) => number[]`
 
 Collects node state values in positional order.
 
@@ -684,7 +684,7 @@ Returns: State list aligned to node indices.
 
 ### collectSerializedConnections
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection[]`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals) => import("src/architecture/network/network.types").SerializedConnection[]`
 
 Collects compact connection records from forward and self connection groups.
 
@@ -695,7 +695,7 @@ Returns: Serialized connection list.
 
 ### createConnection
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default, weight: number) => import("C:/NeatapticTS/src/architecture/connection").default | undefined`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default, weight: number) => import("src/architecture/connection").default | undefined`
 
 Creates one connection and returns first created instance.
 
@@ -709,7 +709,7 @@ Returns: Created connection or undefined.
 
 ### createNodeWithType
 
-`(nodeType: string) => import("C:/NeatapticTS/src/architecture/node").default`
+`(nodeType: string) => import("src/architecture/node").default`
 
 Creates one node with provided type.
 
@@ -720,7 +720,7 @@ Returns: New node.
 
 ### hydrateNodeStateFromCompactPayload
 
-`(rebuiltNode: import("C:/NeatapticTS/src/architecture/node").default, activation: number, state: number, squashName: string | undefined, nodeIndex: number) => void`
+`(rebuiltNode: import("src/architecture/node").default, activation: number, state: number, squashName: string | undefined, nodeIndex: number) => void`
 
 Hydrates node runtime state from compact tuple values.
 
@@ -735,7 +735,7 @@ Returns: Nothing.
 
 ### isSerializedConnectionInNodeBounds
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, serializedConnection: import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection) => boolean`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, serializedConnection: import("src/architecture/network/network.types").SerializedConnection) => boolean`
 
 Checks compact connection bounds against current node list.
 
@@ -747,7 +747,7 @@ Returns: True when endpoints are valid.
 
 ### rebuildConnectionsFromCompactPayload
 
-`(compactConnectionContext: import("C:/NeatapticTS/src/architecture/network/network.types").CompactConnectionRebuildContext) => void`
+`(compactConnectionContext: import("src/architecture/network/network.types").CompactConnectionRebuildContext) => void`
 
 Rebuilds runtime connections from compact connection records.
 
@@ -760,7 +760,7 @@ Returns: Nothing.
 
 ### rebuildNodesFromCompactPayload
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, compactNodeContext: import("C:/NeatapticTS/src/architecture/network/network.types").CompactNodeRebuildContext) => void`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, compactNodeContext: import("src/architecture/network/network.types").CompactNodeRebuildContext) => void`
 
 Rebuilds runtime nodes from compact payload arrays.
 
@@ -774,7 +774,7 @@ Returns: Nothing.
 
 ### rebuildOneCompactConnection
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals, serializedConnection: import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection) => void`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, serializedConnection: import("src/architecture/network/network.types").SerializedConnection) => void`
 
 Rebuilds one compact serialized connection.
 
@@ -786,7 +786,7 @@ Returns: Nothing.
 
 ### refreshNodeIndices
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => void`
+`(nodes: import("src/architecture/node").default[]) => void`
 
 Refreshes `node.index` for each node in list order.
 
@@ -814,7 +814,7 @@ Returns: Node type string.
 
 ### serializeOneConnection
 
-`(connectionInstance: import("C:/NeatapticTS/src/architecture/connection").default) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection`
+`(connectionInstance: import("src/architecture/connection").default) => import("src/architecture/network/network.types").SerializedConnection`
 
 Serializes one connection into compact indexed form.
 
@@ -827,7 +827,7 @@ Returns: Serialized connection record.
 
 ### asNetworkInternals
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").SerializeNetworkInternals`
 
 Casts a network instance to the internal runtime shape used by serializer helpers.
 
@@ -838,7 +838,7 @@ Returns: Runtime internals.
 
 ### asNetworkInternalsWithDropout
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkInternalsWithDropout`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkInternalsWithDropout`
 
 Casts a network instance to internals that include optional dropout metadata.
 
@@ -849,7 +849,7 @@ Returns: Runtime internals with optional dropout.
 
 ### asNodeInternals
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNodeInternals`
+`(node: import("src/architecture/node").default) => import("src/architecture/network/network.types").SerializeNodeInternals`
 
 Casts a node instance to its internal runtime representation.
 
@@ -860,7 +860,7 @@ Returns: Node internals.
 
 ### createCompactPayloadContext
 
-`(data: import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple) => import("C:/NeatapticTS/src/architecture/network/network.types").CompactPayloadContext`
+`(data: import("src/architecture/network/network.types").CompactSerializedNetworkTuple) => import("src/architecture/network/network.types").CompactPayloadContext`
 
 Normalizes a compact tuple payload into a named object context.
 
@@ -874,7 +874,7 @@ Returns: Normalized payload context.
 
 ### createNetworkInstance
 
-`(input: number, output: number) => import("C:/NeatapticTS/src/architecture/network").default`
+`(input: number, output: number) => import("src/architecture/network").default`
 
 Creates a new network instance for deserialize workflows.
 
@@ -897,7 +897,7 @@ Returns: True when finite number.
 
 ### isNodeIndexInBounds
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], index: number) => boolean`
+`(nodes: import("src/architecture/node").default[], index: number) => boolean`
 
 Checks whether an index is inside the bounds of a node array.
 
@@ -909,7 +909,7 @@ Returns: True when index is valid.
 
 ### resetMutableRuntimeCollections
 
-`(networkInternals: import("C:/NeatapticTS/src/architecture/network/network.types").SerializeNetworkInternals) => void`
+`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals) => void`
 
 Clears mutable runtime collections before reconstruction.
 
@@ -920,7 +920,7 @@ Returns: Nothing.
 
 ### resolveNetworkSize
 
-`(compactPayload: import("C:/NeatapticTS/src/architecture/network/network.types").CompactPayloadContext, inputSizeOverride: number | undefined, outputSizeOverride: number | undefined) => import("C:/NeatapticTS/src/architecture/network/network.types").ResolvedNetworkSizeContext`
+`(compactPayload: import("src/architecture/network/network.types").CompactPayloadContext, inputSizeOverride: number | undefined, outputSizeOverride: number | undefined) => import("src/architecture/network/network.types").ResolvedNetworkSizeContext`
 
 Resolves effective input/output dimensions using optional explicit overrides.
 
@@ -949,7 +949,7 @@ Returns: Effective size.
 
 ### findActivationByFunctionName
 
-`(squashName: string | undefined) => import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction | undefined`
+`(squashName: string | undefined) => import("src/methods/activation.utils").ActivationFunction | undefined`
 
 Resolves activation by matching function.name.
 
@@ -960,7 +960,7 @@ Returns: Activation function or undefined.
 
 ### findActivationByKey
 
-`(squashName: string | undefined) => import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction | undefined`
+`(squashName: string | undefined) => import("src/methods/activation.utils").ActivationFunction | undefined`
 
 Resolves activation by direct key lookup.
 
@@ -971,7 +971,7 @@ Returns: Activation function or undefined.
 
 ### findActivationEntryByReference
 
-`(squashFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => [string, import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction] | undefined`
+`(squashFunction: import("src/methods/activation.utils").ActivationFunction) => [string, import("src/methods/activation.utils").ActivationFunction] | undefined`
 
 Finds activation entry by function reference.
 
@@ -982,7 +982,7 @@ Returns: Activation entry or undefined.
 
 ### resolveActivationFunction
 
-`(squashName: string | undefined) => import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction`
+`(squashName: string | undefined) => import("src/methods/activation.utils").ActivationFunction`
 
 Resolves an activation function from a stored key or function name.
 
@@ -996,7 +996,7 @@ Returns: Activation function.
 
 ### resolveActivationKey
 
-`(squashFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => string`
+`(squashFunction: import("src/methods/activation.utils").ActivationFunction) => string`
 
 Resolves a canonical activation key from a runtime activation function reference.
 
@@ -1010,7 +1010,7 @@ Returns: Activation key.
 
 ### resolveNamedActivationFromFunction
 
-`(squashFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => string | undefined`
+`(squashFunction: import("src/methods/activation.utils").ActivationFunction) => string | undefined`
 
 Resolves activation name from function.name when non-empty.
 

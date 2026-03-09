@@ -14,7 +14,7 @@ Partial stats update map keyed by stats-table keys.
 
 ### createCanvasHost
 
-`(containerElement: HTMLElement) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
+`(containerElement: HTMLElement) => import("test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
 
 Builds the browser demo host tree and returns rendering handles.
 
@@ -25,7 +25,7 @@ Returns: Canvas handles, stats cells and network render callback.
 
 ### createCanvasHostInternal
 
-`(containerElement: HTMLElement) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
+`(containerElement: HTMLElement) => import("test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
 
 Builds the browser demo host tree and returns rendering handles.
 
@@ -113,7 +113,7 @@ Returns: Nothing.
 
 ### renderInitialCanvasHostState
 
-`(drawHeaderFrame: () => void, renderNetworkArchitecture: (network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void) => void`
+`(drawHeaderFrame: () => void, renderNetworkArchitecture: (network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void) => void`
 
 Renders the initial header and placeholder network visualization state.
 
@@ -144,7 +144,7 @@ Returns: Shared visual primitives reused across host sections.
 
 ### updateStatsTableValues
 
-`(statsValueByKey: Partial<Record<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
+`(statsValueByKey: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
 
 Applies partial stat updates to the rendered stats table.
 
@@ -196,7 +196,7 @@ Returns: Canvas 2D rendering context.
 
 ### createAndAttachHostStatsTable
 
-`(statsTableHost: HTMLElement) => Partial<Record<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>`
+`(statsTableHost: HTMLElement) => Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>`
 
 Creates the host stats table, appends it into the provided host element, and
 initializes all HUD values to their baseline placeholders.
@@ -208,7 +208,7 @@ Returns: Lookup map for future incremental stat updates.
 
 ### updateStatsTableValues
 
-`(statsValueByKey: Partial<Record<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
+`(statsValueByKey: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
 
 Applies partial stat updates to the rendered stats table.
 

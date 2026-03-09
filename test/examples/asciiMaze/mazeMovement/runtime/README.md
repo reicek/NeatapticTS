@@ -12,7 +12,7 @@ bookkeeping, and perception-state updates.
 
 ### buildMazeMovementVisionAndDistance
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], exitPos: readonly [number, number], distanceMap: number[][] | undefined) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], exitPos: readonly [number, number], distanceMap: number[][] | undefined) => void`
 
 Build the current perception vector and update distance-tracking state.
 
@@ -24,7 +24,7 @@ Parameters:
 
 ### createMazeMovementRunState
 
-`(encodedMaze: number[][], startPos: readonly [number, number], distanceMap: number[][] | undefined, maxSteps: number) => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState`
+`(encodedMaze: number[][], startPos: readonly [number, number], distanceMap: number[][] | undefined, maxSteps: number) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState`
 
 Create the initial run-state object for one simulation episode.
 
@@ -51,7 +51,7 @@ Returns: Finite distance when present, otherwise `Infinity`.
 
 ### getMazeMovementHistoryFromEnd
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, nth: number) => number | undefined`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, nth: number) => number | undefined`
 
 Return the `nth` most recent cell index from the visit-history ring.
 
@@ -77,7 +77,7 @@ Returns: True when the target cell is within bounds and open.
 
 ### pushMazeMovementHistory
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, cellIndex: number) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, cellIndex: number) => void`
 
 Push a cell index into the circular visit-history ring.
 
@@ -87,7 +87,7 @@ Parameters:
 
 ### recordMazeMovementVisitAndPenalties
 
-`(state: import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState) => void`
+`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState) => void`
 
 Record the current cell visit and update visit-driven penalties.
 

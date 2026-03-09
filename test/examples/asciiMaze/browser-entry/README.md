@@ -24,7 +24,7 @@ Browser host services assembled for one running demo instance.
 
 ### BrowserEntryStartFunction
 
-`(container: string | HTMLElement | undefined, opts: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartOptions | undefined) => Promise<import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").AsciiMazeRunHandle>`
+`(container: string | HTMLElement | undefined, opts: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartOptions | undefined) => Promise<import("test/examples/asciiMaze/browser-entry/browser-entry.types").AsciiMazeRunHandle>`
 
 Stable callable shape used by globals compatibility wiring.
 
@@ -64,7 +64,7 @@ Public lifecycle handle returned by the browser demo entrypoint.
 
 ### BrowserEntryStartFunction
 
-`(container: string | HTMLElement | undefined, opts: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartOptions | undefined) => Promise<import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").AsciiMazeRunHandle>`
+`(container: string | HTMLElement | undefined, opts: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartOptions | undefined) => Promise<import("test/examples/asciiMaze/browser-entry/browser-entry.types").AsciiMazeRunHandle>`
 
 Stable callable shape used by globals compatibility wiring.
 
@@ -74,7 +74,7 @@ Options accepted by the browser-hosted ASCII Maze entrypoint.
 
 ### start
 
-`(container: string | HTMLElement, opts: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartOptions) => Promise<import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").AsciiMazeRunHandle>`
+`(container: string | HTMLElement, opts: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartOptions) => Promise<import("test/examples/asciiMaze/browser-entry/browser-entry.types").AsciiMazeRunHandle>`
 
 ## browser-entry/browser-entry.services.ts
 
@@ -91,19 +91,19 @@ importing from this stable boundary while internals evolve independently.
 
 ### createBrowserEntryEvolutionHostAdapter
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter`
+`() => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter`
 
 ### createBrowserEntryHostServices
 
-`(hostElements: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostElements) => import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostServices`
+`(hostElements: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostElements) => import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostServices`
 
 ### installBrowserEntryGlobals
 
-`(start: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartFunction) => void`
+`(start: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartFunction) => void`
 
 ### runBrowserEntryCurriculum
 
-`(context: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryCurriculumContext) => void`
+`(context: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryCurriculumContext) => void`
 
 ## browser-entry/browser-entry.constants.ts
 
@@ -120,11 +120,11 @@ resize, and curriculum services consume a single named configuration table.
 
 ### createBrowserEntryHostServices
 
-`(hostElements: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostElements) => import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostServices`
+`(hostElements: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostElements) => import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostServices`
 
 ### createTelemetryHub
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryTelemetryHub<TTelemetry>`
+`() => import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryTelemetryHub<TTelemetry>`
 
 Create a minimal telemetry hub backed by a Set of listeners.
 
@@ -132,7 +132,7 @@ Returns: A small hub optimized for browser demo listener counts.
 
 ### installResizeRedraw
 
-`(observeTarget: HTMLElement | null, runtimeDashboard: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardPresentationAdapter) => () => void`
+`(observeTarget: HTMLElement | null, runtimeDashboard: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardPresentationAdapter) => () => void`
 
 Attach dashboard redraw behavior to host resizes and return a cleanup function.
 
@@ -144,7 +144,7 @@ Returns: Cleanup function that removes active observers or listeners.
 
 ### safelyRedrawDashboard
 
-`(runtimeDashboard: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardPresentationAdapter) => void`
+`(runtimeDashboard: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardPresentationAdapter) => void`
 
 Safely request a dashboard redraw without letting host issues break the run.
 
@@ -161,23 +161,23 @@ Parameters:
 
 ### createBrowserEntryEvolutionHostAdapter
 
-`() => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter`
+`() => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter`
 
 ### installBrowserEntryGlobals
 
-`(start: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartFunction) => void`
+`(start: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartFunction) => void`
 
 ## browser-entry/browser-entry.curriculum.services.ts
 
 ### runBrowserEntryCurriculum
 
-`(context: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryCurriculumContext) => void`
+`(context: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryCurriculumContext) => void`
 
 ## browser-entry/browser-entry.utils.ts
 
 ### createBrowserEvolutionSettings
 
-`(dimension: number) => import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryEvolutionSettings`
+`(dimension: number) => import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryEvolutionSettings`
 
 ### didSolveBrowserMaze
 
@@ -189,7 +189,7 @@ Parameters:
 
 ### resolveBrowserEntryHostElements
 
-`(container: string | HTMLElement) => import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostElements`
+`(container: string | HTMLElement) => import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostElements`
 
 ### scheduleBrowserEntryFrame
 

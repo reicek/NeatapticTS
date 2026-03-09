@@ -20,6 +20,7 @@ const FILE_SUMMARY_SYMBOL_NAME = '__file_summary__';
 const SOURCE_FILE_GLOBS = ['**/*.ts'];
 const SOURCE_FILE_IGNORE_GLOBS = ['**/*.d.ts'];
 const FOLDER_INDEX_FILE_NAME = 'FOLDERS.md';
+const WORKSPACE_ROOT_DIR = path.resolve('.');
 
 interface DocsTargetConfig {
   name: string;
@@ -1116,17 +1117,50 @@ function resolveCallSignature(declaration: any): string | undefined {
       .getParameters()
       .map((parameter: any) => {
         const parameterDeclarations = parameter.getDeclarations();
-        const parameterType = parameter
+        const parameterType = normalizeRenderedTypeText(
+          parameter
           .getTypeAtLocation(parameterDeclarations[0] || declaration)
-          .getText();
+          .getText(),
+        );
         return `${parameter.getName()}: ${parameterType}`;
       })
       .join(', ');
 
-    return `(${renderedParameters}) => ${callSignature.getReturnType().getText()}`;
+    const returnType = normalizeRenderedTypeText(
+      callSignature.getReturnType().getText(),
+    );
+    return `(${renderedParameters}) => ${returnType}`;
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Rewrites absolute import paths from ts-morph type text into repo-relative paths.
+ *
+ * @param typeText - Raw type text returned by ts-morph.
+ * @returns Normalized type text safe for generated docs.
+ */
+function normalizeRenderedTypeText(typeText: string): string {
+  return typeText.replace(
+    /import\((['"])([^'"]+)\1\)/g,
+    (_match, quote: string, importPath: string) => {
+      const normalizedImportPath = path.normalize(importPath);
+      if (!path.isAbsolute(normalizedImportPath)) {
+        return `import(${quote}${importPath}${quote})`;
+      }
+
+      const relativeImportPath = path
+        .relative(WORKSPACE_ROOT_DIR, normalizedImportPath)
+        .replace(/\\/g, '/');
+
+      const portableImportPath = relativeImportPath.startsWith('..')
+        ? importPath.replace(/\\/g, '/')
+        : relativeImportPath;
+
+      return `import(${quote}${portableImportPath}${quote})`;
+    },
+  );
 }
 
 /**
@@ -1161,21 +1195,41 @@ function extractParamDocs(
 function getTagCommentText(tag: JSDocTag | undefined): string | undefined {
   const rawComment = tag?.getComment();
   if (typeof rawComment === 'string') {
-    return rawComment.trim();
+    return sanitizeTagCommentText(rawComment);
   }
 
   if (Array.isArray(rawComment)) {
-    return rawComment
+    return sanitizeTagCommentText(
+      rawComment
       .map(
         (commentPart) =>
           (commentPart as { getText?: () => string }).getText?.() ||
           String(commentPart),
       )
       .join(' ')
-      .trim();
+      .trim(),
+    );
   }
 
   return undefined;
+}
+
+/**
+ * Remove ts-morph JSDoc tag artifacts such as standalone trailing asterisks.
+ *
+ * @param commentText - Flattened tag comment text.
+ * @returns Cleaned comment text or undefined when nothing meaningful remains.
+ */
+function sanitizeTagCommentText(
+  commentText: string | undefined,
+): string | undefined {
+  const normalizedComment = commentText
+    ?.replace(/\r\n/g, '\n')
+    .replace(/\n\s*\*\s*$/g, '')
+    .replace(/^\s*\*\s*$/g, '')
+    .trim();
+
+  return normalizedComment ? normalizedComment : undefined;
 }
 
 /**

@@ -11,8 +11,9 @@ import type { INetwork } from './interfaces';
  *
  * Semantics & conventions
  * - Coordinate system: row-major arrays with origin at the top-left of the maze.
- *   Positions are expressed as a readonly tuple [rowIndex, colIndex] where both
- *   indices are zero-based.
+ *   Position tuples follow the shared ASCII Maze convention `[x, y]`, where
+ *   `x` is the zero-based column index and `y` is the zero-based row index.
+ *   Read row-major maze grids as `encodedMaze[y][x]`.
  * - Encodings: the numeric encoding of cells (encodedMaze) is intentionally
  *   engine-specific. Common encoders map open floor to 0 and walls/obstacles to 1,
  *   but evaluators must consult the caller's encoder or accept common defaults.
@@ -38,10 +39,10 @@ export interface IFitnessEvaluationContext {
   /** Row-major numeric representation of the maze. */
   encodedMaze: number[][];
 
-  /** Start position for the agent as a readonly tuple [rowIndex, colIndex]. */
+  /** Start position for the agent as a readonly tuple `[x, y]`. */
   startPosition: readonly [number, number];
 
-  /** Exit/goal position for the episode as a readonly tuple [rowIndex, colIndex]. */
+  /** Exit/goal position for the episode as a readonly tuple `[x, y]`. */
   exitPosition: readonly [number, number];
 
   /** Simulation controls for a single agent episode. */

@@ -26,7 +26,7 @@ Shared random generator signature for genetic operators.
 
 ### crossOver
 
-`(parentNetwork1: import("C:/NeatapticTS/src/architecture/network").default, parentNetwork2: import("C:/NeatapticTS/src/architecture/network").default, equal: boolean) => import("C:/NeatapticTS/src/architecture/network").default`
+`(parentNetwork1: import("src/architecture/network").default, parentNetwork2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network").default`
 
 Genetic operator: NEAT‑style crossover (legacy merge operator removed).
 
@@ -45,7 +45,7 @@ Design notes:
 
 ### asGeneticNetwork
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").GeneticNetwork`
 
 Coerces a network to the internal genetic runtime shape.
 
@@ -56,7 +56,7 @@ Returns: Network with runtime genetic properties.
 
 ### assignNodeIndexes
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => void`
+`(nodes: import("src/architecture/node").default[]) => void`
 
 Assigns contiguous indices to a node list.
 
@@ -67,7 +67,7 @@ Returns: Nothing.
 
 ### assignOffspringNodes
 
-`(nodeContext: import("C:/NeatapticTS/src/architecture/network/network.types").CrossoverNodeBuildContext) => void`
+`(nodeContext: import("src/architecture/network/network.types").CrossoverNodeBuildContext) => void`
 
 Builds and reindexes offspring nodes.
 
@@ -78,7 +78,7 @@ Returns: Nothing.
 
 ### buildOffspringNodes
 
-`(parent1: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parent2: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("C:/NeatapticTS/src/architecture/network/network.types").ParentMetrics, offspringNodeCount: number, equal: boolean, randomGenerator: import("C:/NeatapticTS/src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, offspringNodeCount: number, equal: boolean, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/node").default[]`
 
 Builds the offspring node list by selecting genes per slot.
 
@@ -94,7 +94,7 @@ Returns: Cloned offspring node genes.
 
 ### chooseOffspringConnectionGenes
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").CrossoverContext) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene[]`
+`(context: import("src/architecture/network/network.types").CrossoverContext) => import("src/architecture/network/network.types").ConnectionGene[]`
 
 Chooses all offspring connection genes from both parents.
 
@@ -105,7 +105,7 @@ Returns: Chosen connection genes.
 
 ### cloneNodeGene
 
-`(sourceNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/node").default`
+`(sourceNode: import("src/architecture/node").default) => import("src/architecture/node").default`
 
 Clones node structural gene attributes.
 
@@ -116,7 +116,7 @@ Returns: Cloned node.
 
 ### createCrossoverContext
 
-`(parentNetwork1: import("C:/NeatapticTS/src/architecture/network").default, parentNetwork2: import("C:/NeatapticTS/src/architecture/network").default, equal: boolean) => import("C:/NeatapticTS/src/architecture/network/network.types").CrossoverContext`
+`(parentNetwork1: import("src/architecture/network").default, parentNetwork2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network/network.types").CrossoverContext`
 
 Creates the immutable crossover baseline context.
 
@@ -129,7 +129,7 @@ Returns: Initialized crossover context.
 
 ### createNodeBuildContext
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").CrossoverContext) => import("C:/NeatapticTS/src/architecture/network/network.types").CrossoverNodeBuildContext`
+`(context: import("src/architecture/network/network.types").CrossoverContext) => import("src/architecture/network/network.types").CrossoverNodeBuildContext`
 
 Creates the node-build context for offspring node selection.
 
@@ -140,7 +140,7 @@ Returns: Node-build context.
 
 ### createOffspringScaffold
 
-`(inputSize: number, outputSize: number) => import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork`
+`(inputSize: number, outputSize: number) => import("src/architecture/network/network.types").GeneticNetwork`
 
 Creates an empty offspring scaffold with reset runtime arrays.
 
@@ -152,7 +152,7 @@ Returns: Initialized offspring runtime object.
 
 ### determineOffspringNodeCount
 
-`(equal: boolean, parentMetrics: import("C:/NeatapticTS/src/architecture/network/network.types").ParentMetrics, randomGenerator: import("C:/NeatapticTS/src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => number`
+`(equal: boolean, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => number`
 
 Determines offspring node count from fitness/equality policy.
 
@@ -165,7 +165,7 @@ Returns: Offspring node count.
 
 ### getAlignedOutputNode
 
-`(parent: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, alignedIndex: number) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(parent: import("src/architecture/network/network.types").GeneticNetwork, alignedIndex: number) => import("src/architecture/node").default | undefined`
 
 Reads an aligned output candidate node if index is in the valid non-input range.
 
@@ -177,7 +177,7 @@ Returns: Output candidate node.
 
 ### getRandomGenerator
 
-`(parentNetwork: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator`
+`(parentNetwork: import("src/architecture/network").default) => import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator`
 
 Resolves the random generator used by crossover decisions.
 
@@ -188,7 +188,7 @@ Returns: Random function.
 
 ### resolveParentMetrics
 
-`(parent1: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parent2: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, outputSize: number) => import("C:/NeatapticTS/src/architecture/network/network.types").ParentMetrics`
+`(parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, outputSize: number) => import("src/architecture/network/network.types").ParentMetrics`
 
 Computes common parent metrics reused across helper functions.
 
@@ -201,7 +201,7 @@ Returns: Parent metrics.
 
 ### selectHiddenNodeGene
 
-`(nodeIndex: number, parent1: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parent2: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("C:/NeatapticTS/src/architecture/network/network.types").ParentMetrics, equal: boolean, randomGenerator: import("C:/NeatapticTS/src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(nodeIndex: number, parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, equal: boolean, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/node").default | undefined`
 
 Selects a hidden-region node gene.
 
@@ -217,7 +217,7 @@ Returns: Selected hidden node gene.
 
 ### selectInputNodeGene
 
-`(nodeIndex: number, parent1: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(nodeIndex: number, parent1: import("src/architecture/network/network.types").GeneticNetwork) => import("src/architecture/node").default | undefined`
 
 Selects an input-region node gene.
 
@@ -229,7 +229,7 @@ Returns: Parent 1 input node gene.
 
 ### selectNodeGeneAtIndex
 
-`(nodeIndex: number, offspringNodeCount: number, parent1: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parent2: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("C:/NeatapticTS/src/architecture/network/network.types").ParentMetrics, equal: boolean, randomGenerator: import("C:/NeatapticTS/src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(nodeIndex: number, offspringNodeCount: number, parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, equal: boolean, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/node").default | undefined`
 
 Selects a node gene for a specific offspring slot.
 
@@ -246,7 +246,7 @@ Returns: Selected parent node gene, if any.
 
 ### selectOutputNodeGene
 
-`(nodeIndex: number, offspringNodeCount: number, parent1: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parent2: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("C:/NeatapticTS/src/architecture/network/network.types").ParentMetrics, randomGenerator: import("C:/NeatapticTS/src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(nodeIndex: number, offspringNodeCount: number, parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/node").default | undefined`
 
 Selects an output-region node gene using tail alignment.
 
@@ -262,7 +262,7 @@ Returns: Selected output node gene.
 
 ### validateParentCompatibility
 
-`(parentNetwork1: import("C:/NeatapticTS/src/architecture/network").default, parentNetwork2: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(parentNetwork1: import("src/architecture/network").default, parentNetwork2: import("src/architecture/network").default) => void`
 
 Validates parent compatibility for crossover.
 
@@ -276,7 +276,7 @@ Returns: Nothing.
 
 ### buildConnectionGene
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene | undefined`
+`(connection: import("src/architecture/connection").default) => import("src/architecture/network/network.types").ConnectionGene | undefined`
 
 Builds a connection gene from a concrete connection instance.
 
@@ -287,7 +287,7 @@ Returns: Gene descriptor, or undefined when endpoints lack valid indices.
 
 ### canInheritParent1DisjointGenes
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGeneSelectionContext) => boolean`
+`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext) => boolean`
 
 Determines if parent-1 disjoint/excess genes are inheritable.
 
@@ -298,7 +298,7 @@ Returns: True when parent-1 disjoint genes can be selected.
 
 ### canInheritParent2DisjointGenes
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGeneSelectionContext) => boolean`
+`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext) => boolean`
 
 Determines if parent-2 disjoint/excess genes are inheritable.
 
@@ -309,7 +309,7 @@ Returns: True when parent-2 disjoint genes can be selected.
 
 ### chooseConnectionGenes
 
-`(parent1: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parent2: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("C:/NeatapticTS/src/architecture/network/network.types").ParentMetrics, parent1Genes: Record<string, import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene>, parent2Genes: Record<string, import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene>, equal: boolean, randomGenerator: import("C:/NeatapticTS/src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene[]`
+`(parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, parent1Genes: Record<string, import("src/architecture/network/network.types").ConnectionGene>, parent2Genes: Record<string, import("src/architecture/network/network.types").ConnectionGene>, equal: boolean, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/network/network.types").ConnectionGene[]`
 
 Selects connection genes for offspring inheritance.
 
@@ -326,7 +326,7 @@ Returns: Chosen genes for offspring materialization.
 
 ### chooseDisjointGeneFromParent
 
-`(parent: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, sourceGene: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene`
+`(parent: import("src/architecture/network/network.types").GeneticNetwork, sourceGene: import("src/architecture/network/network.types").ConnectionGene) => import("src/architecture/network/network.types").ConnectionGene`
 
 Chooses a disjoint/excess gene from a single parent.
 
@@ -338,7 +338,7 @@ Returns: Selected disjoint gene.
 
 ### chooseMatchingGene
 
-`(parent1: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parent2: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, parent1Gene: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene, parent2Gene: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene, randomGenerator: import("C:/NeatapticTS/src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene`
+`(parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parent1Gene: import("src/architecture/network/network.types").ConnectionGene, parent2Gene: import("src/architecture/network/network.types").ConnectionGene, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/network/network.types").ConnectionGene`
 
 Chooses a gene for matching innovation IDs.
 
@@ -353,7 +353,7 @@ Returns: Selected gene.
 
 ### cloneConnectionGene
 
-`(sourceGene: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene`
+`(sourceGene: import("src/architecture/network/network.types").ConnectionGene) => import("src/architecture/network/network.types").ConnectionGene`
 
 Clones a connection gene.
 
@@ -364,7 +364,7 @@ Returns: Independent clone.
 
 ### collectConnectionGenes
 
-`(parent: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork) => Record<string, import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene>`
+`(parent: import("src/architecture/network/network.types").GeneticNetwork) => Record<string, import("src/architecture/network/network.types").ConnectionGene>`
 
 Collects all connection genes (standard + self) keyed by innovation ID.
 
@@ -375,7 +375,7 @@ Returns: Innovation-keyed connection gene map.
 
 ### combineChosenGenes
 
-`(parent1TraversalGenes: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene[], parent2OnlyGenesToAppend: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene[]) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene[]`
+`(parent1TraversalGenes: import("src/architecture/network/network.types").ConnectionGene[], parent2OnlyGenesToAppend: import("src/architecture/network/network.types").ConnectionGene[]) => import("src/architecture/network/network.types").ConnectionGene[]`
 
 Combines selected gene partitions into one ordered list.
 
@@ -387,7 +387,7 @@ Returns: Combined chosen genes.
 
 ### createParent1TraversalContexts
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGeneSelectionContext) => import("C:/NeatapticTS/src/architecture/network/network.types").Parent1GeneTraversalContext[]`
+`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext) => import("src/architecture/network/network.types").Parent1GeneTraversalContext[]`
 
 Builds parent-1 traversal contexts keyed by innovation IDs.
 
@@ -398,7 +398,7 @@ Returns: Parent-1 traversal contexts.
 
 ### createSelectionContext
 
-`(sourceParent1: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, sourceParent2: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, sourceParentMetrics: import("C:/NeatapticTS/src/architecture/network/network.types").ParentMetrics, sourceParent1Genes: Record<string, import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene>, sourceParent2Genes: Record<string, import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene>, sourceEqual: boolean, sourceRandomGenerator: import("C:/NeatapticTS/src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGeneSelectionContext`
+`(sourceParent1: import("src/architecture/network/network.types").GeneticNetwork, sourceParent2: import("src/architecture/network/network.types").GeneticNetwork, sourceParentMetrics: import("src/architecture/network/network.types").ParentMetrics, sourceParent1Genes: Record<string, import("src/architecture/network/network.types").ConnectionGene>, sourceParent2Genes: Record<string, import("src/architecture/network/network.types").ConnectionGene>, sourceEqual: boolean, sourceRandomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/network/network.types").ConnectionGeneSelectionContext`
 
 Creates the immutable context for this selection pass.
 
@@ -415,7 +415,7 @@ Returns: Selection context.
 
 ### foldParent1TraversalContexts
 
-`(traversalContexts: import("C:/NeatapticTS/src/architecture/network/network.types").Parent1GeneTraversalContext[]) => import("C:/NeatapticTS/src/architecture/network/network.types").Parent1TraversalSelectionResult`
+`(traversalContexts: import("src/architecture/network/network.types").Parent1GeneTraversalContext[]) => import("src/architecture/network/network.types").Parent1TraversalSelectionResult`
 
 Folds parent-1 traversal contexts into selected genes and consumed IDs.
 
@@ -438,7 +438,7 @@ Returns: Probability in [0, 1].
 
 ### selectGeneForParent1TraversalContext
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").Parent1GeneTraversalContext) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene | undefined`
+`(traversalContext: import("src/architecture/network/network.types").Parent1GeneTraversalContext) => import("src/architecture/network/network.types").ConnectionGene | undefined`
 
 Selects one inheritable gene for a parent-1 traversal context.
 
@@ -449,7 +449,7 @@ Returns: Selected gene or undefined.
 
 ### selectParent1TraversalGenes
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGeneSelectionContext) => import("C:/NeatapticTS/src/architecture/network/network.types").Parent1TraversalSelectionResult`
+`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext) => import("src/architecture/network/network.types").Parent1TraversalSelectionResult`
 
 Selects genes reachable from parent-1 innovation traversal.
 
@@ -460,7 +460,7 @@ Returns: Parent-1 traversal result.
 
 ### selectParent2OnlyGenes
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGeneSelectionContext, remainingParent2Genes: Record<string, import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene>) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene[]`
+`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext, remainingParent2Genes: Record<string, import("src/architecture/network/network.types").ConnectionGene>) => import("src/architecture/network/network.types").ConnectionGene[]`
 
 Selects inheritable parent-2-only disjoint/excess genes.
 
@@ -472,7 +472,7 @@ Returns: Selected parent-2-only genes.
 
 ### selectRemainingParent2Genes
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGeneSelectionContext, consumedInnovationIds: string[]) => Record<string, import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene>`
+`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext, consumedInnovationIds: string[]) => Record<string, import("src/architecture/network/network.types").ConnectionGene>`
 
 Builds parent-2 gene map after removing consumed matching innovations.
 
@@ -486,7 +486,7 @@ Returns: Remaining parent-2 genes.
 
 ### applyConnectionGeneToConnection
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default, connectionGene: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene) => void`
+`(connection: import("src/architecture/connection").default, connectionGene: import("src/architecture/network/network.types").ConnectionGene) => void`
 
 Applies gene properties to a runtime connection.
 
@@ -498,7 +498,7 @@ Returns: Nothing.
 
 ### attachGaterIfAvailable
 
-`(offspring: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, connection: import("C:/NeatapticTS/src/architecture/connection").default, gaterIndex: number) => void`
+`(offspring: import("src/architecture/network/network.types").GeneticNetwork, connection: import("src/architecture/connection").default, gaterIndex: number) => void`
 
 Attaches a gater node when the target index is valid.
 
@@ -511,7 +511,7 @@ Returns: Nothing.
 
 ### collectEligibleTraversalContexts
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").OffspringMaterializationContext, genes: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene[]) => import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext[]`
+`(context: import("src/architecture/network/network.types").OffspringMaterializationContext, genes: import("src/architecture/network/network.types").ConnectionGene[]) => import("src/architecture/network/network.types").GeneTraversalContext[]`
 
 Collects traversal contexts that satisfy all structural eligibility checks.
 
@@ -523,7 +523,7 @@ Returns: Eligible traversal contexts.
 
 ### createConnectionForEndpoints
 
-`(endpointsContext: import("C:/NeatapticTS/src/architecture/network/network.types").GeneEndpointsContext) => import("C:/NeatapticTS/src/architecture/connection").default | undefined`
+`(endpointsContext: import("src/architecture/network/network.types").GeneEndpointsContext) => import("src/architecture/connection").default | undefined`
 
 Creates a runtime connection for endpoint nodes.
 
@@ -534,7 +534,7 @@ Returns: Created connection or undefined.
 
 ### createMaterializationContext
 
-`(targetOffspring: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork) => import("C:/NeatapticTS/src/architecture/network/network.types").OffspringMaterializationContext`
+`(targetOffspring: import("src/architecture/network/network.types").GeneticNetwork) => import("src/architecture/network/network.types").OffspringMaterializationContext`
 
 Creates the immutable top-level context used during materialization.
 
@@ -545,7 +545,7 @@ Returns: Materialization context.
 
 ### createOffspringConnection
 
-`(offspring: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, fromNode: import("C:/NeatapticTS/src/architecture/node").default, toNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/connection").default | undefined`
+`(offspring: import("src/architecture/network/network.types").GeneticNetwork, fromNode: import("src/architecture/node").default, toNode: import("src/architecture/node").default) => import("src/architecture/connection").default | undefined`
 
 Creates a single offspring connection edge.
 
@@ -558,7 +558,7 @@ Returns: Created connection or undefined.
 
 ### createTraversalContexts
 
-`(context: import("C:/NeatapticTS/src/architecture/network/network.types").OffspringMaterializationContext, genes: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene[]) => import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext[]`
+`(context: import("src/architecture/network/network.types").OffspringMaterializationContext, genes: import("src/architecture/network/network.types").ConnectionGene[]) => import("src/architecture/network/network.types").GeneTraversalContext[]`
 
 Builds traversal contexts for each candidate gene.
 
@@ -570,7 +570,7 @@ Returns: Traversal contexts.
 
 ### hasExistingProjection
 
-`(endpointsContext: import("C:/NeatapticTS/src/architecture/network/network.types").GeneEndpointsContext) => boolean`
+`(endpointsContext: import("src/architecture/network/network.types").GeneEndpointsContext) => boolean`
 
 Checks whether the source endpoint already projects to the target endpoint.
 
@@ -581,7 +581,7 @@ Returns: True when projection already exists.
 
 ### isTraversalContextFeedForward
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext) => boolean`
+`(traversalContext: import("src/architecture/network/network.types").GeneTraversalContext) => boolean`
 
 Validates that a traversal context follows feed-forward ordering.
 
@@ -592,7 +592,7 @@ Returns: True when the gene is strictly forward.
 
 ### isTraversalContextWithinNodeBounds
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext) => boolean`
+`(traversalContext: import("src/architecture/network/network.types").GeneTraversalContext) => boolean`
 
 Validates that a traversal context endpoints are inside offspring bounds.
 
@@ -603,7 +603,7 @@ Returns: True when both indices are bounded.
 
 ### keepFeedForwardTraversalContexts
 
-`(traversalContexts: import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext[]) => import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext[]`
+`(traversalContexts: import("src/architecture/network/network.types").GeneTraversalContext[]) => import("src/architecture/network/network.types").GeneTraversalContext[]`
 
 Keeps traversal contexts that preserve feed-forward edge direction.
 
@@ -614,7 +614,7 @@ Returns: Feed-forward contexts.
 
 ### keepTraversalContextsWithinNodeBounds
 
-`(traversalContexts: import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext[]) => import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext[]`
+`(traversalContexts: import("src/architecture/network/network.types").GeneTraversalContext[]) => import("src/architecture/network/network.types").GeneTraversalContext[]`
 
 Keeps traversal contexts whose endpoints are inside offspring bounds.
 
@@ -625,7 +625,7 @@ Returns: Node-bounded contexts.
 
 ### materializeOffspringConnections
 
-`(offspring: import("C:/NeatapticTS/src/architecture/network/network.types").GeneticNetwork, chosenGenes: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGene[]) => void`
+`(offspring: import("src/architecture/network/network.types").GeneticNetwork, chosenGenes: import("src/architecture/network/network.types").ConnectionGene[]) => void`
 
 Materializes selected connection genes in the offspring network.
 
@@ -637,7 +637,7 @@ Returns: Nothing.
 
 ### materializeSingleTraversalContext
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext) => void`
+`(traversalContext: import("src/architecture/network/network.types").GeneTraversalContext) => void`
 
 Materializes one eligible traversal context when no duplicate projection exists.
 
@@ -648,7 +648,7 @@ Returns: Nothing.
 
 ### materializeTraversalContexts
 
-`(traversalContexts: import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext[]) => void`
+`(traversalContexts: import("src/architecture/network/network.types").GeneTraversalContext[]) => void`
 
 Materializes each eligible traversal context independently.
 
@@ -659,7 +659,7 @@ Returns: Nothing.
 
 ### resolveGeneEndpointsContext
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").GeneTraversalContext) => import("C:/NeatapticTS/src/architecture/network/network.types").GeneEndpointsContext | undefined`
+`(traversalContext: import("src/architecture/network/network.types").GeneTraversalContext) => import("src/architecture/network/network.types").GeneEndpointsContext | undefined`
 
 Resolves concrete endpoint nodes for a traversal context.
 

@@ -5,7 +5,6 @@ import {
   FLAPPY_WORLD_HEIGHT_PX,
 } from '../constants/constants';
 import {
-  resolveAdaptiveDifficultyProfile,
   resolveNextSpawnGapCenterY as resolveSharedNextSpawnGapCenterY,
   resolveNextSpawnGapSize as resolveSharedNextSpawnGapSize,
   resolveNextSpawnIntervalFrames as resolveSharedNextSpawnIntervalFrames,

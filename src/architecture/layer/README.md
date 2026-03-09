@@ -106,7 +106,7 @@ const propagationContext: LayerPropagationContext = { nodes: layer.nodes };
 
 ### activateLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerActivationContext, values: number[] | undefined, training: boolean) => number[]`
+`(context: import("src/architecture/layer/layer.utils.types").LayerActivationContext, values: number[] | undefined, training: boolean) => number[]`
 
 Orchestrates layer activation behavior with a high-level flow.
 
@@ -140,7 +140,7 @@ Returns: A cloned array of activation values.
 
 ### clearLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerConnectionContext) => void`
+`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext) => void`
 
 Orchestrates clearing node activation state with a high-level flow.
 
@@ -154,7 +154,7 @@ clearLayer(layerConnectionContext);
 
 ### connectLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/group").default | import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Orchestrates layer connection behavior with a high-level flow.
 
@@ -177,7 +177,7 @@ Returns: The created connection list.
 
 ### createAttentionLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, heads: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, heads: number) => TLayer`
 
 Orchestrates attention layer creation with a high-level flow.
 
@@ -195,7 +195,7 @@ const attention = createAttentionLayer(factoryContext, 8, 4);
 
 ### createBatchNormLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Orchestrates batch normalization layer creation with a high-level flow.
 
@@ -212,7 +212,7 @@ const batchNorm = createBatchNormLayer(factoryContext, 16);
 
 ### createConv1dLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, kernelSize: number, stride: number, padding: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, kernelSize: number, stride: number, padding: number) => TLayer`
 
 Orchestrates 1D convolution layer creation with a high-level flow.
 
@@ -232,7 +232,7 @@ const conv1d = createConv1dLayer(factoryContext, 8, 3);
 
 ### createDenseLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Orchestrates dense layer creation with a high-level flow.
 
@@ -249,7 +249,7 @@ const dense = createDenseLayer(factoryContext, 8);
 
 ### createGruLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Orchestrates GRU layer creation with a high-level flow.
 
@@ -266,7 +266,7 @@ const gru = createGruLayer(factoryContext, 8);
 
 ### createLayerNormLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Orchestrates layer normalization layer creation with a high-level flow.
 
@@ -283,7 +283,7 @@ const layerNorm = createLayerNormLayer(factoryContext, 16);
 
 ### createLstmLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Orchestrates LSTM layer creation with a high-level flow.
 
@@ -300,7 +300,7 @@ const lstm = createLstmLayer(factoryContext, 8);
 
 ### createMemoryLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, memory: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, memory: number) => TLayer`
 
 Orchestrates Memory layer creation with a high-level flow.
 
@@ -318,7 +318,7 @@ const memoryLayer = createMemoryLayer(factoryContext, 4, 3);
 
 ### disconnectLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/group").default, twoSided: boolean) => void`
+`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default, twoSided: boolean) => void`
 
 Orchestrates disconnection behavior with a high-level flow.
 
@@ -335,7 +335,7 @@ Parameters:
 
 ### gateLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerConnectionContext, connections: import("C:/NeatapticTS/src/architecture/connection").default[], method: unknown) => void`
+`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, connections: import("src/architecture/connection").default[], method: unknown) => void`
 
 Orchestrates layer gating behavior with a high-level flow.
 
@@ -352,7 +352,7 @@ Parameters:
 
 ### inputLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerConnectionContext, from: import("C:/NeatapticTS/src/architecture/group").default | import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Orchestrates layer input wiring with a high-level flow.
 
@@ -372,7 +372,7 @@ Returns: The created connection list.
 
 ### propagateLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerPropagationContext, rate: number, momentum: number, targets: number[] | undefined) => void`
+`(context: import("src/architecture/layer/layer.utils.types").LayerPropagationContext, rate: number, momentum: number, targets: number[] | undefined) => void`
 
 Orchestrates layer backpropagation behavior with a high-level flow.
 
@@ -450,7 +450,7 @@ Returns: A pooled output array.
 
 ### applyLayerMask
 
-`(nodeList: import("C:/NeatapticTS/src/architecture/node").default[], mask: number) => void`
+`(nodeList: import("src/architecture/node").default[], mask: number) => void`
 
 Applies one mask value to every node in the layer.
 
@@ -520,7 +520,7 @@ Returns: A cloned output array.
 
 ### fillActivationOutput
 
-`(nodeList: import("C:/NeatapticTS/src/architecture/node").default[], inputValues: number[] | undefined, output: number[]) => void`
+`(nodeList: import("src/architecture/node").default[], inputValues: number[] | undefined, output: number[]) => void`
 
 Activates each node and writes outputs into the provided buffer.
 
@@ -588,7 +588,7 @@ Returns: A mask value of 1 or 0 for all nodes in the layer.
 
 ### clearLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerConnectionContext) => void`
+`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext) => void`
 
 Clears activation state for all nodes in a layer.
 
@@ -606,7 +606,7 @@ Parameters:
 
 ### connectLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/group").default | import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Connects a layer's output group to a target.
 
@@ -638,7 +638,7 @@ Returns: The created connection list.
 
 ### disconnectFromGroup
 
-`(layerNodes: import("C:/NeatapticTS/src/architecture/node").default[], targetGroup: import("C:/NeatapticTS/src/architecture/group").default, layerConnections: { in: import("C:/NeatapticTS/src/architecture/connection").default[]; out: import("C:/NeatapticTS/src/architecture/connection").default[]; self: import("C:/NeatapticTS/src/architecture/connection").default[]; }, removeTwoSided: boolean) => void`
+`(layerNodes: import("src/architecture/node").default[], targetGroup: import("src/architecture/group").default, layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, removeTwoSided: boolean) => void`
 
 Disconnects all layer nodes from a target group.
 
@@ -653,7 +653,7 @@ Parameters:
 
 ### disconnectFromNode
 
-`(layerNodes: import("C:/NeatapticTS/src/architecture/node").default[], targetNode: import("C:/NeatapticTS/src/architecture/node").default, layerConnections: { in: import("C:/NeatapticTS/src/architecture/connection").default[]; out: import("C:/NeatapticTS/src/architecture/connection").default[]; self: import("C:/NeatapticTS/src/architecture/connection").default[]; }, removeTwoSided: boolean) => void`
+`(layerNodes: import("src/architecture/node").default[], targetNode: import("src/architecture/node").default, layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, removeTwoSided: boolean) => void`
 
 Disconnects all layer nodes from a target node.
 
@@ -665,7 +665,7 @@ Parameters:
 
 ### disconnectLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/group").default, twoSided: boolean) => void`
+`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default, twoSided: boolean) => void`
 
 Disconnects nodes in this layer from a target group or node.
 
@@ -686,7 +686,7 @@ Parameters:
 
 ### gateLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerConnectionContext, connections: import("C:/NeatapticTS/src/architecture/connection").default[], method: unknown) => void`
+`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, connections: import("src/architecture/connection").default[], method: unknown) => void`
 
 Applies gating to the provided connections using the layer output group.
 
@@ -709,7 +709,7 @@ Parameters:
 
 ### inputLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerConnectionContext, from: import("C:/NeatapticTS/src/architecture/group").default | import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Connects a source group or layer to this layer's input target.
 
@@ -740,7 +740,7 @@ Returns: The created connection list.
 
 ### removeIncomingConnection
 
-`(layerConnections: { in: import("C:/NeatapticTS/src/architecture/connection").default[]; out: import("C:/NeatapticTS/src/architecture/connection").default[]; self: import("C:/NeatapticTS/src/architecture/connection").default[]; }, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => void`
 
 Removes an incoming connection from layer tracking.
 
@@ -753,7 +753,7 @@ Parameters:
 
 ### removeOutgoingConnection
 
-`(layerConnections: { in: import("C:/NeatapticTS/src/architecture/connection").default[]; out: import("C:/NeatapticTS/src/architecture/connection").default[]; self: import("C:/NeatapticTS/src/architecture/connection").default[]; }, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => void`
 
 Removes an outgoing connection from layer tracking.
 
@@ -788,7 +788,7 @@ Parameters:
 
 ### propagateNodesInReverse
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerPropagationContext, rate: number, momentum: number, targets: number[] | undefined) => void`
+`(context: import("src/architecture/layer/layer.utils.types").LayerPropagationContext, rate: number, momentum: number, targets: number[] | undefined) => void`
 
 Propagates errors through all nodes in reverse order.
 
@@ -822,7 +822,7 @@ Parameters:
 
 ### buildDenseLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Builds a standard dense (fully connected) layer.
 
@@ -854,7 +854,7 @@ dense.input(previousLayerLike);
 
 ### buildGruLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Builds a GRU layer using the provided factory context.
 
@@ -878,7 +878,7 @@ gru.input(previousLayerLike);
 
 ### buildLstmLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Builds an LSTM layer using the provided factory context.
 
@@ -908,7 +908,7 @@ lstm.input(previousLayerLike);
 
 ### buildMemoryLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, memory: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, memory: number) => TLayer`
 
 Builds a Memory layer using the provided factory context.
 
@@ -936,7 +936,7 @@ memoryLayer.input(previousLayerLike);
 
 ### flattenConnections
 
-`(connectionLists: import("C:/NeatapticTS/src/architecture/connection").default[][]) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(connectionLists: import("src/architecture/connection").default[][]) => import("src/architecture/connection").default[]`
 
 Flattens grouped connection arrays into a single list.
 
@@ -976,7 +976,7 @@ const method = resolveConnectionMethod(undefined);
 
 ### resolveSourceGroup
 
-`(factoryContext: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, from: import("C:/NeatapticTS/src/architecture/group").default | import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerLike) => import("C:/NeatapticTS/src/architecture/group").default`
+`(factoryContext: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike) => import("src/architecture/group").default`
 
 Resolves a source group from a layer-like or group input.
 
@@ -1019,7 +1019,7 @@ const outputs = activateStubNodes(layer);
 
 ### buildAttentionLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, heads: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, heads: number) => TLayer`
 
 Builds a lightweight attention-style stub layer.
 
@@ -1048,7 +1048,7 @@ const out = attention.activate([1, 2, 3, 4]);
 
 ### buildConv1dLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, kernelSize: number, stride: number, padding: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, kernelSize: number, stride: number, padding: number) => TLayer`
 
 Builds a lightweight Conv1D-style stub layer.
 
@@ -1130,7 +1130,7 @@ activate([9, 8, 7, 6]); // -> [9, 8, 7]
 
 ### createStubLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Creates shared node/output scaffolding for experimental layers.
 
@@ -1176,7 +1176,7 @@ Example (conceptual flow):
 
 ### buildBatchNormLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Builds a dense layer decorated with batch-style normalization.
 
@@ -1204,7 +1204,7 @@ const normalized = buildBatchNormLayer(factoryContext, 16);
 
 ### buildLayerNormLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
 
 Builds a dense layer decorated with layer-style normalization.
 

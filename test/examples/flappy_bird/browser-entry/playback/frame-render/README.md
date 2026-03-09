@@ -22,7 +22,7 @@ Resolved opacity and color for one bird trail render pass.
 
 ### renderPopulationFrame
 
-`(context: CanvasRenderingContext2D, renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState) => void`
+`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState) => void`
 
 Draws one simulation frame for the current population state.
 
@@ -35,7 +35,7 @@ Returns: Nothing.
 
 ### updateTrailState
 
-`(trailState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState, renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => void`
+`(trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => void`
 
 Updates the trail cache from the latest frame snapshot.
 
@@ -49,7 +49,7 @@ Returns: Nothing.
 
 ### beginPlaybackFrameViewportTransform
 
-`(context: CanvasRenderingContext2D, sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
+`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
 
 Applies the viewport transform used for world-space frame rendering.
 
@@ -83,7 +83,7 @@ Returns: Nothing.
 
 ### renderPlaybackFrameBackground
 
-`(context: CanvasRenderingContext2D, renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
+`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
 
 Draws the split playback background for the current world viewport.
 
@@ -96,7 +96,7 @@ Returns: Nothing.
 
 ### renderPlaybackFrameBirds
 
-`(context: CanvasRenderingContext2D, renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext, renderBird: PlaybackBirdRenderer) => void`
+`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext, renderBird: PlaybackBirdRenderer) => void`
 
 Draws all active birds for the current frame.
 
@@ -110,7 +110,7 @@ Returns: Nothing.
 
 ### renderPlaybackFramePipes
 
-`(context: CanvasRenderingContext2D, renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
+`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
 
 Draws all visible pipe segments and their neon outlines for the frame.
 
@@ -123,7 +123,7 @@ Returns: Nothing.
 
 ### renderPlaybackFrameTrails
 
-`(context: CanvasRenderingContext2D, renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState, sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext, resolveTrailStyle: PlaybackTrailStyleResolver, renderTrail: PlaybackTrailRenderer) => void`
+`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext, resolveTrailStyle: PlaybackTrailStyleResolver, renderTrail: PlaybackTrailRenderer) => void`
 
 Draws stepped trails for all active birds in the frame.
 
@@ -139,7 +139,7 @@ Returns: Nothing.
 
 ### resolvePlaybackFrameSceneContext
 
-`(context: CanvasRenderingContext2D, renderState: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext`
+`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext`
 
 Resolves the shared scene contract used by one frame render pass.
 
@@ -153,7 +153,7 @@ Returns: Viewport, camera, and edge-bounds state for the frame.
 
 ### drawPlaybackBirdBody
 
-`(context: CanvasRenderingContext2D, birdGeometry: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
+`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
 
 Draws the square bird body with its base neon glow.
 
@@ -166,7 +166,7 @@ Returns: Nothing.
 
 ### drawPlaybackBirdChampionAura
 
-`(context: CanvasRenderingContext2D, birdGeometry: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
+`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
 
 Draws the soft champion aura plate behind the bird body.
 
@@ -179,7 +179,7 @@ Returns: Nothing.
 
 ### drawPlaybackBirdChampionGlowPlate
 
-`(context: CanvasRenderingContext2D, birdGeometry: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
+`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
 
 Draws the champion-only red glow plate beneath the bird body.
 
@@ -192,7 +192,7 @@ Returns: Nothing.
 
 ### drawPlaybackBirdLeaderRing
 
-`(context: CanvasRenderingContext2D, birdGeometry: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, isChampionBird: boolean) => void`
+`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, isChampionBird: boolean) => void`
 
 Draws the leader ring around the champion bird.
 
@@ -205,7 +205,7 @@ Returns: Nothing.
 
 ### drawPlaybackBirdShine
 
-`(context: CanvasRenderingContext2D, birdGeometry: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, isChampionBird: boolean) => void`
+`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, isChampionBird: boolean) => void`
 
 Draws the reflective shine highlight for one bird body.
 
@@ -218,7 +218,7 @@ Returns: Nothing.
 
 ### drawTrail
 
-`(context: CanvasRenderingContext2D, trailPoints: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], color: string, anchorX: number, baseOpacity: number, edgeBounds: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds) => void`
+`(context: CanvasRenderingContext2D, trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], color: string, anchorX: number, baseOpacity: number, edgeBounds: import("test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds) => void`
 
 Draws the stepped trail history for one active bird.
 
@@ -234,7 +234,7 @@ Returns: Nothing.
 
 ### drawTrailSegmentWithEdgeFade
 
-`(context: CanvasRenderingContext2D, startXPx: number, startYPx: number, endXPx: number, endYPx: number, baseOpacity: number, edgeBounds: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds, startFrameOffset: number, endFrameOffset: number, maximumTrailFrameOffset: number) => void`
+`(context: CanvasRenderingContext2D, startXPx: number, startYPx: number, endXPx: number, endYPx: number, baseOpacity: number, edgeBounds: import("test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds, startFrameOffset: number, endFrameOffset: number, maximumTrailFrameOffset: number) => void`
 
 Draws one trail segment with combined edge and lifetime fading.
 
@@ -268,7 +268,7 @@ Returns: Nothing.
 
 ### resolvePlaybackBirdGeometry
 
-`(birdYPx: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry`
+`(birdYPx: number) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry`
 
 Resolves the fixed bird geometry used by all body rendering passes.
 
@@ -279,7 +279,7 @@ Returns: Pixel-aligned square geometry for the bird body.
 
 ### resolvePlaybackTrailStyle
 
-`(birdIndex: number, championBirdIndex: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailRenderStyle`
+`(birdIndex: number, championBirdIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailRenderStyle`
 
 Resolves the trail style used for one bird's stepped trail.
 

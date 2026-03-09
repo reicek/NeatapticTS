@@ -142,7 +142,7 @@ Returns: Formatted error string for CLI logging.
 
 ### applyMutationSchedule
 
-`(neatController: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController, mutationSchedule: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.evaluation-plan.utils").FlappyMutationSchedule) => void`
+`(neatController: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController, mutationSchedule: import("test/examples/flappy_bird/trainer/trainer.evaluation-plan.utils").FlappyMutationSchedule) => void`
 
 Applies mutation schedule values to the NEAT controller options.
 
@@ -152,13 +152,13 @@ Parameters:
 
 ### LogGenerationSummaryCallback
 
-`(generationLabel: number, mutationSchedule: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.evaluation-plan.utils").FlappyMutationSchedule, report: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationReport | undefined, fittestGenome: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, fallbackEpisode: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyEpisodeResult) => void`
+`(generationLabel: number, mutationSchedule: import("test/examples/flappy_bird/trainer/trainer.evaluation-plan.utils").FlappyMutationSchedule, report: import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationReport | undefined, fittestGenome: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, fallbackEpisode: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyEpisodeResult) => void`
 
 Callback signature for one-line generation logging.
 
 ### runTrainerEvolutionLoop
 
-`(neatController: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController, trainerRuntimeState: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState, logGenerationSummary: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.loop.service").LogGenerationSummaryCallback) => Promise<void>`
+`(neatController: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController, trainerRuntimeState: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState, logGenerationSummary: import("test/examples/flappy_bird/trainer/trainer.loop.service").LogGenerationSummaryCallback) => Promise<void>`
 
 Runs the outer evolution loop until runtime stop is requested.
 
@@ -171,7 +171,7 @@ Parameters:
 
 ### createNeatController
 
-`(trainerSetup: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerSetup) => import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController`
+`(trainerSetup: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerSetup) => import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController`
 
 Builds the NEAT controller with baseline options.
 
@@ -182,7 +182,7 @@ Returns: Typed NEAT controller used by the trainer loop.
 
 ### createTrainerRuntimeState
 
-`() => import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState`
+`() => import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState`
 
 Creates mutable runtime state container.
 
@@ -190,7 +190,7 @@ Returns: Fresh runtime state used by loop orchestration.
 
 ### createTrainerSetup
 
-`() => import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerSetup`
+`() => import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerSetup`
 
 Creates immutable setup values for the trainer.
 
@@ -208,7 +208,7 @@ Returns: Constant zero fitness.
 
 ### buildGenerationReport
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], aggregateByGenome: ReadonlyMap<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, generationEvaluationPlan: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan) => import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationReport`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], aggregateByGenome: ReadonlyMap<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, generationEvaluationPlan: import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan) => import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationReport`
 
 Builds a compact report for the current generation.
 
@@ -221,7 +221,7 @@ Returns: Aggregated generation report.
 
 ### logGenerationSummary
 
-`(generationLabel: number, mutationSchedule: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.evaluation-plan.utils").FlappyMutationSchedule, report: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationReport | undefined, fittestGenome: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, fallbackEpisode: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyEpisodeResult) => void`
+`(generationLabel: number, mutationSchedule: import("test/examples/flappy_bird/trainer/trainer.evaluation-plan.utils").FlappyMutationSchedule, report: import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationReport | undefined, fittestGenome: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, fallbackEpisode: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyEpisodeResult) => void`
 
 Emits one compact generation log line.
 
@@ -238,7 +238,7 @@ Returns: Nothing.
 
 ### attachPopulationFitnessEvaluator
 
-`(neatController: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController, trainerRuntimeState: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState, elitismCount: number, dependencies: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.fitness.service").TrainerFitnessServiceDependencies) => void`
+`(neatController: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController, trainerRuntimeState: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState, elitismCount: number, dependencies: import("test/examples/flappy_bird/trainer/trainer.fitness.service").TrainerFitnessServiceDependencies) => void`
 
 Attaches population-level staged evaluator to the NEAT controller.
 
@@ -250,7 +250,7 @@ Parameters:
 
 ### createPopulationFitnessEvaluator
 
-`(neatController: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController, trainerRuntimeState: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState, elitismCount: number, dependencies: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.fitness.service").TrainerFitnessServiceDependencies) => (population: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[]) => Promise<void>`
+`(neatController: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController, trainerRuntimeState: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState, elitismCount: number, dependencies: import("test/examples/flappy_bird/trainer/trainer.fitness.service").TrainerFitnessServiceDependencies) => (population: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[]) => Promise<void>`
 
 Creates the asynchronous population fitness evaluator.
 
@@ -270,7 +270,7 @@ Callback dependencies required by the trainer fitness orchestration service.
 
 ### handleTrainerStopSignal
 
-`(trainerRuntimeState: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState) => void`
+`(trainerRuntimeState: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState) => void`
 
 Handles one stop signal update.
 
@@ -279,7 +279,7 @@ Parameters:
 
 ### registerTrainerStopSignals
 
-`(trainerRuntimeState: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState) => void`
+`(trainerRuntimeState: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState) => void`
 
 Registers graceful stop signal handlers.
 
@@ -298,7 +298,7 @@ contracts, and sub-services can evolve behind a focused boundary.
 
 ### commitPopulationScores
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], provisionalScoresByGenome: ReadonlyMap<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], provisionalScoresByGenome: ReadonlyMap<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
 
 Commits provisional scores to genome score fields.
 
@@ -310,7 +310,7 @@ Returns: Nothing.
 
 ### evaluatePopulationFullStage
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>, elitismCount: number) => void`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>, elitismCount: number) => void`
 
 Executes the full evaluation stage over the top provisional candidates.
 
@@ -325,7 +325,7 @@ Returns: Nothing.
 
 ### evaluatePopulationQuickStage
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>) => void`
 
 Executes the quick evaluation stage over the full population.
 
@@ -339,7 +339,7 @@ Returns: Nothing.
 
 ### evaluatePopulationReevaluationStage
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>, elitismCount: number) => void`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], generationEvaluationPlan: import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan, aggregateByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, provisionalScoresByGenome: Map<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>, elitismCount: number) => void`
 
 Executes the large-seed reevaluation stage over top candidates.
 
@@ -356,7 +356,7 @@ Returns: Nothing.
 
 ### collectFiniteGenomeScores
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[]) => number[]`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[]) => number[]`
 
 Collects only finite scores from the current population.
 
@@ -370,7 +370,7 @@ Returns: Finite scores in population order.
 
 ### resolveBestGenerationDetails
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], bestGenome: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork | undefined, aggregateByGenome: ReadonlyMap<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, fallbackSeeds: readonly number[], fallbackRolloutOptions: import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.report.service.services").ResolvedBestGenerationDetails`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], bestGenome: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork | undefined, aggregateByGenome: ReadonlyMap<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation>, fallbackSeeds: readonly number[], fallbackRolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("test/examples/flappy_bird/trainer/trainer.report.service.services").ResolvedBestGenerationDetails`
 
 Resolves cached or fallback best-of-generation details for reporting.
 
@@ -398,7 +398,7 @@ orchestration while this helper module owns cache fallback behavior.
 
 ### buildGenerationLogParts
 
-`(generationLabel: number, bestFitness: number, bestPipesPassed: number, bestFramesSurvived: number, report: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationReport | undefined, mutationSchedule: import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.evaluation-plan.utils").FlappyMutationSchedule) => string[]`
+`(generationLabel: number, bestFitness: number, bestPipesPassed: number, bestFramesSurvived: number, report: import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationReport | undefined, mutationSchedule: import("test/examples/flappy_bird/trainer/trainer.evaluation-plan.utils").FlappyMutationSchedule) => string[]`
 
 Builds one-line generation log tokens.
 
@@ -416,7 +416,7 @@ Returns: Ordered log tokens for compact console output.
 
 ### resolveBestGenomeByScore
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[]) => import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork | undefined`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[]) => import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork | undefined`
 
 Resolves the best genome by current score.
 
@@ -427,7 +427,7 @@ Returns: Highest-scoring genome or `undefined` when population is empty.
 
 ### selectTopGenomesByScore
 
-`(population: readonly import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], provisionalScoresByGenome: ReadonlyMap<import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>, targetCount: number) => import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[]`
+`(population: readonly import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[], provisionalScoresByGenome: ReadonlyMap<import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork, number>, targetCount: number) => import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNetwork[]`
 
 Returns top genomes ordered by current provisional score.
 
@@ -455,7 +455,7 @@ Returns: Deterministic shared seed list.
 
 ### createFullRolloutOptions
 
-`(difficultyScale: number) => import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions`
+`(difficultyScale: number) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions`
 
 Builds full-stage rollout options.
 
@@ -466,7 +466,7 @@ Returns: Full stage rollout options.
 
 ### createQuickRolloutOptions
 
-`(difficultyScale: number) => import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions`
+`(difficultyScale: number) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions`
 
 Builds quick-screen rollout options.
 
@@ -477,7 +477,7 @@ Returns: Quick stage rollout options.
 
 ### createReevaluationRolloutOptions
 
-`(difficultyScale: number) => import("C:/NeatapticTS/test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions`
+`(difficultyScale: number) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions`
 
 Builds high-confidence reevaluation rollout options.
 
@@ -515,7 +515,7 @@ Returns: Difficulty scale in [0, 1].
 
 ### resolveGenerationEvaluationPlan
 
-`(generationIndex: number) => import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan`
+`(generationIndex: number) => import("test/examples/flappy_bird/trainer/trainer.types").FlappyGenerationEvaluationPlan`
 
 Resolves all per-generation evaluation controls.
 
@@ -526,7 +526,7 @@ Returns: Full staged evaluation plan for the generation.
 
 ### resolveMutationSchedule
 
-`(generationIndex: number) => import("C:/NeatapticTS/test/examples/flappy_bird/trainer/trainer.evaluation-plan.utils").FlappyMutationSchedule`
+`(generationIndex: number) => import("test/examples/flappy_bird/trainer/trainer.evaluation-plan.utils").FlappyMutationSchedule`
 
 Resolve a smooth mutation annealing schedule.
 

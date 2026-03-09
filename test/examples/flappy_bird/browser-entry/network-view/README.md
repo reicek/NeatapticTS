@@ -25,7 +25,7 @@ Returns: Clamped panel height.
 
 ### createPositionByNodeIndex
 
-`(centeredPositionedNodes: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]) => Map<number, import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>`
+`(centeredPositionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]) => Map<number, import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>`
 
 Builds a node-index lookup map for resolved positioned nodes.
 
@@ -36,7 +36,7 @@ Returns: Map keyed by node index.
 
 ### drawNetworkVisualization
 
-`(context: CanvasRenderingContext2D, network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void`
+`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void`
 
 Draws a complete, layer-based visualization of the active network.
 
@@ -90,7 +90,7 @@ Returns: Nothing.
 
 ### resolveAdjustedGraphPaddingContext
 
-`(context: CanvasRenderingContext2D, network: import("C:/NeatapticTS/src/architecture/network").default | undefined, canvasWidthPx: number, hideNetworkOverlays: boolean, graphPaddingContext: NetworkGraphPaddingContext) => Pick<NetworkGraphPaddingContext, "graphLeftPaddingPx" | "graphRightPaddingPx">`
+`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, canvasWidthPx: number, hideNetworkOverlays: boolean, graphPaddingContext: NetworkGraphPaddingContext) => Pick<NetworkGraphPaddingContext, "graphLeftPaddingPx" | "graphRightPaddingPx">`
 
 Adjusts graph-side padding to keep the floating legend from overlapping nodes.
 
@@ -125,7 +125,7 @@ Returns: Hidden-layer label.
 
 ### resolveNetworkArchitectureLabel
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => string`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => string`
 
 Resolves compact architecture label text for headers and HUD rows.
 
@@ -149,7 +149,7 @@ Returns: Drawable area dimensions.
 
 ### resolveNetworkNodeDimensions
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number, drawableWidthPx: number, drawableHeightPx: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number, drawableWidthPx: number, drawableHeightPx: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike`
 
 Resolves node rectangle dimensions from topology density and drawable bounds.
 
@@ -164,7 +164,7 @@ Returns: Node dimensions.
 
 ### resolveNetworkNodeDimensionsFromTopologySummary
 
-`(networkTopologySummary: NetworkTopologySummary, drawableWidthPx: number, drawableHeightPx: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike`
+`(networkTopologySummary: NetworkTopologySummary, drawableWidthPx: number, drawableHeightPx: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike`
 
 Resolves node rectangle dimensions from topology density and drawable bounds.
 
@@ -177,7 +177,7 @@ Returns: Node dimensions.
 
 ### resolveNetworkTopologySummary
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => NetworkTopologySummary`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => NetworkTopologySummary`
 
 Resolves a reusable topology summary for layout and sizing helpers.
 
@@ -190,7 +190,7 @@ Returns: Topology summary.
 
 ### resolveNetworkVisualizationHeightPx
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => number`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => number`
 
 Resolves responsive visualization canvas height from network shape.
 
@@ -203,7 +203,7 @@ Returns: Recommended height in pixels.
 
 ### resolveNetworkVisualizationScene
 
-`(context: CanvasRenderingContext2D, network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => NetworkVisualizationScene`
+`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => NetworkVisualizationScene`
 
 Resolves all non-topology canvas state needed to draw the network view.
 
@@ -217,7 +217,7 @@ Returns: Scene context for the current frame.
 
 ### resolvePositionedNetworkGraphScene
 
-`(networkVisualizationScene: NetworkVisualizationScene, network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => PositionedNetworkGraphScene`
+`(networkVisualizationScene: NetworkVisualizationScene, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => PositionedNetworkGraphScene`
 
 Resolves positioned nodes, connection lookup state, and shared node dimensions.
 
@@ -243,7 +243,7 @@ Returns: Recommended panel height.
 
 ### resolveRuntimeConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[]`
+`(network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[]`
 
 Resolves the runtime connection array from the active network.
 
@@ -287,7 +287,7 @@ Ordered labels for grouped Flappy network input bands.
 
 ### drawInputGroupLabelBands
 
-`(context: CanvasRenderingContext2D, positionedNodes: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => void`
+`(context: CanvasRenderingContext2D, positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => void`
 
 Draws vertical neon bands that label semantic groups in the input layer.
 
@@ -308,7 +308,7 @@ Draws a filled rounded rectangle path.
 
 ### resolveInputGroupLabelBands
 
-`(inputNodeCount: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/network-view/network-view.types").InputGroupLabelBand[]`
+`(inputNodeCount: number) => import("test/examples/flappy_bird/browser-entry/network-view/network-view.types").InputGroupLabelBand[]`
 
 Resolves input-layer semantic label bands for Flappy temporal observation channels.
 
@@ -321,7 +321,7 @@ Returns: Group label ranges with band colors.
 
 ### centerPositionedNodesInDrawableArea
 
-`(positionedNodes: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], leftPaddingPx: number, topPaddingPx: number, drawableWidthPx: number, drawableHeightPx: number, nodeLayoutPaddingPx: number, nodeDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]`
+`(positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], leftPaddingPx: number, topPaddingPx: number, drawableWidthPx: number, drawableHeightPx: number, nodeLayoutPaddingPx: number, nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]`
 
 Centers positioned nodes within the drawable graph area.
 
@@ -338,7 +338,7 @@ Returns: Center-aligned positioned nodes.
 
 ### positionNetworkNodes
 
-`(networkLayers: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][], leftPaddingPx: number, topPaddingPx: number, drawableWidthPx: number, drawableHeightPx: number, nodeLayoutPaddingPx: number, nodeDimensions: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]`
+`(networkLayers: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][], leftPaddingPx: number, topPaddingPx: number, drawableWidthPx: number, drawableHeightPx: number, nodeLayoutPaddingPx: number, nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]`
 
 Positions network nodes into drawable canvas coordinates.
 
@@ -357,7 +357,7 @@ Returns: Positioned nodes.
 
 ### resolveNetworkVisualizationLayers
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
+`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
 Resolves layered node groups for network-view layout and rendering.
 

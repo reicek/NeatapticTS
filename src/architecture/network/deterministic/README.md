@@ -109,7 +109,7 @@ Returns: Nothing.
 
 ### snapshotRNG
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.types").RNGSnapshot`
+`() => import("src/architecture/network/network.types").RNGSnapshot`
 
 Captures the current deterministic RNG lifecycle state as a portable snapshot.
 
@@ -138,7 +138,7 @@ Returns: Next unsigned 32-bit state.
 
 ### createDeterministicRandomFunction
 
-`(internalState: import("C:/NeatapticTS/src/architecture/network/network.types").DeterministicNetworkInternals) => () => number`
+`(internalState: import("src/architecture/network/network.types").DeterministicNetworkInternals) => () => number`
 
 Create deterministic PRNG function bound to provided internal state holder.
 
@@ -160,7 +160,7 @@ Returns: Mixed unsigned 32-bit word.
 
 ### setInternalSeedState
 
-`(internalState: import("C:/NeatapticTS/src/architecture/network/network.types").DeterministicNetworkInternals, normalizedState: number) => void`
+`(internalState: import("src/architecture/network/network.types").DeterministicNetworkInternals, normalizedState: number) => void`
 
 Assign normalized seed state to internal RNG storage.
 
@@ -172,7 +172,7 @@ Returns: Nothing.
 
 ### setRandomFunction
 
-`(internalState: import("C:/NeatapticTS/src/architecture/network/network.types").DeterministicNetworkInternals, randomFunction: () => number) => void`
+`(internalState: import("src/architecture/network/network.types").DeterministicNetworkInternals, randomFunction: () => number) => void`
 
 Assign the active random function reference.
 
@@ -278,7 +278,7 @@ Returns: Unsigned 32-bit state.
 
 ### clearStoredRngState
 
-`(internalState: import("C:/NeatapticTS/src/architecture/network/network.types").DeterministicNetworkInternals) => void`
+`(internalState: import("src/architecture/network/network.types").DeterministicNetworkInternals) => void`
 
 Clear stored numeric RNG state.
 
@@ -301,7 +301,7 @@ Returns: Nothing.
 
 ### setRandomFunction
 
-`(internalState: import("C:/NeatapticTS/src/architecture/network/network.types").DeterministicNetworkInternals, randomFunction: () => number) => void`
+`(internalState: import("src/architecture/network/network.types").DeterministicNetworkInternals, randomFunction: () => number) => void`
 
 Assign active random function reference.
 
@@ -313,7 +313,7 @@ Returns: Nothing.
 
 ### snapshotRNG
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.types").RNGSnapshot`
+`() => import("src/architecture/network/network.types").RNGSnapshot`
 
 Capture a snapshot of the RNG state together with the network's training step.
 

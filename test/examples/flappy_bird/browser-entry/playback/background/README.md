@@ -40,7 +40,7 @@ Horizontal tiled-image draw request.
 
 ### renderPlaybackBackground
 
-`(context: CanvasRenderingContext2D, request: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => void`
+`(context: CanvasRenderingContext2D, request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => void`
 
 Draws the layered playback background.
 
@@ -58,7 +58,7 @@ Returns: Nothing.
 
 ### drawPlaybackBackgroundHorizon
 
-`(context: CanvasRenderingContext2D, sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
+`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
 
 Draws the glowing horizon divider across the visible viewport.
 
@@ -70,7 +70,7 @@ Returns: Nothing.
 
 ### drawPlaybackBackgroundSky
 
-`(context: CanvasRenderingContext2D, sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext, request: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => void`
+`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext, request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => void`
 
 Draws the starfield parallax clipped to the upper sky band.
 
@@ -83,7 +83,7 @@ Returns: Nothing.
 
 ### drawPlaybackHorizonLine
 
-`(context: CanvasRenderingContext2D, request: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackHorizonLineRequest) => void`
+`(context: CanvasRenderingContext2D, request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackHorizonLineRequest) => void`
 
 Draws the glowing horizon divider using the provided neon style.
 
@@ -95,7 +95,7 @@ Returns: Nothing.
 
 ### drawPlaybackTiledImageRow
 
-`(context: CanvasRenderingContext2D, row: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackTiledImageRowRequest) => void`
+`(context: CanvasRenderingContext2D, row: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackTiledImageRowRequest) => void`
 
 Draws a horizontally tiled image strip across the visible width.
 
@@ -107,7 +107,7 @@ Returns: Nothing.
 
 ### paintPlaybackBackgroundBase
 
-`(context: CanvasRenderingContext2D, sceneContext: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
+`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
 
 Paints the base background fill for the currently visible viewport.
 
@@ -119,7 +119,7 @@ Returns: Nothing.
 
 ### resolvePlaybackBackgroundSceneContext
 
-`(request: import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext`
+`(request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext`
 
 Resolves the derived scene contract required by the background passes.
 
@@ -179,7 +179,7 @@ Returns: Pixel-snapped y-position for the stroke.
 
 ### resolvePlaybackBackgroundLayout
 
-`(visibleWorldHeightPx: number) => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundLayout`
+`(visibleWorldHeightPx: number) => import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundLayout`
 
 Resolves the vertical split between the starfield sky and the future ground.
 
@@ -190,7 +190,7 @@ Returns: Stable scene layout for the current frame.
 
 ### resolvePlaybackHorizonStyle
 
-`() => import("C:/NeatapticTS/test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackHorizonStyle`
+`() => import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackHorizonStyle`
 
 Resolves the neon paint settings for the horizon divider.
 
