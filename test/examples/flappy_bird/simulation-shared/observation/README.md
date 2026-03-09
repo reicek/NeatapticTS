@@ -21,6 +21,7 @@ channels while dropping derived one-step predictors that become redundant
 once short-term temporal memory is available.
 
 Parameters:
+
 - `features` - - Structured observation features.
 
 Returns: Core per-frame vector.
@@ -37,6 +38,7 @@ the canonical network vectors now lives in the neighboring vector module so
 observation policy and network-shape concerns can evolve independently.
 
 Parameters:
+
 - `input` - - Observation input bundle.
 
 Returns: Structured observation features.
@@ -52,6 +54,7 @@ This module owns the network-shape projection so feature semantics can change
 independently from how the policy input is ordered.
 
 Parameters:
+
 - `features` - - Structured feature object.
 
 Returns: Ordered feature vector.
@@ -63,6 +66,7 @@ Returns: Ordered feature vector.
 Resolves the next two upcoming pipes in front of the bird.
 
 Parameters:
+
 - `pipes` - - Current pipe list.
 - `birdCenterXPx` - - Bird center x-position.
 - `birdRadiusPx` - - Bird radius.
@@ -83,6 +87,7 @@ channels while dropping derived one-step predictors that become redundant
 once short-term temporal memory is available.
 
 Parameters:
+
 - `features` - - Structured observation features.
 
 Returns: Core per-frame vector.
@@ -98,6 +103,7 @@ This module owns the network-shape projection so feature semantics can change
 independently from how the policy input is ordered.
 
 Parameters:
+
 - `features` - - Structured feature object.
 
 Returns: Ordered feature vector.
@@ -111,6 +117,7 @@ Returns: Ordered feature vector.
 Clamps a numeric value to the inclusive [min, max] interval.
 
 Parameters:
+
 - `value` - - Candidate value.
 - `min` - - Inclusive lower bound.
 - `max` - - Inclusive upper bound.
@@ -124,6 +131,7 @@ Returns: Clamped value.
 Clamps a numeric value to the inclusive [0, 1] interval.
 
 Parameters:
+
 - `value` - - Candidate value.
 
 Returns: Value clamped between 0 and 1.
@@ -140,6 +148,7 @@ the canonical network vectors now lives in the neighboring vector module so
 observation policy and network-shape concerns can evolve independently.
 
 Parameters:
+
 - `input` - - Observation input bundle.
 
 Returns: Structured observation features.
@@ -151,6 +160,7 @@ Returns: Structured observation features.
 Predicts bird y-position after a frame horizon with constant gravity.
 
 Parameters:
+
 - `startYPx` - - Current bird y-position.
 - `initialVerticalVelocityPxPerFrame` - - Initial vertical velocity.
 - `frameHorizon` - - Predicted horizon in simulation frames.
@@ -164,6 +174,7 @@ Returns: Predicted y-position.
 Resolves the next two upcoming pipes in front of the bird.
 
 Parameters:
+
 - `pipes` - - Current pipe list.
 - `birdCenterXPx` - - Bird center x-position.
 - `birdRadiusPx` - - Bird radius.

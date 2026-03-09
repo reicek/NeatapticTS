@@ -1,117 +1,165 @@
 import {
   FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT,
   FLAPPY_GROUND_GRID_MIN_VERTICAL_LINE_COUNT,
+  FLAPPY_GROUND_GRID_PULSE_MIN_ELIGIBLE_THICKNESS_PX,
+  FLAPPY_GROUND_GRID_PULSE_PREFERRED_HORIZONTAL_START_RATIO,
+  FLAPPY_GROUND_GRID_PULSE_VISIBLE_VIEWPORT_INSET_PX,
   FLAPPY_GROUND_GRID_SCROLL_RATIO,
   FLAPPY_GROUND_GRID_TARGET_VERTICAL_LINE_SPACING_PX,
   FLAPPY_GROUND_GRID_TARGET_VERTICAL_SEGMENT_HEIGHT_PX,
   FLAPPY_GROUND_GRID_VERTICAL_OVERFLOW_COUNT,
+  FLAPPY_GROUND_GRID_VERTICAL_PULSE_END_RATIO,
+  FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO,
 } from './playback.background.ground-grid.constants';
 import { positiveModulo } from '../../playback.starfield.utils';
 import {
-  interpolatePlaybackGroundGridPoint,
   resolvePlaybackGroundGridDepthCurve,
   resolvePlaybackGroundGridDepthFromHorizonDistance,
   resolvePlaybackGroundGridLineAlpha,
   resolvePlaybackGroundGridLineBlur,
   resolvePlaybackGroundGridLineThickness,
 } from './playback.background.ground-grid.math.utils';
+import {
+  ensureGroundGridViewportCacheValidity,
+  resolveCachedGroundGridHorizontalGeometry,
+  resolveCachedGroundGridVerticalGeometry,
+  resolveGroundGridSceneCacheKey,
+  resolveGroundGridVerticalCycleCacheKey,
+} from './playback.background.ground-grid.cache.services';
 import type {
+  PlaybackGroundGridAnchorBounds,
+  PlaybackGroundGridAnchorBoundsInput,
+  PlaybackGroundGridAnchorProjectionInput,
   PlaybackBackgroundGroundGridSceneContext,
+  PlaybackGroundGridHorizontalGeometry,
+  PlaybackGroundGridHorizontalGeometryFactory,
   PlaybackGroundGridLineSegment,
   PlaybackGroundGridPulsePath,
+  PlaybackGroundGridSegmentBatch,
+  PlaybackGroundGridVerticalCycleContext,
+  PlaybackGroundGridVerticalGeometry,
+  PlaybackGroundGridVerticalRayInput,
 } from './playback.background.ground-grid.types';
 
-type PlaybackGroundGridVerticalSegmentsInput = PlaybackGroundGridPulsePath & {
-  anchorXPx: number;
-  centeredStrength: number;
-  lineDepthRatio: number;
-  maximumDistanceToHorizonPx: number;
-  sceneContext: PlaybackBackgroundGroundGridSceneContext;
-  verticalSegmentCount: number;
-};
+/**
+ * Resolves cached screen-horizontal depth bands for the lower neon plane.
+ *
+ * @param sceneContext - Lower-band geometry for the current viewport.
+ * @returns Ordered far-to-near line segments and pulse subsets.
+ */
+export function resolvePlaybackGroundGridHorizontalGeometry(
+  sceneContext: PlaybackBackgroundGroundGridSceneContext,
+): PlaybackGroundGridHorizontalGeometry {
+  ensureGroundGridViewportCacheValidity(sceneContext);
+  const sceneCacheKey = resolveGroundGridSceneCacheKey(sceneContext);
 
-type PlaybackGroundGridAnchorBoundsInput = {
-  horizonLeftXPx: number;
-  horizonRightXPx: number;
-  sceneContext: PlaybackBackgroundGroundGridSceneContext;
-};
+  return resolveCachedGroundGridHorizontalGeometry(sceneCacheKey, () =>
+    buildPlaybackGroundGridHorizontalGeometry(sceneContext),
+  );
+}
 
-type PlaybackGroundGridAnchorBounds = {
-  leftAnchorXPx: number;
-  rightAnchorXPx: number;
-  anchorSpanPx: number;
-};
+/**
+ * Resolves cached perspective rays that converge to the centered horizon point.
+ *
+ * @param sceneContext - Lower-band geometry for the current viewport.
+ * @param scrollBasePx - Shared world scroll used for parallax motion.
+ * @returns Wrapped left-to-right perspective rays and pulse subsets.
+ */
+export function resolvePlaybackGroundGridVerticalGeometry(
+  sceneContext: PlaybackBackgroundGroundGridSceneContext,
+  scrollBasePx: number,
+): PlaybackGroundGridVerticalGeometry {
+  ensureGroundGridViewportCacheValidity(sceneContext);
 
-type PlaybackGroundGridAnchorProjectionInput = {
-  horizonXPx: number;
-  sceneContext: PlaybackBackgroundGroundGridSceneContext;
-};
+  const sceneCacheKey = resolveGroundGridSceneCacheKey(sceneContext);
+  const verticalCycleContext = resolvePlaybackGroundGridVerticalCycleContext(
+    sceneContext,
+    scrollBasePx,
+  );
+  const cycleCacheKey = resolveGroundGridVerticalCycleCacheKey(
+    sceneCacheKey,
+    verticalCycleContext.quantizedWrappedOffsetPx,
+  );
+
+  return resolveCachedGroundGridVerticalGeometry(cycleCacheKey, () =>
+    buildPlaybackGroundGridVerticalGeometry(
+      sceneContext,
+      verticalCycleContext.safeLaneSpacingPx,
+      verticalCycleContext.quantizedWrappedOffsetPx,
+    ),
+  );
+}
 
 /**
  * Builds the screen-horizontal depth bands for the lower neon plane.
  *
  * @param sceneContext - Lower-band geometry for the current viewport.
- * @returns Ordered far-to-near line segments.
+ * @returns Ordered far-to-near line segments and pulse subsets.
  */
-export function resolvePlaybackGroundGridHorizontalLines(
+function buildPlaybackGroundGridHorizontalGeometry(
   sceneContext: PlaybackBackgroundGroundGridSceneContext,
-): readonly PlaybackGroundGridLineSegment[] {
+): PlaybackGroundGridHorizontalGeometry {
   const maximumDistanceToHorizonPx = Math.max(
     1,
     sceneContext.lowerBandBottomYPx - sceneContext.alignedHorizonYPx,
   );
-
-  return Array.from(
-    { length: FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT },
-    (_unusedValue, lineIndex) => {
-      // Step 1: Resolve normalized depth so the first line hugs the horizon.
-      const depthRatio =
-        (lineIndex + 1) / FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT;
-      const curvedDepthRatio = resolvePlaybackGroundGridDepthCurve(depthRatio);
-      const lineYPx =
-        sceneContext.lowerBandTopYPx +
-        curvedDepthRatio * sceneContext.lowerBandHeightPx;
-      const thicknessDepthRatio =
-        resolvePlaybackGroundGridDepthFromHorizonDistance(
-          lineYPx - sceneContext.alignedHorizonYPx,
-          maximumDistanceToHorizonPx,
-        );
-
-      // Step 2: Strengthen the near lines while softening the far ones.
-      return {
-        startXPx: sceneContext.viewportLeftXPx,
-        startYPx: lineYPx,
-        endXPx: sceneContext.viewportLeftXPx + sceneContext.visibleWorldWidthPx,
-        endYPx: lineYPx,
-        alpha: resolvePlaybackGroundGridLineAlpha(depthRatio),
-        blurPx: resolvePlaybackGroundGridLineBlur(depthRatio),
-        thicknessPx:
-          resolvePlaybackGroundGridLineThickness(thicknessDepthRatio),
-      };
-    },
+  const horizontalLines = new Array<PlaybackGroundGridLineSegment>(
+    FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT,
   );
+
+  for (
+    let lineIndex = 0;
+    lineIndex < FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT;
+    lineIndex += 1
+  ) {
+    // Step 1: Resolve normalized depth so the first line hugs the horizon.
+    const depthRatio =
+      (lineIndex + 1) / FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT;
+    const curvedDepthRatio = resolvePlaybackGroundGridDepthCurve(depthRatio);
+    const lineYPx =
+      sceneContext.lowerBandTopYPx +
+      curvedDepthRatio * sceneContext.lowerBandHeightPx;
+    const thicknessDepthRatio =
+      resolvePlaybackGroundGridDepthFromHorizonDistance(
+        lineYPx - sceneContext.alignedHorizonYPx,
+        maximumDistanceToHorizonPx,
+      );
+
+    // Step 2: Strengthen the near lines while softening the far ones.
+    horizontalLines[lineIndex] = {
+      startXPx: 0,
+      startYPx: lineYPx,
+      endXPx: sceneContext.visibleWorldWidthPx,
+      endYPx: lineYPx,
+      alpha: resolvePlaybackGroundGridLineAlpha(depthRatio),
+      blurPx: resolvePlaybackGroundGridLineBlur(depthRatio),
+      thicknessPx: resolvePlaybackGroundGridLineThickness(thicknessDepthRatio),
+    };
+  }
+
+  return {
+    horizontalLineBatches:
+      groupPlaybackGroundGridSegmentsByStyle(horizontalLines),
+    horizontalLines,
+    preferredHorizontalPulsePaths:
+      resolvePlaybackGroundGridPreferredHorizontalPulsePaths(horizontalLines),
+  };
 }
 
 /**
- * Builds the perspective rays that converge to the centered horizon point.
+ * Resolves the wrapped vertical-geometry cycle for the current scroll value.
  *
  * @param sceneContext - Lower-band geometry for the current viewport.
  * @param scrollBasePx - Shared world scroll used for parallax motion.
- * @returns Wrapped left-to-right perspective rays.
+ * @returns Quantized wrapped offset and safe lane spacing for cache lookups.
  */
-export function resolvePlaybackGroundGridVerticalLines(
+function resolvePlaybackGroundGridVerticalCycleContext(
   sceneContext: PlaybackBackgroundGroundGridSceneContext,
   scrollBasePx: number,
-): {
-  verticalLines: readonly PlaybackGroundGridLineSegment[];
-  verticalPulsePaths: readonly PlaybackGroundGridPulsePath[];
-} {
-  const horizonLeftXPx = sceneContext.viewportLeftXPx;
-  const horizonRightXPx =
-    sceneContext.viewportLeftXPx + sceneContext.visibleWorldWidthPx;
+): PlaybackGroundGridVerticalCycleContext {
   const visibleAnchorBounds = resolvePlaybackGroundGridAnchorBounds({
-    horizonLeftXPx,
-    horizonRightXPx,
+    horizonLeftXPx: 0,
+    horizonRightXPx: sceneContext.visibleWorldWidthPx,
     sceneContext,
   });
   const totalVisibleLaneCount = Math.max(
@@ -130,10 +178,42 @@ export function resolvePlaybackGroundGridVerticalLines(
     scrollBasePx * FLAPPY_GROUND_GRID_SCROLL_RATIO,
     safeLaneSpacingPx,
   );
+
+  return {
+    quantizedWrappedOffsetPx: Math.round(wrappedOffsetPx),
+    safeLaneSpacingPx,
+  };
+}
+
+/**
+ * Builds the perspective rays that converge to the centered horizon point.
+ *
+ * @param sceneContext - Lower-band geometry for the current viewport.
+ * @param safeLaneSpacingPx - Stable lane spacing used for ray anchors.
+ * @param quantizedWrappedOffsetPx - Quantized wrapped offset used for cache reuse.
+ * @returns Wrapped left-to-right perspective rays and pulse subsets.
+ */
+function buildPlaybackGroundGridVerticalGeometry(
+  sceneContext: PlaybackBackgroundGroundGridSceneContext,
+  safeLaneSpacingPx: number,
+  quantizedWrappedOffsetPx: number,
+): PlaybackGroundGridVerticalGeometry {
+  const visibleAnchorBounds = resolvePlaybackGroundGridAnchorBounds({
+    horizonLeftXPx: 0,
+    horizonRightXPx: sceneContext.visibleWorldWidthPx,
+    sceneContext,
+  });
+  const totalVisibleLaneCount = Math.max(
+    FLAPPY_GROUND_GRID_MIN_VERTICAL_LINE_COUNT,
+    Math.ceil(
+      visibleAnchorBounds.anchorSpanPx /
+        FLAPPY_GROUND_GRID_TARGET_VERTICAL_LINE_SPACING_PX,
+    ) + 1,
+  );
   const firstAnchorXPx =
     visibleAnchorBounds.leftAnchorXPx -
     FLAPPY_GROUND_GRID_VERTICAL_OVERFLOW_COUNT * safeLaneSpacingPx -
-    wrappedOffsetPx;
+    quantizedWrappedOffsetPx;
   const totalRayCount =
     totalVisibleLaneCount + FLAPPY_GROUND_GRID_VERTICAL_OVERFLOW_COUNT * 2 + 1;
   const maximumLateralDistancePx =
@@ -157,105 +237,125 @@ export function resolvePlaybackGroundGridVerticalLines(
         FLAPPY_GROUND_GRID_TARGET_VERTICAL_SEGMENT_HEIGHT_PX,
     ),
   );
+  const verticalPulsePaths = new Array<PlaybackGroundGridPulsePath>(
+    totalRayCount,
+  );
+  const verticalLineSegments = new Array<PlaybackGroundGridLineSegment>(
+    totalRayCount * verticalSegmentCount,
+  );
+  const visibleVerticalPulsePaths: PlaybackGroundGridPulsePath[] = [];
+  const midTravelRatio =
+    FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO +
+    (FLAPPY_GROUND_GRID_VERTICAL_PULSE_END_RATIO -
+      FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO) *
+      0.5;
+  let segmentWriteIndex = 0;
 
-  const verticalPulsePaths = Array.from(
-    { length: totalRayCount },
-    (_unusedValue, rayIndex) => {
-      // Step 1: Resolve the bottom anchor and its centered strength.
-      const anchorXPx = firstAnchorXPx + rayIndex * safeLaneSpacingPx;
-      const lateralDistancePx = Math.abs(
-        anchorXPx - sceneContext.vanishingPointXPx,
-      );
-      const centeredStrength =
-        1 - Math.min(1, lateralDistancePx / maximumLateralDistancePx);
-      const lineDepthRatio = 0.45 + centeredStrength * 0.55;
+  for (let rayIndex = 0; rayIndex < totalRayCount; rayIndex += 1) {
+    // Step 1: Resolve the bottom anchor and its centered strength.
+    const anchorXPx = firstAnchorXPx + rayIndex * safeLaneSpacingPx;
+    const lateralDistancePx = Math.abs(
+      anchorXPx - sceneContext.vanishingPointXPx,
+    );
+    const centeredStrength =
+      1 - Math.min(1, lateralDistancePx / maximumLateralDistancePx);
+    const lineDepthRatio = 0.45 + centeredStrength * 0.55;
+    const verticalPulsePath: PlaybackGroundGridPulsePath = {
+      orientation: 'vertical',
+      startXPx: anchorXPx,
+      startYPx: sceneContext.lowerBandBottomYPx,
+      endXPx: sceneContext.vanishingPointXPx,
+      endYPx: sceneContext.vanishingPointYPx,
+      thicknessPx: resolvePlaybackGroundGridLineThickness(1),
+    };
 
-      // Step 2: Split the ray into short segments so width can taper to 1px.
-      return {
-        orientation: 'vertical' as const,
-        anchorXPx,
-        endXPx: sceneContext.vanishingPointXPx,
-        endYPx: sceneContext.vanishingPointYPx,
-        startXPx: anchorXPx,
-        startYPx: sceneContext.lowerBandBottomYPx,
-        thicknessPx: resolvePlaybackGroundGridLineThickness(1),
-        centeredStrength,
+    verticalPulsePaths[rayIndex] = verticalPulsePath;
+    if (
+      isPlaybackGroundGridVerticalPulsePathVisible(
+        verticalPulsePath,
+        sceneContext,
+        midTravelRatio,
+      )
+    ) {
+      visibleVerticalPulsePaths.push(verticalPulsePath);
+    }
+
+    segmentWriteIndex = appendPlaybackGroundGridVerticalLineSegments(
+      verticalLineSegments,
+      segmentWriteIndex,
+      {
+        ...verticalPulsePath,
         lineDepthRatio,
         maximumDistanceToHorizonPx,
         sceneContext,
         verticalSegmentCount,
-      };
-    },
-  );
-  const verticalLines = verticalPulsePaths.flatMap((verticalPulsePath) =>
-    resolvePlaybackGroundGridVerticalLineSegments(verticalPulsePath),
-  );
+      },
+    );
+  }
 
   return {
-    verticalLines,
+    verticalLineBatches:
+      groupPlaybackGroundGridSegmentsByStyle(verticalLineSegments),
     verticalPulsePaths,
+    visibleVerticalPulsePaths,
   };
 }
 
 /**
- * Builds tapered style segments for one perspective ray.
+ * Appends tapered style segments for one perspective ray.
  *
+ * @param targetSegments - Target line-segment buffer.
+ * @param startIndex - Current insertion index within the target buffer.
  * @param input - Geometry and depth context for one ray.
- * @returns Ordered near-to-far segments for one perspective ray.
+ * @returns Next insertion index after all ray segments have been written.
  */
-function resolvePlaybackGroundGridVerticalLineSegments(
-  input: PlaybackGroundGridVerticalSegmentsInput,
-): readonly PlaybackGroundGridLineSegment[] {
-  return Array.from(
-    { length: input.verticalSegmentCount },
-    (_unusedValue, segmentIndex) => {
-      // Step 1: Resolve the interpolation bounds for this sub-segment.
-      const segmentStartRatio = segmentIndex / input.verticalSegmentCount;
-      const segmentEndRatio = (segmentIndex + 1) / input.verticalSegmentCount;
-      const segmentMidpointRatio = (segmentStartRatio + segmentEndRatio) * 0.5;
-      const segmentStartPoint = interpolatePlaybackGroundGridPoint(
-        input.startXPx,
-        input.startYPx,
-        input.endXPx,
-        input.endYPx,
-        segmentStartRatio,
-      );
-      const segmentEndPoint = interpolatePlaybackGroundGridPoint(
-        input.startXPx,
-        input.startYPx,
-        input.endXPx,
-        input.endYPx,
-        segmentEndRatio,
-      );
+function appendPlaybackGroundGridVerticalLineSegments(
+  targetSegments: PlaybackGroundGridLineSegment[],
+  startIndex: number,
+  input: PlaybackGroundGridVerticalRayInput,
+): number {
+  const rayDeltaXPx = input.endXPx - input.startXPx;
+  const rayDeltaYPx = input.endYPx - input.startYPx;
+  let writeIndex = startIndex;
 
-      // Step 2: Resolve style from the segment midpoint distance to the horizon.
-      const segmentMidpoint = interpolatePlaybackGroundGridPoint(
-        input.startXPx,
-        input.startYPx,
-        input.endXPx,
-        input.endYPx,
-        segmentMidpointRatio,
-      );
-      const segmentDepthRatio =
-        resolvePlaybackGroundGridDepthFromHorizonDistance(
-          segmentMidpoint.yPx - input.sceneContext.alignedHorizonYPx,
-          input.maximumDistanceToHorizonPx,
-        );
-      const combinedAlphaDepthRatio =
-        segmentDepthRatio * 0.7 + input.lineDepthRatio * 0.3;
+  for (
+    let segmentIndex = 0;
+    segmentIndex < input.verticalSegmentCount;
+    segmentIndex += 1
+  ) {
+    // Step 1: Resolve the interpolation bounds for this sub-segment.
+    const segmentStartRatio = segmentIndex / input.verticalSegmentCount;
+    const segmentEndRatio = (segmentIndex + 1) / input.verticalSegmentCount;
+    const segmentMidpointRatio = (segmentStartRatio + segmentEndRatio) * 0.5;
+    const segmentStartXPx = input.startXPx + rayDeltaXPx * segmentStartRatio;
+    const segmentStartYPx = input.startYPx + rayDeltaYPx * segmentStartRatio;
+    const segmentEndXPx = input.startXPx + rayDeltaXPx * segmentEndRatio;
+    const segmentEndYPx = input.startYPx + rayDeltaYPx * segmentEndRatio;
 
-      // Step 3: Return the tapered segment so the ray narrows toward the horizon.
-      return {
-        startXPx: segmentStartPoint.xPx,
-        startYPx: segmentStartPoint.yPx,
-        endXPx: segmentEndPoint.xPx,
-        endYPx: segmentEndPoint.yPx,
-        alpha: resolvePlaybackGroundGridLineAlpha(combinedAlphaDepthRatio),
-        blurPx: resolvePlaybackGroundGridLineBlur(segmentDepthRatio),
-        thicknessPx: resolvePlaybackGroundGridLineThickness(segmentDepthRatio),
-      };
-    },
-  );
+    // Step 2: Resolve style from the segment midpoint distance to the horizon.
+    const segmentMidpointYPx =
+      input.startYPx + rayDeltaYPx * segmentMidpointRatio;
+    const segmentDepthRatio = resolvePlaybackGroundGridDepthFromHorizonDistance(
+      segmentMidpointYPx - input.sceneContext.alignedHorizonYPx,
+      input.maximumDistanceToHorizonPx,
+    );
+    const combinedAlphaDepthRatio =
+      segmentDepthRatio * 0.7 + input.lineDepthRatio * 0.3;
+
+    // Step 3: Append the tapered segment so the ray narrows toward the horizon.
+    targetSegments[writeIndex] = {
+      startXPx: segmentStartXPx,
+      startYPx: segmentStartYPx,
+      endXPx: segmentEndXPx,
+      endYPx: segmentEndYPx,
+      alpha: resolvePlaybackGroundGridLineAlpha(combinedAlphaDepthRatio),
+      blurPx: resolvePlaybackGroundGridLineBlur(segmentDepthRatio),
+      thicknessPx: resolvePlaybackGroundGridLineThickness(segmentDepthRatio),
+    };
+    writeIndex += 1;
+  }
+
+  return writeIndex;
 }
 
 /**
@@ -306,5 +406,113 @@ function projectPlaybackGroundGridHorizonXToAnchorX(
     input.sceneContext.vanishingPointXPx +
     (input.horizonXPx - input.sceneContext.vanishingPointXPx) *
       verticalProjectionRatio
+  );
+}
+
+/**
+ * Groups line segments into ordered style batches for lower-overhead drawing.
+ *
+ * @param segments - Ordered line segments that should preserve draw grouping.
+ * @returns Ordered style batches that can be stroked with fewer state changes.
+ */
+function groupPlaybackGroundGridSegmentsByStyle(
+  segments: readonly PlaybackGroundGridLineSegment[],
+): readonly PlaybackGroundGridSegmentBatch[] {
+  const groupedSegmentsByStyle = new Map<
+    string,
+    PlaybackGroundGridLineSegment[]
+  >();
+
+  for (const segment of segments) {
+    const styleKey = `${segment.alpha}:${segment.blurPx}:${segment.thicknessPx}`;
+    const existingGroup = groupedSegmentsByStyle.get(styleKey);
+    if (existingGroup) {
+      existingGroup.push(segment);
+      continue;
+    }
+
+    groupedSegmentsByStyle.set(styleKey, [segment]);
+  }
+
+  const segmentBatches: PlaybackGroundGridSegmentBatch[] = [];
+  for (const groupedSegments of groupedSegmentsByStyle.values()) {
+    const firstSegment = groupedSegments[0];
+    segmentBatches.push({
+      alpha: firstSegment.alpha,
+      blurPx: firstSegment.blurPx,
+      thicknessPx: firstSegment.thicknessPx,
+      segments: groupedSegments,
+    });
+  }
+
+  return segmentBatches;
+}
+
+/**
+ * Prefers the nearer, thicker horizontal tracks when picking a pulse lane.
+ *
+ * @param horizontalLines - Visible horizontal grid bands.
+ * @returns Pulse-eligible horizontal paths biased toward the foreground.
+ */
+function resolvePlaybackGroundGridPreferredHorizontalPulsePaths(
+  horizontalLines: readonly PlaybackGroundGridLineSegment[],
+): readonly PlaybackGroundGridPulsePath[] {
+  const eligibleHorizontalPulsePaths: PlaybackGroundGridPulsePath[] = [];
+
+  for (const horizontalLine of horizontalLines) {
+    if (
+      horizontalLine.thicknessPx <
+      FLAPPY_GROUND_GRID_PULSE_MIN_ELIGIBLE_THICKNESS_PX
+    ) {
+      continue;
+    }
+
+    eligibleHorizontalPulsePaths.push({
+      orientation: 'horizontal',
+      startXPx: horizontalLine.startXPx,
+      startYPx: horizontalLine.startYPx,
+      endXPx: horizontalLine.endXPx,
+      endYPx: horizontalLine.endYPx,
+      thicknessPx: horizontalLine.thicknessPx,
+    });
+  }
+
+  if (eligibleHorizontalPulsePaths.length === 0) {
+    return eligibleHorizontalPulsePaths;
+  }
+
+  const preferredStartIndex = Math.min(
+    eligibleHorizontalPulsePaths.length - 1,
+    Math.floor(
+      eligibleHorizontalPulsePaths.length *
+        FLAPPY_GROUND_GRID_PULSE_PREFERRED_HORIZONTAL_START_RATIO,
+    ),
+  );
+  return eligibleHorizontalPulsePaths.slice(preferredStartIndex);
+}
+
+/**
+ * Resolves whether one vertical pulse path is safely visible in the viewport.
+ *
+ * @param pulsePath - Candidate vertical pulse path.
+ * @param sceneContext - Current lower-band scene geometry.
+ * @param midTravelRatio - Midpoint travel ratio used for visibility checks.
+ * @returns True when the pulse midpoint stays inside the visible ground band.
+ */
+function isPlaybackGroundGridVerticalPulsePathVisible(
+  pulsePath: PlaybackGroundGridPulsePath,
+  sceneContext: PlaybackBackgroundGroundGridSceneContext,
+  midTravelRatio: number,
+): boolean {
+  const pulseMidpointXPx =
+    pulsePath.startXPx +
+    (pulsePath.endXPx - pulsePath.startXPx) * midTravelRatio;
+  const visibleLeftXPx = FLAPPY_GROUND_GRID_PULSE_VISIBLE_VIEWPORT_INSET_PX;
+  const visibleRightXPx =
+    sceneContext.visibleWorldWidthPx -
+    FLAPPY_GROUND_GRID_PULSE_VISIBLE_VIEWPORT_INSET_PX;
+
+  return (
+    pulseMidpointXPx >= visibleLeftXPx && pulseMidpointXPx <= visibleRightXPx
   );
 }

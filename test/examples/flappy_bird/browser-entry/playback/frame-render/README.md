@@ -27,6 +27,7 @@ Resolved opacity and color for one bird trail render pass.
 Draws one simulation frame for the current population state.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `renderState` - - Mutable simulation state snapshot.
 - `trailState` - - Leader trail render cache.
@@ -40,6 +41,7 @@ Returns: Nothing.
 Updates the trail cache from the latest frame snapshot.
 
 Parameters:
+
 - `trailState` - - Mutable trail state.
 - `renderState` - - Current render state.
 
@@ -54,6 +56,7 @@ Returns: Nothing.
 Applies the viewport transform used for world-space frame rendering.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `sceneContext` - - Shared scene geometry for the frame.
 
@@ -66,6 +69,7 @@ Returns: Nothing.
 Restores the caller canvas state after viewport-space frame drawing.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 
 Returns: Nothing.
@@ -77,6 +81,7 @@ Returns: Nothing.
 Resets the target canvas and base paint state before frame drawing begins.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 
 Returns: Nothing.
@@ -88,6 +93,7 @@ Returns: Nothing.
 Draws the split playback background for the current world viewport.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `renderState` - - Mutable simulation state snapshot.
 - `sceneContext` - - Shared scene geometry for the frame.
@@ -101,6 +107,7 @@ Returns: Nothing.
 Draws all active birds for the current frame.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `renderState` - - Mutable simulation state snapshot.
 - `sceneContext` - - Shared scene geometry for the frame.
@@ -115,6 +122,7 @@ Returns: Nothing.
 Draws all visible pipe segments and their neon outlines for the frame.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `renderState` - - Mutable simulation state snapshot.
 - `sceneContext` - - Shared scene geometry for the frame.
@@ -128,6 +136,7 @@ Returns: Nothing.
 Draws stepped trails for all active birds in the frame.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `renderState` - - Mutable simulation state snapshot.
 - `trailState` - - Leader trail render cache.
@@ -144,6 +153,7 @@ Returns: Nothing.
 Resolves the shared scene contract used by one frame render pass.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `renderState` - - Mutable simulation state snapshot.
 
@@ -158,6 +168,7 @@ Returns: Viewport, camera, and edge-bounds state for the frame.
 Draws the square bird body with its base neon glow.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `birdGeometry` - - Pixel-aligned bird geometry.
 - `birdRenderStyle` - - Resolved bird style payload.
@@ -171,6 +182,7 @@ Returns: Nothing.
 Draws the soft champion aura plate behind the bird body.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `birdGeometry` - - Pixel-aligned bird geometry.
 - `birdRenderStyle` - - Resolved bird style payload.
@@ -184,6 +196,7 @@ Returns: Nothing.
 Draws the champion-only red glow plate beneath the bird body.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `birdGeometry` - - Pixel-aligned bird geometry.
 - `birdRenderStyle` - - Resolved bird style payload.
@@ -197,6 +210,7 @@ Returns: Nothing.
 Draws the leader ring around the champion bird.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `birdGeometry` - - Pixel-aligned bird geometry.
 - `isChampionBird` - - Whether the current bird is the champion.
@@ -210,6 +224,7 @@ Returns: Nothing.
 Draws the reflective shine highlight for one bird body.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `birdGeometry` - - Pixel-aligned bird geometry.
 - `isChampionBird` - - Whether the current bird is the champion.
@@ -223,6 +238,7 @@ Returns: Nothing.
 Draws the stepped trail history for one active bird.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `trailPoints` - - Cached per-frame trail points for one bird.
 - `color` - - Stroke color for the trail.
@@ -239,6 +255,7 @@ Returns: Nothing.
 Draws one trail segment with combined edge and lifetime fading.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `startXPx` - - Segment start x-position.
 - `startYPx` - - Segment start y-position.
@@ -259,6 +276,7 @@ Returns: Nothing.
 Draws one active bird body, glow, shine, and leader ring.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `birdYPx` - - Bird vertical position in world pixels.
 - `birdIndex` - - Index of the bird being rendered.
@@ -273,6 +291,7 @@ Returns: Nothing.
 Resolves the fixed bird geometry used by all body rendering passes.
 
 Parameters:
+
 - `birdYPx` - - Bird vertical position in world pixels.
 
 Returns: Pixel-aligned square geometry for the bird body.
@@ -284,6 +303,7 @@ Returns: Pixel-aligned square geometry for the bird body.
 Resolves the trail style used for one bird's stepped trail.
 
 Parameters:
+
 - `birdIndex` - - Index of the bird being rendered.
 - `championBirdIndex` - - Champion index for the current frame.
 

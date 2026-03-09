@@ -1,5 +1,5 @@
-import { FLAPPY_NEON_PALETTE } from '../../../../constants/constants';
 import { drawPlaybackGroundGrid } from './playback.background.ground-grid.services';
+import { FLAPPY_BACKGROUND_GROUND_GRID_STYLE } from './playback.background.ground-grid.constants';
 import type {
   PlaybackBackgroundGroundGridRequest,
   PlaybackBackgroundGroundGridResolvedScene,
@@ -33,13 +33,7 @@ export function renderPlaybackBackgroundGroundGrid(
   // Step 2: Resolve theme-owned styling for the lower-band grid.
   const resolvedScene: PlaybackBackgroundGroundGridResolvedScene = {
     sceneContext,
-    style: {
-      lineColor: FLAPPY_NEON_PALETTE.groundGridLine,
-      glowColor: FLAPPY_NEON_PALETTE.groundGridGlow,
-      fogColor: FLAPPY_NEON_PALETTE.groundGridFog,
-      pulseFillColor: FLAPPY_NEON_PALETTE.groundGridPulseFill,
-      pulseGlowColor: FLAPPY_NEON_PALETTE.groundGridPulseGlow,
-    },
+    style: FLAPPY_BACKGROUND_GROUND_GRID_STYLE,
   };
 
   // Step 3: Build all grid geometry before touching the canvas state.

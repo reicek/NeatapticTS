@@ -22,9 +22,31 @@ Helper alias used when adapting the shared background scene context.
 
 Theme-owned style contract for the neon ground grid.
 
+### PlaybackGroundGridAnchorBounds
+
+Visible horizon bounds projected onto the bottom anchor line.
+
+### PlaybackGroundGridAnchorBoundsInput
+
+Input used when projecting a visible horizon span onto anchor space.
+
+### PlaybackGroundGridAnchorProjectionInput
+
+Input used when projecting one horizon x-position onto the floor anchor line.
+
 ### PlaybackGroundGridGeometry
 
 Pure geometry bundle generated before canvas drawing begins.
+
+### PlaybackGroundGridHorizontalGeometry
+
+Cached horizontal geometry bundle reused across matching scene sizes.
+
+### PlaybackGroundGridHorizontalGeometryFactory
+
+`() => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridHorizontalGeometry`
+
+Lazy builder used when one horizontal geometry cache entry is missing.
 
 ### PlaybackGroundGridLineSegment
 
@@ -34,6 +56,10 @@ Declarative line segment model used by the ground-grid renderer.
 
 One visible pulse square rendered above the grid lines.
 
+### PlaybackGroundGridPulseInput
+
+Input contract used while resolving one deterministic pulse event.
+
 ### PlaybackGroundGridPulseOrientation
 
 Travel orientation used by lightweight pulse overlays.
@@ -41,6 +67,36 @@ Travel orientation used by lightweight pulse overlays.
 ### PlaybackGroundGridPulsePath
 
 Simplified path used by one visible pulse event.
+
+### PlaybackGroundGridPulseTrackThicknessInput
+
+Input used when adapting a pulse position into a local track thickness.
+
+### PlaybackGroundGridPulseTravelRatioInput
+
+Direction and timing state used when resolving pulse travel progress.
+
+### PlaybackGroundGridSegmentBatch
+
+Ordered batch of line segments that share one render style.
+
+### PlaybackGroundGridVerticalCycleContext
+
+Wrapped vertical-cycle state derived from scroll for one frame.
+
+### PlaybackGroundGridVerticalGeometry
+
+Cached vertical geometry bundle reused across one wrapped scroll cycle.
+
+### PlaybackGroundGridVerticalGeometryFactory
+
+`() => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridVerticalGeometry`
+
+Lazy builder used when one vertical geometry cache entry is missing.
+
+### PlaybackGroundGridVerticalRayInput
+
+Internal helper contract used while generating vertical-ray sub-segments.
 
 ## browser-entry/playback/background/ground-grid/playback.background.ground-grid.ts
 
@@ -55,6 +111,7 @@ horizontal depth bands compress toward the horizon, while moving perspective
 rays slide sideways but still converge to the centered vanishing point.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `sourceScene` - - Shared lower-band geometry from the background module.
 - `request` - - Shared parallax scroll input for the current frame.
@@ -70,6 +127,7 @@ Returns: Nothing.
 Draws the lower-band atmospheric wash behind the neon line work.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `resolvedScene` - - Geometry and style for the current viewport.
 
@@ -82,6 +140,7 @@ Returns: Nothing.
 Draws one pulse square above the grid lines and below gameplay entities.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `pulse` - - Visible pulse square for the current frame.
 - `fillColor` - - Core neon fill color.
@@ -89,29 +148,29 @@ Parameters:
 
 Returns: Nothing.
 
-### drawGroundGridSegment
+### drawGroundGridSegmentBatch
 
-`(context: CanvasRenderingContext2D, segment: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment, lineColor: string, glowColor: string) => void`
+`(context: CanvasRenderingContext2D, batch: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridSegmentBatch) => void`
 
-Draws one neon line segment with a glow pass and crisp core line.
+Draws one batch of neon line segments that share one render style.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
-- `segment` - - One resolved line segment.
-- `lineColor` - - Core neon stroke color.
-- `glowColor` - - Outer glow color used for bloom.
+- `batch` - - Ordered line-segment batch that shares one render style.
 
 Returns: Nothing.
 
-### drawGroundGridSegments
+### drawGroundGridSegmentBatches
 
-`(context: CanvasRenderingContext2D, segments: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[], lineColor: string, glowColor: string) => void`
+`(context: CanvasRenderingContext2D, batches: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridSegmentBatch[], lineColor: string, glowColor: string) => void`
 
-Draws one ordered collection of neon line segments.
+Draws one ordered collection of neon segment batches.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
-- `segments` - - Ordered line segments to render.
+- `batches` - - Ordered line-segment batches to render.
 - `lineColor` - - Core neon stroke color.
 - `glowColor` - - Outer glow color used for bloom.
 
@@ -124,6 +183,7 @@ Returns: Nothing.
 Draws the resolved neon ground grid inside the lower background band.
 
 Parameters:
+
 - `context` - - Canvas 2D drawing context.
 - `resolvedScene` - - Geometry and style for the current viewport.
 - `geometry` - - Precomputed horizontal and vertical line segments.
@@ -132,9 +192,7 @@ Returns: Nothing.
 
 ## browser-entry/playback/background/ground-grid/playback.background.ground-grid.constants.ts
 
-### playback.background.ground-grid.constants
-
-Number of horizontal depth bands used by the neon ground grid.
+### FLAPPY_BACKGROUND_GROUND_GRID_STYLE
 
 ### FLAPPY_GROUND_GRID_APPROX_FRAME_DURATION_MS
 
@@ -196,6 +254,101 @@ Number of horizontal depth bands used by the neon ground grid.
 
 ### FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO
 
+## browser-entry/playback/background/ground-grid/playback.background.ground-grid.cache.services.ts
+
+### ensureGroundGridViewportCacheValidity
+
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => string`
+
+Ensures ground-grid caches only retain entries for the current viewport size.
+
+The ground grid is derived from viewport width and total scene height, so a
+page resize invalidates every cached geometry variant and fog gradient.
+
+Parameters:
+
+- `sceneContext` - - Current lower-band scene geometry.
+
+Returns: Stable viewport-size cache key for the current frame.
+
+### resolveCachedGroundGridFogGradient
+
+`(context: CanvasRenderingContext2D, sceneCacheKey: string, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext, fogColor: string) => CanvasGradient`
+
+Resolves a cached fog gradient for one canvas and local scene.
+
+Parameters:
+
+- `context` - - Canvas 2D drawing context.
+- `sceneCacheKey` - - Stable scene key for the active viewport.
+- `sceneContext` - - Current lower-band scene geometry.
+- `fogColor` - - Theme-owned fog color token.
+
+Returns: Cached fog gradient aligned to the lower-band scene.
+
+### resolveCachedGroundGridHorizontalGeometry
+
+`(sceneCacheKey: string, factory: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridHorizontalGeometryFactory) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridHorizontalGeometry`
+
+Resolves cached horizontal geometry for one scene.
+
+Parameters:
+
+- `sceneCacheKey` - - Stable scene key for the active viewport.
+- `factory` - - Lazy geometry builder used when the cache misses.
+
+Returns: Cached horizontal geometry bundle for the scene.
+
+### resolveCachedGroundGridVerticalGeometry
+
+`(cycleCacheKey: string, factory: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridVerticalGeometryFactory) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridVerticalGeometry`
+
+Resolves cached vertical geometry for one scene and wrapped offset cycle.
+
+Parameters:
+
+- `cycleCacheKey` - - Scene-and-offset cache key for the active frame.
+- `factory` - - Lazy geometry builder used when the cache misses.
+
+Returns: Cached vertical geometry bundle for the cycle.
+
+### resolveGroundGridSceneCacheKey
+
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => string`
+
+Resolves the stable local-scene cache key for ground-grid geometry.
+
+Parameters:
+
+- `sceneContext` - - Current lower-band scene geometry.
+
+Returns: Scene key suitable for static horizontal and vertical cache entries.
+
+### resolveGroundGridVerticalCycleCacheKey
+
+`(sceneCacheKey: string, wrappedOffsetPx: number) => string`
+
+Resolves the cache key for one wrapped vertical-geometry cycle.
+
+Parameters:
+
+- `sceneCacheKey` - - Stable scene key for the active viewport.
+- `wrappedOffsetPx` - - Quantized wrapped offset within one lane cycle.
+
+Returns: Cycle key used for vertical geometry reuse.
+
+### resolveGroundGridViewportCacheKey
+
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => string`
+
+Resolves the viewport-size cache key used by the ground-grid caches.
+
+Parameters:
+
+- `sceneContext` - - Current lower-band scene geometry.
+
+Returns: Cache key that changes whenever the page size changes.
+
 ## browser-entry/playback/background/ground-grid/playback.background.ground-grid.utils.ts
 
 ### interpolatePlaybackGroundGridPoint
@@ -205,6 +358,7 @@ Number of horizontal depth bands used by the neon ground grid.
 Interpolates one point along a perspective ray.
 
 Parameters:
+
 - `startXPx` - - Bottom anchor x-position.
 - `startYPx` - - Bottom anchor y-position.
 - `endXPx` - - Vanishing-point x-position.
@@ -220,6 +374,7 @@ Returns: Interpolated point on the perspective ray.
 Maps a normalized depth ratio into a stronger synthwave spacing curve.
 
 Parameters:
+
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Curved depth ratio used for line placement and styling.
@@ -231,6 +386,7 @@ Returns: Curved depth ratio used for line placement and styling.
 Resolves normalized depth from a vertical distance away from the horizon.
 
 Parameters:
+
 - `distanceToHorizonPx` - - Vertical distance from the vanishing horizon.
 - `maximumDistanceToHorizonPx` - - Largest visible vertical horizon distance.
 
@@ -243,7 +399,9 @@ Returns: Normalized 0..1 depth where 0 is at the horizon and 1 is nearest.
 Builds the line geometry for the neon ground grid.
 
 Parameters:
+
 - `sceneContext` - - Lower-band geometry for the current viewport.
+- `frameIndex` - - Current deterministic playback frame index.
 - `scrollBasePx` - - Shared world scroll used for parallax motion.
 
 Returns: Horizontal depth bands and perspective rays for the current frame.
@@ -255,6 +413,7 @@ Returns: Horizontal depth bands and perspective rays for the current frame.
 Resolves neon alpha for one line based on its normalized depth.
 
 Parameters:
+
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Opacity for the rendered line.
@@ -266,6 +425,7 @@ Returns: Opacity for the rendered line.
 Resolves glow blur for one line based on its normalized depth.
 
 Parameters:
+
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Blur radius for the rendered line.
@@ -277,17 +437,19 @@ Returns: Blur radius for the rendered line.
 Resolves stroke thickness for one line based on its normalized depth.
 
 Parameters:
+
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Stroke width in pixels.
 
 ### resolvePlaybackGroundGridSceneContext
 
-`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext`
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSourceScene) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext`
 
 Resolves the shared scene context used by the ground-grid renderer.
 
 Parameters:
+
 - `sceneContext` - - Lower-band geometry provided by the background module.
 
 Returns: Narrow scene contract consumed by grid-specific helpers.
@@ -301,6 +463,7 @@ Returns: Narrow scene contract consumed by grid-specific helpers.
 Interpolates one point along a perspective ray.
 
 Parameters:
+
 - `startXPx` - - Bottom anchor x-position.
 - `startYPx` - - Bottom anchor y-position.
 - `endXPx` - - Vanishing-point x-position.
@@ -320,6 +483,7 @@ Small point value used when interpolating positions along one grid ray.
 Maps a normalized depth ratio into a stronger synthwave spacing curve.
 
 Parameters:
+
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Curved depth ratio used for line placement and styling.
@@ -331,6 +495,7 @@ Returns: Curved depth ratio used for line placement and styling.
 Resolves normalized depth from a vertical distance away from the horizon.
 
 Parameters:
+
 - `distanceToHorizonPx` - - Vertical distance from the vanishing horizon.
 - `maximumDistanceToHorizonPx` - - Largest visible vertical horizon distance.
 
@@ -343,6 +508,7 @@ Returns: Normalized 0..1 depth where 0 is at the horizon and 1 is nearest.
 Resolves neon alpha for one line based on its normalized depth.
 
 Parameters:
+
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Opacity for the rendered line.
@@ -354,6 +520,7 @@ Returns: Opacity for the rendered line.
 Resolves glow blur for one line based on its normalized depth.
 
 Parameters:
+
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Blur radius for the rendered line.
@@ -365,65 +532,34 @@ Returns: Blur radius for the rendered line.
 Resolves stroke thickness for one line based on its normalized depth.
 
 Parameters:
+
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Stroke width in pixels.
 
 ## browser-entry/playback/background/ground-grid/playback.background.ground-grid.pulse.utils.ts
 
-### isPlaybackGroundGridHorizontalPulseLineEligible
-
-`(horizontalLine: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment) => boolean`
-
-Resolves whether a horizontal line is thick enough to carry a visible pulse.
-
-Parameters:
-- `horizontalLine` - - Candidate horizontal ground-grid line.
-
-Returns: True when the line should be considered pulse-eligible.
-
-### isPlaybackGroundGridVerticalPulsePathVisible
-
-`(pulsePath: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => boolean`
-
-Resolves whether one vertical pulse path is safely visible in the viewport.
-
-Parameters:
-- `pulsePath` - - Candidate vertical pulse path.
-- `sceneContext` - - Current lower-band scene geometry.
-
-Returns: True when the pulse midpoint stays inside the visible ground band.
-
 ### resolvePlaybackGroundGridHorizontalPulsePath
 
-`(horizontalLines: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[], pulseSlotIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath | null`
+`(horizontalPulsePaths: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath[], pulseSlotIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath | null`
 
 Selects one thick-enough horizontal band for the current pulse slot.
 
 Parameters:
-- `horizontalLines` - - Visible horizontal grid bands.
+
+- `horizontalPulsePaths` - - Cached horizontal pulse paths eligible for travel.
 - `pulseSlotIndex` - - Zero-based pulse slot index.
 
 Returns: Horizontal pulse path, or null when none are suitable.
 
-### resolvePlaybackGroundGridPreferredHorizontalPulseLines
-
-`(horizontalLines: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]) => readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]`
-
-Prefers the nearer, thicker horizontal tracks when picking a pulse lane.
-
-Parameters:
-- `horizontalLines` - - Visible horizontal grid bands.
-
-Returns: Pulse-eligible horizontal lines biased toward the foreground.
-
 ### resolvePlaybackGroundGridPulse
 
-`(input: PlaybackGroundGridPulseInput) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulse | null`
+`(input: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulseInput) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulse | null`
 
 Resolves one rare, deterministic pulse square for the current frame.
 
 Parameters:
+
 - `input` - - Current frame timing and visible pulse path candidates.
 
 Returns: Visible pulse square, or null when the current slot is inactive.
@@ -435,28 +571,31 @@ Returns: Visible pulse square, or null when the current slot is inactive.
 Resolves pulse orientation for one deterministic pulse slot.
 
 Parameters:
+
 - `pulseSlotIndex` - - Zero-based pulse slot index.
 
 Returns: Horizontal or vertical pulse travel orientation.
 
 ### resolvePlaybackGroundGridPulseTrackThickness
 
-`(input: PlaybackGroundGridPulseTrackThicknessInput) => number`
+`(input: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulseTrackThicknessInput) => number`
 
 Resolves the local track thickness at the pulse position.
 
 Parameters:
+
 - `input` - - Pulse position, path, and scene geometry.
 
 Returns: Thickness of the current line under the pulse.
 
 ### resolvePlaybackGroundGridPulseTravelRatio
 
-`(input: PlaybackGroundGridPulseTravelRatioInput) => number`
+`(input: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulseTravelRatioInput) => number`
 
 Resolves the pulse travel ratio along its chosen line.
 
 Parameters:
+
 - `input` - - Pulse timing direction and orientation.
 
 Returns: Normalized 0..1 travel ratio along the chosen line.
@@ -468,6 +607,7 @@ Returns: Normalized 0..1 travel ratio along the chosen line.
 Resolves a deterministic unit-interval hash from a slot index and salt.
 
 Parameters:
+
 - `seed` - - Slot-local seed value.
 - `salt` - - Small integer salt used to pick a stable random stream.
 
@@ -475,71 +615,156 @@ Returns: Stable random value in the range 0..1.
 
 ### resolvePlaybackGroundGridVerticalPulsePath
 
-`(verticalPulsePaths: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath[], pulseSlotIndex: number, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath | null`
+`(verticalPulsePaths: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath[], visibleVerticalPulsePaths: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath[], pulseSlotIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath | null`
 
 Selects one sparse vertical pulse path for the current pulse slot.
 
 Parameters:
+
 - `verticalPulsePaths` - - Full vertical ray paths.
+- `visibleVerticalPulsePaths` - - Visible subset preferred for on-screen pulses.
 - `pulseSlotIndex` - - Zero-based pulse slot index.
-- `sceneContext` - - Current lower-band scene geometry.
 
 Returns: Vertical pulse path, or null when none are available.
 
 ## browser-entry/playback/background/ground-grid/playback.background.ground-grid.geometry.utils.ts
 
+### appendPlaybackGroundGridVerticalLineSegments
+
+`(targetSegments: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[], startIndex: number, input: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridVerticalRayInput) => number`
+
+Appends tapered style segments for one perspective ray.
+
+Parameters:
+
+- `targetSegments` - - Target line-segment buffer.
+- `startIndex` - - Current insertion index within the target buffer.
+- `input` - - Geometry and depth context for one ray.
+
+Returns: Next insertion index after all ray segments have been written.
+
+### buildPlaybackGroundGridHorizontalGeometry
+
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridHorizontalGeometry`
+
+Builds the screen-horizontal depth bands for the lower neon plane.
+
+Parameters:
+
+- `sceneContext` - - Lower-band geometry for the current viewport.
+
+Returns: Ordered far-to-near line segments and pulse subsets.
+
+### buildPlaybackGroundGridVerticalGeometry
+
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext, safeLaneSpacingPx: number, quantizedWrappedOffsetPx: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridVerticalGeometry`
+
+Builds the perspective rays that converge to the centered horizon point.
+
+Parameters:
+
+- `sceneContext` - - Lower-band geometry for the current viewport.
+- `safeLaneSpacingPx` - - Stable lane spacing used for ray anchors.
+- `quantizedWrappedOffsetPx` - - Quantized wrapped offset used for cache reuse.
+
+Returns: Wrapped left-to-right perspective rays and pulse subsets.
+
+### groupPlaybackGroundGridSegmentsByStyle
+
+`(segments: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]) => readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridSegmentBatch[]`
+
+Groups line segments into ordered style batches for lower-overhead drawing.
+
+Parameters:
+
+- `segments` - - Ordered line segments that should preserve draw grouping.
+
+Returns: Ordered style batches that can be stroked with fewer state changes.
+
+### isPlaybackGroundGridVerticalPulsePathVisible
+
+`(pulsePath: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext, midTravelRatio: number) => boolean`
+
+Resolves whether one vertical pulse path is safely visible in the viewport.
+
+Parameters:
+
+- `pulsePath` - - Candidate vertical pulse path.
+- `sceneContext` - - Current lower-band scene geometry.
+- `midTravelRatio` - - Midpoint travel ratio used for visibility checks.
+
+Returns: True when the pulse midpoint stays inside the visible ground band.
+
 ### projectPlaybackGroundGridHorizonXToAnchorX
 
-`(input: PlaybackGroundGridAnchorProjectionInput) => number`
+`(input: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridAnchorProjectionInput) => number`
 
 Projects one horizon x-position down to the required floor anchor x-position.
 
 Parameters:
+
 - `input` - - Horizon target and scene geometry.
 
 Returns: Bottom anchor x-position whose ray reaches the target horizon x.
 
 ### resolvePlaybackGroundGridAnchorBounds
 
-`(input: PlaybackGroundGridAnchorBoundsInput) => PlaybackGroundGridAnchorBounds`
+`(input: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridAnchorBoundsInput) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridAnchorBounds`
 
 Projects the visible horizon span back onto the floor anchor line.
 
 Parameters:
+
 - `input` - - Visible horizon bounds and scene geometry.
 
 Returns: Bottom-anchor bounds required to cover the full visible horizon.
 
-### resolvePlaybackGroundGridHorizontalLines
+### resolvePlaybackGroundGridHorizontalGeometry
 
-`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]`
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridHorizontalGeometry`
 
-Builds the screen-horizontal depth bands for the lower neon plane.
+Resolves cached screen-horizontal depth bands for the lower neon plane.
 
 Parameters:
+
 - `sceneContext` - - Lower-band geometry for the current viewport.
 
-Returns: Ordered far-to-near line segments.
+Returns: Ordered far-to-near line segments and pulse subsets.
 
-### resolvePlaybackGroundGridVerticalLines
+### resolvePlaybackGroundGridPreferredHorizontalPulsePaths
 
-`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext, scrollBasePx: number) => { verticalLines: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]; verticalPulsePaths: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath[]; }`
+`(horizontalLines: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]) => readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulsePath[]`
 
-Builds the perspective rays that converge to the centered horizon point.
+Prefers the nearer, thicker horizontal tracks when picking a pulse lane.
 
 Parameters:
+
+- `horizontalLines` - - Visible horizontal grid bands.
+
+Returns: Pulse-eligible horizontal paths biased toward the foreground.
+
+### resolvePlaybackGroundGridVerticalCycleContext
+
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext, scrollBasePx: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridVerticalCycleContext`
+
+Resolves the wrapped vertical-geometry cycle for the current scroll value.
+
+Parameters:
+
 - `sceneContext` - - Lower-band geometry for the current viewport.
 - `scrollBasePx` - - Shared world scroll used for parallax motion.
 
-Returns: Wrapped left-to-right perspective rays.
+Returns: Quantized wrapped offset and safe lane spacing for cache lookups.
 
-### resolvePlaybackGroundGridVerticalLineSegments
+### resolvePlaybackGroundGridVerticalGeometry
 
-`(input: PlaybackGroundGridVerticalSegmentsInput) => readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]`
+`(sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext, scrollBasePx: number) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridVerticalGeometry`
 
-Builds tapered style segments for one perspective ray.
+Resolves cached perspective rays that converge to the centered horizon point.
 
 Parameters:
-- `input` - - Geometry and depth context for one ray.
 
-Returns: Ordered near-to-far segments for one perspective ray.
+- `sceneContext` - - Lower-band geometry for the current viewport.
+- `scrollBasePx` - - Shared world scroll used for parallax motion.
+
+Returns: Wrapped left-to-right perspective rays and pulse subsets.

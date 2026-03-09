@@ -5,10 +5,7 @@ import {
   FLAPPY_GROUND_GRID_PULSE_INTERVAL_MS,
   FLAPPY_GROUND_GRID_PULSE_LIFETIME_MS,
   FLAPPY_GROUND_GRID_PULSE_MAX_SIZE_PX,
-  FLAPPY_GROUND_GRID_PULSE_MIN_ELIGIBLE_THICKNESS_PX,
   FLAPPY_GROUND_GRID_PULSE_MIN_SIZE_PX,
-  FLAPPY_GROUND_GRID_PULSE_PREFERRED_HORIZONTAL_START_RATIO,
-  FLAPPY_GROUND_GRID_PULSE_VISIBLE_VIEWPORT_INSET_PX,
   FLAPPY_GROUND_GRID_UNSIGNED_NORMALIZATION_DIVISOR,
   FLAPPY_GROUND_GRID_VERTICAL_PULSE_END_RATIO,
   FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO,
@@ -20,30 +17,13 @@ import {
 } from './playback.background.ground-grid.math.utils';
 import type {
   PlaybackBackgroundGroundGridSceneContext,
-  PlaybackGroundGridLineSegment,
   PlaybackGroundGridPulse,
+  PlaybackGroundGridPulseInput,
   PlaybackGroundGridPulseOrientation,
   PlaybackGroundGridPulsePath,
+  PlaybackGroundGridPulseTrackThicknessInput,
+  PlaybackGroundGridPulseTravelRatioInput,
 } from './playback.background.ground-grid.types';
-
-type PlaybackGroundGridPulseInput = {
-  frameIndex: number;
-  horizontalLines: readonly PlaybackGroundGridLineSegment[];
-  sceneContext: PlaybackBackgroundGroundGridSceneContext;
-  verticalPulsePaths: readonly PlaybackGroundGridPulsePath[];
-};
-
-type PlaybackGroundGridPulseTravelRatioInput = {
-  directionIsForward: boolean;
-  lifetimeProgressRatio: number;
-  orientation: PlaybackGroundGridPulseOrientation;
-};
-
-type PlaybackGroundGridPulseTrackThicknessInput = {
-  pulseCenterYPx: number;
-  pulsePath: PlaybackGroundGridPulsePath;
-  sceneContext: PlaybackBackgroundGroundGridSceneContext;
-};
 
 /**
  * Resolves one rare, deterministic pulse square for the current frame.
@@ -70,13 +50,13 @@ export function resolvePlaybackGroundGridPulse(
   const selectedPulsePath =
     pulseOrientation === 'horizontal'
       ? resolvePlaybackGroundGridHorizontalPulsePath(
-          input.horizontalLines,
+          input.horizontalPulsePaths,
           pulseSlotIndex,
         )
       : resolvePlaybackGroundGridVerticalPulsePath(
           input.verticalPulsePaths,
+          input.visibleVerticalPulsePaths,
           pulseSlotIndex,
-          input.sceneContext,
         );
   if (!selectedPulsePath) {
     return null;
@@ -133,103 +113,45 @@ function resolvePlaybackGroundGridPulseOrientation(
 /**
  * Selects one thick-enough horizontal band for the current pulse slot.
  *
- * @param horizontalLines - Visible horizontal grid bands.
+ * @param horizontalPulsePaths - Cached horizontal pulse paths eligible for travel.
  * @param pulseSlotIndex - Zero-based pulse slot index.
  * @returns Horizontal pulse path, or null when none are suitable.
  */
 function resolvePlaybackGroundGridHorizontalPulsePath(
-  horizontalLines: readonly PlaybackGroundGridLineSegment[],
+  horizontalPulsePaths: readonly PlaybackGroundGridPulsePath[],
   pulseSlotIndex: number,
 ): PlaybackGroundGridPulsePath | null {
-  const eligibleHorizontalLines =
-    resolvePlaybackGroundGridPreferredHorizontalPulseLines(horizontalLines);
-  if (eligibleHorizontalLines.length === 0) {
+  if (horizontalPulsePaths.length === 0) {
     return null;
   }
 
   const selectedLineIndex = Math.min(
-    eligibleHorizontalLines.length - 1,
+    horizontalPulsePaths.length - 1,
     Math.floor(
       resolvePlaybackGroundGridUnitHash(pulseSlotIndex, 17) *
-        eligibleHorizontalLines.length,
+        horizontalPulsePaths.length,
     ),
   );
-  const selectedLine = eligibleHorizontalLines[selectedLineIndex];
-  return {
-    orientation: 'horizontal',
-    startXPx: selectedLine.startXPx,
-    startYPx: selectedLine.startYPx,
-    endXPx: selectedLine.endXPx,
-    endYPx: selectedLine.endYPx,
-    thicknessPx: selectedLine.thicknessPx,
-  };
-}
-
-/**
- * Resolves whether a horizontal line is thick enough to carry a visible pulse.
- *
- * @param horizontalLine - Candidate horizontal ground-grid line.
- * @returns True when the line should be considered pulse-eligible.
- */
-function isPlaybackGroundGridHorizontalPulseLineEligible(
-  horizontalLine: PlaybackGroundGridLineSegment,
-): boolean {
-  return (
-    horizontalLine.thicknessPx >=
-    FLAPPY_GROUND_GRID_PULSE_MIN_ELIGIBLE_THICKNESS_PX
-  );
-}
-
-/**
- * Prefers the nearer, thicker horizontal tracks when picking a pulse lane.
- *
- * @param horizontalLines - Visible horizontal grid bands.
- * @returns Pulse-eligible horizontal lines biased toward the foreground.
- */
-function resolvePlaybackGroundGridPreferredHorizontalPulseLines(
-  horizontalLines: readonly PlaybackGroundGridLineSegment[],
-): readonly PlaybackGroundGridLineSegment[] {
-  const eligibleHorizontalLines = horizontalLines.filter(
-    isPlaybackGroundGridHorizontalPulseLineEligible,
-  );
-  if (eligibleHorizontalLines.length === 0) {
-    return eligibleHorizontalLines;
-  }
-
-  const preferredStartIndex = Math.min(
-    eligibleHorizontalLines.length - 1,
-    Math.floor(
-      eligibleHorizontalLines.length *
-        FLAPPY_GROUND_GRID_PULSE_PREFERRED_HORIZONTAL_START_RATIO,
-    ),
-  );
-  return eligibleHorizontalLines.slice(preferredStartIndex);
+  return horizontalPulsePaths[selectedLineIndex];
 }
 
 /**
  * Selects one sparse vertical pulse path for the current pulse slot.
  *
  * @param verticalPulsePaths - Full vertical ray paths.
+ * @param visibleVerticalPulsePaths - Visible subset preferred for on-screen pulses.
  * @param pulseSlotIndex - Zero-based pulse slot index.
- * @param sceneContext - Current lower-band scene geometry.
  * @returns Vertical pulse path, or null when none are available.
  */
 function resolvePlaybackGroundGridVerticalPulsePath(
   verticalPulsePaths: readonly PlaybackGroundGridPulsePath[],
+  visibleVerticalPulsePaths: readonly PlaybackGroundGridPulsePath[],
   pulseSlotIndex: number,
-  sceneContext: PlaybackBackgroundGroundGridSceneContext,
 ): PlaybackGroundGridPulsePath | null {
   if (verticalPulsePaths.length === 0) {
     return null;
   }
 
-  const visibleVerticalPulsePaths = verticalPulsePaths.filter(
-    (verticalPulsePath) =>
-      isPlaybackGroundGridVerticalPulsePathVisible(
-        verticalPulsePath,
-        sceneContext,
-      ),
-  );
   const candidatePulsePaths =
     visibleVerticalPulsePaths.length > 0
       ? visibleVerticalPulsePaths
@@ -243,42 +165,6 @@ function resolvePlaybackGroundGridVerticalPulsePath(
     ),
   );
   return candidatePulsePaths[selectedPathIndex];
-}
-
-/**
- * Resolves whether one vertical pulse path is safely visible in the viewport.
- *
- * @param pulsePath - Candidate vertical pulse path.
- * @param sceneContext - Current lower-band scene geometry.
- * @returns True when the pulse midpoint stays inside the visible ground band.
- */
-function isPlaybackGroundGridVerticalPulsePathVisible(
-  pulsePath: PlaybackGroundGridPulsePath,
-  sceneContext: PlaybackBackgroundGroundGridSceneContext,
-): boolean {
-  const midTravelRatio =
-    FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO +
-    (FLAPPY_GROUND_GRID_VERTICAL_PULSE_END_RATIO -
-      FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO) *
-      0.5;
-  const pulseMidpoint = interpolatePlaybackGroundGridPoint(
-    pulsePath.startXPx,
-    pulsePath.startYPx,
-    pulsePath.endXPx,
-    pulsePath.endYPx,
-    midTravelRatio,
-  );
-  const visibleLeftXPx =
-    sceneContext.viewportLeftXPx +
-    FLAPPY_GROUND_GRID_PULSE_VISIBLE_VIEWPORT_INSET_PX;
-  const visibleRightXPx =
-    sceneContext.viewportLeftXPx +
-    sceneContext.visibleWorldWidthPx -
-    FLAPPY_GROUND_GRID_PULSE_VISIBLE_VIEWPORT_INSET_PX;
-
-  return (
-    pulseMidpoint.xPx >= visibleLeftXPx && pulseMidpoint.xPx <= visibleRightXPx
-  );
 }
 
 /**

@@ -2,6 +2,11 @@ import { FLAPPY_NEON_PALETTE } from '../../../constants/constants';
 import { resolveStarfieldTiles } from '../playback.starfield.service';
 import { positiveModulo } from '../playback.starfield.utils';
 import {
+  ensurePlaybackBackgroundViewportCacheValidity,
+  resolveCachedPlaybackBackgroundLayout,
+  resolveCachedPlaybackTileCoverageCount,
+} from './playback.background.cache.services';
+import {
   FLAPPY_BACKGROUND_COMPOSITE_LIGHTER,
   FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER,
   FLAPPY_BACKGROUND_TILE_ROW_BUFFER_COUNT,
@@ -12,7 +17,6 @@ import type {
   PlaybackBackgroundRequest,
   PlaybackBackgroundSceneContext,
   PlaybackHorizonLineRequest,
-  PlaybackTiledImageRowRequest,
 } from './playback.background.types';
 import {
   resolveAlignedHorizonYPx,
@@ -37,17 +41,22 @@ export function resolvePlaybackBackgroundSceneContext(
   const visibleWorldHeightPx = resolveSafeBackgroundDimension(
     request.visibleWorldHeightPx,
   );
+  ensurePlaybackBackgroundViewportCacheValidity(
+    visibleWorldWidthPx,
+    visibleWorldHeightPx,
+  );
 
   // Step 2: Resolve the vertical sky-ground split and horizon style.
-  const backgroundLayout =
-    resolvePlaybackBackgroundLayout(visibleWorldHeightPx);
+  const backgroundLayout = resolveCachedPlaybackBackgroundLayout(
+    visibleWorldHeightPx,
+    () => resolvePlaybackBackgroundLayout(visibleWorldHeightPx),
+  );
   const horizonStyle = resolvePlaybackHorizonStyle();
   const alignedHorizonYPx = resolveAlignedHorizonYPx(
     backgroundLayout.horizonYPx,
     horizonStyle.lineThicknessPx,
   );
-  const vanishingPointXPx =
-    request.viewportLeftXPx + visibleWorldWidthPx * 0.5;
+  const vanishingPointXPx = request.viewportLeftXPx + visibleWorldWidthPx * 0.5;
   const vanishingPointYPx = visibleWorldHeightPx * 0.5;
 
   // Step 3: Return a compact context object for the remaining passes.
@@ -122,13 +131,14 @@ export function drawPlaybackBackgroundSky(
   const starfieldTiles = resolveStarfieldTiles(sceneContext.skyHeightPx);
   for (const starfieldTile of starfieldTiles) {
     const scrollOffsetPx = request.scrollBasePx * starfieldTile.scrollRatio;
-    drawPlaybackTiledImageRow(context, {
-      startXPx: sceneContext.viewportLeftXPx,
-      tile: starfieldTile.image,
-      tileWidthPx: starfieldTile.tileWidthPx,
-      visibleWidthPx: sceneContext.visibleWorldWidthPx,
-      offsetPx: scrollOffsetPx,
-    });
+    drawPlaybackTiledImageRow(
+      context,
+      sceneContext.viewportLeftXPx,
+      starfieldTile.image,
+      starfieldTile.tileWidthPx,
+      sceneContext.visibleWorldWidthPx,
+      scrollOffsetPx,
+    );
   }
 
   // Step 3: Restore the caller's unclipped canvas state.
@@ -159,18 +169,29 @@ export function drawPlaybackBackgroundHorizon(
  * Draws a horizontally tiled image strip across the visible width.
  *
  * @param context - Canvas 2D drawing context.
- * @param row - Tile image and wrap parameters.
+ * @param startXPx - Leftmost visible world x-position for the tiled strip.
+ * @param tile - Pre-rendered tile image reused across the sky band.
+ * @param tileWidthPx - Width of one repeated tile in pixels.
+ * @param visibleWidthPx - Current visible width that must be fully covered.
+ * @param offsetPx - Parallax scroll offset used to wrap tile placement.
  * @returns Nothing.
  */
 function drawPlaybackTiledImageRow(
   context: CanvasRenderingContext2D,
-  row: PlaybackTiledImageRowRequest,
+  startXPx: number,
+  tile: CanvasImageSource,
+  tileWidthPx: number,
+  visibleWidthPx: number,
+  offsetPx: number,
 ): void {
   // Step 1: Normalize the scroll offset so tile placement stays bounded.
-  const normalizedOffsetPx = positiveModulo(row.offsetPx, row.tileWidthPx);
-  const maximumTileIndex =
-    Math.ceil(row.visibleWidthPx / row.tileWidthPx) +
-    FLAPPY_BACKGROUND_TILE_ROW_BUFFER_COUNT;
+  const normalizedOffsetPx = positiveModulo(offsetPx, tileWidthPx);
+  const maximumTileIndex = resolveCachedPlaybackTileCoverageCount(
+    tileWidthPx,
+    () =>
+      Math.ceil(visibleWidthPx / tileWidthPx) +
+      FLAPPY_BACKGROUND_TILE_ROW_BUFFER_COUNT,
+  );
 
   // Step 2: Draw enough repeated tiles to cover the visible strip.
   for (
@@ -178,9 +199,8 @@ function drawPlaybackTiledImageRow(
     tileIndex <= maximumTileIndex;
     tileIndex += 1
   ) {
-    const tileLeftPx =
-      row.startXPx + tileIndex * row.tileWidthPx - normalizedOffsetPx;
-    context.drawImage(row.tile, tileLeftPx, 0);
+    const tileLeftPx = startXPx + tileIndex * tileWidthPx - normalizedOffsetPx;
+    context.drawImage(tile, tileLeftPx, 0);
   }
 }
 

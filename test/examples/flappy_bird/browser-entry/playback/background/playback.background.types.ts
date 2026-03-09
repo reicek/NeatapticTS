@@ -42,6 +42,11 @@ export type PlaybackBackgroundLayout = {
 };
 
 /**
+ * Zero-argument builder used to lazily construct one cached background layout.
+ */
+export type PlaybackBackgroundLayoutFactory = () => PlaybackBackgroundLayout;
+
+/**
  * Neon styling contract for the horizon divider line.
  */
 export type PlaybackHorizonStyle = {
@@ -60,15 +65,4 @@ export type PlaybackHorizonLineRequest = {
   visibleWorldWidthPx: number;
   alignedHorizonYPx: number;
   horizonStyle: PlaybackHorizonStyle;
-};
-
-/**
- * Horizontal tiled-image draw request.
- */
-export type PlaybackTiledImageRowRequest = {
-  startXPx: number;
-  tile: CanvasImageSource;
-  tileWidthPx: number;
-  visibleWidthPx: number;
-  offsetPx: number;
 };

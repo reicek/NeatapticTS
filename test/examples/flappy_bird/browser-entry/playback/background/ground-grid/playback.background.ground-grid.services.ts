@@ -1,18 +1,22 @@
 import {
-  FLAPPY_GROUND_GRID_PULSE_GLOW_ALPHA_RATIO,
-  FLAPPY_GROUND_GRID_PULSE_GLOW_SIZE_MULTIPLIER,
   FLAPPY_GROUND_GRID_FOG_ALPHA,
   FLAPPY_GROUND_GRID_FOG_HEIGHT_RATIO,
+  FLAPPY_GROUND_GRID_PULSE_GLOW_ALPHA_RATIO,
+  FLAPPY_GROUND_GRID_PULSE_GLOW_SIZE_MULTIPLIER,
 } from './playback.background.ground-grid.constants';
 import {
   FLAPPY_BACKGROUND_COMPOSITE_LIGHTER,
   FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER,
 } from '../playback.background.constants';
+import {
+  resolveCachedGroundGridFogGradient,
+  resolveGroundGridSceneCacheKey,
+} from './playback.background.ground-grid.cache.services';
 import type {
   PlaybackBackgroundGroundGridResolvedScene,
   PlaybackGroundGridGeometry,
-  PlaybackGroundGridLineSegment,
   PlaybackGroundGridPulse,
+  PlaybackGroundGridSegmentBatch,
 } from './playback.background.ground-grid.types';
 
 /**
@@ -29,10 +33,11 @@ export function drawPlaybackGroundGrid(
   geometry: PlaybackGroundGridGeometry,
 ): void {
   context.save();
+  context.translate(resolvedScene.sceneContext.viewportOffsetXPx, 0);
   context.globalCompositeOperation = FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER;
   context.beginPath();
   context.rect(
-    resolvedScene.sceneContext.viewportLeftXPx,
+    0,
     resolvedScene.sceneContext.lowerBandTopYPx,
     resolvedScene.sceneContext.visibleWorldWidthPx,
     resolvedScene.sceneContext.lowerBandHeightPx,
@@ -40,15 +45,15 @@ export function drawPlaybackGroundGrid(
   context.clip();
 
   drawGroundGridFog(context, resolvedScene);
-  drawGroundGridSegments(
+  drawGroundGridSegmentBatches(
     context,
-    geometry.verticalLines,
+    geometry.verticalLineBatches,
     resolvedScene.style.lineColor,
     resolvedScene.style.glowColor,
   );
-  drawGroundGridSegments(
+  drawGroundGridSegmentBatches(
     context,
-    geometry.horizontalLines,
+    geometry.horizontalLineBatches,
     resolvedScene.style.lineColor,
     resolvedScene.style.glowColor,
   );
@@ -75,21 +80,21 @@ export function drawGroundGridFog(
   const fogHeightPx =
     resolvedScene.sceneContext.lowerBandHeightPx *
     FLAPPY_GROUND_GRID_FOG_HEIGHT_RATIO;
-  const fogGradient = context.createLinearGradient(
-    0,
-    resolvedScene.sceneContext.lowerBandTopYPx,
-    0,
-    resolvedScene.sceneContext.lowerBandTopYPx + fogHeightPx,
+  const sceneCacheKey = resolveGroundGridSceneCacheKey(
+    resolvedScene.sceneContext,
   );
-
-  fogGradient.addColorStop(0, resolvedScene.style.fogColor);
-  fogGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  const fogGradient = resolveCachedGroundGridFogGradient(
+    context,
+    sceneCacheKey,
+    resolvedScene.sceneContext,
+    resolvedScene.style.fogColor,
+  );
 
   context.save();
   context.globalAlpha = FLAPPY_GROUND_GRID_FOG_ALPHA;
   context.fillStyle = fogGradient;
   context.fillRect(
-    resolvedScene.sceneContext.viewportLeftXPx,
+    0,
     resolvedScene.sceneContext.lowerBandTopYPx,
     resolvedScene.sceneContext.visibleWorldWidthPx,
     fogHeightPx,
@@ -98,58 +103,64 @@ export function drawGroundGridFog(
 }
 
 /**
- * Draws one ordered collection of neon line segments.
+ * Draws one ordered collection of neon segment batches.
  *
  * @param context - Canvas 2D drawing context.
- * @param segments - Ordered line segments to render.
+ * @param batches - Ordered line-segment batches to render.
  * @param lineColor - Core neon stroke color.
  * @param glowColor - Outer glow color used for bloom.
  * @returns Nothing.
  */
-export function drawGroundGridSegments(
+export function drawGroundGridSegmentBatches(
   context: CanvasRenderingContext2D,
-  segments: readonly PlaybackGroundGridLineSegment[],
-  lineColor: string,
-  glowColor: string,
-): void {
-  for (const segment of segments) {
-    drawGroundGridSegment(context, segment, lineColor, glowColor);
-  }
-}
-
-/**
- * Draws one neon line segment with a glow pass and crisp core line.
- *
- * @param context - Canvas 2D drawing context.
- * @param segment - One resolved line segment.
- * @param lineColor - Core neon stroke color.
- * @param glowColor - Outer glow color used for bloom.
- * @returns Nothing.
- */
-export function drawGroundGridSegment(
-  context: CanvasRenderingContext2D,
-  segment: PlaybackGroundGridLineSegment,
+  batches: readonly PlaybackGroundGridSegmentBatch[],
   lineColor: string,
   glowColor: string,
 ): void {
   context.save();
   context.strokeStyle = lineColor;
   context.shadowColor = glowColor;
-  context.shadowBlur = segment.blurPx;
-  context.globalAlpha = segment.alpha;
-  context.lineWidth = segment.thicknessPx;
+
+  for (const batch of batches) {
+    drawGroundGridSegmentBatch(context, batch);
+  }
+
+  context.restore();
+}
+
+/**
+ * Draws one batch of neon line segments that share one render style.
+ *
+ * @param context - Canvas 2D drawing context.
+ * @param batch - Ordered line-segment batch that shares one render style.
+ * @returns Nothing.
+ */
+export function drawGroundGridSegmentBatch(
+  context: CanvasRenderingContext2D,
+  batch: PlaybackGroundGridSegmentBatch,
+): void {
+  context.shadowBlur = batch.blurPx;
+  context.globalAlpha = batch.alpha;
+  context.lineWidth = batch.thicknessPx;
   context.beginPath();
-  context.moveTo(segment.startXPx, segment.startYPx);
-  context.lineTo(segment.endXPx, segment.endYPx);
+
+  for (const segment of batch.segments) {
+    context.moveTo(segment.startXPx, segment.startYPx);
+    context.lineTo(segment.endXPx, segment.endYPx);
+  }
+
   context.stroke();
 
   context.shadowBlur = 0;
-  context.globalAlpha = Math.min(1, segment.alpha + 0.18);
+  context.globalAlpha = Math.min(1, batch.alpha + 0.18);
   context.beginPath();
-  context.moveTo(segment.startXPx, segment.startYPx);
-  context.lineTo(segment.endXPx, segment.endYPx);
+
+  for (const segment of batch.segments) {
+    context.moveTo(segment.startXPx, segment.startYPx);
+    context.lineTo(segment.endXPx, segment.endYPx);
+  }
+
   context.stroke();
-  context.restore();
 }
 
 /**

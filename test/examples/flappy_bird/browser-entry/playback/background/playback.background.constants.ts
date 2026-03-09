@@ -1,3 +1,6 @@
+import { FLAPPY_NEON_PALETTE } from '../../../constants/constants';
+import type { PlaybackHorizonStyle } from './playback.background.types';
+
 /**
  * Background layout ratio reserved for the starfield sky band.
  *
@@ -41,3 +44,19 @@ export const FLAPPY_BACKGROUND_HORIZON_GLOW_ALPHA = 0.92;
 
 /** Blur radius used to bloom the horizon divider glow (pixels). */
 export const FLAPPY_BACKGROUND_HORIZON_GLOW_BLUR_PX = 14;
+
+/**
+ * Frozen neon paint bundle reused by the playback horizon renderer.
+ *
+ * Keeping this style object in the constants module prevents repeated
+ * allocation during every background frame while still keeping the palette
+ * centrally theme-owned.
+ */
+export const FLAPPY_BACKGROUND_HORIZON_STYLE: PlaybackHorizonStyle =
+  Object.freeze({
+    lineColor: FLAPPY_NEON_PALETTE.horizonLine,
+    glowColor: FLAPPY_NEON_PALETTE.horizonGlow,
+    glowAlpha: FLAPPY_BACKGROUND_HORIZON_GLOW_ALPHA,
+    glowBlurPx: FLAPPY_BACKGROUND_HORIZON_GLOW_BLUR_PX,
+    lineThicknessPx: FLAPPY_BACKGROUND_HORIZON_LINE_THICKNESS_PX,
+  });

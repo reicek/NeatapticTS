@@ -1,7 +1,5 @@
-import { FLAPPY_NEON_PALETTE } from '../../../constants/constants';
 import {
-  FLAPPY_BACKGROUND_HORIZON_GLOW_ALPHA,
-  FLAPPY_BACKGROUND_HORIZON_GLOW_BLUR_PX,
+  FLAPPY_BACKGROUND_HORIZON_STYLE,
   FLAPPY_BACKGROUND_HORIZON_HALF_THICKNESS_MULTIPLIER,
   FLAPPY_BACKGROUND_HORIZON_LINE_THICKNESS_PX,
   FLAPPY_BACKGROUND_MIN_VIEWPORT_DIMENSION_PX,
@@ -62,14 +60,8 @@ export function resolvePlaybackBackgroundLayout(
  * @returns Reusable draw style for both the glow and crisp line passes.
  */
 export function resolvePlaybackHorizonStyle(): PlaybackHorizonStyle {
-  // Step 1: Reuse shared palette tokens so horizon colors remain theme-owned.
-  return {
-    lineColor: FLAPPY_NEON_PALETTE.horizonLine,
-    glowColor: FLAPPY_NEON_PALETTE.horizonGlow,
-    glowAlpha: FLAPPY_BACKGROUND_HORIZON_GLOW_ALPHA,
-    glowBlurPx: FLAPPY_BACKGROUND_HORIZON_GLOW_BLUR_PX,
-    lineThicknessPx: FLAPPY_BACKGROUND_HORIZON_LINE_THICKNESS_PX,
-  };
+  // Step 1: Reuse one frozen style object so horizon drawing stays allocation-free.
+  return FLAPPY_BACKGROUND_HORIZON_STYLE;
 }
 
 /**

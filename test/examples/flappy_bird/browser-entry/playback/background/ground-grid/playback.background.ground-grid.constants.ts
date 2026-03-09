@@ -1,3 +1,6 @@
+import { FLAPPY_NEON_PALETTE } from '../../../../constants/constants';
+import type { PlaybackBackgroundGroundGridStyle } from './playback.background.ground-grid.types';
+
 /** Number of horizontal depth bands used by the neon ground grid. */
 export const FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT = 16;
 
@@ -87,3 +90,18 @@ export const FLAPPY_GROUND_GRID_FOG_HEIGHT_RATIO = 0.45;
 
 /** Peak opacity used by the lower-band neon fog wash. */
 export const FLAPPY_GROUND_GRID_FOG_ALPHA = 0.24;
+
+/**
+ * Frozen neon style bundle reused by the playback ground-grid renderer.
+ *
+ * The values stay theme-owned but are materialized once so the renderer does
+ * not allocate a new style object during every frame.
+ */
+export const FLAPPY_BACKGROUND_GROUND_GRID_STYLE: PlaybackBackgroundGroundGridStyle =
+  Object.freeze({
+    lineColor: FLAPPY_NEON_PALETTE.groundGridLine,
+    glowColor: FLAPPY_NEON_PALETTE.groundGridGlow,
+    fogColor: FLAPPY_NEON_PALETTE.groundGridFog,
+    pulseFillColor: FLAPPY_NEON_PALETTE.groundGridPulseFill,
+    pulseGlowColor: FLAPPY_NEON_PALETTE.groundGridPulseGlow,
+  });
