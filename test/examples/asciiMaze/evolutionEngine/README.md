@@ -126,6 +126,10 @@ Loop helpers returned by prepareLoopHelpers.
 
 Distance map for pathfinding.
 
+### MazeEvolutionCurriculumPhaseOutcome
+
+Shared curriculum-facing summary derived from one completed evolution phase.
+
 ### MazeEvolutionRunResult
 
 Stable result returned by `EvolutionEngine.runMazeEvolution()`.
@@ -560,6 +564,20 @@ Simulation result with profiling and ring state
 ### updateDashboardPeriodic
 
 `(maze: string[], bestResult: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IMazeRunResult | undefined, bestNetwork: import("C:/NeatapticTS/src/architecture/network").default | null, completedGenerations: number, neat: import("C:/NeatapticTS/src/neat").default, dashboardManager: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").IDashboardManager | undefined, flushToFrame: (() => Promise<void>) | undefined) => Promise<void>`
+
+## evolutionEngine/curriculumPhase.ts
+
+### hasMazeEvolutionReachedCurriculumThreshold
+
+`(progress: unknown, minProgressToPass: number) => boolean`
+
+### refineMazeEvolutionCarryOverNetwork
+
+`(bestNetwork: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork | undefined, previousBestNetwork: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork | undefined) => import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork | undefined`
+
+### resolveMazeEvolutionPhaseOutcome
+
+`(evolutionResult: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").MazeEvolutionRunResult, previousBestNetwork: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork | undefined, minProgressToPass: number) => import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").MazeEvolutionCurriculumPhaseOutcome`
 
 ## evolutionEngine/optionsAndSetup.ts
 

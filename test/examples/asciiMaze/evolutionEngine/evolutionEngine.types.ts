@@ -149,6 +149,25 @@ export interface MazeEvolutionRunResult {
   exitReason: string;
 }
 
+/**
+ * Shared curriculum-facing summary derived from one completed evolution phase.
+ *
+ * @remarks
+ * Browser curriculum code and curriculum-style tests should depend on this
+ * engine-owned contract so host boundaries do not recreate local refinement or
+ * result-interpretation shims when carrying winners across phases.
+ */
+export interface MazeEvolutionCurriculumPhaseOutcome {
+  /** Original engine result for callers that still need the underlying run details. */
+  result: MazeEvolutionRunResult;
+  /** Convenience mirror of the best-run progress percentage for logging or gating. */
+  progress: number | undefined;
+  /** Whether the phase met the caller's curriculum advancement threshold. */
+  solved: boolean;
+  /** Refined winner to seed into the next curriculum phase, when one is available. */
+  nextBestNetwork: INetwork | undefined;
+}
+
 /** Type for Neat class instance from the neataptic library. */
 export type NeatInstance = import('../../../../src/neat').default;
 

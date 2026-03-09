@@ -1,13 +1,10 @@
-import type Network from '../../../../src/architecture/network';
 import { EvolutionEngine } from '../evolutionEngine';
-import type { MazeEvolutionRunResult } from '../evolutionEngine/evolutionEngine.types';
+import { resolveMazeEvolutionPhaseOutcome } from '../evolutionEngine';
 import type { INetwork } from '../interfaces';
-import { NetworkRefinement } from '../networkRefinement';
 import { BROWSER_ENTRY_CONSTANTS as C } from './browser-entry.constants';
 import type { BrowserEntryCurriculumContext } from './browser-entry.types';
 import {
   createBrowserEvolutionSettings,
-  didSolveBrowserMaze,
   getNextBrowserMazeDimension,
   scheduleBrowserEntryFrame,
 } from './browser-entry.utils';
@@ -15,8 +12,10 @@ import {
 /**
  * Browser curriculum-runtime service boundary for the ASCII Maze browser entry.
  *
- * This module isolates maze progression, solve detection, and cross-phase
- * winner carry-over so the compatibility facade stays orchestration-first.
+ * This module now owns browser-only curriculum progression concerns: dimension
+ * scheduling, frame pacing, and lifecycle completion. Evolution-phase result
+ * interpretation and winner carry-over refinement live behind the engine-owned
+ * curriculum helper so browser-entry stays focused on host runtime behavior.
  */
 
 /**
@@ -69,15 +68,15 @@ export const runBrowserEntryCurriculum = (
         cancellation: { isCancelled: () => context.isCancelled() },
         signal: context.combinedSignal,
       });
-      const evolutionResult = result as MazeEvolutionRunResult;
-      const progress = evolutionResult.bestResult?.progress;
-
-      previousBestNetwork = refineBrowserEntryBestNetwork(
-        (evolutionResult.bestNetwork as unknown as INetwork | undefined) ??
-          undefined,
+      const phaseOutcome = resolveMazeEvolutionPhaseOutcome(
+        result,
         previousBestNetwork,
+        C.MIN_PROGRESS_TO_PASS,
       );
-      solved = didSolveBrowserMaze(progress);
+      const progress = phaseOutcome.progress;
+
+      previousBestNetwork = phaseOutcome.nextBestNetwork;
+      solved = phaseOutcome.solved;
 
       try {
         console.log(
@@ -114,28 +113,3 @@ export const runBrowserEntryCurriculum = (
     context.finish();
   }
 };
-
-/**
- * Refine the winning network before seeding the next curriculum phase.
- *
- * @param bestNetwork - Network returned by the latest evolution phase.
- * @param previousBestNetwork - Previously carried curriculum seed.
- * @returns Refined winner or the best available carry-over network.
- */
-function refineBrowserEntryBestNetwork(
-  bestNetwork: INetwork | undefined,
-  previousBestNetwork: INetwork | undefined,
-): INetwork | undefined {
-  if (!bestNetwork) {
-    return previousBestNetwork;
-  }
-
-  try {
-    const refinedNetwork = NetworkRefinement.refineWinnerWithBackprop(
-      bestNetwork as unknown as Network,
-    );
-    return (refinedNetwork as unknown as INetwork) || bestNetwork;
-  } catch {
-    return bestNetwork;
-  }
-}

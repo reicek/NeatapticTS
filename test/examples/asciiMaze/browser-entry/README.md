@@ -169,18 +169,6 @@ Parameters:
 
 ## browser-entry/browser-entry.curriculum.services.ts
 
-### refineBrowserEntryBestNetwork
-
-`(bestNetwork: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork | undefined, previousBestNetwork: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork | undefined) => import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork | undefined`
-
-Refine the winning network before seeding the next curriculum phase.
-
-Parameters:
-- `bestNetwork` - - Network returned by the latest evolution phase.
-- `previousBestNetwork` - - Previously carried curriculum seed.
-
-Returns: Refined winner or the best available carry-over network.
-
 ### runBrowserEntryCurriculum
 
 `(context: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryCurriculumContext) => void`

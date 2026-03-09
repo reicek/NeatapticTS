@@ -29,6 +29,7 @@ import {
   prepareLoopHelpers,
   emitProfileSummary,
 } from './evolutionEngine/evolutionLoop';
+import { resolveMazeEvolutionPhaseOutcome } from './evolutionEngine/curriculumPhase';
 import { printNetworkStructure } from './evolutionEngine/networkInspection';
 import type { INetwork } from './interfaces';
 import type {
@@ -56,6 +57,7 @@ import type Network from '../../../src/architecture/network';
  *
  * Public API (frozen entry points):
  * - `runMazeEvolution(options)`: Main entry point for maze solving
+ * - `resolveMazeEvolutionPhaseOutcome(result, previousBest, minProgressToPass)`: Shared curriculum-phase interpretation helper
  * - `printNetworkStructure(network)`: Debug utility for network topology
  * - `setDeterministic(seed?)`: Enable deterministic mode
  * - `clearDeterministic()`: Disable deterministic mode
@@ -483,3 +485,5 @@ export class EvolutionEngine {
     printNetworkStructure(EvolutionEngine.#STATE, network);
   }
 }
+
+export { resolveMazeEvolutionPhaseOutcome };

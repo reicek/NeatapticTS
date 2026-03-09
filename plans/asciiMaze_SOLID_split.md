@@ -27,6 +27,7 @@ Current read
 - Step 5 is now finalized around focused contract owners instead of the old `interfaces.ts` dependency bucket: evolution run/configuration and engine-internal helper contracts now live in `evolutionEngine/evolutionEngine.types.ts`, fitness evaluation contracts now live in `fitness.types.ts`, existing browser-entry/dashboardManager/mazeMovement module-owned `*.types.ts` files remain the primary owners for their split boundaries, and the top-level `interfaces.ts` file is now reduced to a narrow shared/core compatibility layer that re-exports moved contracts while retaining only the genuinely cross-cutting network, dashboard-abstraction, maze-run-result, and terminal-result shapes.
 - Step 6 is now finalized around a narrow engine-owned host adapter boundary: `evolutionEngine/evolutionEngine.types.ts` owns the `EvolutionHostAdapter` and stop-event contracts, `evolutionEngine/setupHelpers.ts` now reads cooperative pause state through that adapter instead of polling browser globals directly, `evolutionEngine/evolutionLoop.ts` now reports solve and stop outcomes through the adapter instead of dispatching browser behavior itself, and `browser-entry/browser-entry.globals.services.ts` owns the browser implementation that maps those engine events back to browser globals and solved-event compatibility behavior.
 - Step 7 is now finalized around owner-defined runtime and presentation contracts instead of browser-entry-local runtime shims: `dashboardManager/dashboardManager.types.ts` now owns the shared browser/non-browser presentation seam through `DashboardPresentationAdapter`, `DashboardTelemetryPayload`, and `AsciiMazeTelemetrySnapshot`; `browser-entry/browser-entry.types.ts` now consumes those dashboard-owned contracts for the public run handle and host services instead of defining its own `RuntimeDashboard`/`RuntimeEvolutionResult` adapters; and `evolutionEngine/evolutionEngine.types.ts` now owns the shared run-result and loose runtime helper contracts (`MazeEvolutionRunResult`, tracked network/genome helpers, species-history host) consumed by the engine facade, telemetry helpers, and population-dynamics helpers. The remaining compatibility-only runtime shapes are the browser platform shims in `browser-entry/browser-entry.types.ts` (`RuntimeWindow` and abort-signal helpers), not duplicated presentation or engine result seams.
+- Step 8 is now finalized around an engine-owned curriculum/refinement boundary: `evolutionEngine/curriculumPhase.ts` now owns phase-outcome interpretation, curriculum solve-threshold evaluation, and refined winner carry-over resolution; `browser-entry/browser-entry.curriculum.services.ts` now focuses on browser-only dimension scheduling, animation-frame pacing, and lifecycle completion; and `asciiMaze.e2e.test.ts` now reuses the same engine-owned helper instead of re-implementing winner-refinement carry-over locally. The remaining compatibility surface is the underlying `networkRefinement.ts` implementation, which stays reusable behind the engine-owned curriculum helper rather than being called directly by browser-entry.
 
 Split standard
 
@@ -97,9 +98,9 @@ High-level gaps
 - Host-specific browser wiring now depends on the shared dashboard-owned presentation model instead of re-declaring telemetry and redraw seams locally.
 - Remaining follow-up work is concentrated in refinement, curriculum, and evolution orchestration boundaries rather than presentation-contract drift.
 
-- Refinement and evolution concerns are adjacent but not fully isolated.
-- The example still blends local training, curriculum carry-over, and evolutionary orchestration closely enough that future changes could cross-cut too many files.
-- A stricter separation between evolution flow, refinement policy, and curriculum policy would improve maintainability.
+- Refinement, curriculum progression, and evolution orchestration now have clearer owners.
+- The engine-owned curriculum helper interprets completed run results and refines carry-over winners, while browser-entry stays focused on host scheduling and maze-dimension progression.
+- Future changes to winner refinement or curriculum carry-over policy should now land in the engine boundary instead of cross-cutting browser-entry and curriculum-style callers.
 
 Execution steps
 
@@ -110,7 +111,7 @@ Execution steps
 - [DONE] Step 5: Decompose `interfaces.ts` into focused module-owned `*.types.ts` files and leave behind only the smallest shared contract surface that is still truly cross-cutting.
 - [DONE] Step 6: Remove browser-facing solve, stop, and pause side effects from engine internals so `evolutionEngine` reports through a narrower adapter or reporting boundary instead of touching host behavior directly.
 - [DONE] Step 7: Consolidate scattered runtime shape adapters and presentation seams so browser and non-browser paths depend on clearer shared contracts rather than ad hoc local `Runtime*` compensating interfaces.
-- [] Step 8: Recheck refinement, curriculum, and evolution boundaries so follow-up changes do not reintroduce cross-cutting orchestration drift after the earlier splits.
+- [DONE] Step 8: Recheck refinement, curriculum, and evolution boundaries so follow-up changes do not reintroduce cross-cutting orchestration drift after the earlier splits.
 - [] Step 9: Validate the final shape by checking naming consistency, folder ownership, generated-doc expectations, and TypeScript/build health.
 
 Execution expectation
