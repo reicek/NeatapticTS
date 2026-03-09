@@ -55,7 +55,7 @@ Global index counter for assigning unique indices to nodes.
 
 #### _safeUpdateWeight
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default, delta: number) => void`
+`(connection: import("src/architecture/connection").default, delta: number) => void`
 
 Internal helper to safely update a connection weight with clipping and NaN checks.
 
@@ -159,7 +159,7 @@ Useful for starting a new activation sequence (e.g., for a new input pattern).
 
 #### connect
 
-`(target: import("C:/NeatapticTS/src/architecture/node").default | { nodes: import("C:/NeatapticTS/src/architecture/node").default[]; }, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(target: import("src/architecture/node").default | { nodes: import("src/architecture/node").default[]; }, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Creates a connection from this node to a target node or all nodes in a group.
 
@@ -179,7 +179,7 @@ The derivative of the activation function evaluated at the node's current state.
 
 #### disconnect
 
-`(target: import("C:/NeatapticTS/src/architecture/node").default, twosided: boolean) => void`
+`(target: import("src/architecture/node").default, twosided: boolean) => void`
 
 Removes the connection from this node to the target node.
 
@@ -193,7 +193,7 @@ Stores error values calculated during backpropagation.
 
 #### fromJSON
 
-`(json: { bias: number; type: string; squash: string; mask: number; }) => import("C:/NeatapticTS/src/architecture/node").default`
+`(json: { bias: number; type: string; squash: string; mask: number; }) => import("src/architecture/node").default`
 
 Creates a Node instance from a JSON object.
 
@@ -204,7 +204,7 @@ Returns: A new Node instance configured according to the JSON object.
 
 #### gate
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default | import("C:/NeatapticTS/src/architecture/connection").default[]) => void`
+`(connections: import("src/architecture/connection").default | import("src/architecture/connection").default[]) => void`
 
 Makes this node gate the provided connection(s).
 The connection's gain will be controlled by this node's activation value.
@@ -226,7 +226,7 @@ Internal flag to detect cycles during activation
 
 #### isConnectedTo
 
-`(target: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(target: import("src/architecture/node").default) => boolean`
 
 Checks if this node is connected to another node.
 
@@ -237,7 +237,7 @@ Returns: True if connected, otherwise false.
 
 #### isProjectedBy
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(node: import("src/architecture/node").default) => boolean`
 
 Checks if the given node has a direct outgoing connection to this node.
 Considers both regular incoming connections and the self-connection.
@@ -249,7 +249,7 @@ Returns: True if the given node projects to this node, false otherwise.
 
 #### isProjectingTo
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(node: import("src/architecture/node").default) => boolean`
 
 Checks if this node has a direct outgoing connection to the given node.
 Considers both regular outgoing connections and the self-connection.
@@ -369,7 +369,7 @@ Determines behavior (e.g., input nodes don't have biases modified typically, out
 
 #### ungate
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default | import("C:/NeatapticTS/src/architecture/connection").default[]) => void`
+`(connections: import("src/architecture/connection").default | import("src/architecture/connection").default[]) => void`
 
 Removes this node's gating control over the specified connection(s).
 Resets the connection's gain to 1 and removes it from the `connections.gated` list.
@@ -394,7 +394,7 @@ may reject the model.
 
 ### exportToONNX
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+`(network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
 Export a NeatapticTS network to an ONNX-like **JSON object** (`OnnxModel`).
 
@@ -432,7 +432,7 @@ Returns: ONNX-like model object suitable for persistence or re-import.
 
 ### importFromONNX
 
-`(onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("C:/NeatapticTS/src/architecture/network").default`
+`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network").default`
 
 Reconstruct a NeatapticTS network from an exported `OnnxModel`.
 
@@ -534,9 +534,6 @@ Activates all nodes in the group. If input values are provided, they are assigne
 sequentially to the nodes before activation. Otherwise, nodes activate based on their
 existing states and incoming connections.
 
-Parameters:
-- `` - - An optional array of input values. If provided, its length must match the number of nodes in the group.
-
 Returns: An array containing the activation value of each node in the group, in order.
 
 #### clear
@@ -549,15 +546,10 @@ especially relevant in recurrent networks or sequence processing.
 
 #### connect
 
-`(target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/layer").default | import("C:/NeatapticTS/src/architecture/group").default, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(target: import("src/architecture/node").default | import("src/architecture/layer").default | import("src/architecture/group").default, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Establishes connections from all nodes in this group to a target Group, Layer, or Node.
 The connection pattern (e.g., all-to-all, one-to-one) can be specified.
-
-Parameters:
-- `` - - The destination entity (Group, Layer, or Node) to connect to.
-- `` - - The connection method/type (e.g., `methods.groupConnection.ALL_TO_ALL`, `methods.groupConnection.ONE_TO_ONE`). Defaults depend on the target type and whether it's the same group.
-- `` - - An optional fixed weight to assign to all created connections. If not provided, weights might be initialized randomly or based on node defaults.
 
 Returns: An array containing all the connection objects created.
 
@@ -570,24 +562,16 @@ Stores connection information related to this group.
 
 #### disconnect
 
-`(target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/group").default, twosided: boolean) => void`
+`(target: import("src/architecture/node").default | import("src/architecture/group").default, twosided: boolean) => void`
 
 Removes connections between nodes in this group and a target Group or Node.
 
-Parameters:
-- `` - - The Group or Node to disconnect from.
-- `` - - If true, also removes connections originating from the `target` and ending in this group. Defaults to false (only removes connections from this group to the target).
-
 #### gate
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default | import("C:/NeatapticTS/src/architecture/connection").default[], method: unknown) => void`
+`(connections: import("src/architecture/connection").default | import("src/architecture/connection").default[], method: unknown) => void`
 
 Configures nodes within this group to act as gates for the specified connection(s).
 Gating allows the output of a node in this group to modulate the flow of signal through the gated connection.
-
-Parameters:
-- `` - - A single connection object or an array of connection objects to be gated.
-- `` - - The gating mechanism to use (e.g., `methods.gating.INPUT`, `methods.gating.OUTPUT`, `methods.gating.SELF`). Specifies which part of the connection is influenced by the gater node.
 
 #### nodes
 
@@ -601,22 +585,11 @@ Propagates the error backward through all nodes in the group. If target values a
 the error is calculated against these targets (typically for output layers). Otherwise,
 the error is calculated based on the error propagated from subsequent layers/nodes.
 
-Parameters:
-- `` - - The learning rate to apply during weight updates.
-- `` - - The momentum factor to apply during weight updates.
-- `` - - Optional target values for error calculation. If provided, its length must match the number of nodes.
-
 #### set
 
 `(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; type?: string | undefined; }) => void`
 
 Sets specific properties (like bias, squash function, or type) for all nodes within the group.
-
-Parameters:
-- `` - - An object containing the properties and their new values. Only provided properties are updated.
-`bias`: Sets the bias term for all nodes.
-`squash`: Sets the activation function (squashing function) for all nodes.
-`type`: Sets the node type (e.g., 'input', 'hidden', 'output') for all nodes.
 
 #### toJSON
 
@@ -670,7 +643,7 @@ Returns: An array containing the activation value of each node in the layer afte
 
 #### attention
 
-`(size: number, heads: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+`(size: number, heads: number) => import("src/architecture/layer").default`
 
 Creates a multi-head self-attention layer (stub implementation).
 
@@ -682,7 +655,7 @@ Returns: A new Layer instance representing an attention layer.
 
 #### batchNorm
 
-`(size: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+`(size: number) => import("src/architecture/layer").default`
 
 Creates a batch normalization layer.
 Applies batch normalization to the activations of the nodes in this layer during activation.
@@ -701,7 +674,7 @@ This is typically done before processing a new input sequence or sample.
 
 #### connect
 
-`(target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/group").default | import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(target: import("src/architecture/node").default | import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Connects this layer's output to a target component (Layer, Group, or Node).
 
@@ -726,7 +699,7 @@ by the network or higher-level structures rather than directly by the layer itse
 
 #### conv1d
 
-`(size: number, kernelSize: number, stride: number, padding: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+`(size: number, kernelSize: number, stride: number, padding: number) => import("src/architecture/layer").default`
 
 Creates a 1D convolutional layer (stub implementation).
 
@@ -740,7 +713,7 @@ Returns: A new Layer instance representing a 1D convolutional layer.
 
 #### dense
 
-`(size: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+`(size: number) => import("src/architecture/layer").default`
 
 Creates a standard fully connected (dense) layer.
 
@@ -754,7 +727,7 @@ Returns: A new Layer instance configured as a dense layer.
 
 #### disconnect
 
-`(target: import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/group").default, twosided: boolean | undefined) => void`
+`(target: import("src/architecture/node").default | import("src/architecture/group").default, twosided: boolean | undefined) => void`
 
 Removes connections between this layer's nodes and a target Group or Node.
 
@@ -769,7 +742,7 @@ Layer-level dropout takes precedence over node-level dropout for nodes in this l
 
 #### gate
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default[], method: unknown) => void`
+`(connections: import("src/architecture/connection").default[], method: unknown) => void`
 
 Applies gating to a set of connections originating from this layer's output group.
 
@@ -782,7 +755,7 @@ Parameters:
 
 #### gru
 
-`(size: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+`(size: number) => import("src/architecture/layer").default`
 
 Creates a Gated Recurrent Unit (GRU) layer.
 
@@ -797,7 +770,7 @@ Returns: A new Layer instance configured as a GRU layer.
 
 #### input
 
-`(from: import("C:/NeatapticTS/src/architecture/group").default | import("C:/NeatapticTS/src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Handles the connection logic when this layer is the *target* of a connection.
 
@@ -814,7 +787,7 @@ Returns: An array containing the newly created connection objects.
 
 #### layerNorm
 
-`(size: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+`(size: number) => import("src/architecture/layer").default`
 
 Creates a layer normalization layer.
 Applies layer normalization to the activations of the nodes in this layer during activation.
@@ -826,7 +799,7 @@ Returns: A new Layer instance configured as a layer normalization layer.
 
 #### lstm
 
-`(size: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+`(size: number) => import("src/architecture/layer").default`
 
 Creates a Long Short-Term Memory (LSTM) layer.
 
@@ -841,7 +814,7 @@ Returns: A new Layer instance configured as an LSTM layer.
 
 #### memory
 
-`(size: number, memory: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+`(size: number, memory: number) => import("src/architecture/layer").default`
 
 Creates a Memory layer, designed to hold state over a fixed number of time steps.
 
@@ -1023,7 +996,7 @@ Whether to apply separate bias clipping.
 
 #### _hasPath
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
 
 Check whether a directed path exists between two nodes.
 
@@ -1169,11 +1142,6 @@ Original weights captured for weight-noise recovery.
 Activates the network using the given input array.
 Performs a forward pass through the network, calculating the activation of each node.
 
-Parameters:
-- `` - - An array of numerical values corresponding to the network's input nodes.
-- `` - - Flag indicating if the activation is part of a training process.
-- `` - - Maximum allowed activation depth to prevent infinite loops/cycles.
-
 Returns: An array of numerical values representing the activations of the network's output nodes.
 
 #### activateBatch
@@ -1194,7 +1162,7 @@ Returns: Array of output vectors, each length equals this.output
 
 #### activateRaw
 
-`(input: number[], training: boolean, maxActivationDepth: number) => import("C:/NeatapticTS/src/architecture/activationArrayPool").ActivationArray`
+`(input: number[], training: boolean, maxActivationDepth: number) => import("src/architecture/activationArrayPool").ActivationArray`
 
 Raw activation that can return a typed array when pooling is enabled (zero-copy).
 If reuseActivationArrays=false falls back to standard activate().
@@ -1240,7 +1208,7 @@ Clear the dynamic global weight-noise schedule.
 
 #### clone
 
-`() => import("C:/NeatapticTS/src/architecture/network").default`
+`() => import("src/architecture/network").default`
 
 Creates a deep copy of the network.
 
@@ -1257,16 +1225,11 @@ Parameters:
 
 #### connect
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Creates a connection between two nodes in the network.
 Handles both regular connections and self-connections.
 Adds the new connection object(s) to the appropriate network list (`connections` or `selfconns`).
-
-Parameters:
-- `` - - The source node of the connection.
-- `` - - The target node of the connection.
-- `` - - Optional weight for the connection. If not provided, a random weight is usually assigned by the underlying `Node.connect` method.
 
 Returns: An array containing the newly created connection object(s). Typically contains one connection, but might be empty or contain more in specialized node types.
 
@@ -1276,20 +1239,15 @@ Connection list.
 
 #### createMLP
 
-`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("C:/NeatapticTS/src/architecture/network").default`
+`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("src/architecture/network").default`
 
 Creates a fully connected, strictly layered MLP network.
-
-Parameters:
-- `` - - Number of input nodes
-- `` - - Array of hidden layer sizes (e.g. [2,3] for two hidden layers)
-- `` - - Number of output nodes
 
 Returns: A new, fully connected, layered MLP
 
 #### crossOver
 
-`(network1: import("C:/NeatapticTS/src/architecture/network").default, network2: import("C:/NeatapticTS/src/architecture/network").default, equal: boolean) => import("C:/NeatapticTS/src/architecture/network").default`
+`(network1: import("src/architecture/network").default, network2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network").default`
 
 Creates a new offspring network by performing crossover between two parent networks.
 This method implements the crossover mechanism inspired by the NEAT algorithm and described
@@ -1297,17 +1255,11 @@ in the Instinct paper, combining genes (nodes and connections) from both parents
 Fitness scores can influence the inheritance process. Matching genes are inherited randomly,
 while disjoint/excess genes are typically inherited from the fitter parent (or randomly if fitness is equal or `equal` flag is set).
 
-Parameters:
-- `` - - The first parent network.
-- `` - - The second parent network.
-- `` - - If true, disjoint and excess genes are inherited randomly regardless of fitness.
-   If false (default), they are inherited from the fitter parent.
-
 Returns: A new Network instance representing the offspring.
 
 #### describeArchitecture
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor`
+`() => import("src/architecture/network/network.types").NetworkArchitectureDescriptor`
 
 Resolves a stable architecture descriptor for telemetry/UI consumers.
 
@@ -1318,16 +1270,10 @@ Returns: Architecture descriptor with hidden-layer widths and provenance.
 
 #### deserialize
 
-`(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) => import("C:/NeatapticTS/src/architecture/network").default`
+`(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
 
 Creates a Network instance from serialized data produced by `serialize()`.
 Reconstructs the network structure and state based on the provided arrays.
-
-Parameters:
-- `` - - The serialized network data array, typically obtained from `network.serialize()`.
-  Expected format: `[activations, states, squashNames, connectionData, inputSize, outputSize]`.
-- `` - - Optional input size override.
-- `` - - Optional output size override.
 
 Returns: A new Network instance reconstructed from the serialized data.
 
@@ -1351,15 +1297,11 @@ Disable all weight-noise settings.
 
 #### disconnect
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => void`
 
 Disconnects two nodes, removing the connection between them.
 Handles both regular connections and self-connections.
 If the connection being removed was gated, it is also ungated.
-
-Parameters:
-- `` - - The source node of the connection to remove.
-- `` - - The target node of the connection to remove.
 
 #### dropout
 
@@ -1396,27 +1338,20 @@ Returns: Activation output.
 
 #### fromJSON
 
-`(json: Record<string, unknown>) => import("C:/NeatapticTS/src/architecture/network").default`
+`(json: Record<string, unknown>) => import("src/architecture/network").default`
 
 Reconstructs a network from a JSON object (latest standard).
 Handles formatVersion, robust error handling, and index-based references.
-
-Parameters:
-- `` - - The JSON object representing the network.
 
 Returns: The reconstructed network.
 
 #### gate
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default, connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(node: import("src/architecture/node").default, connection: import("src/architecture/connection").default) => void`
 
 Gates a connection with a specified node.
 The activation of the `node` (gater) will modulate the weight of the `connection`.
 Adds the connection to the network's `gates` list.
-
-Parameters:
-- `` - - The node that will act as the gater. Must be part of this network.
-- `` - - The connection to be gated.
 
 #### gates
 
@@ -1424,7 +1359,7 @@ Network gates collection.
 
 #### getConnectionSlab
 
-`() => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
+`() => import("src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
 
 Read slab structures for fast activation.
 
@@ -1492,7 +1427,7 @@ Optional layered view cache.
 
 #### mutate
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => void`
+`(method: import("src/architecture/network/network.types").MutationMethod) => void`
 
 Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
@@ -1514,10 +1449,6 @@ Activates the network without calculating eligibility traces.
 This is a performance optimization for scenarios where backpropagation is not needed,
 such as during testing, evaluation, or deployment (inference).
 
-Parameters:
-- `` - - An array of numerical values corresponding to the network's input nodes.
-  The length must match the network's `input` size.
-
 Returns: An array of numerical values representing the activations of the network's output nodes.
 
 #### output
@@ -1535,15 +1466,6 @@ learning rate, momentum, and optional L2 regularization.
 
 The process starts from the output nodes and moves backward layer by layer (or topologically for recurrent nets).
 
-Parameters:
-- `` - - The learning rate (controls the step size of weight adjustments).
-- `` - - The momentum factor (helps overcome local minima and speeds up convergence). Typically between 0 and 1.
-- `` - - If true, apply the calculated weight and bias updates. If false, only calculate gradients (e.g., for batch accumulation).
-- `` - - An array of target values corresponding to the network's output nodes.
-  The length must match the network's `output` size.
-- `` - - The L2 regularization factor (lambda). Helps prevent overfitting by penalizing large weights.
-- `` - - Optional derivative of the cost function for output nodes.
-
 #### pruneToSparsity
 
 `(targetSparsity: number, method: "magnitude" | "snip") => void`
@@ -1557,14 +1479,11 @@ Parameters:
 
 #### rebuildConnections
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(net: import("src/architecture/network").default) => void`
 
 Rebuilds the network's connections array from all per-node connections.
 This ensures that the network.connections array is consistent with the actual
 outgoing connections of all nodes. Useful after manual wiring or node manipulation.
-
-Parameters:
-- `` - - The network instance to rebuild connections for.
 
 Returns: Example usage:
   Network.rebuildConnections(net);
@@ -1582,7 +1501,7 @@ Returns: Slab rebuild result.
 
 #### remove
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(node: import("src/architecture/node").default) => void`
 
 Removes a node from the network.
 This involves:
@@ -1593,9 +1512,6 @@ This involves:
    to maintain network flow, if possible and configured.
 5. Handling gates involving the removed node (ungating connections gated *by* this node,
    and potentially re-gating connections that were gated *by other nodes* onto the removed node's connections).
-
-Parameters:
-- `` - - The node instance to remove. Must exist within the network's `nodes` list.
 
 #### resetDropoutMasks
 
@@ -1623,7 +1539,7 @@ Self-connection list.
 
 #### serialize
 
-`() => [number[], number[], string[], import("C:/NeatapticTS/src/architecture/network/network.types").SerializedConnection[], number, number]`
+`() => [number[], number[], string[], import("src/architecture/network/network.types").SerializedConnection[], number, number]`
 
 Lightweight tuple serializer delegating to network.serialize.ts
 
@@ -1633,9 +1549,6 @@ Lightweight tuple serializer delegating to network.serialize.ts
 
 Sets specified properties (e.g., bias, squash function) for all nodes in the network.
 Useful for initializing or resetting node properties uniformly.
-
-Parameters:
-- `` - - An object containing the properties and values to set.
 
 #### setEnforceAcyclic
 
@@ -1702,7 +1615,7 @@ Parameters:
 
 #### snapshotRNG
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.types").RNGSnapshot`
+`() => import("src/architecture/network/network.types").RNGSnapshot`
 
 Snapshot deterministic RNG runtime state.
 
@@ -1716,10 +1629,6 @@ Tests the network's performance on a given dataset.
 Calculates the average error over the dataset using a specified cost function.
 Uses `noTraceActivate` for efficiency as gradients are not needed.
 Handles dropout scaling if dropout was used during training.
-
-Parameters:
-- `` - - The test dataset, an array of objects with `input` and `output` arrays.
-- `` - - The cost function to evaluate the error. Defaults to Mean Squared Error.
 
 Returns: An object containing the calculated average error over the dataset and the time taken for the test in milliseconds.
 
@@ -1741,7 +1650,7 @@ Returns: A JSON-compatible object representing the network.
 
 #### toONNX
 
-`() => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+`() => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
 Exports the network to ONNX format (JSON object, minimal MLP support).
 Only standard feedforward architectures and standard activations are supported.
@@ -1755,14 +1664,11 @@ Current training step counter.
 
 #### ungate
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(connection: import("src/architecture/connection").default) => void`
 
 Removes the gate from a specified connection.
 The connection will no longer be modulated by its gater node.
 Removes the connection from the network's `gates` list.
-
-Parameters:
-- `` - - The connection object to ungate.
 
 ## architecture/nodePool.ts
 
@@ -1788,7 +1694,7 @@ Deferred (Phase 3+): preWarm(count), adaptive trim(), leak pattern heuristics, s
 
 ### acquireNode
 
-`(opts: import("C:/NeatapticTS/src/architecture/nodePool").AcquireNodeOptions) => import("C:/NeatapticTS/src/architecture/node").default`
+`(opts: import("src/architecture/nodePool").AcquireNodeOptions) => import("src/architecture/node").default`
 
 ### AcquireNodeOptions
 
@@ -1800,7 +1706,7 @@ Options bag for acquiring a node.
 
 ### releaseNode
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(node: import("src/architecture/node").default) => void`
 
 ### resetNodePool
 
@@ -1836,7 +1742,7 @@ connection strategies from `methods.groupConnection`.
 
 #### construct
 
-`(list: (import("C:/NeatapticTS/src/architecture/node").default | import("C:/NeatapticTS/src/architecture/layer").default | import("C:/NeatapticTS/src/architecture/group").default)[]) => import("C:/NeatapticTS/src/architecture/network").default`
+`(list: (import("src/architecture/node").default | import("src/architecture/layer").default | import("src/architecture/group").default)[]) => import("src/architecture/network").default`
 
 Constructs a Network instance from an array of interconnected Layers, Groups, or Nodes.
 
@@ -1845,101 +1751,73 @@ gates, and self-connections, and determines the network's input and output sizes
 on the `type` property ('input' or 'output') set on the nodes. It uses Sets internally
 for efficient handling of unique elements during construction.
 
-Parameters:
-- `` - - An array containing the building blocks (Nodes, Layers, Groups) of the network, assumed to be already interconnected.
-
 Returns: A Network object representing the constructed architecture.
 
 #### enforceMinimumHiddenLayerSizes
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network").default`
+`(network: import("src/architecture/network").default) => import("src/architecture/network").default`
 
 Enforces the minimum hidden layer size rule on a network.
 
 This ensures that all hidden layers have at least min(input, output) + 1 nodes,
 which is a common heuristic to ensure networks have adequate representation capacity.
 
-Parameters:
-- `` - - The network to enforce minimum hidden layer sizes on
-
 Returns: The same network with properly sized hidden layers
 
 #### gru
 
-`(layers: number[]) => import("C:/NeatapticTS/src/architecture/network").default`
+`(layers: number[]) => import("src/architecture/network").default`
 
 Creates a Gated Recurrent Unit (GRU) network.
 GRUs are another type of recurrent neural network, similar to LSTMs but often simpler.
 This constructor uses `Layer.gru` to create the core GRU blocks.
 
-Parameters:
-- `` - - A sequence of numbers representing the size (number of units) of each layer: input layer size, hidden GRU layer sizes..., output layer size. Must include at least input, one hidden, and output layer sizes.
-
 Returns: The constructed GRU network.
 
 #### hopfield
 
-`(size: number) => import("C:/NeatapticTS/src/architecture/network").default`
+`(size: number) => import("src/architecture/network").default`
 
 Creates a Hopfield network.
 Hopfield networks are a form of recurrent neural network often used for associative memory tasks.
 This implementation creates a simple, fully connected structure.
 
-Parameters:
-- `` - - The number of nodes in the network (input and output layers will have this size).
-
 Returns: The constructed Hopfield network.
 
 #### lstm
 
-`(layerArgs: (number | { inputToOutput?: boolean | undefined; })[]) => import("C:/NeatapticTS/src/architecture/network").default`
+`(layerArgs: (number | { inputToOutput?: boolean | undefined; })[]) => import("src/architecture/network").default`
 
 Creates a Long Short-Term Memory (LSTM) network.
 LSTMs are a type of recurrent neural network (RNN) capable of learning long-range dependencies.
 This constructor uses `Layer.lstm` to create the core LSTM blocks.
 
-Parameters:
-- `` - - A sequence of arguments defining the network structure:
-- Numbers represent the size (number of units) of each layer: input layer size, hidden LSTM layer sizes..., output layer size.
-- An optional configuration object can be provided as the last argument.
-- `` - - Configuration options (if passed as the last argument).
-
 Returns: The constructed LSTM network.
 
 #### narx
 
-`(inputSize: number, hiddenLayers: number | number[], outputSize: number, previousInput: number, previousOutput: number) => import("C:/NeatapticTS/src/architecture/network").default`
+`(inputSize: number, hiddenLayers: number | number[], outputSize: number, previousInput: number, previousOutput: number) => import("src/architecture/network").default`
 
 Creates a Nonlinear AutoRegressive network with eXogenous inputs (NARX).
 NARX networks are recurrent networks often used for time series prediction.
 They predict the next value of a time series based on previous values of the series
 and previous values of external (exogenous) input series.
 
-Parameters:
-- `` - - The number of input nodes for the exogenous inputs at each time step.
-- `` - - The size of the hidden layer(s). Can be a single number for one hidden layer, or an array of numbers for multiple hidden layers. Use 0 or [] for no hidden layers.
-- `` - - The number of output nodes (predicting the time series).
-- `` - - The number of past time steps of the exogenous input to feed back into the network.
-- `` - - The number of past time steps of the network's own output to feed back into the network (autoregressive part).
-
 Returns: The constructed NARX network.
 
 #### perceptron
 
-`(layers: number[]) => import("C:/NeatapticTS/src/architecture/network").default`
+`(layers: number[]) => import("src/architecture/network").default`
 
 Creates a standard Multi-Layer Perceptron (MLP) network.
 An MLP consists of an input layer, one or more hidden layers, and an output layer,
 fully connected layer by layer.
 
-Parameters:
-- `` - - A sequence of numbers representing the size (number of nodes) of each layer, starting with the input layer, followed by hidden layers, and ending with the output layer. Must include at least input, one hidden, and output layer sizes.
-
 Returns: The constructed MLP network.
 
 #### random
 
-`(input: number, hidden: number, output: number, options: { connections?: number | undefined; backconnections?: number | undefined; selfconnections?: number | undefined; gates?: number | undefined; }) => import("C:/NeatapticTS/src/architecture/network").default`
+`(input: number, hidden: number, output: number, options: { connections?: number | undefined; backconnections?: number | undefined; selfconnections?: number | undefined; gates?: number | undefined; }) => import("src/architecture/network").default`
 
 Creates a randomly structured network based on specified node counts and connection options.
 
@@ -1947,12 +1825,6 @@ This method allows for the generation of networks with a less rigid structure th
 It initializes a network with input and output nodes and then iteratively adds hidden nodes
 and various types of connections (forward, backward, self) and gates using mutation methods.
 This approach is inspired by neuro-evolution techniques where network topology evolves.
-
-Parameters:
-- `` - - The number of input nodes.
-- `` - - The number of hidden nodes to add.
-- `` - - The number of output nodes.
-- `` - - Optional configuration for the network structure.
 
 Returns: The constructed network with a randomized topology.
 
@@ -1990,7 +1862,7 @@ bits4+ reserved.
 
 #### acquire
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default`
 
 Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
 a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
@@ -2091,7 +1963,7 @@ Last applied delta weight (used by classic momentum).
 
 #### release
 
-`(conn: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(conn: import("src/architecture/connection").default) => void`
 
 Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
 afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not

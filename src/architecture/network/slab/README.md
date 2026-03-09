@@ -121,7 +121,7 @@ Returns: Output activations (detached plain array) of length `network.output`.
 
 ### getConnectionSlab
 
-`() => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
+`() => import("src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
 
 Obtain (and lazily rebuild if dirty) the current packed SoA view of connections.
 
@@ -133,7 +133,7 @@ Returns: Read‑only style view (do not mutate) containing typed arrays + metada
 
 ### getSlabAllocationStats
 
-`() => { pool: { [x: string]: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
+`() => { pool: { [x: string]: import("src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
 
 Slab Packing / Structure‑of‑Arrays Backend (Educational Module)
 ==============================================================
@@ -222,7 +222,7 @@ Internal slab pool/stat helpers extracted from network.slab.utils.ts.
 
 ### _acquireTA
 
-`(kind: string, ctor: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").TypedArrayConstructor, length: number, bytesPerElement: number) => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").TypedArray`
+`(kind: string, ctor: import("src/architecture/network/slab/network.slab.utils.types").TypedArrayConstructor, length: number, bytesPerElement: number) => import("src/architecture/network/slab/network.slab.utils.types").TypedArray`
 
 Acquires a typed array from pool or allocates a fresh one.
 
@@ -236,7 +236,7 @@ Returns: Acquired typed array.
 
 ### _getSlabAllocationStatsSnapshot
 
-`() => { pool: { [x: string]: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
+`() => { pool: { [x: string]: import("src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
 
 Returns allocation stats snapshot for slab typed arrays.
 
@@ -257,7 +257,7 @@ Returns: Stable pool key.
 
 ### _releaseTA
 
-`(kind: string, bytesPerElement: number, arr: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").TypedArray) => void`
+`(kind: string, bytesPerElement: number, arr: import("src/architecture/network/slab/network.slab.utils.types").TypedArray) => void`
 
 Releases a typed array back to bounded per-key pool.
 
@@ -280,7 +280,7 @@ Returns: Non-negative max retained arrays per key.
 
 ### _createConnectionSlabView
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
 
 Creates a read-oriented packed slab view from current network internals.
 
@@ -291,7 +291,7 @@ Returns: Packed connection slab view.
 
 ### _readSlabVersion
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(network: import("src/architecture/network").default) => number`
 
 Reads the current monotonic slab version from network internals.
 
@@ -302,7 +302,7 @@ Returns: Non-negative slab version counter.
 
 ### _resolveConnectionGainView
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, capacity: number) => Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | null`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, capacity: number) => Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | null`
 
 Resolves gain slab view, synthesizing neutral gain values when omitted.
 
@@ -314,7 +314,7 @@ Returns: Gain array view.
 
 ### _resolveConnectionSlabCapacity
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => number`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => number`
 
 Resolves effective slab capacity using explicit capacity first.
 
@@ -327,7 +327,7 @@ Returns: Effective capacity value.
 
 ### _prepareSlabBuildPreconditions
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
 
 Applies prerequisite normalization for slab rebuild passes.
 
@@ -340,7 +340,7 @@ Returns: Nothing.
 
 ### _activateFastSlab
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, input: number[]) => number[]`
+`(network: import("src/architecture/network").default, input: number[]) => number[]`
 
 Executes fast slab activation once slab and adjacency prerequisites are prepared.
 
@@ -354,7 +354,7 @@ Returns: Output activation array.
 
 ### _reindexNodes
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(network: import("src/architecture/network").default) => void`
 
 Assigns sequential node indices used by slab packing and fast-path traversal.
 
@@ -371,7 +371,7 @@ Internal slab rebuild helper functions extracted from network.slab.utils.ts.
 
 ### _allocateCoreSlabArrays
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
 
 Allocates core slab arrays (weights/from/to/flags).
 
@@ -382,7 +382,7 @@ Returns: Nothing.
 
 ### _allocateGainSlabForAsync
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
 
 Allocates gain slab for async pass prefill strategy.
 
@@ -393,7 +393,7 @@ Returns: Nothing.
 
 ### _applyGainOmissionPolicy
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult) => void`
 
 Applies gain omission rule by releasing neutral gain slab.
 
@@ -405,7 +405,7 @@ Returns: Nothing.
 
 ### _applyPlasticPolicyAsync
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult) => void`
 
 Applies async plastic slab allocation/release policy.
 
@@ -417,7 +417,7 @@ Returns: Nothing.
 
 ### _applyPlasticPolicySync
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult) => void`
 
 Applies sync plastic slab allocation/release policy.
 
@@ -429,7 +429,7 @@ Returns: Nothing.
 
 ### _createInitialSlabPopulateResult
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult`
 
 Creates initial populate result from current optional slab state.
 
@@ -440,7 +440,7 @@ Returns: Initial populate result.
 
 ### _createSlabBuildContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, growthFactor: number) => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext`
+`(network: import("src/architecture/network").default, growthFactor: number) => import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext`
 
 Creates immutable slab build context for one rebuild pass.
 
@@ -452,7 +452,7 @@ Returns: Build context.
 
 ### _createSlabWriteArrays
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabWriteArrays`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => import("src/architecture/network/slab/network.slab.utils.types").SlabWriteArrays`
 
 Creates strongly typed write-array bundle for connection population.
 
@@ -463,7 +463,7 @@ Returns: Write-array bundle.
 
 ### _ensureGainArrayExistsForIndex
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, connectionIndex: number) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, connectionIndex: number) => void`
 
 Ensures gain slab exists before writing non-neutral value.
 
@@ -476,7 +476,7 @@ Returns: Nothing.
 
 ### _ensureSlabCapacityAsync
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
 
 Ensures async rebuild has enough slab capacity.
 
@@ -487,7 +487,7 @@ Returns: Nothing.
 
 ### _ensureSlabCapacitySync
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
 
 Ensures sync rebuild has enough slab capacity.
 
@@ -511,7 +511,7 @@ Returns: Expanded capacity.
 
 ### _fillPlasticityRates
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, plasticArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, connectionCount: number) => void`
+`(network: import("src/architecture/network").default, plasticArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, connectionCount: number) => void`
 
 Fills plastic slab values from connection plasticity rates.
 
@@ -524,7 +524,7 @@ Returns: Nothing.
 
 ### _finalizeAsyncSlabRebuild
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
 
 Finalizes async rebuild bookkeeping fields.
 
@@ -535,7 +535,7 @@ Returns: Nothing.
 
 ### _finalizeSharedSlabState
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, connectionCount: number) => void`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, connectionCount: number) => void`
 
 Finalizes shared rebuild bookkeeping fields.
 
@@ -547,7 +547,7 @@ Returns: Nothing.
 
 ### _finalizeSyncSlabRebuild
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
 
 Finalizes sync rebuild bookkeeping fields.
 
@@ -558,7 +558,7 @@ Returns: Nothing.
 
 ### _populateAsyncChunkRange
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, writeArrays: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabWriteArrays, populateResult: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, startIndex: number, endIndex: number) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, writeArrays: import("src/architecture/network/slab/network.slab.utils.types").SlabWriteArrays, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, startIndex: number, endIndex: number) => void`
 
 Populates one inclusive-exclusive chunk range for async rebuild.
 
@@ -573,7 +573,7 @@ Returns: Nothing.
 
 ### _populateSlabConnectionsAsync
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, chunkSize: number) => Promise<import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult>`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, chunkSize: number) => Promise<import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult>`
 
 Populates core slab arrays in cooperative async chunks.
 
@@ -585,7 +585,7 @@ Returns: Population result flags and optional slabs.
 
 ### _populateSlabConnectionsSync
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult`
 
 Populates core slab arrays in synchronous single pass.
 
@@ -596,7 +596,7 @@ Returns: Population result flags and optional slabs.
 
 ### _releaseExistingSlabArrays
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
 
 Releases all currently allocated slab arrays back to pool.
 
@@ -607,7 +607,7 @@ Returns: Nothing.
 
 ### _resetOptionalSlabArraysAfterSyncAllocate
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => void`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => void`
 
 Resets optional slabs after sync allocation to keep omission semantics.
 
@@ -630,7 +630,7 @@ Returns: Effective chunk size.
 
 ### _shouldSkipSlabRebuild
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, force: boolean) => boolean`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, force: boolean) => boolean`
 
 Determines whether slab rebuild can be skipped.
 
@@ -642,7 +642,7 @@ Returns: True when rebuild can be skipped.
 
 ### _updatePlasticPresence
 
-`(populateResult: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, connection: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").ConnectionInternals) => void`
+`(populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, connection: import("src/architecture/network/slab/network.slab.utils.types").ConnectionInternals) => void`
 
 Updates plastic-presence flag from connection bitfield.
 
@@ -676,7 +676,7 @@ Returns: Byte width for weight elements.
 
 ### _writeConnectionCoreFields
 
-`(writeArrays: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabWriteArrays, connection: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").ConnectionInternals, connectionIndex: number) => void`
+`(writeArrays: import("src/architecture/network/slab/network.slab.utils.types").SlabWriteArrays, connection: import("src/architecture/network/slab/network.slab.utils.types").ConnectionInternals, connectionIndex: number) => void`
 
 Writes core fields for one connection into slab arrays.
 
@@ -689,7 +689,7 @@ Returns: Nothing.
 
 ### _writeConnectionGainField
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, connection: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").ConnectionInternals, connectionIndex: number) => void`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, connection: import("src/architecture/network/slab/network.slab.utils.types").ConnectionInternals, connectionIndex: number) => void`
 
 Writes gain field for one connection and updates gain flags.
 
@@ -709,7 +709,7 @@ Internal slab adjacency helpers extracted from network.slab.utils.ts.
 
 ### _buildAdjacency
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(network: import("src/architecture/network").default) => void`
 
 Build or refresh CSR-style adjacency (outStart + outOrder) for fast fan-out traversal.
 
@@ -720,7 +720,7 @@ Returns: Nothing.
 
 ### asNetworkSlabProps
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps`
 
 Cast network instance into internal slab-backed shape.
 
@@ -731,7 +731,7 @@ Returns: Internal slab-backed network representation.
 
 ### buildOutgoingOrder
 
-`(outgoingOrderBuildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").OutgoingOrderBuildContext) => Uint32Array<ArrayBufferLike>`
+`(outgoingOrderBuildContext: import("src/architecture/network/slab/network.slab.utils.types").OutgoingOrderBuildContext) => Uint32Array<ArrayBufferLike>`
 
 Build source-grouped outgoing order using CSR start offsets.
 
@@ -742,7 +742,7 @@ Returns: Ordered outgoing connection indices.
 
 ### buildOutgoingStartIndices
 
-`(startIndicesBuildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").StartIndicesBuildContext) => Uint32Array<ArrayBufferLike>`
+`(startIndicesBuildContext: import("src/architecture/network/slab/network.slab.utils.types").StartIndicesBuildContext) => Uint32Array<ArrayBufferLike>`
 
 Build CSR start offsets from fan-out counts.
 
@@ -753,7 +753,7 @@ Returns: Outgoing start indices slab.
 
 ### collectFanOutCounts
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").BuildAdjacencyContext) => Uint32Array<ArrayBufferLike>`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").BuildAdjacencyContext) => Uint32Array<ArrayBufferLike>`
 
 Collect fan-out counts for each source node.
 
@@ -764,7 +764,7 @@ Returns: Fan-out counts per node.
 
 ### createBuildAdjacencyContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").BuildAdjacencyContext | null`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/slab/network.slab.utils.types").BuildAdjacencyContext | null`
 
 Build adjacency context when required slabs are available.
 
@@ -775,7 +775,7 @@ Returns: Build context or null when adjacency cannot be built yet.
 
 ### createFanOutCollectionContext
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").BuildAdjacencyContext) => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").FanOutCollectionContext`
+`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").BuildAdjacencyContext) => import("src/architecture/network/slab/network.slab.utils.types").FanOutCollectionContext`
 
 Build fan-out collection context.
 
@@ -830,7 +830,7 @@ Returns: Outgoing start indices buffer.
 
 ### hasRequiredConnectionSlabs
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => boolean`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => boolean`
 
 Check whether required connection slabs exist.
 
@@ -887,7 +887,7 @@ Returns: Nothing.
 
 ### populateFanOutCounts
 
-`(fanOutCollectionContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").FanOutCollectionContext) => void`
+`(fanOutCollectionContext: import("src/architecture/network/slab/network.slab.utils.types").FanOutCollectionContext) => void`
 
 Populate fan-out counts from the connection source slab.
 
@@ -920,7 +920,7 @@ Returns: Terminal running offset after the last node.
 
 ### publishAdjacency
 
-`(publishAdjacencyContext: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").PublishAdjacencyContext) => void`
+`(publishAdjacencyContext: import("src/architecture/network/slab/network.slab.utils.types").PublishAdjacencyContext) => void`
 
 Publish adjacency slabs and clear dirty flag.
 
@@ -948,7 +948,7 @@ Internal fast slab activation helpers extracted from network.slab.utils.ts.
 
 ### _activateThroughLegacyPath
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, input: number[]) => number[]`
+`(network: import("src/architecture/network").default, input: number[]) => number[]`
 
 Executes legacy network activation fallback.
 
@@ -971,7 +971,7 @@ Returns: True if fast path can be safely used.
 
 ### _collectFastSlabOutput
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, nodeCount: number) => number[]`
+`(network: import("src/architecture/network").default, activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, nodeCount: number) => number[]`
 
 Collects output activations into detached number array.
 
@@ -996,7 +996,7 @@ Returns: New typed buffer.
 
 ### _ensureFastSlabBuffers
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, nodeCount: number) => void`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, nodeCount: number) => void`
 
 Ensures fast activation/state buffers are allocated and shape-compatible.
 
@@ -1008,7 +1008,7 @@ Returns: Nothing.
 
 ### _hasFastSlabPrerequisites
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => boolean`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => boolean`
 
 Checks whether core slab prerequisites are available.
 
@@ -1019,7 +1019,7 @@ Returns: True when all required slabs/adjacency arrays exist.
 
 ### _maybeActivateNonInputNode
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, node: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").FastSlabNodeRuntime, nodeIndex: number, stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>) => void`
+`(network: import("src/architecture/network").default, node: import("src/architecture/network/slab/network.slab.utils.types").FastSlabNodeRuntime, nodeIndex: number, stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>) => void`
 
 Activates one non-input node when required.
 
@@ -1047,7 +1047,7 @@ Returns: True when replacement is needed.
 
 ### _prepareFastSlabRuntime
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, reindexNodes: (network: import("C:/NeatapticTS/src/architecture/network").default) => void) => void`
+`(network: import("src/architecture/network").default, internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, reindexNodes: (network: import("src/architecture/network").default) => void) => void`
 
 Prepares topology and indices for fast slab pass.
 
@@ -1060,7 +1060,7 @@ Returns: Nothing.
 
 ### _propagateFastSlabActivations
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, topoOrder: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").FastSlabNodeRuntime[], activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>) => void`
+`(network: import("src/architecture/network").default, internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, topoOrder: import("src/architecture/network/slab/network.slab.utils.types").FastSlabNodeRuntime[], activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>) => void`
 
 Propagates activations through topology using slab arrays.
 
@@ -1075,7 +1075,7 @@ Returns: Nothing.
 
 ### _propagateNodeOutgoingEdges
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, nodeIndex: number, activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, weightArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, toIndexArray: Uint32Array<ArrayBufferLike>, outgoingOrder: Uint32Array<ArrayBufferLike>, outgoingStartIndices: Uint32Array<ArrayBufferLike>) => void`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, nodeIndex: number, activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, weightArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, toIndexArray: Uint32Array<ArrayBufferLike>, outgoingOrder: Uint32Array<ArrayBufferLike>, outgoingStartIndices: Uint32Array<ArrayBufferLike>) => void`
 
 Propagates one node activation over all outgoing slab edges.
 
@@ -1093,7 +1093,7 @@ Returns: Nothing.
 
 ### _recomputeTopologyOrder
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(network: import("src/architecture/network").default) => void`
 
 Recomputes topological order on demand.
 
@@ -1104,7 +1104,7 @@ Returns: Nothing.
 
 ### _resolveFastTopoOrder
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").FastSlabNodeRuntime[]`
+`(network: import("src/architecture/network").default, internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => import("src/architecture/network/slab/network.slab.utils.types").FastSlabNodeRuntime[]`
 
 Resolves topological iteration order for fast slab pass.
 
@@ -1116,7 +1116,7 @@ Returns: Topological node order.
 
 ### _resolveWeightedConnectionValue
 
-`(internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, weightArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, connectionIndex: number) => number`
+`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, weightArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, connectionIndex: number) => number`
 
 Resolves effective connection weight including optional gain.
 
@@ -1129,7 +1129,7 @@ Returns: Effective weighted value.
 
 ### _seedFastInputLayer
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, input: number[], activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>) => void`
+`(network: import("src/architecture/network").default, input: number[], activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>) => void`
 
 Seeds input-layer activations for fast slab pass.
 
@@ -1142,7 +1142,7 @@ Returns: Nothing.
 
 ### _tryFastSlabFallbackForGating
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, input: number[]) => number[] | null`
+`(network: import("src/architecture/network").default, input: number[]) => number[] | null`
 
 Falls back to legacy activation when gating is present.
 
@@ -1154,7 +1154,7 @@ Returns: Legacy output or null when fast path may continue.
 
 ### _tryFastSlabFallbackForMissingPrerequisites
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, internalNet: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, input: number[]) => number[] | null`
+`(network: import("src/architecture/network").default, internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, input: number[]) => number[] | null`
 
 Falls back to legacy activation when slab prerequisites are missing.
 
@@ -1167,7 +1167,7 @@ Returns: Legacy output or null when fast path may continue.
 
 ### _writeInputNodeRuntime
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default, inputValue: number) => void`
+`(node: import("src/architecture/node").default, inputValue: number) => void`
 
 Writes runtime activation/state for one input node.
 

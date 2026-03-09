@@ -1,3 +1,10 @@
+import {
+  FLAPPY_STARFIELD_UNSIGNED_NORMALIZATION_DIVISOR,
+  FLAPPY_STARFIELD_XORSHIFT_LEFT_SHIFT_FINAL,
+  FLAPPY_STARFIELD_XORSHIFT_LEFT_SHIFT_PRIMARY,
+  FLAPPY_STARFIELD_XORSHIFT_RIGHT_SHIFT,
+} from '../../constants/constants';
+
 /**
  * Creates a deterministic pseudo-random generator for starfield tile layouts.
  *
@@ -9,15 +16,15 @@ export function createSeededRandom(seed: number): () => number {
 
   return () => {
     // Step 1: Apply xorshift32 state transitions.
-    randomState ^= randomState << 13;
+    randomState ^= randomState << FLAPPY_STARFIELD_XORSHIFT_LEFT_SHIFT_PRIMARY;
     randomState >>>= 0;
-    randomState ^= randomState >> 17;
+    randomState ^= randomState >> FLAPPY_STARFIELD_XORSHIFT_RIGHT_SHIFT;
     randomState >>>= 0;
-    randomState ^= randomState << 5;
+    randomState ^= randomState << FLAPPY_STARFIELD_XORSHIFT_LEFT_SHIFT_FINAL;
     randomState >>>= 0;
 
     // Step 2: Normalize 32-bit unsigned state into [0, 1).
-    return randomState / 0x1_0000_0000;
+    return randomState / FLAPPY_STARFIELD_UNSIGNED_NORMALIZATION_DIVISOR;
   };
 }
 

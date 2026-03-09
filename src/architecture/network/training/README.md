@@ -6,7 +6,7 @@
 
 ### buildMonitoredSmoothingConfig
 
-`(type: import("C:/NeatapticTS/src/architecture/network/network.types").MovingAverageType, window: number, emaAlpha: number | undefined, trimmedRatio: number | undefined) => import("C:/NeatapticTS/src/architecture/network/network.types").MonitoredSmoothingConfig`
+`(type: import("src/architecture/network/network.types").MovingAverageType, window: number, emaAlpha: number | undefined, trimmedRatio: number | undefined) => import("src/architecture/network/network.types").MonitoredSmoothingConfig`
 
 Build monitored smoothing configuration from options and defaults.
 
@@ -83,7 +83,7 @@ Notes:
 
 ### applyGradientClippingImpl
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, cfg: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
+`(net: import("src/architecture/network").default, cfg: import("src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
 
 Apply gradient clipping to a network using a normalized runtime configuration.
 
@@ -201,7 +201,7 @@ Notes:
 
 ### propagate
 
-`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
+`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
 
 Propagate output and hidden errors backward through the network.
 
@@ -230,7 +230,7 @@ structures. Treat this as an opaque snapshot blob.
 
 ### trainImpl
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, set: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").TrainingSample[], options: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
+`(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], options: import("src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
 
 High-level training orchestration with early stopping, smoothing & callbacks.
 
@@ -270,7 +270,7 @@ Stopping conditions:
 
 ### trainSetImpl
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, set: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("C:/NeatapticTS/src/architecture/network/network.types").RegularizationConfig, costFunction: import("C:/NeatapticTS/src/architecture/network/network.types").CostFunction | import("C:/NeatapticTS/src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("C:/NeatapticTS/src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
+`(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("src/architecture/network/network.types").RegularizationConfig, costFunction: import("src/architecture/network/network.types").CostFunction | import("src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
 
 Execute one full pass over dataset (epoch) with optional accumulation & adaptive optimizer.
 Returns mean cost across processed samples.
@@ -294,13 +294,13 @@ Returns: Mean cost across the processed samples.
 
 ### trainSetCore
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, set: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("C:/NeatapticTS/src/architecture/network/network.types").RegularizationConfig, costFunction: import("C:/NeatapticTS/src/architecture/network/network.types").CostFunction | import("C:/NeatapticTS/src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("C:/NeatapticTS/src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
+`(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("src/architecture/network/network.types").RegularizationConfig, costFunction: import("src/architecture/network/network.types").CostFunction | import("src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
 
 ## architecture/network/training/network.training.backprop.utils.ts
 
 ### clearNodeState
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(node: import("src/architecture/node").default) => void`
 
 Clear runtime state for a single node.
 
@@ -318,7 +318,7 @@ Parameters:
 
 ### createPropagationContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, rate: number, momentum: number, update: boolean, regularization: number | { type: "L1" | "L2"; lambda: number; } | ((weight: number) => number) | undefined, costDerivative: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").PropagationContext`
+`(network: import("src/architecture/network").default, rate: number, momentum: number, update: boolean, regularization: number | { type: "L1" | "L2"; lambda: number; } | ((weight: number) => number) | undefined, costDerivative: import("src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => import("src/architecture/network/training/network.training.utils.types").PropagationContext`
 
 Build the shared propagation context consumed by layer helpers.
 
@@ -334,7 +334,7 @@ Returns: Immutable context consumed by propagation helpers.
 
 ### getLastNodeIndex
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(network: import("src/architecture/network").default) => number`
 
 Resolve the last node index in the network.
 
@@ -345,7 +345,7 @@ Returns: Last valid node index.
 
 ### getOutputLayerStartIndex
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(network: import("src/architecture/network").default) => number`
 
 Resolve the first index of the output layer.
 
@@ -356,7 +356,7 @@ Returns: Index at which output nodes begin.
 
 ### propagate
 
-`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
+`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
 
 Propagate output and hidden errors backward through the network.
 
@@ -371,7 +371,7 @@ Parameters:
 
 ### propagateHiddenLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").PropagationContext) => void`
+`(context: import("src/architecture/network/training/network.training.utils.types").PropagationContext) => void`
 
 Propagate all hidden nodes in reverse topological order.
 
@@ -380,7 +380,7 @@ Parameters:
 
 ### propagateOutputLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").PropagationContext, target: number[]) => void`
+`(context: import("src/architecture/network/training/network.training.utils.types").PropagationContext, target: number[]) => void`
 
 Propagate all output nodes with explicit targets.
 
@@ -390,7 +390,7 @@ Parameters:
 
 ### propagateOutputNodeWithCostDerivative
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default, context: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").PropagationContext, targetValue: number, costDerivative: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").CostDerivative) => void`
+`(node: import("src/architecture/node").default, context: import("src/architecture/network/training/network.training.utils.types").PropagationContext, targetValue: number, costDerivative: import("src/architecture/network/training/network.training.utils.types").CostDerivative) => void`
 
 Propagate one output node using a custom cost derivative override.
 
@@ -402,7 +402,7 @@ Parameters:
 
 ### propagateSingleHiddenNode
 
-`(context: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").PropagationContext, node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(context: import("src/architecture/network/training/network.training.utils.types").PropagationContext, node: import("src/architecture/node").default) => void`
 
 Propagate a single hidden node without a target value.
 
@@ -412,7 +412,7 @@ Parameters:
 
 ### propagateSingleOutputNode
 
-`(context: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").PropagationContext, node: import("C:/NeatapticTS/src/architecture/node").default, targetValue: number) => void`
+`(context: import("src/architecture/network/training/network.training.utils.types").PropagationContext, node: import("src/architecture/node").default, targetValue: number) => void`
 
 Propagate a single output node with a target value.
 
@@ -423,7 +423,7 @@ Parameters:
 
 ### validateTargetLength
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, target: number[]) => void`
+`(network: import("src/architecture/network").default, target: number[]) => void`
 
 Validate that target output count matches the network output width.
 
@@ -435,20 +435,20 @@ Parameters:
 
 ### trainFinalizeCore
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, set: { input: number[]; output: number[]; }[], options: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
+`(net: import("src/architecture/network").default, set: { input: number[]; output: number[]; }[], options: import("src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
 
 ## architecture/network/training/network.training.smoothing.utils.ts
 
 ### computeMonitoredError
 
-`(trainError: number, recentErrors: number[], cfg: import("C:/NeatapticTS/src/architecture/network/network.types").MonitoredSmoothingConfig, state: import("C:/NeatapticTS/src/architecture/network/network.types").PrimarySmoothingState) => number`
+`(trainError: number, recentErrors: number[], cfg: import("src/architecture/network/network.types").MonitoredSmoothingConfig, state: import("src/architecture/network/network.types").PrimarySmoothingState) => number`
 
 ### computePlateauMetric
 
-`(trainError: number, plateauErrors: number[], cfg: import("C:/NeatapticTS/src/architecture/network/network.types").PlateauSmoothingConfig, state: import("C:/NeatapticTS/src/architecture/network/network.types").PlateauSmoothingState) => number`
+`(trainError: number, plateauErrors: number[], cfg: import("src/architecture/network/network.types").PlateauSmoothingConfig, state: import("src/architecture/network/network.types").PlateauSmoothingState) => number`
 
 ## architecture/network/training/network.training.gradient-clip.utils.ts
 
 ### applyGradientClippingCore
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, cfg: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
+`(net: import("src/architecture/network").default, cfg: import("src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`

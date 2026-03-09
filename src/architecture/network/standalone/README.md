@@ -64,7 +64,7 @@ Activation function shape used by standalone source generation helpers.
 
 ### generateStandalone
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default) => string`
+`(net: import("src/architecture/network").default) => string`
 
 Standalone forward pass code generator.
 
@@ -96,7 +96,7 @@ Not Supported / Simplifications:
 
 ### appendActivationLine
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number, activationFunctionIndex: number, maskValue: number) => void`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number, activationFunctionIndex: number, maskValue: number) => void`
 
 Append generated activation assignment line for one node.
 
@@ -110,7 +110,7 @@ Returns: Void.
 
 ### appendAllNodeComputationLines
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => void`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => void`
 
 Append compute lines for all non-input nodes.
 
@@ -121,7 +121,7 @@ Returns: Void.
 
 ### appendInputSeedLine
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => void`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => void`
 
 Append the generated input-copy loop to the standalone body.
 
@@ -132,7 +132,7 @@ Returns: Void.
 
 ### appendOutputReturnLine
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext, outputIndexes: number[]) => void`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, outputIndexes: number[]) => void`
 
 Append generated return line for output activations.
 
@@ -144,7 +144,7 @@ Returns: Void.
 
 ### appendSingleNodeComputationLines
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number) => void`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number) => void`
 
 Append state and activation lines for one node.
 
@@ -156,7 +156,7 @@ Returns: Void.
 
 ### appendStateLine
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number, sumExpression: string, biasValue: number) => void`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number, sumExpression: string, biasValue: number) => void`
 
 Append generated state assignment line for one node.
 
@@ -183,7 +183,7 @@ Returns: Empty suffix for identity, otherwise multiplicative fragment.
 
 ### appendGateMultiplier
 
-`(connectionTerm: string, gateNode: import("C:/NeatapticTS/src/architecture/node").default | null) => string`
+`(connectionTerm: string, gateNode: import("src/architecture/node").default | null) => string`
 
 Append a gate activation multiplier to a connection term when a gate exists.
 
@@ -195,7 +195,7 @@ Returns: Term with optional gate multiplier.
 
 ### buildNodeSumExpression
 
-`(currentNode: import("C:/NeatapticTS/src/architecture/node").default, nodeTraversalIndex: number) => string`
+`(currentNode: import("src/architecture/node").default, nodeTraversalIndex: number) => string`
 
 Build the pre-activation sum expression for one node.
 
@@ -207,7 +207,7 @@ Returns: String expression used for generated `S[index]` assignment.
 
 ### collectIncomingTerms
 
-`(currentNode: import("C:/NeatapticTS/src/architecture/node").default) => string[]`
+`(currentNode: import("src/architecture/node").default) => string[]`
 
 Collect feed-forward inbound connection terms for a node.
 
@@ -218,7 +218,7 @@ Returns: Weighted term expressions.
 
 ### collectOutputIndexes
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => number[]`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => number[]`
 
 Collect output node indexes from the output tail segment.
 
@@ -229,7 +229,7 @@ Returns: Output indexes used for result array emission.
 
 ### collectSelfConnectionTerms
 
-`(currentNode: import("C:/NeatapticTS/src/architecture/node").default, nodeTraversalIndex: number) => string[]`
+`(currentNode: import("src/architecture/node").default, nodeTraversalIndex: number) => string[]`
 
 Collect recurrent self-connection term for a node when present.
 
@@ -263,7 +263,7 @@ Returns: Comma-separated `A[index]` selector list.
 
 ### getOptionalNodeIndex
 
-`(nodeReference: import("C:/NeatapticTS/src/architecture/node").default | null) => number | undefined`
+`(nodeReference: import("src/architecture/node").default | null) => number | undefined`
 
 Resolve optional generated node index from a node reference.
 
@@ -288,7 +288,7 @@ Returns: Combined term collection.
 
 ### asStandaloneProps
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkStandaloneProps`
+`(net: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkStandaloneProps`
 
 Cast a network instance to the internal standalone generation view.
 
@@ -299,7 +299,7 @@ Returns: Internal network properties used by the standalone generator.
 
 ### createGenerationContext
 
-`(standaloneProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkStandaloneProps) => import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext`
+`(standaloneProps: import("src/architecture/network/network.types").NetworkStandaloneProps) => import("src/architecture/network/network.types").StandaloneGenerationContext`
 
 Create a fresh generation context used across orchestration steps.
 
@@ -310,7 +310,7 @@ Returns: Initialized generation context.
 
 ### ensureOutputNodesExist
 
-`(standaloneProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkStandaloneProps) => void`
+`(standaloneProps: import("src/architecture/network/network.types").NetworkStandaloneProps) => void`
 
 Validate that the network has at least one output node.
 
@@ -321,7 +321,7 @@ Returns: Void.
 
 ### seedNodeIndexesAndState
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => void`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => void`
 
 Seed index, activation, and state arrays from network nodes.
 
@@ -347,7 +347,7 @@ Returns: Cleaned source text suitable for deterministic standalone emission.
 
 ### assembleStandaloneSource
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => string`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => string`
 
 Assemble the final standalone IIFE source string.
 
@@ -358,7 +358,7 @@ Returns: Final generated source string.
 
 ### buildActivationArrayLiteral
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => string`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => string`
 
 Build deterministic activation function array literal by function index ordering.
 
@@ -380,7 +380,7 @@ Returns: Guard statement line including trailing newline.
 
 ### resolveActivationArrayType
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext) => string`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => string`
 
 Resolve typed-array constructor name based on configured activation precision.
 
@@ -405,7 +405,7 @@ Returns: Named function source.
 
 ### ensureActivationFunctionIndex
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext, squashName: string, squashFunction: import("C:/NeatapticTS/src/architecture/network/standalone/network.standalone.utils.types").StandaloneSquashFunction, nodeTraversalIndex: number) => number`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, squashName: string, squashFunction: import("src/architecture/network/standalone/network.standalone.utils.types").StandaloneSquashFunction, nodeTraversalIndex: number) => number`
 
 Ensure an activation function is registered and return its table index.
 
@@ -478,7 +478,7 @@ Returns: Cleaned named function source.
 
 ### registerActivationFunction
 
-`(generationContext: import("C:/NeatapticTS/src/architecture/network/network.types").StandaloneGenerationContext, squashName: string, functionSource: string) => void`
+`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, squashName: string, functionSource: string) => void`
 
 Register a function source and allocate its numeric index.
 
@@ -491,7 +491,7 @@ Returns: Void.
 
 ### resolveActivationFunctionSource
 
-`(squashName: string, squashFunction: import("C:/NeatapticTS/src/architecture/network/standalone/network.standalone.utils.types").StandaloneSquashFunction, nodeTraversalIndex: number) => string`
+`(squashName: string, squashFunction: import("src/architecture/network/standalone/network.standalone.utils.types").StandaloneSquashFunction, nodeTraversalIndex: number) => string`
 
 Resolve emitted source for built-in or custom activation functions.
 
@@ -504,7 +504,7 @@ Returns: Named function source string.
 
 ### resolveSquashName
 
-`(currentNode: import("C:/NeatapticTS/src/architecture/node").default, nodeTraversalIndex: number) => string`
+`(currentNode: import("src/architecture/node").default, nodeTraversalIndex: number) => string`
 
 Resolve a stable activation function name for emission.
 

@@ -50,7 +50,7 @@
 
 ### mutateImpl
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
 
 Public entry point: apply a single mutation operator to the network.
 
@@ -78,7 +78,7 @@ Mutation method descriptor shape.
 
 ### findMutationKeyByIdentityReference
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => string | undefined`
+`(method: import("src/architecture/network/network.types").MutationMethod) => string | undefined`
 
 Resolves a mutation key by direct identity-reference comparison.
 
@@ -89,7 +89,7 @@ Returns: Matching mutation key or undefined.
 
 ### isMutationMethodKeyString
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => boolean`
+`(method: import("src/architecture/network/network.types").MutationMethod) => boolean`
 
 Checks whether mutation input is already a direct key string.
 
@@ -111,7 +111,7 @@ Returns: Direct key or undefined.
 
 ### resolveMutationKey
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod) => string | undefined`
+`(method: import("src/architecture/network/network.types").MutationMethod) => string | undefined`
 
 Mutation-key normalization and warning helpers used by the mutate orchestrator.
 
@@ -227,7 +227,7 @@ Returns: Nothing.
 
 ### addNodeDeterministicChain
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, mutationProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkMutationProps) => void`
+`(network: import("src/architecture/network").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps) => void`
 
 Applies deterministic chain-growth ADD_NODE mutation.
 
@@ -239,7 +239,7 @@ Returns: Nothing.
 
 ### addNodeRandomSplit
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, mutationProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkMutationProps) => void`
+`(network: import("src/architecture/network").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps) => void`
 
 Applies non-deterministic ADD_NODE by splitting a random connection.
 
@@ -251,7 +251,7 @@ Returns: Nothing.
 
 ### addRecurrentNode
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, blockType: "lstm" | "gru") => void`
+`(network: import("src/architecture/network").default, blockType: "lstm" | "gru") => void`
 
 Shared orchestrator for recurrent-node mutation variants.
 
@@ -276,7 +276,7 @@ Returns: Nothing.
 
 ### appendBackwardCandidatesForLaterNode
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").BackwardCandidateTraversalContext, backwardConnectionCandidates: import("C:/NeatapticTS/src/architecture/network/network.types").NodePair[]) => void`
+`(traversalContext: import("src/architecture/network/network.types").BackwardCandidateTraversalContext, backwardConnectionCandidates: import("src/architecture/network/network.types").NodePair[]) => void`
 
 Appends backward candidates for one later-node traversal context.
 
@@ -288,7 +288,7 @@ Returns: Nothing.
 
 ### appendForwardCandidatesForSource
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").ForwardCandidateTraversalContext, forwardConnectionCandidates: import("C:/NeatapticTS/src/architecture/network/network.types").NodePair[]) => void`
+`(traversalContext: import("src/architecture/network/network.types").ForwardCandidateTraversalContext, forwardConnectionCandidates: import("src/architecture/network/network.types").NodePair[]) => void`
 
 Appends forward candidates for a single source-node traversal context.
 
@@ -300,7 +300,7 @@ Returns: Nothing.
 
 ### appendRecurrentLayerNodes
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, layerNodes: import("C:/NeatapticTS/src/architecture/node").default[]) => void`
+`(network: import("src/architecture/network").default, layerNodes: import("src/architecture/node").default[]) => void`
 
 Appends recurrent layer nodes as hidden nodes.
 
@@ -312,7 +312,7 @@ Returns: Nothing.
 
 ### applyFirstConnectionStabilityNudge
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(network: import("src/architecture/network").default) => void`
 
 Applies tiny stability nudge to the first remaining connection.
 
@@ -323,7 +323,7 @@ Returns: Nothing.
 
 ### asMutationProps
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkMutationProps`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkMutationProps`
 
 Concrete mutation handler implementations used by the network mutate orchestrator.
 
@@ -351,7 +351,7 @@ Returns: Nothing.
 
 ### collectAllConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(network: import("src/architecture/network").default) => import("src/architecture/connection").default[]`
 
 Collects normal and self connections.
 
@@ -362,7 +362,7 @@ Returns: Combined connections.
 
 ### collectBackwardCandidatesForLaterNode
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").BackwardCandidateTraversalContext) => import("C:/NeatapticTS/src/architecture/network/network.types").NodePair[]`
+`(traversalContext: import("src/architecture/network/network.types").BackwardCandidateTraversalContext) => import("src/architecture/network/network.types").NodePair[]`
 
 Collects all backward candidates for one later-node traversal context.
 
@@ -373,7 +373,7 @@ Returns: Candidate source/target pairs.
 
 ### collectBackwardCandidatesFromContext
 
-`(backwardConnectionCandidates: import("C:/NeatapticTS/src/architecture/network/network.types").NodePair[], traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").BackwardCandidateTraversalContext) => import("C:/NeatapticTS/src/architecture/network/network.types").NodePair[]`
+`(backwardConnectionCandidates: import("src/architecture/network/network.types").NodePair[], traversalContext: import("src/architecture/network/network.types").BackwardCandidateTraversalContext) => import("src/architecture/network/network.types").NodePair[]`
 
 Reduces one backward traversal context into candidate connection pairs.
 
@@ -385,7 +385,7 @@ Returns: Updated candidate pairs.
 
 ### collectBackwardConnectionCandidates
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NodePair[]`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NodePair[]`
 
 Collects backward (recurrent) connection candidates.
 
@@ -396,7 +396,7 @@ Returns: Candidate source/target pairs.
 
 ### collectBackwardTraversalContexts
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").BackwardCandidateTraversalContext[]`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").BackwardCandidateTraversalContext[]`
 
 Collects backward traversal contexts for all eligible later nodes.
 
@@ -407,7 +407,7 @@ Returns: Backward traversal contexts.
 
 ### collectConnectionGroupsForReinit
 
-`(targetNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/connection").default[][]`
+`(targetNode: import("src/architecture/node").default) => import("src/architecture/connection").default[][]`
 
 Collects all connection groups affected by REINIT_WEIGHT.
 
@@ -418,7 +418,7 @@ Returns: Mutable connection groups.
 
 ### collectDistinctNodeCandidates
 
-`(nodeCandidates: import("C:/NeatapticTS/src/architecture/node").default[], excludedNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(nodeCandidates: import("src/architecture/node").default[], excludedNode: import("src/architecture/node").default) => import("src/architecture/node").default[]`
 
 Collects candidates that are distinct from an excluded node.
 
@@ -430,7 +430,7 @@ Returns: Distinct candidates.
 
 ### collectForwardCandidatesForSource
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").ForwardCandidateTraversalContext) => import("C:/NeatapticTS/src/architecture/network/network.types").NodePair[]`
+`(traversalContext: import("src/architecture/network/network.types").ForwardCandidateTraversalContext) => import("src/architecture/network/network.types").NodePair[]`
 
 Collects all forward candidates for one source traversal context.
 
@@ -441,7 +441,7 @@ Returns: Candidate source/target pairs.
 
 ### collectForwardCandidatesFromContext
 
-`(forwardConnectionCandidates: import("C:/NeatapticTS/src/architecture/network/network.types").NodePair[], traversalContext: import("C:/NeatapticTS/src/architecture/network/network.types").ForwardCandidateTraversalContext) => import("C:/NeatapticTS/src/architecture/network/network.types").NodePair[]`
+`(forwardConnectionCandidates: import("src/architecture/network/network.types").NodePair[], traversalContext: import("src/architecture/network/network.types").ForwardCandidateTraversalContext) => import("src/architecture/network/network.types").NodePair[]`
 
 Reduces one forward traversal context into candidate connection pairs.
 
@@ -453,7 +453,7 @@ Returns: Updated candidate pairs.
 
 ### collectForwardConnectionCandidates
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NodePair[]`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NodePair[]`
 
 Collects forward connection candidates.
 
@@ -464,7 +464,7 @@ Returns: Candidate source/target pairs.
 
 ### collectForwardTraversalContexts
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").ForwardCandidateTraversalContext[]`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").ForwardCandidateTraversalContext[]`
 
 Collects forward traversal contexts for all eligible source nodes.
 
@@ -475,7 +475,7 @@ Returns: Forward traversal contexts.
 
 ### collectMutableNonInputNodes
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, excludeOutputNodes: boolean) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(network: import("src/architecture/network").default, excludeOutputNodes: boolean) => import("src/architecture/node").default[]`
 
 Collects mutable non-input nodes.
 
@@ -487,7 +487,7 @@ Returns: Mutable nodes.
 
 ### collectNodesByType
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, nodeType: string) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(network: import("src/architecture/network").default, nodeType: string) => import("src/architecture/node").default[]`
 
 Collects nodes by type.
 
@@ -499,7 +499,7 @@ Returns: Matching nodes.
 
 ### collectNodesWithoutSelfLoop
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(network: import("src/architecture/network").default) => import("src/architecture/node").default[]`
 
 Collects non-input nodes that do not have self loops.
 
@@ -510,7 +510,7 @@ Returns: Eligible nodes.
 
 ### collectRemovableBackwardConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(network: import("src/architecture/network").default) => import("src/architecture/connection").default[]`
 
 Collects removable backward connections using redundancy constraints.
 
@@ -521,7 +521,7 @@ Returns: Removable backward connections.
 
 ### collectRemovableForwardConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(network: import("src/architecture/network").default) => import("src/architecture/connection").default[]`
 
 Collects removable forward connections using redundancy constraints.
 
@@ -532,7 +532,7 @@ Returns: Removable forward connections.
 
 ### collectSwappableNodesForMutation
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(network: import("src/architecture/network").default, method: import("src/architecture/network/network.types").MutationMethod | undefined) => import("src/architecture/node").default[]`
 
 Collects swap-eligible nodes based on mutation configuration.
 
@@ -544,7 +544,7 @@ Returns: Swap-eligible nodes.
 
 ### collectTargetLayerPeers
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(network: import("src/architecture/network").default, targetNode: import("src/architecture/node").default) => import("src/architecture/node").default[]`
 
 Collects peers around a target node in the same type/layer neighborhood.
 
@@ -556,7 +556,7 @@ Returns: Peer nodes.
 
 ### collectUngatedConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(network: import("src/architecture/network").default) => import("src/architecture/connection").default[]`
 
 Collects ungated connections including self-connections.
 
@@ -567,7 +567,7 @@ Returns: Ungated connections.
 
 ### connectPair
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, selectedConnectionPair: import("C:/NeatapticTS/src/architecture/network/network.types").NodePair) => void`
+`(network: import("src/architecture/network").default, selectedConnectionPair: import("src/architecture/network/network.types").NodePair) => void`
 
 Connects source/target node pair.
 
@@ -579,7 +579,7 @@ Returns: Nothing.
 
 ### containsNode
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], node: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(nodes: import("src/architecture/node").default[], node: import("src/architecture/node").default) => boolean`
 
 Checks whether a node list contains a node reference.
 
@@ -591,7 +591,7 @@ Returns: True when contained.
 
 ### countConnectionWhenSourceTargetsPeer
 
-`(peerConnectionsFromSource: number, existingConnection: import("C:/NeatapticTS/src/architecture/connection").default, countContext: import("C:/NeatapticTS/src/architecture/network/network.types").SourcePeerConnectionCountContext) => number`
+`(peerConnectionsFromSource: number, existingConnection: import("src/architecture/connection").default, countContext: import("src/architecture/network/network.types").SourcePeerConnectionCountContext) => number`
 
 Counts one connection when it originates from source and targets a peer.
 
@@ -604,7 +604,7 @@ Returns: Updated count.
 
 ### countSourceConnectionsIntoPeerSet
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default, targetLayerPeers: import("C:/NeatapticTS/src/architecture/node").default[]) => number`
+`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default, targetLayerPeers: import("src/architecture/node").default[]) => number`
 
 Counts source-originated connections that end inside the target peer set.
 
@@ -617,7 +617,7 @@ Returns: Number of source-to-peer connections.
 
 ### createBackwardCandidateTraversalContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, laterNodeIndex: number) => import("C:/NeatapticTS/src/architecture/network/network.types").BackwardCandidateTraversalContext`
+`(network: import("src/architecture/network").default, laterNodeIndex: number) => import("src/architecture/network/network.types").BackwardCandidateTraversalContext`
 
 Creates context for one backward-candidate traversal pass.
 
@@ -629,7 +629,7 @@ Returns: Immutable traversal context.
 
 ### createConnectionGroupReinitContext
 
-`(randomValue: () => number, methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGroupReinitContext`
+`(randomValue: () => number, methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }) => import("src/architecture/network/network.types").ConnectionGroupReinitContext`
 
 Creates immutable context for connection-group reinitialization.
 
@@ -641,7 +641,7 @@ Returns: Reinitialization context.
 
 ### createDirectionalConnectionContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default) => import("C:/NeatapticTS/src/architecture/network/network.types").DirectionalConnectionContext`
+`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default) => import("src/architecture/network/network.types").DirectionalConnectionContext`
 
 Creates indexed directional context for a connection candidate.
 
@@ -653,7 +653,7 @@ Returns: Directional context.
 
 ### createForwardCandidateTraversalContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, sourceNodeIndex: number) => import("C:/NeatapticTS/src/architecture/network/network.types").ForwardCandidateTraversalContext`
+`(network: import("src/architecture/network").default, sourceNodeIndex: number) => import("src/architecture/network/network.types").ForwardCandidateTraversalContext`
 
 Creates context for one forward-candidate source traversal pass.
 
@@ -665,7 +665,7 @@ Returns: Immutable traversal context.
 
 ### createHiddenNode
 
-`(randomValue: () => number) => import("C:/NeatapticTS/src/architecture/node").default`
+`(randomValue: () => number) => import("src/architecture/node").default`
 
 Creates a hidden node with random activation mutation.
 
@@ -676,7 +676,7 @@ Returns: Hidden node.
 
 ### createRecurrentLayer
 
-`(blockType: "lstm" | "gru") => import("C:/NeatapticTS/src/architecture/network/network.types").RecurrentLayerShape`
+`(blockType: "lstm" | "gru") => import("src/architecture/network/network.types").RecurrentLayerShape`
 
 Creates recurrent layer by type.
 
@@ -687,7 +687,7 @@ Returns: Created recurrent layer.
 
 ### createSourcePeerConnectionCountContext
 
-`(candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default, targetLayerPeers: import("C:/NeatapticTS/src/architecture/node").default[]) => import("C:/NeatapticTS/src/architecture/network/network.types").SourcePeerConnectionCountContext`
+`(candidateConnection: import("src/architecture/connection").default, targetLayerPeers: import("src/architecture/node").default[]) => import("src/architecture/network/network.types").SourcePeerConnectionCountContext`
 
 Creates immutable context for source-to-peer connection counting.
 
@@ -699,7 +699,7 @@ Returns: Count context.
 
 ### createTargetLayerPeerContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/network/network.types").TargetLayerPeerContext`
+`(network: import("src/architecture/network").default, targetNode: import("src/architecture/node").default) => import("src/architecture/network/network.types").TargetLayerPeerContext`
 
 Creates immutable context for peer-layer collection.
 
@@ -711,7 +711,7 @@ Returns: Peer traversal context.
 
 ### createWeightSamplingRangeContext
 
-`(reinitContext: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGroupReinitContext) => import("C:/NeatapticTS/src/architecture/network/network.types").WeightSamplingRangeContext`
+`(reinitContext: import("src/architecture/network/network.types").ConnectionGroupReinitContext) => import("src/architecture/network/network.types").WeightSamplingRangeContext`
 
 Creates immutable sampling range context.
 
@@ -722,7 +722,7 @@ Returns: Sampling range context.
 
 ### disconnectConnectionAndGetGater
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, connectionToExpand: import("C:/NeatapticTS/src/architecture/connection").default) => import("C:/NeatapticTS/src/architecture/node").default | null`
+`(network: import("src/architecture/network").default, connectionToExpand: import("src/architecture/connection").default) => import("src/architecture/node").default | null`
 
 Disconnects a connection and returns its previous gater.
 
@@ -734,7 +734,7 @@ Returns: Previous gater reference.
 
 ### disconnectConnectionPair
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, selectedConnection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(network: import("src/architecture/network").default, selectedConnection: import("src/architecture/connection").default) => void`
 
 Disconnects selected connection by endpoints.
 
@@ -746,7 +746,7 @@ Returns: Nothing.
 
 ### disconnectUnexpectedOutgoingConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, chainNode: import("C:/NeatapticTS/src/architecture/node").default, expectedTargetNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(network: import("src/architecture/network").default, chainNode: import("src/architecture/node").default, expectedTargetNode: import("src/architecture/node").default) => void`
 
 Removes outgoing connections that do not match the expected chain target.
 
@@ -759,7 +759,7 @@ Returns: Nothing.
 
 ### enableNodeBatchNorm
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(node: import("src/architecture/node").default) => void`
 
 Enables internal batch-norm flag on a node.
 
@@ -770,7 +770,7 @@ Returns: Nothing.
 
 ### ensureConnection
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, fromNode: import("C:/NeatapticTS/src/architecture/node").default, toNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/connection").default | undefined`
+`(network: import("src/architecture/network").default, fromNode: import("src/architecture/node").default, toNode: import("src/architecture/node").default) => import("src/architecture/connection").default | undefined`
 
 Ensures a connection exists and returns it.
 
@@ -783,7 +783,7 @@ Returns: Existing or created connection.
 
 ### ensureSeedForwardConnectionWhenEmpty
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => boolean`
+`(network: import("src/architecture/network").default) => boolean`
 
 Ensures a seed input->output connection exists when connection list is empty.
 
@@ -794,7 +794,7 @@ Returns: True when mutation may continue.
 
 ### expandConnectionWithRecurrentBlock
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, connectionToExpand: import("C:/NeatapticTS/src/architecture/connection").default, blockType: "lstm" | "gru") => void`
+`(network: import("src/architecture/network").default, connectionToExpand: import("src/architecture/connection").default, blockType: "lstm" | "gru") => void`
 
 Replaces one connection with a minimal recurrent block.
 
@@ -807,7 +807,7 @@ Returns: Nothing.
 
 ### findConnection
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, fromNode: import("C:/NeatapticTS/src/architecture/node").default, toNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/connection").default | undefined`
+`(network: import("src/architecture/network").default, fromNode: import("src/architecture/node").default, toNode: import("src/architecture/node").default) => import("src/architecture/connection").default | undefined`
 
 Gets a connection between two nodes when it exists.
 
@@ -820,7 +820,7 @@ Returns: Matching connection or undefined.
 
 ### findFirstNodeByType
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, nodeType: string) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(network: import("src/architecture/network").default, nodeType: string) => import("src/architecture/node").default | undefined`
 
 Returns the first node by type.
 
@@ -832,7 +832,7 @@ Returns: Matching node or undefined.
 
 ### hasRedundantEndpoints
 
-`(candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+`(candidateConnection: import("src/architecture/connection").default) => boolean`
 
 Checks whether both endpoints maintain at least one redundant edge.
 
@@ -843,7 +843,7 @@ Returns: True when endpoint redundancy exists.
 
 ### initializeDeterministicChain
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, mutationProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkMutationProps, inputNode: import("C:/NeatapticTS/src/architecture/node").default, outputNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(network: import("src/architecture/network").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps, inputNode: import("src/architecture/node").default, outputNode: import("src/architecture/node").default) => void`
 
 Initializes deterministic chain storage and seed edge.
 
@@ -857,7 +857,7 @@ Returns: Nothing.
 
 ### insertNodeBeforeOutputTail
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, nodeToInsert: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default, mutationProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkMutationProps) => void`
+`(network: import("src/architecture/network").default, nodeToInsert: import("src/architecture/node").default, targetNode: import("src/architecture/node").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps) => void`
 
 Inserts a node before output tail while preserving output block ordering.
 
@@ -871,7 +871,7 @@ Returns: Nothing.
 
 ### isBackwardCandidateTargetAvailable
 
-`(laterNode: import("C:/NeatapticTS/src/architecture/node").default, earlierNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(laterNode: import("src/architecture/node").default, earlierNode: import("src/architecture/node").default) => boolean`
 
 Checks whether a backward candidate target is not already projected.
 
@@ -883,7 +883,7 @@ Returns: True when connection may be added.
 
 ### isBackwardDirectionalContext
 
-`(directionContext: import("C:/NeatapticTS/src/architecture/network/network.types").DirectionalConnectionContext) => boolean`
+`(directionContext: import("src/architecture/network/network.types").DirectionalConnectionContext) => boolean`
 
 Checks whether a directional context represents a backward edge.
 
@@ -894,7 +894,7 @@ Returns: True when backward.
 
 ### isForwardCandidateTargetAvailable
 
-`(sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => boolean`
 
 Checks whether a forward candidate target is not already projected.
 
@@ -906,7 +906,7 @@ Returns: True when connection may be added.
 
 ### isForwardConnectionStructurallyRemovable
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default) => boolean`
 
 Checks structural preconditions for removable forward connections.
 
@@ -918,7 +918,7 @@ Returns: True when the connection is a forward edge with redundant endpoints.
 
 ### isForwardDirectionalContext
 
-`(directionContext: import("C:/NeatapticTS/src/architecture/network/network.types").DirectionalConnectionContext) => boolean`
+`(directionContext: import("src/architecture/network/network.types").DirectionalConnectionContext) => boolean`
 
 Checks whether a directional context represents a forward edge.
 
@@ -929,7 +929,7 @@ Returns: True when forward.
 
 ### isNodeWithoutSelfLoop
 
-`(candidateNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(candidateNode: import("src/architecture/node").default) => boolean`
 
 Checks whether a node currently has no self-loop connections.
 
@@ -940,7 +940,7 @@ Returns: True when the node has no self-loop.
 
 ### isRemovableBackwardConnection
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default) => boolean`
 
 Evaluates whether a backward connection is safe to remove.
 
@@ -952,7 +952,7 @@ Returns: True when removable.
 
 ### isRemovableForwardConnection
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default) => boolean`
 
 Evaluates whether a forward connection is safe to remove.
 
@@ -964,7 +964,7 @@ Returns: True when removable.
 
 ### isTargetLayerPeer
 
-`(candidateNode: import("C:/NeatapticTS/src/architecture/node").default, candidateNodeIndex: number, peerContext: import("C:/NeatapticTS/src/architecture/network/network.types").TargetLayerPeerContext) => boolean`
+`(candidateNode: import("src/architecture/node").default, candidateNodeIndex: number, peerContext: import("src/architecture/network/network.types").TargetLayerPeerContext) => boolean`
 
 Checks whether candidate node belongs to the target peer-layer set.
 
@@ -977,7 +977,7 @@ Returns: True when candidate is an eligible peer.
 
 ### isTargetLayerPeerTypeMatch
 
-`(candidateNode: import("C:/NeatapticTS/src/architecture/node").default, peerContext: import("C:/NeatapticTS/src/architecture/network/network.types").TargetLayerPeerContext) => boolean`
+`(candidateNode: import("src/architecture/node").default, peerContext: import("src/architecture/network/network.types").TargetLayerPeerContext) => boolean`
 
 Checks whether node type matches the target-layer peer type.
 
@@ -989,7 +989,7 @@ Returns: True when type matches.
 
 ### isTargetLayerPeerWithinDistance
 
-`(candidateNodeIndex: number, peerContext: import("C:/NeatapticTS/src/architecture/network/network.types").TargetLayerPeerContext) => boolean`
+`(candidateNodeIndex: number, peerContext: import("src/architecture/network/network.types").TargetLayerPeerContext) => boolean`
 
 Checks whether candidate index lies within allowed peer distance.
 
@@ -1001,7 +1001,7 @@ Returns: True when within distance.
 
 ### isUngatedConnection
 
-`(candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+`(candidateConnection: import("src/architecture/connection").default) => boolean`
 
 Checks whether a connection has no gater attached.
 
@@ -1012,7 +1012,7 @@ Returns: True when ungated.
 
 ### markTopoDirtyIfAcyclic
 
-`(mutationProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkMutationProps) => void`
+`(mutationProps: import("src/architecture/network/network.types").NetworkMutationProps) => void`
 
 Marks topology caches dirty when acyclic mode is enforced.
 
@@ -1023,7 +1023,7 @@ Returns: Nothing.
 
 ### modActivation
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
 
 Mutates activation function on one random non-input node.
 
@@ -1037,7 +1037,7 @@ Returns: Nothing.
 
 ### modBias
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
 
 Mutates bias parameters on one random non-input node.
 
@@ -1051,7 +1051,7 @@ Returns: Nothing.
 
 ### modWeight
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
 
 Perturbs one connection weight using a uniform delta sampled from configured bounds.
 
@@ -1065,7 +1065,7 @@ Returns: Nothing.
 
 ### pickDistinctNodePair
 
-`(swappableNodes: import("C:/NeatapticTS/src/architecture/node").default[], randomValue: () => number) => import("C:/NeatapticTS/src/architecture/network/network.types").DistinctNodePair | undefined`
+`(swappableNodes: import("src/architecture/node").default[], randomValue: () => number) => import("src/architecture/network/network.types").DistinctNodePair | undefined`
 
 Picks two distinct nodes from a candidate set.
 
@@ -1077,7 +1077,7 @@ Returns: Distinct pair or undefined.
 
 ### pickDistinctRandomNode
 
-`(nodeCandidates: import("C:/NeatapticTS/src/architecture/node").default[], excludedNode: import("C:/NeatapticTS/src/architecture/node").default, randomValue: () => number) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(nodeCandidates: import("src/architecture/node").default[], excludedNode: import("src/architecture/node").default, randomValue: () => number) => import("src/architecture/node").default | undefined`
 
 Picks a random node distinct from a given reference.
 
@@ -1102,7 +1102,7 @@ Returns: Random entry or undefined when empty.
 
 ### pickRandomNonInputNode
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, excludeOutputNodes: boolean, randomValue: () => number) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(network: import("src/architecture/network").default, excludeOutputNodes: boolean, randomValue: () => number) => import("src/architecture/node").default | undefined`
 
 Selects a random mutable non-input node.
 
@@ -1115,7 +1115,7 @@ Returns: Selected mutable node.
 
 ### pruneDeterministicChainExtraEdges
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, deterministicChain: import("C:/NeatapticTS/src/architecture/node").default[], outputNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(network: import("src/architecture/network").default, deterministicChain: import("src/architecture/node").default[], outputNode: import("src/architecture/node").default) => void`
 
 Prunes side edges from chain nodes to preserve linear deterministic depth.
 
@@ -1128,7 +1128,7 @@ Returns: Nothing.
 
 ### reconnectThroughRecurrentLayer
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, connectionToExpand: import("C:/NeatapticTS/src/architecture/connection").default, recurrentLayer: import("C:/NeatapticTS/src/architecture/network/network.types").RecurrentLayerShape) => import("C:/NeatapticTS/src/architecture/connection").default | undefined`
+`(network: import("src/architecture/network").default, connectionToExpand: import("src/architecture/connection").default, recurrentLayer: import("src/architecture/network/network.types").RecurrentLayerShape) => import("src/architecture/connection").default | undefined`
 
 Reconnects a source/target pair through a recurrent layer.
 
@@ -1141,7 +1141,7 @@ Returns: Latest newly created connection or undefined.
 
 ### reinitializeConnectionGroupWeights
 
-`(connections: import("C:/NeatapticTS/src/architecture/connection").default[], reinitContext: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionGroupReinitContext) => void`
+`(connections: import("src/architecture/connection").default[], reinitContext: import("src/architecture/network/network.types").ConnectionGroupReinitContext) => void`
 
 Reinitializes all weights in a connection group.
 
@@ -1155,7 +1155,7 @@ Returns: Nothing.
 
 ### reinitWeight
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
 
 Reinitializes incoming, outgoing, and self-connection weights for one target node.
 
@@ -1169,7 +1169,7 @@ Returns: Nothing.
 
 ### removeHiddenNodeAndApplyStabilityNudge
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, hiddenNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(network: import("src/architecture/network").default, hiddenNode: import("src/architecture/node").default) => void`
 
 Removes selected hidden node and applies stability nudge.
 
@@ -1181,7 +1181,7 @@ Returns: Nothing.
 
 ### resolveDeterministicChainMutationContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, mutationProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkMutationProps) => import("C:/NeatapticTS/src/architecture/network/network.types").DeterministicChainMutationContext | undefined`
+`(network: import("src/architecture/network").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps) => import("src/architecture/network/network.types").DeterministicChainMutationContext | undefined`
 
 Resolves all deterministic add-node prerequisites into one context object.
 
@@ -1193,7 +1193,7 @@ Returns: Deterministic context or undefined when any prerequisite fails.
 
 ### resolveDistinctPairWithKnownFirstNode
 
-`(swappableNodes: import("C:/NeatapticTS/src/architecture/node").default[], firstNode: import("C:/NeatapticTS/src/architecture/node").default, randomValue: () => number) => import("C:/NeatapticTS/src/architecture/network/network.types").DistinctNodePair | undefined`
+`(swappableNodes: import("src/architecture/node").default[], firstNode: import("src/architecture/node").default, randomValue: () => number) => import("src/architecture/network/network.types").DistinctNodePair | undefined`
 
 Resolves a distinct pair when first node is already known.
 
@@ -1206,7 +1206,7 @@ Returns: Distinct pair or undefined.
 
 ### resolveExpectedChainTarget
 
-`(deterministicChain: import("C:/NeatapticTS/src/architecture/node").default[], chainNodeIndex: number, outputNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/node").default`
+`(deterministicChain: import("src/architecture/node").default[], chainNodeIndex: number, outputNode: import("src/architecture/node").default) => import("src/architecture/node").default`
 
 Resolves the expected outgoing target for a chain node position.
 
@@ -1219,7 +1219,7 @@ Returns: Expected successor target.
 
 ### resolveInputOutputEndpoints
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").InputOutputEndpoints | undefined`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").InputOutputEndpoints | undefined`
 
 Resolves input/output endpoints required for seed and deterministic flows.
 
@@ -1230,7 +1230,7 @@ Returns: Endpoint nodes or undefined when missing.
 
 ### resolveMethodObject
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }`
+`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }`
 
 Extracts method-object form when provided.
 
@@ -1241,7 +1241,7 @@ Returns: Method object view.
 
 ### resolveSelectedBackwardConnectionPair
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, randomValue: () => number) => import("C:/NeatapticTS/src/architecture/network/network.types").NodePair | undefined`
+`(network: import("src/architecture/network").default, randomValue: () => number) => import("src/architecture/network/network.types").NodePair | undefined`
 
 Resolves random selected backward connection pair.
 
@@ -1253,7 +1253,7 @@ Returns: Selected source/target pair.
 
 ### resolveSelectedForwardConnectionPair
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, randomValue: () => number) => import("C:/NeatapticTS/src/architecture/network/network.types").NodePair | undefined`
+`(network: import("src/architecture/network").default, randomValue: () => number) => import("src/architecture/network/network.types").NodePair | undefined`
 
 Resolves random selected forward connection pair.
 
@@ -1265,7 +1265,7 @@ Returns: Selected source/target pair.
 
 ### resolveSelfConnectionTargetNode
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, randomValue: () => number) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(network: import("src/architecture/network").default, randomValue: () => number) => import("src/architecture/node").default | undefined`
 
 Resolves random node eligible for self-connection creation.
 
@@ -1290,7 +1290,7 @@ Returns: Sampled value.
 
 ### sampleUniformFromContext
 
-`(samplingContext: import("C:/NeatapticTS/src/architecture/network/network.types").WeightSamplingRangeContext) => number`
+`(samplingContext: import("src/architecture/network/network.types").WeightSamplingRangeContext) => number`
 
 Samples one weight using a prebuilt range context.
 
@@ -1301,7 +1301,7 @@ Returns: Sampled weight.
 
 ### selectHiddenNodeForRemoval
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, hiddenNodes: import("C:/NeatapticTS/src/architecture/node").default[]) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(network: import("src/architecture/network").default, hiddenNodes: import("src/architecture/node").default[]) => import("src/architecture/node").default | undefined`
 
 Selects a hidden node candidate for SUB_NODE mutation.
 
@@ -1313,7 +1313,7 @@ Returns: Selected hidden node.
 
 ### splitConnectionThroughHiddenNode
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, mutationProps: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkMutationProps, connectionToSplit: import("C:/NeatapticTS/src/architecture/connection").default) => import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionSplitResult`
+`(network: import("src/architecture/network").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps, connectionToSplit: import("src/architecture/connection").default) => import("src/architecture/network/network.types").ConnectionSplitResult`
 
 Replaces one connection by inserting a hidden node and reconnecting edges.
 
@@ -1386,7 +1386,7 @@ Returns: Nothing.
 
 ### swapNodeBiasAndSquash
 
-`(firstNode: import("C:/NeatapticTS/src/architecture/node").default, secondNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(firstNode: import("src/architecture/node").default, secondNode: import("src/architecture/node").default) => void`
 
 Swaps bias and squash values between two nodes.
 
@@ -1398,7 +1398,7 @@ Returns: Nothing.
 
 ### swapNodes
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
 
 Swaps bias and activation squash functions between two distinct mutable nodes.
 
@@ -1413,7 +1413,7 @@ Returns: Nothing.
 
 ### tryDisconnectConnection
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(network: import("src/architecture/network").default, connection: import("src/architecture/connection").default) => void`
 
 Disconnects a connection pair while suppressing errors.
 
@@ -1425,7 +1425,7 @@ Returns: Nothing.
 
 ### tryGateLatestConnection
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, previousGater: import("C:/NeatapticTS/src/architecture/node").default | null, latestConnection: import("C:/NeatapticTS/src/architecture/connection").default | undefined) => void`
+`(network: import("src/architecture/network").default, previousGater: import("src/architecture/node").default | null, latestConnection: import("src/architecture/connection").default | undefined) => void`
 
 Gates the latest connection when both previous gater and target exist.
 
@@ -1438,7 +1438,7 @@ Returns: Nothing.
 
 ### tryReassignGateAfterSplit
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, randomValue: () => number, splitResult: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectionSplitResult) => void`
+`(network: import("src/architecture/network").default, randomValue: () => number, splitResult: import("src/architecture/network/network.types").ConnectionSplitResult) => void`
 
 Reassigns prior gater to one of the new split connections when possible.
 
@@ -1462,7 +1462,7 @@ Returns: Nothing.
 
 ### wouldDisconnectTargetPeerLayerGroup
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, candidateConnection: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default) => boolean`
 
 Determines whether removal would disconnect a target peer-layer group.
 

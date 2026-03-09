@@ -259,7 +259,7 @@ Test Coverage (single expectation style): capacity growth, versioning, flags par
 
 Deferred (post‑Phase 3): chunked copy yield refinements (browser large slabs), adjacency→phenotype direct mapping (moved to caching phase), forward variance reduction (targeted in later phases once churn reduced).
 
-### Phase 3 Results (Final Validation Before HyperEvoDevo MorphoNEAT)
+### Phase 3 Results (Final Validation Before Later Track 1 Phases)
 
 Source: `test/benchmarks/benchmark.results.json` (latest history entry vs earliest recorded baseline in same file).
 
@@ -285,11 +285,11 @@ Notes:
 - Bytes/connection held constant (no regression) despite added optional slabs; gain omission and plasticity pay‑for‑use prevented per-connection inflation. This confirms the pay-for-use principle is working but highlights that progress on the bytes/connection reduction metric is dependent on Phase 5 (Sparsity).
 - Field audit counts: Connection enumerable keys = 9 (stable), Node = 15 (stable) per benchmark `fieldAudit` confirmation.
 
-Results Notes & Next Step: For quantitative deltas see table above; variance & invariant consolidation detailed in Phase 3 Conclusion below. Proceed to HyperEvoDevo MorphoNEAT work with stable slab foundation.
+Results Notes & Next Step: For quantitative deltas see table above; variance & invariant consolidation detailed in Phase 3 Conclusion below. Proceed to Phase 4 centralized memory management and browser-validation work with a stable slab foundation. Track 2 Hyper work remains gated behind the Track 1 conditions defined earlier in this document.
 
 #### Phase 3 Conclusion (Extended Slab Packing & Validation)
 
-All planned Phase 3 memory layout features are implemented, documented, and validated by tests; the slab system now provides a pay‑for‑use foundation for forthcoming HyperEvoDevo MorphoNEAT caching & morphogenesis work.
+All planned Phase 3 memory layout features are implemented, documented, and validated by tests; the slab system now provides a pay-for-use foundation for later Track 1 caching work and eventual HyperEvoDevo MorphoNEAT phases once the Track 1 gate is satisfied.
 
 Delivered Enhancements (Recap):
 

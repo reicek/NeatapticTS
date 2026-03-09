@@ -61,7 +61,7 @@ export function getFlappyObservationFeatures(
   state: FlappyGameState,
   difficultyScale: FlappyDifficultyScale = FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE,
 ): FlappyObservationFeatures {
-  const difficultyProfile = resolveDifficultyProfile(
+  const difficultyProfile = resolveAdaptiveDifficultyProfile(
     state.pipesPassed,
     difficultyScale,
   );
@@ -83,22 +83,4 @@ export function getFlappyObservationFeatures(
     maxFallSpeedPxPerFrame: FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
     normalizationEpsilon: FLAPPY_NORMALIZATION_EPSILON,
   });
-}
-
-/**
- * Resolves adaptive difficulty parameters from current progress.
- *
- * @param pipesPassed - Number of pipes passed by the active bird.
- * @param difficultyScale - Curriculum difficulty scale in [0, 1].
- * @returns Runtime difficulty profile.
- */
-function resolveDifficultyProfile(
-  pipesPassed: number,
-  difficultyScale: FlappyDifficultyScale = FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE,
-): {
-  pipeGapPx: number;
-  pipeSpeedPxPerFrame: number;
-  pipeSpawnIntervalFrames: number;
-} {
-  return resolveAdaptiveDifficultyProfile(pipesPassed, difficultyScale);
 }

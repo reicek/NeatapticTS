@@ -32,59 +32,59 @@ Use this as a reference architecture when building your own task-specific neuroe
 ### Core runtime
 
 - `evolutionEngine.ts`
-	- Public façade entry point: `EvolutionEngine.runMazeEvolution(options)`.
-	- Delegates to modular files under `evolutionEngine/`.
+  - Public façade entry point: `EvolutionEngine.runMazeEvolution(options)`.
+  - Delegates to modular files under `evolutionEngine/`.
 - `evolutionEngine/`
-	- `optionsAndSetup.ts`: normalize options, prepare maze/distance map, create NEAT instance.
-	- `evolutionLoop.ts`: generation loop, cancellation, stop conditions, telemetry flow.
-	- `populationDynamics.ts`: pruning, simplify phase, anti-collapse, dynamic population.
-	- `trainingWarmStart.ts`: warm-start + Lamarckian/Baldwinian helpers.
-	- `telemetryMetrics.ts`: generation metrics collection/log formatting.
-	- `rngAndTiming.ts`, `scratchPools.ts`, `sampling.ts`, etc.: performance + deterministic helpers.
+  - `optionsAndSetup.ts`: normalize options, prepare maze/distance map, create NEAT instance.
+  - `evolutionLoop.ts`: generation loop, cancellation, stop conditions, telemetry flow.
+  - `populationDynamics.ts`: pruning, simplify phase, anti-collapse, dynamic population.
+  - `trainingWarmStart.ts`: warm-start + Lamarckian/Baldwinian helpers.
+  - `telemetryMetrics.ts`: generation metrics collection/log formatting.
+  - `rngAndTiming.ts`, `scratchPools.ts`, `sampling.ts`, etc.: performance + deterministic helpers.
 
 ### Maze simulation pipeline
 
 - `mazeVision.ts`
-	- Builds 6D inputs for the policy network.
+  - Builds 6D inputs for the policy network.
 - `mazeMovement.ts`
-	- Simulates one episode with action selection, movement, penalties/rewards, and final run result.
+  - Simulates one episode with action selection, movement, penalties/rewards, and final run result.
 - `fitness.ts`
-	- Converts simulation outcomes into scalar fitness.
+  - Converts simulation outcomes into scalar fitness.
 - `mazeUtils.ts`
-	- Encoding, BFS distance, progress calculations, coordinate utilities.
+  - Encoding, BFS distance, progress calculations, coordinate utilities.
 
 ### Visualization and UX
 
 - `dashboardManager.ts`
-	- Rich per-generation dashboard with telemetry history, archive of solved mazes, and trend snapshots.
+  - Rich per-generation dashboard with telemetry history, archive of solved mazes, and trend snapshots.
 - `mazeVisualization.ts`
-	- Colorized maze rendering and summary stats.
+  - Colorized maze rendering and summary stats.
 - `networkVisualization.ts`
-	- Network topology formatting/inspection.
+  - Network topology formatting/inspection.
 - `terminalUtility.ts` / `browserTerminalUtility.ts`
-	- Rendering primitives for Node terminal and browser DOM.
+  - Rendering primitives for Node terminal and browser DOM.
 - `browserLogger.ts`
-	- Browser-target logging utility.
+  - Browser-target logging utility.
 
 ### Scenario definitions and adapters
 
 - `mazes.ts`
-	- Static mazes (`tiny`, `small`, `medium`, `large`, `minotaur`) plus procedural `MazeGenerator`.
+  - Static mazes (`tiny`, `small`, `medium`, `large`, `minotaur`) plus procedural `MazeGenerator`.
 - `interfaces.ts`
-	- Canonical contracts: run options, telemetry contracts, network/visualization types.
+  - Canonical contracts: run options, telemetry contracts, network/visualization types.
 - `index.ts` and `asciiMaze.ts`
-	- Re-exports for easier imports.
+  - Re-exports for easier imports.
 
 ### Demo and test entry points
 
 - `browser-entry.ts`
-	- Public `start(...)` API for browser demo lifecycle.
+  - Public `start(...)` API for browser demo lifecycle.
 - `index.html`
-	- Simple host page loading `docs/assets/ascii-maze.bundle.js`.
+  - Simple host page loading `docs/assets/ascii-maze.bundle.js`.
 - `asciiMaze.e2e.test.ts`
-	- Curriculum-style end-to-end evolution in test form.
+  - Curriculum-style end-to-end evolution in test form.
 - `networkRefinement.ts` and `refineWinner.ts`
-	- Two refinement helpers (class-based and functional style).
+  - Two refinement helpers (class-based and functional style).
 
 ---
 
@@ -168,15 +168,15 @@ At a high level, `EvolutionEngine.runMazeEvolution` performs:
 2. Maze preparation (encoding, start/exit detection, distance map)
 3. NEAT creation and optional warm-start seeding
 4. Generation loop:
-	 - evaluate population
-	 - apply adaptive/population dynamics
-	 - apply optional refinement phases
-	 - log/update dashboard/telemetry
+   - evaluate population
+   - apply adaptive/population dynamics
+   - apply optional refinement phases
+   - log/update dashboard/telemetry
 5. Stop when one of these occurs:
-	 - solved threshold reached
-	 - stagnation cap hit
-	 - max generations reached
-	 - cancellation/abort requested
+   - solved threshold reached
+   - stagnation cap hit
+   - max generations reached
+   - cancellation/abort requested
 
 The engine supports deterministic mode, telemetry toggles, persistence intervals, and dynamic population controls.
 
@@ -241,25 +241,25 @@ import { DashboardManager } from './dashboardManager';
 import { TerminalUtility } from './terminalUtility';
 
 const dashboard = new DashboardManager(
-	TerminalUtility.createTerminalClearer(),
-	(...args) => console.log(...args),
+  TerminalUtility.createTerminalClearer(),
+  (...args) => console.log(...args),
 );
 
 const result = await EvolutionEngine.runMazeEvolution({
-	mazeConfig: { maze: new MazeGenerator(24, 24).generate() },
-	agentSimConfig: { maxSteps: 2000 },
-	evolutionAlgorithmConfig: {
-		popSize: 40,
-		maxGenerations: 100,
-		maxStagnantGenerations: 50,
-		minProgressToPass: 95,
-		allowRecurrent: true,
-	},
-	reportingConfig: {
-		dashboardManager: dashboard,
-		logEvery: 1,
-		label: 'demo-24x24',
-	},
+  mazeConfig: { maze: new MazeGenerator(24, 24).generate() },
+  agentSimConfig: { maxSteps: 2000 },
+  evolutionAlgorithmConfig: {
+    popSize: 40,
+    maxGenerations: 100,
+    maxStagnantGenerations: 50,
+    minProgressToPass: 95,
+    allowRecurrent: true,
+  },
+  reportingConfig: {
+    dashboardManager: dashboard,
+    logEvery: 1,
+    label: 'demo-24x24',
+  },
 });
 
 console.log(result.exitReason, result.bestResult?.progress);
@@ -272,17 +272,17 @@ console.log(result.exitReason, result.bestResult?.progress);
 If you’re teaching or experimenting, these knobs are typically most impactful first:
 
 1. `agentSimConfig.maxSteps`
-	 - increase for larger/harder mazes
+   - increase for larger/harder mazes
 2. `evolutionAlgorithmConfig.popSize`
-	 - larger population improves search breadth but costs compute
+   - larger population improves search breadth but costs compute
 3. `evolutionAlgorithmConfig.maxGenerations`
-	 - higher cap for difficult layouts
+   - higher cap for difficult layouts
 4. `evolutionAlgorithmConfig.minProgressToPass`
-	 - solved threshold sensitivity
+   - solved threshold sensitivity
 5. `lamarckianIterations` and `lamarckianSampleSize`
-	 - adjust local supervised-style refinement pressure
+   - adjust local supervised-style refinement pressure
 6. `deterministic` + `randomSeed`
-	 - reproducibility for educational comparisons
+   - reproducibility for educational comparisons
 
 Then, for advanced learners:
 
@@ -297,15 +297,15 @@ Then, for advanced learners:
 Try these in order:
 
 1. **Perception ablation**
-	 - Remove one input channel from `MazeVision` and observe learning degradation.
+   - Remove one input channel from `MazeVision` and observe learning degradation.
 2. **Reward shaping experiment**
-	 - Reduce exploration bonus and track effects on dead-end behavior.
+   - Reduce exploration bonus and track effects on dead-end behavior.
 3. **Curriculum comparison**
-	 - Train directly on big mazes vs phased growth with transfer.
+   - Train directly on big mazes vs phased growth with transfer.
 4. **Determinism study**
-	 - Fix seed and compare run-to-run variance when toggling certain heuristics.
+   - Fix seed and compare run-to-run variance when toggling certain heuristics.
 5. **Refinement impact**
-	 - Compare before/after `NetworkRefinement.refineWinnerWithBackprop` on transfer tasks.
+   - Compare before/after `NetworkRefinement.refineWinnerWithBackprop` on transfer tasks.
 
 ---
 

@@ -295,7 +295,7 @@ Internal normalized evolution config.
 
 ### EvolutionFitnessFunction
 
-`(arg0: import("C:/NeatapticTS/src/architecture/network").default & import("C:/NeatapticTS/src/architecture/network").default[]) => number | Promise<void>`
+`(arg0: import("src/architecture/network").default & import("src/architecture/network").default[]) => number | Promise<void>`
 
 Unified evolution fitness callback shape.
 
@@ -509,7 +509,7 @@ Smoothing can make early stopping and progress logging less noisy.
 
 ### MutationHandler
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
 
 Mutation handler function contract.
 
@@ -951,7 +951,7 @@ while keeping the ONNX parser itself mostly pure.
 
 ### OnnxRuntimeLayerFactory
 
-`(size: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+`(size: number) => import("src/architecture/layer").default`
 
 Runtime layer-constructor signature used for recurrent layer reconstruction.
 
@@ -970,7 +970,7 @@ This is the minimal set of recurrent factories needed by the importer.
 
 ### OnnxRuntimePerceptronFactory
 
-`(sizes: number[]) => import("C:/NeatapticTS/src/architecture/network").default`
+`(sizes: number[]) => import("src/architecture/network").default`
 
 Runtime perceptron factory signature used by ONNX import orchestration.
 
@@ -1103,7 +1103,7 @@ Per-pool-key allocation & reuse counters (educational / diagnostics).
 
 ### PopulationFitnessFunction
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[]) => Promise<void>`
+`(population: import("src/architecture/network").default[]) => Promise<void>`
 
 Fitness signature evaluating full population asynchronously.
 
@@ -1272,7 +1272,7 @@ Shared parameters for constructing a Gemm node payload.
 
 ### SingleGenomeFitnessFunction
 
-`(genome: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(genome: import("src/architecture/network").default) => number`
 
 Fitness signature evaluating one genome.
 
@@ -1453,7 +1453,7 @@ Returns: Implementation-defined result of Network.activate (typically an output 
 
 ### applyGradientClippingImpl
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, cfg: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
+`(net: import("src/architecture/network").default, cfg: import("src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
 
 Apply gradient clipping to a network using a normalized runtime configuration.
 
@@ -1505,7 +1505,7 @@ Design Notes:
 
 ### connect
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Create and register one (or multiple) directed connection objects between two nodes.
 
@@ -1538,9 +1538,11 @@ Parameters:
 - `to` - - Target node (receives signal).
 - `weight` - - Optional explicit initial weight value.
 
+Returns: Array of created  {@link Connection} objects (possibly empty if acyclicity rejected the edge).
+
 ### createMLP
 
-`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("C:/NeatapticTS/src/architecture/network").default`
+`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("src/architecture/network").default`
 
 Build a strictly layered and fully connected MLP network.
 
@@ -1554,7 +1556,7 @@ Returns: Newly created MLP network.
 
 ### crossOver
 
-`(parentNetwork1: import("C:/NeatapticTS/src/architecture/network").default, parentNetwork2: import("C:/NeatapticTS/src/architecture/network").default, equal: boolean) => import("C:/NeatapticTS/src/architecture/network").default`
+`(parentNetwork1: import("src/architecture/network").default, parentNetwork2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network").default`
 
 Genetic operator: NEAT‑style crossover (legacy merge operator removed).
 
@@ -1571,7 +1573,7 @@ Design notes:
 
 ### describeArchitecture
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkArchitectureDescriptor`
 
 Describes network architecture for diagnostics, telemetry, and UI rendering.
 
@@ -1591,11 +1593,11 @@ Returns: Stable architecture descriptor.
 
 ### deserialize
 
-`(data: import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("C:/NeatapticTS/src/architecture/network").default`
+`(data: import("src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
 
 ### disconnect
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => void`
 
 Remove (at most) one directed connection from source 'from' to target 'to'.
 
@@ -1626,7 +1628,7 @@ Parameters:
 
 ### evolveNetwork
 
-`(set: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingSample[], options: import("C:/NeatapticTS/src/architecture/network/network.types").EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
+`(set: import("src/architecture/network/network.types").TrainingSample[], options: import("src/architecture/network/network.types").EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
 
 Evolves a network with a NEAT-style search loop until an error target or generation limit is reached.
 
@@ -1671,11 +1673,11 @@ Returns: Output activations (detached plain array) of length `network.output`.
 
 ### fromJSONImpl
 
-`(json: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON) => import("C:/NeatapticTS/src/architecture/network").default`
+`(json: import("src/architecture/network/network.types").NetworkJSON) => import("src/architecture/network").default`
 
 ### gate
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default, connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(node: import("src/architecture/node").default, connection: import("src/architecture/connection").default) => void`
 
 Attach a gater node to a connection so that the connection's effective weight
 becomes dynamically modulated by the gater's activation (see {@link Node.gate} for exact math).
@@ -1704,7 +1706,7 @@ Returns: Standard normal sample with mean 0 and variance 1.
 
 ### generateStandalone
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default) => string`
+`(net: import("src/architecture/network").default) => string`
 
 Standalone forward pass code generator.
 
@@ -1734,7 +1736,7 @@ Not Supported / Simplifications:
 
 ### getConnectionSlab
 
-`() => import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
+`() => import("src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
 
 Obtain (and lazily rebuild if dirty) the current packed SoA view of connections.
 
@@ -1782,7 +1784,7 @@ Returns: Numeric RNG state value, or `undefined` when no deterministic state exi
 
 ### getSlabAllocationStats
 
-`() => { pool: { [x: string]: import("C:/NeatapticTS/src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
+`() => { pool: { [x: string]: import("src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
 
 Slab Packing / Structure‑of‑Arrays Backend (Educational Module)
 ==============================================================
@@ -1816,7 +1818,7 @@ console.log('First weight from->to', slab.weights[0], slab.from[0], slab.to[0]);
 
 ### hasPath
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
 
 Depth-first reachability test (avoids infinite loops via visited set).
 
@@ -1844,7 +1846,7 @@ Internal State Fields (attached to Network via `any` casting):
 
 ### mutateImpl
 
-`(method: import("C:/NeatapticTS/src/architecture/network/network.types").MutationMethod | undefined) => void`
+`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
 
 Public entry point: apply a single mutation operator to the network.
 
@@ -1903,7 +1905,7 @@ Returns: Array of output neuron activations (length == network.output).
 
 ### propagate
 
-`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
+`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
 
 Propagate output and hidden errors backward through the network.
 
@@ -1918,7 +1920,7 @@ Parameters:
 
 ### pruneToSparsity
 
-`(targetSparsity: number, method: import("C:/NeatapticTS/src/architecture/network/network.types").PruningMethod) => void`
+`(targetSparsity: number, method: import("src/architecture/network/network.types").PruningMethod) => void`
 
 Evolutionary (generation-based) pruning toward a target sparsity baseline.
 Unlike maybePrune this operates immediately relative to the first invocation's connection count
@@ -1932,7 +1934,7 @@ Returns: Nothing.
 
 ### rebuildConnections
 
-`(networkInstance: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(networkInstance: import("src/architecture/network").default) => void`
 
 Rebuild the canonical connection array from per-node outgoing lists.
 
@@ -1982,7 +1984,7 @@ Returns: Promise resolving once rebuild completes.
 
 ### removeNode
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(node: import("src/architecture/node").default) => void`
 
 Node removal utilities.
 
@@ -2032,7 +2034,7 @@ Returns: Nothing.
 
 ### serialize
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.types").CompactSerializedNetworkTuple`
+`() => import("src/architecture/network/network.types").CompactSerializedNetworkTuple`
 
 Serializes a network instance into the compact tuple format.
 
@@ -2080,7 +2082,7 @@ Returns: Nothing.
 
 ### snapshotRNG
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.types").RNGSnapshot`
+`() => import("src/architecture/network/network.types").RNGSnapshot`
 
 Captures the current deterministic RNG lifecycle state as a portable snapshot.
 
@@ -2109,7 +2111,7 @@ Returns: Mean error and evaluation duration.
 
 ### toJSONImpl
 
-`() => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkJSON`
+`() => import("src/architecture/network/network.types").NetworkJSON`
 
 Serializes a network instance into the verbose JSON format.
 
@@ -2123,7 +2125,7 @@ Returns: Versioned JSON payload with shape metadata, nodes, and connections.
 
 ### trainImpl
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, set: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").TrainingSample[], options: import("C:/NeatapticTS/src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
+`(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], options: import("src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
 
 High-level training orchestration with early stopping, smoothing & callbacks.
 
@@ -2138,7 +2140,7 @@ Returns: Summary payload containing final error, iteration count, and elapsed ti
 
 ### trainSetImpl
 
-`(net: import("C:/NeatapticTS/src/architecture/network").default, set: import("C:/NeatapticTS/src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("C:/NeatapticTS/src/architecture/network/network.types").RegularizationConfig, costFunction: import("C:/NeatapticTS/src/architecture/network/network.types").CostFunction | import("C:/NeatapticTS/src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("C:/NeatapticTS/src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
+`(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("src/architecture/network/network.types").RegularizationConfig, costFunction: import("src/architecture/network/network.types").CostFunction | import("src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
 
 Execute one full pass over dataset (epoch) with optional accumulation & adaptive optimizer.
 Returns mean cost across processed samples.
@@ -2160,7 +2162,7 @@ Returns: Mean cost across the processed samples.
 
 ### ungate
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(connection: import("src/architecture/connection").default) => void`
 
 Remove gating from a connection, restoring its static weight contribution.
 

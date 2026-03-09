@@ -10,7 +10,7 @@ Internal network state shape shared by connect utility helper modules.
 
 ### connect
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default, weight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default[]`
 
 Create and register one (or multiple) directed connection objects between two nodes.
 
@@ -43,9 +43,11 @@ Parameters:
 - `to` - - Target node (receives signal).
 - `weight` - - Optional explicit initial weight value.
 
+Returns: Array of created  {@link Connection} objects (possibly empty if acyclicity rejected the edge).
+
 ### disconnect
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => void`
 
 Remove (at most) one directed connection from source 'from' to target 'to'.
 
@@ -78,7 +80,7 @@ Parameters:
 
 ### createConnectionsFromSourceNode
 
-`(sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default, initialWeight: number | undefined) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default, initialWeight: number | undefined) => import("src/architecture/connection").default[]`
 
 Build one or more low-level connection objects from source node to target node.
 
@@ -91,7 +93,7 @@ Returns: Created low-level connection objects.
 
 ### markConnectionCachesDirtyWhenNeeded
 
-`(internalState: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectNetworkInternals, createdConnectionCount: number) => void`
+`(internalState: import("src/architecture/network/network.types").ConnectNetworkInternals, createdConnectionCount: number) => void`
 
 Mark topology and slab caches dirty when connection creation occurred.
 
@@ -103,7 +105,7 @@ Returns: Nothing.
 
 ### registerCreatedConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, internalState: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectNetworkInternals, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default, createdConnections: import("C:/NeatapticTS/src/architecture/connection").default[]) => void`
+`(network: import("src/architecture/network").default, internalState: import("src/architecture/network/network.types").ConnectNetworkInternals, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default, createdConnections: import("src/architecture/connection").default[]) => void`
 
 Register created connections in either normal-connection or self-connection storage.
 
@@ -118,7 +120,7 @@ Returns: Nothing.
 
 ### registerSingleCreatedConnection
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, internalState: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectNetworkInternals, isSelfConnection: boolean, createdConnection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(network: import("src/architecture/network").default, internalState: import("src/architecture/network/network.types").ConnectNetworkInternals, isSelfConnection: boolean, createdConnection: import("src/architecture/connection").default) => void`
 
 Register one created connection in the appropriate collection.
 
@@ -132,7 +134,7 @@ Returns: Nothing.
 
 ### shouldRejectConnectionForAcyclicMode
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, internalState: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectNetworkInternals, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(network: import("src/architecture/network").default, internalState: import("src/architecture/network/network.types").ConnectNetworkInternals, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => boolean`
 
 Determine whether an edge must be rejected to preserve acyclic ordering.
 
@@ -148,7 +150,7 @@ Returns: True when edge should be rejected.
 
 ### disconnectNodes
 
-`(sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => void`
 
 Delegate per-node disconnect cleanup.
 
@@ -160,7 +162,7 @@ Returns: Nothing.
 
 ### findConnectionIndex
 
-`(candidateConnections: import("C:/NeatapticTS/src/architecture/connection").default[], sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => number`
+`(candidateConnections: import("src/architecture/connection").default[], sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => number`
 
 Find index of the first connection matching source and target nodes.
 
@@ -173,7 +175,7 @@ Returns: Matching index or -1 when no edge is found.
 
 ### markStructureCachesDirty
 
-`(internalState: import("C:/NeatapticTS/src/architecture/network/network.types").ConnectNetworkInternals) => void`
+`(internalState: import("src/architecture/network/network.types").ConnectNetworkInternals) => void`
 
 Mark topology/slab caches dirty after structural mutation.
 
@@ -184,7 +186,7 @@ Returns: Nothing.
 
 ### removeConnectionAtIndex
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, candidateConnections: import("C:/NeatapticTS/src/architecture/connection").default[], targetConnectionIndex: number) => void`
+`(network: import("src/architecture/network").default, candidateConnections: import("src/architecture/connection").default[], targetConnectionIndex: number) => void`
 
 Remove one connection by index, ungating first if required.
 
@@ -197,7 +199,7 @@ Returns: Nothing.
 
 ### removeFirstMatchingConnection
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, candidateConnections: import("C:/NeatapticTS/src/architecture/connection").default[], sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(network: import("src/architecture/network").default, candidateConnections: import("src/architecture/connection").default[], sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => void`
 
 Remove first connection that matches source and target nodes.
 
@@ -211,7 +213,7 @@ Returns: Nothing.
 
 ### selectConnectionCollection
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, sourceNode: import("C:/NeatapticTS/src/architecture/node").default, targetNode: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(network: import("src/architecture/network").default, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => import("src/architecture/connection").default[]`
 
 Select the relevant collection to search for the edge.
 

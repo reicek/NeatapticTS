@@ -1,36 +1,14 @@
+import type { EvolutionHostAdapter } from './evolutionEngine.types';
+
 /**
- * setupHelpers.ts
+ * Setup helpers for the ASCII maze evolution engine.
  *
- * Environment and setup utilities for the evolution engine.
-   // Return  return async (): Promise<void> => {
-    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
-    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
-    while (true) {
-      await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
-      // otherwise continue and await another tick before re-checking
-    }
-  };
-};flush function used by the evolution loop.
-  return async (): Promise<void> => {
-    // Polling loop: after each tick, if the cooperative pause flag is set, wait another tick.
-    // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
-    while (true) {
-      await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
-      // otherwise continue and await another tick before re-checking
-    }
-  };
-};ibilities:
- * - Create cooperative frame-yielding functions for async evolution loops
- * - Initialize Node.js filesystem persistence helpers (fs, path)
- * - Build resilient logging writers with fallback chains
+ * Responsibilities:
+ * - Create cooperative frame-yielding helpers for async evolution loops.
+ * - Initialize Node.js persistence helpers when available.
+ * - Build resilient logging writers with dashboard and console fallbacks.
  *
- * All functions are pure/side-effect-free except where explicitly documented.
- *
- * @module setupHelpers
+ * @module evolutionEngine/setupHelpers
  */
 
 /**
@@ -66,22 +44,24 @@ export interface DashboardManagerLike {
  * Behaviour:
  * - Prefers `requestAnimationFrame` when available (browser hosts)
  * - Falls back to `setImmediate` when available (Node) or `setTimeout(...,0)` otherwise
- * - Respects a cooperative pause flag (`globalThis.asciiMazePaused`) by polling between ticks
- *   without busy-waiting. The returned function resolves once a single new frame/tick is available
- *   and the pause flag is not set
+ * - Respects an optional host adapter pause callback by polling between ticks without busy-waiting
+ * - Resolves once a single new frame or tick is available and the host is not paused
  *
  * Steps:
  * 1. Choose the preferred tick function based on the host runtime
- * 2. When called, await the preferred tick; if `asciiMazePaused` is true poll again after the tick
+ * 2. When called, await the preferred tick; if the host adapter reports pause, poll again after the tick
  * 3. Resolve once a tick passed while not paused
  *
+ * @param hostAdapter - Optional host adapter that owns cooperative pause state.
  * @returns A function that yields cooperatively to the next animation frame / tick.
  *
  * @example
  * const flushToFrame = makeFlushToFrame();
  * await flushToFrame(); // yields to next frame/tick
  */
-export const makeFlushToFrame = (): (() => Promise<void>) => {
+export const makeFlushToFrame = (
+  hostAdapter?: EvolutionHostAdapter,
+): (() => Promise<void>) => {
   // Helper factories for the three tick primitives; each returns a Promise that resolves on the next tick.
   const rafTick = () =>
     new Promise<void>((resolve) =>
@@ -117,12 +97,25 @@ export const makeFlushToFrame = (): (() => Promise<void>) => {
     // This keeps CPU usage minimal while allowing the host to pause/resume the evolution loop.
     while (true) {
       await preferredTick();
-      // Note: using a permissive read of the global pause flag; undefined => not paused.
-      if (!(globalThis as Record<string, unknown>).asciiMazePaused) return;
+      if (!isPauseRequested(hostAdapter)) return;
       // otherwise continue and await another tick before re-checking
     }
   };
 };
+
+/**
+ * Read host-controlled pause state without letting host errors break the engine.
+ *
+ * @param hostAdapter - Optional host adapter implementing pause polling.
+ * @returns True when the host asks the engine to remain paused.
+ */
+function isPauseRequested(hostAdapter?: EvolutionHostAdapter): boolean {
+  try {
+    return hostAdapter?.isPauseRequested?.() === true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Initialize persistence helpers (Node `fs` & `path`) when available and ensure the target

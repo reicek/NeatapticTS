@@ -1,10 +1,10 @@
 // Fitness evaluation logic for maze solving
 // Exports: FitnessEvaluator class with static methods
 
-import { INetwork } from './interfaces'; // Added INetwork import
+import type { INetwork } from './interfaces';
 import { MazeUtils } from './mazeUtils';
 import { MazeMovement } from './mazeMovement';
-import { IFitnessEvaluationContext } from './interfaces';
+import type { IFitnessEvaluationContext } from './fitness.types';
 
 /**
  * The `FitnessEvaluator` class is responsible for calculating the fitness of a neural network

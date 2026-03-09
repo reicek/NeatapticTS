@@ -17,6 +17,11 @@ export {
   interpolateValue,
 } from './simulation-shared/simulation-shared.math.utils';
 export {
+  computeMean,
+  computePercentile,
+  computePopulationStandardDeviation,
+} from './simulation-shared/simulation-shared.statistics.utils';
+export {
   resolveNextSpawnGapCenterY,
   resolveNextSpawnGapSize,
   resolveNextSpawnIntervalFrames,

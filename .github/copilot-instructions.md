@@ -15,6 +15,70 @@ When you touch code under `src/` or `test/`, prefer improving JSDoc so the gener
 
 Keep examples short, dependency-light, and consistent with the current public API (avoid imaginary helpers or absolute file paths).
 
+Generated README handling
+------------------------
+Folder `README.md` files inside `src/` are generated artifacts and should be treated as read-only during normal editing.
+
+When a generated `src/**/README.md` is lacking, improve the associated JSDoc in the source files that feed it instead of editing the README directly.
+
+When a generated `src/**/README.md` appears outdated relative to the code or JSDoc:
+
+- do not hand-edit the generated README,
+- run `npm run docs` to refresh generated documentation when needed,
+- consider agents pre-approved to run `npm run docs` after doc-affecting edits so README files stay synchronized and drift does not confuse later work.
+
+Folder README reconnaissance (read this before deep code search)
+---------------------------------------------------------------
+Because JSDoc is auto-compiled into each folder's `README.md`, those README files are the fastest condensed overview of a module's purpose, exported surface, neighboring files, and intended usage.
+
+Before exploring or editing a folder in `src/` or `test/`, agents should:
+
+1. Read the nearest folder `README.md` first.
+   - Example: before changing `src/architecture/network/genetic/*`, read `src/architecture/network/genetic/README.md`.
+2. Read the nearest useful parent README when the task spans multiple sibling areas.
+   - Example: pair `src/architecture/network/genetic/README.md` with `src/architecture/network/README.md`.
+3. Only then read individual source files.
+
+Use folder README files to quickly answer:
+
+- What is this folder responsible for?
+- Which files are likely orchestration files vs helper/detail files?
+- What public APIs, invariants, or examples are already documented here?
+- Which neighboring modules or tests are probably affected by a change?
+- Whether a code change should also improve JSDoc because the generated README is user-facing.
+
+This README-first pass is especially useful for:
+
+- fast codebase orientation in unfamiliar folders,
+- choosing the right edit target before opening many files,
+- planning refactors without breaking folder responsibilities,
+- spotting doc/code drift early,
+- finding likely examples and tests for a feature,
+- producing concise explanations for the user after changes.
+
+If the folder README appears stale, incomplete, or in tension with the code, treat that as a signal to improve the underlying JSDoc in the touched source files when it is safe to do so.
+
+Plan-aware execution (align changes without overloading context)
+---------------------------------------------------------------
+This repository has an active `plans/` directory with roadmap and design intent. Agents should keep work aligned with those plans, but should avoid loading the entire folder into context unless the task truly requires it.
+
+Use this lightweight plan workflow:
+
+1. For any architectural feature, roadmap item, major refactor, export format, or new subsystem work, read `plans/README.md` first as the lightweight plan index.
+2. Then read `plans/neat.plans.md` when the task touches core NEAT architecture or evolutionary correctness, or otherwise read only the single most relevant plan file from `plans/` for the task at hand.
+3. If the task touches two clearly related initiatives, read at most one additional plan file.
+4. Do not bulk-read the whole `plans/` directory by default.
+
+When applying a plan:
+
+- preserve its terminology and goals unless the user asks to revise the plan,
+- mention any visible mismatch between the codebase and the plan,
+- prefer incremental steps that move the code toward the documented direction,
+- avoid introducing APIs or architecture that conflict with a stated plan without explicitly flagging the conflict.
+
+For substantial work, agent prompts and final summaries should briefly note which README and which plan document informed the change.
+After substantial edits, keep summaries short and high level by default, and only expand into detailed walkthroughs when the user asks.
+
 **CRITICAL: Fix-first strategy for test failures**
 ---------------------------------------------------
 When asked to fix multiple test failures:
@@ -79,6 +143,44 @@ How to use these instructions
 - Always prefer to produce code that already satisfies the style guide.
 - If you cannot fully transform a file (large refactor), return a patch with clear TODO comments, an explicit list of remaining violations, and small, safe automated fixes where possible.
 - If you propose changes that alter public behavior, include tests and TypeScript typechecks.
+- Default discovery order for non-trivial tasks: relevant folder `README.md` -> parent folder `README.md` if needed -> `plans/README.md` for roadmap alignment when relevant -> the specific source files and the single most relevant detailed plan.
+- Treat generated folder READMEs as compressed context, not as a substitute for code. Use them to reduce search noise, then verify behavior in source.
+- Prefer multiple small, targeted, documented edits over large single-pass rewrites when both approaches can solve the task. This reduces breakage risk and makes generated-doc refreshes easier to verify.
+
+Standard architecture for project files
+---------------------------------------
+When splitting medium or large modules in `src/` or `test/`, prefer a dedicated folder-based module boundary instead of accumulating many sibling files at the parent level.
+
+Use this naming convention for a module named `module`:
+- `module/module.ts`
+- `module/module.utils.ts`
+- `module/module.types.ts`
+- `module/module.errors.ts`
+- `module/module.services.ts`
+- `module/module.constants.ts`
+
+Use this naming convention for a nested sub-module named `sub-module` inside `module`:
+- `module/sub-module/module.sub-module.ts`
+- `module/sub-module/module.sub-module.utils.ts`
+- `module/sub-module/module.sub-module.types.ts`
+- `module/sub-module/module.sub-module.errors.ts`
+- `module/sub-module/module.sub-module.services.ts`
+- `module/sub-module/module.sub-module.constants.ts`
+
+Interpretation rules:
+- `*.ts`: main orchestration and primary public surface for the module.
+- `*.utils.ts`: helper logic that is not the main orchestration path.
+- `*.types.ts`: interfaces, DTOs, context/result objects, and narrow contracts.
+- `*.errors.ts`: module-local error classes and error helpers.
+- `*.services.ts`: side-effecting or stateful services used by orchestration.
+- `*.constants.ts`: named constants, lookup tables, and local config values.
+
+Architecture rules:
+- Do not create a folder for every tiny file; use this pattern when a file has become a real subsystem.
+- Keep the main `module/module.ts` file orchestration-first and declarative.
+- Prefer subfolders over continued file sprawl when a module develops a clear internal subsystem.
+- Avoid one-off naming patterns during refactors; once a module is folderized, keep all follow-up files in the same naming scheme.
+- Replace broad catch-all files with narrower module-owned `*.types.ts`, `*.services.ts`, or `*.utils.ts` files rather than recreating another hub.
 
 Strict rules to enforce (apply to any suggestion touching `src/` or `test/`)
 ---------------------------------------------------------------------
@@ -122,6 +224,7 @@ Strict rules to enforce (apply to any suggestion touching `src/` or `test/`)
        3) Introduce typed context/result objects to reduce parameter sprawl
        4) Simplify top-level flow to orchestration only
        5) Fold repeated logic into collect/transform/fold helpers
+   - All new complex methods should follow a declarative above-the-fold structure: keep the exported or top-level method as step-oriented orchestration, and place the actual logic in small SRP private helpers below the fold.
    - Keep the top-level method declarative and linear, with numbered inline comments (`Step 1`, `Step 2`, ...).
    - Ensure each helper has one reason to change (SRP), very low cognitive complexity, and descriptive naming.
    - Place helper declarations after the top-level return/fold where language/style allows.

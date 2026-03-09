@@ -7,7 +7,7 @@
  * 3. Centralise RNG parameter resolution for sampling paths to keep behaviour deterministic under shared state.
  */
 
-import { EngineState } from './engineState';
+import type { EngineState } from './engineState.types';
 import { drawFastRandom, resolveRngParameters } from './rngAndTiming';
 import { MazeUtils } from '../mazeUtils';
 

@@ -16,7 +16,7 @@
  */
 
 import type { Neat, Network } from '../../../../src/neataptic';
-import { EngineState } from './engineState';
+import type { EngineState } from './engineState';
 import { drawFastRandom, resolveRngParameters } from './rngAndTiming';
 
 /** Weight initialization minimum value for warm-start connections. */

@@ -1,15 +1,7 @@
-/**
- * Shared type contract for starfield tile rendering layers.
- *
- * A tile is pre-rendered and repeated horizontally to draw efficient
- * parallax backgrounds during playback.
- */
-export type StarTile = {
-  image: CanvasImageSource;
-  tileWidthPx: number;
-  tileHeightPx: number;
-  scrollRatio: number;
-};
+export type {
+  PlaybackStarfieldLayerSpec,
+  StarTile,
+} from './playback.starfield.types';
 
 /**
  * Axis-aligned visible world bounds used for edge-aware trail fading.

@@ -28,10 +28,6 @@ rounded network outputs (thresholded at 0.5) against the target labels.
 It assumes target values are 0 or 1, and outputs are probabilities between 0 and 1.
 Note: This is equivalent to `1 - accuracy` for binary classification.
 
-Parameters:
-- `` - - An array of target values, expected to be 0 or 1.
-- `` - - An array of output values from the network, typically probabilities between 0 and 1.
-
 Returns: The proportion of misclassified samples (error rate, between 0 and 1).
 
 #### crossEntropy
@@ -47,10 +43,6 @@ predicted probability diverges from the actual label.
 It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent `log(0)` which would result in `NaN`.
 Output values are clamped to the range `[epsilon, 1 - epsilon]` for numerical stability.
 
-Parameters:
-- `` - - An array of target values, typically 0 or 1 for binary classification, or probabilities for soft labels.
-- `` - - An array of output values from the network, representing probabilities (expected to be between 0 and 1).
-
 Returns: The mean cross-entropy error over all samples.
 
 #### focalLoss
@@ -59,12 +51,6 @@ Returns: The mean cross-entropy error over all samples.
 
 Calculates the Focal Loss, which is useful for addressing class imbalance in classification tasks.
 Focal loss down-weights easy examples and focuses training on hard negatives.
-
-Parameters:
-- `` - - Array of target values (0 or 1 for binary, or probabilities for soft labels).
-- `` - - Array of predicted probabilities (between 0 and 1).
-- `` - - Focusing parameter (default 2).
-- `` - - Balancing parameter (default 0.25).
 
 Returns: The mean focal loss.
 
@@ -79,10 +65,6 @@ Hinge loss is used for training classifiers. It penalizes predictions that are
 not only incorrect but also those that are correct but not confident (i.e., close to the decision boundary).
 Assumes target values are encoded as -1 or 1.
 
-Parameters:
-- `` - - An array of target values, expected to be -1 or 1.
-- `` - - An array of output values from the network (raw scores, not necessarily probabilities).
-
 Returns: The mean hinge loss.
 
 #### labelSmoothing
@@ -91,11 +73,6 @@ Returns: The mean hinge loss.
 
 Calculates the Cross Entropy with Label Smoothing.
 Label smoothing prevents the model from becoming overconfident by softening the targets.
-
-Parameters:
-- `` - - Array of target values (0 or 1 for binary, or probabilities for soft labels).
-- `` - - Array of predicted probabilities (between 0 and 1).
-- `` - - Smoothing factor (between 0 and 1, e.g., 0.1).
 
 Returns: The mean cross-entropy loss with label smoothing.
 
@@ -107,10 +84,6 @@ Calculates the Mean Absolute Error (MAE), another common loss function for regre
 
 MAE measures the average of the absolute differences between predictions and actual values.
 Compared to MSE, it is less sensitive to outliers because errors are not squared.
-
-Parameters:
-- `` - - An array of target numerical values.
-- `` - - An array of output values from the network.
 
 Returns: The mean absolute error.
 
@@ -125,10 +98,6 @@ for understanding the error relative to the magnitude of the target values.
 However, it has limitations: it's undefined when the target value is zero and
 can be skewed by target values close to zero.
 
-Parameters:
-- `` - - An array of target numerical values. Should not contain zeros for standard MAPE.
-- `` - - An array of output values from the network.
-
 Returns: The mean absolute percentage error, expressed as a proportion (e.g., 0.1 for 10%).
 
 #### mse
@@ -140,10 +109,6 @@ Calculates the Mean Squared Error (MSE), a common loss function for regression t
 MSE measures the average of the squares of the errors—that is, the average
 squared difference between the estimated values and the actual value.
 It is sensitive to outliers due to the squaring of the error terms.
-
-Parameters:
-- `` - - An array of target numerical values.
-- `` - - An array of output values from the network.
 
 Returns: The mean squared error.
 
@@ -158,10 +123,6 @@ or when penalizing under-predictions more than over-predictions is desired.
 It measures the squared difference between the logarithms of the predicted and actual values.
 Uses `log(1 + x)` instead of `log(x)` for numerical stability and to handle inputs of 0.
 Assumes both targets and outputs are non-negative.
-
-Parameters:
-- `` - - An array of target numerical values (assumed >= 0).
-- `` - - An array of output values from the network (assumed >= 0).
 
 Returns: The mean squared logarithmic error.
 
@@ -382,10 +343,6 @@ rounded network outputs (thresholded at 0.5) against the target labels.
 It assumes target values are 0 or 1, and outputs are probabilities between 0 and 1.
 Note: This is equivalent to `1 - accuracy` for binary classification.
 
-Parameters:
-- `` - - An array of target values, expected to be 0 or 1.
-- `` - - An array of output values from the network, typically probabilities between 0 and 1.
-
 Returns: The proportion of misclassified samples (error rate, between 0 and 1).
 
 #### cosineAnnealing
@@ -434,10 +391,6 @@ predicted probability diverges from the actual label.
 It uses a small epsilon (PROB_EPSILON = 1e-15) to prevent `log(0)` which would result in `NaN`.
 Output values are clamped to the range `[epsilon, 1 - epsilon]` for numerical stability.
 
-Parameters:
-- `` - - An array of target values, typically 0 or 1 for binary classification, or probabilities for soft labels.
-- `` - - An array of output values from the network, representing probabilities (expected to be between 0 and 1).
-
 Returns: The mean cross-entropy error over all samples.
 
 #### exp
@@ -482,12 +435,6 @@ Returns: A function that takes the base learning rate and the current iteration 
 Calculates the Focal Loss, which is useful for addressing class imbalance in classification tasks.
 Focal loss down-weights easy examples and focuses training on hard negatives.
 
-Parameters:
-- `` - - Array of target values (0 or 1 for binary, or probabilities for soft labels).
-- `` - - Array of predicted probabilities (between 0 and 1).
-- `` - - Focusing parameter (default 2).
-- `` - - Balancing parameter (default 0.25).
-
 Returns: The mean focal loss.
 
 #### hinge
@@ -500,10 +447,6 @@ most notably for Support Vector Machines (SVMs).
 Hinge loss is used for training classifiers. It penalizes predictions that are
 not only incorrect but also those that are correct but not confident (i.e., close to the decision boundary).
 Assumes target values are encoded as -1 or 1.
-
-Parameters:
-- `` - - An array of target values, expected to be -1 or 1.
-- `` - - An array of output values from the network (raw scores, not necessarily probabilities).
 
 Returns: The mean hinge loss.
 
@@ -534,11 +477,6 @@ Returns: A function that calculates the inversely decayed learning rate for a gi
 Calculates the Cross Entropy with Label Smoothing.
 Label smoothing prevents the model from becoming overconfident by softening the targets.
 
-Parameters:
-- `` - - Array of target values (0 or 1 for binary, or probabilities for soft labels).
-- `` - - Array of predicted probabilities (between 0 and 1).
-- `` - - Smoothing factor (between 0 and 1, e.g., 0.1).
-
 Returns: The mean cross-entropy loss with label smoothing.
 
 #### linearWarmupDecay
@@ -563,10 +501,6 @@ Calculates the Mean Absolute Error (MAE), another common loss function for regre
 MAE measures the average of the absolute differences between predictions and actual values.
 Compared to MSE, it is less sensitive to outliers because errors are not squared.
 
-Parameters:
-- `` - - An array of target numerical values.
-- `` - - An array of output values from the network.
-
 Returns: The mean absolute error.
 
 #### mape
@@ -580,10 +514,6 @@ for understanding the error relative to the magnitude of the target values.
 However, it has limitations: it's undefined when the target value is zero and
 can be skewed by target values close to zero.
 
-Parameters:
-- `` - - An array of target numerical values. Should not contain zeros for standard MAPE.
-- `` - - An array of output values from the network.
-
 Returns: The mean absolute percentage error, expressed as a proportion (e.g., 0.1 for 10%).
 
 #### mse
@@ -595,10 +525,6 @@ Calculates the Mean Squared Error (MSE), a common loss function for regression t
 MSE measures the average of the squares of the errors—that is, the average
 squared difference between the estimated values and the actual value.
 It is sensitive to outliers due to the squaring of the error terms.
-
-Parameters:
-- `` - - An array of target numerical values.
-- `` - - An array of output values from the network.
 
 Returns: The mean squared error.
 
@@ -613,10 +539,6 @@ or when penalizing under-predictions more than over-predictions is desired.
 It measures the squared difference between the logarithms of the predicted and actual values.
 Uses `log(1 + x)` instead of `log(x)` for numerical stability and to handle inputs of 0.
 Assumes both targets and outputs are non-negative.
-
-Parameters:
-- `` - - An array of target numerical values (assumed >= 0).
-- `` - - An array of output values from the network (assumed >= 0).
 
 Returns: The mean squared logarithmic error.
 
@@ -703,7 +625,7 @@ but can slow down the search process.
 
 ### registerCustomActivation
 
-`(activationName: string, activationFunction: import("C:/NeatapticTS/src/methods/activation.utils").ActivationFunction) => void`
+`(activationName: string, activationFunction: import("src/methods/activation.utils").ActivationFunction) => void`
 
 ## methods/connection.ts
 
@@ -935,7 +857,7 @@ Useful for any stateless schedule strategy.
 
 ### createCosineAnnealingRateSchedule
 
-`(period: number, minimumRate: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(period: number, minimumRate: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns a cosine annealing learning rate schedule.
 
@@ -947,7 +869,7 @@ Returns: A learning rate schedule implementing cosine annealing.
 
 ### createCosineAnnealingWarmRestartsSchedule
 
-`(initialPeriod: number, minimumRate: number, periodGrowthMultiplier: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(initialPeriod: number, minimumRate: number, periodGrowthMultiplier: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns a cosine annealing schedule with warm restarts and growing cycles.
 
@@ -960,7 +882,7 @@ Returns: A learning rate schedule implementing SGDR-style warm restarts.
 
 ### createExponentialRateSchedule
 
-`(decayFactor: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(decayFactor: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns an exponential decay learning rate schedule.
 
@@ -971,7 +893,7 @@ Returns: A learning rate schedule implementing exponential decay.
 
 ### createFixedRateSchedule
 
-`() => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`() => import("src/methods/rate.utils").RateSchedule`
 
 Returns a schedule that always yields the base learning rate.
 
@@ -979,7 +901,7 @@ Returns: A learning rate schedule that ignores iteration and returns baseRate.
 
 ### createInverseRateSchedule
 
-`(decayFactor: number, decayPower: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(decayFactor: number, decayPower: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns an inverse decay learning rate schedule.
 
@@ -991,7 +913,7 @@ Returns: A learning rate schedule implementing inverse decay.
 
 ### createLinearWarmupDecaySchedule
 
-`(totalStepCount: number, warmupStepCount: number | undefined, endRate: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(totalStepCount: number, warmupStepCount: number | undefined, endRate: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns a linear warmup followed by linear decay schedule.
 
@@ -1004,7 +926,7 @@ Returns: A learning rate schedule implementing warmup then decay.
 
 ### createReduceOnPlateauSchedule
 
-`(options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined) => import("C:/NeatapticTS/src/methods/rate.utils").ReduceOnPlateauSchedule`
+`(options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined) => import("src/methods/rate.utils").ReduceOnPlateauSchedule`
 
 Returns a ReduceLROnPlateau-style schedule that lowers the rate when no improvement is seen.
 
@@ -1015,7 +937,7 @@ Returns: A stateful schedule that reacts to lack of improvement.
 
 ### createStepRateSchedule
 
-`(decayFactor: number, decayStepSize: number) => import("C:/NeatapticTS/src/methods/rate.utils").RateSchedule`
+`(decayFactor: number, decayStepSize: number) => import("src/methods/rate.utils").RateSchedule`
 
 Returns a step decay learning rate schedule.
 

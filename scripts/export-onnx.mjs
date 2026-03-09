@@ -21,7 +21,7 @@ const flag = (name) => args.includes(name);
 
 if (flag('--help') || flag('-h')) {
   console.log(
-    `Usage: node scripts/export-onnx.mjs --in network.json --out model.onnx.json [--metadata] [--batch] [--legacy] [--partial] [--mixed]\n`
+    `Usage: node scripts/export-onnx.mjs --in network.json --out model.onnx.json [--metadata] [--batch] [--legacy] [--partial] [--mixed]\n`,
   );
   process.exit(0);
 }
@@ -48,7 +48,7 @@ async function loadDist() {
     // Fallback to network/network.onnx if direct path changed
     return import(
       pathToFileURL(
-        path.resolve('dist', 'architecture', 'network', 'network.onnx.js')
+        path.resolve('dist', 'architecture', 'network', 'network.onnx.js'),
       ).href
     );
   });
@@ -76,7 +76,7 @@ async function loadDist() {
     fs.writeFileSync(
       path.resolve(outputFile),
       JSON.stringify(onnx, null, 2),
-      'utf8'
+      'utf8',
     );
     console.log(`ONNX JSON written to ${outputFile}`);
   } catch (err) {

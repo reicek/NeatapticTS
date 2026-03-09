@@ -6,7 +6,7 @@ function copyAsciiMaze() {
   const srcDir = path.resolve('test', 'examples', 'asciiMaze');
   if (!fs.existsSync(srcDir)) {
     console.warn(
-      '[docs:examples] asciiMaze source directory not found, skipping'
+      '[docs:examples] asciiMaze source directory not found, skipping',
     );
     return;
   }
@@ -26,7 +26,7 @@ function copyFlappyBird() {
   const srcDir = path.resolve('test', 'examples', 'flappy_bird');
   if (!fs.existsSync(srcDir)) {
     console.warn(
-      '[docs:examples] flappy_bird source directory not found, skipping'
+      '[docs:examples] flappy_bird source directory not found, skipping',
     );
     return;
   }
@@ -47,7 +47,11 @@ function writeExamplesLandingPage() {
   fs.mkdirSync(examplesDir, { recursive: true });
 
   const demoEntries = [
-    { dirName: 'asciiMaze', label: 'asciiMaze', title: 'ASCII Maze (NeatapticTS)' },
+    {
+      dirName: 'asciiMaze',
+      label: 'asciiMaze',
+      title: 'ASCII Maze (NeatapticTS)',
+    },
     {
       dirName: 'flappy_bird',
       label: 'flappy_bird',
@@ -57,11 +61,11 @@ function writeExamplesLandingPage() {
 
   const linksMarkup = demoEntries
     .filter((entry) =>
-      fs.existsSync(path.join(examplesDir, entry.dirName, 'index.html'))
+      fs.existsSync(path.join(examplesDir, entry.dirName, 'index.html')),
     )
     .map(
       (entry) =>
-        `<li><a href="./${entry.dirName}/index.html">${entry.title}</a> <span class="demo-path">(examples/${entry.label})</span></li>`
+        `<li><a href="./${entry.dirName}/index.html">${entry.title}</a> <span class="demo-path">(examples/${entry.label})</span></li>`,
     )
     .join('');
 

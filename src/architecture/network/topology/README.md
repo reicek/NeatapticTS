@@ -51,7 +51,7 @@ Design Notes:
 
 ### createMLP
 
-`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("C:/NeatapticTS/src/architecture/network").default`
+`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("src/architecture/network").default`
 
 Build a strictly layered and fully connected MLP network.
 
@@ -65,13 +65,13 @@ Returns: Newly created MLP network.
 
 ### hasPath
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
 
 Depth-first reachability test (avoids infinite loops via visited set).
 
 ### rebuildConnections
 
-`(networkInstance: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(networkInstance: import("src/architecture/network").default) => void`
 
 Rebuild the canonical connection array from per-node outgoing lists.
 
@@ -82,7 +82,7 @@ Parameters:
 
 ### appendTopoNode
 
-`(topoOrder: import("C:/NeatapticTS/src/architecture/node").default[], node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(topoOrder: import("src/architecture/node").default[], node: import("src/architecture/node").default) => void`
 
 Append one node to topological order output.
 
@@ -94,7 +94,7 @@ Returns: Void.
 
 ### decrementNodeInDegree
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext, node: import("C:/NeatapticTS/src/architecture/node").default) => number`
+`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext, node: import("src/architecture/node").default) => number`
 
 Decrement node in-degree and return remaining value.
 
@@ -106,7 +106,7 @@ Returns: Remaining in-degree after decrement.
 
 ### getInDegree
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext, node: import("C:/NeatapticTS/src/architecture/node").default) => number`
+`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext, node: import("src/architecture/node").default) => number`
 
 Read in-degree for a node with zero fallback.
 
@@ -118,7 +118,7 @@ Returns: In-degree value.
 
 ### isInputNode
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(node: import("src/architecture/node").default) => boolean`
 
 Test whether a node is an input node.
 
@@ -129,7 +129,7 @@ Returns: True when node type is input.
 
 ### isQueueSeedNode
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default, buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext) => boolean`
+`(node: import("src/architecture/node").default, buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => boolean`
 
 Determine whether a node belongs in the initial queue.
 
@@ -141,7 +141,7 @@ Returns: True when node is input-type or has zero in-degree.
 
 ### isSelfConnection
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
 
 Test whether a connection is a self-loop.
 
@@ -153,7 +153,7 @@ Returns: True when source and target are the same node.
 
 ### processKahnQueue
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext) => void`
+`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => void`
 
 Process queue until all available nodes are emitted.
 
@@ -164,7 +164,7 @@ Returns: Void.
 
 ### relaxOutgoingEdges
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext, currentNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext, currentNode: import("src/architecture/node").default) => void`
 
 Relax outgoing edges for one processed node.
 
@@ -176,7 +176,7 @@ Returns: Void.
 
 ### seedProcessingQueue
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext) => void`
+`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => void`
 
 Seed Kahn queue with input nodes and zero in-degree nodes.
 
@@ -187,7 +187,7 @@ Returns: Void.
 
 ### takeNextQueueNode
 
-`(processingQueue: import("C:/NeatapticTS/src/architecture/node").default[]) => import("C:/NeatapticTS/src/architecture/node").default`
+`(processingQueue: import("src/architecture/node").default[]) => import("src/architecture/node").default`
 
 Shift and return the next queue node.
 
@@ -200,7 +200,7 @@ Returns: Next node.
 
 ### createPathSearchContext
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/network/network.types").PathSearchContext`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => import("src/architecture/network/network.types").PathSearchContext`
 
 Create DFS search context.
 
@@ -212,7 +212,7 @@ Returns: Initialized path-search context.
 
 ### hasVisitedNode
 
-`(visitedNodes: Set<import("C:/NeatapticTS/src/architecture/node").default>, node: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(visitedNodes: Set<import("src/architecture/node").default>, node: import("src/architecture/node").default) => boolean`
 
 Test whether a node has already been visited.
 
@@ -224,7 +224,7 @@ Returns: True when node is already visited.
 
 ### isSameNode
 
-`(leftNode: import("C:/NeatapticTS/src/architecture/node").default, rightNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(leftNode: import("src/architecture/node").default, rightNode: import("src/architecture/node").default) => boolean`
 
 Compare node identity.
 
@@ -236,7 +236,7 @@ Returns: True when references are identical.
 
 ### isSelfConnection
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
 
 Test whether a connection is a self-loop.
 
@@ -248,7 +248,7 @@ Returns: True when source and target are the same node.
 
 ### markVisited
 
-`(visitedNodes: Set<import("C:/NeatapticTS/src/architecture/node").default>, node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(visitedNodes: Set<import("src/architecture/node").default>, node: import("src/architecture/node").default) => void`
 
 Mark a node as visited.
 
@@ -260,7 +260,7 @@ Returns: Void.
 
 ### pushOutgoingTargets
 
-`(nodesToVisitStack: import("C:/NeatapticTS/src/architecture/node").default[], currentNode: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(nodesToVisitStack: import("src/architecture/node").default[], currentNode: import("src/architecture/node").default) => void`
 
 Push non-self outgoing targets to DFS stack.
 
@@ -272,7 +272,7 @@ Returns: Void.
 
 ### takeNextStackNode
 
-`(nodesToVisitStack: import("C:/NeatapticTS/src/architecture/node").default[]) => import("C:/NeatapticTS/src/architecture/node").default`
+`(nodesToVisitStack: import("src/architecture/node").default[]) => import("src/architecture/node").default`
 
 Pop and return next DFS stack node.
 
@@ -283,7 +283,7 @@ Returns: Next node to process.
 
 ### traversePathSearch
 
-`(searchContext: import("C:/NeatapticTS/src/architecture/network/network.types").PathSearchContext) => boolean`
+`(searchContext: import("src/architecture/network/network.types").PathSearchContext) => boolean`
 
 Traverse DFS search stack and test reachability.
 
@@ -296,7 +296,7 @@ Returns: True when target node is reachable.
 
 ### applyIncomingEdgeCounts
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext) => void`
+`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => void`
 
 Apply in-degree increments from non-self connections.
 
@@ -307,7 +307,7 @@ Returns: Void.
 
 ### asTopologyProps
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").TopologyNetworkProps`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").TopologyNetworkProps`
 
 Cast network to internal topology props view.
 
@@ -318,7 +318,7 @@ Returns: Internal topology props view.
 
 ### clearCachedTopoOrder
 
-`(internalTopologyProps: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyNetworkProps) => void`
+`(internalTopologyProps: import("src/architecture/network/network.types").TopologyNetworkProps) => void`
 
 Clear cached topological order state.
 
@@ -329,7 +329,7 @@ Returns: Void.
 
 ### createTopologyBuildContext
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, internalTopologyProps: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyNetworkProps) => import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext`
+`(network: import("src/architecture/network").default, internalTopologyProps: import("src/architecture/network/network.types").TopologyNetworkProps) => import("src/architecture/network/network.types").TopologyBuildContext`
 
 Create mutable build context for Kahn traversal.
 
@@ -341,7 +341,7 @@ Returns: Initialized build context.
 
 ### finalizeTopoOrder
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext) => void`
+`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => void`
 
 Finalize cached order, falling back to raw node order on cycle detection.
 
@@ -352,7 +352,7 @@ Returns: Void.
 
 ### incrementNodeInDegree
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext, node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext, node: import("src/architecture/node").default) => void`
 
 Increment in-degree for a node in the tally map.
 
@@ -364,7 +364,7 @@ Returns: Void.
 
 ### initializeAllNodeInDegreeCounts
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext) => void`
+`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => void`
 
 Initialize all nodes with zero in-degree.
 
@@ -375,7 +375,7 @@ Returns: Void.
 
 ### isSelfConnection
 
-`(from: import("C:/NeatapticTS/src/architecture/node").default, to: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
 
 Test whether a connection is a self-loop.
 
@@ -387,7 +387,7 @@ Returns: True when source and target are the same node.
 
 ### resolveFinalOrder
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyBuildContext) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => import("src/architecture/node").default[]`
 
 Resolve final topological order with cycle fallback.
 
@@ -398,7 +398,7 @@ Returns: Fully valid topological order or raw node order fallback.
 
 ### shouldUseRawNodeOrder
 
-`(internalTopologyProps: import("C:/NeatapticTS/src/architecture/network/network.types").TopologyNetworkProps) => boolean`
+`(internalTopologyProps: import("src/architecture/network/network.types").TopologyNetworkProps) => boolean`
 
 Determine whether topological order should be bypassed.
 
@@ -411,7 +411,7 @@ Returns: True when acyclic mode is disabled.
 
 ### addOutgoingConnectionsToSet
 
-`(outgoingConnections: import("C:/NeatapticTS/src/architecture/connection").default[], allConnections: Set<import("C:/NeatapticTS/src/architecture/connection").default>) => void`
+`(outgoingConnections: import("src/architecture/connection").default[], allConnections: Set<import("src/architecture/connection").default>) => void`
 
 Add all outgoing connections to a deduplication set.
 
@@ -421,7 +421,7 @@ Parameters:
 
 ### assignNetworkNodes
 
-`(networkInstance: import("C:/NeatapticTS/src/architecture/network").default, mlpNodeLayers: MlpNodeLayers) => void`
+`(networkInstance: import("src/architecture/network").default, mlpNodeLayers: MlpNodeLayers) => void`
 
 Assign ordered nodes to the network instance.
 
@@ -431,7 +431,7 @@ Parameters:
 
 ### collectUniqueOutgoingConnections
 
-`(networkInstance: import("C:/NeatapticTS/src/architecture/network").default) => Set<import("C:/NeatapticTS/src/architecture/connection").default>`
+`(networkInstance: import("src/architecture/network").default) => Set<import("src/architecture/connection").default>`
 
 Collect unique outgoing connections across all network nodes.
 
@@ -442,7 +442,7 @@ Returns: Set of unique outgoing connections.
 
 ### connectLayerPair
 
-`(sourceLayer: import("C:/NeatapticTS/src/architecture/node").default[], targetLayer: import("C:/NeatapticTS/src/architecture/node").default[]) => void`
+`(sourceLayer: import("src/architecture/node").default[], targetLayer: import("src/architecture/node").default[]) => void`
 
 Fully connect every source node to every target node.
 
@@ -461,7 +461,7 @@ Parameters:
 
 ### convertConnectionSetToArray
 
-`(uniqueConnections: Set<import("C:/NeatapticTS/src/architecture/connection").default>) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(uniqueConnections: Set<import("src/architecture/connection").default>) => import("src/architecture/connection").default[]`
 
 Convert a connection set into the canonical array format.
 
@@ -472,7 +472,7 @@ Returns: Array of network connections.
 
 ### createHiddenLayers
 
-`(hiddenCounts: number[]) => import("C:/NeatapticTS/src/architecture/node").default[][]`
+`(hiddenCounts: number[]) => import("src/architecture/node").default[][]`
 
 Create all hidden layers for an MLP topology.
 
@@ -483,7 +483,7 @@ Returns: Hidden layers in forward order.
 
 ### createMLP
 
-`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("C:/NeatapticTS/src/architecture/network").default`
+`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("src/architecture/network").default`
 
 Build a strictly layered and fully connected MLP network.
 
@@ -510,7 +510,7 @@ Returns: Grouped node layers for MLP assembly.
 
 ### createNodesOfType
 
-`(nodeCount: number, nodeType: "input" | "output" | "hidden") => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(nodeCount: number, nodeType: "input" | "output" | "hidden") => import("src/architecture/node").default[]`
 
 Create all nodes for a single fixed node type.
 
@@ -522,7 +522,7 @@ Returns: Node list of the requested type.
 
 ### createOrderedNodeList
 
-`(mlpNodeLayers: MlpNodeLayers) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(mlpNodeLayers: MlpNodeLayers) => import("src/architecture/node").default[]`
 
 Build the canonical ordered node list used by the network.
 
@@ -533,7 +533,7 @@ Returns: Ordered node list: input, hidden, then output.
 
 ### flattenNodeLayers
 
-`(nodeLayers: import("C:/NeatapticTS/src/architecture/node").default[][]) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(nodeLayers: import("src/architecture/node").default[][]) => import("src/architecture/node").default[]`
 
 Flatten layered node collections into a single ordered list.
 
@@ -544,7 +544,7 @@ Returns: Flattened node list.
 
 ### instantiateNetwork
 
-`(networkFactory: NetworkConstructor, inputCount: number, outputCount: number) => import("C:/NeatapticTS/src/architecture/network").default`
+`(networkFactory: NetworkConstructor, inputCount: number, outputCount: number) => import("src/architecture/network").default`
 
 Instantiate a new network using the runtime constructor.
 
@@ -557,7 +557,7 @@ Returns: Newly instantiated network.
 
 ### markTopologyDirty
 
-`(networkInstance: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(networkInstance: import("src/architecture/network").default) => void`
 
 Mark a network topology as dirty after structural edits.
 
@@ -566,7 +566,7 @@ Parameters:
 
 ### rebuildConnections
 
-`(networkInstance: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(networkInstance: import("src/architecture/network").default) => void`
 
 Rebuild the canonical connection array from per-node outgoing lists.
 
@@ -577,7 +577,7 @@ Parameters:
 
 ### createArchitectureDescriptor
 
-`(hiddenLayerSizes: number[], hasCycles: boolean, source: import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureSource, totalNodes: number, totalConnections: number) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor`
+`(hiddenLayerSizes: number[], hasCycles: boolean, source: import("src/architecture/network/network.types").NetworkArchitectureSource, totalNodes: number, totalConnections: number) => import("src/architecture/network/network.types").NetworkArchitectureDescriptor`
 
 Creates the final immutable descriptor shape used by telemetry and UI code.
 
@@ -624,7 +624,7 @@ Returns: Node map keyed by stable node index.
 
 ### describeArchitecture
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/network.types").NetworkArchitectureDescriptor`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkArchitectureDescriptor`
 
 Describes network architecture for diagnostics, telemetry, and UI rendering.
 

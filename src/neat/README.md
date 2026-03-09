@@ -291,7 +291,7 @@ Minimal telemetry stream options for streaming helpers.
 
 ### exportRngState
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost) => number | undefined`
+`(host: import("src/neat/neat.rng.utils").RngHost) => number | undefined`
 
 Export the current RNG state for persistence.
 
@@ -302,7 +302,7 @@ Returns: The numeric RNG state or undefined when not set.
 
 ### getOrCreateRng
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost) => () => number`
+`(host: import("src/neat/neat.rng.utils").RngHost) => () => number`
 
 Return a cached RNG or create a deterministic xorshift RNG when absent.
 
@@ -317,13 +317,13 @@ Returns: A function that yields a uniform random value in [0, 1).
 
 ### importRngState
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost, state: string | number | undefined) => void`
+`(host: import("src/neat/neat.rng.utils").RngHost, state: string | number | undefined) => void`
 
 Alias for restoring RNG state kept for compatibility with prior surface.
 
 ### restoreRngState
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost, state: string | number | undefined) => void`
+`(host: import("src/neat/neat.rng.utils").RngHost, state: string | number | undefined) => void`
 
 Restore a previously captured RNG state.
 
@@ -351,7 +351,7 @@ Minimal host surface required by the RNG utilities.
 
 ### sampleRandomSequence
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost, sampleCount: number) => number[]`
+`(host: import("src/neat/neat.rng.utils").RngHost, sampleCount: number) => number[]`
 
 Produce a sequence of random samples using the host RNG.
 
@@ -363,7 +363,7 @@ Returns: Array of random samples in [0, 1).
 
 ### snapshotRngState
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost) => number | undefined`
+`(host: import("src/neat/neat.rng.utils").RngHost) => number | undefined`
 
 Snapshot the current RNG state for deterministic replay.
 
@@ -387,17 +387,17 @@ Parameters:
 
 ### _compatibilityDistance
 
-`(genomeA: import("C:/NeatapticTS/src/neat/neat.compat.utils").GenomeLike, genomeB: import("C:/NeatapticTS/src/neat/neat.compat.utils").GenomeLike) => number`
+`(genomeA: import("src/neat/neat.compat.utils").GenomeLike, genomeB: import("src/neat/neat.compat.utils").GenomeLike) => number`
 
 ### _fallbackInnov
 
-`(connection: import("C:/NeatapticTS/src/neat/neat.compat.utils").ConnectionLike) => number`
+`(connection: import("src/neat/neat.compat.utils").ConnectionLike) => number`
 
 ## neat/neat.evolve.ts
 
 ### evolve
 
-`() => Promise<import("C:/NeatapticTS/src/architecture/network").default>`
+`() => Promise<import("src/architecture/network").default>`
 
 Run a single evolution step for this NEAT population.
 
@@ -486,7 +486,7 @@ Returns: a deep-cloned Network representing the best genome
 
 ### exportPopulation
 
-`() => import("C:/NeatapticTS/src/neat/neat.export").GenomeJSON[]`
+`() => import("src/neat/neat.export").GenomeJSON[]`
 
 Export the current population (array of genomes) into plain JSON objects.
 Each genome is converted via its `toJSON()` method. You can persist this
@@ -509,7 +509,7 @@ Returns: Array of genome JSON objects.
 
 ### exportState
 
-`() => import("C:/NeatapticTS/src/neat/neat.export").NeatStateJSON`
+`() => import("src/neat/neat.export").NeatStateJSON`
 
 Convenience helper that returns a full evolutionary snapshot: both NEAT meta
 information and the serialized population array. Use this when you want a
@@ -525,9 +525,11 @@ const raw = JSON.parse(fs.readFileSync('state.json','utf8')) as NeatStateJSON;
 const neat2 = Neat.importState(raw, fitnessFn); // identical evolutionary context
 ```
 
+Returns: A  {@link NeatStateJSON} bundle containing meta + population.
+
 ### fromJSONImpl
 
-`(neatJSON: import("C:/NeatapticTS/src/neat/neat.export").NeatMetaJSON, fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>) => NeatControllerForExport`
+`(neatJSON: import("src/neat/neat.export").NeatMetaJSON, fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>) => NeatControllerForExport`
 
 Static-style implementation that rehydrates a NEAT instance from previously
 exported meta JSON produced by {@link toJSONImpl}. This does *not* restore a
@@ -561,7 +563,7 @@ Genome with toJSON serialization method.
 
 ### importPopulation
 
-`(populationJSON: import("C:/NeatapticTS/src/neat/neat.export").GenomeJSON[]) => Promise<void>`
+`(populationJSON: import("src/neat/neat.export").GenomeJSON[]) => Promise<void>`
 
 Import (replace) the current population from an array of serialized genomes.
 This does not touch NEAT meta state (generation, innovations, etc.)—only the
@@ -584,7 +586,7 @@ Parameters:
 
 ### importStateImpl
 
-`(stateBundle: import("C:/NeatapticTS/src/neat/neat.export").NeatStateJSON, fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>) => Promise<NeatControllerForExport>`
+`(stateBundle: import("src/neat/neat.export").NeatStateJSON, fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>) => Promise<NeatControllerForExport>`
 
 Static-style helper that rehydrates a full evolutionary state previously
 produced by {@link exportState}. Invoke this with the NEAT *class* (not an
@@ -606,7 +608,6 @@ neat.evolve();
 
 Parameters:
 - `stateBundle` - Full state bundle from  {@link exportState} .
- *
 - `fitnessFunction` - Fitness evaluation callback used for new instance.
 
 Returns: Rehydrated NEAT instance ready to continue evolving.
@@ -642,7 +643,7 @@ Network class with static fromJSON method.
 
 ### toJSONImpl
 
-`() => import("C:/NeatapticTS/src/neat/neat.export").NeatMetaJSON`
+`() => import("src/neat/neat.export").NeatMetaJSON`
 
 Serialize NEAT meta (excluding the mutable population) for persistence of
 innovation history and experiment configuration. This is sufficient to
@@ -754,7 +755,7 @@ Glossary:
 
 ### buildAnc
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike) => Set<number>`
+`(genome: import("src/neat/neat.lineage.utils").GenomeLike) => Set<number>`
 
 Build the (shallow) ancestor ID set for a single genome using breadth‑first traversal.
 
@@ -873,7 +874,7 @@ Notes for docs:
 
 ### getSpeciesHistory
 
-`() => import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[]`
+`() => import("src/neat/neat.types").SpeciesHistoryEntry[]`
 
 Retrieve the recorded species history across generations.
 
@@ -1148,13 +1149,13 @@ Returns: Promise<void> resolves after evaluation and adaptive updates complete.
 
 ### ensureMinHiddenNodes
 
-`(network: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, multiplierOverride: number | undefined) => Promise<void>`
+`(network: import("src/neat/neat.mutation.types").GenomeWithMetadata, multiplierOverride: number | undefined) => Promise<void>`
 
 Ensure the network has a minimum number of hidden nodes and connectivity.
 
 ### ensureNoDeadEnds
 
-`(network: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => void`
+`(network: import("src/neat/neat.mutation.types").GenomeWithMetadata) => void`
 
 Ensure there are no dead-end nodes (input/output isolation) in the network.
 
@@ -1185,7 +1186,7 @@ neat.mutate();
 
 ### mutateAddConnReuse
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata) => void`
 
 Add a connection between two previously unconnected nodes, reusing a
 stable innovation id per unordered node pair when possible.
@@ -1213,7 +1214,7 @@ Parameters:
 
 ### mutateAddNodeReuse
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => Promise<void>`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata) => Promise<void>`
 
 Split a randomly chosen enabled connection and insert a hidden node.
 
@@ -1243,7 +1244,7 @@ Parameters:
 
 ### selectMutationMethod
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, rawReturnForTest: boolean) => Promise<import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[] | null>`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, rawReturnForTest: boolean) => Promise<import("src/neat/neat.mutation.types").MutationMethod | import("src/neat/neat.mutation.types").MutationMethod[] | null>`
 
 Select a mutation method respecting structural constraints and adaptive controllers.
 Mirrors legacy implementation from `neat.ts` to preserve test expectations.
@@ -1271,7 +1272,7 @@ numbers and simplifies tuning while refactoring.
 
 ### computeDiversityStats
 
-`(population: import("C:/NeatapticTS/src/neat/neat.diversity.utils").GenomeWithMetrics[], compatibilityComputer: import("C:/NeatapticTS/src/neat/neat.diversity.utils").CompatComputer) => import("C:/NeatapticTS/src/neat/neat.diversity.utils").DiversityStats | undefined`
+`(population: import("src/neat/neat.diversity.utils").GenomeWithMetrics[], compatibilityComputer: import("src/neat/neat.diversity.utils").CompatComputer) => import("src/neat/neat.diversity.utils").DiversityStats | undefined`
 
 Compute diversity statistics for a NEAT population.
 This is a pure helper used by reporting and diagnostics. It intentionally
@@ -1299,7 +1300,7 @@ Each field represents an aggregate metric for a NEAT population.
 
 ### structuralEntropy
 
-`(graph: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(graph: import("src/architecture/network").default) => number`
 
 Compute the Shannon-style entropy of a network's out-degree distribution.
 This is a lightweight, approximate structural dispersion metric used to
@@ -1338,7 +1339,7 @@ Returns: The mean fitness as a number.
 
 ### getFittest
 
-`() => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+`() => import("src/neat/neat.selection.utils").GenomeWithScore`
 
 Return the fittest genome in the population.
 
@@ -1353,7 +1354,7 @@ Returns: The genome object judged to be the fittest (highest score).
 
 ### getParent
 
-`() => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+`() => import("src/neat/neat.selection.utils").GenomeWithScore`
 
 Select a parent genome according to the configured selection strategy.
 
@@ -1432,7 +1433,7 @@ Returns: The filtered telemetry object (same reference as input).
 
 ### buildTelemetryEntry
 
-`(fittest: Record<string, unknown>) => import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry`
+`(fittest: Record<string, unknown>) => import("src/neat/neat.types").TelemetryEntry`
 
 Build a comprehensive telemetry entry for the current generation.
 
@@ -1460,7 +1461,7 @@ This helper is intentionally conservative in runtime: when `fastMode` is enabled
 
 ### createTelemetryEntryBase
 
-`(generationIndex: number, bestScore: number, speciesCount: number) => import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry`
+`(generationIndex: number, bestScore: number, speciesCount: number) => import("src/neat/neat.types").TelemetryEntry`
 
 Create a strict baseline telemetry entry with required fields populated.
 
@@ -1476,7 +1477,7 @@ Returns: A strict telemetry entry with required fields populated.
 
 ### recordTelemetryEntry
 
-`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry) => void`
+`(entry: import("src/neat/neat.types").TelemetryEntry) => void`
 
 Record a telemetry entry into the instance buffer and optionally stream it.
 
@@ -1519,7 +1520,7 @@ fields with descriptive names rather than repeated inline casts.
 
 ### _getObjectives
 
-`() => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+`() => import("src/neat/neat.types").ObjectiveDescriptor[]`
 
 Build and return the list of registered objectives for this NEAT instance.
 
@@ -1561,7 +1562,7 @@ neat.clearObjectives();
 
 ### registerObjective
 
-`(key: string, direction: "max" | "min", accessor: (genome: import("C:/NeatapticTS/src/neat/neat.types").GenomeLike) => number) => void`
+`(key: string, direction: "max" | "min", accessor: (genome: import("src/neat/neat.types").GenomeLike) => number) => void`
 
 Register a new objective descriptor.
 
@@ -1581,11 +1582,6 @@ Notes:
   enabled.
 - Registering an objective replaces any previous objective with the same
   `key`.
-
-Parameters:
-- `` - Unique name for the objective (used for sorting/lookup)
-- `` - Whether the objective should be minimized or maximized
-- `` - Function to extract a numeric value from a genome
 
 ## neat/neat.speciation.ts
 
@@ -1609,7 +1605,7 @@ Parameters:
 
 ### _sortSpeciesMembers
 
-`(species: import("C:/NeatapticTS/src/neat/neat.types").SpeciesLike) => void`
+`(species: import("src/neat/neat.types").SpeciesLike) => void`
 
 Sort species members by descending score.
 
@@ -1666,7 +1662,7 @@ Extracted from `neat.ts` to keep the core class slimmer.
 
 ### fastNonDominated
 
-`(pop: import("C:/NeatapticTS/src/architecture/network").default[]) => import("C:/NeatapticTS/src/architecture/network").default[][]`
+`(pop: import("src/architecture/network").default[]) => import("src/architecture/network").default[][]`
 
 Perform fast non-dominated sorting and compute crowding distances for a
 population of networks (genomes). This implements a standard NSGA-II style
@@ -1862,7 +1858,7 @@ Exported for use in tests and type-safe function calls.
 
 ### buildSpeciesHistoryCsv
 
-`(recentHistory: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[], headers: string[]) => string`
+`(recentHistory: import("src/neat/neat.types").SpeciesHistoryEntry[], headers: string[]) => string`
 
 Build the full CSV string for species history given ordered headers and
 a slice of history entries.
@@ -1881,7 +1877,7 @@ Flattened nested metrics are emitted using group prefixes (group.key).
 
 ### collectTelemetryHeaderInfo
 
-`(entries: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[]) => TelemetryHeaderInfo`
+`(entries: import("src/neat/neat.types").TelemetryEntry[]) => TelemetryHeaderInfo`
 
 Collect header metadata from the raw telemetry entries.
 - Discovers base (top‑level) keys excluding grouped objects.
@@ -1955,7 +1951,7 @@ operate against `this` so they can be attached to instances.
 
 ### serializeTelemetryEntry
 
-`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, headers: string[]) => string`
+`(entry: import("src/neat/neat.types").TelemetryEntry, headers: string[]) => string`
 
 Serialize one telemetry entry into a CSV row using previously computed headers.
 Uses a `switch(true)` pattern instead of a long if/else chain to reduce
@@ -2062,7 +2058,7 @@ Notes:
 
 ### exportRngState
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost) => number | undefined`
+`(host: import("src/neat/neat.rng.utils").RngHost) => number | undefined`
 
 Export the current RNG state for persistence.
 
@@ -2073,7 +2069,7 @@ Returns: The numeric RNG state or undefined when not set.
 
 ### getOrCreateRng
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost) => () => number`
+`(host: import("src/neat/neat.rng.utils").RngHost) => () => number`
 
 Return a cached RNG or create a deterministic xorshift RNG when absent.
 
@@ -2088,13 +2084,13 @@ Returns: A function that yields a uniform random value in [0, 1).
 
 ### importRngState
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost, state: string | number | undefined) => void`
+`(host: import("src/neat/neat.rng.utils").RngHost, state: string | number | undefined) => void`
 
 Alias for restoring RNG state kept for compatibility with prior surface.
 
 ### restoreRngState
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost, state: string | number | undefined) => void`
+`(host: import("src/neat/neat.rng.utils").RngHost, state: string | number | undefined) => void`
 
 Restore a previously captured RNG state.
 
@@ -2108,7 +2104,7 @@ Minimal host surface required by the RNG utilities.
 
 ### sampleRandomSequence
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost, sampleCount: number) => number[]`
+`(host: import("src/neat/neat.rng.utils").RngHost, sampleCount: number) => number[]`
 
 Produce a sequence of random samples using the host RNG.
 
@@ -2120,7 +2116,7 @@ Returns: Array of random samples in [0, 1).
 
 ### snapshotRngState
 
-`(host: import("C:/NeatapticTS/src/neat/neat.rng.utils").RngHost) => number | undefined`
+`(host: import("src/neat/neat.rng.utils").RngHost) => number | undefined`
 
 Snapshot the current RNG state for deterministic replay.
 
@@ -2158,7 +2154,7 @@ helpers for use by the compatibility orchestration layer.
 
 ### buildPairKey
 
-`(firstGenome: import("C:/NeatapticTS/src/neat/neat.compat.utils").GenomeLike, secondGenome: import("C:/NeatapticTS/src/neat/neat.compat.utils").GenomeLike) => string`
+`(firstGenome: import("src/neat/neat.compat.utils").GenomeLike, secondGenome: import("src/neat/neat.compat.utils").GenomeLike) => string`
 
 Build a stable cache key for a genome pair.
 
@@ -2170,7 +2166,7 @@ Returns: Stable cache key in the form "minId|maxId".
 
 ### compareInnovationLists
 
-`(firstList: [number, number][], secondList: [number, number][]) => import("C:/NeatapticTS/src/neat/neat.compat.utils").ComparisonMetrics`
+`(firstList: [number, number][], secondList: [number, number][]) => import("src/neat/neat.compat.utils").ComparisonMetrics`
 
 Compare two sorted innovation lists and derive comparison metrics.
 
@@ -2186,7 +2182,7 @@ Aggregated comparison metrics for compatibility calculations.
 
 ### computeCompatibilityDistance
 
-`(neatContext: import("C:/NeatapticTS/src/neat/neat.compat.utils").NeatLikeForCompat, metrics: import("C:/NeatapticTS/src/neat/neat.compat.utils").ComparisonMetrics) => number`
+`(neatContext: import("src/neat/neat.compat.utils").NeatLikeForCompat, metrics: import("src/neat/neat.compat.utils").ComparisonMetrics) => number`
 
 Compute the compatibility distance from comparison metrics.
 
@@ -2202,7 +2198,7 @@ Compatibility-distance helper utilities.
 
 ### ensureGenerationCache
 
-`(neatContext: import("C:/NeatapticTS/src/neat/neat.compat.utils").NeatLikeForCompat) => void`
+`(neatContext: import("src/neat/neat.compat.utils").NeatLikeForCompat) => void`
 
 Ensure generation-scoped compatibility caches exist.
 
@@ -2217,7 +2213,7 @@ Minimal genome shape used for compatibility distance calculations.
 
 ### getDistanceCacheMap
 
-`(neatContext: import("C:/NeatapticTS/src/neat/neat.compat.utils").NeatLikeForCompat) => Map<string, number>`
+`(neatContext: import("src/neat/neat.compat.utils").NeatLikeForCompat) => Map<string, number>`
 
 Retrieve the generation-scoped cache map for pairwise distances.
 
@@ -2228,7 +2224,7 @@ Returns: Map storing cached distances for genome pairs this generation.
 
 ### getSortedInnovationCache
 
-`(neatContext: import("C:/NeatapticTS/src/neat/neat.compat.utils").NeatLikeForCompat, genome: import("C:/NeatapticTS/src/neat/neat.compat.utils").GenomeLike) => [number, number][]`
+`(neatContext: import("src/neat/neat.compat.utils").NeatLikeForCompat, genome: import("src/neat/neat.compat.utils").GenomeLike) => [number, number][]`
 
 Retrieve or build a sorted innovation list for a genome.
 
@@ -2257,7 +2253,7 @@ Returns: Highest innovation id or 0 if list is empty.
 
 ### adaptReenableProbability
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { minSamples: number; target: number; min: number; max: number; deltaScale: number; }) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, config: { minSamples: number; target: number; min: number; max: number; deltaScale: number; }) => void`
 
 Adapt the re-enable probability based on recent success ratios.
 
@@ -2268,7 +2264,7 @@ Returns: void.
 
 ### addOffspring
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], helpers: { addSpeciatedOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>; addUnspeciatedOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>; }) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[], helpers: { addSpeciatedOffspring: (nextPopulation: import("src/architecture/network").default[], remainingSlots: number) => Promise<void>; addUnspeciatedOffspring: (nextPopulation: import("src/architecture/network").default[], remainingSlots: number) => Promise<void>; }) => Promise<void>`
 
 Add offspring to fill remaining population slots.
 
@@ -2283,7 +2279,7 @@ Returns: void.
 
 ### addSpeciatedOffspring
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number, config: { minOffspringDefault: number; survivalThresholdDefault: number; youngThresholdDefault: number; youngMultiplierDefault: number; oldThresholdDefault: number; oldMultiplierDefault: number; crossSpeciesGuardLimit: number; }) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[], remainingSlots: number, config: { minOffspringDefault: number; survivalThresholdDefault: number; youngThresholdDefault: number; youngMultiplierDefault: number; oldThresholdDefault: number; oldMultiplierDefault: number; crossSpeciesGuardLimit: number; }) => Promise<void>`
 
 Add offspring when speciation is enabled.
 
@@ -2297,7 +2293,7 @@ Returns: void.
 
 ### addUnspeciatedOffspring
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[], remainingSlots: number) => Promise<void>`
 
 Add offspring when speciation is disabled.
 
@@ -2310,7 +2306,7 @@ Returns: void.
 
 ### applyAdaptiveComplexityControllers
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Apply adaptive complexity controllers if available.
 
@@ -2321,7 +2317,7 @@ Returns: void.
 
 ### applyAncestorUniqAdaptiveSafe
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Apply ancestor uniqueness adaptation if available.
 
@@ -2332,7 +2328,7 @@ Returns: void.
 
 ### applyAutoCompatibilityTuning
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { targetMin: number; adjustRate: number; minCoeff: number; maxCoeff: number; randomScale: number; }) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, config: { targetMin: number; adjustRate: number; minCoeff: number; maxCoeff: number; randomScale: number; }) => void`
 
 Apply auto-compatibility tuning if enabled.
 
@@ -2344,7 +2340,7 @@ Returns: void.
 
 ### applyDynamicObjectiveSchedule
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, currentObjectiveKeys: string[], config: { autoEntropyAddAt: number; }) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, currentObjectiveKeys: string[], config: { autoEntropyAddAt: number; }) => void`
 
 Apply dynamic objective scheduling and entropy rules.
 
@@ -2357,7 +2353,7 @@ Returns: void.
 
 ### applyElitism
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[]) => void`
 
 Apply elitism for the next generation.
 
@@ -2369,7 +2365,7 @@ Returns: void.
 
 ### applyFitnessSuppressionForTests
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Suppress fitness objective for specific test scenarios.
 
@@ -2380,7 +2376,7 @@ Returns: void.
 
 ### applyGlobalStagnationInjectionIfNeeded
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { buildFreshGenomeForStagnation: () => Promise<import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata>; replaceFraction: number; }) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { buildFreshGenomeForStagnation: () => Promise<import("src/neat/neat.evolve.types").GenomeWithMetadata>; replaceFraction: number; }) => Promise<void>`
 
 Apply global stagnation injection if configured.
 
@@ -2393,7 +2389,7 @@ Returns: void.
 
 ### applyMinimalCriterionAdaptiveSafe
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Apply minimal criterion adaptive controller if available.
 
@@ -2404,7 +2400,7 @@ Returns: void.
 
 ### applyOperatorAdaptationSafe
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Apply operator adaptation if available.
 
@@ -2415,7 +2411,7 @@ Returns: void.
 
 ### applyProvenance
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[]) => void`
 
 Add provenance genomes into the next population.
 
@@ -2427,7 +2423,7 @@ Returns: void.
 
 ### applyPruningAndMutation
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Apply pruning and mutation phases.
 
@@ -2438,7 +2434,7 @@ Returns: void.
 
 ### applySpeciationAndSharingIfEnabled
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyAutoCompatibilityTuning: () => void; recordSpeciesHistorySnapshot: () => void; }) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyAutoCompatibilityTuning: () => void; recordSpeciesHistorySnapshot: () => void; }) => Promise<void>`
 
 Apply speciation, fitness sharing, and related side effects.
 
@@ -2452,7 +2448,7 @@ Returns: void.
 
 ### buildFittestSnapshot
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => import("C:/NeatapticTS/src/architecture/network").default`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => import("src/architecture/network").default`
 
 Build a cloned Network from the current best genome.
 
@@ -2463,7 +2459,7 @@ Returns: best network snapshot.
 
 ### buildFreshGenomeForStagnation
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<import("src/neat/neat.evolve.types").GenomeWithMetadata>`
 
 Build a fresh genome for stagnation injection.
 
@@ -2474,7 +2470,7 @@ Returns: new genome with minimum constraints.
 
 ### buildNextPopulation
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyElitism: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void; applyProvenance: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void; addOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => Promise<void>; }) => Promise<import("C:/NeatapticTS/src/architecture/network").default[]>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyElitism: (nextPopulation: import("src/architecture/network").default[]) => void; applyProvenance: (nextPopulation: import("src/architecture/network").default[]) => void; addOffspring: (nextPopulation: import("src/architecture/network").default[]) => Promise<void>; }) => Promise<import("src/architecture/network").default[]>`
 
 Build the next population (elitism, provenance, offspring).
 
@@ -2489,7 +2485,7 @@ Returns: next population array.
 
 ### captureObjectiveImportanceSnapshot
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Capture objective importance stats for telemetry.
 
@@ -2500,7 +2496,7 @@ Returns: void.
 
 ### clearPopulationScores
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Clear genome scores to force re-evaluation.
 
@@ -2511,7 +2507,7 @@ Returns: void.
 
 ### computeDiversityStatsSafely
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Compute diversity stats safely if the hook exists.
 
@@ -2533,7 +2529,7 @@ Returns: elapsed time.
 
 ### createOffspring
 
-`(context: import("C:/NeatapticTS/src/neat/neat.evolve.offspring.utils").OffspringContext, selectParent: () => import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network").default`
+`(context: import("src/neat/neat.evolve.offspring.utils").OffspringContext, selectParent: () => import("src/architecture/network").default) => import("src/architecture/network").default`
 
 Create a child genome by crossing two parents selected via the provided callback.
 
@@ -2545,7 +2541,7 @@ Returns: Newly created offspring genome.
 
 ### enforcePopulationConstraints
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[]) => Promise<void>`
 
 Ensure new population meets structural constraints.
 
@@ -2557,7 +2553,7 @@ Returns: void.
 
 ### ensurePopulationEvaluated
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Ensure the population is evaluated before evolution operations.
 
@@ -2568,7 +2564,7 @@ Returns: void.
 
 ### ensureSpeciesHistorySnapshot
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
 
 Ensure a minimal species history snapshot exists for exports.
 
@@ -2582,7 +2578,7 @@ Returns: void.
 
 ### invalidateCompatibilityCaches
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Invalidate compatibility caches after mutations.
 
@@ -2603,7 +2599,7 @@ Minimal surface needed for offspring generation.
 
 ### processMultiObjective
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { paretoArchiveMax: number; targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; pruneWindowDefault: number; pruneRangeEpsDefault: number; }) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, config: { paretoArchiveMax: number; targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; pruneWindowDefault: number; pruneRangeEpsDefault: number; }) => void`
 
 Run multi-objective ranking, crowding distance, and archives.
 
@@ -2615,7 +2611,7 @@ Returns: void.
 
 ### recordSpeciesHistorySnapshot
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
 
 Record a species history snapshot when needed.
 
@@ -2627,7 +2623,7 @@ Returns: void.
 
 ### recordTelemetryIfEnabled
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("C:/NeatapticTS/src/architecture/network").default) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("src/architecture/network").default) => Promise<void>`
 
 Record telemetry if enabled.
 
@@ -2639,7 +2635,7 @@ Returns: void.
 
 ### resetObjectivesCache
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Clear cached objectives so dynamic schedules can rebuild them.
 
@@ -2658,7 +2654,7 @@ Returns: timestamp in milliseconds or high-resolution units.
 
 ### trackGlobalImprovement
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("src/architecture/network").default) => void`
 
 Track global best improvement for stagnation logic.
 
@@ -2670,7 +2666,7 @@ Returns: void.
 
 ### updateGlobalBestTracking
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Update generation-level best score tracking.
 
@@ -2681,7 +2677,7 @@ Returns: void.
 
 ### updateObjectiveScheduleAndAges
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyDynamicObjectiveSchedule: (currentObjectiveKeys: string[]) => void; }) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyDynamicObjectiveSchedule: (currentObjectiveKeys: string[]) => void; }) => Promise<void>`
 
 Update objective schedule, pending adds/removes, and objective ages.
 
@@ -2694,7 +2690,7 @@ Returns: void.
 
 ### updateSpeciesStagnationIfEnabled
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Update species stagnation status when speciation enabled.
 
@@ -2733,7 +2729,7 @@ Returns: Upper bound on the number of sampled pairs.
 
 ### collectAncestorIds
 
-`(queueEntries: AncestorQueueEntry[], population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[]) => Set<number>`
+`(queueEntries: AncestorQueueEntry[], population: import("src/neat/neat.lineage.utils").GenomeLike[]) => Set<number>`
 
 Parameters:
 - `queueEntries` - BFS queue seeded with direct parents.
@@ -2762,7 +2758,7 @@ Returns: Jaccard distance for the two sets.
 
 ### computePairDistance
 
-`(pair: GenomeIndexPair, population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[], buildAncestorSet: (genome: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike) => Set<number>) => number | undefined`
+`(pair: GenomeIndexPair, population: import("src/neat/neat.lineage.utils").GenomeLike[], buildAncestorSet: (genome: import("src/neat/neat.lineage.utils").GenomeLike) => Set<number>) => number | undefined`
 
 Parameters:
 - `pair` - Index pair for comparison.
@@ -2773,7 +2769,7 @@ Returns: Jaccard distance or undefined when skipped.
 
 ### computePairDistances
 
-`(pairs: GenomeIndexPair[], population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[], buildAncestorSet: (genome: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike) => Set<number>) => number[]`
+`(pairs: GenomeIndexPair[], population: import("src/neat/neat.lineage.utils").GenomeLike[], buildAncestorSet: (genome: import("src/neat/neat.lineage.utils").GenomeLike) => Set<number>) => number[]`
 
 Parameters:
 - `pairs` - Sampled index pairs.
@@ -2794,7 +2790,7 @@ Returns: Size of intersection between the sets.
 
 ### createInitialQueue
 
-`(parentIds: number[], population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[]) => AncestorQueueEntry[]`
+`(parentIds: number[], population: import("src/neat/neat.lineage.utils").GenomeLike[]) => AncestorQueueEntry[]`
 
 Parameters:
 - `parentIds` - Direct parent IDs to seed the queue.
@@ -2804,7 +2800,7 @@ Returns: Queue entries at depth 1.
 
 ### enqueueParentEntries
 
-`(queueEntries: AncestorQueueEntry[], currentEntry: AncestorQueueEntry, population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[]) => void`
+`(queueEntries: AncestorQueueEntry[], currentEntry: AncestorQueueEntry, population: import("src/neat/neat.lineage.utils").GenomeLike[]) => void`
 
 Parameters:
 - `queueEntries` - Mutable queue array to append to.
@@ -2813,7 +2809,7 @@ Parameters:
 
 ### findGenomeById
 
-`(population: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike[], genomeId: number) => import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike | undefined`
+`(population: import("src/neat/neat.lineage.utils").GenomeLike[], genomeId: number) => import("src/neat/neat.lineage.utils").GenomeLike | undefined`
 
 Parameters:
 - `population` - Current population for lookup.
@@ -2866,7 +2862,7 @@ Expected `this` context for lineage helpers (a subset of the NEAT instance).
 
 ### normalizeParentIds
 
-`(value: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike) => number[]`
+`(value: import("src/neat/neat.lineage.utils").GenomeLike) => number[]`
 
 Parameters:
 - `value` - Genome to read parents from.
@@ -2896,7 +2892,7 @@ Returns: Random index within bounds.
 
 ### resolveParentIds
 
-`(value: import("C:/NeatapticTS/src/neat/neat.lineage.utils").GenomeLike | undefined) => number[]`
+`(value: import("src/neat/neat.lineage.utils").GenomeLike | undefined) => number[]`
 
 Parameters:
 - `value` - Optional genome reference.
@@ -2951,7 +2947,7 @@ Adaptive pruning options extracted from the Neat instance.
 
 ### applyAdaptivePruneLevelToPopulation
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning, pruneLevel: number) => void`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning, pruneLevel: number) => void`
 
 Parameters:
 - `host` - - Neat instance with population.
@@ -2959,7 +2955,7 @@ Parameters:
 
 ### applyPruningToPopulation
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning, options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; }, targetSparsity: number) => void`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning, options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; }, targetSparsity: number) => void`
 
 Parameters:
 - `host` - - Neat instance with population.
@@ -2968,7 +2964,7 @@ Parameters:
 
 ### computeMeanConnectionCount
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => number`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning) => number`
 
 Parameters:
 - `host` - - Neat instance with population.
@@ -2977,7 +2973,7 @@ Returns: Average number of connections per genome.
 
 ### computeMeanNodeCount
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => number`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning) => number`
 
 Parameters:
 - `host` - - Neat instance with population.
@@ -2998,7 +2994,7 @@ Returns: Updated prune level.
 
 ### computePopulationMetrics
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => import("C:/NeatapticTS/src/neat/neat.pruning.utils").PopulationMetrics`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning) => import("src/neat/neat.pruning.utils").PopulationMetrics`
 
 Parameters:
 - `host` - - Neat instance with population.
@@ -3007,7 +3003,7 @@ Returns: Population metric summary.
 
 ### computeRampFraction
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning, options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; }) => number`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning, options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; }) => number`
 
 Parameters:
 - `host` - - Neat instance with generation state.
@@ -3027,7 +3023,7 @@ Returns: Target remaining metric value.
 
 ### computeTargetSparsityNow
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning, options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; }) => number`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning, options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; }) => number`
 
 Parameters:
 - `host` - - Neat instance with generation state.
@@ -3041,7 +3037,7 @@ Evolution pruning options extracted from the Neat instance.
 
 ### initializeAdaptivePruningState
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => void`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning) => void`
 
 Parameters:
 - `host` - - Neat instance with adaptive pruning state.
@@ -3056,7 +3052,7 @@ Summary of population metrics used by adaptive pruning.
 
 ### resolveActiveAdaptivePruningOptions
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; } | null`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning) => { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; } | null`
 
 Parameters:
 - `host` - - Neat instance with adaptive pruning options.
@@ -3065,7 +3061,7 @@ Returns: Adaptive pruning options when enabled, otherwise null.
 
 ### resolveActiveEvolutionPruningOptions
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning) => { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; } | null`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning) => { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; } | null`
 
 Parameters:
 - `host` - - Neat instance with generation state.
@@ -3074,7 +3070,7 @@ Returns: Evolution pruning options when active, otherwise null.
 
 ### resolveAdaptivePruneBaseline
 
-`(host: import("C:/NeatapticTS/src/neat/neat.pruning.utils").NeatLikeForPruning, currentMetricValue: number) => number`
+`(host: import("src/neat/neat.pruning.utils").NeatLikeForPruning, currentMetricValue: number) => number`
 
 Parameters:
 - `host` - - Neat instance with adaptive baseline state.
@@ -3084,7 +3080,7 @@ Returns: Baseline metric value used for adaptation.
 
 ### resolveObservedMetricValue
 
-`(options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; }, metrics: import("C:/NeatapticTS/src/neat/neat.pruning.utils").PopulationMetrics) => number`
+`(options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; }, metrics: import("src/neat/neat.pruning.utils").PopulationMetrics) => number`
 
 Parameters:
 - `options` - - Adaptive pruning options.
@@ -3108,7 +3104,7 @@ Returns: True when pruning should be adjusted.
 
 ### backfillExtendedHistory
 
-`(history: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[], context: { _species?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesLike[] | undefined; _fallbackInnov?: ((c: import("C:/NeatapticTS/src/neat/neat.types").ConnectionLike) => number) | undefined; }) => void`
+`(history: import("src/neat/neat.types").SpeciesHistoryEntry[], context: { _species?: import("src/neat/neat.types").SpeciesLike[] | undefined; _fallbackInnov?: ((c: import("src/neat/neat.types").ConnectionLike) => number) | undefined; }) => void`
 
 Parameters:
 - `history` - - Recorded history to enrich in place.
@@ -3116,7 +3112,7 @@ Parameters:
 
 ### shouldAugmentExtendedHistory
 
-`(options: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions | undefined) => boolean`
+`(options: import("src/neat/neat.types").NeatOptions | undefined) => boolean`
 
 Parameters:
 - `options` - - Current Neat options.
@@ -3147,7 +3143,7 @@ Returns: True when extended history is enabled.
 
 ### adjustConnectionBudget
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, factors: { increaseFactor: number; stagnationFactor: number; }, noveltyFactor: number, history: number[]) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, factors: { increaseFactor: number; stagnationFactor: number; }, noveltyFactor: number, history: number[]) => void`
 
 Adjust connection budget based on trends and factors.
 
@@ -3161,7 +3157,7 @@ Parameters:
 
 ### adjustNodeBudget
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, factors: { increaseFactor: number; stagnationFactor: number; }, noveltyFactor: number, history: number[]) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, factors: { increaseFactor: number; stagnationFactor: number; }, noveltyFactor: number, history: number[]) => void`
 
 Adjust node budget based on trends and factors.
 
@@ -3185,7 +3181,7 @@ Parameters:
 
 ### applyAdaptiveSchedule
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Apply adaptive complexity budget scheduling.
 
@@ -3195,7 +3191,7 @@ Parameters:
 
 ### applyAnnealDelta
 
-`(baseDelta: number, settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings) => number`
+`(baseDelta: number, settings: import("src/neat/neat.adaptive.shared").MutationSettings) => number`
 
 Apply annealing adjustments to a delta.
 
@@ -3207,7 +3203,7 @@ Returns: Adjusted delta.
 
 ### applyComplexityBudgetSchedule
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Apply the complexity budget schedule for the configured mode.
 
@@ -3217,7 +3213,7 @@ Parameters:
 
 ### applyEpsilonAdjustment
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }, adjustMagnitude: number) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }, adjustMagnitude: number) => void`
 
 Apply dominance-epsilon adjustments when configured.
 
@@ -3242,7 +3238,7 @@ Returns: Adjusted delta.
 
 ### applyLineagePressureAdjustment
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }) => void`
 
 Apply lineage pressure strength adjustments.
 
@@ -3253,7 +3249,7 @@ Parameters:
 
 ### applyLinearSchedule
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Apply linear complexity budget scheduling.
 
@@ -3263,7 +3259,7 @@ Parameters:
 
 ### applyMutationAmount
 
-`(genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => void`
+`(genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, settings: import("src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => void`
 
 Apply mutation-amount adjustments to a genome.
 
@@ -3277,7 +3273,7 @@ Parameters:
 
 ### applyMutationsToPopulation
 
-`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[], partitions: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationPartitions, settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number) => import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationOutcome`
+`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[], partitions: import("src/neat/neat.adaptive.shared").MutationPartitions, settings: import("src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number) => import("src/neat/neat.adaptive.shared").MutationOutcome`
 
 Apply mutation updates to the population.
 
@@ -3302,7 +3298,7 @@ Parameters:
 
 ### applyRejection
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, threshold: number) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, threshold: number) => void`
 
 Zero scores below the final threshold.
 
@@ -3342,7 +3338,7 @@ Returns: Adjusted delta.
 
 ### applyTwoTierFallback
 
-`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[], settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings) => void`
+`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[], settings: import("src/neat/neat.adaptive.shared").MutationSettings) => void`
 
 Apply two-tier fallback balancing.
 
@@ -3352,7 +3348,7 @@ Parameters:
 
 ### applyUniquenessAdjustment
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }, adjustMagnitude: number) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }, adjustMagnitude: number) => void`
 
 Apply an adjustment for the configured mode.
 
@@ -3367,7 +3363,7 @@ Parameters:
 
 ### clampNodeBudget
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Clamp node budget to configured minimum.
 
@@ -3412,7 +3408,7 @@ Returns: Scored genomes.
 
 ### collectScores
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number[]`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number[]`
 
 Collect population scores into a snapshot array.
 
@@ -3454,7 +3450,7 @@ Returns: Adjustment factors (increase and stagnation multipliers).
 
 ### computeNoveltyFactor
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number`
 
 Compute novelty factor based on archive size.
 
@@ -3547,7 +3543,7 @@ Returns: Decayed operator statistic record.
 
 ### ensureLineagePressureState
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => { enabled?: boolean | undefined; mode?: string | undefined; strength?: number | undefined; }`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => { enabled?: boolean | undefined; mode?: string | undefined; strength?: number | undefined; }`
 
 Ensure lineage pressure state is available.
 
@@ -3562,7 +3558,7 @@ Returns: Lineage pressure configuration object.
 
 ### extractAncestorUniqueness
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number | undefined`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number | undefined`
 
 Extract the latest ancestor-uniqueness metric from telemetry.
 
@@ -3585,7 +3581,7 @@ Returns: Ancestor uniqueness value or undefined when missing.
 
 ### initializeConnectionBudget
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Initialize connection budget if undefined.
 
@@ -3595,7 +3591,7 @@ Parameters:
 
 ### initializeNodeBudget
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Initialize node budget if undefined.
 
@@ -3605,7 +3601,7 @@ Parameters:
 
 ### initializePhaseState
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; }) => void`
 
 Ensure phase state is initialized.
 
@@ -3615,7 +3611,7 @@ Parameters:
 
 ### initializeThreshold
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; }) => void`
 
 Initialize MC threshold if missing.
 
@@ -3625,7 +3621,7 @@ Parameters:
 
 ### isCooldownSatisfied
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }) => boolean`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }) => boolean`
 
 Determine whether the cooldown window has elapsed.
 
@@ -3706,7 +3702,7 @@ Returns: Normalized slope clamped to [-2, 2].
 
 ### recordAdjustment
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => void`
 
 Record the generation when an adjustment is applied.
 
@@ -3726,7 +3722,7 @@ Returns: Adjustment magnitude.
 
 ### resolveAmountDelta
 
-`(settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
+`(settings: import("src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
 
 Resolve mutation-amount delta based on strategy.
 
@@ -3742,7 +3738,7 @@ Returns: Signed mutation amount delta.
 
 ### resolveMutationSettings
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; }) => import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; }) => import("src/neat/neat.adaptive.shared").MutationSettings`
 
 Resolve mutation settings derived from configuration and engine state.
 
@@ -3776,7 +3772,7 @@ Returns: Decay factor for exponential smoothing.
 
 ### resolveRandomSource
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => () => number`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => () => number`
 
 Resolve a random source that matches the legacy RNG usage.
 
@@ -3787,7 +3783,7 @@ Returns: Random number provider.
 
 ### resolveRateDelta
 
-`(settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
+`(settings: import("src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
 
 Resolve mutation-rate delta based on strategy.
 
@@ -3841,7 +3837,7 @@ Returns: True if adaptation should run.
 
 ### shouldApplyTwoTierFallback
 
-`(strategy: string, outcome: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationOutcome) => boolean`
+`(strategy: string, outcome: import("src/neat/neat.adaptive.shared").MutationOutcome) => boolean`
 
 Determine whether a two-tier fallback is needed.
 
@@ -3870,7 +3866,7 @@ Returns: Sorted genomes.
 
 ### splitScoredGenomes
 
-`(scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]) => import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationPartitions`
+`(scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]) => import("src/neat/neat.adaptive.shared").MutationPartitions`
 
 Split scored genomes into top and bottom halves.
 
@@ -3887,7 +3883,7 @@ Returns: Partitions used by strategy rules.
 
 ### togglePhaseIfNeeded
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; }) => void`
 
 Toggle phase if the current phase has exceeded its length.
 
@@ -3899,7 +3895,7 @@ Parameters:
 
 ### updateScoreHistory
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => number[]`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => number[]`
 
 Update rolling score history with current best score.
 
@@ -3911,7 +3907,7 @@ Returns: Rolling history array after update.
 
 ### updateThreshold
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, acceptance: number, tuning: { targetAcceptance: number; adjustRate: number; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, acceptance: number, tuning: { targetAcceptance: number; adjustRate: number; }) => void`
 
 Update the MC threshold based on acceptance proportion.
 
@@ -3947,7 +3943,7 @@ subset of metrics.
 
 ### ensureDiversityStatsContainer
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -4009,7 +4005,7 @@ Objectives are registered dynamically to guide evaluation and selection.
 
 ### runAutoDistanceCoefficientTuning
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -4019,7 +4015,7 @@ Returns: void.
 
 ### runAutoEntropyObjectiveInjection
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -4029,7 +4025,7 @@ Returns: void.
 
 ### runEntropyCompatibilityTuning
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -4039,7 +4035,7 @@ Returns: void.
 
 ### runEntropySharingTuning
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -4049,7 +4045,7 @@ Returns: void.
 
 ### runFitnessEvaluation
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => Promise<void>`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => Promise<void>`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -4059,7 +4055,7 @@ Returns: Promise<void> after fitness evaluation completes.
 
 ### runLightweightSpeciation
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -4069,7 +4065,7 @@ Returns: void.
 
 ### runNoveltyBlendAndArchive
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -4085,7 +4081,7 @@ Returns: void.
 
 ### applyAddConnMutation
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
 
 Apply an ADD_CONN mutation with reuse and weight nudging.
 
@@ -4098,7 +4094,7 @@ Returns: void
 
 ### applyAddNodeMutation
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
 
 Apply an ADD_NODE mutation with reuse and weight nudging.
 
@@ -4111,7 +4107,7 @@ Returns: void
 
 ### applyMutationOperator
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("src/neat/neat.mutation.types").MutationMethod, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
 
 Apply a mutation operator to a genome and invalidate caches as needed.
 
@@ -4125,7 +4121,7 @@ Returns: void
 
 ### applyOperatorAdaptationForSelect
 
-`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+`(pool: import("src/neat/neat.mutation.types").MutationMethod[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").MutationMethod[]`
 
 Apply operator adaptation weighting to the pool when enabled.
 
@@ -4137,7 +4133,7 @@ Returns: augmented pool
 
 ### applyOperatorBanditForSelect
 
-`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], fallbackMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod`
+`(pool: import("src/neat/neat.mutation.types").MutationMethod[], fallbackMethod: import("src/neat/neat.mutation.types").MutationMethod, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").MutationMethod`
 
 Apply operator bandit selection if enabled.
 
@@ -4150,7 +4146,7 @@ Returns: selected method
 
 ### applyPhasedComplexityForSelect
 
-`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+`(pool: import("src/neat/neat.mutation.types").MutationMethod[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").MutationMethod[]`
 
 Apply phased complexity adjustments to the pool when enabled.
 
@@ -4162,7 +4158,7 @@ Returns: pool with phased complexity adjustments
 
 ### applySplitWithExistingRecord
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, splitRecord: { newNodeGeneId: number; inInnov: number; outInnov: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown) => void`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, splitRecord: { newNodeGeneId: number; inInnov: number; outInnov: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown) => void`
 
 Apply a split using an existing innovation record.
 
@@ -4177,7 +4173,7 @@ Returns: void
 
 ### applySplitWithNewRecord
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Apply a split and create a new innovation record.
 
@@ -4192,7 +4188,7 @@ Returns: void
 
 ### assignInnovationForConnection
 
-`(connection: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, pairNodes: { symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(connection: import("src/neat/neat.mutation.types").ConnectionWithMetadata, pairNodes: { symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Assign an innovation id for a new connection, reusing when possible.
 
@@ -4205,7 +4201,7 @@ Returns: void
 
 ### assignInnovationsForNewSplit
 
-`(newNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, splitConnections: { incomingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => { newNodeGeneId: number; inInnov: number; outInnov: number; }`
+`(newNode: import("src/neat/neat.mutation.types").NodeWithMetadata, splitConnections: { incomingConnection?: import("src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => { newNodeGeneId: number; inInnov: number; outInnov: number; }`
 
 Assign new innovations for a split and build the innovation record.
 
@@ -4218,7 +4214,7 @@ Returns: innovation record for the split
 
 ### buildLegacyKeyForConn
 
-`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => string`
+`(sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata) => string`
 
 Build a legacy directional innovation key.
 
@@ -4230,7 +4226,7 @@ Returns: directional innovation key
 
 ### buildSplitDescriptor
 
-`(connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata) => { splitKey: string; originalWeight: number; }`
+`(connectionToSplit: import("src/neat/neat.mutation.types").ConnectionWithMetadata) => { splitKey: string; originalWeight: number; }`
 
 Build the split descriptor used for innovation lookup and connection creation.
 
@@ -4241,7 +4237,7 @@ Returns: split descriptor
 
 ### buildSymmetricKeyForConn
 
-`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => string`
+`(sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata) => string`
 
 Build a symmetric innovation key for an unordered node pair.
 
@@ -4253,7 +4249,7 @@ Returns: symmetric innovation key
 
 ### captureStructuralSizes
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { beforeNodes: number; beforeConns: number; }`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata) => { beforeNodes: number; beforeConns: number; }`
 
 Capture structural sizes used to evaluate operator success.
 
@@ -4264,7 +4260,7 @@ Returns: structural size snapshot
 
 ### chooseConnectionForSplit
 
-`(enabledConnectionsList: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | null`
+`(enabledConnectionsList: import("src/neat/neat.mutation.types").ConnectionWithMetadata[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").ConnectionWithMetadata | null`
 
 Choose a random enabled connection to split.
 
@@ -4276,7 +4272,7 @@ Returns: selected connection or null
 
 ### choosePairForConn
 
-`(pairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata] | null`
+`(pairs: [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata] | null`
 
 Choose a pair deterministically when only one candidate exists.
 
@@ -4288,7 +4284,7 @@ Returns: chosen pair or null
 
 ### chooseRandomNodeForDeadEnds
 
-`(candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | null`
+`(candidates: import("src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").NodeWithMetadata | null`
 
 Choose a random node from candidates for dead-end repair.
 
@@ -4300,7 +4296,7 @@ Returns: selected node or null
 
 ### chooseRandomNodeForMinHidden
 
-`(candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | null`
+`(candidates: import("src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").NodeWithMetadata | null`
 
 Choose a random node from a candidate list.
 
@@ -4312,7 +4308,7 @@ Returns: selected node or null
 
 ### collectCandidatePairsForConn
 
-`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+`(genomeToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata) => [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][]`
 
 Collect legal (from,to) node pairs not already connected.
 
@@ -4323,7 +4319,7 @@ Returns: candidate node pairs
 
 ### collectEnabledConnections
 
-`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata[]`
+`(genomeToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata) => import("src/neat/neat.mutation.types").ConnectionWithMetadata[]`
 
 Collect all enabled connections from a genome.
 
@@ -4334,7 +4330,7 @@ Returns: enabled connections list
 
 ### collectNodeGroupsForDeadEnds
 
-`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }`
+`(networkToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }`
 
 Collect categorized node arrays for dead-end repair.
 
@@ -4345,7 +4341,7 @@ Returns: grouped node arrays
 
 ### collectNodeGroupsForMinHidden
 
-`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }`
+`(networkToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }`
 
 Collect categorized node arrays for the network.
 
@@ -4370,7 +4366,7 @@ Returns: Minimum hidden node requirement.
 
 ### connectChosenPair
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; }) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata; }) => import("src/neat/neat.mutation.types").ConnectionWithMetadata | undefined`
 
 Create the connection for the chosen pair.
 
@@ -4382,7 +4378,7 @@ Returns: created connection or undefined
 
 ### connectIfCandidatesExistForDeadEnds
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, anchorNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], reverse: boolean, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, anchorNode: import("src/neat/neat.mutation.types").NodeWithMetadata, candidates: import("src/neat/neat.mutation.types").NodeWithMetadata[], reverse: boolean, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Connect a node to a random candidate if candidates exist.
 
@@ -4397,7 +4393,7 @@ Returns: void
 
 ### connectSplitEdges
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, newNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, originalWeight: number) => { incomingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("src/neat/neat.mutation.types").ConnectionWithMetadata, newNode: import("src/neat/neat.mutation.types").NodeWithMetadata, originalWeight: number) => { incomingConnection?: import("src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }`
 
 Create the incoming and outgoing split connections.
 
@@ -4411,7 +4407,7 @@ Returns: incoming/outgoing connection handles
 
 ### createsCycle
 
-`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+`(sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
 
 Detect whether adding a connection would create a cycle.
 
@@ -4423,7 +4419,7 @@ Returns: true when a cycle is detected
 
 ### disconnectOriginalConnection
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToRemove: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata) => void`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, connectionToRemove: import("src/neat/neat.mutation.types").ConnectionWithMetadata) => void`
 
 Disconnect the original connection before inserting the split node.
 
@@ -4435,7 +4431,7 @@ Returns: void
 
 ### ensureBootstrapConnection
 
-`(genomeToSeed: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(genomeToSeed: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure the genome has at least one connection by linking input to output.
 
@@ -4447,7 +4443,7 @@ Returns: void
 
 ### ensureHiddenConnectivityForDeadEnds
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure hidden nodes have both incoming and outgoing connections.
 
@@ -4460,7 +4456,7 @@ Returns: void
 
 ### ensureHiddenConnectivityForMinHidden
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure hidden nodes have both incoming and outgoing connections.
 
@@ -4473,7 +4469,7 @@ Returns: void
 
 ### ensureHiddenNodeCountForMinHidden
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToEdit: { hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, minimumHidden: number, maxNodesLimit: number) => Promise<void>`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToEdit: { hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, minimumHidden: number, maxNodesLimit: number) => Promise<void>`
 
 Ensure the network has at least the minimum number of hidden nodes.
 
@@ -4487,7 +4483,7 @@ Returns: Promise resolving when nodes are created
 
 ### ensureIncomingConnectionForMinHidden
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("src/neat/neat.mutation.types").NodeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure a hidden node has at least one incoming connection.
 
@@ -4501,7 +4497,7 @@ Returns: void
 
 ### ensureInputConnectivityForDeadEnds
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure all input nodes have at least one outgoing connection.
 
@@ -4514,7 +4510,7 @@ Returns: void
 
 ### ensureOutgoingConnectionForMinHidden
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("src/neat/neat.mutation.types").NodeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure a hidden node has at least one outgoing connection.
 
@@ -4528,7 +4524,7 @@ Returns: void
 
 ### ensureOutputConnectivityForDeadEnds
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure all output nodes have at least one incoming connection.
 
@@ -4541,7 +4537,7 @@ Returns: void
 
 ### filterPairsWithInnovations
 
-`(pairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+`(pairs: [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][]`
 
 Filter candidate pairs that already have innovation reuse keys.
 
@@ -4553,7 +4549,7 @@ Returns: reuse candidates
 
 ### findFirstNodeByType
 
-`(genomeToSearch: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeType: "input" | "output" | "hidden") => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | undefined`
+`(genomeToSearch: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeType: "input" | "output" | "hidden") => import("src/neat/neat.mutation.types").NodeWithMetadata | undefined`
 
 Find the first node of a given type.
 
@@ -4565,7 +4561,7 @@ Returns: the first matching node or undefined
 
 ### hasIncomingForDeadEnds
 
-`(node: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+`(node: import("src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
 
 Check whether a node has any incoming connections.
 
@@ -4576,7 +4572,7 @@ Returns: true when incoming connections exist
 
 ### hasOutgoingForDeadEnds
 
-`(node: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+`(node: import("src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
 
 Check whether a node has any outgoing connections.
 
@@ -4587,7 +4583,7 @@ Returns: true when outgoing connections exist
 
 ### hasRequiredEndpointsForMinHidden
 
-`(nodeGroupsToCheck: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }) => boolean`
+`(nodeGroupsToCheck: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }) => boolean`
 
 Check whether the network has at least one input and output node.
 
@@ -4598,7 +4594,7 @@ Returns: true when inputs and outputs are present
 
 ### initializeAdaptiveMutation
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Initialize per-genome adaptive mutation parameters if configured.
 
@@ -4610,7 +4606,7 @@ Returns: void
 
 ### isBlockedByRecurrentPolicyForSelect
 
-`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
+`(mutationMethod: import("src/neat/neat.mutation.types").MutationMethod, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
 
 Check whether a mutation is blocked by recurrent connection policy.
 
@@ -4623,7 +4619,7 @@ Returns: true when the mutation should be blocked
 
 ### isBlockedByStructuralLimitsForSelect
 
-`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
+`(mutationMethod: import("src/neat/neat.mutation.types").MutationMethod, genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
 
 Check whether a mutation is blocked by structural limits.
 
@@ -4637,7 +4633,7 @@ Returns: true when the mutation should be blocked
 
 ### isLegacyFFWPoolForSelect
 
-`(configuredPool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], methods: { mutation: unknown; }) => boolean`
+`(configuredPool: import("src/neat/neat.mutation.types").MutationMethod[], methods: { mutation: unknown; }) => boolean`
 
 Check whether a pool matches the legacy FFW operator ordering.
 
@@ -4649,7 +4645,7 @@ Returns: true when the pool matches FFW
 
 ### isOperatorNamePrefixedForSelect
 
-`(method: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, prefix: string) => boolean`
+`(method: import("src/neat/neat.mutation.types").MutationMethod, prefix: string) => boolean`
 
 Check whether an operator name uses a specific prefix.
 
@@ -4661,7 +4657,7 @@ Returns: true when the operator name matches the prefix
 
 ### maybeAddExtraConnection
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Optionally add an extra connection to increase exploration.
 
@@ -4675,7 +4671,7 @@ Returns: void
 
 ### mutateGenome
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => Promise<void>`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => Promise<void>`
 
 Mutate a single genome based on configured mutation policies.
 
@@ -4688,7 +4684,7 @@ Returns: Promise resolving after mutation attempts complete
 
 ### normalizeMutationPoolForSelect
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+`(internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("src/neat/neat.mutation.types").MutationMethod[]`
 
 Normalize the configured mutation pool to a flat operator list.
 
@@ -4701,7 +4697,7 @@ Returns: normalized mutation pool
 
 ### rebuildNetworkConnectionsForMinHidden
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => Promise<void>`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata) => Promise<void>`
 
 Rebuild connection caches after structural edits.
 
@@ -4712,7 +4708,7 @@ Returns: Promise resolving after rebuild completes
 
 ### resolveEffectiveAmount
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => number`
 
 Resolve the effective mutation amount for a genome.
 
@@ -4724,7 +4720,7 @@ Returns: effective mutation amount
 
 ### resolveEffectiveRate
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => number`
 
 Resolve the effective mutation rate for a genome.
 
@@ -4736,7 +4732,7 @@ Returns: effective mutation rate
 
 ### resolveFFWPolicyForSelect
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[] | null`
+`(internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("src/neat/neat.mutation.types").MutationMethod | import("src/neat/neat.mutation.types").MutationMethod[] | null`
 
 Resolve legacy FFW policy behavior, including test-specific returns.
 
@@ -4749,7 +4745,7 @@ Returns: mutation method or null when not handled
 
 ### resolveInsertIndex
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => number`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata) => number`
 
 Resolve the insertion index for a new node, keeping outputs at the end.
 
@@ -4761,7 +4757,7 @@ Returns: insertion index
 
 ### resolveMaxNodesForMinHidden
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+`(internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => number`
 
 Resolve the maximum node limit for the network.
 
@@ -4772,7 +4768,7 @@ Returns: maximum node limit
 
 ### resolveMinHiddenForMinHidden
 
-`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, maxNodesLimit: number, multiplier: number | undefined, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+`(networkToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata, maxNodesLimit: number, multiplier: number | undefined, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => number`
 
 Resolve the minimum hidden node requirement for the network.
 
@@ -4786,7 +4782,7 @@ Returns: minimum hidden node count
 
 ### resolvePairNodes
 
-`(chosenPair: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata]) => { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }`
+`(chosenPair: [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata]) => { sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata; symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }`
 
 Resolve nodes and innovation key details for a chosen pair.
 
@@ -4797,7 +4793,7 @@ Returns: resolved pair metadata
 
 ### sampleFromPoolForSelect
 
-`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | null`
+`(pool: import("src/neat/neat.mutation.types").MutationMethod[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").MutationMethod | null`
 
 Sample a random method from the pool.
 
@@ -4809,7 +4805,7 @@ Returns: sampled method or null
 
 ### selectConcreteMutationMethod
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => Promise<import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | null>`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => Promise<import("src/neat/neat.mutation.types").MutationMethod | null>`
 
 Select a concrete mutation method, resolving any legacy arrays.
 
@@ -4821,7 +4817,7 @@ Returns: resolved mutation method or null
 
 ### selectPairPool
 
-`(allPairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], reusePairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+`(allPairs: [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][], reusePairs: [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][]) => [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][]`
 
 Build the final selection pool based on reuse and hidden-node preference.
 
@@ -4833,7 +4829,7 @@ Returns: selection pool
 
 ### shouldAbortForCycle
 
-`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; }) => boolean`
+`(genomeToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata; }) => boolean`
 
 Determine whether adding the connection would create a cycle.
 
@@ -4845,7 +4841,7 @@ Returns: true if the connection should be aborted
 
 ### shouldInvalidateCaches
 
-`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, methods: { mutation: unknown; }) => boolean`
+`(mutationMethod: import("src/neat/neat.mutation.types").MutationMethod, methods: { mutation: unknown; }) => boolean`
 
 Determine whether a mutation method invalidates cached structures.
 
@@ -4857,7 +4853,7 @@ Returns: true when caches should be invalidated
 
 ### shouldMutateGenome
 
-`(effectiveRate: number, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => boolean`
+`(effectiveRate: number, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => boolean`
 
 Decide whether a genome should be mutated based on probability.
 
@@ -4869,7 +4865,7 @@ Returns: true when the genome should be mutated
 
 ### updateOperatorStatsIfNeeded
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, beforeSizes: { beforeNodes: number; beforeConns: number; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("src/neat/neat.mutation.types").MutationMethod, beforeSizes: { beforeNodes: number; beforeConns: number; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Update operator statistics when adaptation is enabled.
 
@@ -4916,7 +4912,7 @@ Returns: Population variance.
 
 ### calculateDiversityStats
 
-`(population: import("C:/NeatapticTS/src/neat/neat.diversity.utils").GenomeWithMetrics[], compatibilityComputer: import("C:/NeatapticTS/src/neat/neat.diversity.utils").CompatComputer) => import("C:/NeatapticTS/src/neat/neat.diversity.utils").DiversityStats | undefined`
+`(population: import("src/neat/neat.diversity.utils").GenomeWithMetrics[], compatibilityComputer: import("src/neat/neat.diversity.utils").CompatComputer) => import("src/neat/neat.diversity.utils").DiversityStats | undefined`
 
 Compute diversity statistics for a NEAT population.
 
@@ -4928,7 +4924,7 @@ Returns: DiversityStats object with all computed aggregates, or undefined if inp
 
 ### calculateStructuralEntropy
 
-`(graph: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(graph: import("src/architecture/network").default) => number`
 
 Compute the Shannon-style entropy of a network's out-degree distribution.
 
@@ -4963,7 +4959,7 @@ Minimal node interface with connections.
 
 ### calculateFitnessTotals
 
-`(population: import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore[]) => { totalFitness: number; minFitnessShift: number; }`
+`(population: import("src/neat/neat.selection.utils").GenomeWithScore[]) => { totalFitness: number; minFitnessShift: number; }`
 
 Compute the total fitness and minimal score shift for roulette selection.
 
@@ -4974,7 +4970,7 @@ Returns: Aggregated fitness totals.
 
 ### calculateTotalScore
 
-`(population: import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore[]) => number`
+`(population: import("src/neat/neat.selection.utils").GenomeWithScore[]) => number`
 
 Calculate the total fitness across the population.
 
@@ -4993,7 +4989,7 @@ Returns: The sum of all scores.
 
 ### ensurePopulationEvaluated
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.selection.utils").NeatLikeWithSelection) => void`
+`(internal: import("src/neat/neat.selection.utils").NeatLikeWithSelection) => void`
 
 Ensure population scores exist by running evaluation if needed.
 
@@ -5004,7 +5000,7 @@ Returns: void
 
 ### ensurePopulationSortedDescending
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.selection.utils").NeatLikeWithSelection) => void`
+`(internal: import("src/neat/neat.selection.utils").NeatLikeWithSelection) => void`
 
 Ensure the population is sorted descending by score when out of order.
 
@@ -5033,7 +5029,7 @@ Genome with a fitness score and arbitrary additional metadata.
 
 ### getRandomPopulationMember
 
-`(selectionContext: SelectionContext) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+`(selectionContext: SelectionContext) => import("src/neat/neat.selection.utils").GenomeWithScore`
 
 Select a random population member using the configured RNG.
 
@@ -5060,7 +5056,7 @@ NEAT-like instance extended with selection-specific state and helpers.
 
 ### pickByShiftedThreshold
 
-`(population: import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore[], selectionThreshold: number, minFitnessShift: number) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore | undefined`
+`(population: import("src/neat/neat.selection.utils").GenomeWithScore[], selectionThreshold: number, minFitnessShift: number) => import("src/neat/neat.selection.utils").GenomeWithScore | undefined`
 
 Pick the first genome whose shifted cumulative fitness exceeds the threshold.
 
@@ -5073,7 +5069,7 @@ Returns: The chosen genome if one crosses the threshold.
 
 ### pickTournamentWinner
 
-`(selectionContext: SelectionContext, sortedParticipants: import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore[]) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+`(selectionContext: SelectionContext, sortedParticipants: import("src/neat/neat.selection.utils").GenomeWithScore[]) => import("src/neat/neat.selection.utils").GenomeWithScore`
 
 Select a winner from sorted tournament participants.
 
@@ -5085,7 +5081,7 @@ Returns: The chosen tournament winner.
 
 ### resolveTournamentOverflow
 
-`(selectionContext: SelectionContext) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+`(selectionContext: SelectionContext) => import("src/neat/neat.selection.utils").GenomeWithScore`
 
 Resolve what happens when the tournament size exceeds population size.
 
@@ -5096,7 +5092,7 @@ Returns: A fallback parent genome.
 
 ### sampleTournamentParticipants
 
-`(selectionContext: SelectionContext, tournamentSize: number) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore[]`
+`(selectionContext: SelectionContext, tournamentSize: number) => import("src/neat/neat.selection.utils").GenomeWithScore[]`
 
 Sample a list of tournament participants (with possible repeats).
 
@@ -5110,7 +5106,7 @@ Returns: Sampled participants.
 
 ### selectParentByFitnessProportionate
 
-`(selectionContext: SelectionContext) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+`(selectionContext: SelectionContext) => import("src/neat/neat.selection.utils").GenomeWithScore`
 
 Select a parent using roulette-wheel fitness proportionate selection.
 
@@ -5121,7 +5117,7 @@ Returns: The chosen parent genome.
 
 ### selectParentByPower
 
-`(selectionContext: SelectionContext) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+`(selectionContext: SelectionContext) => import("src/neat/neat.selection.utils").GenomeWithScore`
 
 Select a parent by power-law distribution on the sorted population.
 
@@ -5132,7 +5128,7 @@ Returns: The chosen parent genome.
 
 ### selectParentByStrategy
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.selection.utils").NeatLikeWithSelection) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+`(internal: import("src/neat/neat.selection.utils").NeatLikeWithSelection) => import("src/neat/neat.selection.utils").GenomeWithScore`
 
 Select a parent genome according to configured selection strategy.
 
@@ -5143,7 +5139,7 @@ Returns: A genome object chosen as the parent.
 
 ### selectParentByTournament
 
-`(selectionContext: SelectionContext) => import("C:/NeatapticTS/src/neat/neat.selection.utils").GenomeWithScore`
+`(selectionContext: SelectionContext) => import("src/neat/neat.selection.utils").GenomeWithScore`
 
 Select a parent by tournament selection.
 
@@ -5156,7 +5152,7 @@ Returns: The chosen parent genome.
 
 ### applyComplexityStatsMonoObjective
 
-`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[], entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Attach complexity stats for mono-objective mode.
 
@@ -5167,7 +5163,7 @@ Parameters:
 
 ### applyComplexityStatsMultiObjective
 
-`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("src/neat/neat.types").GenomeDetailed[], entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Attach complexity stats for multi-objective mode.
 
@@ -5179,7 +5175,7 @@ Parameters:
 
 ### applyFastModeDefaults
 
-`(telemetryContext: { _fastModeTuned?: boolean | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions) => void`
+`(telemetryContext: { _fastModeTuned?: boolean | undefined; }, telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions) => void`
 
 Apply fast-mode tuning to diversity sampling and novelty defaults.
 
@@ -5189,7 +5185,7 @@ Parameters:
 
 ### applyHypervolumeTelemetry
 
-`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, hyperVolumeProxy: number, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, hyperVolumeProxy: number, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Attach hypervolume scalar when requested.
 
@@ -5200,7 +5196,7 @@ Parameters:
 
 ### applyLineageStatsMonoObjective
 
-`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[], entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply lineage stats for mono-objective mode using sampled ancestors.
 
@@ -5211,7 +5207,7 @@ Parameters:
 
 ### applyLineageStatsMultiObjective
 
-`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, population: import("src/neat/neat.types").GenomeDetailed[], entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply lineage stats for multi-objective mode using ancestor uniqueness.
 
@@ -5222,7 +5218,7 @@ Parameters:
 
 ### applyObjectiveAges
 
-`(telemetryContext: { _objectiveAges?: Map<string, number> | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _objectiveAges?: Map<string, number> | undefined; }, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply objective age snapshots to the entry.
 
@@ -5232,7 +5228,7 @@ Parameters:
 
 ### applyObjectiveEvents
 
-`(telemetryContext: { _pendingObjectiveAdds?: string[] | undefined; _pendingObjectiveRemoves?: string[] | undefined; _objectiveEvents?: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveEvent[] | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord, generation: number) => void`
+`(telemetryContext: { _pendingObjectiveAdds?: string[] | undefined; _pendingObjectiveRemoves?: string[] | undefined; _objectiveEvents?: import("src/neat/neat.types").ObjectiveEvent[] | undefined; }, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord, generation: number) => void`
 
 Apply and flush objective lifecycle events.
 
@@ -5243,7 +5239,7 @@ Parameters:
 
 ### applyObjectiveImportance
 
-`(telemetryContext: { _lastObjImportance?: import("C:/NeatapticTS/src/neat/neat.types").ObjImportance | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lastObjImportance?: import("src/neat/neat.types").ObjImportance | undefined; }, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply the most recent objective importance snapshot.
 
@@ -5253,7 +5249,7 @@ Parameters:
 
 ### applyObjectivesSnapshot
 
-`(telemetryContext: { _getObjectives?: (() => { key: string; }[]) | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _getObjectives?: (() => { key: string; }[]) | undefined; }, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply objectives list snapshot (keys only).
 
@@ -5263,7 +5259,7 @@ Parameters:
 
 ### applyPerformanceStats
 
-`(telemetryContext: { _lastEvalDuration?: number | undefined; _lastEvolveDuration?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lastEvalDuration?: number | undefined; _lastEvolveDuration?: number | undefined; }, telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Attach performance stats when configured.
 
@@ -5274,7 +5270,7 @@ Parameters:
 
 ### applyRngState
 
-`(telemetryContext: { _rngState?: unknown; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _rngState?: unknown; }, telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Attach RNG state when configured.
 
@@ -5285,7 +5281,7 @@ Parameters:
 
 ### applySpeciesAllocation
 
-`(telemetryContext: { _lastOffspringAlloc?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesAlloc[] | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lastOffspringAlloc?: import("src/neat/neat.types").SpeciesAlloc[] | undefined; }, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply per-species offspring allocation snapshot.
 
@@ -5295,7 +5291,7 @@ Parameters:
 
 ### buildComplexityEntry
 
-`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, meanCounts: { meanNodes: number; meanConns: number; }, maxCounts: { maxNodes: number; maxConns: number; }, meanEnabledRatio: number, growthValues: { growthNodes: number; growthConns: number; }) => { meanNodes: number; meanConns: number; maxNodes: number; maxConns: number; meanEnabledRatio: number; growthNodes: number; growthConns: number; budgetMaxNodes: number; budgetMaxConns: number; }`
+`(telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, meanCounts: { meanNodes: number; meanConns: number; }, maxCounts: { maxNodes: number; maxConns: number; }, meanEnabledRatio: number, growthValues: { growthNodes: number; growthConns: number; }) => { meanNodes: number; meanConns: number; maxNodes: number; maxConns: number; meanEnabledRatio: number; growthNodes: number; growthConns: number; budgetMaxNodes: number; budgetMaxConns: number; }`
 
 Build the complexity entry payload for multi-objective mode.
 
@@ -5321,7 +5317,7 @@ Returns: Map degree -> number of nodes with that degree.
 
 ### buildLineageContext
 
-`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => import("C:/NeatapticTS/src/neat/neat.lineage.utils").NeatLineageContext`
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => import("src/neat/neat.lineage.utils").NeatLineageContext`
 
 Build a lineage helper context for ancestor operations.
 
@@ -5333,7 +5329,7 @@ Returns: Lineage helper context.
 
 ### buildLineageEntry
 
-`(context: { _prevInbreedingCount?: number | undefined; }, bestGenomeSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed, meanDepthValue: number, ancestorUniquenessScore: number) => { parents: number[]; depthBest: number; meanDepth: number; inbreeding: number; ancestorUniq: number; }`
+`(context: { _prevInbreedingCount?: number | undefined; }, bestGenomeSnapshot: import("src/neat/neat.types").GenomeDetailed, meanDepthValue: number, ancestorUniquenessScore: number) => { parents: number[]; depthBest: number; meanDepth: number; inbreeding: number; ancestorUniq: number; }`
 
 Build the lineage entry payload.
 
@@ -5353,13 +5349,13 @@ Snapshot lineage metadata for the first `limit` genomes.
 
 ### clearTelemetryBuffer
 
-`(host: import("C:/NeatapticTS/src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => void`
+`(host: import("src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => void`
 
 Clear the telemetry buffer in place.
 
 ### collectDepths
 
-`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+`(populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => number[]`
 
 Collect depth values for the current population.
 
@@ -5370,7 +5366,7 @@ Returns: Array of depth values (defaults to 0).
 
 ### collectPopulationCounts
 
-`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => { nodeCounts: number[]; connectionCounts: number[]; }`
+`(populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => { nodeCounts: number[]; connectionCounts: number[]; }`
 
 Collect node and connection counts for the population.
 
@@ -5381,7 +5377,7 @@ Returns: Node and connection counts arrays.
 
 ### computeAncestorUniquenessSampled
 
-`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number`
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => number`
 
 Compute ancestor uniqueness using sampled Jaccard distance.
 
@@ -5405,7 +5401,7 @@ Returns: Growth values for nodes and connections.
 
 ### computeCompatibilityStats
 
-`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number, compatibilityDistance: ((a: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome, b: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome) => number) | undefined) => { meanCompat: number; varCompat: number; }`
+`(genomes: import("src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number, compatibilityDistance: ((a: import("src/neat/neat.telemetry.types").TelemetryGenome, b: import("src/neat/neat.telemetry.types").TelemetryGenome) => number) | undefined) => { meanCompat: number; varCompat: number; }`
 
 Compute pairwise compatibility statistics via sampling.
 
@@ -5431,7 +5427,7 @@ Returns: Map geneId -> degree count.
 
 ### computeEnabledRatios
 
-`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+`(populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => number[]`
 
 Compute enabled ratios per genome.
 
@@ -5454,7 +5450,7 @@ Returns: Entropy value (non-negative).
 
 ### computeEntropyStats
 
-`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], structuralEntropyFn: (genome: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome) => number) => { meanEntropy: number; varEntropy: number; }`
+`(genomes: import("src/neat/neat.telemetry.types").TelemetryGenome[], structuralEntropyFn: (genome: import("src/neat/neat.telemetry.types").TelemetryGenome) => number) => { meanEntropy: number; varEntropy: number; }`
 
 Compute structural entropy mean and variance across the population.
 
@@ -5466,7 +5462,7 @@ Returns: Mean and variance of entropy values.
 
 ### computeGraphletEntropy
 
-`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, graphletSampleCount: number, rngFactoryFn: () => () => number) => number`
+`(genomes: import("src/neat/neat.telemetry.types").TelemetryGenome[], size: number, graphletSampleCount: number, rngFactoryFn: () => () => number) => number`
 
 Sample graphlet motifs and compute entropy over their edge counts.
 
@@ -5480,7 +5476,7 @@ Returns: Graphlet entropy value.
 
 ### computeHyperVolumeProxy
 
-`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number`
+`(telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("src/neat/neat.types").GenomeDetailed[]) => number`
 
 Compute a hypervolume-like proxy for the Pareto front.
 
@@ -5492,7 +5488,7 @@ Returns: Hypervolume proxy value.
 
 ### computeLineageStats
 
-`(lineageEnabled: boolean, genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number) => { lineageMeanDepth: number; lineageMeanPairDist: number; }`
+`(lineageEnabled: boolean, genomes: import("src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number) => { lineageMeanDepth: number; lineageMeanPairDist: number; }`
 
 Compute lineage depth and pairwise depth-distance statistics.
 
@@ -5551,7 +5547,7 @@ Returns: Mean enabled ratio.
 
 ### computeOperatorStatsSnapshot
 
-`(operatorStats: import("C:/NeatapticTS/src/neat/neat.telemetry.types").OperatorStatsMap | undefined) => { op: string; succ: number; att: number; }[]`
+`(operatorStats: import("src/neat/neat.telemetry.types").OperatorStatsMap | undefined) => { op: string; succ: number; att: number; }[]`
 
 Snapshot operator statistics into a telemetry-friendly array.
 
@@ -5562,7 +5558,7 @@ Returns: Operator stats snapshot array.
 
 ### computePairJaccardDistance
 
-`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], firstIndex: number, secondIndex: number) => number | undefined`
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[], firstIndex: number, secondIndex: number) => number | undefined`
 
 Compute Jaccard distance between ancestor sets for a pair.
 
@@ -5576,7 +5572,7 @@ Returns: Jaccard distance or undefined when both sets are empty.
 
 ### computeParetoFrontSizes
 
-`(population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+`(population: import("src/neat/neat.types").GenomeDetailed[]) => number[]`
 
 Compute sizes of early Pareto fronts.
 
@@ -5599,7 +5595,7 @@ Returns: Intersection count.
 
 ### countEnabledEdges
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome, selectedNodes: import("C:/NeatapticTS/src/neat/neat.types").NodeLike[]) => number`
+`(genome: import("src/neat/neat.telemetry.types").TelemetryGenome, selectedNodes: import("src/neat/neat.types").NodeLike[]) => number`
 
 Count enabled edges between the selected nodes in a genome.
 
@@ -5611,7 +5607,7 @@ Returns: Edge count capped at 3.
 
 ### ensureTelemetryBuffer
 
-`(telemetryContext: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryBufferContext) => import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[]`
+`(telemetryContext: import("src/neat/neat.telemetry.types").TelemetryBufferContext) => import("src/neat/neat.types").TelemetryEntry[]`
 
 Ensure the telemetry buffer is initialized.
 
@@ -5622,7 +5618,7 @@ Returns: A mutable telemetry buffer.
 
 ### getCachedDiversityStats
 
-`(host: import("C:/NeatapticTS/src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => import("C:/NeatapticTS/src/neat/neat.diversity.utils").DiversityStats | undefined`
+`(host: import("src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => import("src/neat/neat.diversity.utils").DiversityStats | undefined`
 
 Read cached diversity statistics.
 
@@ -5641,25 +5637,25 @@ Returns: Cached entropy number, or undefined when not available.
 
 ### getObjectiveEventsSnapshot
 
-`(host: import("C:/NeatapticTS/src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => { gen: number; type: "add" | "remove"; key: string; }[]`
+`(host: import("src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => { gen: number; type: "add" | "remove"; key: string; }[]`
 
 Return a shallow copy of recent objective events.
 
 ### getPerformanceStatsSnapshot
 
-`(host: import("C:/NeatapticTS/src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }`
+`(host: import("src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }`
 
 Snapshot performance timings for evaluation and evolution steps.
 
 ### getTelemetryBuffer
 
-`(host: import("C:/NeatapticTS/src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[]`
+`(host: import("src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => import("src/neat/neat.types").TelemetryEntry[]`
 
 Return the telemetry buffer, defaulting to an empty array when missing.
 
 ### getTelemetryCoreSnapshot
 
-`(sourceEntry: Record<string, unknown>, fields: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryCoreFields) => Partial<Record<string, unknown>>`
+`(sourceEntry: Record<string, unknown>, fields: import("src/neat/neat.telemetry.types").TelemetryCoreFields) => Partial<Record<string, unknown>>`
 
 Build a snapshot of the core telemetry fields present on the entry; does
 not mutate the source entry.
@@ -5672,7 +5668,7 @@ Returns: Shallow snapshot of core fields that exist on the entry.
 
 ### isLineageEligible
 
-`(context: { _lineageEnabled?: boolean | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => boolean`
+`(context: { _lineageEnabled?: boolean | undefined; }, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => boolean`
 
 Check whether lineage metrics should be computed.
 
@@ -5728,13 +5724,13 @@ Returns: Pair of distinct indices.
 
 ### readOperatorStats
 
-`(operatorStats: import("C:/NeatapticTS/src/neat/neat.telemetry.types").OperatorStatsMap | undefined) => { name: string; success: number; attempts: number; }[]`
+`(operatorStats: import("src/neat/neat.telemetry.types").OperatorStatsMap | undefined) => { name: string; success: number; attempts: number; }[]`
 
 Convert operator stats map into the public accessor shape.
 
 ### safelyApplyTelemetrySelect
 
-`(telemetryContext: TContext, telemetryEntry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, applyTelemetrySelectFn: (this: TContext, entry: Record<string, unknown>) => Record<string, unknown>) => void`
+`(telemetryContext: TContext, telemetryEntry: import("src/neat/neat.types").TelemetryEntry, applyTelemetrySelectFn: (this: TContext, entry: Record<string, unknown>) => Record<string, unknown>) => void`
 
 Apply telemetry selection while swallowing any selection errors.
 
@@ -5745,7 +5741,7 @@ Parameters:
 
 ### safelyStreamTelemetryEntry
 
-`(telemetryContext: { options?: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryStreamOptions | undefined; }, telemetryEntry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry) => void`
+`(telemetryContext: { options?: import("src/neat/neat.telemetry.types").TelemetryStreamOptions | undefined; }, telemetryEntry: import("src/neat/neat.types").TelemetryEntry) => void`
 
 Stream telemetry entry when a stream callback is configured.
 
@@ -5766,7 +5762,7 @@ Parameters:
 
 ### stripUnselectedTelemetryKeys
 
-`(sourceEntry: Record<string, unknown>, selection: Set<string>, fields: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryCoreFields) => Record<string, unknown>`
+`(sourceEntry: Record<string, unknown>, selection: Set<string>, fields: import("src/neat/neat.telemetry.types").TelemetryCoreFields) => Record<string, unknown>`
 
 Remove non-core keys that are not whitelisted by the selection set.
 Mutates the provided entry in-place for efficiency.
@@ -5812,7 +5808,7 @@ Minimal telemetry stream options for streaming helpers.
 
 ### trimTelemetryBuffer
 
-`(telemetryBufferRef: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[], maxEntries: number) => void`
+`(telemetryBufferRef: import("src/neat/neat.types").TelemetryEntry[], maxEntries: number) => void`
 
 Trim the telemetry buffer to a maximum size.
 
@@ -5824,13 +5820,13 @@ Parameters:
 
 ### buildDefaultFitnessObjective
 
-`() => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor`
+`() => import("src/neat/neat.types").ObjectiveDescriptor`
 
 Returns: Default fitness objective descriptor.
 
 ### collectDefaultObjectives
 
-`(neatInstance: import("C:/NeatapticTS/src/neat/neat.objectives.utils").NeatLikeWithObjectives) => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+`(neatInstance: import("src/neat/neat.objectives.utils").NeatLikeWithObjectives) => import("src/neat/neat.types").ObjectiveDescriptor[]`
 
 Parameters:
 - `neatInstance` - - Instance providing objective settings.
@@ -5839,7 +5835,7 @@ Returns: Default objectives when fitness is not suppressed.
 
 ### collectUserObjectives
 
-`(neatInstance: import("C:/NeatapticTS/src/neat/neat.objectives.utils").NeatLikeWithObjectives) => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+`(neatInstance: import("src/neat/neat.objectives.utils").NeatLikeWithObjectives) => import("src/neat/neat.types").ObjectiveDescriptor[]`
 
 Parameters:
 - `neatInstance` - - Instance providing objective settings.
@@ -5848,7 +5844,7 @@ Returns: Valid user-registered objectives when multi-objective is enabled.
 
 ### ensureMultiObjectiveOptions
 
-`(neatInstance: import("C:/NeatapticTS/src/neat/neat.objectives.utils").NeatLikeWithObjectives) => { enabled?: boolean | undefined; objectives?: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[] | undefined; }`
+`(neatInstance: import("src/neat/neat.objectives.utils").NeatLikeWithObjectives) => { enabled?: boolean | undefined; objectives?: import("src/neat/neat.types").ObjectiveDescriptor[] | undefined; }`
 
 Parameters:
 - `neatInstance` - - Instance receiving the multi-objective container.
@@ -5857,7 +5853,7 @@ Returns: Initialized multi-objective options.
 
 ### ensureObjectivesList
 
-`(multiObjectiveOptions: { enabled?: boolean | undefined; objectives?: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[] | undefined; }) => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+`(multiObjectiveOptions: { enabled?: boolean | undefined; objectives?: import("src/neat/neat.types").ObjectiveDescriptor[] | undefined; }) => import("src/neat/neat.types").ObjectiveDescriptor[]`
 
 Parameters:
 - `multiObjectiveOptions` - - Multi-objective container to hydrate.
@@ -5866,7 +5862,7 @@ Returns: Objectives list for mutation-free operations.
 
 ### getObjectiveCandidates
 
-`(neatInstance: import("C:/NeatapticTS/src/neat/neat.objectives.utils").NeatLikeWithObjectives) => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+`(neatInstance: import("src/neat/neat.objectives.utils").NeatLikeWithObjectives) => import("src/neat/neat.types").ObjectiveDescriptor[]`
 
 Parameters:
 - `neatInstance` - - Instance providing objective settings.
@@ -5875,7 +5871,7 @@ Returns: Candidate objectives from configuration.
 
 ### isMultiObjectiveEnabled
 
-`(neatInstance: import("C:/NeatapticTS/src/neat/neat.objectives.utils").NeatLikeWithObjectives) => boolean`
+`(neatInstance: import("src/neat/neat.objectives.utils").NeatLikeWithObjectives) => boolean`
 
 Parameters:
 - `neatInstance` - - Instance providing objective settings.
@@ -5884,7 +5880,7 @@ Returns: Whether multi-objective mode is enabled with a candidate list.
 
 ### isValidObjective
 
-`(candidateObjective: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor | undefined) => boolean`
+`(candidateObjective: import("src/neat/neat.types").ObjectiveDescriptor | undefined) => boolean`
 
 Parameters:
 - `candidateObjective` - - Candidate descriptor to validate.
@@ -5900,7 +5896,7 @@ This shape is intentionally small and only includes the pieces needed by
 
 ### replaceObjectiveByKey
 
-`(objectivesList: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[], objectiveKey: string, objectiveDirection: "max" | "min", objectiveAccessor: (genome: import("C:/NeatapticTS/src/neat/neat.types").GenomeLike) => number) => import("C:/NeatapticTS/src/neat/neat.types").ObjectiveDescriptor[]`
+`(objectivesList: import("src/neat/neat.types").ObjectiveDescriptor[], objectiveKey: string, objectiveDirection: "max" | "min", objectiveAccessor: (genome: import("src/neat/neat.types").GenomeLike) => number) => import("src/neat/neat.types").ObjectiveDescriptor[]`
 
 Parameters:
 - `objectivesList` - - Existing objectives to update.
@@ -5918,7 +5914,7 @@ Utility helpers for NEAT speciation orchestration.
 
 ### adjustCompatibilityThreshold
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions, compatAdjust: { smoothingWindow?: number | undefined; decay?: number | undefined; kp?: number | undefined; ki?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; }, minCompatibilityThreshold: number, maxCompatibilityThreshold: number) => void`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions, compatAdjust: { smoothingWindow?: number | undefined; decay?: number | undefined; kp?: number | undefined; ki?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; }, minCompatibilityThreshold: number, maxCompatibilityThreshold: number) => void`
 
 Update the adaptive compatibility threshold and clamp to bounds.
 
@@ -5933,7 +5929,7 @@ Returns: Nothing.
 
 ### applyAgeProtection
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions) => void`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions) => void`
 
 Apply age protection penalties to old species.
 
@@ -5945,7 +5941,7 @@ Returns: Nothing.
 
 ### applyFitnessSharing
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.speciation.utils").FitnessSharingContext, sharingSigma: number) => void`
+`(speciationContext: import("src/neat/neat.speciation.utils").FitnessSharingContext, sharingSigma: number) => void`
 
 Apply fitness sharing to penalize similarity within species.
 
@@ -5957,7 +5953,7 @@ Returns: Nothing.
 
 ### assignPopulationToSpecies
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions) => void`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions) => void`
 
 Assign each genome in the population to a compatible species.
 
@@ -5980,7 +5976,7 @@ Returns: Mean of the values or zero.
 
 ### buildExtendedHistoryStats
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, species: import("C:/NeatapticTS/src/neat/neat.types").SpeciesLike) => Record<string, unknown>`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>, species: import("src/neat/neat.types").SpeciesLike) => Record<string, unknown>`
 
 Build extended history stats for a species.
 
@@ -5992,7 +5988,7 @@ Returns: Extended history entry.
 
 ### clampCompatibilityThreshold
 
-`(options: import("C:/NeatapticTS/src/neat/neat.types").SpeciationOptions, minCompatibilityThreshold: number, maxCompatibilityThreshold: number) => void`
+`(options: import("src/neat/neat.types").SpeciationOptions, minCompatibilityThreshold: number, maxCompatibilityThreshold: number) => void`
 
 Clamp the compatibility threshold to configured bounds.
 
@@ -6012,7 +6008,7 @@ by the speciation PID controller.
 
 ### computePidThreshold
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions, compatAdjust: { smoothingWindow?: number | undefined; decay?: number | undefined; kp?: number | undefined; ki?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; }, currentThreshold: number, minCompatibilityThreshold: number, maxCompatibilityThreshold: number) => number`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions, compatAdjust: { smoothingWindow?: number | undefined; decay?: number | undefined; kp?: number | undefined; ki?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; }, currentThreshold: number, minCompatibilityThreshold: number, maxCompatibilityThreshold: number) => number`
 
 Compute a PID-based threshold update and clamp when needed.
 
@@ -6028,7 +6024,7 @@ Returns: Updated threshold.
 
 ### createSpeciesForGenome
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, genome: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed) => void`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>, genome: import("src/neat/neat.types").GenomeDetailed) => void`
 
 Create a new species for the provided genome.
 
@@ -6068,7 +6064,7 @@ Returns: Nothing.
 
 ### findCompatibleSpecies
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions, genome: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed) => import("C:/NeatapticTS/src/neat/neat.types").SpeciesLike | undefined`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions, genome: import("src/neat/neat.types").GenomeDetailed) => import("src/neat/neat.types").SpeciesLike | undefined`
 
 Find a compatible species representative for the given genome.
 
@@ -6101,7 +6097,7 @@ enabled/disabled ratios).
 
 ### recordHistory
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions) => void`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>, options: TOptions) => void`
 
 Record the current species history snapshot.
 
@@ -6113,7 +6109,7 @@ Returns: Nothing.
 
 ### refreshSpeciesRepresentatives
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
 
 Refresh representatives and remove empty species.
 
@@ -6124,7 +6120,7 @@ Returns: Nothing.
 
 ### resetSpeciesMembers
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
 
 Clear member lists for all species.
 
@@ -6141,7 +6137,7 @@ Returns: Nothing.
 
 ### snapshotPreviousMembers
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
 
 Snapshot current species memberships for telemetry.
 
@@ -6161,7 +6157,7 @@ within a configured number of generations.
 
 ### summarizeInnovations
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>, members: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => { meanInnovation: number; innovationRange: number; enabledRatio: number; }`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>, members: import("src/neat/neat.types").GenomeDetailed[]) => { meanInnovation: number; innovationRange: number; enabledRatio: number; }`
 
 Summarize innovation statistics for a set of members.
 
@@ -6173,7 +6169,7 @@ Returns: Innovation summary statistics.
 
 ### trimHistory
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
+`(speciationContext: import("src/neat/neat.types").SpeciationHarnessContext<TOptions>) => void`
 
 Trim species history to the maximum buffer size.
 
@@ -6184,7 +6180,7 @@ Returns: Nothing.
 
 ### updateSpeciesStagnation
 
-`(speciationContext: import("C:/NeatapticTS/src/neat/neat.speciation.utils").StagnationContext, stagnationWindow: number, sortSpeciesMembers: (species: import("C:/NeatapticTS/src/neat/neat.types").SpeciesLike) => void) => void`
+`(speciationContext: import("src/neat/neat.speciation.utils").StagnationContext, stagnationWindow: number, sortSpeciesMembers: (species: import("src/neat/neat.types").SpeciesLike) => void) => void`
 
 Update stagnation counters and prune stagnant species.
 
@@ -6199,7 +6195,7 @@ Returns: Nothing.
 
 ### applyAddConnMutation
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
 
 Apply an ADD_CONN mutation with reuse and weight nudging.
 
@@ -6212,7 +6208,7 @@ Returns: void
 
 ### applyAddNodeMutation
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
 
 Apply an ADD_NODE mutation with reuse and weight nudging.
 
@@ -6225,7 +6221,7 @@ Returns: void
 
 ### applyMutationOperator
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("src/neat/neat.mutation.types").MutationMethod, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => void`
 
 Apply a mutation operator to a genome and invalidate caches as needed.
 
@@ -6239,7 +6235,7 @@ Returns: void
 
 ### captureStructuralSizes
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { beforeNodes: number; beforeConns: number; }`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata) => { beforeNodes: number; beforeConns: number; }`
 
 Capture structural sizes used to evaluate operator success.
 
@@ -6250,7 +6246,7 @@ Returns: structural size snapshot
 
 ### initializeAdaptiveMutation
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Initialize per-genome adaptive mutation parameters if configured.
 
@@ -6262,7 +6258,7 @@ Returns: void
 
 ### maybeAddExtraConnection
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Optionally add an extra connection to increase exploration.
 
@@ -6274,7 +6270,7 @@ Returns: void
 
 ### mutateGenome
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => Promise<void>`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => Promise<void>`
 
 Mutate a single genome based on configured mutation policies.
 
@@ -6287,7 +6283,7 @@ Returns: Promise resolving after mutation attempts complete
 
 ### resolveEffectiveAmount
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => number`
 
 Resolve the effective mutation amount for a genome.
 
@@ -6299,7 +6295,7 @@ Returns: effective mutation amount
 
 ### resolveEffectiveRate
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => number`
 
 Resolve the effective mutation rate for a genome.
 
@@ -6311,7 +6307,7 @@ Returns: effective mutation rate
 
 ### selectConcreteMutationMethod
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => Promise<import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | null>`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => Promise<import("src/neat/neat.mutation.types").MutationMethod | null>`
 
 Select a concrete mutation method, resolving any legacy arrays.
 
@@ -6323,7 +6319,7 @@ Returns: resolved mutation method or null
 
 ### shouldInvalidateCaches
 
-`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, methods: { mutation: unknown; }) => boolean`
+`(mutationMethod: import("src/neat/neat.mutation.types").MutationMethod, methods: { mutation: unknown; }) => boolean`
 
 Determine whether a mutation method invalidates cached structures.
 
@@ -6335,7 +6331,7 @@ Returns: true when caches should be invalidated
 
 ### shouldMutateGenome
 
-`(effectiveRate: number, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => boolean`
+`(effectiveRate: number, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => boolean`
 
 Decide whether a genome should be mutated based on probability.
 
@@ -6347,7 +6343,7 @@ Returns: true when the genome should be mutated
 
 ### updateOperatorStatsIfNeeded
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, beforeSizes: { beforeNodes: number; beforeConns: number; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, mutationMethod: import("src/neat/neat.mutation.types").MutationMethod, beforeSizes: { beforeNodes: number; beforeConns: number; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Update operator statistics when adaptation is enabled.
 
@@ -6363,7 +6359,7 @@ Returns: void
 
 ### applyRngState
 
-`(telemetryContext: { _rngState?: unknown; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _rngState?: unknown; }, telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Attach RNG state when configured.
 
@@ -6376,7 +6372,7 @@ Parameters:
 
 ### buildFittestSnapshot
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => import("C:/NeatapticTS/src/architecture/network").default`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => import("src/architecture/network").default`
 
 Build a cloned Network from the current best genome.
 
@@ -6387,7 +6383,7 @@ Returns: best network snapshot.
 
 ### clearPopulationScores
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Clear genome scores to force re-evaluation.
 
@@ -6409,7 +6405,7 @@ Returns: elapsed time.
 
 ### ensurePopulationEvaluated
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Ensure the population is evaluated before evolution operations.
 
@@ -6428,7 +6424,7 @@ Returns: timestamp in milliseconds or high-resolution units.
 
 ### trackGlobalImprovement
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("src/architecture/network").default) => void`
 
 Track global best improvement for stagnation logic.
 
@@ -6440,7 +6436,7 @@ Returns: void.
 
 ### updateGlobalBestTracking
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Update generation-level best score tracking.
 
@@ -6457,7 +6453,7 @@ Barrel exports for multi-objective utilities.
 
 ### accumulateCrowdingForObjective
 
-`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number) => void`
+`(sortedFront: import("src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("src/architecture/network").default, number>, objectiveIndex: number) => void`
 
 Accumulates crowding distance contributions for a single objective.
 
@@ -6480,7 +6476,7 @@ Parameters:
 
 ### archiveParetoFrontsIfEnabled
 
-`(neatInstance: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").NeatLikeWithMultiObjective, fronts: import("C:/NeatapticTS/src/architecture/network").default[][]) => void`
+`(neatInstance: import("src/neat/neat.multiobjective.utils.types").NeatLikeWithMultiObjective, fronts: import("src/architecture/network").default[][]) => void`
 
 Archives a compact snapshot of the current Pareto fronts when
 multi-objective mode is enabled.
@@ -6502,7 +6498,7 @@ Parameters:
 
 ### assignCrowdingDistances
 
-`(fronts: import("C:/NeatapticTS/src/architecture/network").default[][], valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[], population: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+`(fronts: import("src/architecture/network").default[][], valuesMatrixInput: number[][], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[], population: import("src/architecture/network").default[]) => void`
 
 Assigns crowding-distance annotations for each Pareto front.
 
@@ -6527,7 +6523,7 @@ Parameters:
 
 ### buildDominanceState
 
-`(valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState`
+`(valuesMatrixInput: number[][], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => import("src/neat/neat.multiobjective.dominance.utils").DominanceState`
 
 Builds dominance bookkeeping structures used by fast non-dominated sorting.
 
@@ -6553,7 +6549,7 @@ Returns: Dominance bookkeeping structures for ranking.
 
 ### buildGenomeIndexByReference
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[]) => Map<import("C:/NeatapticTS/src/architecture/network").default, number>`
+`(population: import("src/architecture/network").default[]) => Map<import("src/architecture/network").default, number>`
 
 Builds a stable mapping from genome object references to their population
 index.
@@ -6569,7 +6565,7 @@ Returns: Map from genome references to their index.
 
 ### buildGenomeValues
 
-`(genomeItem: import("C:/NeatapticTS/src/architecture/network").default, descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => number[]`
+`(genomeItem: import("src/architecture/network").default, descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => number[]`
 
 Builds an objective vector for a single genome.
 
@@ -6585,13 +6581,13 @@ Returns: Objective value vector (length equals `descriptors.length`).
 
 ### buildMultiObjectiveMetrics
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[]) => { rank: any; crowding: any; score: number; nodes: number; connections: number; }[]`
+`(population: import("src/architecture/network").default[]) => { rank: any; crowding: any; score: number; nodes: number; connections: number; }[]`
 
 Build lightweight multi-objective metrics for each genome in the population.
 
 ### buildParetoFronts
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[], dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, maxFrontRankGuard: number) => import("C:/NeatapticTS/src/architecture/network").default[][]`
+`(population: import("src/architecture/network").default[], dominanceState: import("src/neat/neat.multiobjective.dominance.utils").DominanceState, maxFrontRankGuard: number) => import("src/architecture/network").default[][]`
 
 Builds Pareto fronts from a precomputed dominance state.
 
@@ -6618,7 +6614,7 @@ Returns: Ordered Pareto fronts (rank order).
 
 ### buildValuesMatrix
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => number[][]`
+`(population: import("src/architecture/network").default[], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => number[][]`
 
 Builds a population-wide objective value matrix.
 
@@ -6652,7 +6648,7 @@ Export a Pareto archive slice as JSON Lines.
 
 ### initializeCrowding
 
-`(front: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+`(front: import("src/architecture/network").default[]) => void`
 
 Initializes crowding-distance annotations for a front.
 
@@ -6664,7 +6660,7 @@ Parameters:
 
 ### markBoundaryCrowding
 
-`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+`(sortedFront: import("src/architecture/network").default[]) => void`
 
 Marks the boundary genomes of a sorted front as infinitely crowded.
 
@@ -6716,7 +6712,7 @@ Notes:
 
 ### readObjectiveValue
 
-`(genomeItem: import("C:/NeatapticTS/src/architecture/network").default, descriptor: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor) => number`
+`(genomeItem: import("src/architecture/network").default, descriptor: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor) => number`
 
 Safely reads a single objective value for a given genome.
 
@@ -6736,20 +6732,19 @@ Returns: Numeric objective value; `0` if the accessor throws.
 
 ### reconstructParetoFronts
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[], maxFronts: number, isMultiObjectiveEnabled: boolean) => import("C:/NeatapticTS/src/architecture/network").default[][]`
+`(population: import("src/architecture/network").default[], maxFronts: number, isMultiObjectiveEnabled: boolean) => import("src/architecture/network").default[][]`
 
 Reconstruct Pareto fronts from stored rank annotations.
 
 ### resolveGenomeIndex
 
-`(genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, genomeItem: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(genomeIndexByReference: Map<import("src/architecture/network").default, number>, genomeItem: import("src/architecture/network").default) => number`
 
 Resolves a genome’s index using a reference-based map.
 
 Parameters:
 - `genomeIndexByReference` - - Lookup map created by
  *  {@link buildGenomeIndexByReference} .
- *
 - `genomeItem` - - Genome to resolve.
 
 Returns: The population index of the genome.
@@ -6772,7 +6767,7 @@ Returns: Normalized range with a non-zero floor.
 
 ### resolveObjectiveValue
 
-`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, genomeItem: import("C:/NeatapticTS/src/architecture/network").default, objectiveIndex: number) => number`
+`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("src/architecture/network").default, number>, genomeItem: import("src/architecture/network").default, objectiveIndex: number) => number`
 
 Resolves an objective value for a genome from a values matrix.
 
@@ -6795,7 +6790,7 @@ Return the most recent Pareto archive entries up to the provided limit.
 
 ### vectorDominates
 
-`(valuesA: number[], valuesB: number[], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => boolean`
+`(valuesA: number[], valuesB: number[], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => boolean`
 
 Determines whether vector A Pareto-dominates vector B.
 
@@ -6820,7 +6815,7 @@ Returns: `true` if A dominates B; otherwise `false`.
 
 ### initializePhaseState
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; }) => void`
 
 Ensure phase state is initialized.
 
@@ -6841,7 +6836,7 @@ Returns: Next phase label.
 
 ### togglePhaseIfNeeded
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; }) => void`
 
 Toggle phase if the current phase has exceeded its length.
 
@@ -6853,7 +6848,7 @@ Parameters:
 
 ### adaptReenableProbability
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { minSamples: number; target: number; min: number; max: number; deltaScale: number; }) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, config: { minSamples: number; target: number; min: number; max: number; deltaScale: number; }) => void`
 
 Adapt the re-enable probability based on recent success ratios.
 
@@ -6864,7 +6859,7 @@ Returns: void.
 
 ### applyAdaptiveComplexityControllers
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Apply adaptive complexity controllers if available.
 
@@ -6875,7 +6870,7 @@ Returns: void.
 
 ### applyAncestorUniqAdaptiveSafe
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Apply ancestor uniqueness adaptation if available.
 
@@ -6886,7 +6881,7 @@ Returns: void.
 
 ### applyAutoCompatibilityTuning
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { targetMin: number; adjustRate: number; minCoeff: number; maxCoeff: number; randomScale: number; }) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, config: { targetMin: number; adjustRate: number; minCoeff: number; maxCoeff: number; randomScale: number; }) => void`
 
 Apply auto-compatibility tuning if enabled.
 
@@ -6898,7 +6893,7 @@ Returns: void.
 
 ### applyMinimalCriterionAdaptiveSafe
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Apply minimal criterion adaptive controller if available.
 
@@ -6909,7 +6904,7 @@ Returns: void.
 
 ### applyOperatorAdaptationSafe
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Apply operator adaptation if available.
 
@@ -6920,7 +6915,7 @@ Returns: void.
 
 ### applyPruningAndMutation
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<void>`
 
 Apply pruning and mutation phases.
 
@@ -6931,7 +6926,7 @@ Returns: void.
 
 ### invalidateCompatibilityCaches
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Invalidate compatibility caches after mutations.
 
@@ -6958,7 +6953,7 @@ Emit the standard warning for runs that end without a valid best genome.
 
 ### applyOperatorAdaptationForSelect
 
-`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+`(pool: import("src/neat/neat.mutation.types").MutationMethod[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").MutationMethod[]`
 
 Apply operator adaptation weighting to the pool when enabled.
 
@@ -6970,7 +6965,7 @@ Returns: augmented pool
 
 ### applyOperatorBanditForSelect
 
-`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], fallbackMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod`
+`(pool: import("src/neat/neat.mutation.types").MutationMethod[], fallbackMethod: import("src/neat/neat.mutation.types").MutationMethod, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").MutationMethod`
 
 Apply operator bandit selection if enabled.
 
@@ -6983,7 +6978,7 @@ Returns: selected method
 
 ### applyPhasedComplexityForSelect
 
-`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+`(pool: import("src/neat/neat.mutation.types").MutationMethod[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").MutationMethod[]`
 
 Apply phased complexity adjustments to the pool when enabled.
 
@@ -6995,7 +6990,7 @@ Returns: pool with phased complexity adjustments
 
 ### isBlockedByRecurrentPolicyForSelect
 
-`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
+`(mutationMethod: import("src/neat/neat.mutation.types").MutationMethod, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
 
 Check whether a mutation is blocked by recurrent connection policy.
 
@@ -7008,7 +7003,7 @@ Returns: true when the mutation should be blocked
 
 ### isBlockedByStructuralLimitsForSelect
 
-`(mutationMethod: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, genome: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
+`(mutationMethod: import("src/neat/neat.mutation.types").MutationMethod, genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => boolean`
 
 Check whether a mutation is blocked by structural limits.
 
@@ -7022,7 +7017,7 @@ Returns: true when the mutation should be blocked
 
 ### isLegacyFFWPoolForSelect
 
-`(configuredPool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], methods: { mutation: unknown; }) => boolean`
+`(configuredPool: import("src/neat/neat.mutation.types").MutationMethod[], methods: { mutation: unknown; }) => boolean`
 
 Check whether a pool matches the legacy FFW operator ordering.
 
@@ -7034,7 +7029,7 @@ Returns: true when the pool matches FFW
 
 ### isOperatorNamePrefixedForSelect
 
-`(method: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod, prefix: string) => boolean`
+`(method: import("src/neat/neat.mutation.types").MutationMethod, prefix: string) => boolean`
 
 Check whether an operator name uses a specific prefix.
 
@@ -7046,7 +7041,7 @@ Returns: true when the operator name matches the prefix
 
 ### normalizeMutationPoolForSelect
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[]`
+`(internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("src/neat/neat.mutation.types").MutationMethod[]`
 
 Normalize the configured mutation pool to a flat operator list.
 
@@ -7059,7 +7054,7 @@ Returns: normalized mutation pool
 
 ### resolveFFWPolicyForSelect
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[] | null`
+`(internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }, rawReturnForTest: boolean) => import("src/neat/neat.mutation.types").MutationMethod | import("src/neat/neat.mutation.types").MutationMethod[] | null`
 
 Resolve legacy FFW policy behavior, including test-specific returns.
 
@@ -7072,7 +7067,7 @@ Returns: mutation method or null when not handled
 
 ### sampleFromPoolForSelect
 
-`(pool: import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").MutationMethod | null`
+`(pool: import("src/neat/neat.mutation.types").MutationMethod[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").MutationMethod | null`
 
 Sample a random method from the pool.
 
@@ -7100,7 +7095,7 @@ Export species history records as JSON Lines.
 
 ### clearGenomeStateIfRequested
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }, clearAction: (genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => void) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }, clearAction: (genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => void) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -7111,7 +7106,7 @@ Returns: void.
 
 ### runFitnessEvaluation
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => Promise<void>`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => Promise<void>`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -7123,7 +7118,7 @@ Returns: Promise<void> after fitness evaluation completes.
 
 ### addGenomeToNoveltyArchive
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, descriptor: number[], novelty: number, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, descriptor: number[], novelty: number, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -7135,7 +7130,7 @@ Returns: void.
 
 ### applyNoveltyToPopulation
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, descriptors: number[][], distanceMatrix: number[][], kNeighbors: number, blendFactor: number, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, descriptors: number[][], distanceMatrix: number[][], kNeighbors: number, blendFactor: number, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -7149,7 +7144,7 @@ Returns: void.
 
 ### blendNoveltyIntoScore
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation, novelty: number, blendFactor: number) => void`
+`(genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation, novelty: number, blendFactor: number) => void`
 
 Parameters:
 - `genome` - - Genome to update.
@@ -7169,7 +7164,7 @@ Returns: Distance matrix.
 
 ### buildNoveltyDescriptors
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number[][]`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number[][]`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -7200,7 +7195,7 @@ Returns: Novelty score.
 
 ### getNoveltyBlendFactor
 
-`(noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number`
+`(noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number`
 
 Parameters:
 - `noveltyOptions` - - Novelty configuration.
@@ -7209,7 +7204,7 @@ Returns: Blend factor for novelty vs. fitness.
 
 ### getNoveltyNeighborCount
 
-`(noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number`
+`(noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; }) => number`
 
 Parameters:
 - `noveltyOptions` - - Novelty configuration.
@@ -7218,7 +7213,7 @@ Returns: Number of neighbors to consider.
 
 ### runNoveltyBlendAndArchive
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -7230,7 +7225,7 @@ Returns: void.
 
 ### createOffspring
 
-`(context: import("C:/NeatapticTS/src/neat/neat.evolve.offspring.utils").OffspringContext, selectParent: () => import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network").default`
+`(context: import("src/neat/neat.evolve.offspring.utils").OffspringContext, selectParent: () => import("src/architecture/network").default) => import("src/architecture/network").default`
 
 Create a child genome by crossing two parents selected via the provided callback.
 
@@ -7248,7 +7243,7 @@ Minimal surface needed for offspring generation.
 
 ### computeDiversityStatsSafely
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Compute diversity stats safely if the hook exists.
 
@@ -7259,7 +7254,7 @@ Returns: void.
 
 ### recordTelemetryIfEnabled
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("C:/NeatapticTS/src/architecture/network").default) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, snapshot: import("src/architecture/network").default) => Promise<void>`
 
 Record telemetry if enabled.
 
@@ -7273,7 +7268,7 @@ Returns: void.
 
 ### ensureTelemetryBuffer
 
-`(telemetryContext: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryBufferContext) => import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[]`
+`(telemetryContext: import("src/neat/neat.telemetry.types").TelemetryBufferContext) => import("src/neat/neat.types").TelemetryEntry[]`
 
 Ensure the telemetry buffer is initialized.
 
@@ -7284,7 +7279,7 @@ Returns: A mutable telemetry buffer.
 
 ### safelyStreamTelemetryEntry
 
-`(telemetryContext: { options?: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryStreamOptions | undefined; }, telemetryEntry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry) => void`
+`(telemetryContext: { options?: import("src/neat/neat.telemetry.types").TelemetryStreamOptions | undefined; }, telemetryEntry: import("src/neat/neat.types").TelemetryEntry) => void`
 
 Stream telemetry entry when a stream callback is configured.
 
@@ -7294,7 +7289,7 @@ Parameters:
 
 ### trimTelemetryBuffer
 
-`(telemetryBufferRef: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[], maxEntries: number) => void`
+`(telemetryBufferRef: import("src/neat/neat.types").TelemetryEntry[], maxEntries: number) => void`
 
 Trim the telemetry buffer to a maximum size.
 
@@ -7306,7 +7301,7 @@ Parameters:
 
 ### applyAnnealDelta
 
-`(baseDelta: number, settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings) => number`
+`(baseDelta: number, settings: import("src/neat/neat.adaptive.shared").MutationSettings) => number`
 
 Apply annealing adjustments to a delta.
 
@@ -7331,7 +7326,7 @@ Returns: Adjusted delta.
 
 ### applyMutationAmount
 
-`(genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => void`
+`(genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, settings: import("src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => void`
 
 Apply mutation-amount adjustments to a genome.
 
@@ -7345,7 +7340,7 @@ Parameters:
 
 ### applyMutationsToPopulation
 
-`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[], partitions: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationPartitions, settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number) => import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationOutcome`
+`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[], partitions: import("src/neat/neat.adaptive.shared").MutationPartitions, settings: import("src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number) => import("src/neat/neat.adaptive.shared").MutationOutcome`
 
 Apply mutation updates to the population.
 
@@ -7389,7 +7384,7 @@ Returns: Adjusted delta.
 
 ### applyTwoTierFallback
 
-`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[], settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings) => void`
+`(population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[], settings: import("src/neat/neat.adaptive.shared").MutationSettings) => void`
 
 Apply two-tier fallback balancing.
 
@@ -7435,7 +7430,7 @@ Returns: Signed delta.
 
 ### resolveAmountDelta
 
-`(settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
+`(settings: import("src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
 
 Resolve mutation-amount delta based on strategy.
 
@@ -7451,7 +7446,7 @@ Returns: Signed mutation amount delta.
 
 ### resolveMutationSettings
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; }) => import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; }) => import("src/neat/neat.adaptive.shared").MutationSettings`
 
 Resolve mutation settings derived from configuration and engine state.
 
@@ -7463,7 +7458,7 @@ Returns: Resolved mutation settings.
 
 ### resolveRandomSource
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => () => number`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => () => number`
 
 Resolve a random source that matches the legacy RNG usage.
 
@@ -7474,7 +7469,7 @@ Returns: Random number provider.
 
 ### resolveRateDelta
 
-`(settings: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
+`(settings: import("src/neat/neat.adaptive.shared").MutationSettings, randomSource: () => number, genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }, genomeIndex: number, topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>, bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>) => number`
 
 Resolve mutation-rate delta based on strategy.
 
@@ -7502,7 +7497,7 @@ Returns: True if adaptation should run.
 
 ### shouldApplyTwoTierFallback
 
-`(strategy: string, outcome: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationOutcome) => boolean`
+`(strategy: string, outcome: import("src/neat/neat.adaptive.shared").MutationOutcome) => boolean`
 
 Determine whether a two-tier fallback is needed.
 
@@ -7525,7 +7520,7 @@ Returns: Sorted genomes.
 
 ### splitScoredGenomes
 
-`(scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]) => import("C:/NeatapticTS/src/neat/neat.adaptive.shared").MutationPartitions`
+`(scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]) => import("src/neat/neat.adaptive.shared").MutationPartitions`
 
 Split scored genomes into top and bottom halves.
 
@@ -7585,7 +7580,7 @@ Returns: Decay factor for exponential smoothing.
 
 ### applyDynamicObjectiveSchedule
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, currentObjectiveKeys: string[], config: { autoEntropyAddAt: number; }) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, currentObjectiveKeys: string[], config: { autoEntropyAddAt: number; }) => void`
 
 Apply dynamic objective scheduling and entropy rules.
 
@@ -7598,7 +7593,7 @@ Returns: void.
 
 ### applyFitnessSuppressionForTests
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Suppress fitness objective for specific test scenarios.
 
@@ -7609,7 +7604,7 @@ Returns: void.
 
 ### captureObjectiveImportanceSnapshot
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Capture objective importance stats for telemetry.
 
@@ -7620,7 +7615,7 @@ Returns: void.
 
 ### handleEntropyDropAndReadd
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, currentObjectiveKeys: string[], dynamicConfig: { enabled?: boolean | undefined; addComplexityAt?: number | undefined; addEntropyAt?: number | undefined; dropEntropyOnStagnation?: number | undefined; readdEntropyAfter?: number | undefined; } | undefined) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, currentObjectiveKeys: string[], dynamicConfig: { enabled?: boolean | undefined; addComplexityAt?: number | undefined; addEntropyAt?: number | undefined; dropEntropyOnStagnation?: number | undefined; readdEntropyAfter?: number | undefined; } | undefined) => void`
 
 Handle entropy removal and re-addition rules.
 
@@ -7633,7 +7628,7 @@ Returns: void.
 
 ### resetObjectivesCache
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Clear cached objectives so dynamic schedules can rebuild them.
 
@@ -7644,7 +7639,7 @@ Returns: void.
 
 ### updateObjectiveScheduleAndAges
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyDynamicObjectiveSchedule: (currentObjectiveKeys: string[]) => void; }) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyDynamicObjectiveSchedule: (currentObjectiveKeys: string[]) => void; }) => Promise<void>`
 
 Update objective schedule, pending adds/removes, and objective ages.
 
@@ -7659,7 +7654,7 @@ Returns: void.
 
 ### addOffspring
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], helpers: { addSpeciatedOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>; addUnspeciatedOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>; }) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[], helpers: { addSpeciatedOffspring: (nextPopulation: import("src/architecture/network").default[], remainingSlots: number) => Promise<void>; addUnspeciatedOffspring: (nextPopulation: import("src/architecture/network").default[], remainingSlots: number) => Promise<void>; }) => Promise<void>`
 
 Add offspring to fill remaining population slots.
 
@@ -7674,7 +7669,7 @@ Returns: void.
 
 ### addSpeciatedOffspring
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number, config: { minOffspringDefault: number; survivalThresholdDefault: number; youngThresholdDefault: number; youngMultiplierDefault: number; oldThresholdDefault: number; oldMultiplierDefault: number; crossSpeciesGuardLimit: number; }) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[], remainingSlots: number, config: { minOffspringDefault: number; survivalThresholdDefault: number; youngThresholdDefault: number; youngMultiplierDefault: number; oldThresholdDefault: number; oldMultiplierDefault: number; crossSpeciesGuardLimit: number; }) => Promise<void>`
 
 Add offspring when speciation is enabled.
 
@@ -7688,7 +7683,7 @@ Returns: void.
 
 ### addUnspeciatedOffspring
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[], remainingSlots: number) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[], remainingSlots: number) => Promise<void>`
 
 Add offspring when speciation is disabled.
 
@@ -7701,7 +7696,7 @@ Returns: void.
 
 ### applyElitism
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[]) => void`
 
 Apply elitism for the next generation.
 
@@ -7713,7 +7708,7 @@ Returns: void.
 
 ### applyProvenance
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[]) => void`
 
 Add provenance genomes into the next population.
 
@@ -7725,7 +7720,7 @@ Returns: void.
 
 ### buildNextPopulation
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyElitism: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void; applyProvenance: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => void; addOffspring: (nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => Promise<void>; }) => Promise<import("C:/NeatapticTS/src/architecture/network").default[]>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyElitism: (nextPopulation: import("src/architecture/network").default[]) => void; applyProvenance: (nextPopulation: import("src/architecture/network").default[]) => void; addOffspring: (nextPopulation: import("src/architecture/network").default[]) => Promise<void>; }) => Promise<import("src/architecture/network").default[]>`
 
 Build the next population (elitism, provenance, offspring).
 
@@ -7740,7 +7735,7 @@ Returns: next population array.
 
 ### buildSpeciesOffspring
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, survivors: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[], speciesIndex: number, crossSpeciesProbability: number, crossSpeciesGuardLimit: number, survivalThresholdDefault: number) => import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, survivors: import("src/neat/neat.evolve.types").GenomeWithMetadata[], speciesIndex: number, crossSpeciesProbability: number, crossSpeciesGuardLimit: number, survivalThresholdDefault: number) => import("src/neat/neat.evolve.types").GenomeWithMetadata`
 
 Build a single offspring within a species.
 
@@ -7755,7 +7750,7 @@ Returns: offspring genome.
 
 ### computeOffspringAllocation
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, remainingSlots: number, config: { minOffspringDefault: number; youngThresholdDefault: number; youngMultiplierDefault: number; oldThresholdDefault: number; oldMultiplierDefault: number; }) => number[]`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, remainingSlots: number, config: { minOffspringDefault: number; youngThresholdDefault: number; youngMultiplierDefault: number; oldThresholdDefault: number; oldMultiplierDefault: number; }) => number[]`
 
 Compute offspring allocation per species.
 
@@ -7781,7 +7776,7 @@ Returns: void.
 
 ### enforceMinimumOffspring
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, allocation: number[], remainingSlots: number, minOffspringDefault: number) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, allocation: number[], remainingSlots: number, minOffspringDefault: number) => void`
 
 Enforce minimum offspring per species when possible.
 
@@ -7795,7 +7790,7 @@ Returns: void.
 
 ### enforcePopulationConstraints
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("C:/NeatapticTS/src/architecture/network").default[]) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, nextPopulation: import("src/architecture/network").default[]) => Promise<void>`
 
 Ensure new population meets structural constraints.
 
@@ -7807,7 +7802,7 @@ Returns: void.
 
 ### selectSecondParent
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, survivors: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[], speciesIndex: number, crossSpeciesProbability: number, crossSpeciesGuardLimit: number, survivalThresholdDefault: number) => import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, survivors: import("src/neat/neat.evolve.types").GenomeWithMetadata[], speciesIndex: number, crossSpeciesProbability: number, crossSpeciesGuardLimit: number, survivalThresholdDefault: number) => import("src/neat/neat.evolve.types").GenomeWithMetadata`
 
 Select a second parent, optionally from another species.
 
@@ -7822,7 +7817,7 @@ Returns: chosen parent genome.
 
 ### trimOversubscription
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, allocation: number[], remainingSlots: number, minOffspringDefault: number) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, allocation: number[], remainingSlots: number, minOffspringDefault: number) => void`
 
 Trim allocations when oversubscribed.
 
@@ -7838,7 +7833,7 @@ Returns: void.
 
 ### applyGlobalStagnationInjectionIfNeeded
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { buildFreshGenomeForStagnation: () => Promise<import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata>; replaceFraction: number; }) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { buildFreshGenomeForStagnation: () => Promise<import("src/neat/neat.evolve.types").GenomeWithMetadata>; replaceFraction: number; }) => Promise<void>`
 
 Apply global stagnation injection if configured.
 
@@ -7851,7 +7846,7 @@ Returns: void.
 
 ### applySpeciationAndSharingIfEnabled
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyAutoCompatibilityTuning: () => void; recordSpeciesHistorySnapshot: () => void; }) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, helpers: { applyAutoCompatibilityTuning: () => void; recordSpeciesHistorySnapshot: () => void; }) => Promise<void>`
 
 Apply speciation, fitness sharing, and related side effects.
 
@@ -7865,7 +7860,7 @@ Returns: void.
 
 ### buildFreshGenomeForStagnation
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => Promise<import("src/neat/neat.evolve.types").GenomeWithMetadata>`
 
 Build a fresh genome for stagnation injection.
 
@@ -7876,7 +7871,7 @@ Returns: new genome with minimum constraints.
 
 ### ensureHiddenNodeVariance
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, genome: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata) => Promise<void>`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, genome: import("src/neat/neat.evolve.types").GenomeWithMetadata) => Promise<void>`
 
 Ensure a minimal hidden-node variance in injected genomes.
 
@@ -7888,7 +7883,7 @@ Returns: void.
 
 ### ensureSpeciesHistorySnapshot
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
 
 Ensure a minimal species history snapshot exists for exports.
 
@@ -7900,7 +7895,7 @@ Returns: void.
 
 ### recordSpeciesHistorySnapshot
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, maxHistory: number) => void`
 
 Record a species history snapshot when needed.
 
@@ -7912,7 +7907,7 @@ Returns: void.
 
 ### updateSpeciesStagnationIfEnabled
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
 
 Update species stagnation status when speciation enabled.
 
@@ -7925,7 +7920,7 @@ Returns: void.
 
 ### assignInnovationForConnection
 
-`(connection: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, pairNodes: { symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(connection: import("src/neat/neat.mutation.types").ConnectionWithMetadata, pairNodes: { symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Assign an innovation id for a new connection, reusing when possible.
 
@@ -7938,7 +7933,7 @@ Returns: void
 
 ### buildLegacyKeyForConn
 
-`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => string`
+`(sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata) => string`
 
 Build a legacy directional innovation key.
 
@@ -7950,7 +7945,7 @@ Returns: directional innovation key
 
 ### buildSymmetricKeyForConn
 
-`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => string`
+`(sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata) => string`
 
 Build a symmetric innovation key for an unordered node pair.
 
@@ -7962,7 +7957,7 @@ Returns: symmetric innovation key
 
 ### choosePairForConn
 
-`(pairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata] | null`
+`(pairs: [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata] | null`
 
 Choose a pair deterministically when only one candidate exists.
 
@@ -7974,7 +7969,7 @@ Returns: chosen pair or null
 
 ### collectCandidatePairsForConn
 
-`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+`(genomeToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata) => [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][]`
 
 Collect legal (from,to) node pairs not already connected.
 
@@ -7985,7 +7980,7 @@ Returns: candidate node pairs
 
 ### connectChosenPair
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; }) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata; }) => import("src/neat/neat.mutation.types").ConnectionWithMetadata | undefined`
 
 Create the connection for the chosen pair.
 
@@ -7997,7 +7992,7 @@ Returns: created connection or undefined
 
 ### createsCycle
 
-`(sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+`(sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata, targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
 
 Detect whether adding a connection would create a cycle.
 
@@ -8009,7 +8004,7 @@ Returns: true when a cycle is detected
 
 ### filterPairsWithInnovations
 
-`(pairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+`(pairs: [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][]`
 
 Filter candidate pairs that already have innovation reuse keys.
 
@@ -8021,7 +8016,7 @@ Returns: reuse candidates
 
 ### resolvePairNodes
 
-`(chosenPair: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata]) => { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }`
+`(chosenPair: [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata]) => { sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata; symmetricKey: string; legacyForwardKey: string; legacyReverseKey: string; }`
 
 Resolve nodes and innovation key details for a chosen pair.
 
@@ -8032,7 +8027,7 @@ Returns: resolved pair metadata
 
 ### selectPairPool
 
-`(allPairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][], reusePairs: [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]) => [import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata][]`
+`(allPairs: [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][], reusePairs: [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][]) => [import("src/neat/neat.mutation.types").NodeWithMetadata, import("src/neat/neat.mutation.types").NodeWithMetadata][]`
 
 Build the final selection pool based on reuse and hidden-node preference.
 
@@ -8044,7 +8039,7 @@ Returns: selection pool
 
 ### shouldAbortForCycle
 
-`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata; }) => boolean`
+`(genomeToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata, pairNodes: { sourceNode: import("src/neat/neat.mutation.types").NodeWithMetadata; targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata; }) => boolean`
 
 Determine whether adding the connection would create a cycle.
 
@@ -8058,7 +8053,7 @@ Returns: true if the connection should be aborted
 
 ### applySplitWithExistingRecord
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, splitRecord: { newNodeGeneId: number; inInnov: number; outInnov: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown) => void`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, splitRecord: { newNodeGeneId: number; inInnov: number; outInnov: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown) => void`
 
 Apply a split using an existing innovation record.
 
@@ -8073,7 +8068,7 @@ Returns: void
 
 ### applySplitWithNewRecord
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("src/neat/neat.mutation.types").ConnectionWithMetadata, splitDescriptor: { splitKey: string; originalWeight: number; }, NodeClass: new (type: "input" | "output" | "hidden") => unknown, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Apply a split and create a new innovation record.
 
@@ -8088,7 +8083,7 @@ Returns: void
 
 ### assignInnovationsForNewSplit
 
-`(newNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, splitConnections: { incomingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => { newNodeGeneId: number; inInnov: number; outInnov: number; }`
+`(newNode: import("src/neat/neat.mutation.types").NodeWithMetadata, splitConnections: { incomingConnection?: import("src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => { newNodeGeneId: number; inInnov: number; outInnov: number; }`
 
 Assign new innovations for a split and build the innovation record.
 
@@ -8101,7 +8096,7 @@ Returns: innovation record for the split
 
 ### buildSplitDescriptor
 
-`(connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata) => { splitKey: string; originalWeight: number; }`
+`(connectionToSplit: import("src/neat/neat.mutation.types").ConnectionWithMetadata) => { splitKey: string; originalWeight: number; }`
 
 Build the split descriptor used for innovation lookup and connection creation.
 
@@ -8112,7 +8107,7 @@ Returns: split descriptor
 
 ### chooseConnectionForSplit
 
-`(enabledConnectionsList: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | null`
+`(enabledConnectionsList: import("src/neat/neat.mutation.types").ConnectionWithMetadata[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").ConnectionWithMetadata | null`
 
 Choose a random enabled connection to split.
 
@@ -8124,7 +8119,7 @@ Returns: selected connection or null
 
 ### collectEnabledConnections
 
-`(genomeToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata[]`
+`(genomeToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata) => import("src/neat/neat.mutation.types").ConnectionWithMetadata[]`
 
 Collect all enabled connections from a genome.
 
@@ -8135,7 +8130,7 @@ Returns: enabled connections list
 
 ### connectSplitEdges
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata, newNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, originalWeight: number) => { incomingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, connectionToSplit: import("src/neat/neat.mutation.types").ConnectionWithMetadata, newNode: import("src/neat/neat.mutation.types").NodeWithMetadata, originalWeight: number) => { incomingConnection?: import("src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; outgoingConnection?: import("src/neat/neat.mutation.types").ConnectionWithMetadata | undefined; }`
 
 Create the incoming and outgoing split connections.
 
@@ -8149,7 +8144,7 @@ Returns: incoming/outgoing connection handles
 
 ### disconnectOriginalConnection
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, connectionToRemove: import("C:/NeatapticTS/src/neat/neat.mutation.types").ConnectionWithMetadata) => void`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, connectionToRemove: import("src/neat/neat.mutation.types").ConnectionWithMetadata) => void`
 
 Disconnect the original connection before inserting the split node.
 
@@ -8161,7 +8156,7 @@ Returns: void
 
 ### ensureBootstrapConnection
 
-`(genomeToSeed: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(genomeToSeed: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure the genome has at least one connection by linking input to output.
 
@@ -8173,7 +8168,7 @@ Returns: void
 
 ### findFirstNodeByType
 
-`(genomeToSearch: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeType: "input" | "output" | "hidden") => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | undefined`
+`(genomeToSearch: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeType: "input" | "output" | "hidden") => import("src/neat/neat.mutation.types").NodeWithMetadata | undefined`
 
 Find the first node of a given type.
 
@@ -8185,7 +8180,7 @@ Returns: the first matching node or undefined
 
 ### resolveInsertIndex
 
-`(genomeToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, targetNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => number`
+`(genomeToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, targetNode: import("src/neat/neat.mutation.types").NodeWithMetadata) => number`
 
 Resolve the insertion index for a new node, keeping outputs at the end.
 
@@ -8259,7 +8254,7 @@ Parameters:
 
 ### buildSpeciesHistoryStats
 
-`(speciesList: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryStat[], defaultSpeciesId: number, defaultSpeciesSize: number, defaultBestScore: number, defaultLastImproved: number) => import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryStat[]`
+`(speciesList: import("src/neat/neat.types").SpeciesHistoryStat[], defaultSpeciesId: number, defaultSpeciesSize: number, defaultBestScore: number, defaultLastImproved: number) => import("src/neat/neat.types").SpeciesHistoryStat[]`
 
 Normalize raw species records into exportable history stats.
 
@@ -8274,7 +8269,7 @@ Returns: Normalized stats for CSV export.
 
 ### collectBaseKeys
 
-`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, state: import("C:/NeatapticTS/src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState, frontsHeader: string) => void`
+`(entry: import("src/neat/neat.types").TelemetryEntry, state: import("src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState, frontsHeader: string) => void`
 
 Collect base (top-level) telemetry keys for a single entry.
 
@@ -8287,7 +8282,7 @@ Returns: void. Mutates `state.baseKeys`.
 
 ### collectDiversityLineageMetrics
 
-`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, state: import("C:/NeatapticTS/src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState) => void`
+`(entry: import("src/neat/neat.types").TelemetryEntry, state: import("src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState) => void`
 
 Collect curated diversity lineage metrics for stable CSV exports.
 
@@ -8299,7 +8294,7 @@ Returns: void. Mutates diversity lineage key set.
 
 ### collectGroupedMetricKeys
 
-`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, state: import("C:/NeatapticTS/src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState) => void`
+`(entry: import("src/neat/neat.types").TelemetryEntry, state: import("src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState) => void`
 
 Collect nested metric keys for grouped telemetry fields.
 
@@ -8311,7 +8306,7 @@ Returns: void. Mutates complexity/perf/lineage key sets.
 
 ### collectOptionalColumnPresence
 
-`(entry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, state: import("C:/NeatapticTS/src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState) => void`
+`(entry: import("src/neat/neat.types").TelemetryEntry, state: import("src/neat/neat.telemetry.exports.utils").TelemetryHeaderCollectionState) => void`
 
 Collect presence flags for optional telemetry columns.
 
@@ -8323,7 +8318,7 @@ Returns: void. Mutates optional-column flags.
 
 ### collectSpeciesHistoryHeaders
 
-`(history: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[], generationHeader: string) => string[]`
+`(history: import("src/neat/neat.types").SpeciesHistoryEntry[], generationHeader: string) => string[]`
 
 Collect ordered header keys for species history CSV export.
 
@@ -8335,7 +8330,7 @@ Returns: Ordered header list for CSV output.
 
 ### ensureMinimalSpeciesSnapshot
 
-`(neatInstance: import("C:/NeatapticTS/src/neat/neat.types").NeatLike & { _speciesHistory?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[] | undefined; _species?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryStat[] | undefined; generation?: number | undefined; }, history: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[], fallbackGeneration: number, defaultSpeciesId: number, defaultSpeciesSize: number, defaultBestScore: number, defaultLastImproved: number) => void`
+`(neatInstance: import("src/neat/neat.types").NeatLike & { _speciesHistory?: import("src/neat/neat.types").SpeciesHistoryEntry[] | undefined; _species?: import("src/neat/neat.types").SpeciesHistoryStat[] | undefined; generation?: number | undefined; }, history: import("src/neat/neat.types").SpeciesHistoryEntry[], fallbackGeneration: number, defaultSpeciesId: number, defaultSpeciesSize: number, defaultBestScore: number, defaultLastImproved: number) => void`
 
 Ensure a minimal species snapshot exists for deterministic CSV headers.
 
@@ -8352,7 +8347,7 @@ Returns: void. Mutates history when a minimal snapshot is needed.
 
 ### ensureSpeciesHistoryArray
 
-`(neatInstance: import("C:/NeatapticTS/src/neat/neat.types").NeatLike & { _speciesHistory?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[] | undefined; }) => import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry[]`
+`(neatInstance: import("src/neat/neat.types").NeatLike & { _speciesHistory?: import("src/neat/neat.types").SpeciesHistoryEntry[] | undefined; }) => import("src/neat/neat.types").SpeciesHistoryEntry[]`
 
 Ensure the species history array exists on the Neat instance.
 
@@ -8363,7 +8358,7 @@ Returns: Species history backing array (ensured on instance).
 
 ### resolveSpeciesHistoryCellValue
 
-`(historyEntry: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry, speciesStat: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryStat, headerName: string, generationHeader: string) => string`
+`(historyEntry: import("src/neat/neat.types").SpeciesHistoryEntry, speciesStat: import("src/neat/neat.types").SpeciesHistoryStat, headerName: string, generationHeader: string) => string`
 
 Resolve a single species history cell value for the provided header.
 
@@ -8388,7 +8383,7 @@ Returns: JSON string or empty string when JSON.stringify returns undefined.
 
 ### serializeSpeciesHistoryRow
 
-`(historyEntry: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryEntry, speciesStat: import("C:/NeatapticTS/src/neat/neat.types").SpeciesHistoryStat, orderedHeaders: string[], generationHeader: string) => string`
+`(historyEntry: import("src/neat/neat.types").SpeciesHistoryEntry, speciesStat: import("src/neat/neat.types").SpeciesHistoryStat, orderedHeaders: string[], generationHeader: string) => string`
 
 Serialize one species history row using the provided headers.
 
@@ -8408,7 +8403,7 @@ Mutable state container used while collecting telemetry header metadata.
 
 ### applyLineageStatsMonoObjective
 
-`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[], entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply lineage stats for mono-objective mode using sampled ancestors.
 
@@ -8419,7 +8414,7 @@ Parameters:
 
 ### applyLineageStatsMultiObjective
 
-`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lineageEnabled?: boolean | undefined; _getRNG?: (() => () => number) | undefined; _lastMeanDepth?: number | undefined; _prevInbreedingCount?: number | undefined; }, population: import("src/neat/neat.types").GenomeDetailed[], entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply lineage stats for multi-objective mode using ancestor uniqueness.
 
@@ -8430,7 +8425,7 @@ Parameters:
 
 ### buildLineageContext
 
-`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => import("C:/NeatapticTS/src/neat/neat.lineage.utils").NeatLineageContext`
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => import("src/neat/neat.lineage.utils").NeatLineageContext`
 
 Build a lineage helper context for ancestor operations.
 
@@ -8442,7 +8437,7 @@ Returns: Lineage helper context.
 
 ### buildLineageEntry
 
-`(context: { _prevInbreedingCount?: number | undefined; }, bestGenomeSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed, meanDepthValue: number, ancestorUniquenessScore: number) => { parents: number[]; depthBest: number; meanDepth: number; inbreeding: number; ancestorUniq: number; }`
+`(context: { _prevInbreedingCount?: number | undefined; }, bestGenomeSnapshot: import("src/neat/neat.types").GenomeDetailed, meanDepthValue: number, ancestorUniquenessScore: number) => { parents: number[]; depthBest: number; meanDepth: number; inbreeding: number; ancestorUniq: number; }`
 
 Build the lineage entry payload.
 
@@ -8456,7 +8451,7 @@ Returns: Lineage entry payload.
 
 ### collectDepths
 
-`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+`(populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => number[]`
 
 Collect depth values for the current population.
 
@@ -8467,7 +8462,7 @@ Returns: Array of depth values (defaults to 0).
 
 ### computeAncestorUniquenessSampled
 
-`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number`
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => number`
 
 Compute ancestor uniqueness using sampled Jaccard distance.
 
@@ -8479,7 +8474,7 @@ Returns: Rounded ancestor uniqueness score.
 
 ### computeLineageStats
 
-`(lineageEnabled: boolean, genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number) => { lineageMeanDepth: number; lineageMeanPairDist: number; }`
+`(lineageEnabled: boolean, genomes: import("src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number) => { lineageMeanDepth: number; lineageMeanPairDist: number; }`
 
 Compute lineage depth and pairwise depth-distance statistics.
 
@@ -8505,7 +8500,7 @@ Returns: Mean depth value.
 
 ### computePairJaccardDistance
 
-`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], firstIndex: number, secondIndex: number) => number | undefined`
+`(context: { _getRNG?: (() => () => number) | undefined; }, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[], firstIndex: number, secondIndex: number) => number | undefined`
 
 Compute Jaccard distance between ancestor sets for a pair.
 
@@ -8531,7 +8526,7 @@ Returns: Intersection count.
 
 ### isLineageEligible
 
-`(context: { _lineageEnabled?: boolean | undefined; }, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => boolean`
+`(context: { _lineageEnabled?: boolean | undefined; }, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => boolean`
 
 Check whether lineage metrics should be computed.
 
@@ -8605,7 +8600,7 @@ Default neighbor count for novelty calculation.
 
 ### chooseRandomNodeForDeadEnds
 
-`(candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | null`
+`(candidates: import("src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").NodeWithMetadata | null`
 
 Choose a random node from candidates for dead-end repair.
 
@@ -8617,7 +8612,7 @@ Returns: selected node or null
 
 ### collectNodeGroupsForDeadEnds
 
-`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }`
+`(networkToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }`
 
 Collect categorized node arrays for dead-end repair.
 
@@ -8628,7 +8623,7 @@ Returns: grouped node arrays
 
 ### connectIfCandidatesExistForDeadEnds
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, anchorNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], reverse: boolean, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, anchorNode: import("src/neat/neat.mutation.types").NodeWithMetadata, candidates: import("src/neat/neat.mutation.types").NodeWithMetadata[], reverse: boolean, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Connect a node to a random candidate if candidates exist.
 
@@ -8643,7 +8638,7 @@ Returns: void
 
 ### ensureHiddenConnectivityForDeadEnds
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure hidden nodes have both incoming and outgoing connections.
 
@@ -8656,7 +8651,7 @@ Returns: void
 
 ### ensureInputConnectivityForDeadEnds
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure all input nodes have at least one outgoing connection.
 
@@ -8669,7 +8664,7 @@ Returns: void
 
 ### ensureOutputConnectivityForDeadEnds
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure all output nodes have at least one incoming connection.
 
@@ -8682,7 +8677,7 @@ Returns: void
 
 ### hasIncomingForDeadEnds
 
-`(node: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+`(node: import("src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
 
 Check whether a node has any incoming connections.
 
@@ -8693,7 +8688,7 @@ Returns: true when incoming connections exist
 
 ### hasOutgoingForDeadEnds
 
-`(node: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
+`(node: import("src/neat/neat.mutation.types").NodeWithMetadata) => boolean`
 
 Check whether a node has any outgoing connections.
 
@@ -8706,7 +8701,7 @@ Returns: true when outgoing connections exist
 
 ### computeOperatorStatsSnapshot
 
-`(operatorStats: import("C:/NeatapticTS/src/neat/neat.telemetry.types").OperatorStatsMap | undefined) => { op: string; succ: number; att: number; }[]`
+`(operatorStats: import("src/neat/neat.telemetry.types").OperatorStatsMap | undefined) => { op: string; succ: number; att: number; }[]`
 
 Snapshot operator statistics into a telemetry-friendly array.
 
@@ -8717,7 +8712,7 @@ Returns: Operator stats snapshot array.
 
 ### readOperatorStats
 
-`(operatorStats: import("C:/NeatapticTS/src/neat/neat.telemetry.types").OperatorStatsMap | undefined) => { name: string; success: number; attempts: number; }[]`
+`(operatorStats: import("src/neat/neat.telemetry.types").OperatorStatsMap | undefined) => { name: string; success: number; attempts: number; }[]`
 
 Convert operator stats map into the public accessor shape.
 
@@ -8725,7 +8720,7 @@ Convert operator stats map into the public accessor shape.
 
 ### adjustConnectionBudget
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, factors: { increaseFactor: number; stagnationFactor: number; }, noveltyFactor: number, history: number[]) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, factors: { increaseFactor: number; stagnationFactor: number; }, noveltyFactor: number, history: number[]) => void`
 
 Adjust connection budget based on trends and factors.
 
@@ -8739,7 +8734,7 @@ Parameters:
 
 ### adjustNodeBudget
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, factors: { increaseFactor: number; stagnationFactor: number; }, noveltyFactor: number, history: number[]) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }, trends: { improvement: number; slope: number; }, factors: { increaseFactor: number; stagnationFactor: number; }, noveltyFactor: number, history: number[]) => void`
 
 Adjust node budget based on trends and factors.
 
@@ -8753,7 +8748,7 @@ Parameters:
 
 ### applyAdaptiveSchedule
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Apply adaptive complexity budget scheduling.
 
@@ -8763,7 +8758,7 @@ Parameters:
 
 ### applyComplexityBudgetSchedule
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Apply the complexity budget schedule for the configured mode.
 
@@ -8773,7 +8768,7 @@ Parameters:
 
 ### applyLinearSchedule
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Apply linear complexity budget scheduling.
 
@@ -8783,7 +8778,7 @@ Parameters:
 
 ### clampNodeBudget
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Clamp node budget to configured minimum.
 
@@ -8806,7 +8801,7 @@ Returns: Adjustment factors (increase and stagnation multipliers).
 
 ### computeNoveltyFactor
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number`
 
 Compute novelty factor based on archive size.
 
@@ -8839,7 +8834,7 @@ Returns: Trend metrics (improvement and slope).
 
 ### initializeConnectionBudget
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Initialize connection budget if undefined.
 
@@ -8849,7 +8844,7 @@ Parameters:
 
 ### initializeNodeBudget
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
 
 Initialize node budget if undefined.
 
@@ -8871,7 +8866,7 @@ Returns: Normalized slope clamped to [-2, 2].
 
 ### updateScoreHistory
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => number[]`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => number[]`
 
 Update rolling score history with current best score.
 
@@ -8885,7 +8880,7 @@ Returns: Rolling history array after update.
 
 ### registerEntropyObjective
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -8894,7 +8889,7 @@ Returns: void.
 
 ### runAutoEntropyObjectiveInjection
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -8904,7 +8899,7 @@ Returns: void.
 
 ### shouldAutoInjectEntropy
 
-`(evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => boolean`
+`(evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => boolean`
 
 Parameters:
 - `evaluationOptions` - - Options object for the current evaluation pass.
@@ -8915,7 +8910,7 @@ Returns: Whether entropy objective should be injected.
 
 ### runLightweightSpeciation
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -8925,7 +8920,7 @@ Returns: void.
 
 ### shouldRunSpeciation
 
-`(evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => boolean`
+`(evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => boolean`
 
 Parameters:
 - `evaluationOptions` - - Options object for the current evaluation pass.
@@ -8936,7 +8931,7 @@ Returns: Whether speciation should be run.
 
 ### chooseRandomNodeForMinHidden
 
-`(candidates: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata | null`
+`(candidates: import("src/neat/neat.mutation.types").NodeWithMetadata[], internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => import("src/neat/neat.mutation.types").NodeWithMetadata | null`
 
 Choose a random node from a candidate list.
 
@@ -8948,7 +8943,7 @@ Returns: selected node or null
 
 ### collectNodeGroupsForMinHidden
 
-`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }`
+`(networkToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata) => { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }`
 
 Collect categorized node arrays for the network.
 
@@ -8973,7 +8968,7 @@ Returns: Minimum hidden node requirement.
 
 ### ensureHiddenConnectivityForMinHidden
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure hidden nodes have both incoming and outgoing connections.
 
@@ -8986,7 +8981,7 @@ Returns: void
 
 ### ensureHiddenNodeCountForMinHidden
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToEdit: { hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, minimumHidden: number, maxNodesLimit: number) => Promise<void>`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToEdit: { hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, minimumHidden: number, maxNodesLimit: number) => Promise<void>`
 
 Ensure the network has at least the minimum number of hidden nodes.
 
@@ -9000,7 +8995,7 @@ Returns: Promise resolving when nodes are created
 
 ### ensureIncomingConnectionForMinHidden
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("src/neat/neat.mutation.types").NodeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure a hidden node has at least one incoming connection.
 
@@ -9014,7 +9009,7 @@ Returns: void
 
 ### ensureOutgoingConnectionForMinHidden
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => void`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata, nodeGroupsToUse: { outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; hiddenNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }, hiddenNode: import("src/neat/neat.mutation.types").NodeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => void`
 
 Ensure a hidden node has at least one outgoing connection.
 
@@ -9028,7 +9023,7 @@ Returns: void
 
 ### hasRequiredEndpointsForMinHidden
 
-`(nodeGroupsToCheck: { inputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("C:/NeatapticTS/src/neat/neat.mutation.types").NodeWithMetadata[]; }) => boolean`
+`(nodeGroupsToCheck: { inputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; outputNodes: import("src/neat/neat.mutation.types").NodeWithMetadata[]; }) => boolean`
 
 Check whether the network has at least one input and output node.
 
@@ -9041,7 +9036,7 @@ Returns: true when inputs and outputs are present
 
 ### rebuildNetworkConnectionsForMinHidden
 
-`(networkToEdit: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata) => Promise<void>`
+`(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata) => Promise<void>`
 
 Rebuild connection caches after structural edits.
 
@@ -9052,7 +9047,7 @@ Returns: Promise resolving after rebuild completes
 
 ### resolveMaxNodesForMinHidden
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+`(internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => number`
 
 Resolve the maximum node limit for the network.
 
@@ -9063,7 +9058,7 @@ Returns: maximum node limit
 
 ### resolveMinHiddenForMinHidden
 
-`(networkToInspect: import("C:/NeatapticTS/src/neat/neat.mutation.types").GenomeWithMetadata, maxNodesLimit: number, multiplier: number | undefined, internal: import("C:/NeatapticTS/src/neat/neat.mutation.types").NeatControllerForMutation) => number`
+`(networkToInspect: import("src/neat/neat.mutation.types").GenomeWithMetadata, maxNodesLimit: number, multiplier: number | undefined, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation) => number`
 
 Resolve the minimum hidden node requirement for the network.
 
@@ -9093,31 +9088,31 @@ Snapshot lineage metadata for the first `limit` genomes.
 
 ### clearTelemetryBuffer
 
-`(host: import("C:/NeatapticTS/src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => void`
+`(host: import("src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => void`
 
 Clear the telemetry buffer in place.
 
 ### getCachedDiversityStats
 
-`(host: import("C:/NeatapticTS/src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => import("C:/NeatapticTS/src/neat/neat.diversity.utils").DiversityStats | undefined`
+`(host: import("src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => import("src/neat/neat.diversity.utils").DiversityStats | undefined`
 
 Read cached diversity statistics.
 
 ### getObjectiveEventsSnapshot
 
-`(host: import("C:/NeatapticTS/src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => { gen: number; type: "add" | "remove"; key: string; }[]`
+`(host: import("src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => { gen: number; type: "add" | "remove"; key: string; }[]`
 
 Return a shallow copy of recent objective events.
 
 ### getPerformanceStatsSnapshot
 
-`(host: import("C:/NeatapticTS/src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }`
+`(host: import("src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }`
 
 Snapshot performance timings for evaluation and evolution steps.
 
 ### getTelemetryBuffer
 
-`(host: import("C:/NeatapticTS/src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry[]`
+`(host: import("src/neat/neat.telemetry.accessors.utils").TelemetryAccessorHost) => import("src/neat/neat.types").TelemetryEntry[]`
 
 Return the telemetry buffer, defaulting to an empty array when missing.
 
@@ -9131,7 +9126,7 @@ Minimal host surface needed by telemetry accessors.
 
 ### applyFastModeDefaults
 
-`(telemetryContext: { _fastModeTuned?: boolean | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions) => void`
+`(telemetryContext: { _fastModeTuned?: boolean | undefined; }, telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions) => void`
 
 Apply fast-mode tuning to diversity sampling and novelty defaults.
 
@@ -9141,7 +9136,7 @@ Parameters:
 
 ### computeCompatibilityStats
 
-`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number, compatibilityDistance: ((a: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome, b: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome) => number) | undefined) => { meanCompat: number; varCompat: number; }`
+`(genomes: import("src/neat/neat.telemetry.types").TelemetryGenome[], size: number, pairSampleCount: number, rngFactoryFn: () => () => number, compatibilityDistance: ((a: import("src/neat/neat.telemetry.types").TelemetryGenome, b: import("src/neat/neat.telemetry.types").TelemetryGenome) => number) | undefined) => { meanCompat: number; varCompat: number; }`
 
 Compute pairwise compatibility statistics via sampling.
 
@@ -9156,7 +9151,7 @@ Returns: Mean and variance of sampled compatibilities.
 
 ### computeEntropyStats
 
-`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], structuralEntropyFn: (genome: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome) => number) => { meanEntropy: number; varEntropy: number; }`
+`(genomes: import("src/neat/neat.telemetry.types").TelemetryGenome[], structuralEntropyFn: (genome: import("src/neat/neat.telemetry.types").TelemetryGenome) => number) => { meanEntropy: number; varEntropy: number; }`
 
 Compute structural entropy mean and variance across the population.
 
@@ -9168,7 +9163,7 @@ Returns: Mean and variance of entropy values.
 
 ### computeGraphletEntropy
 
-`(genomes: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome[], size: number, graphletSampleCount: number, rngFactoryFn: () => () => number) => number`
+`(genomes: import("src/neat/neat.telemetry.types").TelemetryGenome[], size: number, graphletSampleCount: number, rngFactoryFn: () => () => number) => number`
 
 Sample graphlet motifs and compute entropy over their edge counts.
 
@@ -9182,7 +9177,7 @@ Returns: Graphlet entropy value.
 
 ### countEnabledEdges
 
-`(genome: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryGenome, selectedNodes: import("C:/NeatapticTS/src/neat/neat.types").NodeLike[]) => number`
+`(genome: import("src/neat/neat.telemetry.types").TelemetryGenome, selectedNodes: import("src/neat/neat.types").NodeLike[]) => number`
 
 Count enabled edges between the selected nodes in a genome.
 
@@ -9209,7 +9204,7 @@ Returns: Array of distinct indices.
 
 ### getTelemetryCoreSnapshot
 
-`(sourceEntry: Record<string, unknown>, fields: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryCoreFields) => Partial<Record<string, unknown>>`
+`(sourceEntry: Record<string, unknown>, fields: import("src/neat/neat.telemetry.types").TelemetryCoreFields) => Partial<Record<string, unknown>>`
 
 Build a snapshot of the core telemetry fields present on the entry; does
 not mutate the source entry.
@@ -9235,7 +9230,7 @@ Returns: The same entry reference with core fields restored.
 
 ### safelyApplyTelemetrySelect
 
-`(telemetryContext: TContext, telemetryEntry: import("C:/NeatapticTS/src/neat/neat.types").TelemetryEntry, applyTelemetrySelectFn: (this: TContext, entry: Record<string, unknown>) => Record<string, unknown>) => void`
+`(telemetryContext: TContext, telemetryEntry: import("src/neat/neat.types").TelemetryEntry, applyTelemetrySelectFn: (this: TContext, entry: Record<string, unknown>) => Record<string, unknown>) => void`
 
 Apply telemetry selection while swallowing any selection errors.
 
@@ -9246,7 +9241,7 @@ Parameters:
 
 ### stripUnselectedTelemetryKeys
 
-`(sourceEntry: Record<string, unknown>, selection: Set<string>, fields: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryCoreFields) => Record<string, unknown>`
+`(sourceEntry: Record<string, unknown>, selection: Set<string>, fields: import("src/neat/neat.telemetry.types").TelemetryCoreFields) => Record<string, unknown>`
 
 Remove non-core keys that are not whitelisted by the selection set.
 Mutates the provided entry in-place for efficiency.
@@ -9262,7 +9257,7 @@ Returns: The same entry reference after filtering.
 
 ### applyComplexityStatsMonoObjective
 
-`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, populationSnapshot: import("src/neat/neat.types").GenomeDetailed[], entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Attach complexity stats for mono-objective mode.
 
@@ -9273,7 +9268,7 @@ Parameters:
 
 ### applyComplexityStatsMultiObjective
 
-`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[], entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lastMeanNodes?: number | undefined; _lastMeanConns?: number | undefined; }, telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("src/neat/neat.types").GenomeDetailed[], entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Attach complexity stats for multi-objective mode.
 
@@ -9285,7 +9280,7 @@ Parameters:
 
 ### buildComplexityEntry
 
-`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, meanCounts: { meanNodes: number; meanConns: number; }, maxCounts: { maxNodes: number; maxConns: number; }, meanEnabledRatio: number, growthValues: { growthNodes: number; growthConns: number; }) => { meanNodes: number; meanConns: number; maxNodes: number; maxConns: number; meanEnabledRatio: number; growthNodes: number; growthConns: number; budgetMaxNodes: number; budgetMaxConns: number; }`
+`(telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, meanCounts: { meanNodes: number; meanConns: number; }, maxCounts: { maxNodes: number; maxConns: number; }, meanEnabledRatio: number, growthValues: { growthNodes: number; growthConns: number; }) => { meanNodes: number; meanConns: number; maxNodes: number; maxConns: number; meanEnabledRatio: number; growthNodes: number; growthConns: number; budgetMaxNodes: number; budgetMaxConns: number; }`
 
 Build the complexity entry payload for multi-objective mode.
 
@@ -9300,7 +9295,7 @@ Returns: Complexity entry payload.
 
 ### collectPopulationCounts
 
-`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => { nodeCounts: number[]; connectionCounts: number[]; }`
+`(populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => { nodeCounts: number[]; connectionCounts: number[]; }`
 
 Collect node and connection counts for the population.
 
@@ -9323,7 +9318,7 @@ Returns: Growth values for nodes and connections.
 
 ### computeEnabledRatios
 
-`(populationSnapshot: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+`(populationSnapshot: import("src/neat/neat.types").GenomeDetailed[]) => number[]`
 
 Compute enabled ratios per genome.
 
@@ -9369,7 +9364,7 @@ Returns: Mean enabled ratio.
 
 ### applyHypervolumeTelemetry
 
-`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, hyperVolumeProxy: number, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, hyperVolumeProxy: number, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Attach hypervolume scalar when requested.
 
@@ -9380,7 +9375,7 @@ Parameters:
 
 ### applyObjectiveAges
 
-`(telemetryContext: { _objectiveAges?: Map<string, number> | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _objectiveAges?: Map<string, number> | undefined; }, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply objective age snapshots to the entry.
 
@@ -9390,7 +9385,7 @@ Parameters:
 
 ### applyObjectiveEvents
 
-`(telemetryContext: { _pendingObjectiveAdds?: string[] | undefined; _pendingObjectiveRemoves?: string[] | undefined; _objectiveEvents?: import("C:/NeatapticTS/src/neat/neat.types").ObjectiveEvent[] | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord, generation: number) => void`
+`(telemetryContext: { _pendingObjectiveAdds?: string[] | undefined; _pendingObjectiveRemoves?: string[] | undefined; _objectiveEvents?: import("src/neat/neat.types").ObjectiveEvent[] | undefined; }, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord, generation: number) => void`
 
 Apply and flush objective lifecycle events.
 
@@ -9401,7 +9396,7 @@ Parameters:
 
 ### applyObjectiveImportance
 
-`(telemetryContext: { _lastObjImportance?: import("C:/NeatapticTS/src/neat/neat.types").ObjImportance | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lastObjImportance?: import("src/neat/neat.types").ObjImportance | undefined; }, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply the most recent objective importance snapshot.
 
@@ -9411,7 +9406,7 @@ Parameters:
 
 ### applyObjectivesSnapshot
 
-`(telemetryContext: { _getObjectives?: (() => { key: string; }[]) | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _getObjectives?: (() => { key: string; }[]) | undefined; }, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply objectives list snapshot (keys only).
 
@@ -9421,7 +9416,7 @@ Parameters:
 
 ### applySpeciesAllocation
 
-`(telemetryContext: { _lastOffspringAlloc?: import("C:/NeatapticTS/src/neat/neat.types").SpeciesAlloc[] | undefined; }, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lastOffspringAlloc?: import("src/neat/neat.types").SpeciesAlloc[] | undefined; }, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Apply per-species offspring allocation snapshot.
 
@@ -9431,7 +9426,7 @@ Parameters:
 
 ### computeHyperVolumeProxy
 
-`(telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number`
+`(telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, population: import("src/neat/neat.types").GenomeDetailed[]) => number`
 
 Compute a hypervolume-like proxy for the Pareto front.
 
@@ -9443,7 +9438,7 @@ Returns: Hypervolume proxy value.
 
 ### computeParetoFrontSizes
 
-`(population: import("C:/NeatapticTS/src/neat/neat.types").GenomeDetailed[]) => number[]`
+`(population: import("src/neat/neat.types").GenomeDetailed[]) => number[]`
 
 Compute sizes of early Pareto fronts.
 
@@ -9456,7 +9451,7 @@ Returns: Array of front sizes (rank 0..4).
 
 ### annotateGenomeRank
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[], genomeIndex: number, frontRank: number) => void`
+`(population: import("src/architecture/network").default[], genomeIndex: number, frontRank: number) => void`
 
 Annotates a genome with its Pareto front rank.
 
@@ -9467,7 +9462,7 @@ Parameters:
 
 ### appendFront
 
-`(paretoFronts: import("C:/NeatapticTS/src/architecture/network").default[][], population: import("C:/NeatapticTS/src/architecture/network").default[], currentFrontIndices: number[]) => void`
+`(paretoFronts: import("src/architecture/network").default[][], population: import("src/architecture/network").default[], currentFrontIndices: number[]) => void`
 
 Appends the current front (index list) as genome references to the
 `paretoFronts` accumulator.
@@ -9479,7 +9474,7 @@ Parameters:
 
 ### buildNextFrontIndices
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[], dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, currentFrontIndices: number[], currentFrontRank: number) => number[]`
+`(population: import("src/architecture/network").default[], dominanceState: import("src/neat/neat.multiobjective.dominance.utils").DominanceState, currentFrontIndices: number[], currentFrontRank: number) => number[]`
 
 Builds the next front by applying rank annotations and dominance updates.
 
@@ -9493,7 +9488,7 @@ Returns: Indices for the next front.
 
 ### buildParetoFronts
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[], dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, maxFrontRankGuard: number) => import("C:/NeatapticTS/src/architecture/network").default[][]`
+`(population: import("src/architecture/network").default[], dominanceState: import("src/neat/neat.multiobjective.dominance.utils").DominanceState, maxFrontRankGuard: number) => import("src/architecture/network").default[][]`
 
 Builds Pareto fronts from a precomputed dominance state.
 
@@ -9520,7 +9515,7 @@ Returns: Ordered Pareto fronts (rank order).
 
 ### collectNextFrontIndices
 
-`(dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, genomeIndex: number, nextFrontIndices: number[]) => void`
+`(dominanceState: import("src/neat/neat.multiobjective.dominance.utils").DominanceState, genomeIndex: number, nextFrontIndices: number[]) => void`
 
 Collects indices that become non-dominated after removing the current
 genome’s dominance influence.
@@ -9559,7 +9554,7 @@ Returns: `true` if ranking should stop.
 
 ### applyPerformanceStats
 
-`(telemetryContext: { _lastEvalDuration?: number | undefined; _lastEvolveDuration?: number | undefined; }, telemetryOptions: import("C:/NeatapticTS/src/neat/neat.types").NeatOptions & import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("C:/NeatapticTS/src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
+`(telemetryContext: { _lastEvalDuration?: number | undefined; _lastEvolveDuration?: number | undefined; }, telemetryOptions: import("src/neat/neat.types").NeatOptions & import("src/neat/neat.telemetry.types").TelemetryDiversityOptions, entry: import("src/neat/neat.telemetry.types").TelemetryEntryRecord) => void`
 
 Attach performance stats when configured.
 
@@ -9572,7 +9567,7 @@ Parameters:
 
 ### applyAutoDistanceCoefficientTuning
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, autoDistanceCoeffOptions: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; }, connectionVariance: number) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, autoDistanceCoeffOptions: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; }, connectionVariance: number) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -9583,7 +9578,7 @@ Returns: void.
 
 ### applyDistanceCoefficientDecrease
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -9594,7 +9589,7 @@ Returns: void.
 
 ### applyDistanceCoefficientIncrease
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -9633,7 +9628,7 @@ Returns: Bounds for coefficients.
 
 ### initializeConnectionVarianceBootstrap
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, connectionVariance: number, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, connectionVariance: number, bounds: { minCoeff: number; maxCoeff: number; }, adjustRate: number) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -9645,7 +9640,7 @@ Returns: void.
 
 ### runAutoDistanceCoefficientTuning
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -9657,7 +9652,7 @@ Returns: void.
 
 ### archiveParetoFrontsIfEnabled
 
-`(neatInstance: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").NeatLikeWithMultiObjective, fronts: import("C:/NeatapticTS/src/architecture/network").default[][]) => void`
+`(neatInstance: import("src/neat/neat.multiobjective.utils.types").NeatLikeWithMultiObjective, fronts: import("src/architecture/network").default[][]) => void`
 
 Archives a compact snapshot of the current Pareto fronts when
 multi-objective mode is enabled.
@@ -9685,7 +9680,7 @@ Parameters:
 
 ### buildMultiObjectiveMetrics
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[]) => { rank: any; crowding: any; score: number; nodes: number; connections: number; }[]`
+`(population: import("src/architecture/network").default[]) => { rank: any; crowding: any; score: number; nodes: number; connections: number; }[]`
 
 Build lightweight multi-objective metrics for each genome in the population.
 
@@ -9703,7 +9698,7 @@ Export a Pareto archive slice as JSON Lines.
 
 ### reconstructParetoFronts
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[], maxFronts: number, isMultiObjectiveEnabled: boolean) => import("C:/NeatapticTS/src/architecture/network").default[][]`
+`(population: import("src/architecture/network").default[], maxFronts: number, isMultiObjectiveEnabled: boolean) => import("src/architecture/network").default[][]`
 
 Reconstruct Pareto fronts from stored rank annotations.
 
@@ -9728,7 +9723,7 @@ Returns: Next compatibility threshold.
 
 ### runEntropyCompatibilityTuning
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -9740,7 +9735,7 @@ Returns: void.
 
 ### adaptDominanceEpsilon
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, paretoFronts: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[][], config: { targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; }) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, paretoFronts: import("src/neat/neat.evolve.types").GenomeWithMetadata[][], config: { targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; }) => void`
 
 Adapt dominance epsilon based on Pareto front size.
 
@@ -9753,7 +9748,7 @@ Returns: void.
 
 ### computeCrowdingDistances
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[], paretoFronts: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[][], objectives: import("C:/NeatapticTS/src/neat/neat.evolve.types").ObjectiveDescriptor[]) => number[]`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, populationSnapshot: import("src/neat/neat.evolve.types").GenomeWithMetadata[], paretoFronts: import("src/neat/neat.evolve.types").GenomeWithMetadata[][], objectives: import("src/neat/neat.evolve.types").ObjectiveDescriptor[]) => number[]`
 
 Compute crowding distances for multi-objective fronts.
 
@@ -9767,7 +9762,7 @@ Returns: crowding distances aligned with population order.
 
 ### processMultiObjective
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { paretoArchiveMax: number; targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; pruneWindowDefault: number; pruneRangeEpsDefault: number; }) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, config: { paretoArchiveMax: number; targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; pruneWindowDefault: number; pruneRangeEpsDefault: number; }) => void`
 
 Run multi-objective ranking, crowding distance, and archives.
 
@@ -9779,7 +9774,7 @@ Returns: void.
 
 ### pruneInactiveObjectives
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, config: { pruneWindowDefault: number; pruneRangeEpsDefault: number; }) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, config: { pruneWindowDefault: number; pruneRangeEpsDefault: number; }) => void`
 
 Prune objectives that have collapsed ranges over a window.
 
@@ -9791,7 +9786,7 @@ Returns: void.
 
 ### recordParetoArchives
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, paretoFronts: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[][], objectives: import("C:/NeatapticTS/src/neat/neat.evolve.types").ObjectiveDescriptor[], archiveMax: number) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, paretoFronts: import("src/neat/neat.evolve.types").GenomeWithMetadata[][], objectives: import("src/neat/neat.evolve.types").ObjectiveDescriptor[], archiveMax: number) => void`
 
 Record Pareto front archives for telemetry.
 
@@ -9805,7 +9800,7 @@ Returns: void.
 
 ### sortPopulationByPareto
 
-`(internal: import("C:/NeatapticTS/src/neat/neat.evolve.types").NeatControllerForEvolution, populationSnapshot: import("C:/NeatapticTS/src/neat/neat.evolve.types").GenomeWithMetadata[], crowdingDistances: number[]) => void`
+`(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution, populationSnapshot: import("src/neat/neat.evolve.types").GenomeWithMetadata[], crowdingDistances: number[]) => void`
 
 Sort population by Pareto rank and crowding distance.
 
@@ -9820,7 +9815,7 @@ Returns: void.
 
 ### accumulateCrowdingForObjective
 
-`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number) => void`
+`(sortedFront: import("src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("src/architecture/network").default, number>, objectiveIndex: number) => void`
 
 Accumulates crowding distance contributions for a single objective.
 
@@ -9843,7 +9838,7 @@ Parameters:
 
 ### accumulateInteriorCrowding
 
-`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number, valueRange: number) => void`
+`(sortedFront: import("src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("src/architecture/network").default, number>, objectiveIndex: number, valueRange: number) => void`
 
 Accumulates crowding deltas for the interior genomes of a sorted front.
 
@@ -9859,7 +9854,7 @@ Parameters:
 
 ### applyCrowdingDelta
 
-`(currentGenome: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").NetworkWithMOAnnotations, previousValue: number, nextValue: number, valueRange: number) => void`
+`(currentGenome: import("src/neat/neat.multiobjective.utils.types").NetworkWithMOAnnotations, previousValue: number, nextValue: number, valueRange: number) => void`
 
 Applies a normalized crowding-distance delta to a genome.
 
@@ -9874,7 +9869,7 @@ Parameters:
 
 ### applyCrowdingForObjective
 
-`(front: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number) => void`
+`(front: import("src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("src/architecture/network").default, number>, objectiveIndex: number) => void`
 
 Applies crowding-distance accumulation for a single objective within a
 single front.
@@ -9887,7 +9882,7 @@ Parameters:
 
 ### assignCrowdingDistances
 
-`(fronts: import("C:/NeatapticTS/src/architecture/network").default[][], valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[], population: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+`(fronts: import("src/architecture/network").default[][], valuesMatrixInput: number[][], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[], population: import("src/architecture/network").default[]) => void`
 
 Assigns crowding-distance annotations for each Pareto front.
 
@@ -9912,7 +9907,7 @@ Parameters:
 
 ### assignCrowdingForFront
 
-`(front: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndices: number[]) => void`
+`(front: import("src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("src/architecture/network").default, number>, objectiveIndices: number[]) => void`
 
 Assigns crowding distances for a single front across all objectives.
 
@@ -9924,7 +9919,7 @@ Parameters:
 
 ### buildGenomeIndexByReference
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[]) => Map<import("C:/NeatapticTS/src/architecture/network").default, number>`
+`(population: import("src/architecture/network").default[]) => Map<import("src/architecture/network").default, number>`
 
 Builds a stable mapping from genome object references to their population
 index.
@@ -9965,7 +9960,7 @@ Returns: Objective indices `0..objectiveCount-1`.
 
 ### buildSortedFrontByObjective
 
-`(front: import("C:/NeatapticTS/src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number) => import("C:/NeatapticTS/src/architecture/network").default[]`
+`(front: import("src/architecture/network").default[], valuesMatrixInput: number[][], genomeIndexByReference: Map<import("src/architecture/network").default, number>, objectiveIndex: number) => import("src/architecture/network").default[]`
 
 Builds a copy of the front sorted by the specified objective.
 
@@ -9982,7 +9977,7 @@ Returns: Front sorted by objective value.
 
 ### compareObjectiveValuesForCrowding
 
-`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, objectiveIndex: number, leftGenome: import("C:/NeatapticTS/src/architecture/network").default, rightGenome: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("src/architecture/network").default, number>, objectiveIndex: number, leftGenome: import("src/architecture/network").default, rightGenome: import("src/architecture/network").default) => number`
 
 Comparator used to sort genomes by a specific objective value.
 
@@ -9997,7 +9992,7 @@ Returns: Numeric sort comparison value (ascending).
 
 ### initializeCrowding
 
-`(front: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+`(front: import("src/architecture/network").default[]) => void`
 
 Initializes crowding-distance annotations for a front.
 
@@ -10009,7 +10004,7 @@ Parameters:
 
 ### markBoundaryCrowding
 
-`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[]) => void`
+`(sortedFront: import("src/architecture/network").default[]) => void`
 
 Marks the boundary genomes of a sorted front as infinitely crowded.
 
@@ -10022,7 +10017,7 @@ Parameters:
 
 ### resolveBoundaryGenomes
 
-`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[]) => { firstGenome: import("C:/NeatapticTS/src/architecture/network").default; lastGenome: import("C:/NeatapticTS/src/architecture/network").default; } | null`
+`(sortedFront: import("src/architecture/network").default[]) => { firstGenome: import("src/architecture/network").default; lastGenome: import("src/architecture/network").default; } | null`
 
 Resolves the boundary (first/last) genomes for a sorted front.
 
@@ -10033,21 +10028,20 @@ Returns: Boundary genomes, or `null` if the front is empty.
 
 ### resolveGenomeIndex
 
-`(genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, genomeItem: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(genomeIndexByReference: Map<import("src/architecture/network").default, number>, genomeItem: import("src/architecture/network").default) => number`
 
 Resolves a genome’s index using a reference-based map.
 
 Parameters:
 - `genomeIndexByReference` - - Lookup map created by
  *  {@link buildGenomeIndexByReference} .
- *
 - `genomeItem` - - Genome to resolve.
 
 Returns: The population index of the genome.
 
 ### resolveNeighborPair
 
-`(sortedFront: import("C:/NeatapticTS/src/architecture/network").default[], sortedIndex: number) => { previousGenome: import("C:/NeatapticTS/src/architecture/network").default; nextGenome: import("C:/NeatapticTS/src/architecture/network").default; }`
+`(sortedFront: import("src/architecture/network").default[], sortedIndex: number) => { previousGenome: import("src/architecture/network").default; nextGenome: import("src/architecture/network").default; }`
 
 Resolves the neighbor genomes for an interior element of a sorted front.
 
@@ -10075,7 +10069,7 @@ Returns: Normalized range with a non-zero floor.
 
 ### resolveObjectiveRangeFromBoundaries
 
-`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, boundaryGenomes: { firstGenome: import("C:/NeatapticTS/src/architecture/network").default; lastGenome: import("C:/NeatapticTS/src/architecture/network").default; }, objectiveIndex: number) => number`
+`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("src/architecture/network").default, number>, boundaryGenomes: { firstGenome: import("src/architecture/network").default; lastGenome: import("src/architecture/network").default; }, objectiveIndex: number) => number`
 
 Resolves the normalized objective range for a front from its boundary
 genomes.
@@ -10093,7 +10087,7 @@ Returns: Normalized value range for the objective.
 
 ### resolveObjectiveValue
 
-`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("C:/NeatapticTS/src/architecture/network").default, number>, genomeItem: import("C:/NeatapticTS/src/architecture/network").default, objectiveIndex: number) => number`
+`(valuesMatrixInput: number[][], genomeIndexByReference: Map<import("src/architecture/network").default, number>, genomeItem: import("src/architecture/network").default, objectiveIndex: number) => number`
 
 Resolves an objective value for a genome from a values matrix.
 
@@ -10110,7 +10104,7 @@ Returns: The objective value for the genome.
 
 ### shouldSkipCrowdingFront
 
-`(front: import("C:/NeatapticTS/src/architecture/network").default[]) => boolean`
+`(front: import("src/architecture/network").default[]) => boolean`
 
 Determines whether crowding-distance processing should be skipped for a
 front.
@@ -10135,7 +10129,7 @@ Returns: Next sigma value.
 
 ### ensureDiversityStatsContainer
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -10144,7 +10138,7 @@ Returns: void.
 
 ### runEntropySharingTuning
 
-`(controller: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("C:/NeatapticTS/src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
+`(controller: import("src/neat/neat.evaluate.utils.types").NeatControllerForEval, evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: import("src/neat/neat.evaluate.utils.types").GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; }) => void`
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
@@ -10156,7 +10150,7 @@ Returns: void.
 
 ### applyPairwiseDominance
 
-`(dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[], candidateIndex: number, opponentIndex: number) => void`
+`(dominanceState: import("src/neat/neat.multiobjective.dominance.utils").DominanceState, valuesMatrixInput: number[][], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[], candidateIndex: number, opponentIndex: number) => void`
 
 Applies a single pairwise dominance update between candidate and opponent.
 
@@ -10173,7 +10167,7 @@ Parameters:
 
 ### buildDominanceState
 
-`(valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState`
+`(valuesMatrixInput: number[][], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => import("src/neat/neat.multiobjective.dominance.utils").DominanceState`
 
 Builds dominance bookkeeping structures used by fast non-dominated sorting.
 
@@ -10226,7 +10220,7 @@ Returns: Comparison flags for this objective.
 
 ### createEmptyDominanceState
 
-`(populationSize: number) => import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState`
+`(populationSize: number) => import("src/neat/neat.multiobjective.dominance.utils").DominanceState`
 
 Creates an empty dominance state container sized to the population.
 
@@ -10277,7 +10271,7 @@ Returns: `true` if the candidate is strictly better for this objective.
 
 ### isNonDominatedCandidate
 
-`(dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, candidateIndex: number) => boolean`
+`(dominanceState: import("src/neat/neat.multiobjective.dominance.utils").DominanceState, candidateIndex: number) => boolean`
 
 Determines whether a candidate has zero domination count.
 
@@ -10289,7 +10283,7 @@ Returns: `true` if the candidate is currently non-dominated.
 
 ### resolveDominanceOutcome
 
-`(candidateVector: number[], opponentVector: number[], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => "dominates" | "dominated" | "indifferent"`
+`(candidateVector: number[], opponentVector: number[], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => "dominates" | "dominated" | "indifferent"`
 
 Resolves dominance outcome between two objective vectors.
 
@@ -10307,7 +10301,7 @@ Returns: Dominance outcome between candidate and opponent.
 
 ### resolveObjectiveDirection
 
-`(descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[], objectiveIndex: number) => "max" | "min"`
+`(descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[], objectiveIndex: number) => "max" | "min"`
 
 Resolves the objective direction for a given objective index.
 
@@ -10335,7 +10329,7 @@ Returns: `true` if the pair should be skipped.
 
 ### updateDominanceForCandidate
 
-`(dominanceState: import("C:/NeatapticTS/src/neat/neat.multiobjective.dominance.utils").DominanceState, valuesMatrixInput: number[][], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[], candidateIndex: number, candidateIndices: number[]) => void`
+`(dominanceState: import("src/neat/neat.multiobjective.dominance.utils").DominanceState, valuesMatrixInput: number[][], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[], candidateIndex: number, candidateIndices: number[]) => void`
 
 Updates dominance bookkeeping for a candidate against all opponents.
 
@@ -10365,7 +10359,7 @@ Returns: Updated strict-improvement flag.
 
 ### vectorDominates
 
-`(valuesA: number[], valuesB: number[], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => boolean`
+`(valuesA: number[], valuesB: number[], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => boolean`
 
 Determines whether vector A Pareto-dominates vector B.
 
@@ -10390,7 +10384,7 @@ Returns: `true` if A dominates B; otherwise `false`.
 
 ### buildGenomeValues
 
-`(genomeItem: import("C:/NeatapticTS/src/architecture/network").default, descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => number[]`
+`(genomeItem: import("src/architecture/network").default, descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => number[]`
 
 Builds an objective vector for a single genome.
 
@@ -10406,7 +10400,7 @@ Returns: Objective value vector (length equals `descriptors.length`).
 
 ### buildValuesMatrix
 
-`(population: import("C:/NeatapticTS/src/architecture/network").default[], descriptors: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => number[][]`
+`(population: import("src/architecture/network").default[], descriptors: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor[]) => number[][]`
 
 Builds a population-wide objective value matrix.
 
@@ -10421,7 +10415,7 @@ Returns: Objective values matrix.
 
 ### readObjectiveValue
 
-`(genomeItem: import("C:/NeatapticTS/src/architecture/network").default, descriptor: import("C:/NeatapticTS/src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor) => number`
+`(genomeItem: import("src/architecture/network").default, descriptor: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor) => number`
 
 Safely reads a single objective value for a given genome.
 
@@ -10443,7 +10437,7 @@ Returns: Numeric objective value; `0` if the accessor throws.
 
 ### applyRejection
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, threshold: number) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, threshold: number) => void`
 
 Zero scores below the final threshold.
 
@@ -10453,7 +10447,7 @@ Parameters:
 
 ### collectScores
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number[]`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number[]`
 
 Collect population scores into a snapshot array.
 
@@ -10476,7 +10470,7 @@ Returns: Acceptance proportion.
 
 ### initializeThreshold
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; }) => void`
 
 Initialize MC threshold if missing.
 
@@ -10497,7 +10491,7 @@ Returns: Target settings.
 
 ### updateThreshold
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, acceptance: number, tuning: { targetAcceptance: number; adjustRate: number; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, acceptance: number, tuning: { targetAcceptance: number; adjustRate: number; }) => void`
 
 Update the MC threshold based on acceptance proportion.
 
@@ -10510,7 +10504,7 @@ Parameters:
 
 ### applyEpsilonAdjustment
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }, adjustMagnitude: number) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }, adjustMagnitude: number) => void`
 
 Apply dominance-epsilon adjustments when configured.
 
@@ -10522,7 +10516,7 @@ Parameters:
 
 ### applyLineagePressureAdjustment
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }) => void`
 
 Apply lineage pressure strength adjustments.
 
@@ -10533,7 +10527,7 @@ Parameters:
 
 ### applyUniquenessAdjustment
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }, adjustMagnitude: number) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }, ancestorUniq: number, thresholds: { lowThreshold: number; highThreshold: number; }, adjustMagnitude: number) => void`
 
 Apply an adjustment for the configured mode.
 
@@ -10546,7 +10540,7 @@ Parameters:
 
 ### ensureLineagePressureState
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => { enabled?: boolean | undefined; mode?: string | undefined; strength?: number | undefined; }`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => { enabled?: boolean | undefined; mode?: string | undefined; strength?: number | undefined; }`
 
 Ensure lineage pressure state is available.
 
@@ -10557,7 +10551,7 @@ Returns: Lineage pressure configuration object.
 
 ### extractAncestorUniqueness
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number | undefined`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => number | undefined`
 
 Extract the latest ancestor-uniqueness metric from telemetry.
 
@@ -10568,7 +10562,7 @@ Returns: Ancestor uniqueness value or undefined when missing.
 
 ### isCooldownSatisfied
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }) => boolean`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; }) => boolean`
 
 Determine whether the cooldown window has elapsed.
 
@@ -10580,7 +10574,7 @@ Returns: True when adjustment is allowed.
 
 ### recordAdjustment
 
-`(engine: import("C:/NeatapticTS/src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => void`
+`(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive) => void`
 
 Record the generation when an adjustment is applied.
 

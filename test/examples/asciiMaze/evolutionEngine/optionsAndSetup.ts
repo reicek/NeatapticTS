@@ -24,10 +24,8 @@
 import { Network } from '../../../../src/neataptic';
 import { MazeUtils } from '../mazeUtils';
 import { FitnessEvaluator } from '../fitness';
-import {
-  IFitnessEvaluationContext,
-  IRunMazeEvolutionOptions,
-} from '../interfaces';
+import type { IFitnessEvaluationContext } from '../fitness.types';
+import type { IRunMazeEvolutionOptions } from './evolutionEngine.types';
 import { createNeat, seedInitialPopulation } from './neatConfiguration';
 
 /**

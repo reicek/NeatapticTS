@@ -5,9 +5,8 @@
  * shared state without relying on class statics.
  */
 
+import type { EngineState, RngCacheParameters } from './engineState.types';
 import {
-  EngineState,
-  RngCacheParameters,
   DEFAULT_RNG_CACHE_BATCH_SIZE,
   ensureRngCacheBatch,
   reseedRngState,

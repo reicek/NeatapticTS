@@ -20,7 +20,7 @@ Design principles:
 
 ### memoryStats
 
-`(targetNetworks: import("C:/NeatapticTS/src/utils/memory").NetworkView | import("C:/NeatapticTS/src/utils/memory").NetworkView[] | undefined) => import("C:/NeatapticTS/src/utils/memory").MemoryStats`
+`(targetNetworks: import("src/utils/memory").NetworkView | import("src/utils/memory").NetworkView[] | undefined) => import("src/utils/memory").MemoryStats`
 
 ### MemoryStats
 
@@ -41,7 +41,7 @@ enabling typed local variables instead of `any` everywhere.
 
 ### registerTrackedNetwork
 
-`(network: import("C:/NeatapticTS/src/utils/memory").NetworkView | null | undefined) => void`
+`(network: import("src/utils/memory").NetworkView | null | undefined) => void`
 
 ### resetMemoryTracking
 
@@ -54,13 +54,13 @@ include additional fields; we only rely on fresh/pooled counts.
 
 ### unregisterTrackedNetwork
 
-`(network: import("C:/NeatapticTS/src/utils/memory").NetworkView) => void`
+`(network: import("src/utils/memory").NetworkView) => void`
 
 ## utils/memory.utils.ts
 
 ### accumulateCapacitySlices
 
-`(accumulators: import("C:/NeatapticTS/src/utils/memory.utils").Accumulators, network: import("C:/NeatapticTS/src/utils/memory").NetworkView, heuristics: import("C:/NeatapticTS/src/utils/memory.utils").HeuristicBytes) => void`
+`(accumulators: import("src/utils/memory.utils").Accumulators, network: import("src/utils/memory").NetworkView, heuristics: import("src/utils/memory.utils").HeuristicBytes) => void`
 
 Track reserved vs used bytes based on connection capacity slices.
 
@@ -71,7 +71,7 @@ Parameters:
 
 ### accumulateSlabArrays
 
-`(accumulators: import("C:/NeatapticTS/src/utils/memory.utils").Accumulators, typedArrays: (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]) => void`
+`(accumulators: import("src/utils/memory.utils").Accumulators, typedArrays: (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]) => void`
 
 Sum slab-backed array counts and byte sizes into the accumulator.
 
@@ -86,7 +86,7 @@ Accumulates counts, slab byte totals, and reserved vs used capacity snapshots.
 
 ### aggregateNetworkStats
 
-`(networksToSummarize: import("C:/NeatapticTS/src/utils/memory").NetworkView[], heuristics: import("C:/NeatapticTS/src/utils/memory.utils").HeuristicBytes) => import("C:/NeatapticTS/src/utils/memory.utils").Accumulators`
+`(networksToSummarize: import("src/utils/memory").NetworkView[], heuristics: import("src/utils/memory.utils").HeuristicBytes) => import("src/utils/memory.utils").Accumulators`
 
 Aggregate per-network counters and slab metrics into a single accumulator.
 
@@ -98,7 +98,7 @@ Returns: Accumulated summary of network metrics.
 
 ### buildFlagSnapshot
 
-`(configSnapshot: import("C:/NeatapticTS/src/utils/memory.utils").ConfigSnapshot, allocationStats: import("C:/NeatapticTS/src/utils/memory").SlabAllocStats) => { warnings: unknown; float32Mode: unknown; deterministicChainMode: unknown; enableGatingTraces: unknown; poolMaxPerBucket: number | null; poolPrewarmCount: number | null; enableNodePooling: boolean; allocStats: unknown; }`
+`(configSnapshot: import("src/utils/memory.utils").ConfigSnapshot, allocationStats: import("src/utils/memory").SlabAllocStats) => { warnings: unknown; float32Mode: unknown; deterministicChainMode: unknown; enableGatingTraces: unknown; poolMaxPerBucket: number | null; poolPrewarmCount: number | null; enableNodePooling: boolean; allocStats: unknown; }`
 
 Build flag snapshot derived from config and allocator stats.
 
@@ -115,7 +115,7 @@ Bundles precomputed accumulators, environment info, allocator stats, and flags.
 
 ### buildMemoryStatsSnapshot
 
-`(input: import("C:/NeatapticTS/src/utils/memory.utils").BuildMemoryStatsInput) => import("C:/NeatapticTS/src/utils/memory").MemoryStats`
+`(input: import("src/utils/memory.utils").BuildMemoryStatsInput) => import("src/utils/memory").MemoryStats`
 
 Build the full MemoryStats snapshot from precomputed components.
 
@@ -126,7 +126,7 @@ Returns: Complete MemoryStats snapshot.
 
 ### buildSlabStats
 
-`(accumulators: import("C:/NeatapticTS/src/utils/memory.utils").Accumulators, networksToSummarize: import("C:/NeatapticTS/src/utils/memory").NetworkView[], allocationStats: import("C:/NeatapticTS/src/utils/memory").SlabAllocStats) => { slabBytes: number; slabArrayCount: number; fragmentationPct: number | null; reservedBytes: number | null; usedBytes: number | null; slabVersion: number | null; asyncBuilds: number; pooledFraction: number | null; }`
+`(accumulators: import("src/utils/memory.utils").Accumulators, networksToSummarize: import("src/utils/memory").NetworkView[], allocationStats: import("src/utils/memory").SlabAllocStats) => { slabBytes: number; slabArrayCount: number; fragmentationPct: number | null; reservedBytes: number | null; usedBytes: number | null; slabVersion: number | null; asyncBuilds: number; pooledFraction: number | null; }`
 
 Assemble slab-related statistics for the MemoryStats payload.
 
@@ -139,7 +139,7 @@ Returns: Structured slab metrics block.
 
 ### calculateFragmentation
 
-`(accumulators: import("C:/NeatapticTS/src/utils/memory.utils").Accumulators) => number | null`
+`(accumulators: import("src/utils/memory.utils").Accumulators) => number | null`
 
 Compute fragmentation percentage from reserved vs used connection bytes.
 
@@ -150,7 +150,7 @@ Returns: Fragmentation percent (0-100) or null when undefined.
 
 ### calculatePooledFraction
 
-`(allocationStats: import("C:/NeatapticTS/src/utils/memory").SlabAllocStats) => number | null`
+`(allocationStats: import("src/utils/memory").SlabAllocStats) => number | null`
 
 Calculate pooled fraction from allocator stats with four-decimal precision.
 
@@ -169,7 +169,7 @@ Returns: Environment metrics structure for the snapshot.
 
 ### captureVersionMetadata
 
-`(accumulators: import("C:/NeatapticTS/src/utils/memory.utils").Accumulators, network: import("C:/NeatapticTS/src/utils/memory").NetworkView) => void`
+`(accumulators: import("src/utils/memory.utils").Accumulators, network: import("src/utils/memory").NetworkView) => void`
 
 Capture slab metadata (version and async builds) once across all networks.
 
@@ -179,7 +179,7 @@ Parameters:
 
 ### collectConnectionTypedArrays
 
-`(network: import("C:/NeatapticTS/src/utils/memory").NetworkView) => (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]`
+`(network: import("src/utils/memory").NetworkView) => (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]`
 
 Gather all typed arrays that represent connection-parallel data on a network.
 
@@ -190,7 +190,7 @@ Returns: Typed arrays aligned to connections.
 
 ### computeCounts
 
-`(network: import("C:/NeatapticTS/src/utils/memory").NetworkView) => CountSnapshot`
+`(network: import("src/utils/memory").NetworkView) => CountSnapshot`
 
 Capture simple counts for nodes and connections on a network view.
 
@@ -208,7 +208,7 @@ Keeps only the flags relevant to the memory snapshot to avoid leaking full confi
 
 ### createEmptyAccumulators
 
-`() => import("C:/NeatapticTS/src/utils/memory.utils").Accumulators`
+`() => import("src/utils/memory.utils").Accumulators`
 
 Initialize a fresh accumulator snapshot for memory summaries.
 
@@ -216,7 +216,7 @@ Returns: Zeroed accumulators ready for aggregation.
 
 ### describeConnectionBytes
 
-`(network: import("C:/NeatapticTS/src/utils/memory").NetworkView, heuristics: import("C:/NeatapticTS/src/utils/memory.utils").HeuristicBytes) => number`
+`(network: import("src/utils/memory").NetworkView, heuristics: import("src/utils/memory.utils").HeuristicBytes) => number`
 
 Determine bytes per connection using typed-array width or heuristic fallback.
 
@@ -237,7 +237,7 @@ These numbers represent typical JS object footprints, not exact runtime measurem
 
 ### normalizeNetworks
 
-`(targets: import("C:/NeatapticTS/src/utils/memory").NetworkView | import("C:/NeatapticTS/src/utils/memory").NetworkView[] | undefined, trackedNetworks: import("C:/NeatapticTS/src/utils/memory").NetworkView[]) => import("C:/NeatapticTS/src/utils/memory").NetworkView[]`
+`(targets: import("src/utils/memory").NetworkView | import("src/utils/memory").NetworkView[] | undefined, trackedNetworks: import("src/utils/memory").NetworkView[]) => import("src/utils/memory").NetworkView[]`
 
 Normalize provided targets to an array of networks, falling back to tracked registry.
 
@@ -249,7 +249,7 @@ Returns: Array of networks to summarize.
 
 ### safeGetSlabAllocationStats
 
-`(getSlabAllocationStats: () => unknown) => import("C:/NeatapticTS/src/utils/memory").SlabAllocStats`
+`(getSlabAllocationStats: () => unknown) => import("src/utils/memory").SlabAllocStats`
 
 Safely read slab allocation stats, guarding against provider errors.
 

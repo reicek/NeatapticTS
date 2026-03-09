@@ -7,55 +7,17 @@
  */
 import type { Neat, Network } from '../../../../src/neataptic';
 import type { GenomeDetailed } from '../../../../src/neat/neat.types';
+import type { EngineState } from './engineState.types';
+import type {
+  EvolutionGenomeLike,
+  NetworkNode,
+  TelemetryNeatLike,
+} from './evolutionEngine.types';
 import {
-  EngineState,
   ensureVisitedHashCapacity,
   initialiseTelemetryScratch,
 } from './engineState';
 import { getTail, sampleIntoScratch } from './sampling';
-
-/**
- * Runtime type for NEAT instance with dynamic properties.
- * NEAT instances may have population, getTelemetry and other runtime methods.
- */
-interface RuntimeNeat {
-  population?: unknown[];
-  getTelemetry?: () => unknown;
-  [key: string]: unknown;
-}
-
-/**
- * Runtime type for network connection with dynamic properties.
- * Connections may have enabled, weight, and other runtime-added fields.
- */
-interface RuntimeConnection {
-  enabled?: boolean;
-  weight?: number;
-  [key: string]: unknown;
-}
-
-/**
- * Runtime type for NEAT genome/network with dynamic properties.
- * Genomes may have nodes, connections, score, species and runtime tracking fields.
- */
-interface RuntimeGenome {
-  nodes?: RuntimeNode[];
-  connections?: RuntimeConnection[];
-  score?: number;
-  species?: number | null;
-  _lastStepOutputs?: unknown[];
-  [key: string]: unknown;
-}
-
-/**
- * Runtime type for network node with dynamic properties.
- * Nodes may have type, bias, and other runtime-added fields.
- */
-interface RuntimeNode {
-  type?: string;
-  bias?: number;
-  [key: string]: unknown;
-}
 
 /**
  * Telemetry tag emitted when logging action-entropy statistics.
@@ -122,8 +84,6 @@ type TelemetryWriter = (message: string) => void;
 interface GenerationResult {
   /** Path taken by the agent (array of [x, y] coordinate pairs). */
   path?: ReadonlyArray<[number, number]>;
-  /** Additional properties may exist but are not strongly typed. */
-  [key: string]: unknown;
 }
 
 /**
@@ -208,7 +168,7 @@ export const logOutputBiasStats = ({
 }: LogOutputBiasParams): void => {
   if (typeof safeWrite !== 'function') return;
 
-  const runtimeFittest = fittest as RuntimeGenome | undefined;
+  const runtimeFittest = fittest as EvolutionGenomeLike | undefined;
   const nodeList = runtimeFittest?.nodes ?? [];
 
   try {
@@ -279,7 +239,7 @@ export const logLogitsAndCollapse = ({
 
   try {
     // Step 1: Obtain the recent logits history from the fittest candidate.
-    const runtimeFittest = fittest as RuntimeGenome | undefined;
+    const runtimeFittest = fittest as EvolutionGenomeLike | undefined;
     const logitsHistory: number[][] =
       (runtimeFittest?._lastStepOutputs as number[][]) ?? EMPTY_VECTOR;
     if (logitsHistory.length === 0) return;
@@ -414,7 +374,7 @@ export const logDiversity = ({
   sampleSize = DEFAULT_SAMPLE_SIZE,
 }: LogDiversityParams): void => {
   if (typeof safeWrite !== 'function') return;
-  const runtimeNeat = neat as RuntimeNeat | undefined;
+  const runtimeNeat = neat as TelemetryNeatLike | undefined;
   if (!runtimeNeat || !Array.isArray(runtimeNeat.population)) return;
 
   try {
@@ -452,7 +412,7 @@ export const collectTelemetryTail = (
   tailLength = 10,
 ): unknown => {
   // Step 1: Guard against missing telemetry providers so callers can skip optional handling.
-  const runtimeNeat = neat as RuntimeNeat | undefined;
+  const runtimeNeat = neat as TelemetryNeatLike | undefined;
   if (!runtimeNeat || typeof runtimeNeat.getTelemetry !== 'function')
     return undefined;
 
@@ -671,7 +631,7 @@ const countDistinctCoordinatesHashed = (
  */
 const computeDiversityMetrics = (
   state: EngineState,
-  neat: RuntimeNeat,
+  neat: TelemetryNeatLike,
   sampleSize: number,
 ): { speciesUniqueCount: number; simpson: number; weightStd: number } => {
   // Step 1: Normalise the population reference to a safe array view.
@@ -700,7 +660,7 @@ const computeDiversityMetrics = (
   let speciesUniqueCount = 0;
   let individualCount = 0;
   for (let genomeIndex = 0; genomeIndex < populationLength; genomeIndex++) {
-    const genome = population[genomeIndex] as RuntimeGenome | undefined;
+    const genome = population[genomeIndex] as EvolutionGenomeLike | undefined;
     const speciesId =
       (genome && genome.species != null ? genome.species : -1) | 0;
 
@@ -751,16 +711,14 @@ const computeDiversityMetrics = (
   for (let sampleIndex = 0; sampleIndex < sampledLength; sampleIndex++) {
     const genome = sampleBuffer[sampleIndex] as GenomeDetailed | undefined;
     const connections = Array.isArray(genome?.connections)
-      ? (genome.connections as RuntimeConnection[])
+      ? genome.connections
       : EMPTY_VECTOR;
     for (
       let connectionIndex = 0;
       connectionIndex < connections.length;
       connectionIndex++
     ) {
-      const connection = connections[connectionIndex] as
-        | RuntimeConnection
-        | undefined;
+      const connection = connections[connectionIndex];
       if (connection && connection.enabled !== false) {
         const weight = Number.isFinite(connection.weight)
           ? connection.weight!
@@ -786,7 +744,7 @@ const computeDiversityMetrics = (
 /** Gather indices of nodes matching `nodeType` into the pooled scratch buffer. */
 const collectNodeIndicesByType = (
   state: EngineState,
-  nodes: RuntimeNode[] | undefined,
+  nodes: NetworkNode[] | undefined,
   nodeType: string,
 ): number => {
   // Step 1: Exit early when the node list is absent or already empty.
@@ -818,7 +776,7 @@ const collectNodeIndicesByType = (
 /** Compute mean, standard deviation and CSV string for output-node biases. */
 const computeOutputBiasStats = (
   state: EngineState,
-  nodes: RuntimeNode[],
+  nodes: NetworkNode[],
   outputCount: number,
 ): { mean: number; std: number; biasesStr: string } => {
   // Step 1: Initialise telemetry scratch sized to the output-node count.

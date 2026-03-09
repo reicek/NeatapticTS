@@ -187,4 +187,4 @@ Acceptance:
 
 - Hybrid workflows are well-defined and reproducible.
 - Training integration does not require ad-hoc per-project glue.
-- Parameter mapping becomes a building block for export/worker features.
+- Parameter mapping becomes a later unification seam for export- and worker-adjacent tooling once those Phase 4 foundations exist.

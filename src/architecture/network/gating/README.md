@@ -26,7 +26,7 @@ Mutable gater collection retained while removing a hidden node.
 
 ### gate
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default, connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(node: import("src/architecture/node").default, connection: import("src/architecture/connection").default) => void`
 
 Attach a gater node to a connection so that the connection's effective weight
 becomes dynamically modulated by the gater's activation (see {@link Node.gate} for exact math).
@@ -44,7 +44,7 @@ Parameters:
 
 ### removeNode
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(node: import("src/architecture/node").default) => void`
 
 Remove a hidden node from the network while attempting to preserve functional connectivity.
 
@@ -76,7 +76,7 @@ Parameters:
 
 ### ungate
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(connection: import("src/architecture/connection").default) => void`
 
 Remove gating from a connection, restoring its static weight contribution.
 
@@ -94,7 +94,7 @@ Parameters:
 
 ### assertGaterNodeBelongsToNetwork
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(network: import("src/architecture/network").default, node: import("src/architecture/node").default) => void`
 
 Validate that a candidate gater node belongs to the target network.
 
@@ -106,7 +106,7 @@ Returns: Nothing.
 
 ### attachGaterToConnection
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, node: import("C:/NeatapticTS/src/architecture/node").default, connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(network: import("src/architecture/network").default, node: import("src/architecture/node").default, connection: import("src/architecture/connection").default) => void`
 
 Attach a gater to a connection and track that connection in the network gate list.
 
@@ -119,7 +119,7 @@ Returns: Nothing.
 
 ### detachConnectionFromGater
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => void`
+`(connection: import("src/architecture/connection").default) => void`
 
 Remove reverse gater bookkeeping from a connection's gater node.
 
@@ -130,7 +130,7 @@ Returns: Nothing.
 
 ### findGateIndex
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, connection: import("C:/NeatapticTS/src/architecture/connection").default) => number`
+`(network: import("src/architecture/network").default, connection: import("src/architecture/connection").default) => number`
 
 Find a connection position within the network global gates list.
 
@@ -142,7 +142,7 @@ Returns: Zero-based index in the gates list, or -1 when absent.
 
 ### isConnectionAlreadyGated
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default) => boolean`
+`(connection: import("src/architecture/connection").default) => boolean`
 
 Determine whether a connection already has a gater node assigned.
 
@@ -153,7 +153,7 @@ Returns: True when a gater is already set; otherwise false.
 
 ### removeGateAtIndex
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, gateIndex: number) => void`
+`(network: import("src/architecture/network").default, gateIndex: number) => void`
 
 Remove a gated connection from the network global gate list.
 
@@ -183,7 +183,7 @@ Returns: Nothing.
 
 ### assertNodeRemovableAndGetIndex
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, node: import("C:/NeatapticTS/src/architecture/node").default) => number`
+`(network: import("src/architecture/network").default, node: import("src/architecture/node").default) => number`
 
 Ensure a node can be removed and return its index in the network node list.
 
@@ -195,7 +195,7 @@ Returns: Index of the node in the network node list.
 
 ### createBridgingConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, predecessorNodes: import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList, successorNodes: import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList) => import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").BridgingConnectionList`
+`(network: import("src/architecture/network").default, predecessorNodes: import("src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList, successorNodes: import("src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList) => import("src/architecture/network/gating/network.gating.utils.types").BridgingConnectionList`
 
 Create bridging connections from each predecessor to each successor when valid.
 
@@ -208,7 +208,7 @@ Returns: Newly created bridge connections.
 
 ### disconnectInboundConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, node: import("C:/NeatapticTS/src/architecture/node").default, preservedGaters: import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").PreservedGaters, subNodeConfig: import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig) => import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList`
+`(network: import("src/architecture/network").default, node: import("src/architecture/node").default, preservedGaters: import("src/architecture/network/gating/network.gating.utils.types").PreservedGaters, subNodeConfig: import("src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig) => import("src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList`
 
 Disconnect all inbound connections for a node while collecting predecessors.
 
@@ -222,7 +222,7 @@ Returns: Predecessor nodes that previously projected into the removed node.
 
 ### disconnectNodeSelfLoop
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(network: import("src/architecture/network").default, node: import("src/architecture/node").default) => void`
 
 Disconnect a node self-loop before broader edge rewiring.
 
@@ -234,7 +234,7 @@ Returns: Nothing.
 
 ### disconnectOutboundConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, node: import("C:/NeatapticTS/src/architecture/node").default, preservedGaters: import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").PreservedGaters, subNodeConfig: import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig) => import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList`
+`(network: import("src/architecture/network").default, node: import("src/architecture/node").default, preservedGaters: import("src/architecture/network/gating/network.gating.utils.types").PreservedGaters, subNodeConfig: import("src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig) => import("src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList`
 
 Disconnect all outbound connections for a node while collecting successors.
 
@@ -248,7 +248,7 @@ Returns: Successor nodes that were previously targeted by the removed node.
 
 ### preserveGaterForReassignment
 
-`(connection: import("C:/NeatapticTS/src/architecture/connection").default, removedNode: import("C:/NeatapticTS/src/architecture/node").default, preservedGaters: import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").PreservedGaters, subNodeConfig: import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig) => void`
+`(connection: import("src/architecture/connection").default, removedNode: import("src/architecture/node").default, preservedGaters: import("src/architecture/network/gating/network.gating.utils.types").PreservedGaters, subNodeConfig: import("src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig) => void`
 
 Preserve a gater for later reassignment when gate retention is enabled.
 
@@ -262,7 +262,7 @@ Returns: Nothing.
 
 ### reassignPreservedGaters
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, preservedGaters: import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").PreservedGaters, bridgingConnections: import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").BridgingConnectionList) => void`
+`(network: import("src/architecture/network").default, preservedGaters: import("src/architecture/network/gating/network.gating.utils.types").PreservedGaters, bridgingConnections: import("src/architecture/network/gating/network.gating.utils.types").BridgingConnectionList) => void`
 
 Reattach preserved gaters to randomly selected newly-created bridge connections.
 
@@ -275,7 +275,7 @@ Returns: Nothing.
 
 ### removeNodeAtIndex
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, nodeIndex: number) => void`
+`(network: import("src/architecture/network").default, nodeIndex: number) => void`
 
 Remove a node from the network list and mark node indexing as dirty.
 
@@ -287,7 +287,7 @@ Returns: Nothing.
 
 ### resolveSubNodeMutationConfig
 
-`() => import("C:/NeatapticTS/src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig`
+`() => import("src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig`
 
 Resolve the active SUB_NODE mutation configuration shape.
 
@@ -306,7 +306,7 @@ Returns: Random zero-based index.
 
 ### shouldCreateBridgeConnection
 
-`(predecessorNode: import("C:/NeatapticTS/src/architecture/node").default, successorNode: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(predecessorNode: import("src/architecture/node").default, successorNode: import("src/architecture/node").default) => boolean`
 
 Decide whether a predecessor-successor pair should receive a bridge connection.
 
@@ -318,7 +318,7 @@ Returns: True when the pair is distinct and no projection already exists.
 
 ### ungateConnectionsGatedByNode
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, node: import("C:/NeatapticTS/src/architecture/node").default) => void`
+`(network: import("src/architecture/network").default, node: import("src/architecture/node").default) => void`
 
 Ungate all connections that are currently gated by the removed node.
 

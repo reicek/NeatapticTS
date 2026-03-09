@@ -48,7 +48,7 @@ may reject the model.
 
 ### exportToONNX
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+`(network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
 Export a NeatapticTS network to an ONNX-like **JSON object** (`OnnxModel`).
 
@@ -86,7 +86,7 @@ Returns: ONNX-like model object suitable for persistence or re-import.
 
 ### importFromONNX
 
-`(onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("C:/NeatapticTS/src/architecture/network").default`
+`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network").default`
 
 Reconstruct a NeatapticTS network from an exported `OnnxModel`.
 
@@ -741,7 +741,7 @@ while keeping the ONNX parser itself mostly pure.
 
 ### OnnxRuntimeLayerFactory
 
-`(size: number) => import("C:/NeatapticTS/src/architecture/layer").default`
+`(size: number) => import("src/architecture/layer").default`
 
 Runtime layer-constructor signature used for recurrent layer reconstruction.
 
@@ -760,7 +760,7 @@ This is the minimal set of recurrent factories needed by the importer.
 
 ### OnnxRuntimePerceptronFactory
 
-`(sizes: number[]) => import("C:/NeatapticTS/src/architecture/network").default`
+`(sizes: number[]) => import("src/architecture/network").default`
 
 Runtime perceptron factory signature used by ONNX import orchestration.
 
@@ -958,7 +958,7 @@ NOT supported. Experimental fused recurrent nodes are best-effort and may silent
 
 ### applyModelMetadata
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModelMetadataContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModelMetadataContext) => void`
 
 Attach producer and opset metadata to a model when metadata emission is enabled.
 
@@ -969,7 +969,7 @@ Returns: Nothing.
 
 ### assignActivationFunctions
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[]) => void`
+`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[]) => void`
 
 Assign node activation functions from ONNX activation nodes.
 
@@ -982,7 +982,7 @@ Returns: Nothing.
 
 ### assignWeightsAndBiases
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], metadataProps: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => void`
+`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => void`
 
 Assign weights and biases from ONNX initializers to a newly created network.
 
@@ -996,7 +996,7 @@ Returns: Nothing.
 
 ### buildOnnxModel
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, layers: import("C:/NeatapticTS/src/architecture/node").default[][], options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+`(network: import("src/architecture/network").default, layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
 Build an ONNX-like model from a validated layered network view.
 
@@ -1026,7 +1026,7 @@ Returns: ONNX-like model object representing graph nodes, tensors, and metadata.
 
 ### collectRecurrentLayerIndices
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => number[]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => number[]`
 
 Detect hidden layers with self-recurrence and add matching previous-state graph inputs.
 
@@ -1037,7 +1037,7 @@ Returns: Export-layer indices with recurrent self-connections.
 
 ### createBaseModel
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxBaseModelBuildContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxBaseModelBuildContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
 Create the base ONNX model shell with graph input/output declarations.
 
@@ -1048,7 +1048,7 @@ Returns: Initialized ONNX model with empty initializer/node lists.
 
 ### createGraphDimensions
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensionBuildContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensions`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensionBuildContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensions`
 
 Build tensor dimensions for model input and output, optionally with symbolic batch dimension.
 
@@ -1059,7 +1059,7 @@ Returns: Input and output dimension arrays for ONNX value info.
 
 ### deriveHiddenLayerSizes
 
-`(initializers: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[], metadataProps: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => number[]`
+`(initializers: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[], metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => number[]`
 
 Extract hidden layer sizes from ONNX initializers (weight tensors).
 
@@ -1071,7 +1071,7 @@ Returns: Hidden layer sizes in order.
 
 ### emitFusedRecurrentHeuristics
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("C:/NeatapticTS/src/architecture/node").default[][], allowRecurrent: boolean | undefined, previousOutputName: string) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], allowRecurrent: boolean | undefined, previousOutputName: string) => void`
 
 Emit heuristic fused recurrent operators (LSTM/GRU) when recurrent export is enabled.
 
@@ -1085,7 +1085,7 @@ Returns: Nothing.
 
 ### emitLayerGraph
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerBuildContext) => string`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").LayerBuildContext) => string`
 
 Emit one export layer graph segment and return the produced output tensor name.
 
@@ -1096,7 +1096,7 @@ Returns: Output tensor name produced by this layer.
 
 ### finalizeExportMetadata
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("C:/NeatapticTS/src/architecture/node").default[][], options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions, includeMetadata: boolean, hiddenSizesMetadata: number[], recurrentLayerIndices: number[]) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions, includeMetadata: boolean, hiddenSizesMetadata: number[], recurrentLayerIndices: number[]) => void`
 
 Finalize export metadata and optional conv-sharing validation.
 
@@ -1112,7 +1112,7 @@ Returns: Nothing.
 
 ### inferLayerOrdering
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/node").default[][]`
+`(network: import("src/architecture/network").default) => import("src/architecture/node").default[][]`
 
 Infer strictly layered ordering from a network.
 
@@ -1142,7 +1142,7 @@ Security/trust boundary:
 
 ### rebuildConnectionsLocal
 
-`(networkLike: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(networkLike: import("src/architecture/network").default) => void`
 
 Rebuild the network's flat connections array from each node's outgoing list.
 
@@ -1153,7 +1153,7 @@ Returns: Nothing.
 
 ### runOnnxExportFlow
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+`(network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
 Execute the complete ONNX export flow for one network instance.
 
@@ -1171,7 +1171,7 @@ Returns: ONNX-like model payload.
 
 ### runOnnxImportFlow
 
-`(onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("C:/NeatapticTS/src/architecture/network").default`
+`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network").default`
 
 Execute the complete ONNX import flow and reconstruct a runtime network.
 
@@ -1187,7 +1187,7 @@ Returns: Reconstructed network instance.
 
 ### validateLayerHomogeneityAndConnectivity
 
-`(layers: import("C:/NeatapticTS/src/architecture/node").default[][], network: import("C:/NeatapticTS/src/architecture/network").default, options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => void`
+`(layers: import("src/architecture/node").default[][], network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => void`
 
 Validate connectivity and activation homogeneity constraints per layer.
 
@@ -1202,7 +1202,7 @@ Returns: Nothing.
 
 ### tryEmitConvLayer
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxConvEmissionParams) => string | undefined`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxConvEmissionParams) => string | undefined`
 
 Try to emit a conv-mapped layer.
 
@@ -1215,7 +1215,7 @@ Returns: New output tensor name when handled, otherwise undefined.
 
 ### runOnnxExportFlow
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+`(network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
 Execute the complete ONNX export flow for one network instance.
 
@@ -1235,7 +1235,7 @@ Returns: ONNX-like model payload.
 
 ### runOnnxImportFlow
 
-`(onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("C:/NeatapticTS/src/architecture/network").default`
+`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network").default`
 
 Execute the complete ONNX import flow and reconstruct a runtime network.
 
@@ -1253,7 +1253,7 @@ Returns: Reconstructed network instance.
 
 ### buildOnnxModel
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, layers: import("C:/NeatapticTS/src/architecture/node").default[][], options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+`(network: import("src/architecture/network").default, layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
 Construct ONNX graph (initializers + nodes) from validated layered network structure.
 
@@ -1268,7 +1268,7 @@ Returns: ONNX model.
 
 ### appendDenseBiasInitializer
 
-`(layerContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext, biasTensorName: string, biasVector: number[]) => void`
+`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext, biasTensorName: string, biasVector: number[]) => void`
 
 Append dense bias initializer.
 
@@ -1281,7 +1281,7 @@ Returns: Nothing.
 
 ### appendDenseNodes
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, orderedNodes: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseOrderedNodePayload[]) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, orderedNodes: import("src/architecture/network/onnx/network.onnx.utils.types").DenseOrderedNodePayload[]) => void`
 
 Append ordered dense nodes to the model graph.
 
@@ -1293,7 +1293,7 @@ Returns: Nothing.
 
 ### appendDenseWeightInitializer
 
-`(layerContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext, weightTensorName: string, weightMatrixValues: number[]) => void`
+`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext, weightTensorName: string, weightMatrixValues: number[]) => void`
 
 Append dense weight initializer.
 
@@ -1306,7 +1306,7 @@ Returns: Nothing.
 
 ### buildSingleNeuronWeightRow
 
-`(targetNodeInternal: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, previousLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[]) => number[]`
+`(targetNodeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, previousLayerNodes: import("src/architecture/node").default[]) => number[]`
 
 Build one neuron's incoming weight row against previous layer.
 
@@ -1318,7 +1318,7 @@ Returns: Weight row values.
 
 ### collectDenseInitializerValues
 
-`(layerContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseInitializerValues`
+`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseInitializerValues`
 
 Collect dense weight matrix and bias vector values.
 
@@ -1329,7 +1329,7 @@ Returns: Dense initializer values.
 
 ### createActivationNode
 
-`(denseActivationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseActivationContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseActivationNodePayload`
+`(denseActivationContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationContext) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationNodePayload`
 
 Create dense activation node definition.
 
@@ -1348,7 +1348,7 @@ Returns: Default Gemm attribute list.
 
 ### createDenseTensorNames
 
-`(layerIndex: number) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseTensorNames`
+`(layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseTensorNames`
 
 Build dense tensor names for initializer emission.
 
@@ -1359,7 +1359,7 @@ Returns: Dense tensor names.
 
 ### createGemmNode
 
-`(denseActivationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseActivationContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseGemmNodePayload`
+`(denseActivationContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationContext) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseGemmNodePayload`
 
 Create dense Gemm node definition.
 
@@ -1370,7 +1370,7 @@ Returns: ONNX Gemm node payload.
 
 ### createSharedActivationNodePayload
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").SharedActivationNodeBuildParams) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseActivationNodePayload`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").SharedActivationNodeBuildParams) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationNodePayload`
 
 Build a shared activation node payload.
 
@@ -1381,7 +1381,7 @@ Returns: Activation node payload.
 
 ### createSharedGemmNodePayload
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").SharedGemmNodeBuildParams) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseGemmNodePayload`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").SharedGemmNodeBuildParams) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseGemmNodePayload`
 
 Build a shared Gemm node payload.
 
@@ -1392,7 +1392,7 @@ Returns: Gemm node payload.
 
 ### emitDenseActivationSubgraph
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, denseActivationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseActivationContext) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, denseActivationContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationContext) => void`
 
 Emit Gemm and activation nodes using requested ordering.
 
@@ -1404,7 +1404,7 @@ Returns: Nothing.
 
 ### emitDenseInitializers
 
-`(layerContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseTensorNames`
+`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseTensorNames`
 
 Emit dense initializers and return tensor names.
 
@@ -1415,7 +1415,7 @@ Returns: Tensor names.
 
 ### emitDenseLayer
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseLayerParams) => string`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").DenseLayerParams) => string`
 
 Emit dense layer representation.
 
@@ -1426,7 +1426,7 @@ Returns: Output tensor name.
 
 ### emitOptionalLayerOutput
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OptionalLayerOutputParams) => string`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OptionalLayerOutputParams) => string`
 
 Emit optional pooling and flatten output fold.
 
@@ -1437,7 +1437,7 @@ Returns: Output tensor name.
 
 ### emitPerNeuronLayer
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").PerNeuronLayerParams) => string`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").PerNeuronLayerParams) => string`
 
 Emit per-neuron decomposition layer representation.
 
@@ -1448,7 +1448,7 @@ Returns: Output tensor name.
 
 ### emitPerNeuronSubgraph
 
-`(perNeuronSubgraphContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").PerNeuronSubgraphContext) => string`
+`(perNeuronSubgraphContext: import("src/architecture/network/onnx/network.onnx.utils.types").PerNeuronSubgraphContext) => string`
 
 Emit per-neuron Gemm + activation subgraph.
 
@@ -1459,7 +1459,7 @@ Returns: Per-neuron activation output name.
 
 ### resolveDenseNodeOrder
 
-`(gemmNode: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseGemmNodePayload, activationNode: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseActivationNodePayload, legacyNodeOrdering: boolean) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseOrderedNodePayload[]`
+`(gemmNode: import("src/architecture/network/onnx/network.onnx.utils.types").DenseGemmNodePayload, activationNode: import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationNodePayload, legacyNodeOrdering: boolean) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseOrderedNodePayload[]`
 
 Resolve dense node order for legacy and current exports.
 
@@ -1472,7 +1472,7 @@ Returns: Ordered node list.
 
 ### resolveSingleNeuronInboundWeight
 
-`(targetNodeInternal: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, sourceNode: import("C:/NeatapticTS/src/architecture/node").default) => number`
+`(targetNodeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, sourceNode: import("src/architecture/node").default) => number`
 
 Resolve one inbound connection weight for a source node.
 
@@ -1486,7 +1486,7 @@ Returns: Inbound weight or zero when missing.
 
 ### appendRecurrentGraphInput
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, traversalContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext) => void`
 
 Append one recurrent previous-state graph input for a hidden layer.
 
@@ -1498,7 +1498,7 @@ Returns: Nothing.
 
 ### appendRecurrentLayerIndex
 
-`(recurrentLayerIndices: number[], traversalContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext) => void`
+`(recurrentLayerIndices: number[], traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext) => void`
 
 Append one recurrent layer index to the collected index list.
 
@@ -1510,7 +1510,7 @@ Returns: Nothing.
 
 ### applyModelMetadata
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModelMetadataContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModelMetadataContext) => void`
 
 Attach producer and opset metadata to a model when metadata emission is enabled.
 
@@ -1521,7 +1521,7 @@ Returns: Nothing.
 
 ### collectRecurrentLayerIndices
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => number[]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => number[]`
 
 Detect hidden layers with self-recurrence and add matching previous-state graph inputs.
 
@@ -1532,7 +1532,7 @@ Returns: Export-layer indices with recurrent self-connections.
 
 ### createBaseModel
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxBaseModelBuildContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxBaseModelBuildContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
 
 Create the base ONNX model shell with graph input/output declarations.
 
@@ -1543,7 +1543,7 @@ Returns: Initialized ONNX model with empty initializer/node lists.
 
 ### createGraphDimensions
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensionBuildContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensions`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensionBuildContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensions`
 
 Build tensor dimensions for model input and output, optionally with symbolic batch dimension.
 
@@ -1554,7 +1554,7 @@ Returns: Input and output dimension arrays for ONNX value info.
 
 ### createGraphValueInfo
 
-`(valueName: string, dimensions: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxDimension[]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxValueInfo`
+`(valueName: string, dimensions: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxDimension[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxValueInfo`
 
 Create ONNX value info payload for one graph boundary tensor.
 
@@ -1577,7 +1577,7 @@ Returns: Hidden layer indices.
 
 ### createHiddenLayerTraversalContexts
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext[]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext[]`
 
 Build traversal contexts for all hidden layers.
 
@@ -1588,7 +1588,7 @@ Returns: Hidden layer traversal contexts.
 
 ### createRecurrentInputValueInfo
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentInputValueInfoContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxValueInfo`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentInputValueInfoContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxValueInfo`
 
 Build one recurrent previous-state graph input payload.
 
@@ -1599,7 +1599,7 @@ Returns: ONNX value info payload for recurrent state input.
 
 ### createRecurrentInputValueInfoContext
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentInputValueInfoContext`
+`(traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentInputValueInfoContext`
 
 Build recurrent input context for one hidden recurrent layer.
 
@@ -1610,7 +1610,7 @@ Returns: Recurrent input value-info context.
 
 ### createTensorDimensions
 
-`(width: number, batchDimension: boolean) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxDimension[]`
+`(width: number, batchDimension: boolean) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxDimension[]`
 
 Build one tensor shape dimension payload for dense vectors.
 
@@ -1622,7 +1622,7 @@ Returns: ONNX dimensions for the vector payload.
 
 ### hasLayerSelfRecurrence
 
-`(hiddenLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[]) => boolean`
+`(hiddenLayerNodes: import("src/architecture/node").default[]) => boolean`
 
 Detect whether a hidden layer contains at least one self-recurrent node.
 
@@ -1633,7 +1633,7 @@ Returns: True when any node has a self-connection.
 
 ### isRecurrentCollectionEnabled
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => boolean`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => boolean`
 
 Determine whether recurrent layer collection should execute.
 
@@ -1644,7 +1644,7 @@ Returns: True when recurrent collection is enabled.
 
 ### processHiddenLayerRecurrence
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerProcessingContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerProcessingContext) => void`
 
 Process one hidden layer for recurrent self-connections.
 
@@ -1657,7 +1657,7 @@ Returns: Nothing.
 
 ### buildPerceptronNetwork
 
-`(buildContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronBuildContext) => import("C:/NeatapticTS/src/architecture/network").default`
+`(buildContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronBuildContext) => import("src/architecture/network").default`
 
 Build a perceptron network from size-extraction context.
 
@@ -1668,7 +1668,7 @@ Returns: Reconstructed network instance.
 
 ### createPerceptronBuildContext
 
-`(sizes: number[]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronBuildContext`
+`(sizes: number[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronBuildContext`
 
 Build perceptron-network construction context.
 
@@ -1679,7 +1679,7 @@ Returns: Build context.
 
 ### createPerceptronFactory
 
-`() => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimePerceptronFactory`
+`() => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimePerceptronFactory`
 
 Create an ONNX import network factory from modern static constructors.
 
@@ -1687,7 +1687,7 @@ Returns: Perceptron-compatible factory function.
 
 ### createPerceptronSizeValidationContext
 
-`(sizes: number[]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronSizeValidationContext`
+`(sizes: number[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronSizeValidationContext`
 
 Build perceptron-size validation context.
 
@@ -1698,7 +1698,7 @@ Returns: Validation context.
 
 ### createRuntimeLayerModule
 
-`() => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule`
+`() => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule`
 
 Create the runtime layer-module wiring used by ONNX import orchestrators.
 
@@ -1706,7 +1706,7 @@ Returns: Runtime recurrent-layer module object.
 
 ### foldRuntimeFactories
 
-`(perceptronFactory: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimePerceptronFactory, layerModule: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeFactories`
+`(perceptronFactory: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimePerceptronFactory, layerModule: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeFactories`
 
 Fold runtime perceptron and layer module into a transport payload.
 
@@ -1718,7 +1718,7 @@ Returns: Runtime factories payload.
 
 ### foldRuntimeLayerModule
 
-`(lstmFactory: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerFactory, gruFactory: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerFactory) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule`
+`(lstmFactory: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerFactory, gruFactory: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerFactory) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule`
 
 Fold LSTM/GRU factories into a runtime layer module payload.
 
@@ -1730,7 +1730,7 @@ Returns: Runtime layer module.
 
 ### loadRuntimeFactories
 
-`() => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeFactories`
+`() => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeFactories`
 
 Resolve runtime factories used by ONNX import orchestration.
 
@@ -1738,7 +1738,7 @@ Returns: Perceptron factory and layer module object.
 
 ### resolveLayerFactory
 
-`(layerKey: keyof import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerFactory`
+`(layerKey: keyof import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerFactory`
 
 Resolve one runtime layer factory by module key.
 
@@ -1749,7 +1749,7 @@ Returns: Matching layer factory.
 
 ### validatePerceptronSizes
 
-`(validationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronSizeValidationContext) => void`
+`(validationContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronSizeValidationContext) => void`
 
 Validate perceptron size-list constraints.
 
@@ -1762,7 +1762,7 @@ Returns: Nothing. Throws on invalid size-list.
 
 ### applyAggregatedLayerWeights
 
-`(aggregatedContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportAggregatedLayerAssignmentContext) => void`
+`(aggregatedContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportAggregatedLayerAssignmentContext) => void`
 
 Apply aggregated dense tensor assignments for one layer.
 
@@ -1773,7 +1773,7 @@ Returns: Nothing.
 
 ### applyAggregatedNeuronAssignment
 
-`(neuronContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportAggregatedNeuronAssignmentContext) => void`
+`(neuronContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportAggregatedNeuronAssignmentContext) => void`
 
 Apply aggregated dense row weights and bias for one target neuron.
 
@@ -1784,7 +1784,7 @@ Returns: Nothing.
 
 ### applyConvCoordinateAssignment
 
-`(coordinateContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvCoordinateAssignmentContext) => void`
+`(coordinateContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvCoordinateAssignmentContext) => void`
 
 Apply Conv bias and kernel weights for one output coordinate.
 
@@ -1795,7 +1795,7 @@ Returns: Nothing.
 
 ### applyConvLayerReconstruction
 
-`(layerContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext) => void`
+`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext) => void`
 
 Apply Conv reconstruction for one validated Conv layer context.
 
@@ -1806,7 +1806,7 @@ Returns: Nothing.
 
 ### applyDenseWeightAssignments
 
-`(assignmentContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext) => void`
+`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext) => void`
 
 Apply dense/per-neuron assignments for all sorted layer indices.
 
@@ -1817,7 +1817,7 @@ Returns: Nothing.
 
 ### applyOptionalConvReconstruction
 
-`(assignmentContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext) => void`
+`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext) => void`
 
 Apply optional Conv2D reconstruction pass from metadata payloads.
 
@@ -1828,7 +1828,7 @@ Returns: Nothing.
 
 ### applyPerNeuronAssignment
 
-`(perNeuronAssignmentContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPerNeuronAssignmentContext) => void`
+`(perNeuronAssignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPerNeuronAssignmentContext) => void`
 
 Apply one per-neuron weight vector and bias assignment.
 
@@ -1839,7 +1839,7 @@ Returns: Nothing.
 
 ### applyPerNeuronLayerWeights
 
-`(perNeuronContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPerNeuronLayerAssignmentContext) => void`
+`(perNeuronContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPerNeuronLayerAssignmentContext) => void`
 
 Apply per-neuron tensor assignments for one layer.
 
@@ -1850,7 +1850,7 @@ Returns: Nothing.
 
 ### assignConvKernelWeight
 
-`(kernelAssignmentContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvKernelAssignmentContext) => void`
+`(kernelAssignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvKernelAssignmentContext) => void`
 
 Assign one Conv kernel weight to the matching inbound neuron connection.
 
@@ -1861,7 +1861,7 @@ Returns: Nothing.
 
 ### assignLayerWeights
 
-`(initializerMap: Record<string, import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor>, nodePair: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerNodePair) => void`
+`(initializerMap: Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor>, nodePair: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerNodePair) => void`
 
 Assign one layer's weights using aggregated or per-neuron tensors.
 
@@ -1873,7 +1873,7 @@ Returns: Nothing.
 
 ### assignWeightsAndBiases
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], metadataProps: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => void`
+`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => void`
 
 Assign weights and biases from ONNX initializers to a newly created network.
 
@@ -1887,7 +1887,7 @@ Returns: Nothing.
 
 ### buildConvLayerContext
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContextBuildParams) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext | null`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContextBuildParams) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext | null`
 
 Build one Conv layer reconstruction context.
 
@@ -1898,7 +1898,7 @@ Returns: Conv layer context when valid.
 
 ### buildConvNeuronLinearIndex
 
-`(coordinate: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvOutputCoordinate, convSpec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => number`
+`(coordinate: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvOutputCoordinate, convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => number`
 
 Build flattened linear index for one Conv output coordinate.
 
@@ -1910,7 +1910,7 @@ Returns: Linear neuron index.
 
 ### buildConvNodeSlices
 
-`(layerContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvNodeSlices`
+`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvNodeSlices`
 
 Build Conv current/previous node slices for one layer context.
 
@@ -1921,7 +1921,7 @@ Returns: Node slice payload.
 
 ### buildConvTensorContext
 
-`(layerContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvTensorContext | null`
+`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvTensorContext | null`
 
 Build validated Conv tensor context for one layer.
 
@@ -1932,7 +1932,7 @@ Returns: Conv tensor context when valid.
 
 ### buildHiddenLayerSizesFromBuckets
 
-`(layerWeightBuckets: Record<string, import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>, sortedLayerIndices: number[]) => number[]`
+`(layerWeightBuckets: Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>, sortedLayerIndices: number[]) => number[]`
 
 Build hidden-layer sizes from weight buckets while excluding output layer.
 
@@ -1944,7 +1944,7 @@ Returns: Hidden-layer sizes.
 
 ### buildInboundConnectionMap
 
-`(neuronInternal: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportInboundConnectionMap`
+`(neuronInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportInboundConnectionMap`
 
 Build inbound connection lookup map for one neuron.
 
@@ -1955,7 +1955,7 @@ Returns: Inbound connection map keyed by source node.
 
 ### buildInitializerMap
 
-`(initializers: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[]) => Record<string, import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor>`
+`(initializers: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[]) => Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor>`
 
 Build ONNX initializer map keyed by tensor name.
 
@@ -1966,7 +1966,7 @@ Returns: Tensor map by name.
 
 ### buildInputCoordinate
 
-`(kernelAssignmentContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvKernelAssignmentContext) => { inputRow: number; inputColumn: number; } | null`
+`(kernelAssignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvKernelAssignmentContext) => { inputRow: number; inputColumn: number; } | null`
 
 Build input-space coordinate for one Conv kernel element.
 
@@ -1977,7 +1977,7 @@ Returns: Input coordinate when in bounds.
 
 ### buildInputFeatureLinearIndex
 
-`(convSpec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, inChannelIndex: number, inputRow: number, inputColumn: number) => number`
+`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, inChannelIndex: number, inputRow: number, inputColumn: number) => number`
 
 Build linear feature index in input feature space.
 
@@ -1991,7 +1991,7 @@ Returns: Linear input feature index.
 
 ### buildLayerNodePair
 
-`(assignmentContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext, params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerNodePairBuildParams) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerNodePair`
+`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext, params: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerNodePairBuildParams) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerNodePair`
 
 Build current/previous node slices for one sequential import layer pass.
 
@@ -2003,7 +2003,7 @@ Returns: Layer node pair.
 
 ### buildLayerTensorNames
 
-`(layerIndex: number) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerTensorNames`
+`(layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerTensorNames`
 
 Build dense weight/bias tensor names for one layer index.
 
@@ -2014,7 +2014,7 @@ Returns: Layer tensor names.
 
 ### buildPerNeuronTensorNames
 
-`(layerIndex: number, neuronIndex: number) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerTensorNames`
+`(layerIndex: number, neuronIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerTensorNames`
 
 Build per-neuron tensor names for one layer and neuron index.
 
@@ -2026,7 +2026,7 @@ Returns: Per-neuron tensor names.
 
 ### buildWeightAssignmentContext
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentBuildParams) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentBuildParams) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext`
 
 Build the shared assignment context for import weight restoration.
 
@@ -2037,7 +2037,7 @@ Returns: Shared assignment context.
 
 ### collectConvKernelCoordinates
 
-`(inChannels: number, kernelHeight: number, kernelWidth: number) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxConvKernelCoordinate[]`
+`(inChannels: number, kernelHeight: number, kernelWidth: number) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxConvKernelCoordinate[]`
 
 Collect all kernel traversal coordinates for one Conv output position.
 
@@ -2050,7 +2050,7 @@ Returns: Kernel traversal coordinates.
 
 ### collectConvOutputCoordinates
 
-`(convSpec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, outChannels: number) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvOutputCoordinate[]`
+`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, outChannels: number) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvOutputCoordinate[]`
 
 Collect all output traversal coordinates for one Conv layer.
 
@@ -2062,7 +2062,7 @@ Returns: Output traversal coordinates.
 
 ### collectLayerWeightBuckets
 
-`(initializers: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[]) => Record<string, import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>`
+`(initializers: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[]) => Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>`
 
 Collect ONNX weight tensor buckets grouped by export layer index.
 
@@ -2073,7 +2073,7 @@ Returns: Layer-weight buckets keyed by export layer index.
 
 ### collectNodesByType
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], nodeType: "input" | "output" | "hidden") => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(nodes: import("src/architecture/node").default[], nodeType: "input" | "output" | "hidden") => import("src/architecture/node").default[]`
 
 Collect nodes by runtime node type discriminator.
 
@@ -2085,7 +2085,7 @@ Returns: Filtered nodes.
 
 ### collectSortedLayerIndices
 
-`(layerWeightBuckets: Record<string, import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>) => number[]`
+`(layerWeightBuckets: Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>) => number[]`
 
 Collect sorted layer indices from weight buckets.
 
@@ -2096,7 +2096,7 @@ Returns: Ascending export layer indices.
 
 ### collectSortedUniqueLayerIndices
 
-`(initializerMap: Record<string, import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor>) => number[]`
+`(initializerMap: Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor>) => number[]`
 
 Collect unique sorted layer indices from initializer weight tensors.
 
@@ -2107,7 +2107,7 @@ Returns: Unique sorted layer indices.
 
 ### deriveHiddenLayerSizes
 
-`(initializers: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[], metadataProps: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => number[]`
+`(initializers: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[], metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => number[]`
 
 Extract hidden layer sizes from ONNX initializers (weight tensors).
 
@@ -2119,7 +2119,7 @@ Returns: Hidden layer sizes in order.
 
 ### hasAggregatedLayerWeights
 
-`(aggregatedContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportAggregatedLayerAssignmentContext) => boolean`
+`(aggregatedContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportAggregatedLayerAssignmentContext) => boolean`
 
 Determine whether the layer has aggregated weight tensor data.
 
@@ -2130,7 +2130,7 @@ Returns: True when aggregated tensor exists.
 
 ### parseConvMetadata
 
-`(metadataProps: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvMetadata | null`
+`(metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvMetadata | null`
 
 Parse Conv reconstruction metadata payload.
 
@@ -2152,7 +2152,7 @@ Returns: Parsed layer index or null.
 
 ### parseMetadataLayerSizes
 
-`(metadataProps: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => number[] | null`
+`(metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => number[] | null`
 
 Parse explicit metadata-driven hidden layer sizes.
 
@@ -2174,7 +2174,7 @@ Returns: Parsed layer+neuron components when matched.
 
 ### readConvKernelWeight
 
-`(kernelAssignmentContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvKernelAssignmentContext) => number`
+`(kernelAssignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvKernelAssignmentContext) => number`
 
 Read one Conv kernel weight from flattened ONNX tensor payload.
 
@@ -2185,7 +2185,7 @@ Returns: Kernel weight.
 
 ### resolveCurrentLayerNodes
 
-`(assignmentContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext, params: { sequentialIndex: number; }) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext, params: { sequentialIndex: number; }) => import("src/architecture/node").default[]`
 
 Resolve current layer nodes for one sequential layer assignment pass.
 
@@ -2197,7 +2197,7 @@ Returns: Current layer nodes.
 
 ### resolveLayerHiddenSize
 
-`(layerWeightBuckets: Record<string, import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>, layerIndex: number) => number`
+`(layerWeightBuckets: Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>, layerIndex: number) => number`
 
 Resolve one hidden-layer size from its weight bucket.
 
@@ -2209,7 +2209,7 @@ Returns: Hidden-layer size.
 
 ### resolvePreviousLayerNodes
 
-`(assignmentContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext, params: { sequentialIndex: number; }) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext, params: { sequentialIndex: number; }) => import("src/architecture/node").default[]`
 
 Resolve previous layer nodes for one sequential layer assignment pass.
 
@@ -2235,7 +2235,7 @@ Returns: Prefix sum.
 
 ### appendLastResolvedLayer
 
-`(resolutionContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
+`(resolutionContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
 
 Append the final resolved hidden layer into ordered layer output.
 
@@ -2246,7 +2246,7 @@ Returns: Traversal state with last hidden layer persisted.
 
 ### buildLayerValidationContexts
 
-`(layers: import("C:/NeatapticTS/src/architecture/node").default[][], options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext[]`
+`(layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext[]`
 
 Build per-layer validation contexts for all non-input layers.
 
@@ -2258,7 +2258,7 @@ Returns: Traversal contexts used by layer validators.
 
 ### collectCurrentResolvableHiddenLayer
 
-`(resolutionContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(resolutionContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("src/architecture/node").default[]`
 
 Collect unresolved hidden nodes that can be placed in the next layer.
 
@@ -2269,7 +2269,7 @@ Returns: Hidden nodes that are resolvable in this pass.
 
 ### collectLayerOrderingNodeGroups
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups`
 
 Partition all network nodes into input/hidden/output groups.
 
@@ -2280,7 +2280,7 @@ Returns: Node groups used by layered-ordering inference.
 
 ### collectUniqueOutgoingConnections
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => import("C:/NeatapticTS/src/architecture/connection").default[]`
+`(nodes: import("src/architecture/node").default[]) => import("src/architecture/connection").default[]`
 
 Collect unique outgoing connections across a node list.
 
@@ -2291,7 +2291,7 @@ Returns: Stable array of unique connections.
 
 ### createLayerActivationValidationContext
 
-`(layerValidationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerActivationValidationContext`
+`(layerValidationContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerActivationValidationContext`
 
 Create activation validation context from one layer traversal context.
 
@@ -2302,7 +2302,7 @@ Returns: Activation validation context.
 
 ### ensureLayerWasResolved
 
-`(currentLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[]) => void`
+`(currentLayerNodes: import("src/architecture/node").default[]) => void`
 
 Ensure current hidden-layer resolution pass produced at least one node.
 
@@ -2313,7 +2313,7 @@ Returns: Nothing.
 
 ### filterNodesByType
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], nodeType: string) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(nodes: import("src/architecture/node").default[], nodeType: string) => import("src/architecture/node").default[]`
 
 Filter nodes by one expected node type.
 
@@ -2325,7 +2325,7 @@ Returns: Matching nodes.
 
 ### filterUnresolvedHiddenNodes
 
-`(context: { remainingHiddenNodes: import("C:/NeatapticTS/src/architecture/node").default[]; currentLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[]; }) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(context: { remainingHiddenNodes: import("src/architecture/node").default[]; currentLayerNodes: import("src/architecture/node").default[]; }) => import("src/architecture/node").default[]`
 
 Remove just-resolved hidden nodes from unresolved candidates.
 
@@ -2336,7 +2336,7 @@ Returns: Hidden nodes still unresolved.
 
 ### finalizeOrderingWithoutHiddenNodes
 
-`(nodeGroups: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups) => import("C:/NeatapticTS/src/architecture/node").default[][]`
+`(nodeGroups: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups) => import("src/architecture/node").default[][]`
 
 Finalize ordering for networks without hidden layers.
 
@@ -2347,7 +2347,7 @@ Returns: Input and output layers only.
 
 ### finalizeOrderingWithOutputLayer
 
-`(context: { orderedLayers: import("C:/NeatapticTS/src/architecture/node").default[][]; outputNodes: import("C:/NeatapticTS/src/architecture/node").default[]; }) => import("C:/NeatapticTS/src/architecture/node").default[][]`
+`(context: { orderedLayers: import("src/architecture/node").default[][]; outputNodes: import("src/architecture/node").default[]; }) => import("src/architecture/node").default[][]`
 
 Append output layer to resolved input/hidden ordering.
 
@@ -2358,7 +2358,7 @@ Returns: Full layer ordering including output layer.
 
 ### hasAllIncomingConnectionsFromPreviousLayer
 
-`(context: { hiddenNode: import("C:/NeatapticTS/src/architecture/node").default; previousLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[]; }) => boolean`
+`(context: { hiddenNode: import("src/architecture/node").default; previousLayerNodes: import("src/architecture/node").default[]; }) => boolean`
 
 Check whether a hidden node receives all inputs from the previous layer.
 
@@ -2369,7 +2369,7 @@ Returns: True when the hidden node is layer-resolvable.
 
 ### hasNoHiddenNodes
 
-`(nodeGroups: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups) => boolean`
+`(nodeGroups: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups) => boolean`
 
 Check whether the layer groups contain no hidden nodes.
 
@@ -2380,7 +2380,7 @@ Returns: True when hidden layer traversal can be skipped.
 
 ### inferLayerOrdering
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/node").default[][]`
+`(network: import("src/architecture/network").default) => import("src/architecture/node").default[][]`
 
 Infer strictly layered ordering from a network.
 
@@ -2391,7 +2391,7 @@ Returns: Ordered layers: input, hidden..., output.
 
 ### initializeLayerOrderingResolutionContext
 
-`(nodeGroups: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
+`(nodeGroups: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
 
 Create initial hidden-layer resolution context.
 
@@ -2402,7 +2402,7 @@ Returns: Initial mutable state for hidden-layer resolution.
 
 ### mapActivationToOnnx
 
-`(squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxActivationOperation`
+`(squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxActivationOperation`
 
 Map an internal activation function (squash) to an ONNX op_type.
 
@@ -2424,7 +2424,7 @@ Returns: Uppercased activation name or empty string.
 
 ### rebuildConnectionsLocal
 
-`(networkLike: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(networkLike: import("src/architecture/network").default) => void`
 
 Rebuild the network's flat connections array from each node's outgoing list.
 
@@ -2435,7 +2435,7 @@ Returns: Nothing.
 
 ### resolveAllHiddenLayers
 
-`(initialContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
+`(initialContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
 
 Resolve all hidden layers in dependency order.
 
@@ -2446,7 +2446,7 @@ Returns: Final resolved layer-ordering context.
 
 ### resolveNextHiddenLayer
 
-`(resolutionContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
+`(resolutionContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
 
 Resolve the next hidden layer from unresolved candidates.
 
@@ -2457,7 +2457,7 @@ Returns: Updated resolution state.
 
 ### resolveOnnxActivationOperation
 
-`(normalizedActivationName: string) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxActivationOperation`
+`(normalizedActivationName: string) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxActivationOperation`
 
 Resolve ONNX activation op from a normalized activation name token.
 
@@ -2468,7 +2468,7 @@ Returns: ONNX activation operation.
 
 ### validateLayerActivationHomogeneity
 
-`(activationValidationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerActivationValidationContext) => void`
+`(activationValidationContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerActivationValidationContext) => void`
 
 Validate that a layer has homogeneous activation unless explicitly allowed.
 
@@ -2479,7 +2479,7 @@ Returns: Nothing.
 
 ### validateLayerConnectivity
 
-`(layerValidationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext) => void`
+`(layerValidationContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext) => void`
 
 Validate that each current-layer node has required incoming connectivity.
 
@@ -2490,7 +2490,7 @@ Returns: Nothing.
 
 ### validateLayerHomogeneityAndConnectivity
 
-`(layers: import("C:/NeatapticTS/src/architecture/node").default[][], network: import("C:/NeatapticTS/src/architecture/network").default, options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => void`
+`(layers: import("src/architecture/node").default[][], network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => void`
 
 Validate connectivity and activation homogeneity constraints per layer.
 
@@ -2503,7 +2503,7 @@ Returns: Nothing.
 
 ### validateSingleLayer
 
-`(layerValidationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext) => void`
+`(layerValidationContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext) => void`
 
 Validate one current layer against activation/connectivity constraints.
 
@@ -2514,7 +2514,7 @@ Returns: Nothing.
 
 ### validateSourceToTargetConnectivity
 
-`(connectivityValidationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerConnectivityValidationContext) => void`
+`(connectivityValidationContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerConnectivityValidationContext) => void`
 
 Validate one source->target connection pair under export constraints.
 
@@ -2525,7 +2525,7 @@ Returns: Nothing.
 
 ### validateTargetNodeConnectivity
 
-`(context: { targetNode: import("C:/NeatapticTS/src/architecture/node").default; previousLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[]; layerIndex: number; allowPartialConnectivity: boolean; }) => void`
+`(context: { targetNode: import("src/architecture/node").default; previousLayerNodes: import("src/architecture/node").default[]; layerIndex: number; allowPartialConnectivity: boolean; }) => void`
 
 Validate full source coverage for one target node.
 
@@ -2536,7 +2536,7 @@ Returns: Nothing.
 
 ### warnWhenActivationFallbackIsUsed
 
-`(context: { squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }; resolvedActivationOperation: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxActivationOperation; }) => void`
+`(context: { squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }; resolvedActivationOperation: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxActivationOperation; }) => void`
 
 Emit a warning when activation export falls back to Identity.
 
@@ -2557,7 +2557,7 @@ Returns: Gemm attribute payload list.
 
 ### buildInputBranchGemmEmissionContext
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext, initializerNames: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerNames, graphNames: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGemmEmissionContext`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext, initializerNames: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerNames, graphNames: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGemmEmissionContext`
 
 Build Gemm emission context for the feed-forward branch.
 
@@ -2570,7 +2570,7 @@ Returns: Gemm emission context.
 
 ### buildRecurrentBranchGemmEmissionContext
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext, initializerNames: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerNames, graphNames: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGemmEmissionContext`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext, initializerNames: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerNames, graphNames: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGemmEmissionContext`
 
 Build Gemm emission context for the recurrent hidden-state branch.
 
@@ -2583,7 +2583,7 @@ Returns: Gemm emission context.
 
 ### buildRecurrentGraphNames
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames`
 
 Build deterministic graph names for recurrent-node emission.
 
@@ -2594,7 +2594,7 @@ Returns: Graph-name group for branch and activation nodes.
 
 ### buildRecurrentInitializerNames
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerNames`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerNames`
 
 Build deterministic tensor names for recurrent initializer emission.
 
@@ -2605,7 +2605,7 @@ Returns: Tensor-name group for initializer emission.
 
 ### buildRecurrentLayerEmissionContext
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionParams) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionParams) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext`
 
 Build derived recurrent-layer context from input params.
 
@@ -2616,7 +2616,7 @@ Returns: Derived context with cached dimensions and layer slot.
 
 ### collectRecurrentInitializerValues
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerValues`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerValues`
 
 Collect recurrent initializer vectors for one layer.
 
@@ -2627,7 +2627,7 @@ Returns: Dense and recurrent initializer vectors.
 
 ### emitRecurrentActivationNode
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentActivationEmissionContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentActivationEmissionContext) => void`
 
 Emit activation node for recurrent branch sum output.
 
@@ -2638,7 +2638,7 @@ Returns: Nothing.
 
 ### emitRecurrentAddNode
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, graphNames: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, graphNames: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames) => void`
 
 Emit Add node that fuses feed-forward and recurrent branch outputs.
 
@@ -2650,7 +2650,7 @@ Returns: Nothing.
 
 ### emitRecurrentGemmNode
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGemmEmissionContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGemmEmissionContext) => void`
 
 Emit one recurrent Gemm node with shared ONNX attributes.
 
@@ -2661,7 +2661,7 @@ Returns: Nothing.
 
 ### emitRecurrentInitializers
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerEmissionContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerEmissionContext) => void`
 
 Emit dense and recurrent initializer tensors.
 
@@ -2672,7 +2672,7 @@ Returns: Nothing.
 
 ### emitRecurrentLayer
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionParams) => string`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionParams) => string`
 
 Emit recurrent single-step layer representation.
 
@@ -2683,7 +2683,7 @@ Returns: Output tensor name.
 
 ### readNodeInternals
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals`
+`(node: import("src/architecture/node").default) => import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals`
 
 Normalize runtime node shape to recurrent-export internals contract.
 
@@ -2705,7 +2705,7 @@ Returns: Hidden-state tensor input name.
 
 ### resolveRecurrentActivationType
 
-`(currentLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[]) => string`
+`(currentLayerNodes: import("src/architecture/node").default[]) => string`
 
 Resolve ONNX activation type from first node in recurrent layer.
 
@@ -2718,7 +2718,7 @@ Returns: ONNX activation op type.
 
 ### emitLayerGraph
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LayerBuildContext) => string`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").LayerBuildContext) => string`
 
 Emit one export layer graph segment and return the produced output tensor name.
 
@@ -2731,181 +2731,181 @@ Returns: Output tensor name produced by this layer.
 
 ### appendConvLayerValidationResult
 
-`(result: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationResult, layerIndex: number, isConsistent: boolean) => void`
+`(result: import("src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationResult, layerIndex: number, isConsistent: boolean) => void`
 
 Append one Conv-layer validation outcome and optional warning.
 
 ### appendConvSharingMetadata
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, result: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationResult) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, result: import("src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationResult) => void`
 
 Append Conv-sharing validation metadata arrays.
 
 ### appendFusedRecurrentInitializers
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, initializerNames: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentInitializerNames, parameters: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult, gateCount: number, unitSize: number, previousSize: number) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, initializerNames: import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentInitializerNames, parameters: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult, gateCount: number, unitSize: number, previousSize: number) => void`
 
 Append fused recurrent initializer tensors to the ONNX graph.
 
 ### appendFusedRecurrentNode
 
-`(graph: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxGraph, operatorType: "LSTM" | "GRU", previousOutputName: string, initializerNames: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentInitializerNames, graphNames: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentGraphNames, unitSize: number) => void`
+`(graph: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxGraph, operatorType: "LSTM" | "GRU", previousOutputName: string, initializerNames: import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentInitializerNames, graphNames: import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentGraphNames, unitSize: number) => void`
 
 Append fused recurrent operator node to the ONNX graph.
 
 ### appendIndexMetadata
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, key: string, layerIndex: number) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, key: string, layerIndex: number) => void`
 
 Append a unique layer index to metadata array key.
 
 ### appendMetadataProperty
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, metadataProperty: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, metadataProperty: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty) => void`
 
 Append metadata property to model metadata_props list.
 
 ### appendRecurrentSingleStepMetadata
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, recurrentLayerIndices: number[]) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, recurrentLayerIndices: number[]) => void`
 
 Append recurrent single-step metadata when recurrent layers exist.
 
 ### areWeightsWithinTolerance
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").WeightToleranceComparisonContext) => boolean`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").WeightToleranceComparisonContext) => boolean`
 
 Compare two scalar weights using configured tolerance.
 
 ### asNodeInternals
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals`
+`(node: import("src/architecture/node").default) => import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals`
 
 Resolve runtime node internals in one typed helper.
 
 ### buildFusedGruExecutionContext
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").GruEmissionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentEmissionExecutionContext`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").GruEmissionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentEmissionExecutionContext`
 
 Build shared fused-recurrent execution context for GRU.
 
 ### buildFusedLstmExecutionContext
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmEmissionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentEmissionExecutionContext`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").LstmEmissionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentEmissionExecutionContext`
 
 Build shared fused-recurrent execution context for LSTM.
 
 ### buildFusedRecurrentGraphNames
 
-`(nodePrefix: string, outputSuffix: string, layerIndex: number) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentGraphNames`
+`(nodePrefix: string, outputSuffix: string, layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentGraphNames`
 
 Build fused recurrent graph names for node and output.
 
 ### buildFusedRecurrentInitializerNames
 
-`(operatorType: "LSTM" | "GRU", layerIndex: number) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentInitializerNames`
+`(operatorType: "LSTM" | "GRU", layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentInitializerNames`
 
 Build fused recurrent initializer names for the current layer.
 
 ### buildGruEmissionContext
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").GruEmissionContext`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => import("src/architecture/network/onnx/network.onnx.utils.types").GruEmissionContext`
 
 Build GRU emission context from one hidden-layer traversal record.
 
 ### buildHiddenLayerHeuristicContext
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentHeuristicEmissionContext, layerIndex: number) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentHeuristicEmissionContext, layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext`
 
 Build one hidden-layer traversal context.
 
 ### buildLstmEmissionContext
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmEmissionContext`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmEmissionContext`
 
 Build LSTM emission context from one hidden-layer traversal record.
 
 ### buildMetadataProperty
 
-`(key: string, value: unknown) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty`
+`(key: string, value: unknown) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty`
 
 Build a metadata key/value property with JSON string serialization.
 
 ### buildRecurrentHeuristicEmissionContext
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("C:/NeatapticTS/src/architecture/node").default[][], previousOutputName: string) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentHeuristicEmissionContext`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], previousOutputName: string) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentHeuristicEmissionContext`
 
 Build reusable context for recurrent heuristic traversal.
 
 ### collectConvKernelCoordinates
 
-`(convSpec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxConvKernelCoordinate[]`
+`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxConvKernelCoordinate[]`
 
 Collect kernel coordinates for one Conv kernel traversal.
 
 ### collectConvOutputCoordinates
 
-`(convSpec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvOutputCoordinate[]`
+`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvOutputCoordinate[]`
 
 Collect output coordinates for full Conv traversal.
 
 ### collectGruGateNodeGroups
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").GruEmissionContext) => import("C:/NeatapticTS/src/architecture/node").default[][]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").GruEmissionContext) => import("src/architecture/node").default[][]`
 
 Collect GRU gate node groups in canonical export order.
 
 ### collectHiddenLayerIndices
 
-`(layers: import("C:/NeatapticTS/src/architecture/node").default[][]) => number[]`
+`(layers: import("src/architecture/node").default[][]) => number[]`
 
 Collect hidden-layer indices for recurrent traversal.
 
 ### collectLstmGateNodeGroups
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmEmissionContext) => import("C:/NeatapticTS/src/architecture/node").default[][]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").LstmEmissionContext) => import("src/architecture/node").default[][]`
 
 Collect LSTM gate node groups in canonical export order.
 
 ### collectRecurrentGateBlockParameters
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateBlockCollectionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateBlockCollectionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult`
 
 Collect flattened parameter vectors for one gate node block.
 
 ### collectRecurrentGateRow
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRowCollectionContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRow`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRowCollectionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRow`
 
 Collect one recurrent gate row payload (inputs, recurrent slice, and bias).
 
 ### collectRepresentativeKernelForChannel
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvRepresentativeKernelContext) => number[]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvRepresentativeKernelContext) => number[]`
 
 Collect one representative kernel by reading the first output position for a channel.
 
 ### collectRepresentativeKernels
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext) => number[][]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext) => number[][]`
 
 Collect representative kernels for each output channel.
 
 ### collectRepresentativeKernelWeight
 
-`(convSpec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, previousLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[], representativeInternal: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, kernelCoordinate: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxConvKernelCoordinate) => number`
+`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, previousLayerNodes: import("src/architecture/node").default[], representativeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, kernelCoordinate: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxConvKernelCoordinate) => number`
 
 Collect representative kernel value using top-left receptive field indexing.
 
 ### emitFallbackRecurrentPatternMetadata
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => void`
 
 Emit fallback metadata for recurrent-size ambiguity.
 
 ### emitFusedRecurrentHeuristics
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("C:/NeatapticTS/src/architecture/node").default[][], allowRecurrent: boolean | undefined, previousOutputName: string) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], allowRecurrent: boolean | undefined, previousOutputName: string) => void`
 
 Emit heuristic fused recurrent operators (LSTM/GRU) when recurrent export is enabled.
 
@@ -2919,19 +2919,19 @@ Returns: Nothing.
 
 ### emitFusedRecurrentLayer
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentEmissionExecutionContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentEmissionExecutionContext) => void`
 
 Emit shared fused recurrent payload (initializers, node, metadata).
 
 ### ensureMetadataProps
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]`
 
 Ensure metadata_props array exists and return it.
 
 ### finalizeExportMetadata
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("C:/NeatapticTS/src/architecture/node").default[][], options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions, includeMetadata: boolean, hiddenSizesMetadata: number[], recurrentLayerIndices: number[]) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions, includeMetadata: boolean, hiddenSizesMetadata: number[], recurrentLayerIndices: number[]) => void`
 
 Finalize export metadata and optional conv-sharing validation.
 
@@ -2947,25 +2947,25 @@ Returns: Nothing.
 
 ### findMetadataPropertyIndex
 
-`(metadataProperties: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], key: string) => number`
+`(metadataProperties: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], key: string) => number`
 
 Find metadata property index by key.
 
 ### foldRecurrentGateBlocks
 
-`(gateParameterBlocks: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult[]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult`
+`(gateParameterBlocks: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult[]) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult`
 
 Fold gate blocks into a single fused parameter payload.
 
 ### foldRecurrentGateRows
 
-`(gateRows: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRow[]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult`
+`(gateRows: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRow[]) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult`
 
 Fold recurrent gate rows into flattened ONNX initializer vectors.
 
 ### isConvLayerPairConsistent
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext) => boolean`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext) => boolean`
 
 Validate one Conv layer pair against representative kernel sharing.
 
@@ -2989,19 +2989,19 @@ Check whether hidden size should emit recurrent fallback metadata.
 
 ### isInputPositionInsideBounds
 
-`(convSpec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, inputRow: number, inputColumn: number) => boolean`
+`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, inputRow: number, inputColumn: number) => boolean`
 
 Check whether input row/column falls inside Conv input bounds.
 
 ### isKernelCoordinateConsistent
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvKernelConsistencyContext) => boolean`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvKernelConsistencyContext) => boolean`
 
 Validate one kernel coordinate against its representative channel value.
 
 ### isOutputCoordinateConsistent
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext, outputCoordinate: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvOutputCoordinate, representativeKernels: number[][], tolerance: number) => boolean`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext, outputCoordinate: import("src/architecture/network/onnx/network.onnx.utils.types").ConvOutputCoordinate, representativeKernels: number[][], tolerance: number) => boolean`
 
 Validate one output coordinate against channel representative kernel weights.
 
@@ -3013,7 +3013,7 @@ Parse metadata JSON value into a numeric layer-index array.
 
 ### resolveConvLayerPairContext
 
-`(layers: import("C:/NeatapticTS/src/architecture/node").default[][], layerIndex: number, convSpec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext | undefined`
+`(layers: import("src/architecture/node").default[][], layerIndex: number, convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext | undefined`
 
 Resolve one Conv mapping layer pair or return undefined for invalid layout.
 
@@ -3025,67 +3025,67 @@ Resolve previous output naming semantics for GRU heuristic emission.
 
 ### resolveIncomingWeight
 
-`(targetNodeInternal: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, sourceNode: import("C:/NeatapticTS/src/architecture/node").default) => number`
+`(targetNodeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, sourceNode: import("src/architecture/node").default) => number`
 
 Resolve incoming connection weight from a specific source node.
 
 ### resolveInputPosition
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvKernelConsistencyContext) => { inputRow: number; inputColumn: number; }`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvKernelConsistencyContext) => { inputRow: number; inputColumn: number; }`
 
 Resolve input row/column projected by output and kernel coordinates.
 
 ### resolveNeuronInternalAtOutputCoordinate
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext, outputCoordinate: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvOutputCoordinate) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals | undefined`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext, outputCoordinate: import("src/architecture/network/onnx/network.onnx.utils.types").ConvOutputCoordinate) => import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals | undefined`
 
 Resolve runtime internals for output coordinate neuron, if present.
 
 ### resolveRecurrentRowWeight
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRowCollectionContext, columnIndex: number) => number`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRowCollectionContext, columnIndex: number) => number`
 
 Resolve one recurrent row value at the requested column.
 
 ### resolveSelfConnectionWeight
 
-`(targetNodeInternal: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals) => number`
+`(targetNodeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals) => number`
 
 Resolve self-connection weight for diagonal recurrent matrix entries.
 
 ### resolveSourceNodeAtInputPosition
 
-`(convSpec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, previousLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[], inChannelIndex: number, inputRow: number, inputColumn: number) => import("C:/NeatapticTS/src/architecture/node").default | undefined`
+`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, previousLayerNodes: import("src/architecture/node").default[], inChannelIndex: number, inputRow: number, inputColumn: number) => import("src/architecture/node").default | undefined`
 
 Resolve source node by Conv input position coordinates.
 
 ### shouldValidateConvSharing
 
-`(options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => boolean`
+`(options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => boolean`
 
 Determine whether Conv2D sharing validation is enabled and configured.
 
 ### tryEmitFusedGru
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => void`
 
 Try emitting heuristic fused GRU node and metadata.
 
 ### tryEmitFusedLstm
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => void`
 
 Try emitting heuristic fused LSTM node and metadata.
 
 ### upsertLayerIndexMetadataValue
 
-`(metadataProperties: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], metadataIndex: number, layerIndex: number) => void`
+`(metadataProperties: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], metadataIndex: number, layerIndex: number) => void`
 
 Upsert one layer index into metadata array-like JSON value.
 
 ### validateConvSharingAcrossMappings
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationResult`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationContext) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationResult`
 
 Validate Conv2D sharing across all declared Conv mappings.
 
@@ -3093,7 +3093,7 @@ Validate Conv2D sharing across all declared Conv mappings.
 
 ### assignActivationFunctions
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[]) => void`
+`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[]) => void`
 
 Assign node activation functions from ONNX activation nodes.
 
@@ -3108,7 +3108,7 @@ Returns: Nothing.
 
 ### appendIndexedMetadata
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, key: string, layerIndex: number) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, key: string, layerIndex: number) => void`
 
 Append an integer index to JSON-array metadata key.
 
@@ -3121,7 +3121,7 @@ Returns: Nothing.
 
 ### appendMetadataSpec
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, key: string, spec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping | import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, key: string, spec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping | import("src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => void`
 
 Append a JSON object to JSON-array metadata key.
 
@@ -3134,7 +3134,7 @@ Returns: Nothing.
 
 ### appendPoolingMetadata
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").PoolingEmissionContext) => void`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").PoolingEmissionContext) => void`
 
 Append pooling metadata for one emitted pooling layer.
 
@@ -3145,7 +3145,7 @@ Returns: Nothing.
 
 ### asNodeInternals
 
-`(node: import("C:/NeatapticTS/src/architecture/node").default) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals`
+`(node: import("src/architecture/node").default) => import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals`
 
 Normalize a public node instance into ONNX export internals.
 
@@ -3156,7 +3156,7 @@ Returns: Internal runtime-facing node representation.
 
 ### buildDenseWeightsAndBiases
 
-`(previousLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[], currentLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseWeightBuildResult`
+`(previousLayerNodes: import("src/architecture/node").default[], currentLayerNodes: import("src/architecture/node").default[]) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightBuildResult`
 
 Build dense-layer weight matrix and bias vector.
 
@@ -3168,7 +3168,7 @@ Returns: Flattened row-major weight matrix and bias vector.
 
 ### buildDiagonalRecurrentWeights
 
-`(currentLayerNodes: import("C:/NeatapticTS/src/architecture/node").default[]) => number[]`
+`(currentLayerNodes: import("src/architecture/node").default[]) => number[]`
 
 Build a diagonal recurrent matrix from self-connections.
 
@@ -3179,7 +3179,7 @@ Returns: Flattened row-major recurrent matrix.
 
 ### buildIndexedMetadataProperty
 
-`(key: string, layerIndex: number) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty`
+`(key: string, layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty`
 
 Build a new index-array metadata property.
 
@@ -3191,7 +3191,7 @@ Returns: Metadata property.
 
 ### buildSpecMetadataProperty
 
-`(key: string, spec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping | import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty`
+`(key: string, spec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping | import("src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty`
 
 Build a new spec-array metadata property.
 
@@ -3203,7 +3203,7 @@ Returns: Metadata property.
 
 ### collectDenseRows
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseWeightBuildContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseWeightRow[]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightBuildContext) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightRow[]`
 
 Collect dense rows for each target node in current layer.
 
@@ -3214,7 +3214,7 @@ Returns: Dense rows containing per-target weights and bias.
 
 ### collectDenseRowWeights
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseWeightRowCollectionContext) => number[]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightRowCollectionContext) => number[]`
 
 Collect source-to-target weights for one dense row.
 
@@ -3225,7 +3225,7 @@ Returns: Row weights in source-node order.
 
 ### collectPoolingAttributes
 
-`(poolSpec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").PoolingAttributes`
+`(poolSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => import("src/architecture/network/onnx/network.onnx.utils.types").PoolingAttributes`
 
 Collect ONNX pooling attributes from one pooling spec.
 
@@ -3236,7 +3236,7 @@ Returns: Pooling attributes for ONNX node payload.
 
 ### collectRecurrentRow
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentRowCollectionContext) => number[]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentRowCollectionContext) => number[]`
 
 Collect one recurrent matrix row.
 
@@ -3247,7 +3247,7 @@ Returns: Recurrent row values.
 
 ### collectRecurrentRows
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DiagonalRecurrentBuildContext) => number[][]`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").DiagonalRecurrentBuildContext) => number[][]`
 
 Collect recurrent matrix rows for one layer.
 
@@ -3258,7 +3258,7 @@ Returns: Recurrent row collection.
 
 ### emitOptionalFlattenAfterPooling
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").FlattenAfterPoolingContext) => string`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").FlattenAfterPoolingContext) => string`
 
 Conditionally emit flatten node after pooling.
 
@@ -3269,7 +3269,7 @@ Returns: Output tensor name after optional flatten.
 
 ### emitOptionalPoolingAndFlatten
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OptionalPoolingAndFlattenParams) => string`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OptionalPoolingAndFlattenParams) => string`
 
 Emit optional pooling and flatten nodes after a layer output.
 
@@ -3280,7 +3280,7 @@ Returns: Final output tensor name after optional pooling/flatten.
 
 ### emitPoolingNode
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").PoolingEmissionContext) => string`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").PoolingEmissionContext) => string`
 
 Emit one pooling node and return its output tensor name.
 
@@ -3291,7 +3291,7 @@ Returns: Pooling output tensor name.
 
 ### ensureMetadataRegistry
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]`
 
 Ensure model metadata registry exists.
 
@@ -3302,7 +3302,7 @@ Returns: Mutable metadata registry.
 
 ### findMetadataProperty
 
-`(metadataRegistry: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], key: string) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty | undefined`
+`(metadataRegistry: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], key: string) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty | undefined`
 
 Find a metadata property by key.
 
@@ -3314,7 +3314,7 @@ Returns: Matching metadata property if present.
 
 ### foldDenseRowsToInitializers
 
-`(denseRows: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseWeightRow[]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").DenseWeightBuildResult`
+`(denseRows: import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightRow[]) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightBuildResult`
 
 Fold dense rows into flattened ONNX initializer arrays.
 
@@ -3336,7 +3336,7 @@ Returns: Parsed array when valid, otherwise undefined.
 
 ### resolveDiagonalRecurrentWeight
 
-`(context: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").RecurrentRowCollectionContext, columnIndex: number) => number`
+`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentRowCollectionContext, columnIndex: number) => number`
 
 Resolve recurrent weight value for one matrix coordinate.
 
@@ -3348,7 +3348,7 @@ Returns: Recurrent weight for diagonal entries, otherwise zero.
 
 ### resolveInboundWeight
 
-`(targetNodeInternal: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, sourceNode: import("C:/NeatapticTS/src/architecture/node").default) => number`
+`(targetNodeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, sourceNode: import("src/architecture/node").default) => number`
 
 Resolve source-to-target inbound connection weight.
 
@@ -3372,7 +3372,7 @@ Returns: Serialized JSON value.
 
 ### serializeSpecMetadataValue
 
-`(currentValue: string, spec: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping | import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => string`
+`(currentValue: string, spec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping | import("src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => string`
 
 Serialize spec metadata after appending one spec object.
 
@@ -3384,7 +3384,7 @@ Returns: Serialized JSON value.
 
 ### toPoolingEmissionContext
 
-`(params: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OptionalPoolingAndFlattenParams) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").PoolingEmissionContext`
+`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OptionalPoolingAndFlattenParams) => import("src/architecture/network/onnx/network.onnx.utils.types").PoolingEmissionContext`
 
 Resolve pooling emission context from optional pooling parameters.
 
@@ -3397,7 +3397,7 @@ Returns: Pooling emission context.
 
 ### appendConvInferenceMetadata
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("C:/NeatapticTS/src/architecture/node").default[][], options: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => void`
 
 Append heuristic conv inference metadata when requested.
 
@@ -3410,7 +3410,7 @@ Returns: Nothing.
 
 ### appendLstmPatternStubMetadata
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, lstmPatternStubs: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, lstmPatternStubs: import("src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]) => void`
 
 Append LSTM pattern stub metadata.
 
@@ -3422,7 +3422,7 @@ Returns: Nothing.
 
 ### appendMetadataProperties
 
-`(model: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, metadataProperties: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
+`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, metadataProperties: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
 
 Append metadata properties in a single, normalized path.
 
@@ -3434,7 +3434,7 @@ Returns: Nothing.
 
 ### applyExportNodeIndexAssignments
 
-`(assignmentContexts: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ExportNodeIndexAssignmentContext[]) => void`
+`(assignmentContexts: import("src/architecture/network/onnx/network.onnx.utils.types").ExportNodeIndexAssignmentContext[]) => void`
 
 Apply prepared node/index assignment contexts.
 
@@ -3445,7 +3445,7 @@ Returns: Nothing.
 
 ### applySingleExportNodeIndexAssignment
 
-`(assignmentContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ExportNodeIndexAssignmentContext) => void`
+`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").ExportNodeIndexAssignmentContext) => void`
 
 Apply one export index assignment.
 
@@ -3456,7 +3456,7 @@ Returns: Nothing.
 
 ### assignExportNodeIndices
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(network: import("src/architecture/network").default) => void`
 
 Assign stable index values to nodes for export diagnostics.
 
@@ -3467,7 +3467,7 @@ Returns: Nothing.
 
 ### collectInferredConvMetadata
 
-`(context: { layers: import("C:/NeatapticTS/src/architecture/node").default[][]; declaredMappings: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping[] | undefined; }) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceResult`
+`(context: { layers: import("src/architecture/node").default[][]; declaredMappings: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping[] | undefined; }) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceResult`
 
 Collect inferred Conv metadata from hidden-layer traversals.
 
@@ -3478,7 +3478,7 @@ Returns: Inferred Conv metadata result.
 
 ### collectLstmPatternStubs
 
-`(layers: import("C:/NeatapticTS/src/architecture/node").default[][], allowRecurrent: boolean | undefined) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]`
+`(layers: import("src/architecture/node").default[][], allowRecurrent: boolean | undefined) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]`
 
 Collect heuristic LSTM grouping stubs from hidden layers.
 
@@ -3490,7 +3490,7 @@ Returns: Candidate LSTM pattern stubs.
 
 ### collectLstmPatternStubsFromLayers
 
-`(layers: import("C:/NeatapticTS/src/architecture/node").default[][]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]`
+`(layers: import("src/architecture/node").default[][]) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]`
 
 Collect LSTM pattern stubs from hidden layers.
 
@@ -3501,7 +3501,7 @@ Returns: LSTM pattern stubs.
 
 ### createConvInferenceEvaluationContext
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceEvaluationContext`
+`(traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceEvaluationContext`
 
 Create width/square-evaluation context for Conv inference.
 
@@ -3512,7 +3512,7 @@ Returns: Conv evaluation context.
 
 ### createConvTraversalContexts
 
-`(context: { layers: import("C:/NeatapticTS/src/architecture/node").default[][]; declaredMappings: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping[] | undefined; }) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext[]`
+`(context: { layers: import("src/architecture/node").default[][]; declaredMappings: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping[] | undefined; }) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext[]`
 
 Create Conv traversal contexts for hidden layers.
 
@@ -3523,7 +3523,7 @@ Returns: Conv traversal contexts.
 
 ### createExportNodeIndexAssignmentContexts
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ExportNodeIndexAssignmentContext[]`
+`(network: import("src/architecture/network").default) => import("src/architecture/network/onnx/network.onnx.utils.types").ExportNodeIndexAssignmentContext[]`
 
 Create node/index assignment contexts for export diagnostics.
 
@@ -3534,7 +3534,7 @@ Returns: Assignment contexts.
 
 ### createHiddenLayerTraversalContexts
 
-`(layers: import("C:/NeatapticTS/src/architecture/node").default[][]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmLayerTraversalContext[]`
+`(layers: import("src/architecture/node").default[][]) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmLayerTraversalContext[]`
 
 Create traversal contexts for hidden layers only.
 
@@ -3545,7 +3545,7 @@ Returns: Hidden layer contexts.
 
 ### createLstmCandidateContext
 
-`(hiddenLayerContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmLayerTraversalContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmCandidateContext`
+`(hiddenLayerContext: import("src/architecture/network/onnx/network.onnx.utils.types").LstmLayerTraversalContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmCandidateContext`
 
 Build LSTM candidate context for one hidden layer.
 
@@ -3556,7 +3556,7 @@ Returns: LSTM candidate context.
 
 ### hasInferredConvMetadata
 
-`(inferenceResult: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceResult) => boolean`
+`(inferenceResult: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceResult) => boolean`
 
 Check whether inferred Conv metadata exists.
 
@@ -3567,7 +3567,7 @@ Returns: True when inferred metadata exists.
 
 ### hasRequiredSelfConnectionCount
 
-`(nodeItem: import("C:/NeatapticTS/src/architecture/node").default) => boolean`
+`(nodeItem: import("src/architecture/node").default) => boolean`
 
 Check whether one node has the required self-connection count.
 
@@ -3578,7 +3578,7 @@ Returns: True when self-connection count matches requirement.
 
 ### isDeclaredConvLayer
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext) => boolean`
+`(traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext) => boolean`
 
 Check whether a traversal layer already has declared Conv mapping.
 
@@ -3589,7 +3589,7 @@ Returns: True when mapping is already declared.
 
 ### isInferredConvSpec
 
-`(specification: (import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined) => boolean`
+`(specification: (import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined) => boolean`
 
 Type guard for inferred Conv specifications.
 
@@ -3600,7 +3600,7 @@ Returns: True when specification is defined.
 
 ### isValidLstmCandidateContext
 
-`(candidateContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmCandidateContext) => boolean`
+`(candidateContext: import("src/architecture/network/onnx/network.onnx.utils.types").LstmCandidateContext) => boolean`
 
 Determine whether a candidate context satisfies heuristic LSTM conditions.
 
@@ -3611,7 +3611,7 @@ Returns: True when the candidate is a valid LSTM stub.
 
 ### mapLstmCandidateToStub
 
-`(candidateContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmCandidateContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub`
+`(candidateContext: import("src/architecture/network/onnx/network.onnx.utils.types").LstmCandidateContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub`
 
 Map a valid candidate context to metadata stub.
 
@@ -3622,7 +3622,7 @@ Returns: LSTM pattern stub.
 
 ### resolveConvInferenceForLayer
 
-`(traversalContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext) => (import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined`
+`(traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext) => (import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined`
 
 Resolve inferred Conv specification for one hidden layer.
 
@@ -3633,7 +3633,7 @@ Returns: Inferred Conv specification when matched.
 
 ### resolveConvSpecForKernel
 
-`(kernelContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceKernelEvaluationContext) => (import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined`
+`(kernelContext: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceKernelEvaluationContext) => (import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined`
 
 Resolve Conv specification for one kernel candidate.
 
@@ -3644,7 +3644,7 @@ Returns: Inferred Conv specification when matched.
 
 ### resolveConvSpecFromKernelCandidates
 
-`(evaluationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceEvaluationContext) => (import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined`
+`(evaluationContext: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceEvaluationContext) => (import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined`
 
 Resolve Conv specification using ordered kernel candidates.
 
@@ -3655,7 +3655,7 @@ Returns: Inferred Conv specification when matched.
 
 ### safelyCollectLstmPatternStubs
 
-`(layers: import("C:/NeatapticTS/src/architecture/node").default[][]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]`
+`(layers: import("src/architecture/node").default[][]) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]`
 
 Collect LSTM pattern stubs with heuristic error isolation.
 
@@ -3668,7 +3668,7 @@ Returns: LSTM pattern stubs.
 
 ### applyLayerSelfConnections
 
-`(layerConnectionContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerConnectionContext) => void`
+`(layerConnectionContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerConnectionContext) => void`
 
 Apply one hidden layer diagonal recurrent self-weights.
 
@@ -3679,7 +3679,7 @@ Returns: Nothing.
 
 ### attachOnnxPoolingMetadata
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, metadata: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
+`(network: import("src/architecture/network").default, metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
 
 Attach optional pooling metadata from ONNX model to network instance.
 
@@ -3691,7 +3691,7 @@ Returns: Nothing.
 
 ### attachParsedPoolingMetadata
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, poolingMetadata: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPoolingMetadata) => void`
+`(network: import("src/architecture/network").default, poolingMetadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPoolingMetadata) => void`
 
 Attach parsed pooling metadata to imported network instance.
 
@@ -3703,7 +3703,7 @@ Returns: Nothing.
 
 ### buildArchitectureContext
 
-`(onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportArchitectureContext`
+`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportArchitectureContext`
 
 Build architecture extraction context from ONNX graph state.
 
@@ -3714,7 +3714,7 @@ Returns: Normalized architecture extraction context.
 
 ### buildHiddenLayerSpans
 
-`(hiddenLayerSizes: number[]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportHiddenLayerSpan[]`
+`(hiddenLayerSizes: number[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportHiddenLayerSpan[]`
 
 Build hidden-layer spans with one-based layer numbering and global offsets.
 
@@ -3737,7 +3737,7 @@ Returns: Diagonal recurrent self-weights.
 
 ### collectNodesByType
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[], nodeType: "input" | "output" | "hidden") => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(nodes: import("src/architecture/node").default[], nodeType: "input" | "output" | "hidden") => import("src/architecture/node").default[]`
 
 Collect nodes matching one runtime node-type discriminator.
 
@@ -3749,7 +3749,7 @@ Returns: Filtered node list.
 
 ### collectPerceptronBoundaryNodes
 
-`(nodes: import("C:/NeatapticTS/src/architecture/node").default[]) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(nodes: import("src/architecture/node").default[]) => import("src/architecture/node").default[]`
 
 Collect input and output boundary nodes for perceptron imports.
 
@@ -3760,7 +3760,7 @@ Returns: Input/output-only node list.
 
 ### collectRecurrentLayerSpans
 
-`(restorationContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportRecurrentRestorationContext) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportHiddenLayerSpan[]`
+`(restorationContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportRecurrentRestorationContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportHiddenLayerSpan[]`
 
 Resolve recurrent-target hidden-layer spans from metadata + hidden sizes.
 
@@ -3771,7 +3771,7 @@ Returns: Hidden-layer spans requiring recurrent restoration.
 
 ### extractOnnxArchitecture
 
-`(onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportArchitectureResult`
+`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportArchitectureResult`
 
 Extract input/output counts and hidden layer sizes from ONNX model.
 
@@ -3782,7 +3782,7 @@ Returns: Parsed architecture dimensions.
 
 ### findMetadataProperty
 
-`(metadata: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], metadataKey: string) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty | undefined`
+`(metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], metadataKey: string) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty | undefined`
 
 Find one ONNX metadata property by key.
 
@@ -3794,7 +3794,7 @@ Returns: Matching metadata property when present.
 
 ### findRecurrentInitializer
 
-`(layerConnectionContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerConnectionContext) => { name: string; float_data: number[]; } | undefined`
+`(layerConnectionContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerConnectionContext) => { name: string; float_data: number[]; } | undefined`
 
 Resolve recurrent initializer tensor for one hidden-layer span.
 
@@ -3827,7 +3827,7 @@ Returns: Recurrent layer indices.
 
 ### parsePoolingMetadata
 
-`(metadata: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPoolingMetadata | null`
+`(metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPoolingMetadata | null`
 
 Parse pooling metadata payload from ONNX metadata.
 
@@ -3849,7 +3849,7 @@ Returns: Normalized recurrent layer indices.
 
 ### pruneSingleLayerHiddenPlaceholders
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, hiddenLayerSizes: number[]) => void`
+`(network: import("src/architecture/network").default, hiddenLayerSizes: number[]) => void`
 
 Remove placeholder hidden nodes for single-layer perceptron imports.
 
@@ -3872,7 +3872,7 @@ Returns: Terminal `dim_value` payload.
 
 ### reconstructFusedRecurrentLayers
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], layerFactory: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxLayerFactory, metadata: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
+`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], layerFactory: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxLayerFactory, metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
 
 Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
 
@@ -3887,7 +3887,7 @@ Returns: Nothing.
 
 ### resolveRecurrentLayerIndices
 
-`(metadata: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => number[]`
+`(metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => number[]`
 
 Resolve recurrent layer indices from ONNX metadata.
 
@@ -3898,7 +3898,7 @@ Returns: Parsed recurrent layer indices.
 
 ### restoreRecurrentSelfConnections
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], metadata: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
+`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
 
 Restore recurrent self-connections from recurrent metadata and R tensors.
 
@@ -3912,7 +3912,7 @@ Returns: Nothing.
 
 ### sliceLayerHiddenNodes
 
-`(layerConnectionContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerConnectionContext) => import("C:/NeatapticTS/src/architecture/node").default[]`
+`(layerConnectionContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerConnectionContext) => import("src/architecture/node").default[]`
 
 Slice hidden nodes for one hidden-layer span.
 
@@ -3923,7 +3923,7 @@ Returns: Hidden nodes belonging to the span.
 
 ### upsertSelfConnection
 
-`(selfConnectionContext: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxImportSelfConnectionUpsertContext) => void`
+`(selfConnectionContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportSelfConnectionUpsertContext) => void`
 
 Upsert one node self-connection for recurrent import restoration.
 
@@ -3936,7 +3936,7 @@ Returns: Nothing.
 
 ### reconstructFusedRecurrentLayers
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, onnx: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], layerFactory: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxLayerFactory, metadata: import("C:/NeatapticTS/src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
+`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], layerFactory: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxLayerFactory, metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
 
 Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
 

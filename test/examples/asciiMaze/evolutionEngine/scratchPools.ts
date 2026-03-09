@@ -5,11 +5,8 @@
  * shared {@link EngineState}. They keep the façade lean by encapsulating heuristics for logits
  * ring sizing, telemetry scratch sizing, and connection flag pooling.
  */
-import {
-  EngineState,
-  TelemetryScratchRequest,
-  initialiseTelemetryScratch,
-} from './engineState';
+import type { EngineState, TelemetryScratchRequest } from './engineState.types';
+import { initialiseTelemetryScratch } from './engineState';
 
 /**
  * Shape describing the parameters used when ensuring the logits ring capacity.

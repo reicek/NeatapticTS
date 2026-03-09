@@ -44,7 +44,7 @@ Returns: Mean error and elapsed duration.
 
 ### disableDropoutForTesting
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => number`
+`(network: import("src/architecture/network").default) => number`
 
 Disable dropout while preserving previous runtime dropout value.
 
@@ -55,7 +55,7 @@ Returns: Previous dropout value.
 
 ### evaluateSamples
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, testSet: TestSample[], costFunction: CostFunction) => number`
+`(network: import("src/architecture/network").default, testSet: TestSample[], costFunction: CostFunction) => number`
 
 Evaluate all test samples and accumulate total cost.
 
@@ -68,7 +68,7 @@ Returns: Cumulative error across all samples.
 
 ### evaluateSingleSample
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, sample: TestSample, costFunction: CostFunction) => number`
+`(network: import("src/architecture/network").default, sample: TestSample, costFunction: CostFunction) => number`
 
 Evaluate a single sample and return its cost.
 
@@ -81,7 +81,7 @@ Returns: Error for the sample.
 
 ### resetHiddenMasks
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default) => void`
+`(network: import("src/architecture/network").default) => void`
 
 Force hidden-node masks to active state for deterministic testing.
 
@@ -101,7 +101,7 @@ Returns: Cost function used for test evaluation.
 
 ### restoreDropout
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, previousDropout: number) => void`
+`(network: import("src/architecture/network").default, previousDropout: number) => void`
 
 Restore dropout value after test evaluation.
 
@@ -124,7 +124,7 @@ Returns: Mean error and evaluation duration.
 
 ### validateAllSampleDimensions
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, testSet: TestSample[]) => void`
+`(network: import("src/architecture/network").default, testSet: TestSample[]) => void`
 
 Validate input and output dimensions for every sample.
 
@@ -134,7 +134,7 @@ Parameters:
 
 ### validateSampleInputDimensions
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, sample: TestSample) => void`
+`(network: import("src/architecture/network").default, sample: TestSample) => void`
 
 Validate one sample input vector size.
 
@@ -144,7 +144,7 @@ Parameters:
 
 ### validateSampleOutputDimensions
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, sample: TestSample) => void`
+`(network: import("src/architecture/network").default, sample: TestSample) => void`
 
 Validate one sample output vector size.
 
@@ -154,7 +154,7 @@ Parameters:
 
 ### validateTestSet
 
-`(network: import("C:/NeatapticTS/src/architecture/network").default, testSet: TestSample[]) => void`
+`(network: import("src/architecture/network").default, testSet: TestSample[]) => void`
 
 Validate that the evaluation set exists and each sample matches network dimensions.
 

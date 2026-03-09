@@ -6,12 +6,16 @@ Reduce time-to-first-success by shipping a small set of **runnable examples** th
 
 - building networks (preconfigured + primitives)
 - evolving with NEAT
-- exporting inference
 - running in browser
+
+Phase note:
+
+- Phase 3 covers the starter learning path only.
+- Standalone export and worker examples are follow-on additions after the corresponding Phase 4 capabilities exist.
 
 ## Goals
 
-- G1: Provide a clear learning path: “hello world” → “evolution” → “export” → “workers”.
+- G1: Provide a clear learning path: “hello world” → “evolution” → “browser quickstart”, then extend it with “export” and “workers” once those features are shipped.
 - G2: Examples are runnable with minimal setup and are kept in sync with the public API.
 - G3: Examples serve as regression checks (lightweight smoke checks).
 
@@ -32,6 +36,9 @@ Reduce time-to-first-success by shipping a small set of **runnable examples** th
    - Run a tiny NEAT evolution loop.
 4. **Sequence (NARX)**
    - Demonstrate state handling + reset.
+
+### Later extensions (after Phase 4 capabilities land)
+
 5. **Standalone export**
    - Export inference module and run it.
 6. **Worker evaluation**
@@ -82,6 +89,7 @@ Acceptance:
 ### Step 4 — Document the learning path
 
 - Add a top-level doc that lists examples in recommended order.
+- Clearly mark export/worker examples as later-phase extensions so starter examples stay aligned with the roadmap.
 
 Acceptance:
 

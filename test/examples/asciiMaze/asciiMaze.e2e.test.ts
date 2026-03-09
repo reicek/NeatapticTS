@@ -1,11 +1,12 @@
-import Network from '../../../src/architecture/network'; // Correct import for Network
 import { MazeGenerator } from './mazes';
 import { colors } from './colors';
 import { DashboardManager } from './dashboardManager';
 import { TerminalUtility } from './terminalUtility';
 import { IDashboardManager } from './interfaces';
-import { EvolutionEngine } from './evolutionEngine';
-import { NetworkRefinement } from './networkRefinement';
+import {
+  EvolutionEngine,
+  resolveMazeEvolutionPhaseOutcome,
+} from './evolutionEngine';
 
 /**
  * Forces console output for this test by writing directly to stdout/stderr.
@@ -29,6 +30,9 @@ const dashboardManagerInstance: IDashboardManager = new DashboardManager(
   TerminalUtility.createTerminalClearer(),
   forceLog,
 );
+
+/** Minimum progress required before the curriculum treats a phase as solved. */
+const CURRICULUM_MIN_PROGRESS_TO_PASS = 95;
 
 jest.setTimeout(3600000); //
 
@@ -137,7 +141,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
           popSize: 40,
           autoPauseOnSolve: false,
           maxStagnantGenerations: 50,
-          minProgressToPass: 95,
+          minProgressToPass: CURRICULUM_MIN_PROGRESS_TO_PASS,
           // hard cap per phase (browser DEFAULT_MAX_GENERATIONS)
           maxGenerations: 100,
           lamarckianIterations: 4,
@@ -150,11 +154,12 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
           label: `procedural-curriculum-${dim}x${dim}`,
         },
       });
-      proceduralPrevBest = result
-        ? NetworkRefinement.refineWinnerWithBackprop(
-            result.bestNetwork as Network,
-          )
-        : undefined;
+      const phaseOutcome = resolveMazeEvolutionPhaseOutcome(
+        result,
+        proceduralPrevBest,
+        CURRICULUM_MIN_PROGRESS_TO_PASS,
+      );
+      proceduralPrevBest = phaseOutcome.nextBestNetwork;
 
       expect(!!result?.bestNetwork).toBe(true);
     });
