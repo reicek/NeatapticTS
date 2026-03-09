@@ -141,6 +141,7 @@ export function renderPlaybackFrameBackground(
     viewportLeftXPx: sceneContext.cameraLeftPx,
     visibleWorldWidthPx: sceneContext.visibleWorldWidthPx,
     visibleWorldHeightPx: sceneContext.visibleWorldHeightPx,
+    frameIndex: renderState.frameIndex,
     scrollBasePx: renderState.frameIndex * FLAPPY_PIPE_SPEED_PX_PER_FRAME,
   });
 }

@@ -29,9 +29,7 @@ import {
   prepareLoopHelpers,
   emitProfileSummary,
 } from './evolutionEngine/evolutionLoop';
-import {
-  resolveMazeEvolutionPhaseOutcome as resolveMazeEvolutionPhaseOutcomeImpl,
-} from './evolutionEngine/curriculumPhase';
+import { resolveMazeEvolutionPhaseOutcome as resolveMazeEvolutionPhaseOutcomeImpl } from './evolutionEngine/curriculumPhase';
 import { printNetworkStructure } from './evolutionEngine/networkInspection';
 import type { INetwork } from './interfaces';
 import type {

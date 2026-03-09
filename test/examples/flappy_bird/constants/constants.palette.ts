@@ -27,6 +27,8 @@ export const FLAPPY_NEON_PALETTE = {
   groundGridLine: '#0a8ea0',
   groundGridGlow: 'rgba(10, 142, 160, 0.9)',
   groundGridFog: 'rgba(10, 142, 160, 0.55)',
+  groundGridPulseFill: '#8ef3ff',
+  groundGridPulseGlow: 'rgba(142, 243, 255, 0.92)',
 } as const;
 
 /** Neon bird palette for per-agent render color assignment. */

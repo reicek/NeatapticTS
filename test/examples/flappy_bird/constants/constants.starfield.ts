@@ -53,13 +53,13 @@ export const FLAPPY_STARFIELD_TILE_HEIGHT_PX = FLAPPY_WORLD_HEIGHT_PX;
 export const FLAPPY_STARFIELD_CYAN_FILL_STYLE = 'rgba(95, 255, 255, 1)';
 
 /** Horizontal scroll ratio for the farthest parallax layer. */
-export const FLAPPY_STARFIELD_FAR_SCROLL_RATIO = 0.04;
+export const FLAPPY_STARFIELD_FAR_SCROLL_RATIO = 0.03;
 
 /** Horizontal scroll ratio for the middle parallax layer. */
-export const FLAPPY_STARFIELD_MID_SCROLL_RATIO = 0.055;
+export const FLAPPY_STARFIELD_MID_SCROLL_RATIO = 0.04;
 
 /** Horizontal scroll ratio for the nearest parallax layer. */
-export const FLAPPY_STARFIELD_NEAR_SCROLL_RATIO = 0.075;
+export const FLAPPY_STARFIELD_NEAR_SCROLL_RATIO = 0.05;
 
 /**
  * Declarative layer specs for the default starfield parallax bands.

@@ -1,12 +1,18 @@
 import {
+  FLAPPY_GROUND_GRID_PULSE_GLOW_ALPHA_RATIO,
+  FLAPPY_GROUND_GRID_PULSE_GLOW_SIZE_MULTIPLIER,
   FLAPPY_GROUND_GRID_FOG_ALPHA,
   FLAPPY_GROUND_GRID_FOG_HEIGHT_RATIO,
 } from './playback.background.ground-grid.constants';
-import { FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER } from '../playback.background.constants';
+import {
+  FLAPPY_BACKGROUND_COMPOSITE_LIGHTER,
+  FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER,
+} from '../playback.background.constants';
 import type {
   PlaybackBackgroundGroundGridResolvedScene,
   PlaybackGroundGridGeometry,
   PlaybackGroundGridLineSegment,
+  PlaybackGroundGridPulse,
 } from './playback.background.ground-grid.types';
 
 /**
@@ -45,6 +51,12 @@ export function drawPlaybackGroundGrid(
     geometry.horizontalLines,
     resolvedScene.style.lineColor,
     resolvedScene.style.glowColor,
+  );
+  drawGroundGridPulse(
+    context,
+    geometry.pulse,
+    resolvedScene.style.pulseFillColor,
+    resolvedScene.style.pulseGlowColor,
   );
   context.restore();
 }
@@ -137,5 +149,52 @@ export function drawGroundGridSegment(
   context.moveTo(segment.startXPx, segment.startYPx);
   context.lineTo(segment.endXPx, segment.endYPx);
   context.stroke();
+  context.restore();
+}
+
+/**
+ * Draws one pulse square above the grid lines and below gameplay entities.
+ *
+ * @param context - Canvas 2D drawing context.
+ * @param pulse - Visible pulse square for the current frame.
+ * @param fillColor - Core neon fill color.
+ * @param glowColor - Outer glow color used behind the pulse.
+ * @returns Nothing.
+ */
+export function drawGroundGridPulse(
+  context: CanvasRenderingContext2D,
+  pulse: PlaybackGroundGridPulse | null,
+  fillColor: string,
+  glowColor: string,
+): void {
+  if (!pulse) {
+    return;
+  }
+
+  const halfSizePx = pulse.sizePx * 0.5;
+  const glowSizePx =
+    pulse.sizePx * FLAPPY_GROUND_GRID_PULSE_GLOW_SIZE_MULTIPLIER;
+  const glowHalfSizePx = glowSizePx * 0.5;
+
+  context.save();
+  context.globalCompositeOperation = FLAPPY_BACKGROUND_COMPOSITE_LIGHTER;
+  context.fillStyle = fillColor;
+  context.shadowColor = glowColor;
+  context.shadowBlur = pulse.glowBlurPx;
+  context.globalAlpha = pulse.alpha * FLAPPY_GROUND_GRID_PULSE_GLOW_ALPHA_RATIO;
+  context.fillRect(
+    pulse.centerXPx - glowHalfSizePx,
+    pulse.centerYPx - glowHalfSizePx,
+    glowSizePx,
+    glowSizePx,
+  );
+
+  context.globalAlpha = pulse.alpha;
+  context.fillRect(
+    pulse.centerXPx - halfSizePx,
+    pulse.centerYPx - halfSizePx,
+    pulse.sizePx,
+    pulse.sizePx,
+  );
   context.restore();
 }

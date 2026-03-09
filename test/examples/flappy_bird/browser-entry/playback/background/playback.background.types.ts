@@ -8,6 +8,7 @@ export type PlaybackBackgroundRequest = {
   viewportLeftXPx: number;
   visibleWorldWidthPx: number;
   visibleWorldHeightPx: number;
+  frameIndex: number;
   scrollBasePx: number;
 };
 

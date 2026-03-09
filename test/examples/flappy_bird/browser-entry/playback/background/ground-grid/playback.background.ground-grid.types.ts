@@ -4,6 +4,7 @@ import type { PlaybackBackgroundSceneContext } from '../playback.background.type
  * Narrow request required to render the playback ground grid.
  */
 export type PlaybackBackgroundGroundGridRequest = {
+  frameIndex: number;
   scrollBasePx: number;
 };
 
@@ -28,7 +29,12 @@ export type PlaybackBackgroundGroundGridStyle = {
   lineColor: string;
   glowColor: string;
   fogColor: string;
+  pulseFillColor: string;
+  pulseGlowColor: string;
 };
+
+/** Travel orientation used by lightweight pulse overlays. */
+export type PlaybackGroundGridPulseOrientation = 'horizontal' | 'vertical';
 
 /**
  * Geometry and style package resolved before drawing the ground grid.
@@ -51,11 +57,31 @@ export type PlaybackGroundGridLineSegment = {
   thicknessPx: number;
 };
 
+/** Simplified path used by one visible pulse event. */
+export type PlaybackGroundGridPulsePath = {
+  orientation: PlaybackGroundGridPulseOrientation;
+  startXPx: number;
+  startYPx: number;
+  endXPx: number;
+  endYPx: number;
+  thicknessPx: number;
+};
+
+/** One visible pulse square rendered above the grid lines. */
+export type PlaybackGroundGridPulse = {
+  centerXPx: number;
+  centerYPx: number;
+  sizePx: number;
+  alpha: number;
+  glowBlurPx: number;
+};
+
 /**
  * Pure geometry bundle generated before canvas drawing begins.
  */
 export type PlaybackGroundGridGeometry = {
   horizontalLines: readonly PlaybackGroundGridLineSegment[];
+  pulse: PlaybackGroundGridPulse | null;
   verticalLines: readonly PlaybackGroundGridLineSegment[];
 };
 

@@ -24,6 +24,7 @@ import type { PlaybackBackgroundRequest } from './playback.background.types';
  *   viewportLeftXPx: cameraLeftPx,
  *   visibleWorldWidthPx: 288,
  *   visibleWorldHeightPx: 512,
+ *   frameIndex,
  *   scrollBasePx: frameIndex * pipeSpeedPxPerFrame,
  * });
  * ```
@@ -43,6 +44,7 @@ export function renderPlaybackBackground(
 
   // Step 4: Render the lower-band neon grid beneath the horizon seam.
   renderPlaybackBackgroundGroundGrid(context, backgroundSceneContext, {
+    frameIndex: request.frameIndex,
     scrollBasePx: request.scrollBasePx,
   });
 

@@ -37,12 +37,15 @@ export function renderPlaybackBackgroundGroundGrid(
       lineColor: FLAPPY_NEON_PALETTE.groundGridLine,
       glowColor: FLAPPY_NEON_PALETTE.groundGridGlow,
       fogColor: FLAPPY_NEON_PALETTE.groundGridFog,
+      pulseFillColor: FLAPPY_NEON_PALETTE.groundGridPulseFill,
+      pulseGlowColor: FLAPPY_NEON_PALETTE.groundGridPulseGlow,
     },
   };
 
   // Step 3: Build all grid geometry before touching the canvas state.
   const geometry = resolvePlaybackGroundGridGeometry(
     sceneContext,
+    request.frameIndex,
     request.scrollBasePx,
   );
 
