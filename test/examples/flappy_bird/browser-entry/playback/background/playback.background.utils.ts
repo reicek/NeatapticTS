@@ -34,6 +34,11 @@ export function resolvePlaybackBackgroundLayout(
   );
   const horizonThicknessPx = FLAPPY_BACKGROUND_HORIZON_LINE_THICKNESS_PX;
   const lowerBandTopYPx = skyHeightPx;
+  const lowerBandBottomYPx = safeVisibleWorldHeightPx;
+  const lowerBandHeightPx = Math.max(
+    FLAPPY_BACKGROUND_MIN_VIEWPORT_DIMENSION_PX,
+    lowerBandBottomYPx - lowerBandTopYPx,
+  );
   const horizonYPx = Math.max(
     0,
     lowerBandTopYPx -
@@ -44,6 +49,8 @@ export function resolvePlaybackBackgroundLayout(
   return {
     skyHeightPx,
     lowerBandTopYPx,
+    lowerBandHeightPx,
+    lowerBandBottomYPx,
     horizonYPx,
     horizonThicknessPx,
   };

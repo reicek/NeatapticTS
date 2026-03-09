@@ -44,9 +44,9 @@ Horizontal tiled-image draw request.
 
 Draws the layered playback background.
 
-The current composition reserves the top two-thirds for the existing neon
-starfield, leaves the lower third intentionally empty for a future ground
-parallax, and separates them with a glowing horizon divider.
+The composition keeps the top two-thirds for the neon starfield, fills the
+lower band with a TRON-like perspective ground grid, and separates both
+regions with a glowing horizon divider.
 
 Parameters:
 - `context` - - Canvas 2D drawing context.

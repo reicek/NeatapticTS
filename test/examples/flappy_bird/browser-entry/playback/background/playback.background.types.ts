@@ -19,7 +19,12 @@ export type PlaybackBackgroundSceneContext = {
   visibleWorldWidthPx: number;
   visibleWorldHeightPx: number;
   skyHeightPx: number;
+  lowerBandTopYPx: number;
+  lowerBandHeightPx: number;
+  lowerBandBottomYPx: number;
   alignedHorizonYPx: number;
+  vanishingPointXPx: number;
+  vanishingPointYPx: number;
   horizonStyle: PlaybackHorizonStyle;
 };
 
@@ -29,6 +34,8 @@ export type PlaybackBackgroundSceneContext = {
 export type PlaybackBackgroundLayout = {
   skyHeightPx: number;
   lowerBandTopYPx: number;
+  lowerBandHeightPx: number;
+  lowerBandBottomYPx: number;
   horizonYPx: number;
   horizonThicknessPx: number;
 };

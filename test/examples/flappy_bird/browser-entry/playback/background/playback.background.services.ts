@@ -46,6 +46,9 @@ export function resolvePlaybackBackgroundSceneContext(
     backgroundLayout.horizonYPx,
     horizonStyle.lineThicknessPx,
   );
+  const vanishingPointXPx =
+    request.viewportLeftXPx + visibleWorldWidthPx * 0.5;
+  const vanishingPointYPx = visibleWorldHeightPx * 0.5;
 
   // Step 3: Return a compact context object for the remaining passes.
   return {
@@ -53,7 +56,12 @@ export function resolvePlaybackBackgroundSceneContext(
     visibleWorldWidthPx,
     visibleWorldHeightPx,
     skyHeightPx: backgroundLayout.skyHeightPx,
+    lowerBandTopYPx: backgroundLayout.lowerBandTopYPx,
+    lowerBandHeightPx: backgroundLayout.lowerBandHeightPx,
+    lowerBandBottomYPx: backgroundLayout.lowerBandBottomYPx,
     alignedHorizonYPx,
+    vanishingPointXPx,
+    vanishingPointYPx,
     horizonStyle,
   };
 }
