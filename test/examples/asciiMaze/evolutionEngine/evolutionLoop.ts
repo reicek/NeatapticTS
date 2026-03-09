@@ -61,13 +61,6 @@ interface EvolutionLoopResult {
   };
 }
 
-/** Network with dynamic runtime properties */
-interface RuntimeNetworkInstance extends NetworkInstance {
-  _lastStepOutputs?: Float32Array[];
-  _saturationFraction?: number;
-  _actionEntropy?: number;
-}
-
 /** Simulation result with step outputs */
 interface SimResultWithOutputs extends IMazeRunResult {
   stepOutputs?: number[][];
@@ -119,6 +112,7 @@ import type {
   ScratchBundle,
   SimulationResult,
   SnapshotEntry,
+  TrackedNetworkInstance,
   TrainingConstants,
   EvolutionOptions,
 } from './evolutionEngine.types';
@@ -1222,7 +1216,7 @@ export const simulateAndPostprocess = (
   );
 
   // Best-effort: attach legacy buffer refs and compact telemetry onto the genome.
-  const runtimeFittest = fittest as RuntimeNetworkInstance;
+  const runtimeFittest = fittest as TrackedNetworkInstance;
   try {
     if (!runtimeFittest._lastStepOutputs) {
       runtimeFittest._lastStepOutputs = scratchLogitsRing;

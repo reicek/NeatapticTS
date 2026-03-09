@@ -1,12 +1,15 @@
 import { BrowserTerminalUtility } from '../browserTerminalUtility';
 import { createBrowserLogger } from '../browserLogger';
 import { DashboardManager } from '../dashboardManager';
+import type {
+  DashboardPresentationAdapter,
+  DashboardTelemetryPayload,
+} from '../dashboardManager/dashboardManager.types';
 import { BROWSER_ENTRY_CONSTANTS as C } from './browser-entry.constants';
 import type {
   BrowserEntryHostElements,
   BrowserEntryHostServices,
   BrowserEntryTelemetryHub,
-  RuntimeDashboard,
 } from './browser-entry.types';
 
 /**
@@ -37,10 +40,10 @@ export const createBrowserEntryHostServices = (
     liveLogger as unknown as (...args: unknown[]) => void,
     archiveLogger as unknown as (...args: unknown[]) => void,
   );
-  const telemetryHub = createTelemetryHub<Record<string, unknown>>();
-  const runtimeDashboard = dashboard as unknown as RuntimeDashboard;
+  const telemetryHub = createTelemetryHub<DashboardTelemetryPayload>();
+  const runtimeDashboard: DashboardPresentationAdapter = dashboard;
 
-  runtimeDashboard._telemetryHook = (telemetry: Record<string, unknown>) => {
+  runtimeDashboard._telemetryHook = (telemetry: DashboardTelemetryPayload) => {
     telemetryHub.dispatch(telemetry);
   };
 
@@ -88,12 +91,12 @@ function createTelemetryHub<
  * Attach dashboard redraw behavior to host resizes and return a cleanup function.
  *
  * @param observeTarget - Element whose width should trigger redraw checks.
- * @param runtimeDashboard - Runtime dashboard adapter with redraw support.
+ * @param runtimeDashboard - Shared dashboard presentation adapter with redraw support.
  * @returns Cleanup function that removes active observers or listeners.
  */
 function installResizeRedraw(
   observeTarget: HTMLElement | null,
-  runtimeDashboard: RuntimeDashboard,
+  runtimeDashboard: DashboardPresentationAdapter,
 ): () => void {
   if (!observeTarget) {
     return () => {};
@@ -141,9 +144,11 @@ function installResizeRedraw(
 /**
  * Safely request a dashboard redraw without letting host issues break the run.
  *
- * @param runtimeDashboard - Runtime dashboard adapter with optional redraw support.
+ * @param runtimeDashboard - Shared dashboard presentation adapter with optional redraw support.
  */
-function safelyRedrawDashboard(runtimeDashboard: RuntimeDashboard): void {
+function safelyRedrawDashboard(
+  runtimeDashboard: DashboardPresentationAdapter,
+): void {
   try {
     runtimeDashboard.redraw?.([], undefined);
   } catch {

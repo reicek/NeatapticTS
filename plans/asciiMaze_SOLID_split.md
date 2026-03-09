@@ -26,6 +26,7 @@ Current read
 - Step 4 is now finalized around the dedicated `browser-entry/` folder boundary: shared browser host contracts live in `browser-entry.types.ts`, host and curriculum constants live in `browser-entry.constants.ts`, DOM resolution and curriculum helpers live in `browser-entry.utils.ts`, host bootstrap/resize wiring/abort composition/globals compatibility/runtime orchestration now live in `browser-entry.services.ts`, and the public browser facade now lives in `browser-entry/browser-entry.ts` with the old top-level file reduced to a compatibility re-export.
 - Step 5 is now finalized around focused contract owners instead of the old `interfaces.ts` dependency bucket: evolution run/configuration and engine-internal helper contracts now live in `evolutionEngine/evolutionEngine.types.ts`, fitness evaluation contracts now live in `fitness.types.ts`, existing browser-entry/dashboardManager/mazeMovement module-owned `*.types.ts` files remain the primary owners for their split boundaries, and the top-level `interfaces.ts` file is now reduced to a narrow shared/core compatibility layer that re-exports moved contracts while retaining only the genuinely cross-cutting network, dashboard-abstraction, maze-run-result, and terminal-result shapes.
 - Step 6 is now finalized around a narrow engine-owned host adapter boundary: `evolutionEngine/evolutionEngine.types.ts` owns the `EvolutionHostAdapter` and stop-event contracts, `evolutionEngine/setupHelpers.ts` now reads cooperative pause state through that adapter instead of polling browser globals directly, `evolutionEngine/evolutionLoop.ts` now reports solve and stop outcomes through the adapter instead of dispatching browser behavior itself, and `browser-entry/browser-entry.globals.services.ts` owns the browser implementation that maps those engine events back to browser globals and solved-event compatibility behavior.
+- Step 7 is now finalized around owner-defined runtime and presentation contracts instead of browser-entry-local runtime shims: `dashboardManager/dashboardManager.types.ts` now owns the shared browser/non-browser presentation seam through `DashboardPresentationAdapter`, `DashboardTelemetryPayload`, and `AsciiMazeTelemetrySnapshot`; `browser-entry/browser-entry.types.ts` now consumes those dashboard-owned contracts for the public run handle and host services instead of defining its own `RuntimeDashboard`/`RuntimeEvolutionResult` adapters; and `evolutionEngine/evolutionEngine.types.ts` now owns the shared run-result and loose runtime helper contracts (`MazeEvolutionRunResult`, tracked network/genome helpers, species-history host) consumed by the engine facade, telemetry helpers, and population-dynamics helpers. The remaining compatibility-only runtime shapes are the browser platform shims in `browser-entry/browser-entry.types.ts` (`RuntimeWindow` and abort-signal helpers), not duplicated presentation or engine result seams.
 
 Split standard
 
@@ -88,13 +89,13 @@ High-level gaps
 - This should be split into smaller host/runtime/bootstrap services so the browser entry becomes thin orchestration only.
 - When split, prefer a dedicated `browser-entry/` folder with runtime, host, globals, and resize sub-areas.
 
-- Runtime shape adapters are still scattered.
-- Multiple files define local `Runtime*` interfaces to compensate for loose concrete runtime shapes.
-- These are pragmatic, but they signal incomplete contract centralization and weak abstraction seams.
+- Runtime shape adapters are now mostly centralized in owning module boundaries.
+- Engine-side loose runtime helper contracts now live in `evolutionEngine/evolutionEngine.types.ts`, and browser/non-browser presentation contracts now live in `dashboardManager/dashboardManager.types.ts`.
+- Remaining runtime-specific shapes are limited to browser platform compatibility helpers rather than duplicated presentation or evolution-result adapters.
 
-- Browser and non-browser presentation concerns are not yet fully parallel.
-- The browser path and terminal/dashboard path still share concepts unevenly, with presentation rules and telemetry behavior spread across several files.
-- A cleaner split would make host-specific renderers depend on a common presentation model instead of partially duplicating interpretation logic.
+- Browser and non-browser presentation concerns are now more parallel.
+- Host-specific browser wiring now depends on the shared dashboard-owned presentation model instead of re-declaring telemetry and redraw seams locally.
+- Remaining follow-up work is concentrated in refinement, curriculum, and evolution orchestration boundaries rather than presentation-contract drift.
 
 - Refinement and evolution concerns are adjacent but not fully isolated.
 - The example still blends local training, curriculum carry-over, and evolutionary orchestration closely enough that future changes could cross-cut too many files.
@@ -108,7 +109,7 @@ Execution steps
 - [DONE] Step 4: Thin `browser-entry.ts` into a dedicated `browser-entry/` module boundary so host bootstrap, runtime orchestration, globals compatibility, and resize behavior evolve independently.
 - [DONE] Step 5: Decompose `interfaces.ts` into focused module-owned `*.types.ts` files and leave behind only the smallest shared contract surface that is still truly cross-cutting.
 - [DONE] Step 6: Remove browser-facing solve, stop, and pause side effects from engine internals so `evolutionEngine` reports through a narrower adapter or reporting boundary instead of touching host behavior directly.
-- [] Step 7: Consolidate scattered runtime shape adapters and presentation seams so browser and non-browser paths depend on clearer shared contracts rather than ad hoc local `Runtime*` compensating interfaces.
+- [DONE] Step 7: Consolidate scattered runtime shape adapters and presentation seams so browser and non-browser paths depend on clearer shared contracts rather than ad hoc local `Runtime*` compensating interfaces.
 - [] Step 8: Recheck refinement, curriculum, and evolution boundaries so follow-up changes do not reintroduce cross-cutting orchestration drift after the earlier splits.
 - [] Step 9: Validate the final shape by checking naming consistency, folder ownership, generated-doc expectations, and TypeScript/build health.
 

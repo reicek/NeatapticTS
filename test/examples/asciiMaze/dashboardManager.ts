@@ -10,6 +10,7 @@ export { DashboardManager } from './dashboardManager/dashboardManager';
 export type {
   AsciiMazeDetailedStats,
   AsciiMazeTelemetrySnapshot,
+  DashboardPresentationAdapter,
   DashboardTelemetry,
   DashboardTelemetryPayload,
   RuntimeDashboardManager,

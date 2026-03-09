@@ -44,14 +44,6 @@ Runtime AbortSignal shape used for older or polyfilled environments.
 
 AbortSignal constructor shape with optional static composition helpers.
 
-### RuntimeDashboard
-
-Runtime dashboard surface used by the browser entry host adapter.
-
-### RuntimeEvolutionResult
-
-Runtime evolution result shape used by the browser curriculum adapter.
-
 ### RuntimeWindow
 
 Global namespace exposed for direct browser-script loading compatibility.
@@ -140,24 +132,24 @@ Returns: A small hub optimized for browser demo listener counts.
 
 ### installResizeRedraw
 
-`(observeTarget: HTMLElement | null, runtimeDashboard: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").RuntimeDashboard) => () => void`
+`(observeTarget: HTMLElement | null, runtimeDashboard: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardPresentationAdapter) => () => void`
 
 Attach dashboard redraw behavior to host resizes and return a cleanup function.
 
 Parameters:
 - `observeTarget` - - Element whose width should trigger redraw checks.
-- `runtimeDashboard` - - Runtime dashboard adapter with redraw support.
+- `runtimeDashboard` - - Shared dashboard presentation adapter with redraw support.
 
 Returns: Cleanup function that removes active observers or listeners.
 
 ### safelyRedrawDashboard
 
-`(runtimeDashboard: import("C:/NeatapticTS/test/examples/asciiMaze/browser-entry/browser-entry.types").RuntimeDashboard) => void`
+`(runtimeDashboard: import("C:/NeatapticTS/test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardPresentationAdapter) => void`
 
 Safely request a dashboard redraw without letting host issues break the run.
 
 Parameters:
-- `runtimeDashboard` - - Runtime dashboard adapter with optional redraw support.
+- `runtimeDashboard` - - Shared dashboard presentation adapter with optional redraw support.
 
 ## browser-entry/browser-entry.abort.services.ts
 

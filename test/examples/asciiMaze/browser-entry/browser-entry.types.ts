@@ -1,6 +1,10 @@
 import type { DashboardManager } from '../dashboardManager';
+import type {
+  AsciiMazeTelemetrySnapshot,
+  DashboardPresentationAdapter,
+  DashboardTelemetryPayload,
+} from '../dashboardManager/dashboardManager.types';
 import type { EvolutionHostAdapter } from '../evolutionEngine/evolutionEngine.types';
-import type { INetwork } from '../interfaces';
 
 /**
  * Public lifecycle handle returned by the browser demo entrypoint.
@@ -23,12 +27,12 @@ export interface AsciiMazeRunHandle {
   isRunning: () => boolean;
   /** Promise that resolves when the curriculum finishes or is stopped. */
   done: Promise<void>;
-  /** Subscribe to lightweight per-generation telemetry snapshots. */
+  /** Subscribe to per-generation telemetry payloads emitted by the dashboard boundary. */
   onTelemetry: (
-    listener: (telemetry: Record<string, unknown>) => void,
+    listener: (telemetry: DashboardTelemetryPayload) => void,
   ) => () => void;
   /** Pull the most recently emitted telemetry snapshot, if one exists. */
-  getTelemetry: () => unknown;
+  getTelemetry: () => AsciiMazeTelemetrySnapshot | undefined;
 }
 
 /** Options accepted by the browser-hosted ASCII Maze entrypoint. */
@@ -42,14 +46,6 @@ export type BrowserEntryStartFunction = (
   container?: string | HTMLElement,
   opts?: BrowserEntryStartOptions,
 ) => Promise<AsciiMazeRunHandle>;
-
-/** Runtime dashboard surface used by the browser entry host adapter. */
-export interface RuntimeDashboard {
-  _telemetryHook?: (telemetry: Record<string, unknown>) => void;
-  redraw?: (data: unknown[], state: unknown) => void;
-  getLastTelemetry?: () => Record<string, unknown>;
-  [key: string]: unknown;
-}
 
 /** Runtime AbortSignal shape used for older or polyfilled environments. */
 export interface RuntimeAbortSignal {
@@ -67,16 +63,6 @@ export interface RuntimeAbortSignalConstructor {
   prototype: AbortSignal;
   new (): AbortSignal;
   any?: (signals: AbortSignal[]) => AbortSignal;
-}
-
-/** Runtime evolution result shape used by the browser curriculum adapter. */
-export interface RuntimeEvolutionResult {
-  bestResult?: {
-    progress?: number;
-    [key: string]: unknown;
-  };
-  bestNetwork?: INetwork;
-  [key: string]: unknown;
 }
 
 /** Global namespace exposed for direct browser-script loading compatibility. */
@@ -111,9 +97,7 @@ export interface BrowserEntryEvolutionSettings {
 }
 
 /** Lightweight telemetry hub contract shared between host and public handle. */
-export interface BrowserEntryTelemetryHub<
-  TTelemetry extends Record<string, unknown>,
-> {
+export interface BrowserEntryTelemetryHub<TTelemetry extends object> {
   add(listener: (payload: TTelemetry) => void): () => void;
   dispatch(payload: TTelemetry): void;
 }
@@ -121,8 +105,8 @@ export interface BrowserEntryTelemetryHub<
 /** Browser host services assembled for one running demo instance. */
 export interface BrowserEntryHostServices {
   dashboard: DashboardManager;
-  runtimeDashboard: RuntimeDashboard;
-  telemetryHub: BrowserEntryTelemetryHub<Record<string, unknown>>;
+  runtimeDashboard: DashboardPresentationAdapter;
+  telemetryHub: BrowserEntryTelemetryHub<DashboardTelemetryPayload>;
   disposeResizeHandling: () => void;
 }
 

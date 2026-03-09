@@ -130,12 +130,84 @@ export interface IRunMazeEvolutionOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * Stable result returned by `EvolutionEngine.runMazeEvolution()`.
+ *
+ * @remarks
+ * Browser curriculum code, terminal demos, and tooling should depend on this
+ * shared engine-owned contract instead of recreating local runtime result
+ * adapters just to read winner carry-over or solve progress.
+ */
+export interface MazeEvolutionRunResult {
+  /** Highest-scoring evolved network available at the end of the run. */
+  bestNetwork: NetworkInstance | null;
+  /** Best simulation result captured during the run, when one exists. */
+  bestResult: IMazeRunResult | undefined;
+  /** Final NEAT instance after all completed generations. */
+  neat: NeatInstance;
+  /** Canonical or compatibility exit reason describing why the run ended. */
+  exitReason: string;
+}
+
 /** Type for Neat class instance from the neataptic library. */
 export type NeatInstance = import('../../../../src/neat').default;
 
 /** Type for Network class instance from the neataptic library. */
 export type NetworkInstance =
   import('../../../../src/architecture/network').default;
+
+/**
+ * Network instance annotated with telemetry fields during a generation.
+ *
+ * @remarks
+ * This keeps telemetry post-processing and dashboard reporting aligned on one
+ * engine-owned contract instead of file-local runtime casts.
+ */
+export interface TrackedNetworkInstance extends NetworkInstance {
+  _lastStepOutputs?: Float32Array[];
+  _saturationFraction?: number;
+  _actionEntropy?: number;
+}
+
+/**
+ * Loose genome shape shared by engine telemetry and population-dynamics helpers.
+ *
+ * @remarks
+ * The NEAT runtime exposes additional mutable fields during evolution, so the
+ * engine centralizes those optional members here rather than duplicating local
+ * runtime helper interfaces across multiple files.
+ */
+export interface EvolutionGenomeLike {
+  nodes?: NetworkNode[];
+  connections?: NetworkConnection[];
+  score?: number;
+  species?: number | null;
+  clone?: () => EvolutionGenomeLike;
+  mutate?: (method: unknown) => void;
+  _lastStepOutputs?: unknown[];
+  _id?: number;
+  _parentId?: number;
+  [key: string]: unknown;
+}
+
+/** NEAT runtime shape needed by telemetry helpers that inspect the population. */
+export interface TelemetryNeatLike {
+  population?: EvolutionGenomeLike[];
+  getTelemetry?: () => unknown;
+  [key: string]: unknown;
+}
+
+/** Mutation-operation surface read from the NEAT driver at runtime. */
+export interface MutationOperationLike {
+  length?: number;
+  [key: string]: unknown;
+}
+
+/** Static host used to read optional species-history state from the engine facade. */
+export interface SpeciesHistoryHost {
+  _speciesHistory?: unknown[];
+  [key: string]: unknown;
+}
 
 /** Encoded maze representation with cell values. */
 export interface EncodedMaze {
@@ -313,6 +385,7 @@ export interface NetworkConnection {
   to?: NetworkNode;
   weight?: number;
   gain?: number;
+  enabled?: boolean;
   [key: string]: unknown;
 }
 

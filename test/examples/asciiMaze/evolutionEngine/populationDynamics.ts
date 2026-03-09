@@ -26,7 +26,12 @@ import {
   isProfilingDetailsEnabled,
   profilingStartTimestamp,
 } from './rngAndTiming';
-import type { NetworkConnection, NetworkNode } from './evolutionEngine.types';
+import type {
+  EvolutionGenomeLike,
+  MutationOperationLike,
+  NetworkConnection,
+  NetworkNode,
+} from './evolutionEngine.types';
 
 /** Shared empty array to avoid repeated allocations for missing/invalid arrays. */
 // Type assertion: Empty array for generic fallback when arrays are invalid
@@ -51,32 +56,11 @@ const BIAS_RESET_HALF_RANGE = 0.1;
 /** Half-range for connection weight reset in anti-collapse recovery (±0.2). */
 const CONN_WEIGHT_RESET_HALF_RANGE = 0.2;
 
-// ========== Type Definitions for Runtime Network Structures ==========
-
-/** Network genome with dynamic runtime properties */
-interface RuntimeGenome {
-  nodes?: NetworkNode[];
-  connections?: NetworkConnection[];
-  clone?: () => RuntimeGenome;
-  mutate?: (method: unknown) => void;
-  _id?: number;
-  _parentId?: number;
-  [key: string]: unknown;
-}
-
-/** Mutation operation from NEAT driver */
-interface MutationOperation {
-  length?: number;
-  [key: string]: unknown;
-}
-
 /** Typed or array-based index buffer for sorting */
 type IndexBuffer = Uint32Array | Int32Array | number[];
 
-// ========== End Type Definitions ==========
-
 /** Cached reference to mutation ops array (invalidated if driver replaces the reference). */
-let cachedMutationOps: MutationOperation[] | null = null;
+let cachedMutationOps: MutationOperationLike[] | null = null;
 
 /**
  * Update plateau state based on current fitness vs baseline.
@@ -601,7 +585,7 @@ export const registerClone = (
 
     // Optionally track parent ID.
     if (parentId != null) {
-      const runtimeClone = clone as RuntimeGenome;
+      const runtimeClone = clone as EvolutionGenomeLike;
       runtimeClone._parentId = parentId;
     }
   } catch {
@@ -664,7 +648,7 @@ export const createChildFromParent = (
     if (!clone && typeof parent.clone === 'function') {
       clone = parent.clone();
       if (clone) {
-        const runtimeParent = parent as RuntimeGenome;
+        const runtimeParent = parent as EvolutionGenomeLike;
         registerClone(neat, clone, runtimeParent?._id);
       }
     }
@@ -984,15 +968,15 @@ const getMutationOps = (
 
     if (candidate && cachedMutationOps !== candidate) {
       if (Array.isArray(candidate)) {
-        cachedMutationOps = candidate as MutationOperation[];
+        cachedMutationOps = candidate as MutationOperationLike[];
       } else if (candidate && typeof candidate === 'object') {
-        const maybeMutation = candidate as MutationOperation;
+        const maybeMutation = candidate as MutationOperationLike;
         const maybeLen = maybeMutation.length;
         if (maybeLen != null && Number.isFinite(maybeLen) && maybeLen >= 0) {
-          cachedMutationOps = candidate as MutationOperation[];
+          cachedMutationOps = candidate as MutationOperationLike[];
         } else {
           cachedMutationOps = Object.values(
-            candidate as Record<string, MutationOperation>,
+            candidate as Record<string, MutationOperationLike>,
           );
         }
       } else {
@@ -1038,7 +1022,7 @@ export const ensureOutputIdentity = (
       genomeIndex < populationRef.length;
       genomeIndex++
     ) {
-      const genome = populationRef[genomeIndex] as RuntimeGenome;
+      const genome = populationRef[genomeIndex] as EvolutionGenomeLike;
       if (!genome) continue;
 
       const nodesRef: NetworkNode[] = Array.isArray(genome.nodes)
@@ -1300,7 +1284,7 @@ export const pruneSaturatedHiddenOutputs = (
   try {
     const pruneProfilingEnabled = isProfilingDetailsEnabled(state);
     const startProfile = pruneProfilingEnabled ? profilingStartTimestamp() : 0;
-    const runtimeGenome = genome as RuntimeGenome;
+    const runtimeGenome = genome as EvolutionGenomeLike;
     const nodesRef = runtimeGenome?.nodes ?? EMPTY_VEC;
 
     const outputCount = getNodeIndicesByType(nodesRef, 'output');
@@ -1465,7 +1449,7 @@ export const antiCollapseRecovery = (
     let totalBiasResets = 0;
 
     for (let sampleIndex = 0; sampleIndex < sampledCount; sampleIndex++) {
-      const genome = pooledSampleBuffer[sampleIndex] as RuntimeGenome;
+      const genome = pooledSampleBuffer[sampleIndex] as EvolutionGenomeLike;
       if (!genome) continue;
 
       try {
@@ -1515,7 +1499,7 @@ export const reinitializeGenomeOutputsAndWeights = (
   genome: unknown,
 ): { connReset: number; biasReset: number } => {
   try {
-    const runtimeGenome = genome as RuntimeGenome;
+    const runtimeGenome = genome as EvolutionGenomeLike;
     const nodesList: NetworkNode[] = Array.isArray(runtimeGenome?.nodes)
       ? runtimeGenome.nodes
       : [];

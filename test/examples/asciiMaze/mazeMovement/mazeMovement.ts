@@ -161,7 +161,7 @@ export class MazeMovement {
     startPos: readonly [number, number],
     exitPos: readonly [number, number],
     distanceMap?: number[][],
-    maxSteps = C.DEFAULT_MAX_STEPS,
+    maxSteps: number = C.DEFAULT_MAX_STEPS,
   ): MazeMovementSimulationResult {
     const simulationState = createMazeMovementRunState(
       encodedMaze,

@@ -44,6 +44,10 @@ Mutable runtime state owned by one dashboard instance.
 
 Input accepted by the update orchestration service.
 
+### DashboardPresentationAdapter
+
+Shared presentation adapter used by browser and non-browser hosts.
+
 ### DashboardScratchState
 
 Reused scratch arrays to keep redraw allocations predictable.
@@ -82,7 +86,7 @@ Operator stats entry from NEAT.
 
 ### RuntimeDashboardManager
 
-Public dashboard class shape extended with browser-only helpers.
+Compatibility alias for older runtime-facing imports.
 
 ### SolvedMazeRecord
 

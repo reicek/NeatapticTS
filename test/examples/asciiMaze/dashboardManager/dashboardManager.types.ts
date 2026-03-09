@@ -244,9 +244,24 @@ export interface DashboardManagerUpdateArgs {
   telemetryHook?: DashboardTelemetryHook;
 }
 
-/** Public dashboard class shape extended with browser-only helpers. */
-export interface RuntimeDashboardManager extends IDashboardManager {
+/**
+ * Shared presentation adapter used by browser and non-browser hosts.
+ *
+ * @remarks
+ * Host wiring should prefer this interface when it needs redraw and telemetry
+ * access without depending on the concrete `DashboardManager` implementation.
+ */
+export interface DashboardPresentationAdapter extends IDashboardManager {
   _telemetryHook?: DashboardTelemetryHook;
   redraw?: (currentMaze: string[], neat?: unknown) => void;
   getLastTelemetry?: () => AsciiMazeTelemetrySnapshot;
 }
+
+/**
+ * Compatibility alias for older runtime-facing imports.
+ *
+ * @remarks
+ * Step 7 promotes `DashboardPresentationAdapter` as the primary owner of this
+ * presentation seam while preserving the existing export name.
+ */
+export interface RuntimeDashboardManager extends DashboardPresentationAdapter {}

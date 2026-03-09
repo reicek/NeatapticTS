@@ -138,7 +138,7 @@ Returns: Chosen direction plus softmax and entropy diagnostics.
 
 #### simulateAgent
 
-`(network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork, encodedMaze: number[][], startPos: readonly [number, number], exitPos: readonly [number, number], distanceMap: number[][] | undefined, maxSteps: 3000) => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
+`(network: import("C:/NeatapticTS/test/examples/asciiMaze/interfaces").INetwork, encodedMaze: number[][], startPos: readonly [number, number], exitPos: readonly [number, number], distanceMap: number[][] | undefined, maxSteps: number) => import("C:/NeatapticTS/test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
 
 Simulate one full maze episode for a network-controlled agent.
 

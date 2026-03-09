@@ -1,12 +1,10 @@
 import type Network from '../../../../src/architecture/network';
 import { EvolutionEngine } from '../evolutionEngine';
+import type { MazeEvolutionRunResult } from '../evolutionEngine/evolutionEngine.types';
 import type { INetwork } from '../interfaces';
 import { NetworkRefinement } from '../networkRefinement';
 import { BROWSER_ENTRY_CONSTANTS as C } from './browser-entry.constants';
-import type {
-  BrowserEntryCurriculumContext,
-  RuntimeEvolutionResult,
-} from './browser-entry.types';
+import type { BrowserEntryCurriculumContext } from './browser-entry.types';
 import {
   createBrowserEvolutionSettings,
   didSolveBrowserMaze,
@@ -71,11 +69,12 @@ export const runBrowserEntryCurriculum = (
         cancellation: { isCancelled: () => context.isCancelled() },
         signal: context.combinedSignal,
       });
-      const runtimeResult = result as unknown as RuntimeEvolutionResult;
-      const progress = runtimeResult.bestResult?.progress;
+      const evolutionResult = result as MazeEvolutionRunResult;
+      const progress = evolutionResult.bestResult?.progress;
 
       previousBestNetwork = refineBrowserEntryBestNetwork(
-        runtimeResult.bestNetwork,
+        (evolutionResult.bestNetwork as unknown as INetwork | undefined) ??
+          undefined,
         previousBestNetwork,
       );
       solved = didSolveBrowserMaze(progress);

@@ -31,50 +31,14 @@ import {
 } from './evolutionEngine/evolutionLoop';
 import { printNetworkStructure } from './evolutionEngine/networkInspection';
 import type { INetwork } from './interfaces';
-import type { IRunMazeEvolutionOptions } from './evolutionEngine/evolutionEngine.types';
+import type {
+  IRunMazeEvolutionOptions,
+  MazeEvolutionRunResult,
+  NetworkConnection,
+  NetworkNode,
+  SpeciesHistoryHost,
+} from './evolutionEngine/evolutionEngine.types';
 import type Network from '../../../src/architecture/network';
-
-/**
- * Runtime type for network node with dynamic properties.
- * Nodes may have type, connections, and other runtime-added fields.
- */
-interface RuntimeNetworkNode {
-  type?: string;
-  connections?: {
-    out?: RuntimeNetworkConnection[];
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}
-
-/**
- * Runtime type for network connection with dynamic properties.
- * Connections track from/to nodes and enabled state.
- */
-interface RuntimeNetworkConnection {
-  from?: RuntimeNetworkNode;
-  to?: RuntimeNetworkNode;
-  enabled?: boolean;
-  [key: string]: unknown;
-}
-
-/**
- * Runtime type for evolution result with dynamic exit reason.
- * Results may include exitReason from simulation outcomes.
- */
-interface RuntimeEvolutionResult {
-  exitReason?: string;
-  [key: string]: unknown;
-}
-
-/**
- * Runtime type for EvolutionEngine class with dynamic properties.
- * Engine may have _speciesHistory for telemetry tracking.
- */
-interface RuntimeEvolutionEngine {
-  _speciesHistory?: unknown[];
-  [key: string]: unknown;
-}
 
 /**
  * EvolutionEngine: Thin façade for NEAT-based maze solving.
@@ -196,7 +160,7 @@ export class EvolutionEngine {
    * @internal - Small helper used by various engine methods; retained for internal use.
    */
   static #getNodeIndicesByType(
-    nodes: RuntimeNetworkNode[] | undefined,
+    nodes: NetworkNode[] | undefined,
     type: string,
   ): number {
     if (!Array.isArray(nodes) || nodes.length === 0) return 0;
@@ -222,10 +186,10 @@ export class EvolutionEngine {
    * @internal - Small helper used by network analysis methods; retained for internal use.
    */
   static #collectHiddenToOutputConns(
-    hiddenNode: RuntimeNetworkNode,
-    nodesRef: RuntimeNetworkNode[],
+    hiddenNode: NetworkNode,
+    nodesRef: NetworkNode[],
     outputCount: number,
-  ): RuntimeNetworkConnection[] {
+  ): NetworkConnection[] {
     if (
       !hiddenNode?.connections ||
       !Array.isArray(nodesRef) ||
@@ -244,9 +208,7 @@ export class EvolutionEngine {
     hiddenOutBuffer.length = 0;
     const outgoing = hiddenNode.connections.out ?? EvolutionEngine.#EMPTY_VEC;
     for (let outIndex = 0; outIndex < outgoing.length; outIndex++) {
-      const candidate = outgoing[
-        outIndex
-      ] as unknown as RuntimeNetworkConnection;
+      const candidate = outgoing[outIndex] as unknown as NetworkConnection;
       if (!candidate || candidate.enabled === false) continue;
       for (
         let outputIndex = 0;
@@ -296,7 +258,9 @@ export class EvolutionEngine {
    * console.log(`Best score: ${result.bestResult.score}`);
    * EvolutionEngine.printNetworkStructure(result.bestNetwork);
    */
-  static async runMazeEvolution(options: IRunMazeEvolutionOptions) {
+  static async runMazeEvolution(
+    options: IRunMazeEvolutionOptions,
+  ): Promise<MazeEvolutionRunResult> {
     // 1) Normalise and validate options (descriptive names, defaulting).
     const opts = normalizeRunOptions(
       options,
@@ -444,7 +408,7 @@ export class EvolutionEngine {
         REDUCED_TELEMETRY: EvolutionEngine.#STATE.toggles.reducedTelemetry,
         DISABLE_BALDWIN: EvolutionEngine.#STATE.toggles.disableBaldwinPhase,
       },
-      ((EvolutionEngine as unknown as RuntimeEvolutionEngine)
+      ((EvolutionEngine as unknown as SpeciesHistoryHost)
         ._speciesHistory as unknown as number[]) ??
         (EvolutionEngine.#EMPTY_VEC as unknown as number[]),
     );
@@ -485,9 +449,7 @@ export class EvolutionEngine {
       bestNetwork,
       bestResult,
       neat,
-      exitReason:
-        (bestResult as unknown as RuntimeEvolutionResult).exitReason ??
-        'incomplete',
+      exitReason: bestResult?.exitReason ?? 'incomplete',
     };
   }
 

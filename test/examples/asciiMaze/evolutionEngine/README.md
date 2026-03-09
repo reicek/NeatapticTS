@@ -62,6 +62,10 @@ Encoded maze representation with cell values.
 
 Encoded maze for simulation.
 
+### EvolutionGenomeLike
+
+Loose genome shape shared by engine telemetry and population-dynamics helpers.
+
 ### EvolutionHelpers
 
 Helper functions object passed to evolution loop orchestration.
@@ -122,9 +126,17 @@ Loop helpers returned by prepareLoopHelpers.
 
 Distance map for pathfinding.
 
+### MazeEvolutionRunResult
+
+Stable result returned by `EvolutionEngine.runMazeEvolution()`.
+
 ### MazePosition
 
 Position in maze.
+
+### MutationOperationLike
+
+Mutation-operation surface read from the NEAT driver at runtime.
 
 ### NeatInstance
 
@@ -165,6 +177,18 @@ Simulation result returned by generation evaluation helpers.
 ### SnapshotEntry
 
 Snapshot entry for persistence.
+
+### SpeciesHistoryHost
+
+Static host used to read optional species-history state from the engine facade.
+
+### TelemetryNeatLike
+
+NEAT runtime shape needed by telemetry helpers that inspect the population.
+
+### TrackedNetworkInstance
+
+Network instance annotated with telemetry fields during a generation.
 
 ### TrainingConstants
 
@@ -517,10 +541,6 @@ ES2023 Policy:
 
 `(engineState: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("C:/NeatapticTS/src/neat").default, doProfile: boolean, lamarckianIterations: number, lamarckianTrainingSet: { input: number[]; output: number[]; }[], lamarckianSampleSize: number | undefined, safeWrite: (msg: string) => void, completedGenerations: number, dynamicPopEnabled: boolean, dynamicPopMax: number, plateauGenerations: number, plateauCounter: number, dynamicPopExpandInterval: number, dynamicPopExpandFactor: number, dynamicPopPlateauSlack: number, speciesHistoryRef: number[], emptyVec: import("C:/NeatapticTS/src/architecture/network").default[], scratchNodeIdx: Int32Array<ArrayBufferLike>, getNodeIndicesByType: (nodes: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], type: string) => number, constants: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").TrainingConstants) => Promise<GenerationOutcome>`
 
-### RuntimeNetworkInstance
-
-Network with dynamic runtime properties
-
 ### SimResultWithOutputs
 
 Simulation result with step outputs
@@ -658,26 +678,6 @@ Parameters required to emit output-bias telemetry.
 ### logOutputBiasStats
 
 `(__0: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/telemetryMetrics").LogOutputBiasParams) => void`
-
-### RuntimeConnection
-
-Runtime type for network connection with dynamic properties.
-Connections may have enabled, weight, and other runtime-added fields.
-
-### RuntimeGenome
-
-Runtime type for NEAT genome/network with dynamic properties.
-Genomes may have nodes, connections, score, species and runtime tracking fields.
-
-### RuntimeNeat
-
-Runtime type for NEAT instance with dynamic properties.
-NEAT instances may have population, getTelemetry and other runtime methods.
-
-### RuntimeNode
-
-Runtime type for network node with dynamic properties.
-Nodes may have type, bias, and other runtime-added fields.
 
 ### TelemetryBaseParams
 
@@ -919,10 +919,6 @@ Typed or array-based index buffer for sorting
 
 `(plateauCounter: number, plateauGenerations: number, simplifyDuration: number) => number`
 
-### MutationOperation
-
-Mutation operation from NEAT driver
-
 ### prepareExpansion
 
 `(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any) => { populationRef: any[]; sortedIdx: number[]; parentPoolSize: number; }`
@@ -942,10 +938,6 @@ Mutation operation from NEAT driver
 ### runSimplifyCycle
 
 `(state: import("C:/NeatapticTS/test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, simplifyRemaining: number, simplifyStrategy: string, simplifyPruneFraction: number) => number`
-
-### RuntimeGenome
-
-Network genome with dynamic runtime properties
 
 ### updatePlateauState
 
