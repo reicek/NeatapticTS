@@ -16,10 +16,9 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 **Outcome:** keep iteration speed high, reduce refactor risk, and finish the structural cleanup needed before broad mechanical modernization.
 
 - Demo refinement and learnability hardening [DONE]
-  - Current focus: stabilize and refine the `flappy_bird` demo so it remains the reference quality bar for later example work.
-- asciiMaze SOLID split before ES2023 modernization [WIP]
-  - Finish a maintainable split of `test/examples/asciiMaze` and any touched orchestration surfaces under `src/` so responsibilities are narrow, substitutable, and DRY.
-  - The target shape is the stronger modular style already emerging in `test/examples/flappy_bird`: explicit boundaries, LSP-safe abstractions, and smaller units that make caching and later performance work easier to target precisely.
+- asciiMaze SOLID split before ES2023 modernization [DONE]
+- Phase 0 remaining focus: ES2023 modernization (after the completed demo-structure pass)
+   - The `flappy_bird` reference split plan and the `asciiMaze` SOLID split plan are now both complete, so the remaining Phase 0 work is the repository-wide modernization pass and its validation gate.
 - ES2023 modernization (after the demo-structure pass; mechanical refactors + CI enforcement)
   - Plan: [ES2023 migration](ES2023%20migration)
   - Scope note: this phase is syntax/module modernization plus CI enforcement. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
@@ -135,7 +134,7 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: the project is still in **Phase 0**, with demo refinement active now and the `asciiMaze` SOLID split scheduled before repository-wide ES2023 modernization.
+Current status: the project is still in **Phase 0**, with the demo-structure baseline complete (`flappy_bird` refinement and `asciiMaze` SOLID split) and repository-wide ES2023 modernization now the remaining Phase 0 focus.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes

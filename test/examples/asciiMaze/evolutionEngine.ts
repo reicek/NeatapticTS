@@ -29,11 +29,14 @@ import {
   prepareLoopHelpers,
   emitProfileSummary,
 } from './evolutionEngine/evolutionLoop';
-import { resolveMazeEvolutionPhaseOutcome } from './evolutionEngine/curriculumPhase';
+import {
+  resolveMazeEvolutionPhaseOutcome as resolveMazeEvolutionPhaseOutcomeImpl,
+} from './evolutionEngine/curriculumPhase';
 import { printNetworkStructure } from './evolutionEngine/networkInspection';
 import type { INetwork } from './interfaces';
 import type {
   IRunMazeEvolutionOptions,
+  MazeEvolutionCurriculumPhaseOutcome,
   MazeEvolutionRunResult,
   NetworkConnection,
   NetworkNode,
@@ -486,4 +489,36 @@ export class EvolutionEngine {
   }
 }
 
-export { resolveMazeEvolutionPhaseOutcome };
+/**
+ * Stable curriculum-phase compatibility surface exposed from the engine facade.
+ *
+ * @remarks
+ * The implementation lives in `evolutionEngine/curriculumPhase.ts`, but
+ * callers that already import from `./evolutionEngine` should keep using this
+ * façade export so the dedicated engine folder retains ownership without
+ * forcing import churn across browser-entry, tests, or downstream examples.
+ *
+ * @param evolutionResult - Stable engine result returned by `runMazeEvolution()`.
+ * @param previousBestNetwork - Previously carried curriculum winner, if one exists.
+ * @param minProgressToPass - Progress threshold required before the curriculum advances.
+ * @returns Shared curriculum outcome describing solve status and next carry-over winner.
+ *
+ * @example
+ * ```ts
+ * const phaseOutcome = resolveMazeEvolutionPhaseOutcome(result, previousBest, 95);
+ * if (phaseOutcome.solved) {
+ *   previousBest = phaseOutcome.nextBestNetwork;
+ * }
+ * ```
+ */
+export const resolveMazeEvolutionPhaseOutcome = (
+  evolutionResult: MazeEvolutionRunResult,
+  previousBestNetwork: INetwork | undefined,
+  minProgressToPass: number,
+): MazeEvolutionCurriculumPhaseOutcome => {
+  return resolveMazeEvolutionPhaseOutcomeImpl(
+    evolutionResult,
+    previousBestNetwork,
+    minProgressToPass,
+  );
+};
