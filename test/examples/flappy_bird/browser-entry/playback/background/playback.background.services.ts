@@ -1,5 +1,6 @@
 import { FLAPPY_NEON_PALETTE } from '../../../constants/constants';
 import { resolveStarfieldTiles } from '../playback.starfield.service';
+import type { StarTileImage } from '../playback.starfield.types';
 import { positiveModulo } from '../playback.starfield.utils';
 import {
   ensurePlaybackBackgroundViewportCacheValidity,
@@ -179,7 +180,7 @@ export function drawPlaybackBackgroundHorizon(
 function drawPlaybackTiledImageRow(
   context: CanvasRenderingContext2D,
   startXPx: number,
-  tile: CanvasImageSource,
+  tile: StarTileImage,
   tileWidthPx: number,
   visibleWidthPx: number,
   offsetPx: number,
@@ -200,7 +201,7 @@ function drawPlaybackTiledImageRow(
     tileIndex += 1
   ) {
     const tileLeftPx = startXPx + tileIndex * tileWidthPx - normalizedOffsetPx;
-    context.drawImage(tile, tileLeftPx, 0);
+    context.drawImage(tile as unknown as CanvasImageSource, tileLeftPx, 0);
   }
 }
 

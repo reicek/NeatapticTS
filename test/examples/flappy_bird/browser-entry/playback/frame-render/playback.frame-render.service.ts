@@ -6,7 +6,8 @@ import type {
   PopulationRenderState,
   TrailState,
 } from '../../browser-entry.types';
-import { pushTrailPoint } from '../playback.trail.utils';
+import { resolveChampionBirdIndex } from '../playback.render.utils';
+import { pushChampionTrailPoint } from '../playback.trail.utils';
 import {
   beginPlaybackFrameViewportTransform,
   finalizePlaybackFrameCanvas,
@@ -76,17 +77,22 @@ export function updateTrailState(
   trailState: TrailState,
   renderState: PopulationRenderState,
 ): void {
+  // Step 1: Resolve the current champion so only one short trail is retained.
+  const championBirdIndex = resolveChampionBirdIndex(renderState);
+
+  // Step 2: Reset all non-champion trails to avoid per-frame trail work.
   renderState.birds.forEach((bird, birdIndex) => {
     if (!trailState.birdTrailsY[birdIndex]) {
       trailState.birdTrailsY[birdIndex] = [];
     }
     const birdTrail = trailState.birdTrailsY[birdIndex];
 
-    if (bird.done) {
+    if (bird.done || birdIndex !== championBirdIndex) {
       birdTrail.length = 0;
       return;
     }
 
-    pushTrailPoint(birdTrail, renderState.frameIndex, bird.yPx);
+    // Step 3: Keep a short trail only for the current champion bird.
+    pushChampionTrailPoint(birdTrail, renderState.frameIndex, bird.yPx);
   });
 }

@@ -52,6 +52,13 @@ Shared type contract for starfield tile rendering layers.
 A tile is pre-rendered and repeated horizontally to draw efficient
 parallax backgrounds during playback.
 
+### StarTileImage
+
+Shared type contract for starfield tile rendering layers.
+
+A tile is pre-rendered and repeated horizontally to draw efficient
+parallax backgrounds during playback.
+
 ## browser-entry/playback/playback.ts
 
 ### animatePopulationEpisode
@@ -343,7 +350,7 @@ Returns: Offscreen canvas instance or `null` when unavailable.
 
 ### createStarTileCanvas
 
-`(options: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").CreateStarTileCanvasOptions) => CanvasImageSource`
+`(options: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").CreateStarTileCanvasOptions) => import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTileImage`
 
 Pre-renders a deterministic tile that can be reused across animation frames.
 
@@ -459,9 +466,22 @@ Parameters:
 
 Returns: Clamped value.
 
-### pushTrailPoint
+### pushChampionTrailPoint
 
 `(trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], frameIndex: number, yPosition: number) => void`
+
+Appends one point to the champion-only short trail history.
+
+Parameters:
+- `trailPoints` - - Mutable champion trail collection.
+- `frameIndex` - - Source frame index.
+- `yPosition` - - Bird y position.
+
+Returns: Nothing.
+
+### pushTrailPoint
+
+`(trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], frameIndex: number, yPosition: number, maxRetainedPoints: number) => void`
 
 Appends one trail point while enforcing max retained history length.
 
@@ -469,6 +489,7 @@ Parameters:
 - `trailPoints` - - Mutable trail collection.
 - `frameIndex` - - Source frame index.
 - `yPosition` - - Bird y position.
+- `maxRetainedPoints` - - Optional maximum retained trail history length.
 
 Returns: Nothing.
 

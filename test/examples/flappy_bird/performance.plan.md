@@ -247,9 +247,9 @@ Assessment:
 - Current state: clean and easy to reason about.
 - Performance state: acceptable, but not the lowest-overhead model.
 
-### 6. NeatapticTS likely misses the slab fast path in this demo
+### 6. Feed-forward fast-path eligibility was the main repo-level runtime gap
 
-This is the most important repo-level finding outside the demo renderer.
+This was the most important repo-level finding outside the demo renderer.
 
 The worker runtime is configured using:
 
@@ -268,15 +268,15 @@ However, the network fast slab activation path requires all of the following:
 - no dropout,
 - no stochastic/weight-noise features.
 
-The critical requirement here is explicit acyclic mode. The current initial
-architecture builder does not appear to enable that mode automatically, and no
-Flappy-specific codepath was found that explicitly turns it on.
+The critical requirement here is explicit acyclic mode. That gap has now been
+addressed at the library level by propagating feed-forward intent into the
+acyclic runtime contract required by the fast slab gate.
 
 Implication:
 
-- The demo may be feed-forward in concept,
-- but still run inference on the legacy object-graph activation path,
-- which increases worker cost and limits scalability.
+- The demo remains feed-forward in concept,
+- and Trace-3 indicates it now reaches the cheaper worker activation path,
+- which lowers worker cost even though renderer work still dominates UX.
 
 Why this matters even though the trace is render-bound:
 
@@ -287,8 +287,8 @@ Why this matters even though the trace is render-bound:
 
 Assessment:
 
-- Current state: likely functionally correct.
-- Performance state: likely leaving a major NeatapticTS optimization unused.
+- Current state: validated at the library/runtime level.
+- Performance state: no longer the primary open bottleneck in the demo.
 
 ### 7. Control substeps multiply all worker inference costs
 
@@ -320,13 +320,11 @@ Assessment:
 4. Full-population bird rendering stacks glow-heavy draw passes.
 5. Snapshot transfer between worker and host allocates and clones too much.
 
-### NeatapticTS-layer root causes
+### Shared runtime root causes
 
-1. Feed-forward Flappy inference likely does not opt into acyclic fast-path
-	 requirements.
-2. As a result, `network.activate()` may be falling back to the slower legacy
-	 object-based path.
-3. Substep-based control multiplies that missed optimization.
+1. Control substeps still multiply all worker inference costs.
+2. Snapshot transport still allocates and clones more than necessary.
+3. Playback request orchestration still adds per-batch messaging overhead.
 
 ## Prioritized Action Plan
 
@@ -436,7 +434,7 @@ Risk:
 - moderate, because this touches core network semantics and must not change
 	evolutionary correctness.
 
-### Priority 2: Cut main-thread render cost by simplifying trails first
+### Priority 2: Cut main-thread render cost by simplifying trails first [WIP]
 
 Goal:
 
@@ -444,10 +442,12 @@ Goal:
 
 Actions:
 
-1. Replace per-segment trail strokes with a cheaper batched trail representation.
-2. Consider reducing trail history further or updating trails every other frame.
-3. Consider rendering only champion trail at full fidelity and simplifying the
-	 rest.
+1. Stop rendering trails for non-champion birds so the full population no
+	 longer pays per-frame trail stroke cost.
+2. Keep only a short champion trail history to preserve readability without the
+	 previous full-length cost profile.
+3. Re-profile the renderer before attempting a more invasive batched-trail
+	 renderer, because champion-only trails may already remove most of the spike.
 
 Expected impact:
 
@@ -458,7 +458,7 @@ Risk:
 
 - low, because this is visual-only.
 
-### Priority 3: Cache or pre-render the ground grid
+### Priority 3: Cache or pre-render the ground grid (ideally, cache)
 
 Goal:
 
@@ -620,12 +620,12 @@ performance profile shows that the rendering path is doing more work per frame
 than the browser can comfortably sustain.
 
 The most important user-facing problem is renderer-side frame cost. The most
-important architectural performance problem is that Flappy likely does not use
-the NeatapticTS slab fast path even though it is intended to behave as a
-feed-forward workload.
+important architectural performance problem is no longer feed-forward fast-path
+eligibility. Trace-3 indicates that library-level gap is addressed, while
+renderer work and browser-worker transport remain the main open costs.
 
 Therefore the project should proceed on two tracks:
 
 1. reduce main-thread canvas work so the demo becomes smooth,
-2. explicitly unlock fast feed-forward inference so the worker path scales once
-	 rendering is no longer the bottleneck.
+2. keep trimming renderer and playback transport cost so the cheaper worker
+	 path can translate into smoother visible playback.

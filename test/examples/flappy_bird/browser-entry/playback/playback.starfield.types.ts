@@ -4,8 +4,16 @@
  * A tile is pre-rendered and repeated horizontally to draw efficient
  * parallax backgrounds during playback.
  */
+export type StarTileImage = HTMLCanvasElement | OffscreenCanvas;
+
+/**
+ * Shared type contract for starfield tile rendering layers.
+ *
+ * A tile is pre-rendered and repeated horizontally to draw efficient
+ * parallax backgrounds during playback.
+ */
 export type StarTile = {
-  image: CanvasImageSource;
+  image: StarTileImage;
   tileWidthPx: number;
   tileHeightPx: number;
   scrollRatio: number;

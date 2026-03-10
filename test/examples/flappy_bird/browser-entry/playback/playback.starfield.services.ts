@@ -14,6 +14,7 @@ import type {
   CreateStarTileCanvasOptions,
   StarfieldCanvasDimensions,
   StarPlacement,
+  StarTileImage,
 } from './playback.starfield.types';
 
 /**
@@ -24,7 +25,7 @@ import type {
  */
 export function createStarTileCanvas(
   options: CreateStarTileCanvasOptions,
-): CanvasImageSource {
+): StarTileImage {
   // Step 1: Allocate a compatible canvas for the requested tile dimensions.
   const canvas = createCompatibleCanvas(
     options.tileWidthPx,
@@ -89,7 +90,9 @@ function createCompatibleCanvas(
 function resolveStarTileContext(
   canvas: HTMLCanvasElement | OffscreenCanvas,
 ): OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null {
-  return canvas.getContext(FLAPPY_STARFIELD_CANVAS_CONTEXT_ID);
+  return canvas.getContext(
+    FLAPPY_STARFIELD_CANVAS_CONTEXT_ID,
+  ) as OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
 }
 
 /**

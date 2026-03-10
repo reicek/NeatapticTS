@@ -97,7 +97,7 @@ Returns: Nothing.
 
 ### drawPlaybackTiledImageRow
 
-`(context: CanvasRenderingContext2D, startXPx: number, tile: CanvasImageSource, tileWidthPx: number, visibleWidthPx: number, offsetPx: number) => void`
+`(context: CanvasRenderingContext2D, startXPx: number, tile: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTileImage, tileWidthPx: number, visibleWidthPx: number, offsetPx: number) => void`
 
 Draws a horizontally tiled image strip across the visible width.
 

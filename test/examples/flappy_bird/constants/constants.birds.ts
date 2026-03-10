@@ -8,6 +8,9 @@
 /** Maximum number of trail points retained per bird trail polyline. */
 export const FLAPPY_TRAIL_MAX_POINTS = 40;
 
+/** Maximum number of trail points retained for the champion-only short trail. */
+export const FLAPPY_CHAMPION_TRAIL_MAX_POINTS = 12;
+
 /** Stroke width used for per-bird trail line rendering. */
 export const FLAPPY_TRAIL_LINE_WIDTH_PX = 1.5;
 
