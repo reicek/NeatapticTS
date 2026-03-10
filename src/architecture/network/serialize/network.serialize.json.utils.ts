@@ -53,6 +53,7 @@ export function createEmptyNetworkJson(
     input: networkInternals.input,
     output: networkInternals.output,
     dropout: resolveDropout(networkInternals.dropout),
+    topologyIntent: networkInternals._topologyIntent,
     nodes: [],
     connections: [],
   };

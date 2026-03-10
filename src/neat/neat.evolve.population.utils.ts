@@ -11,6 +11,10 @@ import type {
   GenomeWithMetadata,
   NeatControllerForEvolution,
 } from './neat.evolve.types';
+import {
+  promoteGenomeToFeedForwardIntentWhenEligible,
+  usesFeedForwardMutationPolicy,
+} from './neat.topology-intent.utils';
 
 /**
  * Build the next population (elitism, provenance, offspring).
@@ -99,16 +103,34 @@ export function applyProvenance(
     0,
     Math.min(internal.options.provenance || 0, remainingSlotsAfterElites),
   );
+  const shouldPromoteFeedForwardIntent = usesFeedForwardMutationPolicy(
+    internal.options.mutation,
+  );
+
   // Step 2: Insert provenance genomes.
   for (let index = 0; index < provenanceCount; index++) {
     if (internal.options.network) {
-      nextPopulation.push(Network.fromJSON(internal.options.network.toJSON()));
-    } else {
-      nextPopulation.push(
-        new Network(internal.input, internal.output, {
-          minHidden: internal.options.minHidden,
-        }),
+      const provenanceGenome = Network.fromJSON(internal.options.network.toJSON());
+
+      // Step 2.1: Preserve feed-forward intent when the seed topology is eligible.
+      promoteGenomeToFeedForwardIntentWhenEligible(
+        provenanceGenome,
+        shouldPromoteFeedForwardIntent,
       );
+
+      nextPopulation.push(provenanceGenome);
+    } else {
+      const provenanceGenome = new Network(internal.input, internal.output, {
+        minHidden: internal.options.minHidden,
+      });
+
+      // Step 2.2: Promote fresh provenance genomes when FFW is the active contract.
+      promoteGenomeToFeedForwardIntentWhenEligible(
+        provenanceGenome,
+        shouldPromoteFeedForwardIntent,
+      );
+
+      nextPopulation.push(provenanceGenome);
     }
   }
 }

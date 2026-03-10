@@ -43,7 +43,6 @@ Resolved height and width budgets for the stats panel.
 Applies responsive sizing to the simulation and network canvases.
 
 Parameters:
-
 - `responsiveViewportSizingElements` - - Host elements participating in layout.
 - `deferredNetworkRedrawController` - - Deferred redraw controller.
 - `onNetworkResize` - - Immediate network resize callback.
@@ -57,7 +56,6 @@ Returns: Nothing.
 Installs responsive viewport sizing for simulation and network canvases.
 
 Parameters:
-
 - `canvas` - - Simulation canvas to resize.
 - `containerElement` - - Width/height source.
 - `mainSplitContainer` - - Main split panel host.
@@ -79,7 +77,6 @@ Returns: Nothing.
 Applies the minimal mobile layout that hides the auxiliary panes.
 
 Parameters:
-
 - `responsiveViewportSizingElements` - - Host elements participating in layout.
 - `responsiveViewportLayoutContext` - - Responsive layout context.
 
@@ -92,7 +89,6 @@ Returns: Nothing.
 Applies the fixed network host height and queues redraw when it changes.
 
 Parameters:
-
 - `networkCanvasHost` - - Network canvas host element.
 - `deferredNetworkRedrawController` - - Deferred redraw controller.
 
@@ -105,7 +101,6 @@ Returns: Nothing.
 Applies simulation and network canvas backing sizes for the active layout.
 
 Parameters:
-
 - `responsiveViewportSizingElements` - - Host elements participating in layout.
 - `responsiveViewportLayoutContext` - - Responsive layout context.
 - `statsPanelDimensions` - - Resolved stats panel dimensions.
@@ -120,7 +115,6 @@ Returns: Nothing.
 Applies the split-container styles for the standard layout modes.
 
 Parameters:
-
 - `responsiveViewportSizingElements` - - Host elements participating in layout.
 - `responsiveViewportLayoutContext` - - Responsive layout context.
 
@@ -133,7 +127,6 @@ Returns: Nothing.
 Applies the standard tablet and desktop layout and returns panel dimensions.
 
 Parameters:
-
 - `responsiveViewportSizingElements` - - Host elements participating in layout.
 - `responsiveViewportLayoutContext` - - Responsive layout context.
 - `deferredNetworkRedrawController` - - Deferred redraw controller.
@@ -147,7 +140,6 @@ Returns: Resolved stats panel dimensions.
 Applies the resolved dimensions and scrolling rules to the stats container.
 
 Parameters:
-
 - `statsContainer` - - Stats host element.
 - `responsiveViewportLayoutContext` - - Responsive layout context.
 - `statsPanelDimensions` - - Resolved stats panel dimensions.
@@ -161,7 +153,6 @@ Returns: Nothing.
 Applies ordering and flex styles for stats and network panes.
 
 Parameters:
-
 - `statsTableHost` - - Stats table host element.
 - `networkCanvasHost` - - Network canvas host element.
 - `responsiveViewportLayoutContext` - - Responsive layout context.
@@ -175,7 +166,6 @@ Returns: Nothing.
 Creates a deferred redraw controller that waits for layout to settle.
 
 Parameters:
-
 - `onNetworkResize` - - Callback after network resize.
 
 Returns: Deferred redraw controller.
@@ -187,7 +177,6 @@ Returns: Deferred redraw controller.
 Installs window and container listeners for responsive host sizing.
 
 Parameters:
-
 - `containerElement` - - Width and height source.
 - `applyCanvasSize` - - Shared sizing callback.
 - `deferredNetworkRedrawController` - - Deferred redraw controller.
@@ -215,7 +204,6 @@ Shared CSS tokens used by the host resize layout appliers.
 Resolves the header canvas height, if present.
 
 Parameters:
-
 - `containerElement` - - Width and height source.
 
 Returns: Header height in pixels.
@@ -227,7 +215,6 @@ Returns: Header height in pixels.
 Resolves the simulation canvas bounds for the minimal mobile layout.
 
 Parameters:
-
 - `containerElement` - - Width and height source.
 - `responsiveViewportLayoutContext` - - Responsive layout context.
 
@@ -240,7 +227,6 @@ Returns: Simulation canvas bounds.
 Resolves responsive layout measurements and mode flags from the host DOM.
 
 Parameters:
-
 - `containerElement` - - Width and height source.
 - `statsContainer` - - Stats host element.
 - `networkCanvasHost` - - Network host element.
@@ -254,7 +240,6 @@ Returns: Responsive layout context.
 Resolves simulation canvas bounds from the current viewport layout.
 
 Parameters:
-
 - `containerElement` - - Width and height source.
 - `responsiveViewportLayoutContext` - - Responsive layout context.
 - `statsPanelDimensions` - - Resolved stats panel dimensions.
@@ -268,7 +253,6 @@ Returns: Simulation canvas bounds.
 Resolves the stats panel height and width budgets.
 
 Parameters:
-
 - `responsiveViewportLayoutContext` - - Responsive layout context.
 
 Returns: Stats panel dimensions.

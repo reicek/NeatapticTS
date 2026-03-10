@@ -1093,6 +1093,10 @@ Telemetry buffer storing diagnostic snapshots per generation.
 
 Topology dirty marker.
 
+#### _topologyIntent
+
+Public topology intent used to preserve semantic API choices.
+
 #### _topoOrder
 
 Cached topological order.
@@ -2007,6 +2011,14 @@ Return a concise summary for each current species.
 
 Return the internal telemetry buffer.
 
+#### getTopologyIntent
+
+`() => import("src/architecture/network/network.types").NetworkTopologyIntent`
+
+Returns the public topology intent for this network.
+
+Returns: Current topology intent.
+
 #### getTrainingStats
 
 `() => { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }`
@@ -2329,6 +2341,10 @@ Creates a standard Multi-Layer Perceptron (MLP) network.
 An MLP consists of an input layer, one or more hidden layers, and an output layer,
 fully connected layer by layer.
 
+The returned network is marked with the public `feed-forward` topology
+intent so acyclic enforcement and slab fast-path eligibility stay aligned
+with the builder users already chose.
+
 Returns: The constructed MLP network.
 
 #### plastic
@@ -2641,6 +2657,17 @@ Set stochastic-depth schedule function.
 
 Parameters:
 - `fn` - Function mapping step and current schedule to next schedule.
+
+#### setTopologyIntent
+
+`(topologyIntent: import("src/architecture/network/network.types").NetworkTopologyIntent) => void`
+
+Sets the public topology intent and keeps acyclic enforcement aligned.
+
+Parameters:
+- `topologyIntent` - Desired topology intent.
+
+Returns: Nothing.
 
 #### setWeightNoiseSchedule
 

@@ -142,7 +142,11 @@ export default class Architect {
   /**
    * Creates a standard Multi-Layer Perceptron (MLP) network.
    * An MLP consists of an input layer, one or more hidden layers, and an output layer,
-   * fully connected layer by layer.
+    * fully connected layer by layer.
+    *
+    * The returned network is marked with the public `feed-forward` topology
+    * intent so acyclic enforcement and slab fast-path eligibility stay aligned
+    * with the builder users already chose.
    *
    * @param {...number} layers - A sequence of numbers representing the size (number of nodes) of each layer, starting with the input layer, followed by hidden layers, and ending with the output layer. Must include at least input, one hidden, and output layer sizes.
    * @returns {Network} The constructed MLP network.
@@ -197,6 +201,8 @@ export default class Architect {
     (net as unknown as { layers: Layer[] }).layers = nodes.filter(
       (n) => n instanceof Layer,
     );
+    net.setTopologyIntent('feed-forward');
+
     return net;
   }
 

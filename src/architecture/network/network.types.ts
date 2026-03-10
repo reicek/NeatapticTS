@@ -20,6 +20,8 @@ export interface NetworkRuntimeProps {
   layers?: unknown[];
   /** Optional architecture descriptor hydrated from serialization metadata. */
   _serializedArchitectureDescriptor?: NetworkArchitectureDescriptor;
+  /** Optional public topology intent preserved across runtime boundaries. */
+  _topologyIntent?: NetworkTopologyIntent;
 }
 
 /** Provenance of hidden-layer architecture information. */
@@ -44,6 +46,39 @@ export interface NetworkArchitectureDescriptor {
   totalNodes: number;
   /** Total runtime connection count. */
   totalConnections: number;
+}
+
+/**
+ * Public topology intent exposed by the network API.
+ *
+ * Use `feed-forward` when the caller wants the library to preserve an acyclic,
+ * forward-only contract. Use `unconstrained` when recurrent, gated, or other
+ * cyclic structures may be introduced.
+ */
+export type NetworkTopologyIntent = 'feed-forward' | 'unconstrained';
+
+/**
+ * Public constructor options for `Network`.
+ *
+ * `topologyIntent` is the semantic, DX-first contract. `enforceAcyclic`
+ * remains available for backward compatibility and must not contradict the
+ * declared topology intent.
+ */
+export interface NetworkConstructorOptions {
+  /** Optional minimum hidden-node count to synthesize via node splitting. */
+  minHidden?: number;
+  /** Optional deterministic RNG seed. */
+  seed?: number;
+  /** Optional legacy low-level acyclic enforcement flag. */
+  enforceAcyclic?: boolean;
+  /** Optional public topology intent contract. */
+  topologyIntent?: NetworkTopologyIntent;
+  /** Optional slab activation precision. */
+  activationPrecision?: 'f32' | 'f64';
+  /** Whether pooled activation arrays should be reused. */
+  reuseActivationArrays?: boolean;
+  /** Whether pooled typed activations may be returned directly. */
+  returnTypedActivations?: boolean;
 }
 
 /** Internal runtime properties attached to Connection instances. */
@@ -385,6 +420,8 @@ export interface SerializeNetworkInternals {
   connect: (from: Node, to: Node, weight: number) => Connection[];
   /** Gate API used during reconstruction. */
   gate: (gater: Node, connection: Connection) => void;
+  /** Optional public topology intent contract. */
+  _topologyIntent?: NetworkTopologyIntent;
 }
 
 /**
@@ -537,6 +574,8 @@ export interface NetworkJSON {
   output: number;
   /** Dropout value. */
   dropout: number;
+  /** Optional public topology intent contract. */
+  topologyIntent?: NetworkTopologyIntent;
   /** Serialized nodes. */
   nodes: NetworkJSONNode[];
   /** Serialized connections. */

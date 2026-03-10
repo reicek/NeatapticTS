@@ -7091,6 +7091,67 @@ Export species history records as JSON Lines.
 
 ### SPECIES_HISTORY_JSONL_MAX_DEFAULT
 
+## neat/neat.topology-intent.utils.ts
+
+### isGenomeEligibleForFeedForwardIntentPromotion
+
+`(genome: import("src/neat/neat.topology-intent.utils").TopologyIntentGenome) => boolean`
+
+Check whether a genome can safely adopt feed-forward topology intent.
+
+Eligibility is intentionally conservative: the graph must already be free of
+gates/self-connections and all normal connections must follow the current
+node ordering. This avoids reinterpreting arbitrary legacy seeds as ordered
+feed-forward graphs when that would change structural semantics.
+
+Parameters:
+- `genome` - Genome candidate.
+
+Returns: True when the genome can safely adopt feed-forward intent.
+
+### matchesCanonicalFeedForwardPool
+
+`(configuredPool: import("src/neat/neat.topology-intent.utils").TopologyIntentMutationMethod[], canonicalPool: import("src/neat/neat.topology-intent.utils").TopologyIntentMutationMethod[]) => boolean`
+
+Check whether a configured mutation pool matches the canonical FFW pool.
+
+Parameters:
+- `configuredPool` - Mutation pool configured on the NEAT instance.
+- `canonicalPool` - Canonical feed-forward mutation pool.
+
+Returns: True when both pools align by operator name and order.
+
+### promoteGenomeToFeedForwardIntentWhenEligible
+
+`(genome: import("src/neat/neat.topology-intent.utils").TopologyIntentGenome, shouldPromote: boolean) => void`
+
+Promote a genome to feed-forward topology intent when the structure is eligible.
+
+Parameters:
+- `genome` - Genome candidate being inserted into a population.
+- `shouldPromote` - Whether the active NEAT options request FFW semantics.
+
+Returns: Nothing.
+
+### TopologyIntentGenome
+
+Minimal genome surface required to promote feed-forward intent safely.
+
+### TopologyIntentMutationMethod
+
+Minimal mutation descriptor used by topology-intent helpers.
+
+### usesFeedForwardMutationPolicy
+
+`(mutationConfig: unknown) => boolean`
+
+Determine whether the configured mutation policy communicates feed-forward intent.
+
+Parameters:
+- `mutationConfig` - Configured mutation option.
+
+Returns: True when the option expresses canonical FFW intent.
+
 ## neat/neat.evaluate.fitness.utils.ts
 
 ### clearGenomeStateIfRequested

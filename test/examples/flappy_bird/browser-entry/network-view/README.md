@@ -19,7 +19,6 @@ Input-group label band geometry and style contract.
 Clamps a recommended network height into the configured panel range.
 
 Parameters:
-
 - `recommendedHeightPx` - - Recommended panel height.
 
 Returns: Clamped panel height.
@@ -31,7 +30,6 @@ Returns: Clamped panel height.
 Builds a node-index lookup map for resolved positioned nodes.
 
 Parameters:
-
 - `centeredPositionedNodes` - - Positioned nodes after centering.
 
 Returns: Map keyed by node index.
@@ -43,7 +41,6 @@ Returns: Map keyed by node index.
 Draws a complete, layer-based visualization of the active network.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
@@ -58,7 +55,6 @@ Returns: Nothing.
 Draws the positioned graph layers and optional guide overlays.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `networkVisualizationScene` - - Frame scene context.
 - `positionedNetworkGraphScene` - - Positioned graph scene.
@@ -72,7 +68,6 @@ Returns: Nothing.
 Formats the two-line architecture label used by the header and legend.
 
 Parameters:
-
 - `architectureInputSize` - - Input layer size.
 - `hiddenLayersLabel` - - Hidden-layer description.
 - `architectureOutputSize` - - Output layer size.
@@ -88,7 +83,6 @@ Returns: Formatted architecture label.
 Paints the base network visualization canvas background.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `networkVisualizationScene` - - Frame scene context.
 
@@ -101,7 +95,6 @@ Returns: Nothing.
 Adjusts graph-side padding to keep the floating legend from overlapping nodes.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `network` - - Network to visualize.
 - `canvasWidthPx` - - Canvas width.
@@ -125,7 +118,6 @@ Returns: Base graph padding context.
 Resolves the hidden-layer portion of the compact architecture label.
 
 Parameters:
-
 - `hiddenLayerSizes` - - Hidden-layer sizes.
 - `architectureSource` - - Architecture source metadata.
 
@@ -138,7 +130,6 @@ Returns: Hidden-layer label.
 Resolves compact architecture label text for headers and HUD rows.
 
 Parameters:
-
 - `network` - - Network to describe.
 - `inputSize` - - Configured input size.
 - `outputSize` - - Configured output size.
@@ -152,7 +143,6 @@ Returns: Readable architecture label.
 Resolves the drawable graph area after scene padding is applied.
 
 Parameters:
-
 - `networkVisualizationScene` - - Frame scene context.
 
 Returns: Drawable area dimensions.
@@ -164,7 +154,6 @@ Returns: Drawable area dimensions.
 Resolves node rectangle dimensions from topology density and drawable bounds.
 
 Parameters:
-
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
 - `outputSize` - - Output-layer size.
@@ -180,7 +169,6 @@ Returns: Node dimensions.
 Resolves node rectangle dimensions from topology density and drawable bounds.
 
 Parameters:
-
 - `networkTopologySummary` - - Topology summary.
 - `drawableWidthPx` - - Drawable graph width.
 - `drawableHeightPx` - - Drawable graph height.
@@ -194,7 +182,6 @@ Returns: Node dimensions.
 Resolves a reusable topology summary for layout and sizing helpers.
 
 Parameters:
-
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
 - `outputSize` - - Output-layer size.
@@ -208,7 +195,6 @@ Returns: Topology summary.
 Resolves responsive visualization canvas height from network shape.
 
 Parameters:
-
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
 - `outputSize` - - Output-layer size.
@@ -222,7 +208,6 @@ Returns: Recommended height in pixels.
 Resolves all non-topology canvas state needed to draw the network view.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
@@ -237,7 +222,6 @@ Returns: Scene context for the current frame.
 Resolves positioned nodes, connection lookup state, and shared node dimensions.
 
 Parameters:
-
 - `networkVisualizationScene` - - Frame scene context.
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
@@ -252,7 +236,6 @@ Returns: Positioned graph scene.
 Resolves the recommended panel height from topology and density adjustments.
 
 Parameters:
-
 - `networkTopologySummary` - - Topology summary.
 - `topologyDrivenHeightPx` - - Minimum readable topology height.
 
@@ -265,7 +248,6 @@ Returns: Recommended panel height.
 Resolves the runtime connection array from the active network.
 
 Parameters:
-
 - `network` - - Network to visualize.
 
 Returns: Runtime connection list.
@@ -277,7 +259,6 @@ Returns: Runtime connection list.
 Resolves the topology-driven minimum readable height.
 
 Parameters:
-
 - `networkTopologySummary` - - Topology summary.
 
 Returns: Minimum readable height in pixels.
@@ -289,7 +270,6 @@ Returns: Minimum readable height in pixels.
 Determines whether responsive rules hide auxiliary network overlays.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `fallbackViewportWidthPx` - - Fallback viewport width.
 
@@ -312,7 +292,6 @@ Ordered labels for grouped Flappy network input bands.
 Draws vertical neon bands that label semantic groups in the input layer.
 
 Parameters:
-
 - `context` - - Canvas 2D rendering context.
 - `positionedNodes` - - Positioned nodes in graph coordinates.
 - `nodeDimensions` - - Resolved node dimensions.
@@ -334,7 +313,6 @@ Draws a filled rounded rectangle path.
 Resolves input-layer semantic label bands for Flappy temporal observation channels.
 
 Parameters:
-
 - `inputNodeCount` - - Input-layer node count.
 
 Returns: Group label ranges with band colors.
@@ -348,7 +326,6 @@ Returns: Group label ranges with band colors.
 Centers positioned nodes within the drawable graph area.
 
 Parameters:
-
 - `positionedNodes` - - Positioned nodes before centering.
 - `leftPaddingPx` - - Left graph padding.
 - `topPaddingPx` - - Top graph padding.
@@ -366,7 +343,6 @@ Returns: Center-aligned positioned nodes.
 Positions network nodes into drawable canvas coordinates.
 
 Parameters:
-
 - `networkLayers` - - Resolved network layers.
 - `leftPaddingPx` - - Left graph padding.
 - `topPaddingPx` - - Top graph padding.
@@ -391,7 +367,6 @@ placement, and architecture presentation. Visualization code can still reuse
 the result, but this helper now lives with the module that owns layout.
 
 Parameters:
-
 - `network` - - Runtime network instance.
 - `inputSize` - - Input count fallback.
 - `outputSize` - - Output count fallback.

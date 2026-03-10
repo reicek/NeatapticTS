@@ -874,6 +874,40 @@ Parameters:
 
 ### network
 
+### resolveAcyclicEnforcement
+
+`(options: import("src/architecture/network/network.types").NetworkConstructorOptions | undefined, topologyIntent: import("src/architecture/network/network.types").NetworkTopologyIntent) => boolean`
+
+Resolves whether acyclic enforcement should be enabled for one constructor call.
+
+Parameters:
+- `options` - Optional constructor options.
+- `topologyIntent` - Resolved public topology intent.
+
+Returns: True when acyclic enforcement should be enabled.
+
+### resolveTopologyIntent
+
+`(options: import("src/architecture/network/network.types").NetworkConstructorOptions | undefined) => import("src/architecture/network/network.types").NetworkTopologyIntent`
+
+Resolves the public topology intent for one constructor call.
+
+Parameters:
+- `options` - Optional constructor options.
+
+Returns: Resolved topology intent.
+
+### validateTopologyIntentConfiguration
+
+`(options: import("src/architecture/network/network.types").NetworkConstructorOptions | undefined) => void`
+
+Validates that legacy acyclic flags do not contradict public topology intent.
+
+Parameters:
+- `options` - Optional constructor options.
+
+Returns: Nothing.
+
 ### default
 
 #### _accumulationReduction
@@ -1106,6 +1140,10 @@ Dynamic stochastic depth schedule.
 #### _topoDirty
 
 Topology dirty marker.
+
+#### _topologyIntent
+
+Public topology intent used to preserve semantic API choices.
 
 #### _topoOrder
 
@@ -1407,6 +1445,14 @@ Read the raw deterministic RNG state word.
 
 Returns: RNG state value when present.
 
+#### getTopologyIntent
+
+`() => import("src/architecture/network/network.types").NetworkTopologyIntent`
+
+Returns the public topology intent for this network.
+
+Returns: Current topology intent.
+
 #### getTrainingStats
 
 `() => { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }`
@@ -1603,6 +1649,17 @@ Set stochastic-depth schedule function.
 
 Parameters:
 - `fn` - Function mapping step and current schedule to next schedule.
+
+#### setTopologyIntent
+
+`(topologyIntent: import("src/architecture/network/network.types").NetworkTopologyIntent) => void`
+
+Sets the public topology intent and keeps acyclic enforcement aligned.
+
+Parameters:
+- `topologyIntent` - Desired topology intent.
+
+Returns: Nothing.
 
 #### setWeightNoiseSchedule
 
@@ -1812,6 +1869,10 @@ Returns: The constructed NARX network.
 Creates a standard Multi-Layer Perceptron (MLP) network.
 An MLP consists of an input layer, one or more hidden layers, and an output layer,
 fully connected layer by layer.
+
+The returned network is marked with the public `feed-forward` topology
+intent so acyclic enforcement and slab fast-path eligibility stay aligned
+with the builder users already chose.
 
 Returns: The constructed MLP network.
 

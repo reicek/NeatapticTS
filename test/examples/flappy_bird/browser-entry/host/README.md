@@ -19,7 +19,6 @@ Partial stats update map keyed by stats-table keys.
 Builds the browser demo host tree and returns rendering handles.
 
 Parameters:
-
 - `containerElement` - - Root host container.
 
 Returns: Canvas handles, stats cells and network render callback.
@@ -31,7 +30,6 @@ Returns: Canvas handles, stats cells and network render callback.
 Builds the browser demo host tree and returns rendering handles.
 
 Parameters:
-
 - `containerElement` - - Root host container.
 
 Returns: Canvas handles, stats cells and network render callback.
@@ -43,7 +41,6 @@ Returns: Canvas handles, stats cells and network render callback.
 Creates the reusable title-frame renderer for the header canvas.
 
 Parameters:
-
 - `headerCanvas` - - Header canvas element.
 - `headerContext` - - Header canvas 2D context.
 
@@ -56,7 +53,6 @@ Returns: Callback that redraws the framed title.
 Creates the canvases and 2D contexts used by the host UI.
 
 Parameters:
-
 - `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
 
 Returns: Simulation, header, and network canvases with required contexts.
@@ -68,7 +64,6 @@ Returns: Simulation, header, and network canvases with required contexts.
 Creates the host layout elements used to assemble the browser UI tree.
 
 Parameters:
-
 - `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
 
 Returns: Layout elements grouped by host responsibility.
@@ -80,7 +75,6 @@ Returns: Layout elements grouped by host responsibility.
 Creates the network visualization renderer and redraw controller.
 
 Parameters:
-
 - `networkCanvasHost` - - Host element wrapping the network canvas.
 - `networkCanvas` - - Network visualization canvas.
 - `networkContext` - - Network visualization 2D context.
@@ -94,7 +88,6 @@ Returns: Renderer and redraw callbacks for the network panel.
 Installs responsive resize hooks for the simulation canvas and side panel.
 
 Parameters:
-
 - `canvas` - - Simulation canvas.
 - `hostLayoutElements` - - Prepared layout containers.
 - `networkCanvas` - - Network visualization canvas.
@@ -110,7 +103,6 @@ Returns: Nothing.
 Mounts the completed host DOM tree into the container in final order.
 
 Parameters:
-
 - `containerElement` - - Root host container.
 - `hostLayoutElements` - - Prepared layout containers.
 - `headerCanvas` - - Header title canvas.
@@ -126,7 +118,6 @@ Returns: Nothing.
 Renders the initial header and placeholder network visualization state.
 
 Parameters:
-
 - `drawHeaderFrame` - - Callback that redraws the header title.
 - `renderNetworkArchitecture` - - Network visualization renderer.
 
@@ -139,7 +130,6 @@ Returns: Nothing.
 Clears any previous runtime DOM before rebuilding the browser host tree.
 
 Parameters:
-
 - `containerElement` - - Root host container.
 
 Returns: Nothing.
@@ -159,7 +149,6 @@ Returns: Shared visual primitives reused across host sections.
 Applies partial stat updates to the rendered stats table.
 
 Parameters:
-
 - `statsValueByKey` - - Lookup of stat keys to value cells.
 - `partialValues` - - Subset of values to write this tick.
 
@@ -198,7 +187,6 @@ Resolves a required 2D context from a canvas element.
 Resolves a required 2D context from a canvas element.
 
 Parameters:
-
 - `canvas` - - Target canvas element.
 - `errorMessage` - - Error message when 2D context is unavailable.
 
@@ -214,7 +202,6 @@ Creates the host stats table, appends it into the provided host element, and
 initializes all HUD values to their baseline placeholders.
 
 Parameters:
-
 - `statsTableHost` - - DOM host that receives the table.
 
 Returns: Lookup map for future incremental stat updates.
@@ -226,7 +213,6 @@ Returns: Lookup map for future incremental stat updates.
 Applies partial stat updates to the rendered stats table.
 
 Parameters:
-
 - `statsValueByKey` - - Lookup of stat keys to value cells.
 - `partialValues` - - Subset of values to write this tick.
 
@@ -250,7 +236,6 @@ Applies a canvas backing store size and CSS width/height.
 Applies a canvas backing store size and CSS width/height.
 
 Parameters:
-
 - `canvas` - - Target canvas element.
 - `widthPx` - - Desired backing-store width in pixels.
 - `heightPx` - - Desired backing-store height in pixels.
@@ -264,7 +249,6 @@ Returns: True when canvas dimensions changed.
 Applies fixed simulation-canvas bounds so layout does not stretch unexpectedly.
 
 Parameters:
-
 - `canvas` - - Simulation canvas element.
 - `widthPx` - - Desired width in pixels.
 - `heightPx` - - Desired height in pixels.
@@ -278,7 +262,6 @@ Returns: True when backing-store dimensions changed.
 Computes the drawable network canvas size from host element dimensions.
 
 Parameters:
-
 - `networkCanvasHost` - - Host element wrapping the network canvas.
 - `hostInsetPx` - - Total inset to subtract from both dimensions.
 
@@ -293,7 +276,6 @@ Returns: Width/height pair in pixels.
 Installs responsive viewport sizing for simulation and network canvases.
 
 Parameters:
-
 - `canvas` - - Simulation canvas to resize.
 - `containerElement` - - Width/height source.
 - `mainSplitContainer` - - Main split panel host.

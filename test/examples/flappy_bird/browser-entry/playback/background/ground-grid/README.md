@@ -111,7 +111,6 @@ horizontal depth bands compress toward the horizon, while moving perspective
 rays slide sideways but still converge to the centered vanishing point.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `sourceScene` - - Shared lower-band geometry from the background module.
 - `request` - - Shared parallax scroll input for the current frame.
@@ -127,7 +126,6 @@ Returns: Nothing.
 Draws the lower-band atmospheric wash behind the neon line work.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `resolvedScene` - - Geometry and style for the current viewport.
 
@@ -140,7 +138,6 @@ Returns: Nothing.
 Draws one pulse square above the grid lines and below gameplay entities.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `pulse` - - Visible pulse square for the current frame.
 - `fillColor` - - Core neon fill color.
@@ -155,7 +152,6 @@ Returns: Nothing.
 Draws one batch of neon line segments that share one render style.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `batch` - - Ordered line-segment batch that shares one render style.
 
@@ -168,7 +164,6 @@ Returns: Nothing.
 Draws one ordered collection of neon segment batches.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `batches` - - Ordered line-segment batches to render.
 - `lineColor` - - Core neon stroke color.
@@ -183,7 +178,6 @@ Returns: Nothing.
 Draws the resolved neon ground grid inside the lower background band.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `resolvedScene` - - Geometry and style for the current viewport.
 - `geometry` - - Precomputed horizontal and vertical line segments.
@@ -266,7 +260,6 @@ The ground grid is derived from viewport width and total scene height, so a
 page resize invalidates every cached geometry variant and fog gradient.
 
 Parameters:
-
 - `sceneContext` - - Current lower-band scene geometry.
 
 Returns: Stable viewport-size cache key for the current frame.
@@ -278,7 +271,6 @@ Returns: Stable viewport-size cache key for the current frame.
 Resolves a cached fog gradient for one canvas and local scene.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `sceneCacheKey` - - Stable scene key for the active viewport.
 - `sceneContext` - - Current lower-band scene geometry.
@@ -293,7 +285,6 @@ Returns: Cached fog gradient aligned to the lower-band scene.
 Resolves cached horizontal geometry for one scene.
 
 Parameters:
-
 - `sceneCacheKey` - - Stable scene key for the active viewport.
 - `factory` - - Lazy geometry builder used when the cache misses.
 
@@ -306,7 +297,6 @@ Returns: Cached horizontal geometry bundle for the scene.
 Resolves cached vertical geometry for one scene and wrapped offset cycle.
 
 Parameters:
-
 - `cycleCacheKey` - - Scene-and-offset cache key for the active frame.
 - `factory` - - Lazy geometry builder used when the cache misses.
 
@@ -319,7 +309,6 @@ Returns: Cached vertical geometry bundle for the cycle.
 Resolves the stable local-scene cache key for ground-grid geometry.
 
 Parameters:
-
 - `sceneContext` - - Current lower-band scene geometry.
 
 Returns: Scene key suitable for static horizontal and vertical cache entries.
@@ -331,7 +320,6 @@ Returns: Scene key suitable for static horizontal and vertical cache entries.
 Resolves the cache key for one wrapped vertical-geometry cycle.
 
 Parameters:
-
 - `sceneCacheKey` - - Stable scene key for the active viewport.
 - `wrappedOffsetPx` - - Quantized wrapped offset within one lane cycle.
 
@@ -344,7 +332,6 @@ Returns: Cycle key used for vertical geometry reuse.
 Resolves the viewport-size cache key used by the ground-grid caches.
 
 Parameters:
-
 - `sceneContext` - - Current lower-band scene geometry.
 
 Returns: Cache key that changes whenever the page size changes.
@@ -358,7 +345,6 @@ Returns: Cache key that changes whenever the page size changes.
 Interpolates one point along a perspective ray.
 
 Parameters:
-
 - `startXPx` - - Bottom anchor x-position.
 - `startYPx` - - Bottom anchor y-position.
 - `endXPx` - - Vanishing-point x-position.
@@ -374,7 +360,6 @@ Returns: Interpolated point on the perspective ray.
 Maps a normalized depth ratio into a stronger synthwave spacing curve.
 
 Parameters:
-
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Curved depth ratio used for line placement and styling.
@@ -386,7 +371,6 @@ Returns: Curved depth ratio used for line placement and styling.
 Resolves normalized depth from a vertical distance away from the horizon.
 
 Parameters:
-
 - `distanceToHorizonPx` - - Vertical distance from the vanishing horizon.
 - `maximumDistanceToHorizonPx` - - Largest visible vertical horizon distance.
 
@@ -399,7 +383,6 @@ Returns: Normalized 0..1 depth where 0 is at the horizon and 1 is nearest.
 Builds the line geometry for the neon ground grid.
 
 Parameters:
-
 - `sceneContext` - - Lower-band geometry for the current viewport.
 - `frameIndex` - - Current deterministic playback frame index.
 - `scrollBasePx` - - Shared world scroll used for parallax motion.
@@ -413,7 +396,6 @@ Returns: Horizontal depth bands and perspective rays for the current frame.
 Resolves neon alpha for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Opacity for the rendered line.
@@ -425,7 +407,6 @@ Returns: Opacity for the rendered line.
 Resolves glow blur for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Blur radius for the rendered line.
@@ -437,7 +418,6 @@ Returns: Blur radius for the rendered line.
 Resolves stroke thickness for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Stroke width in pixels.
@@ -449,7 +429,6 @@ Returns: Stroke width in pixels.
 Resolves the shared scene context used by the ground-grid renderer.
 
 Parameters:
-
 - `sceneContext` - - Lower-band geometry provided by the background module.
 
 Returns: Narrow scene contract consumed by grid-specific helpers.
@@ -463,7 +442,6 @@ Returns: Narrow scene contract consumed by grid-specific helpers.
 Interpolates one point along a perspective ray.
 
 Parameters:
-
 - `startXPx` - - Bottom anchor x-position.
 - `startYPx` - - Bottom anchor y-position.
 - `endXPx` - - Vanishing-point x-position.
@@ -483,7 +461,6 @@ Small point value used when interpolating positions along one grid ray.
 Maps a normalized depth ratio into a stronger synthwave spacing curve.
 
 Parameters:
-
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Curved depth ratio used for line placement and styling.
@@ -495,7 +472,6 @@ Returns: Curved depth ratio used for line placement and styling.
 Resolves normalized depth from a vertical distance away from the horizon.
 
 Parameters:
-
 - `distanceToHorizonPx` - - Vertical distance from the vanishing horizon.
 - `maximumDistanceToHorizonPx` - - Largest visible vertical horizon distance.
 
@@ -508,7 +484,6 @@ Returns: Normalized 0..1 depth where 0 is at the horizon and 1 is nearest.
 Resolves neon alpha for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Opacity for the rendered line.
@@ -520,7 +495,6 @@ Returns: Opacity for the rendered line.
 Resolves glow blur for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Blur radius for the rendered line.
@@ -532,7 +506,6 @@ Returns: Blur radius for the rendered line.
 Resolves stroke thickness for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Stroke width in pixels.
@@ -546,7 +519,6 @@ Returns: Stroke width in pixels.
 Selects one thick-enough horizontal band for the current pulse slot.
 
 Parameters:
-
 - `horizontalPulsePaths` - - Cached horizontal pulse paths eligible for travel.
 - `pulseSlotIndex` - - Zero-based pulse slot index.
 
@@ -559,7 +531,6 @@ Returns: Horizontal pulse path, or null when none are suitable.
 Resolves one rare, deterministic pulse square for the current frame.
 
 Parameters:
-
 - `input` - - Current frame timing and visible pulse path candidates.
 
 Returns: Visible pulse square, or null when the current slot is inactive.
@@ -571,7 +542,6 @@ Returns: Visible pulse square, or null when the current slot is inactive.
 Resolves pulse orientation for one deterministic pulse slot.
 
 Parameters:
-
 - `pulseSlotIndex` - - Zero-based pulse slot index.
 
 Returns: Horizontal or vertical pulse travel orientation.
@@ -583,7 +553,6 @@ Returns: Horizontal or vertical pulse travel orientation.
 Resolves the local track thickness at the pulse position.
 
 Parameters:
-
 - `input` - - Pulse position, path, and scene geometry.
 
 Returns: Thickness of the current line under the pulse.
@@ -595,7 +564,6 @@ Returns: Thickness of the current line under the pulse.
 Resolves the pulse travel ratio along its chosen line.
 
 Parameters:
-
 - `input` - - Pulse timing direction and orientation.
 
 Returns: Normalized 0..1 travel ratio along the chosen line.
@@ -607,7 +575,6 @@ Returns: Normalized 0..1 travel ratio along the chosen line.
 Resolves a deterministic unit-interval hash from a slot index and salt.
 
 Parameters:
-
 - `seed` - - Slot-local seed value.
 - `salt` - - Small integer salt used to pick a stable random stream.
 
@@ -620,7 +587,6 @@ Returns: Stable random value in the range 0..1.
 Selects one sparse vertical pulse path for the current pulse slot.
 
 Parameters:
-
 - `verticalPulsePaths` - - Full vertical ray paths.
 - `visibleVerticalPulsePaths` - - Visible subset preferred for on-screen pulses.
 - `pulseSlotIndex` - - Zero-based pulse slot index.
@@ -636,7 +602,6 @@ Returns: Vertical pulse path, or null when none are available.
 Appends tapered style segments for one perspective ray.
 
 Parameters:
-
 - `targetSegments` - - Target line-segment buffer.
 - `startIndex` - - Current insertion index within the target buffer.
 - `input` - - Geometry and depth context for one ray.
@@ -650,7 +615,6 @@ Returns: Next insertion index after all ray segments have been written.
 Builds the screen-horizontal depth bands for the lower neon plane.
 
 Parameters:
-
 - `sceneContext` - - Lower-band geometry for the current viewport.
 
 Returns: Ordered far-to-near line segments and pulse subsets.
@@ -662,7 +626,6 @@ Returns: Ordered far-to-near line segments and pulse subsets.
 Builds the perspective rays that converge to the centered horizon point.
 
 Parameters:
-
 - `sceneContext` - - Lower-band geometry for the current viewport.
 - `safeLaneSpacingPx` - - Stable lane spacing used for ray anchors.
 - `quantizedWrappedOffsetPx` - - Quantized wrapped offset used for cache reuse.
@@ -676,7 +639,6 @@ Returns: Wrapped left-to-right perspective rays and pulse subsets.
 Groups line segments into ordered style batches for lower-overhead drawing.
 
 Parameters:
-
 - `segments` - - Ordered line segments that should preserve draw grouping.
 
 Returns: Ordered style batches that can be stroked with fewer state changes.
@@ -688,7 +650,6 @@ Returns: Ordered style batches that can be stroked with fewer state changes.
 Resolves whether one vertical pulse path is safely visible in the viewport.
 
 Parameters:
-
 - `pulsePath` - - Candidate vertical pulse path.
 - `sceneContext` - - Current lower-band scene geometry.
 - `midTravelRatio` - - Midpoint travel ratio used for visibility checks.
@@ -702,7 +663,6 @@ Returns: True when the pulse midpoint stays inside the visible ground band.
 Projects one horizon x-position down to the required floor anchor x-position.
 
 Parameters:
-
 - `input` - - Horizon target and scene geometry.
 
 Returns: Bottom anchor x-position whose ray reaches the target horizon x.
@@ -714,7 +674,6 @@ Returns: Bottom anchor x-position whose ray reaches the target horizon x.
 Projects the visible horizon span back onto the floor anchor line.
 
 Parameters:
-
 - `input` - - Visible horizon bounds and scene geometry.
 
 Returns: Bottom-anchor bounds required to cover the full visible horizon.
@@ -726,7 +685,6 @@ Returns: Bottom-anchor bounds required to cover the full visible horizon.
 Resolves cached screen-horizontal depth bands for the lower neon plane.
 
 Parameters:
-
 - `sceneContext` - - Lower-band geometry for the current viewport.
 
 Returns: Ordered far-to-near line segments and pulse subsets.
@@ -738,7 +696,6 @@ Returns: Ordered far-to-near line segments and pulse subsets.
 Prefers the nearer, thicker horizontal tracks when picking a pulse lane.
 
 Parameters:
-
 - `horizontalLines` - - Visible horizontal grid bands.
 
 Returns: Pulse-eligible horizontal paths biased toward the foreground.
@@ -750,7 +707,6 @@ Returns: Pulse-eligible horizontal paths biased toward the foreground.
 Resolves the wrapped vertical-geometry cycle for the current scroll value.
 
 Parameters:
-
 - `sceneContext` - - Lower-band geometry for the current viewport.
 - `scrollBasePx` - - Shared world scroll used for parallax motion.
 
@@ -763,7 +719,6 @@ Returns: Quantized wrapped offset and safe lane spacing for cache lookups.
 Resolves cached perspective rays that converge to the centered horizon point.
 
 Parameters:
-
 - `sceneContext` - - Lower-band geometry for the current viewport.
 - `scrollBasePx` - - Shared world scroll used for parallax motion.
 
