@@ -440,12 +440,39 @@ function groupPlaybackGroundGridSegmentsByStyle(
     segmentBatches.push({
       alpha: firstSegment.alpha,
       blurPx: firstSegment.blurPx,
+      path: resolvePlaybackGroundGridBatchPath(groupedSegments),
       thicknessPx: firstSegment.thicknessPx,
       segments: groupedSegments,
     });
   }
 
   return segmentBatches;
+}
+
+/**
+ * Resolves one cached draw-ready path for a grouped segment batch.
+ *
+ * Browsers can stroke a reused Path2D more cheaply than replaying dozens of
+ * moveTo/lineTo calls every frame. Test environments may not provide Path2D,
+ * so callers must tolerate a null fallback and replay raw segments instead.
+ *
+ * @param segments - Ordered line segments that belong to one style batch.
+ * @returns Cached Path2D when available, otherwise null.
+ */
+function resolvePlaybackGroundGridBatchPath(
+  segments: readonly PlaybackGroundGridLineSegment[],
+): Path2D | null {
+  if (typeof Path2D !== 'function') {
+    return null;
+  }
+
+  const batchPath = new Path2D();
+  for (const segment of segments) {
+    batchPath.moveTo(segment.startXPx, segment.startYPx);
+    batchPath.lineTo(segment.endXPx, segment.endYPx);
+  }
+
+  return batchPath;
 }
 
 /**

@@ -458,26 +458,38 @@ Risk:
 
 - low, because this is visual-only.
 
-### Priority 3: Cache or pre-render the ground grid (ideally, cache)
+### Priority 3: Cache the repeating ground-grid loop and keep pulses vector-sharp [WIP]
 
 Goal:
 
-- move decorative background cost out of the hot RAF path.
+- move decorative background cost out of the hot RAF path without switching to
+	 a blurred bitmap pre-render.
 
 Actions:
 
-1. Pre-render one or more grid layers to an offscreen canvas or cached tile.
-2. Scroll cached imagery instead of re-stroking all grid lines every frame.
-3. Keep the horizon and pulse dynamic only if necessary.
+1. Keep the grid fully vector-based, but cache draw-ready geometry for the
+	 repeating horizontal bands and wrapped vertical-ray cycle so the renderer
+	 reuses the same command structure instead of rebuilding line paths every
+	 frame.
+2. Treat the lower-band grid as a deterministic loop keyed by viewport size and
+	 wrapped scroll offset, so only cache misses pay the full geometry-build cost.
+3. Keep the random pulses as live vector overlays, but source them from the same
+	 cached pulse-eligible lanes used by the grid cycle so only travel progress is
+	 frame-local.
+4. Avoid full offscreen pre-rendering unless the vector-path cache still proves
+	 too expensive, because bitmap caching risks softer lines and higher startup
+	 cost for a background that already repeats cleanly.
 
 Expected impact:
 
 - medium to high main-thread improvement,
-- possible GPU improvement through fewer dynamic stroke operations.
+- preserves line sharpness and keeps startup cost flat,
+- keeps the pulse detail intact while reducing repeated path construction.
 
 Risk:
 
-- low to moderate, because the background is isolated and decorative.
+- low to moderate, because the background is isolated and decorative but the
+	 cache keys must stay aligned with viewport size and wrapped scroll.
 
 ### Priority 4: Reduce bird rendering complexity for non-champion birds
 
@@ -550,8 +562,8 @@ To maximize return while reducing risk, implement in this order:
 
 1. Enable and verify acyclic fast-path use for Flappy feed-forward networks.
 2. Simplify or batch trail rendering.
-3. Reduce non-champion bird visual complexity.
-4. Cache or pre-render the ground grid.
+3. Cache the repeating ground-grid loop.
+4. Reduce non-champion bird visual complexity.
 5. Re-profile.
 6. Only then redesign snapshot transport and playback messaging if still needed.
 

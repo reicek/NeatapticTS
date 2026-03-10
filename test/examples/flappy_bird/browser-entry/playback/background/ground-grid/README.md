@@ -184,6 +184,18 @@ Parameters:
 
 Returns: Nothing.
 
+### strokePlaybackGroundGridBatch
+
+`(context: CanvasRenderingContext2D, batch: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridSegmentBatch) => void`
+
+Strokes one ground-grid batch using a cached path when the environment supports it.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `batch` - - Ordered line-segment batch that shares one render style.
+
+Returns: Nothing.
+
 ## browser-entry/playback/background/ground-grid/playback.background.ground-grid.constants.ts
 
 ### FLAPPY_BACKGROUND_GROUND_GRID_STYLE
@@ -677,6 +689,21 @@ Parameters:
 - `input` - - Visible horizon bounds and scene geometry.
 
 Returns: Bottom-anchor bounds required to cover the full visible horizon.
+
+### resolvePlaybackGroundGridBatchPath
+
+`(segments: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridLineSegment[]) => Path2D | null`
+
+Resolves one cached draw-ready path for a grouped segment batch.
+
+Browsers can stroke a reused Path2D more cheaply than replaying dozens of
+moveTo/lineTo calls every frame. Test environments may not provide Path2D,
+so callers must tolerate a null fallback and replay raw segments instead.
+
+Parameters:
+- `segments` - - Ordered line segments that belong to one style batch.
+
+Returns: Cached Path2D when available, otherwise null.
 
 ### resolvePlaybackGroundGridHorizontalGeometry
 

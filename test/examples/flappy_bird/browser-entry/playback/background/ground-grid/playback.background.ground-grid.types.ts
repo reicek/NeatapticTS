@@ -73,6 +73,7 @@ export type PlaybackGroundGridLineSegment = {
 export type PlaybackGroundGridSegmentBatch = {
   alpha: number;
   blurPx: number;
+  path: Path2D | null;
   thicknessPx: number;
   segments: readonly PlaybackGroundGridLineSegment[];
 };

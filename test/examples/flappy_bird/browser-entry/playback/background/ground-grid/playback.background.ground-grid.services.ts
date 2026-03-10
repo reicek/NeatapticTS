@@ -142,24 +142,34 @@ export function drawGroundGridSegmentBatch(
   context.shadowBlur = batch.blurPx;
   context.globalAlpha = batch.alpha;
   context.lineWidth = batch.thicknessPx;
-  context.beginPath();
-
-  for (const segment of batch.segments) {
-    context.moveTo(segment.startXPx, segment.startYPx);
-    context.lineTo(segment.endXPx, segment.endYPx);
-  }
-
-  context.stroke();
+  strokePlaybackGroundGridBatch(context, batch);
 
   context.shadowBlur = 0;
   context.globalAlpha = Math.min(1, batch.alpha + 0.18);
-  context.beginPath();
+  strokePlaybackGroundGridBatch(context, batch);
+}
 
+/**
+ * Strokes one ground-grid batch using a cached path when the environment supports it.
+ *
+ * @param context - Canvas 2D drawing context.
+ * @param batch - Ordered line-segment batch that shares one render style.
+ * @returns Nothing.
+ */
+function strokePlaybackGroundGridBatch(
+  context: CanvasRenderingContext2D,
+  batch: PlaybackGroundGridSegmentBatch,
+): void {
+  if (batch.path) {
+    context.stroke(batch.path);
+    return;
+  }
+
+  context.beginPath();
   for (const segment of batch.segments) {
     context.moveTo(segment.startXPx, segment.startYPx);
     context.lineTo(segment.endXPx, segment.endYPx);
   }
-
   context.stroke();
 }
 
