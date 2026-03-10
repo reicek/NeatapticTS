@@ -44,6 +44,9 @@ export const FLAPPY_BIRD_WHITE_SHINE_GLOW_BLUR_PX = 2;
 /** Base neon blur radius used for bird body glow. */
 export const FLAPPY_BIRD_BODY_GLOW_BLUR_PX = 10;
 
+/** Glow blur radius used for simplified non-champion bird bodies. */
+export const FLAPPY_NON_CHAMPION_BODY_GLOW_BLUR_PX = 0;
+
 /**
  * Opacity used for the extra Radiant-style aura around each bird.
  *

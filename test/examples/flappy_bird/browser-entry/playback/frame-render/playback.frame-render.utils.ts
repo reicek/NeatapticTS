@@ -19,6 +19,7 @@ import {
   FLAPPY_LEADER_RING_LINE_WIDTH_PX,
   FLAPPY_LEADER_RING_RADIUS_OFFSET_PX,
   FLAPPY_NEON_PALETTE,
+  FLAPPY_NON_CHAMPION_BODY_GLOW_BLUR_PX,
   FLAPPY_NON_CHAMPION_OPACITY,
   FLAPPY_PIPE_SPEED_PX_PER_FRAME,
   FLAPPY_TRAIL_LINE_WIDTH_PX,
@@ -39,7 +40,7 @@ import type {
 } from './playback.frame-render.types';
 
 /**
- * Draws one active bird body, glow, shine, and leader ring.
+ * Draws one active bird body and champion-only highlight passes.
  *
  * @param context - Canvas 2D drawing context.
  * @param birdYPx - Bird vertical position in world pixels.
@@ -61,8 +62,10 @@ export function renderPlaybackBird(
   drawPlaybackBirdChampionAura(context, birdGeometry, birdRenderStyle);
   drawPlaybackBirdChampionGlowPlate(context, birdGeometry, birdRenderStyle);
 
-  // Step 3: Draw the bird body, shine highlight, and champion ring.
+  // Step 3: Draw the bird body for every active bird.
   drawPlaybackBirdBody(context, birdGeometry, birdRenderStyle);
+
+  // Step 4: Keep expensive highlight passes for the champion only.
   drawPlaybackBirdShine(context, birdGeometry, birdRenderStyle.isChampionBird);
   drawPlaybackBirdLeaderRing(
     context,
@@ -337,11 +340,7 @@ function drawPlaybackBirdBody(
   context.globalAlpha = birdRenderStyle.birdOpacity;
   context.fillStyle = birdRenderStyle.birdRenderColor;
   context.shadowColor = birdRenderStyle.birdRenderColor;
-  context.shadowBlur =
-    FLAPPY_BIRD_BODY_GLOW_BLUR_PX +
-    (birdRenderStyle.isChampionBird
-      ? FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX
-      : 0);
+  context.shadowBlur = resolvePlaybackBirdBodyGlowBlur(birdRenderStyle);
   context.fillRect(
     birdGeometry.birdLeftPx,
     birdGeometry.birdTopPx,
@@ -363,7 +362,12 @@ function drawPlaybackBirdShine(
   birdGeometry: PlaybackBirdGeometry,
   isChampionBird: boolean,
 ): void {
-  // Step 1: Resolve shine geometry inside the square bird body.
+  // Step 1: Skip the shine pass for simplified non-champion birds.
+  if (!isChampionBird) {
+    return;
+  }
+
+  // Step 2: Resolve shine geometry inside the square bird body.
   const shineInsetPx =
     birdGeometry.birdSideLengthPx * FLAPPY_BIRD_SHINE_INSET_RATIO;
   const shineSideLengthPx = Math.max(
@@ -371,13 +375,9 @@ function drawPlaybackBirdShine(
     birdGeometry.birdSideLengthPx * FLAPPY_BIRD_SHINE_SIZE_RATIO,
   );
 
-  // Step 2: Draw the inner shine highlight using champion-aware colors.
-  context.fillStyle = isChampionBird
-    ? FLAPPY_BIRD_CHAMPION_SHINE_FILL_STYLE
-    : FLAPPY_BIRD_SHINE_FILL_STYLE;
-  context.shadowColor = isChampionBird
-    ? FLAPPY_BIRD_CHAMPION_SHINE_GLOW_COLOR
-    : FLAPPY_BIRD_WHITE_SHINE_GLOW_COLOR;
+  // Step 3: Draw the champion shine highlight.
+  context.fillStyle = FLAPPY_BIRD_CHAMPION_SHINE_FILL_STYLE;
+  context.shadowColor = FLAPPY_BIRD_CHAMPION_SHINE_GLOW_COLOR;
   context.shadowBlur = FLAPPY_BIRD_WHITE_SHINE_GLOW_BLUR_PX;
   context.fillRect(
     Math.round(birdGeometry.birdLeftPx + shineInsetPx),
@@ -387,6 +387,24 @@ function drawPlaybackBirdShine(
   );
   context.shadowBlur = 0;
   context.shadowColor = 'transparent';
+}
+
+/**
+ * Resolves the body glow blur for one bird render pass.
+ *
+ * @param birdRenderStyle - Resolved bird style payload.
+ * @returns Blur radius used behind the square bird body.
+ */
+function resolvePlaybackBirdBodyGlowBlur(
+  birdRenderStyle: ReturnType<typeof resolveBirdRenderStyle>,
+): number {
+  if (!birdRenderStyle.isChampionBird) {
+    return FLAPPY_NON_CHAMPION_BODY_GLOW_BLUR_PX;
+  }
+
+  return (
+    FLAPPY_BIRD_BODY_GLOW_BLUR_PX + FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX
+  );
 }
 
 /**

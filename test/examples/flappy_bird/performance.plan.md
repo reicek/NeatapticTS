@@ -491,7 +491,7 @@ Risk:
 - low to moderate, because the background is isolated and decorative but the
 	 cache keys must stay aligned with viewport size and wrapped scroll.
 
-### Priority 4: Reduce bird rendering complexity for non-champion birds
+### Priority 4: Reduce bird rendering complexity for non-champion birds [WIP]
 
 Goal:
 
@@ -499,9 +499,13 @@ Goal:
 
 Actions:
 
-1. Remove or reduce aura/glow passes for non-champion birds.
-2. Keep full styling only for the leader/champion.
-3. Consider rendering non-champion birds as simple filled squares with no blur.
+1. Remove the remaining non-champion glow-heavy body styling so non-champions
+	 render as crisp body-only markers.
+2. Keep the full aura, glow, shine, and leader-ring stack only for the
+	 leader/champion.
+3. Re-profile before changing non-champion opacity or size, because the first
+	 pass should reduce draw cost without changing the readability contract more
+	 than necessary.
 
 Expected impact:
 

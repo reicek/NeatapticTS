@@ -4,6 +4,7 @@ import type {
 } from '../../../../../../test/examples/flappy_bird/browser-entry/browser-entry.types';
 import { updateTrailState } from '../../../../../../test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.service';
 import { renderPlaybackFrameBirds } from '../../../../../../test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.services';
+import { renderPlaybackBird } from '../../../../../../test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.utils';
 import { FLAPPY_CHAMPION_TRAIL_MAX_POINTS } from '../../../../../../test/examples/flappy_bird/constants/constants.birds';
 
 describe('updateTrailState', () => {
@@ -80,6 +81,22 @@ describe('updateTrailState', () => {
       1,
     ]);
   });
+
+  it('renders non-champion birds without champion highlight passes', () => {
+    const drawingContext = createMockDrawingContext();
+
+    renderPlaybackBird(drawingContext, 40, 0, 1);
+
+    expect(drawingContext.strokeRect).not.toHaveBeenCalled();
+  });
+
+  it('keeps champion highlight passes for the current leader', () => {
+    const drawingContext = createMockDrawingContext();
+
+    renderPlaybackBird(drawingContext, 40, 1, 1);
+
+    expect(drawingContext.strokeRect).toHaveBeenCalledTimes(1);
+  });
 });
 
 function createRenderState(overrides?: {
@@ -134,4 +151,22 @@ function createSceneContext() {
       bottomYPx: 480,
     },
   };
+}
+
+function createMockDrawingContext(): CanvasRenderingContext2D {
+  return {
+    fillRect: jest.fn(),
+    strokeRect: jest.fn(),
+    beginPath: jest.fn(),
+    moveTo: jest.fn(),
+    lineTo: jest.fn(),
+    stroke: jest.fn(),
+    globalAlpha: 1,
+    globalCompositeOperation: 'source-over',
+    fillStyle: '#000000',
+    strokeStyle: '#000000',
+    shadowColor: 'transparent',
+    shadowBlur: 0,
+    lineWidth: 1,
+  } as unknown as CanvasRenderingContext2D;
 }
