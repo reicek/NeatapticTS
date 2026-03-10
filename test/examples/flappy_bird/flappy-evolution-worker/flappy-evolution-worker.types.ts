@@ -18,7 +18,6 @@ export interface WorkerPopulationPipe {
 /** Mutable bird state tracked by the worker playback simulation. */
 export interface WorkerPopulationBird {
   network: Network;
-  color: string;
   observationMemoryState: SharedObservationMemoryState;
   yPx: number;
   velocityYPxPerFrame: number;
@@ -45,7 +44,6 @@ export interface WorkerPlaybackState {
 
 /** Render-only bird snapshot DTO posted to host. */
 export interface WorkerFrameBirdSnapshot {
-  color: string;
   yPx: number;
   pipesPassed: number;
   framesSurvived: number;
@@ -60,13 +58,31 @@ export interface WorkerFramePipeSnapshot {
   gapSizePx: number;
 }
 
+/** Packed typed-array payload for playback pipe snapshot transport. */
+export interface WorkerPackedPlaybackPipeSnapshot {
+  xPositionsPx: Float32Array;
+  gapCenterYPositionsPx: Float32Array;
+  gapSizesPx: Float32Array;
+}
+
+/** Packed typed-array payload for playback bird snapshot transport. */
+export interface WorkerPackedPlaybackBirdSnapshot {
+  yPositionsPx: Float32Array;
+  pipesPassed: Uint32Array;
+  framesSurvived: Uint32Array;
+  doneFlags: Uint8Array;
+}
+
 /** Full frame snapshot payload posted to host. */
 export interface WorkerPlaybackFrameSnapshot {
+  format: 'packed-v1';
   frameIndex: number;
   visibleWorldWidthPx: number;
   visibleWorldHeightPx: number;
-  pipes: WorkerFramePipeSnapshot[];
-  birds: WorkerFrameBirdSnapshot[];
+  pipeCount: number;
+  birdCount: number;
+  pipes: WorkerPackedPlaybackPipeSnapshot;
+  birds: WorkerPackedPlaybackBirdSnapshot;
 }
 
 /** Worker init request message. */

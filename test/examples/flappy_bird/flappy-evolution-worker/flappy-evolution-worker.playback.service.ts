@@ -76,7 +76,13 @@ export function processWorkerPlaybackStep(options: {
   createPlaybackSnapshot: (
     playbackState: WorkerPlaybackState,
   ) => WorkerPlaybackFrameSnapshot;
-  postWorkerMessage: (workerMessage: WorkerResponseMessage) => void;
+  resolvePlaybackSnapshotTransferList: (
+    snapshot: WorkerPlaybackFrameSnapshot,
+  ) => Transferable[];
+  postWorkerMessage: (
+    workerMessage: WorkerResponseMessage,
+    transferList?: Transferable[],
+  ) => void;
 }): {
   currentPlaybackState: WorkerPlaybackState | undefined;
   currentPlaybackRng: ReturnType<typeof createXorshift32> | undefined;
@@ -91,6 +97,7 @@ export function processWorkerPlaybackStep(options: {
     neatRuntime,
     stepPopulationFrame,
     createPlaybackSnapshot,
+    resolvePlaybackSnapshotTransferList,
     postWorkerMessage,
   } = options;
 
@@ -135,6 +142,7 @@ export function processWorkerPlaybackStep(options: {
     : undefined;
 
   const snapshot = createPlaybackSnapshot(currentPlaybackState);
+  const snapshotTransferList = resolvePlaybackSnapshotTransferList(snapshot);
 
   if (hasAliveBirds(currentPlaybackState.birds)) {
     postWorkerMessage({
@@ -144,7 +152,7 @@ export function processWorkerPlaybackStep(options: {
         instrumentation: instrumentationPayload,
         done: false,
       },
-    });
+    }, snapshotTransferList);
     return {
       currentPlaybackState,
       currentPlaybackRng,
@@ -201,7 +209,7 @@ export function processWorkerPlaybackStep(options: {
       winnerPipesPassed: winnerBird?.pipesPassed ?? 0,
       winnerFramesSurvived: winnerBird?.framesSurvived ?? 0,
     },
-  });
+  }, snapshotTransferList);
 
   return {
     currentPlaybackState: undefined,

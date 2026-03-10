@@ -135,6 +135,17 @@ Parameters:
 
 Returns: Playback-step payload including snapshot and completion marker.
 
+### resolvePlaybackWorkerChannelState
+
+`(evolutionWorker: Worker) => PlaybackWorkerChannelState`
+
+Resolves persistent playback worker-channel state for one worker instance.
+
+Parameters:
+- `evolutionWorker` - - Worker that owns playback simulation state.
+
+Returns: Persistent playback worker-channel state for the worker.
+
 ## browser-entry/worker-channel/worker-channel.generation.service.ts
 
 ### requestWorkerGeneration

@@ -1,6 +1,5 @@
 import type Network from '../../../../src/architecture/network';
 import {
-  createBirdColor,
   resolveNextSpawnGapSize,
   resolveNextSpawnIntervalFrames,
   sampleGapCenterY,
@@ -45,7 +44,6 @@ export function createWorkerPopulationRenderState(
 
   const birds = networks.map((network, networkIndex) => ({
     network,
-    color: createBirdColor(networkIndex, networks.length),
     observationMemoryState: createSharedObservationMemoryState(),
     yPx: initialVisibleWorldHeightPx * 0.5,
     velocityYPxPerFrame: 0,

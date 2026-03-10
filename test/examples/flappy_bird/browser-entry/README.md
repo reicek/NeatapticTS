@@ -82,6 +82,14 @@ Pixel dimensions used for network-node rectangle rendering.
 
 Draw callback contract for network architecture panel updates.
 
+### PackedPlaybackBirdSnapshot
+
+Packed typed-array payload for playback bird snapshot transport.
+
+### PackedPlaybackPipeSnapshot
+
+Packed typed-array payload for playback pipe snapshot transport.
+
 ### PlaybackFrameStats
 
 Lightweight per-frame telemetry emitted to HUD update callback.
@@ -223,6 +231,14 @@ Worker message emitted for simulation/playback errors.
 ### EvolutionWorkerMessage
 
 Union of all supported worker messages consumed by browser entry.
+
+### PackedPlaybackBirdSnapshot
+
+Packed typed-array payload for playback bird snapshot transport.
+
+### PackedPlaybackPipeSnapshot
+
+Packed typed-array payload for playback pipe snapshot transport.
 
 ### PlaybackFrameStats
 

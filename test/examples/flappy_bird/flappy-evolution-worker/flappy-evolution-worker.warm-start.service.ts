@@ -7,7 +7,6 @@ import {
   resolveObservationVector,
 } from '../browser-entry/browser-entry.observation.utils';
 import {
-  createBirdColor,
   sampleGapCenterY,
 } from '../browser-entry/browser-entry.spawn.utils';
 import type {

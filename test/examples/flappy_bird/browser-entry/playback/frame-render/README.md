@@ -256,7 +256,7 @@ Returns: Nothing.
 
 `(context: CanvasRenderingContext2D, birdYPx: number, birdIndex: number, championBirdIndex: number) => void`
 
-Draws one active bird body, glow, shine, and leader ring.
+Draws one active bird body and champion-only highlight passes.
 
 Parameters:
 - `context` - - Canvas 2D drawing context.
@@ -265,6 +265,17 @@ Parameters:
 - `championBirdIndex` - - Champion index for the current frame.
 
 Returns: Nothing.
+
+### resolvePlaybackBirdBodyGlowBlur
+
+`(birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => number`
+
+Resolves the body glow blur for one bird render pass.
+
+Parameters:
+- `birdRenderStyle` - - Resolved bird style payload.
+
+Returns: Blur radius used behind the square bird body.
 
 ### resolvePlaybackBirdGeometry
 

@@ -3,7 +3,24 @@ import type {
   WorkerChannelPlaybackStepPayload,
   WorkerChannelPlaybackStepRequest,
 } from './worker-channel.types';
-import { requestWorkerResponse } from './worker-channel.request.service';
+import {
+  createWorkerChannelResponseError,
+  resolveWorkerChannelRuntimeError,
+} from './worker-channel.errors';
+
+type PendingPlaybackRequest = {
+  reject: (error: Error) => void;
+  resolve: (payload: WorkerChannelPlaybackStepPayload) => void;
+};
+
+type PlaybackWorkerChannelState = {
+  pendingPlaybackRequest: PendingPlaybackRequest | null;
+};
+
+const playbackWorkerChannelStateByWorker = new WeakMap<
+  Worker,
+  PlaybackWorkerChannelState
+>();
 
 /**
  * Requests one playback batch step from the worker channel.
@@ -16,19 +33,92 @@ export function requestWorkerPlaybackStep(
   evolutionWorker: Worker,
   playbackStepRequest: WorkerChannelPlaybackStepRequest,
 ): Promise<WorkerChannelPlaybackStepPayload> {
-  return requestWorkerResponse({
-    evolutionWorker,
-    requestMessage: {
+  const playbackWorkerChannelState =
+    resolvePlaybackWorkerChannelState(evolutionWorker);
+
+  return new Promise((resolve, reject) => {
+    if (playbackWorkerChannelState.pendingPlaybackRequest) {
+      reject(
+        new Error(
+          'Concurrent playback-step requests are not supported by the playback worker channel.',
+        ),
+      );
+      return;
+    }
+
+    playbackWorkerChannelState.pendingPlaybackRequest = {
+      reject,
+      resolve,
+    };
+
+    evolutionWorker.postMessage({
       type: 'request-playback-step',
       payload: playbackStepRequest,
-    },
-    resolveResponsePayload: (
-      workerMessage: WorkerChannelMessage,
-    ): WorkerChannelPlaybackStepPayload | undefined => {
-      if (workerMessage.type === 'playback-step') {
-        return workerMessage.payload;
-      }
-      return undefined;
-    },
+    });
   });
+}
+
+/**
+ * Resolves persistent playback worker-channel state for one worker instance.
+ *
+ * @param evolutionWorker - Worker that owns playback simulation state.
+ * @returns Persistent playback worker-channel state for the worker.
+ */
+function resolvePlaybackWorkerChannelState(
+  evolutionWorker: Worker,
+): PlaybackWorkerChannelState {
+  const cachedState = playbackWorkerChannelStateByWorker.get(evolutionWorker);
+  if (cachedState) {
+    return cachedState;
+  }
+
+  const playbackWorkerChannelState: PlaybackWorkerChannelState = {
+    pendingPlaybackRequest: null,
+  };
+
+  evolutionWorker.addEventListener(
+    'message',
+    ((event: MessageEvent<WorkerChannelMessage>): void => {
+      const pendingPlaybackRequest =
+        playbackWorkerChannelState.pendingPlaybackRequest;
+      if (!pendingPlaybackRequest) {
+        return;
+      }
+
+      if (event.data.type === 'playback-step') {
+        playbackWorkerChannelState.pendingPlaybackRequest = null;
+        pendingPlaybackRequest.resolve(event.data.payload);
+        return;
+      }
+
+      if (event.data.type === 'error') {
+        playbackWorkerChannelState.pendingPlaybackRequest = null;
+        pendingPlaybackRequest.reject(
+          createWorkerChannelResponseError(event.data.payload.message),
+        );
+      }
+    }) as EventListener,
+  );
+
+  evolutionWorker.addEventListener(
+    'error',
+    ((event: ErrorEvent): void => {
+      const pendingPlaybackRequest =
+        playbackWorkerChannelState.pendingPlaybackRequest;
+      if (!pendingPlaybackRequest) {
+        return;
+      }
+
+      playbackWorkerChannelState.pendingPlaybackRequest = null;
+      pendingPlaybackRequest.reject(
+        resolveWorkerChannelRuntimeError(event.error, event.message),
+      );
+    }) as EventListener,
+  );
+
+  playbackWorkerChannelStateByWorker.set(
+    evolutionWorker,
+    playbackWorkerChannelState,
+  );
+  return playbackWorkerChannelState;
 }

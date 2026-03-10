@@ -580,6 +580,30 @@ Parameters:
 
 Returns: Maximum frames survived by any bird.
 
+### syncPlaybackSnapshotBirds
+
+`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
+
+Synchronizes packed bird snapshot fields into the reusable render-state bird array.
+
+Parameters:
+- `renderState` - - Mutable render state mirror used by the browser.
+- `snapshot` - - Packed worker playback snapshot for the current render tick.
+
+Returns: Nothing.
+
+### syncPlaybackSnapshotPipes
+
+`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
+
+Synchronizes packed pipe snapshot fields into the reusable render-state pipe array.
+
+Parameters:
+- `renderState` - - Mutable render state mirror used by the browser.
+- `snapshot` - - Packed worker playback snapshot for the current render tick.
+
+Returns: Nothing.
+
 ## browser-entry/playback/playback.starfield.utils.ts
 
 ### createSeededRandom

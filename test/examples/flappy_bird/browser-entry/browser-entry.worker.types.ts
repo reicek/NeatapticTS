@@ -11,11 +11,25 @@ export interface PopulationPipe {
 
 /** Renderable bird state snapshot emitted by the playback worker. */
 export interface PopulationBird {
-  color: string;
   yPx: number;
   pipesPassed: number;
   framesSurvived: number;
   done: boolean;
+}
+
+/** Packed typed-array payload for playback pipe snapshot transport. */
+export interface PackedPlaybackPipeSnapshot {
+  xPositionsPx: Float32Array;
+  gapCenterYPositionsPx: Float32Array;
+  gapSizesPx: Float32Array;
+}
+
+/** Packed typed-array payload for playback bird snapshot transport. */
+export interface PackedPlaybackBirdSnapshot {
+  yPositionsPx: Float32Array;
+  pipesPassed: Uint32Array;
+  framesSurvived: Uint32Array;
+  doneFlags: Uint8Array;
 }
 
 /** Worker payload describing evolved generation summary values. */
@@ -41,11 +55,14 @@ export interface EvolutionWorkerErrorMessage {
 
 /** Per-frame snapshot received from the worker playback channel. */
 export interface EvolutionPlaybackStepSnapshot {
+  format: 'packed-v1';
   frameIndex: number;
   visibleWorldWidthPx: number;
   visibleWorldHeightPx: number;
-  pipes: PopulationPipe[];
-  birds: PopulationBird[];
+  pipeCount: number;
+  birdCount: number;
+  pipes: PackedPlaybackPipeSnapshot;
+  birds: PackedPlaybackBirdSnapshot;
 }
 
 /** Worker message carrying one playback step and aggregate markers. */

@@ -24,7 +24,10 @@ export interface WorkerProtocolHandlers {
   ) => void;
   hasPopulation: () => boolean;
   hasPlaybackState: () => boolean;
-  postWorkerMessage: (workerMessage: WorkerResponseMessage) => void;
+  postWorkerMessage: (
+    workerMessage: WorkerResponseMessage,
+    transferList?: Transferable[],
+  ) => void;
 }
 
 /**

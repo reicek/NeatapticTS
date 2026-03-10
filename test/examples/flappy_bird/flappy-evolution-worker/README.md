@@ -30,6 +30,14 @@ Structured features used by heuristic generation-0 teacher policy.
 
 Worker init request message.
 
+### WorkerPackedPlaybackBirdSnapshot
+
+Packed typed-array payload for playback bird snapshot transport.
+
+### WorkerPackedPlaybackPipeSnapshot
+
+Packed typed-array payload for playback pipe snapshot transport.
+
 ### WorkerPlaybackFrameSnapshot
 
 Full frame snapshot payload posted to host.
@@ -178,12 +186,13 @@ Returns: Promise resolved when runtime setup is complete.
 
 ### postWorkerMessage
 
-`(workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerResponseMessage) => void`
+`(workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerResponseMessage, transferList: Transferable[] | undefined) => void`
 
 Posts a typed message from worker to host.
 
 Parameters:
 - `workerMessage` - - Outbound worker response payload.
+- `transferList` - - Optional transferable buffers moved with the payload.
 
 Returns: Nothing.
 
@@ -294,7 +303,7 @@ Returns: Playback runtime state and deterministic RNG.
 
 ### processWorkerPlaybackStep
 
-`(options: { playbackStepPayload: { simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng; currentPopulation: import("src/architecture/network").default[]; neatRuntime: import("src/neat").default | undefined; stepPopulationFrame: (renderState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState, rng: import("test/examples/flappy_bird/rng").FlappyRng, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot; postWorkerMessage: (workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerResponseMessage) => void; }) => { currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState | undefined; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng | undefined; currentPopulation: import("src/architecture/network").default[]; playbackWinnerIndex: number; }`
+`(options: { playbackStepPayload: { simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng; currentPopulation: import("src/architecture/network").default[]; neatRuntime: import("src/neat").default | undefined; stepPopulationFrame: (renderState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState, rng: import("test/examples/flappy_bird/rng").FlappyRng, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; }) => { currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState | undefined; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng | undefined; currentPopulation: import("src/architecture/network").default[]; playbackWinnerIndex: number; }`
 
 Processes one worker playback-step request including completion/finalization logic.
 
@@ -565,6 +574,17 @@ Parameters:
 - `playbackState` - - Current mutable playback state.
 
 Returns: Immutable frame snapshot for the host.
+
+### resolveWorkerPlaybackSnapshotTransferList
+
+`(snapshot: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot) => Transferable[]`
+
+Resolves transferable buffers for one packed playback snapshot.
+
+Parameters:
+- `snapshot` - - Packed playback snapshot posted back to the browser host.
+
+Returns: Transfer list used to move typed-array buffers without copying.
 
 ## flappy-evolution-worker/flappy-evolution-worker.simulation.utils.ts
 

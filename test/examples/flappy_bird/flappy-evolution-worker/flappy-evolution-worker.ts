@@ -24,7 +24,10 @@ import {
   beginWorkerPlaybackSession,
   processWorkerPlaybackStep,
 } from './flappy-evolution-worker.playback.service';
-import { createWorkerPlaybackSnapshot } from './flappy-evolution-worker.snapshot.utils';
+import {
+  createWorkerPlaybackSnapshot,
+  resolveWorkerPlaybackSnapshotTransferList,
+} from './flappy-evolution-worker.snapshot.utils';
 import { createWorkerPopulationRenderState } from './flappy-evolution-worker.simulation.utils';
 import { stepWorkerPopulationFrame } from './flappy-evolution-worker.simulation.frame.service';
 import { warmStartWorkerGenerationZeroIfNeeded } from './flappy-evolution-worker.warm-start.service';
@@ -302,6 +305,8 @@ function processWorkerPlaybackStepRequest(
     neatRuntime: workerMutableRuntimeState.neatRuntime,
     stepPopulationFrame: stepWorkerPopulationFrame,
     createPlaybackSnapshot: createWorkerPlaybackSnapshot,
+    resolvePlaybackSnapshotTransferList:
+      resolveWorkerPlaybackSnapshotTransferList,
     postWorkerMessage,
   });
 
@@ -320,8 +325,12 @@ function processWorkerPlaybackStepRequest(
  * Posts a typed message from worker to host.
  *
  * @param workerMessage - Outbound worker response payload.
+ * @param transferList - Optional transferable buffers moved with the payload.
  * @returns Nothing.
  */
-function postWorkerMessage(workerMessage: WorkerResponseMessage): void {
-  self.postMessage(workerMessage);
+function postWorkerMessage(
+  workerMessage: WorkerResponseMessage,
+  transferList?: Transferable[],
+): void {
+  self.postMessage(workerMessage, transferList ?? []);
 }

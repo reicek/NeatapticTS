@@ -118,14 +118,12 @@ function createRenderState(overrides?: {
 }
 
 function createBird(overrides?: {
-  color?: string;
   yPx?: number;
   pipesPassed?: number;
   framesSurvived?: number;
   done?: boolean;
 }): PopulationRenderState['birds'][number] {
   return {
-    color: overrides?.color ?? '#ffffff',
     yPx: overrides?.yPx ?? 32,
     pipesPassed: overrides?.pipesPassed ?? 0,
     framesSurvived: overrides?.framesSurvived ?? 0,

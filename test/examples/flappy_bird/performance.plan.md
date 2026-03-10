@@ -340,6 +340,12 @@ npm run trace:analyze -- test/examples/flappy_bird/Trace-20260309T191949.json --
 
 Recommended for follow-up captures:
 
+Current batching note:
+
+- defer the next fresh trace until the current optimization batch is complete,
+	 then use that capture to plan the next round instead of re-profiling after
+	 each remaining sub-step in isolation.
+
 1. capture a new trace,
 2. compare dropped frames,
 3. compare renderer main-thread totals,
@@ -434,7 +440,7 @@ Risk:
 - moderate, because this touches core network semantics and must not change
 	evolutionary correctness.
 
-### Priority 2: Cut main-thread render cost by simplifying trails first [WIP]
+### Priority 2: Cut main-thread render cost by simplifying trails first [DONE]
 
 Goal:
 
@@ -458,7 +464,7 @@ Risk:
 
 - low, because this is visual-only.
 
-### Priority 3: Cache the repeating ground-grid loop and keep pulses vector-sharp [WIP]
+### Priority 3: Cache the repeating ground-grid loop and keep pulses vector-sharp [DONE]
 
 Goal:
 
@@ -491,7 +497,7 @@ Risk:
 - low to moderate, because the background is isolated and decorative but the
 	 cache keys must stay aligned with viewport size and wrapped scroll.
 
-### Priority 4: Reduce bird rendering complexity for non-champion birds [WIP]
+### Priority 4: Reduce bird rendering complexity for non-champion birds [DONE]
 
 Goal:
 
@@ -515,7 +521,7 @@ Risk:
 
 - low, because this is visual-only.
 
-### Priority 5: Make worker snapshot transport cheaper
+### Priority 5: Make worker snapshot transport cheaper [WIP]
 
 Goal:
 
@@ -523,10 +529,14 @@ Goal:
 
 Actions:
 
-1. Replace array-of-objects snapshots with typed-array snapshots.
-2. Use transferable buffers where practical.
-3. Consider a stable shared buffer protocol for fixed-layout bird and pipe data.
-4. Avoid sending fields that the renderer can derive locally.
+1. Replace the playback array-of-objects snapshot with a packed typed-array
+	 snapshot so worker posts move scalar fields in contiguous buffers.
+2. Transfer those packed buffers from the worker to the browser when posting
+	 playback-step messages so the hot path avoids unnecessary snapshot copies.
+3. Decode packed snapshot data into reusable browser-side render objects so the
+	 renderer contract stays stable without paying fresh per-frame object churn.
+4. Keep removing fields the renderer can derive locally before widening the
+	 protocol further toward a stable shared-buffer layout.
 
 Expected impact:
 
@@ -538,7 +548,7 @@ Risk:
 
 - moderate, because it changes protocol shape and renderer decoding logic.
 
-### Priority 6: Replace request-per-step listener churn with a persistent playback channel
+### Priority 6: Replace request-per-step listener churn with a persistent playback channel [WIP]
 
 Goal:
 
@@ -568,8 +578,9 @@ To maximize return while reducing risk, implement in this order:
 2. Simplify or batch trail rendering.
 3. Cache the repeating ground-grid loop.
 4. Reduce non-champion bird visual complexity.
-5. Re-profile.
-6. Only then redesign snapshot transport and playback messaging if still needed.
+5. Make worker snapshot transport cheaper.
+6. Replace request-per-step listener churn with a persistent playback channel.
+7. Re-profile the full optimization batch and plan the next round from that capture.
 
 ## Validation Plan
 
