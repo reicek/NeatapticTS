@@ -133,7 +133,7 @@ Returns: Nothing.
 
 ### drawGroundGridPulse
 
-`(context: CanvasRenderingContext2D, pulse: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulse | null, fillColor: string, glowColor: string) => void`
+`(context: CanvasRenderingContext2D, pulse: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridPulse | null, fillColor: string) => void`
 
 Draws one pulse square above the grid lines and below gameplay entities.
 
@@ -141,7 +141,6 @@ Parameters:
 - `context` - - Canvas 2D drawing context.
 - `pulse` - - Visible pulse square for the current frame.
 - `fillColor` - - Core neon fill color.
-- `glowColor` - - Outer glow color used behind the pulse.
 
 Returns: Nothing.
 
@@ -159,7 +158,7 @@ Returns: Nothing.
 
 ### drawGroundGridSegmentBatches
 
-`(context: CanvasRenderingContext2D, batches: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridSegmentBatch[], lineColor: string, glowColor: string) => void`
+`(context: CanvasRenderingContext2D, batches: readonly import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridSegmentBatch[], lineColor: string) => void`
 
 Draws one ordered collection of neon segment batches.
 
@@ -167,7 +166,6 @@ Parameters:
 - `context` - - Canvas 2D drawing context.
 - `batches` - - Ordered line-segment batches to render.
 - `lineColor` - - Core neon stroke color.
-- `glowColor` - - Outer glow color used for bloom.
 
 Returns: Nothing.
 
@@ -225,12 +223,6 @@ Returns: Nothing.
 ### FLAPPY_GROUND_GRID_MIN_VERTICAL_LINE_COUNT
 
 ### FLAPPY_GROUND_GRID_PULSE_ALPHA
-
-### FLAPPY_GROUND_GRID_PULSE_GLOW_ALPHA_RATIO
-
-### FLAPPY_GROUND_GRID_PULSE_GLOW_BLUR_PX
-
-### FLAPPY_GROUND_GRID_PULSE_GLOW_SIZE_MULTIPLIER
 
 ### FLAPPY_GROUND_GRID_PULSE_INTERVAL_MS
 

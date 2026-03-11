@@ -1,23 +1,8 @@
 import {
-  FLAPPY_BIRD_AURA_ALPHA,
-  FLAPPY_BIRD_AURA_BLUR_MULTIPLIER,
-  FLAPPY_BIRD_AURA_EXPAND_PX,
   FLAPPY_BIRD_BODY_GLOW_BLUR_PX,
   FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX,
-  FLAPPY_BIRD_CHAMPION_RED_GLOW_ALPHA,
-  FLAPPY_BIRD_CHAMPION_RED_GLOW_EXPAND_PX,
-  FLAPPY_BIRD_CHAMPION_SHINE_FILL_STYLE,
-  FLAPPY_BIRD_CHAMPION_SHINE_GLOW_COLOR,
   FLAPPY_BIRD_RADIUS_PX,
-  FLAPPY_BIRD_SHINE_FILL_STYLE,
-  FLAPPY_BIRD_SHINE_INSET_RATIO,
-  FLAPPY_BIRD_SHINE_SIZE_RATIO,
-  FLAPPY_BIRD_WHITE_SHINE_GLOW_BLUR_PX,
-  FLAPPY_BIRD_WHITE_SHINE_GLOW_COLOR,
   FLAPPY_BIRD_X_PX,
-  FLAPPY_LEADER_RING_GLOW_BLUR_PX,
-  FLAPPY_LEADER_RING_LINE_WIDTH_PX,
-  FLAPPY_LEADER_RING_RADIUS_OFFSET_PX,
   FLAPPY_NEON_PALETTE,
   FLAPPY_NON_CHAMPION_BODY_GLOW_BLUR_PX,
   FLAPPY_NON_CHAMPION_OPACITY,
@@ -58,20 +43,8 @@ export function renderPlaybackBird(
   const birdGeometry = resolvePlaybackBirdGeometry(birdYPx);
   const birdRenderStyle = resolveBirdRenderStyle(birdIndex, championBirdIndex);
 
-  // Step 2: Draw champion-only glow passes behind the bird body.
-  drawPlaybackBirdChampionAura(context, birdGeometry, birdRenderStyle);
-  drawPlaybackBirdChampionGlowPlate(context, birdGeometry, birdRenderStyle);
-
-  // Step 3: Draw the bird body for every active bird.
+  // Step 2: Draw one body pass for every active bird.
   drawPlaybackBirdBody(context, birdGeometry, birdRenderStyle);
-
-  // Step 4: Keep expensive highlight passes for the champion only.
-  drawPlaybackBirdShine(context, birdGeometry, birdRenderStyle.isChampionBird);
-  drawPlaybackBirdLeaderRing(
-    context,
-    birdGeometry,
-    birdRenderStyle.isChampionBird,
-  );
 }
 
 /**
@@ -249,80 +222,6 @@ function resolvePlaybackBirdGeometry(birdYPx: number): PlaybackBirdGeometry {
 }
 
 /**
- * Draws the soft champion aura plate behind the bird body.
- *
- * @param context - Canvas 2D drawing context.
- * @param birdGeometry - Pixel-aligned bird geometry.
- * @param birdRenderStyle - Resolved bird style payload.
- * @returns Nothing.
- */
-function drawPlaybackBirdChampionAura(
-  context: CanvasRenderingContext2D,
-  birdGeometry: PlaybackBirdGeometry,
-  birdRenderStyle: ReturnType<typeof resolveBirdRenderStyle>,
-): void {
-  // Step 1: Skip the aura pass for non-champion birds.
-  if (!birdRenderStyle.isChampionBird) {
-    return;
-  }
-
-  // Step 2: Draw the additive aura plate behind the champion body.
-  const auraExpandPx = Math.round(FLAPPY_BIRD_AURA_EXPAND_PX);
-  const previousCompositeOperation = context.globalCompositeOperation;
-  context.globalCompositeOperation = 'lighter';
-  context.globalAlpha = birdRenderStyle.birdOpacity * FLAPPY_BIRD_AURA_ALPHA;
-  context.fillStyle = birdRenderStyle.birdRenderColor;
-  context.shadowColor = birdRenderStyle.birdRenderColor;
-  context.shadowBlur = Math.round(
-    FLAPPY_BIRD_BODY_GLOW_BLUR_PX * FLAPPY_BIRD_AURA_BLUR_MULTIPLIER,
-  );
-  context.fillRect(
-    birdGeometry.birdLeftPx - auraExpandPx,
-    birdGeometry.birdTopPx - auraExpandPx,
-    birdGeometry.birdSideLengthPx + auraExpandPx * 2,
-    birdGeometry.birdSideLengthPx + auraExpandPx * 2,
-  );
-  context.shadowBlur = 0;
-  context.shadowColor = 'transparent';
-  context.globalCompositeOperation = previousCompositeOperation;
-}
-
-/**
- * Draws the champion-only red glow plate beneath the bird body.
- *
- * @param context - Canvas 2D drawing context.
- * @param birdGeometry - Pixel-aligned bird geometry.
- * @param birdRenderStyle - Resolved bird style payload.
- * @returns Nothing.
- */
-function drawPlaybackBirdChampionGlowPlate(
-  context: CanvasRenderingContext2D,
-  birdGeometry: PlaybackBirdGeometry,
-  birdRenderStyle: ReturnType<typeof resolveBirdRenderStyle>,
-): void {
-  // Step 1: Skip the red glow plate for non-champion birds.
-  if (!birdRenderStyle.isChampionBird) {
-    return;
-  }
-
-  // Step 2: Draw the expanded red glow plate behind the champion body.
-  const expandedGlowInsetPx = Math.round(
-    FLAPPY_BIRD_CHAMPION_RED_GLOW_EXPAND_PX,
-  );
-  context.globalAlpha =
-    birdRenderStyle.birdOpacity * FLAPPY_BIRD_CHAMPION_RED_GLOW_ALPHA;
-  context.fillStyle = FLAPPY_NEON_PALETTE.championBird;
-  context.shadowColor = FLAPPY_NEON_PALETTE.championBird;
-  context.shadowBlur =
-    FLAPPY_BIRD_BODY_GLOW_BLUR_PX + FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX;
-  context.fillRect(
-    birdGeometry.birdLeftPx - expandedGlowInsetPx,
-    birdGeometry.birdTopPx - expandedGlowInsetPx,
-    birdGeometry.birdSideLengthPx + expandedGlowInsetPx * 2,
-    birdGeometry.birdSideLengthPx + expandedGlowInsetPx * 2,
-  );
-}
-
 /**
  * Draws the square bird body with its base neon glow.
  *
@@ -350,46 +249,6 @@ function drawPlaybackBirdBody(
 }
 
 /**
- * Draws the reflective shine highlight for one bird body.
- *
- * @param context - Canvas 2D drawing context.
- * @param birdGeometry - Pixel-aligned bird geometry.
- * @param isChampionBird - Whether the current bird is the champion.
- * @returns Nothing.
- */
-function drawPlaybackBirdShine(
-  context: CanvasRenderingContext2D,
-  birdGeometry: PlaybackBirdGeometry,
-  isChampionBird: boolean,
-): void {
-  // Step 1: Skip the shine pass for simplified non-champion birds.
-  if (!isChampionBird) {
-    return;
-  }
-
-  // Step 2: Resolve shine geometry inside the square bird body.
-  const shineInsetPx =
-    birdGeometry.birdSideLengthPx * FLAPPY_BIRD_SHINE_INSET_RATIO;
-  const shineSideLengthPx = Math.max(
-    1,
-    birdGeometry.birdSideLengthPx * FLAPPY_BIRD_SHINE_SIZE_RATIO,
-  );
-
-  // Step 3: Draw the champion shine highlight.
-  context.fillStyle = FLAPPY_BIRD_CHAMPION_SHINE_FILL_STYLE;
-  context.shadowColor = FLAPPY_BIRD_CHAMPION_SHINE_GLOW_COLOR;
-  context.shadowBlur = FLAPPY_BIRD_WHITE_SHINE_GLOW_BLUR_PX;
-  context.fillRect(
-    Math.round(birdGeometry.birdLeftPx + shineInsetPx),
-    Math.round(birdGeometry.birdTopPx + shineInsetPx),
-    Math.round(shineSideLengthPx),
-    Math.round(shineSideLengthPx),
-  );
-  context.shadowBlur = 0;
-  context.shadowColor = 'transparent';
-}
-
-/**
  * Resolves the body glow blur for one bird render pass.
  *
  * @param birdRenderStyle - Resolved bird style payload.
@@ -405,40 +264,6 @@ function resolvePlaybackBirdBodyGlowBlur(
   return (
     FLAPPY_BIRD_BODY_GLOW_BLUR_PX + FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX
   );
-}
-
-/**
- * Draws the leader ring around the champion bird.
- *
- * @param context - Canvas 2D drawing context.
- * @param birdGeometry - Pixel-aligned bird geometry.
- * @param isChampionBird - Whether the current bird is the champion.
- * @returns Nothing.
- */
-function drawPlaybackBirdLeaderRing(
-  context: CanvasRenderingContext2D,
-  birdGeometry: PlaybackBirdGeometry,
-  isChampionBird: boolean,
-): void {
-  // Step 1: Skip the leader ring for non-champion birds.
-  if (!isChampionBird) {
-    return;
-  }
-
-  // Step 2: Draw the glowing leader ring around the champion body.
-  const leaderRingInsetPx = Math.round(FLAPPY_LEADER_RING_RADIUS_OFFSET_PX);
-  context.strokeStyle = FLAPPY_NEON_PALETTE.leaderRing;
-  context.lineWidth = FLAPPY_LEADER_RING_LINE_WIDTH_PX;
-  context.shadowColor = FLAPPY_NEON_PALETTE.leaderRing;
-  context.shadowBlur = FLAPPY_LEADER_RING_GLOW_BLUR_PX;
-  context.strokeRect(
-    birdGeometry.birdLeftPx - leaderRingInsetPx,
-    birdGeometry.birdTopPx - leaderRingInsetPx,
-    birdGeometry.birdSideLengthPx + leaderRingInsetPx * 2,
-    birdGeometry.birdSideLengthPx + leaderRingInsetPx * 2,
-  );
-  context.shadowBlur = 0;
-  context.shadowColor = 'transparent';
 }
 
 /**

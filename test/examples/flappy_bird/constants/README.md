@@ -358,6 +358,8 @@ existing imports continue to work while callers migrate gradually.
 
 ### FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX
 
+### FLAPPY_PIPE_ENTRY_RIM_INSET_PX
+
 ### FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX
 
 ### FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX
@@ -1008,6 +1010,8 @@ simulation when building normalized feature vectors.
 ### FLAPPY_NORMALIZATION_EPSILON
 
 ## constants/constants.pipe-render.ts
+
+### FLAPPY_PIPE_ENTRY_RIM_INSET_PX
 
 ### FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX
 

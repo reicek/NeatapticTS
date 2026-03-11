@@ -1,11 +1,8 @@
 import {
   FLAPPY_GROUND_GRID_FOG_ALPHA,
   FLAPPY_GROUND_GRID_FOG_HEIGHT_RATIO,
-  FLAPPY_GROUND_GRID_PULSE_GLOW_ALPHA_RATIO,
-  FLAPPY_GROUND_GRID_PULSE_GLOW_SIZE_MULTIPLIER,
 } from './playback.background.ground-grid.constants';
 import {
-  FLAPPY_BACKGROUND_COMPOSITE_LIGHTER,
   FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER,
 } from '../playback.background.constants';
 import {
@@ -49,19 +46,16 @@ export function drawPlaybackGroundGrid(
     context,
     geometry.verticalLineBatches,
     resolvedScene.style.lineColor,
-    resolvedScene.style.glowColor,
   );
   drawGroundGridSegmentBatches(
     context,
     geometry.horizontalLineBatches,
     resolvedScene.style.lineColor,
-    resolvedScene.style.glowColor,
   );
   drawGroundGridPulse(
     context,
     geometry.pulse,
     resolvedScene.style.pulseFillColor,
-    resolvedScene.style.pulseGlowColor,
   );
   context.restore();
 }
@@ -108,18 +102,15 @@ export function drawGroundGridFog(
  * @param context - Canvas 2D drawing context.
  * @param batches - Ordered line-segment batches to render.
  * @param lineColor - Core neon stroke color.
- * @param glowColor - Outer glow color used for bloom.
  * @returns Nothing.
  */
 export function drawGroundGridSegmentBatches(
   context: CanvasRenderingContext2D,
   batches: readonly PlaybackGroundGridSegmentBatch[],
   lineColor: string,
-  glowColor: string,
 ): void {
   context.save();
   context.strokeStyle = lineColor;
-  context.shadowColor = glowColor;
 
   for (const batch of batches) {
     drawGroundGridSegmentBatch(context, batch);
@@ -139,13 +130,8 @@ export function drawGroundGridSegmentBatch(
   context: CanvasRenderingContext2D,
   batch: PlaybackGroundGridSegmentBatch,
 ): void {
-  context.shadowBlur = batch.blurPx;
   context.globalAlpha = batch.alpha;
   context.lineWidth = batch.thicknessPx;
-  strokePlaybackGroundGridBatch(context, batch);
-
-  context.shadowBlur = 0;
-  context.globalAlpha = Math.min(1, batch.alpha + 0.18);
   strokePlaybackGroundGridBatch(context, batch);
 }
 
@@ -179,37 +165,22 @@ function strokePlaybackGroundGridBatch(
  * @param context - Canvas 2D drawing context.
  * @param pulse - Visible pulse square for the current frame.
  * @param fillColor - Core neon fill color.
- * @param glowColor - Outer glow color used behind the pulse.
  * @returns Nothing.
  */
 export function drawGroundGridPulse(
   context: CanvasRenderingContext2D,
   pulse: PlaybackGroundGridPulse | null,
   fillColor: string,
-  glowColor: string,
 ): void {
   if (!pulse) {
     return;
   }
 
   const halfSizePx = pulse.sizePx * 0.5;
-  const glowSizePx =
-    pulse.sizePx * FLAPPY_GROUND_GRID_PULSE_GLOW_SIZE_MULTIPLIER;
-  const glowHalfSizePx = glowSizePx * 0.5;
 
   context.save();
-  context.globalCompositeOperation = FLAPPY_BACKGROUND_COMPOSITE_LIGHTER;
+  context.globalCompositeOperation = FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER;
   context.fillStyle = fillColor;
-  context.shadowColor = glowColor;
-  context.shadowBlur = pulse.glowBlurPx;
-  context.globalAlpha = pulse.alpha * FLAPPY_GROUND_GRID_PULSE_GLOW_ALPHA_RATIO;
-  context.fillRect(
-    pulse.centerXPx - glowHalfSizePx,
-    pulse.centerYPx - glowHalfSizePx,
-    glowSizePx,
-    glowSizePx,
-  );
-
   context.globalAlpha = pulse.alpha;
   context.fillRect(
     pulse.centerXPx - halfSizePx,

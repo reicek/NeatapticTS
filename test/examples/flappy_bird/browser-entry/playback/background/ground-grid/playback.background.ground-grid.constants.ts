@@ -25,9 +25,6 @@ export const FLAPPY_GROUND_GRID_PULSE_INTERVAL_MS = 3000;
 /** Lifetime of one pulse as it travels across its chosen line (milliseconds). */
 export const FLAPPY_GROUND_GRID_PULSE_LIFETIME_MS = 1100;
 
-/** Glow blur applied behind each visible pulse square (pixels). */
-export const FLAPPY_GROUND_GRID_PULSE_GLOW_BLUR_PX = 8;
-
 /** Peak opacity used by visible pulse squares. */
 export const FLAPPY_GROUND_GRID_PULSE_ALPHA = 0.92;
 
@@ -51,12 +48,6 @@ export const FLAPPY_GROUND_GRID_PULSE_PREFERRED_HORIZONTAL_START_RATIO = 0.4;
 
 /** Horizontal inset that keeps vertical pulse picks away from clipped edges. */
 export const FLAPPY_GROUND_GRID_PULSE_VISIBLE_VIEWPORT_INSET_PX = 24;
-
-/** Size multiplier used for the soft glow halo behind one pulse square. */
-export const FLAPPY_GROUND_GRID_PULSE_GLOW_SIZE_MULTIPLIER = 2.4;
-
-/** Alpha ratio used for the soft glow halo behind one pulse square. */
-export const FLAPPY_GROUND_GRID_PULSE_GLOW_ALPHA_RATIO = 0.45;
 
 /** Normalization divisor used for deterministic pulse hash generation. */
 export const FLAPPY_GROUND_GRID_UNSIGNED_NORMALIZATION_DIVISOR = 0x1_0000_0000;
@@ -100,8 +91,6 @@ export const FLAPPY_GROUND_GRID_FOG_ALPHA = 0.24;
 export const FLAPPY_BACKGROUND_GROUND_GRID_STYLE: PlaybackBackgroundGroundGridStyle =
   Object.freeze({
     lineColor: FLAPPY_NEON_PALETTE.groundGridLine,
-    glowColor: FLAPPY_NEON_PALETTE.groundGridGlow,
     fogColor: FLAPPY_NEON_PALETTE.groundGridFog,
     pulseFillColor: FLAPPY_NEON_PALETTE.groundGridPulseFill,
-    pulseGlowColor: FLAPPY_NEON_PALETTE.groundGridPulseGlow,
   });

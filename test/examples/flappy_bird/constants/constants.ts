@@ -41,6 +41,7 @@ export * from './constants.stats';
 export * from './constants.network-view';
 export * from './constants.birds';
 export {
+  FLAPPY_PIPE_ENTRY_RIM_INSET_PX,
   FLAPPY_PIPE_OUTLINE_GLOW_ALPHA,
   FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX,
   FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR,

@@ -8,7 +8,6 @@ import {
   resolveCachedPlaybackTileCoverageCount,
 } from './playback.background.cache.services';
 import {
-  FLAPPY_BACKGROUND_COMPOSITE_LIGHTER,
   FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER,
   FLAPPY_BACKGROUND_TILE_ROW_BUFFER_COUNT,
   FLAPPY_BACKGROUND_TILE_ROW_START_INDEX,
@@ -126,7 +125,7 @@ export function drawPlaybackBackgroundSky(
     sceneContext.skyHeightPx,
   );
   context.clip();
-  context.globalCompositeOperation = FLAPPY_BACKGROUND_COMPOSITE_LIGHTER;
+  context.globalCompositeOperation = FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER;
 
   // Step 2: Draw each cached starfield layer with its own parallax offset.
   const starfieldTiles = resolveStarfieldTiles(sceneContext.skyHeightPx);

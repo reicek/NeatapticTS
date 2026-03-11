@@ -361,9 +361,9 @@ Returns: Canvas image source containing the rendered star strip.
 
 ### initializeStarTileContext
 
-`(options: { tileContext: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D; canvas: HTMLCanvasElement | OffscreenCanvas; blurPx: number; }) => void`
+`(options: { tileContext: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D; canvas: HTMLCanvasElement | OffscreenCanvas; }) => void`
 
-Clears the canvas and applies the glow settings shared by all rendered stars.
+Clears the canvas and applies the neutral settings shared by all rendered stars.
 
 Parameters:
 - `options` - - Context initialization dependencies.

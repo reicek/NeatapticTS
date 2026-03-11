@@ -30,6 +30,9 @@ export const FLAPPY_PIPE_OUTLINE_GLOW_ALPHA = 0.68;
 /** Stroke width used for the soft pipe glow stroke pass (pixels). */
 export const FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX = 8;
 
+/** Inset used for the pipe entrance rim line measured from the gap-facing edge. */
+export const FLAPPY_PIPE_ENTRY_RIM_INSET_PX = 10;
+
 /**
  * Cyan neon glow used for pipe outline shadow.
  *

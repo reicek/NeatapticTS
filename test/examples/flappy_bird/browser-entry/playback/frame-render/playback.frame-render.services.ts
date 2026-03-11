@@ -2,7 +2,6 @@ import {
   FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_BIRD_VIEWPORT_X_RATIO,
   FLAPPY_BIRD_X_PX,
-  FLAPPY_NEON_PALETTE,
   FLAPPY_PIPE_SPEED_PX_PER_FRAME,
   FLAPPY_PIPE_WIDTH_PX,
 } from '../../../constants/constants';
@@ -165,16 +164,8 @@ export function renderPlaybackFramePipes(
     const gapTopPx = pipe.gapCenterYPx - gapHalfPx;
     const gapBottomPx = pipe.gapCenterYPx + gapHalfPx;
 
-    context.fillStyle = FLAPPY_NEON_PALETTE.pipeFill;
-    context.fillRect(pipe.xPx, 0, FLAPPY_PIPE_WIDTH_PX, gapTopPx);
     drawPipeNeonOutline(context, pipe.xPx, 0, FLAPPY_PIPE_WIDTH_PX, gapTopPx);
 
-    context.fillRect(
-      pipe.xPx,
-      gapBottomPx,
-      FLAPPY_PIPE_WIDTH_PX,
-      sceneContext.visibleWorldHeightPx - gapBottomPx,
-    );
     drawPipeNeonOutline(
       context,
       pipe.xPx,

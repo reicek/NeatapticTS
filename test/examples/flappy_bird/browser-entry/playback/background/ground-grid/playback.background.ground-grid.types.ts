@@ -39,10 +39,8 @@ export type PlaybackBackgroundGroundGridSceneContext = {
  */
 export type PlaybackBackgroundGroundGridStyle = {
   lineColor: string;
-  glowColor: string;
   fogColor: string;
   pulseFillColor: string;
-  pulseGlowColor: string;
 };
 
 /** Travel orientation used by lightweight pulse overlays. */
@@ -104,7 +102,6 @@ export type PlaybackGroundGridPulse = {
   centerYPx: number;
   sizePx: number;
   alpha: number;
-  glowBlurPx: number;
 };
 
 /**

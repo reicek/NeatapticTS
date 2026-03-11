@@ -155,64 +155,13 @@ Returns: Viewport, camera, and edge-bounds state for the frame.
 
 `(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
 
+/**
 Draws the square bird body with its base neon glow.
 
 Parameters:
 - `context` - - Canvas 2D drawing context.
 - `birdGeometry` - - Pixel-aligned bird geometry.
 - `birdRenderStyle` - - Resolved bird style payload.
-
-Returns: Nothing.
-
-### drawPlaybackBirdChampionAura
-
-`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
-
-Draws the soft champion aura plate behind the bird body.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdGeometry` - - Pixel-aligned bird geometry.
-- `birdRenderStyle` - - Resolved bird style payload.
-
-Returns: Nothing.
-
-### drawPlaybackBirdChampionGlowPlate
-
-`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
-
-Draws the champion-only red glow plate beneath the bird body.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdGeometry` - - Pixel-aligned bird geometry.
-- `birdRenderStyle` - - Resolved bird style payload.
-
-Returns: Nothing.
-
-### drawPlaybackBirdLeaderRing
-
-`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, isChampionBird: boolean) => void`
-
-Draws the leader ring around the champion bird.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdGeometry` - - Pixel-aligned bird geometry.
-- `isChampionBird` - - Whether the current bird is the champion.
-
-Returns: Nothing.
-
-### drawPlaybackBirdShine
-
-`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, isChampionBird: boolean) => void`
-
-Draws the reflective shine highlight for one bird body.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdGeometry` - - Pixel-aligned bird geometry.
-- `isChampionBird` - - Whether the current bird is the champion.
 
 Returns: Nothing.
 
