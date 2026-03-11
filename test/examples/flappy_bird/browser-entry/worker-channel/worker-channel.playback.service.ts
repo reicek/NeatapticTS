@@ -86,49 +86,45 @@ function resolvePlaybackWorkerChannelState(
     pendingPlaybackRequest: null,
   };
 
-  evolutionWorker.addEventListener(
-    'message',
-    ((event: MessageEvent<WorkerChannelMessage>): void => {
-      const pendingPlaybackRequest =
-        playbackWorkerChannelState.pendingPlaybackRequest;
-      if (!pendingPlaybackRequest) {
-        return;
-      }
+  evolutionWorker.addEventListener('message', ((
+    event: MessageEvent<WorkerChannelMessage>,
+  ): void => {
+    const pendingPlaybackRequest =
+      playbackWorkerChannelState.pendingPlaybackRequest;
+    if (!pendingPlaybackRequest) {
+      return;
+    }
 
-      if (event.data.type === 'playback-step') {
-        if (event.data.payload.requestId !== pendingPlaybackRequest.requestId) {
-          return;
-        }
-
-        playbackWorkerChannelState.pendingPlaybackRequest = null;
-        pendingPlaybackRequest.resolve(event.data.payload);
-        return;
-      }
-
-      if (event.data.type === 'error') {
-        playbackWorkerChannelState.pendingPlaybackRequest = null;
-        pendingPlaybackRequest.reject(
-          createWorkerChannelResponseError(event.data.payload.message),
-        );
-      }
-    }) as EventListener,
-  );
-
-  evolutionWorker.addEventListener(
-    'error',
-    ((event: ErrorEvent): void => {
-      const pendingPlaybackRequest =
-        playbackWorkerChannelState.pendingPlaybackRequest;
-      if (!pendingPlaybackRequest) {
+    if (event.data.type === 'playback-step') {
+      if (event.data.payload.requestId !== pendingPlaybackRequest.requestId) {
         return;
       }
 
       playbackWorkerChannelState.pendingPlaybackRequest = null;
+      pendingPlaybackRequest.resolve(event.data.payload);
+      return;
+    }
+
+    if (event.data.type === 'error') {
+      playbackWorkerChannelState.pendingPlaybackRequest = null;
       pendingPlaybackRequest.reject(
-        resolveWorkerChannelRuntimeError(event.error, event.message),
+        createWorkerChannelResponseError(event.data.payload.message),
       );
-    }) as EventListener,
-  );
+    }
+  }) as EventListener);
+
+  evolutionWorker.addEventListener('error', ((event: ErrorEvent): void => {
+    const pendingPlaybackRequest =
+      playbackWorkerChannelState.pendingPlaybackRequest;
+    if (!pendingPlaybackRequest) {
+      return;
+    }
+
+    playbackWorkerChannelState.pendingPlaybackRequest = null;
+    pendingPlaybackRequest.reject(
+      resolveWorkerChannelRuntimeError(event.error, event.message),
+    );
+  }) as EventListener);
 
   playbackWorkerChannelStateByWorker.set(
     evolutionWorker,

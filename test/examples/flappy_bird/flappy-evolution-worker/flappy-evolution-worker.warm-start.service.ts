@@ -6,9 +6,7 @@ import {
   resolveFlapDecision,
   resolveObservationVector,
 } from '../browser-entry/browser-entry.observation.utils';
-import {
-  sampleGapCenterY,
-} from '../browser-entry/browser-entry.spawn.utils';
+import { sampleGapCenterY } from '../browser-entry/browser-entry.spawn.utils';
 import type {
   WorkerHeuristicObservationFeatures,
   WorkerPopulationPipe,

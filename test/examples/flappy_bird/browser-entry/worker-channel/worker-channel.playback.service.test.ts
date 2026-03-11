@@ -58,7 +58,9 @@ describe('requestWorkerPlaybackStep', () => {
     evolutionWorker.emitMessage(createPlaybackStepMessage(99, 0));
     evolutionWorker.emitMessage(createPlaybackStepMessage(1, 1));
 
-    expect(await playbackRequestPromise).toEqual(createPlaybackStepPayload(1, 1));
+    expect(await playbackRequestPromise).toEqual(
+      createPlaybackStepPayload(1, 1),
+    );
   });
 });
 

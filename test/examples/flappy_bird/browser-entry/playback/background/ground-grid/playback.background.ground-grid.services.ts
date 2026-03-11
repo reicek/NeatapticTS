@@ -2,9 +2,7 @@ import {
   FLAPPY_GROUND_GRID_FOG_ALPHA,
   FLAPPY_GROUND_GRID_FOG_HEIGHT_RATIO,
 } from './playback.background.ground-grid.constants';
-import {
-  FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER,
-} from '../playback.background.constants';
+import { FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER } from '../playback.background.constants';
 import {
   resolveCachedGroundGridFogGradient,
   resolveGroundGridSceneCacheKey,

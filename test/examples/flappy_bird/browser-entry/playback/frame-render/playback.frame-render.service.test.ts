@@ -21,10 +21,9 @@ describe('updateTrailState', () => {
 
     updateTrailState(trailState, renderState);
 
-    expect(trailState.birdTrailsY.map((birdTrail) => birdTrail.length)).toEqual([
-      0,
-      1,
-    ]);
+    expect(trailState.birdTrailsY.map((birdTrail) => birdTrail.length)).toEqual(
+      [0, 1],
+    );
   });
 
   it('clears trail history for eliminated birds', () => {
@@ -46,10 +45,15 @@ describe('updateTrailState', () => {
       birds: [createBird({ pipesPassed: 2, framesSurvived: 12 })],
     });
     const trailState: TrailState = {
-      birdTrailsY: [Array.from({ length: FLAPPY_CHAMPION_TRAIL_MAX_POINTS }, (_, frameIndex) => ({
-        frameIndex,
-        yPx: frameIndex,
-      }))],
+      birdTrailsY: [
+        Array.from(
+          { length: FLAPPY_CHAMPION_TRAIL_MAX_POINTS },
+          (_, frameIndex) => ({
+            frameIndex,
+            yPx: frameIndex,
+          }),
+        ),
+      ],
     };
 
     updateTrailState(trailState, renderState);
@@ -77,8 +81,7 @@ describe('updateTrailState', () => {
     );
 
     expect(renderBird.mock.calls.map(([, , birdIndex]) => birdIndex)).toEqual([
-      0,
-      1,
+      0, 1,
     ]);
   });
 

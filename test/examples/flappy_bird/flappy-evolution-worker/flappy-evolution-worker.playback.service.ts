@@ -145,15 +145,18 @@ export function processWorkerPlaybackStep(options: {
   const snapshotTransferList = resolvePlaybackSnapshotTransferList(snapshot);
 
   if (hasAliveBirds(currentPlaybackState.birds)) {
-    postWorkerMessage({
-      type: 'playback-step',
-      payload: {
-        requestId: playbackStepPayload.requestId,
-        snapshot,
-        instrumentation: instrumentationPayload,
-        done: false,
+    postWorkerMessage(
+      {
+        type: 'playback-step',
+        payload: {
+          requestId: playbackStepPayload.requestId,
+          snapshot,
+          instrumentation: instrumentationPayload,
+          done: false,
+        },
       },
-    }, snapshotTransferList);
+      snapshotTransferList,
+    );
     return {
       currentPlaybackState,
       currentPlaybackRng,
@@ -199,19 +202,22 @@ export function processWorkerPlaybackStep(options: {
   const p90FramesSurvived =
     sortedFramesSurvived.length > 0 ? sortedFramesSurvived[p90FrameIndex] : 0;
 
-  postWorkerMessage({
-    type: 'playback-step',
-    payload: {
-      requestId: playbackStepPayload.requestId,
-      snapshot,
-      instrumentation: instrumentationPayload,
-      done: true,
-      averagePipesPassed,
-      p90FramesSurvived,
-      winnerPipesPassed: winnerBird?.pipesPassed ?? 0,
-      winnerFramesSurvived: winnerBird?.framesSurvived ?? 0,
+  postWorkerMessage(
+    {
+      type: 'playback-step',
+      payload: {
+        requestId: playbackStepPayload.requestId,
+        snapshot,
+        instrumentation: instrumentationPayload,
+        done: true,
+        averagePipesPassed,
+        p90FramesSurvived,
+        winnerPipesPassed: winnerBird?.pipesPassed ?? 0,
+        winnerFramesSurvived: winnerBird?.framesSurvived ?? 0,
+      },
     },
-  }, snapshotTransferList);
+    snapshotTransferList,
+  );
 
   return {
     currentPlaybackState: undefined,
