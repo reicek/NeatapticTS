@@ -69,6 +69,7 @@ export interface EvolutionPlaybackStepSnapshot {
 export interface EvolutionPlaybackStepMessage {
   type: 'playback-step';
   payload: {
+    requestId: number;
     snapshot: EvolutionPlaybackStepSnapshot;
     instrumentation?: {
       activationCallsPerFrame: number;

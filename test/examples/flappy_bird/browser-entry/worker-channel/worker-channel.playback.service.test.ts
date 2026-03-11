@@ -9,7 +9,7 @@ describe('requestWorkerPlaybackStep', () => {
       visibleWorldWidthPx: 640,
       visibleWorldHeightPx: 480,
     });
-    evolutionWorker.emitMessage(createPlaybackStepMessage(1));
+    evolutionWorker.emitMessage(createPlaybackStepMessage(1, 1));
     await firstRequestPromise;
 
     const secondRequestPromise = requestWorkerPlaybackStep(evolutionWorker, {
@@ -17,7 +17,7 @@ describe('requestWorkerPlaybackStep', () => {
       visibleWorldWidthPx: 640,
       visibleWorldHeightPx: 480,
     });
-    evolutionWorker.emitMessage(createPlaybackStepMessage(2));
+    evolutionWorker.emitMessage(createPlaybackStepMessage(2, 2));
     await secondRequestPromise;
 
     expect(evolutionWorker.addEventListener).toHaveBeenCalledTimes(2);
@@ -37,14 +37,28 @@ describe('requestWorkerPlaybackStep', () => {
       visibleWorldHeightPx: 480,
     }).catch((error: Error) => error.message);
 
-    evolutionWorker.emitMessage(createPlaybackStepMessage(1));
+    evolutionWorker.emitMessage(createPlaybackStepMessage(1, 1));
 
     expect(
       await Promise.all([firstRequestPromise, concurrentRequestResult]),
     ).toEqual([
-      createPlaybackStepPayload(1),
+      createPlaybackStepPayload(1, 1),
       'Concurrent playback-step requests are not supported by the playback worker channel.',
     ]);
+  });
+
+  it('ignores stale playback-step responses with older request ids', async () => {
+    const evolutionWorker = createMockWorker();
+    const playbackRequestPromise = requestWorkerPlaybackStep(evolutionWorker, {
+      simulationSteps: 1,
+      visibleWorldWidthPx: 640,
+      visibleWorldHeightPx: 480,
+    });
+
+    evolutionWorker.emitMessage(createPlaybackStepMessage(99, 0));
+    evolutionWorker.emitMessage(createPlaybackStepMessage(1, 1));
+
+    expect(await playbackRequestPromise).toEqual(createPlaybackStepPayload(1, 1));
   });
 });
 
@@ -89,17 +103,19 @@ function createMockWorker(): Worker & {
   } as unknown as Worker & { emitMessage: (message: unknown) => void };
 }
 
-function createPlaybackStepMessage(frameIndex: number) {
+function createPlaybackStepMessage(frameIndex: number, requestId: number) {
   return {
     type: 'playback-step' as const,
-    payload: createPlaybackStepPayload(frameIndex),
+    payload: createPlaybackStepPayload(frameIndex, requestId),
   };
 }
 
 function createPlaybackStepPayload(
   frameIndex: number,
+  requestId: number,
 ): WorkerChannelPlaybackStepPayload {
   return {
+    requestId,
     snapshot: {
       format: 'packed-v1',
       frameIndex,

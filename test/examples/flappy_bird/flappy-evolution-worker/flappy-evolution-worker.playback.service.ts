@@ -148,6 +148,7 @@ export function processWorkerPlaybackStep(options: {
     postWorkerMessage({
       type: 'playback-step',
       payload: {
+        requestId: playbackStepPayload.requestId,
         snapshot,
         instrumentation: instrumentationPayload,
         done: false,
@@ -201,6 +202,7 @@ export function processWorkerPlaybackStep(options: {
   postWorkerMessage({
     type: 'playback-step',
     payload: {
+      requestId: playbackStepPayload.requestId,
       snapshot,
       instrumentation: instrumentationPayload,
       done: true,

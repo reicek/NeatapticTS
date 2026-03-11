@@ -9,11 +9,13 @@ import {
 } from './worker-channel.errors';
 
 type PendingPlaybackRequest = {
+  requestId: number;
   reject: (error: Error) => void;
   resolve: (payload: WorkerChannelPlaybackStepPayload) => void;
 };
 
 type PlaybackWorkerChannelState = {
+  nextRequestId: number;
   pendingPlaybackRequest: PendingPlaybackRequest | null;
 };
 
@@ -46,14 +48,21 @@ export function requestWorkerPlaybackStep(
       return;
     }
 
+    const requestId = playbackWorkerChannelState.nextRequestId;
+    playbackWorkerChannelState.nextRequestId += 1;
+
     playbackWorkerChannelState.pendingPlaybackRequest = {
+      requestId,
       reject,
       resolve,
     };
 
     evolutionWorker.postMessage({
       type: 'request-playback-step',
-      payload: playbackStepRequest,
+      payload: {
+        ...playbackStepRequest,
+        requestId,
+      },
     });
   });
 }
@@ -73,6 +82,7 @@ function resolvePlaybackWorkerChannelState(
   }
 
   const playbackWorkerChannelState: PlaybackWorkerChannelState = {
+    nextRequestId: 1,
     pendingPlaybackRequest: null,
   };
 
@@ -86,6 +96,10 @@ function resolvePlaybackWorkerChannelState(
       }
 
       if (event.data.type === 'playback-step') {
+        if (event.data.payload.requestId !== pendingPlaybackRequest.requestId) {
+          return;
+        }
+
         playbackWorkerChannelState.pendingPlaybackRequest = null;
         pendingPlaybackRequest.resolve(event.data.payload);
         return;

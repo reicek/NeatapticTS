@@ -269,17 +269,22 @@ function collectWorkerThreadLabels(traceEvents: TraceEvent[]): Map<string, strin
 
 /** Computes the visible time window spanned by non-zero timestamp events. */
 function resolveTimeRange(traceEvents: TraceEvent[]): { windowMs: number } {
-  const timestamps = traceEvents
-    .map((traceEvent) => traceEvent.ts)
-    .filter((timestamp): timestamp is number => typeof timestamp === 'number' && timestamp > 0);
-  const minimumTimestamp = Math.min(...timestamps);
-  const maximumTimestamp = Math.max(
-    ...traceEvents.map((traceEvent) => {
-      const eventTimestamp = traceEvent.ts ?? 0;
-      const eventDuration = traceEvent.dur ?? 0;
-      return eventTimestamp + eventDuration;
-    }),
-  );
+  let minimumTimestamp = Number.POSITIVE_INFINITY;
+  let maximumTimestamp = 0;
+
+  for (const traceEvent of traceEvents) {
+    const eventTimestamp = traceEvent.ts;
+    if (typeof eventTimestamp === 'number' && eventTimestamp > 0) {
+      minimumTimestamp = Math.min(minimumTimestamp, eventTimestamp);
+    }
+
+    const eventDuration = typeof traceEvent.dur === 'number' ? traceEvent.dur : 0;
+    maximumTimestamp = Math.max(maximumTimestamp, (eventTimestamp ?? 0) + eventDuration);
+  }
+
+  if (!Number.isFinite(minimumTimestamp)) {
+    minimumTimestamp = 0;
+  }
 
   return {
     windowMs: (maximumTimestamp - minimumTimestamp) / MICROSECONDS_PER_MILLISECOND,

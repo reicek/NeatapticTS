@@ -113,6 +113,7 @@ export interface WorkerStartPlaybackMessage {
 export interface WorkerRequestPlaybackStepMessage {
   type: 'request-playback-step';
   payload: {
+    requestId: number;
     simulationSteps: number;
     visibleWorldWidthPx: number;
     visibleWorldHeightPx: number;
@@ -146,6 +147,7 @@ export interface WorkerGenerationReadyMessage {
 export interface WorkerPlaybackStepMessage {
   type: 'playback-step';
   payload: {
+    requestId: number;
     snapshot: WorkerPlaybackFrameSnapshot;
     instrumentation?: {
       activationCallsPerFrame: number;
