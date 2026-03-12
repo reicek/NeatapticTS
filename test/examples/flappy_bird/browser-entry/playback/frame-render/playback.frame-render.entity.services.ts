@@ -18,7 +18,17 @@ import type {
 } from './playback.frame-render.types';
 
 /**
+ * Entity-layer rendering helpers for playback frames.
+ *
+ * These services paint the world-space contents of a frame once the scene and
+ * canvas transforms have already been resolved.
+ */
+
+/**
  * Draws the split playback background for the current world viewport.
+ *
+ * Background painting is delegated to the dedicated background subsystem so this
+ * layer can stay focused on frame composition order.
  *
  * @param context - Canvas 2D drawing context.
  * @param renderState - Mutable simulation state snapshot.
@@ -43,6 +53,9 @@ export function renderPlaybackFrameBackground(
 /**
  * Draws all visible pipe segments and their neon outlines for the frame.
  *
+ * Pipes are rendered as upper and lower segments connected to the projected
+ * floor profile used by the background grid.
+ *
  * @param context - Canvas 2D drawing context.
  * @param renderState - Mutable simulation state snapshot.
  * @param sceneContext - Shared scene geometry for the frame.
@@ -54,10 +67,9 @@ export function renderPlaybackFramePipes(
   sceneContext: PlaybackFrameSceneContext,
 ): void {
   // Step 1: Resolve the lifted lower-pipe floor from the shared grid projection.
-  const pipeConnectionProfile =
-    resolvePlaybackGroundGridPipeConnectionProfile(
-      sceneContext.visibleWorldHeightPx,
-    );
+  const pipeConnectionProfile = resolvePlaybackGroundGridPipeConnectionProfile(
+    sceneContext.visibleWorldHeightPx,
+  );
 
   // Step 2: Render each pipe pair against the projected floor height.
   for (const pipe of renderState.pipes) {
@@ -79,6 +91,9 @@ export function renderPlaybackFramePipes(
 
 /**
  * Draws all active birds for the current frame.
+ *
+ * Only live birds are painted so the playback frame reflects the active
+ * population rather than leaving ghost bodies behind.
  *
  * @param context - Canvas 2D drawing context.
  * @param renderState - Mutable simulation state snapshot.
@@ -104,6 +119,10 @@ export function renderPlaybackFrameBirds(
 
 /**
  * Draws stepped trails for all active birds in the frame.
+ *
+ * In practice the trail cache usually contains only the champion trail, but the
+ * renderer stays generic and asks the trail-style policy how each active bird
+ * should be painted.
  *
  * @param context - Canvas 2D drawing context.
  * @param renderState - Mutable simulation state snapshot.

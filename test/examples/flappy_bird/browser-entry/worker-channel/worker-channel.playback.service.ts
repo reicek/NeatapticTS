@@ -8,6 +8,15 @@ import {
   resolveWorkerChannelRuntimeError,
 } from './worker-channel.errors';
 
+/**
+ * Stateful playback request channel for one evolution worker.
+ *
+ * Playback is intentionally handled differently from generation requests. The
+ * browser asks for a sequence of incremental frames, and the channel keeps a
+ * small amount of per-worker state so each request can be matched to the
+ * correct reply.
+ */
+
 type PendingPlaybackRequest = {
   requestId: number;
   reject: (error: Error) => void;
@@ -27,9 +36,22 @@ const playbackWorkerChannelStateByWorker = new WeakMap<
 /**
  * Requests one playback batch step from the worker channel.
  *
+ * A playback-step request is effectively "advance the simulation by this many
+ * internal steps, then send me a packed frame I can render". The request is
+ * tagged with a monotonically increasing request id so stale or out-of-order
+ * replies can be ignored safely.
+ *
  * @param evolutionWorker - Worker that owns playback simulation state.
  * @param playbackStepRequest - Requested simulation budget and viewport size.
  * @returns Playback-step payload including snapshot and completion marker.
+ * @example
+ * ```ts
+ * const playbackPayload = await requestWorkerPlaybackStep(evolutionWorker, {
+ *   simulationSteps: 2,
+ *   visibleWorldWidthPx: 640,
+ *   visibleWorldHeightPx: 480,
+ * });
+ * ```
  */
 export function requestWorkerPlaybackStep(
   evolutionWorker: Worker,
@@ -69,6 +91,10 @@ export function requestWorkerPlaybackStep(
 
 /**
  * Resolves persistent playback worker-channel state for one worker instance.
+ *
+ * The state tracks request ids and the one allowed in-flight playback request.
+ * That single-flight rule keeps the protocol simple and avoids ambiguous frame
+ * ordering on the browser side.
  *
  * @param evolutionWorker - Worker that owns playback simulation state.
  * @returns Persistent playback worker-channel state for the worker.

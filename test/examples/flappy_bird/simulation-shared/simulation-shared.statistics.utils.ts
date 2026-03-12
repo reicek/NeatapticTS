@@ -13,9 +13,12 @@ export function computeMean(values: readonly number[]): number {
     values.length
   );
 }
-
 /**
  * Computes population standard deviation.
+ *
+ * This uses population variance rather than sample variance because the trainer
+ * is summarizing the whole evolved population for that generation, not estimating
+ * a larger hidden distribution from a subsample.
  *
  * @param values - Numeric samples.
  * @param meanValue - Precomputed mean.
@@ -38,6 +41,9 @@ export function computePopulationStandardDeviation(
 
 /**
  * Computes percentile value via linear interpolation between nearest ranks.
+ *
+ * Percentiles are useful in the trainer because they reveal whether strong
+ * performance is broad across the population or concentrated in a single outlier.
  *
  * @param values - Numeric samples.
  * @param percentile - Percentile in [0, 1].

@@ -4,6 +4,12 @@ import type { WorkerGenerationReadyMessage } from './flappy-evolution-worker.typ
 
 /**
  * Dependencies required to evolve one generation and prepare host payload output.
+ *
+ * Educational note:
+ * This interface isolates the evolution step from the worker entrypoint. That
+ * makes the README easier to follow: the entrypoint owns protocol orchestration,
+ * while this service owns one well-defined "run generation -> publish summary"
+ * slice of behavior.
  */
 export interface WorkerEvolutionServiceOptions {
   initializationPromise?: Promise<void>;
@@ -15,6 +21,22 @@ export interface WorkerEvolutionServiceOptions {
 
 /**
  * Evolves one generation and creates the compact generation-ready response payload.
+ *
+ * Educational note:
+ * The worker does not stream the whole population back to the UI after each
+ * evolution step. Instead it emits a compact summary containing the generation
+ * index, best fitness, and a serializable best-network snapshot for inspection.
+ *
+ * @example
+ * ```ts
+ * const generationMessage = await evolveAndBuildGenerationReadyMessage({
+ *   initializationPromise,
+ *   neatRuntime,
+ *   isStopped: () => false,
+ *   warmStartGenerationZeroIfNeeded,
+ *   setCurrentPopulation,
+ * });
+ * ```
  *
  * @param options - Evolution dependencies and runtime state accessors.
  * @returns Generation-ready worker response payload.

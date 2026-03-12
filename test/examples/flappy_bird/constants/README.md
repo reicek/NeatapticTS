@@ -10,6 +10,11 @@ Constants are now organized into small, category-focused modules
 (`constants.*.ts`). This file remains as a compatibility export surface so
 existing imports continue to work while callers migrate gradually.
 
+Educational note:
+Treat this file as the folder map, not the best place to learn individual
+values. The category modules below are where the real documentation lives:
+physics, pipes, observation, runtime, rendering, network layout, and so on.
+
 ### DEFAULT_CONTAINER_ID
 
 ### FLAPPY_BIAS_TIER_CENTER_THRESHOLD
@@ -823,6 +828,9 @@ Flappy physics and control-cadence constants.
 Values in this module shape how quickly the bird falls, how strongly a flap
 responds, and how often a policy can react inside each visible frame.
 
+Small changes here have outsized behavioral impact because they reshape the
+control problem the policy is trying to solve.
+
 ### FLAPPY_CONTROL_SUBSTEPS_PER_FRAME
 
 ### FLAPPY_FLAP_VELOCITY_PX_PER_FRAME
@@ -958,6 +966,10 @@ Shared observation-normalization constants.
 
 These values are used by both browser playback and headless environment
 simulation when building normalized feature vectors.
+
+Keeping normalization constants shared is important because even tiny drift in
+feature scaling would make trainer, worker, and browser policies "see"
+different worlds.
 
 ### FLAPPY_NORMALIZATION_EPSILON
 

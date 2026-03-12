@@ -4,5 +4,8 @@
  * Keeping this file at the evaluation layer preserves the established import
  * path while the actual rollout orchestration lives behind the dedicated
  * rollout-owned module boundary.
+ *
+ * This is the public evaluation-layer shelf for callers that should not need to
+ * know about the rollout subfolder layout.
  */
 export { rolloutEpisode } from './rollout/evaluation.rollout.service';

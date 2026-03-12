@@ -23,7 +23,9 @@ export interface TopologyIntentGenome {
   /** Runtime self-connection list. */
   selfconns?: unknown[];
   /** Public topology intent setter exposed by `Network`. */
-  setTopologyIntent?: (topologyIntent: 'feed-forward' | 'unconstrained') => void;
+  setTopologyIntent?: (
+    topologyIntent: 'feed-forward' | 'unconstrained',
+  ) => void;
 }
 
 /**
@@ -33,7 +35,10 @@ export interface TopologyIntentGenome {
  * @returns True when the option expresses canonical FFW intent.
  */
 export function usesFeedForwardMutationPolicy(
-  mutationConfig: TopologyIntentMutationMethod | TopologyIntentMutationMethod[] | unknown,
+  mutationConfig:
+    | TopologyIntentMutationMethod
+    | TopologyIntentMutationMethod[]
+    | unknown,
 ): boolean {
   // Step 1: Accept the canonical direct FFW reference.
   if (mutationConfig === methods.mutation.FFW) {

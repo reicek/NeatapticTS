@@ -5,6 +5,11 @@ import { FLAPPY_WORLD_HEIGHT_PX } from './constants.world';
  *
  * These values describe the canonical pipe body size, opening geometry, visual
  * outline offsets, and default leftward movement cadence.
+ *
+ * Educational note:
+ * Pipe constants do double duty: some values describe actual gameplay geometry,
+ * while others are chosen so the visible pipe outline and the collision envelope
+ * feel aligned to a human viewer.
  */
 
 /** Pipe width (pixels). */
@@ -40,13 +45,27 @@ export const FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX = Math.round(
     FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX * 0.5,
 );
 
-/** Vertical opening size of each pipe gap (pixels). */
+/**
+ * Vertical opening size of each pipe gap (pixels).
+ *
+ * This is the nominal baseline gap before adaptive difficulty narrows it.
+ */
 export const FLAPPY_PIPE_GAP_PX = 150;
 
-/** Pipe horizontal speed (pixels/frame). */
+/**
+ * Pipe horizontal speed (pixels/frame).
+ *
+ * Higher values shrink reaction time, which makes the same gap geometry much
+ * harder even before the adaptive curriculum starts tightening gaps.
+ */
 export const FLAPPY_PIPE_SPEED_PX_PER_FRAME = 5;
 
-/** Frames between spawning new pipes. */
+/**
+ * Frames between spawning new pipes.
+ *
+ * Together with pipe speed, this controls horizontal pacing and how much time a
+ * policy has to recover between obstacles.
+ */
 export const FLAPPY_PIPE_SPAWN_INTERVAL_FRAMES = 50;
 
 /** Minimum allowed gap center height (pixels). */

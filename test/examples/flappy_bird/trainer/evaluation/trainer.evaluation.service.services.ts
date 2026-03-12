@@ -11,6 +11,11 @@ import type { PopulationStageEvaluationRequest } from './trainer.evaluation.serv
 /**
  * Evaluates a selected candidate subset for a population stage.
  *
+ * Educational note:
+ * This helper is the workhorse behind the full and reevaluation stages. It
+ * turns a stage request into three steps: pick candidates, evaluate them across
+ * shared seeds, then refresh the provisional ranking for the whole population.
+ *
  * @param population - Current population.
  * @param populationStageEvaluationRequest - Candidate-stage evaluation request.
  * @param aggregateByGenome - Mutable aggregate cache keyed by genome.
@@ -48,6 +53,14 @@ export function evaluatePopulationSelectedCandidateStage(
 
 /**
  * Evaluates a specific genome subset across shared seeds.
+ *
+ * Shared seeds are the fairness mechanism in this trainer. Every selected genome
+ * sees the same randomized episode batch for the stage, so comparisons are much
+ * less noisy than per-genome private seed sampling.
+ *
+ * For background reading, the Wikipedia article on "control variates" is a good
+ * intuition pump for why holding part of the randomness fixed can reduce
+ * variance when comparing alternatives.
  *
  * @param genomes - Genomes selected for evaluation.
  * @param sharedSeeds - Shared deterministic seeds.

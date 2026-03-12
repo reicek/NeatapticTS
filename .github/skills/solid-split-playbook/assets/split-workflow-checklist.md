@@ -5,26 +5,31 @@ Use this checklist during each SOLID split session.
 ## Before Editing
 
 1. Confirm the split root and the single durable step for this session.
-2. Read the nearest folder `README.md` first.
-3. Read the nearest useful parent `README.md` if the boundary spans sibling
+2. Build a full inventory of every `README.md` under the requested root.
+3. Convert that inventory into an explicit todo list so every README-owning
+   folder is visible before edits begin.
+4. Read the nearest folder `README.md` first.
+5. Read the nearest useful parent `README.md` if the boundary spans sibling
    areas.
-4. Read `plans/README.md`.
-5. Read only the most relevant plan file, with at most one additional related
+6. Read `plans/README.md`.
+7. Read only the most relevant plan file, with at most one additional related
    plan if needed.
-6. Inspect the current public surface, its closest helpers, and its main
+8. Inspect the current public surface, its closest helpers, and its main
    consumers.
-7. Decide whether the current file should remain a public facade, a
+9. Decide whether the current file should remain a public facade, a
    compatibility shim, or the true orchestration entrypoint.
 
 ## During the Split
 
 1. Keep exactly one active todo item.
-2. Move one responsibility cluster at a time.
-3. Prefer a dedicated subfolder when the file is a real subsystem.
-4. Keep the main entrypoint orchestration-first.
-5. Preserve stable imports where possible.
-6. Improve JSDoc on touched public surfaces while splitting.
-7. Add narrow tests only when they increase confidence in the extracted
+2. For documentation-heavy passes, keep that active item bound to one README or
+   one README-owning folder at a time.
+3. Move one responsibility cluster at a time.
+4. Prefer a dedicated subfolder when the file is a real subsystem.
+5. Keep the main entrypoint orchestration-first.
+6. Preserve stable imports where possible.
+7. Improve JSDoc on touched public surfaces while splitting.
+8. Add narrow tests only when they increase confidence in the extracted
    boundary.
 
 ## Documentation Pass

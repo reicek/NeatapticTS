@@ -3,6 +3,9 @@
  *
  * Using a local RNG keeps evaluations reproducible regardless of global
  * `Math.random()` state and makes comparisons between genomes more stable.
+ *
+ * If you want background reading, the Wikipedia article on "Xorshift" explains
+ * the family of lightweight PRNGs this file uses.
  */
 
 /** Minimal interface needed by the simulation to sample randomness. */
@@ -21,12 +24,19 @@ export interface FlappyRng {
 /**
  * Create a deterministic xorshift32 RNG.
  *
+ * Educational note:
+ * A tiny local PRNG is enough for this example because the main requirement is
+ * repeatability, not cryptographic security. The same seed produces the same
+ * pipe sequence, which makes training runs and regression debugging comparable.
+ *
  * @param seed - Unsigned 32-bit seed.
  * @returns RNG instance.
  *
  * @example
+ * ```ts
  * const rng = createXorshift32(123);
  * rng.nextFloat01();
+ * ```
  */
 export function createXorshift32(seed: number): FlappyRng {
   let state = toUint32(seed) || 0x6d2b79f5;

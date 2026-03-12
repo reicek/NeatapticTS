@@ -17,6 +17,9 @@ import type {
 /**
  * Samples a random gap center y-position.
  *
+ * The sampled center is bounded so the resulting pipe gap always remains inside
+ * the visible play area.
+ *
  * @param rng - Deterministic RNG.
  * @param maximumGapCenterYPx - Optional inclusive upper bound for smaller viewports.
  * @returns Sampled y-position.
@@ -37,6 +40,11 @@ export function sampleGapCenterY(
 
 /**
  * Resolves next gap center with bounded per-pipe delta.
+ *
+ * Educational note:
+ * Consecutive gaps are deliberately constrained to avoid unfair zig-zag jumps.
+ * The environment should still be challenging, but it should not demand an
+ * impossible vertical correction from one pipe to the next.
  *
  * @param previousGapCenterYPx - Previous spawn gap center.
  * @param rng - Deterministic RNG.
@@ -70,6 +78,10 @@ export function resolveNextSpawnGapCenterY(
 
 /**
  * Resolves next spawn gap size using progressive shrink and jitter.
+ *
+ * The gap starts wider than the current hardest target, then shrinks toward the
+ * active difficulty profile with a small amount of deterministic jitter so runs
+ * do not feel mechanically repetitive.
  *
  * @param previousSpawnGapPx - Previous spawn gap size.
  * @param difficultyProfile - Active difficulty profile.
@@ -107,6 +119,10 @@ export function resolveNextSpawnGapSize(
 
 /**
  * Resolves next spawn interval using progressive shrink.
+ *
+ * This mirrors the gap-size logic: early pipes are spaced more generously, then
+ * spacing contracts toward the current difficulty target as the episode settles
+ * into its harder rhythm.
  *
  * @param previousSpawnIntervalFrames - Previous spawn interval.
  * @param difficultyProfile - Active difficulty profile.

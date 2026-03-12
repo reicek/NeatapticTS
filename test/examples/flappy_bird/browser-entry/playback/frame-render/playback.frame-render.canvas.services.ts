@@ -1,7 +1,17 @@
 import type { PlaybackFrameSceneContext } from './playback.frame-render.types';
 
 /**
+ * Canvas-state helpers for playback frame rendering.
+ *
+ * These functions isolate the mutable canvas setup and teardown needed for one
+ * frame so the orchestration layer can read as declarative world rendering.
+ */
+
+/**
  * Resets the target canvas and base paint state before frame drawing begins.
+ *
+ * This establishes a predictable baseline before world-space transforms and glow
+ * effects are applied.
  *
  * @param context - Canvas 2D drawing context.
  * @returns Nothing.
@@ -23,6 +33,9 @@ export function preparePlaybackFrameCanvas(
 
 /**
  * Applies the viewport transform used for world-space frame rendering.
+ *
+ * After this transform, draw calls can work in simulation coordinates instead of
+ * raw canvas pixel coordinates.
  *
  * @param context - Canvas 2D drawing context.
  * @param sceneContext - Shared scene geometry for the frame.
@@ -46,6 +59,9 @@ export function beginPlaybackFrameViewportTransform(
 
 /**
  * Restores the caller canvas state after viewport-space frame drawing.
+ *
+ * This ensures later canvas users do not inherit playback-specific transform or
+ * alpha state.
  *
  * @param context - Canvas 2D drawing context.
  * @returns Nothing.

@@ -1,9 +1,17 @@
-import type {
-  EvolutionPlaybackStepMessage,
-} from '../../browser-entry.types';
+import type { EvolutionPlaybackStepMessage } from '../../browser-entry.types';
+
+/**
+ * Playback-specific worker-channel contracts.
+ *
+ * These types sit above the lower-level browser worker protocol and describe the
+ * request budgeting plus summary data flow used by the playback loop.
+ */
 
 /**
  * Request payload for one playback-step worker call.
+ *
+ * The browser asks the worker to advance simulation by a small batch of steps
+ * and to package the result for the current viewport dimensions.
  */
 export interface PlaybackStepRequest {
   simulationSteps: number;
@@ -13,6 +21,9 @@ export interface PlaybackStepRequest {
 
 /**
  * Input used to resolve the next playback-step request and budget remainder.
+ *
+ * Playback uses a fractional frame budget so browser render cadence and worker
+ * simulation cadence can be smoothed together over time.
  */
 export interface ResolvePlaybackStepRequestInput {
   simulationFrameBudget: number;
@@ -23,6 +34,9 @@ export interface ResolvePlaybackStepRequestInput {
 
 /**
  * Output for the resolved playback-step request and frame-budget remainder.
+ *
+ * The resolved request records both the integer step batch to send now and the
+ * leftover fractional budget to carry into the next render tick.
  */
 export interface ResolvePlaybackStepRequestResult {
   simulationStepsThisRender: number;
@@ -32,5 +46,8 @@ export interface ResolvePlaybackStepRequestResult {
 
 /**
  * Shared alias for the worker playback-step payload.
+ *
+ * This keeps the playback worker-channel modules focused on playback semantics
+ * instead of long imported protocol names.
  */
 export type PlaybackStepPayload = EvolutionPlaybackStepMessage['payload'];

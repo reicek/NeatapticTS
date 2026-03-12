@@ -20,7 +20,17 @@ import type {
 } from './host.resize.service.types';
 
 /**
+ * Measurement and budget helpers for responsive host sizing.
+ *
+ * These functions convert live DOM dimensions into the numeric budgets used by
+ * the resize appliers.
+ */
+
+/**
  * Resolves responsive layout measurements and mode flags from the host DOM.
+ *
+ * This is the measurement root for the resize system: read the current viewport,
+ * reserve required minimums, then classify the active layout mode.
  *
  * @param containerElement - Width and height source.
  * @param statsContainer - Stats host element.
@@ -83,6 +93,9 @@ export function resolveResponsiveViewportLayoutContext(
 /**
  * Resolves the simulation canvas bounds for the minimal mobile layout.
  *
+ * Minimal mobile mode spends nearly the entire available budget on the main
+ * simulation surface.
+ *
  * @param containerElement - Width and height source.
  * @param responsiveViewportLayoutContext - Responsive layout context.
  * @returns Simulation canvas bounds.
@@ -114,6 +127,9 @@ export function resolveMinimalMobileCanvasBounds(
 
 /**
  * Resolves the stats panel height and width budgets.
+ *
+ * The stats panel budget is computed after preserving a minimum readable region
+ * for the simulation canvas.
  *
  * @param responsiveViewportLayoutContext - Responsive layout context.
  * @returns Stats panel dimensions.
@@ -184,6 +200,9 @@ export function resolveStatsPanelDimensions(
 /**
  * Resolves simulation canvas bounds from the current viewport layout.
  *
+ * The simulation canvas consumes the remainder after the stats/network budget and
+ * fixed gutters are applied.
+ *
  * @param containerElement - Width and height source.
  * @param responsiveViewportLayoutContext - Responsive layout context.
  * @param statsPanelDimensions - Resolved stats panel dimensions.
@@ -232,6 +251,9 @@ export function resolveSimulationCanvasBounds(
 
 /**
  * Resolves the header canvas height, if present.
+ *
+ * The resize system subtracts the header from the total container height before
+ * budgeting the main panels.
  *
  * @param containerElement - Width and height source.
  * @returns Header height in pixels.

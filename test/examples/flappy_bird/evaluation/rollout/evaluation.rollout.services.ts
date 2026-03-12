@@ -3,6 +3,9 @@
  *
  * This file will host context resolution, runtime initialization, frame loop,
  * and early-termination behavior for rollout execution.
+ *
+ * The companion utils file owns reward shaping and result composition. This file
+ * owns the mechanics of actually running the episode.
  */
 import {
   FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,
@@ -52,6 +55,9 @@ import {
 
 /**
  * Resolves normalized rollout configuration from user options.
+ *
+ * This is the rollout safety boundary: caller-provided values are clamped into
+ * deterministic, execution-safe ranges before the main loop touches them.
  *
  * @param network - Genome/network to evaluate.
  * @param rolloutOptions - Optional rollout controls.
@@ -104,6 +110,10 @@ export function resolveRolloutEpisodeContext(
 /**
  * Creates mutable runtime state for one rollout episode.
  *
+ * The runtime state carries the seeded RNG, the mutable environment, the
+ * temporal observation memory, and the shaping counters accumulated during the
+ * episode.
+ *
  * @param rolloutEpisodeContext - Normalized rollout configuration.
  * @returns Mutable runtime state.
  */
@@ -126,6 +136,9 @@ export function createRolloutEpisodeRuntimeState(
 
 /**
  * Runs the main rollout loop until termination or frame-budget exhaustion.
+ *
+ * This is the episode heartbeat: keep stepping while the bird is alive and the
+ * rollout still has budget left.
  *
  * @param network - Genome/network to evaluate.
  * @param rolloutEpisodeContext - Normalized rollout configuration.
@@ -154,6 +167,9 @@ export function runRolloutEpisodeLoop(
 /**
  * Finalizes episode state after the main rollout loop exits.
  *
+ * Timeouts are applied here instead of inside the loop body so natural episode
+ * endings stay distinct from budget exhaustion.
+ *
  * @param rolloutEpisodeContext - Normalized rollout configuration.
  * @param rolloutEpisodeRuntimeState - Mutable runtime state.
  * @returns Nothing.
@@ -179,6 +195,10 @@ export function finalizeRolloutEpisodeState(
 
 /**
  * Runs one rollout frame including control, shaping, and early termination.
+ *
+ * Educational note:
+ * Each frame follows a compact pipeline: observe, act, step the environment,
+ * accumulate shaping reward, then optionally prune the trajectory.
  *
  * @param network - Genome/network to evaluate.
  * @param rolloutEpisodeContext - Normalized rollout configuration.
@@ -231,6 +251,9 @@ function runRolloutEpisodeFrame(
 /**
  * Resolves the flap decision for one control substep and commits memory state.
  *
+ * The temporal memory is updated immediately after the decision so subsequent
+ * substeps can see short-term action history without needing recurrent state.
+ *
  * @param network - Genome/network to evaluate.
  * @param rolloutEpisodeContext - Normalized rollout configuration.
  * @param rolloutEpisodeRuntimeState - Mutable runtime state.
@@ -266,6 +289,11 @@ function resolveRolloutFrameFlapDecision(
 
 /**
  * Applies the optional early-termination heuristic for unrecoverable starts.
+ *
+ * Educational note:
+ * Early termination is an evaluation-speed heuristic, not a gameplay rule. It
+ * exists to stop obviously doomed warmup trajectories from consuming excessive
+ * rollout budget.
  *
  * @param rolloutEpisodeContext - Normalized rollout configuration.
  * @param rolloutEpisodeRuntimeState - Mutable runtime state.

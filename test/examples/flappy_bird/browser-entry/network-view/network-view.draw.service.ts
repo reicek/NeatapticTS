@@ -15,7 +15,18 @@ import type {
 import { resolveInputGroupLabelBands } from './network-view.labels.utils';
 
 /**
+ * Overlay drawing helpers specific to the network-view panel.
+ *
+ * These helpers render semantic guides that sit on top of the raw graph, most
+ * notably the colored input-group bands that explain how temporal observation
+ * channels are organized.
+ */
+
+/**
  * Draws vertical neon bands that label semantic groups in the input layer.
+ *
+ * The bands make the input layer readable as domain features rather than just a
+ * numbered stack of nodes.
  *
  * @param context - Canvas 2D rendering context.
  * @param positionedNodes - Positioned nodes in graph coordinates.
@@ -102,6 +113,8 @@ export function drawInputGroupLabelBands(
 
 /**
  * Draws a filled rounded rectangle path.
+ *
+ * This is the small geometry primitive used by the input-group band renderer.
  */
 export function drawRoundedRect(
   context: CanvasRenderingContext2D,

@@ -6,7 +6,18 @@ import type {
 } from './runtime.types';
 
 /**
+ * Lifecycle and teardown helpers for the browser runtime.
+ *
+ * The runtime behaves like a small application process. These helpers create the
+ * mutable state and public handle needed to stop it cleanly, terminate the
+ * worker, and resolve the completion promise exactly once.
+ */
+
+/**
  * Creates mutable lifecycle state for stop semantics and completion signaling.
+ *
+ * The returned object is shared across runtime orchestration paths so both
+ * expected shutdown and failure-driven shutdown follow the same completion flow.
  *
  * @returns Mutable lifecycle state used by the run handle.
  */
@@ -26,6 +37,10 @@ export function createRuntimeLifecycleState(): RuntimeMutableLifecycleState {
 
 /**
  * Builds the public run handle and binds it to runtime teardown behavior.
+ *
+ * The handle is the user-facing control surface for the demo. Internally it is
+ * just a thin closure layer over the mutable lifecycle state and startup
+ * context.
  *
  * @param runtimeStartContext - Shared runtime start context.
  * @param runtimeLifecycleState - Mutable lifecycle state for stop semantics.

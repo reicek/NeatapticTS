@@ -87,7 +87,7 @@ function createRenderStateWithOneBirdAndOnePipe(): PopulationRenderState {
     framesUntilNextPipeSpawn: 0,
     pipes: [
       {
-          id: 0,
+        id: 0,
         xPx: 1,
         gapCenterYPx: 2,
         gapSizePx: 3,

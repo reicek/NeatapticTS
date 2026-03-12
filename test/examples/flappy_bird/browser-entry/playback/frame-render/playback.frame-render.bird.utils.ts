@@ -13,7 +13,18 @@ import { resolveBirdRenderStyle } from '../playback.render.utils';
 import type { PlaybackBirdGeometry } from './playback.frame-render.types';
 
 /**
+ * Detailed bird-painting helpers for playback frames.
+ *
+ * The bird renderer keeps the body intentionally simple and geometric: a neon
+ * square with optional champion glow passes. That makes the population readable
+ * at a glance even when many birds overlap.
+ */
+
+/**
  * Draws one active bird body and champion-only highlight passes.
+ *
+ * The champion receives an extra additive-outline treatment so viewers can spot
+ * the leading bird quickly during playback.
  *
  * @param context - Canvas 2D drawing context.
  * @param birdYPx - Bird vertical position in world pixels.
@@ -37,6 +48,9 @@ export function renderPlaybackBird(
 /**
  * Resolves the fixed bird geometry used by all body rendering passes.
  *
+ * Geometry is snapped to integer pixels so the square body stays crisp instead
+ * of blurring across subpixel boundaries.
+ *
  * @param birdYPx - Bird vertical position in world pixels.
  * @returns Pixel-aligned square geometry for the bird body.
  */
@@ -54,6 +68,8 @@ export function resolvePlaybackBirdGeometry(
 
 /**
  * Draws the square bird body with its base neon glow.
+ *
+ * This is the standard body pass shared by champion and non-champion birds.
  *
  * @param context - Canvas 2D drawing context.
  * @param birdGeometry - Pixel-aligned bird geometry.
@@ -79,6 +95,9 @@ export function drawPlaybackBirdBody(
 
 /**
  * Draws the champion bird using the same two-pass additive outline glow method as pipes.
+ *
+ * Reusing the pipe-style glow language helps the whole playback scene feel like
+ * one visual system instead of unrelated rendering effects.
  *
  * @param context - Canvas 2D drawing context.
  * @param birdGeometry - Pixel-aligned bird geometry.
@@ -141,6 +160,9 @@ export function drawChampionPlaybackBirdGlow(
 
 /**
  * Resolves the body glow blur for one bird render pass.
+ *
+ * Champion birds receive a slightly stronger body glow than the rest of the
+ * population.
  *
  * @param birdRenderStyle - Resolved bird style payload.
  * @returns Blur radius used behind the square bird body.

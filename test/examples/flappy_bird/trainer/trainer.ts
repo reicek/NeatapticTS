@@ -37,8 +37,24 @@ import { registerTrainerStopSignals } from './trainer.signals.service';
  * The network sees a temporal observation (38 floats) and outputs two competing
  * action scores (`no flap` vs `flap`).
  *
+ * Educational note:
+ * The trainer is intentionally orchestration-first. It wires together setup,
+ * staged population evaluation, the outer evolution loop, graceful shutdown,
+ * and compact generation logging without burying those responsibilities inside a
+ * single monolithic file.
+ *
+ * The mutation schedule gradually cools over early generations. If you want a
+ * conceptual parallel, the Wikipedia article on "simulated annealing" is a
+ * useful mental model for why early exploration is broader and later updates are
+ * more conservative.
+ *
  * Run (from repo root):
  * `npx ts-node test/examples/flappy_bird/trainFlappyBird.ts`
+ *
+ * @example
+ * ```ts
+ * await runTrainer();
+ * ```
  */
 export async function runTrainer(): Promise<void> {
   const trainerSetup = createTrainerSetup();
@@ -73,6 +89,12 @@ export async function runTrainer(): Promise<void> {
 
 /**
  * Handles fatal `main` rejection path.
+ *
+ * The trainer keeps this boundary small so unexpected failures are formatted in
+ * one consistent place before reaching the CLI.
+ *
+ * @param error - Unknown rejection reason from trainer execution.
+ * @returns Nothing.
  */
 export function handleTrainerMainError(error: unknown): void {
   // eslint-disable-next-line no-console
@@ -84,6 +106,11 @@ if (isDirectTrainerExecution()) {
   runTrainer().catch(handleTrainerMainError);
 }
 
+/**
+ * Resolves whether this module is the direct Node entrypoint.
+ *
+ * @returns `true` when Node launched this file directly.
+ */
 function isDirectTrainerExecution(): boolean {
   const entryScriptPath = process.argv[1];
   if (!entryScriptPath) {

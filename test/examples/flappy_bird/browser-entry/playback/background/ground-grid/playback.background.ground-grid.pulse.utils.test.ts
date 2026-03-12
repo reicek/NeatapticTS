@@ -135,9 +135,9 @@ describe('resolvePlaybackGroundGridPulse', () => {
       visibleVerticalPulsePaths: secondVerticalPulsePaths,
     });
 
-    expect(Math.abs(secondPulse!.centerXPx - firstPulse!.centerXPx)).toBeLessThan(
-      140,
-    );
+    expect(
+      Math.abs(secondPulse!.centerXPx - firstPulse!.centerXPx),
+    ).toBeLessThan(140);
   });
 });
 
@@ -158,11 +158,14 @@ function findVerticalPulseFrameIndex(
     }
   }
 
-  throw new Error('Expected to find a vertical pulse frame for the test fixture.');
+  throw new Error(
+    'Expected to find a vertical pulse frame for the test fixture.',
+  );
 }
 
 function resolveVerticalTravelProgressRatio(frameIndex: number): number {
-  const currentTimeMs = frameIndex * FLAPPY_GROUND_GRID_APPROX_FRAME_DURATION_MS;
+  const currentTimeMs =
+    frameIndex * FLAPPY_GROUND_GRID_APPROX_FRAME_DURATION_MS;
   const pulseSlotIndex = Math.floor(
     currentTimeMs / FLAPPY_GROUND_GRID_PULSE_INTERVAL_MS,
   );
@@ -192,8 +195,14 @@ function resolveClosestPulsePath(
   let closestDistanceSq = Number.POSITIVE_INFINITY;
 
   for (const verticalPulsePath of verticalPulsePaths) {
-    const centerXPx = interpolatePathXPx(verticalPulsePath, travelProgressRatio);
-    const centerYPx = interpolatePathYPx(verticalPulsePath, travelProgressRatio);
+    const centerXPx = interpolatePathXPx(
+      verticalPulsePath,
+      travelProgressRatio,
+    );
+    const centerYPx = interpolatePathYPx(
+      verticalPulsePath,
+      travelProgressRatio,
+    );
     const deltaXPx = centerXPx - pulse.centerXPx;
     const deltaYPx = centerYPx - pulse.centerYPx;
     const distanceSq = deltaXPx * deltaXPx + deltaYPx * deltaYPx;
@@ -256,7 +265,9 @@ function createVerticalPulsePaths(): readonly PlaybackGroundGridPulsePath[] {
   ];
 }
 
-function createVerticalPulsePath(startXPx: number): PlaybackGroundGridPulsePath {
+function createVerticalPulsePath(
+  startXPx: number,
+): PlaybackGroundGridPulsePath {
   return {
     orientation: 'vertical',
     startXPx,

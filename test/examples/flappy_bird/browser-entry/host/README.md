@@ -4,11 +4,17 @@
 
 ### CanvasHostResult
 
-Result payload returned after constructing the browser host UI tree.
+Public type contracts for the browser-entry host boundary.
+
+These types describe what the host builder returns to the runtime and how HUD
+value updates are represented once the UI tree exists.
 
 ### HostStatsPartialValues
 
 Partial stats update map keyed by stats-table keys.
+
+Using a partial map lets the runtime update only the HUD fields that changed
+on a given tick.
 
 ## browser-entry/host/host.ts
 
@@ -17,6 +23,8 @@ Partial stats update map keyed by stats-table keys.
 `(containerElement: HTMLElement) => import("test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
 
 Builds the browser demo host tree and returns rendering handles.
+
+This is the public host entrypoint used by the runtime startup path.
 
 Parameters:
 - `containerElement` - - Root host container.
@@ -28,6 +36,10 @@ Returns: Canvas handles, stats cells and network render callback.
 `(containerElement: HTMLElement) => import("test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
 
 Builds the browser demo host tree and returns rendering handles.
+
+The orchestration is deliberately step-shaped: clear old DOM, build layout,
+create canvases, wire resize behavior, render placeholders, then return the
+handles the runtime will mutate during execution.
 
 Parameters:
 - `containerElement` - - Root host container.
@@ -52,6 +64,9 @@ Returns: Callback that redraws the framed title.
 
 Creates the canvases and 2D contexts used by the host UI.
 
+The host manages three canvas surfaces with different jobs: a title/header
+frame, the main simulation view, and the side-panel network visualization.
+
 Parameters:
 - `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
 
@@ -62,6 +77,9 @@ Returns: Simulation, header, and network canvases with required contexts.
 `(hostVisualPrimitives: HostVisualPrimitives) => HostLayoutElements`
 
 Creates the host layout elements used to assemble the browser UI tree.
+
+This creates the structural DOM only. Canvases, stats content, and
+visualization wiring are layered on afterward.
 
 Parameters:
 - `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
@@ -80,6 +98,15 @@ Parameters:
 - `networkContext` - - Network visualization 2D context.
 
 Returns: Renderer and redraw callbacks for the network panel.
+
+### HostVisualPrimitives
+
+Browser host assembly for the Flappy Bird demo UI.
+
+The host boundary is responsible for building the browser-side shell around
+the simulation: framed title, main canvas, stats panel, and network
+visualization panel. It does not run evolution itself; it prepares the stage
+on which the runtime loop renders.
 
 ### installCanvasHostResizeHooks
 
@@ -129,6 +156,9 @@ Returns: Nothing.
 
 Clears any previous runtime DOM before rebuilding the browser host tree.
 
+The demo rebuilds the host from scratch on each startup so repeated runs begin
+from a known clean DOM state.
+
 Parameters:
 - `containerElement` - - Root host container.
 
@@ -140,6 +170,9 @@ Returns: Nothing.
 
 Resolves shared border, shadow, and padding values for host assembly.
 
+Centralizing these primitives keeps the DOM-building code focused on layout
+structure instead of duplicating presentation constants everywhere.
+
 Returns: Shared visual primitives reused across host sections.
 
 ### updateStatsTableValues
@@ -147,6 +180,9 @@ Returns: Shared visual primitives reused across host sections.
 `(statsValueByKey: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
 
 Applies partial stat updates to the rendered stats table.
+
+The runtime writes HUD values incrementally, so the host exposes a narrow
+partial-update helper rather than requiring full table redraws.
 
 Parameters:
 - `statsValueByKey` - - Lookup of stat keys to value cells.
@@ -158,7 +194,10 @@ Returns: Nothing.
 
 ### host.constants
 
-Shared panel padding used by the host stats container.
+Shared presentation constants for browser host assembly.
+
+These values tune the spacing and responsiveness of the host HUD and side
+panels without burying layout numbers inside DOM-building code.
 
 ### FLAPPY_HOST_PANEL_PADDING
 
@@ -174,23 +213,21 @@ Shared panel padding used by the host stats container.
 
 ### host.dom.service
 
-Resolves a required 2D context from a canvas element.
+Low-level DOM safety helpers for the browser host boundary.
 
-@param canvas - Target canvas element.
-@param errorMessage - Error message when 2D context is unavailable.
-@returns Canvas 2D rendering context.
+Host assembly depends on several canvases. This helper turns the browser's
+nullable `getContext` API into a strict contract before higher-level host
+assembly begins.
 
 ### resolveRequiredCanvas2dContext
 
 `(canvas: HTMLCanvasElement, errorMessage: string) => CanvasRenderingContext2D`
 
-Resolves a required 2D context from a canvas element.
+Low-level DOM safety helpers for the browser host boundary.
 
-Parameters:
-- `canvas` - - Target canvas element.
-- `errorMessage` - - Error message when 2D context is unavailable.
-
-Returns: Canvas 2D rendering context.
+Host assembly depends on several canvases. This helper turns the browser's
+nullable `getContext` API into a strict contract before higher-level host
+assembly begins.
 
 ## browser-entry/host/host.stats.service.ts
 
@@ -198,19 +235,20 @@ Returns: Canvas 2D rendering context.
 
 `(statsTableHost: HTMLElement) => Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>`
 
-Creates the host stats table, appends it into the provided host element, and
-initializes all HUD values to their baseline placeholders.
+Stats-table creation and update helpers for the browser host HUD.
 
-Parameters:
-- `statsTableHost` - - DOM host that receives the table.
-
-Returns: Lookup map for future incremental stat updates.
+The host treats the stats table as a small indexed dashboard: build it once,
+keep direct references to value cells, then apply partial text updates during
+the runtime loop.
 
 ### updateStatsTableValues
 
 `(statsValueByKey: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
 
 Applies partial stat updates to the rendered stats table.
+
+This keeps HUD writes cheap and explicit: only supplied keys are rewritten,
+and architecture values receive their display formatting in one place.
 
 Parameters:
 - `statsValueByKey` - - Lookup of stat keys to value cells.
@@ -222,31 +260,28 @@ Returns: Nothing.
 
 ### host.canvas.service
 
-Applies a canvas backing store size and CSS width/height.
+Canvas sizing helpers for the browser host boundary.
 
-@param canvas - Target canvas element.
-@param widthPx - Desired backing-store width in pixels.
-@param heightPx - Desired backing-store height in pixels.
-@returns True when canvas dimensions changed.
+These utilities keep host layout and backing-store sizing aligned so the
+simulation and network canvases render crisply without stretching artifacts.
 
 ### applyCanvasBackingSize
 
 `(canvas: HTMLCanvasElement, widthPx: number, heightPx: number) => boolean`
 
-Applies a canvas backing store size and CSS width/height.
+Canvas sizing helpers for the browser host boundary.
 
-Parameters:
-- `canvas` - - Target canvas element.
-- `widthPx` - - Desired backing-store width in pixels.
-- `heightPx` - - Desired backing-store height in pixels.
-
-Returns: True when canvas dimensions changed.
+These utilities keep host layout and backing-store sizing aligned so the
+simulation and network canvases render crisply without stretching artifacts.
 
 ### applySimulationCanvasBounds
 
 `(canvas: HTMLCanvasElement, widthPx: number, heightPx: number) => boolean`
 
 Applies fixed simulation-canvas bounds so layout does not stretch unexpectedly.
+
+The main simulation canvas uses fixed bounds because the world renderer is
+tuned for a controlled viewport rather than fluid DOM stretching.
 
 Parameters:
 - `canvas` - - Simulation canvas element.
@@ -261,6 +296,9 @@ Returns: True when backing-store dimensions changed.
 
 Computes the drawable network canvas size from host element dimensions.
 
+The side-panel network view needs the drawable size after panel insets are
+accounted for, not just the raw host client box.
+
 Parameters:
 - `networkCanvasHost` - - Host element wrapping the network canvas.
 - `hostInsetPx` - - Total inset to subtract from both dimensions.
@@ -273,17 +311,8 @@ Returns: Width/height pair in pixels.
 
 `(canvas: HTMLCanvasElement, containerElement: HTMLElement, mainSplitContainer: HTMLElement, statsContainer: HTMLElement, statsSplitContainer: HTMLElement, statsTableHost: HTMLElement, networkCanvas: HTMLCanvasElement, networkCanvasHost: HTMLElement, onNetworkResize: () => void) => void`
 
-Installs responsive viewport sizing for simulation and network canvases.
+Top-level responsive sizing orchestration for the browser host.
 
-Parameters:
-- `canvas` - - Simulation canvas to resize.
-- `containerElement` - - Width/height source.
-- `mainSplitContainer` - - Main split panel host.
-- `statsContainer` - - Stats host element.
-- `statsSplitContainer` - - Stats split panel containing stats and network panes.
-- `statsTableHost` - - Stats table host element.
-- `networkCanvas` - - Network canvas.
-- `networkCanvasHost` - - Network host element.
-- `onNetworkResize` - - Callback after network resize.
-
-Returns: Nothing.
+This module wires the host resize lifecycle together: gather the relevant DOM
+elements, run the initial layout pass, and keep canvas sizing synchronized with
+viewport changes over time.

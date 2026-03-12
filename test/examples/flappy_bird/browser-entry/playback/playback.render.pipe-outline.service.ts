@@ -117,10 +117,7 @@ function resolvePipeOutlinePath(alignedRectangle: {
     entranceLineYPx <
       alignedRectangle.alignedTopPx + alignedRectangle.alignedHeightPx
   ) {
-    pipeOutlinePath.moveTo(
-      alignedRectangle.alignedLeftPx,
-      entranceLineYPx,
-    );
+    pipeOutlinePath.moveTo(alignedRectangle.alignedLeftPx, entranceLineYPx);
     pipeOutlinePath.lineTo(
       alignedRectangle.alignedLeftPx + alignedRectangle.alignedWidthPx,
       entranceLineYPx,

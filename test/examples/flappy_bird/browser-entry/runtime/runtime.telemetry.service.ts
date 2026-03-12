@@ -14,7 +14,19 @@ import {
 import type { PlaybackFrameStats } from '../browser-entry.types';
 
 /**
+ * Runtime telemetry helpers for live browser HUD updates.
+ *
+ * The runtime tracks a small rolling window of operational signals such as HUD
+ * update frequency and minor GC activity. These are not part of the simulation
+ * itself; they are observability features for understanding how expensive the
+ * browser playback loop is.
+ */
+
+/**
  * Runtime telemetry mutable state used for rolling HUD metrics.
+ *
+ * The state keeps timestamp windows rather than pre-aggregated counters so the
+ * HUD can report smoothed recent rates instead of lifetime totals.
  */
 export interface RuntimeTelemetryState {
   hudUpdateTimestampsMs: number[];
@@ -24,6 +36,9 @@ export interface RuntimeTelemetryState {
 
 /**
  * Creates telemetry state and attaches optional minor-GC observer.
+ *
+ * Instrumentation is feature-gated so the demo can run in a low-noise mode when
+ * telemetry is not desired.
  *
  * @returns Initialized telemetry state.
  */
@@ -41,6 +56,9 @@ export function createRuntimeTelemetryState(): RuntimeTelemetryState {
 /**
  * Disconnects runtime telemetry observers.
  *
+ * This is part of runtime teardown and prevents instrumentation observers from
+ * lingering after the demo has stopped.
+ *
  * @param telemetryState - Runtime telemetry state.
  * @returns Nothing.
  */
@@ -52,6 +70,9 @@ export function disconnectRuntimeTelemetry(
 
 /**
  * Resolves default telemetry HUD values used before first playback updates.
+ *
+ * The initial values make the instrumentation section self-describing even
+ * before the first playback frame arrives.
  *
  * @returns Initial telemetry field values.
  */
@@ -81,6 +102,9 @@ export function resolveInitialRuntimeTelemetryHudValues(): {
 
 /**
  * Resolves per-frame telemetry HUD values and updates rolling windows.
+ *
+ * On each published playback frame, the runtime folds the new telemetry sample
+ * into rolling windows and emits human-readable HUD strings.
  *
  * @param frameStats - Playback frame stats for the current frame.
  * @param telemetryState - Runtime telemetry mutable state.

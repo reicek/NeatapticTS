@@ -12,6 +12,29 @@ import {
 /**
  * Creates and configures the worker-local NEAT runtime used by browser evolution playback.
  *
+ * Educational note:
+ * The browser worker reuses the same core NeatapticTS runtime as the Node-side
+ * trainer, but trims configuration down to the pieces needed for an interactive
+ * example: deterministic seeding, feed-forward mutation policy, and a fitness
+ * function that favors quick browser-visible iteration.
+ *
+ * The resulting runtime is both the evolution engine and the source of the
+ * population that later playback requests visualize.
+ *
+ * For background reading, the Wikipedia article on "Neuroevolution of
+ * augmenting topologies" is a useful overview of the family of ideas this demo
+ * is exercising, even though the repository implements its own detailed runtime
+ * behavior and modern extensions.
+ *
+ * @example
+ * ```ts
+ * const neatRuntime = createInitializedWorkerRuntime({
+ *   populationSize: 50,
+ *   elitismCount: 10,
+ *   rngSeed: 12345,
+ * });
+ * ```
+ *
  * @param initPayload - Initialization values from the browser host.
  * @returns Initialized NEAT runtime.
  */

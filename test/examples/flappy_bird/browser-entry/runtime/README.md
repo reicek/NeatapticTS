@@ -6,35 +6,61 @@
 
 Container argument accepted by the browser runtime start function.
 
+Callers can either pass a host element directly or provide an element id for
+late resolution inside the runtime startup path.
+
 ### RuntimeGlobalWindow
 
 Browser `window` extension shape used for global runtime wiring.
+
+This keeps the auto-start and compatibility globals typed without coupling
+the runtime modules directly to ad hoc window-property access.
 
 ### RuntimeHostViewContext
 
 Browser host view handles used by the runtime entry orchestration.
 
+This is the typed bundle of canvas, HUD, and visualization handles returned
+by the host layer once the browser DOM has been prepared.
+
 ### RuntimeMutableLifecycleState
 
 Mutable lifecycle state used to coordinate stop semantics and completion.
 
+The runtime loop is asynchronous and long-lived, so the browser keeps a small
+shared lifecycle object for idempotent shutdown and completion signaling.
+
 ### RuntimeRunHandle
 
-Public run handle returned by the browser runtime entrypoint.
+Core runtime contracts for the Flappy Bird browser demo.
+
+The runtime boundary is where the browser-side application comes together:
+DOM host setup, worker creation, telemetry wiring, lifecycle control, and the
+configuration passed into the evolution loop.
 
 ### RuntimeStartConfig
 
 Static runtime configuration resolved before the browser loop starts.
 
+These values define the high-level NEAT and network shape used for the whole
+browser session.
+
 ### RuntimeStartContext
 
 Shared runtime startup dependencies created before evolution begins.
+
+Once this context exists, the browser has everything it needs to launch the
+actual evolution/playback loop.
 
 ## browser-entry/runtime/runtime.ts
 
 ### RuntimeRunHandle
 
-Public run handle returned by the browser runtime entrypoint.
+Core runtime contracts for the Flappy Bird browser demo.
+
+The runtime boundary is where the browser-side application comes together:
+DOM host setup, worker creation, telemetry wiring, lifecycle control, and the
+configuration passed into the evolution loop.
 
 ### start
 
@@ -48,6 +74,9 @@ Public run handle returned by the browser runtime entrypoint.
 
 Resolves and validates the browser runtime host element.
 
+The runtime accepts either a string id or a concrete element so this helper
+folds that loose input into one validated host node.
+
 Parameters:
 - `container` - - Element id or HTMLElement provided to runtime start.
 
@@ -59,6 +88,9 @@ Returns: Resolved host element.
 
 Formats unknown runtime failures into a stable HUD status string.
 
+The HUD should not need to understand arbitrary thrown values, so this helper
+normalizes anything throwable into one readable status line.
+
 Parameters:
 - `error` - - Unknown runtime exception value.
 
@@ -66,7 +98,11 @@ Returns: Normalized status string for HUD output.
 
 ### RuntimeContainerNotFoundError
 
-Error raised when the browser runtime host container cannot be resolved.
+Runtime-specific error helpers for the browser entrypoint.
+
+These errors normalize two user-facing failure modes: the browser cannot find
+the requested host container, or the runtime needs to report an unexpected
+failure back into the HUD.
 
 ## browser-entry/runtime/runtime.startup.service.ts
 
@@ -76,24 +112,29 @@ Error raised when the browser runtime host container cannot be resolved.
 
 Resolves the static runtime configuration used during browser startup.
 
+Centralizing the configuration fold here makes the runtime entry read as
+orchestration instead of constant plumbing.
+
 Returns: Runtime configuration derived from shared constants.
 
 ### createRuntimeStartContext
 
 `(container: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext`
 
-Creates the shared runtime startup dependencies used by the entry orchestration.
+Runtime startup helpers for the Flappy Bird browser demo.
 
-Parameters:
-- `container` - - Element id or HTMLElement to host the demo.
-
-Returns: Shared runtime start context for setup and loop launch.
+These functions cover the pre-loop phase: resolve the host container, build a
+typed browser view, derive static config, create telemetry state, spawn the
+worker, and paint the initial HUD before evolution begins.
 
 ### initializeRuntimeHud
 
 `(runtimeStartContext: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext) => void`
 
 Paints the initial runtime HUD values before the evolution loop starts.
+
+The HUD is seeded immediately so the page communicates that startup is in
+progress rather than appearing blank while the worker and loop are booting.
 
 Parameters:
 - `runtimeStartContext` - - Shared runtime start context.
@@ -106,15 +147,21 @@ Returns: Nothing.
 
 `() => import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeMutableLifecycleState`
 
-Creates mutable lifecycle state for stop semantics and completion signaling.
+Lifecycle and teardown helpers for the browser runtime.
 
-Returns: Mutable lifecycle state used by the run handle.
+The runtime behaves like a small application process. These helpers create the
+mutable state and public handle needed to stop it cleanly, terminate the
+worker, and resolve the completion promise exactly once.
 
 ### createRuntimeRunHandle
 
 `(runtimeStartContext: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext, runtimeLifecycleState: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeMutableLifecycleState) => import("test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle`
 
 Builds the public run handle and binds it to runtime teardown behavior.
+
+The handle is the user-facing control surface for the demo. Internally it is
+just a thin closure layer over the mutable lifecycle state and startup
+context.
 
 Parameters:
 - `runtimeStartContext` - - Shared runtime start context.
@@ -130,6 +177,9 @@ Returns: Public run handle exposed to callers.
 
 Creates telemetry state and attaches optional minor-GC observer.
 
+Instrumentation is feature-gated so the demo can run in a low-noise mode when
+telemetry is not desired.
+
 Returns: Initialized telemetry state.
 
 ### disconnectRuntimeTelemetry
@@ -137,6 +187,9 @@ Returns: Initialized telemetry state.
 `(telemetryState: import("test/examples/flappy_bird/browser-entry/runtime/runtime.telemetry.service").RuntimeTelemetryState) => void`
 
 Disconnects runtime telemetry observers.
+
+This is part of runtime teardown and prevents instrumentation observers from
+lingering after the demo has stopped.
 
 Parameters:
 - `telemetryState` - - Runtime telemetry state.
@@ -149,6 +202,9 @@ Returns: Nothing.
 
 Resolves default telemetry HUD values used before first playback updates.
 
+The initial values make the instrumentation section self-describing even
+before the first playback frame arrives.
+
 Returns: Initial telemetry field values.
 
 ### resolveRuntimeTelemetryHudValues
@@ -156,6 +212,9 @@ Returns: Initial telemetry field values.
 `(frameStats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats, telemetryState: import("test/examples/flappy_bird/browser-entry/runtime/runtime.telemetry.service").RuntimeTelemetryState) => { telemetryActivationsPerFrame: string; telemetrySimulationStepsPerRaf: string; telemetryHudUpdatesPerSecond: string; telemetryMinorGcPerMinute: string; }`
 
 Resolves per-frame telemetry HUD values and updates rolling windows.
+
+On each published playback frame, the runtime folds the new telemetry sample
+into rolling windows and emits human-readable HUD strings.
 
 Parameters:
 - `frameStats` - - Playback frame stats for the current frame.
@@ -165,7 +224,12 @@ Returns: Formatted telemetry HUD values for this frame.
 
 ### RuntimeTelemetryState
 
-Runtime telemetry mutable state used for rolling HUD metrics.
+Runtime telemetry helpers for live browser HUD updates.
+
+The runtime tracks a small rolling window of operational signals such as HUD
+update frequency and minor GC activity. These are not part of the simulation
+itself; they are observability features for understanding how expensive the
+browser playback loop is.
 
 ## browser-entry/runtime/runtime.evolution-loop.service.ts
 
@@ -175,6 +239,13 @@ Runtime telemetry mutable state used for rolling HUD metrics.
 
 Runs generation orchestration and playback until a stop signal is observed.
 
+The loop alternates between two phases:
+1. Evolve off-thread until the worker emits the next best-generation summary.
+2. Play that generation back on the main thread while streaming HUD updates.
+
+This rhythm makes the demo feel like a live training dashboard instead of a
+one-shot batch job.
+
 Parameters:
 - `options` - - Runtime evolution dependencies and mutable state accessors.
 
@@ -182,7 +253,12 @@ Returns: Nothing.
 
 ### RuntimeEvolutionLoopOptions
 
-Dependencies required to run the browser runtime evolution loop.
+Long-running evolution/playback orchestration for the browser runtime.
+
+This loop is the heart of the interactive demo. It repeatedly asks the worker
+for the next evolved generation, updates the HUD and network view, plays back
+that generation on the canvas, then folds the outcome into best-so-far
+browser state.
 
 ## browser-entry/runtime/runtime.browser-globals.service.ts
 
@@ -191,6 +267,9 @@ Dependencies required to run the browser runtime evolution loop.
 `(startRuntime: import("test/examples/flappy_bird/browser-entry/runtime/runtime.browser-globals.service").RuntimeStartFunction) => void`
 
 Publishes browser globals for demo auto-start and host-driven control.
+
+This keeps the runtime friendly to static docs pages where the bundle may be
+loaded by script tag rather than imported programmatically.
 
 This keeps parity with the asciiMaze entry style:
 - `window.flappyBird.start(...)` for explicit invocation,
@@ -206,7 +285,11 @@ Returns: Nothing.
 
 `(container: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget | undefined) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle>`
 
-Runtime start function signature used by browser-global wiring.
+Browser-global wiring for the Flappy Bird runtime entrypoint.
+
+The demo supports both module-style startup and traditional global-page usage.
+This module publishes the small global surface used by standalone docs pages
+and compatibility integrations.
 
 ## browser-entry/runtime/runtime.evolution-launch.service.ts
 
@@ -214,11 +297,8 @@ Runtime start function signature used by browser-global wiring.
 
 `(runtimeStartContext: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeStartContext, runtimeLifecycleState: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeMutableLifecycleState, stop: () => void) => void`
 
-Starts the runtime evolution loop and routes unexpected failures to the HUD.
+Launch wrapper for the long-running browser runtime loop.
 
-Parameters:
-- `runtimeStartContext` - - Shared runtime start context.
-- `runtimeLifecycleState` - - Mutable lifecycle state used for stop checks.
-- `stop` - - Idempotent stop function bound to the current runtime handle.
-
-Returns: Nothing.
+The evolution loop itself is asynchronous and may surface unexpected errors.
+This launcher keeps the entrypoint clean by centralizing the catch path that
+routes failures into the HUD before shutting the runtime down.

@@ -12,6 +12,11 @@ import type {
 /**
  * Creates an empty temporal observation memory state.
  *
+ * @example
+ * ```ts
+ * const memoryState = createSharedObservationMemoryState();
+ * ```
+ *
  * @returns Fresh mutable memory buffers for one bird/controller.
  */
 export function createSharedObservationMemoryState(): SharedObservationMemoryState {
@@ -23,6 +28,12 @@ export function createSharedObservationMemoryState(): SharedObservationMemorySta
 
 /**
  * Builds the temporal policy input vector (stacked observation + action memory).
+ *
+ * Educational note:
+ * This helper turns an interpretable feature object into the exact flat vector a
+ * feed-forward network consumes. That is why the output layout is documented so
+ * explicitly: changing the order would change the meaning of every trained
+ * weight in the policy.
  *
  * Output layout:
  * 1) current core observation frame
@@ -60,6 +71,10 @@ export function resolveTemporalObservationVector(
 /**
  * Commits one observation-action step into temporal memory.
  *
+ * The memory update happens after the decision is made so the next step can see
+ * both the recent observation context and the action history that produced the
+ * current trajectory.
+ *
  * @param observationMemoryState - Mutable temporal memory for the active bird.
  * @param features - Structured observation features used for the decision.
  * @param didFlap - Decision taken at this step.
@@ -92,6 +107,9 @@ export function commitSharedObservationMemoryStep(
 
 /**
  * Resolves previous core frames (newest-first) with deterministic zero padding.
+ *
+ * Zero padding keeps the policy input width stable during the first few frames
+ * of an episode before enough history has accumulated.
  *
  * @param observationMemoryState - Mutable temporal memory for the active bird.
  * @returns Previous core frame list with fixed target length.

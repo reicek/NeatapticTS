@@ -15,6 +15,21 @@ import type { WorkerPlaybackState } from './flappy-evolution-worker.types';
 /**
  * Creates initial playback state for a population of networks.
  *
+ * Educational note:
+ * This is the ownership boundary for worker playback initialization. The frame
+ * simulation service mutates the returned state on every step, but only this
+ * helper decides how a fresh population is placed into the world at time zero.
+ *
+ * @example
+ * ```ts
+ * const playbackState = createWorkerPopulationRenderState(
+ *   currentPopulation,
+ *   rng,
+ *   1280,
+ *   720,
+ * );
+ * ```
+ *
  * @param networks - Population to visualize.
  * @param rng - Deterministic random source.
  * @param initialVisibleWorldWidthPx - Initial viewport width from host.

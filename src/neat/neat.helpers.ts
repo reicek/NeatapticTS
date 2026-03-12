@@ -17,7 +17,9 @@ interface GenomeWithMetadata {
   clone?: () => GenomeWithMetadata;
   toJSON?: () => Record<string, unknown>;
   mutate?: (method: MutationMethod) => void;
-  setTopologyIntent?: (topologyIntent: 'feed-forward' | 'unconstrained') => void;
+  setTopologyIntent?: (
+    topologyIntent: 'feed-forward' | 'unconstrained',
+  ) => void;
   [key: string]: unknown;
 }
 

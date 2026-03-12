@@ -1,6 +1,11 @@
 /**
  * Resolves the evolution worker bundle URL relative to the active browser-entry bundle.
  *
+ * The browser bundle and worker bundle are emitted side-by-side by the docs/demo
+ * build. Resolving the worker URL relative to the currently loaded browser
+ * bundle keeps the demo portable across local files, static hosting, and docs
+ * builds without hard-coding absolute paths.
+ *
  * @returns Absolute URL string for `flappy-evolution.worker.bundle.js`.
  */
 export function resolveEvolutionWorkerBundleUrl(): string {

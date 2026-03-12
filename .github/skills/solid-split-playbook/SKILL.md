@@ -58,19 +58,27 @@ Useful optional detail to include:
 
 For any non-trivial split, follow this order before editing:
 
-1. Read the nearest folder `README.md` for the target root.
-2. Read the nearest useful parent `README.md` if the split spans sibling
-   surfaces.
-3. Read `plans/README.md`.
-4. Read only the single most relevant detailed plan, plus at most one adjacent
-   plan if the split clearly spans two initiatives.
-5. Then inspect the smallest set of source files needed to confirm the actual
-   seams.
+1. Build a full README inventory for the requested root, including nested
+  subfolder `README.md` files that shape the documentation surface.
+2. Convert that README inventory into an explicit todo list so the session can
+  proceed folder by folder with visible scope.
+3. Read the nearest folder `README.md` for the target root.
+4. Read the nearest useful parent `README.md` if the split spans sibling
+  surfaces.
+5. Read `plans/README.md`.
+6. Read only the single most relevant detailed plan, plus at most one adjacent
+  plan if the split clearly spans two initiatives.
+7. Then inspect the smallest set of source files needed to confirm the actual
+  seams.
 
 Generated folder README files are reconnaissance artifacts. Do not hand-edit
 them. Use them to infer responsibility boundaries, missing docs, stale public
 surface descriptions, likely neighboring consumers, and where source JSDoc must
 improve.
+
+For documentation-heavy passes over a root such as `#file:flappy_bird`, the
+README inventory is mandatory. Do not start editing source until the full set of
+README-owning folders is visible in the todo list.
 
 ## Split Philosophy
 
@@ -94,21 +102,24 @@ API, default, or runtime contract.
 
 1. Confirm the split root and whether the user wants planning, execution, or
    continuation of an existing pass.
-2. Read the nearest README files before deep code search.
-3. Read `plans/README.md`, then the single most relevant plan file when the work
+2. Build a full inventory of every `README.md` under that root.
+3. Convert the inventory into a todo list that names each README-owning folder.
+4. Read the README files in that inventory before deep code search, starting at
+  the root and then proceeding folder by folder.
+5. Read `plans/README.md`, then the single most relevant plan file when the work
    is architectural or part of an ongoing roadmap stream.
-4. If the split spans an unfamiliar area, use the existing `Boundary Mapper`,
+6. If the split spans an unfamiliar area, use the existing `Boundary Mapper`,
    `Plan Scout`, or `Docs Scout` agents as needed.
-5. If no durable plan exists, create one using the bundled template.
-6. Convert the current step into a todo list with exactly one active
-   implementation item.
-7. Execute only one durable step unless the user explicitly asks for more.
-8. Improve JSDoc on touched exported and public surfaces so generated README
+7. If no durable plan exists, create one using the bundled template.
+8. Keep the README todo explicit and folder-focused, with exactly one active
+  README or folder documentation item at a time.
+9. Execute only one durable step unless the user explicitly asks for more.
+10. Improve JSDoc on touched exported and public surfaces so generated README
    output remains educational, example-driven, and conceptually clear.
-9. Run the minimum validation needed for touched files and the step's done
+11. Run the minimum validation needed for touched files and the step's done
    criteria.
-10. Update the plan immediately after the step completes.
-11. End with a next-session handoff prompt that can continue from the next step
+12. Update the plan immediately after the step completes.
+13. End with a next-session handoff prompt that can continue from the next step
    without depending on prior chat history.
 
 ## Documentation Standards
@@ -135,6 +146,8 @@ Use the generated README as a doc gap detector:
   touched source needs clearer exported comments.
 - If a new subfolder is introduced, run `npm run docs` after doc-affecting edits
   so the generated README surface stays synchronized.
+- During large documentation passes, work through the README inventory one todo
+  item at a time instead of jumping between folders opportunistically.
 
 ## Naming and File-Shape Rules
 

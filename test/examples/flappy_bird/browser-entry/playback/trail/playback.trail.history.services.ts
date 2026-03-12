@@ -7,11 +7,23 @@ import type { TrailPoint } from '../../browser-entry.types';
 /**
  * Appends one trail point while enforcing the maximum retained history length.
  *
+ * Playback trails are intentionally modeled as short rolling histories rather
+ * than unbounded path logs. That keeps the neon afterimage readable, prevents
+ * old turns from dominating the current frame, and avoids per-frame growth in a
+ * long-running browser session.
+ *
  * @param trailPoints - Mutable trail collection.
  * @param frameIndex - Source frame index.
  * @param yPosition - Bird y position.
  * @param maxRetainedPoints - Optional maximum retained trail history length.
  * @returns Nothing.
+ *
+ * @example
+ * ```ts
+ * const trailPoints = [{ frameIndex: 10, yPx: 140 }];
+ * pushTrailPoint(trailPoints, 11, 136, 2);
+ * // trailPoints now contains the two newest samples only.
+ * ```
  */
 export function pushTrailPoint(
   trailPoints: TrailPoint[],
@@ -27,6 +39,11 @@ export function pushTrailPoint(
 
 /**
  * Appends one point to the champion-only short trail history.
+ *
+ * The browser highlights the current leader with a shorter, denser trail than
+ * the rest of the flock. Using a dedicated helper keeps that policy explicit in
+ * the call site instead of scattering champion-specific retention numbers
+ * through the playback renderer.
  *
  * @param trailPoints - Mutable champion trail collection.
  * @param frameIndex - Source frame index.

@@ -6,17 +6,29 @@
 
 Shared alias for the worker playback-step payload.
 
+This keeps the playback worker-channel modules focused on playback semantics
+instead of long imported protocol names.
+
 ### PlaybackStepRequest
 
-Request payload for one playback-step worker call.
+Playback-specific worker-channel contracts.
+
+These types sit above the lower-level browser worker protocol and describe the
+request budgeting plus summary data flow used by the playback loop.
 
 ### ResolvePlaybackStepRequestInput
 
 Input used to resolve the next playback-step request and budget remainder.
 
+Playback uses a fractional frame budget so browser render cadence and worker
+simulation cadence can be smoothed together over time.
+
 ### ResolvePlaybackStepRequestResult
 
 Output for the resolved playback-step request and frame-budget remainder.
+
+The resolved request records both the integer step batch to send now and the
+leftover fractional budget to carry into the next render tick.
 
 ## browser-entry/playback/worker-channel/playback.worker-channel.request.services.ts
 
@@ -24,12 +36,10 @@ Output for the resolved playback-step request and frame-budget remainder.
 
 `(input: import("test/examples/flappy_bird/browser-entry/playback/worker-channel/playback.worker-channel.types").ResolvePlaybackStepRequestInput) => import("test/examples/flappy_bird/browser-entry/playback/worker-channel/playback.worker-channel.types").ResolvePlaybackStepRequestResult`
 
-Resolves step count and request payload for the next worker playback batch.
+Playback batch-request helpers for the browser worker channel.
 
-Parameters:
-- `input` - - Current frame budget and viewport dimensions.
-
-Returns: Request payload plus carried-over fractional frame budget.
+The playback loop accumulates simulation budget in fractional units, then
+converts that budget into integer worker step requests on each render tick.
 
 ## browser-entry/playback/worker-channel/playback.worker-channel.summary.services.ts
 
@@ -38,6 +48,10 @@ Returns: Request payload plus carried-over fractional frame budget.
 `(playbackStepPayload: { requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }, latestLeaderPipesPassed: number, latestLeaderFramesSurvived: number) => { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; }`
 
 Resolves final playback summary values when the worker reports completion.
+
+Some end-of-episode aggregates may be omitted from the worker payload, so the
+browser falls back to the latest leader values it has already observed during
+playback.
 
 Parameters:
 - `playbackStepPayload` - - Playback payload returned by worker.
@@ -50,13 +64,8 @@ Returns: Final aggregate playback summary.
 
 `(playbackStepPayload: { requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }, frameIndex: number, activeBirdCount: number, leaderPipesPassed: number, leaderFramesSurvived: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats`
 
-Resolves HUD playback frame stats from worker payload and leader metrics.
+Summary and HUD helpers for playback worker-channel results.
 
-Parameters:
-- `playbackStepPayload` - - Playback payload returned by worker.
-- `frameIndex` - - Current render frame index.
-- `activeBirdCount` - - Number of alive birds in current frame.
-- `leaderPipesPassed` - - Current frame leader pipes passed.
-- `leaderFramesSurvived` - - Current frame leader survived frames.
-
-Returns: Normalized per-frame HUD telemetry payload.
+Once the worker replies with a playback-step payload, these helpers turn that
+raw protocol data into the browser-facing telemetry and end-of-episode summary
+values used elsewhere in the playback loop.

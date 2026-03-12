@@ -48,12 +48,11 @@ export const FLAPPY_BIRD_AURA_BLUR_MULTIPLIER = 2.6;
  * comparable visual weight.
  */
 export const FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX =
-	Math.max(24, Math.round(FLAPPY_BIRD_BODY_GLOW_BLUR_PX * 3.2)) -
-	FLAPPY_BIRD_BODY_GLOW_BLUR_PX;
+  Math.max(24, Math.round(FLAPPY_BIRD_BODY_GLOW_BLUR_PX * 3.2)) -
+  FLAPPY_BIRD_BODY_GLOW_BLUR_PX;
 
 /** Minimum horizontal segment length used by stepped trail rendering. */
 export const FLAPPY_TRAIL_MIN_HORIZONTAL_SEGMENT_PX = 2;
 
 /** Minimum vertical segment length used by stepped trail rendering. */
 export const FLAPPY_TRAIL_MIN_VERTICAL_SEGMENT_PX = 2;
-

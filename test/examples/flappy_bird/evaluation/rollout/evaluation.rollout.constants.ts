@@ -3,6 +3,9 @@
  *
  * This file will host rollout-only constants and sentinels that belong to the
  * rollout subsystem rather than the wider evaluation surface.
+ *
+ * Naming these sentinels explicitly keeps rollout code easier to read than a
+ * sea of raw `0`, `1`, and string literals.
  */
 import type { FlappyGameState } from '../../flappyEnvironment.ts';
 
@@ -18,7 +21,12 @@ export const FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_GRACE_FRAMES = 0;
 /** Minimum unrecoverable-frame streak required for early termination. */
 export const FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_CONSECUTIVE_FRAMES = 1;
 
-/** Shared zero baseline used across rollout fitness and counters. */
+/**
+ * Shared zero baseline used across rollout fitness and counters.
+ *
+ * This acts as the semantic baseline for both shaping accumulation and several
+ * rollout guard conditions.
+ */
 export const FLAPPY_ROLLOUT_ZERO_FITNESS = 0;
 
 /** Rollout done reason used by heuristic early termination. */

@@ -23,7 +23,18 @@ import type {
 } from './host.resize.service.types';
 
 /**
+ * Layout-application helpers for responsive host sizing.
+ *
+ * These helpers implement the actual responsive policy once the viewport has
+ * been measured: choose a layout mode, resize canvases, reorder panes, and
+ * trigger redraws when the network panel geometry changes.
+ */
+
+/**
  * Creates a deferred redraw controller that waits for layout to settle.
+ *
+ * Waiting two animation frames is a pragmatic way to avoid redrawing the network
+ * panel against transient intermediate layout sizes.
  *
  * @param onNetworkResize - Callback after network resize.
  * @returns Deferred redraw controller.
@@ -54,6 +65,9 @@ export function createDeferredNetworkRedrawController(
 
 /**
  * Applies the minimal mobile layout that hides the auxiliary panes.
+ *
+ * On the smallest viewports, the resize policy prioritizes the simulation canvas
+ * and temporarily hides the stats/network panel to preserve playable space.
  *
  * @param responsiveViewportSizingElements - Host elements participating in layout.
  * @param responsiveViewportLayoutContext - Responsive layout context.
@@ -103,6 +117,9 @@ export function applyMinimalMobileViewportLayout(
 /**
  * Applies the standard tablet and desktop layout and returns panel dimensions.
  *
+ * This path keeps the auxiliary panes visible and resolves a balanced split
+ * between simulation and side-panel content.
+ *
  * @param responsiveViewportSizingElements - Host elements participating in layout.
  * @param responsiveViewportLayoutContext - Responsive layout context.
  * @param deferredNetworkRedrawController - Deferred redraw controller.
@@ -144,6 +161,9 @@ export function applyStandardViewportLayout(
 
 /**
  * Applies simulation and network canvas backing sizes for the active layout.
+ *
+ * Once panel dimensions are known, this helper updates both backing stores and
+ * triggers an immediate network redraw when the visualization canvas changed.
  *
  * @param responsiveViewportSizingElements - Host elements participating in layout.
  * @param responsiveViewportLayoutContext - Responsive layout context.
@@ -188,6 +208,9 @@ export function applyResponsiveCanvasBounds(
 /**
  * Installs window and container listeners for responsive host sizing.
  *
+ * The host listens both to global window resizes and to container-specific size
+ * changes when `ResizeObserver` is available.
+ *
  * @param containerElement - Width and height source.
  * @param applyCanvasSize - Shared sizing callback.
  * @param deferredNetworkRedrawController - Deferred redraw controller.
@@ -218,6 +241,9 @@ export function installResponsiveViewportSizingListeners(
 
 /**
  * Applies the split-container styles for the standard layout modes.
+ *
+ * This helper decides whether the main panels should stack or sit side-by-side,
+ * then applies the matching flexbox configuration.
  *
  * @param responsiveViewportSizingElements - Host elements participating in layout.
  * @param responsiveViewportLayoutContext - Responsive layout context.
@@ -263,6 +289,9 @@ function applySplitContainerLayoutStyles(
 /**
  * Applies ordering and flex styles for stats and network panes.
  *
+ * Compact layouts may hide the stats table or promote the network panel so the
+ * most informative content remains visible in constrained space.
+ *
  * @param statsTableHost - Stats table host element.
  * @param networkCanvasHost - Network canvas host element.
  * @param responsiveViewportLayoutContext - Responsive layout context.
@@ -306,6 +335,9 @@ function applyStatsPaneOrdering(
 
 /**
  * Applies the fixed network host height and queues redraw when it changes.
+ *
+ * The network panel uses a fixed-height target so the visualization remains
+ * readable and stable across layout transitions.
  *
  * @param networkCanvasHost - Network canvas host element.
  * @param deferredNetworkRedrawController - Deferred redraw controller.

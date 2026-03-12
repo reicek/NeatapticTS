@@ -4,7 +4,19 @@ import type {
 } from '../../browser-entry.types';
 
 /**
+ * Snapshot synchronization helpers for playback.
+ *
+ * The worker streams packed typed-array snapshots, while the browser renderer
+ * wants stable mutable arrays of pipes and birds. This module performs that
+ * translation in place so playback can stay fast and allocation-light.
+ */
+
+/**
  * Applies worker snapshot data to the mutable playback render state.
+ *
+ * This is the top-level hydration step for one frame: copy scalar frame fields,
+ * then synchronize packed pipe and bird arrays into reusable browser-side
+ * objects.
  *
  * @param renderState - Mutable render state mirror used by the browser.
  * @param snapshot - Worker playback snapshot for the current render tick.
@@ -24,6 +36,9 @@ export function applyPlaybackSnapshot(
 
 /**
  * Synchronizes packed pipe snapshot fields into the reusable render-state pipe array.
+ *
+ * Instead of recreating pipe objects every frame, the browser grows the array as
+ * needed and then mutates the existing records in place.
  *
  * @param renderState - Mutable render state mirror used by the browser.
  * @param snapshot - Packed worker playback snapshot for the current render tick.
@@ -55,6 +70,9 @@ function syncPlaybackSnapshotPipes(
 
 /**
  * Synchronizes packed bird snapshot fields into the reusable render-state bird array.
+ *
+ * This mirrors the pipe strategy: keep a stable array shape when possible and
+ * update fields in place from the packed worker buffers.
  *
  * @param renderState - Mutable render state mirror used by the browser.
  * @param snapshot - Packed worker playback snapshot for the current render tick.

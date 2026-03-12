@@ -35,6 +35,16 @@ import type { WorkerPlaybackFrameContext } from './flappy-evolution-worker.simul
 /**
  * Advances the whole population simulation by one logical frame.
  *
+ * Educational note:
+ * One logical frame is internally split into smaller control substeps so the
+ * worker can make flap decisions, apply gravity, move pipes, spawn new pipes,
+ * and resolve collisions with better numerical stability than a single large
+ * integration jump.
+ *
+ * This function is the main simulation ownership boundary for the folder.
+ * The companion `simulation.utils` file creates initial state; this service is
+ * responsible for mutating that state over time.
+ *
  * @param renderState - Mutable simulation state.
  * @param rng - Deterministic random source for spawn variation.
  * @param difficultyProfile - Active dynamic difficulty profile.

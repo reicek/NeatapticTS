@@ -1,4 +1,7 @@
-import type { PopulationRenderState, TrailState } from '../../browser-entry.types';
+import type {
+  PopulationRenderState,
+  TrailState,
+} from '../../browser-entry.types';
 import {
   beginPlaybackFrameViewportTransform,
   finalizePlaybackFrameCanvas,

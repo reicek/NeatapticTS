@@ -57,6 +57,10 @@ const workerMutableRuntimeState = createWorkerMutableRuntimeState();
  * the host posts typed messages, and the worker folds those messages into state.
  * This keeps rendering and heavy simulation/evolution work decoupled.
  *
+ * If you want background reading, the MDN article on Web Workers is the most
+ * practical reference for understanding why this example moves evolution and
+ * playback simulation off the main thread.
+ *
  * Routing policy in this worker:
  * - `init`: create NEAT runtime and seed deterministic RNG state.
  * - `request-generation`: run one evolution cycle and publish summary payload.
@@ -68,6 +72,11 @@ self.onmessage = createWorkerMessageHandler(workerMutableRuntimeState);
 
 /**
  * Creates the mutable worker runtime state container.
+ *
+ * Educational note:
+ * The worker keeps one small mutable state bag instead of scattering globals.
+ * That makes the protocol flow easier to explain and lets the entrypoint pass a
+ * single dependency object through the orchestration helpers.
  *
  * @returns Mutable worker runtime state.
  */
@@ -89,6 +98,15 @@ function createWorkerMutableRuntimeState(): WorkerMutableRuntimeState {
 /**
  * Creates the top-level worker message handler.
  *
+ * The returned function is intentionally thin. All protocol decisions are
+ * delegated to the router service so the worker entrypoint stays readable as a
+ * high-level orchestration module.
+ *
+ * @example
+ * ```ts
+ * self.onmessage = createWorkerMessageHandler(workerMutableRuntimeState);
+ * ```
+ *
  * @param workerMutableRuntimeState - Mutable worker runtime state.
  * @returns Worker message handler.
  */
@@ -109,6 +127,10 @@ function createWorkerMessageHandler(
 
 /**
  * Creates protocol handlers bound to the mutable worker runtime state.
+ *
+ * This helper is the bridge between the pure protocol router and the impure
+ * worker runtime. Each callback closes over the same mutable state bag so the
+ * protocol layer can remain small and declarative.
  *
  * @param workerMutableRuntimeState - Mutable worker runtime state.
  * @returns Protocol handler bundle.
@@ -150,6 +172,10 @@ function createWorkerProtocolHandlers(
  * The runtime is configured once with deterministic RNG state and a lightweight
  * early-termination fitness rollout. Keeping this setup centralized helps ensure
  * reproducibility between runs and keeps host<->worker contracts simple.
+ *
+ * This function only prepares the evolutionary controller. It does not start
+ * playback and it does not evolve a generation yet; those remain separate
+ * protocol steps so the host can control them explicitly.
  *
  * @param initPayload - Initialization values from the browser host.
  * @returns Promise resolved when runtime setup is complete.
@@ -202,6 +228,9 @@ async function evolveAndPublishGeneration(
 /**
  * Begins worker initialization and captures asynchronous failures.
  *
+ * The worker retains the initialization promise so later generation requests can
+ * await setup completion instead of racing against it.
+ *
  * @param workerMutableRuntimeState - Mutable worker runtime state.
  * @param initPayload - Initialization payload.
  * @returns Nothing.
@@ -230,6 +259,10 @@ function beginWorkerInitialization(
 /**
  * Begins one asynchronous generation request and captures failures.
  *
+ * This is intentionally fire-and-forget from the protocol perspective. The
+ * actual completion signal is the later `generation-ready` or `error` message
+ * posted back to the host.
+ *
  * @param workerMutableRuntimeState - Mutable worker runtime state.
  * @returns Nothing.
  */
@@ -246,6 +279,10 @@ function beginWorkerGenerationRequest(
 
 /**
  * Begins a new playback session from the current evolved population.
+ *
+ * A playback session is a deterministic simulation snapshot seeded from the
+ * current population. Each new session resets playback RNG and world state so
+ * the host can replay generations cleanly.
  *
  * @param workerMutableRuntimeState - Mutable worker runtime state.
  * @param payload - Playback start payload.
@@ -278,6 +315,9 @@ function beginWorkerPlayback(
  * The browser host can request multiple simulation steps per RAF to trade visual
  * smoothness against throughput. This function keeps that loop deterministic and
  * emits one compact snapshot payload per request.
+ *
+ * Importantly, the worker remains authoritative for deciding when the run is
+ * over and which bird should be treated as the playback winner.
  *
  * @param playbackStepPayload - Host-selected simulation-step budget and viewport.
  * @returns Nothing.
@@ -323,6 +363,9 @@ function processWorkerPlaybackStepRequest(
 
 /**
  * Posts a typed message from worker to host.
+ *
+ * This is the narrowest possible transport helper: all message construction is
+ * done elsewhere so the README can point to one stable worker-to-host boundary.
  *
  * @param workerMessage - Outbound worker response payload.
  * @param transferList - Optional transferable buffers moved with the payload.

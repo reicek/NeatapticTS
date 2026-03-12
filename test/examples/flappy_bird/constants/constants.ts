@@ -4,6 +4,11 @@
  * Constants are now organized into small, category-focused modules
  * (`constants.*.ts`). This file remains as a compatibility export surface so
  * existing imports continue to work while callers migrate gradually.
+ *
+ * Educational note:
+ * Treat this file as the folder map, not the best place to learn individual
+ * values. The category modules below are where the real documentation lives:
+ * physics, pipes, observation, runtime, rendering, network layout, and so on.
  */
 
 export * from './constants.world';

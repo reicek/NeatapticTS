@@ -4,31 +4,40 @@
 
 ### DynamicColorScale
 
-Dynamic tiered color scale used by visualization render layers.
+Visualization-specific color-scale contracts for network rendering.
+
+The Flappy Bird demo renders connection weights and node biases with tiered
+neon ramps so humans can quickly read sign and magnitude without parsing raw
+numbers on every edge and node.
 
 ### NetworkVisualizationColorScales
 
 Grouped color scales for connection and bias channels.
 
+Keeping the two scales together ensures the legend and drawing code read from
+one consistent view of the active network range.
+
 ## browser-entry/visualization/visualization.ts
+
+### visualization
+
+Public visualization facade for browser-entry network rendering.
+
+The dedicated visualization folder focuses on turning network structure and
+parameter ranges into readable graphics. Layer resolution itself is shared
+with the neighboring network-view topology boundary, so this facade exposes
+that topology helper while keeping the visualization subsystem's public story
+in one place.
 
 ### resolveNetworkVisualizationLayers
 
 `(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
-Resolves layered node groups for network-view layout and rendering.
+Topology resolution helpers for the browser network view.
 
-Educational note:
-Layer grouping is a network-view concern because it drives sizing, node
-placement, and architecture presentation. Visualization code can still reuse
-the result, but this helper now lives with the module that owns layout.
-
-Parameters:
-- `network` - - Runtime network instance.
-- `inputSize` - - Input count fallback.
-- `outputSize` - - Output count fallback.
-
-Returns: Layered nodes for rendering.
+These helpers answer a key visualization question: how should the current
+network be partitioned into ordered layers so layout and architecture labels
+stay meaningful even when some metadata is missing?
 
 ## browser-entry/visualization/visualization.errors.ts
 
@@ -131,6 +140,9 @@ Returns: Nothing.
 `(context: CanvasRenderingContext2D, positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, biasScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
 
 Draws all network nodes with bias labels.
+
+The node layer pairs each rectangle with a compact bias label so the panel can
+show both topology and a lightweight hint of parameter state.
 
 Parameters:
 - `context` - - Render context.
@@ -246,6 +258,10 @@ Returns: Nothing.
 
 Draws the color legend for connections and node bias values.
 
+This legend is what turns the panel from "colorful art" into an interpretable
+instrument: it tells the viewer what each weight and bias color actually
+means numerically.
+
 Parameters:
 - `context` - - Render context.
 - `architectureLabel` - - Compact architecture description.
@@ -258,6 +274,9 @@ Returns: Nothing.
 `(context: CanvasRenderingContext2D, architectureLabel: string) => void`
 
 Draws network architecture header text.
+
+The header gives viewers a compact architecture summary before they inspect
+individual nodes and edges.
 
 Parameters:
 - `context` - - Render context.
@@ -294,6 +313,10 @@ Returns: Nothing.
 `(context: CanvasRenderingContext2D, runtimeConnections: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[], positionByNodeIndex: Map<number, import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>, connectionScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
 
 Draws weighted connection lines.
+
+Connection styling carries semantic meaning: color encodes magnitude and sign,
+while dash patterns and auxiliary marks help distinguish disabled or negative
+edges in a way that still reads quickly on a dense graph.
 
 Parameters:
 - `context` - - Render context.
@@ -399,18 +422,21 @@ Returns: True when the legend should be omitted.
 
 `(input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; }) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[]`
 
-Builds logarithmic diverging color tiers with a center band and edge extension.
+Color-scale synthesis helpers for network visualization.
 
-Parameters:
-- `input` - - Tier creation options.
-
-Returns: Ordered tier list.
+These utilities convert raw connection weights and node biases into tiered
+neon color scales. The goal is not photorealism; it is interpretability. A
+reader should be able to glance at the network panel and see where strong
+positive, strong negative, and near-zero values live.
 
 ### resolveBiasRangeColor
 
 `(nodeBias: number) => string`
 
 Resolves bias color for a raw node bias.
+
+Bias colors follow the same diverging logic as connection colors so the legend
+remains conceptually consistent across channels.
 
 Parameters:
 - `nodeBias` - - Node bias.
@@ -423,6 +449,9 @@ Returns: Tier color.
 
 Resolves connection color for a raw weight.
 
+This small helper is useful when one-off drawing code wants the same color
+semantics as the full dynamic scale machinery.
+
 Parameters:
 - `connectionWeight` - - Connection weight.
 
@@ -434,6 +463,10 @@ Returns: Tier color.
 
 Resolves dynamic connection/bias color scales from the active network range.
 
+The active network may contain only a narrow slice of the full theoretical
+value range, so the legend adapts to what is currently present instead of
+always rendering a fixed generic scale.
+
 Parameters:
 - `network` - - Active network.
 
@@ -444,6 +477,9 @@ Returns: Dynamic scales used by graph drawing and legend rows.
 `(value: number, tiers: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[], aboveTierColor: string) => string`
 
 Resolves a color from ordered tier definitions.
+
+This is the final classification step that maps one numeric weight or bias to
+the swatch color the renderer should paint.
 
 Parameters:
 - `value` - - Numeric value to classify.
@@ -458,19 +494,21 @@ Returns: Resolved color string.
 
 `(scale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale, symbol: "w" | "b") => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]`
 
-Creates legend rows from ordered tiers.
+Legend-layout helpers for network visualization.
 
-Parameters:
-- `scale` - - Dynamic color scale containing bounds, tiers, and overflow color.
-- `symbol` - - Label symbol.
-
-Returns: Legend rows.
+The legend explains how colors map back to numeric weights and biases. These
+helpers turn color scales into labeled rows and place the legend so it stays
+readable across different canvas sizes.
 
 ### resolveDefaultNetworkLegendLayout
 
 `(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
 
 Resolves default legend layout from internal tier definitions.
+
+This convenience helper is used when the caller wants a layout driven by the
+currently active network and does not need to assemble the intermediate rows
+manually.
 
 Parameters:
 - `context` - - Render context.
@@ -484,6 +522,10 @@ Returns: Legend layout.
 
 Resolves network legend layout from canvas constraints.
 
+The legend layout adapts between regular and compact modes so the network
+panel can stay informative on smaller viewports without swallowing the whole
+canvas.
+
 Parameters:
 - `context` - - Render context.
 - `connectionLegendRows` - - Connection legend rows.
@@ -493,11 +535,22 @@ Returns: Computed legend layout.
 
 ## browser-entry/visualization/visualization.topology.utils.ts
 
+### visualization.topology.utils
+
+Shared topology formatting helpers used by network-view and visualization.
+
+The topology boundary resolves node layering, while this helper module adds a
+few small presentation-oriented utilities that are reused by the visualization
+panel.
+
 ### formatNodeBiasLabel
 
 `(nodeBias: number) => string`
 
 Formats node bias labels with fixed sign and precision.
+
+Consistent sign and precision make dense node labels easier to scan quickly in
+the rendered network panel.
 
 Parameters:
 - `nodeBias` - - Node bias value.
@@ -508,16 +561,8 @@ Returns: Label text.
 
 `(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
-Resolves layered node groups for network-view layout and rendering.
+Topology resolution helpers for the browser network view.
 
-Educational note:
-Layer grouping is a network-view concern because it drives sizing, node
-placement, and architecture presentation. Visualization code can still reuse
-the result, but this helper now lives with the module that owns layout.
-
-Parameters:
-- `network` - - Runtime network instance.
-- `inputSize` - - Input count fallback.
-- `outputSize` - - Output count fallback.
-
-Returns: Layered nodes for rendering.
+These helpers answer a key visualization question: how should the current
+network be partitioned into ordered layers so layout and architecture labels
+stay meaningful even when some metadata is missing?

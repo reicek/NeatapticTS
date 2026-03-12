@@ -110,7 +110,9 @@ export function applyProvenance(
   // Step 2: Insert provenance genomes.
   for (let index = 0; index < provenanceCount; index++) {
     if (internal.options.network) {
-      const provenanceGenome = Network.fromJSON(internal.options.network.toJSON());
+      const provenanceGenome = Network.fromJSON(
+        internal.options.network.toJSON(),
+      );
 
       // Step 2.1: Preserve feed-forward intent when the seed topology is eligible.
       promoteGenomeToFeedForwardIntentWhenEligible(

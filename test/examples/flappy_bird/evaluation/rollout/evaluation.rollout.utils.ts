@@ -3,6 +3,11 @@
  *
  * This file will host rollout-local fitness composition, shaping utilities,
  * and terminal result assembly helpers.
+ *
+ * Educational note:
+ * The rollout subsystem separates simulation from scoring on purpose. The
+ * services file determines what happened; this file determines how that episode
+ * should be interpreted as fitness.
  */
 import {
   FLAPPY_FITNESS_ALIGNMENT_WEIGHT_PER_FRAME,
@@ -49,6 +54,10 @@ import type { FlappyEpisodeResult } from '../evaluation.types';
 
 /**
  * Composes the final rollout result from the terminal game state.
+ *
+ * This is the final fold step for rollout execution: internal counters and
+ * shaping channels become the public `FlappyEpisodeResult` consumed by training
+ * and reporting.
  *
  * @param rolloutEpisodeContext - Normalized rollout configuration.
  * @param rolloutEpisodeRuntimeState - Mutable runtime state.
@@ -99,6 +108,9 @@ export function composeRolloutEpisodeResult(
 /**
  * Computes dense reward shaping from consecutive observations.
  *
+ * Dense shaping rewards incremental improvement throughout an episode instead of
+ * paying out only at the end, which gives evolution a more informative signal.
+ *
  * @param previousFeatures - Observation before stepping the environment.
  * @param currentFeatures - Observation after stepping the environment.
  * @returns Per-step shaped reward.
@@ -127,6 +139,9 @@ export function computeDenseShapingReward(
 /**
  * Detects trajectories that are usually irrecoverable in early warmup.
  *
+ * The heuristic focuses on obvious early failures, where spending more rollout
+ * budget is least informative.
+ *
  * @param observationFeatures - Post-step observation features.
  * @returns Whether the current trajectory appears unrecoverable.
  */
@@ -152,6 +167,9 @@ export function isBirdLikelyUnrecoverable(
 
 /**
  * Resolves the raw fitness channels from the final episode state.
+ *
+ * Separating raw channels from final composition makes reward rebalancing much
+ * easier to reason about.
  *
  * @param rolloutEpisodeContext - Normalized rollout configuration.
  * @param rolloutEpisodeRuntimeState - Mutable runtime state.
@@ -186,6 +204,9 @@ function resolveRolloutFitnessBreakdown(
 /**
  * Resolves raw fitness by summing every fitness channel.
  *
+ * This is the legacy unnormalized objective. The normalized path below caps
+ * channels so no single term dominates the whole score.
+ *
  * @param rolloutFitnessBreakdown - Fitness-channel breakdown.
  * @returns Raw unnormalized fitness.
  */
@@ -203,6 +224,9 @@ function resolveUnnormalizedRolloutFitness(
 
 /**
  * Resolves every dense-shaping reward component from consecutive observations.
+ *
+ * If you want background reading, the Wikipedia article on "reward shaping" is
+ * a good high-level companion concept for why these components exist.
  *
  * @param previousFeatures - Observation before stepping the environment.
  * @param currentFeatures - Observation after stepping the environment.
@@ -272,6 +296,9 @@ function resolveDenseShapingRewardComponents(
 /**
  * Adds small terminal bonuses from final progress/alignment signals.
  *
+ * Terminal bonuses refine the final ranking, but they are intentionally smaller
+ * than the main survival and pipe-progress channels.
+ *
  * @param episodeState - Final rollout state.
  * @param difficultyScale - Active rollout difficulty scale.
  * @returns Terminal shaping reward.
@@ -304,6 +331,10 @@ function computeTerminalShapingFitness(
 
 /**
  * Normalize and cap fitness channels so no single reward term dominates.
+ *
+ * Educational note:
+ * Channel normalization is a pragmatic way to keep the objective balanced across
+ * episodes of different lengths and levels of progress.
  *
  * @param framesValue - Frames survived for the episode.
  * @param pipesPassedValue - Pipes passed during the episode.

@@ -3,6 +3,11 @@
  *
  * This file will host the internal rollout orchestration entry while the
  * public evaluation-level service remains a stable compatibility facade.
+ *
+ * Educational note:
+ * A rollout is one deterministic episode for one policy under one seed. This
+ * module keeps that lifecycle readable: normalize inputs, create runtime state,
+ * simulate until termination, then fold the result into a public episode report.
  */
 import {
   createRolloutEpisodeRuntimeState,
@@ -19,6 +24,14 @@ import type {
 
 /**
  * Roll out an episode and return details.
+ *
+ * @example
+ * ```ts
+ * const result = rolloutEpisode(network, {
+ *   seed: 123,
+ *   normalizeFitness: true,
+ * });
+ * ```
  *
  * @param network - Genome/network to evaluate.
  * @param rolloutOptions - Optional rollout controls.

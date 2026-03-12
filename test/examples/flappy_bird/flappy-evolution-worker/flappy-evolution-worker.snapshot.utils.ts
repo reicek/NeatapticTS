@@ -10,6 +10,16 @@ import type {
  * runtime-only references (e.g., network instances, sets) and keeps only
  * renderer-relevant fields.
  *
+ * Educational note:
+ * The snapshot is intentionally column-oriented. By packing values into typed
+ * arrays, the worker can transfer large bird populations to the host with much
+ * lower overhead than a per-frame array of nested objects.
+ *
+ * This is a small example of a structure-of-arrays transport layout. If that
+ * pattern is unfamiliar, the Wikipedia article on "AoS and SoA" is a good short
+ * reference for why packed columns are often friendlier to hot-path data
+ * movement than arrays of rich objects.
+ *
  * @param playbackState - Current mutable playback state.
  * @returns Immutable frame snapshot for the host.
  */
@@ -65,6 +75,14 @@ export function createWorkerPlaybackSnapshot(
 
 /**
  * Resolves transferable buffers for one packed playback snapshot.
+ *
+ * The returned buffers should be passed as the second argument to
+ * `postMessage(...)` so ownership moves to the host thread instead of copying
+ * the typed-array contents.
+ *
+ * That ownership transfer is a large part of why the worker can stream full
+ * population snapshots without forcing the main thread to pay unnecessary copy
+ * costs every frame.
  *
  * @param snapshot - Packed playback snapshot posted back to the browser host.
  * @returns Transfer list used to move typed-array buffers without copying.

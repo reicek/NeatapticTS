@@ -6,6 +6,13 @@ import {
 } from './flappy-evolution-worker.snapshot.utils';
 import type { WorkerPlaybackState } from './flappy-evolution-worker.types';
 
+/**
+ * Snapshot transport tests for the worker playback packing helpers.
+ *
+ * These tests are intentionally narrow: they lock in the packed transport shape
+ * and transfer-list ownership contract without depending on the full simulation
+ * loop.
+ */
 describe('createWorkerPlaybackSnapshot', () => {
   it('packs playback state into typed arrays for worker transport', () => {
     const playbackState = createPlaybackState();
@@ -47,6 +54,11 @@ describe('createWorkerPlaybackSnapshot', () => {
   });
 });
 
+/**
+ * Builds a minimal but realistic playback state fixture for snapshot tests.
+ *
+ * @returns Worker playback state containing one pipe and one living bird.
+ */
 function createPlaybackState(): WorkerPlaybackState {
   return {
     frameIndex: 12,

@@ -16,7 +16,17 @@ import type { PlaybackEdgeBounds } from '../playback.types';
 import type { PlaybackTrailRenderStyle } from './playback.frame-render.types';
 
 /**
+ * Detailed trail-painting helpers for playback frames.
+ *
+ * Trails are rendered as stepped segments with both lifetime fading and edge
+ * fading so motion remains legible without overwhelming the scene.
+ */
+
+/**
  * Resolves the trail style used for one bird's stepped trail.
+ *
+ * Champion trails are emphasized while non-champion trails, when present, are
+ * intentionally subdued.
  *
  * @param birdIndex - Index of the bird being rendered.
  * @param championBirdIndex - Champion index for the current frame.
@@ -39,6 +49,9 @@ export function resolvePlaybackTrailStyle(
 
 /**
  * Draws the stepped trail history for one active bird.
+ *
+ * The stepped shape makes the trajectory feel more schematic and readable than a
+ * perfectly smooth spline, which fits the overall instrument-panel aesthetic.
  *
  * @param context - Canvas 2D drawing context.
  * @param trailPoints - Cached per-frame trail points for one bird.
@@ -167,6 +180,9 @@ export function drawTrail(
 
 /**
  * Draws one trail segment with combined edge and lifetime fading.
+ *
+ * Two independent fade signals are combined here: old segments dim over time,
+ * and segments near the viewport edge fade to avoid harsh clipping.
  *
  * @param context - Canvas 2D drawing context.
  * @param startXPx - Segment start x-position.

@@ -25,7 +25,18 @@ import {
 } from './playback.frame-render.utils';
 
 /**
+ * High-level frame-render orchestration for playback.
+ *
+ * This boundary coordinates one visual frame of the playback experience. It
+ * resolves the scene, prepares the canvas, paints the background and entities,
+ * and maintains the short champion trail used for motion emphasis.
+ */
+
+/**
  * Draws one simulation frame for the current population state.
+ *
+ * The render order matters: background first, then pipes, then birds, then
+ * trails and overlays that should visually sit on top.
  *
  * @param context - Canvas 2D drawing context.
  * @param renderState - Mutable simulation state snapshot.
@@ -68,6 +79,10 @@ export function renderPopulationFrame(
 
 /**
  * Updates the trail cache from the latest frame snapshot.
+ *
+ * The renderer intentionally keeps only a short champion trail instead of full
+ * history for every bird, which keeps the visual emphasis clear and the per-frame
+ * work small.
  *
  * @param trailState - Mutable trail state.
  * @param renderState - Current render state.

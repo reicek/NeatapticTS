@@ -11,7 +11,14 @@ import type { FlappyGameState } from './environment.types';
 /**
  * Apply out-of-bounds, pipe-collision, and pass-credit rules for one substep.
  *
+ * Educational note:
+ * Collision resolution and progress credit live together because both depend on
+ * the same bird-vs-pipe geometry for the current substep. Keeping them in one
+ * place helps the environment avoid inconsistent "passed but also collided"
+ * edge cases.
+ *
  * @param state - Mutable simulation state to update in-place.
+ * @returns Nothing.
  */
 export function updateCollisionAndProgressState(state: FlappyGameState): void {
   // Step 1: Resolve world-bound collisions.

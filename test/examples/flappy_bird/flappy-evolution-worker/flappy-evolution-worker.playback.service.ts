@@ -22,6 +22,20 @@ import type { Neat } from '../../../../src/neataptic';
 /**
  * Creates a fresh worker playback session state from the current evolved population.
  *
+ * Educational note:
+ * Evolution and playback are intentionally separated. Evolution produces a new
+ * population, then playback freezes that population into a deterministic
+ * simulation state that the host can step frame-by-frame for rendering.
+ *
+ * @example
+ * ```ts
+ * const session = beginWorkerPlaybackSession({
+ *   currentPopulation,
+ *   payload: { visibleWorldWidthPx: 1280, visibleWorldHeightPx: 720 },
+ *   createPopulationRenderState,
+ * });
+ * ```
+ *
  * @param currentPopulation - Current evolved population.
  * @param payload - Playback start viewport payload.
  * @param createPopulationRenderState - Callback that builds initial simulation state.
@@ -58,6 +72,12 @@ export function beginWorkerPlaybackSession(options: {
 
 /**
  * Processes one worker playback-step request including completion/finalization logic.
+ *
+ * Educational note:
+ * One playback request may advance multiple simulation steps. This lets the
+ * host trade visual smoothness against throughput while keeping the worker in
+ * control of simulation correctness, winner selection, and packed snapshot
+ * publishing.
  *
  * @param options - Playback step dependencies and mutable runtime state.
  * @returns Updated playback runtime state after processing this step.

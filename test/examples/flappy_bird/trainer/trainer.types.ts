@@ -3,12 +3,22 @@ import type {
   FlappyRolloutOptions,
 } from '../flappyEvaluation';
 
-/** Network shape expected by the Flappy trainer. */
+/**
+ * Network shape expected by the Flappy trainer.
+ *
+ * The trainer only needs the evaluation-facing subset of a full network plus an
+ * optional score field used by staged ranking helpers.
+ */
 export interface FlappyTrainerNetwork extends FlappyNetworkLike {
   score?: number;
 }
 
-/** Local typed view for population-level fitness mode used by this trainer. */
+/**
+ * Local typed view for population-level fitness mode used by this trainer.
+ *
+ * This is intentionally narrower than the full `Neat` runtime API. The trainer
+ * documents only the methods and mutable options it actually depends on.
+ */
 export interface FlappyTrainerNeatController {
   generation: number;
   options: {
@@ -21,7 +31,13 @@ export interface FlappyTrainerNeatController {
   restoreRNGState(seed: number): void;
 }
 
-/** Compact generation report used for training logs. */
+/**
+ * Compact generation report used for training logs.
+ *
+ * The report is shaped for longitudinal monitoring rather than raw storage. It
+ * collects the distribution and best-run details needed to judge whether a
+ * generation improved robustly.
+ */
 export interface FlappyGenerationReport {
   generationIndex: number;
   difficultyScale: number;
@@ -41,13 +57,23 @@ export interface FlappyGenerationReport {
   bestFramesSurvived: number;
 }
 
-/** Trainer runtime state shared by orchestration helpers. */
+/**
+ * Trainer runtime state shared by orchestration helpers.
+ *
+ * Only mutable cross-step values live here: stop intent and the most recent
+ * generation report.
+ */
 export interface FlappyTrainerRuntimeState {
   shouldStop: boolean;
   latestGenerationReport?: FlappyGenerationReport;
 }
 
-/** Immutable trainer setup values. */
+/**
+ * Immutable trainer setup values.
+ *
+ * These values define the static training shape before runtime state and staged
+ * evaluation are attached.
+ */
 export interface FlappyTrainerSetup {
   inputSize: number;
   outputSize: number;
@@ -55,7 +81,13 @@ export interface FlappyTrainerSetup {
   elitismCount: number;
 }
 
-/** Generation-level rollout plans for staged evaluation. */
+/**
+ * Generation-level rollout plans for staged evaluation.
+ *
+ * Each generation resolves one plan that answers three questions: how strong is
+ * the current mutation schedule, which shared seeds belong to each stage, and
+ * what rollout budget each stage is allowed to spend.
+ */
 export interface FlappyGenerationEvaluationPlan {
   generationIndex: number;
   mutationRate: number;
@@ -69,7 +101,12 @@ export interface FlappyGenerationEvaluationPlan {
   reevaluationRolloutOptions: FlappyRolloutOptions;
 }
 
-/** Score carrier used for deterministic ordering helpers. */
+/**
+ * Score carrier used for deterministic ordering helpers.
+ *
+ * Wrapping a genome together with its score makes ranking utilities easier to
+ * write and keeps tie-breaking logic explicit.
+ */
 export interface ScoredGenomeEntry {
   genome: FlappyTrainerNetwork;
   score: number;

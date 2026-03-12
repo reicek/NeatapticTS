@@ -134,18 +134,14 @@ export function resolveCachedGroundGridVerticalSceneMetrics(
   sceneCacheKey: string,
   factory: PlaybackGroundGridVerticalSceneMetricsFactory,
 ): PlaybackGroundGridVerticalSceneMetrics {
-  const cachedSceneMetrics = cachedVerticalSceneMetricsBySceneKey.get(
-    sceneCacheKey,
-  );
+  const cachedSceneMetrics =
+    cachedVerticalSceneMetricsBySceneKey.get(sceneCacheKey);
   if (cachedSceneMetrics) {
     return cachedSceneMetrics;
   }
 
   const resolvedSceneMetrics = factory();
-  cachedVerticalSceneMetricsBySceneKey.set(
-    sceneCacheKey,
-    resolvedSceneMetrics,
-  );
+  cachedVerticalSceneMetricsBySceneKey.set(sceneCacheKey, resolvedSceneMetrics);
   return resolvedSceneMetrics;
 }
 

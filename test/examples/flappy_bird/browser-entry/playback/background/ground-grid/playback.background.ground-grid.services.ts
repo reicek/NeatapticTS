@@ -59,4 +59,7 @@ export {
   drawGroundGridSegmentBatch,
   drawGroundGridSegmentBatches,
 } from './playback.background.ground-grid.batch.services';
-export { drawGroundGridFog, drawGroundGridPulse } from './playback.background.ground-grid.layer.services';
+export {
+  drawGroundGridFog,
+  drawGroundGridPulse,
+} from './playback.background.ground-grid.layer.services';

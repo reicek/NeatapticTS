@@ -12,7 +12,19 @@ import type {
 } from './host.resize.service.types';
 
 /**
+ * Top-level responsive sizing orchestration for the browser host.
+ *
+ * This module wires the host resize lifecycle together: gather the relevant DOM
+ * elements, run the initial layout pass, and keep canvas sizing synchronized with
+ * viewport changes over time.
+ */
+
+/**
  * Installs responsive viewport sizing for simulation and network canvases.
+ *
+ * This is the public entrypoint used by host assembly. It captures the elements,
+ * creates the deferred redraw policy, runs the first layout pass, and installs
+ * ongoing resize listeners.
  *
  * @param canvas - Simulation canvas to resize.
  * @param containerElement - Width/height source.
@@ -72,6 +84,9 @@ export function installResponsiveViewportSizing(
 
 /**
  * Applies responsive sizing to the simulation and network canvases.
+ *
+ * The resize flow is intentionally split into two branches: the minimal mobile
+ * path and the richer standard path used for tablet and desktop layouts.
  *
  * @param responsiveViewportSizingElements - Host elements participating in layout.
  * @param deferredNetworkRedrawController - Deferred redraw controller.

@@ -14,6 +14,9 @@ import {
 /**
  * Evaluate a network on a single deterministic Flappy Bird episode.
  *
+ * This is the simplest evaluation entrypoint: one policy, one rollout, one
+ * scalar fitness.
+ *
  * @param network - Genome/network to evaluate.
  * @param rolloutOptions - Optional rollout controls.
  * @returns Fitness score (higher is better).
@@ -27,6 +30,18 @@ export function evaluateFlappyFitness(
 
 /**
  * Evaluate a network on a shared batch of deterministic seeds.
+ *
+ * Educational note:
+ * Shared-seed evaluation reduces luck. Every genome in the same comparison set
+ * sees the same rollout seeds, which makes the aggregate statistics much more
+ * useful for selection than a single lucky episode.
+ *
+ * @example
+ * ```ts
+ * const aggregate = evaluateFlappyFitnessAcrossSeeds(network, [11, 22, 33], {
+ *   normalizeFitness: true,
+ * });
+ * ```
  *
  * @param network - Genome/network to evaluate.
  * @param sharedSeeds - Shared deterministic seeds used for all genomes.

@@ -1,6 +1,4 @@
-import {
-  FLAPPY_STARFIELD_TILE_WIDTH_PX,
-} from '../../constants/constants';
+import { FLAPPY_STARFIELD_TILE_WIDTH_PX } from '../../constants/constants';
 import { createStarTileCanvas } from './playback.starfield.services';
 import type {
   PlaybackStarfieldLayerSpec,

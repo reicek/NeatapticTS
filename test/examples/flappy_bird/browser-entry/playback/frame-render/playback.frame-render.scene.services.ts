@@ -8,7 +8,18 @@ import { resolveChampionBirdIndex } from '../playback.render.utils';
 import type { PlaybackFrameSceneContext } from './playback.frame-render.types';
 
 /**
+ * Scene-resolution helpers for playback frame rendering.
+ *
+ * Before anything can be painted, the renderer needs a camera-relative view of
+ * the world: viewport scale, visible bounds, camera origin, and which bird is
+ * currently the champion.
+ */
+
+/**
  * Resolves the shared scene contract used by one frame render pass.
+ *
+ * The camera is anchored so the focal bird region stays at a readable screen
+ * position while the world scrolls beneath it.
  *
  * @param context - Canvas 2D drawing context.
  * @param renderState - Mutable simulation state snapshot.

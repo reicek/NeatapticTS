@@ -19,6 +19,11 @@ import type { PopulationStageEvaluationRequest } from './trainer.evaluation.serv
 /**
  * Executes the quick evaluation stage over the full population.
  *
+ * Educational note:
+ * The quick stage is a cheap screening pass. Every genome is tested on the same
+ * small shared seed batch so the trainer can discard obviously weak candidates
+ * before spending more rollout budget on them.
+ *
  * @param population - Current population.
  * @param generationEvaluationPlan - Per-generation staged evaluation plan.
  * @param aggregateByGenome - Mutable aggregate cache keyed by genome.
@@ -58,6 +63,10 @@ export function evaluatePopulationQuickStage(
 /**
  * Executes the full evaluation stage over the top provisional candidates.
  *
+ * This is the middle-cost stage in the ranking ladder: not every genome
+ * survives into it, but the survivors receive a more trustworthy estimate than
+ * the quick screen alone can provide.
+ *
  * @param population - Current population.
  * @param generationEvaluationPlan - Per-generation staged evaluation plan.
  * @param aggregateByGenome - Mutable aggregate cache keyed by genome.
@@ -93,6 +102,11 @@ export function evaluatePopulationFullStage(
 
 /**
  * Executes the large-seed reevaluation stage over top candidates.
+ *
+ * Educational note:
+ * Reevaluation is the trainer's anti-luck pass. The best provisional genomes
+ * are tested again on a larger shared seed batch so leaderboard positions are
+ * less sensitive to a fortunate early sample.
  *
  * @param population - Current population.
  * @param generationEvaluationPlan - Per-generation staged evaluation plan.
@@ -130,6 +144,10 @@ export function evaluatePopulationReevaluationStage(
 /**
  * Commits provisional scores to genome score fields.
  *
+ * Provisional scores are kept in a map during staging so each phase can refresh
+ * them without mutating the genomes too early. This helper performs the final
+ * write-back once staged evaluation is complete.
+ *
  * @param population - Current population.
  * @param provisionalScoresByGenome - Final provisional score map.
  * @returns Nothing.
@@ -148,6 +166,10 @@ export function commitPopulationScores(
 
 /**
  * Resolves how many genomes should advance to the full-pass stage.
+ *
+ * The trainer uses the larger of two budgets so the full stage stays large
+ * enough to preserve competitive diversity while still shrinking meaningfully
+ * relative to the full population.
  *
  * @param populationSize - Population size.
  * @param elitismCount - Configured elitism count.

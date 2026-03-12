@@ -41,8 +41,9 @@ export function resolvePlaybackGroundGridPulse(
     return null;
   }
 
-  const pulseOrientation =
-    resolvePlaybackGroundGridPulseOrientation(pulseTiming.pulseSlotIndex);
+  const pulseOrientation = resolvePlaybackGroundGridPulseOrientation(
+    pulseTiming.pulseSlotIndex,
+  );
 
   const directionIsForward =
     resolvePlaybackGroundGridUnitHash(pulseTiming.pulseSlotIndex, 29) >= 0.5;
@@ -81,9 +82,9 @@ export function resolvePlaybackGroundGridPulse(
     rememberPlaybackGroundGridVerticalPulseSelection(
       pulseTiming.pulseSlotIndex,
       {
-      centerXPx: pulseCenter.xPx,
-      centerYPx: pulseCenter.yPx,
-      frameIndex: input.frameIndex,
+        centerXPx: pulseCenter.xPx,
+        centerYPx: pulseCenter.yPx,
+        frameIndex: input.frameIndex,
       },
     );
   }
@@ -129,4 +130,3 @@ function resolvePlaybackGroundGridPulseTrackThickness(
   );
   return resolvePlaybackGroundGridLineThickness(depthRatio);
 }
-

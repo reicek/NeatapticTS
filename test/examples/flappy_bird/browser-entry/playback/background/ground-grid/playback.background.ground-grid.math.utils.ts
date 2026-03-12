@@ -124,15 +124,15 @@ export function resolvePlaybackGroundGridDepthFromHorizonDistance(
 export function resolvePlaybackGroundGridPipeConnectionProfile(
   visibleWorldHeightPx: number,
 ): PlaybackGroundGridPipeConnectionProfile {
-  const cachedProfile = cachedPipeConnectionProfileByHeight.get(
-    visibleWorldHeightPx,
-  );
+  const cachedProfile =
+    cachedPipeConnectionProfileByHeight.get(visibleWorldHeightPx);
   if (cachedProfile) {
     return cachedProfile;
   }
 
   // Step 1: Resolve the lower-band layout used by both the grid and pipe illusion.
-  const backgroundLayout = resolvePlaybackBackgroundLayout(visibleWorldHeightPx);
+  const backgroundLayout =
+    resolvePlaybackBackgroundLayout(visibleWorldHeightPx);
   const connectionLineIndex = Math.max(
     0,
     FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT -
@@ -153,8 +153,7 @@ export function resolvePlaybackGroundGridPipeConnectionProfile(
   const interpolationRatio =
     Math.abs(verticalTravelPx) < Number.EPSILON
       ? 0
-      : (pipeFloorYPx - backgroundLayout.lowerBandBottomYPx) /
-        verticalTravelPx;
+      : (pipeFloorYPx - backgroundLayout.lowerBandBottomYPx) / verticalTravelPx;
   const clampedInterpolationRatio = Math.min(
     0.999,
     Math.max(0, interpolationRatio),

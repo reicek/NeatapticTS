@@ -23,6 +23,12 @@ import type {
 /**
  * Generate the network observation vector for the current state.
  *
+ * Educational note:
+ * This helper is the environment-facing bridge into the shared observation
+ * system. It keeps the environment API simple while ensuring evaluation,
+ * training, and browser playback all derive their policy inputs from the same
+ * feature definitions.
+ *
  * Observation (12 numbers):
  *  1) bird y position normalized to [0, 1]
  *  2) bird vertical velocity normalized to [-1, 1]
@@ -52,6 +58,11 @@ export function getFlappyObservation(
 
 /**
  * Resolve structured observation features for policy input and reward shaping.
+ *
+ * @example
+ * ```ts
+ * const features = getFlappyObservationFeatures(state, 1);
+ * ```
  *
  * @param state - Current state.
  * @param difficultyScale - Curriculum difficulty scale in [0, 1].
