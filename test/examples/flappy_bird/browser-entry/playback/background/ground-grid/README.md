@@ -946,27 +946,44 @@ Parameters:
 
 Returns: True when the pulse midpoint stays inside the visible ground band.
 
-### projectPlaybackGroundGridHorizonXToAnchorX
+### projectPlaybackGroundGridProjectedXToAnchorX
 
-`(input: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridAnchorProjectionInput) => number`
+`(input: { projectedXPx: number; projectedYPx: number; sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackBackgroundGroundGridSceneContext; }) => number`
 
-Projects one horizon x-position down to the required floor anchor x-position.
+Projects one visible x-position at an arbitrary y-level to the anchor line.
 
 Parameters:
-- `input` - - Horizon target and scene geometry.
+- `input` - - Projected target and scene geometry.
 
-Returns: Bottom anchor x-position whose ray reaches the target horizon x.
+Returns: Bottom anchor x-position whose ray reaches the projected point.
 
 ### resolvePlaybackGroundGridAnchorBounds
 
 `(input: import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridAnchorBoundsInput) => import("test/examples/flappy_bird/browser-entry/playback/background/ground-grid/playback.background.ground-grid.types").PlaybackGroundGridAnchorBounds`
 
-Projects the visible horizon span back onto the floor anchor line.
+Projects one visible horizontal span back onto the floor anchor line.
 
 Parameters:
-- `input` - - Visible horizon bounds and scene geometry.
+- `input` - - Visible span bounds and scene geometry.
 
-Returns: Bottom-anchor bounds required to cover the full visible horizon.
+Returns: Bottom-anchor bounds required to cover the chosen projected span.
+
+### resolvePlaybackGroundGridRetainedWidthRatioAtYPx
+
+`(lowerBandBottomYPx: number, vanishingPointYPx: number, targetYPx: number) => number`
+
+Resolves how much adjacent-ray spacing remains at one projected y-position.
+
+Perspective rays linearly collapse toward the vanishing point, so the local
+lane width at any y-position is just the bottom-anchor spacing multiplied by
+the remaining width ratio between the bottom edge and the vanishing point.
+
+Parameters:
+- `lowerBandBottomYPx` - - Bottom edge of the visible ground band.
+- `vanishingPointYPx` - - Shared vanishing-point y-position.
+- `targetYPx` - - Projected y-position whose retained width should be measured.
+
+Returns: Width-retention ratio in the inclusive `[0, 1]` range.
 
 ### resolvePlaybackGroundGridVerticalCycleContext
 

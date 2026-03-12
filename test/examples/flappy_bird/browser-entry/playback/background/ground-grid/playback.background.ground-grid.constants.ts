@@ -1,4 +1,5 @@
 import { FLAPPY_NEON_PALETTE } from '../../../../constants/constants';
+import { FLAPPY_MAX_DIFFICULTY_PIPE_PITCH_PX } from '../../../../constants/constants.difficulty';
 import type { PlaybackBackgroundGroundGridStyle } from './playback.background.ground-grid.types';
 
 /**
@@ -10,12 +11,16 @@ import type { PlaybackBackgroundGroundGridStyle } from './playback.background.gr
 export const FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT = 16;
 
 /**
- * Target spacing between perspective-ray anchors at the bottom edge (pixels).
+ * Target visible spacing between adjacent vertical rays at the pipe floor.
  *
- * This controls how wide the ground lanes feel near the viewer before they
- * converge toward the horizon.
+ * The lower pipes visually attach to a projected floor band in the grid. The
+ * important invariant is phase repeat, not just raw gap width: each new pipe at
+ * max difficulty should land on the same relative grid position as the previous
+ * one. That requires matching the full pipe-to-pipe pitch, not only the open
+ * edge-to-edge gap between pipe bodies.
  */
-export const FLAPPY_GROUND_GRID_TARGET_VERTICAL_LINE_SPACING_PX = 320;
+export const FLAPPY_GROUND_GRID_TARGET_VERTICAL_LINE_SPACING_PX =
+  FLAPPY_MAX_DIFFICULTY_PIPE_PITCH_PX;
 
 /**
  * Minimum visible perspective-ray count used on very narrow viewports.

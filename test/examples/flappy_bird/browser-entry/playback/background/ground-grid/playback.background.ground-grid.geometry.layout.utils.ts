@@ -12,7 +12,6 @@ import { positiveModulo } from '../../playback.starfield.utils';
 import type {
   PlaybackGroundGridAnchorBounds,
   PlaybackGroundGridAnchorBoundsInput,
-  PlaybackGroundGridAnchorProjectionInput,
   PlaybackBackgroundGroundGridSceneContext,
   PlaybackGroundGridPulsePath,
   PlaybackGroundGridVerticalCycleContext,
@@ -33,22 +32,29 @@ export function buildPlaybackGroundGridVerticalSceneMetrics(
     horizonRightXPx: sceneContext.visibleWorldWidthPx,
     sceneContext,
   });
+  const pipeConnectionProfile = resolvePlaybackGroundGridPipeConnectionProfile(
+    sceneContext.lowerBandBottomYPx,
+  );
+  const retainedWidthRatioAtPipeConnection =
+    resolvePlaybackGroundGridRetainedWidthRatioAtYPx(
+      sceneContext.lowerBandBottomYPx,
+      sceneContext.vanishingPointYPx,
+      pipeConnectionProfile.pipeFloorYPx,
+    );
+  const safeLaneSpacingPx = Math.max(
+    1,
+    FLAPPY_GROUND_GRID_TARGET_VERTICAL_LINE_SPACING_PX /
+      Math.max(Number.EPSILON, retainedWidthRatioAtPipeConnection),
+  );
   const totalVisibleLaneCount = Math.max(
     FLAPPY_GROUND_GRID_MIN_VERTICAL_LINE_COUNT,
-    Math.ceil(
-      visibleAnchorBounds.anchorSpanPx /
-        FLAPPY_GROUND_GRID_TARGET_VERTICAL_LINE_SPACING_PX,
-    ) + 1,
+    Math.ceil(visibleAnchorBounds.anchorSpanPx / safeLaneSpacingPx) + 1,
   );
-  const laneSpacingPx =
-    totalVisibleLaneCount > 1
-      ? visibleAnchorBounds.anchorSpanPx / (totalVisibleLaneCount - 1)
-      : visibleAnchorBounds.anchorSpanPx;
 
   return {
     visibleAnchorBounds,
     totalVisibleLaneCount,
-    safeLaneSpacingPx: Math.max(1, laneSpacingPx),
+    safeLaneSpacingPx,
   };
 }
 
@@ -87,20 +93,22 @@ export function resolvePlaybackGroundGridVerticalCycleContext(
 }
 
 /**
- * Projects the visible horizon span back onto the floor anchor line.
+ * Projects one visible horizontal span back onto the floor anchor line.
  *
- * @param input - Visible horizon bounds and scene geometry.
- * @returns Bottom-anchor bounds required to cover the full visible horizon.
+ * @param input - Visible span bounds and scene geometry.
+ * @returns Bottom-anchor bounds required to cover the chosen projected span.
  */
 export function resolvePlaybackGroundGridAnchorBounds(
   input: PlaybackGroundGridAnchorBoundsInput,
 ): PlaybackGroundGridAnchorBounds {
-  const leftAnchorXPx = projectPlaybackGroundGridHorizonXToAnchorX({
-    horizonXPx: input.horizonLeftXPx,
+  const leftAnchorXPx = projectPlaybackGroundGridProjectedXToAnchorX({
+    projectedXPx: input.horizonLeftXPx,
+    projectedYPx: input.sceneContext.alignedHorizonYPx,
     sceneContext: input.sceneContext,
   });
-  const rightAnchorXPx = projectPlaybackGroundGridHorizonXToAnchorX({
-    horizonXPx: input.horizonRightXPx,
+  const rightAnchorXPx = projectPlaybackGroundGridProjectedXToAnchorX({
+    projectedXPx: input.horizonRightXPx,
+    projectedYPx: input.sceneContext.alignedHorizonYPx,
     sceneContext: input.sceneContext,
   });
 
@@ -141,18 +149,20 @@ export function isPlaybackGroundGridVerticalPulsePathVisible(
 }
 
 /**
- * Projects one horizon x-position down to the required floor anchor x-position.
+ * Projects one visible x-position at an arbitrary y-level to the anchor line.
  *
- * @param input - Horizon target and scene geometry.
- * @returns Bottom anchor x-position whose ray reaches the target horizon x.
+ * @param input - Projected target and scene geometry.
+ * @returns Bottom anchor x-position whose ray reaches the projected point.
  */
-function projectPlaybackGroundGridHorizonXToAnchorX(
-  input: PlaybackGroundGridAnchorProjectionInput,
-): number {
+function projectPlaybackGroundGridProjectedXToAnchorX(input: {
+  projectedXPx: number;
+  projectedYPx: number;
+  sceneContext: PlaybackBackgroundGroundGridSceneContext;
+}): number {
   const verticalProjectionDenominatorPx =
-    input.sceneContext.alignedHorizonYPx - input.sceneContext.vanishingPointYPx;
+    input.projectedYPx - input.sceneContext.vanishingPointYPx;
   if (Math.abs(verticalProjectionDenominatorPx) < Number.EPSILON) {
-    return input.horizonXPx;
+    return input.projectedXPx;
   }
 
   const verticalProjectionRatio =
@@ -161,7 +171,34 @@ function projectPlaybackGroundGridHorizonXToAnchorX(
     verticalProjectionDenominatorPx;
   return (
     input.sceneContext.vanishingPointXPx +
-    (input.horizonXPx - input.sceneContext.vanishingPointXPx) *
+    (input.projectedXPx - input.sceneContext.vanishingPointXPx) *
       verticalProjectionRatio
   );
+}
+
+/**
+ * Resolves how much adjacent-ray spacing remains at one projected y-position.
+ *
+ * Perspective rays linearly collapse toward the vanishing point, so the local
+ * lane width at any y-position is just the bottom-anchor spacing multiplied by
+ * the remaining width ratio between the bottom edge and the vanishing point.
+ *
+ * @param lowerBandBottomYPx - Bottom edge of the visible ground band.
+ * @param vanishingPointYPx - Shared vanishing-point y-position.
+ * @param targetYPx - Projected y-position whose retained width should be measured.
+ * @returns Width-retention ratio in the inclusive `[0, 1]` range.
+ */
+function resolvePlaybackGroundGridRetainedWidthRatioAtYPx(
+  lowerBandBottomYPx: number,
+  vanishingPointYPx: number,
+  targetYPx: number,
+): number {
+  const verticalTravelPx = vanishingPointYPx - lowerBandBottomYPx;
+  if (Math.abs(verticalTravelPx) < Number.EPSILON) {
+    return 1;
+  }
+
+  const interpolationRatio =
+    (targetYPx - lowerBandBottomYPx) / verticalTravelPx;
+  return Math.max(0, Math.min(1, 1 - interpolationRatio));
 }

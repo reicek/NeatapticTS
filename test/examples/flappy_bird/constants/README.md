@@ -143,6 +143,10 @@ physics, pipes, observation, runtime, rendering, network layout, and so on.
 
 ### FLAPPY_LIGHT_NEON_RAMP
 
+### FLAPPY_MAX_DIFFICULTY_EDGE_TO_EDGE_PIPE_SPACING_PX
+
+### FLAPPY_MAX_DIFFICULTY_PIPE_PITCH_PX
+
 ### FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME
 
 ### FLAPPY_MAX_FRAMES_PER_EPISODE
@@ -933,6 +937,10 @@ in shared Flappy constants to keep legacy imports stable during migration.
 ## constants/constants.difficulty.ts
 
 ### FLAPPY_DIFFICULTY_RAMP_PIPES
+
+### FLAPPY_MAX_DIFFICULTY_EDGE_TO_EDGE_PIPE_SPACING_PX
+
+### FLAPPY_MAX_DIFFICULTY_PIPE_PITCH_PX
 
 ### FLAPPY_MIN_CLEARANCE_MARGIN_PX
 
