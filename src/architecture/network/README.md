@@ -543,6 +543,14 @@ Provenance of hidden-layer architecture information.
 
 Constructor signature for runtime Network import.
 
+### NetworkConstructorOptions
+
+Public constructor options for `Network`.
+
+`topologyIntent` is the semantic, DX-first contract. `enforceAcyclic`
+remains available for backward compatibility and must not contradict the
+declared topology intent.
+
 ### NetworkGeneticProps
 
 Runtime properties used during genetic operations.
@@ -594,6 +602,14 @@ Internal Network properties for slab operations.
 ### NetworkStandaloneProps
 
 Internal standalone generation network view.
+
+### NetworkTopologyIntent
+
+Public topology intent exposed by the network API.
+
+Use `feed-forward` when the caller wants the library to preserve an acyclic,
+forward-only contract. Use `unconstrained` when recurrent, gated, or other
+cyclic structures may be introduced.
 
 ### NetworkTopoRuntime
 

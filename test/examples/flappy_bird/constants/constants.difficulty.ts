@@ -69,6 +69,27 @@ export const FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES = Math.max(
   ),
 );
 
+/**
+ * Actual edge-to-edge spacing produced at peak adaptive difficulty.
+ *
+ * The recovery target above is a lower bound, but the runtime cadence is
+ * ultimately quantized by whole frames. This value is the real rendered pipe
+ * spacing once the minimum spawn interval has been rounded to an integer.
+ */
+export const FLAPPY_MAX_DIFFICULTY_EDGE_TO_EDGE_PIPE_SPACING_PX =
+  FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES * FLAPPY_PIPE_SPEED_MAX_PX_PER_FRAME -
+  FLAPPY_PIPE_WIDTH_PX;
+
+/**
+ * Full pipe-to-pipe pitch produced at peak adaptive difficulty.
+ *
+ * This is the distance from one pipe's leading edge to the next pipe's leading
+ * edge at the hardest steady-state cadence. It is the periodicity the ground
+ * grid must match if each spawned pipe should land on the same grid phase.
+ */
+export const FLAPPY_MAX_DIFFICULTY_PIPE_PITCH_PX =
+  FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES * FLAPPY_PIPE_SPEED_MAX_PX_PER_FRAME;
+
 /** Initial spawn-interval multiplier relative to the current hardest interval target. */
 export const FLAPPY_PIPE_SPAWN_INTERVAL_START_MULTIPLIER = 2.35;
 

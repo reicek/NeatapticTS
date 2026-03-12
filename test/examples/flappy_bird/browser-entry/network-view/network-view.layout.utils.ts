@@ -7,7 +7,18 @@ import type {
 } from '../browser-entry.types';
 
 /**
+ * Node-positioning helpers for the browser network view.
+ *
+ * Once topology has been resolved into layers, these helpers place nodes inside
+ * the drawable panel and then center the final graph so it feels balanced inside
+ * the available canvas space.
+ */
+
+/**
  * Positions network nodes into drawable canvas coordinates.
+ *
+ * The layout keeps layer ordering stable while adapting inter-node spacing to
+ * the amount of available vertical space.
  *
  * @param networkLayers - Resolved network layers.
  * @param leftPaddingPx - Left graph padding.
@@ -123,6 +134,9 @@ export function positionNetworkNodes(
 
 /**
  * Centers positioned nodes within the drawable graph area.
+ *
+ * Positioning establishes relative structure first; centering then shifts the
+ * whole graph as a block so it sits comfortably within the padded draw region.
  *
  * @param positionedNodes - Positioned nodes before centering.
  * @param leftPaddingPx - Left graph padding.

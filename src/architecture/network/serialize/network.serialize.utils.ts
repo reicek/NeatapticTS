@@ -241,7 +241,12 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
     connectionJsonEntries: json.connections,
   });
 
-  // Step 5: Hydrate optional architecture metadata when valid.
+  // Step 5: Restore the public topology contract when the payload carries one.
+  if (json.topologyIntent) {
+    rebuiltNetwork.setTopologyIntent(json.topologyIntent);
+  }
+
+  // Step 6: Hydrate optional architecture metadata when valid.
   applyHydratedArchitectureDescriptor(rebuiltNetwork, json.architecture);
 
   return rebuiltNetwork;

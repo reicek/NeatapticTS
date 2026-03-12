@@ -22,6 +22,20 @@ import type { Neat } from '../../../../src/neataptic';
 /**
  * Creates a fresh worker playback session state from the current evolved population.
  *
+ * Educational note:
+ * Evolution and playback are intentionally separated. Evolution produces a new
+ * population, then playback freezes that population into a deterministic
+ * simulation state that the host can step frame-by-frame for rendering.
+ *
+ * @example
+ * ```ts
+ * const session = beginWorkerPlaybackSession({
+ *   currentPopulation,
+ *   payload: { visibleWorldWidthPx: 1280, visibleWorldHeightPx: 720 },
+ *   createPopulationRenderState,
+ * });
+ * ```
+ *
  * @param currentPopulation - Current evolved population.
  * @param payload - Playback start viewport payload.
  * @param createPopulationRenderState - Callback that builds initial simulation state.
@@ -59,6 +73,12 @@ export function beginWorkerPlaybackSession(options: {
 /**
  * Processes one worker playback-step request including completion/finalization logic.
  *
+ * Educational note:
+ * One playback request may advance multiple simulation steps. This lets the
+ * host trade visual smoothness against throughput while keeping the worker in
+ * control of simulation correctness, winner selection, and packed snapshot
+ * publishing.
+ *
  * @param options - Playback step dependencies and mutable runtime state.
  * @returns Updated playback runtime state after processing this step.
  */
@@ -76,7 +96,13 @@ export function processWorkerPlaybackStep(options: {
   createPlaybackSnapshot: (
     playbackState: WorkerPlaybackState,
   ) => WorkerPlaybackFrameSnapshot;
-  postWorkerMessage: (workerMessage: WorkerResponseMessage) => void;
+  resolvePlaybackSnapshotTransferList: (
+    snapshot: WorkerPlaybackFrameSnapshot,
+  ) => Transferable[];
+  postWorkerMessage: (
+    workerMessage: WorkerResponseMessage,
+    transferList?: Transferable[],
+  ) => void;
 }): {
   currentPlaybackState: WorkerPlaybackState | undefined;
   currentPlaybackRng: ReturnType<typeof createXorshift32> | undefined;
@@ -91,6 +117,7 @@ export function processWorkerPlaybackStep(options: {
     neatRuntime,
     stepPopulationFrame,
     createPlaybackSnapshot,
+    resolvePlaybackSnapshotTransferList,
     postWorkerMessage,
   } = options;
 
@@ -135,16 +162,21 @@ export function processWorkerPlaybackStep(options: {
     : undefined;
 
   const snapshot = createPlaybackSnapshot(currentPlaybackState);
+  const snapshotTransferList = resolvePlaybackSnapshotTransferList(snapshot);
 
   if (hasAliveBirds(currentPlaybackState.birds)) {
-    postWorkerMessage({
-      type: 'playback-step',
-      payload: {
-        snapshot,
-        instrumentation: instrumentationPayload,
-        done: false,
+    postWorkerMessage(
+      {
+        type: 'playback-step',
+        payload: {
+          requestId: playbackStepPayload.requestId,
+          snapshot,
+          instrumentation: instrumentationPayload,
+          done: false,
+        },
       },
-    });
+      snapshotTransferList,
+    );
     return {
       currentPlaybackState,
       currentPlaybackRng,
@@ -190,18 +222,22 @@ export function processWorkerPlaybackStep(options: {
   const p90FramesSurvived =
     sortedFramesSurvived.length > 0 ? sortedFramesSurvived[p90FrameIndex] : 0;
 
-  postWorkerMessage({
-    type: 'playback-step',
-    payload: {
-      snapshot,
-      instrumentation: instrumentationPayload,
-      done: true,
-      averagePipesPassed,
-      p90FramesSurvived,
-      winnerPipesPassed: winnerBird?.pipesPassed ?? 0,
-      winnerFramesSurvived: winnerBird?.framesSurvived ?? 0,
+  postWorkerMessage(
+    {
+      type: 'playback-step',
+      payload: {
+        requestId: playbackStepPayload.requestId,
+        snapshot,
+        instrumentation: instrumentationPayload,
+        done: true,
+        averagePipesPassed,
+        p90FramesSurvived,
+        winnerPipesPassed: winnerBird?.pipesPassed ?? 0,
+        winnerFramesSurvived: winnerBird?.framesSurvived ?? 0,
+      },
     },
-  });
+    snapshotTransferList,
+  );
 
   return {
     currentPlaybackState: undefined,

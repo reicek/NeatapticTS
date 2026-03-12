@@ -5,12 +5,24 @@ import type {
 } from '../browser-entry.types';
 
 /**
+ * Topology resolution helpers for the browser network view.
+ *
+ * These helpers answer a key visualization question: how should the current
+ * network be partitioned into ordered layers so layout and architecture labels
+ * stay meaningful even when some metadata is missing?
+ */
+
+/**
  * Resolves layered node groups for network-view layout and rendering.
  *
  * Educational note:
  * Layer grouping is a network-view concern because it drives sizing, node
  * placement, and architecture presentation. Visualization code can still reuse
  * the result, but this helper now lives with the module that owns layout.
+ *
+ * The resolver prefers explicit layer metadata when it exists, then falls back
+ * to a topology-derived depth estimate so even loosely structured networks can
+ * still be drawn in an intelligible left-to-right order.
  *
  * @param network - Runtime network instance.
  * @param inputSize - Input count fallback.

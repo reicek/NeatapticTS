@@ -21,7 +21,19 @@ import type {
 import type { RuntimeTelemetryState } from './runtime.telemetry.service';
 
 /**
+ * Long-running evolution/playback orchestration for the browser runtime.
+ *
+ * This loop is the heart of the interactive demo. It repeatedly asks the worker
+ * for the next evolved generation, updates the HUD and network view, plays back
+ * that generation on the canvas, then folds the outcome into best-so-far
+ * browser state.
+ */
+
+/**
  * Dependencies required to run the browser runtime evolution loop.
+ *
+ * Grouping these dependencies into one object keeps the public loop entry more
+ * declarative and avoids a long positional parameter list.
  */
 export interface RuntimeEvolutionLoopOptions {
   evolutionWorker: Worker;
@@ -39,6 +51,13 @@ export interface RuntimeEvolutionLoopOptions {
 
 /**
  * Runs generation orchestration and playback until a stop signal is observed.
+ *
+ * The loop alternates between two phases:
+ * 1. Evolve off-thread until the worker emits the next best-generation summary.
+ * 2. Play that generation back on the main thread while streaming HUD updates.
+ *
+ * This rhythm makes the demo feel like a live training dashboard instead of a
+ * one-shot batch job.
  *
  * @param options - Runtime evolution dependencies and mutable state accessors.
  * @returns Nothing.

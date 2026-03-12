@@ -1,5 +1,15 @@
 /**
+ * Canvas sizing helpers for the browser host boundary.
+ *
+ * These utilities keep host layout and backing-store sizing aligned so the
+ * simulation and network canvases render crisply without stretching artifacts.
+ */
+
+/**
  * Applies a canvas backing store size and CSS width/height.
+ *
+ * Browser canvases have both backing-store dimensions and CSS box dimensions;
+ * this helper updates both together.
  *
  * @param canvas - Target canvas element.
  * @param widthPx - Desired backing-store width in pixels.
@@ -28,6 +38,9 @@ export function applyCanvasBackingSize(
 /**
  * Applies fixed simulation-canvas bounds so layout does not stretch unexpectedly.
  *
+ * The main simulation canvas uses fixed bounds because the world renderer is
+ * tuned for a controlled viewport rather than fluid DOM stretching.
+ *
  * @param canvas - Simulation canvas element.
  * @param widthPx - Desired width in pixels.
  * @param heightPx - Desired height in pixels.
@@ -51,6 +64,9 @@ export function applySimulationCanvasBounds(
 
 /**
  * Computes the drawable network canvas size from host element dimensions.
+ *
+ * The side-panel network view needs the drawable size after panel insets are
+ * accounted for, not just the raw host client box.
  *
  * @param networkCanvasHost - Host element wrapping the network canvas.
  * @param hostInsetPx - Total inset to subtract from both dimensions.

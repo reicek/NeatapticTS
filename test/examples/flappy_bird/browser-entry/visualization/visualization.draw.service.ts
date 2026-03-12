@@ -67,6 +67,14 @@ import type {
 } from './visualization.types';
 import { resolveTierColor } from './visualization.colors.utils';
 
+/**
+ * Canvas drawing helpers for the network visualization panel.
+ *
+ * This module turns prepared topology, color scales, and legend layout into the
+ * actual rendered network view. The emphasis is educational readability: clear
+ * topology, readable bias labels, and a legend that explains the neon encoding.
+ */
+
 const FLAPPY_MULTILINE_LABEL_SEPARATOR = '\n';
 const FLAPPY_CANVAS_TEXT_ALIGN_LEFT: CanvasTextAlign = 'left';
 const FLAPPY_CANVAS_TEXT_ALIGN_CENTER: CanvasTextAlign = 'center';
@@ -124,6 +132,10 @@ type LegendSceneContext = NetworkLegendLayout & {
 /**
  * Draws weighted connection lines.
  *
+ * Connection styling carries semantic meaning: color encodes magnitude and sign,
+ * while dash patterns and auxiliary marks help distinguish disabled or negative
+ * edges in a way that still reads quickly on a dense graph.
+ *
  * @param context - Render context.
  * @param runtimeConnections - Runtime connection list.
  * @param positionByNodeIndex - Node layout map.
@@ -160,6 +172,9 @@ export function drawWeightedConnectionsLayer(
 /**
  * Draws all network nodes with bias labels.
  *
+ * The node layer pairs each rectangle with a compact bias label so the panel can
+ * show both topology and a lightweight hint of parameter state.
+ *
  * @param context - Render context.
  * @param positionedNodes - Positioned nodes.
  * @param nodeDimensions - Node dimensions.
@@ -194,6 +209,9 @@ export function drawBiasNodesLayer(
 /**
  * Draws network architecture header text.
  *
+ * The header gives viewers a compact architecture summary before they inspect
+ * individual nodes and edges.
+ *
  * @param context - Render context.
  * @param architectureLabel - Header label.
  * @returns Nothing.
@@ -218,6 +236,10 @@ export function drawNetworkVisualizationHeader(
 
 /**
  * Draws the color legend for connections and node bias values.
+ *
+ * This legend is what turns the panel from "colorful art" into an interpretable
+ * instrument: it tells the viewer what each weight and bias color actually
+ * means numerically.
  *
  * @param context - Render context.
  * @param architectureLabel - Compact architecture description.

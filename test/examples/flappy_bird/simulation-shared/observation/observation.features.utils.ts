@@ -18,11 +18,20 @@ import type {
 /**
  * Resolves the next two upcoming pipes in front of the bird.
  *
+ * The observation pipeline only cares about the immediate near future, because
+ * Flappy Bird decisions are dominated by the next gap and the transition after
+ * it. Looking further ahead adds noise faster than it adds useful control
+ * signal.
+ *
  * @param pipes - Current pipe list.
  * @param birdCenterXPx - Bird center x-position.
  * @param birdRadiusPx - Bird radius.
  * @param pipeWidthPx - Pipe width.
  * @returns Tuple of first and second upcoming pipes.
+ * @example
+ * ```ts
+ * const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
+ * ```
  */
 export function resolveUpcomingPipes(
   pipes: SharedPipeLike[],
@@ -45,6 +54,20 @@ export function resolveUpcomingPipes(
  * the canonical network vectors now lives in the neighboring vector module so
  * observation policy and network-shape concerns can evolve independently.
  *
+ * The features deliberately mix three kinds of signal:
+ * 1. Current state, such as bird height and vertical velocity.
+ * 2. Near-term geometry, such as gap bounds and upcoming-pipe distances.
+ * 3. Simple forward-looking control hints, such as urgency and one-flap
+ *    reachability.
+ *
+ * This is a compact example of feature engineering for control. Instead of
+ * asking NEAT to rediscover basic geometry from raw sensory input, the example
+ * hands the network semantically meaningful signals and lets evolution focus on
+ * policy search.
+ *
+ * For broader context, the Wikipedia article on "feature engineering" is a
+ * good companion reference.
+ *
  * @param input - Observation input bundle.
  * @returns Structured observation features.
  * @example
@@ -57,6 +80,10 @@ export function resolveUpcomingPipes(
  *   difficultyProfile,
  *   activeSpawnIntervalFrames: 90,
  * });
+ *
+ * if (features.normalizedEntryUrgency > 0.8) {
+ *   // The bird is misaligned and running out of time to recover.
+ * }
  * ```
  */
 export function resolveObservationFeatures(
@@ -260,6 +287,11 @@ export function resolveObservationFeatures(
 /**
  * Predicts bird y-position after a frame horizon with constant gravity.
  *
+ * This is a deliberately cheap forward model. It ignores richer control
+ * sequences and simply answers: "where would the bird be after N frames under
+ * the current physics assumption?" That small prediction is enough to build the
+ * reachability and urgency features used by the controller.
+ *
  * @param startYPx - Current bird y-position.
  * @param initialVerticalVelocityPxPerFrame - Initial vertical velocity.
  * @param frameHorizon - Predicted horizon in simulation frames.
@@ -281,6 +313,9 @@ function resolvePredictedBirdYAtFrames(
 /**
  * Clamps a numeric value to the inclusive [min, max] interval.
  *
+ * Observation synthesis normalizes many raw measurements, so this helper keeps
+ * derived channels inside their documented ranges.
+ *
  * @param value - Candidate value.
  * @param min - Inclusive lower bound.
  * @param max - Inclusive upper bound.
@@ -292,6 +327,9 @@ function clamp(value: number, min: number, max: number): number {
 
 /**
  * Clamps a numeric value to the inclusive [0, 1] interval.
+ *
+ * This is used for channels that are naturally interpreted as normalized
+ * proportions or bounded progress values.
  *
  * @param value - Candidate value.
  * @returns Value clamped between 0 and 1.

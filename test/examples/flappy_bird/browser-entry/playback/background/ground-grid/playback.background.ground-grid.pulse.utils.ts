@@ -1,28 +1,30 @@
 import {
-  FLAPPY_GROUND_GRID_APPROX_FRAME_DURATION_MS,
   FLAPPY_GROUND_GRID_PULSE_ALPHA,
-  FLAPPY_GROUND_GRID_PULSE_GLOW_BLUR_PX,
-  FLAPPY_GROUND_GRID_PULSE_INTERVAL_MS,
-  FLAPPY_GROUND_GRID_PULSE_LIFETIME_MS,
   FLAPPY_GROUND_GRID_PULSE_MAX_SIZE_PX,
   FLAPPY_GROUND_GRID_PULSE_MIN_SIZE_PX,
-  FLAPPY_GROUND_GRID_UNSIGNED_NORMALIZATION_DIVISOR,
-  FLAPPY_GROUND_GRID_VERTICAL_PULSE_END_RATIO,
-  FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO,
 } from './playback.background.ground-grid.constants';
 import {
   interpolatePlaybackGroundGridPoint,
   resolvePlaybackGroundGridDepthFromHorizonDistance,
   resolvePlaybackGroundGridLineThickness,
 } from './playback.background.ground-grid.math.utils';
+import {
+  rememberPlaybackGroundGridVerticalPulseSelection,
+  resolvePlaybackGroundGridVerticalPulseSelection,
+} from './playback.background.ground-grid.pulse.selection.utils';
+import {
+  resolvePlaybackGroundGridHorizontalPulsePath,
+  resolvePlaybackGroundGridPulseOrientation,
+  resolvePlaybackGroundGridPulseTiming,
+  resolvePlaybackGroundGridPulseTravelRatio,
+  resolvePlaybackGroundGridUnitHash,
+} from './playback.background.ground-grid.pulse.timing.utils';
 import type {
   PlaybackBackgroundGroundGridSceneContext,
   PlaybackGroundGridPulse,
   PlaybackGroundGridPulseInput,
-  PlaybackGroundGridPulseOrientation,
   PlaybackGroundGridPulsePath,
   PlaybackGroundGridPulseTrackThicknessInput,
-  PlaybackGroundGridPulseTravelRatioInput,
 } from './playback.background.ground-grid.types';
 
 /**
@@ -34,43 +36,40 @@ import type {
 export function resolvePlaybackGroundGridPulse(
   input: PlaybackGroundGridPulseInput,
 ): PlaybackGroundGridPulse | null {
-  const currentTimeMs =
-    input.frameIndex * FLAPPY_GROUND_GRID_APPROX_FRAME_DURATION_MS;
-  const pulseSlotIndex = Math.floor(
-    currentTimeMs / FLAPPY_GROUND_GRID_PULSE_INTERVAL_MS,
-  );
-  const pulseElapsedMs =
-    currentTimeMs - pulseSlotIndex * FLAPPY_GROUND_GRID_PULSE_INTERVAL_MS;
-  if (pulseElapsedMs > FLAPPY_GROUND_GRID_PULSE_LIFETIME_MS) {
+  const pulseTiming = resolvePlaybackGroundGridPulseTiming(input.frameIndex);
+  if (!pulseTiming) {
     return null;
   }
 
-  const pulseOrientation =
-    resolvePlaybackGroundGridPulseOrientation(pulseSlotIndex);
+  const pulseOrientation = resolvePlaybackGroundGridPulseOrientation(
+    pulseTiming.pulseSlotIndex,
+  );
+
+  const directionIsForward =
+    resolvePlaybackGroundGridUnitHash(pulseTiming.pulseSlotIndex, 29) >= 0.5;
+  const travelProgressRatio = resolvePlaybackGroundGridPulseTravelRatio({
+    directionIsForward,
+    lifetimeProgressRatio: pulseTiming.lifetimeProgressRatio,
+    orientation: pulseOrientation,
+  });
   const selectedPulsePath =
     pulseOrientation === 'horizontal'
       ? resolvePlaybackGroundGridHorizontalPulsePath(
           input.horizontalPulsePaths,
-          pulseSlotIndex,
+          pulseTiming.pulseSlotIndex,
         )
-      : resolvePlaybackGroundGridVerticalPulsePath(
-          input.verticalPulsePaths,
-          input.visibleVerticalPulsePaths,
-          pulseSlotIndex,
-        );
+      : resolvePlaybackGroundGridVerticalPulseSelection({
+          verticalPulsePaths: input.verticalPulsePaths,
+          visibleVerticalPulsePaths: input.visibleVerticalPulsePaths,
+          pulseSlotIndex: pulseTiming.pulseSlotIndex,
+          frameIndex: input.frameIndex,
+          travelProgressRatio,
+          resolveUnitHash: resolvePlaybackGroundGridUnitHash,
+        });
   if (!selectedPulsePath) {
     return null;
   }
 
-  const directionIsForward =
-    resolvePlaybackGroundGridUnitHash(pulseSlotIndex, 29) >= 0.5;
-  const lifetimeProgressRatio =
-    pulseElapsedMs / FLAPPY_GROUND_GRID_PULSE_LIFETIME_MS;
-  const travelProgressRatio = resolvePlaybackGroundGridPulseTravelRatio({
-    directionIsForward,
-    lifetimeProgressRatio,
-    orientation: pulseOrientation,
-  });
   const pulseCenter = interpolatePlaybackGroundGridPoint(
     selectedPulsePath.startXPx,
     selectedPulsePath.startYPx,
@@ -78,6 +77,18 @@ export function resolvePlaybackGroundGridPulse(
     selectedPulsePath.endYPx,
     travelProgressRatio,
   );
+
+  if (pulseOrientation === 'vertical') {
+    rememberPlaybackGroundGridVerticalPulseSelection(
+      pulseTiming.pulseSlotIndex,
+      {
+        centerXPx: pulseCenter.xPx,
+        centerYPx: pulseCenter.yPx,
+        frameIndex: input.frameIndex,
+      },
+    );
+  }
+
   const pulseTrackThicknessPx = resolvePlaybackGroundGridPulseTrackThickness({
     pulseCenterYPx: pulseCenter.yPx,
     pulsePath: selectedPulsePath,
@@ -92,103 +103,7 @@ export function resolvePlaybackGroundGridPulse(
       Math.min(FLAPPY_GROUND_GRID_PULSE_MAX_SIZE_PX, pulseTrackThicknessPx),
     ),
     alpha: FLAPPY_GROUND_GRID_PULSE_ALPHA,
-    glowBlurPx: FLAPPY_GROUND_GRID_PULSE_GLOW_BLUR_PX,
   };
-}
-
-/**
- * Resolves pulse orientation for one deterministic pulse slot.
- *
- * @param pulseSlotIndex - Zero-based pulse slot index.
- * @returns Horizontal or vertical pulse travel orientation.
- */
-function resolvePlaybackGroundGridPulseOrientation(
-  pulseSlotIndex: number,
-): PlaybackGroundGridPulseOrientation {
-  return resolvePlaybackGroundGridUnitHash(pulseSlotIndex, 11) >= 0.5
-    ? 'horizontal'
-    : 'vertical';
-}
-
-/**
- * Selects one thick-enough horizontal band for the current pulse slot.
- *
- * @param horizontalPulsePaths - Cached horizontal pulse paths eligible for travel.
- * @param pulseSlotIndex - Zero-based pulse slot index.
- * @returns Horizontal pulse path, or null when none are suitable.
- */
-function resolvePlaybackGroundGridHorizontalPulsePath(
-  horizontalPulsePaths: readonly PlaybackGroundGridPulsePath[],
-  pulseSlotIndex: number,
-): PlaybackGroundGridPulsePath | null {
-  if (horizontalPulsePaths.length === 0) {
-    return null;
-  }
-
-  const selectedLineIndex = Math.min(
-    horizontalPulsePaths.length - 1,
-    Math.floor(
-      resolvePlaybackGroundGridUnitHash(pulseSlotIndex, 17) *
-        horizontalPulsePaths.length,
-    ),
-  );
-  return horizontalPulsePaths[selectedLineIndex];
-}
-
-/**
- * Selects one sparse vertical pulse path for the current pulse slot.
- *
- * @param verticalPulsePaths - Full vertical ray paths.
- * @param visibleVerticalPulsePaths - Visible subset preferred for on-screen pulses.
- * @param pulseSlotIndex - Zero-based pulse slot index.
- * @returns Vertical pulse path, or null when none are available.
- */
-function resolvePlaybackGroundGridVerticalPulsePath(
-  verticalPulsePaths: readonly PlaybackGroundGridPulsePath[],
-  visibleVerticalPulsePaths: readonly PlaybackGroundGridPulsePath[],
-  pulseSlotIndex: number,
-): PlaybackGroundGridPulsePath | null {
-  if (verticalPulsePaths.length === 0) {
-    return null;
-  }
-
-  const candidatePulsePaths =
-    visibleVerticalPulsePaths.length > 0
-      ? visibleVerticalPulsePaths
-      : verticalPulsePaths;
-
-  const selectedPathIndex = Math.min(
-    candidatePulsePaths.length - 1,
-    Math.floor(
-      resolvePlaybackGroundGridUnitHash(pulseSlotIndex, 23) *
-        candidatePulsePaths.length,
-    ),
-  );
-  return candidatePulsePaths[selectedPathIndex];
-}
-
-/**
- * Resolves the pulse travel ratio along its chosen line.
- *
- * @param input - Pulse timing direction and orientation.
- * @returns Normalized 0..1 travel ratio along the chosen line.
- */
-function resolvePlaybackGroundGridPulseTravelRatio(
-  input: PlaybackGroundGridPulseTravelRatioInput,
-): number {
-  const baseTravelProgressRatio = input.directionIsForward
-    ? input.lifetimeProgressRatio
-    : 1 - input.lifetimeProgressRatio;
-  if (input.orientation === 'horizontal') {
-    return baseTravelProgressRatio;
-  }
-
-  return (
-    FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO +
-    (FLAPPY_GROUND_GRID_VERTICAL_PULSE_END_RATIO -
-      FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO) *
-      baseTravelProgressRatio
-  );
 }
 
 /**
@@ -214,20 +129,4 @@ function resolvePlaybackGroundGridPulseTrackThickness(
     maximumDistanceToHorizonPx,
   );
   return resolvePlaybackGroundGridLineThickness(depthRatio);
-}
-
-/**
- * Resolves a deterministic unit-interval hash from a slot index and salt.
- *
- * @param seed - Slot-local seed value.
- * @param salt - Small integer salt used to pick a stable random stream.
- * @returns Stable random value in the range 0..1.
- */
-function resolvePlaybackGroundGridUnitHash(seed: number, salt: number): number {
-  let hashedValue = (seed + 1) ^ Math.imul(salt + 1, 374_761_393);
-  hashedValue = Math.imul(hashedValue ^ (hashedValue >>> 13), 1_274_126_177);
-  hashedValue ^= hashedValue >>> 16;
-  return (
-    (hashedValue >>> 0) / FLAPPY_GROUND_GRID_UNSIGNED_NORMALIZATION_DIVISOR
-  );
 }

@@ -5,6 +5,9 @@ import type { SharedObservationFeatures } from '../flappy.simulation.shared.util
  *
  * Pipes move from right to left. The bird scores once per pipe when the pipe
  * completely crosses the bird x-position.
+ *
+ * This is the environment-owned pipe state, distinct from the packed snapshot
+ * transport shapes used by the browser worker.
  */
 export interface FlappyPipe {
   /** Horizontal position of the left edge (pixels). */
@@ -22,6 +25,9 @@ export interface FlappyPipe {
 
 /**
  * Bird kinematic state for one simulation frame.
+ *
+ * The environment keeps only the minimum physics state needed to advance the
+ * episode: vertical position and vertical velocity.
  */
 export interface FlappyBird {
   /** Vertical position (pixels). */
@@ -33,6 +39,11 @@ export interface FlappyBird {
 
 /**
  * Full simulation state for one Flappy episode.
+ *
+ * Educational note:
+ * This is the canonical single-episode world state used by evaluation and some
+ * trainer-facing helpers. It is intentionally compact so stepping the world is
+ * deterministic and easy to inspect.
  */
 export interface FlappyGameState {
   /** Current frame counter (0-based). */
@@ -84,5 +95,8 @@ export type FlappyObservationFeatures = SharedObservationFeatures;
  *
  * - `0` means easiest profile (wide gaps, slower pipes).
  * - `1` means fully adaptive profile based on passed pipes.
+ *
+ * Values between `0` and `1` interpolate between those extremes, which lets the
+ * trainer or environment caller dial curriculum strength continuously.
  */
 export type FlappyDifficultyScale = number;

@@ -48,6 +48,15 @@ import {
 } from './host.stats.service';
 import type { CanvasHostResult, HostStatsPartialValues } from './host.types';
 
+/**
+ * Browser host assembly for the Flappy Bird demo UI.
+ *
+ * The host boundary is responsible for building the browser-side shell around
+ * the simulation: framed title, main canvas, stats panel, and network
+ * visualization panel. It does not run evolution itself; it prepares the stage
+ * on which the runtime loop renders.
+ */
+
 type HostVisualPrimitives = {
   unifiedBorder: string;
   unifiedInsetShadow: string;
@@ -88,6 +97,8 @@ type HostNetworkVisualizationController = {
 /**
  * Builds the browser demo host tree and returns rendering handles.
  *
+ * This is the public host entrypoint used by the runtime startup path.
+ *
  * @param containerElement - Root host container.
  * @returns Canvas handles, stats cells and network render callback.
  */
@@ -99,6 +110,10 @@ export function createCanvasHost(
 
 /**
  * Builds the browser demo host tree and returns rendering handles.
+ *
+ * The orchestration is deliberately step-shaped: clear old DOM, build layout,
+ * create canvases, wire resize behavior, render placeholders, then return the
+ * handles the runtime will mutate during execution.
  *
  * @param containerElement - Root host container.
  * @returns Canvas handles, stats cells and network render callback.
@@ -166,6 +181,9 @@ export function createCanvasHostInternal(
 /**
  * Applies partial stat updates to the rendered stats table.
  *
+ * The runtime writes HUD values incrementally, so the host exposes a narrow
+ * partial-update helper rather than requiring full table redraws.
+ *
  * @param statsValueByKey - Lookup of stat keys to value cells.
  * @param partialValues - Subset of values to write this tick.
  * @returns Nothing.
@@ -182,6 +200,9 @@ export { updateStatsTableValues as updateStatsTableValuesInternal };
 /**
  * Clears any previous runtime DOM before rebuilding the browser host tree.
  *
+ * The demo rebuilds the host from scratch on each startup so repeated runs begin
+ * from a known clean DOM state.
+ *
  * @param containerElement - Root host container.
  * @returns Nothing.
  */
@@ -192,6 +213,9 @@ function resetHostContainer(containerElement: HTMLElement): void {
 
 /**
  * Resolves shared border, shadow, and padding values for host assembly.
+ *
+ * Centralizing these primitives keeps the DOM-building code focused on layout
+ * structure instead of duplicating presentation constants everywhere.
  *
  * @returns Shared visual primitives reused across host sections.
  */
@@ -212,6 +236,9 @@ function resolveHostVisualPrimitives(): HostVisualPrimitives {
 
 /**
  * Creates the host layout elements used to assemble the browser UI tree.
+ *
+ * This creates the structural DOM only. Canvases, stats content, and
+ * visualization wiring are layered on afterward.
  *
  * @param hostVisualPrimitives - Shared visual primitives for border and shadow styling.
  * @returns Layout elements grouped by host responsibility.
@@ -303,6 +330,9 @@ function createHostLayoutElements(
 
 /**
  * Creates the canvases and 2D contexts used by the host UI.
+ *
+ * The host manages three canvas surfaces with different jobs: a title/header
+ * frame, the main simulation view, and the side-panel network visualization.
  *
  * @param hostVisualPrimitives - Shared visual primitives for border and shadow styling.
  * @returns Simulation, header, and network canvases with required contexts.

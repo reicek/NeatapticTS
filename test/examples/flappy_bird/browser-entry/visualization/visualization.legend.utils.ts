@@ -27,7 +27,18 @@ import { resolveNetworkVisualizationColorScales } from './visualization.colors.u
 import type { DynamicColorScale } from './visualization.types';
 
 /**
+ * Legend-layout helpers for network visualization.
+ *
+ * The legend explains how colors map back to numeric weights and biases. These
+ * helpers turn color scales into labeled rows and place the legend so it stays
+ * readable across different canvas sizes.
+ */
+
+/**
  * Creates legend rows from ordered tiers.
+ *
+ * Each row describes one closed numeric interval and the swatch used to paint
+ * it, making the dynamic color scale legible to a human reader.
  *
  * @param scale - Dynamic color scale containing bounds, tiers, and overflow color.
  * @param symbol - Label symbol.
@@ -53,6 +64,10 @@ export function createColorLegendRows(
 
 /**
  * Resolves network legend layout from canvas constraints.
+ *
+ * The legend layout adapts between regular and compact modes so the network
+ * panel can stay informative on smaller viewports without swallowing the whole
+ * canvas.
  *
  * @param context - Render context.
  * @param connectionLegendRows - Connection legend rows.
@@ -124,6 +139,10 @@ export function resolveNetworkLegendLayout(
 
 /**
  * Resolves default legend layout from internal tier definitions.
+ *
+ * This convenience helper is used when the caller wants a layout driven by the
+ * currently active network and does not need to assemble the intermediate rows
+ * manually.
  *
  * @param context - Render context.
  * @param network - Active network instance.

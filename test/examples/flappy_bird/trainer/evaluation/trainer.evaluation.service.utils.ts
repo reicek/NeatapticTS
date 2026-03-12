@@ -17,6 +17,11 @@ import type { PopulationAggregateScoringContext } from './trainer.evaluation.ser
 /**
  * Assigns refreshed frame-primary scores to the current population.
  *
+ * Educational note:
+ * The trainer does not rank genomes purely by one raw metric. It combines pipe
+ * progress, survival, and stability into a provisional score so early-stage
+ * selection remains robust when several genomes are close in quality.
+ *
  * @param population - Current population.
  * @param aggregateByGenome - Aggregate cache keyed by genome.
  * @param provisionalScoresByGenome - Mutable provisional score map.
@@ -58,6 +63,10 @@ export function assignFramePrimaryScores(
 /**
  * Collects all currently available aggregate values.
  *
+ * Only genomes with completed aggregate results are included. That lets the
+ * scoring helpers distinguish between genuinely weak genomes and genomes that
+ * simply have not yet reached a later stage.
+ *
  * @param population - Current population.
  * @param aggregateByGenome - Aggregate cache keyed by genome.
  * @returns Collected aggregate values.
@@ -85,6 +94,10 @@ export function collectAggregateValues(
 /**
  * Resolves the leading mean pipe-progress value across available aggregates.
  *
+ * Mean pipe progress acts as the leading indicator for the frame-primary score:
+ * if a genome is far behind the current pipe leader, it falls back to a simpler
+ * progress-first score.
+ *
  * @param aggregateValues - Aggregate values currently available.
  * @returns Highest mean pipe-progress value.
  */
@@ -101,6 +114,11 @@ export function resolveMaximumMeanPipesPassed(
 
 /**
  * Scores one aggregate using the frame-primary heuristic.
+ *
+ * Educational note:
+ * The heuristic intentionally mixes progress and stability. A genome that passes
+ * many pipes but has wildly inconsistent fitness across seeds is treated more
+ * cautiously than a similarly strong but steadier genome.
  *
  * @param aggregate - Aggregate evaluation result.
  * @param maximumMeanPipesPassed - Best mean pipe progress in the population.
@@ -138,6 +156,9 @@ export function scoreAggregateFramePrimary(
 
 /**
  * Resolves the aggregate scoring context used by frame-primary scoring.
+ *
+ * This precomputation step keeps the per-genome scoring loop lean and avoids
+ * recomputing population-wide maxima for every genome.
  *
  * @param population - Current population.
  * @param aggregateByGenome - Aggregate cache keyed by genome.

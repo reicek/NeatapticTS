@@ -1,4 +1,8 @@
-/** Default difficulty scale for rollouts when caller does not provide one. */
+/**
+ * Default difficulty scale for rollouts when caller does not provide one.
+ *
+ * A value of `1` means full adaptive difficulty is enabled during evaluation.
+ */
 export const FLAPPY_EVALUATION_DEFAULT_DIFFICULTY_SCALE = 1;
 
 /** Default grace period (frames) before early termination checks begin. */
@@ -7,7 +11,12 @@ export const FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_GRACE_FRAMES = 160;
 /** Default consecutive unrecoverable frames required for early termination. */
 export const FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_CONSECUTIVE_FRAMES = 24;
 
-/** Default pipe-progress target used when normalizing rollout fitness. */
+/**
+ * Default pipe-progress target used when normalizing rollout fitness.
+ *
+ * This target anchors the progress channel so normalization remains meaningful
+ * even when individual episodes vary widely in difficulty and duration.
+ */
 export const FLAPPY_EVALUATION_DEFAULT_PIPE_PROGRESS_TARGET = 20;
 
 /** Dense shaping normalization factor per survived frame. */
@@ -25,7 +34,12 @@ export const FLAPPY_EVALUATION_NORMALIZED_DENSE_WEIGHT = 1_200;
 /** Terminal-shaping channel weight in normalized fitness composition. */
 export const FLAPPY_EVALUATION_NORMALIZED_TERMINAL_WEIGHT = 600;
 
-/** Robust fitness penalty multiplier applied to standard deviation. */
+/**
+ * Robust fitness penalty multiplier applied to standard deviation.
+ *
+ * A higher value penalizes instability more strongly when computing robust
+ * fitness from a shared-seed batch.
+ */
 export const FLAPPY_EVALUATION_ROBUST_STDDEV_PENALTY = 0.35;
 
 /** Unrecoverable clearance threshold used by early termination heuristic. */
@@ -43,7 +57,12 @@ export const FLAPPY_EVALUATION_UNRECOVERABLE_ABOVE_GAP_DELTA = -0.45;
 /** Rising-speed threshold used by early termination heuristic. */
 export const FLAPPY_EVALUATION_UNRECOVERABLE_RISING_VELOCITY = -0.5;
 
-/** Seed-mix additive constant used to decorrelate nearby genome ids. */
+/**
+ * Seed-mix additive constant used to decorrelate nearby genome ids.
+ *
+ * Together with the multiplicative constants below, this creates a small
+ * avalanche-style mixing pipeline for deterministic seed derivation.
+ */
 export const FLAPPY_EVALUATION_SEED_MIX_XOR_SALT = 0x9e3779b9;
 
 /** Seed-mix first multiplicative avalanche constant. */

@@ -1,16 +1,3 @@
-import {
-  resolvePlaybackGroundGridHorizontalGeometry,
-  resolvePlaybackGroundGridVerticalGeometry,
-} from './playback.background.ground-grid.geometry.utils';
-import { resolvePlaybackGroundGridPulse } from './playback.background.ground-grid.pulse.utils';
-import type {
-  PlaybackBackgroundGroundGridSceneContext,
-  PlaybackBackgroundGroundGridSourceScene,
-  PlaybackGroundGridGeometry,
-  PlaybackGroundGridHorizontalGeometry,
-  PlaybackGroundGridVerticalGeometry,
-} from './playback.background.ground-grid.types';
-
 export {
   interpolatePlaybackGroundGridPoint,
   resolvePlaybackGroundGridDepthCurve,
@@ -19,63 +6,5 @@ export {
   resolvePlaybackGroundGridLineBlur,
   resolvePlaybackGroundGridLineThickness,
 } from './playback.background.ground-grid.math.utils';
-
-/**
- * Resolves the shared scene context used by the ground-grid renderer.
- *
- * @param sceneContext - Lower-band geometry provided by the background module.
- * @returns Narrow scene contract consumed by grid-specific helpers.
- */
-export function resolvePlaybackGroundGridSceneContext(
-  sceneContext: PlaybackBackgroundGroundGridSourceScene,
-): PlaybackBackgroundGroundGridSceneContext {
-  return {
-    viewportOffsetXPx: sceneContext.viewportLeftXPx,
-    visibleWorldWidthPx: sceneContext.visibleWorldWidthPx,
-    alignedHorizonYPx: sceneContext.alignedHorizonYPx,
-    lowerBandTopYPx: sceneContext.lowerBandTopYPx,
-    lowerBandHeightPx: sceneContext.lowerBandHeightPx,
-    lowerBandBottomYPx: sceneContext.lowerBandBottomYPx,
-    vanishingPointXPx:
-      sceneContext.vanishingPointXPx - sceneContext.viewportLeftXPx,
-    vanishingPointYPx: sceneContext.vanishingPointYPx,
-  };
-}
-
-/**
- * Builds the line geometry for the neon ground grid.
- *
- * @param sceneContext - Lower-band geometry for the current viewport.
- * @param frameIndex - Current deterministic playback frame index.
- * @param scrollBasePx - Shared world scroll used for parallax motion.
- * @returns Horizontal depth bands and perspective rays for the current frame.
- */
-export function resolvePlaybackGroundGridGeometry(
-  sceneContext: PlaybackBackgroundGroundGridSceneContext,
-  frameIndex: number,
-  scrollBasePx: number,
-): PlaybackGroundGridGeometry {
-  // Step 1: Resolve and cache the fixed horizontal depth bands for the lower plane.
-  const horizontalGeometry: PlaybackGroundGridHorizontalGeometry =
-    resolvePlaybackGroundGridHorizontalGeometry(sceneContext);
-
-  // Step 2: Resolve and cache the moving perspective rays within one wrapped cycle.
-  const verticalGeometry: PlaybackGroundGridVerticalGeometry =
-    resolvePlaybackGroundGridVerticalGeometry(sceneContext, scrollBasePx);
-
-  // Step 3: Resolve one visible pulse above the grid lines.
-  const pulse = resolvePlaybackGroundGridPulse({
-    frameIndex,
-    horizontalPulsePaths: horizontalGeometry.preferredHorizontalPulsePaths,
-    sceneContext,
-    verticalPulsePaths: verticalGeometry.verticalPulsePaths,
-    visibleVerticalPulsePaths: verticalGeometry.visibleVerticalPulsePaths,
-  });
-
-  // Step 4: Return the pure geometry bundle used by the canvas renderer.
-  return {
-    horizontalLineBatches: horizontalGeometry.horizontalLineBatches,
-    pulse,
-    verticalLineBatches: verticalGeometry.verticalLineBatches,
-  };
-}
+export { resolvePlaybackGroundGridGeometry } from './playback.background.ground-grid.geometry.services';
+export { resolvePlaybackGroundGridSceneContext } from './playback.background.ground-grid.scene.services';

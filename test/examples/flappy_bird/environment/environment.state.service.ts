@@ -16,6 +16,16 @@ import type { FlappyGameState } from './environment.types';
 /**
  * Create a fresh Flappy Bird episode state.
  *
+ * Educational note:
+ * A new episode starts with one initial pipe already materialized so the first
+ * observation is meaningful immediately. That avoids a cold-start phase where a
+ * policy would receive mostly empty-space inputs.
+ *
+ * @example
+ * ```ts
+ * const state = createInitialFlappyState(rng);
+ * ```
+ *
  * @param rng - Random source used to generate initial pipe configuration.
  * @returns Initial state for one deterministic rollout.
  */

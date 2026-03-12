@@ -6,29 +6,52 @@
 
 Generation-level rollout plans for staged evaluation.
 
+Each generation resolves one plan that answers three questions: how strong is
+the current mutation schedule, which shared seeds belong to each stage, and
+what rollout budget each stage is allowed to spend.
+
 ### FlappyGenerationReport
 
 Compact generation report used for training logs.
+
+The report is shaped for longitudinal monitoring rather than raw storage. It
+collects the distribution and best-run details needed to judge whether a
+generation improved robustly.
 
 ### FlappyTrainerNeatController
 
 Local typed view for population-level fitness mode used by this trainer.
 
+This is intentionally narrower than the full `Neat` runtime API. The trainer
+documents only the methods and mutable options it actually depends on.
+
 ### FlappyTrainerNetwork
 
 Network shape expected by the Flappy trainer.
+
+The trainer only needs the evaluation-facing subset of a full network plus an
+optional score field used by staged ranking helpers.
 
 ### FlappyTrainerRuntimeState
 
 Trainer runtime state shared by orchestration helpers.
 
+Only mutable cross-step values live here: stop intent and the most recent
+generation report.
+
 ### FlappyTrainerSetup
 
 Immutable trainer setup values.
 
+These values define the static training shape before runtime state and staged
+evaluation are attached.
+
 ### ScoredGenomeEntry
 
 Score carrier used for deterministic ordering helpers.
+
+Wrapping a genome together with its score makes ranking utilities easier to
+write and keeps tie-breaking logic explicit.
 
 ## trainer/trainer.ts
 
@@ -37,6 +60,22 @@ Score carrier used for deterministic ordering helpers.
 `(error: unknown) => void`
 
 Handles fatal `main` rejection path.
+
+The trainer keeps this boundary small so unexpected failures are formatted in
+one consistent place before reaching the CLI.
+
+Parameters:
+- `error` - - Unknown rejection reason from trainer execution.
+
+Returns: Nothing.
+
+### isDirectTrainerExecution
+
+`() => boolean`
+
+Resolves whether this module is the direct Node entrypoint.
+
+Returns: `true` when Node launched this file directly.
 
 ### runTrainer
 
@@ -47,6 +86,17 @@ Flappy Bird neuroevolution demo.
 This script runs a small NEAT population where each genome controls a bird.
 The network sees a temporal observation (38 floats) and outputs two competing
 action scores (`no flap` vs `flap`).
+
+Educational note:
+The trainer is intentionally orchestration-first. It wires together setup,
+staged population evaluation, the outer evolution loop, graceful shutdown,
+and compact generation logging without burying those responsibilities inside a
+single monolithic file.
+
+The mutation schedule gradually cools over early generations. If you want a
+conceptual parallel, the Wikipedia article on "simulated annealing" is a
+useful mental model for why early exploration is broader and later updates are
+more conservative.
 
 Run (from repo root):
 `npx ts-node test/examples/flappy_bird/trainFlappyBird.ts`
@@ -66,7 +116,6 @@ Prefix used when rendering unexpected trainer failures to stderr.
 Formats unknown trainer failures into a stable human-readable message.
 
 Parameters:
-
 - `error` - - Unknown rejection reason from trainer execution.
 
 Returns: Formatted error string for CLI logging.
@@ -147,10 +196,14 @@ Returns: Formatted error string for CLI logging.
 
 Applies mutation schedule values to the NEAT controller options.
 
-Parameters:
+The schedule is resolved outside this helper so the loop can read as a clean
+"resolve -> apply -> evolve -> report" flow.
 
+Parameters:
 - `neatController` - - Trainer NEAT controller.
 - `mutationSchedule` - - Mutation schedule for current generation.
+
+Returns: Nothing.
 
 ### LogGenerationSummaryCallback
 
@@ -158,17 +211,27 @@ Parameters:
 
 Callback signature for one-line generation logging.
 
+The loop owns evolution cadence, while the callback owns presentation.
+Keeping those concerns separate makes it easy to reuse the loop with richer
+reporting later.
+
 ### runTrainerEvolutionLoop
 
 `(neatController: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerNeatController, trainerRuntimeState: import("test/examples/flappy_bird/trainer/trainer.types").FlappyTrainerRuntimeState, logGenerationSummary: import("test/examples/flappy_bird/trainer/trainer.loop.service").LogGenerationSummaryCallback) => Promise<void>`
 
 Runs the outer evolution loop until runtime stop is requested.
 
-Parameters:
+Educational note:
+This is the trainer's main heartbeat: resolve the current mutation schedule,
+evolve one generation, run a representative fallback rollout for logging, and
+emit a compact summary.
 
+Parameters:
 - `neatController` - - Trainer NEAT controller.
 - `trainerRuntimeState` - - Mutable trainer runtime state.
 - `logGenerationSummary` - - Callback that emits compact generation logs.
+
+Returns: Promise resolved when the trainer has been stopped.
 
 ## trainer/trainer.setup.service.ts
 
@@ -178,8 +241,12 @@ Parameters:
 
 Builds the NEAT controller with baseline options.
 
-Parameters:
+Educational note:
+The trainer enables population-level fitness mode because the quality of a
+Flappy policy depends on fair comparison across shared seed batches, not on a
+one-network-at-a-time scoring callback.
 
+Parameters:
 - `trainerSetup` - - Immutable trainer setup values.
 
 Returns: Typed NEAT controller used by the trainer loop.
@@ -190,6 +257,9 @@ Returns: Typed NEAT controller used by the trainer loop.
 
 Creates mutable runtime state container.
 
+The runtime state is intentionally tiny. It only tracks stop intent and the
+latest report so the outer loop can remain easy to reason about.
+
 Returns: Fresh runtime state used by loop orchestration.
 
 ### createTrainerSetup
@@ -198,6 +268,11 @@ Returns: Fresh runtime state used by loop orchestration.
 
 Creates immutable setup values for the trainer.
 
+Educational note:
+The setup object freezes the core training shape up front: input width,
+output width, population size, and elitism count. Centralizing those values
+makes the rest of the trainer read as policy rather than configuration noise.
+
 Returns: Default trainer setup values used for NEAT configuration.
 
 ### resolveNoopFitness
@@ -205,6 +280,9 @@ Returns: Default trainer setup values used for NEAT configuration.
 `() => number`
 
 Trivial baseline fitness used before attaching population evaluator.
+
+This placeholder keeps controller construction simple. The real staged
+evaluator is attached immediately afterward by the fitness service.
 
 Returns: Constant zero fitness.
 
@@ -216,8 +294,13 @@ Returns: Constant zero fitness.
 
 Builds a compact report for the current generation.
 
-Parameters:
+Educational note:
+The trainer logs more than a single best score because single-number progress
+can hide instability. Mean, median, $p90$, and standard deviation reveal
+whether a generation is broadly improving or whether one lucky genome is
+masking a weak population.
 
+Parameters:
 - `population` - - Current population.
 - `aggregateByGenome` - - Aggregate evaluation results keyed by genome.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
@@ -230,8 +313,11 @@ Returns: Aggregated generation report.
 
 Emits one compact generation log line.
 
-Parameters:
+The emitted line is designed for long-running terminal sessions: dense enough
+to be useful, but stable enough that humans can visually scan progress over
+hundreds of generations.
 
+Parameters:
 - `generationLabel` - - Current generation label.
 - `mutationSchedule` - - Active mutation schedule.
 - `report` - - Optional aggregated generation report.
@@ -248,12 +334,18 @@ Returns: Nothing.
 
 Attaches population-level staged evaluator to the NEAT controller.
 
-Parameters:
+This is the moment where the generic NEAT controller becomes a
+Flappy-specific trainer: a plain controller receives the staged population
+evaluator that understands shared-seed screening, full-pass scoring, and
+reevaluation.
 
+Parameters:
 - `neatController` - - Trainer NEAT controller.
 - `trainerRuntimeState` - - Mutable trainer runtime state.
 - `elitismCount` - - Number of elite genomes preserved each generation.
 - `dependencies` - - Pure/impure helper callbacks used by the evaluator.
+
+Returns: Nothing.
 
 ### createPopulationFitnessEvaluator
 
@@ -261,8 +353,16 @@ Parameters:
 
 Creates the asynchronous population fitness evaluator.
 
-Parameters:
+Educational note:
+The trainer uses staged evaluation to reduce luck. Genomes are first screened
+quickly, then the most promising ones receive more expensive evaluation, and
+the best candidates are reevaluated again for robustness.
 
+That strategy is closer to tournament design than to naive one-shot scoring:
+the same generation budget is spent unevenly so weak genomes are filtered out
+early and strong genomes are compared more carefully.
+
+Parameters:
 - `neatController` - - Trainer NEAT controller.
 - `trainerRuntimeState` - - Mutable trainer runtime state.
 - `elitismCount` - - Number of elite genomes preserved each generation.
@@ -274,6 +374,11 @@ Returns: Evaluator callback assigned to `neatController.fitness`.
 
 Callback dependencies required by the trainer fitness orchestration service.
 
+Educational note:
+The trainer evaluates whole populations in staged passes. This dependency bag
+keeps the top-level service declarative and makes each stage independently
+replaceable without rewriting the orchestration logic.
+
 ## trainer/trainer.signals.service.ts
 
 ### handleTrainerStopSignal
@@ -283,8 +388,9 @@ Callback dependencies required by the trainer fitness orchestration service.
 Handles one stop signal update.
 
 Parameters:
-
 - `trainerRuntimeState` - - Mutable trainer runtime state.
+
+Returns: Nothing.
 
 ### registerTrainerStopSignals
 
@@ -292,9 +398,15 @@ Parameters:
 
 Registers graceful stop signal handlers.
 
-Parameters:
+Educational note:
+Long-running evolutionary runs should stop cleanly when the user presses
+`Ctrl+C`. This service flips runtime intent instead of abruptly tearing down
+the process mid-generation.
 
+Parameters:
 - `trainerRuntimeState` - - Mutable trainer runtime state.
+
+Returns: Nothing.
 
 ## trainer/trainer.evaluation.service.ts
 
@@ -312,8 +424,11 @@ contracts, and sub-services can evolve behind a focused boundary.
 
 Commits provisional scores to genome score fields.
 
-Parameters:
+Provisional scores are kept in a map during staging so each phase can refresh
+them without mutating the genomes too early. This helper performs the final
+write-back once staged evaluation is complete.
 
+Parameters:
 - `population` - - Current population.
 - `provisionalScoresByGenome` - - Final provisional score map.
 
@@ -325,8 +440,11 @@ Returns: Nothing.
 
 Executes the full evaluation stage over the top provisional candidates.
 
-Parameters:
+This is the middle-cost stage in the ranking ladder: not every genome
+survives into it, but the survivors receive a more trustworthy estimate than
+the quick screen alone can provide.
 
+Parameters:
 - `population` - - Current population.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
@@ -341,8 +459,12 @@ Returns: Nothing.
 
 Executes the quick evaluation stage over the full population.
 
-Parameters:
+Educational note:
+The quick stage is a cheap screening pass. Every genome is tested on the same
+small shared seed batch so the trainer can discard obviously weak candidates
+before spending more rollout budget on them.
 
+Parameters:
 - `population` - - Current population.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
@@ -356,8 +478,12 @@ Returns: Nothing.
 
 Executes the large-seed reevaluation stage over top candidates.
 
-Parameters:
+Educational note:
+Reevaluation is the trainer's anti-luck pass. The best provisional genomes
+are tested again on a larger shared seed batch so leaderboard positions are
+less sensitive to a fortunate early sample.
 
+Parameters:
 - `population` - - Current population.
 - `generationEvaluationPlan` - - Per-generation staged evaluation plan.
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
@@ -378,7 +504,6 @@ Unevaluated or invalid scores are intentionally skipped so percentile and
 standard deviation calculations operate on stable numeric inputs only.
 
 Parameters:
-
 - `population` - - Current population.
 
 Returns: Finite scores in population order.
@@ -394,7 +519,6 @@ episode. This helper centralizes the fallback rules so the service facade can
 remain a thin orchestration layer.
 
 Parameters:
-
 - `population` - - Current population.
 - `bestGenome` - - Genome selected as generation best.
 - `aggregateByGenome` - - Cached aggregate evaluations keyed by genome.
@@ -419,7 +543,6 @@ orchestration while this helper module owns cache fallback behavior.
 Builds one-line generation log tokens.
 
 Parameters:
-
 - `generationLabel` - - Generation label shown in logs.
 - `bestFitness` - - Best resolved fitness value for this generation.
 - `bestPipesPassed` - - Best resolved pipes passed value.
@@ -438,7 +561,6 @@ Returns: Ordered log tokens for compact console output.
 Resolves the best genome by current score.
 
 Parameters:
-
 - `population` - - Current trainer population.
 
 Returns: Highest-scoring genome or `undefined` when population is empty.
@@ -450,7 +572,6 @@ Returns: Highest-scoring genome or `undefined` when population is empty.
 Returns top genomes ordered by current provisional score.
 
 Parameters:
-
 - `population` - - Current trainer population.
 - `provisionalScoresByGenome` - - Optional map of staged provisional scores.
 - `targetCount` - - Maximum number of genomes to return.
@@ -466,7 +587,6 @@ Returns: Highest-scoring genomes in descending score order.
 Build deterministic shared seeds for one generation stage.
 
 Parameters:
-
 - `generationIndex` - - Zero-based generation index.
 - `stageSalt` - - Constant stage-specific salt.
 - `seedCount` - - Number of seeds to produce.
@@ -480,7 +600,6 @@ Returns: Deterministic shared seed list.
 Builds full-stage rollout options.
 
 Parameters:
-
 - `difficultyScale` - - Difficulty scale for this generation.
 
 Returns: Full stage rollout options.
@@ -492,7 +611,6 @@ Returns: Full stage rollout options.
 Builds quick-screen rollout options.
 
 Parameters:
-
 - `difficultyScale` - - Difficulty scale for this generation.
 
 Returns: Quick stage rollout options.
@@ -504,7 +622,6 @@ Returns: Quick stage rollout options.
 Builds high-confidence reevaluation rollout options.
 
 Parameters:
-
 - `difficultyScale` - - Difficulty scale for this generation.
 
 Returns: Reevaluation stage rollout options.
@@ -520,7 +637,6 @@ Mutation schedule used by generation planning and outer loop logging.
 Mixes generation and stage salts into a deterministic uint32 RNG seed.
 
 Parameters:
-
 - `generationIndex` - - Current generation index.
 - `stageSalt` - - Stage-specific salt.
 
@@ -533,7 +649,6 @@ Returns: Mixed uint32 seed.
 Resolve curriculum difficulty scale for the current generation.
 
 Parameters:
-
 - `generationIndex` - - Zero-based generation index.
 
 Returns: Difficulty scale in [0, 1].
@@ -545,7 +660,6 @@ Returns: Difficulty scale in [0, 1].
 Resolves all per-generation evaluation controls.
 
 Parameters:
-
 - `generationIndex` - - Zero-based generation index.
 
 Returns: Full staged evaluation plan for the generation.
@@ -557,7 +671,6 @@ Returns: Full staged evaluation plan for the generation.
 Resolve a smooth mutation annealing schedule.
 
 Parameters:
-
 - `generationIndex` - - Zero-based generation index.
 
 Returns: Mutation rate and mutation amount for this generation.

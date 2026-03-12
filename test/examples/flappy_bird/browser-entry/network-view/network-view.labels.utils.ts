@@ -7,7 +7,19 @@ import { FLAPPY_INPUT_GROUP_LABELS } from './network-view.constants';
 import type { InputGroupLabelBand } from './network-view.types';
 
 /**
+ * Semantic input-label helpers for the network-view panel.
+ *
+ * The Flappy controller input layer is not just a list of anonymous scalars; it
+ * is organized into stacked observation frames plus action-history channels.
+ * These helpers recover that grouping for visual annotation.
+ */
+
+/**
  * Resolves input-layer semantic label bands for Flappy temporal observation channels.
+ *
+ * When the input size matches the expected temporal-memory layout, the view can
+ * annotate groups such as stacked frames and action channels directly beside the
+ * input layer.
  *
  * @param inputNodeCount - Input-layer node count.
  * @returns Group label ranges with band colors.

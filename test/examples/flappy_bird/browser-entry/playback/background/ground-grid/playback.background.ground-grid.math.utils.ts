@@ -1,12 +1,21 @@
 import {
   FLAPPY_GROUND_GRID_DEPTH_CURVE_EXPONENT,
+  FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT,
   FLAPPY_GROUND_GRID_MAX_ALPHA,
   FLAPPY_GROUND_GRID_MAX_BLUR_PX,
   FLAPPY_GROUND_GRID_MAX_THICKNESS_PX,
   FLAPPY_GROUND_GRID_MIN_ALPHA,
   FLAPPY_GROUND_GRID_MIN_BLUR_PX,
   FLAPPY_GROUND_GRID_MIN_THICKNESS_PX,
+  FLAPPY_GROUND_GRID_PIPE_CONNECTION_LINE_OFFSET_FROM_BOTTOM,
+  FLAPPY_GROUND_GRID_SCROLL_RATIO,
 } from './playback.background.ground-grid.constants';
+import { resolvePlaybackBackgroundLayout } from '../playback.background.utils';
+
+const cachedPipeConnectionProfileByHeight = new Map<
+  number,
+  PlaybackGroundGridPipeConnectionProfile
+>();
 
 /**
  * Small point value used when interpolating positions along one grid ray.
@@ -14,6 +23,14 @@ import {
 export type PlaybackGroundGridPoint = {
   xPx: number;
   yPx: number;
+};
+
+/**
+ * Shared pipe-floor projection resolved from the lower ground-grid geometry.
+ */
+export type PlaybackGroundGridPipeConnectionProfile = {
+  pipeFloorYPx: number;
+  matchedRayScrollRatio: number;
 };
 
 /**
@@ -91,6 +108,73 @@ export function resolvePlaybackGroundGridDepthFromHorizonDistance(
     1,
     Math.max(0, distanceToHorizonPx / maximumDistanceToHorizonPx),
   );
+}
+
+/**
+ * Resolves the shared lower-pipe floor and matched grid-ray scroll ratio.
+ *
+ * The lower pipe is visually clipped to the first usable horizontal grid band
+ * above the bottom edge. The returned scroll ratio then speeds up the moving
+ * perspective rays so their lateral motion matches the pipe speed exactly at
+ * that same projected height.
+ *
+ * @param visibleWorldHeightPx - Current visible world height in pixels.
+ * @returns Pipe-floor y-position plus the matching vertical-ray scroll ratio.
+ */
+export function resolvePlaybackGroundGridPipeConnectionProfile(
+  visibleWorldHeightPx: number,
+): PlaybackGroundGridPipeConnectionProfile {
+  const cachedProfile =
+    cachedPipeConnectionProfileByHeight.get(visibleWorldHeightPx);
+  if (cachedProfile) {
+    return cachedProfile;
+  }
+
+  // Step 1: Resolve the lower-band layout used by both the grid and pipe illusion.
+  const backgroundLayout =
+    resolvePlaybackBackgroundLayout(visibleWorldHeightPx);
+  const connectionLineIndex = Math.max(
+    0,
+    FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT -
+      FLAPPY_GROUND_GRID_PIPE_CONNECTION_LINE_OFFSET_FROM_BOTTOM -
+      1,
+  );
+  const depthRatio =
+    (connectionLineIndex + 1) / FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT;
+  const curvedDepthRatio = resolvePlaybackGroundGridDepthCurve(depthRatio);
+  const pipeFloorYPx =
+    backgroundLayout.lowerBandTopYPx +
+    curvedDepthRatio * backgroundLayout.lowerBandHeightPx;
+
+  // Step 2: Resolve how much anchor motion survives at the projected floor height.
+  const vanishingPointYPx = Math.max(0, visibleWorldHeightPx * 0.5);
+  const verticalTravelPx =
+    vanishingPointYPx - backgroundLayout.lowerBandBottomYPx;
+  const interpolationRatio =
+    Math.abs(verticalTravelPx) < Number.EPSILON
+      ? 0
+      : (pipeFloorYPx - backgroundLayout.lowerBandBottomYPx) / verticalTravelPx;
+  const clampedInterpolationRatio = Math.min(
+    0.999,
+    Math.max(0, interpolationRatio),
+  );
+
+  // Step 3: Return the floor height and the ray-scroll multiplier needed there.
+  const pipeConnectionProfile = {
+    pipeFloorYPx,
+    matchedRayScrollRatio:
+      1 /
+      Math.max(
+        Number.EPSILON,
+        FLAPPY_GROUND_GRID_SCROLL_RATIO * (1 - clampedInterpolationRatio),
+      ),
+  };
+
+  cachedPipeConnectionProfileByHeight.set(
+    visibleWorldHeightPx,
+    pipeConnectionProfile,
+  );
+  return pipeConnectionProfile;
 }
 
 /**

@@ -5,7 +5,18 @@ import {
 import type { WorkerChannelMessage } from './worker-channel.types';
 
 /**
+ * Generic request/response helper for worker-channel interactions.
+ *
+ * This module implements a small RPC-like pattern on top of browser worker
+ * events. The browser sends one message, listens for the first matching reply,
+ * and normalizes protocol failures into ordinary `Error` instances.
+ */
+
+/**
  * Message shape sent to the worker request channel.
+ *
+ * The worker protocol stays stringly-typed at the transport edge on purpose so
+ * the message stream is easy to inspect during debugging.
  */
 export interface WorkerChannelRequestMessage {
   type: string;
@@ -14,6 +25,9 @@ export interface WorkerChannelRequestMessage {
 
 /**
  * Configuration used for one worker request/response lifecycle.
+ *
+ * Callers provide the worker, the outbound message, and the predicate that says
+ * which inbound worker message should satisfy the request.
  */
 export interface WorkerChannelRequestOptions<ResponsePayload> {
   evolutionWorker: Worker;
@@ -26,8 +40,21 @@ export interface WorkerChannelRequestOptions<ResponsePayload> {
 /**
  * Sends one request to the worker and resolves with the first matching response payload.
  *
+ * This keeps generation requests simple: the caller describes the response it is
+ * waiting for, and this helper handles transient listeners, protocol errors,
+ * and runtime worker failures.
+ *
  * @param options - Worker request options and response resolver callback.
  * @returns Promise resolving with the matched worker response payload.
+ * @example
+ * ```ts
+ * const generation = await requestWorkerResponse({
+ *   evolutionWorker,
+ *   requestMessage: { type: 'request-generation' },
+ *   resolveResponsePayload: (message) =>
+ *     message.type === 'generation-ready' ? message.payload : undefined,
+ * });
+ * ```
  */
 export function requestWorkerResponse<ResponsePayload>(
   options: WorkerChannelRequestOptions<ResponsePayload>,

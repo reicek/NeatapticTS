@@ -1,5 +1,9 @@
 import type { NeatLike } from './neat.types';
 import Network from '../architecture/network';
+import {
+  promoteGenomeToFeedForwardIntentWhenEligible,
+  usesFeedForwardMutationPolicy,
+} from './neat.topology-intent.utils';
 
 /**
  * Genome with NEAT-specific metadata and methods.
@@ -13,6 +17,9 @@ interface GenomeWithMetadata {
   clone?: () => GenomeWithMetadata;
   toJSON?: () => Record<string, unknown>;
   mutate?: (method: MutationMethod) => void;
+  setTopologyIntent?: (
+    topologyIntent: 'feed-forward' | 'unconstrained',
+  ) => void;
   [key: string]: unknown;
 }
 
@@ -261,6 +268,9 @@ export function createPool(
     // Step 1: Reset population container.
     internal.population = [];
     const poolSize = internal.options?.popsize ?? 50;
+    const shouldPromoteFeedForwardIntent = usesFeedForwardMutationPolicy(
+      internal.options?.mutation,
+    );
 
     // Step 2: Generate each initial genome.
     for (let genomeIndex = 0; genomeIndex < poolSize; genomeIndex++) {
@@ -275,6 +285,12 @@ export function createPool(
 
       // Step 2a: Ensure no stale scoring information.
       genomeCopy.score = undefined;
+
+      // Step 2a.1: Promote feed-forward topology intent when the policy and topology agree.
+      promoteGenomeToFeedForwardIntentWhenEligible(
+        genomeCopy,
+        shouldPromoteFeedForwardIntent,
+      );
 
       // Step 2b: Attempt structural invariant enforcement (best effort).
       try {

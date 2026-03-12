@@ -7,7 +7,14 @@ import type {
   FlappyTrainerRuntimeState,
 } from './trainer.types';
 
-/** Callback dependencies required by the trainer fitness orchestration service. */
+/**
+ * Callback dependencies required by the trainer fitness orchestration service.
+ *
+ * Educational note:
+ * The trainer evaluates whole populations in staged passes. This dependency bag
+ * keeps the top-level service declarative and makes each stage independently
+ * replaceable without rewriting the orchestration logic.
+ */
 export interface TrainerFitnessServiceDependencies {
   resolveGenerationEvaluationPlan: (
     generationIndex: number,
@@ -49,10 +56,16 @@ export interface TrainerFitnessServiceDependencies {
 /**
  * Attaches population-level staged evaluator to the NEAT controller.
  *
+ * This is the moment where the generic NEAT controller becomes a
+ * Flappy-specific trainer: a plain controller receives the staged population
+ * evaluator that understands shared-seed screening, full-pass scoring, and
+ * reevaluation.
+ *
  * @param neatController - Trainer NEAT controller.
  * @param trainerRuntimeState - Mutable trainer runtime state.
  * @param elitismCount - Number of elite genomes preserved each generation.
  * @param dependencies - Pure/impure helper callbacks used by the evaluator.
+ * @returns Nothing.
  */
 export function attachPopulationFitnessEvaluator(
   neatController: FlappyTrainerNeatController,
@@ -70,6 +83,15 @@ export function attachPopulationFitnessEvaluator(
 
 /**
  * Creates the asynchronous population fitness evaluator.
+ *
+ * Educational note:
+ * The trainer uses staged evaluation to reduce luck. Genomes are first screened
+ * quickly, then the most promising ones receive more expensive evaluation, and
+ * the best candidates are reevaluated again for robustness.
+ *
+ * That strategy is closer to tournament design than to naive one-shot scoring:
+ * the same generation budget is spent unevenly so weak genomes are filtered out
+ * early and strong genomes are compared more carefully.
  *
  * @param neatController - Trainer NEAT controller.
  * @param trainerRuntimeState - Mutable trainer runtime state.

@@ -1,4 +1,9 @@
-/** Minimal deterministic random contract used by shared spawn helpers. */
+/**
+ * Minimal deterministic random contract used by shared spawn helpers.
+ *
+ * The shared layer keeps its RNG contract intentionally small so the same spawn
+ * helpers can work with both Node-side and browser-side deterministic sources.
+ */
 export interface SharedRngLike {
   /**
    * Returns integer in `[min, max)`.
@@ -10,7 +15,12 @@ export interface SharedRngLike {
   nextInt(min: number, max: number): number;
 }
 
-/** Common pipe shape consumed by observation helpers. */
+/**
+ * Common pipe shape consumed by observation helpers.
+ *
+ * This is the narrowest useful pipe contract for feature synthesis: horizontal
+ * position plus the vertical gap geometry seen by the bird.
+ */
 export interface SharedPipeLike {
   /** Horizontal left position in world pixels. */
   xPx: number;
@@ -22,7 +32,13 @@ export interface SharedPipeLike {
   gapSizePx: number;
 }
 
-/** Shared runtime difficulty profile used by browser and environment simulators. */
+/**
+ * Shared runtime difficulty profile used by browser and environment simulators.
+ *
+ * By projecting difficulty into one plain object, the example can keep
+ * curriculum logic independent from rendering, evaluation, and worker runtime
+ * concerns.
+ */
 export interface SharedDifficultyProfile {
   /** Active target gap size. */
   pipeGapPx: number;
@@ -34,7 +50,14 @@ export interface SharedDifficultyProfile {
   pipeSpawnIntervalFrames: number;
 }
 
-/** Structured observation features for network input. */
+/**
+ * Structured observation features for network input.
+ *
+ * Educational note:
+ * These features make the policy input interpretable. The example does not feed
+ * raw pixels into NEAT; it feeds geometric signals such as distance to the next
+ * pipe, corridor clearance, and urgency of recovering to the gap center.
+ */
 export interface SharedObservationFeatures {
   /** Bird y position normalized to [0, 1]. */
   normalizedBirdY: number;
@@ -97,6 +120,10 @@ export interface SharedObservationFeatures {
  * The memory stores recent core observation frames and recent action history,
  * allowing feedforward policies to consume short-term context without adding
  * recurrent connections.
+ *
+ * If you want background reading, the Wikipedia article on "frame stacking"
+ * captures the basic idea of giving a feed-forward policy a short motion trail
+ * instead of full recurrent state.
  */
 export interface SharedObservationMemoryState {
   /** Previous core frames, newest-first, excluding the current frame. */
@@ -106,7 +133,13 @@ export interface SharedObservationMemoryState {
   recentFlapActions: number[];
 }
 
-/** Input shape for observation-feature synthesis. */
+/**
+ * Input shape for observation-feature synthesis.
+ *
+ * This object is the raw world snapshot from which normalized features are
+ * derived. It intentionally separates world geometry from the later feature
+ * projection step.
+ */
 export interface SharedObservationInput {
   /** Bird vertical position in world pixels. */
   birdYPx: number;

@@ -6,79 +6,169 @@
 
 Loose JSON-compatible network payload used by worker messages.
 
+The worker never posts live `Network` instances back to the browser host.
+Instead it sends the result of `network.toJSON()` so the payload stays
+structured-clone safe and easy to inspect in devtools.
+
 ### WorkerErrorMessage
 
 Worker error response message.
+
+Errors are normalized into a display-safe string so the host UI can surface
+failures without depending on worker-specific exception classes.
 
 ### WorkerFrameBirdSnapshot
 
 Render-only bird snapshot DTO posted to host.
 
+This shape is useful conceptually, but the current transport uses the packed
+typed-array variant for lower allocation and transfer cost.
+
 ### WorkerFramePipeSnapshot
 
 Render-only pipe snapshot DTO posted to host.
+
+Like `WorkerFrameBirdSnapshot`, this documents the logical payload shape even
+though the worker currently sends the packed transport form.
 
 ### WorkerGenerationReadyMessage
 
 Worker generation-ready response message.
 
+The browser host uses this message to refresh HUD state and optionally render
+the current best network visualization.
+
 ### WorkerHeuristicObservationFeatures
 
 Structured features used by heuristic generation-0 teacher policy.
+
+The warm-start service reuses the same high-level observation semantics as the
+real policy inference path, which keeps the heuristic teacher aligned with the
+features evolved networks will later see.
 
 ### WorkerInitMessage
 
 Worker init request message.
 
+This is the first message the host should send. It seeds deterministic RNG
+state and configures the worker-local NEAT runtime.
+
+### WorkerPackedPlaybackBirdSnapshot
+
+Packed typed-array payload for playback bird snapshot transport.
+
+The host can reconstruct renderer-friendly bird views from these arrays while
+the worker keeps the authoritative mutable simulation objects private.
+
+### WorkerPackedPlaybackPipeSnapshot
+
+Packed typed-array payload for playback pipe snapshot transport.
+
+Packing the per-pipe fields into column-oriented typed arrays makes the
+browser/worker boundary cheaper than sending large arrays of object literals
+on every animation frame.
+
 ### WorkerPlaybackFrameSnapshot
 
 Full frame snapshot payload posted to host.
+
+Educational note:
+`packed-v1` is a transport contract, not a rendering primitive. The versioned
+format string gives the browser host a stable way to decode snapshots even if
+the worker later gains additional packed fields or alternate transport modes.
 
 ### WorkerPlaybackState
 
 Mutable simulation state stored between worker playback requests.
 
+A `start-playback` message creates this state once, and each
+`request-playback-step` message advances it by a host-selected number of
+simulation steps.
+
 ### WorkerPlaybackStepMessage
 
 Worker playback-step response message.
+
+The message carries the packed frame snapshot plus optional instrumentation
+and end-of-run summary statistics when the whole simulated population has
+been eliminated.
+
+The split between per-frame snapshot data and end-of-run summary fields keeps
+the hot path compact while still giving the host enough telemetry to update
+HUD metrics when a playback session completes.
 
 ### WorkerPopulationBird
 
 Mutable bird state tracked by the worker playback simulation.
 
+Educational note:
+Each bird keeps both physics state and policy state. The observation-memory
+field lets feed-forward networks approximate short-term temporal memory by
+carrying previous observation features between simulation steps.
+
 ### WorkerPopulationPipe
 
 Mutable pipe state tracked by the worker playback simulation.
+
+These objects exist only inside the worker runtime. The host later receives a
+packed snapshot derived from them rather than these live mutable records.
 
 ### WorkerRequestGenerationMessage
 
 Worker request asking to evolve one generation.
 
+The worker responds with `generation-ready` once the NEAT runtime finishes
+one evolution pass.
+
 ### WorkerRequestMessage
 
 Union of inbound worker request messages.
+
+Reading this union top-to-bottom is the quickest way to understand the worker
+protocol: initialize, evolve, start playback, step playback, then stop.
 
 ### WorkerRequestPlaybackStepMessage
 
 Worker request asking to advance playback by N simulation steps.
 
+The host typically sends this once per animation frame and chooses
+`simulationSteps` based on how much simulation throughput it wants relative to
+rendering smoothness.
+
 ### WorkerResponseMessage
 
 Union of outbound worker response messages.
+
+Together with `WorkerRequestMessage`, this forms the full host/worker
+protocol contract for the demo.
 
 ### WorkerStartPlaybackMessage
 
 Worker request asking to initialize playback state.
 
+This materializes the mutable world state for the current evolved population.
+After this message succeeds, the host can begin issuing playback-step
+requests.
+
 ### WorkerStopMessage
 
 Worker stop request message.
+
+This is a cooperative shutdown signal. Long-running worker flows can observe
+the stopped flag and fail fast instead of continuing work the UI no longer
+cares about.
 
 ## flappy-evolution-worker/flappy-evolution-worker.simulation.types.ts
 
 ### WorkerPlaybackFrameContext
 
 Shared mutable inputs for one worker playback frame simulation pass.
+
+Educational note:
+The frame service computes several derived geometry values once per logical
+frame and threads them through the substep helpers in this context object.
+That keeps the top-level simulation flow declarative while avoiding repeated
+argument sprawl across helper calls.
 
 ## flappy-evolution-worker/flappy-evolution-worker.ts
 
@@ -88,8 +178,11 @@ Shared mutable inputs for one worker playback frame simulation pass.
 
 Begins one asynchronous generation request and captures failures.
 
-Parameters:
+This is intentionally fire-and-forget from the protocol perspective. The
+actual completion signal is the later `generation-ready` or `error` message
+posted back to the host.
 
+Parameters:
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 
 Returns: Nothing.
@@ -100,8 +193,10 @@ Returns: Nothing.
 
 Begins worker initialization and captures asynchronous failures.
 
-Parameters:
+The worker retains the initialization promise so later generation requests can
+await setup completion instead of racing against it.
 
+Parameters:
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 - `initPayload` - - Initialization payload.
 
@@ -113,8 +208,11 @@ Returns: Nothing.
 
 Begins a new playback session from the current evolved population.
 
-Parameters:
+A playback session is a deterministic simulation snapshot seeded from the
+current population. Each new session resets playback RNG and world state so
+the host can replay generations cleanly.
 
+Parameters:
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 - `payload` - - Playback start payload.
 
@@ -126,8 +224,11 @@ Returns: Nothing.
 
 Creates the top-level worker message handler.
 
-Parameters:
+The returned function is intentionally thin. All protocol decisions are
+delegated to the router service so the worker entrypoint stays readable as a
+high-level orchestration module.
 
+Parameters:
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 
 Returns: Worker message handler.
@@ -138,16 +239,24 @@ Returns: Worker message handler.
 
 Creates the mutable worker runtime state container.
 
+Educational note:
+The worker keeps one small mutable state bag instead of scattering globals.
+That makes the protocol flow easier to explain and lets the entrypoint pass a
+single dependency object through the orchestration helpers.
+
 Returns: Mutable worker runtime state.
 
 ### createWorkerProtocolHandlers
 
-`(workerMutableRuntimeState: WorkerMutableRuntimeState) => { markStopped: () => void; beginInitialization: (payload: { populationSize: number; elitismCount: number; rngSeed: number; }) => void; beginGenerationRequest: () => void; hasPopulation: () => boolean; startPlayback: (payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; hasPlaybackState: () => boolean; processPlaybackStep: (payload: { simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; postWorkerMessage: typeof postWorkerMessage; }`
+`(workerMutableRuntimeState: WorkerMutableRuntimeState) => { markStopped: () => void; beginInitialization: (payload: { populationSize: number; elitismCount: number; rngSeed: number; }) => void; beginGenerationRequest: () => void; hasPopulation: () => boolean; startPlayback: (payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; hasPlaybackState: () => boolean; processPlaybackStep: (payload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; postWorkerMessage: typeof postWorkerMessage; }`
 
 Creates protocol handlers bound to the mutable worker runtime state.
 
-Parameters:
+This helper is the bridge between the pure protocol router and the impure
+worker runtime. Each callback closes over the same mutable state bag so the
+protocol layer can remain small and declarative.
 
+Parameters:
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 
 Returns: Protocol handler bundle.
@@ -176,27 +285,33 @@ The runtime is configured once with deterministic RNG state and a lightweight
 early-termination fitness rollout. Keeping this setup centralized helps ensure
 reproducibility between runs and keeps host<->worker contracts simple.
 
-Parameters:
+This function only prepares the evolutionary controller. It does not start
+playback and it does not evolve a generation yet; those remain separate
+protocol steps so the host can control them explicitly.
 
+Parameters:
 - `initPayload` - - Initialization values from the browser host.
 
 Returns: Promise resolved when runtime setup is complete.
 
 ### postWorkerMessage
 
-`(workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerResponseMessage) => void`
+`(workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerResponseMessage, transferList: Transferable[] | undefined) => void`
 
 Posts a typed message from worker to host.
 
-Parameters:
+This is the narrowest possible transport helper: all message construction is
+done elsewhere so the README can point to one stable worker-to-host boundary.
 
+Parameters:
 - `workerMessage` - - Outbound worker response payload.
+- `transferList` - - Optional transferable buffers moved with the payload.
 
 Returns: Nothing.
 
 ### processWorkerPlaybackStepRequest
 
-`(workerMutableRuntimeState: WorkerMutableRuntimeState, playbackStepPayload: { simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void`
+`(workerMutableRuntimeState: WorkerMutableRuntimeState, playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void`
 
 Advances playback by a host-requested number of simulation steps.
 
@@ -205,8 +320,10 @@ The browser host can request multiple simulation steps per RAF to trade visual
 smoothness against throughput. This function keeps that loop deterministic and
 emits one compact snapshot payload per request.
 
-Parameters:
+Importantly, the worker remains authoritative for deciding when the run is
+over and which bird should be treated as the playback winner.
 
+Parameters:
 - `playbackStepPayload` - - Host-selected simulation-step budget and viewport.
 
 Returns: Nothing.
@@ -220,7 +337,6 @@ Returns: Nothing.
 Creates a typed worker error response payload from a message string.
 
 Parameters:
-
 - `message` - - Error message text.
 
 Returns: Worker error response message.
@@ -231,8 +347,11 @@ Returns: Worker error response message.
 
 Creates a typed worker error response payload from an unknown thrown value.
 
-Parameters:
+This helper keeps the protocol boundary narrow: worker internals can use
+regular exceptions, while the browser host still receives one predictable
+`WorkerErrorMessage` shape.
 
+Parameters:
 - `error` - - Unknown thrown value.
 
 Returns: Worker error response message.
@@ -249,8 +368,12 @@ Returns: Worker error response message.
 
 Resolves unknown error-like values into display-safe worker error messages.
 
-Parameters:
+Educational note:
+Browser workers can throw anything, including strings or arbitrary objects.
+Normalizing that value here gives the rest of the protocol a simple
+`string`-only error surface.
 
+Parameters:
 - `error` - - Unknown error value thrown by worker logic.
 
 Returns: Normalized error message string.
@@ -260,6 +383,13 @@ Returns: Normalized error message string.
 ### flappy-evolution-worker.constants
 
 Synthetic sample count used for generation-0 warm-start pretraining.
+
+Educational note:
+The warm-start service briefly trains a template network on a heuristic
+teacher before the first NEAT generation is evolved. This value controls how
+many synthetic state/action examples are generated for that bootstrap pass.
+Larger values usually make the teacher signal more stable, but they also
+increase startup latency inside the worker.
 
 ### FLAPPY_WORKER_GEN0_PRETRAIN_BATCH_SIZE
 
@@ -283,8 +413,21 @@ Synthetic sample count used for generation-0 warm-start pretraining.
 
 Creates and configures the worker-local NEAT runtime used by browser evolution playback.
 
-Parameters:
+Educational note:
+The browser worker reuses the same core NeatapticTS runtime as the Node-side
+trainer, but trims configuration down to the pieces needed for an interactive
+example: deterministic seeding, feed-forward mutation policy, and a fitness
+function that favors quick browser-visible iteration.
 
+The resulting runtime is both the evolution engine and the source of the
+population that later playback requests visualize.
+
+For background reading, the Wikipedia article on "Neuroevolution of
+augmenting topologies" is a useful overview of the family of ideas this demo
+is exercising, even though the repository implements its own detailed runtime
+behavior and modern extensions.
+
+Parameters:
 - `initPayload` - - Initialization values from the browser host.
 
 Returns: Initialized NEAT runtime.
@@ -297,8 +440,12 @@ Returns: Initialized NEAT runtime.
 
 Creates a fresh worker playback session state from the current evolved population.
 
-Parameters:
+Educational note:
+Evolution and playback are intentionally separated. Evolution produces a new
+population, then playback freezes that population into a deterministic
+simulation state that the host can step frame-by-frame for rendering.
 
+Parameters:
 - `currentPopulation` - - Current evolved population.
 - `payload` - - Playback start viewport payload.
 - `createPopulationRenderState` - - Callback that builds initial simulation state.
@@ -307,12 +454,17 @@ Returns: Playback runtime state and deterministic RNG.
 
 ### processWorkerPlaybackStep
 
-`(options: { playbackStepPayload: { simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng; currentPopulation: import("src/architecture/network").default[]; neatRuntime: import("src/neat").default | undefined; stepPopulationFrame: (renderState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState, rng: import("test/examples/flappy_bird/rng").FlappyRng, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot; postWorkerMessage: (workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerResponseMessage) => void; }) => { currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState | undefined; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng | undefined; currentPopulation: import("src/architecture/network").default[]; playbackWinnerIndex: number; }`
+`(options: { playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng; currentPopulation: import("src/architecture/network").default[]; neatRuntime: import("src/neat").default | undefined; stepPopulationFrame: (renderState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState, rng: import("test/examples/flappy_bird/rng").FlappyRng, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; }) => { currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState | undefined; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng | undefined; currentPopulation: import("src/architecture/network").default[]; playbackWinnerIndex: number; }`
 
 Processes one worker playback-step request including completion/finalization logic.
 
-Parameters:
+Educational note:
+One playback request may advance multiple simulation steps. This lets the
+host trade visual smoothness against throughput while keeping the worker in
+control of simulation correctness, winner selection, and packed snapshot
+publishing.
 
+Parameters:
 - `options` - - Playback step dependencies and mutable runtime state.
 
 Returns: Updated playback runtime state after processing this step.
@@ -325,8 +477,17 @@ Returns: Updated playback runtime state after processing this step.
 
 Routes one inbound worker request message to the corresponding runtime action.
 
-Parameters:
+Educational note:
+This router is the protocol gatekeeper for the worker. It enforces the two
+important sequencing rules in the demo:
+- playback requires a previously evolved population,
+- playback stepping requires an active playback session.
 
+In practice this acts like a tiny finite-state machine. If you want a quick
+conceptual refresher, the Wikipedia article on "finite-state machine" maps
+well onto the worker's init -> evolve -> start playback -> step playback flow.
+
+Parameters:
 - `workerMessage` - - Inbound worker request payload.
 - `handlers` - - Runtime action callbacks and state probes.
 
@@ -336,6 +497,11 @@ Returns: Nothing.
 
 Callback bundle used by worker protocol routing.
 
+Each callback corresponds to one legal transition in the worker message
+protocol. Keeping the router dependent on this narrow interface makes the
+protocol easy to read in generated docs and easy to test independently from
+the worker-global `self.onmessage` hook.
+
 ## flappy-evolution-worker/flappy-evolution-worker.evolution.service.ts
 
 ### evolveAndBuildGenerationReadyMessage
@@ -344,8 +510,12 @@ Callback bundle used by worker protocol routing.
 
 Evolves one generation and creates the compact generation-ready response payload.
 
-Parameters:
+Educational note:
+The worker does not stream the whole population back to the UI after each
+evolution step. Instead it emits a compact summary containing the generation
+index, best fitness, and a serializable best-network snapshot for inspection.
 
+Parameters:
 - `options` - - Evolution dependencies and runtime state accessors.
 
 Returns: Generation-ready worker response payload.
@@ -353,6 +523,12 @@ Returns: Generation-ready worker response payload.
 ### WorkerEvolutionServiceOptions
 
 Dependencies required to evolve one generation and prepare host payload output.
+
+Educational note:
+This interface isolates the evolution step from the worker entrypoint. That
+makes the README easier to follow: the entrypoint owns protocol orchestration,
+while this service owns one well-defined "run generation -> publish summary"
+slice of behavior.
 
 ## flappy-evolution-worker/flappy-evolution-worker.warm-start.service.ts
 
@@ -362,8 +538,11 @@ Dependencies required to evolve one generation and prepare host payload output.
 
 Copies template parameters into a genome and injects small Gaussian noise.
 
-Parameters:
+Educational note:
+The template network gives generation 0 a shared prior, while the noise terms
+restore diversity so the population is still worth evolving.
 
+Parameters:
 - `genome` - - Target genome to mutate in-place.
 - `template` - - Trained template source network.
 - `rng` - - Deterministic random source for noise sampling.
@@ -377,8 +556,12 @@ Returns: Nothing.
 
 Builds synthetic supervised samples for generation-0 behavior cloning.
 
-Parameters:
+Educational note:
+These samples are not recorded gameplay traces. They are synthetic states
+generated from the same observation pipeline used during real playback so the
+teacher labels and the evolved policy inputs stay in the same feature space.
 
+Parameters:
 - `rng` - - Deterministic random source.
 - `sampleCount` - - Requested number of synthetic samples.
 
@@ -390,8 +573,11 @@ Returns: Supervised dataset of input/output pairs.
 
 Heuristic teacher policy used to label synthetic pretraining samples.
 
-Parameters:
+The rule intentionally stays simple and interpretable: flap when the bird is
+meaningfully below the next gap center, not already rising fast, and either
+close to the gap entry or in an urgent approach state.
 
+Parameters:
 - `features` - - Structured observation features for one synthetic state.
 
 Returns: True when the teacher says to flap.
@@ -402,8 +588,12 @@ Returns: True when the teacher says to flap.
 
 Samples one standard-normal value using the Box-Muller transform.
 
-Parameters:
+If you are unfamiliar with the transform, the Wikipedia article on
+"Box-Muller transform" is a useful short background read. The worker uses it
+here because it is deterministic, dependency-light, and good enough for small
+noise injection during warm-start diversification.
 
+Parameters:
 - `rng` - - Deterministic random source.
 
 Returns: One approximately standard-normal random value.
@@ -419,8 +609,11 @@ The worker entry should stay protocol-first. This service owns the short
 supervised bootstrap pass that nudges generation 0 away from pure noise while
 preserving the later NEAT-driven search loop.
 
-Parameters:
+Conceptually this is a lightweight behavior-cloning pass. If you want more
+background, the Wikipedia article on "imitation learning" is a helpful bridge
+between the heuristic teacher used here and the later evolutionary search.
 
+Parameters:
 - `neatController` - - Initialized NEAT runtime.
 - `warmStartState` - - Mutable warm-start lifecycle state.
 
@@ -429,6 +622,10 @@ Returns: Promise resolved when warm-start evaluation finishes.
 ### WorkerWarmStartState
 
 State carried between generation requests for one worker runtime.
+
+The warm-start service is intentionally one-shot. These fields let the worker
+remember whether generation 0 has already been bootstrapped and which initial
+RNG seed should be reused for deterministic synthetic sample generation.
 
 ## flappy-evolution-worker/flappy-evolution-worker.simulation.frame.service.ts
 
@@ -439,7 +636,6 @@ State carried between generation requests for one worker runtime.
 Integrates bird velocity and vertical motion for one control substep.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -451,7 +647,6 @@ Returns: Nothing.
 Advances all visible pipes and culls those that have left the camera window.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -463,7 +658,6 @@ Returns: Nothing.
 Commits one passed-pipe progress increment for a bird when eligible.
 
 Parameters:
-
 - `bird` - - Mutable bird state.
 - `pipe` - - Pipe candidate to mark as passed.
 
@@ -476,7 +670,6 @@ Returns: Nothing.
 Increments survival counters for birds that remain active at frame start.
 
 Parameters:
-
 - `renderState` - - Mutable playback state.
 
 Returns: Nothing.
@@ -488,7 +681,6 @@ Returns: Nothing.
 Resolves whether a bird collides with one pipe corridor during this substep.
 
 Parameters:
-
 - `bird` - - Mutable bird state.
 - `pipe` - - Pipe candidate to test.
 - `frameContext` - - Shared frame context for this logical frame.
@@ -502,7 +694,6 @@ Returns: `true` when the bird overlaps the pipe body instead of the gap.
 Runs policy evaluation and commits the resulting observation memory updates.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Number of activation calls performed in the substep.
@@ -514,7 +705,6 @@ Returns: Number of activation calls performed in the substep.
 Resolves whether a bird has exceeded the vertical play area.
 
 Parameters:
-
 - `bird` - - Mutable bird state.
 - `visibleWorldHeightPx` - - Current visible world height.
 
@@ -527,7 +717,6 @@ Returns: `true` when the bird is outside the vertical bounds.
 Resolves bird deaths and passed-pipe progress after motion is applied.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -539,7 +728,6 @@ Returns: Nothing.
 Resolves the current left-edge of the visible world in world-space pixels.
 
 Parameters:
-
 - `visibleWorldWidthPx` - - Current visible world width.
 
 Returns: Left edge x-position in world coordinates.
@@ -551,7 +739,6 @@ Returns: Left edge x-position in world coordinates.
 Advances one control substep of the worker playback simulation.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Number of activation calls performed in the substep.
@@ -563,7 +750,6 @@ Returns: Number of activation calls performed in the substep.
 Spawns a new pipe when the substep budget crosses the spawn boundary.
 
 Parameters:
-
 - `frameContext` - - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -574,8 +760,17 @@ Returns: Nothing.
 
 Advances the whole population simulation by one logical frame.
 
-Parameters:
+Educational note:
+One logical frame is internally split into smaller control substeps so the
+worker can make flap decisions, apply gravity, move pipes, spawn new pipes,
+and resolve collisions with better numerical stability than a single large
+integration jump.
 
+This function is the main simulation ownership boundary for the folder.
+The companion `simulation.utils` file creates initial state; this service is
+responsible for mutating that state over time.
+
+Parameters:
 - `renderState` - - Mutable simulation state.
 - `rng` - - Deterministic random source for spawn variation.
 - `difficultyProfile` - - Active dynamic difficulty profile.
@@ -594,11 +789,39 @@ Workers should send only structured-clone-safe payloads. This helper strips
 runtime-only references (e.g., network instances, sets) and keeps only
 renderer-relevant fields.
 
-Parameters:
+Educational note:
+The snapshot is intentionally column-oriented. By packing values into typed
+arrays, the worker can transfer large bird populations to the host with much
+lower overhead than a per-frame array of nested objects.
 
+This is a small example of a structure-of-arrays transport layout. If that
+pattern is unfamiliar, the Wikipedia article on "AoS and SoA" is a good short
+reference for why packed columns are often friendlier to hot-path data
+movement than arrays of rich objects.
+
+Parameters:
 - `playbackState` - - Current mutable playback state.
 
 Returns: Immutable frame snapshot for the host.
+
+### resolveWorkerPlaybackSnapshotTransferList
+
+`(snapshot: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot) => Transferable[]`
+
+Resolves transferable buffers for one packed playback snapshot.
+
+The returned buffers should be passed as the second argument to
+`postMessage(...)` so ownership moves to the host thread instead of copying
+the typed-array contents.
+
+That ownership transfer is a large part of why the worker can stream full
+population snapshots without forcing the main thread to pay unnecessary copy
+costs every frame.
+
+Parameters:
+- `snapshot` - - Packed playback snapshot posted back to the browser host.
+
+Returns: Transfer list used to move typed-array buffers without copying.
 
 ## flappy-evolution-worker/flappy-evolution-worker.simulation.utils.ts
 
@@ -608,8 +831,12 @@ Returns: Immutable frame snapshot for the host.
 
 Creates initial playback state for a population of networks.
 
-Parameters:
+Educational note:
+This is the ownership boundary for worker playback initialization. The frame
+simulation service mutates the returned state on every step, but only this
+helper decides how a fresh population is placed into the world at time zero.
 
+Parameters:
 - `networks` - - Population to visualize.
 - `rng` - - Deterministic random source.
 - `initialVisibleWorldWidthPx` - - Initial viewport width from host.

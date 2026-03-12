@@ -21,8 +21,19 @@ import type {
 import type { HostStatsPartialValues } from './host.types';
 
 /**
+ * Stats-table creation and update helpers for the browser host HUD.
+ *
+ * The host treats the stats table as a small indexed dashboard: build it once,
+ * keep direct references to value cells, then apply partial text updates during
+ * the runtime loop.
+ */
+
+/**
  * Creates the host stats table, appends it into the provided host element, and
  * initializes all HUD values to their baseline placeholders.
+ *
+ * The initial placeholders make the HUD legible before the first generation or
+ * playback frame has been processed.
  *
  * @param statsTableHost - DOM host that receives the table.
  * @returns Lookup map for future incremental stat updates.
@@ -115,6 +126,9 @@ export function createAndAttachHostStatsTable(
 
 /**
  * Applies partial stat updates to the rendered stats table.
+ *
+ * This keeps HUD writes cheap and explicit: only supplied keys are rewritten,
+ * and architecture values receive their display formatting in one place.
  *
  * @param statsValueByKey - Lookup of stat keys to value cells.
  * @param partialValues - Subset of values to write this tick.

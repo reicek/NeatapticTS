@@ -28,6 +28,12 @@ import type {
 /**
  * Builds a compact report for the current generation.
  *
+ * Educational note:
+ * The trainer logs more than a single best score because single-number progress
+ * can hide instability. Mean, median, $p90$, and standard deviation reveal
+ * whether a generation is broadly improving or whether one lucky genome is
+ * masking a weak population.
+ *
  * @param population - Current population.
  * @param aggregateByGenome - Aggregate evaluation results keyed by genome.
  * @param generationEvaluationPlan - Per-generation staged evaluation plan.
@@ -88,6 +94,10 @@ export function buildGenerationReport(
 
 /**
  * Emits one compact generation log line.
+ *
+ * The emitted line is designed for long-running terminal sessions: dense enough
+ * to be useful, but stable enough that humans can visually scan progress over
+ * hundreds of generations.
  *
  * @param generationLabel - Current generation label.
  * @param mutationSchedule - Active mutation schedule.

@@ -19,7 +19,19 @@ import type {
 } from './runtime.types';
 
 /**
+ * Runtime startup helpers for the Flappy Bird browser demo.
+ *
+ * These functions cover the pre-loop phase: resolve the host container, build a
+ * typed browser view, derive static config, create telemetry state, spawn the
+ * worker, and paint the initial HUD before evolution begins.
+ */
+
+/**
  * Creates the shared runtime startup dependencies used by the entry orchestration.
+ *
+ * This is the main bootstrap fold for browser startup. After it returns, the
+ * runtime has a host view, a worker channel, telemetry state, and a resolved
+ * configuration object.
  *
  * @param container - Element id or HTMLElement to host the demo.
  * @returns Shared runtime start context for setup and loop launch.
@@ -45,6 +57,9 @@ export function createRuntimeStartContext(
 /**
  * Paints the initial runtime HUD values before the evolution loop starts.
  *
+ * The HUD is seeded immediately so the page communicates that startup is in
+ * progress rather than appearing blank while the worker and loop are booting.
+ *
  * @param runtimeStartContext - Shared runtime start context.
  * @returns Nothing.
  */
@@ -60,6 +75,9 @@ export function initializeRuntimeHud(
 
 /**
  * Resolves the static runtime configuration used during browser startup.
+ *
+ * Centralizing the configuration fold here makes the runtime entry read as
+ * orchestration instead of constant plumbing.
  *
  * @returns Runtime configuration derived from shared constants.
  */

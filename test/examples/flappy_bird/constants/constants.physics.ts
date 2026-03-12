@@ -3,6 +3,9 @@
  *
  * Values in this module shape how quickly the bird falls, how strongly a flap
  * responds, and how often a policy can react inside each visible frame.
+ *
+ * Small changes here have outsized behavioral impact because they reshape the
+ * control problem the policy is trying to solve.
  */
 
 /**
@@ -33,6 +36,9 @@ export const FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME = 7;
  *
  * Values > 1 give agents finer temporal control in tight scenarios by allowing
  * multiple react-and-integrate passes before the frame counter advances.
+ *
+ * This is one of the main levers that keeps high-speed play numerically stable
+ * without forcing the visible frame rate to explode.
  */
 export const FLAPPY_CONTROL_SUBSTEPS_PER_FRAME = 4;
 
@@ -41,5 +47,8 @@ export const FLAPPY_CONTROL_SUBSTEPS_PER_FRAME = 4;
  *
  * A smaller value means the policy is expected to correct more frequently
  * (effectively "jumping more often"), which supports narrower endgame gaps.
+ *
+ * The value is used analytically when estimating whether a late recovery is
+ * still plausible, not as the direct execution cadence of the simulation loop.
  */
 export const FLAPPY_TARGET_FLAP_INTERVAL_FRAMES = 2;

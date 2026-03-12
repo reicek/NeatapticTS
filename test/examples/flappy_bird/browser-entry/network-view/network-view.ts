@@ -63,6 +63,15 @@ import {
 } from './network-view.layout.utils';
 import { resolveNetworkVisualizationLayers } from './network-view.topology.utils';
 
+/**
+ * Network-view orchestration for the browser-side architecture panel.
+ *
+ * This subsystem sits between raw network data and the lower-level visualization
+ * drawing helpers. It resolves topology summaries, chooses panel size, lays out
+ * nodes inside the drawable area, and coordinates overlays such as legends and
+ * input-group bands.
+ */
+
 type NetworkTopologySummary = {
   networkLayers: ReturnType<typeof resolveNetworkVisualizationLayers>;
   layerCount: number;
@@ -100,6 +109,9 @@ type PositionedNetworkGraphScene = {
 
 /**
  * Draws a complete, layer-based visualization of the active network.
+ *
+ * Conceptually, this is the main fold from network object to finished panel:
+ * resolve scene state, compute layout, paint the graph, then paint overlays.
  *
  * @param context - Canvas 2D drawing context.
  * @param network - Network to visualize.
@@ -150,6 +162,9 @@ export function drawNetworkVisualization(
 /**
  * Resolves responsive visualization canvas height from network shape.
  *
+ * Dense or deeper networks need more vertical room to stay readable, so panel
+ * height is driven by topology rather than fixed to a single constant.
+ *
  * @param network - Network to visualize.
  * @param inputSize - Input-layer size.
  * @param outputSize - Output-layer size.
@@ -184,6 +199,9 @@ export function resolveNetworkVisualizationHeightPx(
 
 /**
  * Resolves compact architecture label text for headers and HUD rows.
+ *
+ * The label compresses the active network into a short human-readable summary:
+ * input size, hidden-layer structure, output size, and graph size metadata.
  *
  * @param network - Network to describe.
  * @param inputSize - Configured input size.
@@ -225,6 +243,9 @@ export function resolveNetworkArchitectureLabel(
 
 /**
  * Resolves all non-topology canvas state needed to draw the network view.
+ *
+ * This separates frame-scene concerns such as canvas size, overlays, and color
+ * scales from the later graph-topology layout step.
  *
  * @param context - Canvas 2D drawing context.
  * @param network - Network to visualize.

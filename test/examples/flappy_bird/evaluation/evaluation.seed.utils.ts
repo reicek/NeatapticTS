@@ -10,6 +10,10 @@ import {
  * This keeps evaluation deterministic per genome while still spreading nearby
  * genome ids across the RNG state space to reduce correlated rollouts.
  *
+ * If you want background reading, the Wikipedia article on "hash function"
+ * gives a reasonable intuition for why a few avalanche-style mixing steps help
+ * nearby ids map to less-correlated seed values.
+ *
  * @param genomeId - Genome id from NEAT bookkeeping.
  * @returns Mixed uint32 seed.
  */

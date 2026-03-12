@@ -10,6 +10,11 @@ Constants are now organized into small, category-focused modules
 (`constants.*.ts`). This file remains as a compatibility export surface so
 existing imports continue to work while callers migrate gradually.
 
+Educational note:
+Treat this file as the folder map, not the best place to learn individual
+values. The category modules below are where the real documentation lives:
+physics, pipes, observation, runtime, rendering, network layout, and so on.
+
 ### DEFAULT_CONTAINER_ID
 
 ### FLAPPY_BIAS_TIER_CENTER_THRESHOLD
@@ -28,29 +33,11 @@ existing imports continue to work while callers migrate gradually.
 
 ### FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX
 
-### FLAPPY_BIRD_CHAMPION_RED_GLOW_ALPHA
-
-### FLAPPY_BIRD_CHAMPION_RED_GLOW_EXPAND_PX
-
-### FLAPPY_BIRD_CHAMPION_SHINE_FILL_STYLE
-
-### FLAPPY_BIRD_CHAMPION_SHINE_GLOW_COLOR
-
 ### FLAPPY_BIRD_HEIGHT_PX
 
 ### FLAPPY_BIRD_RADIUS_PX
 
-### FLAPPY_BIRD_SHINE_FILL_STYLE
-
-### FLAPPY_BIRD_SHINE_INSET_RATIO
-
-### FLAPPY_BIRD_SHINE_SIZE_RATIO
-
 ### FLAPPY_BIRD_VIEWPORT_X_RATIO
-
-### FLAPPY_BIRD_WHITE_SHINE_GLOW_BLUR_PX
-
-### FLAPPY_BIRD_WHITE_SHINE_GLOW_COLOR
 
 ### FLAPPY_BIRD_X_PX
 
@@ -63,6 +50,8 @@ existing imports continue to work while callers migrate gradually.
 ### FLAPPY_BROWSER_POPULATION_SIZE
 
 ### FLAPPY_CENTER_BLUE_RAMP
+
+### FLAPPY_CHAMPION_TRAIL_MAX_POINTS
 
 ### FLAPPY_CONNECTION_TIER_CENTER_THRESHOLD
 
@@ -152,13 +141,11 @@ existing imports continue to work while callers migrate gradually.
 
 ### FLAPPY_INSTRUMENTATION_STATS_KEYS
 
-### FLAPPY_LEADER_RING_GLOW_BLUR_PX
-
-### FLAPPY_LEADER_RING_LINE_WIDTH_PX
-
-### FLAPPY_LEADER_RING_RADIUS_OFFSET_PX
-
 ### FLAPPY_LIGHT_NEON_RAMP
+
+### FLAPPY_MAX_DIFFICULTY_EDGE_TO_EDGE_PIPE_SPACING_PX
+
+### FLAPPY_MAX_DIFFICULTY_PIPE_PITCH_PX
 
 ### FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME
 
@@ -346,6 +333,8 @@ existing imports continue to work while callers migrate gradually.
 
 ### FLAPPY_NETWORK_TOPOLOGY_HEIGHT_MULTIPLIER
 
+### FLAPPY_NON_CHAMPION_BODY_GLOW_BLUR_PX
+
 ### FLAPPY_NON_CHAMPION_OPACITY
 
 ### FLAPPY_NORMALIZATION_EPSILON
@@ -353,6 +342,8 @@ existing imports continue to work while callers migrate gradually.
 ### FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX
 
 ### FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX
+
+### FLAPPY_PIPE_ENTRY_RIM_INSET_PX
 
 ### FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX
 
@@ -553,29 +544,9 @@ stays decoupled from simulation and UI layout logic.
 
 ### FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX
 
-### FLAPPY_BIRD_CHAMPION_RED_GLOW_ALPHA
+### FLAPPY_CHAMPION_TRAIL_MAX_POINTS
 
-### FLAPPY_BIRD_CHAMPION_RED_GLOW_EXPAND_PX
-
-### FLAPPY_BIRD_CHAMPION_SHINE_FILL_STYLE
-
-### FLAPPY_BIRD_CHAMPION_SHINE_GLOW_COLOR
-
-### FLAPPY_BIRD_SHINE_FILL_STYLE
-
-### FLAPPY_BIRD_SHINE_INSET_RATIO
-
-### FLAPPY_BIRD_SHINE_SIZE_RATIO
-
-### FLAPPY_BIRD_WHITE_SHINE_GLOW_BLUR_PX
-
-### FLAPPY_BIRD_WHITE_SHINE_GLOW_COLOR
-
-### FLAPPY_LEADER_RING_GLOW_BLUR_PX
-
-### FLAPPY_LEADER_RING_LINE_WIDTH_PX
-
-### FLAPPY_LEADER_RING_RADIUS_OFFSET_PX
+### FLAPPY_NON_CHAMPION_BODY_GLOW_BLUR_PX
 
 ### FLAPPY_NON_CHAMPION_OPACITY
 
@@ -861,6 +832,9 @@ Flappy physics and control-cadence constants.
 Values in this module shape how quickly the bird falls, how strongly a flap
 responds, and how often a policy can react inside each visible frame.
 
+Small changes here have outsized behavioral impact because they reshape the
+control problem the policy is trying to solve.
+
 ### FLAPPY_CONTROL_SUBSTEPS_PER_FRAME
 
 ### FLAPPY_FLAP_VELOCITY_PX_PER_FRAME
@@ -964,6 +938,10 @@ in shared Flappy constants to keep legacy imports stable during migration.
 
 ### FLAPPY_DIFFICULTY_RAMP_PIPES
 
+### FLAPPY_MAX_DIFFICULTY_EDGE_TO_EDGE_PIPE_SPACING_PX
+
+### FLAPPY_MAX_DIFFICULTY_PIPE_PITCH_PX
+
 ### FLAPPY_MIN_CLEARANCE_MARGIN_PX
 
 ### FLAPPY_MIN_EDGE_TO_EDGE_PIPE_SPACING_PX
@@ -997,9 +975,15 @@ Shared observation-normalization constants.
 These values are used by both browser playback and headless environment
 simulation when building normalized feature vectors.
 
+Keeping normalization constants shared is important because even tiny drift in
+feature scaling would make trainer, worker, and browser policies "see"
+different worlds.
+
 ### FLAPPY_NORMALIZATION_EPSILON
 
 ## constants/constants.pipe-render.ts
+
+### FLAPPY_PIPE_ENTRY_RIM_INSET_PX
 
 ### FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX
 

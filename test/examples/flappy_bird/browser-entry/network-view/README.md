@@ -4,11 +4,19 @@
 
 ### network-view.types
 
-Input-group label band geometry and style contract.
+Shared type contracts for network-view overlays.
+
+The most notable overlay is the input-group label band system, which annotates
+stacked temporal observation channels so the input layer reads as grouped
+semantics instead of a flat strip of anonymous nodes.
 
 ### InputGroupLabelBand
 
-Input-group label band geometry and style contract.
+Shared type contracts for network-view overlays.
+
+The most notable overlay is the input-group label band system, which annotates
+stacked temporal observation channels so the input layer reads as grouped
+semantics instead of a flat strip of anonymous nodes.
 
 ## browser-entry/network-view/network-view.ts
 
@@ -19,7 +27,6 @@ Input-group label band geometry and style contract.
 Clamps a recommended network height into the configured panel range.
 
 Parameters:
-
 - `recommendedHeightPx` - - Recommended panel height.
 
 Returns: Clamped panel height.
@@ -31,7 +38,6 @@ Returns: Clamped panel height.
 Builds a node-index lookup map for resolved positioned nodes.
 
 Parameters:
-
 - `centeredPositionedNodes` - - Positioned nodes after centering.
 
 Returns: Map keyed by node index.
@@ -42,8 +48,10 @@ Returns: Map keyed by node index.
 
 Draws a complete, layer-based visualization of the active network.
 
-Parameters:
+Conceptually, this is the main fold from network object to finished panel:
+resolve scene state, compute layout, paint the graph, then paint overlays.
 
+Parameters:
 - `context` - - Canvas 2D drawing context.
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
@@ -58,7 +66,6 @@ Returns: Nothing.
 Draws the positioned graph layers and optional guide overlays.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `networkVisualizationScene` - - Frame scene context.
 - `positionedNetworkGraphScene` - - Positioned graph scene.
@@ -72,7 +79,6 @@ Returns: Nothing.
 Formats the two-line architecture label used by the header and legend.
 
 Parameters:
-
 - `architectureInputSize` - - Input layer size.
 - `hiddenLayersLabel` - - Hidden-layer description.
 - `architectureOutputSize` - - Output layer size.
@@ -81,6 +87,15 @@ Parameters:
 
 Returns: Formatted architecture label.
 
+### NetworkTopologySummary
+
+Network-view orchestration for the browser-side architecture panel.
+
+This subsystem sits between raw network data and the lower-level visualization
+drawing helpers. It resolves topology summaries, chooses panel size, lays out
+nodes inside the drawable area, and coordinates overlays such as legends and
+input-group bands.
+
 ### paintNetworkVisualizationCanvasBase
 
 `(context: CanvasRenderingContext2D, networkVisualizationScene: NetworkVisualizationScene) => void`
@@ -88,7 +103,6 @@ Returns: Formatted architecture label.
 Paints the base network visualization canvas background.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `networkVisualizationScene` - - Frame scene context.
 
@@ -101,7 +115,6 @@ Returns: Nothing.
 Adjusts graph-side padding to keep the floating legend from overlapping nodes.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `network` - - Network to visualize.
 - `canvasWidthPx` - - Canvas width.
@@ -125,7 +138,6 @@ Returns: Base graph padding context.
 Resolves the hidden-layer portion of the compact architecture label.
 
 Parameters:
-
 - `hiddenLayerSizes` - - Hidden-layer sizes.
 - `architectureSource` - - Architecture source metadata.
 
@@ -137,8 +149,10 @@ Returns: Hidden-layer label.
 
 Resolves compact architecture label text for headers and HUD rows.
 
-Parameters:
+The label compresses the active network into a short human-readable summary:
+input size, hidden-layer structure, output size, and graph size metadata.
 
+Parameters:
 - `network` - - Network to describe.
 - `inputSize` - - Configured input size.
 - `outputSize` - - Configured output size.
@@ -152,7 +166,6 @@ Returns: Readable architecture label.
 Resolves the drawable graph area after scene padding is applied.
 
 Parameters:
-
 - `networkVisualizationScene` - - Frame scene context.
 
 Returns: Drawable area dimensions.
@@ -164,7 +177,6 @@ Returns: Drawable area dimensions.
 Resolves node rectangle dimensions from topology density and drawable bounds.
 
 Parameters:
-
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
 - `outputSize` - - Output-layer size.
@@ -180,7 +192,6 @@ Returns: Node dimensions.
 Resolves node rectangle dimensions from topology density and drawable bounds.
 
 Parameters:
-
 - `networkTopologySummary` - - Topology summary.
 - `drawableWidthPx` - - Drawable graph width.
 - `drawableHeightPx` - - Drawable graph height.
@@ -194,7 +205,6 @@ Returns: Node dimensions.
 Resolves a reusable topology summary for layout and sizing helpers.
 
 Parameters:
-
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
 - `outputSize` - - Output-layer size.
@@ -207,8 +217,10 @@ Returns: Topology summary.
 
 Resolves responsive visualization canvas height from network shape.
 
-Parameters:
+Dense or deeper networks need more vertical room to stay readable, so panel
+height is driven by topology rather than fixed to a single constant.
 
+Parameters:
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
 - `outputSize` - - Output-layer size.
@@ -221,8 +233,10 @@ Returns: Recommended height in pixels.
 
 Resolves all non-topology canvas state needed to draw the network view.
 
-Parameters:
+This separates frame-scene concerns such as canvas size, overlays, and color
+scales from the later graph-topology layout step.
 
+Parameters:
 - `context` - - Canvas 2D drawing context.
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
@@ -237,7 +251,6 @@ Returns: Scene context for the current frame.
 Resolves positioned nodes, connection lookup state, and shared node dimensions.
 
 Parameters:
-
 - `networkVisualizationScene` - - Frame scene context.
 - `network` - - Network to visualize.
 - `inputSize` - - Input-layer size.
@@ -252,7 +265,6 @@ Returns: Positioned graph scene.
 Resolves the recommended panel height from topology and density adjustments.
 
 Parameters:
-
 - `networkTopologySummary` - - Topology summary.
 - `topologyDrivenHeightPx` - - Minimum readable topology height.
 
@@ -265,7 +277,6 @@ Returns: Recommended panel height.
 Resolves the runtime connection array from the active network.
 
 Parameters:
-
 - `network` - - Network to visualize.
 
 Returns: Runtime connection list.
@@ -277,7 +288,6 @@ Returns: Runtime connection list.
 Resolves the topology-driven minimum readable height.
 
 Parameters:
-
 - `networkTopologySummary` - - Topology summary.
 
 Returns: Minimum readable height in pixels.
@@ -289,7 +299,6 @@ Returns: Minimum readable height in pixels.
 Determines whether responsive rules hide auxiliary network overlays.
 
 Parameters:
-
 - `context` - - Canvas 2D drawing context.
 - `fallbackViewportWidthPx` - - Fallback viewport width.
 
@@ -309,15 +318,11 @@ Ordered labels for grouped Flappy network input bands.
 
 `(context: CanvasRenderingContext2D, positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => void`
 
-Draws vertical neon bands that label semantic groups in the input layer.
+Overlay drawing helpers specific to the network-view panel.
 
-Parameters:
-
-- `context` - - Canvas 2D rendering context.
-- `positionedNodes` - - Positioned nodes in graph coordinates.
-- `nodeDimensions` - - Resolved node dimensions.
-
-Returns: Nothing.
+These helpers render semantic guides that sit on top of the raw graph, most
+notably the colored input-group bands that explain how temporal observation
+channels are organized.
 
 ### drawRoundedRect
 
@@ -325,19 +330,19 @@ Returns: Nothing.
 
 Draws a filled rounded rectangle path.
 
+This is the small geometry primitive used by the input-group band renderer.
+
 ## browser-entry/network-view/network-view.labels.utils.ts
 
 ### resolveInputGroupLabelBands
 
 `(inputNodeCount: number) => import("test/examples/flappy_bird/browser-entry/network-view/network-view.types").InputGroupLabelBand[]`
 
-Resolves input-layer semantic label bands for Flappy temporal observation channels.
+Semantic input-label helpers for the network-view panel.
 
-Parameters:
-
-- `inputNodeCount` - - Input-layer node count.
-
-Returns: Group label ranges with band colors.
+The Flappy controller input layer is not just a list of anonymous scalars; it
+is organized into stacked observation frames plus action-history channels.
+These helpers recover that grouping for visual annotation.
 
 ## browser-entry/network-view/network-view.layout.utils.ts
 
@@ -347,8 +352,10 @@ Returns: Group label ranges with band colors.
 
 Centers positioned nodes within the drawable graph area.
 
-Parameters:
+Positioning establishes relative structure first; centering then shifts the
+whole graph as a block so it sits comfortably within the padded draw region.
 
+Parameters:
 - `positionedNodes` - - Positioned nodes before centering.
 - `leftPaddingPx` - - Left graph padding.
 - `topPaddingPx` - - Top graph padding.
@@ -363,19 +370,11 @@ Returns: Center-aligned positioned nodes.
 
 `(networkLayers: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][], leftPaddingPx: number, topPaddingPx: number, drawableWidthPx: number, drawableHeightPx: number, nodeLayoutPaddingPx: number, nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]`
 
-Positions network nodes into drawable canvas coordinates.
+Node-positioning helpers for the browser network view.
 
-Parameters:
-
-- `networkLayers` - - Resolved network layers.
-- `leftPaddingPx` - - Left graph padding.
-- `topPaddingPx` - - Top graph padding.
-- `drawableWidthPx` - - Drawable graph width.
-- `drawableHeightPx` - - Drawable graph height.
-- `nodeLayoutPaddingPx` - - Inner graph padding.
-- `nodeDimensions` - - Node dimensions.
-
-Returns: Positioned nodes.
+Once topology has been resolved into layers, these helpers place nodes inside
+the drawable panel and then center the final graph so it feels balanced inside
+the available canvas space.
 
 ## browser-entry/network-view/network-view.topology.utils.ts
 
@@ -383,17 +382,8 @@ Returns: Positioned nodes.
 
 `(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
-Resolves layered node groups for network-view layout and rendering.
+Topology resolution helpers for the browser network view.
 
-Educational note:
-Layer grouping is a network-view concern because it drives sizing, node
-placement, and architecture presentation. Visualization code can still reuse
-the result, but this helper now lives with the module that owns layout.
-
-Parameters:
-
-- `network` - - Runtime network instance.
-- `inputSize` - - Input count fallback.
-- `outputSize` - - Output count fallback.
-
-Returns: Layered nodes for rendering.
+These helpers answer a key visualization question: how should the current
+network be partitioned into ordered layers so layout and architecture labels
+stay meaningful even when some metadata is missing?

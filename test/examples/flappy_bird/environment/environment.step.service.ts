@@ -28,10 +28,14 @@ import type {
 /**
  * Advance the simulation by one frame.
  *
+ * This is the simplest stepping surface: one logical frame and one flap choice.
+ * More advanced callers can use the control-substep variant below.
+ *
  * @param state - Mutable state object to update in-place.
  * @param rng - Random source used to spawn pipes.
  * @param flap - If true, applies an upward velocity impulse.
  * @param difficultyScale - Curriculum difficulty scale in [0, 1].
+ * @returns Nothing.
  */
 export function stepFlappyState(
   state: FlappyGameState,
@@ -53,6 +57,14 @@ export function stepFlappyState(
  *
  * This allows policies to react multiple times before `frameIndex` advances,
  * improving responsiveness in high-difficulty scenarios.
+ *
+ * Educational note:
+ * Splitting a logical frame into smaller control steps is a simple numerical
+ * stability trick. It reduces the chance that fast pipes or large velocity
+ * updates make the environment feel artificially coarse.
+ *
+ * For background reading, the Wikipedia article on "numerical integration"
+ * provides the general idea behind updating continuous motion in small steps.
  *
  * @param state - Mutable state object to update in-place.
  * @param rng - Random source used to spawn pipes.

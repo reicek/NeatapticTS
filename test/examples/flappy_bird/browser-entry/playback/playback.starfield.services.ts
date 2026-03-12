@@ -5,15 +5,14 @@ import {
   FLAPPY_STARFIELD_FULL_ALPHA,
   FLAPPY_STARFIELD_INCLUSIVE_RANGE_OFFSET,
   FLAPPY_STARFIELD_MIN_DIMENSION_PX,
-  FLAPPY_STARFIELD_NO_BLUR_PX,
   FLAPPY_STARFIELD_ORIGIN_PX,
-  FLAPPY_STARFIELD_TRANSPARENT_SHADOW_COLOR,
 } from '../../constants/constants';
 import { createSeededRandom } from './playback.starfield.utils';
 import type {
   CreateStarTileCanvasOptions,
   StarfieldCanvasDimensions,
   StarPlacement,
+  StarTileImage,
 } from './playback.starfield.types';
 
 /**
@@ -24,7 +23,7 @@ import type {
  */
 export function createStarTileCanvas(
   options: CreateStarTileCanvasOptions,
-): CanvasImageSource {
+): StarTileImage {
   // Step 1: Allocate a compatible canvas for the requested tile dimensions.
   const canvas = createCompatibleCanvas(
     options.tileWidthPx,
@@ -42,7 +41,6 @@ export function createStarTileCanvas(
   initializeStarTileContext({
     tileContext,
     canvas,
-    blurPx: options.blurPx,
   });
   renderSeededStars({
     tileContext,
@@ -89,11 +87,14 @@ function createCompatibleCanvas(
 function resolveStarTileContext(
   canvas: HTMLCanvasElement | OffscreenCanvas,
 ): OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null {
-  return canvas.getContext(FLAPPY_STARFIELD_CANVAS_CONTEXT_ID);
+  return canvas.getContext(FLAPPY_STARFIELD_CANVAS_CONTEXT_ID) as
+    | OffscreenCanvasRenderingContext2D
+    | CanvasRenderingContext2D
+    | null;
 }
 
 /**
- * Clears the canvas and applies the glow settings shared by all rendered stars.
+ * Clears the canvas and applies the neutral settings shared by all rendered stars.
  *
  * @param options - Context initialization dependencies.
  * @returns Nothing. The provided context is mutated in place.
@@ -101,7 +102,6 @@ function resolveStarTileContext(
 function initializeStarTileContext(options: {
   tileContext: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
   canvas: HTMLCanvasElement | OffscreenCanvas;
-  blurPx: number;
 }): void {
   options.tileContext.clearRect(
     FLAPPY_STARFIELD_ORIGIN_PX,
@@ -111,8 +111,6 @@ function initializeStarTileContext(options: {
   );
   options.tileContext.globalCompositeOperation =
     FLAPPY_STARFIELD_COMPOSITE_SOURCE_OVER;
-  options.tileContext.shadowColor = FLAPPY_STARFIELD_CYAN_FILL_STYLE;
-  options.tileContext.shadowBlur = options.blurPx;
 }
 
 /**
@@ -161,8 +159,6 @@ function renderSeededStars(options: {
 function resetStarTileContext(
   tileContext: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D,
 ): void {
-  tileContext.shadowBlur = FLAPPY_STARFIELD_NO_BLUR_PX;
-  tileContext.shadowColor = FLAPPY_STARFIELD_TRANSPARENT_SHADOW_COLOR;
   tileContext.globalAlpha = FLAPPY_STARFIELD_FULL_ALPHA;
 }
 

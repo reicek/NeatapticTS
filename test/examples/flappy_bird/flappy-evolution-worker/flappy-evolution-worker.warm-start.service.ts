@@ -6,10 +6,7 @@ import {
   resolveFlapDecision,
   resolveObservationVector,
 } from '../browser-entry/browser-entry.observation.utils';
-import {
-  createBirdColor,
-  sampleGapCenterY,
-} from '../browser-entry/browser-entry.spawn.utils';
+import { sampleGapCenterY } from '../browser-entry/browser-entry.spawn.utils';
 import type {
   WorkerHeuristicObservationFeatures,
   WorkerPopulationPipe,
@@ -43,6 +40,10 @@ import {
 
 /**
  * State carried between generation requests for one worker runtime.
+ *
+ * The warm-start service is intentionally one-shot. These fields let the worker
+ * remember whether generation 0 has already been bootstrapped and which initial
+ * RNG seed should be reused for deterministic synthetic sample generation.
  */
 export interface WorkerWarmStartState {
   workerInitSeed: number;
@@ -56,6 +57,10 @@ export interface WorkerWarmStartState {
  * The worker entry should stay protocol-first. This service owns the short
  * supervised bootstrap pass that nudges generation 0 away from pure noise while
  * preserving the later NEAT-driven search loop.
+ *
+ * Conceptually this is a lightweight behavior-cloning pass. If you want more
+ * background, the Wikipedia article on "imitation learning" is a helpful bridge
+ * between the heuristic teacher used here and the later evolutionary search.
  *
  * @param neatController - Initialized NEAT runtime.
  * @param warmStartState - Mutable warm-start lifecycle state.
@@ -131,6 +136,11 @@ export async function warmStartWorkerGenerationZeroIfNeeded(
 /**
  * Builds synthetic supervised samples for generation-0 behavior cloning.
  *
+ * Educational note:
+ * These samples are not recorded gameplay traces. They are synthetic states
+ * generated from the same observation pipeline used during real playback so the
+ * teacher labels and the evolved policy inputs stay in the same feature space.
+ *
  * @param rng - Deterministic random source.
  * @param sampleCount - Requested number of synthetic samples.
  * @returns Supervised dataset of input/output pairs.
@@ -205,6 +215,10 @@ function buildHeuristicPretrainSet(
 /**
  * Heuristic teacher policy used to label synthetic pretraining samples.
  *
+ * The rule intentionally stays simple and interpretable: flap when the bird is
+ * meaningfully below the next gap center, not already rising fast, and either
+ * close to the gap entry or in an urgent approach state.
+ *
  * @param features - Structured observation features for one synthetic state.
  * @returns True when the teacher says to flap.
  */
@@ -227,6 +241,10 @@ function resolveHeuristicTeacherFlapDecision(
 
 /**
  * Copies template parameters into a genome and injects small Gaussian noise.
+ *
+ * Educational note:
+ * The template network gives generation 0 a shared prior, while the noise terms
+ * restore diversity so the population is still worth evolving.
  *
  * @param genome - Target genome to mutate in-place.
  * @param template - Trained template source network.
@@ -274,6 +292,11 @@ function applyTemplateWeightsWithNoise(
 
 /**
  * Samples one standard-normal value using the Box-Muller transform.
+ *
+ * If you are unfamiliar with the transform, the Wikipedia article on
+ * "Box-Muller transform" is a useful short background read. The worker uses it
+ * here because it is deterministic, dependency-light, and good enough for small
+ * noise injection during warm-start diversification.
  *
  * @param rng - Deterministic random source.
  * @returns One approximately standard-normal random value.

@@ -14,6 +14,15 @@ import type { SharedDifficultyProfile } from './simulation-shared.types';
 /**
  * Resolves adaptive difficulty profile from passed-pipe progress.
  *
+ * Educational note:
+ * Difficulty is ramped as a smooth profile rather than as a sequence of hard
+ * level jumps. That keeps the task readable for humans and less noisy for
+ * evolution.
+ *
+ * The idea is closely related to curriculum learning: easier versions of the
+ * task dominate early, then the example interpolates toward the harder target
+ * settings as progress increases.
+ *
  * @param pipesPassed - Number of passed pipes.
  * @param difficultyScale - Curriculum scale in `[0, 1]`.
  * @returns Active difficulty profile.

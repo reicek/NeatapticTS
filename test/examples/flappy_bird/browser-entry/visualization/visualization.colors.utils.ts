@@ -13,7 +13,20 @@ import type {
 } from './visualization.types';
 
 /**
+ * Color-scale synthesis helpers for network visualization.
+ *
+ * These utilities convert raw connection weights and node biases into tiered
+ * neon color scales. The goal is not photorealism; it is interpretability. A
+ * reader should be able to glance at the network panel and see where strong
+ * positive, strong negative, and near-zero values live.
+ */
+
+/**
  * Builds logarithmic diverging color tiers with a center band and edge extension.
+ *
+ * Diverging scales are useful here because network parameters naturally split
+ * around zero. Negative and positive values should feel visually related, but
+ * not identical.
  *
  * @param input - Tier creation options.
  * @returns Ordered tier list.
@@ -74,6 +87,9 @@ export function createLogDivergingColorTiers(input: {
 /**
  * Resolves a color from ordered tier definitions.
  *
+ * This is the final classification step that maps one numeric weight or bias to
+ * the swatch color the renderer should paint.
+ *
  * @param value - Numeric value to classify.
  * @param tiers - Ordered tier list.
  * @param aboveTierColor - Fallback color for values above the last tier.
@@ -90,6 +106,9 @@ export function resolveTierColor(
 
 /**
  * Resolves connection color for a raw weight.
+ *
+ * This small helper is useful when one-off drawing code wants the same color
+ * semantics as the full dynamic scale machinery.
  *
  * @param connectionWeight - Connection weight.
  * @returns Tier color.
@@ -109,6 +128,9 @@ export function resolveConnectionRangeColor(connectionWeight: number): string {
 /**
  * Resolves bias color for a raw node bias.
  *
+ * Bias colors follow the same diverging logic as connection colors so the legend
+ * remains conceptually consistent across channels.
+ *
  * @param nodeBias - Node bias.
  * @returns Tier color.
  */
@@ -122,6 +144,10 @@ export function resolveBiasRangeColor(nodeBias: number): string {
 
 /**
  * Resolves dynamic connection/bias color scales from the active network range.
+ *
+ * The active network may contain only a narrow slice of the full theoretical
+ * value range, so the legend adapts to what is currently present instead of
+ * always rendering a fixed generic scale.
  *
  * @param network - Active network.
  * @returns Dynamic scales used by graph drawing and legend rows.

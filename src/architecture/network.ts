@@ -49,11 +49,75 @@ import type {
   NetworkArchitectureDescriptor,
   ConnectionWeightNoiseProps,
   MutationMethod,
+  NetworkConstructorOptions,
   NetworkRuntimeProps,
+  NetworkTopologyIntent,
   RNGSnapshot,
   SerializedConnection,
   TrainingOptions,
 } from './network/network.types';
+
+/**
+ * Resolves the public topology intent for one constructor call.
+ *
+ * @param options Optional constructor options.
+ * @returns Resolved topology intent.
+ */
+function resolveTopologyIntent(
+  options?: NetworkConstructorOptions,
+): NetworkTopologyIntent {
+  if (options?.topologyIntent) {
+    return options.topologyIntent;
+  }
+
+  return options?.enforceAcyclic ? 'feed-forward' : 'unconstrained';
+}
+
+/**
+ * Validates that legacy acyclic flags do not contradict public topology intent.
+ *
+ * @param options Optional constructor options.
+ * @returns Nothing.
+ */
+function validateTopologyIntentConfiguration(
+  options?: NetworkConstructorOptions,
+): void {
+  if (
+    options?.topologyIntent === 'feed-forward' &&
+    options.enforceAcyclic === false
+  ) {
+    throw new Error(
+      'Conflicting topology options: feed-forward intent cannot disable acyclic enforcement.',
+    );
+  }
+
+  if (
+    options?.topologyIntent === 'unconstrained' &&
+    options.enforceAcyclic === true
+  ) {
+    throw new Error(
+      'Conflicting topology options: unconstrained intent cannot enable acyclic enforcement.',
+    );
+  }
+}
+
+/**
+ * Resolves whether acyclic enforcement should be enabled for one constructor call.
+ *
+ * @param options Optional constructor options.
+ * @param topologyIntent Resolved public topology intent.
+ * @returns True when acyclic enforcement should be enabled.
+ */
+function resolveAcyclicEnforcement(
+  options: NetworkConstructorOptions | undefined,
+  topologyIntent: NetworkTopologyIntent,
+): boolean {
+  if (typeof options?.enforceAcyclic === 'boolean') {
+    return options.enforceAcyclic;
+  }
+
+  return topologyIntent === 'feed-forward';
+}
 
 /**
  * Network (Evolvable / Trainable Graph)
@@ -182,6 +246,8 @@ export default class Network implements NetworkView {
   private _initialConnectionCount?: number;
   /** Whether to enforce acyclic connectivity. */
   private _enforceAcyclic: boolean = false;
+  /** Public topology intent used to preserve semantic API choices. */
+  private _topologyIntent: NetworkTopologyIntent = 'unconstrained';
   /** Cached topological order. */
   private _topoOrder: Node[] | null = null;
   /** Topology dirty marker. */
@@ -254,19 +320,19 @@ export default class Network implements NetworkView {
   constructor(
     input: number,
     output: number,
-    options?: {
-      minHidden?: number;
-      seed?: number;
-      enforceAcyclic?: boolean;
-      activationPrecision?: 'f32' | 'f64';
-      reuseActivationArrays?: boolean;
-      returnTypedActivations?: boolean;
-    },
+    options?: NetworkConstructorOptions,
   ) {
     // Validate that input and output sizes are provided.
     if (typeof input === 'undefined' || typeof output === 'undefined') {
       throw new Error('No input or output size given');
     }
+
+    // Step 1: Validate constructor topology semantics before mutating runtime state.
+    validateTopologyIntentConfiguration(options);
+
+    // Step 2: Resolve the public topology contract and the low-level acyclic flag.
+    const topologyIntent = resolveTopologyIntent(options);
+    const enforceAcyclic = resolveAcyclicEnforcement(options, topologyIntent);
 
     // Initialize network properties
     this.input = input;
@@ -276,7 +342,8 @@ export default class Network implements NetworkView {
     this.gates = [];
     this.selfconns = [];
     this.dropout = 0;
-    this._enforceAcyclic = options?.enforceAcyclic || false;
+    this._topologyIntent = topologyIntent;
+    this._enforceAcyclic = enforceAcyclic;
     if (options?.activationPrecision) {
       this._activationPrecision = options.activationPrecision;
     } else if (config.float32Mode) {
@@ -468,12 +535,45 @@ export default class Network implements NetworkView {
   }
 
   /**
+   * Returns the public topology intent for this network.
+   *
+   * @returns Current topology intent.
+   */
+  getTopologyIntent(): NetworkTopologyIntent {
+    return this._topologyIntent;
+  }
+
+  /**
+   * Sets the public topology intent and keeps acyclic enforcement aligned.
+   *
+   * @param topologyIntent Desired topology intent.
+   * @returns Nothing.
+   */
+  setTopologyIntent(topologyIntent: NetworkTopologyIntent): void {
+    // Step 1: Persist the public topology contract.
+    this._topologyIntent = topologyIntent;
+
+    // Step 2: Keep the low-level acyclic guard aligned with the public contract.
+    this._enforceAcyclic = topologyIntent === 'feed-forward';
+
+    // Step 3: Mark topology caches dirty so later activation rebuilds coherent state.
+    this._topoDirty = true;
+  }
+
+  /**
    * Enable or disable acyclic topology enforcement.
    *
    * @param flag Whether to enforce acyclic connectivity.
    */
-  setEnforceAcyclic(flag: boolean) {
+  setEnforceAcyclic(flag: boolean): void {
+    // Step 1: Preserve backward compatibility for callers using the legacy toggle.
     this._enforceAcyclic = !!flag;
+
+    // Step 2: Keep the public topology intent synchronized with the active runtime contract.
+    this._topologyIntent = flag ? 'feed-forward' : 'unconstrained';
+
+    // Step 3: Mark topology caches dirty so acyclic mode changes rebuild ordering safely.
+    this._topoDirty = true;
   }
 
   /**
@@ -1618,6 +1718,10 @@ export default class Network implements NetworkView {
     // Rebuild net.connections from all per-node connections
     net.connections = net.nodes.flatMap((n) => n.connections.out);
     net._topoDirty = true;
+
+    // Step 1: Preserve the public feed-forward contract for layered MLP builders.
+    net.setTopologyIntent('feed-forward');
+
     return net;
   }
 

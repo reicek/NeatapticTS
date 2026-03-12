@@ -1,6 +1,5 @@
 import type Network from '../../../../src/architecture/network';
 import {
-  createBirdColor,
   resolveNextSpawnGapSize,
   resolveNextSpawnIntervalFrames,
   sampleGapCenterY,
@@ -15,6 +14,21 @@ import type { WorkerPlaybackState } from './flappy-evolution-worker.types';
 
 /**
  * Creates initial playback state for a population of networks.
+ *
+ * Educational note:
+ * This is the ownership boundary for worker playback initialization. The frame
+ * simulation service mutates the returned state on every step, but only this
+ * helper decides how a fresh population is placed into the world at time zero.
+ *
+ * @example
+ * ```ts
+ * const playbackState = createWorkerPopulationRenderState(
+ *   currentPopulation,
+ *   rng,
+ *   1280,
+ *   720,
+ * );
+ * ```
  *
  * @param networks - Population to visualize.
  * @param rng - Deterministic random source.
@@ -45,7 +59,6 @@ export function createWorkerPopulationRenderState(
 
   const birds = networks.map((network, networkIndex) => ({
     network,
-    color: createBirdColor(networkIndex, networks.length),
     observationMemoryState: createSharedObservationMemoryState(),
     yPx: initialVisibleWorldHeightPx * 0.5,
     velocityYPxPerFrame: 0,
@@ -57,6 +70,7 @@ export function createWorkerPopulationRenderState(
 
   return {
     frameIndex: 0,
+    cumulativePipeTravelPx: 0,
     visibleWorldWidthPx: initialVisibleWorldWidthPx,
     visibleWorldHeightPx: initialVisibleWorldHeightPx,
     nextPipeId: 2,

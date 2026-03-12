@@ -76,6 +76,22 @@ When applying a plan:
 - prefer incremental steps that move the code toward the documented direction,
 - avoid introducing APIs or architecture that conflict with a stated plan without explicitly flagging the conflict.
 
+Demo-first library gap policy (critical)
+---------------------------------------
+Examples and demos in `test/examples/` are not places to normalize library ergonomics gaps. They are probes that should reveal where the public API, defaults, or runtime contracts fall short of world-class expectations.
+
+When demo work exposes a mismatch between obvious user intent and the library behavior:
+
+- treat the demo as evidence of a library DX gap first,
+- prefer fixing the library, public API, defaults, or shared runtime semantics,
+- use demo-local compensation only when the issue is genuinely demo-specific or a library fix would be unsafe for the current task,
+- if a temporary demo-local workaround is unavoidable, call it out explicitly as technical debt and note the preferred library-level fix.
+
+Critical expectation for feed-forward examples:
+
+- if a user selects a feed-forward builder or feed-forward mutation policy, agents should assume the expected DX is that feed-forward intent flows through to the runtime without extra demo-specific flags unless the codebase explicitly documents a different contract,
+- when that expectation is not met, agents should frame the issue as a library-level design gap and update plans accordingly.
+
 For substantial work, agent prompts and final summaries should briefly note which README and which plan document informed the change.
 After substantial edits, keep summaries short and high level by default, and only expand into detailed walkthroughs when the user asks.
 

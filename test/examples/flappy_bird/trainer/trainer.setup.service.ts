@@ -21,6 +21,11 @@ import type {
 /**
  * Creates immutable setup values for the trainer.
  *
+ * Educational note:
+ * The setup object freezes the core training shape up front: input width,
+ * output width, population size, and elitism count. Centralizing those values
+ * makes the rest of the trainer read as policy rather than configuration noise.
+ *
  * @returns Default trainer setup values used for NEAT configuration.
  */
 export function createTrainerSetup(): FlappyTrainerSetup {
@@ -35,6 +40,9 @@ export function createTrainerSetup(): FlappyTrainerSetup {
 /**
  * Creates mutable runtime state container.
  *
+ * The runtime state is intentionally tiny. It only tracks stop intent and the
+ * latest report so the outer loop can remain easy to reason about.
+ *
  * @returns Fresh runtime state used by loop orchestration.
  */
 export function createTrainerRuntimeState(): FlappyTrainerRuntimeState {
@@ -46,6 +54,17 @@ export function createTrainerRuntimeState(): FlappyTrainerRuntimeState {
 
 /**
  * Builds the NEAT controller with baseline options.
+ *
+ * Educational note:
+ * The trainer enables population-level fitness mode because the quality of a
+ * Flappy policy depends on fair comparison across shared seed batches, not on a
+ * one-network-at-a-time scoring callback.
+ *
+ * @example
+ * ```ts
+ * const trainerSetup = createTrainerSetup();
+ * const neatController = createNeatController(trainerSetup);
+ * ```
  *
  * @param trainerSetup - Immutable trainer setup values.
  * @returns Typed NEAT controller used by the trainer loop.
@@ -80,6 +99,9 @@ export function createNeatController(
 
 /**
  * Trivial baseline fitness used before attaching population evaluator.
+ *
+ * This placeholder keeps controller construction simple. The real staged
+ * evaluator is attached immediately afterward by the fitness service.
  *
  * @returns Constant zero fitness.
  */

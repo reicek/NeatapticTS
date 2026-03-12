@@ -3,7 +3,13 @@ import type { FlappyTrainerRuntimeState } from './trainer.types';
 /**
  * Registers graceful stop signal handlers.
  *
+ * Educational note:
+ * Long-running evolutionary runs should stop cleanly when the user presses
+ * `Ctrl+C`. This service flips runtime intent instead of abruptly tearing down
+ * the process mid-generation.
+ *
  * @param trainerRuntimeState - Mutable trainer runtime state.
+ * @returns Nothing.
  */
 export function registerTrainerStopSignals(
   trainerRuntimeState: FlappyTrainerRuntimeState,
@@ -19,6 +25,8 @@ export function registerTrainerStopSignals(
 
 /**
  * Handles one stop signal update.
+ *
+ * @returns Nothing.
  *
  * @param trainerRuntimeState - Mutable trainer runtime state.
  */
