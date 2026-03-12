@@ -98,7 +98,7 @@ describe('updateTrailState', () => {
 
     renderPlaybackBird(drawingContext, 40, 1, 1);
 
-    expect(drawingContext.strokeRect).toHaveBeenCalledTimes(1);
+    expect(drawingContext.strokeRect).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -108,6 +108,7 @@ function createRenderState(overrides?: {
 }): PopulationRenderState {
   return {
     frameIndex: overrides?.frameIndex ?? 8,
+    cumulativePipeTravelPx: 0,
     visibleWorldWidthPx: 640,
     visibleWorldHeightPx: 480,
     nextPipeId: 0,
@@ -168,6 +169,8 @@ function createMockDrawingContext(): CanvasRenderingContext2D {
     strokeStyle: '#000000',
     shadowColor: 'transparent',
     shadowBlur: 0,
+    shadowOffsetX: 0,
+    shadowOffsetY: 0,
     lineWidth: 1,
   } as unknown as CanvasRenderingContext2D;
 }

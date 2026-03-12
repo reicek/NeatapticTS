@@ -5,6 +5,8 @@ import type {
   PlaybackGroundGridHorizontalGeometryFactory,
   PlaybackGroundGridVerticalGeometry,
   PlaybackGroundGridVerticalGeometryFactory,
+  PlaybackGroundGridVerticalSceneMetrics,
+  PlaybackGroundGridVerticalSceneMetricsFactory,
 } from './playback.background.ground-grid.types';
 
 let cachedViewportSizeKey: string | null = null;
@@ -16,6 +18,10 @@ let cachedFogGradientsByCanvas = new WeakMap<
 const cachedHorizontalGeometryBySceneKey = new Map<
   string,
   PlaybackGroundGridHorizontalGeometry
+>();
+const cachedVerticalSceneMetricsBySceneKey = new Map<
+  string,
+  PlaybackGroundGridVerticalSceneMetrics
 >();
 const cachedVerticalGeometryByCycleKey = new Map<
   string,
@@ -41,6 +47,7 @@ export function ensureGroundGridViewportCacheValidity(
 
   cachedViewportSizeKey = viewportSizeKey;
   cachedHorizontalGeometryBySceneKey.clear();
+  cachedVerticalSceneMetricsBySceneKey.clear();
   cachedVerticalGeometryByCycleKey.clear();
   cachedFogGradientsByCanvas = new WeakMap<
     HTMLCanvasElement,
@@ -85,7 +92,7 @@ export function resolveGroundGridSceneCacheKey(
  * Resolves the cache key for one wrapped vertical-geometry cycle.
  *
  * @param sceneCacheKey - Stable scene key for the active viewport.
- * @param wrappedOffsetPx - Quantized wrapped offset within one lane cycle.
+ * @param wrappedOffsetPx - Wrapped offset within one lane cycle.
  * @returns Cycle key used for vertical geometry reuse.
  */
 export function resolveGroundGridVerticalCycleCacheKey(
@@ -114,6 +121,32 @@ export function resolveCachedGroundGridHorizontalGeometry(
   const resolvedGeometry = factory();
   cachedHorizontalGeometryBySceneKey.set(sceneCacheKey, resolvedGeometry);
   return resolvedGeometry;
+}
+
+/**
+ * Resolves cached scene metrics for one vertical-grid layout.
+ *
+ * @param sceneCacheKey - Stable scene key for the active viewport.
+ * @param factory - Lazy scene-metrics builder used when the cache misses.
+ * @returns Cached vertical scene metrics for the scene.
+ */
+export function resolveCachedGroundGridVerticalSceneMetrics(
+  sceneCacheKey: string,
+  factory: PlaybackGroundGridVerticalSceneMetricsFactory,
+): PlaybackGroundGridVerticalSceneMetrics {
+  const cachedSceneMetrics = cachedVerticalSceneMetricsBySceneKey.get(
+    sceneCacheKey,
+  );
+  if (cachedSceneMetrics) {
+    return cachedSceneMetrics;
+  }
+
+  const resolvedSceneMetrics = factory();
+  cachedVerticalSceneMetricsBySceneKey.set(
+    sceneCacheKey,
+    resolvedSceneMetrics,
+  );
+  return resolvedSceneMetrics;
 }
 
 /**

@@ -13,6 +13,7 @@ describe('createWorkerPlaybackSnapshot', () => {
     expect(createWorkerPlaybackSnapshot(playbackState)).toEqual({
       format: 'packed-v1',
       frameIndex: 12,
+      cumulativePipeTravelPx: 96,
       visibleWorldWidthPx: 640,
       visibleWorldHeightPx: 480,
       pipeCount: 1,
@@ -49,6 +50,7 @@ describe('createWorkerPlaybackSnapshot', () => {
 function createPlaybackState(): WorkerPlaybackState {
   return {
     frameIndex: 12,
+    cumulativePipeTravelPx: 96,
     visibleWorldWidthPx: 640,
     visibleWorldHeightPx: 480,
     nextPipeId: 5,

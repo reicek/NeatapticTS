@@ -20,13 +20,13 @@ export const FLAPPY_GROUND_GRID_TARGET_VERTICAL_SEGMENT_HEIGHT_PX = 24;
 export const FLAPPY_GROUND_GRID_APPROX_FRAME_DURATION_MS = 1000 / 60;
 
 /** Interval between visible pulse events (milliseconds). */
-export const FLAPPY_GROUND_GRID_PULSE_INTERVAL_MS = 3000;
+export const FLAPPY_GROUND_GRID_PULSE_INTERVAL_MS = 6000;
 
 /** Lifetime of one pulse as it travels across its chosen line (milliseconds). */
-export const FLAPPY_GROUND_GRID_PULSE_LIFETIME_MS = 1100;
+export const FLAPPY_GROUND_GRID_PULSE_LIFETIME_MS = 5900;
 
 /** Peak opacity used by visible pulse squares. */
-export const FLAPPY_GROUND_GRID_PULSE_ALPHA = 0.92;
+export const FLAPPY_GROUND_GRID_PULSE_ALPHA = 0.99;
 
 /** Smallest visible pulse square size (pixels). */
 export const FLAPPY_GROUND_GRID_PULSE_MIN_SIZE_PX = 1;
@@ -55,8 +55,19 @@ export const FLAPPY_GROUND_GRID_UNSIGNED_NORMALIZATION_DIVISOR = 0x1_0000_0000;
 /** Non-linear exponent used to compress depth lines toward the horizon. */
 export const FLAPPY_GROUND_GRID_DEPTH_CURVE_EXPONENT = 2.35;
 
+/**
+ * Near-edge horizontal line offset used for the lower-pipe floor illusion.
+ *
+ * `1` targets the first usable grid band above the bottom edge rather than the
+ * terminal line that coincides with the lower-band boundary itself.
+ */
+export const FLAPPY_GROUND_GRID_PIPE_CONNECTION_LINE_OFFSET_FROM_BOTTOM = 1;
+
 /** Scroll ratio applied to the moving vertical perspective rays. */
 export const FLAPPY_GROUND_GRID_SCROLL_RATIO = 0.16;
+
+/** Decimal precision used when quantizing the wrapped vertical-ray offset. */
+export const FLAPPY_GROUND_GRID_SCROLL_OFFSET_QUANTIZATION_DECIMALS = 3;
 
 /** Minimum alpha used by the farthest horizontal depth lines. */
 export const FLAPPY_GROUND_GRID_MIN_ALPHA = 0.12;

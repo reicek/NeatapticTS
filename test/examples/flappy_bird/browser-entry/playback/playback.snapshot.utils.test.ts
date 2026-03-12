@@ -23,6 +23,7 @@ describe('applyPlaybackSnapshot', () => {
 
     expect(renderState).toEqual({
       frameIndex: 21,
+      cumulativePipeTravelPx: 84,
       visibleWorldWidthPx: 640,
       visibleWorldHeightPx: 480,
       nextPipeId: 0,
@@ -32,6 +33,7 @@ describe('applyPlaybackSnapshot', () => {
       framesUntilNextPipeSpawn: 0,
       pipes: [
         {
+          id: 0,
           xPx: 250,
           gapCenterYPx: 200,
           gapSizePx: 110,
@@ -53,6 +55,7 @@ function createSnapshot(): EvolutionPlaybackStepSnapshot {
   return {
     format: 'packed-v1',
     frameIndex: 21,
+    cumulativePipeTravelPx: 84,
     visibleWorldWidthPx: 640,
     visibleWorldHeightPx: 480,
     pipeCount: 1,
@@ -74,6 +77,7 @@ function createSnapshot(): EvolutionPlaybackStepSnapshot {
 function createRenderStateWithOneBirdAndOnePipe(): PopulationRenderState {
   return {
     frameIndex: 0,
+    cumulativePipeTravelPx: 0,
     visibleWorldWidthPx: 1,
     visibleWorldHeightPx: 1,
     nextPipeId: 0,
@@ -83,6 +87,7 @@ function createRenderStateWithOneBirdAndOnePipe(): PopulationRenderState {
     framesUntilNextPipeSpawn: 0,
     pipes: [
       {
+          id: 0,
         xPx: 1,
         gapCenterYPx: 2,
         gapSizePx: 3,
@@ -102,6 +107,7 @@ function createRenderStateWithOneBirdAndOnePipe(): PopulationRenderState {
 function createRenderState(): PopulationRenderState {
   return {
     frameIndex: 0,
+    cumulativePipeTravelPx: 0,
     visibleWorldWidthPx: 1,
     visibleWorldHeightPx: 1,
     nextPipeId: 0,

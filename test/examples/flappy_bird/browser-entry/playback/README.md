@@ -59,11 +59,33 @@ Shared type contract for starfield tile rendering layers.
 A tile is pre-rendered and repeated horizontally to draw efficient
 parallax backgrounds during playback.
 
+## browser-entry/playback/playback.orchestration.types.ts
+
+### PlaybackEpisodeSummary
+
+Public aggregate playback summary returned after one episode completes.
+
+### PlaybackIterationContext
+
+Shared dependencies and mutable state used by one playback iteration.
+
+### PlaybackLoopState
+
+Mutable loop bookkeeping shared across playback iterations.
+
+### PlaybackMutableSummary
+
+Mutable playback summary extended with latest leader telemetry fallbacks.
+
+### PlaybackSessionContext
+
+Shared mutable playback state mirrored locally while worker playback runs.
+
 ## browser-entry/playback/playback.ts
 
 ### animatePopulationEpisode
 
-`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary>`
+`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary>`
 
 Public playback entry point used by browser runtime orchestration.
 
@@ -77,7 +99,7 @@ Returns: Aggregate playback summary for the current episode.
 
 ### animatePopulationEpisodeInternal
 
-`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary>`
+`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary>`
 
 Internal playback orchestration entry retained for compatibility re-exports.
 
@@ -89,149 +111,9 @@ Parameters:
 
 Returns: Aggregate playback summary for the current episode.
 
-### applyPlaybackStepSnapshot
-
-`(sessionContext: PlaybackSessionContext, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
-
-Applies the latest worker snapshot to render state and trail caches.
-
-Parameters:
-- `sessionContext` - - Shared mutable playback session state.
-- `snapshot` - - Worker snapshot for the current playback batch.
-
-Returns: Nothing.
-
-### createInitialPlaybackLoopState
-
-`() => PlaybackLoopState`
-
-Creates the mutable loop state used while processing playback steps.
-
-Returns: Initialized loop state and aggregate summary values.
-
-### createInitialRenderState
-
-`(viewportDimensions: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState`
-
-Creates the initial render state used before the first worker snapshot.
-
-Parameters:
-- `viewportDimensions` - - Current visible world dimensions.
-
-Returns: Initialized population render state.
-
-### createInitialTrailState
-
-`() => import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState`
-
-Creates the initial trail state used before any snapshots have been applied.
-
-Returns: Empty trail state for all birds.
-
-### emitPlaybackFrameStats
-
-`(iterationContext: PlaybackIterationContext, playbackStepPayload: { requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }) => void`
-
-Resolves leader telemetry and emits the public frame-stats callback.
-
-Parameters:
-- `iterationContext` - - Shared loop dependencies and mutable playback state.
-- `playbackStepPayload` - - Worker playback result for the current iteration.
-
-Returns: Nothing.
-
-### initializePlaybackSessionContext
-
-`(canvas: HTMLCanvasElement, evolutionWorker: Worker) => PlaybackSessionContext`
-
-Initializes worker playback and local state mirrors for one episode.
-
-Parameters:
-- `canvas` - - Target playback canvas.
-- `evolutionWorker` - - Worker owning playback simulation state.
-
-Returns: Session context shared across the playback loop.
-
 ### PlaybackEpisodeSummary
 
-### requestPlaybackStepPayload
-
-`(iterationContext: PlaybackIterationContext) => Promise<{ requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>`
-
-Requests one playback step batch from the evolution worker.
-
-Parameters:
-- `iterationContext` - - Shared loop dependencies and mutable playback state.
-
-Returns: Worker playback step payload for the current iteration.
-
-### resolvePlaybackEpisodeSummary
-
-`(summary: PlaybackMutableSummary) => import("test/examples/flappy_bird/browser-entry/playback/playback").PlaybackEpisodeSummary`
-
-Folds the mutable loop summary into the public playback summary shape.
-
-Parameters:
-- `summary` - - Mutable loop summary accumulated during playback.
-
-Returns: Public playback episode summary.
-
-### resolvePlaybackViewportDimensions
-
-`(canvas: HTMLCanvasElement) => { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }`
-
-Resolves the current visible playback viewport dimensions from the canvas.
-
-Parameters:
-- `canvas` - - Target playback canvas.
-
-Returns: Visible world width and height in pixels.
-
-### runPlaybackIteration
-
-`(iterationContext: PlaybackIterationContext) => Promise<void>`
-
-Executes one playback iteration from viewport sync through render pacing.
-
-Parameters:
-- `iterationContext` - - Shared loop dependencies and mutable playback state.
-
-Returns: Nothing.
-
-### runPlaybackLoop
-
-`(iterationContext: PlaybackIterationContext) => Promise<void>`
-
-Runs playback iterations until the worker reports that the episode is done.
-
-Parameters:
-- `iterationContext` - - Shared loop dependencies and mutable playback state.
-
-Returns: Nothing.
-
-### syncPlaybackViewportDimensions
-
-`(canvas: HTMLCanvasElement, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => void`
-
-Synchronizes the render state viewport fields with the current canvas size.
-
-Parameters:
-- `canvas` - - Target playback canvas.
-- `renderState` - - Mutable render state updated in place.
-
-Returns: Nothing.
-
-### updatePlaybackLoopCompletion
-
-`(loopState: PlaybackLoopState, playbackStepPayload: { requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }) => void`
-
-Updates the loop summary when the worker reports playback completion.
-
-Parameters:
-- `loopState` - - Mutable playback loop state.
-- `playbackStepPayload` - - Worker playback result for the current iteration.
-
-Returns: Nothing.
+Public aggregate playback summary returned after one episode completes.
 
 ## browser-entry/playback/playback.errors.ts
 
@@ -276,19 +158,82 @@ Parameters:
 
 Returns: Nothing.
 
-## browser-entry/playback/playback.starfield.service.ts
+## browser-entry/playback/playback.session.services.ts
 
-### createStarTile
+### createInitialPlaybackLoopState
 
-`(layerSpec: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").PlaybackStarfieldLayerSpec, tileHeightPx: number) => import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTile`
+`() => import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackLoopState`
 
-Creates one cached tile layer from a declarative layer specification.
+Creates the mutable loop state used while processing playback steps.
+
+Returns: Initialized loop state and aggregate summary values.
+
+### createInitialRenderState
+
+`(viewportDimensions: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState`
+
+Creates the initial render state used before the first worker snapshot.
 
 Parameters:
-- `layerSpec` - - Density and motion contract for a starfield layer.
-- `tileHeightPx` - - Height of the visible sky band in pixels.
+- `viewportDimensions` - - Current visible world dimensions.
 
-Returns: Cached tile metadata for parallax drawing.
+Returns: Initialized population render state.
+
+### createInitialTrailState
+
+`() => import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState`
+
+Creates the initial trail state used before any snapshots have been applied.
+
+Returns: Empty trail state for all birds.
+
+### initializePlaybackSessionContext
+
+`(canvas: HTMLCanvasElement, evolutionWorker: Worker) => import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackSessionContext`
+
+Initializes worker playback and local state mirrors for one episode.
+
+Parameters:
+- `canvas` - - Target playback canvas.
+- `evolutionWorker` - - Worker owning playback simulation state.
+
+Returns: Session context shared across the playback loop.
+
+### resolvePlaybackEpisodeSummary
+
+`(summary: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackMutableSummary) => import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary`
+
+Folds the mutable loop summary into the public playback summary shape.
+
+Parameters:
+- `summary` - - Mutable loop summary accumulated during playback.
+
+Returns: Public playback episode summary.
+
+### resolvePlaybackViewportDimensions
+
+`(canvas: HTMLCanvasElement) => { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }`
+
+Resolves the current visible playback viewport dimensions from the canvas.
+
+Parameters:
+- `canvas` - - Target playback canvas.
+
+Returns: Visible world width and height in pixels.
+
+### syncPlaybackViewportDimensions
+
+`(canvas: HTMLCanvasElement, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => void`
+
+Synchronizes the render state viewport fields with the current canvas size.
+
+Parameters:
+- `canvas` - - Target playback canvas.
+- `renderState` - - Mutable render state updated in place.
+
+Returns: Nothing.
+
+## browser-entry/playback/playback.starfield.service.ts
 
 ### resolveStarfieldTiles
 
@@ -300,6 +245,77 @@ Parameters:
 - `visibleWorldHeightPx` - - Viewport height in world pixels.
 
 Returns: Ordered far/mid/near starfield tiles.
+
+## browser-entry/playback/playback.iteration.services.ts
+
+### applyPlaybackStepSnapshot
+
+`(sessionContext: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackSessionContext, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
+
+Applies the latest worker snapshot to render state and trail caches.
+
+Parameters:
+- `sessionContext` - - Shared mutable playback session state.
+- `snapshot` - - Worker snapshot for the current playback batch.
+
+Returns: Nothing.
+
+### emitPlaybackFrameStats
+
+`(iterationContext: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackIterationContext, playbackStepPayload: { requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }) => void`
+
+Resolves leader telemetry and emits the public frame-stats callback.
+
+Parameters:
+- `iterationContext` - - Shared loop dependencies and mutable playback state.
+- `playbackStepPayload` - - Worker playback result for the current iteration.
+
+Returns: Nothing.
+
+### requestPlaybackStepPayload
+
+`(iterationContext: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackIterationContext) => Promise<{ requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>`
+
+Requests one playback step batch from the evolution worker.
+
+Parameters:
+- `iterationContext` - - Shared loop dependencies and mutable playback state.
+
+Returns: Worker playback step payload for the current iteration.
+
+### runPlaybackIteration
+
+`(iterationContext: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackIterationContext) => Promise<void>`
+
+Executes one playback iteration from viewport sync through render pacing.
+
+Parameters:
+- `iterationContext` - - Shared loop dependencies and mutable playback state.
+
+Returns: Nothing.
+
+### runPlaybackLoop
+
+`(iterationContext: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackIterationContext) => Promise<void>`
+
+Runs playback iterations until the worker reports that the episode is done.
+
+Parameters:
+- `iterationContext` - - Shared loop dependencies and mutable playback state.
+
+Returns: Nothing.
+
+### updatePlaybackLoopCompletion
+
+`(loopState: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackLoopState, playbackStepPayload: { requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }) => void`
+
+Updates the loop summary when the worker reports playback completion.
+
+Parameters:
+- `loopState` - - Mutable playback loop state.
+- `playbackStepPayload` - - Worker playback result for the current iteration.
+
+Returns: Nothing.
 
 ## browser-entry/playback/playback.starfield.services.ts
 
@@ -453,6 +469,59 @@ Parameters:
 
 Returns: Nothing.
 
+## browser-entry/playback/playback.starfield.layer.services.ts
+
+### createStarTile
+
+`(layerSpec: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").PlaybackStarfieldLayerSpec, tileHeightPx: number) => import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTile`
+
+Creates one cached tile layer from a declarative layer specification.
+
+Parameters:
+- `layerSpec` - - Density and motion contract for a starfield layer.
+- `tileHeightPx` - - Height of the visible sky band in pixels.
+
+Returns: Cached tile metadata for parallax drawing.
+
+## browser-entry/playback/playback.render.pipe-outline.service.ts
+
+### drawPipeNeonOutline
+
+`(context: CanvasRenderingContext2D, rectangleLeftPx: number, rectangleTopPx: number, rectangleWidthPx: number, rectangleHeightPx: number) => void`
+
+Draws a simplified neon outline around a pipe rectangle.
+
+Parameters:
+- `context` - - Canvas 2D context.
+- `rectangleLeftPx` - - Rectangle left position.
+- `rectangleTopPx` - - Rectangle top position.
+- `rectangleWidthPx` - - Rectangle width.
+- `rectangleHeightPx` - - Rectangle height.
+
+Returns: Nothing.
+
+### resolveAlignedPipeOutlineRectangle
+
+`(input: { rectangleLeftPx: number; rectangleTopPx: number; rectangleWidthPx: number; rectangleHeightPx: number; }) => { alignedLeftPx: number; alignedTopPx: number; alignedWidthPx: number; alignedHeightPx: number; }`
+
+Resolves a pixel-aligned rectangle used by the pipe outline renderer.
+
+Parameters:
+- `input` - - Raw pipe rectangle values.
+
+Returns: Aligned rectangle ready for outline rendering.
+
+### resolvePipeOutlinePath
+
+`(alignedRectangle: { alignedLeftPx: number; alignedTopPx: number; alignedWidthPx: number; alignedHeightPx: number; }) => Path2D`
+
+Resolves the reusable outline path for one pipe body and its entrance rim.
+
+Parameters:
+- `alignedRectangle` - - Pixel-aligned rectangle used by the outline renderer.
+
+Returns: Path containing the outer pipe outline and optional entrance rim.
+
 ## browser-entry/playback/playback.trail.utils.ts
 
 ### clamp01
@@ -483,7 +552,7 @@ Returns: Nothing.
 
 `(trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], frameIndex: number, yPosition: number, maxRetainedPoints: number) => void`
 
-Appends one trail point while enforcing max retained history length.
+Appends one trail point while enforcing the maximum retained history length.
 
 Parameters:
 - `trailPoints` - - Mutable trail collection.
@@ -580,30 +649,6 @@ Parameters:
 
 Returns: Maximum frames survived by any bird.
 
-### syncPlaybackSnapshotBirds
-
-`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
-
-Synchronizes packed bird snapshot fields into the reusable render-state bird array.
-
-Parameters:
-- `renderState` - - Mutable render state mirror used by the browser.
-- `snapshot` - - Packed worker playback snapshot for the current render tick.
-
-Returns: Nothing.
-
-### syncPlaybackSnapshotPipes
-
-`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
-
-Synchronizes packed pipe snapshot fields into the reusable render-state pipe array.
-
-Parameters:
-- `renderState` - - Mutable render state mirror used by the browser.
-- `snapshot` - - Packed worker playback snapshot for the current render tick.
-
-Returns: Nothing.
-
 ## browser-entry/playback/playback.starfield.utils.ts
 
 ### createSeededRandom
@@ -633,7 +678,7 @@ Returns: Wrapped value in [0, modulo).
 
 ### PlaybackStepPayload
 
-Shared alias for worker playback-step payload.
+Shared alias for the worker playback-step payload.
 
 ### PlaybackStepRequest
 
@@ -643,7 +688,7 @@ Request payload for one playback-step worker call.
 
 `(playbackStepPayload: { requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }, latestLeaderPipesPassed: number, latestLeaderFramesSurvived: number) => { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; }`
 
-Resolves final playback summary values when worker reports completion.
+Resolves final playback summary values when the worker reports completion.
 
 Parameters:
 - `playbackStepPayload` - - Playback payload returned by worker.
@@ -669,7 +714,7 @@ Returns: Normalized per-frame HUD telemetry payload.
 
 ### resolvePlaybackStepRequest
 
-`(input: import("test/examples/flappy_bird/browser-entry/playback/playback.worker-channel.utils").ResolvePlaybackStepRequestInput) => import("test/examples/flappy_bird/browser-entry/playback/playback.worker-channel.utils").ResolvePlaybackStepRequestResult`
+`(input: import("test/examples/flappy_bird/browser-entry/playback/worker-channel/playback.worker-channel.types").ResolvePlaybackStepRequestInput) => import("test/examples/flappy_bird/browser-entry/playback/worker-channel/playback.worker-channel.types").ResolvePlaybackStepRequestResult`
 
 Resolves step count and request payload for the next worker playback batch.
 
@@ -680,8 +725,8 @@ Returns: Request payload plus carried-over fractional frame budget.
 
 ### ResolvePlaybackStepRequestInput
 
-Input used to resolve next playback-step request and budget remainder.
+Input used to resolve the next playback-step request and budget remainder.
 
 ### ResolvePlaybackStepRequestResult
 
-Output for resolved playback-step request and frame-budget remainder.
+Output for the resolved playback-step request and frame-budget remainder.

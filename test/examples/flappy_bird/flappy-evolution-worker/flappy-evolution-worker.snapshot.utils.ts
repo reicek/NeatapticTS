@@ -44,6 +44,7 @@ export function createWorkerPlaybackSnapshot(
   return {
     format: 'packed-v1',
     frameIndex: playbackState.frameIndex,
+    cumulativePipeTravelPx: playbackState.cumulativePipeTravelPx,
     visibleWorldWidthPx: playbackState.visibleWorldWidthPx,
     visibleWorldHeightPx: playbackState.visibleWorldHeightPx,
     pipeCount,

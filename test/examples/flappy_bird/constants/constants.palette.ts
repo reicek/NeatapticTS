@@ -11,8 +11,8 @@ export const FLAPPY_NEON_PALETTE = {
   pipeFill: '#00ff66',
   pipeEdgeOuter: '#2dff78',
   pipeEdgeInner: '#bfffd4',
-  championBird: '#ff0000',
-  nonChampionBird: '#ffe94d',
+  championBird: '#ff4a8d',
+  nonChampionBird: '#00e5ff',
   leaderRing: '#ffffff',
   trail: '#875fff',
   currentRunText: '#00ff66',
@@ -27,8 +27,8 @@ export const FLAPPY_NEON_PALETTE = {
   groundGridLine: '#0a8ea0',
   groundGridGlow: 'rgba(10, 142, 160, 0.9)',
   groundGridFog: 'rgba(10, 142, 160, 0.55)',
-  groundGridPulseFill: '#8ef3ff',
-  groundGridPulseGlow: 'rgba(142, 243, 255, 0.92)',
+  groundGridPulseFill: '#fff14a',
+  groundGridPulseGlow: 'rgba(255, 241, 74, 0.92)',
 } as const;
 
 /** Neon bird palette for per-agent render color assignment. */

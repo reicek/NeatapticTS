@@ -83,34 +83,6 @@ Parameters:
 
 Returns: Nothing.
 
-### drawPlaybackHorizonLine
-
-`(context: CanvasRenderingContext2D, request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackHorizonLineRequest) => void`
-
-Draws the glowing horizon divider using the provided neon style.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `request` - - Width, aligned y-position, and style for the divider.
-
-Returns: Nothing.
-
-### drawPlaybackTiledImageRow
-
-`(context: CanvasRenderingContext2D, startXPx: number, tile: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTileImage, tileWidthPx: number, visibleWidthPx: number, offsetPx: number) => void`
-
-Draws a horizontally tiled image strip across the visible width.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `startXPx` - - Leftmost visible world x-position for the tiled strip.
-- `tile` - - Pre-rendered tile image reused across the sky band.
-- `tileWidthPx` - - Width of one repeated tile in pixels.
-- `visibleWidthPx` - - Current visible width that must be fully covered.
-- `offsetPx` - - Parallax scroll offset used to wrap tile placement.
-
-Returns: Nothing.
-
 ### paintPlaybackBackgroundBase
 
 `(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
@@ -163,6 +135,73 @@ Returns: Immutable scene context shared by the private render helpers.
 ### FLAPPY_BACKGROUND_TILE_ROW_START_INDEX
 
 ### FLAPPY_BACKGROUND_TRANSPARENT_SHADOW_COLOR
+
+## browser-entry/playback/background/playback.background.draw.services.ts
+
+### drawPlaybackBackgroundHorizon
+
+`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
+
+Draws the glowing horizon divider across the visible viewport.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `sceneContext` - - Derived scene geometry and style contract.
+
+Returns: Nothing.
+
+### drawPlaybackBackgroundSky
+
+`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext, request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => void`
+
+Draws the starfield parallax clipped to the upper sky band.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `sceneContext` - - Derived scene geometry and style contract.
+- `request` - - Narrow render input required for background composition.
+
+Returns: Nothing.
+
+### drawPlaybackHorizonLine
+
+`(context: CanvasRenderingContext2D, request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackHorizonLineRequest) => void`
+
+Draws the glowing horizon divider using the provided neon style.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `request` - - Width, aligned y-position, and style for the divider.
+
+Returns: Nothing.
+
+### drawPlaybackTiledImageRow
+
+`(context: CanvasRenderingContext2D, startXPx: number, tile: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTileImage, tileWidthPx: number, visibleWidthPx: number, offsetPx: number) => void`
+
+Draws a horizontally tiled image strip across the visible width.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `startXPx` - - Leftmost visible world x-position for the tiled strip.
+- `tile` - - Pre-rendered tile image reused across the sky band.
+- `tileWidthPx` - - Width of one repeated tile in pixels.
+- `visibleWidthPx` - - Current visible width that must be fully covered.
+- `offsetPx` - - Parallax scroll offset used to wrap tile placement.
+
+Returns: Nothing.
+
+### paintPlaybackBackgroundBase
+
+`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
+
+Paints the base background fill for the currently visible viewport.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `sceneContext` - - Derived scene geometry and style contract.
+
+Returns: Nothing.
 
 ## browser-entry/playback/background/playback.background.cache.services.ts
 
@@ -217,6 +256,19 @@ Parameters:
 - `visibleWorldHeightPx` - - Current visible world height in pixels.
 
 Returns: Cache key that changes whenever the page size changes.
+
+## browser-entry/playback/background/playback.background.scene.services.ts
+
+### resolvePlaybackBackgroundSceneContext
+
+`(request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext`
+
+Resolves the derived scene contract required by the background passes.
+
+Parameters:
+- `request` - - Narrow render input required for background composition.
+
+Returns: Immutable scene context shared by the private render helpers.
 
 ## browser-entry/playback/background/playback.background.utils.ts
 

@@ -204,9 +204,13 @@ function advanceBirdPhysics(frameContext: WorkerPlaybackFrameContext): void {
 function advancePipes(frameContext: WorkerPlaybackFrameContext): void {
   const { controlSubstepDelta, difficultyProfile, renderState, cameraLeftXPx } =
     frameContext;
+  const pipeTravelDistancePx =
+    difficultyProfile.pipeSpeedPxPerFrame * controlSubstepDelta;
+
+  renderState.cumulativePipeTravelPx += pipeTravelDistancePx;
 
   renderState.pipes.forEach((pipe) => {
-    pipe.xPx -= difficultyProfile.pipeSpeedPxPerFrame * controlSubstepDelta;
+    pipe.xPx -= pipeTravelDistancePx;
   });
 
   renderState.pipes = renderState.pipes.filter(

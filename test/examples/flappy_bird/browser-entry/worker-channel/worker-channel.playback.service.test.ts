@@ -121,6 +121,7 @@ function createPlaybackStepPayload(
     snapshot: {
       format: 'packed-v1',
       frameIndex,
+      cumulativePipeTravelPx: 0,
       visibleWorldWidthPx: 640,
       visibleWorldHeightPx: 480,
       pipeCount: 0,

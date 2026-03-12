@@ -31,6 +31,7 @@ export interface WorkerPopulationBird {
 /** Mutable simulation state stored between worker playback requests. */
 export interface WorkerPlaybackState {
   frameIndex: number;
+  cumulativePipeTravelPx: number;
   visibleWorldWidthPx: number;
   visibleWorldHeightPx: number;
   nextPipeId: number;
@@ -77,6 +78,7 @@ export interface WorkerPackedPlaybackBirdSnapshot {
 export interface WorkerPlaybackFrameSnapshot {
   format: 'packed-v1';
   frameIndex: number;
+  cumulativePipeTravelPx: number;
   visibleWorldWidthPx: number;
   visibleWorldHeightPx: number;
   pipeCount: number;

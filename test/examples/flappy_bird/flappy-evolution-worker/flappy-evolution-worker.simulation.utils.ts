@@ -55,6 +55,7 @@ export function createWorkerPopulationRenderState(
 
   return {
     frameIndex: 0,
+    cumulativePipeTravelPx: 0,
     visibleWorldWidthPx: initialVisibleWorldWidthPx,
     visibleWorldHeightPx: initialVisibleWorldHeightPx,
     nextPipeId: 2,

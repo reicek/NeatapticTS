@@ -27,6 +27,7 @@ export interface BrowserDifficultyProfile {
 /** Mutable render-state model consumed by the population frame renderer. */
 export interface PopulationRenderState {
   frameIndex: number;
+  cumulativePipeTravelPx: number;
   visibleWorldWidthPx: number;
   visibleWorldHeightPx: number;
   nextPipeId: number;

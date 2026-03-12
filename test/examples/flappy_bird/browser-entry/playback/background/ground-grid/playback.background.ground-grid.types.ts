@@ -21,6 +21,12 @@ export type PlaybackGroundGridVerticalGeometryFactory =
   () => PlaybackGroundGridVerticalGeometry;
 
 /**
+ * Lazy builder used when one vertical scene-metrics cache entry is missing.
+ */
+export type PlaybackGroundGridVerticalSceneMetricsFactory =
+  () => PlaybackGroundGridVerticalSceneMetrics;
+
+/**
  * Immutable scene context resolved for one lower-band ground-grid pass.
  */
 export type PlaybackBackgroundGroundGridSceneContext = {
@@ -132,6 +138,15 @@ export type PlaybackGroundGridVerticalGeometry = {
 };
 
 /**
+ * Cached scene metrics reused across matching vertical-grid frames.
+ */
+export type PlaybackGroundGridVerticalSceneMetrics = {
+  visibleAnchorBounds: PlaybackGroundGridAnchorBounds;
+  totalVisibleLaneCount: number;
+  safeLaneSpacingPx: number;
+};
+
+/**
  * Visible horizon bounds projected onto the bottom anchor line.
  */
 export type PlaybackGroundGridAnchorBounds = {
@@ -161,7 +176,7 @@ export type PlaybackGroundGridAnchorProjectionInput = {
  * Wrapped vertical-cycle state derived from scroll for one frame.
  */
 export type PlaybackGroundGridVerticalCycleContext = {
-  quantizedWrappedOffsetPx: number;
+  wrappedOffsetPx: number;
   safeLaneSpacingPx: number;
 };
 
@@ -174,6 +189,15 @@ export type PlaybackGroundGridPulseInput = {
   sceneContext: PlaybackBackgroundGroundGridSceneContext;
   visibleVerticalPulsePaths: readonly PlaybackGroundGridPulsePath[];
   verticalPulsePaths: readonly PlaybackGroundGridPulsePath[];
+};
+
+/**
+ * Timing state resolved for one deterministic ground-grid pulse slot.
+ */
+export type PlaybackGroundGridPulseTimingState = {
+  pulseSlotIndex: number;
+  pulseElapsedMs: number;
+  lifetimeProgressRatio: number;
 };
 
 /**
@@ -192,6 +216,15 @@ export type PlaybackGroundGridPulseTrackThicknessInput = {
   pulseCenterYPx: number;
   pulsePath: PlaybackGroundGridPulsePath;
   sceneContext: PlaybackBackgroundGroundGridSceneContext;
+};
+
+/**
+ * Cached continuation state used to keep one vertical pulse on the same ray.
+ */
+export type PlaybackGroundGridVerticalPulseContinuationState = {
+  centerXPx: number;
+  centerYPx: number;
+  frameIndex: number;
 };
 
 /**

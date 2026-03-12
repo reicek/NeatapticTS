@@ -57,6 +57,7 @@ export interface EvolutionWorkerErrorMessage {
 export interface EvolutionPlaybackStepSnapshot {
   format: 'packed-v1';
   frameIndex: number;
+  cumulativePipeTravelPx: number;
   visibleWorldWidthPx: number;
   visibleWorldHeightPx: number;
   pipeCount: number;
