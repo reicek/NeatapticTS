@@ -4437,7 +4437,7 @@ Ensure the genome has at least one connection by linking input to output.
 
 Parameters:
 - `genomeToSeed` - - genome that may need a bootstrap connection
-- `internal` - - neat controller context
+- `internal` - - neat controller context retained for compatibility with existing callers
 
 Returns: void
 
@@ -6581,7 +6581,7 @@ Returns: Objective value vector (length equals `descriptors.length`).
 
 ### buildMultiObjectiveMetrics
 
-`(population: import("src/architecture/network").default[]) => { rank: any; crowding: any; score: number; nodes: number; connections: number; }[]`
+`(population: import("src/architecture/network").default[]) => { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]`
 
 Build lightweight multi-objective metrics for each genome in the population.
 
@@ -8223,7 +8223,7 @@ Ensure the genome has at least one connection by linking input to output.
 
 Parameters:
 - `genomeToSeed` - - genome that may need a bootstrap connection
-- `internal` - - neat controller context
+- `internal` - - neat controller context retained for compatibility with existing callers
 
 Returns: void
 
@@ -9741,7 +9741,7 @@ Parameters:
 
 ### buildMultiObjectiveMetrics
 
-`(population: import("src/architecture/network").default[]) => { rank: any; crowding: any; score: number; nodes: number; connections: number; }[]`
+`(population: import("src/architecture/network").default[]) => { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]`
 
 Build lightweight multi-objective metrics for each genome in the population.
 

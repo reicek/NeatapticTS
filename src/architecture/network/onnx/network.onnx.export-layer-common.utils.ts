@@ -7,9 +7,7 @@ import type {
   DenseWeightRowCollectionContext,
   DiagonalRecurrentBuildContext,
   FlattenAfterPoolingContext,
-  IndexedMetadataAppendContext,
   NodeInternals,
-  OnnxExportOptions,
   OnnxMetadataProperty,
   OnnxModel,
   OptionalPoolingAndFlattenParams,
@@ -17,7 +15,6 @@ import type {
   PoolingEmissionContext,
   Pool2DMapping,
   RecurrentRowCollectionContext,
-  SpecMetadataAppendContext,
 } from './network.onnx.utils.types';
 
 /**
@@ -106,11 +103,6 @@ export function appendIndexedMetadata(
   layerIndex: number,
 ): void {
   // Step 1: Resolve append context and metadata registry.
-  const appendContext: IndexedMetadataAppendContext = {
-    model,
-    key,
-    layerIndex,
-  };
   const metadataRegistry = ensureMetadataRegistry(model);
   const existingProperty = findMetadataProperty(metadataRegistry, key);
 
@@ -140,7 +132,6 @@ export function appendMetadataSpec(
   spec: Conv2DMapping | Pool2DMapping,
 ): void {
   // Step 1: Resolve append context and metadata registry.
-  const appendContext: SpecMetadataAppendContext = { model, key, spec };
   const metadataRegistry = ensureMetadataRegistry(model);
   const existingProperty = findMetadataProperty(metadataRegistry, key);
 

@@ -3,10 +3,7 @@ import type {
   PlaybackBackgroundGroundGridResolvedScene,
   PlaybackGroundGridGeometry,
 } from './playback.background.ground-grid.types';
-import {
-  drawGroundGridSegmentBatch,
-  drawGroundGridSegmentBatches,
-} from './playback.background.ground-grid.batch.services';
+import { drawGroundGridSegmentBatches } from './playback.background.ground-grid.batch.services';
 import {
   drawGroundGridFog,
   drawGroundGridPulse,

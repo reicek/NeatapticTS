@@ -323,7 +323,7 @@ export class MazeVisualization {
           const dy = cellY - prevY;
 
           // Replace chained if/else with a switch for clarity and JIT-friendliness.
-          let currentDirection = '';
+          let currentDirection: string;
           switch (true) {
             case dx > 0:
               currentDirection = 'E';
@@ -538,7 +538,7 @@ export class MazeVisualization {
     bar += endCap;
 
     // --- Step 3: choose color based on progress using a switch for clarity ---
-    let barColor = colors.cyanNeon;
+    let barColor: string;
     switch (true) {
       case clampedProgress < 30:
         barColor = colors.neonYellow;

@@ -280,16 +280,17 @@ function resolveNetworkVisualizationScene(
     graphPaddingContext,
   );
 
+  // Step 3: Fold the resolved scene state for downstream drawing helpers.
   return {
     canvasWidthPx,
     canvasHeightPx,
     architectureLabel,
     colorScales,
     hideNetworkOverlays,
-    graphTopPaddingPx: graphPaddingContext.graphTopPaddingPx,
-    graphBottomPaddingPx: graphPaddingContext.graphBottomPaddingPx,
     graphLeftPaddingPx: graphPaddingContext.graphLeftPaddingPx,
+    graphTopPaddingPx: graphPaddingContext.graphTopPaddingPx,
     graphRightPaddingPx: graphPaddingContext.graphRightPaddingPx,
+    graphBottomPaddingPx: graphPaddingContext.graphBottomPaddingPx,
     adjustedGraphLeftPaddingPx: adjustedGraphPaddingContext.graphLeftPaddingPx,
     adjustedGraphRightPaddingPx:
       adjustedGraphPaddingContext.graphRightPaddingPx,
@@ -297,7 +298,7 @@ function resolveNetworkVisualizationScene(
 }
 
 /**
- * Paints the base network visualization canvas background.
+ * Paints the static background fill for the network visualization canvas.
  *
  * @param context - Canvas 2D drawing context.
  * @param networkVisualizationScene - Frame scene context.
@@ -307,15 +308,7 @@ function paintNetworkVisualizationCanvasBase(
   context: CanvasRenderingContext2D,
   networkVisualizationScene: NetworkVisualizationScene,
 ): void {
-  // Step 1: Clear the full canvas before repainting the current frame.
-  context.clearRect(
-    0,
-    0,
-    networkVisualizationScene.canvasWidthPx,
-    networkVisualizationScene.canvasHeightPx,
-  );
-
-  // Step 2: Fill the visualization panel background.
+  context.save();
   context.fillStyle = FLAPPY_UI_NETWORK_CANVAS_BACKGROUND;
   context.fillRect(
     0,
@@ -323,6 +316,7 @@ function paintNetworkVisualizationCanvasBase(
     networkVisualizationScene.canvasWidthPx,
     networkVisualizationScene.canvasHeightPx,
   );
+  context.restore();
 }
 
 /**
@@ -583,38 +577,6 @@ function resolveNetworkTopologySummary(
       ...networkLayers.map((layerNodes) => layerNodes.length),
     ),
   };
-}
-
-/**
- * Resolves node rectangle dimensions from topology density and drawable bounds.
- *
- * @param network - Network to visualize.
- * @param inputSize - Input-layer size.
- * @param outputSize - Output-layer size.
- * @param drawableWidthPx - Drawable graph width.
- * @param drawableHeightPx - Drawable graph height.
- * @returns Node dimensions.
- */
-function resolveNetworkNodeDimensions(
-  network: Network | undefined,
-  inputSize: number,
-  outputSize: number,
-  drawableWidthPx: number,
-  drawableHeightPx: number,
-): NetworkNodeDimensions {
-  // Step 1: Resolve the shared topology summary once for the sizing helpers.
-  const networkTopologySummary = resolveNetworkTopologySummary(
-    network,
-    inputSize,
-    outputSize,
-  );
-
-  // Step 2: Delegate the actual sizing rules to the topology-aware helper.
-  return resolveNetworkNodeDimensionsFromTopologySummary(
-    networkTopologySummary,
-    drawableWidthPx,
-    drawableHeightPx,
-  );
 }
 
 /**

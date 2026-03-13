@@ -15,7 +15,6 @@
  *
  * All `any` usage here is intentional, documented, and necessary for the evolution architecture.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import Network from '../architecture/network';
 import type { NeatControllerForEvolution } from './neat.evolve.types';

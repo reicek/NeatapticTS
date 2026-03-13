@@ -34,7 +34,6 @@ import type {
  * @param connection - Connection object expected to contain `from.index` and `to.index`.
  * @returns A numeric innovation id derived from the (from, to) index pair.
  */
-// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export const _fallbackInnov = function (
   this: NeatLikeForCompat,
   connection: ConnectionLike,

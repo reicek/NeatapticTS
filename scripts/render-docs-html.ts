@@ -10,6 +10,18 @@ import { marked } from 'marked';
 const DOCS_DIR = path.resolve('docs');
 const THEME_CSS_SOURCE_PATH = path.resolve('scripts', 'assets', 'theme.css');
 const THEME_CSS_OUTPUT_PATH = path.join(DOCS_DIR, 'assets', 'theme.css');
+const MERMAID_MODULE_SOURCE_PATH = path.resolve(
+  'node_modules',
+  'mermaid',
+  'dist',
+  'mermaid.esm.min.mjs',
+);
+const MERMAID_MODULE_OUTPUT_PATH = path.join(
+  DOCS_DIR,
+  'assets',
+  'vendor',
+  'mermaid.esm.min.mjs',
+);
 const NN_IMAGE_SOURCE_PATH = path.resolve('nn.jpg');
 const NN_IMAGE_FALLBACK_SOURCE_PATH = path.resolve(
   'scripts',
@@ -83,9 +95,20 @@ async function ensureThemeCss(): Promise<void> {
   await fs.copyFile(THEME_CSS_SOURCE_PATH, THEME_CSS_OUTPUT_PATH);
 }
 
+async function ensureMermaidModule(): Promise<void> {
+  // Step 1: Skip Mermaid bootstrapping when the browser bundle is unavailable.
+  const hasMermaidModule = await fs.pathExists(MERMAID_MODULE_SOURCE_PATH);
+  if (!hasMermaidModule) return;
+
+  // Step 2: Copy the local Mermaid ESM bundle used by generated docs pages.
+  await fs.ensureDir(path.dirname(MERMAID_MODULE_OUTPUT_PATH));
+  await fs.copyFile(MERMAID_MODULE_SOURCE_PATH, MERMAID_MODULE_OUTPUT_PATH);
+}
+
 async function ensureStaticDocsAssets(): Promise<void> {
   // Step 1: Ensure core theme assets are present.
   await ensureThemeCss();
+  await ensureMermaidModule();
 
   // Step 2: Ensure the README hero image resolves when served from `/docs/`.
   // The root README is copied into `docs/README.md`, so `<img src="nn.jpg">`
@@ -108,6 +131,57 @@ function slugify(s: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-');
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildMermaidBootstrapScript(relToRoot: string): string {
+  const mermaidModuleHref =
+    (relToRoot ? `${relToRoot}/` : '') + 'assets/vendor/mermaid.esm.min.mjs';
+
+  return `<script type="module">
+import mermaid from "${mermaidModuleHref}";
+
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'loose',
+  theme: 'base',
+  themeVariables: {
+    darkMode: true,
+    background: '#121a24',
+    primaryColor: '#102131',
+    primaryTextColor: '#d7e4f3',
+    primaryBorderColor: '#5ec8ff',
+    secondaryColor: '#0f1722',
+    secondaryTextColor: '#d7e4f3',
+    secondaryBorderColor: '#5ec8ff',
+    tertiaryColor: '#16283a',
+    tertiaryTextColor: '#d7e4f3',
+    tertiaryBorderColor: '#ffbf69',
+    mainBkg: '#0f1722',
+    nodeBorder: '#5ec8ff',
+    clusterBkg: '#102131',
+    clusterBorder: '#5ec8ff',
+    lineColor: '#5ec8ff',
+    edgeLabelBackground: '#0f1722',
+    textColor: '#d7e4f3',
+    fontFamily: 'Open Sans, sans-serif'
+  }
+});
+
+try {
+  await mermaid.run({ querySelector: '.mermaid-diagram' });
+} catch (error) {
+  console.error('[docs] Mermaid render failed.', error);
+}
+</script>`;
 }
 
 function buildExamplesLinksHtml(currentDir: string): string {
@@ -237,7 +311,8 @@ async function main() {
     }
     // Configure marked renderer with deterministic heading IDs so anchors match our TOC.
     const renderer = new marked.Renderer();
-    const originalHeading = renderer.heading?.bind(renderer);
+    const originalCode = renderer.code?.bind(renderer);
+    let hasMermaidDiagram = false;
     // Marked >= v16 passes a single Heading token object { text, depth, raw, tokens }
     // See: https://marked.js.org/using_pro#renderer for updated signature.
     (renderer as any).heading = ({ text, depth, raw }: any) => {
@@ -247,6 +322,16 @@ async function main() {
         .trim();
       const id = slugify(source);
       return `<h${depth} id="${id}">${text}</h${depth}>`;
+    };
+    (renderer as any).code = ({ text, lang }: any) => {
+      if ((lang ?? '').toString().trim().toLowerCase() === 'mermaid') {
+        hasMermaidDiagram = true;
+        return `<pre class="mermaid mermaid-diagram">${escapeHtml(
+          (text ?? '').toString(),
+        )}</pre>`;
+      }
+
+      return originalCode?.({ text, lang }) ?? '';
     };
     marked.use({ renderer });
     const htmlBody = marked.parse(md, { async: false });
@@ -272,6 +357,9 @@ async function main() {
       .relative(path.dirname(meta.abs), DOCS_DIR)
       .replace(/\\/g, '/');
     const cssHref = (relToRoot ? relToRoot + '/' : '') + 'assets/theme.css';
+    const mermaidBootstrapScript = hasMermaidDiagram
+      ? buildMermaidBootstrapScript(relToRoot)
+      : '';
     // Add Examples top-level nav; active when current dir starts with examples
     const examplesHref = (relToRoot || '.') + '/examples/index.html';
     const onExamples = meta.relDir.startsWith('examples');
@@ -289,7 +377,7 @@ async function main() {
       relToRoot || '.'
     }/index.html"${docsActive}>Docs</a><a href="${examplesHref}"${examplesActive}>Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar">${navHtmlFor(
       meta.relDir,
-    )}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc">${toc}</aside></div></body></html>`;
+    )}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc">${toc}</aside></div>${mermaidBootstrapScript}</body></html>`;
     await writeFileWithRetry(outFile, page, 'utf8');
   }
   console.log('HTML docs generated.');

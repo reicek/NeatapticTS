@@ -26,7 +26,7 @@ describe('resolvePlaybackGroundGridPulse', () => {
       verticalPulsePaths,
       visibleVerticalPulsePaths: verticalPulsePaths.slice(1, 3),
     });
-    const secondPulse = resolvePlaybackGroundGridPulse({
+    resolvePlaybackGroundGridPulse({
       frameIndex: startingFrameIndex + 1,
       horizontalPulsePaths: [],
       sceneContext,
@@ -44,7 +44,7 @@ describe('resolvePlaybackGroundGridPulse', () => {
       sceneContext,
       verticalPulsePaths,
     );
-    const firstPulse = resolvePlaybackGroundGridPulse({
+    resolvePlaybackGroundGridPulse({
       frameIndex: startingFrameIndex,
       horizontalPulsePaths: [],
       sceneContext,

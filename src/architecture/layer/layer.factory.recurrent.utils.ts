@@ -702,11 +702,7 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
     method?: unknown,
     weight?: number,
   ) => Connection[] {
-    return (
-      from: LayerLike | Group,
-      _method?: unknown,
-      _weight?: number,
-    ): Connection[] => {
+    return (from: LayerLike | Group): Connection[] => {
       const sourceGroup = resolveSourceGroup(factoryContext, from);
       const inputBlock = resolveMemoryInputBlock(layerNodes);
       assertMemoryInputSize(sourceGroup, inputBlock);

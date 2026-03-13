@@ -19,6 +19,13 @@ export interface OffspringContext {
   ensureNoDeadEnds?: (genome: Network) => void;
 }
 
+type OffspringMetadataCarrier = Network & {
+  _reenableProb?: number;
+  _id?: number;
+  _parents?: Array<number | undefined>;
+  _depth?: number;
+};
+
 /**
  * Create a child genome by crossing two parents selected via the provided callback.
  *
@@ -78,22 +85,23 @@ function annotateOffspringMetadata(
   parentOne: Network,
   parentTwo: Network,
 ): void {
-  (offspring as any)._reenableProb = context.options.reenableProb;
-  (offspring as any)._id = context._nextGenomeId++;
+  const offspringMetadata = offspring as OffspringMetadataCarrier;
+  const parentOneMetadata = parentOne as OffspringMetadataCarrier;
+  const parentTwoMetadata = parentTwo as OffspringMetadataCarrier;
+
+  offspringMetadata._reenableProb = context.options.reenableProb;
+  offspringMetadata._id = context._nextGenomeId++;
 
   if (!context._lineageEnabled) return;
 
-  const parentOneDepth = (parentOne as any)._depth ?? LINEAGE_BASE_DEPTH;
-  const parentTwoDepth = (parentTwo as any)._depth ?? LINEAGE_BASE_DEPTH;
+  const parentOneDepth = parentOneMetadata._depth ?? LINEAGE_BASE_DEPTH;
+  const parentTwoDepth = parentTwoMetadata._depth ?? LINEAGE_BASE_DEPTH;
 
-  (offspring as any)._parents = [
-    (parentOne as any)._id,
-    (parentTwo as any)._id,
-  ];
-  (offspring as any)._depth =
+  offspringMetadata._parents = [parentOneMetadata._id, parentTwoMetadata._id];
+  offspringMetadata._depth =
     LINEAGE_DEPTH_INCREMENT + Math.max(parentOneDepth, parentTwoDepth);
 
-  if ((parentOne as any)._id === (parentTwo as any)._id) {
+  if (parentOneMetadata._id === parentTwoMetadata._id) {
     context._lastInbreedingCount = (context._lastInbreedingCount ?? 0) + 1;
   }
 }

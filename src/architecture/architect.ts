@@ -298,7 +298,6 @@ export default class Architect {
    */
   static lstm(...layerArgs: (number | { inputToOutput?: boolean })[]): Network {
     let options: { inputToOutput?: boolean } = {};
-    let layers: number[] = [];
 
     // Check if the last argument is an options object.
     if (
@@ -322,7 +321,7 @@ export default class Architect {
         'Invalid LSTM layer arguments: All layer sizes must be positive finite numbers.',
       );
     }
-    layers = layerArgs as number[]; // Type assertion is safe after validation.
+    const layers = layerArgs as number[]; // Type assertion is safe after validation.
 
     // Ensure at least input, one hidden (LSTM), and output layers are specified.
     if (layers.length < 3) {

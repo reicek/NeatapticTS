@@ -878,31 +878,13 @@ const medianOfThreePivot = (
   const rightIndex = indexBuf[hi];
 
   const popRef = population ?? EMPTY_VEC;
+  const orderedScores = [
+    popRef[leftIndex]?.score ?? Number.NEGATIVE_INFINITY,
+    popRef[middleIndex]?.score ?? Number.NEGATIVE_INFINITY,
+    popRef[rightIndex]?.score ?? Number.NEGATIVE_INFINITY,
+  ].toSorted((leftScore, rightScore) => leftScore - rightScore);
 
-  let leftScore = popRef[leftIndex]?.score ?? Number.NEGATIVE_INFINITY;
-  let middleScore = popRef[middleIndex]?.score ?? Number.NEGATIVE_INFINITY;
-  let rightScore = popRef[rightIndex]?.score ?? Number.NEGATIVE_INFINITY;
-
-  // Sort three scores to find median.
-  if (leftScore > middleScore) {
-    const tmp = leftScore;
-    leftScore = middleScore;
-    middleScore = tmp;
-  }
-
-  if (middleScore > rightScore) {
-    const tmp = middleScore;
-    middleScore = rightScore;
-    rightScore = tmp;
-
-    if (leftScore > middleScore) {
-      const tmp2 = leftScore;
-      leftScore = middleScore;
-      middleScore = tmp2;
-    }
-  }
-
-  return middleScore as number;
+  return orderedScores[1] ?? Number.NEGATIVE_INFINITY;
 };
 
 /**

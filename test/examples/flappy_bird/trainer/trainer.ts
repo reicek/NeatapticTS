@@ -1,10 +1,4 @@
 import { pathToFileURL } from 'node:url';
-import { rolloutEpisode } from '../flappyEvaluation';
-import type {
-  FlappyTrainerNetwork,
-  FlappyTrainerRuntimeState,
-  FlappyTrainerSetup,
-} from './trainer.types';
 import {
   FLAPPY_TRAINER_DEFAULT_RNG_SEED,
   FLAPPY_TRAINER_STOPPED_MESSAGE,
@@ -83,7 +77,6 @@ export async function runTrainer(): Promise<void> {
     logGenerationSummary,
   );
 
-  // eslint-disable-next-line no-console
   console.log(FLAPPY_TRAINER_STOPPED_MESSAGE);
 }
 
@@ -97,7 +90,6 @@ export async function runTrainer(): Promise<void> {
  * @returns Nothing.
  */
 export function handleTrainerMainError(error: unknown): void {
-  // eslint-disable-next-line no-console
   console.error(formatTrainerErrorMessage(error));
   process.exitCode = 1;
 }

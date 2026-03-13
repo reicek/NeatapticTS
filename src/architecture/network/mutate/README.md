@@ -12,8 +12,6 @@
 
 ### GATE_REASSIGN_THRESHOLD
 
-### LAYER_MODULE_PATH
-
 ### MIN_REDUNDANT_CONNECTION_COUNT
 
 ### MIN_SWAPPABLE_NODE_COUNT
@@ -271,30 +269,6 @@ This operation is skipped in acyclic mode.
 
 Parameters:
 - `this` - - Bound network.
-
-Returns: Nothing.
-
-### appendBackwardCandidatesForLaterNode
-
-`(traversalContext: import("src/architecture/network/network.types").BackwardCandidateTraversalContext, backwardConnectionCandidates: import("src/architecture/network/network.types").NodePair[]) => void`
-
-Appends backward candidates for one later-node traversal context.
-
-Parameters:
-- `traversalContext` - - Later-node traversal context.
-- `backwardConnectionCandidates` - - Collector array.
-
-Returns: Nothing.
-
-### appendForwardCandidatesForSource
-
-`(traversalContext: import("src/architecture/network/network.types").ForwardCandidateTraversalContext, forwardConnectionCandidates: import("src/architecture/network/network.types").NodePair[]) => void`
-
-Appends forward candidates for a single source-node traversal context.
-
-Parameters:
-- `traversalContext` - - Source traversal context.
-- `forwardConnectionCandidates` - - Collector array.
 
 Returns: Nothing.
 

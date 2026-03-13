@@ -20,13 +20,15 @@ const DEFAULT_INNOVATION_ID = 0;
  * Ensure the genome has at least one connection by linking input to output.
  *
  * @param genomeToSeed - genome that may need a bootstrap connection
- * @param internal - neat controller context
+ * @param internal - neat controller context retained for compatibility with existing callers
  * @returns void
  */
 export function ensureBootstrapConnection(
   genomeToSeed: GenomeWithMetadata,
   internal: NeatControllerForMutation,
 ): void {
+  void internal;
+
   // Step 1: return when any connections exist.
   if (genomeToSeed.connections.length > 0) return;
 

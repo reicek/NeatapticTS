@@ -1,7 +1,3 @@
-import {
-  FLAPPY_BIRD_RADIUS_PX,
-  FLAPPY_BIRD_X_PX,
-} from '../../../constants/constants';
 import type {
   PopulationRenderState,
   TrailState,

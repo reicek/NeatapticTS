@@ -164,6 +164,22 @@ pre {
   border: 1px solid #1c2634;
   overflow: auto;
 }
+.mermaid-diagram {
+  background:
+    radial-gradient(circle at top, rgba(94, 200, 255, 0.12), transparent 55%),
+    linear-gradient(180deg, rgba(16, 33, 49, 0.98), rgba(10, 18, 28, 0.98));
+  border: 1px solid rgba(94, 200, 255, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 191, 105, 0.06);
+}
+.mermaid-diagram[data-processed='true'] {
+  padding: 18px;
+}
+.mermaid-diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
 table {
   width: 100%;
   border-collapse: collapse;

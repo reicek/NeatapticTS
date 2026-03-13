@@ -1,5 +1,10 @@
 import type Network from '../architecture/network';
 
+type MultiObjectiveAnnotatedNetwork = Network & {
+  _moRank?: number;
+  _moCrowd?: number;
+};
+
 /** Default number of Pareto fronts returned by accessors. */
 export const DEFAULT_MAX_PARETO_FRONTS = 3;
 
@@ -14,8 +19,8 @@ export const DEFAULT_PARETO_ARCHIVE_JSONL_MAX = 100;
  */
 export function buildMultiObjectiveMetrics(population: Network[]) {
   return population.map((genome) => ({
-    rank: (genome as any)._moRank ?? 0,
-    crowding: (genome as any)._moCrowd ?? 0,
+    rank: (genome as MultiObjectiveAnnotatedNetwork)._moRank ?? 0,
+    crowding: (genome as MultiObjectiveAnnotatedNetwork)._moCrowd ?? 0,
     score: genome.score || 0,
     nodes: genome.nodes.length,
     connections: genome.connections.length,
@@ -35,7 +40,9 @@ export function reconstructParetoFronts(
   const paretoFronts: Network[][] = [];
   for (let frontIndex = 0; frontIndex < maxFronts; frontIndex++) {
     const frontMembers = population.filter(
-      (genome) => ((genome as any)._moRank ?? 0) === frontIndex,
+      (genome) =>
+        ((genome as MultiObjectiveAnnotatedNetwork)._moRank ?? 0) ===
+        frontIndex,
     );
     if (!frontMembers.length) break;
     paretoFronts.push(frontMembers);

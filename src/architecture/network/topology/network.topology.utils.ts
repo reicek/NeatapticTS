@@ -67,7 +67,6 @@ export function computeTopoOrder(this: Network): void {
 }
 
 /** Depth-first reachability test (avoids infinite loops via visited set). */
-// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function hasPath(this: Network, from: Node, to: Node): boolean {
   // Step 1: Handle trivial reachability.
   if (isSameNode(from, to)) {

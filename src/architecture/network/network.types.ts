@@ -1,11 +1,7 @@
 import type Network from '../network';
 import type Node from '../node';
 import type Connection from '../connection';
-import type { ActivationFunction } from '../../methods/activation.utils';
-import type {
-  TestWorkerConstructor,
-  TestWorkerInstance,
-} from '../../multithreading/types';
+import type { TestWorkerInstance } from '../../multithreading/types';
 
 export * from './onnx/network.onnx.utils.types';
 export * from './slab/network.slab.utils.types';
@@ -795,7 +791,7 @@ export interface OptimizerConfigBase {
  * This is intentionally loose: serialization formats evolve and may include nested
  * structures. Treat this as an opaque snapshot blob.
  */
-export type SerializedNetwork = Record<string, any>;
+export type SerializedNetwork = Record<string, unknown>;
 
 /**
  * Checkpoint callback configuration.

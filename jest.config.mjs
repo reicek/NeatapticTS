@@ -24,8 +24,7 @@ const config = {
       testTimeout: 300000,
       collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
       coverageReporters: ['lcov', 'text', 'html'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-      verbose: process.env.JEST_VERBOSE === '1'
+      testPathIgnorePatterns: ['/node_modules/', '/dist/']
     },
     {
       displayName: 'asciiMaze-browser',
@@ -61,7 +60,6 @@ const config = {
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
   coverageReporters: ['lcov', 'text', 'html'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-  verbose: process.env.JEST_VERBOSE === '1',
   globals: {
     __SHOW_CONSOLE_FOR__: process.env.JEST_SHOW_CONSOLE_FOR || ''
   }

@@ -42,7 +42,6 @@ export function _speciate<
   TOptions extends SpeciationOptions = SpeciationOptions,
 >(this: SpeciationHarnessContext<TOptions>) {
   const options = this.options;
-  const speciationContext = this;
   const compatAdjust: CompatAdjust = options.compatAdjust ?? {};
   const minThreshold =
     compatAdjust.minThreshold ??
@@ -54,26 +53,26 @@ export function _speciate<
     DEFAULT_MAX_COMPATIBILITY_THRESHOLD;
 
   // 1) Snapshot current memberships for telemetry.
-  snapshotPreviousMembers(speciationContext);
+  snapshotPreviousMembers(this);
   // 2) Clear members and reassign population.
-  resetSpeciesMembers(speciationContext);
-  assignPopulationToSpecies(speciationContext, options);
+  resetSpeciesMembers(this);
+  assignPopulationToSpecies(this, options);
   // 3) Update adaptive compatibility threshold.
   adjustCompatibilityThreshold(
-    speciationContext,
+    this,
     options,
     compatAdjust,
     minThreshold,
     maxThreshold,
   );
   // 4) Prune and refresh representatives.
-  refreshSpeciesRepresentatives(speciationContext);
+  refreshSpeciesRepresentatives(this);
   // 5) Apply age-based protection penalties.
-  applyAgeProtection(speciationContext, options);
+  applyAgeProtection(this, options);
   // 6) Record history snapshot.
-  recordHistory(speciationContext, options);
+  recordHistory(this, options);
   // 7) Trim history buffer.
-  trimHistory(speciationContext);
+  trimHistory(this);
 }
 
 /**
@@ -87,7 +86,6 @@ export function _applyFitnessSharing(
     _compatibilityDistance: (a: GenomeDetailed, b: GenomeDetailed) => number;
   },
 ) {
-  const speciationContext = this;
   interface OptionsWithSharing {
     sharingSigma?: number;
   }
@@ -95,7 +93,7 @@ export function _applyFitnessSharing(
     (this.options as OptionsWithSharing).sharingSigma ?? DEFAULT_SHARING_SIGMA;
 
   // 1) Apply the configured sharing strategy.
-  applyFitnessSharing(speciationContext, sharingSigma);
+  applyFitnessSharing(this, sharingSigma);
 }
 
 /**
@@ -119,7 +117,6 @@ export function _sortSpeciesMembers(species: SpeciesLike) {
 export function _updateSpeciesStagnation(
   this: NeatLike & { _species: SpeciesLike[]; generation: number },
 ) {
-  const speciationContext = this;
   interface OptionsWithStagnation {
     stagnationGenerations?: number;
   }
@@ -128,9 +125,5 @@ export function _updateSpeciesStagnation(
     DEFAULT_STAGNATION_WINDOW;
 
   // 1) Update per-species stagnation metrics and prune survivors.
-  updateSpeciesStagnation(
-    speciationContext,
-    stagnationWindow,
-    _sortSpeciesMembers,
-  );
+  updateSpeciesStagnation(this, stagnationWindow, _sortSpeciesMembers);
 }

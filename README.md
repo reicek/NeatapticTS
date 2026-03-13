@@ -297,7 +297,8 @@ Pull requests that improve clarity, examples, or diagnostics are welcome. Please
 1. Read `STYLEGUIDE.md` (naming, JSDoc, tests: single expect rule).
 2. Add / update tests for behavior changes (`npm test`).
 3. Update JSDoc in source; run `npm run docs` to regenerate outputs.
-4. Keep patches focused; include brief rationale in PR description.
+4. Validate Mermaid diagrams locally with `npm run docs:mermaid:validate -- --input path/to/diagram.mmd` or export SVG/PNG with `npm run docs:mermaid:export -- --input path/to/diagram.mmd --output path/to/diagram.svg`.
+5. Keep patches focused; include brief rationale in PR description.
 
 ## License & Attribution
 

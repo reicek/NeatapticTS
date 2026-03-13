@@ -155,7 +155,7 @@ const TOTAL_STEPS_ERROR_MESSAGE = 'totalSteps must be > 0';
  * @returns A learning rate schedule that ignores iteration and returns baseRate.
  */
 export function createFixedRateSchedule(): RateSchedule {
-  return (baseRate: number, unusedIteration: number): number => {
+  return (baseRate: number): number => {
     return baseRate;
   };
 }

@@ -1,27 +1,14 @@
 import type { Neat } from '../../../../src/neataptic';
 import type Network from '../../../../src/architecture/network';
 import { createXorshift32 } from '../rng';
-import {
-  commitObservationMemoryStep,
-  resolveFlapDecision,
-  resolveObservationVector,
-} from '../browser-entry/browser-entry.observation.utils';
-import { sampleGapCenterY } from '../browser-entry/browser-entry.spawn.utils';
+import { resolveObservationVector } from '../browser-entry/browser-entry.observation.utils';
 import type {
   WorkerHeuristicObservationFeatures,
   WorkerPopulationPipe,
 } from './flappy-evolution-worker.types';
-import { FLAPPY_BIRD_VIEWPORT_X_RATIO } from '../constants/constants';
 import {
-  FLAPPY_BIRD_RADIUS_PX,
   FLAPPY_BIRD_X_PX,
-  FLAPPY_PIPE_COLLISION_ENTRANCE_EXPAND_PX,
-  FLAPPY_PIPE_COLLISION_SIDE_EXPAND_PX,
-  FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,
-  FLAPPY_FLAP_VELOCITY_PX_PER_FRAME,
-  FLAPPY_GRAVITY_PX_PER_FRAME2,
   FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
-  FLAPPY_PIPE_WIDTH_PX,
   FLAPPY_WORLD_HEIGHT_PX,
 } from '../constants/constants';
 import {

@@ -377,13 +377,11 @@ export function exportSpeciesHistoryCSV(
   },
   maxEntries = DEFAULT_SPECIES_HISTORY_MAX_ENTRIES,
 ): string {
-  /** Bound Neat instance for helper access without implicit `this` typing. */
-  const neatInstance = this;
   /**
    * Ensure the species history structure exists on the instance.
    * Returned array is the canonical backing store used throughout export.
    */
-  const speciesHistory = ensureSpeciesHistoryArray(neatInstance);
+  const speciesHistory = ensureSpeciesHistoryArray(this);
 
   /**
    * If species history is empty but species are present, create a minimal
@@ -392,7 +390,7 @@ export function exportSpeciesHistoryCSV(
    * has run.
    */
   ensureMinimalSpeciesSnapshot(
-    neatInstance,
+    this,
     speciesHistory,
     DEFAULT_SPECIES_HISTORY_GENERATION,
     DEFAULT_SPECIES_ID,

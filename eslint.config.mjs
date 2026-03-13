@@ -49,7 +49,7 @@ export default defineConfig([
     rules: {
       'no-var': 'error',
       'prefer-const': 'error',
-      'prefer-arrow/prefer-arrow-functions': 'error',
+      'prefer-arrow/prefer-arrow-functions': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
     },

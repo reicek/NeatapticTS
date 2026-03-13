@@ -1,6 +1,5 @@
 import type NeatapticNode from '../../node';
 import type {
-  ActivationSquashFunction,
   DenseActivationContext,
   DenseActivationNodePayload,
   DenseGemmNodePayload,
@@ -12,7 +11,6 @@ import type {
   DenseTensorNames,
   NodeInternals,
   OptionalLayerOutputParams,
-  OnnxExportOptions,
   OnnxModel,
   PerNeuronConcatNodePayload,
   PerNeuronGraphNames,

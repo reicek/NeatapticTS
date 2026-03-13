@@ -12,7 +12,6 @@ import type {
   WorkerStartPlaybackMessage,
 } from './flappy-evolution-worker.types';
 import { createInitializedWorkerRuntime } from './flappy-evolution-worker.runtime.service';
-import { FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION } from '../constants/constants';
 import {
   createWorkerErrorMessage,
   createWorkerErrorMessageFromUnknown,

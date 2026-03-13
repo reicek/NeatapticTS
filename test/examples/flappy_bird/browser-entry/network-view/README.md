@@ -100,7 +100,7 @@ input-group bands.
 
 `(context: CanvasRenderingContext2D, networkVisualizationScene: NetworkVisualizationScene) => void`
 
-Paints the base network visualization canvas background.
+Paints the static background fill for the network visualization canvas.
 
 Parameters:
 - `context` - - Canvas 2D drawing context.
@@ -169,21 +169,6 @@ Parameters:
 - `networkVisualizationScene` - - Frame scene context.
 
 Returns: Drawable area dimensions.
-
-### resolveNetworkNodeDimensions
-
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number, drawableWidthPx: number, drawableHeightPx: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike`
-
-Resolves node rectangle dimensions from topology density and drawable bounds.
-
-Parameters:
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
-- `drawableWidthPx` - - Drawable graph width.
-- `drawableHeightPx` - - Drawable graph height.
-
-Returns: Node dimensions.
 
 ### resolveNetworkNodeDimensionsFromTopologySummary
 

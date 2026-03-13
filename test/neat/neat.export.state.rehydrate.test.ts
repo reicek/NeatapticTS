@@ -12,7 +12,8 @@ describe('NEAT Export / Import State', () => {
     const fitness = (n: Network) => n.nodes.length;
     test('throws on invalid state bundle', async () => {
       // Arrange: capture callable that will invoke static import with bad input
-      const act = async () => await Neat.importState(undefined as any, fitness);
+      const act = async () =>
+        await Neat.importState(undefined as unknown as NeatStateJSON, fitness);
       // Act & Assert: expect error thrown (single expectation)
       await expect(act()).rejects.toThrow();
     });

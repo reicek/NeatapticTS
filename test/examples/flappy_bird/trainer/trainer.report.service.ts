@@ -131,6 +131,5 @@ export function logGenerationSummary(
     mutationSchedule,
   );
 
-  // eslint-disable-next-line no-console
   console.log(logParts.join(FLAPPY_TRAINER_LOG_PARTS_DELIMITER));
 }
