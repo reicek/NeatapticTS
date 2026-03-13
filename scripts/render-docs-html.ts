@@ -2,6 +2,9 @@
  * Converts every README.md inside docs/ (including root copy) into an index.html in the same directory.
  * Usage: npm run docs:html
  */
+import { spawn } from 'node:child_process';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
 import fg from 'fast-glob';
 import path from 'path';
 import fs from 'fs-extra';
@@ -22,6 +25,7 @@ const MERMAID_MODULE_OUTPUT_PATH = path.join(
   'vendor',
   'mermaid.esm.min.mjs',
 );
+const MERMAID_CLI_SCRIPT_PATH = path.resolve('scripts', 'mermaid-cli.mjs');
 const NN_IMAGE_SOURCE_PATH = path.resolve('nn.jpg');
 const NN_IMAGE_FALLBACK_SOURCE_PATH = path.resolve(
   'scripts',
@@ -42,6 +46,19 @@ const RETRIABLE_FILE_SYSTEM_ERROR_CODES = new Set([
 ]);
 const DOCS_WRITE_MAX_ATTEMPTS = 6;
 const DOCS_WRITE_INITIAL_RETRY_DELAY_MS = 120;
+
+interface PageMeta {
+  abs: string;
+  relDir: string;
+  title: string;
+  markdown: string;
+}
+
+interface MermaidBlockReference {
+  readmePath: string;
+  blockNumber: number;
+  diagram: string;
+}
 
 function isRetriableFileSystemError(
   error: unknown,
@@ -197,17 +214,90 @@ function buildExamplesLinksHtml(currentDir: string): string {
     .join('');
 }
 
+function collectMermaidBlocks(
+  markdown: string,
+  readmePath: string,
+): MermaidBlockReference[] {
+  const mermaidBlocks: MermaidBlockReference[] = [];
+  const mermaidFencePattern = /^```mermaid[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
+  let mermaidMatch = mermaidFencePattern.exec(markdown);
+
+  while (mermaidMatch) {
+    mermaidBlocks.push({
+      readmePath,
+      blockNumber: mermaidBlocks.length + 1,
+      diagram: mermaidMatch[1].trim(),
+    });
+    mermaidMatch = mermaidFencePattern.exec(markdown);
+  }
+
+  return mermaidBlocks;
+}
+
+async function validateMermaidBlocks(
+  mermaidBlocks: readonly MermaidBlockReference[],
+): Promise<void> {
+  if (mermaidBlocks.length === 0) {
+    return;
+  }
+
+  const tempDirectoryPath = await mkdtemp(
+    path.join(os.tmpdir(), 'neatapticts-docs-mermaid-'),
+  );
+
+  try {
+    for (const mermaidBlock of mermaidBlocks) {
+      const tempInputPath = path.join(
+        tempDirectoryPath,
+        `diagram-${mermaidBlock.blockNumber}.mmd`,
+      );
+
+      // Step 1: Materialize the Mermaid block for CLI validation.
+      await fs.writeFile(tempInputPath, mermaidBlock.diagram, 'utf8');
+
+      // Step 2: Treat broken Mermaid as a docs build failure instead of a browser-only error.
+      await runMermaidValidation(tempInputPath, mermaidBlock);
+    }
+  } finally {
+    await rm(tempDirectoryPath, { recursive: true, force: true });
+  }
+}
+
+async function runMermaidValidation(
+  tempInputPath: string,
+  mermaidBlock: MermaidBlockReference,
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const childProcess = spawn(
+      process.execPath,
+      [MERMAID_CLI_SCRIPT_PATH, 'validate', '--input', tempInputPath],
+      { stdio: 'inherit' },
+    );
+
+    childProcess.once('exit', (exitCode) => {
+      if (exitCode === 0) {
+        resolve();
+        return;
+      }
+
+      const relativeReadmePath = path.relative(process.cwd(), mermaidBlock.readmePath);
+      reject(
+        new Error(
+          `Invalid Mermaid diagram in ${relativeReadmePath} (block ${mermaidBlock.blockNumber}). Mermaid CLI exited with code ${exitCode ?? 'null'}.`,
+        ),
+      );
+    });
+    childProcess.once('error', reject);
+  });
+}
+
 async function main() {
   await ensureStaticDocsAssets();
   const readmes = await fg(['**/README.md'], { cwd: DOCS_DIR, absolute: true });
 
   // Collect metadata for navigation
-  interface PageMeta {
-    abs: string;
-    relDir: string;
-    title: string;
-  }
   const pages: PageMeta[] = [];
+  const mermaidBlocks: MermaidBlockReference[] = [];
   for (const mdFile of readmes) {
     const md = await fs.readFile(mdFile, 'utf8');
     const title =
@@ -217,8 +307,12 @@ async function main() {
     const relDir = path
       .relative(DOCS_DIR, path.dirname(mdFile))
       .replace(/\\/g, '/');
-    pages.push({ abs: mdFile, relDir, title });
+    pages.push({ abs: mdFile, relDir, title, markdown: md });
+    mermaidBlocks.push(...collectMermaidBlocks(md, mdFile));
   }
+
+  // Step 1: Validate Mermaid across the docs tree before emitting HTML pages.
+  await validateMermaidBlocks(mermaidBlocks);
 
   // Build nav list; group top-level folders similar to original sections.
   const navHtmlFor = (currentDir: string) => {
@@ -281,7 +375,7 @@ async function main() {
   };
 
   for (const meta of pages) {
-    const md = await fs.readFile(meta.abs, 'utf8');
+    const md = meta.markdown;
     // Extract headings for TOC (## file, ### symbol)
     const fileHeadings: {
       file: string;

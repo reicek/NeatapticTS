@@ -8,6 +8,9 @@ charts, or other visual structure.
 Prefer Mermaid Markdown when a diagram can teach structure, flow, or tradeoffs
 faster than prose alone.
 
+Treat GitHub README rendering as the primary compatibility target unless the
+task explicitly says the diagram only needs to work in the generated HTML docs.
+
 The goal is not to decorate a README. The goal is to make invisible structure
 visible.
 
@@ -32,6 +35,30 @@ Actively consider diagrams for:
 - simple quantitative trends.
 
 If the diagram would merely restate a short paragraph, do not add it.
+
+## GitHub-First Compatibility
+
+Most diagrams in this repo are likely to be read first on GitHub in Markdown
+README surfaces. Author Mermaid with that surface in mind first, then let the
+generated HTML docs be the enhancement layer.
+
+Working rules:
+
+- Prefer Mermaid syntax that is widely supported by GitHub's Markdown renderer.
+- Prefer stable diagram families over newer or evolving Mermaid types when both
+  can teach the same idea.
+- Do not rely on repo-local Mermaid bootstrapping, custom theme injection, or
+  docs-site-only runtime behavior to make a README diagram understandable.
+- Assume GitHub may use a different Mermaid version or theme than the generated
+  docs site.
+- If a diagram only becomes legible after heavy styling, simplify the diagram.
+
+Decision rule:
+
+- If the primary surface is a GitHub README, choose the most conservative
+  Mermaid syntax that still teaches well.
+- If exact visual fidelity across GitHub, generated HTML docs, screenshots, or
+  PDFs matters more than Markdown-native rendering, consider static export.
 
 ## Diagram Selection Matrix
 
@@ -120,7 +147,8 @@ Use class diagrams for structure, not for runtime flow.
 ### Use architecture, C4, sankey, radar, treemap, and other newer Mermaid types carefully
 
 Some Mermaid diagram families are newer, flagged, or evolving. Prefer them only
-when they clearly beat a flowchart or sequence diagram for clarity.
+when they clearly beat a flowchart or sequence diagram for clarity and when the
+target surface does not require conservative GitHub-first compatibility.
 
 ## Mermaid-First, But Not Mermaid-Only
 
@@ -136,6 +164,10 @@ Examples:
   Mermaid cannot express the idea cleanly.
 
 Do not force every visual problem into Mermaid syntax.
+
+If GitHub Markdown readability is the main goal and Mermaid would become too
+fragile, too dense, or too version-sensitive, prefer a Markdown table or a
+simpler diagram.
 
 ## Diagram Craft Rules
 
@@ -181,6 +213,8 @@ Subgraphs are valuable for:
 - Use warm or pink accents only for the single key highlight, branch, or
   component the prose is emphasizing.
 - Preserve contrast first; the diagram should remain readable with glow removed.
+- Remember that GitHub will not apply this repo's custom Mermaid initialization,
+  so the unassisted diagram must still read clearly.
 
 ### Default Astro Bird styling profile
 
@@ -213,6 +247,12 @@ Notes are useful for:
 ### Flowcharts
 
 Prefer modern shape syntax when semantics matter.
+
+GitHub-first note:
+
+If a standard node shape communicates the idea well enough, prefer it over
+newer shape syntax. Use advanced shape syntax only when it materially improves
+understanding and has been validated for the target surface.
 
 Example:
 
@@ -322,9 +362,11 @@ Before finalizing a Mermaid diagram:
 
 1. Ask whether the diagram teaches something prose cannot teach as quickly.
 2. Check that labels are short and consistent with repo terminology.
-3. Verify the syntax in a Mermaid-capable renderer when the diagram is complex.
-4. Prefer the `renderMermaidDiagram` tool for fast validation when available.
-5. Re-read the surrounding prose and make sure the diagram is introduced and
+3. Ask whether the primary reading surface is GitHub Markdown, generated HTML
+  docs, or both.
+4. Verify the syntax in a Mermaid-capable renderer when the diagram is complex.
+5. Prefer the `renderMermaidDiagram` tool for fast validation when available.
+6. Re-read the surrounding prose and make sure the diagram is introduced and
    interpreted, not dropped in without context.
 
 ## Educational Heuristics

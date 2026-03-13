@@ -108,6 +108,9 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
 7. Evaluate Mermaid-first visuals deliberately.
   - Prefer Mermaid Markdown for architecture overviews, data flows, decision
     flows, state transitions, timelines, simple charts, and structural maps.
+  - Treat GitHub README rendering as the primary Mermaid compatibility target
+    unless the task explicitly says the diagram only needs to work in the
+    generated HTML docs.
   - Style diagrams with the Astro Bird palette so structure remains blue-led
     and emphasis stays scarce.
   - Add diagrams when they reduce confusion, not merely because Mermaid is
@@ -115,6 +118,8 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
   - Choose the diagram family that matches the teaching goal.
   - Validate non-trivial Mermaid syntax before finalizing when tooling is
     available.
+  - Prefer conservative Mermaid syntax when the README itself is a primary
+    surface on GitHub.
 8. Evaluate external visuals deliberately.
   - Add images only when they improve understanding, not for decoration.
   - Prefer Wikimedia Commons files with clear free-license metadata.
@@ -228,6 +233,10 @@ When external references improve the docs, they must also improve trust.
 Mermaid Markdown should be the default visual tool because it is text-based,
 diff-friendly, and easier to keep synchronized with the code than static images.
 
+When a document is expected to be read both on GitHub and in the generated docs
+site, optimize Mermaid for GitHub compatibility first and treat local HTML
+enhancements as secondary.
+
 ### For text sources
 
 - Cite the source in a compact, readable way.
@@ -288,6 +297,10 @@ For diagram selection, syntax caveats, and validation guidance, use
 - Do not add external references that drown out the repo's own explanations.
 - Do not add decorative images with no teaching value.
 - Do not add decorative Mermaid blocks with no teaching value.
+- Do not assume Mermaid features that work in local generated HTML will render
+  the same way on GitHub.
+- Do not choose cutting-edge Mermaid syntax when a more conservative diagram
+  would teach the same idea.
 - Do not assume a Wikimedia uploader is the author.
 - Do not reuse non-free, fair-use, `-NC`, or `-ND` media.
 - Do not force Mermaid to express a table or heatmap when Markdown or prose is
