@@ -1,5 +1,5 @@
 ---
-name: solid-split-playbook
+name: solid-split
 description: 'Plan and execute repo-consistent SOLID splits in NeatapticTS across src/ or test/, starting from a user-specified root such as #file:flappy_bird. Use when folderizing a module, thinning a compatibility facade, improving JSDoc so generated README files read naturally, or continuing an incremental split pass with stable imports.'
 argument-hint: 'Describe the split root, target module or folder, any relevant plan file, and optional detail about the next boundary to extract.'
 user-invocable: true
@@ -52,6 +52,7 @@ Useful optional detail to include:
 - [Split workflow checklist](./assets/split-workflow-checklist.md)
 - [Split plan template](./assets/split-plan-template.md)
 - [Documentation improvement checklist](./assets/docs-checklist.md)
+- Companion skill: `educational-docs`
 - Existing split execution agent: `solid-split`
 
 ## Repo Discovery Order
@@ -122,32 +123,23 @@ API, default, or runtime contract.
 13. End with a next-session handoff prompt that can continue from the next step
    without depending on prior chat history.
 
-## Documentation Standards
+## Documentation Delegation
 
-This repository is a public-facing educational library. Splits must improve the
-generated documentation story, not only the file structure.
+Use `educational-docs` as the documentation policy for split work.
 
-When touching exported or public surfaces:
+`solid-split` should not redefine the educational writing bar. Instead:
 
-- Add or improve JSDoc so the generated README reads naturally.
-- Include concise “what/why” explanations, not only type signatures.
-- Add short `@example` blocks when behavior or intended usage is not obvious.
-- Mention invariants, defaults, performance costs, or error semantics when they
-  materially affect downstream users.
-- When the topic is conceptually important, suggest useful background reading in
-  plain prose inside the JSDoc description, for example a Wikipedia article on
-  a concept such as parallax, graph theory, dynamic programming, or NEAT.
-- Keep examples short, dependency-light, and aligned with the actual public API.
+- keep split sessions focused on boundary mapping, extraction order, facades,
+  and validation,
+- improve JSDoc enough to keep the touched boundary coherent,
+- invoke `educational-docs` when the task becomes a true documentation pass,
+  when generated README output needs a tone lift, or when citations or
+  Wikimedia-safe visuals enter scope,
+- run `npm run docs` after doc-affecting edits when the split changes the
+  generated surface.
 
-Use the generated README as a doc gap detector:
-
-- If the README sounds too terse, improve source JSDoc.
-- If neighboring modules are undocumented in the README, consider whether the
-  touched source needs clearer exported comments.
-- If a new subfolder is introduced, run `npm run docs` after doc-affecting edits
-  so the generated README surface stays synchronized.
-- During large documentation passes, work through the README inventory one todo
-  item at a time instead of jumping between folders opportunistically.
+This keeps the split skill orchestration-focused and lets the companion skill
+own tone, source mapping, citation handling, and media compliance.
 
 ## Naming and File-Shape Rules
 

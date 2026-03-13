@@ -39,8 +39,8 @@ Use this checklist during each SOLID split session.
 3. Add short examples for exported APIs with non-obvious behavior.
 4. Mention defaults, invariants, error cases, and performance notes when they
    matter.
-5. Suggest high-value background reading in JSDoc prose for important concepts
-   when that would help users learn from the API.
+5. If the docs need a broader tone lift, source mapping, citations, or
+   Wikimedia-safe visuals, invoke `educational-docs` before regenerating docs.
 
 ## Validation
 

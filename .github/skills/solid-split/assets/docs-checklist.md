@@ -2,6 +2,10 @@
 
 Use this checklist whenever a split touches exported or public code.
 
+This checklist is intentionally narrow. For the full educational writing bar,
+source-mapped README work, citations, or Wikimedia-safe visuals, invoke the
+companion `educational-docs` skill.
+
 ## Required
 
 - Every touched exported function, class, type, and shared constant has JSDoc.
@@ -27,8 +31,10 @@ Ask these questions while looking at the generated folder README:
 
 - Prefer short conceptual descriptions over bare type restatement.
 - Use brief examples that match the current public API.
-- When the concept is central to understanding the design, mention useful
-  external reading in prose, such as a relevant Wikipedia article.
+- Hand the pass off to `educational-docs` when the docs need more than a local
+  split-aware cleanup.
+- Hand the pass off to `educational-docs` when the documentation also needs the
+  shared Astro Bird visual language for Mermaid diagrams, tables, or callouts.
 - Keep examples and explanations dependency-light so they survive doc
   generation cleanly.
 - Avoid filler comments that say only what the code already states.
