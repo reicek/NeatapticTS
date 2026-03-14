@@ -15,7 +15,12 @@ desired behavior of the model.
 
 #### binary
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+binary(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Binary Error rate, often used as a simple accuracy metric for classification.
 
@@ -28,7 +33,12 @@ Returns: The proportion of misclassified samples (error rate, between 0 and 1).
 
 #### crossEntropy
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+crossEntropy(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Cross Entropy error, commonly used for classification tasks.
 
@@ -43,7 +53,14 @@ Returns: The mean cross-entropy error over all samples.
 
 #### focalLoss
 
-`(targets: number[], outputs: number[], focalGamma: number, focalAlpha: number) => number`
+```ts
+focalLoss(
+  targets: number[],
+  outputs: number[],
+  focalGamma: number,
+  focalAlpha: number,
+): number
+```
 
 Calculates the Focal Loss, which is useful for addressing class imbalance in classification tasks.
 Focal loss down-weights easy examples and focuses training on hard negatives.
@@ -52,7 +69,12 @@ Returns: The mean focal loss.
 
 #### hinge
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+hinge(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Mean Hinge loss, primarily used for "maximum-margin" classification,
 most notably for Support Vector Machines (SVMs).
@@ -65,7 +87,13 @@ Returns: The mean hinge loss.
 
 #### labelSmoothing
 
-`(targets: number[], outputs: number[], smoothingFactor: number) => number`
+```ts
+labelSmoothing(
+  targets: number[],
+  outputs: number[],
+  smoothingFactor: number,
+): number
+```
 
 Calculates the Cross Entropy with Label Smoothing.
 Label smoothing prevents the model from becoming overconfident by softening the targets.
@@ -74,7 +102,12 @@ Returns: The mean cross-entropy loss with label smoothing.
 
 #### mae
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+mae(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Mean Absolute Error (MAE), another common loss function for regression tasks.
 
@@ -85,7 +118,12 @@ Returns: The mean absolute error.
 
 #### mape
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+mape(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Mean Absolute Percentage Error (MAPE).
 
@@ -98,7 +136,12 @@ Returns: The mean absolute percentage error, expressed as a proportion (e.g., 0.
 
 #### mse
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+mse(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Mean Squared Error (MSE), a common loss function for regression tasks.
 
@@ -110,7 +153,12 @@ Returns: The mean squared error.
 
 #### msle
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+msle(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Mean Squared Logarithmic Error (MSLE).
 
@@ -124,7 +172,12 @@ Returns: The mean squared logarithmic error.
 
 #### softmaxCrossEntropy
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+softmaxCrossEntropy(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Softmax Cross Entropy for mutually exclusive multi-class outputs given raw (pre-softmax or arbitrary) scores.
 Applies a numerically stable softmax to the outputs internally then computes -sum(target * log(prob)).
@@ -158,7 +211,12 @@ offer different strategies to balance exploration and exploitation during traini
 
 #### cosineAnnealing
 
-`(period: number, minimumRate: number) => (baseRate: number, iteration: number) => number`
+```ts
+cosineAnnealing(
+  period: number,
+  minimumRate: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Implements a Cosine Annealing learning rate schedule.
 
@@ -180,7 +238,13 @@ Returns: A function that calculates the learning rate for a given iteration base
 
 #### cosineAnnealingWarmRestarts
 
-`(initialPeriod: number, minimumRate: number, periodGrowthMultiplier: number) => (baseRate: number, iteration: number) => number`
+```ts
+cosineAnnealingWarmRestarts(
+  initialPeriod: number,
+  minimumRate: number,
+  periodGrowthMultiplier: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier after each restart.
 
@@ -191,7 +255,11 @@ Parameters:
 
 #### exp
 
-`(decayFactor: number) => (baseRate: number, iteration: number) => number`
+```ts
+exp(
+  decayFactor: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Implements an exponential decay learning rate schedule.
 
@@ -210,7 +278,9 @@ Returns: A function that calculates the exponentially decayed learning rate for 
 
 #### fixed
 
-`() => (baseRate: number, iteration: number) => number`
+```ts
+fixed(): (baseRate: number, iteration: number) => number
+```
 
 Implements a fixed learning rate schedule.
 
@@ -226,7 +296,12 @@ Returns: A function that takes the base learning rate and the current iteration 
 
 #### inv
 
-`(decayFactor: number, decayPower: number) => (baseRate: number, iteration: number) => number`
+```ts
+inv(
+  decayFactor: number,
+  decayPower: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Implements an inverse decay learning rate schedule.
 
@@ -246,7 +321,13 @@ Returns: A function that calculates the inversely decayed learning rate for a gi
 
 #### linearWarmupDecay
 
-`(totalStepCount: number, warmupStepCount: number | undefined, endRate: number) => (baseRate: number, iteration: number) => number`
+```ts
+linearWarmupDecay(
+  totalStepCount: number,
+  warmupStepCount: number | undefined,
+  endRate: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Linear Warmup followed by Linear Decay to an end rate.
 Warmup linearly increases LR from near 0 up to baseRate over warmupStepCount, then linearly decays to endRate at totalStepCount.
@@ -259,7 +340,11 @@ Parameters:
 
 #### reduceOnPlateau
 
-`(options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined) => (baseRate: number, iteration: number, lastError?: number | undefined) => number`
+```ts
+reduceOnPlateau(
+  options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined,
+): (baseRate: number, iteration: number, lastError?: number | undefined) => number
+```
 
 ReduceLROnPlateau style scheduler (stateful closure) that monitors error signal (third argument if provided)
 and reduces rate by 'factor' if no improvement beyond 'minDelta' for 'patience' iterations.
@@ -268,7 +353,12 @@ NOTE: Requires the training loop to call with signature (baseRate, iteration, la
 
 #### step
 
-`(decayFactor: number, decayStepSize: number) => (baseRate: number, iteration: number) => number`
+```ts
+step(
+  decayFactor: number,
+  decayStepSize: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Implements a step decay learning rate schedule.
 
@@ -405,7 +495,12 @@ but can slow down the search process.
 
 #### binary
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+binary(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Binary Error rate, often used as a simple accuracy metric for classification.
 
@@ -418,7 +513,12 @@ Returns: The proportion of misclassified samples (error rate, between 0 and 1).
 
 #### cosineAnnealing
 
-`(period: number, minimumRate: number) => (baseRate: number, iteration: number) => number`
+```ts
+cosineAnnealing(
+  period: number,
+  minimumRate: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Implements a Cosine Annealing learning rate schedule.
 
@@ -440,7 +540,13 @@ Returns: A function that calculates the learning rate for a given iteration base
 
 #### cosineAnnealingWarmRestarts
 
-`(initialPeriod: number, minimumRate: number, periodGrowthMultiplier: number) => (baseRate: number, iteration: number) => number`
+```ts
+cosineAnnealingWarmRestarts(
+  initialPeriod: number,
+  minimumRate: number,
+  periodGrowthMultiplier: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier after each restart.
 
@@ -451,7 +557,12 @@ Parameters:
 
 #### crossEntropy
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+crossEntropy(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Cross Entropy error, commonly used for classification tasks.
 
@@ -466,7 +577,11 @@ Returns: The mean cross-entropy error over all samples.
 
 #### exp
 
-`(decayFactor: number) => (baseRate: number, iteration: number) => number`
+```ts
+exp(
+  decayFactor: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Implements an exponential decay learning rate schedule.
 
@@ -485,7 +600,9 @@ Returns: A function that calculates the exponentially decayed learning rate for 
 
 #### fixed
 
-`() => (baseRate: number, iteration: number) => number`
+```ts
+fixed(): (baseRate: number, iteration: number) => number
+```
 
 Implements a fixed learning rate schedule.
 
@@ -501,7 +618,14 @@ Returns: A function that takes the base learning rate and the current iteration 
 
 #### focalLoss
 
-`(targets: number[], outputs: number[], focalGamma: number, focalAlpha: number) => number`
+```ts
+focalLoss(
+  targets: number[],
+  outputs: number[],
+  focalGamma: number,
+  focalAlpha: number,
+): number
+```
 
 Calculates the Focal Loss, which is useful for addressing class imbalance in classification tasks.
 Focal loss down-weights easy examples and focuses training on hard negatives.
@@ -510,7 +634,12 @@ Returns: The mean focal loss.
 
 #### hinge
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+hinge(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Mean Hinge loss, primarily used for "maximum-margin" classification,
 most notably for Support Vector Machines (SVMs).
@@ -523,7 +652,12 @@ Returns: The mean hinge loss.
 
 #### inv
 
-`(decayFactor: number, decayPower: number) => (baseRate: number, iteration: number) => number`
+```ts
+inv(
+  decayFactor: number,
+  decayPower: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Implements an inverse decay learning rate schedule.
 
@@ -543,7 +677,13 @@ Returns: A function that calculates the inversely decayed learning rate for a gi
 
 #### labelSmoothing
 
-`(targets: number[], outputs: number[], smoothingFactor: number) => number`
+```ts
+labelSmoothing(
+  targets: number[],
+  outputs: number[],
+  smoothingFactor: number,
+): number
+```
 
 Calculates the Cross Entropy with Label Smoothing.
 Label smoothing prevents the model from becoming overconfident by softening the targets.
@@ -552,7 +692,13 @@ Returns: The mean cross-entropy loss with label smoothing.
 
 #### linearWarmupDecay
 
-`(totalStepCount: number, warmupStepCount: number | undefined, endRate: number) => (baseRate: number, iteration: number) => number`
+```ts
+linearWarmupDecay(
+  totalStepCount: number,
+  warmupStepCount: number | undefined,
+  endRate: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Linear Warmup followed by Linear Decay to an end rate.
 Warmup linearly increases LR from near 0 up to baseRate over warmupStepCount, then linearly decays to endRate at totalStepCount.
@@ -565,7 +711,12 @@ Parameters:
 
 #### mae
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+mae(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Mean Absolute Error (MAE), another common loss function for regression tasks.
 
@@ -576,7 +727,12 @@ Returns: The mean absolute error.
 
 #### mape
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+mape(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Mean Absolute Percentage Error (MAPE).
 
@@ -589,7 +745,12 @@ Returns: The mean absolute percentage error, expressed as a proportion (e.g., 0.
 
 #### mse
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+mse(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Mean Squared Error (MSE), a common loss function for regression tasks.
 
@@ -601,7 +762,12 @@ Returns: The mean squared error.
 
 #### msle
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+msle(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Calculates the Mean Squared Logarithmic Error (MSLE).
 
@@ -615,7 +781,11 @@ Returns: The mean squared logarithmic error.
 
 #### reduceOnPlateau
 
-`(options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined) => (baseRate: number, iteration: number, lastError?: number | undefined) => number`
+```ts
+reduceOnPlateau(
+  options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined,
+): (baseRate: number, iteration: number, lastError?: number | undefined) => number
+```
 
 ReduceLROnPlateau style scheduler (stateful closure) that monitors error signal (third argument if provided)
 and reduces rate by 'factor' if no improvement beyond 'minDelta' for 'patience' iterations.
@@ -624,7 +794,12 @@ NOTE: Requires the training loop to call with signature (baseRate, iteration, la
 
 #### softmaxCrossEntropy
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+softmaxCrossEntropy(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Softmax Cross Entropy for mutually exclusive multi-class outputs given raw (pre-softmax or arbitrary) scores.
 Applies a numerically stable softmax to the outputs internally then computes -sum(target * log(prob)).
@@ -632,7 +807,12 @@ Targets may be soft labels and are expected to sum to 1 (will be re-normalized i
 
 #### step
 
-`(decayFactor: number, decayStepSize: number) => (baseRate: number, iteration: number) => number`
+```ts
+step(
+  decayFactor: number,
+  decayStepSize: number,
+): (baseRate: number, iteration: number) => number
+```
 
 Implements a step decay learning rate schedule.
 
@@ -736,7 +916,12 @@ with respect to `x`; otherwise, it returns the activation function's output.
 
 ### registerCustomActivation
 
-`(activationName: string, activationFunction: import("src/methods/activation.utils").ActivationFunction) => void`
+```ts
+registerCustomActivation(
+  activationName: string,
+  activationFunction: ActivationFunction,
+): void
+```
 
 Register a custom activation function at runtime.
 
@@ -756,7 +941,11 @@ Threshold for binarizing probabilities into class predictions.
 
 ### clampProbability
 
-`(probability: number) => number`
+```ts
+clampProbability(
+  probability: number,
+): number
+```
 
 Clamps a probability into the inclusive bounds defined by PROBABILITY_LOWER_BOUND and PROBABILITY_UPPER_BOUND.
 
@@ -767,7 +956,11 @@ Returns: Probability constrained to the numeric stability range.
 
 ### classifyBinary
 
-`(probability: number) => number`
+```ts
+classifyBinary(
+  probability: number,
+): number
+```
 
 Converts a probability into a binary class label using the configured threshold.
 
@@ -778,7 +971,12 @@ Returns: POSITIVE_CLASS_LABEL when above or equal to threshold; otherwise NEGATI
 
 ### computeBinaryError
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+computeBinaryError(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Computes binary classification error rate.
 
@@ -790,7 +988,12 @@ Returns: Proportion of misclassified samples.
 
 ### computeCrossEntropy
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+computeCrossEntropy(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Computes the Cross Entropy error over the provided targets and outputs.
 
@@ -802,7 +1005,14 @@ Returns: Mean cross-entropy error across all samples.
 
 ### computeFocalLoss
 
-`(targets: number[], outputs: number[], gamma: number, alpha: number) => number`
+```ts
+computeFocalLoss(
+  targets: number[],
+  outputs: number[],
+  gamma: number,
+  alpha: number,
+): number
+```
 
 Computes focal loss for imbalanced classification tasks.
 
@@ -816,7 +1026,12 @@ Returns: Mean focal loss.
 
 ### computeHingeLoss
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+computeHingeLoss(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Computes hinge loss for margin-based classification.
 
@@ -828,7 +1043,13 @@ Returns: Mean hinge loss.
 
 ### computeLabelSmoothingLoss
 
-`(targets: number[], outputs: number[], smoothing: number) => number`
+```ts
+computeLabelSmoothingLoss(
+  targets: number[],
+  outputs: number[],
+  smoothing: number,
+): number
+```
 
 Computes cross entropy with label smoothing applied to targets.
 
@@ -841,7 +1062,12 @@ Returns: Mean cross-entropy loss with smoothed targets.
 
 ### computeMeanAbsoluteError
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+computeMeanAbsoluteError(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Computes mean absolute error between targets and outputs.
 
@@ -853,7 +1079,12 @@ Returns: Mean absolute error.
 
 ### computeMeanAbsolutePercentageError
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+computeMeanAbsolutePercentageError(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Computes mean absolute percentage error between targets and outputs.
 
@@ -865,7 +1096,12 @@ Returns: Mean absolute percentage error (fractional form).
 
 ### computeMeanSquaredError
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+computeMeanSquaredError(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Computes mean squared error between targets and outputs.
 
@@ -877,7 +1113,12 @@ Returns: Mean squared error.
 
 ### computeMeanSquaredLogarithmicError
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+computeMeanSquaredLogarithmicError(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Computes mean squared logarithmic error between targets and outputs.
 
@@ -889,7 +1130,12 @@ Returns: Mean squared logarithmic error.
 
 ### computeSoftmaxCrossEntropy
 
-`(targets: number[], outputs: number[]) => number`
+```ts
+computeSoftmaxCrossEntropy(
+  targets: number[],
+  outputs: number[],
+): number
+```
 
 Computes the softmax cross entropy given targets and raw score outputs.
 
@@ -901,7 +1147,12 @@ Returns: Total (non-averaged) softmax cross-entropy loss.
 
 ### crossEntropyTerm
 
-`(targetProbability: number, clampedProbability: number) => number`
+```ts
+crossEntropyTerm(
+  targetProbability: number,
+  clampedProbability: number,
+): number
+```
 
 Computes the cross-entropy contribution for a single target/output pair.
 
@@ -941,7 +1192,11 @@ Canonical negative label used by binary-oriented helpers.
 
 ### normalizeTargets
 
-`(targets: number[]) => number[]`
+```ts
+normalizeTargets(
+  targets: number[],
+): number[]
+```
 
 Normalizes target probabilities so they sum to 1 when possible.
 
@@ -956,7 +1211,12 @@ Canonical positive label used by binary-oriented helpers.
 
 ### smoothTarget
 
-`(targetProbability: number, smoothing: number) => number`
+```ts
+smoothTarget(
+  targetProbability: number,
+  smoothing: number,
+): number
+```
 
 Applies label smoothing to a target probability.
 
@@ -972,7 +1232,11 @@ Lower bound for softmax denominator to avoid division by zero.
 
 ### stableSoftmax
 
-`(outputs: number[]) => number[]`
+```ts
+stableSoftmax(
+  outputs: number[],
+): number[]
+```
 
 Computes a numerically stable softmax from raw output scores.
 
@@ -988,7 +1252,12 @@ Useful for any stateless schedule strategy.
 
 ### createCosineAnnealingRateSchedule
 
-`(period: number, minimumRate: number) => import("src/methods/rate.utils").RateSchedule`
+```ts
+createCosineAnnealingRateSchedule(
+  period: number,
+  minimumRate: number,
+): RateSchedule
+```
 
 Returns a cosine annealing learning rate schedule.
 
@@ -1000,7 +1269,13 @@ Returns: A learning rate schedule implementing cosine annealing.
 
 ### createCosineAnnealingWarmRestartsSchedule
 
-`(initialPeriod: number, minimumRate: number, periodGrowthMultiplier: number) => import("src/methods/rate.utils").RateSchedule`
+```ts
+createCosineAnnealingWarmRestartsSchedule(
+  initialPeriod: number,
+  minimumRate: number,
+  periodGrowthMultiplier: number,
+): RateSchedule
+```
 
 Returns a cosine annealing schedule with warm restarts and growing cycles.
 
@@ -1013,7 +1288,11 @@ Returns: A learning rate schedule implementing SGDR-style warm restarts.
 
 ### createExponentialRateSchedule
 
-`(decayFactor: number) => import("src/methods/rate.utils").RateSchedule`
+```ts
+createExponentialRateSchedule(
+  decayFactor: number,
+): RateSchedule
+```
 
 Returns an exponential decay learning rate schedule.
 
@@ -1024,7 +1303,9 @@ Returns: A learning rate schedule implementing exponential decay.
 
 ### createFixedRateSchedule
 
-`() => import("src/methods/rate.utils").RateSchedule`
+```ts
+createFixedRateSchedule(): RateSchedule
+```
 
 Returns a schedule that always yields the base learning rate.
 
@@ -1032,7 +1313,12 @@ Returns: A learning rate schedule that ignores iteration and returns baseRate.
 
 ### createInverseRateSchedule
 
-`(decayFactor: number, decayPower: number) => import("src/methods/rate.utils").RateSchedule`
+```ts
+createInverseRateSchedule(
+  decayFactor: number,
+  decayPower: number,
+): RateSchedule
+```
 
 Returns an inverse decay learning rate schedule.
 
@@ -1044,7 +1330,13 @@ Returns: A learning rate schedule implementing inverse decay.
 
 ### createLinearWarmupDecaySchedule
 
-`(totalStepCount: number, warmupStepCount: number | undefined, endRate: number) => import("src/methods/rate.utils").RateSchedule`
+```ts
+createLinearWarmupDecaySchedule(
+  totalStepCount: number,
+  warmupStepCount: number | undefined,
+  endRate: number,
+): RateSchedule
+```
 
 Returns a linear warmup followed by linear decay schedule.
 
@@ -1057,7 +1349,11 @@ Returns: A learning rate schedule implementing warmup then decay.
 
 ### createReduceOnPlateauSchedule
 
-`(options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined) => import("src/methods/rate.utils").ReduceOnPlateauSchedule`
+```ts
+createReduceOnPlateauSchedule(
+  options: { factor?: number | undefined; patience?: number | undefined; minDelta?: number | undefined; cooldown?: number | undefined; minRate?: number | undefined; verbose?: boolean | undefined; } | undefined,
+): ReduceOnPlateauSchedule
+```
 
 Returns a ReduceLROnPlateau-style schedule that lowers the rate when no improvement is seen.
 
@@ -1068,7 +1364,12 @@ Returns: A stateful schedule that reacts to lack of improvement.
 
 ### createStepRateSchedule
 
-`(decayFactor: number, decayStepSize: number) => import("src/methods/rate.utils").RateSchedule`
+```ts
+createStepRateSchedule(
+  decayFactor: number,
+  decayStepSize: number,
+): RateSchedule
+```
 
 Returns a step decay learning rate schedule.
 
@@ -1144,14 +1445,25 @@ Default warmup share of the schedule; 0.1 means 10% of total steps.
 
 ### RateSchedule
 
-`(baseRate: number, iteration: number) => number`
+```ts
+RateSchedule(
+  baseRate: number,
+  iteration: number,
+): number
+```
 
 Learning rate schedule signature that maps a base rate and iteration index to a rate value.
 Useful for any stateless schedule strategy.
 
 ### ReduceOnPlateauSchedule
 
-`(baseRate: number, iteration: number, lastError: number | undefined) => number`
+```ts
+ReduceOnPlateauSchedule(
+  baseRate: number,
+  iteration: number,
+  lastError: number | undefined,
+): number
+```
 
 Stateful ReduceLROnPlateau schedule signature that can react to a loss signal.
 The third argument is optional and only needed when monitoring validation error.
@@ -1162,7 +1474,12 @@ Activation function implementation type.
 
 ### absoluteActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+absoluteActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Absolute activation implementation.
 
@@ -1174,7 +1491,12 @@ Returns: Absolute output or derivative.
 
 ### ActivationFunction
 
-`(inputValue: number, shouldComputeDerivative: boolean | undefined) => number`
+```ts
+ActivationFunction(
+  inputValue: number,
+  shouldComputeDerivative: boolean | undefined,
+): number
+```
 
 Activation function implementation type.
 
@@ -1186,7 +1508,12 @@ Returns: Activation output or derivative at the input.
 
 ### bentIdentityActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+bentIdentityActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Bent identity activation implementation.
 
@@ -1198,7 +1525,12 @@ Returns: Bent identity output or derivative.
 
 ### bipolarActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+bipolarActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Bipolar activation implementation.
 
@@ -1210,7 +1542,12 @@ Returns: Bipolar output or derivative.
 
 ### bipolarSigmoidActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+bipolarSigmoidActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Bipolar sigmoid activation implementation.
 
@@ -1222,7 +1559,12 @@ Returns: Bipolar sigmoid output or derivative.
 
 ### gaussianActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+gaussianActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Gaussian activation implementation.
 
@@ -1234,7 +1576,12 @@ Returns: Gaussian output or derivative.
 
 ### geluActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+geluActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Gaussian Error Linear Unit (GELU) activation implementation.
 
@@ -1246,7 +1593,12 @@ Returns: GELU output or derivative.
 
 ### hardTanhActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+hardTanhActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Hard tanh activation implementation.
 
@@ -1258,7 +1610,12 @@ Returns: Hard tanh output or derivative.
 
 ### identityActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+identityActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Identity activation implementation.
 
@@ -1270,7 +1627,12 @@ Returns: Identity output or derivative.
 
 ### inverseActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+inverseActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Inverse activation implementation.
 
@@ -1282,7 +1644,12 @@ Returns: Inverse output or derivative.
 
 ### logisticActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+logisticActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Logistic (sigmoid) activation implementation.
 
@@ -1294,7 +1661,12 @@ Returns: Logistic output or derivative.
 
 ### mishActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+mishActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Mish activation implementation.
 
@@ -1306,7 +1678,12 @@ Returns: Mish output or derivative.
 
 ### reluActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+reluActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Rectified Linear Unit (ReLU) activation implementation.
 
@@ -1318,7 +1695,12 @@ Returns: ReLU output or derivative.
 
 ### seluActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+seluActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Scaled Exponential Linear Unit (SELU) activation implementation.
 
@@ -1330,7 +1712,12 @@ Returns: SELU output or derivative.
 
 ### sigmoidActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+sigmoidActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Sigmoid alias activation implementation.
 
@@ -1342,7 +1729,12 @@ Returns: Sigmoid output or derivative.
 
 ### sinusoidActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+sinusoidActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Sinusoid activation implementation.
 
@@ -1354,7 +1746,12 @@ Returns: Sinusoid output or derivative.
 
 ### softplusActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+softplusActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Softplus activation implementation with stability guards.
 
@@ -1366,7 +1763,12 @@ Returns: Softplus output or derivative.
 
 ### softsignActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+softsignActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Softsign activation implementation.
 
@@ -1378,7 +1780,12 @@ Returns: Softsign output or derivative.
 
 ### stepActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+stepActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Step activation implementation.
 
@@ -1390,7 +1797,12 @@ Returns: Step output or derivative.
 
 ### swishActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+swishActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Swish activation implementation.
 
@@ -1402,7 +1814,12 @@ Returns: Swish output or derivative.
 
 ### tanhActivation
 
-`(inputValue: number, shouldComputeDerivative: boolean) => number`
+```ts
+tanhActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
 
 Hyperbolic tangent activation implementation.
 

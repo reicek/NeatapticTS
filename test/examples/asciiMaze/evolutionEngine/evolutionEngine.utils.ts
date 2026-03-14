@@ -73,11 +73,7 @@ export const collectEvolutionEngineHiddenToOutputConnections = (
   nodes: NetworkNode[],
   outputCount: number,
 ): NetworkConnection[] => {
-  if (
-    !hiddenNode?.connections ||
-    !Array.isArray(nodes) ||
-    outputCount <= 0
-  ) {
+  if (!hiddenNode?.connections || !Array.isArray(nodes) || outputCount <= 0) {
     return [];
   }
 

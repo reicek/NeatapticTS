@@ -20,7 +20,11 @@ this boundary exists at all.
 
 ### resolveCoreObservationVectorFromFeatures
 
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+```ts
+resolveCoreObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
 
 Resolves the compact core vector used for temporal stacking.
 
@@ -49,7 +53,11 @@ observationMemoryState.previousCoreFrames.push(coreFrame);
 
 ### resolveObservationFeatures
 
-`(input: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
+```ts
+resolveObservationFeatures(
+  input: SharedObservationInput,
+): SharedObservationFeatures
+```
 
 Builds the shared normalized observation feature set consumed by policies.
 
@@ -96,7 +104,11 @@ if (features.normalizedEntryUrgency > 0.8) {
 
 ### resolveObservationVectorFromFeatures
 
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+```ts
+resolveObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
 
 Converts observation features to the canonical 12-value network input vector.
 
@@ -123,7 +135,14 @@ const networkInput = resolveObservationVectorFromFeatures(features);
 
 ### resolveUpcomingPipes
 
-`(pipes: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
+```ts
+resolveUpcomingPipes(
+  pipes: SharedPipeLike[],
+  birdCenterXPx: number,
+  birdRadiusPx: number,
+  pipeWidthPx: number,
+): [SharedPipeLike | undefined, SharedPipeLike | undefined]
+```
 
 Resolves the next two upcoming pipes in front of the bird.
 
@@ -150,7 +169,11 @@ const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
 
 ### resolveCoreObservationVectorFromFeatures
 
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+```ts
+resolveCoreObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
 
 Resolves the compact core vector used for temporal stacking.
 
@@ -179,7 +202,11 @@ observationMemoryState.previousCoreFrames.push(coreFrame);
 
 ### resolveObservationVectorFromFeatures
 
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+```ts
+resolveObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
 
 Converts observation features to the canonical 12-value network input vector.
 
@@ -208,7 +235,13 @@ const networkInput = resolveObservationVectorFromFeatures(features);
 
 ### clamp
 
-`(value: number, min: number, max: number) => number`
+```ts
+clamp(
+  value: number,
+  min: number,
+  max: number,
+): number
+```
 
 Clamps a numeric value to the inclusive [min, max] interval.
 
@@ -224,7 +257,11 @@ Returns: Clamped value.
 
 ### clamp01
 
-`(value: number) => number`
+```ts
+clamp01(
+  value: number,
+): number
+```
 
 Clamps a numeric value to the inclusive [0, 1] interval.
 
@@ -238,7 +275,11 @@ Returns: Value clamped between 0 and 1.
 
 ### resolveObservationFeatures
 
-`(input: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
+```ts
+resolveObservationFeatures(
+  input: SharedObservationInput,
+): SharedObservationFeatures
+```
 
 Builds the shared normalized observation feature set consumed by policies.
 
@@ -285,7 +326,13 @@ if (features.normalizedEntryUrgency > 0.8) {
 
 ### resolvePredictedBirdYAtFrames
 
-`(startYPx: number, initialVerticalVelocityPxPerFrame: number, frameHorizon: number) => number`
+```ts
+resolvePredictedBirdYAtFrames(
+  startYPx: number,
+  initialVerticalVelocityPxPerFrame: number,
+  frameHorizon: number,
+): number
+```
 
 Predicts bird y-position after a frame horizon with constant gravity.
 
@@ -303,7 +350,14 @@ Returns: Predicted y-position.
 
 ### resolveUpcomingPipes
 
-`(pipes: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
+```ts
+resolveUpcomingPipes(
+  pipes: SharedPipeLike[],
+  birdCenterXPx: number,
+  birdRadiusPx: number,
+  pipeWidthPx: number,
+): [SharedPipeLike | undefined, SharedPipeLike | undefined]
+```
 
 Resolves the next two upcoming pipes in front of the bird.
 

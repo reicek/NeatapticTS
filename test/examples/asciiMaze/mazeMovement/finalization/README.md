@@ -22,7 +22,11 @@ pile of counters.
 
 ### computeMazeMovementActionEntropy
 
-`(directionCounts: number[]) => number`
+```ts
+computeMazeMovementActionEntropy(
+  directionCounts: number[],
+): number
+```
 
 Compute the normalized action-entropy summary for a finished run.
 
@@ -33,7 +37,15 @@ Returns: Normalized entropy in the range `[0, 1]`.
 
 ### finalizeFailedMazeMovementRun
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], startPos: readonly [number, number], exitPos: readonly [number, number], distanceMap: number[][] | undefined) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
+```ts
+finalizeFailedMazeMovementRun(
+  state: SimulationState,
+  encodedMaze: number[][],
+  startPos: readonly [number, number],
+  exitPos: readonly [number, number],
+  distanceMap: number[][] | undefined,
+): MazeMovementSimulationResult
+```
 
 Build the finalized payload for a failed maze run.
 
@@ -48,7 +60,12 @@ Returns: Failure result with shaped fitness, path, and diagnostic summaries.
 
 ### finalizeSuccessfulMazeMovementRun
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, maxSteps: number) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
+```ts
+finalizeSuccessfulMazeMovementRun(
+  state: SimulationState,
+  maxSteps: number,
+): MazeMovementSimulationResult
+```
 
 Build the finalized payload for a successful maze run.
 

@@ -1255,13 +1255,188 @@ function resolveCallSignature(declaration: any): string | undefined {
 }
 
 /**
+ * Formats a stored call signature into a human-friendly TypeScript block.
+ *
+ * @param symbolName - Symbol name shown in the heading.
+ * @param signature - Stored canonical call signature.
+ * @returns Fenced TypeScript block lines.
+ */
+function renderSignatureBlock(symbolName: string, signature: string): string[] {
+  const parsedSignature = parseCallSignature(signature);
+  if (!parsedSignature) {
+    return ['```ts', `${symbolName}${signature}`, '```'];
+  }
+
+  if (parsedSignature.parameters.length === 0) {
+    return [
+      '```ts',
+      `${symbolName}(): ${parsedSignature.returnType}`,
+      '```',
+    ];
+  }
+
+  return [
+    '```ts',
+    `${symbolName}(`,
+    ...parsedSignature.parameters.map((parameter) => `  ${parameter},`),
+    `): ${parsedSignature.returnType}`,
+    '```',
+  ];
+}
+
+/**
+ * Parses a canonical stored call signature.
+ *
+ * @param signature - Stored canonical call signature.
+ * @returns Parsed parameters and return type when recognized.
+ */
+function parseCallSignature(
+  signature: string,
+): { parameters: string[]; returnType: string } | undefined {
+  if (!signature.startsWith('(')) {
+    return undefined;
+  }
+
+  const closingParenthesisIndex = findMatchingDelimiter(signature, 0, '(', ')');
+  if (closingParenthesisIndex === -1) {
+    return undefined;
+  }
+
+  const parameterListText = signature.slice(1, closingParenthesisIndex);
+  const returnTypePrefix = signature.slice(closingParenthesisIndex + 1).trimStart();
+  if (!returnTypePrefix.startsWith('=>')) {
+    return undefined;
+  }
+
+  return {
+    parameters: splitTopLevelCommaSeparated(parameterListText),
+    returnType: returnTypePrefix.slice(2).trim(),
+  };
+}
+
+/**
+ * Splits a comma-separated type list while respecting nested delimiters.
+ *
+ * @param value - Comma-separated text.
+ * @returns Top-level list entries.
+ */
+function splitTopLevelCommaSeparated(value: string): string[] {
+  if (!value.trim()) {
+    return [];
+  }
+
+  const segments: string[] = [];
+  let segmentStartIndex = 0;
+  let parenthesisDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+  let angleDepth = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === '(') {
+      parenthesisDepth += 1;
+      continue;
+    }
+
+    if (character === ')') {
+      parenthesisDepth -= 1;
+      continue;
+    }
+
+    if (character === '[') {
+      bracketDepth += 1;
+      continue;
+    }
+
+    if (character === ']') {
+      bracketDepth -= 1;
+      continue;
+    }
+
+    if (character === '{') {
+      braceDepth += 1;
+      continue;
+    }
+
+    if (character === '}') {
+      braceDepth -= 1;
+      continue;
+    }
+
+    if (character === '<') {
+      angleDepth += 1;
+      continue;
+    }
+
+    if (character === '>') {
+      angleDepth = Math.max(0, angleDepth - 1);
+      continue;
+    }
+
+    const isTopLevelComma =
+      character === ',' &&
+      parenthesisDepth === 0 &&
+      bracketDepth === 0 &&
+      braceDepth === 0 &&
+      angleDepth === 0;
+    if (!isTopLevelComma) {
+      continue;
+    }
+
+    segments.push(value.slice(segmentStartIndex, index).trim());
+    segmentStartIndex = index + 1;
+  }
+
+  segments.push(value.slice(segmentStartIndex).trim());
+  return segments.filter(Boolean);
+}
+
+/**
+ * Finds the matching closing delimiter for a starting delimiter.
+ *
+ * @param value - Text to inspect.
+ * @param startIndex - Opening delimiter index.
+ * @param openingDelimiter - Opening delimiter character.
+ * @param closingDelimiter - Closing delimiter character.
+ * @returns Closing delimiter index when found.
+ */
+function findMatchingDelimiter(
+  value: string,
+  startIndex: number,
+  openingDelimiter: string,
+  closingDelimiter: string,
+): number {
+  let delimiterDepth = 0;
+
+  for (let index = startIndex; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === openingDelimiter) {
+      delimiterDepth += 1;
+      continue;
+    }
+
+    if (character !== closingDelimiter) {
+      continue;
+    }
+
+    delimiterDepth -= 1;
+    if (delimiterDepth === 0) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+/**
  * Rewrites absolute import paths from ts-morph type text into repo-relative paths.
  *
  * @param typeText - Raw type text returned by ts-morph.
  * @returns Normalized type text safe for generated docs.
  */
 function normalizeRenderedTypeText(typeText: string): string {
-  return typeText.replace(
+  const normalizedImportPaths = typeText.replace(
     /import\((['"])([^'"]+)\1\)/g,
     (_match, quote: string, importPath: string) => {
       const normalizedImportPath = path.normalize(importPath);
@@ -1280,6 +1455,16 @@ function normalizeRenderedTypeText(typeText: string): string {
       return `import(${quote}${portableImportPath}${quote})`;
     },
   );
+
+  return normalizedImportPaths
+    .replace(
+      /\btypeof\s+import\((['"])([^'"]+)\1\)\.([A-Za-z_$][\w$]*)/g,
+      'typeof $3',
+    )
+    .replace(
+      /import\((['"])([^'"]+)\1\)\.([A-Za-z_$][\w$]*)/g,
+      '$3',
+    );
 }
 
 /**
@@ -1639,7 +1824,7 @@ function renderSymbolBlock(
   lines.push(`${'#'.repeat(headingLevel)} ${renderedSymbol.name}`);
 
   if (renderedSymbol.signature) {
-    lines.push('', `\`${renderedSymbol.signature}\``);
+    lines.push('', ...renderSignatureBlock(renderedSymbol.name, renderedSymbol.signature));
   }
 
   if (symbolDescription) {

@@ -100,7 +100,11 @@ Message emitted when all self-connection candidates are already occupied.
 
 ### mutateImpl
 
-`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
+```ts
+mutateImpl(
+  method: MutationMethod | undefined,
+): void
+```
 
 Public entry point: apply a single mutation operator to the network.
 
@@ -144,7 +148,11 @@ warning emission, so orchestration code can remain deterministic and easy to ins
 
 ### findMutationKeyByIdentityReference
 
-`(method: import("src/architecture/network/network.types").MutationMethod) => string | undefined`
+```ts
+findMutationKeyByIdentityReference(
+  method: MutationMethod,
+): string | undefined
+```
 
 Resolves a mutation key by direct identity-reference comparison.
 
@@ -155,7 +163,11 @@ Returns: Matching mutation key or undefined.
 
 ### isMutationMethodKeyString
 
-`(method: import("src/architecture/network/network.types").MutationMethod) => boolean`
+```ts
+isMutationMethodKeyString(
+  method: MutationMethod,
+): boolean
+```
 
 Checks whether mutation input is already a direct key string.
 
@@ -166,7 +178,11 @@ Returns: True when method is a key string.
 
 ### resolveDirectMutationKey
 
-`(methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }) => string | undefined`
+```ts
+resolveDirectMutationKey(
+  methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; },
+): string | undefined
+```
 
 Resolves direct object fields that can represent a mutation key.
 
@@ -177,7 +193,11 @@ Returns: Direct key or undefined.
 
 ### resolveMutationKey
 
-`(method: import("src/architecture/network/network.types").MutationMethod) => string | undefined`
+```ts
+resolveMutationKey(
+  method: MutationMethod,
+): string | undefined
+```
 
 Resolves a mutation dispatch key from user-provided method input.
 
@@ -199,7 +219,11 @@ const key = resolveMutationKey('ADD_NODE');
 
 ### resolveMutationKeyFromObject
 
-`(methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }) => string | undefined`
+```ts
+resolveMutationKeyFromObject(
+  methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; },
+): string | undefined
+```
 
 Resolves mutation key from object-form descriptor.
 
@@ -210,7 +234,11 @@ Returns: Dispatch key or undefined.
 
 ### warnUnknownMutation
 
-`(mutationKey: string | undefined) => void`
+```ts
+warnUnknownMutation(
+  mutationKey: string | undefined,
+): void
+```
 
 Emits unknown-mutation warning when configured.
 
@@ -239,7 +267,9 @@ Behavioral notes:
 
 ### addBackConn
 
-`() => void`
+```ts
+addBackConn(): void
+```
 
 Adds one backward (recurrent) connection between eligible node pairs.
 
@@ -252,7 +282,9 @@ Returns: Nothing.
 
 ### addConn
 
-`() => void`
+```ts
+addConn(): void
+```
 
 Adds one forward connection between currently unconnected eligible node pairs.
 
@@ -265,7 +297,9 @@ Returns: Nothing.
 
 ### addGate
 
-`() => void`
+```ts
+addGate(): void
+```
 
 Assigns a random eligible node as gater for a random ungated connection.
 
@@ -278,7 +312,9 @@ Returns: Nothing.
 
 ### addGRUNode
 
-`() => void`
+```ts
+addGRUNode(): void
+```
 
 Replaces one connection by inserting a minimal GRU recurrent block.
 
@@ -289,7 +325,9 @@ Returns: Nothing.
 
 ### addLSTMNode
 
-`() => void`
+```ts
+addLSTMNode(): void
+```
 
 Replaces one connection by inserting a minimal LSTM recurrent block.
 
@@ -300,7 +338,9 @@ Returns: Nothing.
 
 ### addNode
 
-`() => void`
+```ts
+addNode(): void
+```
 
 Adds one hidden node by splitting an existing connection.
 
@@ -315,7 +355,12 @@ Returns: Nothing.
 
 ### addNodeDeterministicChain
 
-`(network: import("src/architecture/network").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps) => void`
+```ts
+addNodeDeterministicChain(
+  network: default,
+  mutationProps: NetworkMutationProps,
+): void
+```
 
 Applies deterministic chain-growth ADD_NODE mutation.
 
@@ -327,7 +372,12 @@ Returns: Nothing.
 
 ### addNodeRandomSplit
 
-`(network: import("src/architecture/network").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps) => void`
+```ts
+addNodeRandomSplit(
+  network: default,
+  mutationProps: NetworkMutationProps,
+): void
+```
 
 Applies non-deterministic ADD_NODE by splitting a random connection.
 
@@ -339,7 +389,12 @@ Returns: Nothing.
 
 ### addRecurrentNode
 
-`(network: import("src/architecture/network").default, blockType: "lstm" | "gru") => void`
+```ts
+addRecurrentNode(
+  network: default,
+  blockType: "lstm" | "gru",
+): void
+```
 
 Shared orchestrator for recurrent-node mutation variants.
 
@@ -351,7 +406,9 @@ Returns: Nothing.
 
 ### addSelfConn
 
-`() => void`
+```ts
+addSelfConn(): void
+```
 
 Adds one self-connection on an eligible node that does not already have one.
 
@@ -364,7 +421,12 @@ Returns: Nothing.
 
 ### appendRecurrentLayerNodes
 
-`(network: import("src/architecture/network").default, layerNodes: import("src/architecture/node").default[]) => void`
+```ts
+appendRecurrentLayerNodes(
+  network: default,
+  layerNodes: default[],
+): void
+```
 
 Appends recurrent layer nodes as hidden nodes.
 
@@ -376,7 +438,11 @@ Returns: Nothing.
 
 ### applyFirstConnectionStabilityNudge
 
-`(network: import("src/architecture/network").default) => void`
+```ts
+applyFirstConnectionStabilityNudge(
+  network: default,
+): void
+```
 
 Applies tiny stability nudge to the first remaining connection.
 
@@ -387,7 +453,11 @@ Returns: Nothing.
 
 ### asMutationProps
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkMutationProps`
+```ts
+asMutationProps(
+  network: default,
+): NetworkMutationProps
+```
 
 Converts a network to its internal mutation runtime shape.
 
@@ -398,7 +468,9 @@ Returns: Runtime mutation props.
 
 ### batchNorm
 
-`() => void`
+```ts
+batchNorm(): void
+```
 
 Enables the internal batch-normalization flag on one random hidden node.
 
@@ -409,7 +481,11 @@ Returns: Nothing.
 
 ### collectAllConnections
 
-`(network: import("src/architecture/network").default) => import("src/architecture/connection").default[]`
+```ts
+collectAllConnections(
+  network: default,
+): default[]
+```
 
 Collects normal and self connections.
 
@@ -420,7 +496,11 @@ Returns: Combined connections.
 
 ### collectBackwardCandidatesForLaterNode
 
-`(traversalContext: import("src/architecture/network/network.types").BackwardCandidateTraversalContext) => import("src/architecture/network/network.types").NodePair[]`
+```ts
+collectBackwardCandidatesForLaterNode(
+  traversalContext: BackwardCandidateTraversalContext,
+): NodePair[]
+```
 
 Collects all backward candidates for one later-node traversal context.
 
@@ -431,7 +511,12 @@ Returns: Candidate source/target pairs.
 
 ### collectBackwardCandidatesFromContext
 
-`(backwardConnectionCandidates: import("src/architecture/network/network.types").NodePair[], traversalContext: import("src/architecture/network/network.types").BackwardCandidateTraversalContext) => import("src/architecture/network/network.types").NodePair[]`
+```ts
+collectBackwardCandidatesFromContext(
+  backwardConnectionCandidates: NodePair[],
+  traversalContext: BackwardCandidateTraversalContext,
+): NodePair[]
+```
 
 Reduces one backward traversal context into candidate connection pairs.
 
@@ -443,7 +528,11 @@ Returns: Updated candidate pairs.
 
 ### collectBackwardConnectionCandidates
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NodePair[]`
+```ts
+collectBackwardConnectionCandidates(
+  network: default,
+): NodePair[]
+```
 
 Collects backward (recurrent) connection candidates.
 
@@ -454,7 +543,11 @@ Returns: Candidate source/target pairs.
 
 ### collectBackwardTraversalContexts
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").BackwardCandidateTraversalContext[]`
+```ts
+collectBackwardTraversalContexts(
+  network: default,
+): BackwardCandidateTraversalContext[]
+```
 
 Collects backward traversal contexts for all eligible later nodes.
 
@@ -465,7 +558,11 @@ Returns: Backward traversal contexts.
 
 ### collectConnectionGroupsForReinit
 
-`(targetNode: import("src/architecture/node").default) => import("src/architecture/connection").default[][]`
+```ts
+collectConnectionGroupsForReinit(
+  targetNode: default,
+): default[][]
+```
 
 Collects all connection groups affected by REINIT_WEIGHT.
 
@@ -476,7 +573,12 @@ Returns: Mutable connection groups.
 
 ### collectDistinctNodeCandidates
 
-`(nodeCandidates: import("src/architecture/node").default[], excludedNode: import("src/architecture/node").default) => import("src/architecture/node").default[]`
+```ts
+collectDistinctNodeCandidates(
+  nodeCandidates: default[],
+  excludedNode: default,
+): default[]
+```
 
 Collects candidates that are distinct from an excluded node.
 
@@ -488,7 +590,11 @@ Returns: Distinct candidates.
 
 ### collectForwardCandidatesForSource
 
-`(traversalContext: import("src/architecture/network/network.types").ForwardCandidateTraversalContext) => import("src/architecture/network/network.types").NodePair[]`
+```ts
+collectForwardCandidatesForSource(
+  traversalContext: ForwardCandidateTraversalContext,
+): NodePair[]
+```
 
 Collects all forward candidates for one source traversal context.
 
@@ -499,7 +605,12 @@ Returns: Candidate source/target pairs.
 
 ### collectForwardCandidatesFromContext
 
-`(forwardConnectionCandidates: import("src/architecture/network/network.types").NodePair[], traversalContext: import("src/architecture/network/network.types").ForwardCandidateTraversalContext) => import("src/architecture/network/network.types").NodePair[]`
+```ts
+collectForwardCandidatesFromContext(
+  forwardConnectionCandidates: NodePair[],
+  traversalContext: ForwardCandidateTraversalContext,
+): NodePair[]
+```
 
 Reduces one forward traversal context into candidate connection pairs.
 
@@ -511,7 +622,11 @@ Returns: Updated candidate pairs.
 
 ### collectForwardConnectionCandidates
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NodePair[]`
+```ts
+collectForwardConnectionCandidates(
+  network: default,
+): NodePair[]
+```
 
 Collects forward connection candidates.
 
@@ -522,7 +637,11 @@ Returns: Candidate source/target pairs.
 
 ### collectForwardTraversalContexts
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").ForwardCandidateTraversalContext[]`
+```ts
+collectForwardTraversalContexts(
+  network: default,
+): ForwardCandidateTraversalContext[]
+```
 
 Collects forward traversal contexts for all eligible source nodes.
 
@@ -533,7 +652,12 @@ Returns: Forward traversal contexts.
 
 ### collectMutableNonInputNodes
 
-`(network: import("src/architecture/network").default, excludeOutputNodes: boolean) => import("src/architecture/node").default[]`
+```ts
+collectMutableNonInputNodes(
+  network: default,
+  excludeOutputNodes: boolean,
+): default[]
+```
 
 Collects mutable non-input nodes.
 
@@ -545,7 +669,12 @@ Returns: Mutable nodes.
 
 ### collectNodesByType
 
-`(network: import("src/architecture/network").default, nodeType: string) => import("src/architecture/node").default[]`
+```ts
+collectNodesByType(
+  network: default,
+  nodeType: string,
+): default[]
+```
 
 Collects nodes by type.
 
@@ -557,7 +686,11 @@ Returns: Matching nodes.
 
 ### collectNodesWithoutSelfLoop
 
-`(network: import("src/architecture/network").default) => import("src/architecture/node").default[]`
+```ts
+collectNodesWithoutSelfLoop(
+  network: default,
+): default[]
+```
 
 Collects non-input nodes that do not have self loops.
 
@@ -568,7 +701,11 @@ Returns: Eligible nodes.
 
 ### collectRemovableBackwardConnections
 
-`(network: import("src/architecture/network").default) => import("src/architecture/connection").default[]`
+```ts
+collectRemovableBackwardConnections(
+  network: default,
+): default[]
+```
 
 Collects removable backward connections using redundancy constraints.
 
@@ -579,7 +716,11 @@ Returns: Removable backward connections.
 
 ### collectRemovableForwardConnections
 
-`(network: import("src/architecture/network").default) => import("src/architecture/connection").default[]`
+```ts
+collectRemovableForwardConnections(
+  network: default,
+): default[]
+```
 
 Collects removable forward connections using redundancy constraints.
 
@@ -590,7 +731,12 @@ Returns: Removable forward connections.
 
 ### collectSwappableNodesForMutation
 
-`(network: import("src/architecture/network").default, method: import("src/architecture/network/network.types").MutationMethod | undefined) => import("src/architecture/node").default[]`
+```ts
+collectSwappableNodesForMutation(
+  network: default,
+  method: MutationMethod | undefined,
+): default[]
+```
 
 Collects swap-eligible nodes based on mutation configuration.
 
@@ -602,7 +748,12 @@ Returns: Swap-eligible nodes.
 
 ### collectTargetLayerPeers
 
-`(network: import("src/architecture/network").default, targetNode: import("src/architecture/node").default) => import("src/architecture/node").default[]`
+```ts
+collectTargetLayerPeers(
+  network: default,
+  targetNode: default,
+): default[]
+```
 
 Collects peers around a target node in the same type/layer neighborhood.
 
@@ -614,7 +765,11 @@ Returns: Peer nodes.
 
 ### collectUngatedConnections
 
-`(network: import("src/architecture/network").default) => import("src/architecture/connection").default[]`
+```ts
+collectUngatedConnections(
+  network: default,
+): default[]
+```
 
 Collects ungated connections including self-connections.
 
@@ -625,7 +780,12 @@ Returns: Ungated connections.
 
 ### connectPair
 
-`(network: import("src/architecture/network").default, selectedConnectionPair: import("src/architecture/network/network.types").NodePair) => void`
+```ts
+connectPair(
+  network: default,
+  selectedConnectionPair: NodePair,
+): void
+```
 
 Connects source/target node pair.
 
@@ -637,7 +797,12 @@ Returns: Nothing.
 
 ### containsNode
 
-`(nodes: import("src/architecture/node").default[], node: import("src/architecture/node").default) => boolean`
+```ts
+containsNode(
+  nodes: default[],
+  node: default,
+): boolean
+```
 
 Checks whether a node list contains a node reference.
 
@@ -649,7 +814,13 @@ Returns: True when contained.
 
 ### countConnectionWhenSourceTargetsPeer
 
-`(peerConnectionsFromSource: number, existingConnection: import("src/architecture/connection").default, countContext: import("src/architecture/network/network.types").SourcePeerConnectionCountContext) => number`
+```ts
+countConnectionWhenSourceTargetsPeer(
+  peerConnectionsFromSource: number,
+  existingConnection: default,
+  countContext: SourcePeerConnectionCountContext,
+): number
+```
 
 Counts one connection when it originates from source and targets a peer.
 
@@ -662,7 +833,13 @@ Returns: Updated count.
 
 ### countSourceConnectionsIntoPeerSet
 
-`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default, targetLayerPeers: import("src/architecture/node").default[]) => number`
+```ts
+countSourceConnectionsIntoPeerSet(
+  network: default,
+  candidateConnection: default,
+  targetLayerPeers: default[],
+): number
+```
 
 Counts source-originated connections that end inside the target peer set.
 
@@ -675,7 +852,12 @@ Returns: Number of source-to-peer connections.
 
 ### createBackwardCandidateTraversalContext
 
-`(network: import("src/architecture/network").default, laterNodeIndex: number) => import("src/architecture/network/network.types").BackwardCandidateTraversalContext`
+```ts
+createBackwardCandidateTraversalContext(
+  network: default,
+  laterNodeIndex: number,
+): BackwardCandidateTraversalContext
+```
 
 Creates context for one backward-candidate traversal pass.
 
@@ -687,7 +869,12 @@ Returns: Immutable traversal context.
 
 ### createConnectionGroupReinitContext
 
-`(randomValue: () => number, methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }) => import("src/architecture/network/network.types").ConnectionGroupReinitContext`
+```ts
+createConnectionGroupReinitContext(
+  randomValue: () => number,
+  methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; },
+): ConnectionGroupReinitContext
+```
 
 Creates immutable context for connection-group reinitialization.
 
@@ -699,7 +886,12 @@ Returns: Reinitialization context.
 
 ### createDirectionalConnectionContext
 
-`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default) => import("src/architecture/network/network.types").DirectionalConnectionContext`
+```ts
+createDirectionalConnectionContext(
+  network: default,
+  candidateConnection: default,
+): DirectionalConnectionContext
+```
 
 Creates indexed directional context for a connection candidate.
 
@@ -711,7 +903,12 @@ Returns: Directional context.
 
 ### createForwardCandidateTraversalContext
 
-`(network: import("src/architecture/network").default, sourceNodeIndex: number) => import("src/architecture/network/network.types").ForwardCandidateTraversalContext`
+```ts
+createForwardCandidateTraversalContext(
+  network: default,
+  sourceNodeIndex: number,
+): ForwardCandidateTraversalContext
+```
 
 Creates context for one forward-candidate source traversal pass.
 
@@ -723,7 +920,11 @@ Returns: Immutable traversal context.
 
 ### createHiddenNode
 
-`(randomValue: () => number) => import("src/architecture/node").default`
+```ts
+createHiddenNode(
+  randomValue: () => number,
+): default
+```
 
 Creates a hidden node with random activation mutation.
 
@@ -734,7 +935,11 @@ Returns: Hidden node.
 
 ### createRecurrentLayer
 
-`(blockType: "lstm" | "gru") => import("src/architecture/network/network.types").RecurrentLayerShape`
+```ts
+createRecurrentLayer(
+  blockType: "lstm" | "gru",
+): RecurrentLayerShape
+```
 
 Creates recurrent layer by type.
 
@@ -745,7 +950,12 @@ Returns: Created recurrent layer.
 
 ### createSourcePeerConnectionCountContext
 
-`(candidateConnection: import("src/architecture/connection").default, targetLayerPeers: import("src/architecture/node").default[]) => import("src/architecture/network/network.types").SourcePeerConnectionCountContext`
+```ts
+createSourcePeerConnectionCountContext(
+  candidateConnection: default,
+  targetLayerPeers: default[],
+): SourcePeerConnectionCountContext
+```
 
 Creates immutable context for source-to-peer connection counting.
 
@@ -757,7 +967,12 @@ Returns: Count context.
 
 ### createTargetLayerPeerContext
 
-`(network: import("src/architecture/network").default, targetNode: import("src/architecture/node").default) => import("src/architecture/network/network.types").TargetLayerPeerContext`
+```ts
+createTargetLayerPeerContext(
+  network: default,
+  targetNode: default,
+): TargetLayerPeerContext
+```
 
 Creates immutable context for peer-layer collection.
 
@@ -769,7 +984,11 @@ Returns: Peer traversal context.
 
 ### createWeightSamplingRangeContext
 
-`(reinitContext: import("src/architecture/network/network.types").ConnectionGroupReinitContext) => import("src/architecture/network/network.types").WeightSamplingRangeContext`
+```ts
+createWeightSamplingRangeContext(
+  reinitContext: ConnectionGroupReinitContext,
+): WeightSamplingRangeContext
+```
 
 Creates immutable sampling range context.
 
@@ -780,7 +999,12 @@ Returns: Sampling range context.
 
 ### disconnectConnectionAndGetGater
 
-`(network: import("src/architecture/network").default, connectionToExpand: import("src/architecture/connection").default) => import("src/architecture/node").default | null`
+```ts
+disconnectConnectionAndGetGater(
+  network: default,
+  connectionToExpand: default,
+): default | null
+```
 
 Disconnects a connection and returns its previous gater.
 
@@ -792,7 +1016,12 @@ Returns: Previous gater reference.
 
 ### disconnectConnectionPair
 
-`(network: import("src/architecture/network").default, selectedConnection: import("src/architecture/connection").default) => void`
+```ts
+disconnectConnectionPair(
+  network: default,
+  selectedConnection: default,
+): void
+```
 
 Disconnects selected connection by endpoints.
 
@@ -804,7 +1033,13 @@ Returns: Nothing.
 
 ### disconnectUnexpectedOutgoingConnections
 
-`(network: import("src/architecture/network").default, chainNode: import("src/architecture/node").default, expectedTargetNode: import("src/architecture/node").default) => void`
+```ts
+disconnectUnexpectedOutgoingConnections(
+  network: default,
+  chainNode: default,
+  expectedTargetNode: default,
+): void
+```
 
 Removes outgoing connections that do not match the expected chain target.
 
@@ -817,7 +1052,11 @@ Returns: Nothing.
 
 ### enableNodeBatchNorm
 
-`(node: import("src/architecture/node").default) => void`
+```ts
+enableNodeBatchNorm(
+  node: default,
+): void
+```
 
 Enables internal batch-norm flag on a node.
 
@@ -828,7 +1067,13 @@ Returns: Nothing.
 
 ### ensureConnection
 
-`(network: import("src/architecture/network").default, fromNode: import("src/architecture/node").default, toNode: import("src/architecture/node").default) => import("src/architecture/connection").default | undefined`
+```ts
+ensureConnection(
+  network: default,
+  fromNode: default,
+  toNode: default,
+): default | undefined
+```
 
 Ensures a connection exists and returns it.
 
@@ -841,7 +1086,11 @@ Returns: Existing or created connection.
 
 ### ensureSeedForwardConnectionWhenEmpty
 
-`(network: import("src/architecture/network").default) => boolean`
+```ts
+ensureSeedForwardConnectionWhenEmpty(
+  network: default,
+): boolean
+```
 
 Ensures a seed input->output connection exists when connection list is empty.
 
@@ -852,7 +1101,13 @@ Returns: True when mutation may continue.
 
 ### expandConnectionWithRecurrentBlock
 
-`(network: import("src/architecture/network").default, connectionToExpand: import("src/architecture/connection").default, blockType: "lstm" | "gru") => void`
+```ts
+expandConnectionWithRecurrentBlock(
+  network: default,
+  connectionToExpand: default,
+  blockType: "lstm" | "gru",
+): void
+```
 
 Replaces one connection with a minimal recurrent block.
 
@@ -865,7 +1120,13 @@ Returns: Nothing.
 
 ### findConnection
 
-`(network: import("src/architecture/network").default, fromNode: import("src/architecture/node").default, toNode: import("src/architecture/node").default) => import("src/architecture/connection").default | undefined`
+```ts
+findConnection(
+  network: default,
+  fromNode: default,
+  toNode: default,
+): default | undefined
+```
 
 Gets a connection between two nodes when it exists.
 
@@ -878,7 +1139,12 @@ Returns: Matching connection or undefined.
 
 ### findFirstNodeByType
 
-`(network: import("src/architecture/network").default, nodeType: string) => import("src/architecture/node").default | undefined`
+```ts
+findFirstNodeByType(
+  network: default,
+  nodeType: string,
+): default | undefined
+```
 
 Returns the first node by type.
 
@@ -890,7 +1156,11 @@ Returns: Matching node or undefined.
 
 ### hasRedundantEndpoints
 
-`(candidateConnection: import("src/architecture/connection").default) => boolean`
+```ts
+hasRedundantEndpoints(
+  candidateConnection: default,
+): boolean
+```
 
 Checks whether both endpoints maintain at least one redundant edge.
 
@@ -901,7 +1171,14 @@ Returns: True when endpoint redundancy exists.
 
 ### initializeDeterministicChain
 
-`(network: import("src/architecture/network").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps, inputNode: import("src/architecture/node").default, outputNode: import("src/architecture/node").default) => void`
+```ts
+initializeDeterministicChain(
+  network: default,
+  mutationProps: NetworkMutationProps,
+  inputNode: default,
+  outputNode: default,
+): void
+```
 
 Initializes deterministic chain storage and seed edge.
 
@@ -915,7 +1192,14 @@ Returns: Nothing.
 
 ### insertNodeBeforeOutputTail
 
-`(network: import("src/architecture/network").default, nodeToInsert: import("src/architecture/node").default, targetNode: import("src/architecture/node").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps) => void`
+```ts
+insertNodeBeforeOutputTail(
+  network: default,
+  nodeToInsert: default,
+  targetNode: default,
+  mutationProps: NetworkMutationProps,
+): void
+```
 
 Inserts a node before output tail while preserving output block ordering.
 
@@ -929,7 +1213,12 @@ Returns: Nothing.
 
 ### isBackwardCandidateTargetAvailable
 
-`(laterNode: import("src/architecture/node").default, earlierNode: import("src/architecture/node").default) => boolean`
+```ts
+isBackwardCandidateTargetAvailable(
+  laterNode: default,
+  earlierNode: default,
+): boolean
+```
 
 Checks whether a backward candidate target is not already projected.
 
@@ -941,7 +1230,11 @@ Returns: True when connection may be added.
 
 ### isBackwardDirectionalContext
 
-`(directionContext: import("src/architecture/network/network.types").DirectionalConnectionContext) => boolean`
+```ts
+isBackwardDirectionalContext(
+  directionContext: DirectionalConnectionContext,
+): boolean
+```
 
 Checks whether a directional context represents a backward edge.
 
@@ -952,7 +1245,12 @@ Returns: True when backward.
 
 ### isForwardCandidateTargetAvailable
 
-`(sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => boolean`
+```ts
+isForwardCandidateTargetAvailable(
+  sourceNode: default,
+  targetNode: default,
+): boolean
+```
 
 Checks whether a forward candidate target is not already projected.
 
@@ -964,7 +1262,12 @@ Returns: True when connection may be added.
 
 ### isForwardConnectionStructurallyRemovable
 
-`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default) => boolean`
+```ts
+isForwardConnectionStructurallyRemovable(
+  network: default,
+  candidateConnection: default,
+): boolean
+```
 
 Checks structural preconditions for removable forward connections.
 
@@ -976,7 +1279,11 @@ Returns: True when the connection is a forward edge with redundant endpoints.
 
 ### isForwardDirectionalContext
 
-`(directionContext: import("src/architecture/network/network.types").DirectionalConnectionContext) => boolean`
+```ts
+isForwardDirectionalContext(
+  directionContext: DirectionalConnectionContext,
+): boolean
+```
 
 Checks whether a directional context represents a forward edge.
 
@@ -987,7 +1294,11 @@ Returns: True when forward.
 
 ### isNodeWithoutSelfLoop
 
-`(candidateNode: import("src/architecture/node").default) => boolean`
+```ts
+isNodeWithoutSelfLoop(
+  candidateNode: default,
+): boolean
+```
 
 Checks whether a node currently has no self-loop connections.
 
@@ -998,7 +1309,12 @@ Returns: True when the node has no self-loop.
 
 ### isRemovableBackwardConnection
 
-`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default) => boolean`
+```ts
+isRemovableBackwardConnection(
+  network: default,
+  candidateConnection: default,
+): boolean
+```
 
 Evaluates whether a backward connection is safe to remove.
 
@@ -1010,7 +1326,12 @@ Returns: True when removable.
 
 ### isRemovableForwardConnection
 
-`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default) => boolean`
+```ts
+isRemovableForwardConnection(
+  network: default,
+  candidateConnection: default,
+): boolean
+```
 
 Evaluates whether a forward connection is safe to remove.
 
@@ -1022,7 +1343,13 @@ Returns: True when removable.
 
 ### isTargetLayerPeer
 
-`(candidateNode: import("src/architecture/node").default, candidateNodeIndex: number, peerContext: import("src/architecture/network/network.types").TargetLayerPeerContext) => boolean`
+```ts
+isTargetLayerPeer(
+  candidateNode: default,
+  candidateNodeIndex: number,
+  peerContext: TargetLayerPeerContext,
+): boolean
+```
 
 Checks whether candidate node belongs to the target peer-layer set.
 
@@ -1035,7 +1362,12 @@ Returns: True when candidate is an eligible peer.
 
 ### isTargetLayerPeerTypeMatch
 
-`(candidateNode: import("src/architecture/node").default, peerContext: import("src/architecture/network/network.types").TargetLayerPeerContext) => boolean`
+```ts
+isTargetLayerPeerTypeMatch(
+  candidateNode: default,
+  peerContext: TargetLayerPeerContext,
+): boolean
+```
 
 Checks whether node type matches the target-layer peer type.
 
@@ -1047,7 +1379,12 @@ Returns: True when type matches.
 
 ### isTargetLayerPeerWithinDistance
 
-`(candidateNodeIndex: number, peerContext: import("src/architecture/network/network.types").TargetLayerPeerContext) => boolean`
+```ts
+isTargetLayerPeerWithinDistance(
+  candidateNodeIndex: number,
+  peerContext: TargetLayerPeerContext,
+): boolean
+```
 
 Checks whether candidate index lies within allowed peer distance.
 
@@ -1059,7 +1396,11 @@ Returns: True when within distance.
 
 ### isUngatedConnection
 
-`(candidateConnection: import("src/architecture/connection").default) => boolean`
+```ts
+isUngatedConnection(
+  candidateConnection: default,
+): boolean
+```
 
 Checks whether a connection has no gater attached.
 
@@ -1070,7 +1411,11 @@ Returns: True when ungated.
 
 ### markTopoDirtyIfAcyclic
 
-`(mutationProps: import("src/architecture/network/network.types").NetworkMutationProps) => void`
+```ts
+markTopoDirtyIfAcyclic(
+  mutationProps: NetworkMutationProps,
+): void
+```
 
 Marks topology caches dirty when acyclic mode is enforced.
 
@@ -1081,7 +1426,11 @@ Returns: Nothing.
 
 ### modActivation
 
-`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
+```ts
+modActivation(
+  method: MutationMethod | undefined,
+): void
+```
 
 Mutates activation function on one random non-input node.
 
@@ -1095,7 +1444,11 @@ Returns: Nothing.
 
 ### modBias
 
-`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
+```ts
+modBias(
+  method: MutationMethod | undefined,
+): void
+```
 
 Mutates bias parameters on one random non-input node.
 
@@ -1109,7 +1462,11 @@ Returns: Nothing.
 
 ### modWeight
 
-`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
+```ts
+modWeight(
+  method: MutationMethod | undefined,
+): void
+```
 
 Perturbs one connection weight using a uniform delta sampled from configured bounds.
 
@@ -1123,7 +1480,12 @@ Returns: Nothing.
 
 ### pickDistinctNodePair
 
-`(swappableNodes: import("src/architecture/node").default[], randomValue: () => number) => import("src/architecture/network/network.types").DistinctNodePair | undefined`
+```ts
+pickDistinctNodePair(
+  swappableNodes: default[],
+  randomValue: () => number,
+): DistinctNodePair | undefined
+```
 
 Picks two distinct nodes from a candidate set.
 
@@ -1135,7 +1497,13 @@ Returns: Distinct pair or undefined.
 
 ### pickDistinctRandomNode
 
-`(nodeCandidates: import("src/architecture/node").default[], excludedNode: import("src/architecture/node").default, randomValue: () => number) => import("src/architecture/node").default | undefined`
+```ts
+pickDistinctRandomNode(
+  nodeCandidates: default[],
+  excludedNode: default,
+  randomValue: () => number,
+): default | undefined
+```
 
 Picks a random node distinct from a given reference.
 
@@ -1148,7 +1516,12 @@ Returns: Distinct node or undefined.
 
 ### pickRandomEntry
 
-`(entries: T[], randomValue: () => number) => T | undefined`
+```ts
+pickRandomEntry(
+  entries: T[],
+  randomValue: () => number,
+): T | undefined
+```
 
 Selects a random array element.
 
@@ -1160,7 +1533,13 @@ Returns: Random entry or undefined when empty.
 
 ### pickRandomNonInputNode
 
-`(network: import("src/architecture/network").default, excludeOutputNodes: boolean, randomValue: () => number) => import("src/architecture/node").default | undefined`
+```ts
+pickRandomNonInputNode(
+  network: default,
+  excludeOutputNodes: boolean,
+  randomValue: () => number,
+): default | undefined
+```
 
 Selects a random mutable non-input node.
 
@@ -1173,7 +1552,13 @@ Returns: Selected mutable node.
 
 ### pruneDeterministicChainExtraEdges
 
-`(network: import("src/architecture/network").default, deterministicChain: import("src/architecture/node").default[], outputNode: import("src/architecture/node").default) => void`
+```ts
+pruneDeterministicChainExtraEdges(
+  network: default,
+  deterministicChain: default[],
+  outputNode: default,
+): void
+```
 
 Prunes side edges from chain nodes to preserve linear deterministic depth.
 
@@ -1186,7 +1571,13 @@ Returns: Nothing.
 
 ### reconnectThroughRecurrentLayer
 
-`(network: import("src/architecture/network").default, connectionToExpand: import("src/architecture/connection").default, recurrentLayer: import("src/architecture/network/network.types").RecurrentLayerShape) => import("src/architecture/connection").default | undefined`
+```ts
+reconnectThroughRecurrentLayer(
+  network: default,
+  connectionToExpand: default,
+  recurrentLayer: RecurrentLayerShape,
+): default | undefined
+```
 
 Reconnects a source/target pair through a recurrent layer.
 
@@ -1199,7 +1590,12 @@ Returns: Latest newly created connection or undefined.
 
 ### reinitializeConnectionGroupWeights
 
-`(connections: import("src/architecture/connection").default[], reinitContext: import("src/architecture/network/network.types").ConnectionGroupReinitContext) => void`
+```ts
+reinitializeConnectionGroupWeights(
+  connections: default[],
+  reinitContext: ConnectionGroupReinitContext,
+): void
+```
 
 Reinitializes all weights in a connection group.
 
@@ -1213,7 +1609,11 @@ Returns: Nothing.
 
 ### reinitWeight
 
-`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
+```ts
+reinitWeight(
+  method: MutationMethod | undefined,
+): void
+```
 
 Reinitializes incoming, outgoing, and self-connection weights for one target node.
 
@@ -1227,7 +1627,12 @@ Returns: Nothing.
 
 ### removeHiddenNodeAndApplyStabilityNudge
 
-`(network: import("src/architecture/network").default, hiddenNode: import("src/architecture/node").default) => void`
+```ts
+removeHiddenNodeAndApplyStabilityNudge(
+  network: default,
+  hiddenNode: default,
+): void
+```
 
 Removes selected hidden node and applies stability nudge.
 
@@ -1239,7 +1644,12 @@ Returns: Nothing.
 
 ### resolveDeterministicChainMutationContext
 
-`(network: import("src/architecture/network").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps) => import("src/architecture/network/network.types").DeterministicChainMutationContext | undefined`
+```ts
+resolveDeterministicChainMutationContext(
+  network: default,
+  mutationProps: NetworkMutationProps,
+): DeterministicChainMutationContext | undefined
+```
 
 Resolves all deterministic add-node prerequisites into one context object.
 
@@ -1251,7 +1661,13 @@ Returns: Deterministic context or undefined when any prerequisite fails.
 
 ### resolveDistinctPairWithKnownFirstNode
 
-`(swappableNodes: import("src/architecture/node").default[], firstNode: import("src/architecture/node").default, randomValue: () => number) => import("src/architecture/network/network.types").DistinctNodePair | undefined`
+```ts
+resolveDistinctPairWithKnownFirstNode(
+  swappableNodes: default[],
+  firstNode: default,
+  randomValue: () => number,
+): DistinctNodePair | undefined
+```
 
 Resolves a distinct pair when first node is already known.
 
@@ -1264,7 +1680,13 @@ Returns: Distinct pair or undefined.
 
 ### resolveExpectedChainTarget
 
-`(deterministicChain: import("src/architecture/node").default[], chainNodeIndex: number, outputNode: import("src/architecture/node").default) => import("src/architecture/node").default`
+```ts
+resolveExpectedChainTarget(
+  deterministicChain: default[],
+  chainNodeIndex: number,
+  outputNode: default,
+): default
+```
 
 Resolves the expected outgoing target for a chain node position.
 
@@ -1277,7 +1699,11 @@ Returns: Expected successor target.
 
 ### resolveInputOutputEndpoints
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").InputOutputEndpoints | undefined`
+```ts
+resolveInputOutputEndpoints(
+  network: default,
+): InputOutputEndpoints | undefined
+```
 
 Resolves input/output endpoints required for seed and deterministic flows.
 
@@ -1288,7 +1714,11 @@ Returns: Endpoint nodes or undefined when missing.
 
 ### resolveMethodObject
 
-`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }`
+```ts
+resolveMethodObject(
+  method: MutationMethod | undefined,
+): { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }
+```
 
 Extracts method-object form when provided.
 
@@ -1299,7 +1729,12 @@ Returns: Method object view.
 
 ### resolveSelectedBackwardConnectionPair
 
-`(network: import("src/architecture/network").default, randomValue: () => number) => import("src/architecture/network/network.types").NodePair | undefined`
+```ts
+resolveSelectedBackwardConnectionPair(
+  network: default,
+  randomValue: () => number,
+): NodePair | undefined
+```
 
 Resolves random selected backward connection pair.
 
@@ -1311,7 +1746,12 @@ Returns: Selected source/target pair.
 
 ### resolveSelectedForwardConnectionPair
 
-`(network: import("src/architecture/network").default, randomValue: () => number) => import("src/architecture/network/network.types").NodePair | undefined`
+```ts
+resolveSelectedForwardConnectionPair(
+  network: default,
+  randomValue: () => number,
+): NodePair | undefined
+```
 
 Resolves random selected forward connection pair.
 
@@ -1323,7 +1763,12 @@ Returns: Selected source/target pair.
 
 ### resolveSelfConnectionTargetNode
 
-`(network: import("src/architecture/network").default, randomValue: () => number) => import("src/architecture/node").default | undefined`
+```ts
+resolveSelfConnectionTargetNode(
+  network: default,
+  randomValue: () => number,
+): default | undefined
+```
 
 Resolves random node eligible for self-connection creation.
 
@@ -1335,7 +1780,13 @@ Returns: Selected node.
 
 ### sampleUniform
 
-`(randomValue: () => number, minValue: number, maxValue: number) => number`
+```ts
+sampleUniform(
+  randomValue: () => number,
+  minValue: number,
+  maxValue: number,
+): number
+```
 
 Samples a uniform value from [minValue, maxValue].
 
@@ -1348,7 +1799,11 @@ Returns: Sampled value.
 
 ### sampleUniformFromContext
 
-`(samplingContext: import("src/architecture/network/network.types").WeightSamplingRangeContext) => number`
+```ts
+sampleUniformFromContext(
+  samplingContext: WeightSamplingRangeContext,
+): number
+```
 
 Samples one weight using a prebuilt range context.
 
@@ -1359,7 +1814,12 @@ Returns: Sampled weight.
 
 ### selectHiddenNodeForRemoval
 
-`(network: import("src/architecture/network").default, hiddenNodes: import("src/architecture/node").default[]) => import("src/architecture/node").default | undefined`
+```ts
+selectHiddenNodeForRemoval(
+  network: default,
+  hiddenNodes: default[],
+): default | undefined
+```
 
 Selects a hidden node candidate for SUB_NODE mutation.
 
@@ -1371,7 +1831,13 @@ Returns: Selected hidden node.
 
 ### splitConnectionThroughHiddenNode
 
-`(network: import("src/architecture/network").default, mutationProps: import("src/architecture/network/network.types").NetworkMutationProps, connectionToSplit: import("src/architecture/connection").default) => import("src/architecture/network/network.types").ConnectionSplitResult`
+```ts
+splitConnectionThroughHiddenNode(
+  network: default,
+  mutationProps: NetworkMutationProps,
+  connectionToSplit: default,
+): ConnectionSplitResult
+```
 
 Replaces one connection by inserting a hidden node and reconnecting edges.
 
@@ -1384,7 +1850,9 @@ Returns: Split result values.
 
 ### subBackConn
 
-`() => void`
+```ts
+subBackConn(): void
+```
 
 Removes one backward connection that satisfies redundancy constraints.
 
@@ -1395,7 +1863,9 @@ Returns: Nothing.
 
 ### subConn
 
-`() => void`
+```ts
+subConn(): void
+```
 
 Removes one forward connection when structural redundancy constraints are satisfied.
 
@@ -1408,7 +1878,9 @@ Returns: Nothing.
 
 ### subGate
 
-`() => void`
+```ts
+subGate(): void
+```
 
 Removes gating from one randomly selected gated connection.
 
@@ -1419,7 +1891,9 @@ Returns: Nothing.
 
 ### subNode
 
-`() => void`
+```ts
+subNode(): void
+```
 
 Removes one hidden node and applies a tiny weight nudge for numerical continuity.
 
@@ -1433,7 +1907,9 @@ Returns: Nothing.
 
 ### subSelfConn
 
-`() => void`
+```ts
+subSelfConn(): void
+```
 
 Removes one existing self-connection chosen at random.
 
@@ -1444,7 +1920,12 @@ Returns: Nothing.
 
 ### swapNodeBiasAndSquash
 
-`(firstNode: import("src/architecture/node").default, secondNode: import("src/architecture/node").default) => void`
+```ts
+swapNodeBiasAndSquash(
+  firstNode: default,
+  secondNode: default,
+): void
+```
 
 Swaps bias and squash values between two nodes.
 
@@ -1456,7 +1937,11 @@ Returns: Nothing.
 
 ### swapNodes
 
-`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
+```ts
+swapNodes(
+  method: MutationMethod | undefined,
+): void
+```
 
 Swaps bias and activation squash functions between two distinct mutable nodes.
 
@@ -1471,7 +1956,12 @@ Returns: Nothing.
 
 ### tryDisconnectConnection
 
-`(network: import("src/architecture/network").default, connection: import("src/architecture/connection").default) => void`
+```ts
+tryDisconnectConnection(
+  network: default,
+  connection: default,
+): void
+```
 
 Disconnects a connection pair while suppressing errors.
 
@@ -1483,7 +1973,13 @@ Returns: Nothing.
 
 ### tryGateLatestConnection
 
-`(network: import("src/architecture/network").default, previousGater: import("src/architecture/node").default | null, latestConnection: import("src/architecture/connection").default | undefined) => void`
+```ts
+tryGateLatestConnection(
+  network: default,
+  previousGater: default | null,
+  latestConnection: default | undefined,
+): void
+```
 
 Gates the latest connection when both previous gater and target exist.
 
@@ -1496,7 +1992,13 @@ Returns: Nothing.
 
 ### tryReassignGateAfterSplit
 
-`(network: import("src/architecture/network").default, randomValue: () => number, splitResult: import("src/architecture/network/network.types").ConnectionSplitResult) => void`
+```ts
+tryReassignGateAfterSplit(
+  network: default,
+  randomValue: () => number,
+  splitResult: ConnectionSplitResult,
+): void
+```
 
 Reassigns prior gater to one of the new split connections when possible.
 
@@ -1509,7 +2011,11 @@ Returns: Nothing.
 
 ### warnWhenEnabled
 
-`(message: string) => void`
+```ts
+warnWhenEnabled(
+  message: string,
+): void
+```
 
 Emits a warning when warning mode is enabled.
 
@@ -1520,7 +2026,12 @@ Returns: Nothing.
 
 ### wouldDisconnectTargetPeerLayerGroup
 
-`(network: import("src/architecture/network").default, candidateConnection: import("src/architecture/connection").default) => boolean`
+```ts
+wouldDisconnectTargetPeerLayerGroup(
+  network: default,
+  candidateConnection: default,
+): boolean
+```
 
 Determines whether removal would disconnect a target peer-layer group.
 

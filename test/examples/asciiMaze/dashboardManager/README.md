@@ -24,11 +24,17 @@ Latest best candidate used by live rendering and telemetry.
 
 ### DashboardArchiveFunction
 
-`(args: unknown[]) => void`
+```ts
+DashboardArchiveFunction(
+  args: unknown[],
+): void
+```
 
 ### DashboardClearFunction
 
-`() => void`
+```ts
+DashboardClearFunction(): void
+```
 
 ### DashboardHistoryState
 
@@ -36,7 +42,11 @@ Bounded numeric histories used for trends and exports.
 
 ### DashboardLogFunction
 
-`(args: unknown[]) => void`
+```ts
+DashboardLogFunction(
+  args: unknown[],
+): void
+```
 
 ### DashboardManagerContext
 
@@ -64,7 +74,11 @@ Raw telemetry shape received from NEAT dashboard integrations.
 
 ### DashboardTelemetryHook
 
-`(payload: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardTelemetryPayload) => void`
+```ts
+DashboardTelemetryHook(
+  payload: DashboardTelemetryPayload,
+): void
+```
 
 ### DashboardTelemetryPayload
 
@@ -106,7 +120,9 @@ Rich ASCII maze dashboard used by browser and terminal example hosts.
 
 #### getLastTelemetry
 
-`() => import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeTelemetrySnapshot`
+```ts
+getLastTelemetry(): AsciiMazeTelemetrySnapshot
+```
 
 Return the latest public telemetry snapshot, including rich detail history when available.
 
@@ -118,7 +134,12 @@ Optional log function exposed for engine-side safe-writer fallbacks.
 
 #### redraw
 
-`(currentMaze: string[], neat: unknown) => void`
+```ts
+redraw(
+  currentMaze: string[],
+  neat: unknown,
+): void
+```
 
 Clear and repaint the live dashboard using the current best candidate and histories.
 
@@ -128,13 +149,23 @@ Parameters:
 
 #### reset
 
-`() => void`
+```ts
+reset(): void
+```
 
 Clear archive, current best, and telemetry state so the instance can be reused.
 
 #### update
 
-`(maze: string[], result: import("test/examples/asciiMaze/interfaces").IMazeRunResult | undefined, network: import("test/examples/asciiMaze/interfaces").INetwork | null, generation: number, neatInstance: import("src/neat").default | undefined) => void`
+```ts
+update(
+  maze: string[],
+  result: IMazeRunResult | undefined,
+  network: INetwork | null,
+  generation: number,
+  neatInstance: default | undefined,
+): void
+```
 
 Ingest one evolution update, refresh the live dashboard, and emit telemetry.
 
@@ -149,7 +180,12 @@ Parameters:
 
 ### applyDashboardUpdate
 
-`(context: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, args: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerUpdateArgs) => void`
+```ts
+applyDashboardUpdate(
+  context: DashboardManagerContext,
+  args: DashboardManagerUpdateArgs,
+): void
+```
 
 Ingest one engine update, refresh the live view, and emit external telemetry.
 
@@ -159,7 +195,11 @@ Parameters:
 
 ### getDashboardLastTelemetry
 
-`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState) => import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeTelemetrySnapshot`
+```ts
+getDashboardLastTelemetry(
+  state: DashboardManagerState,
+): AsciiMazeTelemetrySnapshot
+```
 
 Produce the latest public telemetry snapshot from current dashboard state.
 
@@ -170,7 +210,13 @@ Returns: Public telemetry snapshot used by browser hosts.
 
 ### redrawDashboard
 
-`(context: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, currentMaze: string[], neat: unknown) => void`
+```ts
+redrawDashboard(
+  context: DashboardManagerContext,
+  currentMaze: string[],
+  neat: unknown,
+): void
+```
 
 Repaint the live dashboard from current state and refresh the detailed snapshot.
 
@@ -181,7 +227,11 @@ Parameters:
 
 ### resetDashboardState
 
-`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState) => void`
+```ts
+resetDashboardState(
+  state: DashboardManagerState,
+): void
+```
 
 Clear retained archive, best-candidate, and history state for a fresh run.
 
@@ -206,7 +256,12 @@ telemetry helpers stay visually and semantically aligned.
 
 ### buildDashboardSparkline
 
-`(series: number[], width: number) => string`
+```ts
+buildDashboardSparkline(
+  series: number[],
+  width: number,
+): string
+```
 
 Convert the recent tail of a numeric series into a compact sparkline.
 
@@ -218,7 +273,12 @@ Returns: Unicode sparkline string.
 
 ### computeDashboardPathMetrics
 
-`(maze: string[], result: Pick<import("test/examples/asciiMaze/interfaces").IMazeRunResult, "path" | "steps" | "fitness">) => { optimalLength: number; pathLength: number; efficiencyPct: string; overheadPct: string; uniqueCellsVisited: number; revisitedCells: number; totalSteps: number; fitnessValue: number; }`
+```ts
+computeDashboardPathMetrics(
+  maze: string[],
+  result: Pick<IMazeRunResult, "path" | "steps" | "fitness">,
+): { optimalLength: number; pathLength: number; efficiencyPct: string; overheadPct: string; uniqueCellsVisited: number; revisitedCells: number; totalSteps: number; fitnessValue: number; }
+```
 
 Compute solved-path efficiency and visitation metrics for archive output.
 
@@ -230,7 +290,11 @@ Returns: Derived path metrics used by solved archive formatting.
 
 ### deriveDashboardArchitecture
 
-`(networkInstance: import("test/examples/asciiMaze/interfaces").INetwork | null | undefined) => string`
+```ts
+deriveDashboardArchitecture(
+  networkInstance: INetwork | null | undefined,
+): string
+```
 
 Infer a compact architecture string from a network-like runtime object.
 
@@ -241,7 +305,15 @@ Returns: Architecture string such as `6 - 8 - 4`, or `n/a` when unavailable.
 
 ### formatDashboardStat
 
-`(label: string, value: string | number, colorLabel: string, colorValue: string, labelWidth: number) => string`
+```ts
+formatDashboardStat(
+  label: string,
+  value: string | number,
+  colorLabel: string,
+  colorValue: string,
+  labelWidth: number,
+): string
+```
 
 Format a single framed dashboard stat line with aligned label and value columns.
 
@@ -256,7 +328,11 @@ Returns: Ready-to-log framed stat line.
 
 ### getDashboardMazeKey
 
-`(maze: string[]) => string`
+```ts
+getDashboardMazeKey(
+  maze: string[],
+): string
+```
 
 Build a lightweight dedupe key for a maze layout.
 
@@ -267,7 +343,11 @@ Returns: Joined maze key used by the solved archive.
 
 ### sliceDashboardHistoryForExport
 
-`(history: number[] | null | undefined) => number[]`
+```ts
+sliceDashboardHistoryForExport(
+  history: number[] | null | undefined,
+): number[]
+```
 
 Return the recent export window of a bounded numeric history buffer.
 

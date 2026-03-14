@@ -28,7 +28,12 @@ applyPlaybackSnapshot(renderState, payload.snapshot);
 
 ### applyPlaybackSnapshot
 
-`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
+```ts
+applyPlaybackSnapshot(
+  renderState: PopulationRenderState,
+  snapshot: EvolutionPlaybackStepSnapshot,
+): void
+```
 
 Applies worker snapshot data to the mutable playback render state.
 
@@ -44,7 +49,12 @@ Returns: Nothing.
 
 ### syncPlaybackSnapshotBirds
 
-`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
+```ts
+syncPlaybackSnapshotBirds(
+  renderState: PopulationRenderState,
+  snapshot: EvolutionPlaybackStepSnapshot,
+): void
+```
 
 Synchronizes packed bird snapshot fields into the reusable render-state bird array.
 
@@ -59,7 +69,12 @@ Returns: Nothing.
 
 ### syncPlaybackSnapshotPipes
 
-`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
+```ts
+syncPlaybackSnapshotPipes(
+  renderState: PopulationRenderState,
+  snapshot: EvolutionPlaybackStepSnapshot,
+): void
+```
 
 Synchronizes packed pipe snapshot fields into the reusable render-state pipe array.
 
@@ -82,7 +97,11 @@ reporting flow.
 
 ### resolveLeaderFramesSurvived
 
-`(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => number`
+```ts
+resolveLeaderFramesSurvived(
+  renderState: PopulationRenderState,
+): number
+```
 
 Resolves the maximum survived-frame count in the current render state.
 

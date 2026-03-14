@@ -124,7 +124,11 @@ Constructor type for typed arrays used in slabs.
 
 ### canUseFastSlab
 
-`(training: boolean) => boolean`
+```ts
+canUseFastSlab(
+  training: boolean,
+): boolean
+```
 
 Public convenience wrapper exposing fast path eligibility.
 Mirrors `_canUseFastSlab` internal predicate.
@@ -140,7 +144,11 @@ Shape returned by getConnectionSlab describing the packed SoA view.
 
 ### fastSlabActivate
 
-`(input: number[]) => number[]`
+```ts
+fastSlabActivate(
+  input: number[],
+): number[]
+```
 
 High‑performance forward pass using packed slabs + CSR adjacency.
 
@@ -161,7 +169,9 @@ Returns: Output activations (detached plain array) of length `network.output`.
 
 ### getConnectionSlab
 
-`() => import("src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
+```ts
+getConnectionSlab(): ConnectionSlabView
+```
 
 Obtain (and lazily rebuild if dirty) the current packed SoA view of connections.
 
@@ -173,7 +183,9 @@ Returns: Read‑only style view (do not mutate) containing typed arrays + metada
 
 ### getSlabAllocationStats
 
-`() => { pool: { [x: string]: import("src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
+```ts
+getSlabAllocationStats(): { pool: { [x: string]: PoolKeyMetrics; }; fresh: number; pooled: number; }
+```
 
 Allocation statistics snapshot for slab typed arrays.
 
@@ -188,7 +200,9 @@ Returns: Plain object copy (safe to serialize) of current allocator counters.
 
 ### getSlabVersion
 
-`() => number`
+```ts
+getSlabVersion(): number
+```
 
 Retrieve current monotonic slab version (increments on each successful rebuild).
 
@@ -196,7 +210,11 @@ Returns: Non‑negative integer (0 if slab never built yet).
 
 ### rebuildConnectionSlab
 
-`(force: boolean) => void`
+```ts
+rebuildConnectionSlab(
+  force: boolean,
+): void
+```
 
 Build (or refresh) the packed connection slabs for the network synchronously.
 
@@ -218,7 +236,11 @@ Parameters:
 
 ### rebuildConnectionSlabAsync
 
-`(chunkSize: number) => Promise<void>`
+```ts
+rebuildConnectionSlabAsync(
+  chunkSize: number,
+): Promise<void>
+```
 
 Cooperative asynchronous slab rebuild (Browser only).
 
@@ -241,7 +263,14 @@ Internal slab pool/stat helpers extracted from network.slab.utils.ts.
 
 ### _acquireTA
 
-`(kind: string, ctor: import("src/architecture/network/slab/network.slab.utils.types").TypedArrayConstructor, length: number, bytesPerElement: number) => import("src/architecture/network/slab/network.slab.utils.types").TypedArray`
+```ts
+_acquireTA(
+  kind: string,
+  ctor: TypedArrayConstructor,
+  length: number,
+  bytesPerElement: number,
+): TypedArray
+```
 
 Acquires a typed array from pool or allocates a fresh one.
 
@@ -255,7 +284,9 @@ Returns: Acquired typed array.
 
 ### _getSlabAllocationStatsSnapshot
 
-`() => { pool: { [x: string]: import("src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
+```ts
+_getSlabAllocationStatsSnapshot(): { pool: { [x: string]: PoolKeyMetrics; }; fresh: number; pooled: number; }
+```
 
 Returns allocation stats snapshot for slab typed arrays.
 
@@ -263,7 +294,13 @@ Returns: Serializable snapshot of fresh, pooled, and per-key metrics.
 
 ### _poolKey
 
-`(kind: string, bytes: number, length: number) => string`
+```ts
+_poolKey(
+  kind: string,
+  bytes: number,
+  length: number,
+): string
+```
 
 Creates a stable pool key from kind, element width, and length.
 
@@ -276,7 +313,13 @@ Returns: Stable pool key.
 
 ### _releaseTA
 
-`(kind: string, bytesPerElement: number, arr: import("src/architecture/network/slab/network.slab.utils.types").TypedArray) => void`
+```ts
+_releaseTA(
+  kind: string,
+  bytesPerElement: number,
+  arr: TypedArray,
+): void
+```
 
 Releases a typed array back to bounded per-key pool.
 
@@ -289,7 +332,9 @@ Returns: Nothing.
 
 ### _slabPoolCap
 
-`() => number`
+```ts
+_slabPoolCap(): number
+```
 
 Computes retention cap per key.
 
@@ -299,7 +344,11 @@ Returns: Non-negative max retained arrays per key.
 
 ### _createConnectionSlabView
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
+```ts
+_createConnectionSlabView(
+  network: default,
+): ConnectionSlabView
+```
 
 Creates a read-oriented packed slab view from current network internals.
 
@@ -310,7 +359,11 @@ Returns: Packed connection slab view.
 
 ### _readSlabVersion
 
-`(network: import("src/architecture/network").default) => number`
+```ts
+_readSlabVersion(
+  network: default,
+): number
+```
 
 Reads the current monotonic slab version from network internals.
 
@@ -321,7 +374,12 @@ Returns: Non-negative slab version counter.
 
 ### _resolveConnectionGainView
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, capacity: number) => Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | null`
+```ts
+_resolveConnectionGainView(
+  internalNet: NetworkSlabProps,
+  capacity: number,
+): Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | null
+```
 
 Resolves gain slab view, synthesizing neutral gain values when omitted.
 
@@ -333,7 +391,11 @@ Returns: Gain array view.
 
 ### _resolveConnectionSlabCapacity
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => number`
+```ts
+_resolveConnectionSlabCapacity(
+  internalNet: NetworkSlabProps,
+): number
+```
 
 Resolves effective slab capacity using explicit capacity first.
 
@@ -346,7 +408,11 @@ Returns: Effective capacity value.
 
 ### _prepareSlabBuildPreconditions
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+```ts
+_prepareSlabBuildPreconditions(
+  buildContext: SlabBuildContext,
+): void
+```
 
 Applies prerequisite normalization for slab rebuild passes.
 
@@ -359,7 +425,12 @@ Returns: Nothing.
 
 ### _activateFastSlab
 
-`(network: import("src/architecture/network").default, input: number[]) => number[]`
+```ts
+_activateFastSlab(
+  network: default,
+  input: number[],
+): number[]
+```
 
 Executes fast slab activation once slab and adjacency prerequisites are prepared.
 
@@ -373,7 +444,11 @@ Returns: Output activation array.
 
 ### _reindexNodes
 
-`(network: import("src/architecture/network").default) => void`
+```ts
+_reindexNodes(
+  network: default,
+): void
+```
 
 Assigns sequential node indices used by slab packing and fast-path traversal.
 
@@ -388,7 +463,11 @@ Internal slab rebuild helper functions extracted from network.slab.utils.ts.
 
 ### _allocateCoreSlabArrays
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+```ts
+_allocateCoreSlabArrays(
+  buildContext: SlabBuildContext,
+): void
+```
 
 Allocates core slab arrays (weights/from/to/flags).
 
@@ -399,7 +478,11 @@ Returns: Nothing.
 
 ### _allocateGainSlabForAsync
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+```ts
+_allocateGainSlabForAsync(
+  buildContext: SlabBuildContext,
+): void
+```
 
 Allocates gain slab for async pass prefill strategy.
 
@@ -410,7 +493,12 @@ Returns: Nothing.
 
 ### _applyGainOmissionPolicy
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult) => void`
+```ts
+_applyGainOmissionPolicy(
+  buildContext: SlabBuildContext,
+  populateResult: SlabPopulateResult,
+): void
+```
 
 Applies gain omission rule by releasing neutral gain slab.
 
@@ -422,7 +510,12 @@ Returns: Nothing.
 
 ### _applyPlasticPolicyAsync
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult) => void`
+```ts
+_applyPlasticPolicyAsync(
+  buildContext: SlabBuildContext,
+  populateResult: SlabPopulateResult,
+): void
+```
 
 Applies async plastic slab allocation/release policy.
 
@@ -434,7 +527,12 @@ Returns: Nothing.
 
 ### _applyPlasticPolicySync
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult) => void`
+```ts
+_applyPlasticPolicySync(
+  buildContext: SlabBuildContext,
+  populateResult: SlabPopulateResult,
+): void
+```
 
 Applies sync plastic slab allocation/release policy.
 
@@ -446,7 +544,11 @@ Returns: Nothing.
 
 ### _createInitialSlabPopulateResult
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult`
+```ts
+_createInitialSlabPopulateResult(
+  internalNet: NetworkSlabProps,
+): SlabPopulateResult
+```
 
 Creates initial populate result from current optional slab state.
 
@@ -457,7 +559,12 @@ Returns: Initial populate result.
 
 ### _createSlabBuildContext
 
-`(network: import("src/architecture/network").default, growthFactor: number) => import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext`
+```ts
+_createSlabBuildContext(
+  network: default,
+  growthFactor: number,
+): SlabBuildContext
+```
 
 Creates immutable slab build context for one rebuild pass.
 
@@ -469,7 +576,11 @@ Returns: Build context.
 
 ### _createSlabWriteArrays
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => import("src/architecture/network/slab/network.slab.utils.types").SlabWriteArrays`
+```ts
+_createSlabWriteArrays(
+  buildContext: SlabBuildContext,
+): SlabWriteArrays
+```
 
 Creates strongly typed write-array bundle for connection population.
 
@@ -480,7 +591,13 @@ Returns: Write-array bundle.
 
 ### _ensureGainArrayExistsForIndex
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, connectionIndex: number) => void`
+```ts
+_ensureGainArrayExistsForIndex(
+  buildContext: SlabBuildContext,
+  populateResult: SlabPopulateResult,
+  connectionIndex: number,
+): void
+```
 
 Ensures gain slab exists before writing non-neutral value.
 
@@ -493,7 +610,11 @@ Returns: Nothing.
 
 ### _ensureSlabCapacityAsync
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+```ts
+_ensureSlabCapacityAsync(
+  buildContext: SlabBuildContext,
+): void
+```
 
 Ensures async rebuild has enough slab capacity.
 
@@ -504,7 +625,11 @@ Returns: Nothing.
 
 ### _ensureSlabCapacitySync
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+```ts
+_ensureSlabCapacitySync(
+  buildContext: SlabBuildContext,
+): void
+```
 
 Ensures sync rebuild has enough slab capacity.
 
@@ -515,7 +640,13 @@ Returns: Nothing.
 
 ### _expandSlabCapacity
 
-`(currentCapacity: number, requiredCapacity: number, growthFactor: number) => number`
+```ts
+_expandSlabCapacity(
+  currentCapacity: number,
+  requiredCapacity: number,
+  growthFactor: number,
+): number
+```
 
 Computes next capacity satisfying required size using geometric growth.
 
@@ -528,7 +659,13 @@ Returns: Expanded capacity.
 
 ### _fillPlasticityRates
 
-`(network: import("src/architecture/network").default, plasticArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, connectionCount: number) => void`
+```ts
+_fillPlasticityRates(
+  network: default,
+  plasticArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+  connectionCount: number,
+): void
+```
 
 Fills plastic slab values from connection plasticity rates.
 
@@ -541,7 +678,11 @@ Returns: Nothing.
 
 ### _finalizeAsyncSlabRebuild
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+```ts
+_finalizeAsyncSlabRebuild(
+  buildContext: SlabBuildContext,
+): void
+```
 
 Finalizes async rebuild bookkeeping fields.
 
@@ -552,7 +693,12 @@ Returns: Nothing.
 
 ### _finalizeSharedSlabState
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, connectionCount: number) => void`
+```ts
+_finalizeSharedSlabState(
+  internalNet: NetworkSlabProps,
+  connectionCount: number,
+): void
+```
 
 Finalizes shared rebuild bookkeeping fields.
 
@@ -564,7 +710,11 @@ Returns: Nothing.
 
 ### _finalizeSyncSlabRebuild
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+```ts
+_finalizeSyncSlabRebuild(
+  buildContext: SlabBuildContext,
+): void
+```
 
 Finalizes sync rebuild bookkeeping fields.
 
@@ -575,7 +725,15 @@ Returns: Nothing.
 
 ### _populateAsyncChunkRange
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, writeArrays: import("src/architecture/network/slab/network.slab.utils.types").SlabWriteArrays, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, startIndex: number, endIndex: number) => void`
+```ts
+_populateAsyncChunkRange(
+  buildContext: SlabBuildContext,
+  writeArrays: SlabWriteArrays,
+  populateResult: SlabPopulateResult,
+  startIndex: number,
+  endIndex: number,
+): void
+```
 
 Populates one inclusive-exclusive chunk range for async rebuild.
 
@@ -590,7 +748,12 @@ Returns: Nothing.
 
 ### _populateSlabConnectionsAsync
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, chunkSize: number) => Promise<import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult>`
+```ts
+_populateSlabConnectionsAsync(
+  buildContext: SlabBuildContext,
+  chunkSize: number,
+): Promise<SlabPopulateResult>
+```
 
 Populates core slab arrays in cooperative async chunks.
 
@@ -602,7 +765,11 @@ Returns: Population result flags and optional slabs.
 
 ### _populateSlabConnectionsSync
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult`
+```ts
+_populateSlabConnectionsSync(
+  buildContext: SlabBuildContext,
+): SlabPopulateResult
+```
 
 Populates core slab arrays in synchronous single pass.
 
@@ -613,7 +780,11 @@ Returns: Population result flags and optional slabs.
 
 ### _releaseExistingSlabArrays
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext) => void`
+```ts
+_releaseExistingSlabArrays(
+  buildContext: SlabBuildContext,
+): void
+```
 
 Releases all currently allocated slab arrays back to pool.
 
@@ -624,7 +795,11 @@ Returns: Nothing.
 
 ### _resetOptionalSlabArraysAfterSyncAllocate
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => void`
+```ts
+_resetOptionalSlabArraysAfterSyncAllocate(
+  internalNet: NetworkSlabProps,
+): void
+```
 
 Resets optional slabs after sync allocation to keep omission semantics.
 
@@ -635,7 +810,12 @@ Returns: Nothing.
 
 ### _resolveAsyncChunkSize
 
-`(totalConnections: number, requestedChunkSize: number) => number`
+```ts
+_resolveAsyncChunkSize(
+  totalConnections: number,
+  requestedChunkSize: number,
+): number
+```
 
 Resolves effective async chunk size using adaptive heuristics.
 
@@ -647,7 +827,12 @@ Returns: Effective chunk size.
 
 ### _shouldSkipSlabRebuild
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, force: boolean) => boolean`
+```ts
+_shouldSkipSlabRebuild(
+  internalNet: NetworkSlabProps,
+  force: boolean,
+): boolean
+```
 
 Determines whether slab rebuild can be skipped.
 
@@ -659,7 +844,12 @@ Returns: True when rebuild can be skipped.
 
 ### _updatePlasticPresence
 
-`(populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, connection: import("src/architecture/network/slab/network.slab.utils.types").ConnectionInternals) => void`
+```ts
+_updatePlasticPresence(
+  populateResult: SlabPopulateResult,
+  connection: ConnectionInternals,
+): void
+```
 
 Updates plastic-presence flag from connection bitfield.
 
@@ -671,7 +861,11 @@ Returns: Nothing.
 
 ### _weightArrayCtor
 
-`(useFloat32Weights: boolean | undefined) => Float32ArrayConstructor | Float64ArrayConstructor`
+```ts
+_weightArrayCtor(
+  useFloat32Weights: boolean | undefined,
+): Float32ArrayConstructor | Float64ArrayConstructor
+```
 
 Resolves typed-array constructor for weight slabs.
 
@@ -682,7 +876,11 @@ Returns: Matching typed-array constructor.
 
 ### _weightByteWidth
 
-`(useFloat32Weights: boolean | undefined) => number`
+```ts
+_weightByteWidth(
+  useFloat32Weights: boolean | undefined,
+): number
+```
 
 Resolves byte width for weight slab arrays.
 
@@ -693,7 +891,13 @@ Returns: Byte width for weight elements.
 
 ### _writeConnectionCoreFields
 
-`(writeArrays: import("src/architecture/network/slab/network.slab.utils.types").SlabWriteArrays, connection: import("src/architecture/network/slab/network.slab.utils.types").ConnectionInternals, connectionIndex: number) => void`
+```ts
+_writeConnectionCoreFields(
+  writeArrays: SlabWriteArrays,
+  connection: ConnectionInternals,
+  connectionIndex: number,
+): void
+```
 
 Writes core fields for one connection into slab arrays.
 
@@ -706,7 +910,14 @@ Returns: Nothing.
 
 ### _writeConnectionGainField
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").SlabBuildContext, populateResult: import("src/architecture/network/slab/network.slab.utils.types").SlabPopulateResult, connection: import("src/architecture/network/slab/network.slab.utils.types").ConnectionInternals, connectionIndex: number) => void`
+```ts
+_writeConnectionGainField(
+  buildContext: SlabBuildContext,
+  populateResult: SlabPopulateResult,
+  connection: ConnectionInternals,
+  connectionIndex: number,
+): void
+```
 
 Writes gain field for one connection and updates gain flags.
 
@@ -724,7 +935,11 @@ Internal slab adjacency helpers extracted from network.slab.utils.ts.
 
 ### _buildAdjacency
 
-`(network: import("src/architecture/network").default) => void`
+```ts
+_buildAdjacency(
+  network: default,
+): void
+```
 
 Build or refresh CSR-style adjacency (outStart + outOrder) for fast fan-out traversal.
 
@@ -735,7 +950,11 @@ Returns: Nothing.
 
 ### asNetworkSlabProps
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps`
+```ts
+asNetworkSlabProps(
+  network: default,
+): NetworkSlabProps
+```
 
 Cast network instance into internal slab-backed shape.
 
@@ -746,7 +965,11 @@ Returns: Internal slab-backed network representation.
 
 ### buildOutgoingOrder
 
-`(outgoingOrderBuildContext: import("src/architecture/network/slab/network.slab.utils.types").OutgoingOrderBuildContext) => Uint32Array<ArrayBufferLike>`
+```ts
+buildOutgoingOrder(
+  outgoingOrderBuildContext: OutgoingOrderBuildContext,
+): Uint32Array<ArrayBufferLike>
+```
 
 Build source-grouped outgoing order using CSR start offsets.
 
@@ -757,7 +980,11 @@ Returns: Ordered outgoing connection indices.
 
 ### buildOutgoingStartIndices
 
-`(startIndicesBuildContext: import("src/architecture/network/slab/network.slab.utils.types").StartIndicesBuildContext) => Uint32Array<ArrayBufferLike>`
+```ts
+buildOutgoingStartIndices(
+  startIndicesBuildContext: StartIndicesBuildContext,
+): Uint32Array<ArrayBufferLike>
+```
 
 Build CSR start offsets from fan-out counts.
 
@@ -768,7 +995,11 @@ Returns: Outgoing start indices slab.
 
 ### collectFanOutCounts
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").BuildAdjacencyContext) => Uint32Array<ArrayBufferLike>`
+```ts
+collectFanOutCounts(
+  buildContext: BuildAdjacencyContext,
+): Uint32Array<ArrayBufferLike>
+```
 
 Collect fan-out counts for each source node.
 
@@ -779,7 +1010,11 @@ Returns: Fan-out counts per node.
 
 ### createBuildAdjacencyContext
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/slab/network.slab.utils.types").BuildAdjacencyContext | null`
+```ts
+createBuildAdjacencyContext(
+  network: default,
+): BuildAdjacencyContext | null
+```
 
 Build adjacency context when required slabs are available.
 
@@ -790,7 +1025,11 @@ Returns: Build context or null when adjacency cannot be built yet.
 
 ### createFanOutCollectionContext
 
-`(buildContext: import("src/architecture/network/slab/network.slab.utils.types").BuildAdjacencyContext) => import("src/architecture/network/slab/network.slab.utils.types").FanOutCollectionContext`
+```ts
+createFanOutCollectionContext(
+  buildContext: BuildAdjacencyContext,
+): FanOutCollectionContext
+```
 
 Build fan-out collection context.
 
@@ -801,7 +1040,11 @@ Returns: Fan-out collection context.
 
 ### createFanOutCountsBuffer
 
-`(nodeCount: number) => Uint32Array<ArrayBufferLike>`
+```ts
+createFanOutCountsBuffer(
+  nodeCount: number,
+): Uint32Array<ArrayBufferLike>
+```
 
 Allocate fan-out counts buffer.
 
@@ -812,7 +1055,11 @@ Returns: Zero-initialized fan-out counts.
 
 ### createInsertionCursor
 
-`(outgoingStartIndices: Uint32Array<ArrayBufferLike>) => Uint32Array<ArrayBufferLike>`
+```ts
+createInsertionCursor(
+  outgoingStartIndices: Uint32Array<ArrayBufferLike>,
+): Uint32Array<ArrayBufferLike>
+```
 
 Create insertion cursor copy from outgoing start indices.
 
@@ -823,7 +1070,11 @@ Returns: Mutable insertion cursor.
 
 ### createOutgoingOrderBuffer
 
-`(connectionCount: number) => Uint32Array<ArrayBufferLike>`
+```ts
+createOutgoingOrderBuffer(
+  connectionCount: number,
+): Uint32Array<ArrayBufferLike>
+```
 
 Allocate outgoing order buffer.
 
@@ -834,7 +1085,11 @@ Returns: Outgoing order buffer.
 
 ### createOutgoingStartIndicesBuffer
 
-`(nodeCount: number) => Uint32Array<ArrayBufferLike>`
+```ts
+createOutgoingStartIndicesBuffer(
+  nodeCount: number,
+): Uint32Array<ArrayBufferLike>
+```
 
 Allocate outgoing start indices buffer with terminal slot.
 
@@ -845,7 +1100,11 @@ Returns: Outgoing start indices buffer.
 
 ### hasRequiredConnectionSlabs
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => boolean`
+```ts
+hasRequiredConnectionSlabs(
+  internalNet: NetworkSlabProps,
+): boolean
+```
 
 Check whether required connection slabs exist.
 
@@ -856,7 +1115,11 @@ Returns: True when adjacency build prerequisites are present.
 
 ### incrementFanOutCountAtSource
 
-`(context: { fanOutCounts: Uint32Array<ArrayBufferLike>; connectionFromSlab: Uint32Array<ArrayBufferLike>; connectionIndex: number; }) => void`
+```ts
+incrementFanOutCountAtSource(
+  context: { fanOutCounts: Uint32Array<ArrayBufferLike>; connectionFromSlab: Uint32Array<ArrayBufferLike>; connectionIndex: number; },
+): void
+```
 
 Increment fan-out count for one connection source index.
 
@@ -867,7 +1130,11 @@ Returns: Nothing.
 
 ### insertConnectionIntoOutgoingOrder
 
-`(context: { connectionIndex: number; connectionFromSlab: Uint32Array<ArrayBufferLike>; outgoingOrder: Uint32Array<ArrayBufferLike>; insertionCursor: Uint32Array<ArrayBufferLike>; }) => void`
+```ts
+insertConnectionIntoOutgoingOrder(
+  context: { connectionIndex: number; connectionFromSlab: Uint32Array<ArrayBufferLike>; outgoingOrder: Uint32Array<ArrayBufferLike>; insertionCursor: Uint32Array<ArrayBufferLike>; },
+): void
+```
 
 Insert one connection index into the proper source-grouped slot.
 
@@ -878,7 +1145,12 @@ Returns: Nothing.
 
 ### iterateConnectionIndices
 
-`(connectionCount: number, visitor: (connectionIndex: number) => void) => void`
+```ts
+iterateConnectionIndices(
+  connectionCount: number,
+  visitor: (connectionIndex: number) => void,
+): void
+```
 
 Iterate all connection indices.
 
@@ -890,7 +1162,12 @@ Returns: Nothing.
 
 ### iterateNodeIndices
 
-`(nodeCount: number, visitor: (nodeIndex: number) => void) => void`
+```ts
+iterateNodeIndices(
+  nodeCount: number,
+  visitor: (nodeIndex: number) => void,
+): void
+```
 
 Iterate all node indices.
 
@@ -902,7 +1179,11 @@ Returns: Nothing.
 
 ### populateFanOutCounts
 
-`(fanOutCollectionContext: import("src/architecture/network/slab/network.slab.utils.types").FanOutCollectionContext) => void`
+```ts
+populateFanOutCounts(
+  fanOutCollectionContext: FanOutCollectionContext,
+): void
+```
 
 Populate fan-out counts from the connection source slab.
 
@@ -913,7 +1194,11 @@ Returns: Nothing.
 
 ### populateOutgoingOrder
 
-`(context: { connectionCount: number; connectionFromSlab: Uint32Array<ArrayBufferLike>; outgoingOrder: Uint32Array<ArrayBufferLike>; insertionCursor: Uint32Array<ArrayBufferLike>; }) => void`
+```ts
+populateOutgoingOrder(
+  context: { connectionCount: number; connectionFromSlab: Uint32Array<ArrayBufferLike>; outgoingOrder: Uint32Array<ArrayBufferLike>; insertionCursor: Uint32Array<ArrayBufferLike>; },
+): void
+```
 
 Populate outgoing order by source-grouped insertion.
 
@@ -924,7 +1209,11 @@ Returns: Nothing.
 
 ### populateOutgoingStartIndices
 
-`(context: { fanOutCounts: Uint32Array<ArrayBufferLike>; outgoingStartIndices: Uint32Array<ArrayBufferLike>; }) => number`
+```ts
+populateOutgoingStartIndices(
+  context: { fanOutCounts: Uint32Array<ArrayBufferLike>; outgoingStartIndices: Uint32Array<ArrayBufferLike>; },
+): number
+```
 
 Populate outgoing start indices and return terminal offset.
 
@@ -935,7 +1224,11 @@ Returns: Terminal running offset after the last node.
 
 ### publishAdjacency
 
-`(publishAdjacencyContext: import("src/architecture/network/slab/network.slab.utils.types").PublishAdjacencyContext) => void`
+```ts
+publishAdjacency(
+  publishAdjacencyContext: PublishAdjacencyContext,
+): void
+```
 
 Publish adjacency slabs and clear dirty flag.
 
@@ -946,7 +1239,11 @@ Returns: Nothing.
 
 ### setTerminalOutgoingStartOffset
 
-`(context: { nodeCount: number; outgoingStartIndices: Uint32Array<ArrayBufferLike>; terminalRunningOffset: number; }) => void`
+```ts
+setTerminalOutgoingStartOffset(
+  context: { nodeCount: number; outgoingStartIndices: Uint32Array<ArrayBufferLike>; terminalRunningOffset: number; },
+): void
+```
 
 Set terminal outgoing start offset at the tail slot.
 
@@ -961,7 +1258,12 @@ Internal fast slab activation helpers extracted from network.slab.utils.ts.
 
 ### _activateThroughLegacyPath
 
-`(network: import("src/architecture/network").default, input: number[]) => number[]`
+```ts
+_activateThroughLegacyPath(
+  network: default,
+  input: number[],
+): number[]
+```
 
 Executes legacy network activation fallback.
 
@@ -973,7 +1275,11 @@ Returns: Legacy activation output.
 
 ### _canUseFastSlab
 
-`(training: boolean) => boolean`
+```ts
+_canUseFastSlab(
+  training: boolean,
+): boolean
+```
 
 Predicate gating usage of high-performance slab forward pass.
 
@@ -984,7 +1290,13 @@ Returns: True if fast path can be safely used.
 
 ### _collectFastSlabOutput
 
-`(network: import("src/architecture/network").default, activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, nodeCount: number) => number[]`
+```ts
+_collectFastSlabOutput(
+  network: default,
+  activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+  nodeCount: number,
+): number[]
+```
 
 Collects output activations into detached number array.
 
@@ -997,7 +1309,12 @@ Returns: Output activation array.
 
 ### _createFastActivationBuffer
 
-`(useFloat32Activation: boolean, nodeCount: number) => Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>`
+```ts
+_createFastActivationBuffer(
+  useFloat32Activation: boolean,
+  nodeCount: number,
+): Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>
+```
 
 Creates typed fast activation/state buffer.
 
@@ -1009,7 +1326,12 @@ Returns: New typed buffer.
 
 ### _ensureFastSlabBuffers
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, nodeCount: number) => void`
+```ts
+_ensureFastSlabBuffers(
+  internalNet: NetworkSlabProps,
+  nodeCount: number,
+): void
+```
 
 Ensures fast activation/state buffers are allocated and shape-compatible.
 
@@ -1021,7 +1343,11 @@ Returns: Nothing.
 
 ### _hasFastSlabPrerequisites
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => boolean`
+```ts
+_hasFastSlabPrerequisites(
+  internalNet: NetworkSlabProps,
+): boolean
+```
 
 Checks whether core slab prerequisites are available.
 
@@ -1032,7 +1358,15 @@ Returns: True when all required slabs/adjacency arrays exist.
 
 ### _maybeActivateNonInputNode
 
-`(network: import("src/architecture/network").default, node: import("src/architecture/network/slab/network.slab.utils.types").FastSlabNodeRuntime, nodeIndex: number, stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>) => void`
+```ts
+_maybeActivateNonInputNode(
+  network: default,
+  node: FastSlabNodeRuntime,
+  nodeIndex: number,
+  stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+  activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+): void
+```
 
 Activates one non-input node when required.
 
@@ -1047,7 +1381,13 @@ Returns: Nothing.
 
 ### _needsFastBufferReplacement
 
-`(buffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | undefined, nodeCount: number, useFloat32Activation: boolean) => boolean`
+```ts
+_needsFastBufferReplacement(
+  buffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | undefined,
+  nodeCount: number,
+  useFloat32Activation: boolean,
+): boolean
+```
 
 Checks whether a fast buffer requires replacement.
 
@@ -1060,7 +1400,13 @@ Returns: True when replacement is needed.
 
 ### _prepareFastSlabRuntime
 
-`(network: import("src/architecture/network").default, internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, reindexNodes: (network: import("src/architecture/network").default) => void) => void`
+```ts
+_prepareFastSlabRuntime(
+  network: default,
+  internalNet: NetworkSlabProps,
+  reindexNodes: (network: default) => void,
+): void
+```
 
 Prepares topology and indices for fast slab pass.
 
@@ -1073,7 +1419,15 @@ Returns: Nothing.
 
 ### _propagateFastSlabActivations
 
-`(network: import("src/architecture/network").default, internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, topoOrder: import("src/architecture/network/slab/network.slab.utils.types").FastSlabNodeRuntime[], activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>) => void`
+```ts
+_propagateFastSlabActivations(
+  network: default,
+  internalNet: NetworkSlabProps,
+  topoOrder: FastSlabNodeRuntime[],
+  activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+  stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+): void
+```
 
 Propagates activations through topology using slab arrays.
 
@@ -1088,7 +1442,18 @@ Returns: Nothing.
 
 ### _propagateNodeOutgoingEdges
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, nodeIndex: number, activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, weightArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, toIndexArray: Uint32Array<ArrayBufferLike>, outgoingOrder: Uint32Array<ArrayBufferLike>, outgoingStartIndices: Uint32Array<ArrayBufferLike>) => void`
+```ts
+_propagateNodeOutgoingEdges(
+  internalNet: NetworkSlabProps,
+  nodeIndex: number,
+  activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+  stateBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+  weightArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+  toIndexArray: Uint32Array<ArrayBufferLike>,
+  outgoingOrder: Uint32Array<ArrayBufferLike>,
+  outgoingStartIndices: Uint32Array<ArrayBufferLike>,
+): void
+```
 
 Propagates one node activation over all outgoing slab edges.
 
@@ -1106,7 +1471,11 @@ Returns: Nothing.
 
 ### _recomputeTopologyOrder
 
-`(network: import("src/architecture/network").default) => void`
+```ts
+_recomputeTopologyOrder(
+  network: default,
+): void
+```
 
 Recomputes topological order on demand.
 
@@ -1117,7 +1486,12 @@ Returns: Nothing.
 
 ### _resolveFastTopoOrder
 
-`(network: import("src/architecture/network").default, internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps) => import("src/architecture/network/slab/network.slab.utils.types").FastSlabNodeRuntime[]`
+```ts
+_resolveFastTopoOrder(
+  network: default,
+  internalNet: NetworkSlabProps,
+): FastSlabNodeRuntime[]
+```
 
 Resolves topological iteration order for fast slab pass.
 
@@ -1129,7 +1503,13 @@ Returns: Topological node order.
 
 ### _resolveWeightedConnectionValue
 
-`(internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, weightArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>, connectionIndex: number) => number`
+```ts
+_resolveWeightedConnectionValue(
+  internalNet: NetworkSlabProps,
+  weightArray: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+  connectionIndex: number,
+): number
+```
 
 Resolves effective connection weight including optional gain.
 
@@ -1142,7 +1522,13 @@ Returns: Effective weighted value.
 
 ### _seedFastInputLayer
 
-`(network: import("src/architecture/network").default, input: number[], activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>) => void`
+```ts
+_seedFastInputLayer(
+  network: default,
+  input: number[],
+  activationBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+): void
+```
 
 Seeds input-layer activations for fast slab pass.
 
@@ -1155,7 +1541,12 @@ Returns: Nothing.
 
 ### _tryFastSlabFallbackForGating
 
-`(network: import("src/architecture/network").default, input: number[]) => number[] | null`
+```ts
+_tryFastSlabFallbackForGating(
+  network: default,
+  input: number[],
+): number[] | null
+```
 
 Falls back to legacy activation when gating is present.
 
@@ -1167,7 +1558,13 @@ Returns: Legacy output or null when fast path may continue.
 
 ### _tryFastSlabFallbackForMissingPrerequisites
 
-`(network: import("src/architecture/network").default, internalNet: import("src/architecture/network/slab/network.slab.utils.types").NetworkSlabProps, input: number[]) => number[] | null`
+```ts
+_tryFastSlabFallbackForMissingPrerequisites(
+  network: default,
+  internalNet: NetworkSlabProps,
+  input: number[],
+): number[] | null
+```
 
 Falls back to legacy activation when slab prerequisites are missing.
 
@@ -1180,7 +1577,12 @@ Returns: Legacy output or null when fast path may continue.
 
 ### _writeInputNodeRuntime
 
-`(node: import("src/architecture/node").default, inputValue: number) => void`
+```ts
+_writeInputNodeRuntime(
+  node: default,
+  inputValue: number,
+): void
+```
 
 Writes runtime activation/state for one input node.
 

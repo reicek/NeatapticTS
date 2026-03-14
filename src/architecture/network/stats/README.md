@@ -20,7 +20,9 @@ option or incremental diff interface.
 
 ### getRegularizationStats
 
-`() => Record<string, unknown> | null`
+```ts
+getRegularizationStats(): Record<string, unknown> | null
+```
 
 Obtain the last recorded regularization / stochastic statistics snapshot.
 
@@ -32,7 +34,12 @@ Returns: A deep-cloned stats object or null if no stats have been recorded yet.
 
 ### testNetwork
 
-`(set: TestSample[], cost: CostFunction | undefined) => TestNetworkResult`
+```ts
+testNetwork(
+  set: TestSample[],
+  cost: CostFunction | undefined,
+): TestNetworkResult
+```
 
 Evaluate a dataset and return average error and elapsed time.
 
@@ -47,7 +54,13 @@ Returns: Mean error and evaluation duration.
 
 ### createTestResult
 
-`(cumulativeError: number, sampleCount: number, startTime: number) => TestNetworkResult`
+```ts
+createTestResult(
+  cumulativeError: number,
+  sampleCount: number,
+  startTime: number,
+): TestNetworkResult
+```
 
 Build the final test result payload.
 
@@ -60,7 +73,11 @@ Returns: Mean error and elapsed duration.
 
 ### disableDropoutForTesting
 
-`(network: import("src/architecture/network").default) => number`
+```ts
+disableDropoutForTesting(
+  network: default,
+): number
+```
 
 Disable dropout while preserving previous runtime dropout value.
 
@@ -71,7 +88,13 @@ Returns: Previous dropout value.
 
 ### evaluateSamples
 
-`(network: import("src/architecture/network").default, testSet: TestSample[], costFunction: CostFunction) => number`
+```ts
+evaluateSamples(
+  network: default,
+  testSet: TestSample[],
+  costFunction: CostFunction,
+): number
+```
 
 Evaluate all test samples and accumulate total cost.
 
@@ -84,7 +107,13 @@ Returns: Cumulative error across all samples.
 
 ### evaluateSingleSample
 
-`(network: import("src/architecture/network").default, sample: TestSample, costFunction: CostFunction) => number`
+```ts
+evaluateSingleSample(
+  network: default,
+  sample: TestSample,
+  costFunction: CostFunction,
+): number
+```
 
 Evaluate a single sample and return its cost.
 
@@ -97,7 +126,11 @@ Returns: Error for the sample.
 
 ### resetHiddenMasks
 
-`(network: import("src/architecture/network").default) => void`
+```ts
+resetHiddenMasks(
+  network: default,
+): void
+```
 
 Force hidden-node masks to active state for deterministic testing.
 
@@ -106,7 +139,11 @@ Parameters:
 
 ### resolveCostFunction
 
-`(cost: CostFunction | undefined) => CostFunction`
+```ts
+resolveCostFunction(
+  cost: CostFunction | undefined,
+): CostFunction
+```
 
 Resolve evaluation cost function with a stable default.
 
@@ -117,7 +154,12 @@ Returns: Cost function used for test evaluation.
 
 ### restoreDropout
 
-`(network: import("src/architecture/network").default, previousDropout: number) => void`
+```ts
+restoreDropout(
+  network: default,
+  previousDropout: number,
+): void
+```
 
 Restore dropout value after test evaluation.
 
@@ -127,7 +169,12 @@ Parameters:
 
 ### testNetwork
 
-`(set: TestSample[], cost: CostFunction | undefined) => TestNetworkResult`
+```ts
+testNetwork(
+  set: TestSample[],
+  cost: CostFunction | undefined,
+): TestNetworkResult
+```
 
 Evaluate a dataset and return average error and elapsed time.
 
@@ -140,7 +187,12 @@ Returns: Mean error and evaluation duration.
 
 ### validateAllSampleDimensions
 
-`(network: import("src/architecture/network").default, testSet: TestSample[]) => void`
+```ts
+validateAllSampleDimensions(
+  network: default,
+  testSet: TestSample[],
+): void
+```
 
 Validate input and output dimensions for every sample.
 
@@ -150,7 +202,12 @@ Parameters:
 
 ### validateSampleInputDimensions
 
-`(network: import("src/architecture/network").default, sample: TestSample) => void`
+```ts
+validateSampleInputDimensions(
+  network: default,
+  sample: TestSample,
+): void
+```
 
 Validate one sample input vector size.
 
@@ -160,7 +217,12 @@ Parameters:
 
 ### validateSampleOutputDimensions
 
-`(network: import("src/architecture/network").default, sample: TestSample) => void`
+```ts
+validateSampleOutputDimensions(
+  network: default,
+  sample: TestSample,
+): void
+```
 
 Validate one sample output vector size.
 
@@ -170,7 +232,12 @@ Parameters:
 
 ### validateTestSet
 
-`(network: import("src/architecture/network").default, testSet: TestSample[]) => void`
+```ts
+validateTestSet(
+  network: default,
+  testSet: TestSample[],
+): void
+```
 
 Validate that the evaluation set exists and each sample matches network dimensions.
 
@@ -180,7 +247,11 @@ Parameters:
 
 ### validateTestSetPresence
 
-`(testSet: TestSample[]) => void`
+```ts
+validateTestSetPresence(
+  testSet: TestSample[],
+): void
+```
 
 Validate that the test set is a non-empty array.
 

@@ -33,7 +33,9 @@ when the scene is otherwise stable.
 
 ### PlaybackBackgroundLayoutFactory
 
-`() => import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundLayout`
+```ts
+PlaybackBackgroundLayoutFactory(): PlaybackBackgroundLayout
+```
 
 Zero-argument builder used to lazily construct one cached background layout.
 
@@ -93,7 +95,12 @@ the horizon as one semantic effect instead of a pile of canvas state.
 
 ### renderPlaybackBackground
 
-`(context: CanvasRenderingContext2D, request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => void`
+```ts
+renderPlaybackBackground(
+  context: CanvasRenderingContext2D,
+  request: PlaybackBackgroundRequest,
+): void
+```
 
 Draws the layered playback background.
 
@@ -126,7 +133,12 @@ renderPlaybackBackground(context, {
 
 ### drawPlaybackBackgroundHorizon
 
-`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
+```ts
+drawPlaybackBackgroundHorizon(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackBackgroundSceneContext,
+): void
+```
 
 Draws the glowing horizon divider across the visible viewport.
 
@@ -138,7 +150,13 @@ Returns: Nothing.
 
 ### drawPlaybackBackgroundSky
 
-`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext, request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => void`
+```ts
+drawPlaybackBackgroundSky(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackBackgroundSceneContext,
+  request: PlaybackBackgroundRequest,
+): void
+```
 
 Draws the starfield parallax clipped to the upper sky band.
 
@@ -151,7 +169,12 @@ Returns: Nothing.
 
 ### paintPlaybackBackgroundBase
 
-`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
+```ts
+paintPlaybackBackgroundBase(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackBackgroundSceneContext,
+): void
+```
 
 Paints the base background fill for the currently visible viewport.
 
@@ -163,7 +186,11 @@ Returns: Nothing.
 
 ### resolvePlaybackBackgroundSceneContext
 
-`(request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext`
+```ts
+resolvePlaybackBackgroundSceneContext(
+  request: PlaybackBackgroundRequest,
+): PlaybackBackgroundSceneContext
+```
 
 Resolves the derived scene contract required by the background passes.
 
@@ -282,7 +309,12 @@ glow-heavy pass from leaking blur into later solid fills or line work.
 
 ### drawPlaybackBackgroundHorizon
 
-`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
+```ts
+drawPlaybackBackgroundHorizon(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackBackgroundSceneContext,
+): void
+```
 
 Draws the glowing horizon divider across the visible viewport.
 
@@ -294,7 +326,13 @@ Returns: Nothing.
 
 ### drawPlaybackBackgroundSky
 
-`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext, request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => void`
+```ts
+drawPlaybackBackgroundSky(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackBackgroundSceneContext,
+  request: PlaybackBackgroundRequest,
+): void
+```
 
 Draws the starfield parallax clipped to the upper sky band.
 
@@ -307,7 +345,12 @@ Returns: Nothing.
 
 ### drawPlaybackHorizonLine
 
-`(context: CanvasRenderingContext2D, request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackHorizonLineRequest) => void`
+```ts
+drawPlaybackHorizonLine(
+  context: CanvasRenderingContext2D,
+  request: PlaybackHorizonLineRequest,
+): void
+```
 
 Draws the glowing horizon divider using the provided neon style.
 
@@ -319,7 +362,16 @@ Returns: Nothing.
 
 ### drawPlaybackTiledImageRow
 
-`(context: CanvasRenderingContext2D, startXPx: number, tile: import("test/examples/flappy_bird/browser-entry/playback/playback.starfield.types").StarTileImage, tileWidthPx: number, visibleWidthPx: number, offsetPx: number) => void`
+```ts
+drawPlaybackTiledImageRow(
+  context: CanvasRenderingContext2D,
+  startXPx: number,
+  tile: StarTileImage,
+  tileWidthPx: number,
+  visibleWidthPx: number,
+  offsetPx: number,
+): void
+```
 
 Draws a horizontally tiled image strip across the visible width.
 
@@ -335,7 +387,12 @@ Returns: Nothing.
 
 ### paintPlaybackBackgroundBase
 
-`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext) => void`
+```ts
+paintPlaybackBackgroundBase(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackBackgroundSceneContext,
+): void
+```
 
 Paints the base background fill for the currently visible viewport.
 
@@ -349,7 +406,12 @@ Returns: Nothing.
 
 ### ensurePlaybackBackgroundViewportCacheValidity
 
-`(visibleWorldWidthPx: number, visibleWorldHeightPx: number) => string`
+```ts
+ensurePlaybackBackgroundViewportCacheValidity(
+  visibleWorldWidthPx: number,
+  visibleWorldHeightPx: number,
+): string
+```
 
 Ensures background caches only retain entries for the current viewport size.
 
@@ -365,7 +427,12 @@ Returns: Stable viewport-size cache key for the current frame.
 
 ### resolveCachedPlaybackBackgroundLayout
 
-`(visibleWorldHeightPx: number, factory: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundLayoutFactory) => import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundLayout`
+```ts
+resolveCachedPlaybackBackgroundLayout(
+  visibleWorldHeightPx: number,
+  factory: PlaybackBackgroundLayoutFactory,
+): PlaybackBackgroundLayout
+```
 
 Resolves cached background layout for the current viewport height.
 
@@ -377,7 +444,12 @@ Returns: Cached background layout for the current viewport size.
 
 ### resolveCachedPlaybackTileCoverageCount
 
-`(tileWidthPx: number, factory: () => number) => number`
+```ts
+resolveCachedPlaybackTileCoverageCount(
+  tileWidthPx: number,
+  factory: () => number,
+): number
+```
 
 Resolves cached tile coverage count for one tile width.
 
@@ -389,7 +461,12 @@ Returns: Cached tile coverage count for the active viewport width.
 
 ### resolvePlaybackBackgroundViewportCacheKey
 
-`(visibleWorldWidthPx: number, visibleWorldHeightPx: number) => string`
+```ts
+resolvePlaybackBackgroundViewportCacheKey(
+  visibleWorldWidthPx: number,
+  visibleWorldHeightPx: number,
+): string
+```
 
 Resolves the stable viewport-size cache key used by background caches.
 
@@ -403,7 +480,11 @@ Returns: Cache key that changes whenever the page size changes.
 
 ### resolvePlaybackBackgroundSceneContext
 
-`(request: import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundRequest) => import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundSceneContext`
+```ts
+resolvePlaybackBackgroundSceneContext(
+  request: PlaybackBackgroundRequest,
+): PlaybackBackgroundSceneContext
+```
 
 Resolves the derived scene contract required by the background passes.
 
@@ -416,7 +497,12 @@ Returns: Immutable scene context shared by the private render helpers.
 
 ### resolveAlignedHorizonYPx
 
-`(horizonYPx: number, lineThicknessPx: number) => number`
+```ts
+resolveAlignedHorizonYPx(
+  horizonYPx: number,
+  lineThicknessPx: number,
+): number
+```
 
 Resolves pixel-snapped horizon positioning for crisp canvas strokes.
 
@@ -428,7 +514,11 @@ Returns: Pixel-snapped y-position for the stroke.
 
 ### resolvePlaybackBackgroundLayout
 
-`(visibleWorldHeightPx: number) => import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackBackgroundLayout`
+```ts
+resolvePlaybackBackgroundLayout(
+  visibleWorldHeightPx: number,
+): PlaybackBackgroundLayout
+```
 
 Resolves the vertical split between the starfield sky and the future ground.
 
@@ -439,7 +529,9 @@ Returns: Stable scene layout for the current frame.
 
 ### resolvePlaybackHorizonStyle
 
-`() => import("test/examples/flappy_bird/browser-entry/playback/background/playback.background.types").PlaybackHorizonStyle`
+```ts
+resolvePlaybackHorizonStyle(): PlaybackHorizonStyle
+```
 
 Resolves the neon paint settings for the horizon divider.
 
@@ -447,7 +539,11 @@ Returns: Reusable draw style for both the glow and crisp line passes.
 
 ### resolveSafeBackgroundDimension
 
-`(dimensionPx: number) => number`
+```ts
+resolveSafeBackgroundDimension(
+  dimensionPx: number,
+): number
+```
 
 Clamps a background dimension into a render-safe positive integer.
 

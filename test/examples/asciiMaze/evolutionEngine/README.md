@@ -251,7 +251,13 @@ Responsibilities:
 
 ### getTail
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, source: T[] | undefined, count: number) => T[]`
+```ts
+getTail(
+  state: EngineState,
+  source: T[] | undefined,
+  count: number,
+): T[]
+```
 
 Extract the last `count` items from `source` into the shared tail buffer.
 
@@ -273,7 +279,13 @@ const recent = getTail(sharedState, telemetryLog, 40);
 
 ### pushHistory
 
-`(buffer: T[] | undefined, value: T, maxLength: number) => T[]`
+```ts
+pushHistory(
+  buffer: T[] | undefined,
+  value: T,
+  maxLength: number,
+): T[]
+```
 
 Proxy to {@link MazeUtils.pushHistory} for consistency with the façade API.
 
@@ -290,7 +302,13 @@ const history = pushHistory(existingHistory, snapshot, 20);
 
 ### sampleArray
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, source: T[], sampleCount: number) => T[]`
+```ts
+sampleArray(
+  state: EngineState,
+  source: T[],
+  sampleCount: number,
+): T[]
+```
 
 Sample `sampleCount` items (with replacement) from `source` into the pooled scratch buffer.
 
@@ -313,7 +331,13 @@ const safeCopy = [...picks];
 
 ### sampleIntoScratch
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, source: T[], sampleCount: number) => number`
+```ts
+sampleIntoScratch(
+  state: EngineState,
+  source: T[],
+  sampleCount: number,
+): number
+```
 
 Sample up to `sampleCount` items (with replacement) into the shared `samplePool` buffer.
 
@@ -338,7 +362,14 @@ for (let index = 0; index < sampled; index++) {
 
 ### sampleSegmentIntoScratch
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, source: T[], segmentStart: number, sampleCount: number) => number`
+```ts
+sampleSegmentIntoScratch(
+  state: EngineState,
+  source: T[],
+  segmentStart: number,
+  sampleCount: number,
+): number
+```
 
 Sample from a suffix of `source` starting at `segmentStart` into the pooled buffer.
 
@@ -374,7 +405,9 @@ Callers mutate the returned scratch instances in place to avoid per-generation a
 
 ### createEngineState
 
-`() => import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState`
+```ts
+createEngineState(): EngineState
+```
 
 Fabricates a new {@link EngineState} with pre-sized scratch buffers and default toggle values.
 
@@ -382,7 +415,9 @@ Returns: Initialized engine state used by the maze evolution façade.
 
 ### createProfilingState
 
-`() => import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineProfilingState`
+```ts
+createProfilingState(): EngineProfilingState
+```
 
 Fabricates the profiling state bundle consumed by timing helpers.
 
@@ -395,7 +430,9 @@ console.log(profiling.detailsEnabled); // false unless env flag set
 
 ### createScratchState
 
-`() => import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineScratchState`
+```ts
+createScratchState(): EngineScratchState
+```
 
 Fabricates the default pooled scratch buffers shared by the evolution façade.
 
@@ -408,7 +445,9 @@ console.log(scratch.exps.length); // 4
 
 ### createToggleState
 
-`() => import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineToggleState`
+```ts
+createToggleState(): EngineToggleState
+```
 
 Fabricates the default runtime toggle bundle for the evolution façade.
 
@@ -453,7 +492,12 @@ Runtime switches that adjust telemetry verbosity and optional training phases.
 
 ### ensureRngCacheBatch
 
-`(parameters: import("test/examples/asciiMaze/evolutionEngine/engineState.types").RngCacheParameters, state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => import("test/examples/asciiMaze/evolutionEngine/engineState.types").RngCacheHandles`
+```ts
+ensureRngCacheBatch(
+  parameters: RngCacheParameters,
+  state: EngineState,
+): RngCacheHandles
+```
 
 Ensure the RNG cache contains fresh samples before consumption.
 
@@ -465,7 +509,12 @@ Returns: Handles exposing the cache and its batch size.
 
 ### ensureVisitedHashCapacity
 
-`(targetEntryCount: number, state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => import("test/examples/asciiMaze/evolutionEngine/engineState.types").VisitedHashScratchHandles`
+```ts
+ensureVisitedHashCapacity(
+  targetEntryCount: number,
+  state: EngineState,
+): VisitedHashScratchHandles
+```
 
 Ensure the visited-coordinate hash table can store the requested entry count.
 
@@ -486,7 +535,12 @@ const { table, slotMask } = ensureVisitedHashCapacity(256);
 
 ### initialiseTelemetryScratch
 
-`(request: import("test/examples/asciiMaze/evolutionEngine/engineState.types").TelemetryScratchRequest, state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => import("test/examples/asciiMaze/evolutionEngine/engineState.types").TelemetryScratchHandles`
+```ts
+initialiseTelemetryScratch(
+  request: TelemetryScratchRequest,
+  state: EngineState,
+): TelemetryScratchHandles
+```
 
 Ensure telemetry-related scratch buffers allocate enough capacity for upcoming work.
 
@@ -504,7 +558,12 @@ Returns: Handles referencing the ensured scratch buffers for immediate use.
 
 ### reseedRngState
 
-`(seed: number, state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => number`
+```ts
+reseedRngState(
+  seed: number,
+  state: EngineState,
+): number
+```
 
 Persist a new RNG seed and schedule a cache refill on the next draw.
 
@@ -524,7 +583,11 @@ Parameters controlling the RNG cache refill process.
 
 ### setBaldwinPhaseDisabledFlag
 
-`(isDisabled: boolean) => void`
+```ts
+setBaldwinPhaseDisabledFlag(
+  isDisabled: boolean,
+): void
+```
 
 Enable or disable the Baldwin-phase warm-start pipeline.
 
@@ -533,7 +596,11 @@ Parameters:
 
 ### setReducedTelemetryFlag
 
-`(isEnabled: boolean) => void`
+```ts
+setReducedTelemetryFlag(
+  isEnabled: boolean,
+): void
+```
 
 Toggle the reduced telemetry mode.
 
@@ -542,7 +609,11 @@ Parameters:
 
 ### setTelemetryMinimalFlag
 
-`(isMinimal: boolean) => void`
+```ts
+setTelemetryMinimalFlag(
+  isMinimal: boolean,
+): void
+```
 
 Toggle the minimal telemetry mode for JSON output.
 
@@ -567,7 +638,13 @@ RNG and timing helpers extracted from the evolution façade.
 
 ### accumulateProfilingDuration
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, category: string, deltaMs: number) => void`
+```ts
+accumulateProfilingDuration(
+  state: EngineState,
+  category: string,
+  deltaMs: number,
+): void
+```
 
 Accumulate a profiling duration under the supplied key when detail profiling is enabled.
 
@@ -580,7 +657,11 @@ Returns: void.
 
 ### clearDeterministicMode
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => void`
+```ts
+clearDeterministicMode(
+  state: EngineState,
+): void
+```
 
 Disable deterministic RNG mode.
 
@@ -591,7 +672,12 @@ Returns: void.
 
 ### drawFastRandom
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, parameters: import("test/examples/asciiMaze/evolutionEngine/engineState.types").RngCacheParameters) => number`
+```ts
+drawFastRandom(
+  state: EngineState,
+  parameters: RngCacheParameters,
+): number
+```
 
 Generate a fast uniform random sample using the shared RNG cache.
 
@@ -607,7 +693,11 @@ const sample = drawFastRandom(sharedState, rngParameters);
 
 ### getProfilingAccumulators
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => Record<string, number>`
+```ts
+getProfilingAccumulators(
+  state: EngineState,
+): Record<string, number>
+```
 
 Provide direct access to the profiling accumulator map.
 
@@ -618,7 +708,11 @@ Returns: Mutable record of profiling accumulators keyed by category name.
 
 ### isDeterministicModeEnabled
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => boolean`
+```ts
+isDeterministicModeEnabled(
+  state: EngineState,
+): boolean
+```
 
 Retrieve the deterministic RNG flag stored on the shared engine state.
 
@@ -629,7 +723,11 @@ Returns: True when deterministic mode is active.
 
 ### isProfilingDetailsEnabled
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => boolean`
+```ts
+isProfilingDetailsEnabled(
+  state: EngineState,
+): boolean
+```
 
 Determine whether detailed profiling accumulation is active.
 
@@ -640,7 +738,9 @@ Returns: True when detail profiling is enabled.
 
 ### profilingStartTimestamp
 
-`() => number`
+```ts
+profilingStartTimestamp(): number
+```
 
 Return a profiling start timestamp that mirrors the historic `#PROFILE_T0` helper.
 
@@ -648,7 +748,9 @@ Returns: Millisecond timestamp representing the profiling start time.
 
 ### readHighResolutionTime
 
-`() => number`
+```ts
+readHighResolutionTime(): number
+```
 
 Obtain a monotonic-ish timestamp suitable for profiling.
 
@@ -660,7 +762,9 @@ const timestamp = readHighResolutionTime();
 
 ### resolveRngParameters
 
-`() => import("test/examples/asciiMaze/evolutionEngine/engineState.types").RngCacheParameters`
+```ts
+resolveRngParameters(): RngCacheParameters
+```
 
 Provide cached congruential parameters used by the shared fast RNG helper.
 
@@ -672,7 +776,12 @@ const parameters = resolveRngParameters();
 
 ### setDeterministicMode
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, seed: number | undefined) => void`
+```ts
+setDeterministicMode(
+  state: EngineState,
+  seed: number | undefined,
+): void
+```
 
 Enable deterministic RNG mode and optionally reseed the shared RNG state.
 
@@ -692,7 +801,12 @@ ring sizing, telemetry scratch sizing, and connection flag pooling.
 
 ### allocateLogitsRing
 
-`(capacity: number, actionDimension: number) => Float32Array<ArrayBufferLike>[]`
+```ts
+allocateLogitsRing(
+  capacity: number,
+  actionDimension: number,
+): Float32Array<ArrayBufferLike>[]
+```
 
 Build a non-shared logits ring sized to the requested capacity.
 
@@ -704,7 +818,12 @@ Returns: Array of typed rows representing the ring buffer.
 
 ### ensureConnFlagsCapacity
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, minimumCapacity: number) => Int8Array<ArrayBufferLike> | null`
+```ts
+ensureConnFlagsCapacity(
+  state: EngineState,
+  minimumCapacity: number,
+): Int8Array<ArrayBufferLike> | null
+```
 
 Ensure the recurrent/gated detection bitmap has sufficient capacity.
 
@@ -716,7 +835,11 @@ Returns: Int8Array bitmap or null when allocation failed.
 
 ### ensureLogitsRingCapacity
 
-`(capacityRequest: import("test/examples/asciiMaze/evolutionEngine/scratchPools").LogitsRingCapacityOptions) => import("test/examples/asciiMaze/evolutionEngine/scratchPools").LogitsRingCapacityResult`
+```ts
+ensureLogitsRingCapacity(
+  capacityRequest: LogitsRingCapacityOptions,
+): LogitsRingCapacityResult
+```
 
 Grow or shrink the logits ring to accomodate the requested recent-step budget.
 
@@ -727,7 +850,12 @@ Returns: The resulting capacity and whether shared-array mode stayed enabled.
 
 ### ensureScratchCapacity
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, request: import("test/examples/asciiMaze/evolutionEngine/scratchPools").ScratchCapacityRequest) => void`
+```ts
+ensureScratchCapacity(
+  state: EngineState,
+  request: ScratchCapacityRequest,
+): void
+```
 
 Grow pooled scratch buffers to conservative sizes for the upcoming run.
 
@@ -737,7 +865,12 @@ Parameters:
 
 ### initialiseSharedLogitsRing
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, config: import("test/examples/asciiMaze/evolutionEngine/scratchPools").SharedLogitsConfig) => boolean`
+```ts
+initialiseSharedLogitsRing(
+  state: EngineState,
+  config: SharedLogitsConfig,
+): boolean
+```
 
 Attempt to allocate SharedArrayBuffer-backed logits ring storage.
 
@@ -757,7 +890,12 @@ Result returned after resizing the logits ring.
 
 ### maybeShrinkScratch
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, populationSize: number) => void`
+```ts
+maybeShrinkScratch(
+  state: EngineState,
+  populationSize: number,
+): void
+```
 
 Shrink oversized scratch buffers once the population size drops significantly.
 
@@ -792,7 +930,11 @@ Minimal filesystem module shape for type safety (Node.js fs module subset).
 
 ### initPersistence
 
-`(persistDir: string | undefined) => { fs: import("test/examples/asciiMaze/evolutionEngine/setupHelpers").FilesystemModule | null; path: import("test/examples/asciiMaze/evolutionEngine/setupHelpers").PathModule | null; }`
+```ts
+initPersistence(
+  persistDir: string | undefined,
+): { fs: FilesystemModule | null; path: PathModule | null; }
+```
 
 Initialize persistence helpers (Node `fs` & `path`) when available and ensure the target
 directory exists. This helper intentionally does nothing in browser-like hosts.
@@ -822,7 +964,11 @@ if (fs && path) {
 
 ### isPauseRequested
 
-`(hostAdapter: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter | undefined) => boolean`
+```ts
+isPauseRequested(
+  hostAdapter: EvolutionHostAdapter | undefined,
+): boolean
+```
 
 Read host-controlled pause state without letting host errors break the engine.
 
@@ -833,7 +979,11 @@ Returns: True when the host asks the engine to remain paused.
 
 ### makeFlushToFrame
 
-`(hostAdapter: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter | undefined) => () => Promise<void>`
+```ts
+makeFlushToFrame(
+  hostAdapter: EvolutionHostAdapter | undefined,
+): () => Promise<void>
+```
 
 Create a cooperative frame-yielding function used by the evolution loop.
 
@@ -860,7 +1010,11 @@ await flushToFrame(); // yields to next frame/tick
 
 ### makeSafeWriter
 
-`(dashboardManager: import("test/examples/asciiMaze/evolutionEngine/setupHelpers").DashboardManagerLike | undefined) => (msg: string) => void`
+```ts
+makeSafeWriter(
+  dashboardManager: DashboardManagerLike | undefined,
+): (msg: string) => void
+```
 
 Build a resilient writer that attempts to write to Node stdout, then a provided
 dashboard logger, and finally `console.log` as a last resort.
@@ -913,7 +1067,12 @@ ES2023 Policy:
 
 ### checkCancellation
 
-`(options: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionOptions, bestResult: import("test/examples/asciiMaze/interfaces").IMazeRunResult | undefined) => string | undefined`
+```ts
+checkCancellation(
+  options: EvolutionOptions,
+  bestResult: IMazeRunResult | undefined,
+): string | undefined
+```
 
 Inspect cooperative cancellation sources and annotate the provided result when cancelled.
 
@@ -954,7 +1113,24 @@ if (checkCancellation(opts)) {
 
 ### checkStopConditions
 
-`(bestResult: import("test/examples/asciiMaze/interfaces").IMazeRunResult | undefined, bestNetwork: import("src/architecture/network").default | null, maze: string[], completedGenerations: number, neat: import("src/neat").default, dashboardManager: import("test/examples/asciiMaze/interfaces").IDashboardManager | undefined, flushToFrame: () => Promise<void>, hostAdapter: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter | undefined, minProgressToPass: number, autoPauseOnSolve: boolean, stopOnlyOnSolve: boolean, stagnantGenerations: number, maxStagnantGenerations: number, maxGenerations: number) => Promise<string | undefined>`
+```ts
+checkStopConditions(
+  bestResult: IMazeRunResult | undefined,
+  bestNetwork: default | null,
+  maze: string[],
+  completedGenerations: number,
+  neat: default,
+  dashboardManager: IDashboardManager | undefined,
+  flushToFrame: () => Promise<void>,
+  hostAdapter: EvolutionHostAdapter | undefined,
+  minProgressToPass: number,
+  autoPauseOnSolve: boolean,
+  stopOnlyOnSolve: boolean,
+  stagnantGenerations: number,
+  maxStagnantGenerations: number,
+  maxGenerations: number,
+): Promise<string | undefined>
+```
 
 Inspect common termination conditions and perform minimal, best-effort side-effects.
 
@@ -1010,7 +1186,18 @@ if (reason) {
 
 ### emitProfileSummary
 
-`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, safeWrite: (msg: string) => void, completedGenerations: number, totalEvolveMs: number, totalLamarckMs: number, totalSimMs: number, isProfilingDetailsEnabledFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => boolean, getProfilingAccumulatorsFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").ProfilingAccumulators) => void`
+```ts
+emitProfileSummary(
+  engineState: EngineState,
+  safeWrite: (msg: string) => void,
+  completedGenerations: number,
+  totalEvolveMs: number,
+  totalLamarckMs: number,
+  totalSimMs: number,
+  isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
+  getProfilingAccumulatorsFn: (state: EngineState) => ProfilingAccumulators,
+): void
+```
 
 Emit a formatted profiling summary showing average per-generation timings.
 
@@ -1066,7 +1253,28 @@ Mutable result object with exitReason field
 
 ### persistSnapshotIfNeeded
 
-`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, fs: { writeFileSync?: ((path: string, data: string) => void) | undefined; } | null, pathModule: { join?: ((...paths: string[]) => string) | undefined; } | null, persistDir: string | undefined, persistTopK: number, completedGenerations: number, persistEvery: number, neat: import("src/neat").default, bestFitness: number, simplifyMode: boolean, plateauCounter: number, scratchSnapshotObj: Record<string, unknown>, scratchSnapshotTop: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").SnapshotEntry[], collectTelemetryTailFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("src/neat").default, count: number) => unknown, getSortedIndicesByScoreFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, population: import("src/architecture/network").default[]) => number[], isProfilingDetailsEnabledFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => boolean, profilingStartTimestampFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => number, accumulateProfilingDurationFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, label: string, duration: number) => void) => void`
+```ts
+persistSnapshotIfNeeded(
+  engineState: EngineState,
+  fs: { writeFileSync?: ((path: string, data: string) => void) | undefined; } | null,
+  pathModule: { join?: ((...paths: string[]) => string) | undefined; } | null,
+  persistDir: string | undefined,
+  persistTopK: number,
+  completedGenerations: number,
+  persistEvery: number,
+  neat: default,
+  bestFitness: number,
+  simplifyMode: boolean,
+  plateauCounter: number,
+  scratchSnapshotObj: Record<string, unknown>,
+  scratchSnapshotTop: SnapshotEntry[],
+  collectTelemetryTailFn: (state: EngineState, neat: default, count: number) => unknown,
+  getSortedIndicesByScoreFn: (state: EngineState, population: default[]) => number[],
+  isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
+  profilingStartTimestampFn: (state: EngineState) => number,
+  accumulateProfilingDurationFn: (state: EngineState, label: string, duration: number) => void,
+): void
+```
 
 Persist a population snapshot to disk at the configured interval.
 
@@ -1126,7 +1334,12 @@ persistSnapshotIfNeeded(
 
 ### prepareLoopHelpers
 
-`(opts: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionOptions, scratchBundle: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").ScratchBundle) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LoopHelpers`
+```ts
+prepareLoopHelpers(
+  opts: EvolutionOptions,
+  scratchBundle: ScratchBundle,
+): LoopHelpers
+```
 
 Build lightweight helpers used inside the evolution loop.
 
@@ -1168,7 +1381,25 @@ await flushToFrame(); // Yield to host
 
 ### runEvolutionLoop
 
-`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("src/neat").default, opts: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionOptions, lamarckianTrainingSet: { input: number[]; output: number[]; }[], encodedMaze: number[][], startPosition: readonly [number, number], exitPosition: readonly [number, number], distanceMap: number[][], helpers: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LoopHelpers, doProfile: boolean, runtimeContext: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopRuntimeContext, initialRingState: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LogitsRingState, telemetryContext: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopTelemetryContext, supportContext: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopSupportContext, constants: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").TrainingConstants & { DEFAULT_TRAIN_BATCH_LARGE: number; FITTEST_TRAIN_ITERATIONS: number; TELEMETRY_MINIMAL: boolean; SATURATION_PRUNE_THRESHOLD: number; RECENT_WINDOW: number; REDUCED_TELEMETRY: boolean; DISABLE_BALDWIN: boolean; }) => Promise<EvolutionLoopResult>`
+```ts
+runEvolutionLoop(
+  engineState: EngineState,
+  neat: default,
+  opts: EvolutionOptions,
+  lamarckianTrainingSet: { input: number[]; output: number[]; }[],
+  encodedMaze: number[][],
+  startPosition: readonly [number, number],
+  exitPosition: readonly [number, number],
+  distanceMap: number[][],
+  helpers: LoopHelpers,
+  doProfile: boolean,
+  runtimeContext: EvolutionLoopRuntimeContext,
+  initialRingState: LogitsRingState,
+  telemetryContext: EvolutionLoopTelemetryContext,
+  supportContext: EvolutionLoopSupportContext,
+  constants: TrainingConstants & { DEFAULT_TRAIN_BATCH_LARGE: number; FITTEST_TRAIN_ITERATIONS: number; TELEMETRY_MINIMAL: boolean; SATURATION_PRUNE_THRESHOLD: number; RECENT_WINDOW: number; REDUCED_TELEMETRY: boolean; DISABLE_BALDWIN: boolean; },
+): Promise<EvolutionLoopResult>
+```
 
 Internal evolution loop that executes generations until a stop condition or cancellation.
 
@@ -1208,7 +1439,30 @@ const runSummary = await runEvolutionLoop(
 
 ### runGeneration
 
-`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("src/neat").default, doProfile: boolean, lamarckianIterations: number, lamarckianTrainingSet: { input: number[]; output: number[]; }[], lamarckianSampleSize: number | undefined, safeWrite: (msg: string) => void, completedGenerations: number, dynamicPopEnabled: boolean, dynamicPopMax: number, plateauGenerations: number, plateauCounter: number, dynamicPopExpandInterval: number, dynamicPopExpandFactor: number, dynamicPopPlateauSlack: number, speciesHistoryRef: number[], emptyVec: import("src/architecture/network").default[], scratchNodeIdx: Int32Array<ArrayBufferLike>, getNodeIndicesByType: (nodes: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], type: string) => number, constants: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").TrainingConstants) => Promise<GenerationOutcome>`
+```ts
+runGeneration(
+  engineState: EngineState,
+  neat: default,
+  doProfile: boolean,
+  lamarckianIterations: number,
+  lamarckianTrainingSet: { input: number[]; output: number[]; }[],
+  lamarckianSampleSize: number | undefined,
+  safeWrite: (msg: string) => void,
+  completedGenerations: number,
+  dynamicPopEnabled: boolean,
+  dynamicPopMax: number,
+  plateauGenerations: number,
+  plateauCounter: number,
+  dynamicPopExpandInterval: number,
+  dynamicPopExpandFactor: number,
+  dynamicPopPlateauSlack: number,
+  speciesHistoryRef: number[],
+  emptyVec: default[],
+  scratchNodeIdx: Int32Array<ArrayBufferLike>,
+  getNodeIndicesByType: (nodes: NetworkNode[], type: string) => number,
+  constants: TrainingConstants,
+): Promise<GenerationOutcome>
+```
 
 Run one generation: evolve, ensure output identity, update species history, maybe expand population,
 and run Lamarckian training if configured.
@@ -1287,7 +1541,26 @@ Simulation result with step outputs
 
 ### simulateAndPostprocess
 
-`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, fittest: import("src/architecture/network").default, encodedMaze: number[][], startPosition: readonly [number, number], exitPosition: readonly [number, number], distanceMap: number[][], maxSteps: number | undefined, doProfile: boolean, safeWrite: (msg: string) => void, logEvery: number, completedGenerations: number, neat: import("src/neat").default, runtimeContext: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopRuntimeContext, ringState: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LogitsRingState, telemetryContext: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopTelemetryContext, loopSupportContext: Pick<import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopSupportContext, "loopHelpers">) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").SimulationResult`
+```ts
+simulateAndPostprocess(
+  engineState: EngineState,
+  fittest: default,
+  encodedMaze: number[][],
+  startPosition: readonly [number, number],
+  exitPosition: readonly [number, number],
+  distanceMap: number[][],
+  maxSteps: number | undefined,
+  doProfile: boolean,
+  safeWrite: (msg: string) => void,
+  logEvery: number,
+  completedGenerations: number,
+  neat: default,
+  runtimeContext: EvolutionLoopRuntimeContext,
+  ringState: LogitsRingState,
+  telemetryContext: EvolutionLoopTelemetryContext,
+  loopSupportContext: Pick<EvolutionLoopSupportContext, "loopHelpers">,
+): SimulationResult
+```
 
 Simulate the supplied `fittest` genome/network and perform allocation-light postprocessing.
 
@@ -1345,7 +1618,17 @@ Simulation result with profiling and ring state
 
 ### updateDashboardAndMaybeFlush
 
-`(maze: string[], result: import("test/examples/asciiMaze/interfaces").IMazeRunResult | undefined, network: import("src/architecture/network").default | null, completedGenerations: number, neat: import("src/neat").default, dashboardManager: import("test/examples/asciiMaze/interfaces").IDashboardManager | undefined, flushToFrame: (() => Promise<void>) | undefined) => Promise<void>`
+```ts
+updateDashboardAndMaybeFlush(
+  maze: string[],
+  result: IMazeRunResult | undefined,
+  network: default | null,
+  completedGenerations: number,
+  neat: default,
+  dashboardManager: IDashboardManager | undefined,
+  flushToFrame: (() => Promise<void>) | undefined,
+): Promise<void>
+```
 
 Safely update a UI dashboard with the latest run state and optionally yield to the
 host/frame via an awaited flush function.
@@ -1386,7 +1669,17 @@ await updateDashboardAndMaybeFlush(
 
 ### updateDashboardPeriodic
 
-`(maze: string[], bestResult: import("test/examples/asciiMaze/interfaces").IMazeRunResult | undefined, bestNetwork: import("src/architecture/network").default | null, completedGenerations: number, neat: import("src/neat").default, dashboardManager: import("test/examples/asciiMaze/interfaces").IDashboardManager | undefined, flushToFrame: (() => Promise<void>) | undefined) => Promise<void>`
+```ts
+updateDashboardPeriodic(
+  maze: string[],
+  bestResult: IMazeRunResult | undefined,
+  bestNetwork: default | null,
+  completedGenerations: number,
+  neat: default,
+  dashboardManager: IDashboardManager | undefined,
+  flushToFrame: (() => Promise<void>) | undefined,
+): Promise<void>
+```
 
 Periodic dashboard update used when the engine wants to refresh a non-primary
 dashboard view (for example background or periodic reporting). This helper is
@@ -1438,7 +1731,12 @@ await updateDashboardPeriodic(
 
 ### hasMazeEvolutionReachedCurriculumThreshold
 
-`(progress: unknown, minProgressToPass: number) => boolean`
+```ts
+hasMazeEvolutionReachedCurriculumThreshold(
+  progress: unknown,
+  minProgressToPass: number,
+): boolean
+```
 
 Determine whether a completed phase should advance the surrounding curriculum.
 
@@ -1450,7 +1748,12 @@ Returns: Whether the phase counts as curriculum-complete.
 
 ### refineMazeEvolutionCarryOverNetwork
 
-`(bestNetwork: import("test/examples/asciiMaze/interfaces").INetwork | undefined, previousBestNetwork: import("test/examples/asciiMaze/interfaces").INetwork | undefined) => import("test/examples/asciiMaze/interfaces").INetwork | undefined`
+```ts
+refineMazeEvolutionCarryOverNetwork(
+  bestNetwork: INetwork | undefined,
+  previousBestNetwork: INetwork | undefined,
+): INetwork | undefined
+```
 
 Refine the winning network before seeding the next curriculum phase.
 
@@ -1462,7 +1765,13 @@ Returns: Refined winner or the best available carry-over network.
 
 ### resolveMazeEvolutionPhaseOutcome
 
-`(evolutionResult: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").MazeEvolutionRunResult, previousBestNetwork: import("test/examples/asciiMaze/interfaces").INetwork | undefined, minProgressToPass: number) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").MazeEvolutionCurriculumPhaseOutcome`
+```ts
+resolveMazeEvolutionPhaseOutcome(
+  evolutionResult: MazeEvolutionRunResult,
+  previousBestNetwork: INetwork | undefined,
+  minProgressToPass: number,
+): MazeEvolutionCurriculumPhaseOutcome
+```
 
 Resolve the stable curriculum-facing outcome of one maze evolution phase.
 
@@ -1505,7 +1814,16 @@ ES2023 Policy:
 
 ### createAndSeedNeat
 
-`(opts: any, inputSize: number, outputSize: number, fitnessContext: import("test/examples/asciiMaze/fitness.types").IFitnessEvaluationContext, scratchPopClone: any[], scratchSample: any[]) => any`
+```ts
+createAndSeedNeat(
+  opts: any,
+  inputSize: number,
+  outputSize: number,
+  fitnessContext: IFitnessEvaluationContext,
+  scratchPopClone: any[],
+  scratchSample: any[],
+): any
+```
 
 Create and seed a NEAT driver with normalized configuration and optional initial population.
 
@@ -1555,7 +1873,15 @@ const { neat, scratchPopClone, scratchSample } = createAndSeedNeat(
 
 ### normalizeRunOptions
 
-`(options: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").IRunMazeEvolutionOptions, setDeterministic: (seed: number) => void, setReducedTelemetry: (enabled: boolean) => void, setMinimalTelemetry: (enabled: boolean) => void, setDisableBaldwin: (disabled: boolean) => void) => any`
+```ts
+normalizeRunOptions(
+  options: IRunMazeEvolutionOptions,
+  setDeterministic: (seed: number) => void,
+  setReducedTelemetry: (enabled: boolean) => void,
+  setMinimalTelemetry: (enabled: boolean) => void,
+  setDisableBaldwin: (disabled: boolean) => void,
+): any
+```
 
 Normalize and validate run options with sensible defaults.
 
@@ -1616,7 +1942,12 @@ const opts = normalizeRunOptions(
 
 ### prepareEnvironmentForRun
 
-`(opts: any, scratchBundle: any) => any`
+```ts
+prepareEnvironmentForRun(
+  opts: any,
+  scratchBundle: any,
+): any
+```
 
 Prepare maze encoding, start/exit positions, distance map, and fitness context for the run.
 
@@ -1676,7 +2007,13 @@ Structure describing the result of action-entropy computation.
 
 ### collectTelemetryTail
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: unknown, tailLength: number) => unknown`
+```ts
+collectTelemetryTail(
+  state: EngineState,
+  neat: unknown,
+  tailLength: number,
+): unknown
+```
 
 Collect a short telemetry tail from a NEAT instance when available.
 
@@ -1718,7 +2055,11 @@ safeWrite(`${LOG_TAG_OUTPUT_BIAS} gen=2 mean=0.001 std=0.010 biases=0.01,-0.02,0
 
 ### logActionEntropy
 
-`(__0: import("test/examples/asciiMaze/evolutionEngine/telemetryMetrics").LogActionEntropyParams) => void`
+```ts
+logActionEntropy(
+  __0: LogActionEntropyParams,
+): void
+```
 
 Emit a best-effort telemetry line containing action-entropy statistics.
 
@@ -1733,7 +2074,11 @@ Parameters required to emit action-entropy telemetry.
 
 ### logDiversity
 
-`(__0: import("test/examples/asciiMaze/evolutionEngine/telemetryMetrics").LogDiversityParams) => void`
+```ts
+logDiversity(
+  __0: LogDiversityParams,
+): void
+```
 
 Emit diversity telemetry including species count, Simpson index and weight standard deviation.
 
@@ -1748,7 +2093,11 @@ Parameters required to emit population diversity telemetry.
 
 ### logExploration
 
-`(__0: import("test/examples/asciiMaze/evolutionEngine/telemetryMetrics").LogExplorationParams) => void`
+```ts
+logExploration(
+  __0: LogExplorationParams,
+): void
+```
 
 Emit exploration telemetry summarising unique coverage, path length and ratios.
 
@@ -1763,7 +2112,24 @@ Parameters required to emit exploration telemetry.
 
 ### logGenerationTelemetry
 
-`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("src/neat").default, fittest: import("src/architecture/network").default | undefined, genResult: GenerationResult | undefined, generationIndex: number, writeLog: (msg: string) => void, actionDimension: number, recentWindow: number, reducedTelemetry: boolean, telemetryMinimal: boolean, onCollapseRecovery: () => void, isProfilingDetailsEnabledFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => boolean, profilingStartTimestampFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => number, accumulateProfilingDurationFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, label: string, duration: number) => void) => void`
+```ts
+logGenerationTelemetry(
+  engineState: EngineState,
+  neat: default,
+  fittest: default | undefined,
+  genResult: GenerationResult | undefined,
+  generationIndex: number,
+  writeLog: (msg: string) => void,
+  actionDimension: number,
+  recentWindow: number,
+  reducedTelemetry: boolean,
+  telemetryMinimal: boolean,
+  onCollapseRecovery: () => void,
+  isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
+  profilingStartTimestampFn: (state: EngineState) => number,
+  accumulateProfilingDurationFn: (state: EngineState, label: string, duration: number) => void,
+): void
+```
 
 Log comprehensive telemetry for a completed generation.
 
@@ -1823,7 +2189,11 @@ Structure describing aggregated logit statistics.
 
 ### logLogitsAndCollapse
 
-`(__0: import("test/examples/asciiMaze/evolutionEngine/telemetryMetrics").LogLogitsParams) => void`
+```ts
+logLogitsAndCollapse(
+  __0: LogLogitsParams,
+): void
+```
 
 Emit logits-level telemetry, detect collapse streaks and trigger anti-collapse recovery when needed.
 
@@ -1842,7 +2212,11 @@ Parameters required to emit output-bias telemetry.
 
 ### logOutputBiasStats
 
-`(__0: import("test/examples/asciiMaze/evolutionEngine/telemetryMetrics").LogOutputBiasParams) => void`
+```ts
+logOutputBiasStats(
+  __0: LogOutputBiasParams,
+): void
+```
 
 Emit bias statistics for the fittest network's output nodes.
 
@@ -1857,7 +2231,11 @@ Parameters shared by telemetry helpers that require access to the shared state a
 
 ### TelemetryWriter
 
-`(message: string) => void`
+```ts
+TelemetryWriter(
+  message: string,
+): void
+```
 
 Writer signature reused across telemetry helpers.
 
@@ -1884,7 +2262,14 @@ ES2023 Policy:
 
 ### createNeat
 
-`(inputCount: number, outputCount: number, fitnessCallback: (net: import("src/architecture/network").default) => number, cfg: import("test/examples/asciiMaze/evolutionEngine/neatConfiguration").NeatConfig | undefined) => import("src/neat").default`
+```ts
+createNeat(
+  inputCount: number,
+  outputCount: number,
+  fitnessCallback: (net: default) => number,
+  cfg: NeatConfig | undefined,
+): default
+```
 
 Create a NEAT instance with normalized configuration and opinionated defaults.
 
@@ -1943,7 +2328,15 @@ NEAT configuration object shape for type safety.
 
 ### seedInitialPopulation
 
-`(neat: import("src/neat").default, initialPopulation: import("src/architecture/network").default[] | undefined, initialBestNetwork: import("src/architecture/network").default | undefined, targetPopSize: number, scratchPopClone: import("src/architecture/network").default[]) => import("src/architecture/network").default[]`
+```ts
+seedInitialPopulation(
+  neat: default,
+  initialPopulation: default[] | undefined,
+  initialBestNetwork: default | undefined,
+  targetPopSize: number,
+  scratchPopClone: default[],
+): default[]
+```
 
 Seed the NEAT population from an optional initial population and/or an optional
 initial best network.
@@ -2012,7 +2405,12 @@ ES2023 Policy:
 
 ### printNetworkStructure
 
-`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, network: import("test/examples/asciiMaze/interfaces").INetwork) => void`
+```ts
+printNetworkStructure(
+  engineState: EngineState,
+  network: INetwork,
+): void
+```
 
 Print a structured summary of network topology to the console.
 
@@ -2037,7 +2435,11 @@ printNetworkStructure(state, bestNetwork);
 
 ### swallowError
 
-`(error: unknown) => void`
+```ts
+swallowError(
+  error: unknown,
+): void
+```
 
 Utility to explicitly mark swallowed errors for lint compliance.
 
@@ -2080,7 +2482,11 @@ All functions are best-effort: internal errors are swallowed to avoid destabiliz
 
 ### applyCompassWarmStart
 
-`(__0: import("test/examples/asciiMaze/evolutionEngine/populationPruning").ApplyCompassWarmStartParams) => void`
+```ts
+applyCompassWarmStart(
+  __0: ApplyCompassWarmStartParams,
+): void
+```
 
 Warm-start wiring for compass and directional openness inputs.
 
@@ -2109,7 +2515,11 @@ Parameters for applying simplify pruning to a population.
 
 ### applySimplifyPruningToPopulation
 
-`(__0: import("test/examples/asciiMaze/evolutionEngine/populationPruning").ApplySimplifyPruningParams) => void`
+```ts
+applySimplifyPruningToPopulation(
+  __0: ApplySimplifyPruningParams,
+): void
+```
 
 Apply simplify-phase pruning to the entire population.
 
@@ -2133,7 +2543,11 @@ applySimplifyPruningToPopulation({
 
 ### centerOutputBiases
 
-`(__0: import("test/examples/asciiMaze/evolutionEngine/populationPruning").CenterOutputBiasesParams) => void`
+```ts
+centerOutputBiases(
+  __0: CenterOutputBiasesParams,
+): void
+```
 
 Re-center and clamp output node biases to prevent drift.
 
@@ -2173,7 +2587,15 @@ Mutations are limited to NEAT population networks and engine scratch buffers.
 
 ### adjustOutputBiasesAfterTraining
 
-`(network: import("src/architecture/network").default, state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, constants: { DEFAULT_STD_SMALL: number; DEFAULT_STD_ADJUST_MULT: number; }, scratchNodeIdx: Int32Array<ArrayBufferLike>, getNodeIndicesByType: (nodes: any[], nodeType: string) => number) => void`
+```ts
+adjustOutputBiasesAfterTraining(
+  network: default,
+  state: EngineState,
+  constants: { DEFAULT_STD_SMALL: number; DEFAULT_STD_ADJUST_MULT: number; },
+  scratchNodeIdx: Int32Array<ArrayBufferLike>,
+  getNodeIndicesByType: (nodes: any[], nodeType: string) => number,
+): void
+```
 
 Adjust output node biases after training to maintain exploration diversity.
 
@@ -2206,7 +2628,20 @@ adjustOutputBiasesAfterTraining(
 
 ### applyLamarckianTraining
 
-`(neat: import("src/neat").default, trainingSet: any[], iterations: number, sampleSize: number | undefined, safeWrite: (msg: string) => void, profileEnabled: boolean, completedGenerations: number, state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, constants: { DEFAULT_TRAIN_ERROR: number; DEFAULT_TRAIN_RATE: number; DEFAULT_TRAIN_MOMENTUM: number; DEFAULT_TRAIN_BATCH_SMALL: number; }, adjustOutputBiases: (network: any) => void) => number`
+```ts
+applyLamarckianTraining(
+  neat: default,
+  trainingSet: any[],
+  iterations: number,
+  sampleSize: number | undefined,
+  safeWrite: (msg: string) => void,
+  profileEnabled: boolean,
+  completedGenerations: number,
+  state: EngineState,
+  constants: { DEFAULT_TRAIN_ERROR: number; DEFAULT_TRAIN_RATE: number; DEFAULT_TRAIN_MOMENTUM: number; DEFAULT_TRAIN_BATCH_SMALL: number; },
+  adjustOutputBiases: (network: any) => void,
+): number
+```
 
 Apply Lamarckian backpropagation training to the entire population with optional profiling.
 
@@ -2255,7 +2690,12 @@ const elapsed = applyLamarckianTraining(
 
 ### buildLamarckianTrainingSet
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, constants: { TRAIN_OUT_PROB_HIGH: number; TRAIN_OUT_PROB_LOW: number; PROGRESS_MEDIUM: number; PROGRESS_STRONG: number; PROGRESS_JUNCTION: number; PROGRESS_FOURWAY: number; PROGRESS_REGRESS: number; PROGRESS_MIN_SIGNAL: number; PROGRESS_MILD_REGRESS: number; DEFAULT_JITTER_PROB: number; AUGMENT_JITTER_BASE: number; AUGMENT_JITTER_RANGE: number; AUGMENT_PROGRESS_JITTER_PROB: number; AUGMENT_PROGRESS_DELTA_RANGE: number; AUGMENT_PROGRESS_DELTA_HALF: number; RNG_PARAMETERS: import("test/examples/asciiMaze/evolutionEngine/engineState.types").RngCacheParameters; }) => { input: number[]; output: number[]; }[]`
+```ts
+buildLamarckianTrainingSet(
+  state: EngineState,
+  constants: { TRAIN_OUT_PROB_HIGH: number; TRAIN_OUT_PROB_LOW: number; PROGRESS_MEDIUM: number; PROGRESS_STRONG: number; PROGRESS_JUNCTION: number; PROGRESS_FOURWAY: number; PROGRESS_REGRESS: number; PROGRESS_MIN_SIGNAL: number; PROGRESS_MILD_REGRESS: number; DEFAULT_JITTER_PROB: number; AUGMENT_JITTER_BASE: number; AUGMENT_JITTER_RANGE: number; AUGMENT_PROGRESS_JITTER_PROB: number; AUGMENT_PROGRESS_DELTA_RANGE: number; AUGMENT_PROGRESS_DELTA_HALF: number; RNG_PARAMETERS: RngCacheParameters; },
+): { input: number[]; output: number[]; }[]
+```
 
 Build the supervised training set used for Lamarckian warm-start training.
 
@@ -2287,7 +2727,15 @@ const trainingSet = buildLamarckianTrainingSet(engineState, {
 
 ### pretrainPopulationWarmStart
 
-`(neat: import("src/neat").default, lamarckianTrainingSet: any[], constants: { PRETRAIN_MAX_ITER: number; PRETRAIN_BASE_ITER: number; DEFAULT_TRAIN_ERROR: number; DEFAULT_PRETRAIN_RATE: number; DEFAULT_PRETRAIN_MOMENTUM: number; DEFAULT_TRAIN_BATCH_SMALL: number; }, applyCompassWarmStart: (network: any) => void, centerOutputBiases: (network: any) => void) => void`
+```ts
+pretrainPopulationWarmStart(
+  neat: default,
+  lamarckianTrainingSet: any[],
+  constants: { PRETRAIN_MAX_ITER: number; PRETRAIN_BASE_ITER: number; DEFAULT_TRAIN_ERROR: number; DEFAULT_PRETRAIN_RATE: number; DEFAULT_PRETRAIN_MOMENTUM: number; DEFAULT_TRAIN_BATCH_SMALL: number; },
+  applyCompassWarmStart: (network: any) => void,
+  centerOutputBiases: (network: any) => void,
+): void
+```
 
 Pretrain the population using a small supervised dataset and apply warm-start heuristics.
 
@@ -2321,7 +2769,14 @@ pretrainPopulationWarmStart(
 
 ### warmStartPopulationIfNeeded
 
-`(neat: import("src/neat").default, trainingSet: any[], state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, pretrainPopulation: (neat: any, trainingSet: any[]) => void) => void`
+```ts
+warmStartPopulationIfNeeded(
+  neat: default,
+  trainingSet: any[],
+  state: EngineState,
+  pretrainPopulation: (neat: any, trainingSet: any[]) => void,
+): void
+```
 
 Conditionally warm-start / pretrain the population using a provided training set.
 
@@ -2374,7 +2829,15 @@ Follows ES2023 idioms: `toSorted`, `.at(-1)`, numeric separators, etc.
 
 ### antiCollapseRecovery
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, completedGenerations: number, safeWrite: (msg: string) => void, sampleSegmentIntoScratchFn: (state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, array: any[], startIdx: number, count: number) => number) => void`
+```ts
+antiCollapseRecovery(
+  state: EngineState,
+  neat: any,
+  completedGenerations: number,
+  safeWrite: (msg: string) => void,
+  sampleSegmentIntoScratchFn: (state: EngineState, array: any[], startIdx: number, count: number) => number,
+): void
+```
 
 Reinitialize output biases and weights for anti-collapse recovery.
 
@@ -2397,7 +2860,14 @@ antiCollapseRecovery(state, neat, genIndex, console.log, sampleSegmentIntoScratc
 
 ### applyMutationsToClone
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, clone: any, neat: any, mutateCount: number) => void`
+```ts
+applyMutationsToClone(
+  state: EngineState,
+  clone: any,
+  neat: any,
+  mutateCount: number,
+): void
+```
 
 Apply up to `mutateCount` distinct mutation operations to `clone`.
 
@@ -2418,7 +2888,11 @@ applyMutationsToClone(state, someClone, neat, 2);
 
 ### compactGenomeConnections
 
-`(genome: any) => number`
+```ts
+compactGenomeConnections(
+  genome: any,
+): number
+```
 
 Compact a single genome's connection list by removing disabled connections.
 
@@ -2438,7 +2912,12 @@ const removed = compactGenomeConnections(genome);
 
 ### compactPopulation
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any) => number`
+```ts
+compactPopulation(
+  state: EngineState,
+  neat: any,
+): number
+```
 
 Compact entire population by removing disabled connections from each genome.
 
@@ -2459,7 +2938,13 @@ const totalRemoved = compactPopulation(state, neat);
 
 ### createChildFromParent
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, parent: any) => any`
+```ts
+createChildFromParent(
+  state: EngineState,
+  neat: any,
+  parent: any,
+): any
+```
 
 Create a child genome from a parent via cloning and mutation.
 
@@ -2480,7 +2965,11 @@ createChildFromParent(state, neat, someParentGenome);
 
 ### determineMutateCount
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState) => number`
+```ts
+determineMutateCount(
+  state: EngineState,
+): number
+```
 
 Determine how many mutation operations to attempt (1 or 2).
 
@@ -2491,7 +2980,11 @@ Returns: 1 or 2 based on random sample.
 
 ### ensureOutputIdentity
 
-`(neat: any) => void`
+```ts
+ensureOutputIdentity(
+  neat: any,
+): void
+```
 
 Ensure all output nodes use identity activation.
 
@@ -2509,7 +3002,15 @@ ensureOutputIdentity(neat);
 
 ### expandPopulation
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, targetAdd: number, safeWrite: (msg: string) => void, completedGenerations: number) => void`
+```ts
+expandPopulation(
+  state: EngineState,
+  neat: any,
+  targetAdd: number,
+  safeWrite: (msg: string) => void,
+  completedGenerations: number,
+): void
+```
 
 Expand the population by creating children from top-performing parents.
 
@@ -2532,7 +3033,12 @@ expandPopulation(state, neat, 10, msg => process.stdout.write(msg), currentGen);
 
 ### getSortedIndicesByScore
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, population: any[]) => number[]`
+```ts
+getSortedIndicesByScore(
+  state: EngineState,
+  population: any[],
+): number[]
+```
 
 Sort population indices by descending score using iterative quicksort.
 
@@ -2554,7 +3060,19 @@ const indices = getSortedIndicesByScore(state, population);
 
 ### handleSimplifyState
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, plateauCounter: number, plateauGenerations: number, simplifyDuration: number, simplifyMode: boolean, simplifyRemaining: number, simplifyStrategy: string, simplifyPruneFraction: number) => { simplifyMode: boolean; simplifyRemaining: number; plateauCounter: number; }`
+```ts
+handleSimplifyState(
+  state: EngineState,
+  neat: any,
+  plateauCounter: number,
+  plateauGenerations: number,
+  simplifyDuration: number,
+  simplifyMode: boolean,
+  simplifyRemaining: number,
+  simplifyStrategy: string,
+  simplifyPruneFraction: number,
+): { simplifyMode: boolean; simplifyRemaining: number; plateauCounter: number; }
+```
 
 Handle simplify entry and per-generation advance.
 
@@ -2581,7 +3099,13 @@ const state = handleSimplifyState(engineState, neat, 3, 10, 5, false, 0, 'aggres
 
 ### handleSpeciesHistory
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, speciesHistory: number[]) => boolean`
+```ts
+handleSpeciesHistory(
+  state: EngineState,
+  neat: any,
+  speciesHistory: number[],
+): boolean
+```
 
 Update species history and detect species collapse.
 
@@ -2608,7 +3132,21 @@ Typed or array-based index buffer for sorting
 
 ### maybeExpandPopulation
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, dynamicPopEnabled: boolean, completedGenerations: number, dynamicPopMax: number, plateauGenerations: number, plateauCounter: number, dynamicPopExpandInterval: number, dynamicPopExpandFactor: number, dynamicPopPlateauSlack: number, safeWrite: (msg: string) => void) => void`
+```ts
+maybeExpandPopulation(
+  state: EngineState,
+  neat: any,
+  dynamicPopEnabled: boolean,
+  completedGenerations: number,
+  dynamicPopMax: number,
+  plateauGenerations: number,
+  plateauCounter: number,
+  dynamicPopExpandInterval: number,
+  dynamicPopExpandFactor: number,
+  dynamicPopPlateauSlack: number,
+  safeWrite: (msg: string) => void,
+): void
+```
 
 Attempt population expansion when conditions permit.
 
@@ -2636,7 +3174,13 @@ maybeExpandPopulation(state, neat, true, 100, 500, 10, 8, 5, 0.1, 0.75, console.
 
 ### maybeStartSimplify
 
-`(plateauCounter: number, plateauGenerations: number, simplifyDuration: number) => number`
+```ts
+maybeStartSimplify(
+  plateauCounter: number,
+  plateauGenerations: number,
+  simplifyDuration: number,
+): number
+```
 
 Decide whether to start a simplify phase based on plateau duration.
 
@@ -2660,7 +3204,12 @@ if (duration > 0) {
 
 ### prepareExpansion
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any) => { populationRef: any[]; sortedIdx: number[]; parentPoolSize: number; }`
+```ts
+prepareExpansion(
+  state: EngineState,
+  neat: any,
+): { populationRef: any[]; sortedIdx: number[]; parentPoolSize: number; }
+```
 
 Prepare working sets for population expansion.
 
@@ -2676,7 +3225,14 @@ const { populationRef, sortedIdx, parentPoolSize } = prepareExpansion(state, nea
 
 ### pruneSaturatedHiddenOutputs
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, genome: unknown, getNodeIndicesByType: (nodes: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], nodeType: string) => number, collectHiddenToOutputConns: (hiddenNode: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode, nodes: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], outputCount: number) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkConnection[]) => void`
+```ts
+pruneSaturatedHiddenOutputs(
+  state: EngineState,
+  genome: unknown,
+  getNodeIndicesByType: (nodes: NetworkNode[], nodeType: string) => number,
+  collectHiddenToOutputConns: (hiddenNode: NetworkNode, nodes: NetworkNode[], outputCount: number) => NetworkConnection[],
+): void
+```
 
 Prune saturated hidden-to-output connections for a single genome.
 
@@ -2697,7 +3253,13 @@ pruneSaturatedHiddenOutputs(state, genome, getNodeIndicesByTypeFn, collectHidden
 
 ### registerClone
 
-`(neat: any, clone: any, parentId: any) => void`
+```ts
+registerClone(
+  neat: any,
+  clone: any,
+  parentId: any,
+): void
+```
 
 Register a cloned genome with the NEAT driver's bookkeeping.
 
@@ -2712,7 +3274,12 @@ registerClone(neat, genomeClone, parentId);
 
 ### reinitializeGenomeOutputsAndWeights
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, genome: unknown) => { connReset: number; biasReset: number; }`
+```ts
+reinitializeGenomeOutputsAndWeights(
+  state: EngineState,
+  genome: unknown,
+): { connReset: number; biasReset: number; }
+```
 
 Reinitialize output node biases and outgoing weights for a single genome.
 
@@ -2733,7 +3300,15 @@ const deltas = reinitializeGenomeOutputsAndWeights(state, genome);
 
 ### runSimplifyCycle
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: any, simplifyRemaining: number, simplifyStrategy: string, simplifyPruneFraction: number) => number`
+```ts
+runSimplifyCycle(
+  state: EngineState,
+  neat: any,
+  simplifyRemaining: number,
+  simplifyStrategy: string,
+  simplifyPruneFraction: number,
+): number
+```
 
 Run a single simplify/pruning generation if conditions permit.
 
@@ -2759,7 +3334,14 @@ const remaining = runSimplifyCycle(state, neat, 5, 'pruneWeak', 0.2);
 
 ### updatePlateauState
 
-`(fitness: number, lastBestFitnessForPlateau: number, plateauCounter: number, plateauImprovementThreshold: number) => { plateauCounter: number; lastBestFitnessForPlateau: number; }`
+```ts
+updatePlateauState(
+  fitness: number,
+  lastBestFitnessForPlateau: number,
+  plateauCounter: number,
+  plateauImprovementThreshold: number,
+): { plateauCounter: number; lastBestFitnessForPlateau: number; }
+```
 
 Update plateau state based on current fitness vs baseline.
 
@@ -2853,7 +3435,11 @@ Knuth-derived 32-bit constant used when seeding the RNG state.
 
 ### applyEvolutionEngineRingState
 
-`(updatedRingState: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LogitsRingState) => void`
+```ts
+applyEvolutionEngineRingState(
+  updatedRingState: LogitsRingState,
+): void
+```
 
 Apply the latest logits-ring runtime values returned by the evolution loop.
 
@@ -2862,7 +3448,13 @@ Parameters:
 
 ### configureEvolutionEngineToggles
 
-`(reducedTelemetry: boolean, telemetryMinimal: boolean, disableBaldwinPhase: boolean) => void`
+```ts
+configureEvolutionEngineToggles(
+  reducedTelemetry: boolean,
+  telemetryMinimal: boolean,
+  disableBaldwinPhase: boolean,
+): void
+```
 
 Apply telemetry and Baldwin-phase toggles derived from one normalized run request.
 
@@ -2873,7 +3465,9 @@ Parameters:
 
 ### getEvolutionEngineFacadeRuntimeState
 
-`() => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionEngineFacadeRuntimeState`
+```ts
+getEvolutionEngineFacadeRuntimeState(): EvolutionEngineFacadeRuntimeState
+```
 
 Read the mutable facade-owned logits-ring runtime state.
 
@@ -2881,7 +3475,9 @@ Returns: Current ring-capacity, shared-mode, and write-cursor state.
 
 ### getEvolutionEngineMaxLogitsRingCapacity
 
-`() => number`
+```ts
+getEvolutionEngineMaxLogitsRingCapacity(): number
+```
 
 Read the hard maximum ring capacity used by the public facade.
 
@@ -2889,7 +3485,9 @@ Returns: Maximum ring capacity allowed for logits telemetry.
 
 ### getEvolutionEngineSharedState
 
-`() => import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState`
+```ts
+getEvolutionEngineSharedState(): EngineState
+```
 
 Return the shared engine singleton used by extracted engine modules.
 
@@ -2900,7 +3498,9 @@ Returns: Shared engine state singleton.
 
 ### resetEvolutionEngineRingState
 
-`() => void`
+```ts
+resetEvolutionEngineRingState(): void
+```
 
 Reset the facade-owned logits-ring runtime state to its baseline defaults.
 
@@ -2968,7 +3568,11 @@ Pure utility helpers shared by the ASCII maze engine-state facade.
 
 ### buildTelemetryHandles
 
-`(scratch: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineScratchState) => import("test/examples/asciiMaze/evolutionEngine/engineState.types").TelemetryScratchHandles`
+```ts
+buildTelemetryHandles(
+  scratch: EngineScratchState,
+): TelemetryScratchHandles
+```
 
 Build typed handles referencing the ensured telemetry scratch buffers.
 
@@ -2979,7 +3583,9 @@ Returns: Structured handles consumed by telemetry helpers.
 
 ### createLogitsRing
 
-`() => Float32Array<ArrayBufferLike>[]`
+```ts
+createLogitsRing(): Float32Array<ArrayBufferLike>[]
+```
 
 Build a logits ring sized to the requested default capacity.
 
@@ -2987,7 +3593,9 @@ Returns: Array of Float32Array rows sized to the action dimension.
 
 ### createProfilingAccumulators
 
-`() => Record<string, number>`
+```ts
+createProfilingAccumulators(): Record<string, number>
+```
 
 Build a fresh profiling accumulator map seeded with zero totals.
 
@@ -2995,7 +3603,9 @@ Returns: Accumulator record keyed by profiling segment name.
 
 ### createSnapshotReusableObject
 
-`() => { generation: number; bestFitness: number; simplifyMode: boolean; plateauCounter: number; timestamp: number; telemetryTail: undefined; top: undefined; }`
+```ts
+createSnapshotReusableObject(): { generation: number; bestFitness: number; simplifyMode: boolean; plateauCounter: number; timestamp: number; telemetryTail: undefined; top: undefined; }
+```
 
 Build the reusable snapshot metadata payload consumed by persistence helpers.
 
@@ -3003,7 +3613,12 @@ Returns: Snapshot placeholder populated with neutral defaults.
 
 ### ensureTelemetryFloatPools
 
-`(scratch: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineScratchState, hints: TelemetryCapacityHints) => void`
+```ts
+ensureTelemetryFloatPools(
+  scratch: EngineScratchState,
+  hints: TelemetryCapacityHints,
+): void
+```
 
 Ensure all Float64 scratch pools required for telemetry are adequately sized.
 
@@ -3015,7 +3630,12 @@ Returns: void.
 
 ### ensureTelemetryStringBuffer
 
-`(buffer: string[], required: number) => string[]`
+```ts
+ensureTelemetryStringBuffer(
+  buffer: string[],
+  required: number,
+): string[]
+```
 
 Ensure the reusable string assembly buffer has sufficient capacity.
 
@@ -3027,7 +3647,11 @@ Returns: Original buffer when large enough, otherwise a grown copy.
 
 ### nextPowerOfTwo
 
-`(candidate: number) => number`
+```ts
+nextPowerOfTwo(
+  candidate: number,
+): number
+```
 
 Compute the next power-of-two for geometric growth.
 
@@ -3038,7 +3662,11 @@ Returns: Smallest power-of-two greater than or equal to the candidate.
 
 ### normaliseRngBatchSize
 
-`(requestedBatchSize: number) => number`
+```ts
+normaliseRngBatchSize(
+  requestedBatchSize: number,
+): number
+```
 
 Clamp the RNG cache batch size to a positive integer.
 
@@ -3049,7 +3677,11 @@ Returns: Valid batch size.
 
 ### normaliseRngSeed
 
-`(rawSeed: number) => number`
+```ts
+normaliseRngSeed(
+  rawSeed: number,
+): number
+```
 
 Normalise a raw numeric seed into an unsigned 32-bit value.
 
@@ -3060,7 +3692,11 @@ Returns: Unsigned 32-bit seed suitable for the congruential generator.
 
 ### normaliseTelemetryCapacityHints
 
-`(request: import("test/examples/asciiMaze/evolutionEngine/engineState.types").TelemetryScratchRequest) => TelemetryCapacityHints`
+```ts
+normaliseTelemetryCapacityHints(
+  request: TelemetryScratchRequest,
+): TelemetryCapacityHints
+```
 
 Derive normalised capacity hints from the raw telemetry scratch request.
 
@@ -3071,7 +3707,11 @@ Returns: Sanitised capacity values used during buffer initialisation.
 
 ### normaliseVisitedHashEntries
 
-`(requestedEntries: number) => number`
+```ts
+normaliseVisitedHashEntries(
+  requestedEntries: number,
+): number
+```
 
 Clamp the requested target entry count to a non-negative integer.
 
@@ -3082,7 +3722,11 @@ Returns: Sanitised entry count used for capacity planning.
 
 ### normaliseVisitedHashLoad
 
-`(requestedLoadFactor: number) => number`
+```ts
+normaliseVisitedHashLoad(
+  requestedLoadFactor: number,
+): number
+```
 
 Ensure the visited hash load factor falls within a sensible range.
 
@@ -3093,7 +3737,9 @@ Returns: Clamped load factor with a fallback to the project default.
 
 ### resolveProfilingEnabled
 
-`() => boolean`
+```ts
+resolveProfilingEnabled(): boolean
+```
 
 Compute whether detailed profiling is enabled via the environment flag.
 
@@ -3103,7 +3749,14 @@ Returns: True when the profiling environment flag is set.
 
 ### collectEvolutionEngineHiddenToOutputConnections
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, hiddenNode: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode, nodes: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], outputCount: number) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkConnection[]`
+```ts
+collectEvolutionEngineHiddenToOutputConnections(
+  state: EngineState,
+  hiddenNode: NetworkNode,
+  nodes: NetworkNode[],
+  outputCount: number,
+): NetworkConnection[]
+```
 
 Collect enabled outgoing connections from one hidden node into the shared scratch array.
 
@@ -3129,7 +3782,13 @@ const connections = collectEvolutionEngineHiddenToOutputConnections(
 
 ### collectEvolutionEngineNodeIndicesByType
 
-`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, nodes: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[] | undefined, type: string) => number`
+```ts
+collectEvolutionEngineNodeIndicesByType(
+  state: EngineState,
+  nodes: NetworkNode[] | undefined,
+  type: string,
+): number
+```
 
 Collect node indices of one requested type into the shared engine scratch buffer.
 

@@ -8,7 +8,12 @@ Runtime interface for activation internals.
 
 ### ActivationFunction
 
-`(x: number, derivate: boolean | undefined) => number`
+```ts
+ActivationFunction(
+  x: number,
+  derivate: boolean | undefined,
+): number
+```
 
 Runtime activation function signature used by ONNX activation import/export paths.
 
@@ -27,7 +32,12 @@ const dy = activation(x, true);
 
 ### ActivationSquashFunction
 
-`(x: number, derivate: boolean | undefined) => number`
+```ts
+ActivationSquashFunction(
+  x: number,
+  derivate: boolean | undefined,
+): number
+```
 
 Activation function signature used by ONNX layer emission helpers.
 
@@ -182,7 +192,12 @@ Result of Conv sharing validation across declared mappings.
 
 ### CostFunction
 
-`(target: number[], output: number[]) => number`
+```ts
+CostFunction(
+  target: number[],
+  output: number[],
+): number
+```
 
 Cost / loss function used during supervised training.
 
@@ -308,7 +323,11 @@ Internal normalized evolution config.
 
 ### EvolutionFitnessFunction
 
-`(arg0: import("src/architecture/network").default & import("src/architecture/network").default[]) => number | Promise<void>`
+```ts
+EvolutionFitnessFunction(
+  arg0: default & default[],
+): number | Promise<void>
+```
 
 Unified evolution fitness callback shape.
 
@@ -326,7 +345,12 @@ Effective evolution stopping conditions.
 
 ### EvolveCostFunction
 
-`(target: number[], output: number[]) => number`
+```ts
+EvolveCostFunction(
+  target: number[],
+  output: number[],
+): number
+```
 
 Evolve-side cost function signature.
 
@@ -488,7 +512,11 @@ Heuristic LSTM pattern stub for metadata output.
 
 ### MetricsHook
 
-`(m: { iteration: number; error: number; plateauError?: number | undefined; gradNorm: number; }) => void`
+```ts
+MetricsHook(
+  m: { iteration: number; error: number; plateauError?: number | undefined; gradNorm: number; },
+): void
+```
 
 Metrics hook signature.
 
@@ -522,7 +550,11 @@ Smoothing can make early stopping and progress logging less noisy.
 
 ### MutationHandler
 
-`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
+```ts
+MutationHandler(
+  method: MutationMethod | undefined,
+): void
+```
 
 Mutation handler function contract.
 
@@ -993,7 +1025,11 @@ while keeping the ONNX parser itself mostly pure.
 
 ### OnnxRuntimeLayerFactory
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+OnnxRuntimeLayerFactory(
+  size: number,
+): default
+```
 
 Runtime layer-constructor signature used for recurrent layer reconstruction.
 
@@ -1012,7 +1048,11 @@ This is the minimal set of recurrent factories needed by the importer.
 
 ### OnnxRuntimePerceptronFactory
 
-`(sizes: number[]) => import("src/architecture/network").default`
+```ts
+OnnxRuntimePerceptronFactory(
+  sizes: number[],
+): default
+```
 
 Runtime perceptron factory signature used by ONNX import orchestration.
 
@@ -1145,7 +1185,11 @@ Per-pool-key allocation & reuse counters (educational / diagnostics).
 
 ### PopulationFitnessFunction
 
-`(population: import("src/architecture/network").default[]) => Promise<void>`
+```ts
+PopulationFitnessFunction(
+  population: default[],
+): Promise<void>
+```
 
 Fitness signature evaluating full population asynchronously.
 
@@ -1314,7 +1358,11 @@ Shared parameters for constructing a Gemm node payload.
 
 ### SingleGenomeFitnessFunction
 
-`(genome: import("src/architecture/network").default) => number`
+```ts
+SingleGenomeFitnessFunction(
+  genome: default,
+): number
+```
 
 Fitness signature evaluating one genome.
 
@@ -1460,7 +1508,12 @@ Important: this is **not** considered stable public API. It may change between r
 
 ### activate
 
-`(input: number[], training: boolean) => number[]`
+```ts
+activate(
+  input: number[],
+  training: boolean,
+): number[]
+```
 
 Execute the main activation routine and return plain numeric outputs.
 
@@ -1473,7 +1526,12 @@ Returns: Output activation values.
 
 ### activateBatch
 
-`(inputs: number[][], training: boolean) => number[][]`
+```ts
+activateBatch(
+  inputs: number[][],
+  training: boolean,
+): number[][]
+```
 
 Activate the network over a mini‑batch (array) of input vectors, returning a 2‑D array of outputs.
 
@@ -1498,7 +1556,13 @@ console.log(batchOut.length); // 3 rows
 
 ### activateRaw
 
-`(input: number[], training: boolean, maxActivationDepth: number) => number[]`
+```ts
+activateRaw(
+  input: number[],
+  training: boolean,
+  maxActivationDepth: number,
+): number[]
+```
 
 Thin semantic alias to the network's main activation path.
 
@@ -1521,7 +1585,12 @@ const y = net.activateRaw([0,1,0]);
 
 ### applyGradientClippingImpl
 
-`(net: import("src/architecture/network").default, cfg: import("src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
+```ts
+applyGradientClippingImpl(
+  net: default,
+  cfg: GradientClipRuntimeConfig,
+): void
+```
 
 Apply gradient clipping to a network using a normalized runtime configuration.
 
@@ -1533,7 +1602,11 @@ Parameters:
 
 ### canUseFastSlab
 
-`(training: boolean) => boolean`
+```ts
+canUseFastSlab(
+  training: boolean,
+): boolean
+```
 
 Public convenience wrapper exposing fast path eligibility.
 Mirrors `_canUseFastSlab` internal predicate.
@@ -1545,7 +1618,9 @@ Returns: True when slab fast path predicates hold.
 
 ### clearState
 
-`() => void`
+```ts
+clearState(): void
+```
 
 Clear all node runtime traces and states.
 
@@ -1554,7 +1629,9 @@ Parameters:
 
 ### computeTopoOrder
 
-`() => void`
+```ts
+computeTopoOrder(): void
+```
 
 Compute a topological ordering (Kahn's algorithm) for the current directed acyclic graph.
 If cycles are detected (order shorter than node count) we fall back to raw node order to avoid breaking callers.
@@ -1562,7 +1639,13 @@ In non-acyclic mode we simply clear cached order to signal use of sequential nod
 
 ### connect
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connect(
+  from: default,
+  to: default,
+  weight: number | undefined,
+): default[]
+```
 
 Create and register one (or multiple) directed connection objects between two nodes.
 
@@ -1603,7 +1686,13 @@ const [edge] = net.connect(nodeA, nodeB, 0.5);
 
 ### createMLP
 
-`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("src/architecture/network").default`
+```ts
+createMLP(
+  inputCount: number,
+  hiddenCounts: number[],
+  outputCount: number,
+): default
+```
 
 Build a strictly layered and fully connected MLP network.
 
@@ -1617,7 +1706,13 @@ Returns: Newly created MLP network.
 
 ### crossOver
 
-`(parentNetwork1: import("src/architecture/network").default, parentNetwork2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network").default`
+```ts
+crossOver(
+  parentNetwork1: default,
+  parentNetwork2: default,
+  equal: boolean,
+): default
+```
 
 NEAT-inspired crossover between two parent networks producing a single offspring.
 
@@ -1678,7 +1773,11 @@ offspring.mutate();
 
 ### describeArchitecture
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkArchitectureDescriptor`
+```ts
+describeArchitecture(
+  network: default,
+): NetworkArchitectureDescriptor
+```
 
 Describes network architecture for diagnostics, telemetry, and UI rendering.
 
@@ -1706,7 +1805,13 @@ const descriptor = describeArchitecture(network);
 
 ### deserialize
 
-`(data: import("src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
+```ts
+deserialize(
+  data: CompactSerializedNetworkTuple,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): default
+```
 
 Rebuilds a network instance from compact tuple form.
 
@@ -1730,7 +1835,12 @@ const rebuiltNetwork = deserialize(compactTuple, 2, 1);
 
 ### disconnect
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => void`
+```ts
+disconnect(
+  from: default,
+  to: default,
+): void
+```
 
 Remove (at most) one directed connection from source 'from' to target 'to'.
 
@@ -1765,7 +1875,12 @@ net.disconnect(nodeA, nodeB);
 
 ### evolveNetwork
 
-`(set: import("src/architecture/network/network.types").TrainingSample[], options: import("src/architecture/network/network.types").EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
+```ts
+evolveNetwork(
+  set: TrainingSample[],
+  options: EvolveOptions,
+): Promise<{ error: number; iterations: number; time: number; }>
+```
 
 Evolves a network with a NEAT-style search loop until an error target or generation limit is reached.
 
@@ -1801,7 +1916,11 @@ console.log(summary.error, summary.iterations, summary.time);
 
 ### fastSlabActivate
 
-`(input: number[]) => number[]`
+```ts
+fastSlabActivate(
+  input: number[],
+): number[]
+```
 
 High‑performance forward pass using packed slabs + CSR adjacency.
 
@@ -1822,7 +1941,11 @@ Returns: Output activations (detached plain array) of length `network.output`.
 
 ### fromJSONImpl
 
-`(json: import("src/architecture/network/network.types").NetworkJSON) => import("src/architecture/network").default`
+```ts
+fromJSONImpl(
+  json: NetworkJSON,
+): default
+```
 
 Reconstructs a network instance from the verbose JSON payload.
 
@@ -1844,7 +1967,12 @@ const rebuiltNetwork = fromJSONImpl(snapshotJson);
 
 ### gate
 
-`(node: import("src/architecture/node").default, connection: import("src/architecture/connection").default) => void`
+```ts
+gate(
+  node: default,
+  connection: default,
+): void
+```
 
 Attach a gater node to a connection so that the connection's effective weight
 becomes dynamically modulated by the gater's activation (see {@link Node.gate} for exact math).
@@ -1862,7 +1990,11 @@ Parameters:
 
 ### gaussianRand
 
-`(rng: () => number) => number`
+```ts
+gaussianRand(
+  rng: () => number,
+): number
+```
 
 Produce a normally distributed random sample using the Box-Muller transform.
 
@@ -1873,7 +2005,11 @@ Returns: Standard normal sample with mean 0 and variance 1.
 
 ### generateStandalone
 
-`(net: import("src/architecture/network").default) => string`
+```ts
+generateStandalone(
+  net: default,
+): string
+```
 
 Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.
 
@@ -1895,7 +2031,9 @@ Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain ac
 
 ### getConnectionSlab
 
-`() => import("src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
+```ts
+getConnectionSlab(): ConnectionSlabView
+```
 
 Obtain (and lazily rebuild if dirty) the current packed SoA view of connections.
 
@@ -1907,7 +2045,9 @@ Returns: Read‑only style view (do not mutate) containing typed arrays + metada
 
 ### getCurrentSparsity
 
-`() => number`
+```ts
+getCurrentSparsity(): number
+```
 
 Current sparsity fraction relative to the training-time pruning baseline.
 
@@ -1915,7 +2055,9 @@ Returns: Current sparsity in the [0,1] range when baseline is available.
 
 ### getRegularizationStats
 
-`() => Record<string, unknown> | null`
+```ts
+getRegularizationStats(): Record<string, unknown> | null
+```
 
 Obtain the last recorded regularization / stochastic statistics snapshot.
 
@@ -1927,7 +2069,9 @@ Returns: A deep-cloned stats object or null if no stats have been recorded yet.
 
 ### getRNGState
 
-`() => number | undefined`
+```ts
+getRNGState(): number | undefined
+```
 
 Returns the current deterministic RNG numeric state, when available.
 
@@ -1949,7 +2093,9 @@ const state = network.getRNGState();
 
 ### getSlabAllocationStats
 
-`() => { pool: { [x: string]: import("src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
+```ts
+getSlabAllocationStats(): { pool: { [x: string]: PoolKeyMetrics; }; fresh: number; pooled: number; }
+```
 
 Allocation statistics snapshot for slab typed arrays.
 
@@ -1964,13 +2110,22 @@ Returns: Plain object copy (safe to serialize) of current allocator counters.
 
 ### hasPath
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
+```ts
+hasPath(
+  from: default,
+  to: default,
+): boolean
+```
 
 Depth-first reachability test (avoids infinite loops via visited set).
 
 ### maybePrune
 
-`(iteration: number) => void`
+```ts
+maybePrune(
+  iteration: number,
+): void
+```
 
 Perform scheduled pruning at a given training iteration if conditions are met.
 
@@ -1982,7 +2137,11 @@ Parameters:
 
 ### mutateImpl
 
-`(method: import("src/architecture/network/network.types").MutationMethod | undefined) => void`
+```ts
+mutateImpl(
+  method: MutationMethod | undefined,
+): void
+```
 
 Public entry point: apply a single mutation operator to the network.
 
@@ -2011,7 +2170,11 @@ network.mutate({ name: 'MOD_WEIGHT', min: -0.1, max: 0.1 });
 
 ### noTraceActivate
 
-`(input: number[]) => number[]`
+```ts
+noTraceActivate(
+  input: number[],
+): number[]
+```
 
 Perform a forward pass without creating or updating any training / gradient traces.
 
@@ -2053,7 +2216,16 @@ console.log(out); // => e.g. [0.5123, 0.0441]
 
 ### propagate
 
-`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  target: number[],
+  regularization: number,
+  costDerivative: CostDerivative | undefined,
+): void
+```
 
 Propagate output and hidden errors backward through the network.
 
@@ -2068,7 +2240,12 @@ Parameters:
 
 ### pruneToSparsity
 
-`(targetSparsity: number, method: import("src/architecture/network/network.types").PruningMethod) => void`
+```ts
+pruneToSparsity(
+  targetSparsity: number,
+  method: PruningMethod,
+): void
+```
 
 Evolutionary (generation-based) pruning toward a target sparsity baseline.
 Unlike maybePrune this operates immediately relative to the first invocation's connection count
@@ -2082,7 +2259,11 @@ Returns: Nothing.
 
 ### rebuildConnections
 
-`(networkInstance: import("src/architecture/network").default) => void`
+```ts
+rebuildConnections(
+  networkInstance: default,
+): void
+```
 
 Rebuild the canonical connection array from per-node outgoing lists.
 
@@ -2091,7 +2272,11 @@ Parameters:
 
 ### rebuildConnectionSlab
 
-`(force: boolean) => void`
+```ts
+rebuildConnectionSlab(
+  force: boolean,
+): void
+```
 
 Build (or refresh) the packed connection slabs for the network synchronously.
 
@@ -2113,7 +2298,11 @@ Parameters:
 
 ### rebuildConnectionSlabAsync
 
-`(chunkSize: number) => Promise<void>`
+```ts
+rebuildConnectionSlabAsync(
+  chunkSize: number,
+): Promise<void>
+```
 
 Cooperative asynchronous slab rebuild (Browser only).
 
@@ -2132,7 +2321,11 @@ Returns: Promise resolving once rebuild completes.
 
 ### removeNode
 
-`(node: import("src/architecture/node").default) => void`
+```ts
+removeNode(
+  node: default,
+): void
+```
 
 Remove a hidden node from the network while minimally repairing connectivity.
 
@@ -2142,7 +2335,11 @@ Parameters:
 
 ### restoreRNG
 
-`(fn: () => number) => void`
+```ts
+restoreRNG(
+  fn: () => number,
+): void
+```
 
 Restores deterministic RNG lifecycle behavior from a provided RNG function.
 
@@ -2165,7 +2362,9 @@ network.restoreRNG(restoredRandomFunction);
 
 ### serialize
 
-`() => import("src/architecture/network/network.types").CompactSerializedNetworkTuple`
+```ts
+serialize(): CompactSerializedNetworkTuple
+```
 
 Serializes a network instance into the compact tuple format.
 
@@ -2190,7 +2389,11 @@ const rebuiltNetwork = deserialize(compactTuple);
 
 ### setRNGState
 
-`(state: number) => void`
+```ts
+setRNGState(
+  state: number,
+): void
+```
 
 Applies a deterministic RNG numeric state to continue from a known checkpoint.
 
@@ -2213,7 +2416,11 @@ network.setRNGState(savedState);
 
 ### setSeed
 
-`(seed: number) => void`
+```ts
+setSeed(
+  seed: number,
+): void
+```
 
 Sets deterministic randomness for a network by installing a seed-backed RNG.
 
@@ -2236,7 +2443,9 @@ network.setSeed(42);
 
 ### snapshotRNG
 
-`() => import("src/architecture/network/network.types").RNGSnapshot`
+```ts
+snapshotRNG(): RNGSnapshot
+```
 
 Captures the current deterministic RNG lifecycle state as a portable snapshot.
 
@@ -2258,7 +2467,12 @@ const snapshot = network.snapshotRNG();
 
 ### testNetwork
 
-`(set: TestSample[], cost: CostFunction | undefined) => TestNetworkResult`
+```ts
+testNetwork(
+  set: TestSample[],
+  cost: CostFunction | undefined,
+): TestNetworkResult
+```
 
 Evaluate a dataset and return average error and elapsed time.
 
@@ -2271,7 +2485,9 @@ Returns: Mean error and evaluation duration.
 
 ### toJSONImpl
 
-`() => import("src/architecture/network/network.types").NetworkJSON`
+```ts
+toJSONImpl(): NetworkJSON
+```
 
 Serializes a network instance into the verbose JSON format.
 
@@ -2296,7 +2512,13 @@ const rebuiltNetwork = fromJSONImpl(snapshotJson);
 
 ### trainImpl
 
-`(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], options: import("src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
+```ts
+trainImpl(
+  net: default,
+  set: TrainingSample[],
+  options: TrainingOptions,
+): { error: number; iterations: number; time: number; }
+```
 
 High-level training orchestration with early stopping, smoothing & callbacks.
 
@@ -2318,7 +2540,19 @@ console.log(result.error);
 
 ### trainSetImpl
 
-`(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("src/architecture/network/network.types").RegularizationConfig, costFunction: import("src/architecture/network/network.types").CostFunction | import("src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
+```ts
+trainSetImpl(
+  net: default,
+  set: TrainingSample[],
+  batchSize: number,
+  accumulationSteps: number,
+  currentRate: number,
+  momentum: number,
+  regularization: RegularizationConfig,
+  costFunction: CostFunction | CostFunctionOrObject,
+  optimizer: OptimizerConfigBase | undefined,
+): number
+```
 
 Execute one full pass over dataset (epoch) with optional accumulation & adaptive optimizer.
 Returns mean cost across processed samples.
@@ -2340,7 +2574,11 @@ Returns: Mean cost across the processed samples.
 
 ### ungate
 
-`(connection: import("src/architecture/connection").default) => void`
+```ts
+ungate(
+  connection: default,
+): void
+```
 
 Remove gating from a connection, restoring its static weight contribution.
 

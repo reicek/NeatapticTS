@@ -80,7 +80,13 @@ flowchart LR
 
 ### applyResponsiveViewportSizing
 
-`(responsiveViewportSizingElements: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportSizingElements, deferredNetworkRedrawController: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").DeferredNetworkRedrawController, onNetworkResize: () => void) => void`
+```ts
+applyResponsiveViewportSizing(
+  responsiveViewportSizingElements: ResponsiveViewportSizingElements,
+  deferredNetworkRedrawController: DeferredNetworkRedrawController,
+  onNetworkResize: () => void,
+): void
+```
 
 Applies responsive sizing to the simulation and network canvases.
 
@@ -96,7 +102,19 @@ Returns: Nothing.
 
 ### installResponsiveViewportSizing
 
-`(canvas: HTMLCanvasElement, containerElement: HTMLElement, mainSplitContainer: HTMLElement, statsContainer: HTMLElement, statsSplitContainer: HTMLElement, statsTableHost: HTMLElement, networkCanvas: HTMLCanvasElement, networkCanvasHost: HTMLElement, onNetworkResize: () => void) => void`
+```ts
+installResponsiveViewportSizing(
+  canvas: HTMLCanvasElement,
+  containerElement: HTMLElement,
+  mainSplitContainer: HTMLElement,
+  statsContainer: HTMLElement,
+  statsSplitContainer: HTMLElement,
+  statsTableHost: HTMLElement,
+  networkCanvas: HTMLCanvasElement,
+  networkCanvasHost: HTMLElement,
+  onNetworkResize: () => void,
+): void
+```
 
 Installs responsive viewport sizing for simulation and network canvases.
 
@@ -127,7 +145,12 @@ trigger redraws when the network panel geometry changes.
 
 ### applyMinimalMobileViewportLayout
 
-`(responsiveViewportSizingElements: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportSizingElements, responsiveViewportLayoutContext: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportLayoutContext) => void`
+```ts
+applyMinimalMobileViewportLayout(
+  responsiveViewportSizingElements: ResponsiveViewportSizingElements,
+  responsiveViewportLayoutContext: ResponsiveViewportLayoutContext,
+): void
+```
 
 Applies the minimal mobile layout that hides the auxiliary panes.
 
@@ -142,7 +165,12 @@ Returns: Nothing.
 
 ### applyNetworkCanvasHostHeight
 
-`(networkCanvasHost: HTMLElement, deferredNetworkRedrawController: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").DeferredNetworkRedrawController) => void`
+```ts
+applyNetworkCanvasHostHeight(
+  networkCanvasHost: HTMLElement,
+  deferredNetworkRedrawController: DeferredNetworkRedrawController,
+): void
+```
 
 Applies the fixed network host height and queues redraw when it changes.
 
@@ -157,7 +185,14 @@ Returns: Nothing.
 
 ### applyResponsiveCanvasBounds
 
-`(responsiveViewportSizingElements: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportSizingElements, responsiveViewportLayoutContext: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportLayoutContext, statsPanelDimensions: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").StatsPanelDimensions, onNetworkResize: () => void) => void`
+```ts
+applyResponsiveCanvasBounds(
+  responsiveViewportSizingElements: ResponsiveViewportSizingElements,
+  responsiveViewportLayoutContext: ResponsiveViewportLayoutContext,
+  statsPanelDimensions: StatsPanelDimensions,
+  onNetworkResize: () => void,
+): void
+```
 
 Applies simulation and network canvas backing sizes for the active layout.
 
@@ -174,7 +209,12 @@ Returns: Nothing.
 
 ### applySplitContainerLayoutStyles
 
-`(responsiveViewportSizingElements: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportSizingElements, responsiveViewportLayoutContext: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportLayoutContext) => void`
+```ts
+applySplitContainerLayoutStyles(
+  responsiveViewportSizingElements: ResponsiveViewportSizingElements,
+  responsiveViewportLayoutContext: ResponsiveViewportLayoutContext,
+): void
+```
 
 Applies the split-container styles for the standard layout modes.
 
@@ -189,7 +229,13 @@ Returns: Nothing.
 
 ### applyStandardViewportLayout
 
-`(responsiveViewportSizingElements: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportSizingElements, responsiveViewportLayoutContext: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportLayoutContext, deferredNetworkRedrawController: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").DeferredNetworkRedrawController) => import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").StatsPanelDimensions`
+```ts
+applyStandardViewportLayout(
+  responsiveViewportSizingElements: ResponsiveViewportSizingElements,
+  responsiveViewportLayoutContext: ResponsiveViewportLayoutContext,
+  deferredNetworkRedrawController: DeferredNetworkRedrawController,
+): StatsPanelDimensions
+```
 
 Applies the standard tablet and desktop layout and returns panel dimensions.
 
@@ -205,7 +251,13 @@ Returns: Resolved stats panel dimensions.
 
 ### applyStatsContainerDimensions
 
-`(statsContainer: HTMLElement, responsiveViewportLayoutContext: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportLayoutContext, statsPanelDimensions: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").StatsPanelDimensions) => void`
+```ts
+applyStatsContainerDimensions(
+  statsContainer: HTMLElement,
+  responsiveViewportLayoutContext: ResponsiveViewportLayoutContext,
+  statsPanelDimensions: StatsPanelDimensions,
+): void
+```
 
 Applies the resolved dimensions and scrolling rules to the stats container.
 
@@ -218,7 +270,13 @@ Returns: Nothing.
 
 ### applyStatsPaneOrdering
 
-`(statsTableHost: HTMLElement, networkCanvasHost: HTMLElement, responsiveViewportLayoutContext: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportLayoutContext) => void`
+```ts
+applyStatsPaneOrdering(
+  statsTableHost: HTMLElement,
+  networkCanvasHost: HTMLElement,
+  responsiveViewportLayoutContext: ResponsiveViewportLayoutContext,
+): void
+```
 
 Applies ordering and flex styles for stats and network panes.
 
@@ -234,7 +292,11 @@ Returns: Nothing.
 
 ### createDeferredNetworkRedrawController
 
-`(onNetworkResize: () => void) => import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").DeferredNetworkRedrawController`
+```ts
+createDeferredNetworkRedrawController(
+  onNetworkResize: () => void,
+): DeferredNetworkRedrawController
+```
 
 Creates a deferred redraw controller that waits for layout to settle.
 
@@ -248,7 +310,13 @@ Returns: Deferred redraw controller.
 
 ### installResponsiveViewportSizingListeners
 
-`(containerElement: HTMLElement, applyCanvasSize: () => void, deferredNetworkRedrawController: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").DeferredNetworkRedrawController) => void`
+```ts
+installResponsiveViewportSizingListeners(
+  containerElement: HTMLElement,
+  applyCanvasSize: () => void,
+  deferredNetworkRedrawController: DeferredNetworkRedrawController,
+): void
+```
 
 Installs window and container listeners for responsive host sizing.
 
@@ -299,7 +367,11 @@ the resize appliers.
 
 ### resolveHeaderHeightPx
 
-`(containerElement: HTMLElement) => number`
+```ts
+resolveHeaderHeightPx(
+  containerElement: HTMLElement,
+): number
+```
 
 Resolves the header canvas height, if present.
 
@@ -313,7 +385,12 @@ Returns: Header height in pixels.
 
 ### resolveMinimalMobileCanvasBounds
 
-`(containerElement: HTMLElement, responsiveViewportLayoutContext: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportLayoutContext) => import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").SimulationCanvasBounds`
+```ts
+resolveMinimalMobileCanvasBounds(
+  containerElement: HTMLElement,
+  responsiveViewportLayoutContext: ResponsiveViewportLayoutContext,
+): SimulationCanvasBounds
+```
 
 Resolves the simulation canvas bounds for the minimal mobile layout.
 
@@ -328,7 +405,13 @@ Returns: Simulation canvas bounds.
 
 ### resolveResponsiveViewportLayoutContext
 
-`(containerElement: HTMLElement, statsContainer: HTMLElement, networkCanvasHost: HTMLElement) => import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportLayoutContext`
+```ts
+resolveResponsiveViewportLayoutContext(
+  containerElement: HTMLElement,
+  statsContainer: HTMLElement,
+  networkCanvasHost: HTMLElement,
+): ResponsiveViewportLayoutContext
+```
 
 Resolves responsive layout measurements and mode flags from the host DOM.
 
@@ -344,7 +427,13 @@ Returns: Responsive layout context.
 
 ### resolveSimulationCanvasBounds
 
-`(containerElement: HTMLElement, responsiveViewportLayoutContext: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportLayoutContext, statsPanelDimensions: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").StatsPanelDimensions) => import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").SimulationCanvasBounds`
+```ts
+resolveSimulationCanvasBounds(
+  containerElement: HTMLElement,
+  responsiveViewportLayoutContext: ResponsiveViewportLayoutContext,
+  statsPanelDimensions: StatsPanelDimensions,
+): SimulationCanvasBounds
+```
 
 Resolves simulation canvas bounds from the current viewport layout.
 
@@ -360,7 +449,11 @@ Returns: Simulation canvas bounds.
 
 ### resolveStatsPanelDimensions
 
-`(responsiveViewportLayoutContext: import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").ResponsiveViewportLayoutContext) => import("test/examples/flappy_bird/browser-entry/host/resize/host.resize.service.types").StatsPanelDimensions`
+```ts
+resolveStatsPanelDimensions(
+  responsiveViewportLayoutContext: ResponsiveViewportLayoutContext,
+): StatsPanelDimensions
+```
 
 Resolves the stats panel height and width budgets.
 

@@ -18,7 +18,11 @@ Design principles:
 
 ### memoryStats
 
-`(targetNetworks: import("src/utils/memory").NetworkView | import("src/utils/memory").NetworkView[] | undefined) => import("src/utils/memory").MemoryStats`
+```ts
+memoryStats(
+  targetNetworks: NetworkView | NetworkView[] | undefined,
+): MemoryStats
+```
 
 Capture heuristic memory statistics for one or more networks with a snapshot of active config flags.
 
@@ -46,7 +50,11 @@ enabling typed local variables instead of `any` everywhere.
 
 ### registerTrackedNetwork
 
-`(network: import("src/utils/memory").NetworkView | null | undefined) => void`
+```ts
+registerTrackedNetwork(
+  network: NetworkView | null | undefined,
+): void
+```
 
 Register a network for inclusion in future `memoryStats()` calls made
 without explicit parameters.
@@ -61,7 +69,9 @@ Returns: void
 
 ### resetMemoryTracking
 
-`() => void`
+```ts
+resetMemoryTracking(): void
+```
 
 Clear the internal list of networks tracked by `memoryStats()` when no
 explicit networks are provided. This does NOT free memory; it only
@@ -76,7 +86,11 @@ include additional fields; we only rely on fresh/pooled counts.
 
 ### unregisterTrackedNetwork
 
-`(network: import("src/utils/memory").NetworkView) => void`
+```ts
+unregisterTrackedNetwork(
+  network: NetworkView,
+): void
+```
 
 Remove a previously registered network from the tracking registry.
 No-op if the network is not currently registered.
@@ -90,7 +104,13 @@ Returns: void
 
 ### accumulateCapacitySlices
 
-`(accumulators: import("src/utils/memory.utils").Accumulators, network: import("src/utils/memory").NetworkView, heuristics: import("src/utils/memory.utils").HeuristicBytes) => void`
+```ts
+accumulateCapacitySlices(
+  accumulators: Accumulators,
+  network: NetworkView,
+  heuristics: HeuristicBytes,
+): void
+```
 
 Track reserved vs used bytes based on connection capacity slices.
 
@@ -101,7 +121,12 @@ Parameters:
 
 ### accumulateSlabArrays
 
-`(accumulators: import("src/utils/memory.utils").Accumulators, typedArrays: (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]) => void`
+```ts
+accumulateSlabArrays(
+  accumulators: Accumulators,
+  typedArrays: (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[],
+): void
+```
 
 Sum slab-backed array counts and byte sizes into the accumulator.
 
@@ -116,7 +141,12 @@ Accumulates counts, slab byte totals, and reserved vs used capacity snapshots.
 
 ### aggregateNetworkStats
 
-`(networksToSummarize: import("src/utils/memory").NetworkView[], heuristics: import("src/utils/memory.utils").HeuristicBytes) => import("src/utils/memory.utils").Accumulators`
+```ts
+aggregateNetworkStats(
+  networksToSummarize: NetworkView[],
+  heuristics: HeuristicBytes,
+): Accumulators
+```
 
 Aggregate per-network counters and slab metrics into a single accumulator.
 
@@ -128,7 +158,12 @@ Returns: Accumulated summary of network metrics.
 
 ### buildFlagSnapshot
 
-`(configSnapshot: import("src/utils/memory.utils").ConfigSnapshot, allocationStats: import("src/utils/memory").SlabAllocStats) => { warnings: unknown; float32Mode: unknown; deterministicChainMode: unknown; enableGatingTraces: unknown; poolMaxPerBucket: number | null; poolPrewarmCount: number | null; enableNodePooling: boolean; allocStats: unknown; }`
+```ts
+buildFlagSnapshot(
+  configSnapshot: ConfigSnapshot,
+  allocationStats: SlabAllocStats,
+): { warnings: unknown; float32Mode: unknown; deterministicChainMode: unknown; enableGatingTraces: unknown; poolMaxPerBucket: number | null; poolPrewarmCount: number | null; enableNodePooling: boolean; allocStats: unknown; }
+```
 
 Build flag snapshot derived from config and allocator stats.
 
@@ -145,7 +180,11 @@ Bundles precomputed accumulators, environment info, allocator stats, and flags.
 
 ### buildMemoryStatsSnapshot
 
-`(input: import("src/utils/memory.utils").BuildMemoryStatsInput) => import("src/utils/memory").MemoryStats`
+```ts
+buildMemoryStatsSnapshot(
+  input: BuildMemoryStatsInput,
+): MemoryStats
+```
 
 Build the full MemoryStats snapshot from precomputed components.
 
@@ -156,7 +195,13 @@ Returns: Complete MemoryStats snapshot.
 
 ### buildSlabStats
 
-`(accumulators: import("src/utils/memory.utils").Accumulators, networksToSummarize: import("src/utils/memory").NetworkView[], allocationStats: import("src/utils/memory").SlabAllocStats) => { slabBytes: number; slabArrayCount: number; fragmentationPct: number | null; reservedBytes: number | null; usedBytes: number | null; slabVersion: number | null; asyncBuilds: number; pooledFraction: number | null; }`
+```ts
+buildSlabStats(
+  accumulators: Accumulators,
+  networksToSummarize: NetworkView[],
+  allocationStats: SlabAllocStats,
+): { slabBytes: number; slabArrayCount: number; fragmentationPct: number | null; reservedBytes: number | null; usedBytes: number | null; slabVersion: number | null; asyncBuilds: number; pooledFraction: number | null; }
+```
 
 Assemble slab-related statistics for the MemoryStats payload.
 
@@ -169,7 +214,11 @@ Returns: Structured slab metrics block.
 
 ### calculateFragmentation
 
-`(accumulators: import("src/utils/memory.utils").Accumulators) => number | null`
+```ts
+calculateFragmentation(
+  accumulators: Accumulators,
+): number | null
+```
 
 Compute fragmentation percentage from reserved vs used connection bytes.
 
@@ -180,7 +229,11 @@ Returns: Fragmentation percent (0-100) or null when undefined.
 
 ### calculatePooledFraction
 
-`(allocationStats: import("src/utils/memory").SlabAllocStats) => number | null`
+```ts
+calculatePooledFraction(
+  allocationStats: SlabAllocStats,
+): number | null
+```
 
 Calculate pooled fraction from allocator stats with four-decimal precision.
 
@@ -191,7 +244,9 @@ Returns: Fraction of pooled allocations or null if indeterminate.
 
 ### captureEnvironmentMetrics
 
-`() => { isBrowser: boolean; usedJSHeapSize?: number | undefined; totalJSHeapSize?: number | undefined; jsHeapSizeLimit?: number | undefined; rss?: number | undefined; heapUsed?: number | undefined; heapTotal?: number | undefined; external?: number | undefined; }`
+```ts
+captureEnvironmentMetrics(): { isBrowser: boolean; usedJSHeapSize?: number | undefined; totalJSHeapSize?: number | undefined; jsHeapSizeLimit?: number | undefined; rss?: number | undefined; heapUsed?: number | undefined; heapTotal?: number | undefined; external?: number | undefined; }
+```
 
 Capture environment memory metrics from browser or Node when available.
 
@@ -199,7 +254,12 @@ Returns: Environment metrics structure for the snapshot.
 
 ### captureVersionMetadata
 
-`(accumulators: import("src/utils/memory.utils").Accumulators, network: import("src/utils/memory").NetworkView) => void`
+```ts
+captureVersionMetadata(
+  accumulators: Accumulators,
+  network: NetworkView,
+): void
+```
 
 Capture slab metadata (version and async builds) once across all networks.
 
@@ -209,7 +269,11 @@ Parameters:
 
 ### collectConnectionTypedArrays
 
-`(network: import("src/utils/memory").NetworkView) => (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]`
+```ts
+collectConnectionTypedArrays(
+  network: NetworkView,
+): (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]
+```
 
 Gather all typed arrays that represent connection-parallel data on a network.
 
@@ -220,7 +284,11 @@ Returns: Typed arrays aligned to connections.
 
 ### computeCounts
 
-`(network: import("src/utils/memory").NetworkView) => CountSnapshot`
+```ts
+computeCounts(
+  network: NetworkView,
+): CountSnapshot
+```
 
 Capture simple counts for nodes and connections on a network view.
 
@@ -241,7 +309,9 @@ Used as a fallback when typed-array parallel data is unavailable.
 
 ### createEmptyAccumulators
 
-`() => import("src/utils/memory.utils").Accumulators`
+```ts
+createEmptyAccumulators(): Accumulators
+```
 
 Initialize a fresh accumulator snapshot for memory summaries.
 
@@ -249,7 +319,12 @@ Returns: Zeroed accumulators ready for aggregation.
 
 ### describeConnectionBytes
 
-`(network: import("src/utils/memory").NetworkView, heuristics: import("src/utils/memory.utils").HeuristicBytes) => number`
+```ts
+describeConnectionBytes(
+  network: NetworkView,
+  heuristics: HeuristicBytes,
+): number
+```
 
 Determine bytes per connection using typed-array width or heuristic fallback.
 
@@ -276,7 +351,12 @@ This heuristic keeps node weight comparable to connection objects during summari
 
 ### normalizeNetworks
 
-`(targets: import("src/utils/memory").NetworkView | import("src/utils/memory").NetworkView[] | undefined, trackedNetworks: import("src/utils/memory").NetworkView[]) => import("src/utils/memory").NetworkView[]`
+```ts
+normalizeNetworks(
+  targets: NetworkView | NetworkView[] | undefined,
+  trackedNetworks: NetworkView[],
+): NetworkView[]
+```
 
 Normalize provided targets to an array of networks, falling back to tracked registry.
 
@@ -288,7 +368,11 @@ Returns: Array of networks to summarize.
 
 ### safeGetSlabAllocationStats
 
-`(getSlabAllocationStats: () => unknown) => import("src/utils/memory").SlabAllocStats`
+```ts
+safeGetSlabAllocationStats(
+  getSlabAllocationStats: () => unknown,
+): SlabAllocStats
+```
 
 Safely read slab allocation stats, guarding against provider errors.
 

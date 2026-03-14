@@ -225,10 +225,7 @@ export class EvolutionEngine {
     );
 
     // 6) Prepare loop helpers and run the full evolution loop inside a private helper.
-    const loopHelpers = prepareLoopHelpers(
-      opts,
-      sharedEngineState.scratch,
-    );
+    const loopHelpers = prepareLoopHelpers(opts, sharedEngineState.scratch);
 
     // Lightweight profiling (opt-in): set env ASCII_MAZE_PROFILE=1 to enable
     const doProfile = !!(
@@ -273,9 +270,9 @@ export class EvolutionEngine {
         scratchSnapshotObj: sharedEngineState.scratch.snapshotReusableObject,
         scratchSnapshotTop: sharedEngineState.scratch.snapshotTopEntries,
         speciesHistoryRef:
-          (((EvolutionEngine as unknown as SpeciesHistoryHost)
+          ((EvolutionEngine as unknown as SpeciesHistoryHost)
             ._speciesHistory as unknown as number[]) ??
-            (EvolutionEngine.#EMPTY_VEC as unknown as number[])),
+          (EvolutionEngine.#EMPTY_VEC as unknown as number[]),
         loopHelpers: {
           getNodeIndicesByType: (nodes, type) => {
             return collectEvolutionEngineNodeIndicesByType(

@@ -608,7 +608,11 @@ Handle returned by `start` for controlling demo execution lifecycle.
 
 ### start
 
-`(container: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle>`
+```ts
+start(
+  container: RuntimeContainerTarget,
+): Promise<FlappyBirdRunHandle>
+```
 
 Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
 
@@ -636,7 +640,11 @@ await runHandle.done;
 
 ### createCanvasHostInternal
 
-`(containerElement: HTMLElement) => import("test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
+```ts
+createCanvasHostInternal(
+  containerElement: HTMLElement,
+): CanvasHostResult
+```
 
 Builds the browser demo host tree and returns rendering handles.
 
@@ -651,7 +659,12 @@ Returns: Canvas handles, stats cells and network render callback.
 
 ### updateStatsTableValues
 
-`(statsValueByKey: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
+```ts
+updateStatsTableValues(
+  statsValueByKey: Partial<Record<FlappyStatsKey, HTMLTableCellElement>>,
+  partialValues: Partial<Record<FlappyStatsKey, string>>,
+): void
+```
 
 Applies partial stat updates to the rendered stats table.
 
@@ -668,7 +681,12 @@ Returns: Nothing.
 
 ### applyAlphaToHexColor
 
-`(hexColor: string, alphaValue: number) => string`
+```ts
+applyAlphaToHexColor(
+  hexColor: string,
+  alphaValue: number,
+): string
+```
 
 Converts a six-digit hex color to rgba with the requested alpha.
 
@@ -680,7 +698,13 @@ Returns: rgba color string, or original value when not 6-digit hex.
 
 ### clamp
 
-`(value: number, min: number, max: number) => number`
+```ts
+clamp(
+  value: number,
+  min: number,
+  max: number,
+): number
+```
 
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
@@ -693,7 +717,11 @@ Returns: Clamped value.
 
 ### clamp01
 
-`(value: number) => number`
+```ts
+clamp01(
+  value: number,
+): number
+```
 
 Clamps a numeric value to the inclusive `[0, 1]` interval.
 
@@ -704,7 +732,13 @@ Returns: Value clamped between 0 and 1.
 
 ### interpolateValue
 
-`(startValue: number, endValue: number, progress: number) => number`
+```ts
+interpolateValue(
+  startValue: number,
+  endValue: number,
+  progress: number,
+): number
+```
 
 Linear interpolation helper.
 
@@ -719,7 +753,12 @@ Returns: Interpolated value.
 
 ### createBirdColor
 
-`(birdIndex: number, totalBirds: number) => string`
+```ts
+createBirdColor(
+  birdIndex: number,
+  totalBirds: number,
+): string
+```
 
 Resolves deterministic bird color from palette index.
 
@@ -731,7 +770,11 @@ Returns: Hex color string.
 
 ### resolveGapCenterUpperBoundYPx
 
-`(worldHeightPx: number) => number`
+```ts
+resolveGapCenterUpperBoundYPx(
+  worldHeightPx: number,
+): number
+```
 
 Resolves the exclusive upper bound used for gap-center sampling.
 
@@ -747,7 +790,13 @@ Returns: Exclusive upper bound for `nextInt(minInclusive, maxExclusive)`.
 
 ### resolveNextSpawnGapCenterY
 
-`(previousGapCenterYPx: number, rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike, worldHeightPx: number) => number`
+```ts
+resolveNextSpawnGapCenterY(
+  previousGapCenterYPx: number,
+  rng: RngLike,
+  worldHeightPx: number,
+): number
+```
 
 Resolves next gap center with bounded per-pipe delta.
 
@@ -760,7 +809,13 @@ Returns: Next gap center y-position.
 
 ### resolveNextSpawnGapSize
 
-`(previousSpawnGapPx: number | undefined, difficultyProfile: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile, rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike) => number`
+```ts
+resolveNextSpawnGapSize(
+  previousSpawnGapPx: number | undefined,
+  difficultyProfile: BrowserDifficultyProfile,
+  rng: RngLike,
+): number
+```
 
 Resolves next spawn gap size using progressive shrink and jitter.
 
@@ -773,7 +828,12 @@ Returns: Next spawn gap size.
 
 ### resolveNextSpawnIntervalFrames
 
-`(previousSpawnIntervalFrames: number | undefined, difficultyProfile: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile) => number`
+```ts
+resolveNextSpawnIntervalFrames(
+  previousSpawnIntervalFrames: number | undefined,
+  difficultyProfile: BrowserDifficultyProfile,
+): number
+```
 
 Resolves next spawn interval using progressive shrink.
 
@@ -785,7 +845,12 @@ Returns: Next spawn interval in frames.
 
 ### sampleGapCenterY
 
-`(rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike, worldHeightPx: number) => number`
+```ts
+sampleGapCenterY(
+  rng: RngLike,
+  worldHeightPx: number,
+): number
+```
 
 Samples a random gap center y-position.
 
@@ -799,7 +864,11 @@ Returns: Sampled y-position.
 
 ### createFlappyStatsTableRows
 
-`(input: import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").CreateFlappyStatsTableRowsInput) => Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>`
+```ts
+createFlappyStatsTableRows(
+  input: CreateFlappyStatsTableRowsInput,
+): Partial<Record<FlappyStatsKey, HTMLTableCellElement>>
+```
 
 Builds stats table rows and returns value-cell lookup by key.
 
@@ -810,7 +879,11 @@ Returns: Mapping from stat key to value cell.
 
 ### formatArchitectureStatsValue
 
-`(architectureValue: string) => string`
+```ts
+formatArchitectureStatsValue(
+  architectureValue: string,
+): string
+```
 
 Splits architecture suffix onto a second line for readability in the stats table.
 
@@ -830,7 +903,15 @@ into a clearer module boundary.
 
 ### animatePopulationEpisodeInternal
 
-`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void, onChampionChanged: ((event: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackChampionChangedEvent) => void) | undefined) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary>`
+```ts
+animatePopulationEpisodeInternal(
+  canvas: HTMLCanvasElement,
+  context: CanvasRenderingContext2D,
+  evolutionWorker: Worker,
+  onFrameStats: (stats: PlaybackFrameStats) => void,
+  onChampionChanged: ((event: PlaybackChampionChangedEvent) => void) | undefined,
+): Promise<PlaybackEpisodeSummary>
+```
 
 Internal playback orchestration entry retained for compatibility re-exports.
 
@@ -849,7 +930,11 @@ Returns: Aggregate playback summary for the current episode.
 
 ### resolvePipeSpawnXPx
 
-`(visibleWorldWidthPx: number) => number`
+```ts
+resolvePipeSpawnXPx(
+  visibleWorldWidthPx: number,
+): number
+```
 
 Resolves the world-space x spawn position for new pipes.
 
@@ -860,7 +945,11 @@ Returns: Spawn x-position.
 
 ### resolveVisibleWorldHeightPx
 
-`(canvas: HTMLCanvasElement) => number`
+```ts
+resolveVisibleWorldHeightPx(
+  canvas: HTMLCanvasElement,
+): number
+```
 
 Resolves visible world height represented by the current canvas.
 
@@ -875,7 +964,11 @@ Returns: Visible height in world-space pixels.
 
 ### resolveVisibleWorldWidthPx
 
-`(canvas: HTMLCanvasElement) => number`
+```ts
+resolveVisibleWorldWidthPx(
+  canvas: HTMLCanvasElement,
+): number
+```
 
 Resolves visible world width represented by the current canvas.
 
@@ -890,7 +983,11 @@ Returns: Visible width in world-space pixels.
 
 ### resolveWorldViewport
 
-`(canvas: HTMLCanvasElement) => import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").ViewportInfo`
+```ts
+resolveWorldViewport(
+  canvas: HTMLCanvasElement,
+): ViewportInfo
+```
 
 Resolves world viewport transformation based on canvas size.
 
@@ -903,7 +1000,11 @@ Returns: Viewport scale and offsets.
 
 ### createMinorGcObserver
 
-`(minorGcTimestampsMs: number[]) => PerformanceObserver | undefined`
+```ts
+createMinorGcObserver(
+  minorGcTimestampsMs: number[],
+): PerformanceObserver | undefined
+```
 
 Creates a PerformanceObserver that tracks minor GC events when supported.
 
@@ -914,7 +1015,11 @@ Returns: Observer when supported; otherwise `undefined`.
 
 ### resolveEventsPerMinute
 
-`(samples: number[]) => number`
+```ts
+resolveEventsPerMinute(
+  samples: number[],
+): number
+```
 
 Resolves events per minute from the latest sample window.
 
@@ -925,7 +1030,11 @@ Returns: Events-per-minute estimate.
 
 ### resolveHudUpdatesPerSecond
 
-`(samples: number[]) => number`
+```ts
+resolveHudUpdatesPerSecond(
+  samples: number[],
+): number
+```
 
 Resolves HUD updates per second from the latest sample window.
 
@@ -936,7 +1045,13 @@ Returns: Updates-per-second estimate.
 
 ### trimSamplesToWindow
 
-`(samples: number[], windowMs: number, nowMs: number) => void`
+```ts
+trimSamplesToWindow(
+  samples: number[],
+  windowMs: number,
+  nowMs: number,
+): void
+```
 
 Trims timestamp samples to a sliding time window.
 
@@ -951,7 +1066,12 @@ Returns: Nothing.
 
 ### buildCenteredTitleBoxLines
 
-`(centeredColumns: number, titleText: string) => string[]`
+```ts
+buildCenteredTitleBoxLines(
+  centeredColumns: number,
+  titleText: string,
+): string[]
+```
 
 Builds an ASCII centered title box.
 
@@ -963,7 +1083,12 @@ Returns: Three-row title box.
 
 ### buildOuterBoxLines
 
-`(centeredColumns: number, totalRows: number) => string[]`
+```ts
+buildOuterBoxLines(
+  centeredColumns: number,
+  totalRows: number,
+): string[]
+```
 
 Builds an ASCII outer frame with closed borders.
 
@@ -975,7 +1100,11 @@ Returns: Frame lines.
 
 ### renderClosedOuterBox
 
-`(input: import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").RenderClosedOuterBoxInput) => void`
+```ts
+renderClosedOuterBox(
+  input: RenderClosedOuterBoxInput,
+): void
+```
 
 Renders a complete closed outer glyph box.
 
@@ -986,7 +1115,11 @@ Returns: Nothing.
 
 ### renderStandaloneTitleBox
 
-`(input: import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").RenderStandaloneTitleBoxInput) => void`
+```ts
+renderStandaloneTitleBox(
+  input: RenderStandaloneTitleBoxInput,
+): void
+```
 
 Renders only the centered title box.
 
@@ -997,7 +1130,11 @@ Returns: Nothing.
 
 ### resolveGlyphWidthPx
 
-`(context: CanvasRenderingContext2D) => number`
+```ts
+resolveGlyphWidthPx(
+  context: CanvasRenderingContext2D,
+): number
+```
 
 Resolves a stable glyph width used for frame-column math.
 
@@ -1008,7 +1145,15 @@ Returns: Floored glyph width clamped to a minimum pixel value.
 
 ### resolveTextFrameMetrics
 
-`(frameWidthPx: number, frameHeightPx: number, glyphWidthPx: number, rowHeightPx: number, minimumColumns: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").TextFrameMetrics`
+```ts
+resolveTextFrameMetrics(
+  frameWidthPx: number,
+  frameHeightPx: number,
+  glyphWidthPx: number,
+  rowHeightPx: number,
+  minimumColumns: number,
+): TextFrameMetrics
+```
 
 Resolves core text-frame metrics for glyph box rendering.
 
@@ -1025,7 +1170,13 @@ Returns: Text frame metrics.
 
 ### commitObservationMemoryStep
 
-`(observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState, observationFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, shouldFlap: boolean) => void`
+```ts
+commitObservationMemoryStep(
+  observationMemoryState: SharedObservationMemoryState,
+  observationFeatures: SharedObservationFeatures,
+  shouldFlap: boolean,
+): void
+```
 
 Commits one browser decision step into temporal memory.
 
@@ -1038,7 +1189,11 @@ Returns: Nothing.
 
 ### hasAliveBirds
 
-`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => boolean`
+```ts
+hasAliveBirds(
+  birds: BrowserPopulationBirdLike[],
+): boolean
+```
 
 Checks whether at least one bird remains alive.
 
@@ -1049,7 +1204,11 @@ Returns: True when any bird is alive.
 
 ### resolveAliveBirdCount
 
-`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => number`
+```ts
+resolveAliveBirdCount(
+  birds: BrowserPopulationBirdLike[],
+): number
+```
 
 Counts birds that are still alive.
 
@@ -1060,7 +1219,11 @@ Returns: Alive bird count.
 
 ### resolveFlapDecision
 
-`(rawOutputs: unknown) => boolean`
+```ts
+resolveFlapDecision(
+  rawOutputs: unknown,
+): boolean
+```
 
 Resolves flap/no-flap decision from network outputs.
 
@@ -1071,7 +1234,12 @@ Returns: True when flap should trigger.
 
 ### resolveFramePrimaryWinnerIndex
 
-`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[], includeAliveOnly: boolean) => number`
+```ts
+resolveFramePrimaryWinnerIndex(
+  birds: BrowserPopulationBirdLike[],
+  includeAliveOnly: boolean,
+): number
+```
 
 Resolves winner index for current frame.
 
@@ -1083,7 +1251,11 @@ Returns: Winner index, or `-1` when unavailable.
 
 ### resolveLeaderPipesPassed
 
-`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => number`
+```ts
+resolveLeaderPipesPassed(
+  birds: BrowserPopulationBirdLike[],
+): number
+```
 
 Resolves leading pipes-passed score in the population.
 
@@ -1094,7 +1266,18 @@ Returns: Maximum pipes passed.
 
 ### resolveObservationVector
 
-`(birdYPx: number, velocityYPxPerFrame: number, pipes: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike[], visibleWorldWidthPx: number, worldHeightPx: number, difficultyProfile: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile, activeSpawnIntervalFrames: number, observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => { observationVector: number[]; observationFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures; }`
+```ts
+resolveObservationVector(
+  birdYPx: number,
+  velocityYPxPerFrame: number,
+  pipes: BrowserPopulationPipeLike[],
+  visibleWorldWidthPx: number,
+  worldHeightPx: number,
+  difficultyProfile: BrowserDifficultyProfile,
+  activeSpawnIntervalFrames: number,
+  observationMemoryState: SharedObservationMemoryState,
+): { observationVector: number[]; observationFeatures: SharedObservationFeatures; }
+```
 
 Builds the normalized observation vector consumed by bird networks.
 
@@ -1112,7 +1295,11 @@ Returns: Ordered normalized observation vector.
 
 ### resolveUpcomingPipes
 
-`(pipes: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike[]) => [import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike | undefined, import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike | undefined]`
+```ts
+resolveUpcomingPipes(
+  pipes: BrowserPopulationPipeLike[],
+): [BrowserPopulationPipeLike | undefined, BrowserPopulationPipeLike | undefined]
+```
 
 Resolves the next two upcoming pipes in front of the bird.
 
@@ -1130,7 +1317,14 @@ into smaller topology, layout, label, and drawing modules.
 
 ### drawNetworkVisualization
 
-`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void`
+```ts
+drawNetworkVisualization(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): void
+```
 
 Draws a complete, layer-based visualization of the active network.
 
@@ -1153,7 +1347,13 @@ drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
 
 ### resolveNetworkArchitectureLabel
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => string`
+```ts
+resolveNetworkArchitectureLabel(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): string
+```
 
 Resolves compact architecture label text for headers and HUD rows.
 
@@ -1169,7 +1369,13 @@ Returns: Readable architecture label.
 
 ### resolveNetworkVisualizationHeightPx
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => number`
+```ts
+resolveNetworkVisualizationHeightPx(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): number
+```
 
 Resolves responsive visualization canvas height from network shape.
 
@@ -1191,7 +1397,13 @@ const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
 
 ### resolveNetworkVisualizationLayers
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
+```ts
+resolveNetworkVisualizationLayers(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): VisualNetworkNodeLike[][]
+```
 
 Resolves layered node groups for network-view layout and rendering.
 
@@ -1220,7 +1432,12 @@ is organized into smaller, clearer modules under the dedicated folder.
 
 ### createColorLegendRows
 
-`(scale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale, symbol: "w" | "b") => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]`
+```ts
+createColorLegendRows(
+  scale: DynamicColorScale,
+  symbol: "w" | "b",
+): ColorLegendRow[]
+```
 
 Creates legend rows from ordered tiers.
 
@@ -1235,7 +1452,11 @@ Returns: Legend rows.
 
 ### createLogDivergingColorTiers
 
-`(input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; }) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[]`
+```ts
+createLogDivergingColorTiers(
+  input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; },
+): ColorTier[]
+```
 
 Builds logarithmic diverging color tiers with a center band and edge extension.
 
@@ -1250,7 +1471,14 @@ Returns: Ordered tier list.
 
 ### drawBiasNodesLayer
 
-`(context: CanvasRenderingContext2D, positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, biasScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
+```ts
+drawBiasNodesLayer(
+  context: CanvasRenderingContext2D,
+  positionedNodes: PositionedNetworkNodeLike[],
+  nodeDimensions: NetworkNodeDimensionsLike,
+  biasScale: DynamicColorScale,
+): void
+```
 
 Draws all network nodes with bias labels.
 
@@ -1267,7 +1495,13 @@ Returns: Nothing.
 
 ### drawNetworkColorLegend
 
-`(context: CanvasRenderingContext2D, architectureLabel: string, colorScales: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales) => void`
+```ts
+drawNetworkColorLegend(
+  context: CanvasRenderingContext2D,
+  architectureLabel: string,
+  colorScales: NetworkVisualizationColorScales,
+): void
+```
 
 Draws the color legend for connections and node bias values.
 
@@ -1284,7 +1518,12 @@ Returns: Nothing.
 
 ### drawNetworkVisualizationHeader
 
-`(context: CanvasRenderingContext2D, architectureLabel: string) => void`
+```ts
+drawNetworkVisualizationHeader(
+  context: CanvasRenderingContext2D,
+  architectureLabel: string,
+): void
+```
 
 Draws network architecture header text.
 
@@ -1299,7 +1538,14 @@ Returns: Nothing.
 
 ### drawWeightedConnectionsLayer
 
-`(context: CanvasRenderingContext2D, runtimeConnections: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[], positionByNodeIndex: Map<number, import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>, connectionScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
+```ts
+drawWeightedConnectionsLayer(
+  context: CanvasRenderingContext2D,
+  runtimeConnections: VisualNetworkConnectionLike[],
+  positionByNodeIndex: Map<number, PositionedNetworkNodeLike>,
+  connectionScale: DynamicColorScale,
+): void
+```
 
 Draws weighted connection lines.
 
@@ -1317,7 +1563,11 @@ Returns: Nothing.
 
 ### formatNodeBiasLabel
 
-`(nodeBias: number) => string`
+```ts
+formatNodeBiasLabel(
+  nodeBias: number,
+): string
+```
 
 Formats node bias labels with fixed sign and precision.
 
@@ -1331,7 +1581,11 @@ Returns: Label text.
 
 ### resolveBiasRangeColor
 
-`(nodeBias: number) => string`
+```ts
+resolveBiasRangeColor(
+  nodeBias: number,
+): string
+```
 
 Resolves bias color for a raw node bias.
 
@@ -1345,7 +1599,11 @@ Returns: Tier color.
 
 ### resolveConnectionRangeColor
 
-`(connectionWeight: number) => string`
+```ts
+resolveConnectionRangeColor(
+  connectionWeight: number,
+): string
+```
 
 Resolves connection color for a raw weight.
 
@@ -1359,7 +1617,12 @@ Returns: Tier color.
 
 ### resolveDefaultNetworkLegendLayout
 
-`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
+```ts
+resolveDefaultNetworkLegendLayout(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+): NetworkLegendLayout
+```
 
 Resolves default legend layout from internal tier definitions.
 
@@ -1375,7 +1638,13 @@ Returns: Legend layout.
 
 ### resolveNetworkLegendLayout
 
-`(context: CanvasRenderingContext2D, connectionLegendRows: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[], biasLegendRows: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
+```ts
+resolveNetworkLegendLayout(
+  context: CanvasRenderingContext2D,
+  connectionLegendRows: ColorLegendRow[],
+  biasLegendRows: ColorLegendRow[],
+): NetworkLegendLayout
+```
 
 Resolves network legend layout from canvas constraints.
 
@@ -1392,7 +1661,11 @@ Returns: Computed legend layout.
 
 ### resolveNetworkVisualizationColorScales
 
-`(network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales`
+```ts
+resolveNetworkVisualizationColorScales(
+  network: default | undefined,
+): NetworkVisualizationColorScales
+```
 
 Resolves dynamic connection/bias color scales from the active network range.
 
@@ -1407,7 +1680,13 @@ Returns: Dynamic scales used by graph drawing and legend rows.
 
 ### resolveNetworkVisualizationLayers
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
+```ts
+resolveNetworkVisualizationLayers(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): VisualNetworkNodeLike[][]
+```
 
 Resolves layered node groups for network-view layout and rendering.
 
@@ -1429,7 +1708,13 @@ Returns: Layered nodes for rendering.
 
 ### resolveTierColor
 
-`(value: number, tiers: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[], aboveTierColor: string) => string`
+```ts
+resolveTierColor(
+  value: number,
+  tiers: ColorTier[],
+  aboveTierColor: string,
+): string
+```
 
 Resolves a color from ordered tier definitions.
 
@@ -1447,7 +1732,9 @@ Returns: Resolved color string.
 
 ### createEvolutionWorker
 
-`() => Worker`
+```ts
+createEvolutionWorker(): Worker
+```
 
 Creates the evolution worker used to keep heavy NEAT compute off the UI thread.
 
@@ -1455,7 +1742,11 @@ Returns: Initialized worker instance.
 
 ### requestWorkerGeneration
 
-`(evolutionWorker: Worker) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionGenerationPayload>`
+```ts
+requestWorkerGeneration(
+  evolutionWorker: Worker,
+): Promise<EvolutionGenerationPayload>
+```
 
 Waits for the next generation payload emitted by the evolution worker.
 
@@ -1466,7 +1757,12 @@ Returns: Next generation payload.
 
 ### requestWorkerPlaybackStep
 
-`(evolutionWorker: Worker, playbackStepRequest: import("test/examples/flappy_bird/browser-entry/worker-channel/worker-channel.types").WorkerChannelPlaybackStepRequest) => Promise<{ requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>`
+```ts
+requestWorkerPlaybackStep(
+  evolutionWorker: Worker,
+  playbackStepRequest: WorkerChannelPlaybackStepRequest,
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
+```
 
 Requests one playback batch step from the worker.
 

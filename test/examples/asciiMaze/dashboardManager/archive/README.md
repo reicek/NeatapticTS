@@ -20,7 +20,15 @@ dashboard turns one notable run into a stable historical record.
 
 ### recordSolvedMaze
 
-`(context: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, maze: string[], result: import("test/examples/asciiMaze/interfaces").IMazeRunResult, network: import("test/examples/asciiMaze/interfaces").INetwork, generation: number) => void`
+```ts
+recordSolvedMaze(
+  context: DashboardManagerContext,
+  maze: string[],
+  result: IMazeRunResult,
+  network: INetwork,
+  generation: number,
+): void
+```
 
 Record and emit a newly solved maze archive block when the layout has not been seen before.
 

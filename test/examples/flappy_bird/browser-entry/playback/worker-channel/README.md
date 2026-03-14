@@ -52,7 +52,11 @@ converts that budget into integer worker step requests on each render tick.
 
 ### resolvePlaybackStepRequest
 
-`(input: import("test/examples/flappy_bird/browser-entry/playback/worker-channel/playback.worker-channel.types").ResolvePlaybackStepRequestInput) => import("test/examples/flappy_bird/browser-entry/playback/worker-channel/playback.worker-channel.types").ResolvePlaybackStepRequestResult`
+```ts
+resolvePlaybackStepRequest(
+  input: ResolvePlaybackStepRequestInput,
+): ResolvePlaybackStepRequestResult
+```
 
 Resolves step count and request payload for the next worker playback batch.
 
@@ -76,7 +80,13 @@ values used elsewhere in the playback loop.
 
 ### resolvePlaybackCompletionSummary
 
-`(playbackStepPayload: { requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }, latestLeaderPipesPassed: number, latestLeaderFramesSurvived: number) => { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; }`
+```ts
+resolvePlaybackCompletionSummary(
+  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; },
+  latestLeaderPipesPassed: number,
+  latestLeaderFramesSurvived: number,
+): { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; }
+```
 
 Resolves final playback summary values when the worker reports completion.
 
@@ -93,7 +103,15 @@ Returns: Final aggregate playback summary.
 
 ### resolvePlaybackFrameStats
 
-`(playbackStepPayload: { requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }, frameIndex: number, activeBirdCount: number, leaderPipesPassed: number, leaderFramesSurvived: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats`
+```ts
+resolvePlaybackFrameStats(
+  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; },
+  frameIndex: number,
+  activeBirdCount: number,
+  leaderPipesPassed: number,
+  leaderFramesSurvived: number,
+): PlaybackFrameStats
+```
 
 Resolves HUD playback frame stats from worker payload and leader metrics.
 

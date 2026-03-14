@@ -46,7 +46,12 @@ may reject the model.
 
 ### exportToONNX
 
-`(network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+```ts
+exportToONNX(
+  network: default,
+  options: OnnxExportOptions,
+): OnnxModel
+```
 
 Export a NeatapticTS network to an ONNX-like **JSON object** (`OnnxModel`).
 
@@ -84,7 +89,11 @@ Returns: ONNX-like model object suitable for persistence or re-import.
 
 ### importFromONNX
 
-`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network").default`
+```ts
+importFromONNX(
+  onnx: OnnxModel,
+): default
+```
 
 Reconstruct a NeatapticTS network from an exported `OnnxModel`.
 
@@ -185,7 +194,12 @@ Stability & compatibility expectations:
 
 ### ActivationFunction
 
-`(x: number, derivate: boolean | undefined) => number`
+```ts
+ActivationFunction(
+  x: number,
+  derivate: boolean | undefined,
+): number
+```
 
 Runtime activation function signature used by ONNX activation import/export paths.
 
@@ -204,7 +218,12 @@ const dy = activation(x, true);
 
 ### ActivationSquashFunction
 
-`(x: number, derivate: boolean | undefined) => number`
+```ts
+ActivationSquashFunction(
+  x: number,
+  derivate: boolean | undefined,
+): number
+```
 
 Activation function signature used by ONNX layer emission helpers.
 
@@ -737,7 +756,11 @@ while keeping the ONNX parser itself mostly pure.
 
 ### OnnxRuntimeLayerFactory
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+OnnxRuntimeLayerFactory(
+  size: number,
+): default
+```
 
 Runtime layer-constructor signature used for recurrent layer reconstruction.
 
@@ -756,7 +779,11 @@ This is the minimal set of recurrent factories needed by the importer.
 
 ### OnnxRuntimePerceptronFactory
 
-`(sizes: number[]) => import("src/architecture/network").default`
+```ts
+OnnxRuntimePerceptronFactory(
+  sizes: number[],
+): default
+```
 
 Runtime perceptron factory signature used by ONNX import orchestration.
 
@@ -952,7 +979,11 @@ NOT supported. Experimental fused recurrent nodes are best-effort and may silent
 
 ### applyModelMetadata
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModelMetadataContext) => void`
+```ts
+applyModelMetadata(
+  context: OnnxModelMetadataContext,
+): void
+```
 
 Attach producer and opset metadata to a model when metadata emission is enabled.
 
@@ -963,7 +994,13 @@ Returns: Nothing.
 
 ### assignActivationFunctions
 
-`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[]) => void`
+```ts
+assignActivationFunctions(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+): void
+```
 
 Assign node activation functions from ONNX activation nodes.
 
@@ -976,7 +1013,14 @@ Returns: Nothing.
 
 ### assignWeightsAndBiases
 
-`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => void`
+```ts
+assignWeightsAndBiases(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadataProps: OnnxMetadataProperty[] | undefined,
+): void
+```
 
 Assign weights and biases from ONNX initializers to a newly created network.
 
@@ -990,7 +1034,13 @@ Returns: Nothing.
 
 ### buildOnnxModel
 
-`(network: import("src/architecture/network").default, layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+```ts
+buildOnnxModel(
+  network: default,
+  layers: default[][],
+  options: OnnxExportOptions,
+): OnnxModel
+```
 
 Build an ONNX-like model from a validated layered network view.
 
@@ -1027,7 +1077,11 @@ const model = buildOnnxModel(network, layers, { includeMetadata: true });
 
 ### collectRecurrentLayerIndices
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => number[]`
+```ts
+collectRecurrentLayerIndices(
+  context: OnnxRecurrentCollectionContext,
+): number[]
+```
 
 Detect hidden layers with self-recurrence and add matching previous-state graph inputs.
 
@@ -1038,7 +1092,11 @@ Returns: Export-layer indices with recurrent self-connections.
 
 ### createBaseModel
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxBaseModelBuildContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+```ts
+createBaseModel(
+  context: OnnxBaseModelBuildContext,
+): OnnxModel
+```
 
 Create the base ONNX model shell with graph input/output declarations.
 
@@ -1049,7 +1107,11 @@ Returns: Initialized ONNX model with empty initializer/node lists.
 
 ### createGraphDimensions
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensionBuildContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensions`
+```ts
+createGraphDimensions(
+  context: OnnxGraphDimensionBuildContext,
+): OnnxGraphDimensions
+```
 
 Build tensor dimensions for model input and output, optionally with symbolic batch dimension.
 
@@ -1060,7 +1122,12 @@ Returns: Input and output dimension arrays for ONNX value info.
 
 ### deriveHiddenLayerSizes
 
-`(initializers: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[], metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => number[]`
+```ts
+deriveHiddenLayerSizes(
+  initializers: OnnxTensor[],
+  metadataProps: OnnxMetadataProperty[] | undefined,
+): number[]
+```
 
 Extract hidden layer sizes from ONNX initializers (weight tensors).
 
@@ -1072,7 +1139,14 @@ Returns: Hidden layer sizes in order.
 
 ### emitFusedRecurrentHeuristics
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], allowRecurrent: boolean | undefined, previousOutputName: string) => void`
+```ts
+emitFusedRecurrentHeuristics(
+  model: OnnxModel,
+  layers: default[][],
+  allowRecurrent: boolean | undefined,
+  previousOutputName: string,
+): void
+```
 
 Emit heuristic fused recurrent operators (LSTM/GRU) when recurrent export is enabled.
 
@@ -1086,7 +1160,11 @@ Returns: Nothing.
 
 ### emitLayerGraph
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").LayerBuildContext) => string`
+```ts
+emitLayerGraph(
+  context: LayerBuildContext,
+): string
+```
 
 Emit one export layer graph segment and return the produced output tensor name.
 
@@ -1097,7 +1175,16 @@ Returns: Output tensor name produced by this layer.
 
 ### finalizeExportMetadata
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions, includeMetadata: boolean, hiddenSizesMetadata: number[], recurrentLayerIndices: number[]) => void`
+```ts
+finalizeExportMetadata(
+  model: OnnxModel,
+  layers: default[][],
+  options: OnnxExportOptions,
+  includeMetadata: boolean,
+  hiddenSizesMetadata: number[],
+  recurrentLayerIndices: number[],
+): void
+```
 
 Finalize export metadata and optional conv-sharing validation.
 
@@ -1113,7 +1200,11 @@ Returns: Nothing.
 
 ### inferLayerOrdering
 
-`(network: import("src/architecture/network").default) => import("src/architecture/node").default[][]`
+```ts
+inferLayerOrdering(
+  network: default,
+): default[][]
+```
 
 Infer strictly layered ordering from a network.
 
@@ -1143,7 +1234,11 @@ Security/trust boundary:
 
 ### rebuildConnectionsLocal
 
-`(networkLike: import("src/architecture/network").default) => void`
+```ts
+rebuildConnectionsLocal(
+  networkLike: default,
+): void
+```
 
 Rebuild the network's flat connections array from each node's outgoing list.
 
@@ -1154,7 +1249,12 @@ Returns: Nothing.
 
 ### runOnnxExportFlow
 
-`(network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+```ts
+runOnnxExportFlow(
+  network: default,
+  options: OnnxExportOptions,
+): OnnxModel
+```
 
 Execute the complete ONNX export flow for one network instance.
 
@@ -1172,7 +1272,11 @@ Returns: ONNX-like model payload.
 
 ### runOnnxImportFlow
 
-`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network").default`
+```ts
+runOnnxImportFlow(
+  onnx: OnnxModel,
+): default
+```
 
 Execute the complete ONNX import flow and reconstruct a runtime network.
 
@@ -1188,7 +1292,13 @@ Returns: Reconstructed network instance.
 
 ### validateLayerHomogeneityAndConnectivity
 
-`(layers: import("src/architecture/node").default[][], network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => void`
+```ts
+validateLayerHomogeneityAndConnectivity(
+  layers: default[][],
+  network: default,
+  options: OnnxExportOptions,
+): void
+```
 
 Validate connectivity and activation homogeneity constraints per layer.
 
@@ -1203,7 +1313,11 @@ Returns: Nothing.
 
 ### tryEmitConvLayer
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxConvEmissionParams) => string | undefined`
+```ts
+tryEmitConvLayer(
+  params: OnnxConvEmissionParams,
+): string | undefined
+```
 
 Try to emit a conv-mapped layer.
 
@@ -1216,7 +1330,12 @@ Returns: New output tensor name when handled, otherwise undefined.
 
 ### runOnnxExportFlow
 
-`(network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+```ts
+runOnnxExportFlow(
+  network: default,
+  options: OnnxExportOptions,
+): OnnxModel
+```
 
 Execute the complete ONNX export flow for one network instance.
 
@@ -1236,7 +1355,11 @@ Returns: ONNX-like model payload.
 
 ### runOnnxImportFlow
 
-`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network").default`
+```ts
+runOnnxImportFlow(
+  onnx: OnnxModel,
+): default
+```
 
 Execute the complete ONNX import flow and reconstruct a runtime network.
 
@@ -1254,7 +1377,13 @@ Returns: Reconstructed network instance.
 
 ### buildOnnxModel
 
-`(network: import("src/architecture/network").default, layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+```ts
+buildOnnxModel(
+  network: default,
+  layers: default[][],
+  options: OnnxExportOptions,
+): OnnxModel
+```
 
 Construct ONNX graph (initializers + nodes) from validated layered network structure.
 
@@ -1269,7 +1398,13 @@ Returns: ONNX model.
 
 ### appendDenseBiasInitializer
 
-`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext, biasTensorName: string, biasVector: number[]) => void`
+```ts
+appendDenseBiasInitializer(
+  layerContext: DenseLayerContext,
+  biasTensorName: string,
+  biasVector: number[],
+): void
+```
 
 Append dense bias initializer.
 
@@ -1282,7 +1417,12 @@ Returns: Nothing.
 
 ### appendDenseNodes
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, orderedNodes: import("src/architecture/network/onnx/network.onnx.utils.types").DenseOrderedNodePayload[]) => void`
+```ts
+appendDenseNodes(
+  model: OnnxModel,
+  orderedNodes: DenseOrderedNodePayload[],
+): void
+```
 
 Append ordered dense nodes to the model graph.
 
@@ -1294,7 +1434,13 @@ Returns: Nothing.
 
 ### appendDenseWeightInitializer
 
-`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext, weightTensorName: string, weightMatrixValues: number[]) => void`
+```ts
+appendDenseWeightInitializer(
+  layerContext: DenseLayerContext,
+  weightTensorName: string,
+  weightMatrixValues: number[],
+): void
+```
 
 Append dense weight initializer.
 
@@ -1307,7 +1453,12 @@ Returns: Nothing.
 
 ### buildSingleNeuronWeightRow
 
-`(targetNodeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, previousLayerNodes: import("src/architecture/node").default[]) => number[]`
+```ts
+buildSingleNeuronWeightRow(
+  targetNodeInternal: NodeInternals,
+  previousLayerNodes: default[],
+): number[]
+```
 
 Build one neuron's incoming weight row against previous layer.
 
@@ -1319,7 +1470,11 @@ Returns: Weight row values.
 
 ### collectDenseInitializerValues
 
-`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseInitializerValues`
+```ts
+collectDenseInitializerValues(
+  layerContext: DenseLayerContext,
+): DenseInitializerValues
+```
 
 Collect dense weight matrix and bias vector values.
 
@@ -1330,7 +1485,11 @@ Returns: Dense initializer values.
 
 ### createActivationNode
 
-`(denseActivationContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationContext) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationNodePayload`
+```ts
+createActivationNode(
+  denseActivationContext: DenseActivationContext,
+): DenseActivationNodePayload
+```
 
 Create dense activation node definition.
 
@@ -1341,7 +1500,9 @@ Returns: ONNX activation node payload.
 
 ### createDefaultGemmAttributes
 
-`() => { name: string; type: string; f?: number | undefined; i?: number | undefined; }[]`
+```ts
+createDefaultGemmAttributes(): { name: string; type: string; f?: number | undefined; i?: number | undefined; }[]
+```
 
 Build default Gemm attributes for ONNX export.
 
@@ -1349,7 +1510,11 @@ Returns: Default Gemm attribute list.
 
 ### createDenseTensorNames
 
-`(layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseTensorNames`
+```ts
+createDenseTensorNames(
+  layerIndex: number,
+): DenseTensorNames
+```
 
 Build dense tensor names for initializer emission.
 
@@ -1360,7 +1525,11 @@ Returns: Dense tensor names.
 
 ### createGemmNode
 
-`(denseActivationContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationContext) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseGemmNodePayload`
+```ts
+createGemmNode(
+  denseActivationContext: DenseActivationContext,
+): DenseGemmNodePayload
+```
 
 Create dense Gemm node definition.
 
@@ -1371,7 +1540,11 @@ Returns: ONNX Gemm node payload.
 
 ### createSharedActivationNodePayload
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").SharedActivationNodeBuildParams) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationNodePayload`
+```ts
+createSharedActivationNodePayload(
+  params: SharedActivationNodeBuildParams,
+): DenseActivationNodePayload
+```
 
 Build a shared activation node payload.
 
@@ -1382,7 +1555,11 @@ Returns: Activation node payload.
 
 ### createSharedGemmNodePayload
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").SharedGemmNodeBuildParams) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseGemmNodePayload`
+```ts
+createSharedGemmNodePayload(
+  params: SharedGemmNodeBuildParams,
+): DenseGemmNodePayload
+```
 
 Build a shared Gemm node payload.
 
@@ -1393,7 +1570,12 @@ Returns: Gemm node payload.
 
 ### emitDenseActivationSubgraph
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, denseActivationContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationContext) => void`
+```ts
+emitDenseActivationSubgraph(
+  model: OnnxModel,
+  denseActivationContext: DenseActivationContext,
+): void
+```
 
 Emit Gemm and activation nodes using requested ordering.
 
@@ -1405,7 +1587,11 @@ Returns: Nothing.
 
 ### emitDenseInitializers
 
-`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").DenseLayerContext) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseTensorNames`
+```ts
+emitDenseInitializers(
+  layerContext: DenseLayerContext,
+): DenseTensorNames
+```
 
 Emit dense initializers and return tensor names.
 
@@ -1416,7 +1602,11 @@ Returns: Tensor names.
 
 ### emitDenseLayer
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").DenseLayerParams) => string`
+```ts
+emitDenseLayer(
+  params: DenseLayerParams,
+): string
+```
 
 Emit dense layer representation.
 
@@ -1427,7 +1617,11 @@ Returns: Output tensor name.
 
 ### emitOptionalLayerOutput
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OptionalLayerOutputParams) => string`
+```ts
+emitOptionalLayerOutput(
+  params: OptionalLayerOutputParams,
+): string
+```
 
 Emit optional pooling and flatten output fold.
 
@@ -1438,7 +1632,11 @@ Returns: Output tensor name.
 
 ### emitPerNeuronLayer
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").PerNeuronLayerParams) => string`
+```ts
+emitPerNeuronLayer(
+  params: PerNeuronLayerParams,
+): string
+```
 
 Emit per-neuron decomposition layer representation.
 
@@ -1449,7 +1647,11 @@ Returns: Output tensor name.
 
 ### emitPerNeuronSubgraph
 
-`(perNeuronSubgraphContext: import("src/architecture/network/onnx/network.onnx.utils.types").PerNeuronSubgraphContext) => string`
+```ts
+emitPerNeuronSubgraph(
+  perNeuronSubgraphContext: PerNeuronSubgraphContext,
+): string
+```
 
 Emit per-neuron Gemm + activation subgraph.
 
@@ -1460,7 +1662,13 @@ Returns: Per-neuron activation output name.
 
 ### resolveDenseNodeOrder
 
-`(gemmNode: import("src/architecture/network/onnx/network.onnx.utils.types").DenseGemmNodePayload, activationNode: import("src/architecture/network/onnx/network.onnx.utils.types").DenseActivationNodePayload, legacyNodeOrdering: boolean) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseOrderedNodePayload[]`
+```ts
+resolveDenseNodeOrder(
+  gemmNode: DenseGemmNodePayload,
+  activationNode: DenseActivationNodePayload,
+  legacyNodeOrdering: boolean,
+): DenseOrderedNodePayload[]
+```
 
 Resolve dense node order for legacy and current exports.
 
@@ -1473,7 +1681,12 @@ Returns: Ordered node list.
 
 ### resolveSingleNeuronInboundWeight
 
-`(targetNodeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, sourceNode: import("src/architecture/node").default) => number`
+```ts
+resolveSingleNeuronInboundWeight(
+  targetNodeInternal: NodeInternals,
+  sourceNode: default,
+): number
+```
 
 Resolve one inbound connection weight for a source node.
 
@@ -1487,7 +1700,12 @@ Returns: Inbound weight or zero when missing.
 
 ### appendRecurrentGraphInput
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext) => void`
+```ts
+appendRecurrentGraphInput(
+  model: OnnxModel,
+  traversalContext: OnnxRecurrentLayerTraversalContext,
+): void
+```
 
 Append one recurrent previous-state graph input for a hidden layer.
 
@@ -1499,7 +1717,12 @@ Returns: Nothing.
 
 ### appendRecurrentLayerIndex
 
-`(recurrentLayerIndices: number[], traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext) => void`
+```ts
+appendRecurrentLayerIndex(
+  recurrentLayerIndices: number[],
+  traversalContext: OnnxRecurrentLayerTraversalContext,
+): void
+```
 
 Append one recurrent layer index to the collected index list.
 
@@ -1511,7 +1734,11 @@ Returns: Nothing.
 
 ### applyModelMetadata
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModelMetadataContext) => void`
+```ts
+applyModelMetadata(
+  context: OnnxModelMetadataContext,
+): void
+```
 
 Attach producer and opset metadata to a model when metadata emission is enabled.
 
@@ -1522,7 +1749,11 @@ Returns: Nothing.
 
 ### collectRecurrentLayerIndices
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => number[]`
+```ts
+collectRecurrentLayerIndices(
+  context: OnnxRecurrentCollectionContext,
+): number[]
+```
 
 Detect hidden layers with self-recurrence and add matching previous-state graph inputs.
 
@@ -1533,7 +1764,11 @@ Returns: Export-layer indices with recurrent self-connections.
 
 ### createBaseModel
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxBaseModelBuildContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+```ts
+createBaseModel(
+  context: OnnxBaseModelBuildContext,
+): OnnxModel
+```
 
 Create the base ONNX model shell with graph input/output declarations.
 
@@ -1544,7 +1779,11 @@ Returns: Initialized ONNX model with empty initializer/node lists.
 
 ### createGraphDimensions
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensionBuildContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxGraphDimensions`
+```ts
+createGraphDimensions(
+  context: OnnxGraphDimensionBuildContext,
+): OnnxGraphDimensions
+```
 
 Build tensor dimensions for model input and output, optionally with symbolic batch dimension.
 
@@ -1555,7 +1794,12 @@ Returns: Input and output dimension arrays for ONNX value info.
 
 ### createGraphValueInfo
 
-`(valueName: string, dimensions: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxDimension[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxValueInfo`
+```ts
+createGraphValueInfo(
+  valueName: string,
+  dimensions: OnnxDimension[],
+): OnnxValueInfo
+```
 
 Create ONNX value info payload for one graph boundary tensor.
 
@@ -1567,7 +1811,11 @@ Returns: ONNX value info payload.
 
 ### createHiddenLayerIndices
 
-`(totalLayerCount: number) => number[]`
+```ts
+createHiddenLayerIndices(
+  totalLayerCount: number,
+): number[]
+```
 
 Build hidden layer indices excluding input and output layers.
 
@@ -1578,7 +1826,11 @@ Returns: Hidden layer indices.
 
 ### createHiddenLayerTraversalContexts
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext[]`
+```ts
+createHiddenLayerTraversalContexts(
+  context: OnnxRecurrentCollectionContext,
+): OnnxRecurrentLayerTraversalContext[]
+```
 
 Build traversal contexts for all hidden layers.
 
@@ -1589,7 +1841,11 @@ Returns: Hidden layer traversal contexts.
 
 ### createRecurrentInputValueInfo
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentInputValueInfoContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxValueInfo`
+```ts
+createRecurrentInputValueInfo(
+  context: OnnxRecurrentInputValueInfoContext,
+): OnnxValueInfo
+```
 
 Build one recurrent previous-state graph input payload.
 
@@ -1600,7 +1856,11 @@ Returns: ONNX value info payload for recurrent state input.
 
 ### createRecurrentInputValueInfoContext
 
-`(traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerTraversalContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentInputValueInfoContext`
+```ts
+createRecurrentInputValueInfoContext(
+  traversalContext: OnnxRecurrentLayerTraversalContext,
+): OnnxRecurrentInputValueInfoContext
+```
 
 Build recurrent input context for one hidden recurrent layer.
 
@@ -1611,7 +1871,12 @@ Returns: Recurrent input value-info context.
 
 ### createTensorDimensions
 
-`(width: number, batchDimension: boolean) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxDimension[]`
+```ts
+createTensorDimensions(
+  width: number,
+  batchDimension: boolean,
+): OnnxDimension[]
+```
 
 Build one tensor shape dimension payload for dense vectors.
 
@@ -1623,7 +1888,11 @@ Returns: ONNX dimensions for the vector payload.
 
 ### hasLayerSelfRecurrence
 
-`(hiddenLayerNodes: import("src/architecture/node").default[]) => boolean`
+```ts
+hasLayerSelfRecurrence(
+  hiddenLayerNodes: default[],
+): boolean
+```
 
 Detect whether a hidden layer contains at least one self-recurrent node.
 
@@ -1634,7 +1903,11 @@ Returns: True when any node has a self-connection.
 
 ### isRecurrentCollectionEnabled
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentCollectionContext) => boolean`
+```ts
+isRecurrentCollectionEnabled(
+  context: OnnxRecurrentCollectionContext,
+): boolean
+```
 
 Determine whether recurrent layer collection should execute.
 
@@ -1645,7 +1918,11 @@ Returns: True when recurrent collection is enabled.
 
 ### processHiddenLayerRecurrence
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRecurrentLayerProcessingContext) => void`
+```ts
+processHiddenLayerRecurrence(
+  context: OnnxRecurrentLayerProcessingContext,
+): void
+```
 
 Process one hidden layer for recurrent self-connections.
 
@@ -1658,7 +1935,11 @@ Returns: Nothing.
 
 ### buildPerceptronNetwork
 
-`(buildContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronBuildContext) => import("src/architecture/network").default`
+```ts
+buildPerceptronNetwork(
+  buildContext: OnnxPerceptronBuildContext,
+): default
+```
 
 Build a perceptron network from size-extraction context.
 
@@ -1669,7 +1950,11 @@ Returns: Reconstructed network instance.
 
 ### createPerceptronBuildContext
 
-`(sizes: number[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronBuildContext`
+```ts
+createPerceptronBuildContext(
+  sizes: number[],
+): OnnxPerceptronBuildContext
+```
 
 Build perceptron-network construction context.
 
@@ -1680,7 +1965,9 @@ Returns: Build context.
 
 ### createPerceptronFactory
 
-`() => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimePerceptronFactory`
+```ts
+createPerceptronFactory(): OnnxRuntimePerceptronFactory
+```
 
 Create an ONNX import network factory from modern static constructors.
 
@@ -1688,7 +1975,11 @@ Returns: Perceptron-compatible factory function.
 
 ### createPerceptronSizeValidationContext
 
-`(sizes: number[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronSizeValidationContext`
+```ts
+createPerceptronSizeValidationContext(
+  sizes: number[],
+): OnnxPerceptronSizeValidationContext
+```
 
 Build perceptron-size validation context.
 
@@ -1699,7 +1990,9 @@ Returns: Validation context.
 
 ### createRuntimeLayerModule
 
-`() => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule`
+```ts
+createRuntimeLayerModule(): OnnxRuntimeLayerModule
+```
 
 Create the runtime layer-module wiring used by ONNX import orchestrators.
 
@@ -1707,7 +2000,12 @@ Returns: Runtime recurrent-layer module object.
 
 ### foldRuntimeFactories
 
-`(perceptronFactory: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimePerceptronFactory, layerModule: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeFactories`
+```ts
+foldRuntimeFactories(
+  perceptronFactory: OnnxRuntimePerceptronFactory,
+  layerModule: OnnxRuntimeLayerModule,
+): OnnxRuntimeFactories
+```
 
 Fold runtime perceptron and layer module into a transport payload.
 
@@ -1719,7 +2017,12 @@ Returns: Runtime factories payload.
 
 ### foldRuntimeLayerModule
 
-`(lstmFactory: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerFactory, gruFactory: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerFactory) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule`
+```ts
+foldRuntimeLayerModule(
+  lstmFactory: OnnxRuntimeLayerFactory,
+  gruFactory: OnnxRuntimeLayerFactory,
+): OnnxRuntimeLayerModule
+```
 
 Fold LSTM/GRU factories into a runtime layer module payload.
 
@@ -1731,7 +2034,9 @@ Returns: Runtime layer module.
 
 ### loadRuntimeFactories
 
-`() => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeFactories`
+```ts
+loadRuntimeFactories(): OnnxRuntimeFactories
+```
 
 Resolve runtime factories used by ONNX import orchestration.
 
@@ -1739,7 +2044,11 @@ Returns: Perceptron factory and layer module object.
 
 ### resolveLayerFactory
 
-`(layerKey: keyof import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerModule) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxRuntimeLayerFactory`
+```ts
+resolveLayerFactory(
+  layerKey: keyof OnnxRuntimeLayerModule,
+): OnnxRuntimeLayerFactory
+```
 
 Resolve one runtime layer factory by module key.
 
@@ -1750,7 +2059,11 @@ Returns: Matching layer factory.
 
 ### validatePerceptronSizes
 
-`(validationContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxPerceptronSizeValidationContext) => void`
+```ts
+validatePerceptronSizes(
+  validationContext: OnnxPerceptronSizeValidationContext,
+): void
+```
 
 Validate perceptron size-list constraints.
 
@@ -1763,7 +2076,11 @@ Returns: Nothing. Throws on invalid size-list.
 
 ### applyAggregatedLayerWeights
 
-`(aggregatedContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportAggregatedLayerAssignmentContext) => void`
+```ts
+applyAggregatedLayerWeights(
+  aggregatedContext: OnnxImportAggregatedLayerAssignmentContext,
+): void
+```
 
 Apply aggregated dense tensor assignments for one layer.
 
@@ -1774,7 +2091,11 @@ Returns: Nothing.
 
 ### applyAggregatedNeuronAssignment
 
-`(neuronContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportAggregatedNeuronAssignmentContext) => void`
+```ts
+applyAggregatedNeuronAssignment(
+  neuronContext: OnnxImportAggregatedNeuronAssignmentContext,
+): void
+```
 
 Apply aggregated dense row weights and bias for one target neuron.
 
@@ -1785,7 +2106,11 @@ Returns: Nothing.
 
 ### applyConvCoordinateAssignment
 
-`(coordinateContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvCoordinateAssignmentContext) => void`
+```ts
+applyConvCoordinateAssignment(
+  coordinateContext: OnnxImportConvCoordinateAssignmentContext,
+): void
+```
 
 Apply Conv bias and kernel weights for one output coordinate.
 
@@ -1796,7 +2121,11 @@ Returns: Nothing.
 
 ### applyConvLayerReconstruction
 
-`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext) => void`
+```ts
+applyConvLayerReconstruction(
+  layerContext: OnnxImportConvLayerContext,
+): void
+```
 
 Apply Conv reconstruction for one validated Conv layer context.
 
@@ -1807,7 +2136,11 @@ Returns: Nothing.
 
 ### applyDenseWeightAssignments
 
-`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext) => void`
+```ts
+applyDenseWeightAssignments(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+): void
+```
 
 Apply dense/per-neuron assignments for all sorted layer indices.
 
@@ -1818,7 +2151,11 @@ Returns: Nothing.
 
 ### applyOptionalConvReconstruction
 
-`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext) => void`
+```ts
+applyOptionalConvReconstruction(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+): void
+```
 
 Apply optional Conv2D reconstruction pass from metadata payloads.
 
@@ -1829,7 +2166,11 @@ Returns: Nothing.
 
 ### applyPerNeuronAssignment
 
-`(perNeuronAssignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPerNeuronAssignmentContext) => void`
+```ts
+applyPerNeuronAssignment(
+  perNeuronAssignmentContext: OnnxImportPerNeuronAssignmentContext,
+): void
+```
 
 Apply one per-neuron weight vector and bias assignment.
 
@@ -1840,7 +2181,11 @@ Returns: Nothing.
 
 ### applyPerNeuronLayerWeights
 
-`(perNeuronContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPerNeuronLayerAssignmentContext) => void`
+```ts
+applyPerNeuronLayerWeights(
+  perNeuronContext: OnnxImportPerNeuronLayerAssignmentContext,
+): void
+```
 
 Apply per-neuron tensor assignments for one layer.
 
@@ -1851,7 +2196,11 @@ Returns: Nothing.
 
 ### assignConvKernelWeight
 
-`(kernelAssignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvKernelAssignmentContext) => void`
+```ts
+assignConvKernelWeight(
+  kernelAssignmentContext: OnnxImportConvKernelAssignmentContext,
+): void
+```
 
 Assign one Conv kernel weight to the matching inbound neuron connection.
 
@@ -1862,7 +2211,12 @@ Returns: Nothing.
 
 ### assignLayerWeights
 
-`(initializerMap: Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor>, nodePair: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerNodePair) => void`
+```ts
+assignLayerWeights(
+  initializerMap: Record<string, OnnxTensor>,
+  nodePair: OnnxImportLayerNodePair,
+): void
+```
 
 Assign one layer's weights using aggregated or per-neuron tensors.
 
@@ -1874,7 +2228,14 @@ Returns: Nothing.
 
 ### assignWeightsAndBiases
 
-`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => void`
+```ts
+assignWeightsAndBiases(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadataProps: OnnxMetadataProperty[] | undefined,
+): void
+```
 
 Assign weights and biases from ONNX initializers to a newly created network.
 
@@ -1888,7 +2249,11 @@ Returns: Nothing.
 
 ### buildConvLayerContext
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContextBuildParams) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext | null`
+```ts
+buildConvLayerContext(
+  params: OnnxImportConvLayerContextBuildParams,
+): OnnxImportConvLayerContext | null
+```
 
 Build one Conv layer reconstruction context.
 
@@ -1899,7 +2264,12 @@ Returns: Conv layer context when valid.
 
 ### buildConvNeuronLinearIndex
 
-`(coordinate: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvOutputCoordinate, convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => number`
+```ts
+buildConvNeuronLinearIndex(
+  coordinate: OnnxImportConvOutputCoordinate,
+  convSpec: Conv2DMapping,
+): number
+```
 
 Build flattened linear index for one Conv output coordinate.
 
@@ -1911,7 +2281,11 @@ Returns: Linear neuron index.
 
 ### buildConvNodeSlices
 
-`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvNodeSlices`
+```ts
+buildConvNodeSlices(
+  layerContext: OnnxImportConvLayerContext,
+): OnnxImportConvNodeSlices
+```
 
 Build Conv current/previous node slices for one layer context.
 
@@ -1922,7 +2296,11 @@ Returns: Node slice payload.
 
 ### buildConvTensorContext
 
-`(layerContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvLayerContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvTensorContext | null`
+```ts
+buildConvTensorContext(
+  layerContext: OnnxImportConvLayerContext,
+): OnnxImportConvTensorContext | null
+```
 
 Build validated Conv tensor context for one layer.
 
@@ -1933,7 +2311,12 @@ Returns: Conv tensor context when valid.
 
 ### buildHiddenLayerSizesFromBuckets
 
-`(layerWeightBuckets: Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>, sortedLayerIndices: number[]) => number[]`
+```ts
+buildHiddenLayerSizesFromBuckets(
+  layerWeightBuckets: Record<string, OnnxImportLayerWeightBucket>,
+  sortedLayerIndices: number[],
+): number[]
+```
 
 Build hidden-layer sizes from weight buckets while excluding output layer.
 
@@ -1945,7 +2328,11 @@ Returns: Hidden-layer sizes.
 
 ### buildInboundConnectionMap
 
-`(neuronInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportInboundConnectionMap`
+```ts
+buildInboundConnectionMap(
+  neuronInternal: NodeInternals,
+): OnnxImportInboundConnectionMap
+```
 
 Build inbound connection lookup map for one neuron.
 
@@ -1956,7 +2343,11 @@ Returns: Inbound connection map keyed by source node.
 
 ### buildInitializerMap
 
-`(initializers: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[]) => Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor>`
+```ts
+buildInitializerMap(
+  initializers: OnnxTensor[],
+): Record<string, OnnxTensor>
+```
 
 Build ONNX initializer map keyed by tensor name.
 
@@ -1967,7 +2358,11 @@ Returns: Tensor map by name.
 
 ### buildInputCoordinate
 
-`(kernelAssignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvKernelAssignmentContext) => { inputRow: number; inputColumn: number; } | null`
+```ts
+buildInputCoordinate(
+  kernelAssignmentContext: OnnxImportConvKernelAssignmentContext,
+): { inputRow: number; inputColumn: number; } | null
+```
 
 Build input-space coordinate for one Conv kernel element.
 
@@ -1978,7 +2373,14 @@ Returns: Input coordinate when in bounds.
 
 ### buildInputFeatureLinearIndex
 
-`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, inChannelIndex: number, inputRow: number, inputColumn: number) => number`
+```ts
+buildInputFeatureLinearIndex(
+  convSpec: Conv2DMapping,
+  inChannelIndex: number,
+  inputRow: number,
+  inputColumn: number,
+): number
+```
 
 Build linear feature index in input feature space.
 
@@ -1992,7 +2394,12 @@ Returns: Linear input feature index.
 
 ### buildLayerNodePair
 
-`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext, params: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerNodePairBuildParams) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerNodePair`
+```ts
+buildLayerNodePair(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+  params: OnnxImportLayerNodePairBuildParams,
+): OnnxImportLayerNodePair
+```
 
 Build current/previous node slices for one sequential import layer pass.
 
@@ -2004,7 +2411,11 @@ Returns: Layer node pair.
 
 ### buildLayerTensorNames
 
-`(layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerTensorNames`
+```ts
+buildLayerTensorNames(
+  layerIndex: number,
+): OnnxImportLayerTensorNames
+```
 
 Build dense weight/bias tensor names for one layer index.
 
@@ -2015,7 +2426,12 @@ Returns: Layer tensor names.
 
 ### buildPerNeuronTensorNames
 
-`(layerIndex: number, neuronIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerTensorNames`
+```ts
+buildPerNeuronTensorNames(
+  layerIndex: number,
+  neuronIndex: number,
+): OnnxImportLayerTensorNames
+```
 
 Build per-neuron tensor names for one layer and neuron index.
 
@@ -2027,7 +2443,11 @@ Returns: Per-neuron tensor names.
 
 ### buildWeightAssignmentContext
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentBuildParams) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext`
+```ts
+buildWeightAssignmentContext(
+  params: OnnxImportWeightAssignmentBuildParams,
+): OnnxImportWeightAssignmentContext
+```
 
 Build the shared assignment context for import weight restoration.
 
@@ -2038,7 +2458,13 @@ Returns: Shared assignment context.
 
 ### collectConvKernelCoordinates
 
-`(inChannels: number, kernelHeight: number, kernelWidth: number) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxConvKernelCoordinate[]`
+```ts
+collectConvKernelCoordinates(
+  inChannels: number,
+  kernelHeight: number,
+  kernelWidth: number,
+): OnnxConvKernelCoordinate[]
+```
 
 Collect all kernel traversal coordinates for one Conv output position.
 
@@ -2051,7 +2477,12 @@ Returns: Kernel traversal coordinates.
 
 ### collectConvOutputCoordinates
 
-`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, outChannels: number) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvOutputCoordinate[]`
+```ts
+collectConvOutputCoordinates(
+  convSpec: Conv2DMapping,
+  outChannels: number,
+): OnnxImportConvOutputCoordinate[]
+```
 
 Collect all output traversal coordinates for one Conv layer.
 
@@ -2063,7 +2494,11 @@ Returns: Output traversal coordinates.
 
 ### collectLayerWeightBuckets
 
-`(initializers: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[]) => Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>`
+```ts
+collectLayerWeightBuckets(
+  initializers: OnnxTensor[],
+): Record<string, OnnxImportLayerWeightBucket>
+```
 
 Collect ONNX weight tensor buckets grouped by export layer index.
 
@@ -2074,7 +2509,12 @@ Returns: Layer-weight buckets keyed by export layer index.
 
 ### collectNodesByType
 
-`(nodes: import("src/architecture/node").default[], nodeType: "input" | "output" | "hidden") => import("src/architecture/node").default[]`
+```ts
+collectNodesByType(
+  nodes: default[],
+  nodeType: "input" | "output" | "hidden",
+): default[]
+```
 
 Collect nodes by runtime node type discriminator.
 
@@ -2086,7 +2526,11 @@ Returns: Filtered nodes.
 
 ### collectSortedLayerIndices
 
-`(layerWeightBuckets: Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>) => number[]`
+```ts
+collectSortedLayerIndices(
+  layerWeightBuckets: Record<string, OnnxImportLayerWeightBucket>,
+): number[]
+```
 
 Collect sorted layer indices from weight buckets.
 
@@ -2097,7 +2541,11 @@ Returns: Ascending export layer indices.
 
 ### collectSortedUniqueLayerIndices
 
-`(initializerMap: Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor>) => number[]`
+```ts
+collectSortedUniqueLayerIndices(
+  initializerMap: Record<string, OnnxTensor>,
+): number[]
+```
 
 Collect unique sorted layer indices from initializer weight tensors.
 
@@ -2108,7 +2556,12 @@ Returns: Unique sorted layer indices.
 
 ### deriveHiddenLayerSizes
 
-`(initializers: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxTensor[], metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[] | undefined) => number[]`
+```ts
+deriveHiddenLayerSizes(
+  initializers: OnnxTensor[],
+  metadataProps: OnnxMetadataProperty[] | undefined,
+): number[]
+```
 
 Extract hidden layer sizes from ONNX initializers (weight tensors).
 
@@ -2120,7 +2573,11 @@ Returns: Hidden layer sizes in order.
 
 ### hasAggregatedLayerWeights
 
-`(aggregatedContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportAggregatedLayerAssignmentContext) => boolean`
+```ts
+hasAggregatedLayerWeights(
+  aggregatedContext: OnnxImportAggregatedLayerAssignmentContext,
+): boolean
+```
 
 Determine whether the layer has aggregated weight tensor data.
 
@@ -2131,7 +2588,11 @@ Returns: True when aggregated tensor exists.
 
 ### parseConvMetadata
 
-`(metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvMetadata | null`
+```ts
+parseConvMetadata(
+  metadataProps: OnnxMetadataProperty[],
+): OnnxImportConvMetadata | null
+```
 
 Parse Conv reconstruction metadata payload.
 
@@ -2142,7 +2603,11 @@ Returns: Parsed Conv metadata.
 
 ### parseLayerIndexFromWeightTensor
 
-`(tensorName: string) => number | null`
+```ts
+parseLayerIndexFromWeightTensor(
+  tensorName: string,
+): number | null
+```
 
 Parse layer index from dense/per-neuron weight tensor name.
 
@@ -2153,7 +2618,11 @@ Returns: Parsed layer index or null.
 
 ### parseMetadataLayerSizes
 
-`(metadataProps: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => number[] | null`
+```ts
+parseMetadataLayerSizes(
+  metadataProps: OnnxMetadataProperty[],
+): number[] | null
+```
 
 Parse explicit metadata-driven hidden layer sizes.
 
@@ -2164,7 +2633,11 @@ Returns: Parsed hidden layer sizes when available.
 
 ### parseWeightTensorName
 
-`(tensorName: string) => { layerIndex: string; neuronIndex: number | null; } | null`
+```ts
+parseWeightTensorName(
+  tensorName: string,
+): { layerIndex: string; neuronIndex: number | null; } | null
+```
 
 Parse layer/neuron components from a weight tensor name.
 
@@ -2175,7 +2648,11 @@ Returns: Parsed layer+neuron components when matched.
 
 ### readConvKernelWeight
 
-`(kernelAssignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportConvKernelAssignmentContext) => number`
+```ts
+readConvKernelWeight(
+  kernelAssignmentContext: OnnxImportConvKernelAssignmentContext,
+): number
+```
 
 Read one Conv kernel weight from flattened ONNX tensor payload.
 
@@ -2186,7 +2663,12 @@ Returns: Kernel weight.
 
 ### resolveCurrentLayerNodes
 
-`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext, params: { sequentialIndex: number; }) => import("src/architecture/node").default[]`
+```ts
+resolveCurrentLayerNodes(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+  params: { sequentialIndex: number; },
+): default[]
+```
 
 Resolve current layer nodes for one sequential layer assignment pass.
 
@@ -2198,7 +2680,12 @@ Returns: Current layer nodes.
 
 ### resolveLayerHiddenSize
 
-`(layerWeightBuckets: Record<string, import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerWeightBucket>, layerIndex: number) => number`
+```ts
+resolveLayerHiddenSize(
+  layerWeightBuckets: Record<string, OnnxImportLayerWeightBucket>,
+  layerIndex: number,
+): number
+```
 
 Resolve one hidden-layer size from its weight bucket.
 
@@ -2210,7 +2697,12 @@ Returns: Hidden-layer size.
 
 ### resolvePreviousLayerNodes
 
-`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportWeightAssignmentContext, params: { sequentialIndex: number; }) => import("src/architecture/node").default[]`
+```ts
+resolvePreviousLayerNodes(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+  params: { sequentialIndex: number; },
+): default[]
+```
 
 Resolve previous layer nodes for one sequential layer assignment pass.
 
@@ -2222,7 +2714,12 @@ Returns: Previous layer nodes.
 
 ### sumHiddenSizesToIndex
 
-`(hiddenLayerSizes: number[], exclusiveEndIndex: number) => number`
+```ts
+sumHiddenSizesToIndex(
+  hiddenLayerSizes: number[],
+  exclusiveEndIndex: number,
+): number
+```
 
 Sum hidden-layer sizes from index `0` to `exclusiveEndIndex`.
 
@@ -2236,7 +2733,11 @@ Returns: Prefix sum.
 
 ### appendLastResolvedLayer
 
-`(resolutionContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
+```ts
+appendLastResolvedLayer(
+  resolutionContext: LayerOrderingResolutionContext,
+): LayerOrderingResolutionContext
+```
 
 Append the final resolved hidden layer into ordered layer output.
 
@@ -2247,7 +2748,12 @@ Returns: Traversal state with last hidden layer persisted.
 
 ### buildLayerValidationContexts
 
-`(layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext[]`
+```ts
+buildLayerValidationContexts(
+  layers: default[][],
+  options: OnnxExportOptions,
+): LayerValidationTraversalContext[]
+```
 
 Build per-layer validation contexts for all non-input layers.
 
@@ -2259,7 +2765,11 @@ Returns: Traversal contexts used by layer validators.
 
 ### collectCurrentResolvableHiddenLayer
 
-`(resolutionContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("src/architecture/node").default[]`
+```ts
+collectCurrentResolvableHiddenLayer(
+  resolutionContext: LayerOrderingResolutionContext,
+): default[]
+```
 
 Collect unresolved hidden nodes that can be placed in the next layer.
 
@@ -2270,7 +2780,11 @@ Returns: Hidden nodes that are resolvable in this pass.
 
 ### collectLayerOrderingNodeGroups
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups`
+```ts
+collectLayerOrderingNodeGroups(
+  network: default,
+): LayerOrderingNodeGroups
+```
 
 Partition all network nodes into input/hidden/output groups.
 
@@ -2281,7 +2795,11 @@ Returns: Node groups used by layered-ordering inference.
 
 ### collectUniqueOutgoingConnections
 
-`(nodes: import("src/architecture/node").default[]) => import("src/architecture/connection").default[]`
+```ts
+collectUniqueOutgoingConnections(
+  nodes: default[],
+): default[]
+```
 
 Collect unique outgoing connections across a node list.
 
@@ -2292,7 +2810,11 @@ Returns: Stable array of unique connections.
 
 ### createLayerActivationValidationContext
 
-`(layerValidationContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerActivationValidationContext`
+```ts
+createLayerActivationValidationContext(
+  layerValidationContext: LayerValidationTraversalContext,
+): LayerActivationValidationContext
+```
 
 Create activation validation context from one layer traversal context.
 
@@ -2303,7 +2825,11 @@ Returns: Activation validation context.
 
 ### ensureLayerWasResolved
 
-`(currentLayerNodes: import("src/architecture/node").default[]) => void`
+```ts
+ensureLayerWasResolved(
+  currentLayerNodes: default[],
+): void
+```
 
 Ensure current hidden-layer resolution pass produced at least one node.
 
@@ -2314,7 +2840,12 @@ Returns: Nothing.
 
 ### filterNodesByType
 
-`(nodes: import("src/architecture/node").default[], nodeType: string) => import("src/architecture/node").default[]`
+```ts
+filterNodesByType(
+  nodes: default[],
+  nodeType: string,
+): default[]
+```
 
 Filter nodes by one expected node type.
 
@@ -2326,7 +2857,11 @@ Returns: Matching nodes.
 
 ### filterUnresolvedHiddenNodes
 
-`(context: { remainingHiddenNodes: import("src/architecture/node").default[]; currentLayerNodes: import("src/architecture/node").default[]; }) => import("src/architecture/node").default[]`
+```ts
+filterUnresolvedHiddenNodes(
+  context: { remainingHiddenNodes: default[]; currentLayerNodes: default[]; },
+): default[]
+```
 
 Remove just-resolved hidden nodes from unresolved candidates.
 
@@ -2337,7 +2872,11 @@ Returns: Hidden nodes still unresolved.
 
 ### finalizeOrderingWithoutHiddenNodes
 
-`(nodeGroups: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups) => import("src/architecture/node").default[][]`
+```ts
+finalizeOrderingWithoutHiddenNodes(
+  nodeGroups: LayerOrderingNodeGroups,
+): default[][]
+```
 
 Finalize ordering for networks without hidden layers.
 
@@ -2348,7 +2887,11 @@ Returns: Input and output layers only.
 
 ### finalizeOrderingWithOutputLayer
 
-`(context: { orderedLayers: import("src/architecture/node").default[][]; outputNodes: import("src/architecture/node").default[]; }) => import("src/architecture/node").default[][]`
+```ts
+finalizeOrderingWithOutputLayer(
+  context: { orderedLayers: default[][]; outputNodes: default[]; },
+): default[][]
+```
 
 Append output layer to resolved input/hidden ordering.
 
@@ -2359,7 +2902,11 @@ Returns: Full layer ordering including output layer.
 
 ### hasAllIncomingConnectionsFromPreviousLayer
 
-`(context: { hiddenNode: import("src/architecture/node").default; previousLayerNodes: import("src/architecture/node").default[]; }) => boolean`
+```ts
+hasAllIncomingConnectionsFromPreviousLayer(
+  context: { hiddenNode: default; previousLayerNodes: default[]; },
+): boolean
+```
 
 Check whether a hidden node receives all inputs from the previous layer.
 
@@ -2370,7 +2917,11 @@ Returns: True when the hidden node is layer-resolvable.
 
 ### hasNoHiddenNodes
 
-`(nodeGroups: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups) => boolean`
+```ts
+hasNoHiddenNodes(
+  nodeGroups: LayerOrderingNodeGroups,
+): boolean
+```
 
 Check whether the layer groups contain no hidden nodes.
 
@@ -2381,7 +2932,11 @@ Returns: True when hidden layer traversal can be skipped.
 
 ### inferLayerOrdering
 
-`(network: import("src/architecture/network").default) => import("src/architecture/node").default[][]`
+```ts
+inferLayerOrdering(
+  network: default,
+): default[][]
+```
 
 Infer strictly layered ordering from a network.
 
@@ -2392,7 +2947,11 @@ Returns: Ordered layers: input, hidden..., output.
 
 ### initializeLayerOrderingResolutionContext
 
-`(nodeGroups: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingNodeGroups) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
+```ts
+initializeLayerOrderingResolutionContext(
+  nodeGroups: LayerOrderingNodeGroups,
+): LayerOrderingResolutionContext
+```
 
 Create initial hidden-layer resolution context.
 
@@ -2403,7 +2962,11 @@ Returns: Initial mutable state for hidden-layer resolution.
 
 ### mapActivationToOnnx
 
-`(squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxActivationOperation`
+```ts
+mapActivationToOnnx(
+  squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; },
+): OnnxActivationOperation
+```
 
 Map an internal activation function (squash) to an ONNX op_type.
 
@@ -2414,7 +2977,11 @@ Returns: ONNX activation operator name.
 
 ### normalizeActivationName
 
-`(squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }) => string`
+```ts
+normalizeActivationName(
+  squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; },
+): string
+```
 
 Normalize activation function name to uppercase for token matching.
 
@@ -2425,7 +2992,11 @@ Returns: Uppercased activation name or empty string.
 
 ### rebuildConnectionsLocal
 
-`(networkLike: import("src/architecture/network").default) => void`
+```ts
+rebuildConnectionsLocal(
+  networkLike: default,
+): void
+```
 
 Rebuild the network's flat connections array from each node's outgoing list.
 
@@ -2436,7 +3007,11 @@ Returns: Nothing.
 
 ### resolveAllHiddenLayers
 
-`(initialContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
+```ts
+resolveAllHiddenLayers(
+  initialContext: LayerOrderingResolutionContext,
+): LayerOrderingResolutionContext
+```
 
 Resolve all hidden layers in dependency order.
 
@@ -2447,7 +3022,11 @@ Returns: Final resolved layer-ordering context.
 
 ### resolveNextHiddenLayer
 
-`(resolutionContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LayerOrderingResolutionContext`
+```ts
+resolveNextHiddenLayer(
+  resolutionContext: LayerOrderingResolutionContext,
+): LayerOrderingResolutionContext
+```
 
 Resolve the next hidden layer from unresolved candidates.
 
@@ -2458,7 +3037,11 @@ Returns: Updated resolution state.
 
 ### resolveOnnxActivationOperation
 
-`(normalizedActivationName: string) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxActivationOperation`
+```ts
+resolveOnnxActivationOperation(
+  normalizedActivationName: string,
+): OnnxActivationOperation
+```
 
 Resolve ONNX activation op from a normalized activation name token.
 
@@ -2469,7 +3052,11 @@ Returns: ONNX activation operation.
 
 ### validateLayerActivationHomogeneity
 
-`(activationValidationContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerActivationValidationContext) => void`
+```ts
+validateLayerActivationHomogeneity(
+  activationValidationContext: LayerActivationValidationContext,
+): void
+```
 
 Validate that a layer has homogeneous activation unless explicitly allowed.
 
@@ -2480,7 +3067,11 @@ Returns: Nothing.
 
 ### validateLayerConnectivity
 
-`(layerValidationContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext) => void`
+```ts
+validateLayerConnectivity(
+  layerValidationContext: LayerValidationTraversalContext,
+): void
+```
 
 Validate that each current-layer node has required incoming connectivity.
 
@@ -2491,7 +3082,13 @@ Returns: Nothing.
 
 ### validateLayerHomogeneityAndConnectivity
 
-`(layers: import("src/architecture/node").default[][], network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => void`
+```ts
+validateLayerHomogeneityAndConnectivity(
+  layers: default[][],
+  network: default,
+  options: OnnxExportOptions,
+): void
+```
 
 Validate connectivity and activation homogeneity constraints per layer.
 
@@ -2504,7 +3101,11 @@ Returns: Nothing.
 
 ### validateSingleLayer
 
-`(layerValidationContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerValidationTraversalContext) => void`
+```ts
+validateSingleLayer(
+  layerValidationContext: LayerValidationTraversalContext,
+): void
+```
 
 Validate one current layer against activation/connectivity constraints.
 
@@ -2515,7 +3116,11 @@ Returns: Nothing.
 
 ### validateSourceToTargetConnectivity
 
-`(connectivityValidationContext: import("src/architecture/network/onnx/network.onnx.utils.types").LayerConnectivityValidationContext) => void`
+```ts
+validateSourceToTargetConnectivity(
+  connectivityValidationContext: LayerConnectivityValidationContext,
+): void
+```
 
 Validate one source->target connection pair under export constraints.
 
@@ -2526,7 +3131,11 @@ Returns: Nothing.
 
 ### validateTargetNodeConnectivity
 
-`(context: { targetNode: import("src/architecture/node").default; previousLayerNodes: import("src/architecture/node").default[]; layerIndex: number; allowPartialConnectivity: boolean; }) => void`
+```ts
+validateTargetNodeConnectivity(
+  context: { targetNode: default; previousLayerNodes: default[]; layerIndex: number; allowPartialConnectivity: boolean; },
+): void
+```
 
 Validate full source coverage for one target node.
 
@@ -2537,7 +3146,11 @@ Returns: Nothing.
 
 ### warnWhenActivationFallbackIsUsed
 
-`(context: { squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }; resolvedActivationOperation: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxActivationOperation; }) => void`
+```ts
+warnWhenActivationFallbackIsUsed(
+  context: { squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }; resolvedActivationOperation: OnnxActivationOperation; },
+): void
+```
 
 Emit a warning when activation export falls back to Identity.
 
@@ -2550,7 +3163,9 @@ Returns: Nothing.
 
 ### buildDefaultGemmAttributes
 
-`() => { name: string; type: string; f?: number | undefined; i?: number | undefined; }[]`
+```ts
+buildDefaultGemmAttributes(): { name: string; type: string; f?: number | undefined; i?: number | undefined; }[]
+```
 
 Build the shared attribute list for ONNX Gemm node payloads.
 
@@ -2558,7 +3173,13 @@ Returns: Gemm attribute payload list.
 
 ### buildInputBranchGemmEmissionContext
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext, initializerNames: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerNames, graphNames: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGemmEmissionContext`
+```ts
+buildInputBranchGemmEmissionContext(
+  context: RecurrentLayerEmissionContext,
+  initializerNames: RecurrentInitializerNames,
+  graphNames: RecurrentGraphNames,
+): RecurrentGemmEmissionContext
+```
 
 Build Gemm emission context for the feed-forward branch.
 
@@ -2571,7 +3192,13 @@ Returns: Gemm emission context.
 
 ### buildRecurrentBranchGemmEmissionContext
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext, initializerNames: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerNames, graphNames: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGemmEmissionContext`
+```ts
+buildRecurrentBranchGemmEmissionContext(
+  context: RecurrentLayerEmissionContext,
+  initializerNames: RecurrentInitializerNames,
+  graphNames: RecurrentGraphNames,
+): RecurrentGemmEmissionContext
+```
 
 Build Gemm emission context for the recurrent hidden-state branch.
 
@@ -2584,7 +3211,11 @@ Returns: Gemm emission context.
 
 ### buildRecurrentGraphNames
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames`
+```ts
+buildRecurrentGraphNames(
+  context: RecurrentLayerEmissionContext,
+): RecurrentGraphNames
+```
 
 Build deterministic graph names for recurrent-node emission.
 
@@ -2595,7 +3226,11 @@ Returns: Graph-name group for branch and activation nodes.
 
 ### buildRecurrentInitializerNames
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerNames`
+```ts
+buildRecurrentInitializerNames(
+  context: RecurrentLayerEmissionContext,
+): RecurrentInitializerNames
+```
 
 Build deterministic tensor names for recurrent initializer emission.
 
@@ -2606,7 +3241,11 @@ Returns: Tensor-name group for initializer emission.
 
 ### buildRecurrentLayerEmissionContext
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionParams) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext`
+```ts
+buildRecurrentLayerEmissionContext(
+  params: RecurrentLayerEmissionParams,
+): RecurrentLayerEmissionContext
+```
 
 Build derived recurrent-layer context from input params.
 
@@ -2617,7 +3256,11 @@ Returns: Derived context with cached dimensions and layer slot.
 
 ### collectRecurrentInitializerValues
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerValues`
+```ts
+collectRecurrentInitializerValues(
+  context: RecurrentLayerEmissionContext,
+): RecurrentInitializerValues
+```
 
 Collect recurrent initializer vectors for one layer.
 
@@ -2628,7 +3271,11 @@ Returns: Dense and recurrent initializer vectors.
 
 ### emitRecurrentActivationNode
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentActivationEmissionContext) => void`
+```ts
+emitRecurrentActivationNode(
+  context: RecurrentActivationEmissionContext,
+): void
+```
 
 Emit activation node for recurrent branch sum output.
 
@@ -2639,7 +3286,12 @@ Returns: Nothing.
 
 ### emitRecurrentAddNode
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, graphNames: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGraphNames) => void`
+```ts
+emitRecurrentAddNode(
+  model: OnnxModel,
+  graphNames: RecurrentGraphNames,
+): void
+```
 
 Emit Add node that fuses feed-forward and recurrent branch outputs.
 
@@ -2651,7 +3303,11 @@ Returns: Nothing.
 
 ### emitRecurrentGemmNode
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGemmEmissionContext) => void`
+```ts
+emitRecurrentGemmNode(
+  context: RecurrentGemmEmissionContext,
+): void
+```
 
 Emit one recurrent Gemm node with shared ONNX attributes.
 
@@ -2662,7 +3318,11 @@ Returns: Nothing.
 
 ### emitRecurrentInitializers
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentInitializerEmissionContext) => void`
+```ts
+emitRecurrentInitializers(
+  context: RecurrentInitializerEmissionContext,
+): void
+```
 
 Emit dense and recurrent initializer tensors.
 
@@ -2673,7 +3333,11 @@ Returns: Nothing.
 
 ### emitRecurrentLayer
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentLayerEmissionParams) => string`
+```ts
+emitRecurrentLayer(
+  params: RecurrentLayerEmissionParams,
+): string
+```
 
 Emit recurrent single-step layer representation.
 
@@ -2684,7 +3348,11 @@ Returns: Output tensor name.
 
 ### readNodeInternals
 
-`(node: import("src/architecture/node").default) => import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals`
+```ts
+readNodeInternals(
+  node: default,
+): NodeInternals
+```
 
 Normalize runtime node shape to recurrent-export internals contract.
 
@@ -2695,7 +3363,11 @@ Returns: Node internals used by ONNX emission helpers.
 
 ### resolvePreviousHiddenInputName
 
-`(layerIndex: number) => string`
+```ts
+resolvePreviousHiddenInputName(
+  layerIndex: number,
+): string
+```
 
 Resolve recurrent branch hidden-state input for one layer.
 
@@ -2706,7 +3378,11 @@ Returns: Hidden-state tensor input name.
 
 ### resolveRecurrentActivationType
 
-`(currentLayerNodes: import("src/architecture/node").default[]) => string`
+```ts
+resolveRecurrentActivationType(
+  currentLayerNodes: default[],
+): string
+```
 
 Resolve ONNX activation type from first node in recurrent layer.
 
@@ -2719,7 +3395,11 @@ Returns: ONNX activation op type.
 
 ### emitLayerGraph
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").LayerBuildContext) => string`
+```ts
+emitLayerGraph(
+  context: LayerBuildContext,
+): string
+```
 
 Emit one export layer graph segment and return the produced output tensor name.
 
@@ -2732,181 +3412,331 @@ Returns: Output tensor name produced by this layer.
 
 ### appendConvLayerValidationResult
 
-`(result: import("src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationResult, layerIndex: number, isConsistent: boolean) => void`
+```ts
+appendConvLayerValidationResult(
+  result: ConvSharingValidationResult,
+  layerIndex: number,
+  isConsistent: boolean,
+): void
+```
 
 Append one Conv-layer validation outcome and optional warning.
 
 ### appendConvSharingMetadata
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, result: import("src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationResult) => void`
+```ts
+appendConvSharingMetadata(
+  model: OnnxModel,
+  result: ConvSharingValidationResult,
+): void
+```
 
 Append Conv-sharing validation metadata arrays.
 
 ### appendFusedRecurrentInitializers
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, initializerNames: import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentInitializerNames, parameters: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult, gateCount: number, unitSize: number, previousSize: number) => void`
+```ts
+appendFusedRecurrentInitializers(
+  model: OnnxModel,
+  initializerNames: FusedRecurrentInitializerNames,
+  parameters: RecurrentGateParameterCollectionResult,
+  gateCount: number,
+  unitSize: number,
+  previousSize: number,
+): void
+```
 
 Append fused recurrent initializer tensors to the ONNX graph.
 
 ### appendFusedRecurrentNode
 
-`(graph: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxGraph, operatorType: "LSTM" | "GRU", previousOutputName: string, initializerNames: import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentInitializerNames, graphNames: import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentGraphNames, unitSize: number) => void`
+```ts
+appendFusedRecurrentNode(
+  graph: OnnxGraph,
+  operatorType: "LSTM" | "GRU",
+  previousOutputName: string,
+  initializerNames: FusedRecurrentInitializerNames,
+  graphNames: FusedRecurrentGraphNames,
+  unitSize: number,
+): void
+```
 
 Append fused recurrent operator node to the ONNX graph.
 
 ### appendIndexMetadata
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, key: string, layerIndex: number) => void`
+```ts
+appendIndexMetadata(
+  model: OnnxModel,
+  key: string,
+  layerIndex: number,
+): void
+```
 
 Append a unique layer index to metadata array key.
 
 ### appendMetadataProperty
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, metadataProperty: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty) => void`
+```ts
+appendMetadataProperty(
+  model: OnnxModel,
+  metadataProperty: OnnxMetadataProperty,
+): void
+```
 
 Append metadata property to model metadata_props list.
 
 ### appendRecurrentSingleStepMetadata
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, recurrentLayerIndices: number[]) => void`
+```ts
+appendRecurrentSingleStepMetadata(
+  model: OnnxModel,
+  recurrentLayerIndices: number[],
+): void
+```
 
 Append recurrent single-step metadata when recurrent layers exist.
 
 ### areWeightsWithinTolerance
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").WeightToleranceComparisonContext) => boolean`
+```ts
+areWeightsWithinTolerance(
+  context: WeightToleranceComparisonContext,
+): boolean
+```
 
 Compare two scalar weights using configured tolerance.
 
 ### asNodeInternals
 
-`(node: import("src/architecture/node").default) => import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals`
+```ts
+asNodeInternals(
+  node: default,
+): NodeInternals
+```
 
 Resolve runtime node internals in one typed helper.
 
 ### buildFusedGruExecutionContext
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").GruEmissionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentEmissionExecutionContext`
+```ts
+buildFusedGruExecutionContext(
+  context: GruEmissionContext,
+): FusedRecurrentEmissionExecutionContext
+```
 
 Build shared fused-recurrent execution context for GRU.
 
 ### buildFusedLstmExecutionContext
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").LstmEmissionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentEmissionExecutionContext`
+```ts
+buildFusedLstmExecutionContext(
+  context: LstmEmissionContext,
+): FusedRecurrentEmissionExecutionContext
+```
 
 Build shared fused-recurrent execution context for LSTM.
 
 ### buildFusedRecurrentGraphNames
 
-`(nodePrefix: string, outputSuffix: string, layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentGraphNames`
+```ts
+buildFusedRecurrentGraphNames(
+  nodePrefix: string,
+  outputSuffix: string,
+  layerIndex: number,
+): FusedRecurrentGraphNames
+```
 
 Build fused recurrent graph names for node and output.
 
 ### buildFusedRecurrentInitializerNames
 
-`(operatorType: "LSTM" | "GRU", layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentInitializerNames`
+```ts
+buildFusedRecurrentInitializerNames(
+  operatorType: "LSTM" | "GRU",
+  layerIndex: number,
+): FusedRecurrentInitializerNames
+```
 
 Build fused recurrent initializer names for the current layer.
 
 ### buildGruEmissionContext
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => import("src/architecture/network/onnx/network.onnx.utils.types").GruEmissionContext`
+```ts
+buildGruEmissionContext(
+  context: HiddenLayerHeuristicContext,
+): GruEmissionContext
+```
 
 Build GRU emission context from one hidden-layer traversal record.
 
 ### buildHiddenLayerHeuristicContext
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentHeuristicEmissionContext, layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext`
+```ts
+buildHiddenLayerHeuristicContext(
+  context: RecurrentHeuristicEmissionContext,
+  layerIndex: number,
+): HiddenLayerHeuristicContext
+```
 
 Build one hidden-layer traversal context.
 
 ### buildLstmEmissionContext
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmEmissionContext`
+```ts
+buildLstmEmissionContext(
+  context: HiddenLayerHeuristicContext,
+): LstmEmissionContext
+```
 
 Build LSTM emission context from one hidden-layer traversal record.
 
 ### buildMetadataProperty
 
-`(key: string, value: unknown) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty`
+```ts
+buildMetadataProperty(
+  key: string,
+  value: unknown,
+): OnnxMetadataProperty
+```
 
 Build a metadata key/value property with JSON string serialization.
 
 ### buildRecurrentHeuristicEmissionContext
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], previousOutputName: string) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentHeuristicEmissionContext`
+```ts
+buildRecurrentHeuristicEmissionContext(
+  model: OnnxModel,
+  layers: default[][],
+  previousOutputName: string,
+): RecurrentHeuristicEmissionContext
+```
 
 Build reusable context for recurrent heuristic traversal.
 
 ### collectConvKernelCoordinates
 
-`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxConvKernelCoordinate[]`
+```ts
+collectConvKernelCoordinates(
+  convSpec: Conv2DMapping,
+): OnnxConvKernelCoordinate[]
+```
 
 Collect kernel coordinates for one Conv kernel traversal.
 
 ### collectConvOutputCoordinates
 
-`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvOutputCoordinate[]`
+```ts
+collectConvOutputCoordinates(
+  convSpec: Conv2DMapping,
+): ConvOutputCoordinate[]
+```
 
 Collect output coordinates for full Conv traversal.
 
 ### collectGruGateNodeGroups
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").GruEmissionContext) => import("src/architecture/node").default[][]`
+```ts
+collectGruGateNodeGroups(
+  context: GruEmissionContext,
+): default[][]
+```
 
 Collect GRU gate node groups in canonical export order.
 
 ### collectHiddenLayerIndices
 
-`(layers: import("src/architecture/node").default[][]) => number[]`
+```ts
+collectHiddenLayerIndices(
+  layers: default[][],
+): number[]
+```
 
 Collect hidden-layer indices for recurrent traversal.
 
 ### collectLstmGateNodeGroups
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").LstmEmissionContext) => import("src/architecture/node").default[][]`
+```ts
+collectLstmGateNodeGroups(
+  context: LstmEmissionContext,
+): default[][]
+```
 
 Collect LSTM gate node groups in canonical export order.
 
 ### collectRecurrentGateBlockParameters
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateBlockCollectionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult`
+```ts
+collectRecurrentGateBlockParameters(
+  context: RecurrentGateBlockCollectionContext,
+): RecurrentGateParameterCollectionResult
+```
 
 Collect flattened parameter vectors for one gate node block.
 
 ### collectRecurrentGateRow
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRowCollectionContext) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRow`
+```ts
+collectRecurrentGateRow(
+  context: RecurrentGateRowCollectionContext,
+): RecurrentGateRow
+```
 
 Collect one recurrent gate row payload (inputs, recurrent slice, and bias).
 
 ### collectRepresentativeKernelForChannel
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvRepresentativeKernelContext) => number[]`
+```ts
+collectRepresentativeKernelForChannel(
+  context: ConvRepresentativeKernelContext,
+): number[]
+```
 
 Collect one representative kernel by reading the first output position for a channel.
 
 ### collectRepresentativeKernels
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext) => number[][]`
+```ts
+collectRepresentativeKernels(
+  context: ConvLayerPairContext,
+): number[][]
+```
 
 Collect representative kernels for each output channel.
 
 ### collectRepresentativeKernelWeight
 
-`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, previousLayerNodes: import("src/architecture/node").default[], representativeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, kernelCoordinate: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxConvKernelCoordinate) => number`
+```ts
+collectRepresentativeKernelWeight(
+  convSpec: Conv2DMapping,
+  previousLayerNodes: default[],
+  representativeInternal: NodeInternals,
+  kernelCoordinate: OnnxConvKernelCoordinate,
+): number
+```
 
 Collect representative kernel value using top-left receptive field indexing.
 
 ### emitFallbackRecurrentPatternMetadata
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => void`
+```ts
+emitFallbackRecurrentPatternMetadata(
+  context: HiddenLayerHeuristicContext,
+): void
+```
 
 Emit fallback metadata for recurrent-size ambiguity.
 
 ### emitFusedRecurrentHeuristics
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], allowRecurrent: boolean | undefined, previousOutputName: string) => void`
+```ts
+emitFusedRecurrentHeuristics(
+  model: OnnxModel,
+  layers: default[][],
+  allowRecurrent: boolean | undefined,
+  previousOutputName: string,
+): void
+```
 
 Emit heuristic fused recurrent operators (LSTM/GRU) when recurrent export is enabled.
 
@@ -2920,19 +3750,36 @@ Returns: Nothing.
 
 ### emitFusedRecurrentLayer
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").FusedRecurrentEmissionExecutionContext) => void`
+```ts
+emitFusedRecurrentLayer(
+  context: FusedRecurrentEmissionExecutionContext,
+): void
+```
 
 Emit shared fused recurrent payload (initializers, node, metadata).
 
 ### ensureMetadataProps
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]`
+```ts
+ensureMetadataProps(
+  model: OnnxModel,
+): OnnxMetadataProperty[]
+```
 
 Ensure metadata_props array exists and return it.
 
 ### finalizeExportMetadata
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions, includeMetadata: boolean, hiddenSizesMetadata: number[], recurrentLayerIndices: number[]) => void`
+```ts
+finalizeExportMetadata(
+  model: OnnxModel,
+  layers: default[][],
+  options: OnnxExportOptions,
+  includeMetadata: boolean,
+  hiddenSizesMetadata: number[],
+  recurrentLayerIndices: number[],
+): void
+```
 
 Finalize export metadata and optional conv-sharing validation.
 
@@ -2948,145 +3795,258 @@ Returns: Nothing.
 
 ### findMetadataPropertyIndex
 
-`(metadataProperties: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], key: string) => number`
+```ts
+findMetadataPropertyIndex(
+  metadataProperties: OnnxMetadataProperty[],
+  key: string,
+): number
+```
 
 Find metadata property index by key.
 
 ### foldRecurrentGateBlocks
 
-`(gateParameterBlocks: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult[]) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult`
+```ts
+foldRecurrentGateBlocks(
+  gateParameterBlocks: RecurrentGateParameterCollectionResult[],
+): RecurrentGateParameterCollectionResult
+```
 
 Fold gate blocks into a single fused parameter payload.
 
 ### foldRecurrentGateRows
 
-`(gateRows: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRow[]) => import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateParameterCollectionResult`
+```ts
+foldRecurrentGateRows(
+  gateRows: RecurrentGateRow[],
+): RecurrentGateParameterCollectionResult
+```
 
 Fold recurrent gate rows into flattened ONNX initializer vectors.
 
 ### isConvLayerPairConsistent
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext) => boolean`
+```ts
+isConvLayerPairConsistent(
+  context: ConvLayerPairContext,
+): boolean
+```
 
 Validate one Conv layer pair against representative kernel sharing.
 
 ### isEligibleForGruHeuristic
 
-`(currentSize: number) => boolean`
+```ts
+isEligibleForGruHeuristic(
+  currentSize: number,
+): boolean
+```
 
 Check GRU heuristic eligibility by size and gate divisibility.
 
 ### isEligibleForLstmHeuristic
 
-`(currentSize: number) => boolean`
+```ts
+isEligibleForLstmHeuristic(
+  currentSize: number,
+): boolean
+```
 
 Check LSTM heuristic eligibility by size and gate divisibility.
 
 ### isFallbackRecurrentPatternSize
 
-`(currentSize: number) => boolean`
+```ts
+isFallbackRecurrentPatternSize(
+  currentSize: number,
+): boolean
+```
 
 Check whether hidden size should emit recurrent fallback metadata.
 
 ### isInputPositionInsideBounds
 
-`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, inputRow: number, inputColumn: number) => boolean`
+```ts
+isInputPositionInsideBounds(
+  convSpec: Conv2DMapping,
+  inputRow: number,
+  inputColumn: number,
+): boolean
+```
 
 Check whether input row/column falls inside Conv input bounds.
 
 ### isKernelCoordinateConsistent
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvKernelConsistencyContext) => boolean`
+```ts
+isKernelCoordinateConsistent(
+  context: ConvKernelConsistencyContext,
+): boolean
+```
 
 Validate one kernel coordinate against its representative channel value.
 
 ### isOutputCoordinateConsistent
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext, outputCoordinate: import("src/architecture/network/onnx/network.onnx.utils.types").ConvOutputCoordinate, representativeKernels: number[][], tolerance: number) => boolean`
+```ts
+isOutputCoordinateConsistent(
+  context: ConvLayerPairContext,
+  outputCoordinate: ConvOutputCoordinate,
+  representativeKernels: number[][],
+  tolerance: number,
+): boolean
+```
 
 Validate one output coordinate against channel representative kernel weights.
 
 ### parseMetadataLayerIndices
 
-`(metadataValue: string) => number[]`
+```ts
+parseMetadataLayerIndices(
+  metadataValue: string,
+): number[]
+```
 
 Parse metadata JSON value into a numeric layer-index array.
 
 ### resolveConvLayerPairContext
 
-`(layers: import("src/architecture/node").default[][], layerIndex: number, convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext | undefined`
+```ts
+resolveConvLayerPairContext(
+  layers: default[][],
+  layerIndex: number,
+  convSpec: Conv2DMapping,
+): ConvLayerPairContext | undefined
+```
 
 Resolve one Conv mapping layer pair or return undefined for invalid layout.
 
 ### resolveGruPreviousOutputName
 
-`(layerIndex: number) => string`
+```ts
+resolveGruPreviousOutputName(
+  layerIndex: number,
+): string
+```
 
 Resolve previous output naming semantics for GRU heuristic emission.
 
 ### resolveIncomingWeight
 
-`(targetNodeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, sourceNode: import("src/architecture/node").default) => number`
+```ts
+resolveIncomingWeight(
+  targetNodeInternal: NodeInternals,
+  sourceNode: default,
+): number
+```
 
 Resolve incoming connection weight from a specific source node.
 
 ### resolveInputPosition
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvKernelConsistencyContext) => { inputRow: number; inputColumn: number; }`
+```ts
+resolveInputPosition(
+  context: ConvKernelConsistencyContext,
+): { inputRow: number; inputColumn: number; }
+```
 
 Resolve input row/column projected by output and kernel coordinates.
 
 ### resolveNeuronInternalAtOutputCoordinate
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvLayerPairContext, outputCoordinate: import("src/architecture/network/onnx/network.onnx.utils.types").ConvOutputCoordinate) => import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals | undefined`
+```ts
+resolveNeuronInternalAtOutputCoordinate(
+  context: ConvLayerPairContext,
+  outputCoordinate: ConvOutputCoordinate,
+): NodeInternals | undefined
+```
 
 Resolve runtime internals for output coordinate neuron, if present.
 
 ### resolveRecurrentRowWeight
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentGateRowCollectionContext, columnIndex: number) => number`
+```ts
+resolveRecurrentRowWeight(
+  context: RecurrentGateRowCollectionContext,
+  columnIndex: number,
+): number
+```
 
 Resolve one recurrent row value at the requested column.
 
 ### resolveSelfConnectionWeight
 
-`(targetNodeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals) => number`
+```ts
+resolveSelfConnectionWeight(
+  targetNodeInternal: NodeInternals,
+): number
+```
 
 Resolve self-connection weight for diagonal recurrent matrix entries.
 
 ### resolveSourceNodeAtInputPosition
 
-`(convSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping, previousLayerNodes: import("src/architecture/node").default[], inChannelIndex: number, inputRow: number, inputColumn: number) => import("src/architecture/node").default | undefined`
+```ts
+resolveSourceNodeAtInputPosition(
+  convSpec: Conv2DMapping,
+  previousLayerNodes: default[],
+  inChannelIndex: number,
+  inputRow: number,
+  inputColumn: number,
+): default | undefined
+```
 
 Resolve source node by Conv input position coordinates.
 
 ### shouldValidateConvSharing
 
-`(options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => boolean`
+```ts
+shouldValidateConvSharing(
+  options: OnnxExportOptions,
+): boolean
+```
 
 Determine whether Conv2D sharing validation is enabled and configured.
 
 ### tryEmitFusedGru
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => void`
+```ts
+tryEmitFusedGru(
+  context: HiddenLayerHeuristicContext,
+): void
+```
 
 Try emitting heuristic fused GRU node and metadata.
 
 ### tryEmitFusedLstm
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").HiddenLayerHeuristicContext) => void`
+```ts
+tryEmitFusedLstm(
+  context: HiddenLayerHeuristicContext,
+): void
+```
 
 Try emitting heuristic fused LSTM node and metadata.
 
 ### upsertLayerIndexMetadataValue
 
-`(metadataProperties: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], metadataIndex: number, layerIndex: number) => void`
+```ts
+upsertLayerIndexMetadataValue(
+  metadataProperties: OnnxMetadataProperty[],
+  metadataIndex: number,
+  layerIndex: number,
+): void
+```
 
 Upsert one layer index into metadata array-like JSON value.
 
 ### validateConvSharingAcrossMappings
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationContext) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvSharingValidationResult`
+```ts
+validateConvSharingAcrossMappings(
+  context: ConvSharingValidationContext,
+): ConvSharingValidationResult
+```
 
 Validate Conv2D sharing across all declared Conv mappings.
 
@@ -3094,7 +4054,13 @@ Validate Conv2D sharing across all declared Conv mappings.
 
 ### assignActivationFunctions
 
-`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[]) => void`
+```ts
+assignActivationFunctions(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+): void
+```
 
 Assign node activation functions from ONNX activation nodes.
 
@@ -3109,7 +4075,13 @@ Returns: Nothing.
 
 ### appendIndexedMetadata
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, key: string, layerIndex: number) => void`
+```ts
+appendIndexedMetadata(
+  model: OnnxModel,
+  key: string,
+  layerIndex: number,
+): void
+```
 
 Append an integer index to JSON-array metadata key.
 
@@ -3122,7 +4094,13 @@ Returns: Nothing.
 
 ### appendMetadataSpec
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, key: string, spec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping | import("src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => void`
+```ts
+appendMetadataSpec(
+  model: OnnxModel,
+  key: string,
+  spec: Conv2DMapping | Pool2DMapping,
+): void
+```
 
 Append a JSON object to JSON-array metadata key.
 
@@ -3135,7 +4113,11 @@ Returns: Nothing.
 
 ### appendPoolingMetadata
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").PoolingEmissionContext) => void`
+```ts
+appendPoolingMetadata(
+  context: PoolingEmissionContext,
+): void
+```
 
 Append pooling metadata for one emitted pooling layer.
 
@@ -3146,7 +4128,11 @@ Returns: Nothing.
 
 ### asNodeInternals
 
-`(node: import("src/architecture/node").default) => import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals`
+```ts
+asNodeInternals(
+  node: default,
+): NodeInternals
+```
 
 Normalize a public node instance into ONNX export internals.
 
@@ -3157,7 +4143,12 @@ Returns: Internal runtime-facing node representation.
 
 ### buildDenseWeightsAndBiases
 
-`(previousLayerNodes: import("src/architecture/node").default[], currentLayerNodes: import("src/architecture/node").default[]) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightBuildResult`
+```ts
+buildDenseWeightsAndBiases(
+  previousLayerNodes: default[],
+  currentLayerNodes: default[],
+): DenseWeightBuildResult
+```
 
 Build dense-layer weight matrix and bias vector.
 
@@ -3169,7 +4160,11 @@ Returns: Flattened row-major weight matrix and bias vector.
 
 ### buildDiagonalRecurrentWeights
 
-`(currentLayerNodes: import("src/architecture/node").default[]) => number[]`
+```ts
+buildDiagonalRecurrentWeights(
+  currentLayerNodes: default[],
+): number[]
+```
 
 Build a diagonal recurrent matrix from self-connections.
 
@@ -3180,7 +4175,12 @@ Returns: Flattened row-major recurrent matrix.
 
 ### buildIndexedMetadataProperty
 
-`(key: string, layerIndex: number) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty`
+```ts
+buildIndexedMetadataProperty(
+  key: string,
+  layerIndex: number,
+): OnnxMetadataProperty
+```
 
 Build a new index-array metadata property.
 
@@ -3192,7 +4192,12 @@ Returns: Metadata property.
 
 ### buildSpecMetadataProperty
 
-`(key: string, spec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping | import("src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty`
+```ts
+buildSpecMetadataProperty(
+  key: string,
+  spec: Conv2DMapping | Pool2DMapping,
+): OnnxMetadataProperty
+```
 
 Build a new spec-array metadata property.
 
@@ -3204,7 +4209,11 @@ Returns: Metadata property.
 
 ### collectDenseRows
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightBuildContext) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightRow[]`
+```ts
+collectDenseRows(
+  context: DenseWeightBuildContext,
+): DenseWeightRow[]
+```
 
 Collect dense rows for each target node in current layer.
 
@@ -3215,7 +4224,11 @@ Returns: Dense rows containing per-target weights and bias.
 
 ### collectDenseRowWeights
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightRowCollectionContext) => number[]`
+```ts
+collectDenseRowWeights(
+  context: DenseWeightRowCollectionContext,
+): number[]
+```
 
 Collect source-to-target weights for one dense row.
 
@@ -3226,7 +4239,11 @@ Returns: Row weights in source-node order.
 
 ### collectPoolingAttributes
 
-`(poolSpec: import("src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => import("src/architecture/network/onnx/network.onnx.utils.types").PoolingAttributes`
+```ts
+collectPoolingAttributes(
+  poolSpec: Pool2DMapping,
+): PoolingAttributes
+```
 
 Collect ONNX pooling attributes from one pooling spec.
 
@@ -3237,7 +4254,11 @@ Returns: Pooling attributes for ONNX node payload.
 
 ### collectRecurrentRow
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentRowCollectionContext) => number[]`
+```ts
+collectRecurrentRow(
+  context: RecurrentRowCollectionContext,
+): number[]
+```
 
 Collect one recurrent matrix row.
 
@@ -3248,7 +4269,11 @@ Returns: Recurrent row values.
 
 ### collectRecurrentRows
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").DiagonalRecurrentBuildContext) => number[][]`
+```ts
+collectRecurrentRows(
+  context: DiagonalRecurrentBuildContext,
+): number[][]
+```
 
 Collect recurrent matrix rows for one layer.
 
@@ -3259,7 +4284,11 @@ Returns: Recurrent row collection.
 
 ### emitOptionalFlattenAfterPooling
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").FlattenAfterPoolingContext) => string`
+```ts
+emitOptionalFlattenAfterPooling(
+  context: FlattenAfterPoolingContext,
+): string
+```
 
 Conditionally emit flatten node after pooling.
 
@@ -3270,7 +4299,11 @@ Returns: Output tensor name after optional flatten.
 
 ### emitOptionalPoolingAndFlatten
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OptionalPoolingAndFlattenParams) => string`
+```ts
+emitOptionalPoolingAndFlatten(
+  params: OptionalPoolingAndFlattenParams,
+): string
+```
 
 Emit optional pooling and flatten nodes after a layer output.
 
@@ -3281,7 +4314,11 @@ Returns: Final output tensor name after optional pooling/flatten.
 
 ### emitPoolingNode
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").PoolingEmissionContext) => string`
+```ts
+emitPoolingNode(
+  context: PoolingEmissionContext,
+): string
+```
 
 Emit one pooling node and return its output tensor name.
 
@@ -3292,7 +4329,11 @@ Returns: Pooling output tensor name.
 
 ### ensureMetadataRegistry
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]`
+```ts
+ensureMetadataRegistry(
+  model: OnnxModel,
+): OnnxMetadataProperty[]
+```
 
 Ensure model metadata registry exists.
 
@@ -3303,7 +4344,12 @@ Returns: Mutable metadata registry.
 
 ### findMetadataProperty
 
-`(metadataRegistry: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], key: string) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty | undefined`
+```ts
+findMetadataProperty(
+  metadataRegistry: OnnxMetadataProperty[],
+  key: string,
+): OnnxMetadataProperty | undefined
+```
 
 Find a metadata property by key.
 
@@ -3315,7 +4361,11 @@ Returns: Matching metadata property if present.
 
 ### foldDenseRowsToInitializers
 
-`(denseRows: import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightRow[]) => import("src/architecture/network/onnx/network.onnx.utils.types").DenseWeightBuildResult`
+```ts
+foldDenseRowsToInitializers(
+  denseRows: DenseWeightRow[],
+): DenseWeightBuildResult
+```
 
 Fold dense rows into flattened ONNX initializer arrays.
 
@@ -3326,7 +4376,11 @@ Returns: Flattened dense initializer result.
 
 ### parseMetadataArray
 
-`(metadataValue: string) => ItemType[] | undefined`
+```ts
+parseMetadataArray(
+  metadataValue: string,
+): ItemType[] | undefined
+```
 
 Parse a metadata JSON array value safely.
 
@@ -3337,7 +4391,12 @@ Returns: Parsed array when valid, otherwise undefined.
 
 ### resolveDiagonalRecurrentWeight
 
-`(context: import("src/architecture/network/onnx/network.onnx.utils.types").RecurrentRowCollectionContext, columnIndex: number) => number`
+```ts
+resolveDiagonalRecurrentWeight(
+  context: RecurrentRowCollectionContext,
+  columnIndex: number,
+): number
+```
 
 Resolve recurrent weight value for one matrix coordinate.
 
@@ -3349,7 +4408,12 @@ Returns: Recurrent weight for diagonal entries, otherwise zero.
 
 ### resolveInboundWeight
 
-`(targetNodeInternal: import("src/architecture/network/onnx/network.onnx.utils.types").NodeInternals, sourceNode: import("src/architecture/node").default) => number`
+```ts
+resolveInboundWeight(
+  targetNodeInternal: NodeInternals,
+  sourceNode: default,
+): number
+```
 
 Resolve source-to-target inbound connection weight.
 
@@ -3361,7 +4425,12 @@ Returns: Inbound weight or zero for disconnected edges.
 
 ### serializeIndexedMetadataValue
 
-`(currentValue: string, layerIndex: number) => string`
+```ts
+serializeIndexedMetadataValue(
+  currentValue: string,
+  layerIndex: number,
+): string
+```
 
 Serialize index metadata after appending one unique index.
 
@@ -3373,7 +4442,12 @@ Returns: Serialized JSON value.
 
 ### serializeSpecMetadataValue
 
-`(currentValue: string, spec: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping | import("src/architecture/network/onnx/network.onnx.utils.types").Pool2DMapping) => string`
+```ts
+serializeSpecMetadataValue(
+  currentValue: string,
+  spec: Conv2DMapping | Pool2DMapping,
+): string
+```
 
 Serialize spec metadata after appending one spec object.
 
@@ -3385,7 +4459,11 @@ Returns: Serialized JSON value.
 
 ### toPoolingEmissionContext
 
-`(params: import("src/architecture/network/onnx/network.onnx.utils.types").OptionalPoolingAndFlattenParams) => import("src/architecture/network/onnx/network.onnx.utils.types").PoolingEmissionContext`
+```ts
+toPoolingEmissionContext(
+  params: OptionalPoolingAndFlattenParams,
+): PoolingEmissionContext
+```
 
 Resolve pooling emission context from optional pooling parameters.
 
@@ -3398,7 +4476,13 @@ Returns: Pooling emission context.
 
 ### appendConvInferenceMetadata
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, layers: import("src/architecture/node").default[][], options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => void`
+```ts
+appendConvInferenceMetadata(
+  model: OnnxModel,
+  layers: default[][],
+  options: OnnxExportOptions,
+): void
+```
 
 Append heuristic conv inference metadata when requested.
 
@@ -3411,7 +4495,12 @@ Returns: Nothing.
 
 ### appendLstmPatternStubMetadata
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, lstmPatternStubs: import("src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]) => void`
+```ts
+appendLstmPatternStubMetadata(
+  model: OnnxModel,
+  lstmPatternStubs: LstmPatternStub[],
+): void
+```
 
 Append LSTM pattern stub metadata.
 
@@ -3423,7 +4512,12 @@ Returns: Nothing.
 
 ### appendMetadataProperties
 
-`(model: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, metadataProperties: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
+```ts
+appendMetadataProperties(
+  model: OnnxModel,
+  metadataProperties: OnnxMetadataProperty[],
+): void
+```
 
 Append metadata properties in a single, normalized path.
 
@@ -3435,7 +4529,11 @@ Returns: Nothing.
 
 ### applyExportNodeIndexAssignments
 
-`(assignmentContexts: import("src/architecture/network/onnx/network.onnx.utils.types").ExportNodeIndexAssignmentContext[]) => void`
+```ts
+applyExportNodeIndexAssignments(
+  assignmentContexts: ExportNodeIndexAssignmentContext[],
+): void
+```
 
 Apply prepared node/index assignment contexts.
 
@@ -3446,7 +4544,11 @@ Returns: Nothing.
 
 ### applySingleExportNodeIndexAssignment
 
-`(assignmentContext: import("src/architecture/network/onnx/network.onnx.utils.types").ExportNodeIndexAssignmentContext) => void`
+```ts
+applySingleExportNodeIndexAssignment(
+  assignmentContext: ExportNodeIndexAssignmentContext,
+): void
+```
 
 Apply one export index assignment.
 
@@ -3457,7 +4559,11 @@ Returns: Nothing.
 
 ### assignExportNodeIndices
 
-`(network: import("src/architecture/network").default) => void`
+```ts
+assignExportNodeIndices(
+  network: default,
+): void
+```
 
 Assign stable index values to nodes for export diagnostics.
 
@@ -3468,7 +4574,11 @@ Returns: Nothing.
 
 ### collectInferredConvMetadata
 
-`(context: { layers: import("src/architecture/node").default[][]; declaredMappings: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping[] | undefined; }) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceResult`
+```ts
+collectInferredConvMetadata(
+  context: { layers: default[][]; declaredMappings: Conv2DMapping[] | undefined; },
+): ConvInferenceResult
+```
 
 Collect inferred Conv metadata from hidden-layer traversals.
 
@@ -3479,7 +4589,12 @@ Returns: Inferred Conv metadata result.
 
 ### collectLstmPatternStubs
 
-`(layers: import("src/architecture/node").default[][], allowRecurrent: boolean | undefined) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]`
+```ts
+collectLstmPatternStubs(
+  layers: default[][],
+  allowRecurrent: boolean | undefined,
+): LstmPatternStub[]
+```
 
 Collect heuristic LSTM grouping stubs from hidden layers.
 
@@ -3491,7 +4606,11 @@ Returns: Candidate LSTM pattern stubs.
 
 ### collectLstmPatternStubsFromLayers
 
-`(layers: import("src/architecture/node").default[][]) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]`
+```ts
+collectLstmPatternStubsFromLayers(
+  layers: default[][],
+): LstmPatternStub[]
+```
 
 Collect LSTM pattern stubs from hidden layers.
 
@@ -3502,7 +4621,11 @@ Returns: LSTM pattern stubs.
 
 ### createConvInferenceEvaluationContext
 
-`(traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceEvaluationContext`
+```ts
+createConvInferenceEvaluationContext(
+  traversalContext: ConvInferenceTraversalContext,
+): ConvInferenceEvaluationContext
+```
 
 Create width/square-evaluation context for Conv inference.
 
@@ -3513,7 +4636,11 @@ Returns: Conv evaluation context.
 
 ### createConvTraversalContexts
 
-`(context: { layers: import("src/architecture/node").default[][]; declaredMappings: import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping[] | undefined; }) => import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext[]`
+```ts
+createConvTraversalContexts(
+  context: { layers: default[][]; declaredMappings: Conv2DMapping[] | undefined; },
+): ConvInferenceTraversalContext[]
+```
 
 Create Conv traversal contexts for hidden layers.
 
@@ -3524,7 +4651,11 @@ Returns: Conv traversal contexts.
 
 ### createExportNodeIndexAssignmentContexts
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/onnx/network.onnx.utils.types").ExportNodeIndexAssignmentContext[]`
+```ts
+createExportNodeIndexAssignmentContexts(
+  network: default,
+): ExportNodeIndexAssignmentContext[]
+```
 
 Create node/index assignment contexts for export diagnostics.
 
@@ -3535,7 +4666,11 @@ Returns: Assignment contexts.
 
 ### createHiddenLayerTraversalContexts
 
-`(layers: import("src/architecture/node").default[][]) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmLayerTraversalContext[]`
+```ts
+createHiddenLayerTraversalContexts(
+  layers: default[][],
+): LstmLayerTraversalContext[]
+```
 
 Create traversal contexts for hidden layers only.
 
@@ -3546,7 +4681,11 @@ Returns: Hidden layer contexts.
 
 ### createLstmCandidateContext
 
-`(hiddenLayerContext: import("src/architecture/network/onnx/network.onnx.utils.types").LstmLayerTraversalContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmCandidateContext`
+```ts
+createLstmCandidateContext(
+  hiddenLayerContext: LstmLayerTraversalContext,
+): LstmCandidateContext
+```
 
 Build LSTM candidate context for one hidden layer.
 
@@ -3557,7 +4696,11 @@ Returns: LSTM candidate context.
 
 ### hasInferredConvMetadata
 
-`(inferenceResult: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceResult) => boolean`
+```ts
+hasInferredConvMetadata(
+  inferenceResult: ConvInferenceResult,
+): boolean
+```
 
 Check whether inferred Conv metadata exists.
 
@@ -3568,7 +4711,11 @@ Returns: True when inferred metadata exists.
 
 ### hasRequiredSelfConnectionCount
 
-`(nodeItem: import("src/architecture/node").default) => boolean`
+```ts
+hasRequiredSelfConnectionCount(
+  nodeItem: default,
+): boolean
+```
 
 Check whether one node has the required self-connection count.
 
@@ -3579,7 +4726,11 @@ Returns: True when self-connection count matches requirement.
 
 ### isDeclaredConvLayer
 
-`(traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext) => boolean`
+```ts
+isDeclaredConvLayer(
+  traversalContext: ConvInferenceTraversalContext,
+): boolean
+```
 
 Check whether a traversal layer already has declared Conv mapping.
 
@@ -3590,7 +4741,11 @@ Returns: True when mapping is already declared.
 
 ### isInferredConvSpec
 
-`(specification: (import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined) => boolean`
+```ts
+isInferredConvSpec(
+  specification: (Conv2DMapping & { note?: string | undefined; }) | undefined,
+): boolean
+```
 
 Type guard for inferred Conv specifications.
 
@@ -3601,7 +4756,11 @@ Returns: True when specification is defined.
 
 ### isValidLstmCandidateContext
 
-`(candidateContext: import("src/architecture/network/onnx/network.onnx.utils.types").LstmCandidateContext) => boolean`
+```ts
+isValidLstmCandidateContext(
+  candidateContext: LstmCandidateContext,
+): boolean
+```
 
 Determine whether a candidate context satisfies heuristic LSTM conditions.
 
@@ -3612,7 +4771,11 @@ Returns: True when the candidate is a valid LSTM stub.
 
 ### mapLstmCandidateToStub
 
-`(candidateContext: import("src/architecture/network/onnx/network.onnx.utils.types").LstmCandidateContext) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub`
+```ts
+mapLstmCandidateToStub(
+  candidateContext: LstmCandidateContext,
+): LstmPatternStub
+```
 
 Map a valid candidate context to metadata stub.
 
@@ -3623,7 +4786,11 @@ Returns: LSTM pattern stub.
 
 ### resolveConvInferenceForLayer
 
-`(traversalContext: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceTraversalContext) => (import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined`
+```ts
+resolveConvInferenceForLayer(
+  traversalContext: ConvInferenceTraversalContext,
+): (Conv2DMapping & { note?: string | undefined; }) | undefined
+```
 
 Resolve inferred Conv specification for one hidden layer.
 
@@ -3634,7 +4801,11 @@ Returns: Inferred Conv specification when matched.
 
 ### resolveConvSpecForKernel
 
-`(kernelContext: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceKernelEvaluationContext) => (import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined`
+```ts
+resolveConvSpecForKernel(
+  kernelContext: ConvInferenceKernelEvaluationContext,
+): (Conv2DMapping & { note?: string | undefined; }) | undefined
+```
 
 Resolve Conv specification for one kernel candidate.
 
@@ -3645,7 +4816,11 @@ Returns: Inferred Conv specification when matched.
 
 ### resolveConvSpecFromKernelCandidates
 
-`(evaluationContext: import("src/architecture/network/onnx/network.onnx.utils.types").ConvInferenceEvaluationContext) => (import("src/architecture/network/onnx/network.onnx.utils.types").Conv2DMapping & { note?: string | undefined; }) | undefined`
+```ts
+resolveConvSpecFromKernelCandidates(
+  evaluationContext: ConvInferenceEvaluationContext,
+): (Conv2DMapping & { note?: string | undefined; }) | undefined
+```
 
 Resolve Conv specification using ordered kernel candidates.
 
@@ -3656,7 +4831,11 @@ Returns: Inferred Conv specification when matched.
 
 ### safelyCollectLstmPatternStubs
 
-`(layers: import("src/architecture/node").default[][]) => import("src/architecture/network/onnx/network.onnx.utils.types").LstmPatternStub[]`
+```ts
+safelyCollectLstmPatternStubs(
+  layers: default[][],
+): LstmPatternStub[]
+```
 
 Collect LSTM pattern stubs with heuristic error isolation.
 
@@ -3669,7 +4848,11 @@ Returns: LSTM pattern stubs.
 
 ### applyLayerSelfConnections
 
-`(layerConnectionContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerConnectionContext) => void`
+```ts
+applyLayerSelfConnections(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): void
+```
 
 Apply one hidden layer diagonal recurrent self-weights.
 
@@ -3680,7 +4863,12 @@ Returns: Nothing.
 
 ### attachOnnxPoolingMetadata
 
-`(network: import("src/architecture/network").default, metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
+```ts
+attachOnnxPoolingMetadata(
+  network: default,
+  metadata: OnnxMetadataProperty[],
+): void
+```
 
 Attach optional pooling metadata from ONNX model to network instance.
 
@@ -3692,7 +4880,12 @@ Returns: Nothing.
 
 ### attachParsedPoolingMetadata
 
-`(network: import("src/architecture/network").default, poolingMetadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPoolingMetadata) => void`
+```ts
+attachParsedPoolingMetadata(
+  network: default,
+  poolingMetadata: OnnxImportPoolingMetadata,
+): void
+```
 
 Attach parsed pooling metadata to imported network instance.
 
@@ -3704,7 +4897,11 @@ Returns: Nothing.
 
 ### buildArchitectureContext
 
-`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportArchitectureContext`
+```ts
+buildArchitectureContext(
+  onnx: OnnxModel,
+): OnnxImportArchitectureContext
+```
 
 Build architecture extraction context from ONNX graph state.
 
@@ -3715,7 +4912,11 @@ Returns: Normalized architecture extraction context.
 
 ### buildHiddenLayerSpans
 
-`(hiddenLayerSizes: number[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportHiddenLayerSpan[]`
+```ts
+buildHiddenLayerSpans(
+  hiddenLayerSizes: number[],
+): OnnxImportHiddenLayerSpan[]
+```
 
 Build hidden-layer spans with one-based layer numbering and global offsets.
 
@@ -3726,7 +4927,12 @@ Returns: Hidden-layer span payload list.
 
 ### collectDiagonalRecurrentWeights
 
-`(recurrentTensorWeights: number[], hiddenLayerSize: number) => number[]`
+```ts
+collectDiagonalRecurrentWeights(
+  recurrentTensorWeights: number[],
+  hiddenLayerSize: number,
+): number[]
+```
 
 Collect diagonal recurrent weights from flattened layer tensor data.
 
@@ -3738,7 +4944,12 @@ Returns: Diagonal recurrent self-weights.
 
 ### collectNodesByType
 
-`(nodes: import("src/architecture/node").default[], nodeType: "input" | "output" | "hidden") => import("src/architecture/node").default[]`
+```ts
+collectNodesByType(
+  nodes: default[],
+  nodeType: "input" | "output" | "hidden",
+): default[]
+```
 
 Collect nodes matching one runtime node-type discriminator.
 
@@ -3750,7 +4961,11 @@ Returns: Filtered node list.
 
 ### collectPerceptronBoundaryNodes
 
-`(nodes: import("src/architecture/node").default[]) => import("src/architecture/node").default[]`
+```ts
+collectPerceptronBoundaryNodes(
+  nodes: default[],
+): default[]
+```
 
 Collect input and output boundary nodes for perceptron imports.
 
@@ -3761,7 +4976,11 @@ Returns: Input/output-only node list.
 
 ### collectRecurrentLayerSpans
 
-`(restorationContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportRecurrentRestorationContext) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportHiddenLayerSpan[]`
+```ts
+collectRecurrentLayerSpans(
+  restorationContext: OnnxImportRecurrentRestorationContext,
+): OnnxImportHiddenLayerSpan[]
+```
 
 Resolve recurrent-target hidden-layer spans from metadata + hidden sizes.
 
@@ -3772,7 +4991,11 @@ Returns: Hidden-layer spans requiring recurrent restoration.
 
 ### extractOnnxArchitecture
 
-`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportArchitectureResult`
+```ts
+extractOnnxArchitecture(
+  onnx: OnnxModel,
+): OnnxImportArchitectureResult
+```
 
 Extract input/output counts and hidden layer sizes from ONNX model.
 
@@ -3783,7 +5006,12 @@ Returns: Parsed architecture dimensions.
 
 ### findMetadataProperty
 
-`(metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[], metadataKey: string) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty | undefined`
+```ts
+findMetadataProperty(
+  metadata: OnnxMetadataProperty[],
+  metadataKey: string,
+): OnnxMetadataProperty | undefined
+```
 
 Find one ONNX metadata property by key.
 
@@ -3795,7 +5023,11 @@ Returns: Matching metadata property when present.
 
 ### findRecurrentInitializer
 
-`(layerConnectionContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerConnectionContext) => { name: string; float_data: number[]; } | undefined`
+```ts
+findRecurrentInitializer(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): { name: string; float_data: number[]; } | undefined
+```
 
 Resolve recurrent initializer tensor for one hidden-layer span.
 
@@ -3806,7 +5038,11 @@ Returns: Recurrent initializer tensor when available.
 
 ### isSingleLayerPerceptronImport
 
-`(hiddenLayerSizes: number[]) => boolean`
+```ts
+isSingleLayerPerceptronImport(
+  hiddenLayerSizes: number[],
+): boolean
+```
 
 Determine whether import shape corresponds to a single-layer perceptron.
 
@@ -3817,7 +5053,11 @@ Returns: True when no hidden layers exist.
 
 ### normalizeRecurrentLayerIndices
 
-`(parsedMetadataValue: string | number | boolean | number[] | Record<string, number> | null) => number[]`
+```ts
+normalizeRecurrentLayerIndices(
+  parsedMetadataValue: string | number | boolean | number[] | Record<string, number> | null,
+): number[]
+```
 
 Normalize recurrent layer indices parsed from metadata JSON.
 
@@ -3828,7 +5068,11 @@ Returns: Recurrent layer indices.
 
 ### parsePoolingMetadata
 
-`(metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportPoolingMetadata | null`
+```ts
+parsePoolingMetadata(
+  metadata: OnnxMetadataProperty[],
+): OnnxImportPoolingMetadata | null
+```
 
 Parse pooling metadata payload from ONNX metadata.
 
@@ -3839,7 +5083,11 @@ Returns: Parsed pooling metadata payload.
 
 ### parseRecurrentLayerIndices
 
-`(rawMetadataValue: string) => number[]`
+```ts
+parseRecurrentLayerIndices(
+  rawMetadataValue: string,
+): number[]
+```
 
 Parse recurrent layer indices metadata.
 
@@ -3850,7 +5098,12 @@ Returns: Normalized recurrent layer indices.
 
 ### pruneSingleLayerHiddenPlaceholders
 
-`(network: import("src/architecture/network").default, hiddenLayerSizes: number[]) => void`
+```ts
+pruneSingleLayerHiddenPlaceholders(
+  network: default,
+  hiddenLayerSizes: number[],
+): void
+```
 
 Remove placeholder hidden nodes for single-layer perceptron imports.
 
@@ -3862,7 +5115,11 @@ Returns: Nothing.
 
 ### readLastDimensionValue
 
-`(dimensions: { dim_value?: number | undefined; }[]) => number`
+```ts
+readLastDimensionValue(
+  dimensions: { dim_value?: number | undefined; }[],
+): number
+```
 
 Read the terminal ONNX shape dimension value from one shape array.
 
@@ -3873,7 +5130,15 @@ Returns: Terminal `dim_value` payload.
 
 ### reconstructFusedRecurrentLayers
 
-`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], layerFactory: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxLayerFactory, metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
+```ts
+reconstructFusedRecurrentLayers(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  layerFactory: OnnxLayerFactory,
+  metadata: OnnxMetadataProperty[],
+): void
+```
 
 Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
 
@@ -3888,7 +5153,11 @@ Returns: Nothing.
 
 ### resolveRecurrentLayerIndices
 
-`(metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => number[]`
+```ts
+resolveRecurrentLayerIndices(
+  metadata: OnnxMetadataProperty[],
+): number[]
+```
 
 Resolve recurrent layer indices from ONNX metadata.
 
@@ -3899,7 +5168,14 @@ Returns: Parsed recurrent layer indices.
 
 ### restoreRecurrentSelfConnections
 
-`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
+```ts
+restoreRecurrentSelfConnections(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadata: OnnxMetadataProperty[],
+): void
+```
 
 Restore recurrent self-connections from recurrent metadata and R tensors.
 
@@ -3913,7 +5189,11 @@ Returns: Nothing.
 
 ### sliceLayerHiddenNodes
 
-`(layerConnectionContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportLayerConnectionContext) => import("src/architecture/node").default[]`
+```ts
+sliceLayerHiddenNodes(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): default[]
+```
 
 Slice hidden nodes for one hidden-layer span.
 
@@ -3924,7 +5204,11 @@ Returns: Hidden nodes belonging to the span.
 
 ### upsertSelfConnection
 
-`(selfConnectionContext: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxImportSelfConnectionUpsertContext) => void`
+```ts
+upsertSelfConnection(
+  selfConnectionContext: OnnxImportSelfConnectionUpsertContext,
+): void
+```
 
 Upsert one node self-connection for recurrent import restoration.
 
@@ -3937,7 +5221,15 @@ Returns: Nothing.
 
 ### reconstructFusedRecurrentLayers
 
-`(network: import("src/architecture/network").default, onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel, hiddenLayerSizes: number[], layerFactory: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxLayerFactory, metadata: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxMetadataProperty[]) => void`
+```ts
+reconstructFusedRecurrentLayers(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  layerFactory: OnnxLayerFactory,
+  metadata: OnnxMetadataProperty[],
+): void
+```
 
 Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
 

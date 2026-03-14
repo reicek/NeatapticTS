@@ -72,7 +72,12 @@ Reused integer coordinate scratch for hot-path movement helpers.
 
 #### #hasReachedExit
 
-`(simulationState: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, exitPos: readonly [number, number]) => boolean`
+```ts
+#hasReachedExit(
+  simulationState: SimulationState,
+  exitPos: readonly [number, number],
+): boolean
+```
 
 Determine whether the current state has reached the maze exit.
 
@@ -84,7 +89,13 @@ Returns: True when the agent position matches the exit coordinate.
 
 #### #processMovementAndShaping
 
-`(simulationState: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], distanceMap: number[][] | undefined) => boolean`
+```ts
+#processMovementAndShaping(
+  simulationState: SimulationState,
+  encodedMaze: number[][],
+  distanceMap: number[][] | undefined,
+): boolean
+```
 
 Execute the selected move, apply post-action shaping, and evaluate stop rules.
 
@@ -97,7 +108,15 @@ Returns: True when the episode should stop after this step.
 
 #### #processPerceptionAndPolicy
 
-`(simulationState: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, network: import("test/examples/asciiMaze/interfaces").INetwork, encodedMaze: number[][], exitPos: readonly [number, number], distanceMap: number[][] | undefined) => void`
+```ts
+#processPerceptionAndPolicy(
+  simulationState: SimulationState,
+  network: INetwork,
+  encodedMaze: number[][],
+  exitPos: readonly [number, number],
+  distanceMap: number[][] | undefined,
+): void
+```
 
 Refresh visit bookkeeping, perception state, and direction policy.
 
@@ -110,7 +129,13 @@ Parameters:
 
 #### moveAgent
 
-`(encodedMaze: readonly (readonly number[])[], position: readonly [number, number], direction: number) => [number, number]`
+```ts
+moveAgent(
+  encodedMaze: readonly (readonly number[])[],
+  position: readonly [number, number],
+  direction: number,
+): [number, number]
+```
 
 Move the agent one step in the requested direction when the target cell is open.
 
@@ -127,7 +152,11 @@ const moved = MazeMovement.moveAgent(encodedMaze, [3, 2], 1);
 
 #### selectDirection
 
-`(outputs: number[]) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").DirectionSelectionStats`
+```ts
+selectDirection(
+  outputs: number[],
+): DirectionSelectionStats
+```
 
 Convert raw network outputs into a chosen action plus diagnostics.
 
@@ -142,7 +171,16 @@ const stats = MazeMovement.selectDirection([0.2, 1.4, -0.1, 0]);
 
 #### simulateAgent
 
-`(network: import("test/examples/asciiMaze/interfaces").INetwork, encodedMaze: number[][], startPos: readonly [number, number], exitPos: readonly [number, number], distanceMap: number[][] | undefined, maxSteps: number) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementSimulationResult`
+```ts
+simulateAgent(
+  network: INetwork,
+  encodedMaze: number[][],
+  startPos: readonly [number, number],
+  exitPos: readonly [number, number],
+  distanceMap: number[][] | undefined,
+  maxSteps: number,
+): MazeMovementSimulationResult
+```
 
 Simulate one full maze episode for a network-controlled agent.
 
@@ -166,7 +204,9 @@ Step 2 incrementally moves helper categories into the dedicated boundary.
 
 ### getMazeMovementBufferMetadata
 
-`() => { cachedWidth: number; cachedHeight: number; }`
+```ts
+getMazeMovementBufferMetadata(): { cachedWidth: number; cachedHeight: number; }
+```
 
 Read the currently cached maze dimensions for bounds and index helpers.
 
@@ -174,7 +214,9 @@ Returns: Cached width and height for the active pooled buffers.
 
 ### getMazeMovementRunServiceState
 
-`() => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementRunServiceState`
+```ts
+getMazeMovementRunServiceState(): MazeMovementRunServiceState
+```
 
 Expose the shared mutable run-scoped state used across helper categories.
 
@@ -182,7 +224,12 @@ Returns: The singleton mutable run-state object for the current process.
 
 ### indexMazeMovementCell
 
-`(x: number, y: number) => number`
+```ts
+indexMazeMovementCell(
+  x: number,
+  y: number,
+): number
+```
 
 Convert a cell coordinate into the pooled linear grid index.
 
@@ -194,7 +241,13 @@ Returns: Linearized index used by pooled grid buffers.
 
 ### initializeMazeMovementBufferPools
 
-`(width: number, height: number, maxSteps: number) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementBufferPools`
+```ts
+initializeMazeMovementBufferPools(
+  width: number,
+  height: number,
+  maxSteps: number,
+): MazeMovementBufferPools
+```
 
 Ensure the pooled grid and path buffers are initialized for a run.
 
@@ -207,7 +260,11 @@ Returns: The initialized pooled buffer surface.
 
 ### materializeMazeMovementPath
 
-`(length: number) => [number, number][]`
+```ts
+materializeMazeMovementPath(
+  length: number,
+): [number, number][]
+```
 
 Materialize the active pooled path buffers into a fresh tuple array.
 
@@ -218,7 +275,9 @@ Returns: A newly allocated materialized path snapshot.
 
 ### randomMazeMovementUnit
 
-`() => number`
+```ts
+randomMazeMovementUnit(): number
+```
 
 Generate a pseudo-random number in the range `[0, 1)`.
 
@@ -226,7 +285,11 @@ Returns: A deterministic or host-random unit float for exploration logic.
 
 ### readMazeMovementOutputHistory
 
-`(network: import("test/examples/asciiMaze/interfaces").INetwork) => number[][] | undefined`
+```ts
+readMazeMovementOutputHistory(
+  network: INetwork,
+): number[][] | undefined
+```
 
 Read the reflected `_lastStepOutputs` network history when present.
 
@@ -237,7 +300,9 @@ Returns: Sanitized output history or `undefined` when absent or invalid.
 
 ### requireMazeMovementBufferPools
 
-`() => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementBufferPools`
+```ts
+requireMazeMovementBufferPools(): MazeMovementBufferPools
+```
 
 Return the initialized pooled buffer surface for the current run.
 
@@ -245,7 +310,9 @@ Returns: The shared buffer pools.
 
 ### resetMazeMovementRunServiceState
 
-`() => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").MazeMovementRunServiceState`
+```ts
+resetMazeMovementRunServiceState(): MazeMovementRunServiceState
+```
 
 Reset the shared mutable run-scoped state before a new simulation begins.
 
@@ -253,7 +320,12 @@ Returns: The reused singleton state after reset.
 
 ### writeMazeMovementOutputHistory
 
-`(network: import("test/examples/asciiMaze/interfaces").INetwork, history: number[][]) => void`
+```ts
+writeMazeMovementOutputHistory(
+  network: INetwork,
+  history: number[][],
+): void
+```
 
 Persist the reflected `_lastStepOutputs` network history.
 
@@ -279,7 +351,13 @@ tables in one place so the public facade can stay focused on orchestration.
 
 ### computeActionEntropyFromCounts
 
-`(directionCounts: number[], logActions: number, scratch: Float64Array<ArrayBufferLike>) => number`
+```ts
+computeActionEntropyFromCounts(
+  directionCounts: number[],
+  logActions: number,
+  scratch: Float64Array<ArrayBufferLike>,
+): number
+```
 
 Compute normalized action entropy from direction counts.
 
@@ -292,7 +370,11 @@ Returns: Normalized entropy in the range `[0, 1]`.
 
 ### isFiniteNumberArray
 
-`(candidate: unknown) => boolean`
+```ts
+isFiniteNumberArray(
+  candidate: unknown,
+): boolean
+```
 
 Determine whether the provided value is a finite-number array.
 
@@ -303,7 +385,13 @@ Returns: True when the input is an array of finite numbers.
 
 ### materializePath
 
-`(length: number, pathX: Int32Array<ArrayBufferLike>, pathY: Int32Array<ArrayBufferLike>) => [number, number][]`
+```ts
+materializePath(
+  length: number,
+  pathX: Int32Array<ArrayBufferLike>,
+  pathY: Int32Array<ArrayBufferLike>,
+): [number, number][]
+```
 
 Materialize the active prefix of pooled path buffers into a fresh array.
 
@@ -316,7 +404,11 @@ Returns: A newly allocated array of path tuples.
 
 ### nextPowerOfTwo
 
-`(n: number) => number`
+```ts
+nextPowerOfTwo(
+  n: number,
+): number
+```
 
 Return the smallest power-of-two integer greater than or equal to `n`.
 
@@ -327,7 +419,11 @@ Returns: The smallest power of two greater than or equal to `n`.
 
 ### readOutputHistory
 
-`(network: import("test/examples/asciiMaze/interfaces").INetwork) => number[][] | undefined`
+```ts
+readOutputHistory(
+  network: INetwork,
+): number[][] | undefined
+```
 
 Read the optional `_lastStepOutputs` history stored on a network.
 
@@ -338,7 +434,14 @@ Returns: Sanitized history buffer or `undefined` when absent or invalid.
 
 ### sumVisionGroup
 
-`(vision: number[], start: number, groupLength: number, scratch: Float64Array<ArrayBufferLike>) => number`
+```ts
+sumVisionGroup(
+  vision: number[],
+  start: number,
+  groupLength: number,
+  scratch: Float64Array<ArrayBufferLike>,
+): number
+```
 
 Sum a contiguous group of entries from a vision vector into a reusable scratch buffer.
 
@@ -352,7 +455,12 @@ Returns: Numeric sum of the selected group.
 
 ### writeOutputHistory
 
-`(network: import("test/examples/asciiMaze/interfaces").INetwork, history: number[][]) => void`
+```ts
+writeOutputHistory(
+  network: INetwork,
+  history: number[][],
+): void
+```
 
 Persist a bounded outputs history on the network via reflection.
 

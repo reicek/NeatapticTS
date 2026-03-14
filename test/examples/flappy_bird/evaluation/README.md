@@ -140,7 +140,12 @@ const result = rolloutEpisode(network, {
 
 ### rolloutEpisode
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyEpisodeResult`
+```ts
+rolloutEpisode(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+): FlappyEpisodeResult
+```
 
 Roll out an episode and return details.
 
@@ -166,7 +171,11 @@ console.log(result.fitness, result.doneReason);
 
 ### mixGenomeEvaluationSeed
 
-`(genomeId: number) => number`
+```ts
+mixGenomeEvaluationSeed(
+  genomeId: number,
+): number
+```
 
 Mixes a genome identifier into a stable uint32 rollout seed.
 
@@ -186,7 +195,12 @@ Returns: Mixed uint32 seed.
 
 ### evaluateFlappyFitness
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => number`
+```ts
+evaluateFlappyFitness(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+): number
+```
 
 Evaluate a network on a single deterministic Flappy Bird episode.
 
@@ -201,7 +215,13 @@ Returns: Fitness score (higher is better).
 
 ### evaluateFlappyFitnessAcrossSeeds
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, sharedSeeds: readonly number[], rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation`
+```ts
+evaluateFlappyFitnessAcrossSeeds(
+  network: FlappyNetworkLike,
+  sharedSeeds: readonly number[],
+  rolloutOptions: FlappyRolloutOptions,
+): FlappySeedBatchEvaluation
+```
 
 Evaluate a network on a shared batch of deterministic seeds.
 

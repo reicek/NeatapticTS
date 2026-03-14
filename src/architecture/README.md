@@ -59,7 +59,12 @@ These properties are lazily allocated and not part of the main class definition.
 
 #### _activateCore
 
-`(withTrace: boolean, input: number | undefined) => number`
+```ts
+_activateCore(
+  withTrace: boolean,
+  input: number | undefined,
+): number
+```
 
 Internal shared implementation for activate/noTraceActivate.
 
@@ -73,13 +78,22 @@ Global index counter for assigning unique indices to nodes.
 
 #### _safeUpdateWeight
 
-`(connection: import("src/architecture/connection").default, delta: number) => void`
+```ts
+_safeUpdateWeight(
+  connection: default,
+  delta: number,
+): void
+```
 
 Internal helper to safely update a connection weight with clipping and NaN checks.
 
 #### activate
 
-`(input: number | undefined) => number`
+```ts
+activate(
+  input: number | undefined,
+): number
+```
 
 Activates the node, calculating its output value based on inputs and state.
 This method also calculates eligibility traces (`xtrace`) used for training recurrent connections.
@@ -106,7 +120,11 @@ The output value of the node after applying the activation function. This is the
 
 #### applyBatchUpdates
 
-`(momentum: number) => void`
+```ts
+applyBatchUpdates(
+  momentum: number,
+): void
+```
 
 Applies accumulated batch updates to incoming and self connections and this node's bias.
 Uses momentum in a Nesterov-compatible way: currentDelta = accumulated + momentum * previousDelta.
@@ -117,7 +135,11 @@ Parameters:
 
 #### applyBatchUpdatesWithOptimizer
 
-`(opts: { type: "sgd" | "rmsprop" | "adagrad" | "adam" | "adamw" | "amsgrad" | "adamax" | "nadam" | "radam" | "lion" | "adabelief" | "lookahead"; momentum?: number | undefined; beta1?: number | undefined; beta2?: number | undefined; eps?: number | undefined; weightDecay?: number | undefined; lrScale?: number | undefined; t?: number | undefined; baseType?: string | undefined; la_k?: number | undefined; la_alpha?: number | undefined; }) => void`
+```ts
+applyBatchUpdatesWithOptimizer(
+  opts: { type: "sgd" | "rmsprop" | "adagrad" | "adam" | "adamw" | "amsgrad" | "adamax" | "nadam" | "radam" | "lion" | "adabelief" | "lookahead"; momentum?: number | undefined; beta1?: number | undefined; beta2?: number | undefined; eps?: number | undefined; weightDecay?: number | undefined; lrScale?: number | undefined; t?: number | undefined; baseType?: string | undefined; la_k?: number | undefined; la_alpha?: number | undefined; },
+): void
+```
 
 Extended batch update supporting multiple optimizers.
 
@@ -169,7 +191,9 @@ Input nodes typically have a bias of 0.
 
 #### clear
 
-`() => void`
+```ts
+clear(): void
+```
 
 Clears the node's dynamic state information.
 Resets activation, state, previous state, error signals, and eligibility traces.
@@ -177,7 +201,12 @@ Useful for starting a new activation sequence (e.g., for a new input pattern).
 
 #### connect
 
-`(target: import("src/architecture/node").default | { nodes: import("src/architecture/node").default[]; }, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connect(
+  target: default | { nodes: default[]; },
+  weight: number | undefined,
+): default[]
+```
 
 Creates a connection from this node to a target node or all nodes in a group.
 
@@ -197,7 +226,12 @@ The derivative of the activation function evaluated at the node's current state.
 
 #### disconnect
 
-`(target: import("src/architecture/node").default, twosided: boolean) => void`
+```ts
+disconnect(
+  target: default,
+  twosided: boolean,
+): void
+```
 
 Removes the connection from this node to the target node.
 
@@ -211,7 +245,11 @@ Stores error values calculated during backpropagation.
 
 #### fromJSON
 
-`(json: { bias: number; type: string; squash: string; mask: number; }) => import("src/architecture/node").default`
+```ts
+fromJSON(
+  json: { bias: number; type: string; squash: string; mask: number; },
+): default
+```
 
 Creates a Node instance from a JSON object.
 
@@ -222,7 +260,11 @@ Returns: A new Node instance configured according to the JSON object.
 
 #### gate
 
-`(connections: import("src/architecture/connection").default | import("src/architecture/connection").default[]) => void`
+```ts
+gate(
+  connections: default | default[],
+): void
+```
 
 Makes this node gate the provided connection(s).
 The connection's gain will be controlled by this node's activation value.
@@ -244,7 +286,11 @@ Internal flag to detect cycles during activation
 
 #### isConnectedTo
 
-`(target: import("src/architecture/node").default) => boolean`
+```ts
+isConnectedTo(
+  target: default,
+): boolean
+```
 
 Checks if this node is connected to another node.
 
@@ -255,7 +301,11 @@ Returns: True if connected, otherwise false.
 
 #### isProjectedBy
 
-`(node: import("src/architecture/node").default) => boolean`
+```ts
+isProjectedBy(
+  node: default,
+): boolean
+```
 
 Checks if the given node has a direct outgoing connection to this node.
 Considers both regular incoming connections and the self-connection.
@@ -267,7 +317,11 @@ Returns: True if the given node projects to this node, false otherwise.
 
 #### isProjectingTo
 
-`(node: import("src/architecture/node").default) => boolean`
+```ts
+isProjectingTo(
+  node: default,
+): boolean
+```
 
 Checks if this node has a direct outgoing connection to the given node.
 Considers both regular outgoing connections and the self-connection.
@@ -283,7 +337,11 @@ A mask factor (typically 0 or 1) used for implementing dropout. If 0, the node's
 
 #### mutate
 
-`(method: unknown) => void`
+```ts
+mutate(
+  method: unknown,
+): void
+```
 
 Applies a mutation method to the node. Used in neuro-evolution.
 
@@ -295,7 +353,11 @@ Parameters:
 
 #### noTraceActivate
 
-`(input: number | undefined) => number`
+```ts
+noTraceActivate(
+  input: number | undefined,
+): number
+```
 
 Activates the node without calculating eligibility traces (`xtrace`).
 This is a performance optimization used during inference (when the network
@@ -316,7 +378,15 @@ The change in bias applied in the previous training iteration. Used for calculat
 
 #### propagate
 
-`(rate: number, momentum: number, update: boolean, regularization: number | { type: "L1" | "L2"; lambda: number; } | ((weight: number) => number), target: number | undefined) => void`
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  regularization: number | { type: "L1" | "L2"; lambda: number; } | ((weight: number) => number),
+  target: number | undefined,
+): void
+```
 
 Back-propagates the error signal through the node and calculates weight/bias updates.
 
@@ -342,7 +412,11 @@ Parameters:
 
 #### setActivation
 
-`(fn: (x: number, derivate?: boolean | undefined) => number) => void`
+```ts
+setActivation(
+  fn: (x: number, derivate?: boolean | undefined) => number,
+): void
+```
 
 Sets a custom activation function for this node at runtime.
 
@@ -351,7 +425,12 @@ Parameters:
 
 #### squash
 
-`(x: number, derivate: boolean | undefined) => number`
+```ts
+squash(
+  x: number,
+  derivate: boolean | undefined,
+): number
+```
 
 The activation function (squashing function) applied to the node's state.
 Maps the internal state to the node's output (activation).
@@ -368,7 +447,9 @@ The internal state of the node (sum of weighted inputs + bias) before the activa
 
 #### toJSON
 
-`() => { index: number | undefined; bias: number; type: string; squash: string | null; mask: number; }`
+```ts
+toJSON(): { index: number | undefined; bias: number; type: string; squash: string | null; mask: number; }
+```
 
 Converts the node's essential properties to a JSON object for serialization.
 Does not include state, activation, error, or connection information, as these
@@ -387,7 +468,11 @@ Determines behavior (e.g., input nodes don't have biases modified typically, out
 
 #### ungate
 
-`(connections: import("src/architecture/connection").default | import("src/architecture/connection").default[]) => void`
+```ts
+ungate(
+  connections: default | default[],
+): void
+```
 
 Removes this node's gating control over the specified connection(s).
 Resets the connection's gain to 1 and removes it from the `connections.gated` list.
@@ -412,7 +497,12 @@ may reject the model.
 
 ### exportToONNX
 
-`(network: import("src/architecture/network").default, options: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxExportOptions) => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+```ts
+exportToONNX(
+  network: default,
+  options: OnnxExportOptions,
+): OnnxModel
+```
 
 Export a NeatapticTS network to an ONNX-like **JSON object** (`OnnxModel`).
 
@@ -450,7 +540,11 @@ Returns: ONNX-like model object suitable for persistence or re-import.
 
 ### importFromONNX
 
-`(onnx: import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel) => import("src/architecture/network").default`
+```ts
+importFromONNX(
+  onnx: OnnxModel,
+): default
+```
 
 Reconstruct a NeatapticTS network from an exported `OnnxModel`.
 
@@ -546,7 +640,11 @@ Groups facilitate operations like collective activation, propagation, and connec
 
 #### activate
 
-`(value: number[] | undefined) => number[]`
+```ts
+activate(
+  value: number[] | undefined,
+): number[]
+```
 
 Activates all nodes in the group. If input values are provided, they are assigned
 sequentially to the nodes before activation. Otherwise, nodes activate based on their
@@ -556,7 +654,9 @@ Returns: An array containing the activation value of each node in the group, in 
 
 #### clear
 
-`() => void`
+```ts
+clear(): void
+```
 
 Resets the state of all nodes in the group. This typically involves clearing
 activation values, state, and propagated errors, preparing the group for a new input pattern,
@@ -564,7 +664,13 @@ especially relevant in recurrent networks or sequence processing.
 
 #### connect
 
-`(target: import("src/architecture/node").default | import("src/architecture/layer").default | import("src/architecture/group").default, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connect(
+  target: default | default | default,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Establishes connections from all nodes in this group to a target Group, Layer, or Node.
 The connection pattern (e.g., all-to-all, one-to-one) can be specified.
@@ -580,13 +686,23 @@ Stores connection information related to this group.
 
 #### disconnect
 
-`(target: import("src/architecture/node").default | import("src/architecture/group").default, twosided: boolean) => void`
+```ts
+disconnect(
+  target: default | default,
+  twosided: boolean,
+): void
+```
 
 Removes connections between nodes in this group and a target Group or Node.
 
 #### gate
 
-`(connections: import("src/architecture/connection").default | import("src/architecture/connection").default[], method: unknown) => void`
+```ts
+gate(
+  connections: default | default[],
+  method: unknown,
+): void
+```
 
 Configures nodes within this group to act as gates for the specified connection(s).
 Gating allows the output of a node in this group to modulate the flow of signal through the gated connection.
@@ -597,7 +713,13 @@ An array holding all the nodes within this group.
 
 #### propagate
 
-`(rate: number, momentum: number, target: number[] | undefined) => void`
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  target: number[] | undefined,
+): void
+```
 
 Propagates the error backward through all nodes in the group. If target values are provided,
 the error is calculated against these targets (typically for output layers). Otherwise,
@@ -605,13 +727,19 @@ the error is calculated based on the error propagated from subsequent layers/nod
 
 #### set
 
-`(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; type?: string | undefined; }) => void`
+```ts
+set(
+  values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; type?: string | undefined; },
+): void
+```
 
 Sets specific properties (like bias, squash function, or type) for all nodes within the group.
 
 #### toJSON
 
-`() => { size: number; nodeIndices: (number | undefined)[]; connections: { in: number; out: number; self: number; }; }`
+```ts
+toJSON(): { size: number; nodeIndices: (number | undefined)[]; connections: { in: number; out: number; self: number; }; }
+```
 
 Serializes the group into a JSON-compatible format, avoiding circular references.
 Only includes node indices and connection counts.
@@ -642,7 +770,12 @@ propagation, and connection to other network components.
 
 #### activate
 
-`(value: number[] | undefined, training: boolean) => number[]`
+```ts
+activate(
+  value: number[] | undefined,
+  training: boolean,
+): number[]
+```
 
 Activates all nodes within the layer, computing their output values.
 
@@ -661,7 +794,12 @@ Returns: An array containing the activation value of each node in the layer afte
 
 #### attention
 
-`(size: number, heads: number) => import("src/architecture/layer").default`
+```ts
+attention(
+  size: number,
+  heads: number,
+): default
+```
 
 Creates a multi-head self-attention layer (stub implementation).
 
@@ -673,7 +811,11 @@ Returns: A new Layer instance representing an attention layer.
 
 #### batchNorm
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+batchNorm(
+  size: number,
+): default
+```
 
 Creates a batch normalization layer.
 Applies batch normalization to the activations of the nodes in this layer during activation.
@@ -685,14 +827,22 @@ Returns: A new Layer instance configured as a batch normalization layer.
 
 #### clear
 
-`() => void`
+```ts
+clear(): void
+```
 
 Resets the activation state of all nodes within the layer.
 This is typically done before processing a new input sequence or sample.
 
 #### connect
 
-`(target: import("src/architecture/node").default | import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connect(
+  target: default | default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Connects this layer's output to a target component (Layer, Group, or Node).
 
@@ -717,7 +867,14 @@ by the network or higher-level structures rather than directly by the layer itse
 
 #### conv1d
 
-`(size: number, kernelSize: number, stride: number, padding: number) => import("src/architecture/layer").default`
+```ts
+conv1d(
+  size: number,
+  kernelSize: number,
+  stride: number,
+  padding: number,
+): default
+```
 
 Creates a 1D convolutional layer (stub implementation).
 
@@ -731,7 +888,11 @@ Returns: A new Layer instance representing a 1D convolutional layer.
 
 #### dense
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+dense(
+  size: number,
+): default
+```
 
 Creates a standard fully connected (dense) layer.
 
@@ -745,7 +906,12 @@ Returns: A new Layer instance configured as a dense layer.
 
 #### disconnect
 
-`(target: import("src/architecture/node").default | import("src/architecture/group").default, twosided: boolean | undefined) => void`
+```ts
+disconnect(
+  target: default | default,
+  twosided: boolean | undefined,
+): void
+```
 
 Removes connections between this layer's nodes and a target Group or Node.
 
@@ -760,7 +926,12 @@ Layer-level dropout takes precedence over node-level dropout for nodes in this l
 
 #### gate
 
-`(connections: import("src/architecture/connection").default[], method: unknown) => void`
+```ts
+gate(
+  connections: default[],
+  method: unknown,
+): void
+```
 
 Applies gating to a set of connections originating from this layer's output group.
 
@@ -773,7 +944,11 @@ Parameters:
 
 #### gru
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+gru(
+  size: number,
+): default
+```
 
 Creates a Gated Recurrent Unit (GRU) layer.
 
@@ -788,7 +963,13 @@ Returns: A new Layer instance configured as a GRU layer.
 
 #### input
 
-`(from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+input(
+  from: default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Handles the connection logic when this layer is the *target* of a connection.
 
@@ -805,7 +986,11 @@ Returns: An array containing the newly created connection objects.
 
 #### layerNorm
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+layerNorm(
+  size: number,
+): default
+```
 
 Creates a layer normalization layer.
 Applies layer normalization to the activations of the nodes in this layer during activation.
@@ -817,7 +1002,11 @@ Returns: A new Layer instance configured as a layer normalization layer.
 
 #### lstm
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+lstm(
+  size: number,
+): default
+```
 
 Creates a Long Short-Term Memory (LSTM) layer.
 
@@ -832,7 +1021,12 @@ Returns: A new Layer instance configured as an LSTM layer.
 
 #### memory
 
-`(size: number, memory: number) => import("src/architecture/layer").default`
+```ts
+memory(
+  size: number,
+  memory: number,
+): default
+```
 
 Creates a Memory layer, designed to hold state over a fixed number of time steps.
 
@@ -860,7 +1054,13 @@ It might be null if the layer is not yet fully constructed or is an input layer.
 
 #### propagate
 
-`(rate: number, momentum: number, target: number[] | undefined) => void`
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  target: number[] | undefined,
+): void
+```
 
 Propagates the error backward through all nodes in the layer.
 
@@ -876,7 +1076,11 @@ Parameters:
 
 #### set
 
-`(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; type?: string | undefined; }) => void`
+```ts
+set(
+  values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; type?: string | undefined; },
+): void
+```
 
 Configures properties for all nodes within the layer.
 
@@ -894,7 +1098,12 @@ Parameters:
 
 ### resolveAcyclicEnforcement
 
-`(options: import("src/architecture/network/network.types").NetworkConstructorOptions | undefined, topologyIntent: import("src/architecture/network/network.types").NetworkTopologyIntent) => boolean`
+```ts
+resolveAcyclicEnforcement(
+  options: NetworkConstructorOptions | undefined,
+  topologyIntent: NetworkTopologyIntent,
+): boolean
+```
 
 Resolves whether acyclic enforcement should be enabled for one constructor call.
 
@@ -906,7 +1115,11 @@ Returns: True when acyclic enforcement should be enabled.
 
 ### resolveTopologyIntent
 
-`(options: import("src/architecture/network/network.types").NetworkConstructorOptions | undefined) => import("src/architecture/network/network.types").NetworkTopologyIntent`
+```ts
+resolveTopologyIntent(
+  options: NetworkConstructorOptions | undefined,
+): NetworkTopologyIntent
+```
 
 Resolves the public topology intent for one constructor call.
 
@@ -917,7 +1130,11 @@ Returns: Resolved topology intent.
 
 ### validateTopologyIntentConfiguration
 
-`(options: import("src/architecture/network/network.types").NetworkConstructorOptions | undefined) => void`
+```ts
+validateTopologyIntentConfiguration(
+  options: NetworkConstructorOptions | undefined,
+): void
+```
 
 Validates that legacy acyclic flags do not contradict public topology intent.
 
@@ -946,7 +1163,11 @@ Adjacency dirty marker for slab structures.
 
 #### _applyGradientClipping
 
-`(cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; }) => void`
+```ts
+_applyGradientClipping(
+  cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; },
+): void
+```
 
 Apply gradient clipping configuration.
 
@@ -955,7 +1176,11 @@ Parameters:
 
 #### _canUseFastSlab
 
-`(training: boolean) => boolean`
+```ts
+_canUseFastSlab(
+  training: boolean,
+): boolean
+```
 
 Check if fast-slab activation can be used.
 
@@ -966,7 +1191,9 @@ Returns: True when fast-slab activation can be used.
 
 #### _computeTopoOrder
 
-`() => void`
+```ts
+_computeTopoOrder(): void
+```
 
 Recompute and cache topological node ordering.
 
@@ -1010,7 +1237,11 @@ Cached fast activation array S.
 
 #### _fastSlabActivate
 
-`(input: number[]) => number[]`
+```ts
+_fastSlabActivate(
+  input: number[],
+): number[]
+```
 
 Execute the fast slab activation path.
 
@@ -1025,7 +1256,11 @@ Flag to force a mixed-precision overflow path.
 
 #### _gaussianRand
 
-`(rng: () => number) => number`
+```ts
+_gaussianRand(
+  rng: () => number,
+): number
+```
 
 Sample a Gaussian random value with an optional RNG.
 
@@ -1048,7 +1283,12 @@ Whether to apply separate bias clipping.
 
 #### _hasPath
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
+```ts
+_hasPath(
+  from: default,
+  to: default,
+): boolean
+```
 
 Check whether a directed path exists between two nodes.
 
@@ -1084,7 +1324,11 @@ Last recorded stats payload.
 
 #### _maybePrune
 
-`(iteration: number) => void`
+```ts
+_maybePrune(
+  iteration: number,
+): void
+```
 
 Apply scheduled pruning if current iteration matches pruning policy.
 
@@ -1127,7 +1371,9 @@ Pruning configuration for scheduled pruning.
 
 #### _rand
 
-`() => number`
+```ts
+_rand(): number
+```
 
 Random number generator used for stochastic operations.
 
@@ -1193,14 +1439,25 @@ Original weights captured for weight-noise recovery.
 
 #### activate
 
-`(input: number[], training: boolean, _maxActivationDepth: number) => number[]`
+```ts
+activate(
+  input: number[],
+  training: boolean,
+  _maxActivationDepth: number,
+): number[]
+```
 
 Standard activation API returning a plain number[] for backward compatibility.
 Internally may use pooled typed arrays; if so they are cloned before returning.
 
 #### activateBatch
 
-`(inputs: number[][], training: boolean) => number[][]`
+```ts
+activateBatch(
+  inputs: number[][],
+  training: boolean,
+): number[][]
+```
 
 Activate the network over a batch of input vectors (micro-batching).
 
@@ -1216,7 +1473,13 @@ Returns: Array of output vectors, each length equals this.output
 
 #### activateRaw
 
-`(input: number[], training: boolean, maxActivationDepth: number) => import("src/architecture/activationArrayPool").ActivationArray`
+```ts
+activateRaw(
+  input: number[],
+  training: boolean,
+  maxActivationDepth: number,
+): ActivationArray
+```
 
 Raw activation that can return a typed array when pooling is enabled (zero-copy).
 If reuseActivationArrays=false falls back to standard activate().
@@ -1230,19 +1493,29 @@ Returns: Output activations (typed array when pooling is enabled).
 
 #### addNodeBetween
 
-`() => void`
+```ts
+addNodeBetween(): void
+```
 
 Split a random existing connection by inserting one hidden node.
 
 #### adjustRateForAccumulation
 
-`(rate: number, accumulationSteps: number, reduction: "average" | "sum") => number`
+```ts
+adjustRateForAccumulation(
+  rate: number,
+  accumulationSteps: number,
+  reduction: "average" | "sum",
+): number
+```
 
 Utility: adjust rate for accumulation mode (use result when switching to 'sum' to mimic 'average').
 
 #### clear
 
-`() => void`
+```ts
+clear(): void
+```
 
 Clears the internal state of all nodes in the network.
 Resets node activation, state, eligibility traces, and extended traces to their initial values (usually 0).
@@ -1250,19 +1523,25 @@ This is typically done before processing a new input sequence in recurrent netwo
 
 #### clearStochasticDepthSchedule
 
-`() => void`
+```ts
+clearStochasticDepthSchedule(): void
+```
 
 Clear stochastic-depth schedule function.
 
 #### clearWeightNoiseSchedule
 
-`() => void`
+```ts
+clearWeightNoiseSchedule(): void
+```
 
 Clear the dynamic global weight-noise schedule.
 
 #### clone
 
-`() => import("src/architecture/network").default`
+```ts
+clone(): default
+```
 
 Creates a deep copy of the network.
 
@@ -1270,7 +1549,11 @@ Returns: A new Network instance that is a clone of the current network.
 
 #### configurePruning
 
-`(cfg: { start: number; end: number; targetSparsity: number; regrowFraction?: number | undefined; frequency?: number | undefined; method?: "magnitude" | "snip" | undefined; }) => void`
+```ts
+configurePruning(
+  cfg: { start: number; end: number; targetSparsity: number; regrowFraction?: number | undefined; frequency?: number | undefined; method?: "magnitude" | "snip" | undefined; },
+): void
+```
 
 Configure scheduled pruning during training.
 
@@ -1279,7 +1562,13 @@ Parameters:
 
 #### connect
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connect(
+  from: default,
+  to: default,
+  weight: number | undefined,
+): default[]
+```
 
 Creates a connection between two nodes in the network.
 Handles both regular connections and self-connections.
@@ -1293,7 +1582,13 @@ Connection list.
 
 #### createMLP
 
-`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("src/architecture/network").default`
+```ts
+createMLP(
+  inputCount: number,
+  hiddenCounts: number[],
+  outputCount: number,
+): default
+```
 
 Creates a fully connected, strictly layered MLP network.
 
@@ -1301,13 +1596,21 @@ Returns: A new, fully connected, layered MLP
 
 #### crossOver
 
-`(network1: import("src/architecture/network").default, network2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network").default`
+```ts
+crossOver(
+  network1: default,
+  network2: default,
+  equal: boolean,
+): default
+```
 
 NEAT-style crossover delegate.
 
 #### describeArchitecture
 
-`() => import("src/architecture/network/network.types").NetworkArchitectureDescriptor`
+```ts
+describeArchitecture(): NetworkArchitectureDescriptor
+```
 
 Resolves a stable architecture descriptor for telemetry/UI consumers.
 
@@ -1318,31 +1621,48 @@ Returns: Architecture descriptor with hidden-layer widths and provenance.
 
 #### deserialize
 
-`(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
+```ts
+deserialize(
+  data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[],
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): default
+```
 
 Static lightweight tuple deserializer delegate
 
 #### disableDropConnect
 
-`() => void`
+```ts
+disableDropConnect(): void
+```
 
 Disable DropConnect.
 
 #### disableStochasticDepth
 
-`() => void`
+```ts
+disableStochasticDepth(): void
+```
 
 Disable stochastic depth.
 
 #### disableWeightNoise
 
-`() => void`
+```ts
+disableWeightNoise(): void
+```
 
 Disable all weight-noise settings.
 
 #### disconnect
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => void`
+```ts
+disconnect(
+  from: default,
+  to: default,
+): void
+```
 
 Disconnects two nodes, removing the connection between them.
 Handles both regular connections and self-connections.
@@ -1354,7 +1674,11 @@ Dropout probability.
 
 #### enableDropConnect
 
-`(p: number) => void`
+```ts
+enableDropConnect(
+  p: number,
+): void
+```
 
 Enable DropConnect with a probability in $[0,1)$.
 
@@ -1363,7 +1687,11 @@ Parameters:
 
 #### enableWeightNoise
 
-`(stdDev: number | { perHiddenLayer: number[]; }) => void`
+```ts
+enableWeightNoise(
+  stdDev: number | { perHiddenLayer: number[]; },
+): void
+```
 
 Enable weight noise using either a global standard deviation or per-hidden-layer values.
 
@@ -1372,7 +1700,11 @@ Parameters:
 
 #### fastSlabActivate
 
-`(input: number[]) => number[]`
+```ts
+fastSlabActivate(
+  input: number[],
+): number[]
+```
 
 Public wrapper for fast slab forward pass.
 
@@ -1383,13 +1715,22 @@ Returns: Activation output.
 
 #### fromJSON
 
-`(json: Record<string, unknown>) => import("src/architecture/network").default`
+```ts
+fromJSON(
+  json: Record<string, unknown>,
+): default
+```
 
 Verbose JSON static deserializer
 
 #### gate
 
-`(node: import("src/architecture/node").default, connection: import("src/architecture/connection").default) => void`
+```ts
+gate(
+  node: default,
+  connection: default,
+): void
+```
 
 Gates a connection with a specified node.
 The activation of the `node` (gater) will modulate the weight of the `connection`.
@@ -1401,7 +1742,9 @@ Network gates collection.
 
 #### getConnectionSlab
 
-`() => import("src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
+```ts
+getConnectionSlab(): ConnectionSlabView
+```
 
 Read slab structures for fast activation.
 
@@ -1409,7 +1752,9 @@ Returns: Slab connection structures.
 
 #### getCurrentSparsity
 
-`() => number`
+```ts
+getCurrentSparsity(): number
+```
 
 Compute the current connection sparsity ratio.
 
@@ -1417,25 +1762,33 @@ Returns: Current sparsity in $[0,1]$.
 
 #### getLastGradClipGroupCount
 
-`() => number`
+```ts
+getLastGradClipGroupCount(): number
+```
 
 Returns last gradient clipping group count (0 if no clipping yet).
 
 #### getLossScale
 
-`() => number`
+```ts
+getLossScale(): number
+```
 
 Returns current mixed precision loss scale (1 if disabled).
 
 #### getRawGradientNorm
 
-`() => number`
+```ts
+getRawGradientNorm(): number
+```
 
 Returns last recorded raw (pre-update) gradient L2 norm.
 
 #### getRegularizationStats
 
-`() => Record<string, unknown> | null`
+```ts
+getRegularizationStats(): Record<string, unknown> | null
+```
 
 Read regularization statistics collected during training.
 
@@ -1443,7 +1796,9 @@ Returns: Regularization stats payload.
 
 #### getRNGState
 
-`() => number | undefined`
+```ts
+getRNGState(): number | undefined
+```
 
 Read the raw deterministic RNG state word.
 
@@ -1451,7 +1806,9 @@ Returns: RNG state value when present.
 
 #### getTopologyIntent
 
-`() => import("src/architecture/network/network.types").NetworkTopologyIntent`
+```ts
+getTopologyIntent(): NetworkTopologyIntent
+```
 
 Returns the public topology intent for this network.
 
@@ -1459,7 +1816,9 @@ Returns: Current topology intent.
 
 #### getTrainingStats
 
-`() => { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }`
+```ts
+getTrainingStats(): { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }
+```
 
 Consolidated training stats snapshot.
 
@@ -1477,7 +1836,11 @@ Optional layered view cache.
 
 #### mutate
 
-`(method: import("src/architecture/network/network.types").MutationMethod) => void`
+```ts
+mutate(
+  method: MutationMethod,
+): void
+```
 
 Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
@@ -1493,7 +1856,11 @@ Network node collection.
 
 #### noTraceActivate
 
-`(input: number[]) => number[]`
+```ts
+noTraceActivate(
+  input: number[],
+): number[]
+```
 
 Activates the network without calculating eligibility traces.
 This is a performance optimization for scenarios where backpropagation is not needed,
@@ -1507,7 +1874,16 @@ Output node count.
 
 #### propagate
 
-`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: ((target: number, output: number) => number) | undefined) => void`
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  target: number[],
+  regularization: number,
+  costDerivative: ((target: number, output: number) => number) | undefined,
+): void
+```
 
 Propagates the error backward through the network (backpropagation).
 Calculates the error gradient for each node and connection.
@@ -1518,7 +1894,12 @@ The process starts from the output nodes and moves backward layer by layer (or t
 
 #### pruneToSparsity
 
-`(targetSparsity: number, method: "magnitude" | "snip") => void`
+```ts
+pruneToSparsity(
+  targetSparsity: number,
+  method: "magnitude" | "snip",
+): void
+```
 
 Immediately prune connections to reach (or approach) a target sparsity fraction.
 Used by evolutionary pruning (generation-based) independent of training iteration schedule.
@@ -1529,7 +1910,11 @@ Parameters:
 
 #### rebuildConnections
 
-`(net: import("src/architecture/network").default) => void`
+```ts
+rebuildConnections(
+  net: default,
+): void
+```
 
 Rebuilds the network's connections array from all per-node connections.
 This ensures that the network.connections array is consistent with the actual
@@ -1540,7 +1925,11 @@ Returns: Example usage:
 
 #### rebuildConnectionSlab
 
-`(force: boolean) => void`
+```ts
+rebuildConnectionSlab(
+  force: boolean,
+): void
+```
 
 Rebuild slab structures for fast activation.
 
@@ -1551,7 +1940,11 @@ Returns: Slab rebuild result.
 
 #### remove
 
-`(node: import("src/architecture/node").default) => void`
+```ts
+remove(
+  node: default,
+): void
+```
 
 Removes a node from the network.
 This involves:
@@ -1565,14 +1958,20 @@ This involves:
 
 #### resetDropoutMasks
 
-`() => void`
+```ts
+resetDropoutMasks(): void
+```
 
 Resets all masks in the network to 1 (no dropout). Applies to both node-level and layer-level dropout.
 Should be called after training to ensure inference is unaffected by previous dropout.
 
 #### restoreRNG
 
-`(fn: () => number) => void`
+```ts
+restoreRNG(
+  fn: () => number,
+): void
+```
 
 Restore deterministic RNG function from a snapshot source.
 
@@ -1589,20 +1988,30 @@ Self-connection list.
 
 #### serialize
 
-`() => [number[], number[], string[], import("src/architecture/network/network.types").SerializedConnection[], number, number]`
+```ts
+serialize(): [number[], number[], string[], SerializedConnection[], number, number]
+```
 
 Lightweight tuple serializer delegating to network.serialize.ts
 
 #### set
 
-`(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; }) => void`
+```ts
+set(
+  values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; },
+): void
+```
 
 Sets specified properties (e.g., bias, squash function) for all nodes in the network.
 Useful for initializing or resetting node properties uniformly.
 
 #### setEnforceAcyclic
 
-`(flag: boolean) => void`
+```ts
+setEnforceAcyclic(
+  flag: boolean,
+): void
+```
 
 Enable or disable acyclic topology enforcement.
 
@@ -1611,7 +2020,11 @@ Parameters:
 
 #### setRandom
 
-`(fn: () => number) => void`
+```ts
+setRandom(
+  fn: () => number,
+): void
+```
 
 Replace the network random number generator.
 
@@ -1620,7 +2033,11 @@ Parameters:
 
 #### setRNGState
 
-`(state: number) => void`
+```ts
+setRNGState(
+  state: number,
+): void
+```
 
 Set the raw deterministic RNG state word.
 
@@ -1629,7 +2046,11 @@ Parameters:
 
 #### setSeed
 
-`(seed: number) => void`
+```ts
+setSeed(
+  seed: number,
+): void
+```
 
 Seed the internal deterministic RNG.
 
@@ -1638,7 +2059,11 @@ Parameters:
 
 #### setStochasticDepth
 
-`(survival: number[]) => void`
+```ts
+setStochasticDepth(
+  survival: number[],
+): void
+```
 
 Configure stochastic depth with survival probabilities per hidden layer.
 
@@ -1647,7 +2072,11 @@ Parameters:
 
 #### setStochasticDepthSchedule
 
-`(fn: (step: number, current: number[]) => number[]) => void`
+```ts
+setStochasticDepthSchedule(
+  fn: (step: number, current: number[]) => number[],
+): void
+```
 
 Set stochastic-depth schedule function.
 
@@ -1656,7 +2085,11 @@ Parameters:
 
 #### setTopologyIntent
 
-`(topologyIntent: import("src/architecture/network/network.types").NetworkTopologyIntent) => void`
+```ts
+setTopologyIntent(
+  topologyIntent: NetworkTopologyIntent,
+): void
+```
 
 Sets the public topology intent and keeps acyclic enforcement aligned.
 
@@ -1667,7 +2100,11 @@ Returns: Nothing.
 
 #### setWeightNoiseSchedule
 
-`(fn: (step: number) => number) => void`
+```ts
+setWeightNoiseSchedule(
+  fn: (step: number) => number,
+): void
+```
 
 Set a dynamic scheduler for global weight noise.
 
@@ -1676,7 +2113,9 @@ Parameters:
 
 #### snapshotRNG
 
-`() => import("src/architecture/network/network.types").RNGSnapshot`
+```ts
+snapshotRNG(): RNGSnapshot
+```
 
 Snapshot deterministic RNG runtime state.
 
@@ -1684,7 +2123,12 @@ Returns: Current RNG snapshot.
 
 #### test
 
-`(set: { input: number[]; output: number[]; }[], cost: ((target: number[], output: number[]) => number) | undefined) => { error: number; time: number; }`
+```ts
+test(
+  set: { input: number[]; output: number[]; }[],
+  cost: ((target: number[], output: number[]) => number) | undefined,
+): { error: number; time: number; }
+```
 
 Tests the network's performance on a given dataset.
 Calculates the average error over the dataset using a specified cost function.
@@ -1695,19 +2139,25 @@ Returns: An object containing the calculated average error over the dataset and 
 
 #### testForceOverflow
 
-`() => void`
+```ts
+testForceOverflow(): void
+```
 
 Force the next mixed-precision overflow path (test utility).
 
 #### toJSON
 
-`() => Record<string, unknown>`
+```ts
+toJSON(): Record<string, unknown>
+```
 
 Verbose JSON serializer delegate
 
 #### toONNX
 
-`() => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+```ts
+toONNX(): OnnxModel
+```
 
 Exports the network to ONNX format (JSON object, minimal MLP support).
 Only standard feedforward architectures and standard activations are supported.
@@ -1721,7 +2171,11 @@ Current training step counter.
 
 #### ungate
 
-`(connection: import("src/architecture/connection").default) => void`
+```ts
+ungate(
+  connection: default,
+): void
+```
 
 Removes the gate from a specified connection.
 The connection will no longer be modulated by its gater node.
@@ -1731,7 +2185,11 @@ Removes the connection from the network's `gates` list.
 
 ### acquireNode
 
-`(opts: import("src/architecture/nodePool").AcquireNodeOptions) => import("src/architecture/node").default`
+```ts
+acquireNode(
+  opts: AcquireNodeOptions,
+): default
+```
 
 Acquire (obtain) a node instance from the pool (or construct a new one if empty).
 The node is guaranteed to have fully reset dynamic state (activation, gradients, error, connections).
@@ -1742,13 +2200,19 @@ Options bag for acquiring a node.
 
 ### nodePoolStats
 
-`() => { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }`
+```ts
+nodePoolStats(): { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }
+```
 
 Get current pool statistics (for debugging / future leak detection).
 
 ### releaseNode
 
-`(node: import("src/architecture/node").default) => void`
+```ts
+releaseNode(
+  node: default,
+): void
+```
 
 Release (recycle) a node back into the pool. The caller MUST ensure the node is fully detached
 from any network (connections arrays pruned, no external references maintained) to prevent leaks.
@@ -1758,7 +2222,9 @@ Phase 2: Automatically invoked by Network.remove() when pooling is enabled to re
 
 ### resetNodePool
 
-`() => void`
+```ts
+resetNodePool(): void
+```
 
 Reset the pool (drops all retained nodes). Intended for test harness cleanup.
 
@@ -1792,7 +2258,11 @@ connection strategies from `methods.groupConnection`.
 
 #### construct
 
-`(list: (import("src/architecture/node").default | import("src/architecture/layer").default | import("src/architecture/group").default)[]) => import("src/architecture/network").default`
+```ts
+construct(
+  list: (default | default | default)[],
+): default
+```
 
 Constructs a Network instance from an array of interconnected Layers, Groups, or Nodes.
 
@@ -1805,7 +2275,11 @@ Returns: A Network object representing the constructed architecture.
 
 #### enforceMinimumHiddenLayerSizes
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network").default`
+```ts
+enforceMinimumHiddenLayerSizes(
+  network: default,
+): default
+```
 
 Enforces the minimum hidden layer size rule on a network.
 
@@ -1816,7 +2290,11 @@ Returns: The same network with properly sized hidden layers
 
 #### gru
 
-`(layers: number[]) => import("src/architecture/network").default`
+```ts
+gru(
+  layers: number[],
+): default
+```
 
 Creates a Gated Recurrent Unit (GRU) network.
 GRUs are another type of recurrent neural network, similar to LSTMs but often simpler.
@@ -1826,7 +2304,11 @@ Returns: The constructed GRU network.
 
 #### hopfield
 
-`(size: number) => import("src/architecture/network").default`
+```ts
+hopfield(
+  size: number,
+): default
+```
 
 Creates a Hopfield network.
 Hopfield networks are a form of recurrent neural network often used for associative memory tasks.
@@ -1836,7 +2318,11 @@ Returns: The constructed Hopfield network.
 
 #### lstm
 
-`(layerArgs: (number | { inputToOutput?: boolean | undefined; })[]) => import("src/architecture/network").default`
+```ts
+lstm(
+  layerArgs: (number | { inputToOutput?: boolean | undefined; })[],
+): default
+```
 
 Creates a Long Short-Term Memory (LSTM) network.
 LSTMs are a type of recurrent neural network (RNN) capable of learning long-range dependencies.
@@ -1846,7 +2332,15 @@ Returns: The constructed LSTM network.
 
 #### narx
 
-`(inputSize: number, hiddenLayers: number | number[], outputSize: number, previousInput: number, previousOutput: number) => import("src/architecture/network").default`
+```ts
+narx(
+  inputSize: number,
+  hiddenLayers: number | number[],
+  outputSize: number,
+  previousInput: number,
+  previousOutput: number,
+): default
+```
 
 Creates a Nonlinear AutoRegressive network with eXogenous inputs (NARX).
 NARX networks are recurrent networks often used for time series prediction.
@@ -1857,7 +2351,11 @@ Returns: The constructed NARX network.
 
 #### perceptron
 
-`(layers: number[]) => import("src/architecture/network").default`
+```ts
+perceptron(
+  layers: number[],
+): default
+```
 
 Creates a standard Multi-Layer Perceptron (MLP) network.
 An MLP consists of an input layer, one or more hidden layers, and an output layer,
@@ -1871,7 +2369,14 @@ Returns: The constructed MLP network.
 
 #### random
 
-`(input: number, hidden: number, output: number, options: { connections?: number | undefined; backconnections?: number | undefined; selfconnections?: number | undefined; gates?: number | undefined; }) => import("src/architecture/network").default`
+```ts
+random(
+  input: number,
+  hidden: number,
+  output: number,
+  options: { connections?: number | undefined; backconnections?: number | undefined; selfconnections?: number | undefined; gates?: number | undefined; },
+): default
+```
 
 Creates a randomly structured network based on specified node counts and connection options.
 
@@ -1914,7 +2419,13 @@ bits4+ reserved.
 
 #### acquire
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default`
+```ts
+acquire(
+  from: default,
+  to: default,
+  weight: number | undefined,
+): default
+```
 
 Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
 a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
@@ -1985,7 +2496,12 @@ Unique historical marking (auto-increment) for evolutionary alignment.
 
 #### innovationID
 
-`(sourceNodeId: number, targetNodeId: number) => number`
+```ts
+innovationID(
+  sourceNodeId: number,
+  targetNodeId: number,
+): number
+```
 
 Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
 Useful when you want a stable innovation id without relying on global mutable counters
@@ -2025,7 +2541,11 @@ Last applied delta weight (used by classic momentum).
 
 #### release
 
-`(conn: import("src/architecture/connection").default) => void`
+```ts
+release(
+  conn: default,
+): void
+```
 
 Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
 afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
@@ -2036,7 +2556,11 @@ Parameters:
 
 #### resetInnovationCounter
 
-`(value: number) => void`
+```ts
+resetInnovationCounter(
+  value: number,
+): void
+```
 
 Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
 You normally only call this at the start of an experiment or when deserializing a full population.
@@ -2063,7 +2587,9 @@ The target (post-synaptic) node receiving activation.
 
 #### toJSON
 
-`() => { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }`
+```ts
+toJSON(): { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }
+```
 
 Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
 Undefined indices are preserved as `undefined` to allow later resolution / remapping.

@@ -20,7 +20,13 @@ trainer judges the consequences of that choice.
 
 ### applyMazeMovementEpsilonExploration
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+```ts
+applyMazeMovementEpsilonExploration(
+  state: SimulationState,
+  encodedMaze: number[][],
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): void
+```
 
 Apply epsilon-greedy exploration to the current action choice.
 
@@ -31,7 +37,13 @@ Parameters:
 
 ### applyMazeMovementForcedExploration
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+```ts
+applyMazeMovementForcedExploration(
+  state: SimulationState,
+  encodedMaze: number[][],
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): void
+```
 
 Force a random valid move when the policy has stalled with repeated no-move outputs.
 
@@ -42,7 +54,14 @@ Parameters:
 
 ### applyMazeMovementProximityGreedy
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], distanceMap: number[][] | undefined, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+```ts
+applyMazeMovementProximityGreedy(
+  state: SimulationState,
+  encodedMaze: number[][],
+  distanceMap: number[][] | undefined,
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): void
+```
 
 Apply the short-horizon proximity-greedy override near the maze exit.
 
@@ -54,7 +73,14 @@ Parameters:
 
 ### applyMazeMovementSaturationAndBiasAdjust
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, outputs: number[], network: import("test/examples/asciiMaze/interfaces").INetwork, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+```ts
+applyMazeMovementSaturationAndBiasAdjust(
+  state: SimulationState,
+  outputs: number[],
+  network: INetwork,
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): void
+```
 
 Detect saturation and optionally damp output-node biases.
 
@@ -66,7 +92,14 @@ Parameters:
 
 ### computeMazeMovementEpsilon
 
-`(stepNumber: number, stepsSinceImprovement: number, distHere: number, saturations: number) => number`
+```ts
+computeMazeMovementEpsilon(
+  stepNumber: number,
+  stepsSinceImprovement: number,
+  distHere: number,
+  saturations: number,
+): number
+```
 
 Compute the adaptive epsilon used for policy exploration.
 
@@ -80,7 +113,13 @@ Returns: Exploration epsilon in the range `[0, 1]`.
 
 ### decideMazeMovementDirection
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, network: import("test/examples/asciiMaze/interfaces").INetwork, coordinateScratch: Int32Array<ArrayBufferLike>) => void`
+```ts
+decideMazeMovementDirection(
+  state: SimulationState,
+  network: INetwork,
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): void
+```
 
 Activate the network, record output history, and choose the next direction.
 
@@ -90,7 +129,11 @@ Parameters:
 
 ### selectMazeMovementDirection
 
-`(outputs: number[]) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").DirectionSelectionStats`
+```ts
+selectMazeMovementDirection(
+  outputs: number[],
+): DirectionSelectionStats
+```
 
 Convert raw network outputs into a chosen direction plus diagnostics.
 

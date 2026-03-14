@@ -1190,8 +1190,12 @@ export const simulateAndPostprocess = (
     scratchLogitsShared,
     scratchLogitsSharedW,
   } = runtimeContext;
-  const { telemetryMinimal, saturationPruneThreshold, recentWindow, reducedTelemetry } =
-    telemetryContext;
+  const {
+    telemetryMinimal,
+    saturationPruneThreshold,
+    recentWindow,
+    reducedTelemetry,
+  } = telemetryContext;
   const { getNodeIndicesByType, collectHiddenToOutputConns } =
     loopSupportContext.loopHelpers;
 

@@ -26,7 +26,12 @@ Mutable gater collection retained while removing a hidden node.
 
 ### gate
 
-`(node: import("src/architecture/node").default, connection: import("src/architecture/connection").default) => void`
+```ts
+gate(
+  node: default,
+  connection: default,
+): void
+```
 
 Attach a gater node to a connection so that the connection's effective weight
 becomes dynamically modulated by the gater's activation (see {@link Node.gate} for exact math).
@@ -44,7 +49,11 @@ Parameters:
 
 ### removeNode
 
-`(node: import("src/architecture/node").default) => void`
+```ts
+removeNode(
+  node: default,
+): void
+```
 
 Remove a hidden node from the network while attempting to preserve functional connectivity.
 
@@ -76,7 +85,11 @@ Parameters:
 
 ### ungate
 
-`(connection: import("src/architecture/connection").default) => void`
+```ts
+ungate(
+  connection: default,
+): void
+```
 
 Remove gating from a connection, restoring its static weight contribution.
 
@@ -94,7 +107,12 @@ Parameters:
 
 ### assertGaterNodeBelongsToNetwork
 
-`(network: import("src/architecture/network").default, node: import("src/architecture/node").default) => void`
+```ts
+assertGaterNodeBelongsToNetwork(
+  network: default,
+  node: default,
+): void
+```
 
 Validate that a candidate gater node belongs to the target network.
 
@@ -106,7 +124,13 @@ Returns: Nothing.
 
 ### attachGaterToConnection
 
-`(network: import("src/architecture/network").default, node: import("src/architecture/node").default, connection: import("src/architecture/connection").default) => void`
+```ts
+attachGaterToConnection(
+  network: default,
+  node: default,
+  connection: default,
+): void
+```
 
 Attach a gater to a connection and track that connection in the network gate list.
 
@@ -119,7 +143,11 @@ Returns: Nothing.
 
 ### detachConnectionFromGater
 
-`(connection: import("src/architecture/connection").default) => void`
+```ts
+detachConnectionFromGater(
+  connection: default,
+): void
+```
 
 Remove reverse gater bookkeeping from a connection's gater node.
 
@@ -130,7 +158,12 @@ Returns: Nothing.
 
 ### findGateIndex
 
-`(network: import("src/architecture/network").default, connection: import("src/architecture/connection").default) => number`
+```ts
+findGateIndex(
+  network: default,
+  connection: default,
+): number
+```
 
 Find a connection position within the network global gates list.
 
@@ -142,7 +175,11 @@ Returns: Zero-based index in the gates list, or -1 when absent.
 
 ### isConnectionAlreadyGated
 
-`(connection: import("src/architecture/connection").default) => boolean`
+```ts
+isConnectionAlreadyGated(
+  connection: default,
+): boolean
+```
 
 Determine whether a connection already has a gater node assigned.
 
@@ -153,7 +190,12 @@ Returns: True when a gater is already set; otherwise false.
 
 ### removeGateAtIndex
 
-`(network: import("src/architecture/network").default, gateIndex: number) => void`
+```ts
+removeGateAtIndex(
+  network: default,
+  gateIndex: number,
+): void
+```
 
 Remove a gated connection from the network global gate list.
 
@@ -165,7 +207,9 @@ Returns: Nothing.
 
 ### warnConnectionAlreadyGated
 
-`() => void`
+```ts
+warnConnectionAlreadyGated(): void
+```
 
 Emit a warning when a gate operation is skipped due to existing gating.
 
@@ -173,7 +217,9 @@ Returns: Nothing.
 
 ### warnMissingGateConnection
 
-`() => void`
+```ts
+warnMissingGateConnection(): void
+```
 
 Emit a warning when an ungate request targets a non-tracked connection.
 
@@ -183,7 +229,12 @@ Returns: Nothing.
 
 ### assertNodeRemovableAndGetIndex
 
-`(network: import("src/architecture/network").default, node: import("src/architecture/node").default) => number`
+```ts
+assertNodeRemovableAndGetIndex(
+  network: default,
+  node: default,
+): number
+```
 
 Ensure a node can be removed and return its index in the network node list.
 
@@ -195,7 +246,13 @@ Returns: Index of the node in the network node list.
 
 ### createBridgingConnections
 
-`(network: import("src/architecture/network").default, predecessorNodes: import("src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList, successorNodes: import("src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList) => import("src/architecture/network/gating/network.gating.utils.types").BridgingConnectionList`
+```ts
+createBridgingConnections(
+  network: default,
+  predecessorNodes: ConnectedNodeList,
+  successorNodes: ConnectedNodeList,
+): BridgingConnectionList
+```
 
 Create bridging connections from each predecessor to each successor when valid.
 
@@ -208,7 +265,14 @@ Returns: Newly created bridge connections.
 
 ### disconnectInboundConnections
 
-`(network: import("src/architecture/network").default, node: import("src/architecture/node").default, preservedGaters: import("src/architecture/network/gating/network.gating.utils.types").PreservedGaters, subNodeConfig: import("src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig) => import("src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList`
+```ts
+disconnectInboundConnections(
+  network: default,
+  node: default,
+  preservedGaters: PreservedGaters,
+  subNodeConfig: NodeRemovalMutationConfig,
+): ConnectedNodeList
+```
 
 Disconnect all inbound connections for a node while collecting predecessors.
 
@@ -222,7 +286,12 @@ Returns: Predecessor nodes that previously projected into the removed node.
 
 ### disconnectNodeSelfLoop
 
-`(network: import("src/architecture/network").default, node: import("src/architecture/node").default) => void`
+```ts
+disconnectNodeSelfLoop(
+  network: default,
+  node: default,
+): void
+```
 
 Disconnect a node self-loop before broader edge rewiring.
 
@@ -234,7 +303,14 @@ Returns: Nothing.
 
 ### disconnectOutboundConnections
 
-`(network: import("src/architecture/network").default, node: import("src/architecture/node").default, preservedGaters: import("src/architecture/network/gating/network.gating.utils.types").PreservedGaters, subNodeConfig: import("src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig) => import("src/architecture/network/gating/network.gating.utils.types").ConnectedNodeList`
+```ts
+disconnectOutboundConnections(
+  network: default,
+  node: default,
+  preservedGaters: PreservedGaters,
+  subNodeConfig: NodeRemovalMutationConfig,
+): ConnectedNodeList
+```
 
 Disconnect all outbound connections for a node while collecting successors.
 
@@ -248,7 +324,14 @@ Returns: Successor nodes that were previously targeted by the removed node.
 
 ### preserveGaterForReassignment
 
-`(connection: import("src/architecture/connection").default, removedNode: import("src/architecture/node").default, preservedGaters: import("src/architecture/network/gating/network.gating.utils.types").PreservedGaters, subNodeConfig: import("src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig) => void`
+```ts
+preserveGaterForReassignment(
+  connection: default,
+  removedNode: default,
+  preservedGaters: PreservedGaters,
+  subNodeConfig: NodeRemovalMutationConfig,
+): void
+```
 
 Preserve a gater for later reassignment when gate retention is enabled.
 
@@ -262,7 +345,13 @@ Returns: Nothing.
 
 ### reassignPreservedGaters
 
-`(network: import("src/architecture/network").default, preservedGaters: import("src/architecture/network/gating/network.gating.utils.types").PreservedGaters, bridgingConnections: import("src/architecture/network/gating/network.gating.utils.types").BridgingConnectionList) => void`
+```ts
+reassignPreservedGaters(
+  network: default,
+  preservedGaters: PreservedGaters,
+  bridgingConnections: BridgingConnectionList,
+): void
+```
 
 Reattach preserved gaters to randomly selected newly-created bridge connections.
 
@@ -275,7 +364,12 @@ Returns: Nothing.
 
 ### removeNodeAtIndex
 
-`(network: import("src/architecture/network").default, nodeIndex: number) => void`
+```ts
+removeNodeAtIndex(
+  network: default,
+  nodeIndex: number,
+): void
+```
 
 Remove a node from the network list and mark node indexing as dirty.
 
@@ -287,7 +381,9 @@ Returns: Nothing.
 
 ### resolveSubNodeMutationConfig
 
-`() => import("src/architecture/network/gating/network.gating.utils.types").NodeRemovalMutationConfig`
+```ts
+resolveSubNodeMutationConfig(): NodeRemovalMutationConfig
+```
 
 Resolve the active SUB_NODE mutation configuration shape.
 
@@ -295,7 +391,11 @@ Returns: Normalized SUB_NODE config when available; otherwise undefined.
 
 ### selectRandomIndex
 
-`(length: number) => number`
+```ts
+selectRandomIndex(
+  length: number,
+): number
+```
 
 Select a uniformly random integer index in the range [0, length).
 
@@ -306,7 +406,12 @@ Returns: Random zero-based index.
 
 ### shouldCreateBridgeConnection
 
-`(predecessorNode: import("src/architecture/node").default, successorNode: import("src/architecture/node").default) => boolean`
+```ts
+shouldCreateBridgeConnection(
+  predecessorNode: default,
+  successorNode: default,
+): boolean
+```
 
 Decide whether a predecessor-successor pair should receive a bridge connection.
 
@@ -318,7 +423,12 @@ Returns: True when the pair is distinct and no projection already exists.
 
 ### ungateConnectionsGatedByNode
 
-`(network: import("src/architecture/network").default, node: import("src/architecture/node").default) => void`
+```ts
+ungateConnectionsGatedByNode(
+  network: default,
+  node: default,
+): void
+```
 
 Ungate all connections that are currently gated by the removed node.
 

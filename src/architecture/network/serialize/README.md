@@ -195,7 +195,12 @@ Suffix used when warning about unknown activation keys.
 
 ### applyHydratedArchitectureDescriptor
 
-`(network: import("src/architecture/network").default, architectureDescriptor: import("src/architecture/network/network.types").NetworkArchitectureDescriptor | undefined) => void`
+```ts
+applyHydratedArchitectureDescriptor(
+  network: default,
+  architectureDescriptor: NetworkArchitectureDescriptor | undefined,
+): void
+```
 
 Applies hydrated architecture metadata to runtime network when shape is valid.
 
@@ -207,7 +212,13 @@ Returns: Nothing.
 
 ### deserialize
 
-`(data: import("src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
+```ts
+deserialize(
+  data: CompactSerializedNetworkTuple,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): default
+```
 
 Rebuilds a network instance from compact tuple form.
 
@@ -231,7 +242,11 @@ const rebuiltNetwork = deserialize(compactTuple, 2, 1);
 
 ### fromJSONImpl
 
-`(json: import("src/architecture/network/network.types").NetworkJSON) => import("src/architecture/network").default`
+```ts
+fromJSONImpl(
+  json: NetworkJSON,
+): default
+```
 
 Reconstructs a network instance from the verbose JSON payload.
 
@@ -253,7 +268,11 @@ const rebuiltNetwork = fromJSONImpl(snapshotJson);
 
 ### isArchitectureDescriptorShapeValid
 
-`(architectureDescriptor: import("src/architecture/network/network.types").NetworkArchitectureDescriptor | undefined) => boolean`
+```ts
+isArchitectureDescriptorShapeValid(
+  architectureDescriptor: NetworkArchitectureDescriptor | undefined,
+): boolean
+```
 
 Parameters:
 - `architectureDescriptor` - - Optional descriptor candidate.
@@ -262,7 +281,9 @@ Returns: True when minimal descriptor shape is valid.
 
 ### serialize
 
-`() => import("src/architecture/network/network.types").CompactSerializedNetworkTuple`
+```ts
+serialize(): CompactSerializedNetworkTuple
+```
 
 Serializes a network instance into the compact tuple format.
 
@@ -293,7 +314,9 @@ Endpoints are canonical node indices, which keeps payloads deterministic and lan
 
 ### toJSONImpl
 
-`() => import("src/architecture/network/network.types").NetworkJSON`
+```ts
+toJSONImpl(): NetworkJSON
+```
 
 Serializes a network instance into the verbose JSON format.
 
@@ -329,7 +352,13 @@ bits4+ reserved.
 
 #### acquire
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default`
+```ts
+acquire(
+  from: default,
+  to: default,
+  weight: number | undefined,
+): default
+```
 
 Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
 a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
@@ -400,7 +429,12 @@ Unique historical marking (auto-increment) for evolutionary alignment.
 
 #### innovationID
 
-`(sourceNodeId: number, targetNodeId: number) => number`
+```ts
+innovationID(
+  sourceNodeId: number,
+  targetNodeId: number,
+): number
+```
 
 Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
 Useful when you want a stable innovation id without relying on global mutable counters
@@ -440,7 +474,11 @@ Last applied delta weight (used by classic momentum).
 
 #### release
 
-`(conn: import("src/architecture/connection").default) => void`
+```ts
+release(
+  conn: default,
+): void
+```
 
 Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
 afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
@@ -451,7 +489,11 @@ Parameters:
 
 #### resetInnovationCounter
 
-`(value: number) => void`
+```ts
+resetInnovationCounter(
+  value: number,
+): void
+```
 
 Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
 You normally only call this at the start of an experiment or when deserializing a full population.
@@ -478,7 +520,9 @@ The target (post-synaptic) node receiving activation.
 
 #### toJSON
 
-`() => { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }`
+```ts
+toJSON(): { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }
+```
 
 Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
 Undefined indices are preserved as `undefined` to allow later resolution / remapping.
@@ -506,7 +550,12 @@ Extended trace structure for modulatory / eligibility propagation algorithms. Pa
 
 ### appendJsonForwardConnections
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, networkJson: import("src/architecture/network/network.types").NetworkJSON) => void`
+```ts
+appendJsonForwardConnections(
+  networkInternals: SerializeNetworkInternals,
+  networkJson: NetworkJSON,
+): void
+```
 
 Appends JSON entries for forward connections.
 
@@ -520,7 +569,12 @@ Returns: Nothing.
 
 ### appendJsonNodesAndSelfConnections
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, networkJson: import("src/architecture/network/network.types").NetworkJSON) => void`
+```ts
+appendJsonNodesAndSelfConnections(
+  networkInternals: SerializeNetworkInternals,
+  networkJson: NetworkJSON,
+): void
+```
 
 Appends JSON node entries and optional self-connections.
 
@@ -535,7 +589,13 @@ Returns: Nothing.
 
 ### appendJsonSelfConnectionWhenPresent
 
-`(nodeInternals: import("src/architecture/network/network.types").SerializeNodeInternals, nodeIndex: number, networkJson: import("src/architecture/network/network.types").NetworkJSON) => void`
+```ts
+appendJsonSelfConnectionWhenPresent(
+  nodeInternals: SerializeNodeInternals,
+  nodeIndex: number,
+  networkJson: NetworkJSON,
+): void
+```
 
 Appends JSON self-connection when node has one.
 
@@ -548,7 +608,12 @@ Returns: Nothing.
 
 ### assignJsonEnabledFlagWhenProvided
 
-`(createdConnection: import("src/architecture/connection").default | undefined, enabled: boolean) => void`
+```ts
+assignJsonEnabledFlagWhenProvided(
+  createdConnection: default | undefined,
+  enabled: boolean,
+): void
+```
 
 Assigns enabled flag when value is provided.
 
@@ -560,7 +625,13 @@ Returns: Nothing.
 
 ### assignJsonGaterWhenValid
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, gaterIndex: number | null, createdConnection: import("src/architecture/connection").default | undefined) => void`
+```ts
+assignJsonGaterWhenValid(
+  networkInternals: SerializeNetworkInternals,
+  gaterIndex: number | null,
+  createdConnection: default | undefined,
+): void
+```
 
 Assigns JSON gater when connection and gater index are valid.
 
@@ -573,7 +644,14 @@ Returns: Nothing.
 
 ### createConnection
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default, weight: number) => import("src/architecture/connection").default | undefined`
+```ts
+createConnection(
+  networkInternals: SerializeNetworkInternals,
+  sourceNode: default,
+  targetNode: default,
+  weight: number,
+): default | undefined
+```
 
 Creates one connection and returns first created instance.
 
@@ -587,7 +665,11 @@ Returns: Created connection or undefined.
 
 ### createEmptyNetworkJson
 
-`(networkInternals: import("src/architecture/network/network.types").NetworkInternalsWithDropout) => import("src/architecture/network/network.types").NetworkJSON`
+```ts
+createEmptyNetworkJson(
+  networkInternals: NetworkInternalsWithDropout,
+): NetworkJSON
+```
 
 Creates an empty verbose JSON shell from runtime internals.
 
@@ -607,7 +689,15 @@ const networkJson = createEmptyNetworkJson(networkInternals);
 
 ### createJsonConnection
 
-`(from: number, to: number, weight: number, gater: number | null, enabled: boolean) => import("src/architecture/network/network.types").NetworkJSONConnection`
+```ts
+createJsonConnection(
+  from: number,
+  to: number,
+  weight: number,
+  gater: number | null,
+  enabled: boolean,
+): NetworkJSONConnection
+```
 
 Creates one JSON connection entry.
 
@@ -622,7 +712,13 @@ Returns: JSON connection entry.
 
 ### createJsonNode
 
-`(node: import("src/architecture/node").default, nodeInternals: import("src/architecture/network/network.types").SerializeNodeInternals, nodeIndex: number) => import("src/architecture/network/network.types").NetworkJSONNode`
+```ts
+createJsonNode(
+  node: default,
+  nodeInternals: SerializeNodeInternals,
+  nodeIndex: number,
+): NetworkJSONNode
+```
 
 Creates one JSON node entry.
 
@@ -635,7 +731,11 @@ Returns: JSON node entry.
 
 ### createNodeWithType
 
-`(nodeType: string) => import("src/architecture/node").default`
+```ts
+createNodeWithType(
+  nodeType: string,
+): default
+```
 
 Creates one node with provided type.
 
@@ -646,7 +746,13 @@ Returns: New node.
 
 ### hydrateNodeFromJsonEntry
 
-`(rebuiltNode: import("src/architecture/node").default, nodeJsonEntry: import("src/architecture/network/network.types").NetworkJSONNode, nodeIndex: number) => void`
+```ts
+hydrateNodeFromJsonEntry(
+  rebuiltNode: default,
+  nodeJsonEntry: NetworkJSONNode,
+  nodeIndex: number,
+): void
+```
 
 Hydrates one node from JSON node entry.
 
@@ -659,7 +765,11 @@ Returns: Nothing.
 
 ### isConnectionEnabled
 
-`(connectionInstance: import("src/architecture/connection").default) => boolean`
+```ts
+isConnectionEnabled(
+  connectionInstance: default,
+): boolean
+```
 
 Resolves enabled status from optional connection flag.
 
@@ -670,7 +780,12 @@ Returns: True when connection is enabled.
 
 ### isJsonConnectionInNodeBounds
 
-`(nodes: import("src/architecture/node").default[], connectionJsonEntry: import("src/architecture/network/network.types").NetworkJSONConnection) => boolean`
+```ts
+isJsonConnectionInNodeBounds(
+  nodes: default[],
+  connectionJsonEntry: NetworkJSONConnection,
+): boolean
+```
 
 Checks JSON connection indices against node list bounds.
 
@@ -682,7 +797,11 @@ Returns: True when both indices are valid.
 
 ### isJsonConnectionShapeValid
 
-`(connectionJsonEntry: import("src/architecture/network/network.types").NetworkJSONConnection) => boolean`
+```ts
+isJsonConnectionShapeValid(
+  connectionJsonEntry: NetworkJSONConnection,
+): boolean
+```
 
 Checks that JSON connection has numeric endpoint fields.
 
@@ -693,7 +812,11 @@ Returns: True when endpoint fields are numbers.
 
 ### rebuildConnectionsFromJsonPayload
 
-`(jsonConnectionContext: import("src/architecture/network/network.types").JsonConnectionRebuildContext) => void`
+```ts
+rebuildConnectionsFromJsonPayload(
+  jsonConnectionContext: JsonConnectionRebuildContext,
+): void
+```
 
 Rebuilds runtime connections from verbose JSON entries.
 
@@ -715,7 +838,11 @@ rebuildConnectionsFromJsonPayload({
 
 ### rebuildNodesFromJsonPayload
 
-`(jsonNodeContext: import("src/architecture/network/network.types").JsonNodeRebuildContext) => void`
+```ts
+rebuildNodesFromJsonPayload(
+  jsonNodeContext: JsonNodeRebuildContext,
+): void
+```
 
 Rebuilds runtime nodes from verbose JSON entries.
 
@@ -732,7 +859,12 @@ rebuildNodesFromJsonPayload({ networkInternals, nodeJsonEntries });
 
 ### rebuildOneJsonConnection
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, connectionJsonEntry: import("src/architecture/network/network.types").NetworkJSONConnection) => void`
+```ts
+rebuildOneJsonConnection(
+  networkInternals: SerializeNetworkInternals,
+  connectionJsonEntry: NetworkJSONConnection,
+): void
+```
 
 Rebuilds one verbose JSON connection entry.
 
@@ -744,7 +876,11 @@ Returns: Nothing.
 
 ### resolveDropout
 
-`(dropout: number | undefined) => number`
+```ts
+resolveDropout(
+  dropout: number | undefined,
+): number
+```
 
 Resolves dropout with a numeric fallback when the value is absent.
 
@@ -755,7 +891,11 @@ Returns: Effective dropout.
 
 ### resolveGaterIndex
 
-`(gaterNode: import("src/architecture/node").default | null) => number | null`
+```ts
+resolveGaterIndex(
+  gaterNode: default | null,
+): number | null
+```
 
 Resolves gater node index from gater reference.
 
@@ -766,7 +906,11 @@ Returns: Gater index or null.
 
 ### validateNetworkJsonOrThrow
 
-`(json: import("src/architecture/network/network.types").NetworkJSON) => void`
+```ts
+validateNetworkJsonOrThrow(
+  json: NetworkJSON,
+): void
+```
 
 Validates the verbose JSON payload root shape.
 
@@ -777,7 +921,11 @@ Returns: Nothing.
 
 ### warnWhenJsonFormatVersionIsUnknown
 
-`(formatVersion: number) => void`
+```ts
+warnWhenJsonFormatVersionIsUnknown(
+  formatVersion: number,
+): void
+```
 
 Warns when incoming verbose format version differs from the expected one.
 
@@ -790,7 +938,13 @@ Returns: Nothing.
 
 ### assignCompactGaterWhenValid
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, gaterIndex: number | null, createdConnection: import("src/architecture/connection").default | undefined) => void`
+```ts
+assignCompactGaterWhenValid(
+  networkInternals: SerializeNetworkInternals,
+  gaterIndex: number | null,
+  createdConnection: default | undefined,
+): void
+```
 
 Assigns compact gater when both connection and gater index are valid.
 
@@ -803,7 +957,11 @@ Returns: Nothing.
 
 ### collectAllConnections
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals) => import("src/architecture/connection").default[]`
+```ts
+collectAllConnections(
+  networkInternals: SerializeNetworkInternals,
+): default[]
+```
 
 Collects all runtime connections into a single list.
 
@@ -814,7 +972,11 @@ Returns: Combined connections.
 
 ### collectNodeActivations
 
-`(nodes: import("src/architecture/node").default[]) => number[]`
+```ts
+collectNodeActivations(
+  nodes: default[],
+): number[]
+```
 
 Collects node activation values in positional order.
 
@@ -825,7 +987,11 @@ Returns: Activation list aligned to node indices.
 
 ### collectNodeSquashKeys
 
-`(nodes: import("src/architecture/node").default[]) => string[]`
+```ts
+collectNodeSquashKeys(
+  nodes: default[],
+): string[]
+```
 
 Collects node activation keys in positional order.
 
@@ -838,7 +1004,11 @@ Returns: Squash-key list aligned to node indices.
 
 ### collectNodeStates
 
-`(nodes: import("src/architecture/node").default[]) => number[]`
+```ts
+collectNodeStates(
+  nodes: default[],
+): number[]
+```
 
 Collects node state values in positional order.
 
@@ -849,7 +1019,11 @@ Returns: State list aligned to node indices.
 
 ### collectSerializedConnections
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals) => import("src/architecture/network/network.types").SerializedConnection[]`
+```ts
+collectSerializedConnections(
+  networkInternals: SerializeNetworkInternals,
+): SerializedConnection[]
+```
 
 Collects compact connection records from forward and self connection groups.
 
@@ -860,7 +1034,14 @@ Returns: Serialized connection list.
 
 ### createConnection
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default, weight: number) => import("src/architecture/connection").default | undefined`
+```ts
+createConnection(
+  networkInternals: SerializeNetworkInternals,
+  sourceNode: default,
+  targetNode: default,
+  weight: number,
+): default | undefined
+```
 
 Creates one connection and returns first created instance.
 
@@ -874,7 +1055,11 @@ Returns: Created connection or undefined.
 
 ### createNodeWithType
 
-`(nodeType: string) => import("src/architecture/node").default`
+```ts
+createNodeWithType(
+  nodeType: string,
+): default
+```
 
 Creates one node with provided type.
 
@@ -885,7 +1070,15 @@ Returns: New node.
 
 ### hydrateNodeStateFromCompactPayload
 
-`(rebuiltNode: import("src/architecture/node").default, activation: number, state: number, squashName: string | undefined, nodeIndex: number) => void`
+```ts
+hydrateNodeStateFromCompactPayload(
+  rebuiltNode: default,
+  activation: number,
+  state: number,
+  squashName: string | undefined,
+  nodeIndex: number,
+): void
+```
 
 Hydrates node runtime state from compact tuple values.
 
@@ -900,7 +1093,12 @@ Returns: Nothing.
 
 ### isSerializedConnectionInNodeBounds
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, serializedConnection: import("src/architecture/network/network.types").SerializedConnection) => boolean`
+```ts
+isSerializedConnectionInNodeBounds(
+  networkInternals: SerializeNetworkInternals,
+  serializedConnection: SerializedConnection,
+): boolean
+```
 
 Checks compact connection bounds against current node list.
 
@@ -912,7 +1110,11 @@ Returns: True when endpoints are valid.
 
 ### rebuildConnectionsFromCompactPayload
 
-`(compactConnectionContext: import("src/architecture/network/network.types").CompactConnectionRebuildContext) => void`
+```ts
+rebuildConnectionsFromCompactPayload(
+  compactConnectionContext: CompactConnectionRebuildContext,
+): void
+```
 
 Rebuilds runtime connections from compact connection records.
 
@@ -936,7 +1138,12 @@ rebuildConnectionsFromCompactPayload({
 
 ### rebuildNodesFromCompactPayload
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, compactNodeContext: import("src/architecture/network/network.types").CompactNodeRebuildContext) => void`
+```ts
+rebuildNodesFromCompactPayload(
+  networkInternals: SerializeNetworkInternals,
+  compactNodeContext: CompactNodeRebuildContext,
+): void
+```
 
 Rebuilds runtime nodes from compact payload arrays.
 
@@ -958,7 +1165,12 @@ rebuildNodesFromCompactPayload(networkInternals, compactNodeContext);
 
 ### rebuildOneCompactConnection
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, serializedConnection: import("src/architecture/network/network.types").SerializedConnection) => void`
+```ts
+rebuildOneCompactConnection(
+  networkInternals: SerializeNetworkInternals,
+  serializedConnection: SerializedConnection,
+): void
+```
 
 Rebuilds one compact serialized connection.
 
@@ -970,7 +1182,11 @@ Returns: Nothing.
 
 ### refreshNodeIndices
 
-`(nodes: import("src/architecture/node").default[]) => void`
+```ts
+refreshNodeIndices(
+  nodes: default[],
+): void
+```
 
 Refreshes `node.index` for each node in list order.
 
@@ -984,7 +1200,14 @@ Returns: Nothing.
 
 ### resolveNodeTypeFromCompactIndex
 
-`(nodeIndex: number, totalNodeCount: number, input: number, output: number) => string`
+```ts
+resolveNodeTypeFromCompactIndex(
+  nodeIndex: number,
+  totalNodeCount: number,
+  input: number,
+  output: number,
+): string
+```
 
 Resolves node type from compact tuple position.
 
@@ -998,7 +1221,11 @@ Returns: Node type string.
 
 ### serializeOneConnection
 
-`(connectionInstance: import("src/architecture/connection").default) => import("src/architecture/network/network.types").SerializedConnection`
+```ts
+serializeOneConnection(
+  connectionInstance: default,
+): SerializedConnection
+```
 
 Serializes one connection into compact indexed form.
 
@@ -1011,7 +1238,11 @@ Returns: Serialized connection record.
 
 ### asNetworkInternals
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").SerializeNetworkInternals`
+```ts
+asNetworkInternals(
+  network: default,
+): SerializeNetworkInternals
+```
 
 Casts a network instance to the internal runtime shape used by serializer helpers.
 
@@ -1022,7 +1253,11 @@ Returns: Runtime internals.
 
 ### asNetworkInternalsWithDropout
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkInternalsWithDropout`
+```ts
+asNetworkInternalsWithDropout(
+  network: default,
+): NetworkInternalsWithDropout
+```
 
 Casts a network instance to internals that include optional dropout metadata.
 
@@ -1033,7 +1268,11 @@ Returns: Runtime internals with optional dropout.
 
 ### asNodeInternals
 
-`(node: import("src/architecture/node").default) => import("src/architecture/network/network.types").SerializeNodeInternals`
+```ts
+asNodeInternals(
+  node: default,
+): SerializeNodeInternals
+```
 
 Casts a node instance to its internal runtime representation.
 
@@ -1044,7 +1283,11 @@ Returns: Node internals.
 
 ### createCompactPayloadContext
 
-`(data: import("src/architecture/network/network.types").CompactSerializedNetworkTuple) => import("src/architecture/network/network.types").CompactPayloadContext`
+```ts
+createCompactPayloadContext(
+  data: CompactSerializedNetworkTuple,
+): CompactPayloadContext
+```
 
 Normalizes a compact tuple payload into a named object context.
 
@@ -1064,7 +1307,12 @@ const compactPayload = createCompactPayloadContext(compactTuple);
 
 ### createNetworkInstance
 
-`(input: number, output: number) => import("src/architecture/network").default`
+```ts
+createNetworkInstance(
+  input: number,
+  output: number,
+): default
+```
 
 Creates a new network instance for deserialize workflows.
 
@@ -1076,7 +1324,11 @@ Returns: New network instance.
 
 ### isFiniteIndex
 
-`(index: number) => boolean`
+```ts
+isFiniteIndex(
+  index: number,
+): boolean
+```
 
 Checks whether a candidate index value is a finite number.
 
@@ -1087,7 +1339,12 @@ Returns: True when finite number.
 
 ### isNodeIndexInBounds
 
-`(nodes: import("src/architecture/node").default[], index: number) => boolean`
+```ts
+isNodeIndexInBounds(
+  nodes: default[],
+  index: number,
+): boolean
+```
 
 Checks whether an index is inside the bounds of a node array.
 
@@ -1099,7 +1356,11 @@ Returns: True when index is valid.
 
 ### resetMutableRuntimeCollections
 
-`(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals) => void`
+```ts
+resetMutableRuntimeCollections(
+  networkInternals: SerializeNetworkInternals,
+): void
+```
 
 Clears mutable runtime collections before reconstruction.
 
@@ -1110,7 +1371,13 @@ Returns: Nothing.
 
 ### resolveNetworkSize
 
-`(compactPayload: import("src/architecture/network/network.types").CompactPayloadContext, inputSizeOverride: number | undefined, outputSizeOverride: number | undefined) => import("src/architecture/network/network.types").ResolvedNetworkSizeContext`
+```ts
+resolveNetworkSize(
+  compactPayload: CompactPayloadContext,
+  inputSizeOverride: number | undefined,
+  outputSizeOverride: number | undefined,
+): ResolvedNetworkSizeContext
+```
 
 Resolves effective input/output dimensions using optional explicit overrides.
 
@@ -1125,7 +1392,12 @@ Returns: Resolved network size context.
 
 ### resolveSizeOverride
 
-`(overrideValue: number | undefined, serializedValue: number) => number`
+```ts
+resolveSizeOverride(
+  overrideValue: number | undefined,
+  serializedValue: number,
+): number
+```
 
 Resolves one size value with override-first semantics.
 
@@ -1139,7 +1411,11 @@ Returns: Effective size.
 
 ### findActivationByFunctionName
 
-`(squashName: string | undefined) => import("src/methods/activation.utils").ActivationFunction | undefined`
+```ts
+findActivationByFunctionName(
+  squashName: string | undefined,
+): ActivationFunction | undefined
+```
 
 Resolves activation by matching function.name.
 
@@ -1150,7 +1426,11 @@ Returns: Activation function or undefined.
 
 ### findActivationByKey
 
-`(squashName: string | undefined) => import("src/methods/activation.utils").ActivationFunction | undefined`
+```ts
+findActivationByKey(
+  squashName: string | undefined,
+): ActivationFunction | undefined
+```
 
 Resolves activation by direct key lookup.
 
@@ -1161,7 +1441,11 @@ Returns: Activation function or undefined.
 
 ### findActivationEntryByReference
 
-`(squashFunction: import("src/methods/activation.utils").ActivationFunction) => [string, import("src/methods/activation.utils").ActivationFunction] | undefined`
+```ts
+findActivationEntryByReference(
+  squashFunction: ActivationFunction,
+): [string, ActivationFunction] | undefined
+```
 
 Finds activation entry by function reference.
 
@@ -1172,7 +1456,11 @@ Returns: Activation entry or undefined.
 
 ### resolveActivationFunction
 
-`(squashName: string | undefined) => import("src/methods/activation.utils").ActivationFunction`
+```ts
+resolveActivationFunction(
+  squashName: string | undefined,
+): ActivationFunction
+```
 
 Resolves an activation function from a stored key or function name.
 
@@ -1192,7 +1480,11 @@ const squashFunction = resolveActivationFunction('relu');
 
 ### resolveActivationKey
 
-`(squashFunction: import("src/methods/activation.utils").ActivationFunction) => string`
+```ts
+resolveActivationKey(
+  squashFunction: ActivationFunction,
+): string
+```
 
 Resolves a canonical activation key from a runtime activation function reference.
 
@@ -1214,7 +1506,11 @@ const key = resolveActivationKey(methods.Activation.tanh);
 
 ### resolveNamedActivationFromFunction
 
-`(squashFunction: import("src/methods/activation.utils").ActivationFunction) => string | undefined`
+```ts
+resolveNamedActivationFromFunction(
+  squashFunction: ActivationFunction,
+): string | undefined
+```
 
 Resolves activation name from function.name when non-empty.
 
@@ -1225,7 +1521,11 @@ Returns: Activation name or undefined.
 
 ### warnUnknownSquashName
 
-`(squashName: string | undefined) => void`
+```ts
+warnUnknownSquashName(
+  squashName: string | undefined,
+): void
+```
 
 Warns about unknown activation and fallback to identity.
 

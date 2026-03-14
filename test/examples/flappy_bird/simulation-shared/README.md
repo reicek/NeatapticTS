@@ -74,7 +74,11 @@ emitting diagnostics.
 
 ### formatSharedSimulationErrorMessage
 
-`(error: unknown) => string`
+```ts
+formatSharedSimulationErrorMessage(
+  error: unknown,
+): string
+```
 
 Formats unknown shared-simulation errors for stable logs.
 
@@ -112,7 +116,13 @@ Clamps a numeric value to the inclusive `[min, max]` interval.
 
 ### clamp
 
-`(value: number, min: number, max: number) => number`
+```ts
+clamp(
+  value: number,
+  min: number,
+  max: number,
+): number
+```
 
 Internal clamp primitive.
 
@@ -125,7 +135,11 @@ Returns: Clamped value.
 
 ### clamp01
 
-`(value: number) => number`
+```ts
+clamp01(
+  value: number,
+): number
+```
 
 Clamps a numeric value to the inclusive `[0, 1]` interval.
 
@@ -136,7 +150,13 @@ Returns: Value clamped between 0 and 1.
 
 ### clampValue
 
-`(value: number, min: number, max: number) => number`
+```ts
+clampValue(
+  value: number,
+  min: number,
+  max: number,
+): number
+```
 
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
@@ -149,7 +169,13 @@ Returns: Clamped value.
 
 ### interpolateValue
 
-`(startValue: number, endValue: number, progress: number) => number`
+```ts
+interpolateValue(
+  startValue: number,
+  endValue: number,
+  progress: number,
+): number
+```
 
 Linear interpolation helper.
 
@@ -164,7 +190,13 @@ Returns: Interpolated value.
 
 ### resolveNextSpawnGapCenterY
 
-`(previousGapCenterYPx: number, rng: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike, maximumGapCenterYPx: number) => number`
+```ts
+resolveNextSpawnGapCenterY(
+  previousGapCenterYPx: number,
+  rng: SharedRngLike,
+  maximumGapCenterYPx: number,
+): number
+```
 
 Resolves next gap center with bounded per-pipe delta.
 
@@ -182,7 +214,13 @@ Returns: Next gap center y-position.
 
 ### resolveNextSpawnGapSize
 
-`(previousSpawnGapPx: number | undefined, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile, rng: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike) => number`
+```ts
+resolveNextSpawnGapSize(
+  previousSpawnGapPx: number | undefined,
+  difficultyProfile: SharedDifficultyProfile,
+  rng: SharedRngLike,
+): number
+```
 
 Resolves next spawn gap size using progressive shrink and jitter.
 
@@ -199,7 +237,12 @@ Returns: Next spawn gap size.
 
 ### resolveNextSpawnIntervalFrames
 
-`(previousSpawnIntervalFrames: number | undefined, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile) => number`
+```ts
+resolveNextSpawnIntervalFrames(
+  previousSpawnIntervalFrames: number | undefined,
+  difficultyProfile: SharedDifficultyProfile,
+): number
+```
 
 Resolves next spawn interval using progressive shrink.
 
@@ -215,7 +258,12 @@ Returns: Next spawn interval in frames.
 
 ### sampleGapCenterY
 
-`(rng: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike, maximumGapCenterYPx: number) => number`
+```ts
+sampleGapCenterY(
+  rng: SharedRngLike,
+  maximumGapCenterYPx: number,
+): number
+```
 
 Samples a random gap center y-position.
 
@@ -232,7 +280,13 @@ Returns: Sampled y-position.
 
 ### commitSharedObservationMemoryStep
 
-`(observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState, features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, didFlap: boolean) => void`
+```ts
+commitSharedObservationMemoryStep(
+  observationMemoryState: SharedObservationMemoryState,
+  features: SharedObservationFeatures,
+  didFlap: boolean,
+): void
+```
 
 Commits one observation-action step into temporal memory.
 
@@ -249,7 +303,9 @@ Returns: Nothing.
 
 ### createSharedObservationMemoryState
 
-`() => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState`
+```ts
+createSharedObservationMemoryState(): SharedObservationMemoryState
+```
 
 Creates an empty temporal observation memory state.
 
@@ -263,7 +319,11 @@ const memoryState = createSharedObservationMemoryState();
 
 ### resolvePreviousCoreFramesWithPadding
 
-`(observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => number[][]`
+```ts
+resolvePreviousCoreFramesWithPadding(
+  observationMemoryState: SharedObservationMemoryState,
+): number[][]
+```
 
 Resolves previous core frames (newest-first) with deterministic zero padding.
 
@@ -277,7 +337,12 @@ Returns: Previous core frame list with fixed target length.
 
 ### resolveTemporalObservationVector
 
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => number[]`
+```ts
+resolveTemporalObservationVector(
+  features: SharedObservationFeatures,
+  observationMemoryState: SharedObservationMemoryState,
+): number[]
+```
 
 Builds the temporal policy input vector (stacked observation + action memory).
 
@@ -301,7 +366,9 @@ Returns: Ordered temporal input vector for policy activation.
 
 ### resolveZeroCoreObservationFrame
 
-`() => number[]`
+```ts
+resolveZeroCoreObservationFrame(): number[]
+```
 
 Builds a zero-valued core frame with canonical length.
 
@@ -319,7 +386,12 @@ caller to reshape its outputs first.
 
 ### resolveFlapDecision
 
-`(rawOutputs: unknown, flapThreshold: number) => boolean`
+```ts
+resolveFlapDecision(
+  rawOutputs: unknown,
+  flapThreshold: number,
+): boolean
+```
 
 Resolves flap/no-flap decision from network outputs.
 
@@ -339,7 +411,12 @@ Returns: True when flap should trigger.
 
 ### resolveAdaptiveDifficultyProfile
 
-`(pipesPassed: number, difficultyScale: number) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile`
+```ts
+resolveAdaptiveDifficultyProfile(
+  pipesPassed: number,
+  difficultyScale: number,
+): SharedDifficultyProfile
+```
 
 Resolves adaptive difficulty profile from passed-pipe progress.
 
@@ -362,7 +439,12 @@ Returns: Active difficulty profile.
 
 ### compareNumbersAscending
 
-`(leftValue: number, rightValue: number) => number`
+```ts
+compareNumbersAscending(
+  leftValue: number,
+  rightValue: number,
+): number
+```
 
 Compares two numeric values in ascending order.
 
@@ -374,7 +456,11 @@ Returns: Comparator delta for `Array.prototype.toSorted`.
 
 ### computeMean
 
-`(values: readonly number[]) => number`
+```ts
+computeMean(
+  values: readonly number[],
+): number
+```
 
 Computes arithmetic mean for numeric samples.
 
@@ -385,7 +471,12 @@ Returns: Arithmetic mean.
 
 ### computePercentile
 
-`(values: readonly number[], percentile: number) => number`
+```ts
+computePercentile(
+  values: readonly number[],
+  percentile: number,
+): number
+```
 
 Computes percentile value via linear interpolation between nearest ranks.
 
@@ -400,7 +491,12 @@ Returns: Percentile value, or `Number.NaN` when `values` is empty.
 
 ### computePopulationStandardDeviation
 
-`(values: readonly number[], meanValue: number) => number`
+```ts
+computePopulationStandardDeviation(
+  values: readonly number[],
+  meanValue: number,
+): number
+```
 
 Computes population standard deviation.
 
@@ -427,7 +523,11 @@ observation subsystem to grow into its own documented folder.
 
 ### resolveCoreObservationVectorFromFeatures
 
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+```ts
+resolveCoreObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
 
 Resolves the compact core vector used for temporal stacking.
 
@@ -456,7 +556,11 @@ observationMemoryState.previousCoreFrames.push(coreFrame);
 
 ### resolveObservationFeatures
 
-`(input: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
+```ts
+resolveObservationFeatures(
+  input: SharedObservationInput,
+): SharedObservationFeatures
+```
 
 Builds the shared normalized observation feature set consumed by policies.
 
@@ -503,7 +607,11 @@ if (features.normalizedEntryUrgency > 0.8) {
 
 ### resolveObservationVectorFromFeatures
 
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+```ts
+resolveObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
 
 Converts observation features to the canonical 12-value network input vector.
 
@@ -530,7 +638,14 @@ const networkInput = resolveObservationVectorFromFeatures(features);
 
 ### resolveUpcomingPipes
 
-`(pipes: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
+```ts
+resolveUpcomingPipes(
+  pipes: SharedPipeLike[],
+  birdCenterXPx: number,
+  birdRadiusPx: number,
+  pipeWidthPx: number,
+): [SharedPipeLike | undefined, SharedPipeLike | undefined]
+```
 
 Resolves the next two upcoming pipes in front of the bird.
 

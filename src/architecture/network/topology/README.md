@@ -53,7 +53,9 @@ Zero baseline used for degree counts and empty-size checks.
 
 ### computeTopoOrder
 
-`() => void`
+```ts
+computeTopoOrder(): void
+```
 
 Compute a topological ordering (Kahn's algorithm) for the current directed acyclic graph.
 If cycles are detected (order shorter than node count) we fall back to raw node order to avoid breaking callers.
@@ -61,7 +63,13 @@ In non-acyclic mode we simply clear cached order to signal use of sequential nod
 
 ### createMLP
 
-`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("src/architecture/network").default`
+```ts
+createMLP(
+  inputCount: number,
+  hiddenCounts: number[],
+  outputCount: number,
+): default
+```
 
 Build a strictly layered and fully connected MLP network.
 
@@ -75,13 +83,22 @@ Returns: Newly created MLP network.
 
 ### hasPath
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
+```ts
+hasPath(
+  from: default,
+  to: default,
+): boolean
+```
 
 Depth-first reachability test (avoids infinite loops via visited set).
 
 ### rebuildConnections
 
-`(networkInstance: import("src/architecture/network").default) => void`
+```ts
+rebuildConnections(
+  networkInstance: default,
+): void
+```
 
 Rebuild the canonical connection array from per-node outgoing lists.
 
@@ -92,7 +109,12 @@ Parameters:
 
 ### appendTopoNode
 
-`(topoOrder: import("src/architecture/node").default[], node: import("src/architecture/node").default) => void`
+```ts
+appendTopoNode(
+  topoOrder: default[],
+  node: default,
+): void
+```
 
 Append one node to topological order output.
 
@@ -104,7 +126,12 @@ Returns: Void.
 
 ### decrementNodeInDegree
 
-`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext, node: import("src/architecture/node").default) => number`
+```ts
+decrementNodeInDegree(
+  buildContext: TopologyBuildContext,
+  node: default,
+): number
+```
 
 Decrement node in-degree and return remaining value.
 
@@ -116,7 +143,12 @@ Returns: Remaining in-degree after decrement.
 
 ### getInDegree
 
-`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext, node: import("src/architecture/node").default) => number`
+```ts
+getInDegree(
+  buildContext: TopologyBuildContext,
+  node: default,
+): number
+```
 
 Read in-degree for a node with zero fallback.
 
@@ -128,7 +160,11 @@ Returns: In-degree value.
 
 ### isInputNode
 
-`(node: import("src/architecture/node").default) => boolean`
+```ts
+isInputNode(
+  node: default,
+): boolean
+```
 
 Test whether a node is an input node.
 
@@ -139,7 +175,12 @@ Returns: True when node type is input.
 
 ### isQueueSeedNode
 
-`(node: import("src/architecture/node").default, buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => boolean`
+```ts
+isQueueSeedNode(
+  node: default,
+  buildContext: TopologyBuildContext,
+): boolean
+```
 
 Determine whether a node belongs in the initial queue.
 
@@ -151,7 +192,12 @@ Returns: True when node is input-type or has zero in-degree.
 
 ### isSelfConnection
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
+```ts
+isSelfConnection(
+  from: default,
+  to: default,
+): boolean
+```
 
 Test whether a connection is a self-loop.
 
@@ -163,7 +209,11 @@ Returns: True when source and target are the same node.
 
 ### processKahnQueue
 
-`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => void`
+```ts
+processKahnQueue(
+  buildContext: TopologyBuildContext,
+): void
+```
 
 Process queue until all available nodes are emitted.
 
@@ -174,7 +224,12 @@ Returns: Void.
 
 ### relaxOutgoingEdges
 
-`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext, currentNode: import("src/architecture/node").default) => void`
+```ts
+relaxOutgoingEdges(
+  buildContext: TopologyBuildContext,
+  currentNode: default,
+): void
+```
 
 Relax outgoing edges for one processed node.
 
@@ -186,7 +241,11 @@ Returns: Void.
 
 ### seedProcessingQueue
 
-`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => void`
+```ts
+seedProcessingQueue(
+  buildContext: TopologyBuildContext,
+): void
+```
 
 Seed Kahn queue with input nodes and zero in-degree nodes.
 
@@ -197,7 +256,11 @@ Returns: Void.
 
 ### takeNextQueueNode
 
-`(processingQueue: import("src/architecture/node").default[]) => import("src/architecture/node").default`
+```ts
+takeNextQueueNode(
+  processingQueue: default[],
+): default
+```
 
 Shift and return the next queue node.
 
@@ -210,7 +273,12 @@ Returns: Next node.
 
 ### createPathSearchContext
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => import("src/architecture/network/network.types").PathSearchContext`
+```ts
+createPathSearchContext(
+  from: default,
+  to: default,
+): PathSearchContext
+```
 
 Create DFS search context.
 
@@ -222,7 +290,12 @@ Returns: Initialized path-search context.
 
 ### hasVisitedNode
 
-`(visitedNodes: Set<import("src/architecture/node").default>, node: import("src/architecture/node").default) => boolean`
+```ts
+hasVisitedNode(
+  visitedNodes: Set<default>,
+  node: default,
+): boolean
+```
 
 Test whether a node has already been visited.
 
@@ -234,7 +307,12 @@ Returns: True when node is already visited.
 
 ### isSameNode
 
-`(leftNode: import("src/architecture/node").default, rightNode: import("src/architecture/node").default) => boolean`
+```ts
+isSameNode(
+  leftNode: default,
+  rightNode: default,
+): boolean
+```
 
 Compare node identity.
 
@@ -246,7 +324,12 @@ Returns: True when references are identical.
 
 ### isSelfConnection
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
+```ts
+isSelfConnection(
+  from: default,
+  to: default,
+): boolean
+```
 
 Test whether a connection is a self-loop.
 
@@ -258,7 +341,12 @@ Returns: True when source and target are the same node.
 
 ### markVisited
 
-`(visitedNodes: Set<import("src/architecture/node").default>, node: import("src/architecture/node").default) => void`
+```ts
+markVisited(
+  visitedNodes: Set<default>,
+  node: default,
+): void
+```
 
 Mark a node as visited.
 
@@ -270,7 +358,12 @@ Returns: Void.
 
 ### pushOutgoingTargets
 
-`(nodesToVisitStack: import("src/architecture/node").default[], currentNode: import("src/architecture/node").default) => void`
+```ts
+pushOutgoingTargets(
+  nodesToVisitStack: default[],
+  currentNode: default,
+): void
+```
 
 Push non-self outgoing targets to DFS stack.
 
@@ -282,7 +375,11 @@ Returns: Void.
 
 ### takeNextStackNode
 
-`(nodesToVisitStack: import("src/architecture/node").default[]) => import("src/architecture/node").default`
+```ts
+takeNextStackNode(
+  nodesToVisitStack: default[],
+): default
+```
 
 Pop and return next DFS stack node.
 
@@ -293,7 +390,11 @@ Returns: Next node to process.
 
 ### traversePathSearch
 
-`(searchContext: import("src/architecture/network/network.types").PathSearchContext) => boolean`
+```ts
+traversePathSearch(
+  searchContext: PathSearchContext,
+): boolean
+```
 
 Traverse DFS search stack and test reachability.
 
@@ -306,7 +407,11 @@ Returns: True when target node is reachable.
 
 ### applyIncomingEdgeCounts
 
-`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => void`
+```ts
+applyIncomingEdgeCounts(
+  buildContext: TopologyBuildContext,
+): void
+```
 
 Apply in-degree increments from non-self connections.
 
@@ -317,7 +422,11 @@ Returns: Void.
 
 ### asTopologyProps
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").TopologyNetworkProps`
+```ts
+asTopologyProps(
+  network: default,
+): TopologyNetworkProps
+```
 
 Cast network to internal topology props view.
 
@@ -328,7 +437,11 @@ Returns: Internal topology props view.
 
 ### clearCachedTopoOrder
 
-`(internalTopologyProps: import("src/architecture/network/network.types").TopologyNetworkProps) => void`
+```ts
+clearCachedTopoOrder(
+  internalTopologyProps: TopologyNetworkProps,
+): void
+```
 
 Clear cached topological order state.
 
@@ -339,7 +452,12 @@ Returns: Void.
 
 ### createTopologyBuildContext
 
-`(network: import("src/architecture/network").default, internalTopologyProps: import("src/architecture/network/network.types").TopologyNetworkProps) => import("src/architecture/network/network.types").TopologyBuildContext`
+```ts
+createTopologyBuildContext(
+  network: default,
+  internalTopologyProps: TopologyNetworkProps,
+): TopologyBuildContext
+```
 
 Create mutable build context for Kahn traversal.
 
@@ -351,7 +469,11 @@ Returns: Initialized build context.
 
 ### finalizeTopoOrder
 
-`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => void`
+```ts
+finalizeTopoOrder(
+  buildContext: TopologyBuildContext,
+): void
+```
 
 Finalize cached order, falling back to raw node order on cycle detection.
 
@@ -362,7 +484,12 @@ Returns: Void.
 
 ### incrementNodeInDegree
 
-`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext, node: import("src/architecture/node").default) => void`
+```ts
+incrementNodeInDegree(
+  buildContext: TopologyBuildContext,
+  node: default,
+): void
+```
 
 Increment in-degree for a node in the tally map.
 
@@ -374,7 +501,11 @@ Returns: Void.
 
 ### initializeAllNodeInDegreeCounts
 
-`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => void`
+```ts
+initializeAllNodeInDegreeCounts(
+  buildContext: TopologyBuildContext,
+): void
+```
 
 Initialize all nodes with zero in-degree.
 
@@ -385,7 +516,12 @@ Returns: Void.
 
 ### isSelfConnection
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
+```ts
+isSelfConnection(
+  from: default,
+  to: default,
+): boolean
+```
 
 Test whether a connection is a self-loop.
 
@@ -397,7 +533,11 @@ Returns: True when source and target are the same node.
 
 ### resolveFinalOrder
 
-`(buildContext: import("src/architecture/network/network.types").TopologyBuildContext) => import("src/architecture/node").default[]`
+```ts
+resolveFinalOrder(
+  buildContext: TopologyBuildContext,
+): default[]
+```
 
 Resolve final topological order with cycle fallback.
 
@@ -408,7 +548,11 @@ Returns: Fully valid topological order or raw node order fallback.
 
 ### shouldUseRawNodeOrder
 
-`(internalTopologyProps: import("src/architecture/network/network.types").TopologyNetworkProps) => boolean`
+```ts
+shouldUseRawNodeOrder(
+  internalTopologyProps: TopologyNetworkProps,
+): boolean
+```
 
 Determine whether topological order should be bypassed.
 
@@ -421,7 +565,12 @@ Returns: True when acyclic mode is disabled.
 
 ### addOutgoingConnectionsToSet
 
-`(outgoingConnections: import("src/architecture/connection").default[], allConnections: Set<import("src/architecture/connection").default>) => void`
+```ts
+addOutgoingConnectionsToSet(
+  outgoingConnections: default[],
+  allConnections: Set<default>,
+): void
+```
 
 Add all outgoing connections to a deduplication set.
 
@@ -431,7 +580,12 @@ Parameters:
 
 ### assignNetworkNodes
 
-`(networkInstance: import("src/architecture/network").default, mlpNodeLayers: MlpNodeLayers) => void`
+```ts
+assignNetworkNodes(
+  networkInstance: default,
+  mlpNodeLayers: MlpNodeLayers,
+): void
+```
 
 Assign ordered nodes to the network instance.
 
@@ -441,7 +595,11 @@ Parameters:
 
 ### collectUniqueOutgoingConnections
 
-`(networkInstance: import("src/architecture/network").default) => Set<import("src/architecture/connection").default>`
+```ts
+collectUniqueOutgoingConnections(
+  networkInstance: default,
+): Set<default>
+```
 
 Collect unique outgoing connections across all network nodes.
 
@@ -452,7 +610,12 @@ Returns: Set of unique outgoing connections.
 
 ### connectLayerPair
 
-`(sourceLayer: import("src/architecture/node").default[], targetLayer: import("src/architecture/node").default[]) => void`
+```ts
+connectLayerPair(
+  sourceLayer: default[],
+  targetLayer: default[],
+): void
+```
 
 Fully connect every source node to every target node.
 
@@ -462,7 +625,11 @@ Parameters:
 
 ### connectMlpLayers
 
-`(mlpNodeLayers: MlpNodeLayers) => void`
+```ts
+connectMlpLayers(
+  mlpNodeLayers: MlpNodeLayers,
+): void
+```
 
 Fully connect each adjacent layer in MLP order.
 
@@ -471,7 +638,11 @@ Parameters:
 
 ### convertConnectionSetToArray
 
-`(uniqueConnections: Set<import("src/architecture/connection").default>) => import("src/architecture/connection").default[]`
+```ts
+convertConnectionSetToArray(
+  uniqueConnections: Set<default>,
+): default[]
+```
 
 Convert a connection set into the canonical array format.
 
@@ -482,7 +653,11 @@ Returns: Array of network connections.
 
 ### createHiddenLayers
 
-`(hiddenCounts: number[]) => import("src/architecture/node").default[][]`
+```ts
+createHiddenLayers(
+  hiddenCounts: number[],
+): default[][]
+```
 
 Create all hidden layers for an MLP topology.
 
@@ -493,7 +668,13 @@ Returns: Hidden layers in forward order.
 
 ### createMLP
 
-`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("src/architecture/network").default`
+```ts
+createMLP(
+  inputCount: number,
+  hiddenCounts: number[],
+  outputCount: number,
+): default
+```
 
 Build a strictly layered and fully connected MLP network.
 
@@ -507,7 +688,13 @@ Returns: Newly created MLP network.
 
 ### createMlpNodeLayers
 
-`(inputCount: number, hiddenCounts: number[], outputCount: number) => MlpNodeLayers`
+```ts
+createMlpNodeLayers(
+  inputCount: number,
+  hiddenCounts: number[],
+  outputCount: number,
+): MlpNodeLayers
+```
 
 Build input, hidden, and output node layers for an MLP topology.
 
@@ -520,7 +707,12 @@ Returns: Grouped node layers for MLP assembly.
 
 ### createNodesOfType
 
-`(nodeCount: number, nodeType: "input" | "output" | "hidden") => import("src/architecture/node").default[]`
+```ts
+createNodesOfType(
+  nodeCount: number,
+  nodeType: "input" | "output" | "hidden",
+): default[]
+```
 
 Create all nodes for a single fixed node type.
 
@@ -532,7 +724,11 @@ Returns: Node list of the requested type.
 
 ### createOrderedNodeList
 
-`(mlpNodeLayers: MlpNodeLayers) => import("src/architecture/node").default[]`
+```ts
+createOrderedNodeList(
+  mlpNodeLayers: MlpNodeLayers,
+): default[]
+```
 
 Build the canonical ordered node list used by the network.
 
@@ -543,7 +739,11 @@ Returns: Ordered node list: input, hidden, then output.
 
 ### flattenNodeLayers
 
-`(nodeLayers: import("src/architecture/node").default[][]) => import("src/architecture/node").default[]`
+```ts
+flattenNodeLayers(
+  nodeLayers: default[][],
+): default[]
+```
 
 Flatten layered node collections into a single ordered list.
 
@@ -554,7 +754,13 @@ Returns: Flattened node list.
 
 ### instantiateNetwork
 
-`(networkFactory: NetworkConstructor, inputCount: number, outputCount: number) => import("src/architecture/network").default`
+```ts
+instantiateNetwork(
+  networkFactory: NetworkConstructor,
+  inputCount: number,
+  outputCount: number,
+): default
+```
 
 Instantiate a new network using the runtime constructor.
 
@@ -567,7 +773,11 @@ Returns: Newly instantiated network.
 
 ### markTopologyDirty
 
-`(networkInstance: import("src/architecture/network").default) => void`
+```ts
+markTopologyDirty(
+  networkInstance: default,
+): void
+```
 
 Mark a network topology as dirty after structural edits.
 
@@ -576,7 +786,11 @@ Parameters:
 
 ### rebuildConnections
 
-`(networkInstance: import("src/architecture/network").default) => void`
+```ts
+rebuildConnections(
+  networkInstance: default,
+): void
+```
 
 Rebuild the canonical connection array from per-node outgoing lists.
 
@@ -587,7 +801,15 @@ Parameters:
 
 ### createArchitectureDescriptor
 
-`(hiddenLayerSizes: number[], hasCycles: boolean, source: import("src/architecture/network/network.types").NetworkArchitectureSource, totalNodes: number, totalConnections: number) => import("src/architecture/network/network.types").NetworkArchitectureDescriptor`
+```ts
+createArchitectureDescriptor(
+  hiddenLayerSizes: number[],
+  hasCycles: boolean,
+  source: NetworkArchitectureSource,
+  totalNodes: number,
+  totalConnections: number,
+): NetworkArchitectureDescriptor
+```
 
 Creates the final immutable descriptor shape used by telemetry and UI code.
 
@@ -612,7 +834,12 @@ const descriptor = createArchitectureDescriptor([6, 3], false, 'graph-topology',
 
 ### createDirectedEdgeList
 
-`(runtimeConnections: RuntimeConnectionLike[], nodeByIndex: Map<number, RuntimeNodeLike>) => { fromIndex: number; toIndex: number; }[]`
+```ts
+createDirectedEdgeList(
+  runtimeConnections: RuntimeConnectionLike[],
+  nodeByIndex: Map<number, RuntimeNodeLike>,
+): { fromIndex: number; toIndex: number; }[]
+```
 
 Produces a validated list of enabled directed edges.
 
@@ -634,7 +861,11 @@ const edges = createDirectedEdgeList(runtimeConnections, nodeByIndex);
 
 ### createNodeIndexMap
 
-`(runtimeNodes: RuntimeNodeLike[]) => Map<number, RuntimeNodeLike>`
+```ts
+createNodeIndexMap(
+  runtimeNodes: RuntimeNodeLike[],
+): Map<number, RuntimeNodeLike>
+```
 
 Builds a node lookup table keyed by stable index.
 
@@ -655,7 +886,11 @@ const nodeByIndex = createNodeIndexMap(nodes);
 
 ### describeArchitecture
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkArchitectureDescriptor`
+```ts
+describeArchitecture(
+  network: default,
+): NetworkArchitectureDescriptor
+```
 
 Describes network architecture for diagnostics, telemetry, and UI rendering.
 
@@ -683,7 +918,11 @@ const descriptor = describeArchitecture(network);
 
 ### isHiddenNode
 
-`(runtimeNode: RuntimeNodeLike) => boolean`
+```ts
+isHiddenNode(
+  runtimeNode: RuntimeNodeLike,
+): boolean
+```
 
 Identifies whether a runtime node should be treated as hidden for topology
 reconstruction and fallback inference.
@@ -703,7 +942,12 @@ if (isHiddenNode(node)) {
 
 ### resolveCycleStateAndTopoOrder
 
-`(nodeByIndex: Map<number, RuntimeNodeLike>, directedEdges: { fromIndex: number; toIndex: number; }[]) => { topologicalOrder: number[]; hasCycles: boolean; }`
+```ts
+resolveCycleStateAndTopoOrder(
+  nodeByIndex: Map<number, RuntimeNodeLike>,
+  directedEdges: { fromIndex: number; toIndex: number; }[],
+): { topologicalOrder: number[]; hasCycles: boolean; }
+```
 
 Resolves cycle presence and, when possible, returns a topological order
 using Kahn's algorithm.
@@ -725,7 +969,12 @@ const { topologicalOrder, hasCycles } = resolveCycleStateAndTopoOrder(nodeByInde
 
 ### resolveHiddenCountsByDepth
 
-`(nodeByIndex: Map<number, RuntimeNodeLike>, depthByNodeIndex: Map<number, number>) => Map<number, number>`
+```ts
+resolveHiddenCountsByDepth(
+  nodeByIndex: Map<number, RuntimeNodeLike>,
+  depthByNodeIndex: Map<number, number>,
+): Map<number, number>
+```
 
 Aggregates hidden-node counts per derived depth.
 
@@ -746,7 +995,12 @@ const hiddenCountsByDepth = resolveHiddenCountsByDepth(nodeByIndex, depthByNodeI
 
 ### resolveHiddenLayerSizesFromGraphTopology
 
-`(runtimeNodes: RuntimeNodeLike[], runtimeConnections: RuntimeConnectionLike[]) => { hiddenLayerSizes: number[]; hasCycles: boolean; }`
+```ts
+resolveHiddenLayerSizesFromGraphTopology(
+  runtimeNodes: RuntimeNodeLike[],
+  runtimeConnections: RuntimeConnectionLike[],
+): { hiddenLayerSizes: number[]; hasCycles: boolean; }
+```
 
 Derives hidden-layer widths from graph topology when no explicit layer
 metadata is available.
@@ -769,7 +1023,11 @@ const { hiddenLayerSizes, hasCycles } = resolveHiddenLayerSizesFromGraphTopology
 
 ### resolveHiddenLayerSizesFromLayerMetadata
 
-`(runtimeNodes: RuntimeNodeLike[]) => number[]`
+```ts
+resolveHiddenLayerSizesFromLayerMetadata(
+  runtimeNodes: RuntimeNodeLike[],
+): number[]
+```
 
 Resolves hidden-layer widths from explicit `node.layer` metadata.
 
@@ -791,7 +1049,13 @@ const sizes = resolveHiddenLayerSizesFromLayerMetadata(nodes);
 
 ### resolveNodeDepthByIndex
 
-`(nodeByIndex: Map<number, RuntimeNodeLike>, directedEdges: { fromIndex: number; toIndex: number; }[], topologicalOrder: number[]) => Map<number, number>`
+```ts
+resolveNodeDepthByIndex(
+  nodeByIndex: Map<number, RuntimeNodeLike>,
+  directedEdges: { fromIndex: number; toIndex: number; }[],
+  topologicalOrder: number[],
+): Map<number, number>
+```
 
 Computes node depth (feed-forward distance from inputs) for an acyclic graph.
 

@@ -16,7 +16,13 @@ pushTrailPoint(trailPoints, 11, 136, 2);
 
 ### pushChampionTrailPoint
 
-`(trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], frameIndex: number, yPosition: number) => void`
+```ts
+pushChampionTrailPoint(
+  trailPoints: TrailPoint[],
+  frameIndex: number,
+  yPosition: number,
+): void
+```
 
 Appends one point to the champion-only short trail history.
 
@@ -34,7 +40,14 @@ Returns: Nothing.
 
 ### pushTrailPoint
 
-`(trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], frameIndex: number, yPosition: number, maxRetainedPoints: number) => void`
+```ts
+pushTrailPoint(
+  trailPoints: TrailPoint[],
+  frameIndex: number,
+  yPosition: number,
+  maxRetainedPoints: number,
+): void
+```
 
 Appends one trail point while enforcing the maximum retained history length.
 
@@ -75,7 +88,11 @@ const alpha = edgeOpacity * ageOpacity;
 
 ### clamp01
 
-`(value: number) => number`
+```ts
+clamp01(
+  value: number,
+): number
+```
 
 Clamps a number to the inclusive [0, 1] range.
 
@@ -90,7 +107,13 @@ Returns: Clamped value.
 
 ### resolveEdgeOpacityFactor
 
-`(pointXPx: number, pointYPx: number, edgeBounds: import("test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds) => number`
+```ts
+resolveEdgeOpacityFactor(
+  pointXPx: number,
+  pointYPx: number,
+  edgeBounds: PlaybackEdgeBounds,
+): number
+```
 
 Converts distance-to-edge into a normalized opacity factor.
 
@@ -118,7 +141,12 @@ const alpha = edgeOpacity * ageOpacity;
 
 ### resolveTrailLifetimeOpacityFactor
 
-`(frameOffset: number, maxTrailFrameOffset: number) => number`
+```ts
+resolveTrailLifetimeOpacityFactor(
+  frameOffset: number,
+  maxTrailFrameOffset: number,
+): number
+```
 
 Converts trail age into a normalized opacity factor.
 

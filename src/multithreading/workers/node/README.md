@@ -49,7 +49,11 @@ Example:
 
 #### evaluate
 
-`(network: SerializableNetwork) => Promise<number>`
+```ts
+evaluate(
+  network: SerializableNetwork,
+): Promise<number>
+```
 
 Evaluates a neural network using the worker process.
 
@@ -68,7 +72,9 @@ console.log('score', score);
 
 #### terminate
 
-`() => void`
+```ts
+terminate(): void
+```
 
 Terminates the worker process.
 

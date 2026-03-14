@@ -71,7 +71,12 @@ flowchart LR
 
 ### rolloutEpisode
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyEpisodeResult`
+```ts
+rolloutEpisode(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+): FlappyEpisodeResult
+```
 
 Roll out an episode and return details.
 
@@ -126,7 +131,13 @@ finalizeRolloutEpisodeState(
 
 ### applyRolloutEarlyTerminationIfNeeded
 
-`(rolloutEpisodeContext: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeContext, rolloutEpisodeRuntimeState: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeRuntimeState, currentObservationFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => void`
+```ts
+applyRolloutEarlyTerminationIfNeeded(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+  currentObservationFeatures: SharedObservationFeatures,
+): void
+```
 
 Applies the optional early-termination heuristic for unrecoverable starts.
 
@@ -144,7 +155,11 @@ Returns: Nothing.
 
 ### createRolloutEpisodeRuntimeState
 
-`(rolloutEpisodeContext: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeContext) => import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeRuntimeState`
+```ts
+createRolloutEpisodeRuntimeState(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+): RolloutEpisodeRuntimeState
+```
 
 Creates mutable runtime state for one rollout episode.
 
@@ -159,7 +174,12 @@ Returns: Mutable runtime state.
 
 ### finalizeRolloutEpisodeState
 
-`(rolloutEpisodeContext: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeContext, rolloutEpisodeRuntimeState: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeRuntimeState) => void`
+```ts
+finalizeRolloutEpisodeState(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): void
+```
 
 Finalizes episode state after the main rollout loop exits.
 
@@ -174,7 +194,12 @@ Returns: Nothing.
 
 ### resolveRolloutEpisodeContext
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeContext`
+```ts
+resolveRolloutEpisodeContext(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+): RolloutEpisodeContext
+```
 
 Resolves normalized rollout configuration from user options.
 
@@ -189,7 +214,13 @@ Returns: Normalized rollout configuration.
 
 ### resolveRolloutFrameFlapDecision
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutEpisodeContext: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeContext, rolloutEpisodeRuntimeState: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeRuntimeState) => boolean`
+```ts
+resolveRolloutFrameFlapDecision(
+  network: FlappyNetworkLike,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): boolean
+```
 
 Resolves the flap decision for one control substep and commits memory state.
 
@@ -205,7 +236,13 @@ Returns: Whether the bird should flap.
 
 ### runRolloutEpisodeFrame
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutEpisodeContext: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeContext, rolloutEpisodeRuntimeState: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeRuntimeState) => void`
+```ts
+runRolloutEpisodeFrame(
+  network: FlappyNetworkLike,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): void
+```
 
 Runs one rollout frame including control, shaping, and early termination.
 
@@ -222,7 +259,13 @@ Returns: Nothing.
 
 ### runRolloutEpisodeLoop
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutEpisodeContext: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeContext, rolloutEpisodeRuntimeState: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeRuntimeState) => void`
+```ts
+runRolloutEpisodeLoop(
+  network: FlappyNetworkLike,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): void
+```
 
 Runs the main rollout loop until termination or frame-budget exhaustion.
 
@@ -293,7 +336,16 @@ should be interpreted as fitness.
 
 ### composeNormalizedFitness
 
-`(framesValue: number, pipesPassedValue: number, denseShapingValue: number, terminalShapingValue: number, maxFramesValue: number, pipeProgressTarget: number | undefined) => number`
+```ts
+composeNormalizedFitness(
+  framesValue: number,
+  pipesPassedValue: number,
+  denseShapingValue: number,
+  terminalShapingValue: number,
+  maxFramesValue: number,
+  pipeProgressTarget: number | undefined,
+): number
+```
 
 Normalize and cap fitness channels so no single reward term dominates.
 
@@ -313,7 +365,12 @@ Returns: Normalized composite fitness.
 
 ### composeRolloutEpisodeResult
 
-`(rolloutEpisodeContext: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeContext, rolloutEpisodeRuntimeState: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeRuntimeState) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyEpisodeResult`
+```ts
+composeRolloutEpisodeResult(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): FlappyEpisodeResult
+```
 
 Composes the final rollout result from the terminal game state.
 
@@ -329,7 +386,12 @@ Returns: Episode result details.
 
 ### computeDenseShapingReward
 
-`(previousFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, currentFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number`
+```ts
+computeDenseShapingReward(
+  previousFeatures: SharedObservationFeatures,
+  currentFeatures: SharedObservationFeatures,
+): number
+```
 
 Computes dense reward shaping from consecutive observations.
 
@@ -344,7 +406,12 @@ Returns: Per-step shaped reward.
 
 ### computeTerminalShapingFitness
 
-`(episodeState: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, difficultyScale: number) => number`
+```ts
+computeTerminalShapingFitness(
+  episodeState: FlappyGameState,
+  difficultyScale: number,
+): number
+```
 
 Adds small terminal bonuses from final progress/alignment signals.
 
@@ -359,7 +426,11 @@ Returns: Terminal shaping reward.
 
 ### isBirdLikelyUnrecoverable
 
-`(observationFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => boolean`
+```ts
+isBirdLikelyUnrecoverable(
+  observationFeatures: SharedObservationFeatures,
+): boolean
+```
 
 Detects trajectories that are usually irrecoverable in early warmup.
 
@@ -373,7 +444,12 @@ Returns: Whether the current trajectory appears unrecoverable.
 
 ### resolveDenseShapingRewardComponents
 
-`(previousFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, currentFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").DenseShapingRewardComponents`
+```ts
+resolveDenseShapingRewardComponents(
+  previousFeatures: SharedObservationFeatures,
+  currentFeatures: SharedObservationFeatures,
+): DenseShapingRewardComponents
+```
 
 Resolves every dense-shaping reward component from consecutive observations.
 
@@ -388,7 +464,14 @@ Returns: Dense-shaping reward components.
 
 ### resolveRolloutFitnessBreakdown
 
-`(rolloutEpisodeContext: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeContext, rolloutEpisodeRuntimeState: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutEpisodeRuntimeState, framesSurvived: number, pipesPassed: number) => import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutFitnessBreakdown`
+```ts
+resolveRolloutFitnessBreakdown(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+  framesSurvived: number,
+  pipesPassed: number,
+): RolloutFitnessBreakdown
+```
 
 Resolves the raw fitness channels from the final episode state.
 
@@ -405,7 +488,11 @@ Returns: Fitness-channel breakdown.
 
 ### resolveUnnormalizedRolloutFitness
 
-`(rolloutFitnessBreakdown: import("test/examples/flappy_bird/evaluation/rollout/evaluation.rollout.types").RolloutFitnessBreakdown) => number`
+```ts
+resolveUnnormalizedRolloutFitness(
+  rolloutFitnessBreakdown: RolloutFitnessBreakdown,
+): number
+```
 
 Resolves raw fitness by summing every fitness channel.
 

@@ -196,7 +196,11 @@ argument sprawl across helper calls.
 
 ### beginWorkerGenerationRequest
 
-`(workerMutableRuntimeState: WorkerMutableRuntimeState) => void`
+```ts
+beginWorkerGenerationRequest(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+): void
+```
 
 Begins one asynchronous generation request and captures failures.
 
@@ -211,7 +215,12 @@ Returns: Nothing.
 
 ### beginWorkerInitialization
 
-`(workerMutableRuntimeState: WorkerMutableRuntimeState, initPayload: { populationSize: number; elitismCount: number; rngSeed: number; }) => void`
+```ts
+beginWorkerInitialization(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+  initPayload: { populationSize: number; elitismCount: number; rngSeed: number; },
+): void
+```
 
 Begins worker initialization and captures asynchronous failures.
 
@@ -226,7 +235,12 @@ Returns: Nothing.
 
 ### beginWorkerPlayback
 
-`(workerMutableRuntimeState: WorkerMutableRuntimeState, payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void`
+```ts
+beginWorkerPlayback(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+  payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; },
+): void
+```
 
 Begins a new playback session from the current evolved population.
 
@@ -242,7 +256,11 @@ Returns: Nothing.
 
 ### createWorkerMessageHandler
 
-`(workerMutableRuntimeState: WorkerMutableRuntimeState) => (event: MessageEvent<import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerRequestMessage>) => void`
+```ts
+createWorkerMessageHandler(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+): (event: MessageEvent<WorkerRequestMessage>) => void
+```
 
 Creates the top-level worker message handler.
 
@@ -263,7 +281,9 @@ self.onmessage = createWorkerMessageHandler(workerMutableRuntimeState);
 
 ### createWorkerMutableRuntimeState
 
-`() => WorkerMutableRuntimeState`
+```ts
+createWorkerMutableRuntimeState(): WorkerMutableRuntimeState
+```
 
 Creates the mutable worker runtime state container.
 
@@ -276,7 +296,11 @@ Returns: Mutable worker runtime state.
 
 ### createWorkerProtocolHandlers
 
-`(workerMutableRuntimeState: WorkerMutableRuntimeState) => { markStopped: () => void; beginInitialization: (payload: { populationSize: number; elitismCount: number; rngSeed: number; }) => void; beginGenerationRequest: () => void; hasPopulation: () => boolean; startPlayback: (payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; hasPlaybackState: () => boolean; processPlaybackStep: (payload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; postWorkerMessage: typeof postWorkerMessage; }`
+```ts
+createWorkerProtocolHandlers(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+): { markStopped: () => void; beginInitialization: (payload: { populationSize: number; elitismCount: number; rngSeed: number; }) => void; beginGenerationRequest: () => void; hasPopulation: () => boolean; startPlayback: (payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; hasPlaybackState: () => boolean; processPlaybackStep: (payload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; postWorkerMessage: typeof postWorkerMessage; }
+```
 
 Creates protocol handlers bound to the mutable worker runtime state.
 
@@ -291,7 +315,11 @@ Returns: Protocol handler bundle.
 
 ### evolveAndPublishGeneration
 
-`(workerMutableRuntimeState: WorkerMutableRuntimeState) => Promise<void>`
+```ts
+evolveAndPublishGeneration(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+): Promise<void>
+```
 
 Evolves one generation and publishes the best-network summary message.
 
@@ -304,7 +332,12 @@ Returns: Promise resolved after generation payload is posted.
 
 ### initializeRuntime
 
-`(workerMutableRuntimeState: WorkerMutableRuntimeState, initPayload: { populationSize: number; elitismCount: number; rngSeed: number; }) => Promise<void>`
+```ts
+initializeRuntime(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+  initPayload: { populationSize: number; elitismCount: number; rngSeed: number; },
+): Promise<void>
+```
 
 Initializes the worker-local NEAT runtime used by browser evolution playback.
 
@@ -324,7 +357,12 @@ Returns: Promise resolved when runtime setup is complete.
 
 ### postWorkerMessage
 
-`(workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerResponseMessage, transferList: Transferable[] | undefined) => void`
+```ts
+postWorkerMessage(
+  workerMessage: WorkerResponseMessage,
+  transferList: Transferable[] | undefined,
+): void
+```
 
 Posts a typed message from worker to host.
 
@@ -339,7 +377,12 @@ Returns: Nothing.
 
 ### processWorkerPlaybackStepRequest
 
-`(workerMutableRuntimeState: WorkerMutableRuntimeState, playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void`
+```ts
+processWorkerPlaybackStepRequest(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+  playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; },
+): void
+```
 
 Advances playback by a host-requested number of simulation steps.
 
@@ -360,7 +403,11 @@ Returns: Nothing.
 
 ### createWorkerErrorMessage
 
-`(message: string) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerErrorMessage`
+```ts
+createWorkerErrorMessage(
+  message: string,
+): WorkerErrorMessage
+```
 
 Creates a typed worker error response payload from a message string.
 
@@ -379,7 +426,11 @@ postWorkerMessage(
 
 ### createWorkerErrorMessageFromUnknown
 
-`(error: unknown) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerErrorMessage`
+```ts
+createWorkerErrorMessageFromUnknown(
+  error: unknown,
+): WorkerErrorMessage
+```
 
 Creates a typed worker error response payload from an unknown thrown value.
 
@@ -415,7 +466,11 @@ state that later `request-playback-step` messages advance.
 
 ### resolveWorkerUnknownErrorMessage
 
-`(error: unknown) => string`
+```ts
+resolveWorkerUnknownErrorMessage(
+  error: unknown,
+): string
+```
 
 Resolves unknown error-like values into display-safe worker error messages.
 
@@ -491,7 +546,11 @@ enough diversity for NEAT to search meaningfully.
 
 ### createInitializedWorkerRuntime
 
-`(initPayload: { populationSize: number; elitismCount: number; rngSeed: number; }) => import("src/neat").default`
+```ts
+createInitializedWorkerRuntime(
+  initPayload: { populationSize: number; elitismCount: number; rngSeed: number; },
+): default
+```
 
 Creates and configures the worker-local NEAT runtime used by browser evolution playback.
 
@@ -528,7 +587,11 @@ const neatRuntime = createInitializedWorkerRuntime({
 
 ### beginWorkerPlaybackSession
 
-`(options: { currentPopulation: import("src/architecture/network").default[]; payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; createPopulationRenderState: (networks: import("src/architecture/network").default[], rng: import("test/examples/flappy_bird/rng").FlappyRng, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState; }) => { currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng; playbackWinnerIndex: number; }`
+```ts
+beginWorkerPlaybackSession(
+  options: { currentPopulation: default[]; payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; createPopulationRenderState: (networks: default[], rng: FlappyRng, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number) => WorkerPlaybackState; },
+): { currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; playbackWinnerIndex: number; }
+```
 
 Creates a fresh worker playback session state from the current evolved population.
 
@@ -556,7 +619,11 @@ const session = beginWorkerPlaybackSession({
 
 ### processWorkerPlaybackStep
 
-`(options: { playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng; currentPopulation: import("src/architecture/network").default[]; neatRuntime: import("src/neat").default | undefined; stepPopulationFrame: (renderState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState, rng: import("test/examples/flappy_bird/rng").FlappyRng, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; }) => { currentPlaybackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState | undefined; currentPlaybackRng: import("test/examples/flappy_bird/rng").FlappyRng | undefined; currentPopulation: import("src/architecture/network").default[]; playbackWinnerIndex: number; }`
+```ts
+processWorkerPlaybackStep(
+  options: { playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; currentPopulation: default[]; neatRuntime: default | undefined; stepPopulationFrame: (renderState: WorkerPlaybackState, rng: FlappyRng, difficultyProfile: SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: WorkerPlaybackState) => WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; },
+): { currentPlaybackState: WorkerPlaybackState | undefined; currentPlaybackRng: FlappyRng | undefined; currentPopulation: default[]; playbackWinnerIndex: number; }
+```
 
 Processes one worker playback-step request including completion/finalization logic.
 
@@ -575,7 +642,12 @@ Returns: Updated playback runtime state after processing this step.
 
 ### routeWorkerProtocolMessage
 
-`(workerMessage: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerRequestMessage, handlers: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.protocol.service").WorkerProtocolHandlers) => void`
+```ts
+routeWorkerProtocolMessage(
+  workerMessage: WorkerRequestMessage,
+  handlers: WorkerProtocolHandlers,
+): void
+```
 
 Routes one inbound worker request message to the corresponding runtime action.
 
@@ -617,7 +689,11 @@ the worker-global `self.onmessage` hook.
 
 ### evolveAndBuildGenerationReadyMessage
 
-`(options: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.evolution.service").WorkerEvolutionServiceOptions) => Promise<import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerGenerationReadyMessage>`
+```ts
+evolveAndBuildGenerationReadyMessage(
+  options: WorkerEvolutionServiceOptions,
+): Promise<WorkerGenerationReadyMessage>
+```
 
 Evolves one generation and creates the compact generation-ready response payload.
 
@@ -657,7 +733,14 @@ slice of behavior.
 
 ### applyTemplateWeightsWithNoise
 
-`(genome: import("src/architecture/network").default, template: import("src/architecture/network").default, rng: import("test/examples/flappy_bird/rng").FlappyRng, noise: { weightStdDev: number; biasStdDev: number; }) => void`
+```ts
+applyTemplateWeightsWithNoise(
+  genome: default,
+  template: default,
+  rng: FlappyRng,
+  noise: { weightStdDev: number; biasStdDev: number; },
+): void
+```
 
 Copies template parameters into a genome and injects small Gaussian noise.
 
@@ -675,7 +758,12 @@ Returns: Nothing.
 
 ### buildHeuristicPretrainSet
 
-`(rng: import("test/examples/flappy_bird/rng").FlappyRng, sampleCount: number) => { input: number[]; output: number[]; }[]`
+```ts
+buildHeuristicPretrainSet(
+  rng: FlappyRng,
+  sampleCount: number,
+): { input: number[]; output: number[]; }[]
+```
 
 Builds synthetic supervised samples for generation-0 behavior cloning.
 
@@ -692,7 +780,11 @@ Returns: Supervised dataset of input/output pairs.
 
 ### resolveHeuristicTeacherFlapDecision
 
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => boolean`
+```ts
+resolveHeuristicTeacherFlapDecision(
+  features: SharedObservationFeatures,
+): boolean
+```
 
 Heuristic teacher policy used to label synthetic pretraining samples.
 
@@ -707,7 +799,11 @@ Returns: True when the teacher says to flap.
 
 ### sampleGaussian
 
-`(rng: import("test/examples/flappy_bird/rng").FlappyRng) => number`
+```ts
+sampleGaussian(
+  rng: FlappyRng,
+): number
+```
 
 Samples one standard-normal value using the Box-Muller transform.
 
@@ -723,7 +819,12 @@ Returns: One approximately standard-normal random value.
 
 ### warmStartWorkerGenerationZeroIfNeeded
 
-`(neatController: import("src/neat").default, warmStartState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.warm-start.service").WorkerWarmStartState) => Promise<void>`
+```ts
+warmStartWorkerGenerationZeroIfNeeded(
+  neatController: default,
+  warmStartState: WorkerWarmStartState,
+): Promise<void>
+```
 
 Applies a one-time generation-0 warm-start to improve initial demo quality.
 
@@ -763,7 +864,11 @@ RNG seed should be reused for deterministic synthetic sample generation.
 
 ### advanceBirdPhysics
 
-`(frameContext: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.simulation.types").WorkerPlaybackFrameContext) => void`
+```ts
+advanceBirdPhysics(
+  frameContext: WorkerPlaybackFrameContext,
+): void
+```
 
 Integrates bird velocity and vertical motion for one control substep.
 
@@ -774,7 +879,11 @@ Returns: Nothing.
 
 ### advancePipes
 
-`(frameContext: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.simulation.types").WorkerPlaybackFrameContext) => void`
+```ts
+advancePipes(
+  frameContext: WorkerPlaybackFrameContext,
+): void
+```
 
 Advances all visible pipes and culls those that have left the camera window.
 
@@ -785,7 +894,12 @@ Returns: Nothing.
 
 ### commitPassedPipeProgress
 
-`(bird: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPopulationBird, pipe: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPopulationPipe) => void`
+```ts
+commitPassedPipeProgress(
+  bird: WorkerPopulationBird,
+  pipe: WorkerPopulationPipe,
+): void
+```
 
 Commits one passed-pipe progress increment for a bird when eligible.
 
@@ -797,7 +911,11 @@ Returns: Nothing.
 
 ### incrementLivingBirdFrameCounters
 
-`(renderState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState) => void`
+```ts
+incrementLivingBirdFrameCounters(
+  renderState: WorkerPlaybackState,
+): void
+```
 
 Increments survival counters for birds that remain active at frame start.
 
@@ -808,7 +926,13 @@ Returns: Nothing.
 
 ### resolveBirdCollisionAgainstPipe
 
-`(bird: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPopulationBird, pipe: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPopulationPipe, frameContext: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.simulation.types").WorkerPlaybackFrameContext) => boolean`
+```ts
+resolveBirdCollisionAgainstPipe(
+  bird: WorkerPopulationBird,
+  pipe: WorkerPopulationPipe,
+  frameContext: WorkerPlaybackFrameContext,
+): boolean
+```
 
 Resolves whether a bird collides with one pipe corridor during this substep.
 
@@ -821,7 +945,11 @@ Returns: `true` when the bird overlaps the pipe body instead of the gap.
 
 ### resolveBirdControlActions
 
-`(frameContext: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.simulation.types").WorkerPlaybackFrameContext) => number`
+```ts
+resolveBirdControlActions(
+  frameContext: WorkerPlaybackFrameContext,
+): number
+```
 
 Runs policy evaluation and commits the resulting observation memory updates.
 
@@ -832,7 +960,12 @@ Returns: Number of activation calls performed in the substep.
 
 ### resolveBirdOutOfBounds
 
-`(bird: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPopulationBird, visibleWorldHeightPx: number) => boolean`
+```ts
+resolveBirdOutOfBounds(
+  bird: WorkerPopulationBird,
+  visibleWorldHeightPx: number,
+): boolean
+```
 
 Resolves whether a bird has exceeded the vertical play area.
 
@@ -844,7 +977,11 @@ Returns: `true` when the bird is outside the vertical bounds.
 
 ### resolveBirdTerminationAndProgress
 
-`(frameContext: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.simulation.types").WorkerPlaybackFrameContext) => void`
+```ts
+resolveBirdTerminationAndProgress(
+  frameContext: WorkerPlaybackFrameContext,
+): void
+```
 
 Resolves bird deaths and passed-pipe progress after motion is applied.
 
@@ -855,7 +992,11 @@ Returns: Nothing.
 
 ### resolveCameraLeftXPx
 
-`(visibleWorldWidthPx: number) => number`
+```ts
+resolveCameraLeftXPx(
+  visibleWorldWidthPx: number,
+): number
+```
 
 Resolves the current left-edge of the visible world in world-space pixels.
 
@@ -866,7 +1007,11 @@ Returns: Left edge x-position in world coordinates.
 
 ### runWorkerPopulationControlSubstep
 
-`(frameContext: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.simulation.types").WorkerPlaybackFrameContext) => number`
+```ts
+runWorkerPopulationControlSubstep(
+  frameContext: WorkerPlaybackFrameContext,
+): number
+```
 
 Advances one control substep of the worker playback simulation.
 
@@ -877,7 +1022,11 @@ Returns: Number of activation calls performed in the substep.
 
 ### spawnPipeIfNeeded
 
-`(frameContext: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.simulation.types").WorkerPlaybackFrameContext) => void`
+```ts
+spawnPipeIfNeeded(
+  frameContext: WorkerPlaybackFrameContext,
+): void
+```
 
 Spawns a new pipe when the substep budget crosses the spawn boundary.
 
@@ -888,7 +1037,13 @@ Returns: Nothing.
 
 ### stepWorkerPopulationFrame
 
-`(renderState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState, rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile) => number`
+```ts
+stepWorkerPopulationFrame(
+  renderState: WorkerPlaybackState,
+  rng: RngLike,
+  difficultyProfile: SharedDifficultyProfile,
+): number
+```
 
 Advances the whole population simulation by one logical frame.
 
@@ -913,7 +1068,11 @@ Returns: Number of policy activation calls made in this frame.
 
 ### createWorkerPlaybackSnapshot
 
-`(playbackState: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot`
+```ts
+createWorkerPlaybackSnapshot(
+  playbackState: WorkerPlaybackState,
+): WorkerPlaybackFrameSnapshot
+```
 
 Creates a serializable snapshot of current playback state.
 
@@ -938,7 +1097,11 @@ Returns: Immutable frame snapshot for the host.
 
 ### resolveWorkerPlaybackSnapshotTransferList
 
-`(snapshot: import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackFrameSnapshot) => Transferable[]`
+```ts
+resolveWorkerPlaybackSnapshotTransferList(
+  snapshot: WorkerPlaybackFrameSnapshot,
+): Transferable[]
+```
 
 Resolves transferable buffers for one packed playback snapshot.
 
@@ -959,7 +1122,14 @@ Returns: Transfer list used to move typed-array buffers without copying.
 
 ### createWorkerPopulationRenderState
 
-`(networks: import("src/architecture/network").default[], rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerPlaybackState`
+```ts
+createWorkerPopulationRenderState(
+  networks: default[],
+  rng: RngLike,
+  initialVisibleWorldWidthPx: number,
+  initialVisibleWorldHeightPx: number,
+): WorkerPlaybackState
+```
 
 Creates initial playback state for a population of networks.
 

@@ -26,7 +26,9 @@ Canonical threshold used for random binary parent/gene choice.
 
 ### RandomGenerator
 
-`() => number`
+```ts
+RandomGenerator(): number
+```
 
 Shared random generator signature for genetic operators.
 
@@ -47,7 +49,13 @@ Design notes:
 
 ### crossOver
 
-`(parentNetwork1: import("src/architecture/network").default, parentNetwork2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network").default`
+```ts
+crossOver(
+  parentNetwork1: default,
+  parentNetwork2: default,
+  equal: boolean,
+): default
+```
 
 NEAT-inspired crossover between two parent networks producing a single offspring.
 
@@ -110,7 +118,11 @@ offspring.mutate();
 
 ### asGeneticNetwork
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").GeneticNetwork`
+```ts
+asGeneticNetwork(
+  network: default,
+): GeneticNetwork
+```
 
 Coerces a network to the internal genetic runtime shape.
 
@@ -121,7 +133,11 @@ Returns: Network with runtime genetic properties.
 
 ### assignNodeIndexes
 
-`(nodes: import("src/architecture/node").default[]) => void`
+```ts
+assignNodeIndexes(
+  nodes: default[],
+): void
+```
 
 Assigns contiguous indices to a node list.
 
@@ -132,7 +148,11 @@ Returns: Nothing.
 
 ### assignOffspringNodes
 
-`(nodeContext: import("src/architecture/network/network.types").CrossoverNodeBuildContext) => void`
+```ts
+assignOffspringNodes(
+  nodeContext: CrossoverNodeBuildContext,
+): void
+```
 
 Builds and reindexes offspring nodes.
 
@@ -143,7 +163,16 @@ Returns: Nothing.
 
 ### buildOffspringNodes
 
-`(parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, offspringNodeCount: number, equal: boolean, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/node").default[]`
+```ts
+buildOffspringNodes(
+  parent1: GeneticNetwork,
+  parent2: GeneticNetwork,
+  parentMetrics: ParentMetrics,
+  offspringNodeCount: number,
+  equal: boolean,
+  randomGenerator: RandomGenerator,
+): default[]
+```
 
 Builds the offspring node list by selecting genes per slot.
 
@@ -159,7 +188,11 @@ Returns: Cloned offspring node genes.
 
 ### chooseOffspringConnectionGenes
 
-`(context: import("src/architecture/network/network.types").CrossoverContext) => import("src/architecture/network/network.types").ConnectionGene[]`
+```ts
+chooseOffspringConnectionGenes(
+  context: CrossoverContext,
+): ConnectionGene[]
+```
 
 Chooses all offspring connection genes from both parents.
 
@@ -170,7 +203,11 @@ Returns: Chosen connection genes.
 
 ### cloneNodeGene
 
-`(sourceNode: import("src/architecture/node").default) => import("src/architecture/node").default`
+```ts
+cloneNodeGene(
+  sourceNode: default,
+): default
+```
 
 Clones node structural gene attributes.
 
@@ -181,7 +218,13 @@ Returns: Cloned node.
 
 ### createCrossoverContext
 
-`(parentNetwork1: import("src/architecture/network").default, parentNetwork2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network/network.types").CrossoverContext`
+```ts
+createCrossoverContext(
+  parentNetwork1: default,
+  parentNetwork2: default,
+  equal: boolean,
+): CrossoverContext
+```
 
 Creates the immutable crossover baseline context.
 
@@ -194,7 +237,11 @@ Returns: Initialized crossover context.
 
 ### createNodeBuildContext
 
-`(context: import("src/architecture/network/network.types").CrossoverContext) => import("src/architecture/network/network.types").CrossoverNodeBuildContext`
+```ts
+createNodeBuildContext(
+  context: CrossoverContext,
+): CrossoverNodeBuildContext
+```
 
 Creates the node-build context for offspring node selection.
 
@@ -205,7 +252,12 @@ Returns: Node-build context.
 
 ### createOffspringScaffold
 
-`(inputSize: number, outputSize: number) => import("src/architecture/network/network.types").GeneticNetwork`
+```ts
+createOffspringScaffold(
+  inputSize: number,
+  outputSize: number,
+): GeneticNetwork
+```
 
 Creates an empty offspring scaffold with reset runtime arrays.
 
@@ -217,7 +269,13 @@ Returns: Initialized offspring runtime object.
 
 ### determineOffspringNodeCount
 
-`(equal: boolean, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => number`
+```ts
+determineOffspringNodeCount(
+  equal: boolean,
+  parentMetrics: ParentMetrics,
+  randomGenerator: RandomGenerator,
+): number
+```
 
 Determines offspring node count from fitness/equality policy.
 
@@ -230,7 +288,12 @@ Returns: Offspring node count.
 
 ### getAlignedOutputNode
 
-`(parent: import("src/architecture/network/network.types").GeneticNetwork, alignedIndex: number) => import("src/architecture/node").default | undefined`
+```ts
+getAlignedOutputNode(
+  parent: GeneticNetwork,
+  alignedIndex: number,
+): default | undefined
+```
 
 Reads an aligned output candidate node if index is in the valid non-input range.
 
@@ -242,7 +305,11 @@ Returns: Output candidate node.
 
 ### getRandomGenerator
 
-`(parentNetwork: import("src/architecture/network").default) => import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator`
+```ts
+getRandomGenerator(
+  parentNetwork: default,
+): RandomGenerator
+```
 
 Resolves the random generator used by crossover decisions.
 
@@ -253,7 +320,13 @@ Returns: Random function.
 
 ### resolveParentMetrics
 
-`(parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, outputSize: number) => import("src/architecture/network/network.types").ParentMetrics`
+```ts
+resolveParentMetrics(
+  parent1: GeneticNetwork,
+  parent2: GeneticNetwork,
+  outputSize: number,
+): ParentMetrics
+```
 
 Computes common parent metrics reused across helper functions.
 
@@ -266,7 +339,16 @@ Returns: Parent metrics.
 
 ### selectHiddenNodeGene
 
-`(nodeIndex: number, parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, equal: boolean, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/node").default | undefined`
+```ts
+selectHiddenNodeGene(
+  nodeIndex: number,
+  parent1: GeneticNetwork,
+  parent2: GeneticNetwork,
+  parentMetrics: ParentMetrics,
+  equal: boolean,
+  randomGenerator: RandomGenerator,
+): default | undefined
+```
 
 Selects a hidden-region node gene.
 
@@ -282,7 +364,12 @@ Returns: Selected hidden node gene.
 
 ### selectInputNodeGene
 
-`(nodeIndex: number, parent1: import("src/architecture/network/network.types").GeneticNetwork) => import("src/architecture/node").default | undefined`
+```ts
+selectInputNodeGene(
+  nodeIndex: number,
+  parent1: GeneticNetwork,
+): default | undefined
+```
 
 Selects an input-region node gene.
 
@@ -294,7 +381,17 @@ Returns: Parent 1 input node gene.
 
 ### selectNodeGeneAtIndex
 
-`(nodeIndex: number, offspringNodeCount: number, parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, equal: boolean, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/node").default | undefined`
+```ts
+selectNodeGeneAtIndex(
+  nodeIndex: number,
+  offspringNodeCount: number,
+  parent1: GeneticNetwork,
+  parent2: GeneticNetwork,
+  parentMetrics: ParentMetrics,
+  equal: boolean,
+  randomGenerator: RandomGenerator,
+): default | undefined
+```
 
 Selects a node gene for a specific offspring slot.
 
@@ -311,7 +408,16 @@ Returns: Selected parent node gene, if any.
 
 ### selectOutputNodeGene
 
-`(nodeIndex: number, offspringNodeCount: number, parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/node").default | undefined`
+```ts
+selectOutputNodeGene(
+  nodeIndex: number,
+  offspringNodeCount: number,
+  parent1: GeneticNetwork,
+  parent2: GeneticNetwork,
+  parentMetrics: ParentMetrics,
+  randomGenerator: RandomGenerator,
+): default | undefined
+```
 
 Selects an output-region node gene using tail alignment.
 
@@ -327,7 +433,12 @@ Returns: Selected output node gene.
 
 ### validateParentCompatibility
 
-`(parentNetwork1: import("src/architecture/network").default, parentNetwork2: import("src/architecture/network").default) => void`
+```ts
+validateParentCompatibility(
+  parentNetwork1: default,
+  parentNetwork2: default,
+): void
+```
 
 Validates parent compatibility for crossover.
 
@@ -341,7 +452,11 @@ Returns: Nothing.
 
 ### buildConnectionGene
 
-`(connection: import("src/architecture/connection").default) => import("src/architecture/network/network.types").ConnectionGene | undefined`
+```ts
+buildConnectionGene(
+  connection: default,
+): ConnectionGene | undefined
+```
 
 Builds a connection gene from a concrete connection instance.
 
@@ -352,7 +467,11 @@ Returns: Gene descriptor, or undefined when endpoints lack valid indices.
 
 ### canInheritParent1DisjointGenes
 
-`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext) => boolean`
+```ts
+canInheritParent1DisjointGenes(
+  context: ConnectionGeneSelectionContext,
+): boolean
+```
 
 Determines if parent-1 disjoint/excess genes are inheritable.
 
@@ -363,7 +482,11 @@ Returns: True when parent-1 disjoint genes can be selected.
 
 ### canInheritParent2DisjointGenes
 
-`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext) => boolean`
+```ts
+canInheritParent2DisjointGenes(
+  context: ConnectionGeneSelectionContext,
+): boolean
+```
 
 Determines if parent-2 disjoint/excess genes are inheritable.
 
@@ -374,7 +497,17 @@ Returns: True when parent-2 disjoint genes can be selected.
 
 ### chooseConnectionGenes
 
-`(parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parentMetrics: import("src/architecture/network/network.types").ParentMetrics, parent1Genes: Record<string, import("src/architecture/network/network.types").ConnectionGene>, parent2Genes: Record<string, import("src/architecture/network/network.types").ConnectionGene>, equal: boolean, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/network/network.types").ConnectionGene[]`
+```ts
+chooseConnectionGenes(
+  parent1: GeneticNetwork,
+  parent2: GeneticNetwork,
+  parentMetrics: ParentMetrics,
+  parent1Genes: Record<string, ConnectionGene>,
+  parent2Genes: Record<string, ConnectionGene>,
+  equal: boolean,
+  randomGenerator: RandomGenerator,
+): ConnectionGene[]
+```
 
 Selects connection genes for offspring inheritance.
 
@@ -391,7 +524,12 @@ Returns: Chosen genes for offspring materialization.
 
 ### chooseDisjointGeneFromParent
 
-`(parent: import("src/architecture/network/network.types").GeneticNetwork, sourceGene: import("src/architecture/network/network.types").ConnectionGene) => import("src/architecture/network/network.types").ConnectionGene`
+```ts
+chooseDisjointGeneFromParent(
+  parent: GeneticNetwork,
+  sourceGene: ConnectionGene,
+): ConnectionGene
+```
 
 Chooses a disjoint/excess gene from a single parent.
 
@@ -403,7 +541,15 @@ Returns: Selected disjoint gene.
 
 ### chooseMatchingGene
 
-`(parent1: import("src/architecture/network/network.types").GeneticNetwork, parent2: import("src/architecture/network/network.types").GeneticNetwork, parent1Gene: import("src/architecture/network/network.types").ConnectionGene, parent2Gene: import("src/architecture/network/network.types").ConnectionGene, randomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/network/network.types").ConnectionGene`
+```ts
+chooseMatchingGene(
+  parent1: GeneticNetwork,
+  parent2: GeneticNetwork,
+  parent1Gene: ConnectionGene,
+  parent2Gene: ConnectionGene,
+  randomGenerator: RandomGenerator,
+): ConnectionGene
+```
 
 Chooses a gene for matching innovation IDs.
 
@@ -418,7 +564,11 @@ Returns: Selected gene.
 
 ### cloneConnectionGene
 
-`(sourceGene: import("src/architecture/network/network.types").ConnectionGene) => import("src/architecture/network/network.types").ConnectionGene`
+```ts
+cloneConnectionGene(
+  sourceGene: ConnectionGene,
+): ConnectionGene
+```
 
 Clones a connection gene.
 
@@ -429,7 +579,11 @@ Returns: Independent clone.
 
 ### collectConnectionGenes
 
-`(parent: import("src/architecture/network/network.types").GeneticNetwork) => Record<string, import("src/architecture/network/network.types").ConnectionGene>`
+```ts
+collectConnectionGenes(
+  parent: GeneticNetwork,
+): Record<string, ConnectionGene>
+```
 
 Collects all connection genes (standard + self) keyed by innovation ID.
 
@@ -440,7 +594,12 @@ Returns: Innovation-keyed connection gene map.
 
 ### combineChosenGenes
 
-`(parent1TraversalGenes: import("src/architecture/network/network.types").ConnectionGene[], parent2OnlyGenesToAppend: import("src/architecture/network/network.types").ConnectionGene[]) => import("src/architecture/network/network.types").ConnectionGene[]`
+```ts
+combineChosenGenes(
+  parent1TraversalGenes: ConnectionGene[],
+  parent2OnlyGenesToAppend: ConnectionGene[],
+): ConnectionGene[]
+```
 
 Combines selected gene partitions into one ordered list.
 
@@ -452,7 +611,11 @@ Returns: Combined chosen genes.
 
 ### createParent1TraversalContexts
 
-`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext) => import("src/architecture/network/network.types").Parent1GeneTraversalContext[]`
+```ts
+createParent1TraversalContexts(
+  context: ConnectionGeneSelectionContext,
+): Parent1GeneTraversalContext[]
+```
 
 Builds parent-1 traversal contexts keyed by innovation IDs.
 
@@ -463,7 +626,17 @@ Returns: Parent-1 traversal contexts.
 
 ### createSelectionContext
 
-`(sourceParent1: import("src/architecture/network/network.types").GeneticNetwork, sourceParent2: import("src/architecture/network/network.types").GeneticNetwork, sourceParentMetrics: import("src/architecture/network/network.types").ParentMetrics, sourceParent1Genes: Record<string, import("src/architecture/network/network.types").ConnectionGene>, sourceParent2Genes: Record<string, import("src/architecture/network/network.types").ConnectionGene>, sourceEqual: boolean, sourceRandomGenerator: import("src/architecture/network/genetic/network.genetic.utils.types").RandomGenerator) => import("src/architecture/network/network.types").ConnectionGeneSelectionContext`
+```ts
+createSelectionContext(
+  sourceParent1: GeneticNetwork,
+  sourceParent2: GeneticNetwork,
+  sourceParentMetrics: ParentMetrics,
+  sourceParent1Genes: Record<string, ConnectionGene>,
+  sourceParent2Genes: Record<string, ConnectionGene>,
+  sourceEqual: boolean,
+  sourceRandomGenerator: RandomGenerator,
+): ConnectionGeneSelectionContext
+```
 
 Creates the immutable context for this selection pass.
 
@@ -480,7 +653,11 @@ Returns: Selection context.
 
 ### foldParent1TraversalContexts
 
-`(traversalContexts: import("src/architecture/network/network.types").Parent1GeneTraversalContext[]) => import("src/architecture/network/network.types").Parent1TraversalSelectionResult`
+```ts
+foldParent1TraversalContexts(
+  traversalContexts: Parent1GeneTraversalContext[],
+): Parent1TraversalSelectionResult
+```
 
 Folds parent-1 traversal contexts into selected genes and consumed IDs.
 
@@ -491,7 +668,12 @@ Returns: Parent-1 selection result.
 
 ### resolveReenableProbability
 
-`(preferredProbability: number | undefined, fallbackProbability: number | undefined) => number`
+```ts
+resolveReenableProbability(
+  preferredProbability: number | undefined,
+  fallbackProbability: number | undefined,
+): number
+```
 
 Resolves re-enable probability with fallback to default value.
 
@@ -503,7 +685,11 @@ Returns: Probability in [0, 1].
 
 ### selectGeneForParent1TraversalContext
 
-`(traversalContext: import("src/architecture/network/network.types").Parent1GeneTraversalContext) => import("src/architecture/network/network.types").ConnectionGene | undefined`
+```ts
+selectGeneForParent1TraversalContext(
+  traversalContext: Parent1GeneTraversalContext,
+): ConnectionGene | undefined
+```
 
 Selects one inheritable gene for a parent-1 traversal context.
 
@@ -514,7 +700,11 @@ Returns: Selected gene or undefined.
 
 ### selectParent1TraversalGenes
 
-`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext) => import("src/architecture/network/network.types").Parent1TraversalSelectionResult`
+```ts
+selectParent1TraversalGenes(
+  context: ConnectionGeneSelectionContext,
+): Parent1TraversalSelectionResult
+```
 
 Selects genes reachable from parent-1 innovation traversal.
 
@@ -525,7 +715,12 @@ Returns: Parent-1 traversal result.
 
 ### selectParent2OnlyGenes
 
-`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext, remainingParent2Genes: Record<string, import("src/architecture/network/network.types").ConnectionGene>) => import("src/architecture/network/network.types").ConnectionGene[]`
+```ts
+selectParent2OnlyGenes(
+  context: ConnectionGeneSelectionContext,
+  remainingParent2Genes: Record<string, ConnectionGene>,
+): ConnectionGene[]
+```
 
 Selects inheritable parent-2-only disjoint/excess genes.
 
@@ -537,7 +732,12 @@ Returns: Selected parent-2-only genes.
 
 ### selectRemainingParent2Genes
 
-`(context: import("src/architecture/network/network.types").ConnectionGeneSelectionContext, consumedInnovationIds: string[]) => Record<string, import("src/architecture/network/network.types").ConnectionGene>`
+```ts
+selectRemainingParent2Genes(
+  context: ConnectionGeneSelectionContext,
+  consumedInnovationIds: string[],
+): Record<string, ConnectionGene>
+```
 
 Builds parent-2 gene map after removing consumed matching innovations.
 
@@ -551,7 +751,12 @@ Returns: Remaining parent-2 genes.
 
 ### applyConnectionGeneToConnection
 
-`(connection: import("src/architecture/connection").default, connectionGene: import("src/architecture/network/network.types").ConnectionGene) => void`
+```ts
+applyConnectionGeneToConnection(
+  connection: default,
+  connectionGene: ConnectionGene,
+): void
+```
 
 Applies gene properties to a runtime connection.
 
@@ -563,7 +768,13 @@ Returns: Nothing.
 
 ### attachGaterIfAvailable
 
-`(offspring: import("src/architecture/network/network.types").GeneticNetwork, connection: import("src/architecture/connection").default, gaterIndex: number) => void`
+```ts
+attachGaterIfAvailable(
+  offspring: GeneticNetwork,
+  connection: default,
+  gaterIndex: number,
+): void
+```
 
 Attaches a gater node when the target index is valid.
 
@@ -576,7 +787,12 @@ Returns: Nothing.
 
 ### collectEligibleTraversalContexts
 
-`(context: import("src/architecture/network/network.types").OffspringMaterializationContext, genes: import("src/architecture/network/network.types").ConnectionGene[]) => import("src/architecture/network/network.types").GeneTraversalContext[]`
+```ts
+collectEligibleTraversalContexts(
+  context: OffspringMaterializationContext,
+  genes: ConnectionGene[],
+): GeneTraversalContext[]
+```
 
 Collects traversal contexts that satisfy all structural eligibility checks.
 
@@ -588,7 +804,11 @@ Returns: Eligible traversal contexts.
 
 ### createConnectionForEndpoints
 
-`(endpointsContext: import("src/architecture/network/network.types").GeneEndpointsContext) => import("src/architecture/connection").default | undefined`
+```ts
+createConnectionForEndpoints(
+  endpointsContext: GeneEndpointsContext,
+): default | undefined
+```
 
 Creates a runtime connection for endpoint nodes.
 
@@ -599,7 +819,11 @@ Returns: Created connection or undefined.
 
 ### createMaterializationContext
 
-`(targetOffspring: import("src/architecture/network/network.types").GeneticNetwork) => import("src/architecture/network/network.types").OffspringMaterializationContext`
+```ts
+createMaterializationContext(
+  targetOffspring: GeneticNetwork,
+): OffspringMaterializationContext
+```
 
 Creates the immutable top-level context used during materialization.
 
@@ -610,7 +834,13 @@ Returns: Materialization context.
 
 ### createOffspringConnection
 
-`(offspring: import("src/architecture/network/network.types").GeneticNetwork, fromNode: import("src/architecture/node").default, toNode: import("src/architecture/node").default) => import("src/architecture/connection").default | undefined`
+```ts
+createOffspringConnection(
+  offspring: GeneticNetwork,
+  fromNode: default,
+  toNode: default,
+): default | undefined
+```
 
 Creates a single offspring connection edge.
 
@@ -623,7 +853,12 @@ Returns: Created connection or undefined.
 
 ### createTraversalContexts
 
-`(context: import("src/architecture/network/network.types").OffspringMaterializationContext, genes: import("src/architecture/network/network.types").ConnectionGene[]) => import("src/architecture/network/network.types").GeneTraversalContext[]`
+```ts
+createTraversalContexts(
+  context: OffspringMaterializationContext,
+  genes: ConnectionGene[],
+): GeneTraversalContext[]
+```
 
 Builds traversal contexts for each candidate gene.
 
@@ -635,7 +870,11 @@ Returns: Traversal contexts.
 
 ### hasExistingProjection
 
-`(endpointsContext: import("src/architecture/network/network.types").GeneEndpointsContext) => boolean`
+```ts
+hasExistingProjection(
+  endpointsContext: GeneEndpointsContext,
+): boolean
+```
 
 Checks whether the source endpoint already projects to the target endpoint.
 
@@ -646,7 +885,11 @@ Returns: True when projection already exists.
 
 ### isTraversalContextFeedForward
 
-`(traversalContext: import("src/architecture/network/network.types").GeneTraversalContext) => boolean`
+```ts
+isTraversalContextFeedForward(
+  traversalContext: GeneTraversalContext,
+): boolean
+```
 
 Validates that a traversal context follows feed-forward ordering.
 
@@ -657,7 +900,11 @@ Returns: True when the gene is strictly forward.
 
 ### isTraversalContextWithinNodeBounds
 
-`(traversalContext: import("src/architecture/network/network.types").GeneTraversalContext) => boolean`
+```ts
+isTraversalContextWithinNodeBounds(
+  traversalContext: GeneTraversalContext,
+): boolean
+```
 
 Validates that a traversal context endpoints are inside offspring bounds.
 
@@ -668,7 +915,11 @@ Returns: True when both indices are bounded.
 
 ### keepFeedForwardTraversalContexts
 
-`(traversalContexts: import("src/architecture/network/network.types").GeneTraversalContext[]) => import("src/architecture/network/network.types").GeneTraversalContext[]`
+```ts
+keepFeedForwardTraversalContexts(
+  traversalContexts: GeneTraversalContext[],
+): GeneTraversalContext[]
+```
 
 Keeps traversal contexts that preserve feed-forward edge direction.
 
@@ -679,7 +930,11 @@ Returns: Feed-forward contexts.
 
 ### keepTraversalContextsWithinNodeBounds
 
-`(traversalContexts: import("src/architecture/network/network.types").GeneTraversalContext[]) => import("src/architecture/network/network.types").GeneTraversalContext[]`
+```ts
+keepTraversalContextsWithinNodeBounds(
+  traversalContexts: GeneTraversalContext[],
+): GeneTraversalContext[]
+```
 
 Keeps traversal contexts whose endpoints are inside offspring bounds.
 
@@ -690,7 +945,12 @@ Returns: Node-bounded contexts.
 
 ### materializeOffspringConnections
 
-`(offspring: import("src/architecture/network/network.types").GeneticNetwork, chosenGenes: import("src/architecture/network/network.types").ConnectionGene[]) => void`
+```ts
+materializeOffspringConnections(
+  offspring: GeneticNetwork,
+  chosenGenes: ConnectionGene[],
+): void
+```
 
 Materializes selected connection genes in the offspring network.
 
@@ -702,7 +962,11 @@ Returns: Nothing.
 
 ### materializeSingleTraversalContext
 
-`(traversalContext: import("src/architecture/network/network.types").GeneTraversalContext) => void`
+```ts
+materializeSingleTraversalContext(
+  traversalContext: GeneTraversalContext,
+): void
+```
 
 Materializes one eligible traversal context when no duplicate projection exists.
 
@@ -713,7 +977,11 @@ Returns: Nothing.
 
 ### materializeTraversalContexts
 
-`(traversalContexts: import("src/architecture/network/network.types").GeneTraversalContext[]) => void`
+```ts
+materializeTraversalContexts(
+  traversalContexts: GeneTraversalContext[],
+): void
+```
 
 Materializes each eligible traversal context independently.
 
@@ -724,7 +992,11 @@ Returns: Nothing.
 
 ### resolveGeneEndpointsContext
 
-`(traversalContext: import("src/architecture/network/network.types").GeneTraversalContext) => import("src/architecture/network/network.types").GeneEndpointsContext | undefined`
+```ts
+resolveGeneEndpointsContext(
+  traversalContext: GeneTraversalContext,
+): GeneEndpointsContext | undefined
+```
 
 Resolves concrete endpoint nodes for a traversal context.
 

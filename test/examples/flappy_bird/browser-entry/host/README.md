@@ -25,7 +25,11 @@ on a given tick.
 
 ### createCanvasHost
 
-`(containerElement: HTMLElement) => import("test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
+```ts
+createCanvasHost(
+  containerElement: HTMLElement,
+): CanvasHostResult
+```
 
 Builds the browser demo host tree and returns rendering handles.
 
@@ -38,7 +42,11 @@ Returns: Canvas handles, stats cells and network render callback.
 
 ### createCanvasHostInternal
 
-`(containerElement: HTMLElement) => import("test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
+```ts
+createCanvasHostInternal(
+  containerElement: HTMLElement,
+): CanvasHostResult
+```
 
 Builds the browser demo host tree and returns rendering handles.
 
@@ -53,7 +61,12 @@ Returns: Canvas handles, stats cells and network render callback.
 
 ### createHeaderFrameRenderer
 
-`(headerCanvas: HTMLCanvasElement, headerContext: CanvasRenderingContext2D) => () => void`
+```ts
+createHeaderFrameRenderer(
+  headerCanvas: HTMLCanvasElement,
+  headerContext: CanvasRenderingContext2D,
+): () => void
+```
 
 Creates the reusable title-frame renderer for the header canvas.
 
@@ -65,7 +78,11 @@ Returns: Callback that redraws the framed title.
 
 ### createHostCanvasElements
 
-`(hostVisualPrimitives: HostVisualPrimitives) => HostCanvasElements`
+```ts
+createHostCanvasElements(
+  hostVisualPrimitives: HostVisualPrimitives,
+): HostCanvasElements
+```
 
 Creates the canvases and 2D contexts used by the host UI.
 
@@ -79,7 +96,11 @@ Returns: Simulation, header, and network canvases with required contexts.
 
 ### createHostLayoutElements
 
-`(hostVisualPrimitives: HostVisualPrimitives) => HostLayoutElements`
+```ts
+createHostLayoutElements(
+  hostVisualPrimitives: HostVisualPrimitives,
+): HostLayoutElements
+```
 
 Creates the host layout elements used to assemble the browser UI tree.
 
@@ -93,7 +114,13 @@ Returns: Layout elements grouped by host responsibility.
 
 ### createHostNetworkVisualizationController
 
-`(networkCanvasHost: HTMLDivElement, networkCanvas: HTMLCanvasElement, networkContext: CanvasRenderingContext2D) => HostNetworkVisualizationController`
+```ts
+createHostNetworkVisualizationController(
+  networkCanvasHost: HTMLDivElement,
+  networkCanvas: HTMLCanvasElement,
+  networkContext: CanvasRenderingContext2D,
+): HostNetworkVisualizationController
+```
 
 Creates the network visualization renderer and redraw controller.
 
@@ -115,7 +142,15 @@ on which the runtime loop renders.
 
 ### installCanvasHostResizeHooks
 
-`(canvas: HTMLCanvasElement, hostLayoutElements: HostLayoutElements, networkCanvas: HTMLCanvasElement, drawHeaderFrame: () => void, hostNetworkVisualizationController: HostNetworkVisualizationController) => void`
+```ts
+installCanvasHostResizeHooks(
+  canvas: HTMLCanvasElement,
+  hostLayoutElements: HostLayoutElements,
+  networkCanvas: HTMLCanvasElement,
+  drawHeaderFrame: () => void,
+  hostNetworkVisualizationController: HostNetworkVisualizationController,
+): void
+```
 
 Installs responsive resize hooks for the simulation canvas and side panel.
 
@@ -130,7 +165,15 @@ Returns: Nothing.
 
 ### mountCanvasHostTree
 
-`(containerElement: HTMLElement, hostLayoutElements: HostLayoutElements, headerCanvas: HTMLCanvasElement, canvas: HTMLCanvasElement, networkCanvas: HTMLCanvasElement) => void`
+```ts
+mountCanvasHostTree(
+  containerElement: HTMLElement,
+  hostLayoutElements: HostLayoutElements,
+  headerCanvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement,
+  networkCanvas: HTMLCanvasElement,
+): void
+```
 
 Mounts the completed host DOM tree into the container in final order.
 
@@ -145,7 +188,12 @@ Returns: Nothing.
 
 ### renderInitialCanvasHostState
 
-`(drawHeaderFrame: () => void, renderNetworkArchitecture: (network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void) => void`
+```ts
+renderInitialCanvasHostState(
+  drawHeaderFrame: () => void,
+  renderNetworkArchitecture: (network: default | undefined, inputSize: number, outputSize: number) => void,
+): void
+```
 
 Renders the initial header and placeholder network visualization state.
 
@@ -157,7 +205,11 @@ Returns: Nothing.
 
 ### resetHostContainer
 
-`(containerElement: HTMLElement) => void`
+```ts
+resetHostContainer(
+  containerElement: HTMLElement,
+): void
+```
 
 Clears any previous runtime DOM before rebuilding the browser host tree.
 
@@ -171,7 +223,9 @@ Returns: Nothing.
 
 ### resolveHostVisualPrimitives
 
-`() => HostVisualPrimitives`
+```ts
+resolveHostVisualPrimitives(): HostVisualPrimitives
+```
 
 Resolves shared border, shadow, and padding values for host assembly.
 
@@ -182,7 +236,12 @@ Returns: Shared visual primitives reused across host sections.
 
 ### updateStatsTableValues
 
-`(statsValueByKey: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
+```ts
+updateStatsTableValues(
+  statsValueByKey: Partial<Record<FlappyStatsKey, HTMLTableCellElement>>,
+  partialValues: Partial<Record<FlappyStatsKey, string>>,
+): void
+```
 
 Applies partial stat updates to the rendered stats table.
 
@@ -245,7 +304,12 @@ assembly begins.
 
 ### resolveRequiredCanvas2dContext
 
-`(canvas: HTMLCanvasElement, errorMessage: string) => CanvasRenderingContext2D`
+```ts
+resolveRequiredCanvas2dContext(
+  canvas: HTMLCanvasElement,
+  errorMessage: string,
+): CanvasRenderingContext2D
+```
 
 Resolves a required 2D context from a canvas element.
 
@@ -267,7 +331,11 @@ the runtime loop.
 
 ### createAndAttachHostStatsTable
 
-`(statsTableHost: HTMLElement) => Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>`
+```ts
+createAndAttachHostStatsTable(
+  statsTableHost: HTMLElement,
+): Partial<Record<FlappyStatsKey, HTMLTableCellElement>>
+```
 
 Creates the host stats table, appends it into the provided host element, and
 initializes all HUD values to their baseline placeholders.
@@ -282,7 +350,12 @@ Returns: Lookup map for future incremental stat updates.
 
 ### updateStatsTableValues
 
-`(statsValueByKey: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
+```ts
+updateStatsTableValues(
+  statsValueByKey: Partial<Record<FlappyStatsKey, HTMLTableCellElement>>,
+  partialValues: Partial<Record<FlappyStatsKey, string>>,
+): void
+```
 
 Applies partial stat updates to the rendered stats table.
 
@@ -304,7 +377,13 @@ simulation and network canvases render crisply without stretching artifacts.
 
 ### applyCanvasBackingSize
 
-`(canvas: HTMLCanvasElement, widthPx: number, heightPx: number) => boolean`
+```ts
+applyCanvasBackingSize(
+  canvas: HTMLCanvasElement,
+  widthPx: number,
+  heightPx: number,
+): boolean
+```
 
 Applies a canvas backing store size and CSS width/height.
 
@@ -320,7 +399,13 @@ Returns: True when canvas dimensions changed.
 
 ### applySimulationCanvasBounds
 
-`(canvas: HTMLCanvasElement, widthPx: number, heightPx: number) => boolean`
+```ts
+applySimulationCanvasBounds(
+  canvas: HTMLCanvasElement,
+  widthPx: number,
+  heightPx: number,
+): boolean
+```
 
 Applies fixed simulation-canvas bounds so layout does not stretch unexpectedly.
 
@@ -336,7 +421,12 @@ Returns: True when backing-store dimensions changed.
 
 ### resolveNetworkCanvasSizePx
 
-`(networkCanvasHost: HTMLElement, hostInsetPx: number) => { widthPx: number; heightPx: number; }`
+```ts
+resolveNetworkCanvasSizePx(
+  networkCanvasHost: HTMLElement,
+  hostInsetPx: number,
+): { widthPx: number; heightPx: number; }
+```
 
 Computes the drawable network canvas size from host element dimensions.
 
@@ -353,7 +443,19 @@ Returns: Width/height pair in pixels.
 
 ### installResponsiveViewportSizing
 
-`(canvas: HTMLCanvasElement, containerElement: HTMLElement, mainSplitContainer: HTMLElement, statsContainer: HTMLElement, statsSplitContainer: HTMLElement, statsTableHost: HTMLElement, networkCanvas: HTMLCanvasElement, networkCanvasHost: HTMLElement, onNetworkResize: () => void) => void`
+```ts
+installResponsiveViewportSizing(
+  canvas: HTMLCanvasElement,
+  containerElement: HTMLElement,
+  mainSplitContainer: HTMLElement,
+  statsContainer: HTMLElement,
+  statsSplitContainer: HTMLElement,
+  statsTableHost: HTMLElement,
+  networkCanvas: HTMLCanvasElement,
+  networkCanvasHost: HTMLElement,
+  onNetworkResize: () => void,
+): void
+```
 
 Installs responsive viewport sizing for simulation and network canvases.
 

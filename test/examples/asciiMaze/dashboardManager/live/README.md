@@ -25,7 +25,13 @@ A useful reading order is:
 
 ### redrawDashboard
 
-`(context: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerContext, currentMaze: string[], neat: unknown) => void`
+```ts
+redrawDashboard(
+  context: DashboardManagerContext,
+  currentMaze: string[],
+  neat: unknown,
+): void
+```
 
 Repaint the live dashboard from current state and refresh the detailed snapshot.
 

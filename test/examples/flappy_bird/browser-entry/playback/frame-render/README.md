@@ -27,7 +27,14 @@ drawing helpers.
 
 ### PlaybackBirdRenderer
 
-`(context: CanvasRenderingContext2D, birdYPx: number, birdIndex: number, championBirdIndex: number) => void`
+```ts
+PlaybackBirdRenderer(
+  context: CanvasRenderingContext2D,
+  birdYPx: number,
+  birdIndex: number,
+  championBirdIndex: number,
+): void
+```
 
 Bird body renderer contract used by frame-render orchestration helpers.
 
@@ -43,7 +50,16 @@ render helpers need during the same paint pass.
 
 ### PlaybackTrailRenderer
 
-`(context: CanvasRenderingContext2D, trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], color: string, anchorX: number, baseOpacity: number, edgeBounds: import("test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds) => void`
+```ts
+PlaybackTrailRenderer(
+  context: CanvasRenderingContext2D,
+  trailPoints: TrailPoint[],
+  color: string,
+  anchorX: number,
+  baseOpacity: number,
+  edgeBounds: PlaybackEdgeBounds,
+): void
+```
 
 Trail segment renderer used by frame-render orchestration helpers.
 
@@ -59,7 +75,12 @@ base opacity plus stroke color.
 
 ### PlaybackTrailStyleResolver
 
-`(birdIndex: number, championBirdIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailRenderStyle`
+```ts
+PlaybackTrailStyleResolver(
+  birdIndex: number,
+  championBirdIndex: number,
+): PlaybackTrailRenderStyle
+```
 
 Trail style resolver used by frame-render orchestration helpers.
 
@@ -76,7 +97,13 @@ and maintains the short champion trail used for motion emphasis.
 
 ### renderPopulationFrame
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState) => void`
+```ts
+renderPopulationFrame(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  trailState: TrailState,
+): void
+```
 
 Draws one simulation frame for the current population state.
 
@@ -98,7 +125,12 @@ renderPopulationFrame(context, renderState, trailState);
 
 ### updateTrailState
 
-`(trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => void`
+```ts
+updateTrailState(
+  trailState: TrailState,
+  renderState: PopulationRenderState,
+): void
+```
 
 Updates the trail cache from the latest frame snapshot.
 
@@ -122,7 +154,12 @@ updateTrailState(trailState, renderState);
 
 ### beginPlaybackFrameViewportTransform
 
-`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
+```ts
+beginPlaybackFrameViewportTransform(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackFrameSceneContext,
+): void
+```
 
 Applies the viewport transform used for world-space frame rendering.
 
@@ -137,7 +174,11 @@ Returns: Nothing.
 
 ### finalizePlaybackFrameCanvas
 
-`(context: CanvasRenderingContext2D) => void`
+```ts
+finalizePlaybackFrameCanvas(
+  context: CanvasRenderingContext2D,
+): void
+```
 
 Restores the caller canvas state after viewport-space frame drawing.
 
@@ -151,7 +192,11 @@ Returns: Nothing.
 
 ### preparePlaybackFrameCanvas
 
-`(context: CanvasRenderingContext2D) => void`
+```ts
+preparePlaybackFrameCanvas(
+  context: CanvasRenderingContext2D,
+): void
+```
 
 Resets the target canvas and base paint state before frame drawing begins.
 
@@ -165,7 +210,13 @@ Returns: Nothing.
 
 ### renderPlaybackFrameBackground
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
+```ts
+renderPlaybackFrameBackground(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  sceneContext: PlaybackFrameSceneContext,
+): void
+```
 
 Draws the split playback background for the current world viewport.
 
@@ -181,7 +232,14 @@ Returns: Nothing.
 
 ### renderPlaybackFrameBirds
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext, renderBird: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdRenderer) => void`
+```ts
+renderPlaybackFrameBirds(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  sceneContext: PlaybackFrameSceneContext,
+  renderBird: PlaybackBirdRenderer,
+): void
+```
 
 Draws all active birds for the current frame.
 
@@ -198,7 +256,13 @@ Returns: Nothing.
 
 ### renderPlaybackFramePipes
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
+```ts
+renderPlaybackFramePipes(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  sceneContext: PlaybackFrameSceneContext,
+): void
+```
 
 Draws all visible pipe segments and their neon outlines for the frame.
 
@@ -214,7 +278,16 @@ Returns: Nothing.
 
 ### renderPlaybackFrameTrails
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext, resolveTrailStyle: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailStyleResolver, renderTrail: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailRenderer) => void`
+```ts
+renderPlaybackFrameTrails(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  trailState: TrailState,
+  sceneContext: PlaybackFrameSceneContext,
+  resolveTrailStyle: PlaybackTrailStyleResolver,
+  renderTrail: PlaybackTrailRenderer,
+): void
+```
 
 Draws stepped trails for all active birds in the frame.
 
@@ -234,7 +307,12 @@ Returns: Nothing.
 
 ### resolvePlaybackFrameSceneContext
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext`
+```ts
+resolvePlaybackFrameSceneContext(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+): PlaybackFrameSceneContext
+```
 
 Resolves the shared scene contract used by one frame render pass.
 
@@ -257,7 +335,12 @@ currently the champion.
 
 ### resolvePlaybackFrameSceneContext
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext`
+```ts
+resolvePlaybackFrameSceneContext(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+): PlaybackFrameSceneContext
+```
 
 Resolves the shared scene contract used by one frame render pass.
 
@@ -279,7 +362,12 @@ frame so the orchestration layer can read as declarative world rendering.
 
 ### beginPlaybackFrameViewportTransform
 
-`(context: CanvasRenderingContext2D, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
+```ts
+beginPlaybackFrameViewportTransform(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackFrameSceneContext,
+): void
+```
 
 Applies the viewport transform used for world-space frame rendering.
 
@@ -294,7 +382,11 @@ Returns: Nothing.
 
 ### finalizePlaybackFrameCanvas
 
-`(context: CanvasRenderingContext2D) => void`
+```ts
+finalizePlaybackFrameCanvas(
+  context: CanvasRenderingContext2D,
+): void
+```
 
 Restores the caller canvas state after viewport-space frame drawing.
 
@@ -308,7 +400,11 @@ Returns: Nothing.
 
 ### preparePlaybackFrameCanvas
 
-`(context: CanvasRenderingContext2D) => void`
+```ts
+preparePlaybackFrameCanvas(
+  context: CanvasRenderingContext2D,
+): void
+```
 
 Resets the target canvas and base paint state before frame drawing begins.
 
@@ -329,7 +425,13 @@ canvas transforms have already been resolved.
 
 ### renderPlaybackFrameBackground
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
+```ts
+renderPlaybackFrameBackground(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  sceneContext: PlaybackFrameSceneContext,
+): void
+```
 
 Draws the split playback background for the current world viewport.
 
@@ -345,7 +447,14 @@ Returns: Nothing.
 
 ### renderPlaybackFrameBirds
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext, renderBird: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdRenderer) => void`
+```ts
+renderPlaybackFrameBirds(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  sceneContext: PlaybackFrameSceneContext,
+  renderBird: PlaybackBirdRenderer,
+): void
+```
 
 Draws all active birds for the current frame.
 
@@ -362,7 +471,13 @@ Returns: Nothing.
 
 ### renderPlaybackFramePipes
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
+```ts
+renderPlaybackFramePipes(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  sceneContext: PlaybackFrameSceneContext,
+): void
+```
 
 Draws all visible pipe segments and their neon outlines for the frame.
 
@@ -378,7 +493,16 @@ Returns: Nothing.
 
 ### renderPlaybackFrameTrails
 
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext, resolveTrailStyle: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailStyleResolver, renderTrail: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailRenderer) => void`
+```ts
+renderPlaybackFrameTrails(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  trailState: TrailState,
+  sceneContext: PlaybackFrameSceneContext,
+  resolveTrailStyle: PlaybackTrailStyleResolver,
+  renderTrail: PlaybackTrailRenderer,
+): void
+```
 
 Draws stepped trails for all active birds in the frame.
 
@@ -400,7 +524,13 @@ Returns: Nothing.
 
 ### drawChampionPlaybackBirdGlow
 
-`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
+```ts
+drawChampionPlaybackBirdGlow(
+  context: CanvasRenderingContext2D,
+  birdGeometry: PlaybackBirdGeometry,
+  birdRenderStyle: PlaybackBirdRenderStyle,
+): void
+```
 
 Draws the champion bird using the same two-pass additive outline glow method as pipes.
 
@@ -416,7 +546,13 @@ Returns: Nothing.
 
 ### drawPlaybackBirdBody
 
-`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
+```ts
+drawPlaybackBirdBody(
+  context: CanvasRenderingContext2D,
+  birdGeometry: PlaybackBirdGeometry,
+  birdRenderStyle: PlaybackBirdRenderStyle,
+): void
+```
 
 Draws the square bird body with its base neon glow.
 
@@ -431,7 +567,16 @@ Returns: Nothing.
 
 ### drawTrail
 
-`(context: CanvasRenderingContext2D, trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], color: string, anchorX: number, baseOpacity: number, edgeBounds: import("test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds) => void`
+```ts
+drawTrail(
+  context: CanvasRenderingContext2D,
+  trailPoints: TrailPoint[],
+  color: string,
+  anchorX: number,
+  baseOpacity: number,
+  edgeBounds: PlaybackEdgeBounds,
+): void
+```
 
 Draws the stepped trail history for one active bird.
 
@@ -450,7 +595,14 @@ Returns: Nothing.
 
 ### renderPlaybackBird
 
-`(context: CanvasRenderingContext2D, birdYPx: number, birdIndex: number, championBirdIndex: number) => void`
+```ts
+renderPlaybackBird(
+  context: CanvasRenderingContext2D,
+  birdYPx: number,
+  birdIndex: number,
+  championBirdIndex: number,
+): void
+```
 
 Draws one active bird body and champion-only highlight passes.
 
@@ -467,7 +619,11 @@ Returns: Nothing.
 
 ### resolvePlaybackBirdBodyGlowBlur
 
-`(birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => number`
+```ts
+resolvePlaybackBirdBodyGlowBlur(
+  birdRenderStyle: PlaybackBirdRenderStyle,
+): number
+```
 
 Resolves the body glow blur for one bird render pass.
 
@@ -481,7 +637,11 @@ Returns: Blur radius used behind the square bird body.
 
 ### resolvePlaybackBirdGeometry
 
-`(birdYPx: number) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry`
+```ts
+resolvePlaybackBirdGeometry(
+  birdYPx: number,
+): PlaybackBirdGeometry
+```
 
 Resolves the fixed bird geometry used by all body rendering passes.
 
@@ -495,7 +655,12 @@ Returns: Pixel-aligned square geometry for the bird body.
 
 ### resolvePlaybackTrailStyle
 
-`(birdIndex: number, championBirdIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailRenderStyle`
+```ts
+resolvePlaybackTrailStyle(
+  birdIndex: number,
+  championBirdIndex: number,
+): PlaybackTrailRenderStyle
+```
 
 Resolves the trail style used for one bird's stepped trail.
 
@@ -518,7 +683,13 @@ at a glance even when many birds overlap.
 
 ### drawChampionPlaybackBirdGlow
 
-`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
+```ts
+drawChampionPlaybackBirdGlow(
+  context: CanvasRenderingContext2D,
+  birdGeometry: PlaybackBirdGeometry,
+  birdRenderStyle: PlaybackBirdRenderStyle,
+): void
+```
 
 Draws the champion bird using the same two-pass additive outline glow method as pipes.
 
@@ -534,7 +705,13 @@ Returns: Nothing.
 
 ### drawPlaybackBirdBody
 
-`(context: CanvasRenderingContext2D, birdGeometry: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry, birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => void`
+```ts
+drawPlaybackBirdBody(
+  context: CanvasRenderingContext2D,
+  birdGeometry: PlaybackBirdGeometry,
+  birdRenderStyle: PlaybackBirdRenderStyle,
+): void
+```
 
 Draws the square bird body with its base neon glow.
 
@@ -549,7 +726,14 @@ Returns: Nothing.
 
 ### renderPlaybackBird
 
-`(context: CanvasRenderingContext2D, birdYPx: number, birdIndex: number, championBirdIndex: number) => void`
+```ts
+renderPlaybackBird(
+  context: CanvasRenderingContext2D,
+  birdYPx: number,
+  birdIndex: number,
+  championBirdIndex: number,
+): void
+```
 
 Draws one active bird body and champion-only highlight passes.
 
@@ -566,7 +750,11 @@ Returns: Nothing.
 
 ### resolvePlaybackBirdBodyGlowBlur
 
-`(birdRenderStyle: import("test/examples/flappy_bird/browser-entry/playback/playback.render.utils").PlaybackBirdRenderStyle) => number`
+```ts
+resolvePlaybackBirdBodyGlowBlur(
+  birdRenderStyle: PlaybackBirdRenderStyle,
+): number
+```
 
 Resolves the body glow blur for one bird render pass.
 
@@ -580,7 +768,11 @@ Returns: Blur radius used behind the square bird body.
 
 ### resolvePlaybackBirdGeometry
 
-`(birdYPx: number) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackBirdGeometry`
+```ts
+resolvePlaybackBirdGeometry(
+  birdYPx: number,
+): PlaybackBirdGeometry
+```
 
 Resolves the fixed bird geometry used by all body rendering passes.
 
@@ -601,7 +793,16 @@ fading so motion remains legible without overwhelming the scene.
 
 ### drawTrail
 
-`(context: CanvasRenderingContext2D, trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], color: string, anchorX: number, baseOpacity: number, edgeBounds: import("test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds) => void`
+```ts
+drawTrail(
+  context: CanvasRenderingContext2D,
+  trailPoints: TrailPoint[],
+  color: string,
+  anchorX: number,
+  baseOpacity: number,
+  edgeBounds: PlaybackEdgeBounds,
+): void
+```
 
 Draws the stepped trail history for one active bird.
 
@@ -620,7 +821,20 @@ Returns: Nothing.
 
 ### drawTrailSegmentWithEdgeFade
 
-`(context: CanvasRenderingContext2D, startXPx: number, startYPx: number, endXPx: number, endYPx: number, baseOpacity: number, edgeBounds: import("test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds, startFrameOffset: number, endFrameOffset: number, maximumTrailFrameOffset: number) => void`
+```ts
+drawTrailSegmentWithEdgeFade(
+  context: CanvasRenderingContext2D,
+  startXPx: number,
+  startYPx: number,
+  endXPx: number,
+  endYPx: number,
+  baseOpacity: number,
+  edgeBounds: PlaybackEdgeBounds,
+  startFrameOffset: number,
+  endFrameOffset: number,
+  maximumTrailFrameOffset: number,
+): void
+```
 
 Draws one trail segment with combined edge and lifetime fading.
 
@@ -643,7 +857,12 @@ Returns: Nothing.
 
 ### resolvePlaybackTrailStyle
 
-`(birdIndex: number, championBirdIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailRenderStyle`
+```ts
+resolvePlaybackTrailStyle(
+  birdIndex: number,
+  championBirdIndex: number,
+): PlaybackTrailRenderStyle
+```
 
 Resolves the trail style used for one bird's stepped trail.
 

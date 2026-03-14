@@ -70,7 +70,14 @@ Timeouts stop extremely long survival loops from dominating evaluation cost.
 
 ### stepFlappyState
 
-`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, rng: import("test/examples/flappy_bird/rng").FlappyRng, flap: boolean, difficultyScale: number) => void`
+```ts
+stepFlappyState(
+  state: FlappyGameState,
+  rng: FlappyRng,
+  flap: boolean,
+  difficultyScale: number,
+): void
+```
 
 Advance the simulation by one frame.
 
@@ -87,7 +94,15 @@ Returns: Nothing.
 
 ### stepFlappyStateWithControlSubsteps
 
-`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, rng: import("test/examples/flappy_bird/rng").FlappyRng, shouldFlapForSubstep: () => boolean, difficultyScale: number, controlSubstepsPerFrame: number) => void`
+```ts
+stepFlappyStateWithControlSubsteps(
+  state: FlappyGameState,
+  rng: FlappyRng,
+  shouldFlapForSubstep: () => boolean,
+  difficultyScale: number,
+  controlSubstepsPerFrame: number,
+): void
+```
 
 Advance one logical frame using multiple control/physics substeps.
 
@@ -115,7 +130,11 @@ Returns: Nothing.
 
 ### createInitialFlappyState
 
-`(rng: import("test/examples/flappy_bird/rng").FlappyRng) => import("test/examples/flappy_bird/environment/environment.types").FlappyGameState`
+```ts
+createInitialFlappyState(
+  rng: FlappyRng,
+): FlappyGameState
+```
 
 Create a fresh Flappy Bird episode state.
 
@@ -139,7 +158,11 @@ const state = createInitialFlappyState(rng);
 
 ### updateCollisionAndProgressState
 
-`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState) => void`
+```ts
+updateCollisionAndProgressState(
+  state: FlappyGameState,
+): void
+```
 
 Apply out-of-bounds, pipe-collision, and pass-credit rules for one substep.
 
@@ -158,7 +181,12 @@ Returns: Nothing.
 
 ### getFlappyObservation
 
-`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, difficultyScale: number) => number[]`
+```ts
+getFlappyObservation(
+  state: FlappyGameState,
+  difficultyScale: number,
+): number[]
+```
 
 Generate the network observation vector for the current state.
 
@@ -190,7 +218,12 @@ Returns: Input vector for the neural network.
 
 ### getFlappyObservationFeatures
 
-`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, difficultyScale: number) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
+```ts
+getFlappyObservationFeatures(
+  state: FlappyGameState,
+  difficultyScale: number,
+): SharedObservationFeatures
+```
 
 Resolve structured observation features for policy input and reward shaping.
 

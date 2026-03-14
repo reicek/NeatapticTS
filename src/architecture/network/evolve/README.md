@@ -68,7 +68,12 @@ Explicit zero-iteration value.
 
 ### evolveNetwork
 
-`(set: import("src/architecture/network/network.types").TrainingSample[], options: import("src/architecture/network/network.types").EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
+```ts
+evolveNetwork(
+  set: TrainingSample[],
+  options: EvolveOptions,
+): Promise<{ error: number; iterations: number; time: number; }>
+```
 
 Evolves a network with a NEAT-style search loop until an error target or generation limit is reached.
 
@@ -106,7 +111,13 @@ console.log(summary.error, summary.iterations, summary.time);
 
 ### applyEvolutionStep
 
-`(state: import("src/architecture/network/network.types").EvolutionLoopState, evolvedGenome: import("src/architecture/network").default, growth: number) => void`
+```ts
+applyEvolutionStep(
+  state: EvolutionLoopState,
+  evolvedGenome: default,
+  growth: number,
+): void
+```
 
 Applies one evolve() result to loop state.
 
@@ -119,7 +130,9 @@ Returns: Nothing.
 
 ### createInitialLoopState
 
-`() => import("src/architecture/network/network.types").EvolutionLoopState`
+```ts
+createInitialLoopState(): EvolutionLoopState
+```
 
 Creates initial loop state snapshot.
 
@@ -127,7 +140,13 @@ Returns: Initial loop state.
 
 ### deriveErrorFromFitness
 
-`(fitness: number, genome: import("src/architecture/network").default, growth: number) => number`
+```ts
+deriveErrorFromFitness(
+  fitness: number,
+  genome: default,
+  growth: number,
+): number
+```
 
 Derive error from fitness by inverting score composition.
 
@@ -140,7 +159,14 @@ Returns: Derived error value.
 
 ### runEvolutionLoop
 
-`(neatInstance: import("src/architecture/network/network.types").NeatRuntime, resolvedSettings: import("src/architecture/network/network.types").EvolutionSettings, targetError: number, iterations: number | undefined) => Promise<{ error: number; bestGenome: import("src/architecture/network").default | undefined; }>`
+```ts
+runEvolutionLoop(
+  neatInstance: NeatRuntime,
+  resolvedSettings: EvolutionSettings,
+  targetError: number,
+  iterations: number | undefined,
+): Promise<{ error: number; bestGenome: default | undefined; }>
+```
 
 Run core evolution loop until stop condition is met.
 
@@ -154,7 +180,14 @@ Returns: Loop result snapshot.
 
 ### runScheduleCallbackSafely
 
-`(scheduleConfig: { iterations: number; function: (stats: { fitness: number; error: number; iteration: number; }) => void; } | undefined, generation: number, bestFitness: number, error: number) => void`
+```ts
+runScheduleCallbackSafely(
+  scheduleConfig: { iterations: number; function: (stats: { fitness: number; error: number; iteration: number; }) => void; } | undefined,
+  generation: number,
+  bestFitness: number,
+  error: number,
+): void
+```
 
 Run schedule callback if schedule trigger is reached.
 
@@ -168,7 +201,11 @@ Returns: Nothing.
 
 ### shouldAbortForInvalidErrors
 
-`(state: import("src/architecture/network/network.types").EvolutionLoopState) => boolean`
+```ts
+shouldAbortForInvalidErrors(
+  state: EvolutionLoopState,
+): boolean
+```
 
 Determines whether loop must abort due to invalid-error streak.
 
@@ -179,7 +216,15 @@ Returns: True when invalid-error threshold is reached.
 
 ### shouldContinueEvolution
 
-`(currentError: number, targetError: number, iterationsSpecified: boolean, currentGeneration: number, maxIterations: number | undefined) => boolean`
+```ts
+shouldContinueEvolution(
+  currentError: number,
+  targetError: number,
+  iterationsSpecified: boolean,
+  currentGeneration: number,
+  maxIterations: number | undefined,
+): boolean
+```
 
 Determine whether evolution loop should continue.
 
@@ -194,7 +239,14 @@ Returns: True when loop should continue.
 
 ### updateBestGenomeIfImproved
 
-`(currentBestFitness: number, currentBestGenome: import("src/architecture/network").default | undefined, candidateFitness: number, candidateGenome: import("src/architecture/network").default) => { bestFitness: number; bestGenome: import("src/architecture/network").default | undefined; }`
+```ts
+updateBestGenomeIfImproved(
+  currentBestFitness: number,
+  currentBestGenome: default | undefined,
+  candidateFitness: number,
+  candidateGenome: default,
+): { bestFitness: number; bestGenome: default | undefined; }
+```
 
 Update best fitness/genome snapshot when improved.
 
@@ -208,7 +260,12 @@ Returns: Updated best snapshot.
 
 ### updateInvalidErrorCounter
 
-`(currentCount: number, currentError: number) => number`
+```ts
+updateInvalidErrorCounter(
+  currentCount: number,
+  currentError: number,
+): number
+```
 
 Update invalid-error counter.
 
@@ -222,7 +279,12 @@ Returns: Updated guard state.
 
 ### applySmallPopulationHeuristics
 
-`(neatInstance: import("src/architecture/network/network.types").NeatRuntime, evolveOptions: import("src/architecture/network/network.types").EvolveOptions) => void`
+```ts
+applySmallPopulationHeuristics(
+  neatInstance: NeatRuntime,
+  evolveOptions: EvolveOptions,
+): void
+```
 
 Increase mutation aggressiveness for tiny populations.
 
@@ -234,7 +296,12 @@ Returns: Nothing.
 
 ### assertEvolutionDatasetCompatibility
 
-`(network: import("src/architecture/network").default, dataSet: import("src/architecture/network/network.types").TrainingSample[]) => void`
+```ts
+assertEvolutionDatasetCompatibility(
+  network: default,
+  dataSet: TrainingSample[],
+): void
+```
 
 Validate dataset existence and dimensional compatibility with network I/O.
 
@@ -246,7 +313,12 @@ Returns: Nothing.
 
 ### configureNeatOptions
 
-`(network: import("src/architecture/network").default, evolveOptions: import("src/architecture/network/network.types").EvolveOptions) => void`
+```ts
+configureNeatOptions(
+  network: default,
+  evolveOptions: EvolveOptions,
+): void
+```
 
 Normalize options used by NEAT constructor.
 
@@ -258,7 +330,11 @@ Returns: Nothing.
 
 ### createEvolutionConfig
 
-`(settingsToSummarize: import("src/architecture/network/network.types").EvolutionSettings) => import("src/architecture/network/network.types").EvolutionConfig | undefined`
+```ts
+createEvolutionConfig(
+  settingsToSummarize: EvolutionSettings,
+): EvolutionConfig | undefined
+```
 
 Build optional structured evolution config summary.
 
@@ -269,7 +345,13 @@ Returns: Optional summary config.
 
 ### createNeatInstance
 
-`(network: import("src/architecture/network").default, fitnessFunction: import("src/architecture/network/network.types").EvolutionFitnessFunction, evolveOptions: import("src/architecture/network/network.types").EvolveOptions) => Promise<import("src/architecture/network/network.types").NeatRuntime>`
+```ts
+createNeatInstance(
+  network: default,
+  fitnessFunction: EvolutionFitnessFunction,
+  evolveOptions: EvolveOptions,
+): Promise<NeatRuntime>
+```
 
 Lazy-load and create NEAT instance.
 
@@ -282,7 +364,11 @@ Returns: Constructed NEAT instance.
 
 ### getNormalizedOptions
 
-`(evolveOptions: import("src/architecture/network/network.types").EvolveOptions) => import("src/architecture/network/network.types").EvolveOptions`
+```ts
+getNormalizedOptions(
+  evolveOptions: EvolveOptions,
+): EvolveOptions
+```
 
 Ensure options object exists.
 
@@ -293,7 +379,13 @@ Returns: Safe options object.
 
 ### prepareFitnessFunction
 
-`(dataSet: import("src/architecture/network/network.types").TrainingSample[], resolvedSettings: import("src/architecture/network/network.types").EvolutionSettings, evolveOptions: import("src/architecture/network/network.types").EvolveOptions) => Promise<import("src/architecture/network/network.types").FitnessSetup>`
+```ts
+prepareFitnessFunction(
+  dataSet: TrainingSample[],
+  resolvedSettings: EvolutionSettings,
+  evolveOptions: EvolveOptions,
+): Promise<FitnessSetup>
+```
 
 Build fitness function according to threading configuration.
 
@@ -306,7 +398,11 @@ Returns: Fitness function and resolved thread count.
 
 ### resolveEvolutionSettings
 
-`(evolveOptions: import("src/architecture/network/network.types").EvolveOptions) => import("src/architecture/network/network.types").EvolutionSettings`
+```ts
+resolveEvolutionSettings(
+  evolveOptions: EvolveOptions,
+): EvolutionSettings
+```
 
 Resolve normalized scalar settings with defaults.
 
@@ -317,7 +413,12 @@ Returns: Normalized scalar settings.
 
 ### resolveStopConditions
 
-`(evolveOptions: import("src/architecture/network/network.types").EvolveOptions, initialTargetError: number) => import("src/architecture/network/network.types").EvolutionStopConditions`
+```ts
+resolveStopConditions(
+  evolveOptions: EvolveOptions,
+  initialTargetError: number,
+): EvolutionStopConditions
+```
 
 Resolve stopping-condition semantics while preserving legacy behavior.
 
@@ -329,7 +430,12 @@ Returns: Final stop conditions.
 
 ### warnIfNoBestGenomeMayOccur
 
-`(neatInstance: import("src/architecture/network/network.types").NeatRuntime, evolveOptions: import("src/architecture/network/network.types").EvolveOptions) => void`
+```ts
+warnIfNoBestGenomeMayOccur(
+  neatInstance: NeatRuntime,
+  evolveOptions: EvolveOptions,
+): void
+```
 
 Emit warning when zero-iteration configuration may produce no best genome.
 
@@ -343,7 +449,16 @@ Returns: Nothing.
 
 ### buildMultiThreadFitness
 
-`(set: import("src/architecture/network/network.types").TrainingSample[], cost: import("src/architecture/network/network.types").CostFunctionOrRef, amount: number, growth: number, threads: number, options: Record<string, unknown>) => Promise<import("src/architecture/network/network.types").FitnessSetup>`
+```ts
+buildMultiThreadFitness(
+  set: TrainingSample[],
+  cost: CostFunctionOrRef,
+  amount: number,
+  growth: number,
+  threads: number,
+  options: Record<string, unknown>,
+): Promise<FitnessSetup>
+```
 
 Build worker-based population fitness setup.
 
@@ -359,7 +474,12 @@ Returns: Population fitness setup.
 
 ### buildPopulationWorkerFitnessFunction
 
-`(workers: import("src/multithreading/types").TestWorkerInstance[], growth: number) => import("src/architecture/network/network.types").PopulationFitnessFunction`
+```ts
+buildPopulationWorkerFitnessFunction(
+  workers: TestWorkerInstance[],
+  growth: number,
+): PopulationFitnessFunction
+```
 
 Build population-level fitness function powered by worker queue.
 
@@ -371,7 +491,14 @@ Returns: Population-level fitness function.
 
 ### buildSingleThreadFitness
 
-`(set: import("src/architecture/network/network.types").TrainingSample[], cost: import("src/architecture/network/network.types").EvolveCostFunction, amount: number, growth: number) => import("src/architecture/network/network.types").SingleGenomeFitnessFunction`
+```ts
+buildSingleThreadFitness(
+  set: TrainingSample[],
+  cost: EvolveCostFunction,
+  amount: number,
+  growth: number,
+): SingleGenomeFitnessFunction
+```
 
 Build a single-threaded genome fitness evaluator.
 
@@ -385,7 +512,13 @@ Returns: Single-genome fitness function.
 
 ### cacheComplexityBase
 
-`(genome: import("src/architecture/network").default, structureCounts: import("src/architecture/network/evolve/network.evolve.utils.types").GenomeStructureCounts, complexityBase: number) => void`
+```ts
+cacheComplexityBase(
+  genome: default,
+  structureCounts: GenomeStructureCounts,
+  complexityBase: number,
+): void
+```
 
 Store complexity base cache entry for future reuse.
 
@@ -398,7 +531,11 @@ Returns: Nothing.
 
 ### claimNextGenome
 
-`(context: import("src/architecture/network/network.types").PopulationWorkerEvaluationContext) => import("src/architecture/network").default | undefined`
+```ts
+claimNextGenome(
+  context: PopulationWorkerEvaluationContext,
+): default | undefined
+```
 
 Claims the next genome index from shared queue state.
 
@@ -409,7 +546,12 @@ Returns: Next genome, or undefined when queue is exhausted.
 
 ### computeComplexityBase
 
-`(genome: import("src/architecture/network").default, structureCounts: import("src/architecture/network/evolve/network.evolve.utils.types").GenomeStructureCounts) => number`
+```ts
+computeComplexityBase(
+  genome: default,
+  structureCounts: GenomeStructureCounts,
+): number
+```
 
 Compute non-scaled complexity base from structural counts.
 
@@ -421,7 +563,12 @@ Returns: Base complexity value before growth scaling.
 
 ### computeComplexityPenalty
 
-`(genome: import("src/architecture/network").default, growth: number) => number`
+```ts
+computeComplexityPenalty(
+  genome: default,
+  growth: number,
+): number
+```
 
 Compute structural complexity penalty scaled by growth.
 
@@ -433,7 +580,14 @@ Returns: Complexity penalty.
 
 ### createPopulationWorkerEvaluationContext
 
-`(sourceWorkers: import("src/multithreading/types").TestWorkerInstance[], sourcePopulation: import("src/architecture/network").default[], sourceGrowth: number, sourceResolve: () => void) => import("src/architecture/network/network.types").PopulationWorkerEvaluationContext`
+```ts
+createPopulationWorkerEvaluationContext(
+  sourceWorkers: TestWorkerInstance[],
+  sourcePopulation: default[],
+  sourceGrowth: number,
+  sourceResolve: () => void,
+): PopulationWorkerEvaluationContext
+```
 
 Creates the shared evaluation context for one population run.
 
@@ -447,7 +601,14 @@ Returns: Population evaluation context.
 
 ### createSingleThreadFallbackFitness
 
-`(set: import("src/architecture/network/network.types").TrainingSample[], cost: import("src/architecture/network/network.types").CostFunctionOrRef, amount: number, growth: number) => import("src/architecture/network/network.types").FitnessSetup`
+```ts
+createSingleThreadFallbackFitness(
+  set: TrainingSample[],
+  cost: CostFunctionOrRef,
+  amount: number,
+  growth: number,
+): FitnessSetup
+```
 
 Build single-thread fallback fitness setup.
 
@@ -461,7 +622,12 @@ Returns: Single-thread fitness setup.
 
 ### createWorkerTraversalContext
 
-`(context: import("src/architecture/network/network.types").PopulationWorkerEvaluationContext, worker: import("src/multithreading/types").TestWorkerInstance) => import("src/architecture/network/network.types").WorkerTraversalContext`
+```ts
+createWorkerTraversalContext(
+  context: PopulationWorkerEvaluationContext,
+  worker: TestWorkerInstance,
+): WorkerTraversalContext
+```
 
 Creates traversal context for one worker.
 
@@ -473,7 +639,14 @@ Returns: Worker traversal context.
 
 ### evaluateGenomeAmountTimes
 
-`(genome: import("src/architecture/network").default, set: import("src/architecture/network/network.types").TrainingSample[], cost: import("src/architecture/network/network.types").EvolveCostFunction, amount: number) => number`
+```ts
+evaluateGenomeAmountTimes(
+  genome: default,
+  set: TrainingSample[],
+  cost: EvolveCostFunction,
+  amount: number,
+): number
+```
 
 Evaluate one genome repeatedly and accumulate negative error.
 
@@ -487,7 +660,13 @@ Returns: Accumulated negative error or -Infinity on failure.
 
 ### evaluateGenomeErrorSafely
 
-`(genome: import("src/architecture/network").default, set: import("src/architecture/network/network.types").TrainingSample[], cost: import("src/architecture/network/network.types").EvolveCostFunction) => number | null`
+```ts
+evaluateGenomeErrorSafely(
+  genome: default,
+  set: TrainingSample[],
+  cost: EvolveCostFunction,
+): number | null
+```
 
 Evaluate one genome and return error, with warning-protected failure handling.
 
@@ -500,7 +679,13 @@ Returns: Error value, or null when evaluation fails.
 
 ### evaluateGenomeWithWorker
 
-`(worker: import("src/multithreading/types").TestWorkerInstance, genome: import("src/architecture/network").default, growth: number) => Promise<void>`
+```ts
+evaluateGenomeWithWorker(
+  worker: TestWorkerInstance,
+  genome: default,
+  growth: number,
+): Promise<void>
+```
 
 Evaluate one genome with a worker and assign penalized score.
 
@@ -513,7 +698,11 @@ Returns: Promise resolving when score assignment completes.
 
 ### finalizeWorker
 
-`(context: import("src/architecture/network/network.types").PopulationWorkerEvaluationContext) => void`
+```ts
+finalizeWorker(
+  context: PopulationWorkerEvaluationContext,
+): void
+```
 
 Marks one worker as completed and resolves when all workers finish.
 
@@ -524,7 +713,12 @@ Returns: Nothing.
 
 ### getCachedComplexityBase
 
-`(genome: import("src/architecture/network").default, structureCounts: import("src/architecture/network/evolve/network.evolve.utils.types").GenomeStructureCounts) => number | null`
+```ts
+getCachedComplexityBase(
+  genome: default,
+  structureCounts: GenomeStructureCounts,
+): number | null
+```
 
 Retrieve cached complexity base if cached structure counts still match.
 
@@ -536,7 +730,11 @@ Returns: Cached complexity base or null when cache miss occurs.
 
 ### getGenomeStructureCounts
 
-`(genome: import("src/architecture/network").default) => import("src/architecture/network/evolve/network.evolve.utils.types").GenomeStructureCounts`
+```ts
+getGenomeStructureCounts(
+  genome: default,
+): GenomeStructureCounts
+```
 
 Get structural counts used by complexity heuristic.
 
@@ -547,7 +745,11 @@ Returns: Structural counts used for complexity computation.
 
 ### hasNoWorkers
 
-`(context: import("src/architecture/network/network.types").PopulationWorkerEvaluationContext) => boolean`
+```ts
+hasNoWorkers(
+  context: PopulationWorkerEvaluationContext,
+): boolean
+```
 
 Checks whether there are workers available to process genomes.
 
@@ -558,7 +760,12 @@ Returns: True when worker pool is empty.
 
 ### installWorkerTerminationHook
 
-`(options: Record<string, unknown>, workers: import("src/multithreading/types").TestWorkerInstance[]) => void`
+```ts
+installWorkerTerminationHook(
+  options: Record<string, unknown>,
+  workers: TestWorkerInstance[],
+): void
+```
 
 Register worker termination hook onto options object.
 
@@ -570,7 +777,11 @@ Returns: Nothing.
 
 ### resolveCostName
 
-`(cost: import("src/architecture/network/network.types").CostFunctionOrRef) => string`
+```ts
+resolveCostName(
+  cost: CostFunctionOrRef,
+): string
+```
 
 Resolve serializable cost name for worker payload.
 
@@ -581,7 +792,11 @@ Returns: Cost name string.
 
 ### resolveEvaluation
 
-`(context: import("src/architecture/network/network.types").PopulationWorkerEvaluationContext) => void`
+```ts
+resolveEvaluation(
+  context: PopulationWorkerEvaluationContext,
+): void
+```
 
 Resolves the population evaluation promise.
 
@@ -592,7 +807,9 @@ Returns: Nothing.
 
 ### resolveTestWorkerConstructor
 
-`() => Promise<import("src/multithreading/types").TestWorkerConstructor | null>`
+```ts
+resolveTestWorkerConstructor(): Promise<TestWorkerConstructor | null>
+```
 
 Resolve worker constructor for current runtime environment.
 
@@ -600,7 +817,11 @@ Returns: Worker constructor or null when unavailable.
 
 ### runWorkerTraversalStep
 
-`(traversalContext: import("src/architecture/network/network.types").WorkerTraversalContext) => void`
+```ts
+runWorkerTraversalStep(
+  traversalContext: WorkerTraversalContext,
+): void
+```
 
 Runs one asynchronous traversal step for a worker.
 
@@ -611,7 +832,14 @@ Returns: Nothing.
 
 ### spawnTestWorkers
 
-`(workerConstructor: import("src/multithreading/types").TestWorkerConstructor, serializedSet: number[], cost: import("src/architecture/network/network.types").CostFunctionOrRef, threads: number) => import("src/multithreading/types").TestWorkerInstance[]`
+```ts
+spawnTestWorkers(
+  workerConstructor: TestWorkerConstructor,
+  serializedSet: number[],
+  cost: CostFunctionOrRef,
+  threads: number,
+): TestWorkerInstance[]
+```
 
 Spawn worker instances up to requested thread count.
 
@@ -625,7 +853,11 @@ Returns: Spawned worker instances.
 
 ### startWorkerTraversal
 
-`(context: import("src/architecture/network/network.types").PopulationWorkerEvaluationContext) => void`
+```ts
+startWorkerTraversal(
+  context: PopulationWorkerEvaluationContext,
+): void
+```
 
 Starts traversal loops for all workers.
 
@@ -636,7 +868,11 @@ Returns: Nothing.
 
 ### warnGenomeEvaluationFailure
 
-`(error: unknown) => void`
+```ts
+warnGenomeEvaluationFailure(
+  error: unknown,
+): void
+```
 
 Emit warning when genome evaluation fails.
 
@@ -649,7 +885,14 @@ Returns: Nothing.
 
 ### adoptBestGenomeOrWarn
 
-`(network: import("src/architecture/network").default, neatInstance: import("src/architecture/network/network.types").NeatRuntime, bestGenome: import("src/architecture/network").default | undefined, clearState: boolean) => void`
+```ts
+adoptBestGenomeOrWarn(
+  network: default,
+  neatInstance: NeatRuntime,
+  bestGenome: default | undefined,
+  clearState: boolean,
+): void
+```
 
 Adopt best genome structure or emit warning when unavailable.
 
@@ -663,7 +906,13 @@ Returns: Nothing.
 
 ### buildEvolutionSummary
 
-`(error: number, iterations: number, loopStartTime: number) => import("src/architecture/network/evolve/network.evolve.utils.types").EvolutionSummary`
+```ts
+buildEvolutionSummary(
+  error: number,
+  iterations: number,
+  loopStartTime: number,
+): EvolutionSummary
+```
 
 Build final evolve return payload.
 
@@ -676,7 +925,11 @@ Returns: Evolution summary object.
 
 ### terminateWorkersSafely
 
-`(evolveOptions: import("src/architecture/network/network.types").EvolveOptions) => void`
+```ts
+terminateWorkersSafely(
+  evolveOptions: EvolveOptions,
+): void
+```
 
 Terminate worker resources registered in options.
 

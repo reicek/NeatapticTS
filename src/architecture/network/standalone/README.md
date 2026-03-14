@@ -96,7 +96,12 @@ Regex stripping sourceMappingURL comments from generated snippets.
 
 ### StandaloneSquashFunction
 
-`(inputValue: number, derivate: boolean | undefined) => number`
+```ts
+StandaloneSquashFunction(
+  inputValue: number,
+  derivate: boolean | undefined,
+): number
+```
 
 Activation function shape used by standalone source generation helpers.
 
@@ -138,7 +143,11 @@ Not Supported / Simplifications:
 
 ### generateStandalone
 
-`(net: import("src/architecture/network").default) => string`
+```ts
+generateStandalone(
+  net: default,
+): string
+```
 
 Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.
 
@@ -162,7 +171,14 @@ Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain ac
 
 ### appendActivationLine
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number, activationFunctionIndex: number, maskValue: number) => void`
+```ts
+appendActivationLine(
+  generationContext: StandaloneGenerationContext,
+  nodeTraversalIndex: number,
+  activationFunctionIndex: number,
+  maskValue: number,
+): void
+```
 
 Append generated activation assignment line for one node.
 
@@ -176,7 +192,11 @@ Returns: Void.
 
 ### appendAllNodeComputationLines
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => void`
+```ts
+appendAllNodeComputationLines(
+  generationContext: StandaloneGenerationContext,
+): void
+```
 
 Append compute lines for all non-input nodes.
 
@@ -187,7 +207,11 @@ Returns: Void.
 
 ### appendInputSeedLine
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => void`
+```ts
+appendInputSeedLine(
+  generationContext: StandaloneGenerationContext,
+): void
+```
 
 Append the generated input-copy loop to the standalone body.
 
@@ -198,7 +222,12 @@ Returns: Void.
 
 ### appendOutputReturnLine
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, outputIndexes: number[]) => void`
+```ts
+appendOutputReturnLine(
+  generationContext: StandaloneGenerationContext,
+  outputIndexes: number[],
+): void
+```
 
 Append generated return line for output activations.
 
@@ -210,7 +239,12 @@ Returns: Void.
 
 ### appendSingleNodeComputationLines
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number) => void`
+```ts
+appendSingleNodeComputationLines(
+  generationContext: StandaloneGenerationContext,
+  nodeTraversalIndex: number,
+): void
+```
 
 Append state and activation lines for one node.
 
@@ -222,7 +256,14 @@ Returns: Void.
 
 ### appendStateLine
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number, sumExpression: string, biasValue: number) => void`
+```ts
+appendStateLine(
+  generationContext: StandaloneGenerationContext,
+  nodeTraversalIndex: number,
+  sumExpression: string,
+  biasValue: number,
+): void
+```
 
 Append generated state assignment line for one node.
 
@@ -236,7 +277,11 @@ Returns: Void.
 
 ### buildMaskSuffix
 
-`(maskValue: number) => string`
+```ts
+buildMaskSuffix(
+  maskValue: number,
+): string
+```
 
 Build optional activation mask suffix for generated assignment line.
 
@@ -249,7 +294,12 @@ Returns: Empty suffix for identity, otherwise multiplicative fragment.
 
 ### appendGateMultiplier
 
-`(connectionTerm: string, gateNode: import("src/architecture/node").default | null) => string`
+```ts
+appendGateMultiplier(
+  connectionTerm: string,
+  gateNode: default | null,
+): string
+```
 
 Append a gate activation multiplier to a connection term when a gate exists.
 
@@ -261,7 +311,12 @@ Returns: Term with optional gate multiplier.
 
 ### buildNodeSumExpression
 
-`(currentNode: import("src/architecture/node").default, nodeTraversalIndex: number) => string`
+```ts
+buildNodeSumExpression(
+  currentNode: default,
+  nodeTraversalIndex: number,
+): string
+```
 
 Build the pre-activation sum expression for one node.
 
@@ -273,7 +328,11 @@ Returns: String expression used for generated `S[index]` assignment.
 
 ### collectIncomingTerms
 
-`(currentNode: import("src/architecture/node").default) => string[]`
+```ts
+collectIncomingTerms(
+  currentNode: default,
+): string[]
+```
 
 Collect feed-forward inbound connection terms for a node.
 
@@ -284,7 +343,11 @@ Returns: Weighted term expressions.
 
 ### collectOutputIndexes
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => number[]`
+```ts
+collectOutputIndexes(
+  generationContext: StandaloneGenerationContext,
+): number[]
+```
 
 Collect output node indexes from the output tail segment.
 
@@ -295,7 +358,12 @@ Returns: Output indexes used for result array emission.
 
 ### collectSelfConnectionTerms
 
-`(currentNode: import("src/architecture/node").default, nodeTraversalIndex: number) => string[]`
+```ts
+collectSelfConnectionTerms(
+  currentNode: default,
+  nodeTraversalIndex: number,
+): string[]
+```
 
 Collect recurrent self-connection term for a node when present.
 
@@ -307,7 +375,11 @@ Returns: Zero or one recurrent term expressions.
 
 ### foldTermsIntoExpression
 
-`(allTerms: string[]) => string`
+```ts
+foldTermsIntoExpression(
+  allTerms: string[],
+): string
+```
 
 Fold a term collection into a summation expression.
 
@@ -318,7 +390,11 @@ Returns: Summation expression or fallback zero literal.
 
 ### formatOutputArrayValues
 
-`(outputIndexes: number[]) => string`
+```ts
+formatOutputArrayValues(
+  outputIndexes: number[],
+): string
+```
 
 Format output activation selectors for generated return expression.
 
@@ -329,7 +405,11 @@ Returns: Comma-separated `A[index]` selector list.
 
 ### getOptionalNodeIndex
 
-`(nodeReference: import("src/architecture/node").default | null) => number | undefined`
+```ts
+getOptionalNodeIndex(
+  nodeReference: default | null,
+): number | undefined
+```
 
 Resolve optional generated node index from a node reference.
 
@@ -340,7 +420,12 @@ Returns: Node index when available.
 
 ### mergeTermCollections
 
-`(firstTerms: string[], secondTerms: string[]) => string[]`
+```ts
+mergeTermCollections(
+  firstTerms: string[],
+  secondTerms: string[],
+): string[]
+```
 
 Merge two term lists into a single ordered list.
 
@@ -354,7 +439,11 @@ Returns: Combined term collection.
 
 ### asStandaloneProps
 
-`(net: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkStandaloneProps`
+```ts
+asStandaloneProps(
+  net: default,
+): NetworkStandaloneProps
+```
 
 Cast a network instance to the internal standalone generation view.
 
@@ -365,7 +454,11 @@ Returns: Internal network properties used by the standalone generator.
 
 ### createGenerationContext
 
-`(standaloneProps: import("src/architecture/network/network.types").NetworkStandaloneProps) => import("src/architecture/network/network.types").StandaloneGenerationContext`
+```ts
+createGenerationContext(
+  standaloneProps: NetworkStandaloneProps,
+): StandaloneGenerationContext
+```
 
 Create a fresh generation context used across orchestration steps.
 
@@ -376,7 +469,11 @@ Returns: Initialized generation context.
 
 ### ensureOutputNodesExist
 
-`(standaloneProps: import("src/architecture/network/network.types").NetworkStandaloneProps) => void`
+```ts
+ensureOutputNodesExist(
+  standaloneProps: NetworkStandaloneProps,
+): void
+```
 
 Validate that the network has at least one output node.
 
@@ -387,7 +484,11 @@ Returns: Void.
 
 ### seedNodeIndexesAndState
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => void`
+```ts
+seedNodeIndexesAndState(
+  generationContext: StandaloneGenerationContext,
+): void
+```
 
 Seed index, activation, and state arrays from network nodes.
 
@@ -400,7 +501,11 @@ Returns: Void.
 
 ### stripCoverage
 
-`(code: string) => string`
+```ts
+stripCoverage(
+  code: string,
+): string
+```
 
 Remove instrumentation artifacts and formatting detritus from function sources.
 
@@ -413,7 +518,11 @@ Returns: Cleaned source text suitable for deterministic standalone emission.
 
 ### assembleStandaloneSource
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => string`
+```ts
+assembleStandaloneSource(
+  generationContext: StandaloneGenerationContext,
+): string
+```
 
 Assemble the final standalone IIFE source string.
 
@@ -424,7 +533,11 @@ Returns: Final generated source string.
 
 ### buildActivationArrayLiteral
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => string`
+```ts
+buildActivationArrayLiteral(
+  generationContext: StandaloneGenerationContext,
+): string
+```
 
 Build deterministic activation function array literal by function index ordering.
 
@@ -435,7 +548,11 @@ Returns: Comma-separated activation function names.
 
 ### buildInputGuardLine
 
-`(expectedInputSize: number) => string`
+```ts
+buildInputGuardLine(
+  expectedInputSize: number,
+): string
+```
 
 Build generated input length guard line.
 
@@ -446,7 +563,11 @@ Returns: Guard statement line including trailing newline.
 
 ### resolveActivationArrayType
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => string`
+```ts
+resolveActivationArrayType(
+  generationContext: StandaloneGenerationContext,
+): string
+```
 
 Resolve typed-array constructor name based on configured activation precision.
 
@@ -459,7 +580,12 @@ Returns: Constructor name used in generated source.
 
 ### convertArrowToNamedFunction
 
-`(sourceCode: string, squashName: string) => string`
+```ts
+convertArrowToNamedFunction(
+  sourceCode: string,
+  squashName: string,
+): string
+```
 
 Convert an arrow-function source string into a named function declaration source.
 
@@ -471,7 +597,14 @@ Returns: Named function source.
 
 ### ensureActivationFunctionIndex
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, squashName: string, squashFunction: import("src/architecture/network/standalone/network.standalone.utils.types").StandaloneSquashFunction, nodeTraversalIndex: number) => number`
+```ts
+ensureActivationFunctionIndex(
+  generationContext: StandaloneGenerationContext,
+  squashName: string,
+  squashFunction: StandaloneSquashFunction,
+  nodeTraversalIndex: number,
+): number
+```
 
 Ensure an activation function is registered and return its table index.
 
@@ -485,7 +618,12 @@ Returns: Activation function index within generated `F` array.
 
 ### ensureNamedFunctionSource
 
-`(sourceCode: string, squashName: string) => string`
+```ts
+ensureNamedFunctionSource(
+  sourceCode: string,
+  squashName: string,
+): string
+```
 
 Ensure generated function source starts with the required named signature.
 
@@ -497,7 +635,11 @@ Returns: Named function source.
 
 ### normalizeArrowBody
 
-`(bodySegment: string) => string`
+```ts
+normalizeArrowBody(
+  bodySegment: string,
+): string
+```
 
 Normalize arrow body into a function-body block.
 
@@ -508,7 +650,11 @@ Returns: Function body block string.
 
 ### normalizeArrowParameters
 
-`(parameterSegment: string) => string`
+```ts
+normalizeArrowParameters(
+  parameterSegment: string,
+): string
+```
 
 Normalize arrow parameter segment into comma-separated parameter list content.
 
@@ -519,7 +665,12 @@ Returns: Parameter list body (without surrounding parentheses).
 
 ### normalizeBuiltinSource
 
-`(sourceCode: string, squashName: string) => string`
+```ts
+normalizeBuiltinSource(
+  sourceCode: string,
+  squashName: string,
+): string
+```
 
 Normalize built-in activation source to a named function and strip coverage artifacts.
 
@@ -531,7 +682,13 @@ Returns: Cleaned named function source.
 
 ### normalizeCustomSource
 
-`(sourceCode: string, squashName: string, nodeTraversalIndex: number) => string`
+```ts
+normalizeCustomSource(
+  sourceCode: string,
+  squashName: string,
+  nodeTraversalIndex: number,
+): string
+```
 
 Normalize custom activation source with function/arrow/fallback handling.
 
@@ -544,7 +701,13 @@ Returns: Cleaned named function source.
 
 ### registerActivationFunction
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, squashName: string, functionSource: string) => void`
+```ts
+registerActivationFunction(
+  generationContext: StandaloneGenerationContext,
+  squashName: string,
+  functionSource: string,
+): void
+```
 
 Register a function source and allocate its numeric index.
 
@@ -557,7 +720,13 @@ Returns: Void.
 
 ### resolveActivationFunctionSource
 
-`(squashName: string, squashFunction: import("src/architecture/network/standalone/network.standalone.utils.types").StandaloneSquashFunction, nodeTraversalIndex: number) => string`
+```ts
+resolveActivationFunctionSource(
+  squashName: string,
+  squashFunction: StandaloneSquashFunction,
+  nodeTraversalIndex: number,
+): string
+```
 
 Resolve emitted source for built-in or custom activation functions.
 
@@ -570,7 +739,12 @@ Returns: Named function source string.
 
 ### resolveSquashName
 
-`(currentNode: import("src/architecture/node").default, nodeTraversalIndex: number) => string`
+```ts
+resolveSquashName(
+  currentNode: default,
+  nodeTraversalIndex: number,
+): string
+```
 
 Resolve a stable activation function name for emission.
 

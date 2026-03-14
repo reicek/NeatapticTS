@@ -21,7 +21,14 @@ define the world state that policy, shaping, and finalization build on top of.
 
 ### buildMazeMovementVisionAndDistance
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, encodedMaze: number[][], exitPos: readonly [number, number], distanceMap: number[][] | undefined) => void`
+```ts
+buildMazeMovementVisionAndDistance(
+  state: SimulationState,
+  encodedMaze: number[][],
+  exitPos: readonly [number, number],
+  distanceMap: number[][] | undefined,
+): void
+```
 
 Build the current perception vector and update distance-tracking state.
 
@@ -33,7 +40,14 @@ Parameters:
 
 ### createMazeMovementRunState
 
-`(encodedMaze: number[][], startPos: readonly [number, number], distanceMap: number[][] | undefined, maxSteps: number) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState`
+```ts
+createMazeMovementRunState(
+  encodedMaze: number[][],
+  startPos: readonly [number, number],
+  distanceMap: number[][] | undefined,
+  maxSteps: number,
+): SimulationState
+```
 
 Create the initial run-state object for one simulation episode.
 
@@ -47,7 +61,13 @@ Returns: Fresh simulation state backed by the shared buffer pools.
 
 ### getMazeMovementDistance
 
-`(encodedMaze: readonly (readonly number[])[], __1: readonly [number, number], distanceMap: number[][] | undefined) => number`
+```ts
+getMazeMovementDistance(
+  encodedMaze: readonly (readonly number[])[],
+  __1: readonly [number, number],
+  distanceMap: number[][] | undefined,
+): number
+```
 
 Resolve the current distance value for a maze coordinate.
 
@@ -60,7 +80,12 @@ Returns: Finite distance when present, otherwise `Infinity`.
 
 ### getMazeMovementHistoryFromEnd
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, nth: number) => number | undefined`
+```ts
+getMazeMovementHistoryFromEnd(
+  state: SimulationState,
+  nth: number,
+): number | undefined
+```
 
 Return the `nth` most recent cell index from the visit-history ring.
 
@@ -72,7 +97,14 @@ Returns: The requested cell index or `undefined` when out of range.
 
 ### isMazeMovementCellOpen
 
-`(encodedMaze: readonly (readonly number[])[], x: number, y: number, coordinateScratch: Int32Array<ArrayBufferLike>) => boolean`
+```ts
+isMazeMovementCellOpen(
+  encodedMaze: readonly (readonly number[])[],
+  x: number,
+  y: number,
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): boolean
+```
 
 Determine whether a maze cell is inside bounds and not a wall.
 
@@ -86,7 +118,12 @@ Returns: True when the target cell is within bounds and open.
 
 ### pushMazeMovementHistory
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState, cellIndex: number) => void`
+```ts
+pushMazeMovementHistory(
+  state: SimulationState,
+  cellIndex: number,
+): void
+```
 
 Push a cell index into the circular visit-history ring.
 
@@ -96,7 +133,11 @@ Parameters:
 
 ### recordMazeMovementVisitAndPenalties
 
-`(state: import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").SimulationState) => void`
+```ts
+recordMazeMovementVisitAndPenalties(
+  state: SimulationState,
+): void
+```
 
 Record the current cell visit and update visit-driven penalties.
 

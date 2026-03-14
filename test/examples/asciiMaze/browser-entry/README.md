@@ -42,7 +42,12 @@ Browser host services assembled for one running demo instance.
 
 ### BrowserEntryStartFunction
 
-`(container: string | HTMLElement | undefined, opts: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartOptions | undefined) => Promise<import("test/examples/asciiMaze/browser-entry/browser-entry.types").AsciiMazeRunHandle>`
+```ts
+BrowserEntryStartFunction(
+  container: string | HTMLElement | undefined,
+  opts: BrowserEntryStartOptions | undefined,
+): Promise<AsciiMazeRunHandle>
+```
 
 Stable callable shape used by globals compatibility wiring.
 
@@ -86,7 +91,12 @@ unsubscribe();
 
 ### BrowserEntryStartFunction
 
-`(container: string | HTMLElement | undefined, opts: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartOptions | undefined) => Promise<import("test/examples/asciiMaze/browser-entry/browser-entry.types").AsciiMazeRunHandle>`
+```ts
+BrowserEntryStartFunction(
+  container: string | HTMLElement | undefined,
+  opts: BrowserEntryStartOptions | undefined,
+): Promise<AsciiMazeRunHandle>
+```
 
 Stable callable shape used by globals compatibility wiring.
 
@@ -96,7 +106,12 @@ Options accepted by the browser-hosted ASCII Maze entrypoint.
 
 ### start
 
-`(container: string | HTMLElement, opts: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartOptions) => Promise<import("test/examples/asciiMaze/browser-entry/browser-entry.types").AsciiMazeRunHandle>`
+```ts
+start(
+  container: string | HTMLElement,
+  opts: BrowserEntryStartOptions,
+): Promise<AsciiMazeRunHandle>
+```
 
 Start the browser-hosted ASCII Maze curriculum demo.
 
@@ -123,7 +138,12 @@ importing from this stable boundary while internals evolve independently.
 
 ### composeBrowserEntryAbortSignal
 
-`(internalController: AbortController, externalSignal: AbortSignal | undefined) => AbortSignal`
+```ts
+composeBrowserEntryAbortSignal(
+  internalController: AbortController,
+  externalSignal: AbortSignal | undefined,
+): AbortSignal
+```
 
 Compose an internal and external abort signal into one cooperative signal.
 
@@ -135,7 +155,9 @@ Returns: A signal that aborts when either source aborts.
 
 ### createBrowserEntryEvolutionHostAdapter
 
-`() => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter`
+```ts
+createBrowserEntryEvolutionHostAdapter(): EvolutionHostAdapter
+```
 
 Create the browser-owned engine host adapter used for pause polling and solve notifications.
 
@@ -143,7 +165,11 @@ Returns: Host adapter that keeps browser globals and DOM events out of engine in
 
 ### createBrowserEntryHostServices
 
-`(hostElements: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostElements) => import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostServices`
+```ts
+createBrowserEntryHostServices(
+  hostElements: BrowserEntryHostElements,
+): BrowserEntryHostServices
+```
 
 Create the browser host services used by one ASCII Maze demo run.
 
@@ -154,7 +180,11 @@ Returns: Dashboard, telemetry hub, runtime dashboard adapter, and resize cleanup
 
 ### installBrowserEntryGlobals
 
-`(start: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartFunction) => void`
+```ts
+installBrowserEntryGlobals(
+  start: BrowserEntryStartFunction,
+): void
+```
 
 Install browser globals and one-time auto-start compatibility hooks.
 
@@ -165,7 +195,11 @@ Returns: Nothing.
 
 ### runBrowserEntryCurriculum
 
-`(context: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryCurriculumContext) => void`
+```ts
+runBrowserEntryCurriculum(
+  context: BrowserEntryCurriculumContext,
+): void
+```
 
 Run the progressive browser curriculum across increasingly larger mazes.
 
@@ -197,7 +231,11 @@ resize redraw behavior used by one browser-hosted ASCII Maze session.
 
 ### createBrowserEntryHostServices
 
-`(hostElements: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostElements) => import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostServices`
+```ts
+createBrowserEntryHostServices(
+  hostElements: BrowserEntryHostElements,
+): BrowserEntryHostServices
+```
 
 Create the browser host services used by one ASCII Maze demo run.
 
@@ -208,7 +246,9 @@ Returns: Dashboard, telemetry hub, runtime dashboard adapter, and resize cleanup
 
 ### createTelemetryHub
 
-`() => import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryTelemetryHub<TTelemetry>`
+```ts
+createTelemetryHub(): BrowserEntryTelemetryHub<TTelemetry>
+```
 
 Create a minimal telemetry hub backed by a Set of listeners.
 
@@ -216,7 +256,12 @@ Returns: A small hub optimized for browser demo listener counts.
 
 ### installResizeRedraw
 
-`(observeTarget: HTMLElement | null, runtimeDashboard: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardPresentationAdapter) => () => void`
+```ts
+installResizeRedraw(
+  observeTarget: HTMLElement | null,
+  runtimeDashboard: DashboardPresentationAdapter,
+): () => void
+```
 
 Attach dashboard redraw behavior to host resizes and return a cleanup function.
 
@@ -228,7 +273,11 @@ Returns: Cleanup function that removes active observers or listeners.
 
 ### safelyRedrawDashboard
 
-`(runtimeDashboard: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardPresentationAdapter) => void`
+```ts
+safelyRedrawDashboard(
+  runtimeDashboard: DashboardPresentationAdapter,
+): void
+```
 
 Safely request a dashboard redraw without letting host issues break the run.
 
@@ -244,7 +293,12 @@ orchestration can stay focused on lifecycle flow instead of platform quirks.
 
 ### composeBrowserEntryAbortSignal
 
-`(internalController: AbortController, externalSignal: AbortSignal | undefined) => AbortSignal`
+```ts
+composeBrowserEntryAbortSignal(
+  internalController: AbortController,
+  externalSignal: AbortSignal | undefined,
+): AbortSignal
+```
 
 Compose an internal and external abort signal into one cooperative signal.
 
@@ -263,7 +317,9 @@ behavior so runtime orchestration can stay focused on session lifecycle.
 
 ### createBrowserEntryEvolutionHostAdapter
 
-`() => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionHostAdapter`
+```ts
+createBrowserEntryEvolutionHostAdapter(): EvolutionHostAdapter
+```
 
 Create the browser-owned engine host adapter used for pause polling and solve notifications.
 
@@ -271,7 +327,11 @@ Returns: Host adapter that keeps browser globals and DOM events out of engine in
 
 ### installBrowserEntryGlobals
 
-`(start: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryStartFunction) => void`
+```ts
+installBrowserEntryGlobals(
+  start: BrowserEntryStartFunction,
+): void
+```
 
 Install browser globals and one-time auto-start compatibility hooks.
 
@@ -291,7 +351,11 @@ curriculum helper so browser-entry stays focused on host runtime behavior.
 
 ### runBrowserEntryCurriculum
 
-`(context: import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryCurriculumContext) => void`
+```ts
+runBrowserEntryCurriculum(
+  context: BrowserEntryCurriculumContext,
+): void
+```
 
 Run the progressive browser curriculum across increasingly larger mazes.
 
@@ -304,7 +368,11 @@ Returns: Nothing.
 
 ### createBrowserEvolutionSettings
 
-`(dimension: number) => import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryEvolutionSettings`
+```ts
+createBrowserEvolutionSettings(
+  dimension: number,
+): BrowserEntryEvolutionSettings
+```
 
 Build immutable evolution settings for a single maze dimension.
 
@@ -315,7 +383,11 @@ Returns: Per-phase evolution settings consumed by the curriculum runtime.
 
 ### didSolveBrowserMaze
 
-`(progress: unknown) => boolean`
+```ts
+didSolveBrowserMaze(
+  progress: unknown,
+): boolean
+```
 
 Determine whether a reported progress value counts as solved for curriculum advancement.
 
@@ -326,7 +398,11 @@ Returns: Whether the maze phase should advance to the next dimension.
 
 ### getNextBrowserMazeDimension
 
-`(currentDimension: number) => number`
+```ts
+getNextBrowserMazeDimension(
+  currentDimension: number,
+): number
+```
 
 Advance the procedural maze dimension without exceeding the configured maximum.
 
@@ -337,7 +413,11 @@ Returns: Next side length to use.
 
 ### resolveBrowserEntryHostElements
 
-`(container: string | HTMLElement) => import("test/examples/asciiMaze/browser-entry/browser-entry.types").BrowserEntryHostElements`
+```ts
+resolveBrowserEntryHostElements(
+  container: string | HTMLElement,
+): BrowserEntryHostElements
+```
 
 Resolve the browser host elements used by the demo logger and dashboard.
 
@@ -348,7 +428,11 @@ Returns: Resolved host, archive, live, and resize-observer targets.
 
 ### scheduleBrowserEntryFrame
 
-`(callback: () => void) => void`
+```ts
+scheduleBrowserEntryFrame(
+  callback: () => void,
+): void
+```
 
 Schedule follow-up curriculum work on the next animation tick when possible.
 

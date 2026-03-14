@@ -56,7 +56,9 @@ world.
 
 ### createEvolutionWorker
 
-`() => Worker`
+```ts
+createEvolutionWorker(): Worker
+```
 
 Creates the evolution worker used to keep heavy NEAT compute off the UI thread.
 
@@ -64,7 +66,11 @@ Returns: Initialized worker instance.
 
 ### requestWorkerGeneration
 
-`(evolutionWorker: Worker) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionGenerationPayload>`
+```ts
+requestWorkerGeneration(
+  evolutionWorker: Worker,
+): Promise<EvolutionGenerationPayload>
+```
 
 Waits for the next generation payload emitted by the evolution worker.
 
@@ -75,7 +81,12 @@ Returns: Next generation payload.
 
 ### requestWorkerPlaybackStep
 
-`(evolutionWorker: Worker, playbackStepRequest: import("test/examples/flappy_bird/browser-entry/worker-channel/worker-channel.types").WorkerChannelPlaybackStepRequest) => Promise<{ requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>`
+```ts
+requestWorkerPlaybackStep(
+  evolutionWorker: Worker,
+  playbackStepRequest: WorkerChannelPlaybackStepRequest,
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
+```
 
 Requests one playback batch step from the worker.
 
@@ -95,7 +106,11 @@ could not be completed.
 
 ### createWorkerChannelResponseError
 
-`(message: string) => Error`
+```ts
+createWorkerChannelResponseError(
+  message: string,
+): Error
+```
 
 Converts worker protocol error payloads into typed worker-channel errors.
 
@@ -109,7 +124,12 @@ Returns: Typed worker-channel protocol error.
 
 ### resolveWorkerChannelRuntimeError
 
-`(errorLike: unknown, fallbackMessage: string) => Error`
+```ts
+resolveWorkerChannelRuntimeError(
+  errorLike: unknown,
+  fallbackMessage: string,
+): Error
+```
 
 Resolves a worker `ErrorEvent` into a normalized `Error` instance.
 
@@ -142,7 +162,9 @@ builds without hard-coding absolute paths.
 
 ### resolveEvolutionWorkerBundleUrl
 
-`() => string`
+```ts
+resolveEvolutionWorkerBundleUrl(): string
+```
 
 Resolves the evolution worker bundle URL relative to the active browser-entry bundle.
 
@@ -163,7 +185,11 @@ and normalizes protocol failures into ordinary `Error` instances.
 
 ### requestWorkerResponse
 
-`(options: import("test/examples/flappy_bird/browser-entry/worker-channel/worker-channel.request.service").WorkerChannelRequestOptions<ResponsePayload>) => Promise<ResponsePayload>`
+```ts
+requestWorkerResponse(
+  options: WorkerChannelRequestOptions<ResponsePayload>,
+): Promise<ResponsePayload>
+```
 
 Sends one request to the worker and resolves with the first matching response payload.
 
@@ -214,7 +240,12 @@ correct reply.
 
 ### requestWorkerPlaybackStep
 
-`(evolutionWorker: Worker, playbackStepRequest: import("test/examples/flappy_bird/browser-entry/worker-channel/worker-channel.types").WorkerChannelPlaybackStepRequest) => Promise<{ requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>`
+```ts
+requestWorkerPlaybackStep(
+  evolutionWorker: Worker,
+  playbackStepRequest: WorkerChannelPlaybackStepRequest,
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
+```
 
 Requests one playback batch step from the worker channel.
 
@@ -241,7 +272,11 @@ const playbackPayload = await requestWorkerPlaybackStep(evolutionWorker, {
 
 ### resolvePlaybackWorkerChannelState
 
-`(evolutionWorker: Worker) => PlaybackWorkerChannelState`
+```ts
+resolvePlaybackWorkerChannelState(
+  evolutionWorker: Worker,
+): PlaybackWorkerChannelState
+```
 
 Resolves persistent playback worker-channel state for one worker instance.
 
@@ -264,7 +299,11 @@ network visualization.
 
 ### requestWorkerGeneration
 
-`(evolutionWorker: Worker) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionGenerationPayload>`
+```ts
+requestWorkerGeneration(
+  evolutionWorker: Worker,
+): Promise<EvolutionGenerationPayload>
+```
 
 Requests the next evolved generation payload from the worker channel.
 

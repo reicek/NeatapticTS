@@ -23,7 +23,14 @@ Set of supported optimizer identifiers accepted by training options.
 
 ### buildMonitoredSmoothingConfig
 
-`(type: import("src/architecture/network/network.types").MovingAverageType, window: number, emaAlpha: number | undefined, trimmedRatio: number | undefined) => import("src/architecture/network/network.types").MonitoredSmoothingConfig`
+```ts
+buildMonitoredSmoothingConfig(
+  type: MovingAverageType,
+  window: number,
+  emaAlpha: number | undefined,
+  trimmedRatio: number | undefined,
+): MonitoredSmoothingConfig
+```
 
 Build monitored smoothing configuration from options and defaults.
 
@@ -37,7 +44,12 @@ Returns: Normalized monitored smoothing configuration.
 
 ### CostDerivative
 
-`(target: number, output: number) => number`
+```ts
+CostDerivative(
+  target: number,
+  output: number,
+): number
+```
 
 Cost-derivative callback shape for output-node backpropagation.
 
@@ -63,7 +75,12 @@ Regularization argument accepted by node-level propagation.
 
 ### resolveEmaAlpha
 
-`(smoothingWindow: number, explicitAlpha: number | undefined) => number`
+```ts
+resolveEmaAlpha(
+  smoothingWindow: number,
+  explicitAlpha: number | undefined,
+): number
+```
 
 Resolve default EMA alpha using a window length.
 
@@ -90,7 +107,12 @@ Important: this is **not** considered stable public API. It may change between r
 
 ### applyGradientClippingImpl
 
-`(net: import("src/architecture/network").default, cfg: import("src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
+```ts
+applyGradientClippingImpl(
+  net: default,
+  cfg: GradientClipRuntimeConfig,
+): void
+```
 
 Apply gradient clipping to a network using a normalized runtime configuration.
 
@@ -109,7 +131,9 @@ You can persist these snapshots to disk, upload them, or keep them in-memory.
 
 ### clearState
 
-`() => void`
+```ts
+clearState(): void
+```
 
 Clear all node runtime traces and states.
 
@@ -118,7 +142,12 @@ Parameters:
 
 ### CostFunction
 
-`(target: number[], output: number[]) => number`
+```ts
+CostFunction(
+  target: number[],
+  output: number[],
+): number
+```
 
 Cost / loss function used during supervised training.
 
@@ -156,7 +185,11 @@ Conceptual modes:
 
 ### MetricsHook
 
-`(m: { iteration: number; error: number; plateauError?: number | undefined; gradNorm: number; }) => void`
+```ts
+MetricsHook(
+  m: { iteration: number; error: number; plateauError?: number | undefined; gradNorm: number; },
+): void
+```
 
 Metrics hook signature.
 
@@ -208,7 +241,16 @@ Notes:
 
 ### propagate
 
-`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  target: number[],
+  regularization: number,
+  costDerivative: CostDerivative | undefined,
+): void
+```
 
 Propagate output and hidden errors backward through the network.
 
@@ -237,7 +279,13 @@ structures. Treat this as an opaque snapshot blob.
 
 ### trainImpl
 
-`(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], options: import("src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
+```ts
+trainImpl(
+  net: default,
+  set: TrainingSample[],
+  options: TrainingOptions,
+): { error: number; iterations: number; time: number; }
+```
 
 High-level training orchestration with early stopping, smoothing & callbacks.
 
@@ -284,7 +332,19 @@ Stopping conditions:
 
 ### trainSetImpl
 
-`(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("src/architecture/network/network.types").RegularizationConfig, costFunction: import("src/architecture/network/network.types").CostFunction | import("src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
+```ts
+trainSetImpl(
+  net: default,
+  set: TrainingSample[],
+  batchSize: number,
+  accumulationSteps: number,
+  currentRate: number,
+  momentum: number,
+  regularization: RegularizationConfig,
+  costFunction: CostFunction | CostFunctionOrObject,
+  optimizer: OptimizerConfigBase | undefined,
+): number
+```
 
 Execute one full pass over dataset (epoch) with optional accumulation & adaptive optimizer.
 Returns mean cost across processed samples.
@@ -308,7 +368,19 @@ Returns: Mean cost across the processed samples.
 
 ### trainSetCore
 
-`(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("src/architecture/network/network.types").RegularizationConfig, costFunction: import("src/architecture/network/network.types").CostFunction | import("src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
+```ts
+trainSetCore(
+  net: default,
+  set: TrainingSample[],
+  batchSize: number,
+  accumulationSteps: number,
+  currentRate: number,
+  momentum: number,
+  regularization: RegularizationConfig,
+  costFunction: CostFunction | CostFunctionOrObject,
+  optimizer: OptimizerConfigBase | undefined,
+): number
+```
 
 Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
 
@@ -329,7 +401,11 @@ Returns: Mean cost over processed samples.
 
 ### clearNodeState
 
-`(node: import("src/architecture/node").default) => void`
+```ts
+clearNodeState(
+  node: default,
+): void
+```
 
 Clear runtime state for a single node.
 
@@ -338,7 +414,9 @@ Parameters:
 
 ### clearState
 
-`() => void`
+```ts
+clearState(): void
+```
 
 Clear all node runtime traces and states.
 
@@ -347,7 +425,16 @@ Parameters:
 
 ### createPropagationContext
 
-`(network: import("src/architecture/network").default, rate: number, momentum: number, update: boolean, regularization: number | { type: "L1" | "L2"; lambda: number; } | ((weight: number) => number) | undefined, costDerivative: import("src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => import("src/architecture/network/training/network.training.utils.types").PropagationContext`
+```ts
+createPropagationContext(
+  network: default,
+  rate: number,
+  momentum: number,
+  update: boolean,
+  regularization: number | { type: "L1" | "L2"; lambda: number; } | ((weight: number) => number) | undefined,
+  costDerivative: CostDerivative | undefined,
+): PropagationContext
+```
 
 Build the shared propagation context consumed by layer helpers.
 
@@ -363,7 +450,11 @@ Returns: Immutable context consumed by propagation helpers.
 
 ### getLastNodeIndex
 
-`(network: import("src/architecture/network").default) => number`
+```ts
+getLastNodeIndex(
+  network: default,
+): number
+```
 
 Resolve the last node index in the network.
 
@@ -374,7 +465,11 @@ Returns: Last valid node index.
 
 ### getOutputLayerStartIndex
 
-`(network: import("src/architecture/network").default) => number`
+```ts
+getOutputLayerStartIndex(
+  network: default,
+): number
+```
 
 Resolve the first index of the output layer.
 
@@ -385,7 +480,16 @@ Returns: Index at which output nodes begin.
 
 ### propagate
 
-`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: import("src/architecture/network/training/network.training.utils.types").CostDerivative | undefined) => void`
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  target: number[],
+  regularization: number,
+  costDerivative: CostDerivative | undefined,
+): void
+```
 
 Propagate output and hidden errors backward through the network.
 
@@ -400,7 +504,11 @@ Parameters:
 
 ### propagateHiddenLayer
 
-`(context: import("src/architecture/network/training/network.training.utils.types").PropagationContext) => void`
+```ts
+propagateHiddenLayer(
+  context: PropagationContext,
+): void
+```
 
 Propagate all hidden nodes in reverse topological order.
 
@@ -409,7 +517,12 @@ Parameters:
 
 ### propagateOutputLayer
 
-`(context: import("src/architecture/network/training/network.training.utils.types").PropagationContext, target: number[]) => void`
+```ts
+propagateOutputLayer(
+  context: PropagationContext,
+  target: number[],
+): void
+```
 
 Propagate all output nodes with explicit targets.
 
@@ -419,7 +532,14 @@ Parameters:
 
 ### propagateOutputNodeWithCostDerivative
 
-`(node: import("src/architecture/node").default, context: import("src/architecture/network/training/network.training.utils.types").PropagationContext, targetValue: number, costDerivative: import("src/architecture/network/training/network.training.utils.types").CostDerivative) => void`
+```ts
+propagateOutputNodeWithCostDerivative(
+  node: default,
+  context: PropagationContext,
+  targetValue: number,
+  costDerivative: CostDerivative,
+): void
+```
 
 Propagate one output node using a custom cost derivative override.
 
@@ -431,7 +551,12 @@ Parameters:
 
 ### propagateSingleHiddenNode
 
-`(context: import("src/architecture/network/training/network.training.utils.types").PropagationContext, node: import("src/architecture/node").default) => void`
+```ts
+propagateSingleHiddenNode(
+  context: PropagationContext,
+  node: default,
+): void
+```
 
 Propagate a single hidden node without a target value.
 
@@ -441,7 +566,13 @@ Parameters:
 
 ### propagateSingleOutputNode
 
-`(context: import("src/architecture/network/training/network.training.utils.types").PropagationContext, node: import("src/architecture/node").default, targetValue: number) => void`
+```ts
+propagateSingleOutputNode(
+  context: PropagationContext,
+  node: default,
+  targetValue: number,
+): void
+```
 
 Propagate a single output node with a target value.
 
@@ -452,7 +583,12 @@ Parameters:
 
 ### validateTargetLength
 
-`(network: import("src/architecture/network").default, target: number[]) => void`
+```ts
+validateTargetLength(
+  network: default,
+  target: number[],
+): void
+```
 
 Validate that target output count matches the network output width.
 
@@ -464,7 +600,13 @@ Parameters:
 
 ### trainFinalizeCore
 
-`(net: import("src/architecture/network").default, set: { input: number[]; output: number[]; }[], options: import("src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
+```ts
+trainFinalizeCore(
+  net: default,
+  set: { input: number[]; output: number[]; }[],
+  options: TrainingOptions,
+): { error: number; iterations: number; time: number; }
+```
 
 Run the full training orchestration loop with smoothing, callbacks, and early stopping.
 
@@ -479,7 +621,14 @@ Returns: Final training summary including error, iteration count, and elapsed ti
 
 ### computeMonitoredError
 
-`(trainError: number, recentErrors: number[], cfg: import("src/architecture/network/network.types").MonitoredSmoothingConfig, state: import("src/architecture/network/network.types").PrimarySmoothingState) => number`
+```ts
+computeMonitoredError(
+  trainError: number,
+  recentErrors: number[],
+  cfg: MonitoredSmoothingConfig,
+  state: PrimarySmoothingState,
+): number
+```
 
 Compute monitored training error using the configured smoothing strategy.
 
@@ -493,7 +642,14 @@ Returns: Smoothed monitored error.
 
 ### computePlateauMetric
 
-`(trainError: number, plateauErrors: number[], cfg: import("src/architecture/network/network.types").PlateauSmoothingConfig, state: import("src/architecture/network/network.types").PlateauSmoothingState) => number`
+```ts
+computePlateauMetric(
+  trainError: number,
+  plateauErrors: number[],
+  cfg: PlateauSmoothingConfig,
+  state: PlateauSmoothingState,
+): number
+```
 
 Compute plateau metric using the configured plateau smoothing strategy.
 
@@ -509,7 +665,12 @@ Returns: Smoothed plateau metric.
 
 ### applyGradientClippingCore
 
-`(net: import("src/architecture/network").default, cfg: import("src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
+```ts
+applyGradientClippingCore(
+  net: default,
+  cfg: GradientClipRuntimeConfig,
+): void
+```
 
 Apply gradient clipping to accumulated connection and bias deltas.
 

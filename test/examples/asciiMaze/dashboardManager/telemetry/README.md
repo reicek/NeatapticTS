@@ -23,7 +23,12 @@ A practical reading order is:
 
 ### createDetailedStatsSnapshot
 
-`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState, neat: unknown) => import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeDetailedStats | null`
+```ts
+createDetailedStatsSnapshot(
+  state: DashboardManagerState,
+  neat: unknown,
+): AsciiMazeDetailedStats | null
+```
 
 Build the rich telemetry detail snapshot shown in browser hooks and exported snapshots.
 
@@ -35,7 +40,13 @@ Returns: Detailed telemetry snapshot or `null` when no data is available.
 
 ### emitTelemetryPayload
 
-`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState, generation: number, telemetryHook: ((payload: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardTelemetryPayload) => void) | undefined) => void`
+```ts
+emitTelemetryPayload(
+  state: DashboardManagerState,
+  generation: number,
+  telemetryHook: ((payload: DashboardTelemetryPayload) => void) | undefined,
+): void
+```
 
 Emit the structured telemetry payload used by browser hosts and runtime hooks.
 
@@ -46,7 +57,11 @@ Parameters:
 
 ### getDashboardLastTelemetry
 
-`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState) => import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").AsciiMazeTelemetrySnapshot`
+```ts
+getDashboardLastTelemetry(
+  state: DashboardManagerState,
+): AsciiMazeTelemetrySnapshot
+```
 
 Produce the latest public telemetry snapshot from current dashboard state.
 
@@ -57,7 +72,12 @@ Returns: Public telemetry snapshot used by browser hosts.
 
 ### updateTelemetryHistory
 
-`(state: import("test/examples/asciiMaze/dashboardManager/dashboardManager.types").DashboardManagerState, neatInstance: { getTelemetry?: (() => unknown[]) | undefined; } | undefined) => void`
+```ts
+updateTelemetryHistory(
+  state: DashboardManagerState,
+  neatInstance: { getTelemetry?: (() => unknown[]) | undefined; } | undefined,
+): void
+```
 
 Pull the latest NEAT telemetry snapshot and update bounded dashboard histories.
 

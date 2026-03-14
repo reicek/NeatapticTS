@@ -19,7 +19,11 @@ used to render that group marker.
 
 ### clampRecommendedNetworkHeightPx
 
-`(recommendedHeightPx: number) => number`
+```ts
+clampRecommendedNetworkHeightPx(
+  recommendedHeightPx: number,
+): number
+```
 
 Clamps a recommended network height into the configured panel range.
 
@@ -30,7 +34,11 @@ Returns: Clamped panel height.
 
 ### createPositionByNodeIndex
 
-`(centeredPositionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]) => Map<number, import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>`
+```ts
+createPositionByNodeIndex(
+  centeredPositionedNodes: PositionedNetworkNodeLike[],
+): Map<number, PositionedNetworkNodeLike>
+```
 
 Builds a node-index lookup map for resolved positioned nodes.
 
@@ -41,7 +49,14 @@ Returns: Map keyed by node index.
 
 ### drawNetworkVisualization
 
-`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void`
+```ts
+drawNetworkVisualization(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): void
+```
 
 Draws a complete, layer-based visualization of the active network.
 
@@ -64,7 +79,13 @@ drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
 
 ### drawPositionedNetworkGraph
 
-`(context: CanvasRenderingContext2D, networkVisualizationScene: NetworkVisualizationScene, positionedNetworkGraphScene: PositionedNetworkGraphScene) => void`
+```ts
+drawPositionedNetworkGraph(
+  context: CanvasRenderingContext2D,
+  networkVisualizationScene: NetworkVisualizationScene,
+  positionedNetworkGraphScene: PositionedNetworkGraphScene,
+): void
+```
 
 Draws the positioned graph layers and optional guide overlays.
 
@@ -77,7 +98,15 @@ Returns: Nothing.
 
 ### formatArchitectureLabel
 
-`(architectureInputSize: number, hiddenLayersLabel: string, architectureOutputSize: number, totalNodeCount: number, totalConnectionCount: number) => string`
+```ts
+formatArchitectureLabel(
+  architectureInputSize: number,
+  hiddenLayersLabel: string,
+  architectureOutputSize: number,
+  totalNodeCount: number,
+  totalConnectionCount: number,
+): string
+```
 
 Formats the two-line architecture label used by the header and legend.
 
@@ -104,7 +133,12 @@ panel: background, graph layout, legend, and input-group overlays.
 
 ### paintNetworkVisualizationCanvasBase
 
-`(context: CanvasRenderingContext2D, networkVisualizationScene: NetworkVisualizationScene) => void`
+```ts
+paintNetworkVisualizationCanvasBase(
+  context: CanvasRenderingContext2D,
+  networkVisualizationScene: NetworkVisualizationScene,
+): void
+```
 
 Paints the static background fill for the network visualization canvas.
 
@@ -116,7 +150,15 @@ Returns: Nothing.
 
 ### resolveAdjustedGraphPaddingContext
 
-`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, canvasWidthPx: number, hideNetworkOverlays: boolean, graphPaddingContext: NetworkGraphPaddingContext) => Pick<NetworkGraphPaddingContext, "graphLeftPaddingPx" | "graphRightPaddingPx">`
+```ts
+resolveAdjustedGraphPaddingContext(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+  canvasWidthPx: number,
+  hideNetworkOverlays: boolean,
+  graphPaddingContext: NetworkGraphPaddingContext,
+): Pick<NetworkGraphPaddingContext, "graphLeftPaddingPx" | "graphRightPaddingPx">
+```
 
 Adjusts graph-side padding to keep the floating legend from overlapping nodes.
 
@@ -131,7 +173,9 @@ Returns: Adjusted graph padding context.
 
 ### resolveBaseGraphPaddingContext
 
-`() => NetworkGraphPaddingContext`
+```ts
+resolveBaseGraphPaddingContext(): NetworkGraphPaddingContext
+```
 
 Resolves the base graph padding before legend-aware adjustments are applied.
 
@@ -139,7 +183,12 @@ Returns: Base graph padding context.
 
 ### resolveHiddenLayersLabel
 
-`(hiddenLayerSizes: number[], architectureSource: "layer-metadata" | "graph-topology" | "inferred") => string`
+```ts
+resolveHiddenLayersLabel(
+  hiddenLayerSizes: number[],
+  architectureSource: "layer-metadata" | "graph-topology" | "inferred",
+): string
+```
 
 Resolves the hidden-layer portion of the compact architecture label.
 
@@ -151,7 +200,13 @@ Returns: Hidden-layer label.
 
 ### resolveNetworkArchitectureLabel
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => string`
+```ts
+resolveNetworkArchitectureLabel(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): string
+```
 
 Resolves compact architecture label text for headers and HUD rows.
 
@@ -167,7 +222,11 @@ Returns: Readable architecture label.
 
 ### resolveNetworkDrawableArea
 
-`(networkVisualizationScene: NetworkVisualizationScene) => NetworkDrawableArea`
+```ts
+resolveNetworkDrawableArea(
+  networkVisualizationScene: NetworkVisualizationScene,
+): NetworkDrawableArea
+```
 
 Resolves the drawable graph area after scene padding is applied.
 
@@ -178,7 +237,13 @@ Returns: Drawable area dimensions.
 
 ### resolveNetworkNodeDimensionsFromTopologySummary
 
-`(networkTopologySummary: NetworkTopologySummary, drawableWidthPx: number, drawableHeightPx: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike`
+```ts
+resolveNetworkNodeDimensionsFromTopologySummary(
+  networkTopologySummary: NetworkTopologySummary,
+  drawableWidthPx: number,
+  drawableHeightPx: number,
+): NetworkNodeDimensionsLike
+```
 
 Resolves node rectangle dimensions from topology density and drawable bounds.
 
@@ -191,7 +256,13 @@ Returns: Node dimensions.
 
 ### resolveNetworkTopologySummary
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => NetworkTopologySummary`
+```ts
+resolveNetworkTopologySummary(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): NetworkTopologySummary
+```
 
 Resolves a reusable topology summary for layout and sizing helpers.
 
@@ -204,7 +275,13 @@ Returns: Topology summary.
 
 ### resolveNetworkVisualizationHeightPx
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => number`
+```ts
+resolveNetworkVisualizationHeightPx(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): number
+```
 
 Resolves responsive visualization canvas height from network shape.
 
@@ -226,7 +303,14 @@ const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
 
 ### resolveNetworkVisualizationScene
 
-`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => NetworkVisualizationScene`
+```ts
+resolveNetworkVisualizationScene(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): NetworkVisualizationScene
+```
 
 Resolves all non-topology canvas state needed to draw the network view.
 
@@ -243,7 +327,14 @@ Returns: Scene context for the current frame.
 
 ### resolvePositionedNetworkGraphScene
 
-`(networkVisualizationScene: NetworkVisualizationScene, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => PositionedNetworkGraphScene`
+```ts
+resolvePositionedNetworkGraphScene(
+  networkVisualizationScene: NetworkVisualizationScene,
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): PositionedNetworkGraphScene
+```
 
 Resolves positioned nodes, connection lookup state, and shared node dimensions.
 
@@ -257,7 +348,12 @@ Returns: Positioned graph scene.
 
 ### resolveRecommendedNetworkHeightPx
 
-`(networkTopologySummary: NetworkTopologySummary, topologyDrivenHeightPx: number) => number`
+```ts
+resolveRecommendedNetworkHeightPx(
+  networkTopologySummary: NetworkTopologySummary,
+  topologyDrivenHeightPx: number,
+): number
+```
 
 Resolves the recommended panel height from topology and density adjustments.
 
@@ -269,7 +365,11 @@ Returns: Recommended panel height.
 
 ### resolveRuntimeConnections
 
-`(network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[]`
+```ts
+resolveRuntimeConnections(
+  network: default | undefined,
+): VisualNetworkConnectionLike[]
+```
 
 Resolves the runtime connection array from the active network.
 
@@ -280,7 +380,11 @@ Returns: Runtime connection list.
 
 ### resolveTopologyDrivenHeightPx
 
-`(networkTopologySummary: NetworkTopologySummary) => number`
+```ts
+resolveTopologyDrivenHeightPx(
+  networkTopologySummary: NetworkTopologySummary,
+): number
+```
 
 Resolves the topology-driven minimum readable height.
 
@@ -291,7 +395,12 @@ Returns: Minimum readable height in pixels.
 
 ### shouldHideNetworkOverlays
 
-`(context: CanvasRenderingContext2D, fallbackViewportWidthPx: number) => boolean`
+```ts
+shouldHideNetworkOverlays(
+  context: CanvasRenderingContext2D,
+  fallbackViewportWidthPx: number,
+): boolean
+```
 
 Determines whether responsive rules hide auxiliary network overlays.
 
@@ -319,7 +428,13 @@ channels are organized.
 
 ### drawInputGroupLabelBands
 
-`(context: CanvasRenderingContext2D, positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => void`
+```ts
+drawInputGroupLabelBands(
+  context: CanvasRenderingContext2D,
+  positionedNodes: PositionedNetworkNodeLike[],
+  nodeDimensions: NetworkNodeDimensionsLike,
+): void
+```
 
 Draws vertical neon bands that label semantic groups in the input layer.
 
@@ -335,7 +450,17 @@ Returns: Nothing.
 
 ### drawRoundedRect
 
-`(context: CanvasRenderingContext2D, leftXPx: number, topYPx: number, widthPx: number, heightPx: number, radiusPx: number, fillColor: string) => void`
+```ts
+drawRoundedRect(
+  context: CanvasRenderingContext2D,
+  leftXPx: number,
+  topYPx: number,
+  widthPx: number,
+  heightPx: number,
+  radiusPx: number,
+  fillColor: string,
+): void
+```
 
 Draws a filled rounded rectangle path.
 
@@ -351,7 +476,11 @@ These helpers recover that grouping for visual annotation.
 
 ### resolveInputGroupLabelBands
 
-`(inputNodeCount: number) => import("test/examples/flappy_bird/browser-entry/network-view/network-view.types").InputGroupLabelBand[]`
+```ts
+resolveInputGroupLabelBands(
+  inputNodeCount: number,
+): InputGroupLabelBand[]
+```
 
 Resolves input-layer semantic label bands for Flappy temporal observation channels.
 
@@ -374,7 +503,17 @@ the available canvas space.
 
 ### centerPositionedNodesInDrawableArea
 
-`(positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], leftPaddingPx: number, topPaddingPx: number, drawableWidthPx: number, drawableHeightPx: number, nodeLayoutPaddingPx: number, nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]`
+```ts
+centerPositionedNodesInDrawableArea(
+  positionedNodes: PositionedNetworkNodeLike[],
+  leftPaddingPx: number,
+  topPaddingPx: number,
+  drawableWidthPx: number,
+  drawableHeightPx: number,
+  nodeLayoutPaddingPx: number,
+  nodeDimensions: NetworkNodeDimensionsLike,
+): PositionedNetworkNodeLike[]
+```
 
 Centers positioned nodes within the drawable graph area.
 
@@ -394,7 +533,17 @@ Returns: Center-aligned positioned nodes.
 
 ### positionNetworkNodes
 
-`(networkLayers: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][], leftPaddingPx: number, topPaddingPx: number, drawableWidthPx: number, drawableHeightPx: number, nodeLayoutPaddingPx: number, nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]`
+```ts
+positionNetworkNodes(
+  networkLayers: VisualNetworkNodeLike[][],
+  leftPaddingPx: number,
+  topPaddingPx: number,
+  drawableWidthPx: number,
+  drawableHeightPx: number,
+  nodeLayoutPaddingPx: number,
+  nodeDimensions: NetworkNodeDimensionsLike,
+): PositionedNetworkNodeLike[]
+```
 
 Positions network nodes into drawable canvas coordinates.
 
@@ -422,7 +571,13 @@ stay meaningful even when some metadata is missing?
 
 ### resolveNetworkVisualizationLayers
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
+```ts
+resolveNetworkVisualizationLayers(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): VisualNetworkNodeLike[][]
+```
 
 Resolves layered node groups for network-view layout and rendering.
 

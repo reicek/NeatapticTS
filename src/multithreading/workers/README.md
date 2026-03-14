@@ -10,7 +10,9 @@ Utility class for managing workers in both Node.js and browser environments.
 
 #### getBrowserTestWorker
 
-`() => Promise<typeof import("src/multithreading/workers/browser/testworker").TestWorker>`
+```ts
+getBrowserTestWorker(): Promise<typeof TestWorker>
+```
 
 Loads the browser test worker dynamically.
 
@@ -18,7 +20,9 @@ Returns: A promise that resolves to the browser TestWorker class.
 
 #### getNodeTestWorker
 
-`() => Promise<typeof import("src/multithreading/workers/node/testworker").TestWorker>`
+```ts
+getNodeTestWorker(): Promise<typeof TestWorker>
+```
 
 Loads the Node.js test worker dynamically.
 

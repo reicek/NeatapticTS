@@ -106,7 +106,13 @@ const propagationContext: LayerPropagationContext = { nodes: layer.nodes };
 
 ### activateLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerActivationContext, values: number[] | undefined, training: boolean) => number[]`
+```ts
+activateLayer(
+  context: LayerActivationContext,
+  values: number[] | undefined,
+  training: boolean,
+): number[]
+```
 
 Orchestrates layer activation behavior with a high-level flow.
 
@@ -140,7 +146,11 @@ Returns: A cloned array of activation values.
 
 ### clearLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext) => void`
+```ts
+clearLayer(
+  context: LayerConnectionContext,
+): void
+```
 
 Orchestrates clearing node activation state with a high-level flow.
 
@@ -154,7 +164,14 @@ clearLayer(layerConnectionContext);
 
 ### connectLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connectLayer(
+  context: LayerConnectionContext,
+  target: default | default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Orchestrates layer connection behavior with a high-level flow.
 
@@ -177,7 +194,13 @@ Returns: The created connection list.
 
 ### createAttentionLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, heads: number) => TLayer`
+```ts
+createAttentionLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  heads: number,
+): TLayer
+```
 
 Orchestrates attention layer creation with a high-level flow.
 
@@ -195,7 +218,12 @@ const attention = createAttentionLayer(factoryContext, 8, 4);
 
 ### createBatchNormLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+createBatchNormLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Orchestrates batch normalization layer creation with a high-level flow.
 
@@ -212,7 +240,15 @@ const batchNorm = createBatchNormLayer(factoryContext, 16);
 
 ### createConv1dLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, kernelSize: number, stride: number, padding: number) => TLayer`
+```ts
+createConv1dLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  kernelSize: number,
+  stride: number,
+  padding: number,
+): TLayer
+```
 
 Orchestrates 1D convolution layer creation with a high-level flow.
 
@@ -232,7 +268,12 @@ const conv1d = createConv1dLayer(factoryContext, 8, 3);
 
 ### createDenseLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+createDenseLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Orchestrates dense layer creation with a high-level flow.
 
@@ -249,7 +290,12 @@ const dense = createDenseLayer(factoryContext, 8);
 
 ### createGruLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+createGruLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Orchestrates GRU layer creation with a high-level flow.
 
@@ -266,7 +312,12 @@ const gru = createGruLayer(factoryContext, 8);
 
 ### createLayerNormLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+createLayerNormLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Orchestrates layer normalization layer creation with a high-level flow.
 
@@ -283,7 +334,12 @@ const layerNorm = createLayerNormLayer(factoryContext, 16);
 
 ### createLstmLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+createLstmLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Orchestrates LSTM layer creation with a high-level flow.
 
@@ -300,7 +356,13 @@ const lstm = createLstmLayer(factoryContext, 8);
 
 ### createMemoryLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, memory: number) => TLayer`
+```ts
+createMemoryLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  memory: number,
+): TLayer
+```
 
 Orchestrates Memory layer creation with a high-level flow.
 
@@ -318,7 +380,13 @@ const memoryLayer = createMemoryLayer(factoryContext, 4, 3);
 
 ### disconnectLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default, twoSided: boolean) => void`
+```ts
+disconnectLayer(
+  context: LayerConnectionContext,
+  target: default | default,
+  twoSided: boolean,
+): void
+```
 
 Orchestrates disconnection behavior with a high-level flow.
 
@@ -335,7 +403,13 @@ Parameters:
 
 ### gateLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, connections: import("src/architecture/connection").default[], method: unknown) => void`
+```ts
+gateLayer(
+  context: LayerConnectionContext,
+  connections: default[],
+  method: unknown,
+): void
+```
 
 Orchestrates layer gating behavior with a high-level flow.
 
@@ -352,7 +426,14 @@ Parameters:
 
 ### inputLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+inputLayer(
+  context: LayerConnectionContext,
+  from: default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Orchestrates layer input wiring with a high-level flow.
 
@@ -372,7 +453,14 @@ Returns: The created connection list.
 
 ### propagateLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerPropagationContext, rate: number, momentum: number, targets: number[] | undefined) => void`
+```ts
+propagateLayer(
+  context: LayerPropagationContext,
+  rate: number,
+  momentum: number,
+  targets: number[] | undefined,
+): void
+```
 
 Orchestrates layer backpropagation behavior with a high-level flow.
 
@@ -399,7 +487,11 @@ Parameters:
 
 ### isGroup
 
-`(candidate: unknown) => boolean`
+```ts
+isGroup(
+  candidate: unknown,
+): boolean
+```
 
 Checks whether an unknown value is group-like.
 
@@ -423,7 +515,11 @@ value.set({ bias: 0 });
 
 ### acquireActivationOutput
 
-`(nodeCount: number) => number[]`
+```ts
+acquireActivationOutput(
+  nodeCount: number,
+): number[]
+```
 
 Acquires a pooled output buffer sized for the current activation call.
 
@@ -450,7 +546,12 @@ Returns: A pooled output array.
 
 ### applyLayerMask
 
-`(nodeList: import("src/architecture/node").default[], mask: number) => void`
+```ts
+applyLayerMask(
+  nodeList: default[],
+  mask: number,
+): void
+```
 
 Applies one mask value to every node in the layer.
 
@@ -469,7 +570,12 @@ Parameters:
 
 ### assertActivationInputSize
 
-`(nodeCount: number, inputValues: number[] | undefined) => void`
+```ts
+assertActivationInputSize(
+  nodeCount: number,
+  inputValues: number[] | undefined,
+): void
+```
 
 Ensures optional activation inputs align 1:1 with layer nodes.
 
@@ -500,7 +606,11 @@ Parameters:
 
 ### cloneActivationOutput
 
-`(output: number[]) => number[]`
+```ts
+cloneActivationOutput(
+  output: number[],
+): number[]
+```
 
 Clones pooled output into a stable caller-owned array.
 
@@ -520,7 +630,13 @@ Returns: A cloned output array.
 
 ### fillActivationOutput
 
-`(nodeList: import("src/architecture/node").default[], inputValues: number[] | undefined, output: number[]) => void`
+```ts
+fillActivationOutput(
+  nodeList: default[],
+  inputValues: number[] | undefined,
+  output: number[],
+): void
+```
 
 Activates each node and writes outputs into the provided buffer.
 
@@ -544,7 +660,11 @@ Parameters:
 
 ### releaseActivationOutput
 
-`(output: number[]) => void`
+```ts
+releaseActivationOutput(
+  output: number[],
+): void
+```
 
 Releases a pooled activation output buffer back to the pool.
 
@@ -557,7 +677,12 @@ Parameters:
 
 ### resolveLayerMask
 
-`(layerDropout: number, isTraining: boolean) => number`
+```ts
+resolveLayerMask(
+  layerDropout: number,
+  isTraining: boolean,
+): number
+```
 
 Resolves a shared dropout mask for the full layer.
 
@@ -588,7 +713,11 @@ Returns: A mask value of 1 or 0 for all nodes in the layer.
 
 ### clearLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext) => void`
+```ts
+clearLayer(
+  context: LayerConnectionContext,
+): void
+```
 
 Clears activation state for all nodes in a layer.
 
@@ -606,7 +735,14 @@ Parameters:
 
 ### connectLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connectLayer(
+  context: LayerConnectionContext,
+  target: default | default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Connects a layer's output group to a target.
 
@@ -638,7 +774,14 @@ Returns: The created connection list.
 
 ### disconnectFromGroup
 
-`(layerNodes: import("src/architecture/node").default[], targetGroup: import("src/architecture/group").default, layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, removeTwoSided: boolean) => void`
+```ts
+disconnectFromGroup(
+  layerNodes: default[],
+  targetGroup: default,
+  layerConnections: { in: default[]; out: default[]; self: default[]; },
+  removeTwoSided: boolean,
+): void
+```
 
 Disconnects all layer nodes from a target group.
 
@@ -653,7 +796,14 @@ Parameters:
 
 ### disconnectFromNode
 
-`(layerNodes: import("src/architecture/node").default[], targetNode: import("src/architecture/node").default, layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, removeTwoSided: boolean) => void`
+```ts
+disconnectFromNode(
+  layerNodes: default[],
+  targetNode: default,
+  layerConnections: { in: default[]; out: default[]; self: default[]; },
+  removeTwoSided: boolean,
+): void
+```
 
 Disconnects all layer nodes from a target node.
 
@@ -665,7 +815,13 @@ Parameters:
 
 ### disconnectLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default, twoSided: boolean) => void`
+```ts
+disconnectLayer(
+  context: LayerConnectionContext,
+  target: default | default,
+  twoSided: boolean,
+): void
+```
 
 Disconnects nodes in this layer from a target group or node.
 
@@ -686,7 +842,13 @@ Parameters:
 
 ### gateLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, connections: import("src/architecture/connection").default[], method: unknown) => void`
+```ts
+gateLayer(
+  context: LayerConnectionContext,
+  connections: default[],
+  method: unknown,
+): void
+```
 
 Applies gating to the provided connections using the layer output group.
 
@@ -709,7 +871,14 @@ Parameters:
 
 ### inputLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+inputLayer(
+  context: LayerConnectionContext,
+  from: default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Connects a source group or layer to this layer's input target.
 
@@ -740,7 +909,13 @@ Returns: The created connection list.
 
 ### removeIncomingConnection
 
-`(layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => void`
+```ts
+removeIncomingConnection(
+  layerConnections: { in: default[]; out: default[]; self: default[]; },
+  sourceNode: default,
+  targetNode: default,
+): void
+```
 
 Removes an incoming connection from layer tracking.
 
@@ -753,7 +928,13 @@ Parameters:
 
 ### removeOutgoingConnection
 
-`(layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => void`
+```ts
+removeOutgoingConnection(
+  layerConnections: { in: default[]; out: default[]; self: default[]; },
+  sourceNode: default,
+  targetNode: default,
+): void
+```
 
 Removes an outgoing connection from layer tracking.
 
@@ -768,7 +949,12 @@ Parameters:
 
 ### assertTargetInputSize
 
-`(nodeCount: number, inputTargets: number[] | undefined) => void`
+```ts
+assertTargetInputSize(
+  nodeCount: number,
+  inputTargets: number[] | undefined,
+): void
+```
 
 Ensures target values align with the node count.
 
@@ -788,7 +974,14 @@ Parameters:
 
 ### propagateNodesInReverse
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerPropagationContext, rate: number, momentum: number, targets: number[] | undefined) => void`
+```ts
+propagateNodesInReverse(
+  context: LayerPropagationContext,
+  rate: number,
+  momentum: number,
+  targets: number[] | undefined,
+): void
+```
 
 Propagates errors through all nodes in reverse order.
 
@@ -822,7 +1015,12 @@ Parameters:
 
 ### buildDenseLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+buildDenseLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Builds a standard dense (fully connected) layer.
 
@@ -854,7 +1052,12 @@ dense.input(previousLayerLike);
 
 ### buildGruLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+buildGruLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Builds a GRU layer using the provided factory context.
 
@@ -878,7 +1081,12 @@ gru.input(previousLayerLike);
 
 ### buildLstmLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+buildLstmLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Builds an LSTM layer using the provided factory context.
 
@@ -908,7 +1116,13 @@ lstm.input(previousLayerLike);
 
 ### buildMemoryLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, memory: number) => TLayer`
+```ts
+buildMemoryLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  memory: number,
+): TLayer
+```
 
 Builds a Memory layer using the provided factory context.
 
@@ -936,7 +1150,11 @@ memoryLayer.input(previousLayerLike);
 
 ### flattenConnections
 
-`(connectionLists: import("src/architecture/connection").default[][]) => import("src/architecture/connection").default[]`
+```ts
+flattenConnections(
+  connectionLists: default[][],
+): default[]
+```
 
 Flattens grouped connection arrays into a single list.
 
@@ -956,7 +1174,11 @@ const connections = flattenConnections([gateConnections, cellConnections]);
 
 ### resolveConnectionMethod
 
-`(method: unknown) => unknown`
+```ts
+resolveConnectionMethod(
+  method: unknown,
+): unknown
+```
 
 Resolves an optional connection method to a concrete method.
 
@@ -976,7 +1198,12 @@ const method = resolveConnectionMethod(undefined);
 
 ### resolveSourceGroup
 
-`(factoryContext: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike) => import("src/architecture/group").default`
+```ts
+resolveSourceGroup(
+  factoryContext: LayerFactoryContext<TLayer>,
+  from: default | LayerLike,
+): default
+```
 
 Resolves a source group from a layer-like or group input.
 
@@ -999,7 +1226,11 @@ const sourceGroup = resolveSourceGroup(factoryContext, previousLayerLike);
 
 ### activateStubNodes
 
-`(layer: TLayer) => number[]`
+```ts
+activateStubNodes(
+  layer: TLayer,
+): number[]
+```
 
 Activates all nodes in a stub layer and returns their outputs.
 
@@ -1019,7 +1250,13 @@ const outputs = activateStubNodes(layer);
 
 ### buildAttentionLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, heads: number) => TLayer`
+```ts
+buildAttentionLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  heads: number,
+): TLayer
+```
 
 Builds a lightweight attention-style stub layer.
 
@@ -1048,7 +1285,15 @@ const out = attention.activate([1, 2, 3, 4]);
 
 ### buildConv1dLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, kernelSize: number, stride: number, padding: number) => TLayer`
+```ts
+buildConv1dLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  kernelSize: number,
+  stride: number,
+  padding: number,
+): TLayer
+```
 
 Builds a lightweight Conv1D-style stub layer.
 
@@ -1080,7 +1325,12 @@ const out = conv.activate([10, 11, 12, 13]);
 
 ### createAttentionActivator
 
-`(layer: TLayer, size: number) => (values?: number[] | undefined) => number[]`
+```ts
+createAttentionActivator(
+  layer: TLayer,
+  size: number,
+): (values?: number[] | undefined) => number[]
+```
 
 Builds the activation function used by the attention stub.
 
@@ -1105,7 +1355,12 @@ activate([1, 3]); // -> [2, 2, 2, 2]
 
 ### createConv1dActivator
 
-`(layer: TLayer, size: number) => (values?: number[] | undefined) => number[]`
+```ts
+createConv1dActivator(
+  layer: TLayer,
+  size: number,
+): (values?: number[] | undefined) => number[]
+```
 
 Builds the activation function used by the Conv1D stub.
 
@@ -1130,7 +1385,12 @@ activate([9, 8, 7, 6]); // -> [9, 8, 7]
 
 ### createStubLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+createStubLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Creates shared node/output scaffolding for experimental layers.
 
@@ -1152,7 +1412,11 @@ Returns: Initialized experimental layer.
 
 ### applyNormalizationActivation
 
-`(layer: TLayer) => void`
+```ts
+applyNormalizationActivation(
+  layer: TLayer,
+): void
+```
 
 Wraps a layer activation function with normalization post-processing.
 
@@ -1176,7 +1440,12 @@ Example (conceptual flow):
 
 ### buildBatchNormLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+buildBatchNormLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Builds a dense layer decorated with batch-style normalization.
 
@@ -1204,7 +1473,12 @@ const normalized = buildBatchNormLayer(factoryContext, 16);
 
 ### buildLayerNormLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+buildLayerNormLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Builds a dense layer decorated with layer-style normalization.
 
@@ -1229,7 +1503,11 @@ const normalized = buildLayerNormLayer(factoryContext, 16);
 
 ### computeMean
 
-`(activations: number[]) => number`
+```ts
+computeMean(
+  activations: number[],
+): number
+```
 
 Computes the arithmetic mean for a vector of activations.
 
@@ -1246,7 +1524,12 @@ computeMean([1, 2, 3]); // -> 2
 
 ### computeVariance
 
-`(activations: number[], mean: number) => number`
+```ts
+computeVariance(
+  activations: number[],
+  mean: number,
+): number
+```
 
 Computes activation variance relative to a known mean.
 
@@ -1269,7 +1552,13 @@ computeVariance([1, 2, 3], mean); // -> 2/3
 
 ### normalizeActivations
 
-`(activations: number[], mean: number, variance: number) => number[]`
+```ts
+normalizeActivations(
+  activations: number[],
+  mean: number,
+  variance: number,
+): number[]
+```
 
 Normalizes activation values using mean and variance.
 

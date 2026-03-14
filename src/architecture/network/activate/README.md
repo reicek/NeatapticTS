@@ -93,7 +93,12 @@ Weight-noise telemetry collected during a single activation pass.
 
 ### activate
 
-`(input: number[], training: boolean) => number[]`
+```ts
+activate(
+  input: number[],
+  training: boolean,
+): number[]
+```
 
 Execute the main activation routine and return plain numeric outputs.
 
@@ -106,7 +111,12 @@ Returns: Output activation values.
 
 ### activateBatch
 
-`(inputs: number[][], training: boolean) => number[][]`
+```ts
+activateBatch(
+  inputs: number[][],
+  training: boolean,
+): number[][]
+```
 
 Activate the network over a mini‑batch (array) of input vectors, returning a 2‑D array of outputs.
 
@@ -131,7 +141,13 @@ console.log(batchOut.length); // 3 rows
 
 ### activateRaw
 
-`(input: number[], training: boolean, maxActivationDepth: number) => number[]`
+```ts
+activateRaw(
+  input: number[],
+  training: boolean,
+  maxActivationDepth: number,
+): number[]
+```
 
 Thin semantic alias to the network's main activation path.
 
@@ -154,7 +170,11 @@ const y = net.activateRaw([0,1,0]);
 
 ### gaussianRand
 
-`(rng: () => number) => number`
+```ts
+gaussianRand(
+  rng: () => number,
+): number
+```
 
 Produce a normally distributed random sample using the Box-Muller transform.
 
@@ -165,7 +185,11 @@ Returns: Standard normal sample with mean 0 and variance 1.
 
 ### noTraceActivate
 
-`(input: number[]) => number[]`
+```ts
+noTraceActivate(
+  input: number[],
+): number[]
+```
 
 Perform a forward pass without creating or updating any training / gradient traces.
 
@@ -209,7 +233,11 @@ console.log(out); // => e.g. [0.5123, 0.0441]
 
 ### activateViaNetworkDelegate
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
+```ts
+activateViaNetworkDelegate(
+  activationContext: RawActivationContext,
+): number[]
+```
 
 Delegate raw activation to the core network activation implementation.
 
@@ -220,7 +248,11 @@ Returns: Activation output vector.
 
 ### activateWithSelectedReusePath
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
+```ts
+activateWithSelectedReusePath(
+  activationContext: RawActivationContext,
+): number[]
+```
 
 Select the raw activation execution path based on runtime reuse configuration.
 
@@ -231,7 +263,11 @@ Returns: Activation output vector.
 
 ### executeRawActivation
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
+```ts
+executeRawActivation(
+  activationContext: RawActivationContext,
+): number[]
+```
 
 Execute raw activation through the network delegate using a compact orchestration flow.
 
@@ -247,7 +283,11 @@ Returns: Activation output vector from the network delegate.
 
 ### acquireOutputBuffer
 
-`(outputSize: number) => import("src/architecture/activationArrayPool").ActivationArray`
+```ts
+acquireOutputBuffer(
+  outputSize: number,
+): ActivationArray
+```
 
 Acquire a pooled activation output buffer for the current output width.
 
@@ -258,7 +298,12 @@ Returns: Mutable pooled output buffer.
 
 ### activate
 
-`(input: number[], training: boolean) => number[]`
+```ts
+activate(
+  input: number[],
+  training: boolean,
+): number[]
+```
 
 Execute the main activation routine and return plain numeric outputs.
 
@@ -271,7 +316,14 @@ Returns: Output activation values.
 
 ### activateLayer
 
-`(currentLayer: import("src/architecture/layer").default, layerIndex: number, inputVector: number[], isTraining: boolean) => number[]`
+```ts
+activateLayer(
+  currentLayer: default,
+  layerIndex: number,
+  inputVector: number[],
+  isTraining: boolean,
+): number[]
+```
 
 Activate one layer, routing input only for the first layer.
 
@@ -285,7 +337,16 @@ Returns: Layer activations.
 
 ### activateLayeredNetworkWithDropout
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("src/architecture/activationArrayPool").ActivationArray, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+```ts
+activateLayeredNetworkWithDropout(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+  outputBuffer: ActivationArray,
+  stats: ActivationStats,
+): void
+```
 
 Run layered activation with dropout masks and no stochastic-depth skips.
 
@@ -301,7 +362,16 @@ Returns: Nothing.
 
 ### activateLayeredNetworkWithStochasticDepth
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("src/architecture/activationArrayPool").ActivationArray, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+```ts
+activateLayeredNetworkWithStochasticDepth(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+  outputBuffer: ActivationArray,
+  stats: ActivationStats,
+): void
+```
 
 Run layered activation with stochastic-depth skipping and inverse-survival scaling.
 
@@ -317,7 +387,16 @@ Returns: Nothing.
 
 ### activateNodeNetworkFallback
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("src/architecture/activationArrayPool").ActivationArray, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+```ts
+activateNodeNetworkFallback(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+  outputBuffer: ActivationArray,
+  stats: ActivationStats,
+): void
+```
 
 Run fallback node-by-node activation for networks without explicit layer definitions.
 
@@ -333,7 +412,13 @@ Returns: Nothing.
 
 ### activateNodesAndCollectOutputs
 
-`(nodes: import("src/architecture/node").default[], inputVector: number[], outputBuffer: import("src/architecture/activationArrayPool").ActivationArray) => void`
+```ts
+activateNodesAndCollectOutputs(
+  nodes: default[],
+  inputVector: number[],
+  outputBuffer: ActivationArray,
+): void
+```
 
 Activate raw nodes in order and collect output-node activations into output buffer.
 
@@ -346,7 +431,14 @@ Returns: Nothing.
 
 ### applyDropConnect
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+```ts
+applyDropConnect(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
+  stats: ActivationStats,
+): void
+```
 
 Apply drop-connect masking and restore original weights where required.
 
@@ -360,7 +452,15 @@ Returns: Nothing.
 
 ### applyFallbackHiddenDropout
 
-`(hiddenNodes: import("src/architecture/node").default[], runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, dropoutProbability: number, isTraining: boolean, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+```ts
+applyFallbackHiddenDropout(
+  hiddenNodes: default[],
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  dropoutProbability: number,
+  isTraining: boolean,
+  stats: ActivationStats,
+): void
+```
 
 Apply fallback dropout for hidden nodes in raw node traversal mode.
 
@@ -375,7 +475,13 @@ Returns: Nothing.
 
 ### applyFallbackWeightNoise
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean) => void`
+```ts
+applyFallbackWeightNoise(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
+): void
+```
 
 Apply raw fallback weight noise to all connections using global standard deviation.
 
@@ -388,7 +494,16 @@ Returns: Nothing.
 
 ### applyHiddenLayerDropout
 
-`(layer: import("src/architecture/layer").default, rawActivations: number[], runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, dropoutProbability: number, isTraining: boolean, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+```ts
+applyHiddenLayerDropout(
+  layer: default,
+  rawActivations: number[],
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  dropoutProbability: number,
+  isTraining: boolean,
+  stats: ActivationStats,
+): void
+```
 
 Apply dropout masks to hidden layer nodes and enforce at least one active node.
 
@@ -404,7 +519,13 @@ Returns: Nothing.
 
 ### applyTrainingDropConnect
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+```ts
+applyTrainingDropConnect(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  stats: ActivationStats,
+): void
+```
 
 Apply training-time drop-connect masks to each connection.
 
@@ -417,7 +538,13 @@ Returns: Nothing.
 
 ### applyTrainingWeightNoise
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean) => import("src/architecture/network/activate/network.activate.utils.types").WeightNoiseApplyResult`
+```ts
+applyTrainingWeightNoise(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
+): WeightNoiseApplyResult
+```
 
 Apply per-connection training noise for the main activation flow.
 
@@ -430,7 +557,11 @@ Returns: Applied-state information for downstream restore logic.
 
 ### collectHiddenNodes
 
-`(nodes: import("src/architecture/node").default[]) => import("src/architecture/node").default[]`
+```ts
+collectHiddenNodes(
+  nodes: default[],
+): default[]
+```
 
 Collect hidden nodes from a raw node list.
 
@@ -441,7 +572,11 @@ Returns: Hidden-only node list.
 
 ### containsInvalidProbability
 
-`(probabilities: number[]) => boolean`
+```ts
+containsInvalidProbability(
+  probabilities: number[],
+): boolean
+```
 
 Check whether a probability vector contains values outside the (0, 1] interval.
 
@@ -452,7 +587,11 @@ Returns: True when any probability is invalid.
 
 ### createActivationStats
 
-`(totalConnections: number) => import("src/architecture/network/activate/network.activate.utils.types").ActivationStats`
+```ts
+createActivationStats(
+  totalConnections: number,
+): ActivationStats
+```
 
 Create activation statistics container for the current pass.
 
@@ -463,7 +602,9 @@ Returns: Initialized activation stats object.
 
 ### createWeightNoiseStats
 
-`() => import("src/architecture/network/activate/network.activate.utils.types").WeightNoiseStats`
+```ts
+createWeightNoiseStats(): WeightNoiseStats
+```
 
 Create the weight-noise statistics record with zeroed aggregates.
 
@@ -471,7 +612,16 @@ Returns: Zero-initialized weight-noise stats.
 
 ### decideLayerSkip
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, currentLayerNodeCount: number, layerIndex: number, isTraining: boolean, previousLayerActivations: number[] | undefined) => { shouldSkipLayer: boolean; surviveProbability: number; }`
+```ts
+decideLayerSkip(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  currentLayerNodeCount: number,
+  layerIndex: number,
+  isTraining: boolean,
+  previousLayerActivations: number[] | undefined,
+): { shouldSkipLayer: boolean; surviveProbability: number; }
+```
 
 Decide whether a hidden layer should be skipped in stochastic-depth mode.
 
@@ -487,7 +637,16 @@ Returns: Skip decision and survival probability for the layer.
 
 ### executeActivationPath
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean, outputBuffer: import("src/architecture/activationArrayPool").ActivationArray, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats) => void`
+```ts
+executeActivationPath(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+  outputBuffer: ActivationArray,
+  stats: ActivationStats,
+): void
+```
 
 Execute one of the three activation branches: stochastic layers, standard layers, or raw nodes.
 
@@ -503,7 +662,13 @@ Returns: Nothing.
 
 ### finalizeNodePathWeightNoiseRestore
 
-`(network: import("src/architecture/network").default, isTraining: boolean, appliedWeightNoise: boolean) => void`
+```ts
+finalizeNodePathWeightNoiseRestore(
+  network: default,
+  isTraining: boolean,
+  appliedWeightNoise: boolean,
+): void
+```
 
 Restore temporary weight-noise values for fallback node path only.
 
@@ -516,7 +681,13 @@ Returns: Nothing.
 
 ### finalizeTrainingStepAndStats
 
-`(runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats, isTraining: boolean) => void`
+```ts
+finalizeTrainingStepAndStats(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  stats: ActivationStats,
+  isTraining: boolean,
+): void
+```
 
 Finalize training counters and attach activation statistics to runtime state.
 
@@ -529,7 +700,12 @@ Returns: Nothing.
 
 ### findSourceLayerIndex
 
-`(network: import("src/architecture/network").default, connection: import("src/architecture/connection").default) => number`
+```ts
+findSourceLayerIndex(
+  network: default,
+  connection: default,
+): number
+```
 
 Find the layer index containing a connection source node.
 
@@ -541,7 +717,11 @@ Returns: Layer index for source node, or -1 when not found.
 
 ### gaussianRand
 
-`(rng: () => number) => number`
+```ts
+gaussianRand(
+  rng: () => number,
+): number
+```
 
 Produce a normally distributed random sample using the Box-Muller transform.
 
@@ -552,7 +732,12 @@ Returns: Standard normal sample with mean 0 and variance 1.
 
 ### hasCompatibleSkipState
 
-`(previousLayerActivations: number[] | undefined, currentLayerNodeCount: number) => boolean`
+```ts
+hasCompatibleSkipState(
+  previousLayerActivations: number[] | undefined,
+  currentLayerNodeCount: number,
+): boolean
+```
 
 Validate whether previous activations can be reused as skip pass-through output.
 
@@ -564,7 +749,11 @@ Returns: True when pass-through activations are compatible.
 
 ### hasLayeredNetwork
 
-`(network: import("src/architecture/network").default) => boolean`
+```ts
+hasLayeredNetwork(
+  network: default,
+): boolean
+```
 
 Check whether the network has at least one explicit layer.
 
@@ -575,7 +764,12 @@ Returns: True when layered activation path should run.
 
 ### hasLayeredNetworkWithStochasticDepth
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps) => boolean`
+```ts
+hasLayeredNetworkWithStochasticDepth(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): boolean
+```
 
 Check whether the network has layers and stochastic-depth configuration for layer skipping path.
 
@@ -587,7 +781,11 @@ Returns: True when stochastic-depth layer path should run.
 
 ### hasOriginalWeightNoise
 
-`(connection: import("src/architecture/connection").default) => boolean`
+```ts
+hasOriginalWeightNoise(
+  connection: default,
+): boolean
+```
 
 Check whether a connection already has an original weight-noise snapshot.
 
@@ -598,7 +796,12 @@ Returns: True when snapshot exists.
 
 ### isHiddenLayer
 
-`(layerIndex: number, totalLayerCount: number) => boolean`
+```ts
+isHiddenLayer(
+  layerIndex: number,
+  totalLayerCount: number,
+): boolean
+```
 
 Check whether a layer index refers to a hidden layer in a layered network.
 
@@ -610,7 +813,11 @@ Returns: True when the layer is hidden.
 
 ### persistOriginalWeightNoise
 
-`(connection: import("src/architecture/connection").default) => void`
+```ts
+persistOriginalWeightNoise(
+  connection: default,
+): void
+```
 
 Store current connection weight before applying temporary weight-noise modifications.
 
@@ -621,7 +828,11 @@ Returns: Nothing.
 
 ### prepareTopologyForActivation
 
-`(runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps) => void`
+```ts
+prepareTopologyForActivation(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): void
+```
 
 Ensure topological order is refreshed before activation when acyclic mode requires it.
 
@@ -632,7 +843,13 @@ Returns: Nothing.
 
 ### recordSkippedLayer
 
-`(network: import("src/architecture/network").default, stats: import("src/architecture/network/activate/network.activate.utils.types").ActivationStats, layerIndex: number) => void`
+```ts
+recordSkippedLayer(
+  network: default,
+  stats: ActivationStats,
+  layerIndex: number,
+): void
+```
 
 Record a skipped layer in runtime and stats trackers.
 
@@ -645,7 +862,11 @@ Returns: Nothing.
 
 ### releaseBufferAndCreateResult
 
-`(outputBuffer: import("src/architecture/activationArrayPool").ActivationArray) => number[]`
+```ts
+releaseBufferAndCreateResult(
+  outputBuffer: ActivationArray,
+): number[]
+```
 
 Release pooled output buffer and return a detached plain array copy.
 
@@ -656,7 +877,11 @@ Returns: Plain array of output values.
 
 ### resetSkippedLayers
 
-`(network: import("src/architecture/network").default) => void`
+```ts
+resetSkippedLayers(
+  network: default,
+): void
+```
 
 Clear the runtime list of skipped layers before current activation pass.
 
@@ -667,7 +892,14 @@ Returns: Nothing.
 
 ### resolveConnectionNoiseStd
 
-`(network: import("src/architecture/network").default, runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, connection: import("src/architecture/connection").default, fallbackStandardDeviation: number) => number`
+```ts
+resolveConnectionNoiseStd(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  connection: default,
+  fallbackStandardDeviation: number,
+): number
+```
 
 Resolve connection-specific weight-noise standard deviation, including per-hidden overrides.
 
@@ -681,7 +913,11 @@ Returns: Effective standard deviation for this connection.
 
 ### resolveDynamicWeightNoiseStd
 
-`(runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps) => number`
+```ts
+resolveDynamicWeightNoiseStd(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number
+```
 
 Resolve the training-step adjusted global weight-noise standard deviation.
 
@@ -692,7 +928,11 @@ Returns: Effective weight-noise standard deviation for current training step.
 
 ### restoreDropConnectWeights
 
-`(network: import("src/architecture/network").default) => void`
+```ts
+restoreDropConnectWeights(
+  network: default,
+): void
+```
 
 Restore drop-connect modified weights and normalize all masks back to one.
 
@@ -703,7 +943,11 @@ Returns: Nothing.
 
 ### restoreOriginalDropConnectWeight
 
-`(connection: import("src/architecture/connection").default) => void`
+```ts
+restoreOriginalDropConnectWeight(
+  connection: default,
+): void
+```
 
 Restore and clear original connection weight after drop-connect.
 
@@ -714,7 +958,11 @@ Returns: Nothing.
 
 ### restoreOriginalWeightNoise
 
-`(connection: import("src/architecture/connection").default) => void`
+```ts
+restoreOriginalWeightNoise(
+  connection: default,
+): void
+```
 
 Restore and clear the original weight-noise snapshot for a connection.
 
@@ -725,7 +973,12 @@ Returns: Nothing.
 
 ### scaleActivations
 
-`(activations: number[], scaleFactor: number) => number[]`
+```ts
+scaleActivations(
+  activations: number[],
+  scaleFactor: number,
+): number[]
+```
 
 Create a new activation vector by multiplying each activation by a scale factor.
 
@@ -737,7 +990,11 @@ Returns: Scaled activation vector.
 
 ### setAllMasksToOne
 
-`(nodes: import("src/architecture/node").default[]) => void`
+```ts
+setAllMasksToOne(
+  nodes: default[],
+): void
+```
 
 Set mask value to one for every node in a layer.
 
@@ -748,7 +1005,12 @@ Returns: Nothing.
 
 ### setDropConnectMask
 
-`(connection: import("src/architecture/connection").default, dropConnectMask: number) => void`
+```ts
+setDropConnectMask(
+  connection: default,
+  dropConnectMask: number,
+): void
+```
 
 Set drop-connect mask value for a connection.
 
@@ -760,7 +1022,12 @@ Returns: Nothing.
 
 ### setLastSampledNoise
 
-`(connection: import("src/architecture/connection").default, sampledNoise: number) => void`
+```ts
+setLastSampledNoise(
+  connection: default,
+  sampledNoise: number,
+): void
+```
 
 Persist last sampled weight-noise value for a connection.
 
@@ -772,7 +1039,11 @@ Returns: Nothing.
 
 ### stashOriginalDropConnectWeight
 
-`(connection: import("src/architecture/connection").default) => void`
+```ts
+stashOriginalDropConnectWeight(
+  connection: default,
+): void
+```
 
 Store original connection weight before drop-connect zeroing.
 
@@ -783,7 +1054,13 @@ Returns: Nothing.
 
 ### tryFastSlabActivation
 
-`(runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, inputVector: number[], isTraining: boolean) => number[] | undefined`
+```ts
+tryFastSlabActivation(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+): number[] | undefined
+```
 
 Attempt fast slab activation and safely fall back to regular activation on failure.
 
@@ -796,7 +1073,12 @@ Returns: Fast slab output when available, otherwise undefined.
 
 ### updateStochasticDepthFromSchedule
 
-`(runtimeNetwork: import("src/architecture/network/activate/network.activate.utils.types").ActivateRuntimeNetworkProps, isTraining: boolean) => void`
+```ts
+updateStochasticDepthFromSchedule(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
+): void
+```
 
 Update stochastic depth probabilities using a training schedule when valid.
 
@@ -808,7 +1090,12 @@ Returns: Nothing.
 
 ### validateInputVector
 
-`(network: import("src/architecture/network").default, inputVector: number[]) => void`
+```ts
+validateInputVector(
+  network: default,
+  inputVector: number[],
+): void
+```
 
 Validate that the incoming input vector exists and matches expected input size.
 
@@ -820,7 +1107,11 @@ Returns: Nothing.
 
 ### validateNetworkNodes
 
-`(network: import("src/architecture/network").default) => void`
+```ts
+validateNetworkNodes(
+  network: default,
+): void
+```
 
 Assert that the network contains nodes before executing activation routines.
 
@@ -831,7 +1122,13 @@ Returns: Nothing.
 
 ### writeLayerActivationsToOutput
 
-`(layerActivations: number[] | undefined, outputBuffer: import("src/architecture/activationArrayPool").ActivationArray, outputSize: number) => void`
+```ts
+writeLayerActivationsToOutput(
+  layerActivations: number[] | undefined,
+  outputBuffer: ActivationArray,
+  outputSize: number,
+): void
+```
 
 Copy final layer activations into the pooled network output buffer.
 
@@ -846,7 +1143,11 @@ Returns: Nothing.
 
 ### activateSingleBatchRow
 
-`(rowActivationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => number[]`
+```ts
+activateSingleBatchRow(
+  rowActivationContext: BatchRowActivationContext,
+): number[]
+```
 
 Validate and activate one batch row.
 
@@ -857,7 +1158,11 @@ Returns: Activation output vector for the row.
 
 ### activateValidatedBatchRows
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchActivationContext) => number[][]`
+```ts
+activateValidatedBatchRows(
+  activationContext: BatchActivationContext,
+): number[][]
+```
 
 Activate each row in a validated batch matrix.
 
@@ -868,7 +1173,11 @@ Returns: Matrix of activation outputs.
 
 ### assertBatchInputCollection
 
-`(batchInputs: number[][]) => void`
+```ts
+assertBatchInputCollection(
+  batchInputs: number[][],
+): void
+```
 
 Validate that the batch input collection is an array of rows.
 
@@ -879,7 +1188,11 @@ Returns: Nothing.
 
 ### assertBatchRowInputSize
 
-`(rowActivationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => void`
+```ts
+assertBatchRowInputSize(
+  rowActivationContext: BatchRowActivationContext,
+): void
+```
 
 Validate one batch row dimensionality.
 
@@ -890,7 +1203,11 @@ Returns: Nothing.
 
 ### buildBatchRowInputSizeMismatchMessage
 
-`(rowActivationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => string`
+```ts
+buildBatchRowInputSizeMismatchMessage(
+  rowActivationContext: BatchRowActivationContext,
+): string
+```
 
 Build a descriptive mismatch message for invalid batch row input dimensions.
 
@@ -901,7 +1218,11 @@ Returns: Formatted error message for invalid row dimensionality.
 
 ### executeBatchActivation
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchActivationContext) => number[][]`
+```ts
+executeBatchActivation(
+  activationContext: BatchActivationContext,
+): number[][]
+```
 
 Execute mini-batch activation with top-level shape validation and per-row checks.
 
@@ -915,7 +1236,11 @@ Returns: Matrix of activation outputs.
 
 ### formatInputLengthForMessage
 
-`(inputVector: number[]) => string`
+```ts
+formatInputLengthForMessage(
+  inputVector: number[],
+): string
+```
 
 Convert input length into a display-safe string for error messaging.
 
@@ -926,7 +1251,11 @@ Returns: Numeric length as string or predefined undefined text.
 
 ### isBatchRowInputSizeValid
 
-`(rowActivationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchRowActivationContext) => boolean`
+```ts
+isBatchRowInputSizeValid(
+  rowActivationContext: BatchRowActivationContext,
+): boolean
+```
 
 Determine whether one batch row matches the expected input dimensionality.
 
@@ -939,7 +1268,13 @@ Returns: True when row size is valid.
 
 ### createBatchActivationContext
 
-`(network: import("src/architecture/network").default, batchInputs: number[][], isTraining: boolean) => import("src/architecture/network/activate/network.activate.utils.types").BatchActivationContext`
+```ts
+createBatchActivationContext(
+  network: default,
+  batchInputs: number[][],
+  isTraining: boolean,
+): BatchActivationContext
+```
 
 Build shared batch activation context for helper orchestration.
 
@@ -952,7 +1287,12 @@ Returns: Fully populated batch activation context.
 
 ### createNoTraceActivationContext
 
-`(network: import("src/architecture/network").default, inputVector: number[]) => import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext`
+```ts
+createNoTraceActivationContext(
+  network: default,
+  inputVector: number[],
+): NoTraceActivationContext
+```
 
 Build shared no-trace activation context for helper orchestration.
 
@@ -964,7 +1304,14 @@ Returns: Fully populated no-trace activation context.
 
 ### createRawActivationContext
 
-`(network: import("src/architecture/network").default, inputVector: number[], isTraining: boolean, maximumActivationDepth: number) => import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext`
+```ts
+createRawActivationContext(
+  network: default,
+  inputVector: number[],
+  isTraining: boolean,
+  maximumActivationDepth: number,
+): RawActivationContext
+```
 
 Build shared raw activation context for helper orchestration.
 
@@ -978,7 +1325,11 @@ Returns: Fully populated raw activation context.
 
 ### executeBatchActivation
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").BatchActivationContext) => number[][]`
+```ts
+executeBatchActivation(
+  activationContext: BatchActivationContext,
+): number[][]
+```
 
 Execute mini-batch activation with top-level shape validation and per-row checks.
 
@@ -992,7 +1343,11 @@ Returns: Matrix of activation outputs.
 
 ### executeNoTraceActivation
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[]`
+```ts
+executeNoTraceActivation(
+  activationContext: NoTraceActivationContext,
+): number[]
+```
 
 Execute no-trace activation with a fast-path attempt and deterministic fallback traversal.
 
@@ -1006,7 +1361,11 @@ Returns: Output activation vector detached from pooled storage.
 
 ### executeRawActivation
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext) => number[]`
+```ts
+executeRawActivation(
+  activationContext: RawActivationContext,
+): number[]
+```
 
 Execute raw activation through the network delegate using a compact orchestration flow.
 
@@ -1022,7 +1381,11 @@ Returns: Activation output vector from the network delegate.
 
 ### activateWithoutTraceUsingNodeIteration
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[]`
+```ts
+activateWithoutTraceUsingNodeIteration(
+  activationContext: NoTraceActivationContext,
+): number[]
+```
 
 Execute no-trace activation through node traversal and pooled output collection.
 
@@ -1033,7 +1396,11 @@ Returns: Detached output activation vector.
 
 ### assertInputMatchesNetworkInputSize
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => void`
+```ts
+assertInputMatchesNetworkInputSize(
+  activationContext: NoTraceActivationContext,
+): void
+```
 
 Validate that the input vector length matches expected network input dimensionality.
 
@@ -1044,7 +1411,11 @@ Returns: Nothing.
 
 ### buildInputSizeMismatchMessage
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => string`
+```ts
+buildInputSizeMismatchMessage(
+  activationContext: NoTraceActivationContext,
+): string
+```
 
 Build a descriptive input mismatch message for activation validation errors.
 
@@ -1055,7 +1426,11 @@ Returns: Formatted mismatch error message.
 
 ### canUseNoTraceFastSlab
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => boolean`
+```ts
+canUseNoTraceFastSlab(
+  activationContext: NoTraceActivationContext,
+): boolean
+```
 
 Determine whether fast slab activation is available for no-trace execution mode.
 
@@ -1066,7 +1441,11 @@ Returns: True when slab execution is available for inference mode.
 
 ### detachPooledOutputBuffer
 
-`(pooledOutputBuffer: import("src/architecture/activationArrayPool").ActivationArray) => number[]`
+```ts
+detachPooledOutputBuffer(
+  pooledOutputBuffer: ActivationArray,
+): number[]
+```
 
 Clone pooled output storage into a detached plain array.
 
@@ -1077,7 +1456,11 @@ Returns: Detached output activation vector.
 
 ### executeNoTraceActivation
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[]`
+```ts
+executeNoTraceActivation(
+  activationContext: NoTraceActivationContext,
+): number[]
+```
 
 Execute no-trace activation with a fast-path attempt and deterministic fallback traversal.
 
@@ -1091,7 +1474,11 @@ Returns: Output activation vector detached from pooled storage.
 
 ### formatInputLengthForMessage
 
-`(inputVector: number[]) => string`
+```ts
+formatInputLengthForMessage(
+  inputVector: number[],
+): string
+```
 
 Convert input length into a display-safe string for error messaging.
 
@@ -1102,7 +1489,11 @@ Returns: Numeric length as string or predefined undefined text.
 
 ### isInputVectorLengthValid
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => boolean`
+```ts
+isInputVectorLengthValid(
+  activationContext: NoTraceActivationContext,
+): boolean
+```
 
 Check whether the input vector has a valid length for activation.
 
@@ -1113,7 +1504,11 @@ Returns: True when the input vector is an array with expected length.
 
 ### refreshTopologicalOrderWhenRequired
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => void`
+```ts
+refreshTopologicalOrderWhenRequired(
+  activationContext: NoTraceActivationContext,
+): void
+```
 
 Refresh cached topological order when acyclic mode is active and marked dirty.
 
@@ -1124,7 +1519,11 @@ Returns: Nothing.
 
 ### tryActivateWithFastSlab
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext) => number[] | null`
+```ts
+tryActivateWithFastSlab(
+  activationContext: NoTraceActivationContext,
+): number[] | null
+```
 
 Attempt fast slab activation and return null when slab execution is unavailable or fails.
 
@@ -1137,7 +1536,13 @@ Returns: Fast slab output when successful, otherwise null.
 
 ### createBatchActivationContext
 
-`(network: import("src/architecture/network").default, batchInputs: number[][], isTraining: boolean) => import("src/architecture/network/activate/network.activate.utils.types").BatchActivationContext`
+```ts
+createBatchActivationContext(
+  network: default,
+  batchInputs: number[][],
+  isTraining: boolean,
+): BatchActivationContext
+```
 
 Build shared batch activation context for helper orchestration.
 
@@ -1150,7 +1555,12 @@ Returns: Fully populated batch activation context.
 
 ### createNoTraceActivationContext
 
-`(network: import("src/architecture/network").default, inputVector: number[]) => import("src/architecture/network/activate/network.activate.utils.types").NoTraceActivationContext`
+```ts
+createNoTraceActivationContext(
+  network: default,
+  inputVector: number[],
+): NoTraceActivationContext
+```
 
 Build shared no-trace activation context for helper orchestration.
 
@@ -1162,7 +1572,14 @@ Returns: Fully populated no-trace activation context.
 
 ### createRawActivationContext
 
-`(network: import("src/architecture/network").default, inputVector: number[], isTraining: boolean, maximumActivationDepth: number) => import("src/architecture/network/activate/network.activate.utils.types").RawActivationContext`
+```ts
+createRawActivationContext(
+  network: default,
+  inputVector: number[],
+  isTraining: boolean,
+  maximumActivationDepth: number,
+): RawActivationContext
+```
 
 Build shared raw activation context for helper orchestration.
 
@@ -1176,7 +1593,11 @@ Returns: Fully populated raw activation context.
 
 ### toNetworkInternals
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").ActivateNetworkInternals`
+```ts
+toNetworkInternals(
+  network: default,
+): ActivateNetworkInternals
+```
 
 Convert a network instance into the activation internals interface used by helper modules.
 
@@ -1189,7 +1610,11 @@ Returns: Network internals view used by activation helper modules.
 
 ### activateHiddenNode
 
-`(networkNode: import("src/architecture/node").default) => void`
+```ts
+activateHiddenNode(
+  networkNode: default,
+): void
+```
 
 Activate a hidden node without trace bookkeeping.
 
@@ -1200,7 +1625,11 @@ Returns: Nothing.
 
 ### activateInputNode
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").SingleNodeNoTraceActivationContext) => void`
+```ts
+activateInputNode(
+  activationContext: SingleNodeNoTraceActivationContext,
+): void
+```
 
 Activate an input node using the matching input vector value.
 
@@ -1211,7 +1640,11 @@ Returns: Nothing.
 
 ### activateOutputNodeAndAdvanceIndex
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").SingleNodeNoTraceActivationContext) => number`
+```ts
+activateOutputNodeAndAdvanceIndex(
+  activationContext: SingleNodeNoTraceActivationContext,
+): number
+```
 
 Activate an output node, write the activation value, and advance the output index.
 
@@ -1222,7 +1655,11 @@ Returns: Next output write index.
 
 ### activateSingleNodeWithoutTrace
 
-`(activationContext: import("src/architecture/network/activate/network.activate.utils.types").SingleNodeNoTraceActivationContext) => number`
+```ts
+activateSingleNodeWithoutTrace(
+  activationContext: SingleNodeNoTraceActivationContext,
+): number
+```
 
 Activate one node and return the next output write index.
 
@@ -1233,7 +1670,11 @@ Returns: Updated output write index.
 
 ### isInputNode
 
-`(networkNode: import("src/architecture/node").default) => boolean`
+```ts
+isInputNode(
+  networkNode: default,
+): boolean
+```
 
 Determine whether a node is an input-role node.
 
@@ -1244,7 +1685,11 @@ Returns: True when node role is input.
 
 ### isOutputNode
 
-`(networkNode: import("src/architecture/node").default) => boolean`
+```ts
+isOutputNode(
+  networkNode: default,
+): boolean
+```
 
 Determine whether a node is an output-role node.
 
@@ -1255,7 +1700,11 @@ Returns: True when node role is output.
 
 ### populatePooledOutputBufferFromNodes
 
-`(traversalContext: import("src/architecture/network/activate/network.activate.utils.types").NoTraceNodeTraversalContext) => void`
+```ts
+populatePooledOutputBufferFromNodes(
+  traversalContext: NoTraceNodeTraversalContext,
+): void
+```
 
 Traverse nodes in activation order and write output activations into pooled storage.
 
