@@ -60,6 +60,55 @@ Decision rule:
 - If exact visual fidelity across GitHub, generated HTML docs, screenshots, or
   PDFs matters more than Markdown-native rendering, consider static export.
 
+## Support Tiers
+
+This repo currently ships Mermaid 11.13.0 in local docs tooling and validates
+diagrams through Mermaid CLI. That gives generated HTML docs broader coverage
+than GitHub README rendering, but it does not remove the need for conservative
+authoring.
+
+Use these tiers when choosing a diagram family:
+
+- Tier 1, README-safe defaults: `flowchart`, `sequenceDiagram`,
+  `classDiagram`, `stateDiagram-v2`, `erDiagram`, `journey`, `gantt`, `pie`,
+  `gitGraph`.
+- Tier 2, validate before shipping to README-heavy surfaces: `mindmap`,
+  `timeline`, `quadrantChart`, `xychart-beta`.
+- Tier 3, docs-first or emerging: `sankey`, `block`, `architecture-beta`,
+  `packet`, `kanban`, `radar`, `treemap`, `venn`, `requirementDiagram`, `C4`,
+  `zenuml`.
+
+Decision rule:
+
+- If Tier 1 can answer the teaching question, stay in Tier 1.
+- If Tier 2 or Tier 3 is clearly the right semantic match, validate it and make
+  sure the surrounding prose explains why a less common diagram was chosen.
+- If the diagram is mainly for generated HTML docs instead of GitHub README,
+  you can be more ambitious, but still prefer the lightest diagram that fits.
+
+## Fast Diagram Chooser
+
+Use this matrix when you know the question you want the diagram to answer but
+have not picked the family yet.
+
+| Question to answer | First choice | Strong fallback | Why |
+| --- | --- | --- | --- |
+| What are the main parts and boundaries? | `flowchart` | `architecture-beta` or `block` | Flowcharts are the most portable structural default. |
+| Who talks to whom, and in what order? | `sequenceDiagram` | `flowchart` | Ordering is the point, not topology. |
+| What types own what responsibilities? | `classDiagram` | `erDiagram` | Class diagrams fit API and service structure better than runtime views. |
+| What states or modes can this runtime enter? | `stateDiagram-v2` | `flowchart` | State machines deserve state syntax. |
+| What entities exist and how many relate? | `erDiagram` | `classDiagram` | Multiplicity is explicit in ER diagrams. |
+| What does a reader or operator experience over time? | `journey` | `timeline` | Journey diagrams capture narrative steps and friction. |
+| When did phases or milestones happen? | `timeline` | `gantt` | Timelines tell history; gantt charts tell scheduled work. |
+| What work overlaps and what depends on what? | `gantt` | `timeline` | Gantt is better for active plans and sequencing. |
+| How do options compare across two axes? | `quadrantChart` | Markdown table | Quadrants are ideal for prioritization and tradeoff framing. |
+| How does quantity change across time or categories? | `xychart-beta` | `pie` | XY charts are better for trends than prose tables. |
+| How is a whole split across a few categories? | `pie` | Markdown table | Pie is only useful for very small categorical splits. |
+| How do flows split or converge between stages? | `sankey` | `flowchart` | Sankey emphasizes weighted movement, not just routes. |
+| How did branches, releases, or migrations evolve? | `gitGraph` | `timeline` | GitGraph is ideal when branch semantics matter. |
+| How should ideas be clustered for learning? | `mindmap` | `flowchart` | Mindmaps are good for concept scaffolding and taxonomy. |
+| How should fixed lanes or layout be preserved? | `block` | `flowchart` | Block diagrams trade auto-layout for positional control. |
+
 ## Diagram Selection Matrix
 
 ### Use flowcharts for
@@ -143,6 +192,62 @@ Use class diagrams for structure, not for runtime flow.
 ### Use pie charts sparingly for
 
 - high-level proportional breakdowns with very few categories.
+
+### Use gitGraph for
+
+- branching strategies,
+- release trains,
+- migration cutovers,
+- backport or hotfix storytelling,
+- showing why sequence alone is not enough.
+
+### Use sankey for
+
+- weighted flow between stages,
+- traffic or event volume splits,
+- where data, requests, or energy leak away,
+- showing convergence and fan-out with magnitude.
+
+### Use block diagrams for
+
+- fixed-lane architecture,
+- layouts where exact placement matters,
+- teaching layered systems without flowchart auto-layout surprises,
+- small dashboards or board-like structural maps.
+
+### Use architecture diagrams for
+
+- service-and-resource maps,
+- deployment or cloud-shaped stories,
+- grouped systems with explicit ingress and storage components,
+- high-level environment boundaries.
+
+### Use requirement diagrams for
+
+- acceptance criteria traceability,
+- compliance or safety requirements,
+- showing what satisfies or verifies a requirement.
+
+### Use kanban for
+
+- live work-state boards,
+- documentation queues,
+- small operational backlogs where column state matters more than time.
+
+### Use radar, treemap, or venn sparingly for
+
+- radar: comparing a few options across several scored dimensions,
+- treemap: showing nested proportional space,
+- venn: overlap between a very small number of concept sets.
+
+These are not default README diagram choices. Use them only when the question is
+inherently shaped like the diagram.
+
+### Use packet, C4, and ZenUML only when the domain truly demands them
+
+- `packet` for packet structure or bit-level communication teaching,
+- `C4` for teams already using the C4 model,
+- `zenuml` for compact interaction narratives that benefit from its syntax.
 
 ### Use architecture, C4, sankey, radar, treemap, and other newer Mermaid types carefully
 
@@ -284,6 +389,9 @@ make the diagram easier to parse.
 
 Use sequence diagrams when order matters more than topology.
 
+Use `alt`, `opt`, `par`, `critical`, and `loop` when timing, branching, or
+parallel work is part of the lesson rather than background detail.
+
 Example:
 
 ```mermaid
@@ -303,6 +411,9 @@ sequenceDiagram
 ### State diagrams
 
 Use `stateDiagram-v2` for lifecycle explanation.
+
+Nested states are a good fit when the reader needs to understand both the outer
+mode and the inner step within that mode.
 
 Example:
 
@@ -330,6 +441,130 @@ erDiagram
     ROLLOUT ||--o{ SNAPSHOT : emits
 ```
 
+  ### Class diagrams
+
+  Use class diagrams when the teaching goal is ownership or API structure rather
+  than runtime sequencing.
+
+  Example:
+
+  ```mermaid
+  classDiagram
+    direction LR
+    class BrowserEntry {
+      +boot()
+      +renderHud()
+    }
+    class PlaybackStore {
+      +snapshots
+      +append(snapshot)
+      +reset()
+    }
+    class WorkerClient {
+      +requestEvaluation()
+    }
+    class SnapshotPacker {
+      +pack(generation) Packet
+    }
+
+    BrowserEntry --> WorkerClient : delegates to
+    BrowserEntry --> PlaybackStore : reads from
+    WorkerClient --> SnapshotPacker : requests
+    SnapshotPacker --> PlaybackStore : fills
+  ```
+
+  ### Journey diagrams
+
+  Use `journey` when the central question is what a reader, operator, or
+  contributor experiences across a staged path.
+
+  Example:
+
+  ```mermaid
+  journey
+    title First-time reader path through a module README
+    section Orientation
+      Learn the module purpose: 5: Reader
+      Find the owning boundary: 4: Reader
+    section Validation
+      Inspect the public API: 4: Reader
+      Run the example or docs build: 3: Reader, Maintainer
+    section Confidence
+      Trace the next file to read: 5: Reader
+  ```
+
+  ### Timeline diagrams
+
+  Use timelines for history, milestone sequencing, or concept evolution.
+
+  Example:
+
+  ```mermaid
+  timeline
+    title Docs surface evolution
+    section Discovery
+      README-first policy : Read folder README before source
+      Source mapping : Trace JSDoc to generated output
+    section Visuals
+      Mermaid guidance : Add the lightest useful diagram
+      Validation : Run Mermaid CLI before finalizing
+  ```
+
+  ### Gantt charts
+
+  Use `gantt` when the reader needs schedule overlap, dependencies, or active plan
+  state.
+
+  Example:
+
+  ```mermaid
+  gantt
+    title Documentation pass plan
+    dateFormat YYYY-MM-DD
+    axisFormat %m/%d
+    section Docs
+    Expand playbook :done, playbook, 2026-03-14, 1d
+    Validate recipes :active, validate, after playbook, 1d
+    Refresh generated docs :refresh, after validate, 1d
+  ```
+
+  ### Quadrant charts
+
+  Use `quadrantChart` for prioritization or two-axis tradeoff communication.
+
+  Example:
+
+  ```mermaid
+  quadrantChart
+    title Mermaid choice tradeoffs
+    x-axis Narrow reuse --> Broad reuse
+    y-axis Low teaching value --> High teaching value
+    quadrant-1 Strong default
+    quadrant-2 Specialist win
+    quadrant-3 Skip it
+    quadrant-4 Nice when needed
+    Flowchart: [0.92, 0.88]
+    Sequence: [0.78, 0.82]
+    Sankey: [0.45, 0.76]
+    Pie: [0.40, 0.38]
+  ```
+
+  ### Pie charts
+
+  Use pie charts only for small categorical splits with very few slices.
+
+  Example:
+
+  ```mermaid
+  pie showData
+    title Diagram family share in a docs set
+    "Flowchart" : 42
+    "Sequence" : 18
+    "State" : 12
+    "Charting" : 10
+    "Other" : 18
+  ```
+
 ### XY charts
 
 Use `xychart` for simple quantitative storytelling.
@@ -344,6 +579,98 @@ xychart-beta
     line [12, 28, 41, 63]
 ```
 
+### Git graphs
+
+Use `gitGraph` when branches, merges, releases, or backports are the lesson.
+
+Example:
+
+```mermaid
+gitGraph LR:
+    commit id: "README"
+    branch docs
+    checkout docs
+    commit id: "recipes"
+    commit id: "validation"
+    checkout main
+    merge docs tag: "docs-pass"
+    commit id: "publish"
+```
+
+### Mindmaps
+
+Use `mindmap` for concept clustering, orientation maps, or teaching taxonomies.
+
+Example:
+
+```mermaid
+mindmap
+  root((Mermaid in repo docs))
+    Stable defaults
+      Flowchart
+      Sequence
+      Class
+      State
+    Quantitative views
+      Quadrant
+      Pie
+      XY chart
+      Sankey
+    Structural maps
+      ER
+      Architecture
+      Block
+```
+
+### Sankey diagrams
+
+Use `sankey` when the weight of movement matters more than exact ordering.
+
+Example:
+
+```mermaid
+sankey
+
+Browser UI,Runtime host,12
+Runtime host,Worker evaluation,9
+Runtime host,Inline evaluation,3
+Worker evaluation,Playback snapshots,6
+Worker evaluation,Leaderboard update,3
+```
+
+### Block diagrams
+
+Use `block` when you need layout control more than algorithmic graph layout.
+
+Example:
+
+```mermaid
+block
+  columns 3
+  Reader space Guide space Output
+  Readme --> Guide
+  Guide --> Output
+  style Guide fill:#001522,stroke:#0fb5ff,stroke-width:2px,color:#9fdcff
+```
+
+### Architecture diagrams
+
+Use `architecture-beta` for grouped service and resource views.
+
+Example:
+
+```mermaid
+architecture-beta
+    group docs(cloud)[Docs Surface]
+
+    service readme(server)[README] in docs
+    service generator(server)[Docs Generator] in docs
+    service mermaid(database)[Mermaid CLI] in docs
+
+    readme:R -- L:generator
+    generator:R --> L:mermaid
+```
+
 ## Mermaid Caveats
 
 - The word `end` can break some Mermaid grammars if used carelessly in labels.
@@ -353,6 +680,13 @@ xychart-beta
   safe default for public documentation.
 - Some newer Mermaid diagram families are still evolving; prefer stable types
   first.
+- `journey`, `timeline`, `mindmap`, `sankey`, `block`, and
+  `architecture-beta` are excellent tools, but they should be validated instead
+  of assumed safe for every README renderer.
+- `sankey` is CSV-like, so commas and quotes inside labels need explicit CSV
+  escaping.
+- `block` gives you more placement control, but that also means you own more of
+  the layout decisions.
 - Large diagrams become unreadable quickly. Split them instead of cramming more
   detail into one canvas.
 
@@ -404,7 +738,9 @@ Be more conservative when the topic is:
 
 This playbook is informed by Mermaid's documentation and current syntax family,
 including flowcharts, sequence diagrams, class diagrams, state diagrams, ER
-models, and `xychart`.
+models, journeys, timelines, gantt charts, quadrant charts, git graphs,
+mindmaps, sankey diagrams, block diagrams, architecture diagrams, and
+`xychart`.
 
 Useful references:
 
@@ -414,4 +750,14 @@ Useful references:
 - Mermaid contributors, "Class diagrams," https://mermaid.js.org/syntax/classDiagram.html
 - Mermaid contributors, "State diagrams," https://mermaid.js.org/syntax/stateDiagram.html
 - Mermaid contributors, "Entity Relationship Diagrams," https://mermaid.js.org/syntax/entityRelationshipDiagram.html
+- Mermaid contributors, "User Journey," https://mermaid.js.org/syntax/userJourney.html
+- Mermaid contributors, "Timeline," https://mermaid.js.org/syntax/timeline.html
+- Mermaid contributors, "Gantt," https://mermaid.js.org/syntax/gantt.html
+- Mermaid contributors, "Pie Chart," https://mermaid.js.org/syntax/pie.html
+- Mermaid contributors, "Quadrant Chart," https://mermaid.js.org/syntax/quadrantChart.html
+- Mermaid contributors, "GitGraph," https://mermaid.js.org/syntax/gitgraph.html
+- Mermaid contributors, "Mindmap," https://mermaid.js.org/syntax/mindmap.html
+- Mermaid contributors, "Sankey," https://mermaid.js.org/syntax/sankey.html
+- Mermaid contributors, "Block Diagram," https://mermaid.js.org/syntax/block.html
+- Mermaid contributors, "Architecture Diagram," https://mermaid.js.org/syntax/architecture.html
 - Mermaid contributors, "XY Chart," https://mermaid.js.org/syntax/xyChart.html

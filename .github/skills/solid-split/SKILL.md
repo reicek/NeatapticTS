@@ -138,12 +138,27 @@ README-owning folders is visible in the todo list.
 The project prefers small, durable, orchestration-first refactors over large
 one-pass rewrites.
 
-- Keep stable public import paths working unless the user explicitly approves a
-  breaking change.
-- Reduce the old top-level file to a compatibility facade or public orchestration
-  surface when stable imports matter.
+- Default to direct path migration once a boundary is folderized.
+- Do not preserve the old flat path with placeholder, mirror, or compatibility
+  re-export files unless the user explicitly asks for them or there is a
+  verified external compatibility requirement.
+- When a split lands, update repo-local imports and tests to the new folder
+  path in the same step whenever it is safe to do so.
+- Delete the old flat file after direct imports are migrated and validations
+  pass.
+- Only keep a thin stable facade when it is the actual public orchestration
+  surface or when a verified compatibility need exists.
 - Move one responsibility cluster at a time into focused helpers or subfolders.
 - Prefer folder-based boundaries when a file has become a real subsystem.
+- Prefer small-chapter folder trees that keep generated README files scoped,
+  navigable, and educational rather than accumulating large mixed-topic folder
+  READMEs.
+- Use responsibility chapters as the default split shape for any overloaded
+  boundary in the project, whether it lives in library code, tests, examples,
+  scripts, browser tooling, or documentation generators. A boundary can expose
+  a small root orchestration file plus focused folders such as `shared/`,
+  `history/`, `assignment/`, `threshold/`, `playback/`, `rendering/`,
+  `serialization/`, `workers/`, or `facade/` when those seams are real.
 - Keep top-level flows declarative: collect, transform, fold, return.
 - Use descriptive names and ES2023-first style where the touched code benefits.
 
@@ -168,9 +183,14 @@ API, default, or runtime contract.
   README or folder documentation item at a time.
 9. Execute only one durable step unless the user explicitly asks for more.
 10. Improve JSDoc on touched exported and public surfaces so generated README
-   output remains educational, example-driven, and conceptually clear.
-11. Update the plan immediately after the step completes.
-12. Immediately run `educational-docs` as the next step on the touched
+  output remains educational, example-driven, and conceptually clear.
+11. After moving a boundary into a real folder, update repo-local imports and
+  tests to use the new folder path directly unless the task packet explicitly
+  requires compatibility files.
+12. Delete obsolete flat or mirror files from the old location once direct
+  imports are in place and validations pass.
+13. Update the plan immediately after the step completes.
+14. Immediately run `educational-docs` as the next step on the touched
   surface.
   - This is mandatory even when the user invokes `solid-split` directly.
   - Pass the changed boundary, the intended reader, whether the surface is
@@ -178,10 +198,68 @@ API, default, or runtime contract.
     shaping, source mapping, Mermaid, citations, or media constraints.
   - Treat this as a focused follow-up pass on the exact split changes, not as
     permission to start a broad unrelated docs rewrite.
-13. Run the minimum validation needed for touched files, documentation output,
+15. Run the minimum validation needed for touched files, documentation output,
   and the step's done criteria.
-14. End with a next-session handoff prompt that can continue from the next step
+16. End with a next-session handoff prompt that can continue from the next step
   without depending on prior chat history.
+
+## Small-Chapter Standard
+
+For all SOLID split work in this repository, the project standard is now the
+small-chapter split pattern.
+
+- Treat dotted names and clear responsibility seams as real folder boundaries,
+  not just filename decoration.
+- Keep each folder README focused on one concept cluster whenever practical.
+- Prefer a small root README that explains the boundary and points to chapter
+  folders instead of repeating the full implementation narrative in one place.
+- If a boundary still produces an oversized generated README after the first
+  split, continue splitting into narrower chapter folders instead of accepting
+  a large mixed-topic folder.
+- Favor chapter names that explain responsibility, not implementation trivia.
+- A good split outcome is one where a new reader can discover the boundary by
+  drilling down through a few concise README pages rather than one monolithic
+  README.
+- Apply this standard everywhere the split skill is used: `src/`, `test/`,
+  `test/examples/`, `scripts/`, browser/demo surfaces, tooling folders, and any
+  other project area that has become too broad for one file or one folder README.
+- Do not treat examples, scripts, or support tooling as exceptions. If they are
+  large enough to need a SOLID split, they should follow the same direct-path,
+  no-shim, small-chapter standard.
+
+Recommended shape for an overloaded boundary:
+
+- `boundary/boundary.ts` for orchestration and public exports.
+- `boundary/shared/` for shared constants, vocabulary, and context types.
+- Additional chapter folders only when they represent a real seam.
+
+This standard overrides older habits of leaving broad root READMEs or keeping
+flat compatibility wrappers after folderization, regardless of which part of
+the repo is being split.
+
+## Handoff Prompt Standard
+
+Every completed split step must end with a handoff prompt that is ready to use
+in a fresh chat with this skill attached.
+
+The handoff prompt must:
+
+- name the split root,
+- name the current boundary just completed,
+- state the next logical boundary,
+- mention the relevant plan file when one exists,
+- state that the repo standard is direct-path migration with no compatibility
+  shims by default,
+- state that the repo standard is the small-chapter README pattern,
+- state that this standard applies to any project area, not just library code,
+- summarize the validations already completed for the finished step,
+- instruct the next session to continue without relying on prior chat history.
+
+Preferred ending sentence:
+
+```text
+Continue from the current repo state only. Do not rely on prior chat history.
+```
 
 ## Companion Agent Contract
 
@@ -297,8 +375,10 @@ This mode exists so large splits remain resumable, reviewable, and low-risk.
 - Do not revert unrelated user or generated changes.
 - Do not complete multiple durable plan steps in one invocation unless the user
   explicitly asks.
-- Do not break stable import paths when a facade or compatibility shim is
-  appropriate.
+- Do not keep compatibility shims or mirror re-export files by habit; require a
+  specific compatibility reason before leaving them behind.
+- Do not break stable import paths when a real public compatibility boundary is
+  required.
 - Do not leave a plan stale after reshaping a step.
 - Do not skip the `educational-docs` follow-up pass after a completed split
   step unless the user explicitly overrides that policy.

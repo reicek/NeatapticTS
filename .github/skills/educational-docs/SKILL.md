@@ -406,6 +406,23 @@ Good defaults:
 - `xychart-beta` for simple metrics and trend views,
 - Markdown tables when a table is clearer than a diagram.
 
+Fast recipe index:
+
+- boundaries and subsystem maps: `flowchart`, with `architecture-beta` or
+  `block` when grouping or lane control matters more,
+- ordered handoffs and protocol timing: `sequenceDiagram`,
+- ownership and API structure: `classDiagram`,
+- lifecycle and runtime modes: `stateDiagram-v2`,
+- multiplicity and entity relationships: `erDiagram`,
+- reader or operator path: `journey`,
+- history or milestones: `timeline`,
+- active work plan and dependencies: `gantt`,
+- two-axis prioritization: `quadrantChart`,
+- proportional or trend views: `pie`, `xychart-beta`, or `sankey` depending on
+  whether the story is share, trend, or weighted flow,
+- branching, releases, and migrations: `gitGraph`,
+- concept clustering or teaching taxonomy: `mindmap`.
+
 Use Mermaid because it helps documentation resist diagram rot: the diagrams stay
 textual, reviewable, and close to the code they explain.
 
