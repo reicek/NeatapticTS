@@ -9,7 +9,7 @@
 	<a href="https://github.com/reicek/NeatapticTS/actions/workflows/deploy-pages.yml"><img src="https://github.com/reicek/NeatapticTS/actions/workflows/deploy-pages.yml/badge.svg?branch=develop" alt="Docs deploy status"/></a>
 </div>
 
-<img src="nn.jpg" width="600"/>
+<img src="nn.jpg" width="784"/>
 
 > A modern TypeScript NEAT library built to be read, tested, and extended.
 
@@ -34,7 +34,6 @@ If you want a library you can inspect, modify, and learn from while still runnin
 
 | Goal | Best place to start |
 | --- | --- |
-| Understand the library at a high level | [docs/index.html](./docs/index.html) |
 | Read the architecture from the source side | [src/README.md](./src/README.md) |
 | Study the strongest end-to-end example | [test/examples/flappy_bird/README.md](./test/examples/flappy_bird/README.md) |
 | Study curriculum learning and reward shaping | [test/examples/asciiMaze/README.md](./test/examples/asciiMaze/README.md) |
