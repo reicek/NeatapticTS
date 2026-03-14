@@ -1,4 +1,4 @@
-import { _speciate } from '../../src/neat/neat.speciation';
+import { _speciate } from '../../src/neat/speciation/speciation';
 import type {
   ConnectionLike,
   GenomeDetailed,

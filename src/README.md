@@ -435,7 +435,7 @@ ensureNoDeadEnds(
 ): void
 ```
 
-Delegate ensureNoDeadEnds to mutation module (added for backward compat).
+Repair dead-end connectivity through the focused maintenance facade.
 
 #### evaluate
 
@@ -2179,7 +2179,7 @@ ensureNoDeadEnds(
 ): void
 ```
 
-Delegate ensureNoDeadEnds to mutation module (added for backward compat).
+Repair dead-end connectivity through the focused maintenance facade.
 
 #### error
 

@@ -1,5 +1,5 @@
 import Neat from '../../src/neat';
-import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
+import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 import { createTelemetryEntryBase } from '../../src/neat/neat.telemetry';
 import type { TelemetryEntry } from '../../src/neat/neat.types';
 
@@ -36,7 +36,7 @@ describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {
         },
       });
       const { applyAncestorUniqAdaptive } =
-        await import('../../src/neat/neat.adaptive');
+        await import('../../src/neat/adaptive/adaptive');
       applyAncestorUniqAdaptive.call(neat as unknown as NeatLikeWithAdaptive);
       const strength = neat.options.lineagePressure.strength;
       // Assert: strength above default baseline 0.01
@@ -74,7 +74,7 @@ describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {
         },
       });
       const { applyAncestorUniqAdaptive } =
-        await import('../../src/neat/neat.adaptive');
+        await import('../../src/neat/adaptive/adaptive');
       applyAncestorUniqAdaptive.call(neat as unknown as NeatLikeWithAdaptive);
       const strength = neat.options.lineagePressure.strength;
       // Assert: strength not increased above starting 0.01 (may reduce or stay ~0.01)

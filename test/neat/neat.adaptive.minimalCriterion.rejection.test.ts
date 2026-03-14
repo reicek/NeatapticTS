@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
-import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
+import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 import Network from '../../src/architecture/network';
-import { applyMinimalCriterionAdaptive } from '../../src/neat/neat.adaptive';
+import { applyMinimalCriterionAdaptive } from '../../src/neat/adaptive/adaptive';
 
 /** Tests for adaptive minimal criterion threshold adjustment & rejection. */
 describe('Adaptive Minimal Criterion', () => {

@@ -311,207 +311,42 @@ Minimal telemetry selection context shape.
 
 Minimal telemetry stream options for streaming helpers.
 
-## neat/neat.rng.ts
+## neat/neat.init.ts
 
-### exportRngState
-
-```ts
-exportRngState(
-  host: RngHost,
-): number | undefined
-```
-
-Export the current RNG state for persistence.
-
-Parameters:
-- `host` - - Object holding RNG state.
-
-Returns: The numeric RNG state or undefined when not set.
-
-### getOrCreateRng
+### initializeNeatConstructor
 
 ```ts
-getOrCreateRng(
-  host: RngHost,
-): () => number
-```
-
-Return a cached RNG or create a deterministic xorshift RNG when absent.
-
-The helper respects a user-provided RNG at `options.rng` when present.
-Otherwise it seeds a xorshift32 RNG using the current time and population
-size, guarding against the invalid zero seed.
-
-Parameters:
-- `host` - - Object holding RNG state and configuration.
-
-Returns: A function that yields a uniform random value in [0, 1).
-
-### importRngState
-
-```ts
-importRngState(
-  host: RngHost,
-  state: string | number | undefined,
+initializeNeatConstructor(
+  host: NeatInitializationHost,
+  request: InitializeNeatConstructorRequest,
 ): void
 ```
 
-Alias for restoring RNG state kept for compatibility with prior surface.
+Apply the legacy constructor bootstrap sequence behind the public `Neat`
+facade.
 
-### restoreRngState
-
-```ts
-restoreRngState(
-  host: RngHost,
-  state: string | number | undefined,
-): void
-```
-
-Restore a previously captured RNG state.
+This helper exists to keep [src/neat.ts](src/neat.ts) focused on the public
+class surface while preserving the exact startup order that current tests and
+migrated helpers rely on: mutate the caller-supplied options bag in place,
+initialize controller state, optionally create the starting population, then
+enable lineage tracking and bind the RNG accessor.
 
 Parameters:
-- `host` - - Object holding RNG state.
-- `state` - - Numeric RNG state to restore.
+- `host` - - `Neat` instance receiving constructor-time side effects.
+- `request` - - Mutable options bag, raw constructor options, and public
+default values exported by the facade.
 
-### RNG_DEFAULT_SEED_FALLBACK
-
-Fallback seed used when the derived seed would be zero (xorshift cannot use 0).
-
-### RNG_NORMALIZATION_DIVISOR
-
-Divisor used to normalize the 32-bit integer state into [0, 1).
-
-### RNG_POPULATION_OFFSET
-
-Minimum population offset added before scrambling to avoid zero seeds.
-
-### RNG_SHIFT_LEFT_PRIMARY
-
-Bit-shift values for the xorshift32 variant.
-
-### RNG_SHIFT_LEFT_SECONDARY
-
-### RNG_SHIFT_RIGHT_PRIMARY
-
-### RNG_TIME_SCRAMBLE_CONSTANT
-
-Constants used by the deterministic xorshift RNG helper.
-
-### RngHost
-
-Minimal host surface required by the RNG utilities.
-
-### sampleRandomSequence
-
-```ts
-sampleRandomSequence(
-  host: RngHost,
-  sampleCount: number,
-): number[]
-```
-
-Produce a sequence of random samples using the host RNG.
-
-Parameters:
-- `host` - - Object holding RNG state.
-- `sampleCount` - - Number of samples to generate.
-
-Returns: Array of random samples in [0, 1).
-
-### snapshotRngState
-
-```ts
-snapshotRngState(
-  host: RngHost,
-): number | undefined
-```
-
-Snapshot the current RNG state for deterministic replay.
-
-Parameters:
-- `host` - - Object holding RNG state.
-
-Returns: The numeric RNG state or undefined when uninitialized.
-
-## neat/neat.cache.ts
-
-### invalidateGenomeCaches
-
-```ts
-invalidateGenomeCaches(
-  genomeCandidate: unknown,
-): void
-```
-
-Invalidate per-genome caches used across compatibility and forward-pass logic.
-
-Parameters:
-- `genomeCandidate` - - Genome object whose caches should be cleared.
-
-## neat/neat.compat.ts
-
-### _compatibilityDistance
-
-```ts
-_compatibilityDistance(
-  genomeA: GenomeLike,
-  genomeB: GenomeLike,
-): number
-```
-
-Compute the NEAT compatibility distance between two genomes (networks).
-
-The compatibility distance is used for speciation in NEAT. It combines the
-number of excess and disjoint genes with the average weight difference of
-matching genes. A generation-scoped cache is used to avoid recomputing the
-same pair distances repeatedly within a generation.
-
-Formula:
-distance = (c1 * excess + c2 * disjoint) / N + c3 * avgWeightDiff
-where N = max(number of genes in genomeA, number of genes in genomeB)
-and c1,c2,c3 are coefficients provided in `this.options`.
+Returns: Nothing. The helper mutates `host` and `request.optionBag` in place.
 
 Example:
-const d = _compatibilityDistance.call(neatInstance, genomeA, genomeB);
-if (d < neatInstance.options.compatibilityThreshold) { // same species }
-
-Parameters:
-- `this` - - The NEAT instance / context which holds generation, options, and caches.
-- `genomeA` - - First genome (network) to compare. Expected to expose `_id` and `connections`.
-- `genomeB` - - Second genome (network) to compare. Expected to expose `_id` and `connections`.
-
-Returns: A numeric compatibility distance; lower means more similar.
-
-### _fallbackInnov
 
 ```ts
-_fallbackInnov(
-  connection: ConnectionLike,
-): number
+initializeNeatConstructor(this, {
+  optionBag: this.options,
+  rawOptions: options,
+  defaults: publicDefaults,
+});
 ```
-
-Generate a deterministic fallback innovation id for a connection when the
-connection does not provide an explicit innovation number.
-
-This function encodes the (from.index, to.index) pair into a single number
-by multiplying the `from` index by a large base and adding the `to` index.
-The large base reduces collisions between different pairs and keeps the id
-stable and deterministic across runs. It is intended as a fallback only —
-explicit innovation numbers (when present) should be preferred.
-
-Example:
-const conn = { from: { index: 2 }, to: { index: 5 } };
-const id = _fallbackInnov.call(neatContext, conn); // 200005
-
-Notes:
-- Not globally guaranteed unique, but deterministic for the same indices.
-- Useful during compatibility checks when some connections are missing innovation ids.
-
-Parameters:
-- `this` - - The NEAT instance / context (kept for symmetry with other helpers).
-- `connection` - - Connection object expected to contain `from.index` and `to.index`.
-
-Returns: A numeric innovation id derived from the (from, to) index pair.
 
 ## neat/neat.evolve.ts
 
@@ -1010,496 +845,6 @@ const child = neat.spawnFromParent(parent, 3); // apply 3 mutation passes
 neat.addGenome(child, [parent._id]);
 ```
 
-## neat/neat.lineage.ts
-
-Lineage / ancestry analysis helpers for NEAT populations.
-
-These utilities were migrated from the historical implementation inside `src/neat.ts`
-to keep core NEAT logic lean while still exposing educational metrics for users who
-want to introspect evolutionary diversity.
-
-Glossary:
- - Genome: An individual network encoding (has a unique `_id` and optional `_parents`).
- - Ancestor Window: A shallow breadth‑first window (default depth = 4) over the lineage graph.
- - Jaccard Distance: 1 - |A ∩ B| / |A ∪ B|, measuring dissimilarity between two sets.
-
-### buildAnc
-
-```ts
-buildAnc(
-  genome: GenomeLike,
-): Set<number>
-```
-
-Build the (shallow) ancestor ID set for a single genome using breadth‑first traversal.
-
-Traversal Strategy:
-1. Seed queue with the genome's parent IDs (depth = 1).
-2. Repeatedly dequeue, record its ID, and enqueue its parents with incremented depth.
-3. Stop exploring a branch once the configured depth window is exceeded.
-
-This bounded BFS gives a quick, memory‑friendly approximation of a genome's lineage neighborhood
-that works well for diversity/uniqueness metrics without the expense of full historical graphs.
-
-Edge Cases:
- - Missing or empty `_parents` array ⇒ returns an empty set.
- - Orphan parent IDs (not found in population) are still added (their ID), but no further expansion occurs.
-
-Complexity (worst case): O(B^D) where B is average branching factor of parent links (usually <= 2)
-and D = ANCESTOR_DEPTH_WINDOW (default 4) – so effectively constant for typical NEAT usage.
-
-Parameters:
-- `this` - NEAT / evolutionary context; must provide `population` (array) for ID lookups.
-- `genome` - Genome whose shallow ancestor set you want to compute.
-
-Returns: A Set of numeric ancestor IDs (deduplicated).
-
-Example:
-
-// Assuming `neat` is your NEAT instance and `g` a genome inside `neat.population`:
-import { buildAnc } from 'neataptic';
-const ancestorIds = buildAnc.call(neat, g);
-console.log([...ancestorIds]); // -> e.g. [12, 4, 9]
-
-### computeAncestorUniqueness
-
-```ts
-computeAncestorUniqueness(): number
-```
-
-Compute an "ancestor uniqueness" diversity metric for the current population.
-
-The metric = mean Jaccard distance between shallow ancestor sets of randomly sampled genome pairs.
-A higher value indicates that individuals trace back to more distinct recent lineages (i.e. less
-overlap in their ancestor windows), while a lower value indicates convergence toward similar ancestry.
-
-Why Jaccard Distance? It is scale‑independent: adding unrelated ancestors to both sets simultaneously
-does not change the proportion of shared ancestry, and distance stays within [0,1].
-
-Sampling Strategy:
- - Uniformly sample up to N = min(30, populationPairs) distinct unordered pairs (with replacement on pair selection, but indices are adjusted to avoid self‑pairs).
- - For each pair, construct ancestor sets via `buildAnc` and accumulate their Jaccard distance.
- - Return the average (rounded to 3 decimal places) or 0 if insufficient samples.
-
-Edge Cases:
- - Population < 2 ⇒ returns 0 (cannot form pairs).
- - Both ancestor sets empty ⇒ pair skipped (no information about uniqueness).
-
-Performance: O(S * W) where S is sampled pair count (≤ 30) and W is bounded ancestor set size
-(kept small by the depth window). This is intentionally lightweight for per‑generation telemetry.
-
-Parameters:
-- `this` - NEAT context (`population` and `_getRNG` must exist).
-
-Returns: Mean Jaccard distance in [0,1]. Higher ⇒ more lineage uniqueness / diversity.
-
-Example:
-
-import { computeAncestorUniqueness } from 'neataptic';
-// inside an evolutionary loop, with `neat` as your NEAT instance:
-const uniqueness = computeAncestorUniqueness.call(neat);
-console.log('Ancestor uniqueness:', uniqueness); // e.g. 0.742
-
-### GenomeLike
-
-Minimal shape assumed for a genome inside the NEAT population. Additional properties are
-intentionally left open (index signature) because user implementations may extend genomes.
-
-### NeatLineageContext
-
-Expected `this` context for lineage helpers (a subset of the NEAT instance).
-
-## neat/neat.pruning.ts
-
-### applyAdaptivePruning
-
-```ts
-applyAdaptivePruning(): void
-```
-
-Adaptive pruning controller.
-
-This function monitors a population-level metric (average nodes or
-average connections) and adjusts a global pruning level so the
-population converges to a target sparsity automatically.
-
-It updates `this._adaptivePruneLevel` on the Neat instance and calls
-each genome's `pruneToSparsity` with the new level when adjustment
-is required.
-
-Example:
-
-```ts
-// options.adaptivePruning = { enabled: true, metric: 'connections', targetSparsity: 0.6 }
-neat.applyAdaptivePruning();
-```
-
-### applyEvolutionPruning
-
-```ts
-applyEvolutionPruning(): void
-```
-
-Apply evolution-time pruning to the current population.
-
-This method is intended to be called from the evolve loop. It reads
-pruning parameters from `this.options.evolutionPruning` and, when
-appropriate for the current generation, instructs each genome to
-prune its connections/nodes to reach a target sparsity.
-
-The pruning target can be ramped in over a number of generations so
-sparsification happens gradually instead of abruptly.
-
-Example (in a Neat instance):
-```ts
-// options.evolutionPruning = { startGeneration: 10, targetSparsity: 0.5 }
-neat.applyEvolutionPruning();
-```
-
-Notes for docs:
-- `method` is passed through to each genome's `pruneToSparsity` and
-  commonly is `'magnitude'` (prune smallest-weight connections first).
-- This function performs no changes if pruning options are not set or
-  the generation is before `startGeneration`.
-
-## neat/neat.species.ts
-
-### getSpeciesHistory
-
-```ts
-getSpeciesHistory(): SpeciesHistoryEntry[]
-```
-
-Retrieve the recorded species history across generations.
-
-Each entry in the returned array corresponds to a recorded generation and
-contains a snapshot of statistics for every species at that generation.
-This is useful for plotting species sizes over time, tracking innovation
-spread, or implementing population-level diagnostics.
-
-The shape of each entry is defined by `SpeciesHistoryEntry` in the public
-types. When `options.speciesAllocation.extendedHistory` is enabled the
-library attempts to include additional metrics such as `innovationRange`
-and `enabledRatio`. When those extended metrics are missing they are
-computed lazily from a representative genome to ensure historical data is
-still useful for analysis.
-
-Example:
-
-```ts
-const history = neat.getSpeciesHistory();
-// history => [{ generation: 0, stats: [{ id:1, size:10, innovationRange:5, enabledRatio:0.9 }, ...] }, ...]
-```
-
-Notes for documentation:
-- The function tries to avoid heavy computation. Extended metrics are
-  computed only when explicitly requested via options.
-- Computed extended metrics are conservative fallbacks; they use the
-  available member connections and a fallback innovation extractor when
-  connection innovation IDs are not present.
-
-Returns: Array of generation-stamped species statistic snapshots.
-
-### getSpeciesStats
-
-```ts
-getSpeciesStats(): { id: number; size: number; bestScore: number; lastImproved: number; }[]
-```
-
-Get lightweight per-species statistics for the current population.
-
-This method intentionally returns a small, immutable-friendly summary per
-species rather than exposing internal member lists. This avoids accidental
-mutation of the library's internal state while still providing useful
-telemetry for UIs, dashboards, or logging.
-
-Example:
-
-```ts
-const stats = neat.getSpeciesStats();
-// stats => [{ id: 1, size: 12, bestScore: 0.85, lastImproved: 42 }, ...]
-```
-
-Success criteria:
-- Returns an array of objects each containing `id`, `size`, `bestScore`,
-  and `lastImproved`.
-- Does not expose or return references to internal member arrays.
-
-Returns: Array of per-species summaries suitable for reporting.
-
-## neat/neat.adaptive.ts
-
-### ANNEAL_BASELINE_GENERATIONS
-
-Baseline generations for annealing progress.
-
-### ANNEAL_PROGRESS_MAX
-
-Maximum progress ratio used in annealing.
-
-### applyAdaptiveMutation
-
-```ts
-applyAdaptiveMutation(): void
-```
-
-Self-adaptive per-genome mutation tuning.
-
-This function implements several strategies to adjust each genome's
-internal mutation rate (`g._mutRate`) and optionally its mutation
-amount (`g._mutAmount`) over time. Strategies include:
-- `twoTier`: push top and bottom halves in opposite directions to
-  create exploration/exploitation balance.
-- `exploreLow`: preferentially increase mutation for lower-scoring
-  genomes to promote exploration.
-- `anneal`: gradually reduce mutation deltas over time.
-
-The method reads `this.options.adaptiveMutation` for configuration
-and mutates genomes in-place.
-
-Example:
-
-// configuration example:
-// options.adaptiveMutation = { enabled: true, initialRate: 0.5, adaptEvery: 1, strategy: 'twoTier', minRate: 0.01, maxRate: 1 }
-engine.applyAdaptiveMutation();
-
-### applyAncestorUniqAdaptive
-
-```ts
-applyAncestorUniqAdaptive(): void
-```
-
-Adaptive adjustments based on ancestor uniqueness telemetry.
-
-This helper inspects the most recent telemetry lineage block (if
-available) for an `ancestorUniq` metric indicating how unique
-ancestry is across the population. If ancestry uniqueness drifts
-outside configured thresholds, the method will adjust either the
-multi-objective dominance epsilon (if `mode === 'epsilon'`) or the
-lineage pressure strength (if `mode === 'lineagePressure'`).
-
-Typical usage: keep population lineage diversity within a healthy
-band. Low ancestor uniqueness means too many genomes share ancestors
-(risking premature convergence); high uniqueness might indicate
-excessive divergence.
-
-Example:
-
-// Adjusts `options.multiObjective.dominanceEpsilon` when configured
-engine.applyAncestorUniqAdaptive();
-
-### applyComplexityBudget
-
-```ts
-applyComplexityBudget(): void
-```
-
-Apply complexity budget scheduling to the evolving population.
-
-This routine updates `this.options.maxNodes` (and optionally
-`this.options.maxConns`) according to a configured complexity budget
-strategy. Two modes are supported:
-
-- `adaptive`: reacts to recent population improvement (or stagnation)
-  by increasing or decreasing the current complexity cap using
-  heuristics such as slope (linear trend) of recent best scores,
-  novelty, and configured increase/stagnation factors.
-- `linear` (default behaviour when not `adaptive`): linearly ramps
-  the budget from `maxNodesStart` to `maxNodesEnd` over a horizon.
-
-Internal state used/maintained on the `this` object:
-- `_cbHistory`: rolling window of best scores used to compute trends.
-- `_cbMaxNodes`: current complexity budget for nodes.
-- `_cbMaxConns`: current complexity budget for connections (optional).
-
-The method is intended to be called on the NEAT engine instance with
-`this` bound appropriately (i.e. a NeatapticTS `Neat`-like object).
-
-Returns: Updates `this.options.maxNodes` and possibly
-`this.options.maxConns` in-place; no value is returned.
-
-Example:
-
-// inside a training loop where `engine` is your Neat instance:
-engine.applyComplexityBudget();
-// engine.options.maxNodes now holds the adjusted complexity cap
-
-### applyMinimalCriterionAdaptive
-
-```ts
-applyMinimalCriterionAdaptive(): void
-```
-
-Apply adaptive minimal criterion (MC) acceptance.
-
-This method maintains an MC threshold used to decide whether an
-individual genome is considered acceptable. It adapts the threshold
-based on the proportion of the population that meets the current
-threshold, trying to converge to a target acceptance rate.
-
-Behavior summary:
-- Initializes `_mcThreshold` from configuration if undefined.
-- Computes the proportion of genomes with score >= threshold.
-- Adjusts threshold multiplicatively by `adjustRate` to move the
-  observed proportion towards `targetAcceptance`.
-- Sets `g.score = 0` for genomes that fall below the final threshold
-  — effectively rejecting them from selection.
-
-Example:
-
-// Example config snippet used by the engine
-// options.minimalCriterionAdaptive = { enabled: true, initialThreshold: 0.1, targetAcceptance: 0.5, adjustRate: 0.1 }
-engine.applyMinimalCriterionAdaptive();
-
-### applyOperatorAdaptation
-
-```ts
-applyOperatorAdaptation(): void
-```
-
-Decay operator adaptation statistics (success/attempt counters).
-
-Many adaptive operator-selection schemes keep running tallies of how
-successful each operator has been. This helper applies an exponential
-moving-average style decay to those counters so older outcomes
-progressively matter less.
-
-The `_operatorStats` map on `this` is expected to contain values of
-the shape `{ success: number, attempts: number }` keyed by operator
-id/name.
-
-Example:
-
-engine.applyOperatorAdaptation();
-
-### applyPhasedComplexity
-
-```ts
-applyPhasedComplexity(): void
-```
-
-Toggle phased complexity mode between 'complexify' and 'simplify'.
-
-Phased complexity supports alternating periods where the algorithm
-is encouraged to grow (complexify) or shrink (simplify) network
-structures. This can help escape local minima or reduce bloat.
-
-The current phase and its start generation are stored on `this` as
-`_phase` and `_phaseStartGeneration` so the state persists across
-generations.
-
-Returns: Mutates `this._phase` and `this._phaseStartGeneration`.
-
-Example:
-
-// Called once per generation to update the phase state
-engine.applyPhasedComplexity();
-
-### DEFAULT_ADAPT_EVERY
-
-Default adapt-every cadence for adaptive mutation.
-
-### DEFAULT_ANCESTOR_UNIQ_ADJUST
-
-Default adjustment magnitude for uniqueness nudges.
-
-### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
-
-Default cooldown (generations) for ancestor-uniqueness adjustments.
-
-### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
-
-Default upper bound for acceptable ancestor uniqueness.
-
-### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
-
-Default lower bound for acceptable ancestor uniqueness.
-
-### DEFAULT_INITIAL_MUTATION_RATE
-
-Default initial mutation rate used for balance checks.
-
-### DEFAULT_LINEAGE_PRESSURE_STRENGTH
-
-Default lineage pressure strength when initializing the option.
-
-### DEFAULT_MAX_MUTATION_AMOUNT
-
-Default maximum mutation amount.
-
-### DEFAULT_MAX_MUTATION_RATE
-
-Default maximum per-genome mutation rate.
-
-### DEFAULT_MIN_MUTATION_AMOUNT
-
-Default minimum mutation amount.
-
-### DEFAULT_MIN_MUTATION_RATE
-
-Default minimum per-genome mutation rate.
-
-### DEFAULT_MUTATION_AMOUNT
-
-Default mutation amount when genome value is missing.
-
-### DEFAULT_MUTATION_AMOUNT_SIGMA
-
-Default mutation amount sigma for perturbations.
-
-### DEFAULT_MUTATION_SIGMA
-
-Default mutation sigma for adaptive mutation.
-
-### EXPLORE_LOW_DECREASE_MULTIPLIER
-
-Multiplicative decay for explore-low strategy (top half).
-
-### EXPLORE_LOW_INCREASE_MULTIPLIER
-
-Multiplicative boost for explore-low strategy (bottom half).
-
-### HALF_INDEX_DIVISOR
-
-Divisor used to split populations in half.
-
-### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
-
-Multiplier when decreasing lineage pressure strength.
-
-### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
-
-Multiplier when increasing lineage pressure strength.
-
-### MUTATION_SIGMA_SCALE
-
-Scale applied to mutation sigma for perturbations.
-
-### MUTATION_STRATEGY_ANNEAL
-
-Strategy identifier for annealed mutation.
-
-### MUTATION_STRATEGY_EXPLORE_LOW
-
-Strategy identifier for explore-low mutation.
-
-### MUTATION_STRATEGY_TWO_TIER
-
-Strategy identifier for two-tier mutation.
-
-### NeatLikeWithAdaptive
-
-Minimal interface for NEAT instances with adaptive features.
-Exported for use in tests and type-safe function calls.
-
-### RNG_CENTER_OFFSET
-
-Random offset for signed deltas.
-
-### RNG_SPREAD_MULTIPLIER
-
-Random range multiplier for signed deltas.
-
 ## neat/neat.evaluate.ts
 
 ### AUTO_COEFF_ADJUST_DEFAULT
@@ -1781,205 +1126,6 @@ Epsilon used in normalization layers (variance smoothing).
 
 Extremely small epsilon for log/ratio protections in probability losses.
 
-## neat/neat.diversity.ts
-
-### computeDiversityStats
-
-```ts
-computeDiversityStats(
-  population: GenomeWithMetrics[],
-  compatibilityComputer: CompatComputer,
-): DiversityStats | undefined
-```
-
-Compute diversity statistics for a NEAT population.
-This is a pure helper used by reporting and diagnostics. It intentionally
-samples pairwise computations to keep cost bounded for large populations.
-
-Notes for documentation:
-- Lineage metrics rely on genomes exposing a numeric `_depth` property.
-- Compatibility distances are computed via the provided compatComputer
-  which mirrors legacy code and may use historical marker logic.
-
-Parameters:
-- `population` - - array of genome-like objects (nodes, connections, optional _depth)
-- `compatibilityComputer` - - object exposing _compatibilityDistance(a,b)
-
-Returns: DiversityStats object with all computed aggregates, or undefined if input empty
-
-Example:
-
-const stats = computeDiversityStats(population, compatImpl);
-console.log(`Mean nodes: ${stats?.meanNodes}`);
-
-### DiversityStats
-
-Diversity statistics returned by computeDiversityStats.
-Each field represents an aggregate metric for a NEAT population.
-
-### MAX_COMPATIBILITY_SAMPLE
-
-Maximum population sample size for compatibility comparisons.
-
-### MAX_LINEAGE_PAIR_SAMPLE
-
-Maximum lineage sample size for pairwise depth comparisons.
-
-### structuralEntropy
-
-```ts
-structuralEntropy(
-  graph: default,
-): number
-```
-
-Compute the Shannon-style entropy of a network's out-degree distribution.
-This is a lightweight, approximate structural dispersion metric used to
-characterise how 'spread out' connections are across nodes.
-
-Educational note: structural entropy here is simply H = -sum(p_i log p_i)
-over the normalized out-degree histogram. It does not measure information
-content of weights or dynamics, but provides a quick structural fingerprint.
-
-Example:
-
-// network-like object shape expected by this helper:
-// const net = { nodes: [ { connections: { out: [] } }, ... ] };
-// const h = structuralEntropy(net);
-
-## neat/neat.selection.ts
-
-### DEFAULT_POWER
-
-Default power exponent for POWER selection when none is configured.
-
-### DEFAULT_SCORE
-
-Default score when a genome has no explicit score.
-
-### DEFAULT_TOURNAMENT_PROBABILITY
-
-Default tournament win probability when none is configured.
-
-### DEFAULT_TOURNAMENT_SIZE
-
-Default tournament size when none is configured.
-
-### FIRST_INDEX
-
-Index of the first element in an array.
-
-### getAverage
-
-```ts
-getAverage(): number
-```
-
-Compute the average (mean) fitness across the population.
-
-If genomes have not been evaluated yet this will call `evaluate()` so
-that scores exist. Missing scores are treated as 0.
-
-Example:
-const avg = neat.getAverage();
-console.log(`Average fitness: ${avg}`);
-
-Returns: The mean fitness as a number.
-
-### getFittest
-
-```ts
-getFittest(): GenomeWithScore
-```
-
-Return the fittest genome in the population.
-
-This will trigger an `evaluate()` if genomes have not been scored yet, and
-will ensure the population is sorted so index 0 contains the fittest.
-
-Example:
-const best = neat.getFittest();
-console.log(best.score);
-
-Returns: The genome object judged to be the fittest (highest score).
-
-### getParent
-
-```ts
-getParent(): GenomeWithScore
-```
-
-Select a parent genome according to the configured selection strategy.
-
-Supported strategies (via `options.selection.name`):
-- 'POWER'              : biased power-law selection (exploits best candidates)
-- 'FITNESS_PROPORTIONATE': roulette-wheel style selection proportional to fitness
-- 'TOURNAMENT'         : pick N random competitors and select the best with probability p
-
-This function intentionally makes no changes to the population except in
-the POWER path where a quick sort may be triggered to ensure descending
-order.
-
-Examples:
-// POWER selection (higher power => more exploitation)
-neat.options.selection = { name: 'POWER', power: 2 };
-const parent = neat.getParent();
-
-// Tournament selection (size 3, 75% probability to take top of tournament)
-neat.options.selection = { name: 'TOURNAMENT', size: 3, probability: 0.75 };
-const parent2 = neat.getParent();
-
-Returns: A genome object chosen as the parent according to the selection strategy
-
-### INITIAL_CUMULATIVE_FITNESS
-
-Initial cumulative fitness value for threshold scans.
-
-### INITIAL_MOST_NEGATIVE_SCORE
-
-Initial most-negative score sentinel for fitness scans.
-
-### INITIAL_TOTAL_FITNESS
-
-Initial total fitness accumulator value.
-
-### LAST_ELEMENT_INDEX
-
-Index used with `at()` to access the last element.
-
-### LAST_INDEX_OFFSET
-
-Offset for retrieving the last element via length arithmetic.
-
-### LOOP_INDEX_INCREMENT
-
-Step size for index-based loops.
-
-### SECOND_INDEX
-
-Index of the second element in an array.
-
-### sort
-
-```ts
-sort(): void
-```
-
-Sorts the internal population in place by descending fitness.
-
-This method mutates the `population` array on the Neat instance so that
-the genome with the highest `score` appears at index 0. It treats missing
-scores as 0.
-
-Example:
-const neat = new Neat(...);
-neat.sort();
-console.log(neat.population[0].score); // highest score
-
-Notes for documentation generators: this is a small utility used by many
-selection and evaluation routines; it intentionally sorts in-place for
-performance and to preserve references to genome objects.
-
 ## neat/neat.telemetry.ts
 
 ### applyTelemetrySelect
@@ -2138,169 +1284,6 @@ console.log(`Structure entropy: ${H.toFixed(3)}`);
 Context view used within telemetry helpers to access optional internal
 fields with descriptive names rather than repeated inline casts.
 
-## neat/neat.objectives.ts
-
-### _getObjectives
-
-```ts
-_getObjectives(): ObjectiveDescriptor[]
-```
-
-Build and return the list of registered objectives for this NEAT instance.
-
-This function lazily builds `this._objectivesList` from the built-in
-fitness objective (unless suppressed) and any user-registered multi-
-objective descriptors found on `this.options.multiObjective.objectives`.
-
-Typical use: the evolution loop calls this to know which objectives to
-evaluate and whether each objective should be maximized or minimized.
-
-Example:
-
-```ts
-const objectives = neatInstance._getObjectives();
-// objectives: Array<ObjectiveDescriptor>
-```
-
-Returns: Array of objective descriptors in the
-order they should be applied. If multi-objective support is disabled or
-no objectives are registered, this will contain only the built-in
-fitness objective (unless suppressed).
-
-### clearObjectives
-
-```ts
-clearObjectives(): void
-```
-
-Clear all registered multi-objectives.
-
-This resets `this.options.multiObjective.objectives` to an empty array and
-clears the cached objectives list so that subsequent calls will reflect the
-cleared state.
-
-Example:
-
-```ts
-neat.clearObjectives();
-// now only the default fitness objective (unless suppressed) will remain
-```
-
-### registerObjective
-
-```ts
-registerObjective(
-  key: string,
-  direction: "max" | "min",
-  accessor: (genome: GenomeLike) => number,
-): void
-```
-
-Register a new objective descriptor.
-
-This adds or replaces an objective with the given `key`. The objective is a
-lightweight descriptor with a `key`, `direction` ('min' | 'max'), and an
-`accessor` function that maps a genome to a numeric objective value.
-
-Example:
-
-```ts
-// register an objective that measures model sparsity (lower is better)
-neat.registerObjective('sparsity', 'min', genome => computeSparsity(genome));
-```
-
-Notes:
-- If `this.options.multiObjective` doesn't exist it will be created and
-  enabled.
-- Registering an objective replaces any previous objective with the same
-  `key`.
-
-## neat/neat.speciation.ts
-
-Assign genomes into species based on compatibility distance and maintain species structures.
-This function creates new species for unassigned genomes, prunes empty species, updates
-dynamic compatibility threshold controllers, performs optional auto coefficient tuning, and
-records per‑species history statistics used by telemetry and adaptive controllers.
-
-Implementation notes:
-
-### _applyFitnessSharing
-
-```ts
-_applyFitnessSharing(): void
-```
-
-Apply fitness sharing to penalize similarity within species.
-
-Parameters:
-- `this` - - Neat instance context with species array and compatibility distance function.
-
-### _sortSpeciesMembers
-
-```ts
-_sortSpeciesMembers(
-  species: SpeciesLike,
-): void
-```
-
-Sort species members by descending score.
-
-Parameters:
-- `this` - - Neat instance context.
-- `sp` - - Species to sort.
-
-### _speciate
-
-```ts
-_speciate(): void
-```
-
-Assign genomes into species based on compatibility distance.
-
-Parameters:
-- `this` - - Speciation harness context.
-
-Returns: Nothing.
-
-### _updateSpeciesStagnation
-
-```ts
-_updateSpeciesStagnation(): void
-```
-
-Update stagnation counters for all species.
-
-Parameters:
-- `this` - - Neat instance context with species array and generation counter.
-
-## neat/neat.rng.constants.ts
-
-Constants used by the deterministic xorshift RNG helper.
-
-### RNG_DEFAULT_SEED_FALLBACK
-
-Fallback seed used when the derived seed would be zero (xorshift cannot use 0).
-
-### RNG_NORMALIZATION_DIVISOR
-
-Divisor used to normalize the 32-bit integer state into [0, 1).
-
-### RNG_POPULATION_OFFSET
-
-Minimum population offset added before scrambling to avoid zero seeds.
-
-### RNG_SHIFT_LEFT_PRIMARY
-
-Bit-shift values for the xorshift32 variant.
-
-### RNG_SHIFT_LEFT_SECONDARY
-
-### RNG_SHIFT_RIGHT_PRIMARY
-
-### RNG_TIME_SCRAMBLE_CONSTANT
-
-Constants used by the deterministic xorshift RNG helper.
-
 ## neat/neat.multiobjective.ts
 
 Multi-objective helpers (fast non-dominated sorting + crowding distance).
@@ -2343,294 +1326,423 @@ Parameters:
 
 Returns: Array of Pareto fronts; each front is an array of `Network` genomes.
 
-## neat/neat.adaptive.shared.ts
+## neat/neat.telemetry.facade.ts
 
-Constant: zero value.
+Public read-heavy facade helpers for Neat telemetry, objectives, and archive inspection.
 
-### ACCEPTANCE_LOWER_MULTIPLIER
+This module groups the parts of the Neat surface that mainly expose existing
+state rather than drive evolution. Keeping them here lets [src/neat.ts](src/neat.ts)
+stay orchestration-first while generated docs still show one place where a
+reader can inspect telemetry, lineage, species history, Pareto fronts, and
+cached diversity snapshots.
 
-Lower acceptance multiplier.
+### clearParetoArchive
 
-### ACCEPTANCE_UPPER_MULTIPLIER
+```ts
+clearParetoArchive(
+  host: NeatTelemetryFacadeHost,
+): void
+```
 
-Upper acceptance multiplier.
+Clear the Pareto archive metadata stored on the host.
 
-### AdaptiveMutationConfig
+Parameters:
+- `host` - - `Neat` instance whose Pareto archive should be emptied.
 
-### ADJUST_RATE_DEFAULT
+Returns: Nothing. The archive buffer is reset in place.
 
-Default adjustment rate in minimal criterion.
+### clearTelemetry
 
-### ANCESTOR_UNIQ_MODE_EPSILON
+```ts
+clearTelemetry(
+  host: NeatTelemetryFacadeHost,
+): void
+```
 
-Ancestor uniqueness epsilon mode.
+Clear cached telemetry entries.
 
-### ANCESTOR_UNIQ_MODE_LINEAGE_PRESSURE
+Parameters:
+- `host` - - `Neat` instance whose telemetry buffer should be reset.
 
-Ancestor uniqueness lineage pressure mode.
+Returns: Nothing. The helper mutates the host buffer in place.
 
-### AncestorUniqAdaptiveConfig
+### clearTelemetryObjectives
 
-### ANNEAL_BASELINE_GENERATIONS
+```ts
+clearTelemetryObjectives(
+  host: NeatTelemetryFacadeHost,
+): void
+```
 
-Baseline generations for annealing progress.
+Remove all registered custom objectives so only the default objective path remains.
 
-### ANNEAL_PROGRESS_MAX
+Parameters:
+- `host` - - `Neat` instance whose objective registry should be cleared.
 
-Maximum progress ratio used in annealing.
+Returns: Nothing. The helper mutates the objective registry in place.
 
-### BUDGET_GROWTH_MULTIPLIER
+### exportParetoFrontJSONL
 
-Default budget growth multiplier.
+```ts
+exportParetoFrontJSONL(
+  host: NeatTelemetryFacadeHost,
+  maxEntries: number,
+): string
+```
 
-### COMPLEXITY_MODE_ADAPTIVE
+Export recent Pareto archive entries as JSON Lines.
 
-Complexity budget adaptive mode string.
+Parameters:
+- `host` - - `Neat` instance storing Pareto objective snapshots.
+- `maxEntries` - - Maximum number of entries to serialize.
 
-### COMPLEXITY_MODE_LINEAR
+Returns: JSONL payload for recent Pareto archive entries.
 
-Complexity budget linear mode string.
+### exportSpeciesHistoryCSV
 
-### ComplexityBudgetConfig
+```ts
+exportSpeciesHistoryCSV(
+  host: NeatTelemetryFacadeHost,
+  maxEntries: number,
+): string
+```
 
-### DEFAULT_ADAPT_EVERY
+Export species history as CSV rows.
 
-Default adapt-every cadence for adaptive mutation.
+Parameters:
+- `host` - - `Neat` instance whose species history should be exported.
+- `maxEntries` - - Maximum number of recent history entries to include.
 
-### DEFAULT_ANCESTOR_UNIQ_ADJUST
+Returns: CSV payload for offline species analysis.
 
-Default adjustment magnitude for uniqueness nudges.
+### exportSpeciesHistoryJSONL
 
-### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
+```ts
+exportSpeciesHistoryJSONL(
+  host: NeatTelemetryFacadeHost,
+  maxEntries: number,
+): string
+```
 
-Default cooldown (generations) for ancestor-uniqueness adjustments.
+Export species history as JSON Lines.
 
-### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
+Parameters:
+- `host` - - `Neat` instance whose species history should be serialized.
+- `maxEntries` - - Maximum number of recent history entries to include.
 
-Default upper bound for acceptable ancestor uniqueness.
+Returns: JSONL payload describing recent species history snapshots.
 
-### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
+### exportTelemetryCSV
 
-Default lower bound for acceptable ancestor uniqueness.
+```ts
+exportTelemetryCSV(
+  host: NeatTelemetryFacadeHost,
+  maxEntries: number,
+): string
+```
 
-### DEFAULT_CB_INCREASE_FACTOR
+Export recent telemetry entries as CSV for quick spreadsheet inspection.
 
-Default increase factor for adaptive schedule.
+Parameters:
+- `host` - - `Neat` instance whose telemetry buffer should be exported.
+- `maxEntries` - - Maximum number of recent entries to include.
 
-### DEFAULT_CB_STAGNATION_FACTOR
+Returns: CSV string containing the requested telemetry window.
 
-Default stagnation factor for adaptive schedule.
+### exportTelemetryJSONL
 
-### DEFAULT_IMPROVEMENT_WINDOW
+```ts
+exportTelemetryJSONL(
+  host: NeatTelemetryFacadeHost,
+): string
+```
 
-Default score history window.
+Export telemetry as JSON Lines so logs can stream into files or post-processors.
 
-### DEFAULT_INITIAL_MUTATION_RATE
+Parameters:
+- `host` - - `Neat` instance whose telemetry buffer should be serialized.
 
-Default initial mutation rate used for balance checks.
+Returns: JSONL payload with one telemetry object per line.
 
-### DEFAULT_LINEAGE_PRESSURE_STRENGTH
+### getDiversityStats
 
-Default lineage pressure strength when initializing the option.
+```ts
+getDiversityStats(
+  host: NeatTelemetryFacadeHost,
+): DiversityStats
+```
 
-### DEFAULT_MAX_MUTATION_AMOUNT
+Return cached diversity metrics, computing a fallback snapshot when needed.
 
-Default maximum mutation amount.
+This keeps the public facade resilient: callers can always ask for diversity
+stats even before a full metrics pass has run.
 
-### DEFAULT_MAX_MUTATION_RATE
+Parameters:
+- `host` - - `Neat` instance exposing cached diversity state.
 
-Default maximum per-genome mutation rate.
+Returns: Diversity metrics for the current population.
 
-### DEFAULT_MIN_MUTATION_AMOUNT
+### getLineageSnapshot
 
-Default minimum mutation amount.
+```ts
+getLineageSnapshot(
+  host: NeatTelemetryFacadeHost,
+  limit: number,
+): { id: number; parents: number[]; }[]
+```
 
-### DEFAULT_MIN_MUTATION_RATE
+Return a compact lineage sample for the first genomes in the current population.
 
-Default minimum per-genome mutation rate.
+This is meant for inspection and teaching, not for full genealogy export. It
+keeps payloads small by clipping the returned slice while still showing which
+genomes share parents.
 
-### DEFAULT_MUTATION_AMOUNT
+Parameters:
+- `host` - - `Neat` instance whose population lineage should be sampled.
+- `limit` - - Maximum number of genomes to include in the snapshot.
 
-Default mutation amount when genome value is missing.
+Returns: Array of `{ id, parents }` lineage entries.
 
-### DEFAULT_MUTATION_AMOUNT_SIGMA
+### getMultiObjectiveMetrics
 
-Default mutation amount sigma for perturbations.
+```ts
+getMultiObjectiveMetrics(
+  host: NeatTelemetryFacadeHost,
+): { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]
+```
 
-### DEFAULT_MUTATION_SIGMA
+Build compact multi-objective metrics for the current population snapshot.
 
-Default mutation sigma for adaptive mutation.
+Parameters:
+- `host` - - `Neat` instance whose population should be summarized.
 
-### DENOMINATOR_FALLBACK
+Returns: Rank, crowding, score, and size metrics per genome.
 
-Fallback denominator to avoid divide-by-zero.
+### getNoveltyArchiveSize
 
-### EXPLORE_LOW_DECREASE_MULTIPLIER
+```ts
+getNoveltyArchiveSize(
+  host: NeatTelemetryFacadeHost,
+): number
+```
 
-Multiplicative decay for explore-low strategy (top half).
+Return the current novelty archive size.
 
-### EXPLORE_LOW_INCREASE_MULTIPLIER
+Parameters:
+- `host` - - `Neat` instance tracking novelty behavior descriptors.
 
-Multiplicative boost for explore-low strategy (bottom half).
+Returns: Number of archived novelty descriptors.
 
-### FIVE
+### getObjectiveEvents
 
-Constant: five value.
+```ts
+getObjectiveEvents(
+  host: NeatTelemetryFacadeHost,
+): { gen: number; type: "add" | "remove"; key: string; }[]
+```
 
-### FOUR
+Snapshot recent objective add/remove events for telemetry consumers.
 
-Constant: four value.
+Parameters:
+- `host` - - `Neat` instance storing objective lifecycle events.
 
-### Genome
+Returns: Shallow copy of the recorded objective events.
 
-### HALF_INDEX_DIVISOR
+### getObjectiveKeys
 
-Divisor used to split populations in half.
+```ts
+getObjectiveKeys(
+  host: NeatTelemetryFacadeHost,
+): string[]
+```
 
-### HISTORY_MIN_IMPROVEMENT_COUNT
+Return just the registered objective keys in stable order.
 
-Minimum history length to compute improvement.
+This is the shortest inspection surface for tests and quick diagnostics that
+only need to confirm which objectives are active, not the full descriptor
+payload.
 
-### HISTORY_MIN_SLOPE_COUNT
+Parameters:
+- `host` - - `Neat` instance exposing objective descriptors.
 
-Minimum history length to compute slope.
+Returns: Ordered list of active objective keys.
 
-### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
+### getObjectives
 
-Multiplier when decreasing lineage pressure strength.
+```ts
+getObjectives(
+  host: NeatTelemetryFacadeHost,
+): { key: string; direction: "max" | "min"; }[]
+```
 
-### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
+Return a compact view of active objective descriptors.
 
-Multiplier when increasing lineage pressure strength.
+The full objective descriptor includes accessors and internal metadata. This
+read model trims that down to the pieces most useful in UI surfaces and
+debugging output: the key and whether the objective is minimized or
+maximized.
 
-### LINEAGE_PRESSURE_MODE_SPREAD
+Parameters:
+- `host` - - `Neat` instance exposing objective descriptors.
 
-Lineage pressure spread mode.
+Returns: Compact objective summaries in evaluation order.
 
-### LINEAR_HORIZON_DEFAULT
+### getOperatorStats
 
-Default horizon for linear schedule.
+```ts
+getOperatorStats(
+  host: NeatTelemetryFacadeHost,
+): { name: string; success: number; attempts: number; }[]
+```
 
-### MINIMAL_TOPOLOGY_OFFSET
+Return aggregated mutation/operator statistics.
 
-Offset added to input/output for minimal topology.
+Parameters:
+- `host` - - `Neat` instance recording operator attempts and successes.
 
-### MinimalCriterionAdaptiveConfig
+Returns: Operator summaries suitable for dashboards and debugging.
 
-### MUTATION_SIGMA_SCALE
+### getParetoArchive
 
-Scale applied to mutation sigma for perturbations.
+```ts
+getParetoArchive(
+  host: NeatTelemetryFacadeHost,
+  maxEntries: number,
+): ParetoArchiveEntry[]
+```
 
-### MUTATION_STRATEGY_ANNEAL
+Return the most recent Pareto archive entries.
 
-Strategy identifier for annealed mutation.
+Parameters:
+- `host` - - `Neat` instance storing archived Pareto metadata.
+- `maxEntries` - - Maximum number of archive entries to return.
 
-### MUTATION_STRATEGY_EXPLORE_LOW
+Returns: Slice of the recent Pareto archive.
 
-Strategy identifier for explore-low mutation.
+### getParetoFronts
 
-### MUTATION_STRATEGY_TWO_TIER
+```ts
+getParetoFronts(
+  host: NeatTelemetryFacadeHost,
+  maxFronts: number,
+): default[][]
+```
 
-Strategy identifier for two-tier mutation.
+Reconstruct Pareto fronts from current rank annotations.
 
-### MutationOutcome
+Parameters:
+- `host` - - `Neat` instance whose population should be partitioned.
+- `maxFronts` - - Maximum number of fronts to reconstruct.
 
-### MutationPartitions
+Returns: Pareto fronts ordered from best to worst.
 
-### MutationSettings
+### getPerformanceStats
 
-### NeatLikeWithAdaptive
+```ts
+getPerformanceStats(
+  host: NeatTelemetryFacadeHost,
+): { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }
+```
 
-Minimal interface for NEAT instances with adaptive features.
-Exported for use in tests and type-safe function calls.
+Return coarse timing metrics for the last evaluation and evolution passes.
 
-### NEGATIVE_ONE
+Parameters:
+- `host` - - `Neat` instance tracking performance timings.
 
-Constant: negative one for last index.
+Returns: Snapshot of the last evaluation and evolution durations.
 
-### NOVELTY_ARCHIVE_MIN_SIZE
+### getSpeciesHistory
 
-Novelty archive minimum size.
+```ts
+getSpeciesHistory(
+  host: NeatTelemetryFacadeHost,
+): SpeciesHistoryEntry[]
+```
 
-### NOVELTY_FACTOR_DEFAULT
+Return recorded species history, lazily backfilling extended metrics when enabled.
 
-Novelty factor when archive is sufficient.
+Parameters:
+- `host` - - `Neat` instance storing species history snapshots.
 
-### NOVELTY_FACTOR_SMALL
+Returns: Historical species entries for each recorded generation.
 
-Novelty factor when archive is small.
+### getSpeciesStats
 
-### ONE
+```ts
+getSpeciesStats(
+  host: NeatTelemetryFacadeHost,
+): { id: number; size: number; bestScore: number; lastImproved: number; }[]
+```
 
-Constant: one value.
+Return a concise summary for each current species.
 
-### ONE_HUNDRED
+Parameters:
+- `host` - - `Neat` instance whose live species registry should be summarized.
 
-Constant: one hundred value.
+Returns: Array of current species summaries.
 
-### OPERATOR_DECAY_DEFAULT
+### getTelemetry
 
-Default operator decay factor.
+```ts
+getTelemetry(
+  host: NeatTelemetryFacadeHost,
+): TelemetryEntry[]
+```
 
-### OperatorAdaptationConfig
+Return the in-memory telemetry buffer.
 
-### PHASE_COMPLEXIFY
+Parameters:
+- `host` - - `Neat` instance storing generation telemetry snapshots.
 
-Phase label for complexify.
+Returns: Telemetry entries captured so far, or an empty array when telemetry
+is not initialized.
 
-### PHASE_LENGTH_DEFAULT
+### NeatTelemetryFacadeHost
 
-Default phase length in generations.
+Narrow `Neat` surface needed by the public telemetry, objective, and archive
+facade methods.
 
-### PHASE_SIMPLIFY
+This interface exists so the public [src/neat.ts](src/neat.ts) facade can
+delegate read-heavy diagnostics and export helpers into one focused module
+without exposing the entire controller implementation. The host shape keeps
+the contract small: population snapshots, telemetry caches, objective
+accessors, and archive buffers.
 
-Phase label for simplify.
+### registerTelemetryObjective
 
-### PhasedComplexityConfig
+```ts
+registerTelemetryObjective(
+  host: NeatTelemetryFacadeHost,
+  key: string,
+  direction: "max" | "min",
+  accessor: (genome: GenomeLike) => number,
+): void
+```
 
-### PROGRESS_RATIO_MAX
+Register or replace a custom objective.
 
-Maximum progress ratio for scheduling.
+Parameters:
+- `host` - - `Neat` instance whose multi-objective registry should change.
+- `key` - - Unique objective key.
+- `direction` - - Whether lower or higher values are considered better.
+- `accessor` - - Function that reads the objective value from a genome.
 
-### RNG_CENTER_OFFSET
+Returns: Nothing. The objective registry on `host` is updated in place.
 
-Random offset for signed deltas.
+### resetNoveltyArchive
 
-### RNG_SPREAD_MULTIPLIER
+```ts
+resetNoveltyArchive(
+  host: NeatTelemetryFacadeHost,
+): void
+```
 
-Random range multiplier for signed deltas.
+Clear the novelty archive.
 
-### SLOPE_BOOST_MULTIPLIER
+Parameters:
+- `host` - - `Neat` instance whose novelty archive should be reset.
 
-Slope boost multiplier for adaptive increase factor.
-
-### SLOPE_NORMALIZE_CLAMP
-
-Clamp magnitude for slope normalization.
-
-### SLOPE_PENALTY_MULTIPLIER
-
-Slope penalty multiplier for stagnation factor.
-
-### TARGET_ACCEPTANCE_DEFAULT
-
-Default target acceptance in minimal criterion.
-
-### TEN
-
-Constant: ten value.
-
-### THREE
-
-Constant: three value.
-
-### TWO
-
-Constant: two value.
-
-### ZERO
-
-Constant: zero value.
+Returns: Nothing. The archive is mutated in place.
 
 ## neat/neat.telemetry.exports.ts
 
@@ -2779,6 +1891,186 @@ cognitive complexity while preserving readability of each scenario.
 
 Shape describing collected telemetry header discovery info.
 
+## neat/neat.maintenance.facade.ts
+
+Public maintenance facade helpers for the stable `Neat` entrypoint.
+
+These wrappers keep a small cluster of topology-repair helpers out of the
+main [src/neat.ts](src/neat.ts) class body: enforcing a minimum hidden-node
+budget, repairing dead-end connectivity, and exposing the computed minimum
+hidden target. Grouping them here makes the public facade easier to scan
+without changing the long-standing method names or the mutation helpers that
+already own the real repair logic.
+
+Invariant: this boundary only maintains baseline structural viability for a
+single network. It does not change mutation operator selection, speciation,
+or public import paths.
+
+### ensureMinHiddenNodes
+
+```ts
+ensureMinHiddenNodes(
+  host: NeatMaintenanceFacadeHost,
+  network: default,
+  multiplierOverride: number | undefined,
+): Promise<void>
+```
+
+Ensure a network satisfies the configured minimum hidden-node policy.
+
+The underlying mutation helper may add hidden nodes and wire them into the
+graph so later mutation and evaluation steps start from a minimally viable
+structure.
+
+Parameters:
+- `host` - - `Neat` instance exposing mutation constraints and innovation tables.
+- `network` - - Network whose hidden-node floor should be enforced.
+- `multiplierOverride` - - Optional one-off multiplier overriding the configured policy.
+
+Returns: Promise that resolves after any required topology repair finishes.
+
+### ensureNoDeadEnds
+
+```ts
+ensureNoDeadEnds(
+  host: NeatMaintenanceFacadeHost,
+  network: default,
+): void
+```
+
+Repair input, output, and hidden nodes that have become structural dead ends.
+
+This preserves the historical best-effort behavior of `neat.ensureNoDeadEnds()`:
+if the underlying repair helper throws, the public facade suppresses that
+failure so maintenance stays additive rather than fatal.
+
+Parameters:
+- `host` - - `Neat` instance exposing mutation constraints and innovation tables.
+- `network` - - Network whose endpoint connectivity should be repaired.
+
+Returns: Nothing. The network is patched in place when repairs are possible.
+
+### getMinimumHiddenSize
+
+```ts
+getMinimumHiddenSize(
+  host: NeatMaintenanceFacadeHost,
+  multiplierOverride: number | undefined,
+): number
+```
+
+Compute the minimum hidden-node target for the current `Neat` configuration.
+
+The public `Neat` facade historically exposed this as a read-only policy
+helper. Keeping it beside the repair wrappers makes the generated docs tell a
+clearer story: one boundary defines the target size, and the neighboring
+helpers enforce it on concrete networks.
+
+Parameters:
+- `host` - - `Neat` instance exposing input/output counts and maintenance options.
+- `multiplierOverride` - - Optional one-off multiplier overriding the configured policy.
+
+Returns: Minimum hidden-node count implied by explicit or multiplier-based settings.
+
+Example:
+
+```ts
+const minimumHidden = neat.getMinimumHiddenSize();
+await neat.ensureMinHiddenNodes(network);
+console.log(minimumHidden, network.nodes.length);
+```
+
+### NeatMaintenanceFacadeHost
+
+Narrow `Neat` host surface required by the public maintenance facade.
+
+This boundary keeps the contract focused on topology-maintenance state:
+mutation constraints, innovation bookkeeping, endpoint counts, and the
+legacy helper used to compute a minimum hidden-node target.
+
+## neat/neat.population-summary.facade.ts
+
+Public population-summary facade helpers for the stable `Neat` entrypoint.
+
+These wrappers cover the smallest read/write summary cluster that still
+lived inline on the public class: population ordering, best-genome lookup,
+and average-score inspection. Keeping them here leaves [src/neat.ts](src/neat.ts)
+focused on higher-level orchestration while preserving the long-standing
+public method names that callers, tests, and generated docs already expect.
+
+Invariant: this boundary only summarizes or reorders the current population.
+It does not change parent-selection strategy, crossover policy, or mutation
+behavior.
+
+### getAverage
+
+```ts
+getAverage(
+  host: NeatPopulationSummaryFacadeHost,
+): number
+```
+
+Compute the average score across the current population.
+
+This is a compact inspection helper for telemetry, tests, and quick
+debugging where the caller only needs the current mean fitness.
+
+Parameters:
+- `host` - - `Neat` instance exposing population and evaluation state.
+
+Returns: Mean score across the current population.
+
+### getFittest
+
+```ts
+getFittest(
+  host: NeatPopulationSummaryFacadeHost,
+): default
+```
+
+Return the fittest genome in the current population.
+
+If scores are missing, the underlying selection helper will trigger the
+existing evaluation path before resolving the best genome.
+
+Parameters:
+- `host` - - `Neat` instance exposing population and evaluation state.
+
+Returns: Genome with the highest current score.
+
+### NeatPopulationSummaryFacadeHost
+
+Narrow `Neat` host surface required by the public population-summary facade.
+
+The host keeps the contract small: a population, selection-aware options,
+the existing sort hook, and the evaluation entrypoint used when callers ask
+for summary data before scores have been computed.
+
+### sort
+
+```ts
+sort(
+  host: NeatPopulationSummaryFacadeHost,
+): void
+```
+
+Sort the population in descending fitness order.
+
+This preserves the historical `neat.sort()` behavior while moving the thin
+facade wrapper out of the main class body.
+
+Parameters:
+- `host` - - `Neat` instance exposing population sorting state.
+
+Returns: Nothing. The population array is reordered in place.
+
+Example:
+
+```ts
+neat.sort();
+console.log(neat.population[0].score);
+```
+
 ## neat/neat.evolve.offspring.constants.ts
 
 Index used when falling back to the first genome in the population.
@@ -2882,254 +2174,6 @@ const objectives: ObjectiveDescriptor[] = [
   { accessor: (g) => g.cost ?? 0, direction: 'min' },
 ];
 ```
-
-## neat/neat.rng.utils.ts
-
-### exportRngState
-
-```ts
-exportRngState(
-  host: RngHost,
-): number | undefined
-```
-
-Export the current RNG state for persistence.
-
-Parameters:
-- `host` - - Object holding RNG state.
-
-Returns: The numeric RNG state or undefined when not set.
-
-### getOrCreateRng
-
-```ts
-getOrCreateRng(
-  host: RngHost,
-): () => number
-```
-
-Return a cached RNG or create a deterministic xorshift RNG when absent.
-
-The helper respects a user-provided RNG at `options.rng` when present.
-Otherwise it seeds a xorshift32 RNG using the current time and population
-size, guarding against the invalid zero seed.
-
-Parameters:
-- `host` - - Object holding RNG state and configuration.
-
-Returns: A function that yields a uniform random value in [0, 1).
-
-### importRngState
-
-```ts
-importRngState(
-  host: RngHost,
-  state: string | number | undefined,
-): void
-```
-
-Alias for restoring RNG state kept for compatibility with prior surface.
-
-### restoreRngState
-
-```ts
-restoreRngState(
-  host: RngHost,
-  state: string | number | undefined,
-): void
-```
-
-Restore a previously captured RNG state.
-
-Parameters:
-- `host` - - Object holding RNG state.
-- `state` - - Numeric RNG state to restore.
-
-### RngHost
-
-Minimal host surface required by the RNG utilities.
-
-### sampleRandomSequence
-
-```ts
-sampleRandomSequence(
-  host: RngHost,
-  sampleCount: number,
-): number[]
-```
-
-Produce a sequence of random samples using the host RNG.
-
-Parameters:
-- `host` - - Object holding RNG state.
-- `sampleCount` - - Number of samples to generate.
-
-Returns: Array of random samples in [0, 1).
-
-### snapshotRngState
-
-```ts
-snapshotRngState(
-  host: RngHost,
-): number | undefined
-```
-
-Snapshot the current RNG state for deterministic replay.
-
-Parameters:
-- `host` - - Object holding RNG state.
-
-Returns: The numeric RNG state or undefined when uninitialized.
-
-## neat/neat.cache.utils.ts
-
-Invalidate per-genome caches used across compatibility and forward-pass logic.
-
-### invalidateGenomeCaches
-
-```ts
-invalidateGenomeCaches(
-  genomeCandidate: unknown,
-): void
-```
-
-Invalidate per-genome caches used across compatibility and forward-pass logic.
-
-Parameters:
-- `genomeCandidate` - - Genome object whose caches should be cleared.
-
-## neat/neat.compat.utils.ts
-
-Compatibility-distance helper utilities.
-
-### buildPairKey
-
-```ts
-buildPairKey(
-  firstGenome: GenomeLike,
-  secondGenome: GenomeLike,
-): string
-```
-
-Build a stable cache key for a genome pair.
-
-Parameters:
-- `firstGenome` - - First genome in the pair.
-- `secondGenome` - - Second genome in the pair.
-
-Returns: Stable cache key in the form "minId|maxId".
-
-### compareInnovationLists
-
-```ts
-compareInnovationLists(
-  firstList: [number, number][],
-  secondList: [number, number][],
-): ComparisonMetrics
-```
-
-Compare two sorted innovation lists and derive comparison metrics.
-
-Parameters:
-- `firstList` - - Sorted innovation list for the first genome.
-- `secondList` - - Sorted innovation list for the second genome.
-
-Returns: Aggregated comparison metrics for distance computation.
-
-### ComparisonMetrics
-
-Aggregated comparison metrics for compatibility calculations.
-
-### computeCompatibilityDistance
-
-```ts
-computeCompatibilityDistance(
-  neatContext: NeatLikeForCompat,
-  metrics: ComparisonMetrics,
-): number
-```
-
-Compute the compatibility distance from comparison metrics.
-
-Parameters:
-- `neatContext` - - NEAT context providing coefficients.
-- `metrics` - - Aggregated comparison metrics.
-
-Returns: Final compatibility distance for the genome pair.
-
-### ConnectionLike
-
-Shape of a connection entry used during compatibility checks.
-
-### ensureGenerationCache
-
-```ts
-ensureGenerationCache(
-  neatContext: NeatLikeForCompat,
-): void
-```
-
-Ensure generation-scoped compatibility caches exist.
-
-Parameters:
-- `neatContext` - - Current NEAT context holding generation and caches.
-
-Returns: void
-
-### GenomeLike
-
-Minimal genome shape used for compatibility distance calculations.
-
-### getDistanceCacheMap
-
-```ts
-getDistanceCacheMap(
-  neatContext: NeatLikeForCompat,
-): Map<string, number>
-```
-
-Retrieve the generation-scoped cache map for pairwise distances.
-
-Parameters:
-- `neatContext` - - Current NEAT context with the cache map.
-
-Returns: Map storing cached distances for genome pairs this generation.
-
-### getSortedInnovationCache
-
-```ts
-getSortedInnovationCache(
-  neatContext: NeatLikeForCompat,
-  genome: GenomeLike,
-): [number, number][]
-```
-
-Retrieve or build a sorted innovation list for a genome.
-
-Parameters:
-- `neatContext` - - NEAT context used for fallback innovation numbers.
-- `genome` - - Genome to derive sorted innovation list for.
-
-Returns: Array of [innovationNumber, weight] sorted by innovationNumber.
-
-### NeatLikeForCompat
-
-Minimal NEAT context required by compatibility helpers.
-
-### resolveMaxInnovation
-
-```ts
-resolveMaxInnovation(
-  list: [number, number][],
-): number
-```
-
-Resolve the highest innovation id from a sorted list.
-
-Parameters:
-- `list` - - Sorted innovation list for a genome.
-
-Returns: Highest innovation id or 0 if list is empty.
 
 ## neat/neat.evolve.utils.ts
 
@@ -3767,296 +2811,6 @@ warnIfNoBestGenome(): void
 
 Emit the standard warning for runs that end without a valid best genome.
 
-## neat/neat.lineage.utils.ts
-
-Lineage / ancestry helper utilities for NEAT populations.
-
-This module centralizes helper logic used by the public lineage APIs to keep
-the main entry file small and orchestration-focused.
-
-### AncestorQueueEntry
-
-Queue entry for ancestor traversal.
-
-### calculateMaxSamplePairs
-
-```ts
-calculateMaxSamplePairs(
-  size: number,
-): number
-```
-
-Parameters:
-- `size` - Population size.
-
-Returns: Upper bound on the number of sampled pairs.
-
-### collectAncestorIds
-
-```ts
-collectAncestorIds(
-  queueEntries: AncestorQueueEntry[],
-  population: GenomeLike[],
-): Set<number>
-```
-
-Parameters:
-- `queueEntries` - BFS queue seeded with direct parents.
-- `population` - Current population for lookups.
-
-Returns: Unique ancestor IDs encountered within the window.
-
-### computeAverageDistance
-
-```ts
-computeAverageDistance(
-  distances: number[],
-): number
-```
-
-Parameters:
-- `distances` - Jaccard distances to average.
-
-Returns: Mean distance rounded to the configured decimal places.
-
-### computeJaccardDistance
-
-```ts
-computeJaccardDistance(
-  ancestorSetA: Set<number>,
-  ancestorSetB: Set<number>,
-): number
-```
-
-Parameters:
-- `ancestorSetA` - First ancestor set.
-- `ancestorSetB` - Second ancestor set.
-
-Returns: Jaccard distance for the two sets.
-
-### computePairDistance
-
-```ts
-computePairDistance(
-  pair: GenomeIndexPair,
-  population: GenomeLike[],
-  buildAncestorSet: (genome: GenomeLike) => Set<number>,
-): number | undefined
-```
-
-Parameters:
-- `pair` - Index pair for comparison.
-- `population` - Current population.
-- `buildAncestorSet` - Helper to build ancestor sets.
-
-Returns: Jaccard distance or undefined when skipped.
-
-### computePairDistances
-
-```ts
-computePairDistances(
-  pairs: GenomeIndexPair[],
-  population: GenomeLike[],
-  buildAncestorSet: (genome: GenomeLike) => Set<number>,
-): number[]
-```
-
-Parameters:
-- `pairs` - Sampled index pairs.
-- `population` - Current population.
-- `buildAncestorSet` - Helper to build ancestor sets.
-
-Returns: Jaccard distances for valid pairs.
-
-### countIntersection
-
-```ts
-countIntersection(
-  ancestorSetA: Set<number>,
-  ancestorSetB: Set<number>,
-): number
-```
-
-Parameters:
-- `ancestorSetA` - First ancestor set.
-- `ancestorSetB` - Second ancestor set.
-
-Returns: Size of intersection between the sets.
-
-### createInitialQueue
-
-```ts
-createInitialQueue(
-  parentIds: number[],
-  population: GenomeLike[],
-): AncestorQueueEntry[]
-```
-
-Parameters:
-- `parentIds` - Direct parent IDs to seed the queue.
-- `population` - Current population for lookups.
-
-Returns: Queue entries at depth 1.
-
-### enqueueParentEntries
-
-```ts
-enqueueParentEntries(
-  queueEntries: AncestorQueueEntry[],
-  currentEntry: AncestorQueueEntry,
-  population: GenomeLike[],
-): void
-```
-
-Parameters:
-- `queueEntries` - Mutable queue array to append to.
-- `currentEntry` - Current ancestor entry being expanded.
-- `population` - Current population for lookups.
-
-### findGenomeById
-
-```ts
-findGenomeById(
-  population: GenomeLike[],
-  genomeId: number,
-): GenomeLike | undefined
-```
-
-Parameters:
-- `population` - Current population for lookup.
-- `genomeId` - Genome identifier to match.
-
-Returns: Genome reference if found.
-
-### GenomeIndexPair
-
-Index pair representing a sampled genome pair.
-
-### GenomeLike
-
-Minimal shape assumed for a genome inside the NEAT population. Additional properties are
-intentionally left open (index signature) because user implementations may extend genomes.
-
-### hasMinimumPopulation
-
-```ts
-hasMinimumPopulation(
-  size: number,
-): boolean
-```
-
-Parameters:
-- `size` - Population size.
-
-Returns: True when at least two genomes exist.
-
-### isEmptyAncestorPair
-
-```ts
-isEmptyAncestorPair(
-  ancestorSetA: Set<number>,
-  ancestorSetB: Set<number>,
-): boolean
-```
-
-Parameters:
-- `ancestorSetA` - First ancestor set.
-- `ancestorSetB` - Second ancestor set.
-
-Returns: True when both sets are empty.
-
-### isWithinDepthWindow
-
-```ts
-isWithinDepthWindow(
-  depth: number,
-): boolean
-```
-
-Parameters:
-- `depth` - Current depth value.
-
-Returns: True when within the configured depth window.
-
-### NeatLineageContext
-
-Expected `this` context for lineage helpers (a subset of the NEAT instance).
-
-### normalizeParentIds
-
-```ts
-normalizeParentIds(
-  value: GenomeLike,
-): number[]
-```
-
-Parameters:
-- `value` - Genome to read parents from.
-
-Returns: Parent ID list (empty when absent).
-
-### pickDistinctIndex
-
-```ts
-pickDistinctIndex(
-  randomNumber: () => number,
-  size: number,
-  firstIndex: number,
-): number
-```
-
-Parameters:
-- `randomNumber` - RNG function returning [0,1).
-- `size` - Population size for bounds.
-- `firstIndex` - Index to avoid.
-
-Returns: Random index not equal to the first index.
-
-### pickRandomIndex
-
-```ts
-pickRandomIndex(
-  randomNumber: () => number,
-  size: number,
-): number
-```
-
-Parameters:
-- `randomNumber` - RNG function returning [0,1).
-- `size` - Population size for bounds.
-
-Returns: Random index within bounds.
-
-### resolveParentIds
-
-```ts
-resolveParentIds(
-  value: GenomeLike | undefined,
-): number[]
-```
-
-Parameters:
-- `value` - Optional genome reference.
-
-Returns: Parent IDs when available.
-
-### sampleGenomePairs
-
-```ts
-sampleGenomePairs(
-  sampleCount: number,
-  size: number,
-  rngFactory: () => () => number,
-): GenomeIndexPair[]
-```
-
-Parameters:
-- `sampleCount` - Number of pairs to sample.
-- `size` - Population size for index bounds.
-- `rngFactory` - RNG provider to obtain a random function.
-
-Returns: Array of sampled index pairs.
-
 ## neat/neat.novelty.utils.ts
 
 Return the current size of the novelty archive.
@@ -4080,1520 +2834,6 @@ resetNoveltyArchive(
 ```
 
 Reset the novelty archive in place.
-
-## neat/neat.pruning.utils.ts
-
-Minimal Neat instance contract required by pruning helpers.
-
-Example:
-
-const host: NeatLikeForPruning = {
-  options: { evolutionPruning: { startGeneration: 5, targetSparsity: 0.4 } },
-  generation: 10,
-  population: [],
-} as NeatLikeForPruning;
-
-### AdaptivePruningOptions
-
-Adaptive pruning options extracted from the Neat instance.
-
-### applyAdaptivePruneLevelToPopulation
-
-```ts
-applyAdaptivePruneLevelToPopulation(
-  host: NeatLikeForPruning,
-  pruneLevel: number,
-): void
-```
-
-Parameters:
-- `host` - - Neat instance with population.
-- `pruneLevel` - - Prune level to apply.
-
-### applyPruningToPopulation
-
-```ts
-applyPruningToPopulation(
-  host: NeatLikeForPruning,
-  options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; },
-  targetSparsity: number,
-): void
-```
-
-Parameters:
-- `host` - - Neat instance with population.
-- `options` - - Evolution pruning options.
-- `targetSparsity` - - Target sparsity to apply.
-
-### computeMeanConnectionCount
-
-```ts
-computeMeanConnectionCount(
-  host: NeatLikeForPruning,
-): number
-```
-
-Parameters:
-- `host` - - Neat instance with population.
-
-Returns: Average number of connections per genome.
-
-### computeMeanNodeCount
-
-```ts
-computeMeanNodeCount(
-  host: NeatLikeForPruning,
-): number
-```
-
-Parameters:
-- `host` - - Neat instance with population.
-
-Returns: Average number of nodes per genome.
-
-### computeNextAdaptivePruneLevel
-
-```ts
-computeNextAdaptivePruneLevel(
-  options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; },
-  currentPruneLevel: number,
-  currentMetricValue: number,
-  targetRemainingMetric: number,
-): number
-```
-
-Parameters:
-- `options` - - Adaptive pruning options.
-- `currentPruneLevel` - - Current global prune level.
-- `currentMetricValue` - - Current observed metric value.
-- `targetRemainingMetric` - - Target remaining metric value.
-
-Returns: Updated prune level.
-
-### computePopulationMetrics
-
-```ts
-computePopulationMetrics(
-  host: NeatLikeForPruning,
-): PopulationMetrics
-```
-
-Parameters:
-- `host` - - Neat instance with population.
-
-Returns: Population metric summary.
-
-### computeRampFraction
-
-```ts
-computeRampFraction(
-  host: NeatLikeForPruning,
-  options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; },
-): number
-```
-
-Parameters:
-- `host` - - Neat instance with generation state.
-- `options` - - Evolution pruning options.
-
-Returns: Fraction in [0,1] indicating ramp completion.
-
-### computeTargetRemainingMetric
-
-```ts
-computeTargetRemainingMetric(
-  options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; },
-  adaptivePruneBaseline: number,
-): number
-```
-
-Parameters:
-- `options` - - Adaptive pruning options.
-- `adaptivePruneBaseline` - - Baseline metric value.
-
-Returns: Target remaining metric value.
-
-### computeTargetSparsityNow
-
-```ts
-computeTargetSparsityNow(
-  host: NeatLikeForPruning,
-  options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; },
-): number
-```
-
-Parameters:
-- `host` - - Neat instance with generation state.
-- `options` - - Evolution pruning options.
-
-Returns: Target sparsity to apply for this generation.
-
-### EvolutionPruningOptions
-
-Evolution pruning options extracted from the Neat instance.
-
-### initializeAdaptivePruningState
-
-```ts
-initializeAdaptivePruningState(
-  host: NeatLikeForPruning,
-): void
-```
-
-Parameters:
-- `host` - - Neat instance with adaptive pruning state.
-
-### NeatLikeForPruning
-
-Minimal Neat instance contract required by pruning helpers.
-
-Example:
-
-const host: NeatLikeForPruning = {
-  options: { evolutionPruning: { startGeneration: 5, targetSparsity: 0.4 } },
-  generation: 10,
-  population: [],
-} as NeatLikeForPruning;
-
-### PopulationMetrics
-
-Summary of population metrics used by adaptive pruning.
-
-### resolveActiveAdaptivePruningOptions
-
-```ts
-resolveActiveAdaptivePruningOptions(
-  host: NeatLikeForPruning,
-): { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; } | null
-```
-
-Parameters:
-- `host` - - Neat instance with adaptive pruning options.
-
-Returns: Adaptive pruning options when enabled, otherwise null.
-
-### resolveActiveEvolutionPruningOptions
-
-```ts
-resolveActiveEvolutionPruningOptions(
-  host: NeatLikeForPruning,
-): { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; } | null
-```
-
-Parameters:
-- `host` - - Neat instance with generation state.
-
-Returns: Evolution pruning options when active, otherwise null.
-
-### resolveAdaptivePruneBaseline
-
-```ts
-resolveAdaptivePruneBaseline(
-  host: NeatLikeForPruning,
-  currentMetricValue: number,
-): number
-```
-
-Parameters:
-- `host` - - Neat instance with adaptive baseline state.
-- `currentMetricValue` - - Current observed metric value.
-
-Returns: Baseline metric value used for adaptation.
-
-### resolveObservedMetricValue
-
-```ts
-resolveObservedMetricValue(
-  options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; },
-  metrics: PopulationMetrics,
-): number
-```
-
-Parameters:
-- `options` - - Adaptive pruning options.
-- `metrics` - - Population metric summary.
-
-Returns: Current observed metric value used for adaptation.
-
-### shouldAdjustAdaptivePruning
-
-```ts
-shouldAdjustAdaptivePruning(
-  options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; },
-  currentMetricValue: number,
-  targetRemainingMetric: number,
-  adaptivePruneBaseline: number,
-): boolean
-```
-
-Parameters:
-- `options` - - Adaptive pruning options.
-- `currentMetricValue` - - Current observed metric value.
-- `targetRemainingMetric` - - Target remaining metric value.
-- `adaptivePruneBaseline` - - Baseline metric value.
-
-Returns: True when pruning should be adjusted.
-
-## neat/neat.species.utils.ts
-
-### backfillExtendedHistory
-
-```ts
-backfillExtendedHistory(
-  history: SpeciesHistoryEntry[],
-  context: { _species?: SpeciesLike[] | undefined; _fallbackInnov?: ((c: ConnectionLike) => number) | undefined; },
-): void
-```
-
-Parameters:
-- `history` - - Recorded history to enrich in place.
-- `context` - - Neat instance context for lookups.
-
-### shouldAugmentExtendedHistory
-
-```ts
-shouldAugmentExtendedHistory(
-  options: NeatOptions | undefined,
-): boolean
-```
-
-Parameters:
-- `options` - - Current Neat options.
-
-Returns: True when extended history is enabled.
-
-### SPECIES_HISTORY_DEFAULT_ENABLED_RATIO
-
-Default enabled ratio when no connections exist.
-
-### SPECIES_HISTORY_DEFAULT_INNOVATION_ID
-
-Default innovation id when none is present.
-
-### SPECIES_HISTORY_DEFAULT_INNOVATION_RANGE
-
-Default innovation range when data is missing.
-
-### SPECIES_HISTORY_INITIAL_MAX_INNOVATION
-
-Initial max tracker for innovation range aggregation.
-
-### SPECIES_HISTORY_INITIAL_MIN_INNOVATION
-
-Initial min tracker for innovation range aggregation.
-
-### SPECIES_HISTORY_ZERO
-
-Shared zero value for counters and defaults.
-
-## neat/neat.adaptive.utils.ts
-
-### ACCEPTANCE_LOWER_MULTIPLIER
-
-Lower acceptance multiplier.
-
-### ACCEPTANCE_UPPER_MULTIPLIER
-
-Upper acceptance multiplier.
-
-### AdaptiveMutationConfig
-
-### ADJUST_RATE_DEFAULT
-
-Default adjustment rate in minimal criterion.
-
-### adjustConnectionBudget
-
-```ts
-adjustConnectionBudget(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-  trends: { improvement: number; slope: number; },
-  factors: { increaseFactor: number; stagnationFactor: number; },
-  noveltyFactor: number,
-  history: number[],
-): void
-```
-
-Adjust connection budget based on trends and factors.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-- `trends` - - Improvement and slope metrics.
-- `factors` - - Adjustment factors.
-- `noveltyFactor` - - Novelty multiplier.
-- `history` - - Rolling history for window checks.
-
-### adjustNodeBudget
-
-```ts
-adjustNodeBudget(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-  trends: { improvement: number; slope: number; },
-  factors: { increaseFactor: number; stagnationFactor: number; },
-  noveltyFactor: number,
-  history: number[],
-): void
-```
-
-Adjust node budget based on trends and factors.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-- `trends` - - Improvement and slope metrics.
-- `factors` - - Adjustment factors.
-- `noveltyFactor` - - Novelty multiplier.
-- `history` - - Rolling history for window checks.
-
-### ANCESTOR_UNIQ_MODE_EPSILON
-
-Ancestor uniqueness epsilon mode.
-
-### ANCESTOR_UNIQ_MODE_LINEAGE_PRESSURE
-
-Ancestor uniqueness lineage pressure mode.
-
-### AncestorUniqAdaptiveConfig
-
-### ANNEAL_BASELINE_GENERATIONS
-
-Baseline generations for annealing progress.
-
-### ANNEAL_PROGRESS_MAX
-
-Maximum progress ratio used in annealing.
-
-### applyAdaptiveSchedule
-
-```ts
-applyAdaptiveSchedule(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Apply adaptive complexity budget scheduling.
-
-Parameters:
-- `engine` - - NEAT engine instance with adaptive state.
-- `config` - - Complexity budget configuration.
-
-### applyAnnealDelta
-
-```ts
-applyAnnealDelta(
-  baseDelta: number,
-  settings: MutationSettings,
-): number
-```
-
-Apply annealing adjustments to a delta.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `settings` - - Resolved settings.
-
-Returns: Adjusted delta.
-
-### applyComplexityBudgetSchedule
-
-```ts
-applyComplexityBudgetSchedule(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Apply the complexity budget schedule for the configured mode.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-### applyEpsilonAdjustment
-
-```ts
-applyEpsilonAdjustment(
-  engine: NeatLikeWithAdaptive,
-  ancestorUniq: number,
-  thresholds: { lowThreshold: number; highThreshold: number; },
-  adjustMagnitude: number,
-): void
-```
-
-Apply dominance-epsilon adjustments when configured.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `ancestorUniq` - - Current ancestor uniqueness metric.
-- `thresholds` - - Threshold bounds for decisions.
-- `adjustMagnitude` - - Adjustment magnitude.
-
-### applyExploreLowDelta
-
-```ts
-applyExploreLowDelta(
-  baseDelta: number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Apply explore-low adjustments to a delta.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `genome` - - Current genome.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Adjusted delta.
-
-### applyLineagePressureAdjustment
-
-```ts
-applyLineagePressureAdjustment(
-  engine: NeatLikeWithAdaptive,
-  ancestorUniq: number,
-  thresholds: { lowThreshold: number; highThreshold: number; },
-): void
-```
-
-Apply lineage pressure strength adjustments.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `ancestorUniq` - - Current ancestor uniqueness metric.
-- `thresholds` - - Threshold bounds for decisions.
-
-### applyLinearSchedule
-
-```ts
-applyLinearSchedule(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Apply linear complexity budget scheduling.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-### applyMutationAmount
-
-```ts
-applyMutationAmount(
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  settings: MutationSettings,
-  randomSource: () => number,
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): void
-```
-
-Apply mutation-amount adjustments to a genome.
-
-Parameters:
-- `genome` - - Current genome.
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-### applyMutationsToPopulation
-
-```ts
-applyMutationsToPopulation(
-  population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-  partitions: MutationPartitions,
-  settings: MutationSettings,
-  randomSource: () => number,
-): MutationOutcome
-```
-
-Apply mutation updates to the population.
-
-Parameters:
-- `population` - - Full population to mutate.
-- `partitions` - - Scored partitions.
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-
-Returns: Mutation outcome flags.
-
-### applyOperatorDecay
-
-```ts
-applyOperatorDecay(
-  stats: Map<string, { success: number; attempts: number; }>,
-  entries: [string, { success: number; attempts: number; }][],
-  decay: number,
-): void
-```
-
-Apply exponential decay to each operator statistic entry.
-
-Parameters:
-- `stats` - - Operator statistics map.
-- `entries` - - Operator stat entries to update.
-- `decay` - - Decay factor.
-
-### applyRejection
-
-```ts
-applyRejection(
-  engine: NeatLikeWithAdaptive,
-  threshold: number,
-): void
-```
-
-Zero scores below the final threshold.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `threshold` - - Final MC threshold.
-
-### applyTwoTierAmountDelta
-
-```ts
-applyTwoTierAmountDelta(
-  baseDelta: number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Apply two-tier adjustments to amount delta.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Adjusted delta.
-
-### applyTwoTierDelta
-
-```ts
-applyTwoTierDelta(
-  baseDelta: number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Apply two-tier adjustments to a delta.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Adjusted delta.
-
-### applyTwoTierFallback
-
-```ts
-applyTwoTierFallback(
-  population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-  settings: MutationSettings,
-): void
-```
-
-Apply two-tier fallback balancing.
-
-Parameters:
-- `population` - - Population of genomes.
-- `settings` - - Resolved settings.
-
-### applyUniquenessAdjustment
-
-```ts
-applyUniquenessAdjustment(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-  ancestorUniq: number,
-  thresholds: { lowThreshold: number; highThreshold: number; },
-  adjustMagnitude: number,
-): void
-```
-
-Apply an adjustment for the configured mode.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Ancestor uniqueness adaptive configuration.
-- `ancestorUniq` - - Current ancestor uniqueness metric.
-- `thresholds` - - Threshold bounds for decisions.
-- `adjustMagnitude` - - Adjustment magnitude.
-
-### BUDGET_GROWTH_MULTIPLIER
-
-Default budget growth multiplier.
-
-### clampNodeBudget
-
-```ts
-clampNodeBudget(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Clamp node budget to configured minimum.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-### clampValue
-
-```ts
-clampValue(
-  value: number,
-  min: number,
-  max: number,
-): number
-```
-
-Clamp a value between min and max bounds.
-
-Parameters:
-- `value` - - Value to clamp.
-- `min` - - Minimum bound.
-- `max` - - Maximum bound.
-
-Returns: Clamped value.
-
-### collectOperatorStatsEntries
-
-```ts
-collectOperatorStatsEntries(
-  stats: Map<string, { success: number; attempts: number; }>,
-): [string, { success: number; attempts: number; }][]
-```
-
-Collect operator statistic entries for processing.
-
-Parameters:
-- `stats` - - Operator statistics map.
-
-Returns: Array of operator stat entries.
-
-### collectScoredGenomes
-
-```ts
-collectScoredGenomes(
-  population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-): { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]
-```
-
-Collect genomes with numeric scores.
-
-Parameters:
-- `population` - - Population of genomes.
-
-Returns: Scored genomes.
-
-### collectScores
-
-```ts
-collectScores(
-  engine: NeatLikeWithAdaptive,
-): number[]
-```
-
-Collect population scores into a snapshot array.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Array of scores (missing scores treated as 0).
-
-### COMPLEXITY_MODE_ADAPTIVE
-
-Complexity budget adaptive mode string.
-
-### COMPLEXITY_MODE_LINEAR
-
-Complexity budget linear mode string.
-
-### ComplexityBudgetConfig
-
-### computeAcceptance
-
-```ts
-computeAcceptance(
-  scores: number[],
-  threshold: number,
-): number
-```
-
-Compute acceptance metrics for the current threshold.
-
-Parameters:
-- `scores` - - Population score snapshot.
-- `threshold` - - Current MC threshold.
-
-Returns: Acceptance proportion.
-
-### computeAdjustmentFactors
-
-```ts
-computeAdjustmentFactors(
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-  trends: { improvement: number; slope: number; },
-  history: number[],
-): { increaseFactor: number; stagnationFactor: number; }
-```
-
-Compute adjustment factors for budget growth and decay.
-
-Parameters:
-- `config` - - Complexity budget configuration.
-- `trends` - - Improvement and slope metrics.
-- `history` - - Rolling history of best scores.
-
-Returns: Adjustment factors (increase and stagnation multipliers).
-
-### computeNoveltyFactor
-
-```ts
-computeNoveltyFactor(
-  engine: NeatLikeWithAdaptive,
-): number
-```
-
-Compute novelty factor based on archive size.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Novelty multiplier (0.9 if archive small, 1.0 otherwise).
-
-### computeSlope
-
-```ts
-computeSlope(
-  history: number[],
-): number
-```
-
-Compute linear regression slope using ordinary least squares.
-
-Parameters:
-- `history` - - Rolling history of best scores.
-
-Returns: OLS slope estimate.
-
-### computeTrends
-
-```ts
-computeTrends(
-  history: number[],
-): { improvement: number; slope: number; }
-```
-
-Compute improvement and slope trends from score history.
-
-Parameters:
-- `history` - - Rolling history of best scores.
-
-Returns: Trend metrics (improvement and slope).
-
-### createRandomDelta
-
-```ts
-createRandomDelta(
-  sigmaBase: number,
-  randomSource: () => number,
-): number
-```
-
-Create a signed random delta scaled by sigma.
-
-Parameters:
-- `sigmaBase` - - Sigma scaling factor.
-- `randomSource` - - Random number provider.
-
-Returns: Signed delta.
-
-### decayOperatorStat
-
-```ts
-decayOperatorStat(
-  operatorStat: { success: number; attempts: number; },
-  decay: number,
-): { success: number; attempts: number; }
-```
-
-Apply decay to a single operator statistic record.
-
-Parameters:
-- `operatorStat` - - Operator statistic record.
-- `decay` - - Decay factor.
-
-Returns: Decayed operator statistic record.
-
-### DEFAULT_ADAPT_EVERY
-
-Default adapt-every cadence for adaptive mutation.
-
-### DEFAULT_ANCESTOR_UNIQ_ADJUST
-
-Default adjustment magnitude for uniqueness nudges.
-
-### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
-
-Default cooldown (generations) for ancestor-uniqueness adjustments.
-
-### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
-
-Default upper bound for acceptable ancestor uniqueness.
-
-### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
-
-Default lower bound for acceptable ancestor uniqueness.
-
-### DEFAULT_CB_INCREASE_FACTOR
-
-Default increase factor for adaptive schedule.
-
-### DEFAULT_CB_STAGNATION_FACTOR
-
-Default stagnation factor for adaptive schedule.
-
-### DEFAULT_IMPROVEMENT_WINDOW
-
-Default score history window.
-
-### DEFAULT_INITIAL_MUTATION_RATE
-
-Default initial mutation rate used for balance checks.
-
-### DEFAULT_LINEAGE_PRESSURE_STRENGTH
-
-Default lineage pressure strength when initializing the option.
-
-### DEFAULT_MAX_MUTATION_AMOUNT
-
-Default maximum mutation amount.
-
-### DEFAULT_MAX_MUTATION_RATE
-
-Default maximum per-genome mutation rate.
-
-### DEFAULT_MIN_MUTATION_AMOUNT
-
-Default minimum mutation amount.
-
-### DEFAULT_MIN_MUTATION_RATE
-
-Default minimum per-genome mutation rate.
-
-### DEFAULT_MUTATION_AMOUNT
-
-Default mutation amount when genome value is missing.
-
-### DEFAULT_MUTATION_AMOUNT_SIGMA
-
-Default mutation amount sigma for perturbations.
-
-### DEFAULT_MUTATION_SIGMA
-
-Default mutation sigma for adaptive mutation.
-
-### DENOMINATOR_FALLBACK
-
-Fallback denominator to avoid divide-by-zero.
-
-### ensureLineagePressureState
-
-```ts
-ensureLineagePressureState(
-  engine: NeatLikeWithAdaptive,
-): { enabled?: boolean | undefined; mode?: string | undefined; strength?: number | undefined; }
-```
-
-Ensure lineage pressure state is available.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Lineage pressure configuration object.
-
-### EXPLORE_LOW_DECREASE_MULTIPLIER
-
-Multiplicative decay for explore-low strategy (top half).
-
-### EXPLORE_LOW_INCREASE_MULTIPLIER
-
-Multiplicative boost for explore-low strategy (bottom half).
-
-### extractAncestorUniqueness
-
-```ts
-extractAncestorUniqueness(
-  engine: NeatLikeWithAdaptive,
-): number | undefined
-```
-
-Extract the latest ancestor-uniqueness metric from telemetry.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Ancestor uniqueness value or undefined when missing.
-
-### FIVE
-
-Constant: five value.
-
-### FOUR
-
-Constant: four value.
-
-### Genome
-
-### HALF_INDEX_DIVISOR
-
-Divisor used to split populations in half.
-
-### HISTORY_MIN_IMPROVEMENT_COUNT
-
-Minimum history length to compute improvement.
-
-### HISTORY_MIN_SLOPE_COUNT
-
-Minimum history length to compute slope.
-
-### initializeConnectionBudget
-
-```ts
-initializeConnectionBudget(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Initialize connection budget if undefined.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-### initializeNodeBudget
-
-```ts
-initializeNodeBudget(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Initialize node budget if undefined.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-### initializePhaseState
-
-```ts
-initializePhaseState(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; },
-): void
-```
-
-Ensure phase state is initialized.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Phased complexity configuration.
-
-### initializeThreshold
-
-```ts
-initializeThreshold(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; },
-): void
-```
-
-Initialize MC threshold if missing.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Minimal-criterion adaptive configuration.
-
-### isCooldownSatisfied
-
-```ts
-isCooldownSatisfied(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-): boolean
-```
-
-Determine whether the cooldown window has elapsed.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Ancestor uniqueness adaptive configuration.
-
-Returns: True when adjustment is allowed.
-
-### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
-
-Multiplier when decreasing lineage pressure strength.
-
-### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
-
-Multiplier when increasing lineage pressure strength.
-
-### LINEAGE_PRESSURE_MODE_SPREAD
-
-Lineage pressure spread mode.
-
-### LINEAR_HORIZON_DEFAULT
-
-Default horizon for linear schedule.
-
-### MINIMAL_TOPOLOGY_OFFSET
-
-Offset added to input/output for minimal topology.
-
-### MinimalCriterionAdaptiveConfig
-
-### MUTATION_SIGMA_SCALE
-
-Scale applied to mutation sigma for perturbations.
-
-### MUTATION_STRATEGY_ANNEAL
-
-Strategy identifier for annealed mutation.
-
-### MUTATION_STRATEGY_EXPLORE_LOW
-
-Strategy identifier for explore-low mutation.
-
-### MUTATION_STRATEGY_TWO_TIER
-
-Strategy identifier for two-tier mutation.
-
-### MutationOutcome
-
-### MutationPartitions
-
-### MutationSettings
-
-### NeatLikeWithAdaptive
-
-Minimal interface for NEAT instances with adaptive features.
-Exported for use in tests and type-safe function calls.
-
-### NEGATIVE_ONE
-
-Constant: negative one for last index.
-
-### normalizeSlope
-
-```ts
-normalizeSlope(
-  slope: number,
-  initialScore: number,
-): number
-```
-
-Normalize slope magnitude relative to initial score.
-
-Parameters:
-- `slope` - - Raw OLS slope.
-- `initialScore` - - First score in history window.
-
-Returns: Normalized slope clamped to [-2, 2].
-
-### NOVELTY_ARCHIVE_MIN_SIZE
-
-Novelty archive minimum size.
-
-### NOVELTY_FACTOR_DEFAULT
-
-Novelty factor when archive is sufficient.
-
-### NOVELTY_FACTOR_SMALL
-
-Novelty factor when archive is small.
-
-### ONE
-
-Constant: one value.
-
-### ONE_HUNDRED
-
-Constant: one hundred value.
-
-### OPERATOR_DECAY_DEFAULT
-
-Default operator decay factor.
-
-### OperatorAdaptationConfig
-
-### PHASE_COMPLEXIFY
-
-Phase label for complexify.
-
-### PHASE_LENGTH_DEFAULT
-
-Default phase length in generations.
-
-### PHASE_SIMPLIFY
-
-Phase label for simplify.
-
-### PhasedComplexityConfig
-
-### PROGRESS_RATIO_MAX
-
-Maximum progress ratio for scheduling.
-
-### recordAdjustment
-
-```ts
-recordAdjustment(
-  engine: NeatLikeWithAdaptive,
-): void
-```
-
-Record the generation when an adjustment is applied.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-### resolveAdjustmentMagnitude
-
-```ts
-resolveAdjustmentMagnitude(
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-): number
-```
-
-Resolve adjustment magnitude for nudging controlled parameters.
-
-Parameters:
-- `config` - - Ancestor uniqueness adaptive configuration.
-
-Returns: Adjustment magnitude.
-
-### resolveAmountDelta
-
-```ts
-resolveAmountDelta(
-  settings: MutationSettings,
-  randomSource: () => number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Resolve mutation-amount delta based on strategy.
-
-Parameters:
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Signed mutation amount delta.
-
-### resolveMutationSettings
-
-```ts
-resolveMutationSettings(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; },
-): MutationSettings
-```
-
-Resolve mutation settings derived from configuration and engine state.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Adaptive mutation configuration.
-
-Returns: Resolved mutation settings.
-
-### resolveNextPhase
-
-```ts
-resolveNextPhase(
-  currentPhase: string,
-): string
-```
-
-Resolve next phase name.
-
-Parameters:
-- `currentPhase` - - Current phase label.
-
-Returns: Next phase label.
-
-### resolveOperatorDecay
-
-```ts
-resolveOperatorDecay(
-  config: { enabled?: boolean | undefined; learningRate?: number | undefined; alpha?: number | undefined; decay?: number | undefined; },
-): number
-```
-
-Resolve the decay factor for operator statistics.
-
-Parameters:
-- `config` - - Operator adaptation configuration.
-
-Returns: Decay factor for exponential smoothing.
-
-### resolveRandomSource
-
-```ts
-resolveRandomSource(
-  engine: NeatLikeWithAdaptive,
-): () => number
-```
-
-Resolve a random source that matches the legacy RNG usage.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Random number provider.
-
-### resolveRateDelta
-
-```ts
-resolveRateDelta(
-  settings: MutationSettings,
-  randomSource: () => number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Resolve mutation-rate delta based on strategy.
-
-Parameters:
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Signed mutation rate delta.
-
-### resolveTargetSettings
-
-```ts
-resolveTargetSettings(
-  config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; },
-): { targetAcceptance: number; adjustRate: number; }
-```
-
-Resolve target acceptance and adjust rate settings.
-
-Parameters:
-- `config` - - Minimal-criterion adaptive configuration.
-
-Returns: Target settings.
-
-### resolveUniquenessThresholds
-
-```ts
-resolveUniquenessThresholds(
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-): { lowThreshold: number; highThreshold: number; }
-```
-
-Resolve thresholds for ancestor-uniqueness decisions.
-
-Parameters:
-- `config` - - Ancestor uniqueness adaptive configuration.
-
-Returns: Threshold bounds.
-
-### RNG_CENTER_OFFSET
-
-Random offset for signed deltas.
-
-### RNG_SPREAD_MULTIPLIER
-
-Random range multiplier for signed deltas.
-
-### shouldAdaptThisGeneration
-
-```ts
-shouldAdaptThisGeneration(
-  generation: number,
-  config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; },
-): boolean
-```
-
-Check whether mutation adaptation should run this generation.
-
-Parameters:
-- `generation` - - Current generation index.
-- `config` - - Adaptive mutation configuration.
-
-Returns: True if adaptation should run.
-
-### shouldApplyTwoTierFallback
-
-```ts
-shouldApplyTwoTierFallback(
-  strategy: string,
-  outcome: MutationOutcome,
-): boolean
-```
-
-Determine whether a two-tier fallback is needed.
-
-Parameters:
-- `strategy` - - Mutation strategy identifier.
-- `outcome` - - Mutation outcome flags.
-
-Returns: True if fallback should run.
-
-### SLOPE_BOOST_MULTIPLIER
-
-Slope boost multiplier for adaptive increase factor.
-
-### SLOPE_NORMALIZE_CLAMP
-
-Clamp magnitude for slope normalization.
-
-### SLOPE_PENALTY_MULTIPLIER
-
-Slope penalty multiplier for stagnation factor.
-
-### sortScoredGenomes
-
-```ts
-sortScoredGenomes(
-  scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-): { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]
-```
-
-Sort scored genomes in ascending score order.
-
-Parameters:
-- `scoredGenomes` - - Scored genomes.
-
-Returns: Sorted genomes.
-
-### splitScoredGenomes
-
-```ts
-splitScoredGenomes(
-  scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-): MutationPartitions
-```
-
-Split scored genomes into top and bottom halves.
-
-Parameters:
-- `scoredGenomes` - - Sorted scored genomes.
-
-Returns: Partitions used by strategy rules.
-
-### TARGET_ACCEPTANCE_DEFAULT
-
-Default target acceptance in minimal criterion.
-
-### TEN
-
-Constant: ten value.
-
-### THREE
-
-Constant: three value.
-
-### togglePhaseIfNeeded
-
-```ts
-togglePhaseIfNeeded(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; },
-): void
-```
-
-Toggle phase if the current phase has exceeded its length.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Phased complexity configuration.
-
-### TWO
-
-Constant: two value.
-
-### updateScoreHistory
-
-```ts
-updateScoreHistory(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): number[]
-```
-
-Update rolling score history with current best score.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-Returns: Rolling history array after update.
-
-### updateThreshold
-
-```ts
-updateThreshold(
-  engine: NeatLikeWithAdaptive,
-  acceptance: number,
-  tuning: { targetAcceptance: number; adjustRate: number; },
-): void
-```
-
-Update the MC threshold based on acceptance proportion.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `acceptance` - - Observed acceptance proportion.
-- `tuning` - - Target acceptance and adjustment settings.
-
-### ZERO
-
-Constant: zero value.
 
 ## neat/neat.evaluate.utils.ts
 
@@ -6995,387 +4235,6 @@ Emit a warning when the network lacks input or output nodes.
 
 Returns: void
 
-## neat/neat.diversity.utils.ts
-
-### arrayMean
-
-```ts
-arrayMean(
-  values: number[],
-): number
-```
-
-Compute the arithmetic mean of a numeric array. Returns 0 for empty arrays.
-
-Parameters:
-- `values` - - Values to average.
-
-Returns: Arithmetic mean of the values.
-
-### arrayVariance
-
-```ts
-arrayVariance(
-  values: number[],
-): number
-```
-
-Compute the variance (population variance) of a numeric array.
-Returns 0 for empty arrays. Uses arrayMean internally.
-
-Parameters:
-- `values` - - Values to evaluate.
-
-Returns: Population variance.
-
-### calculateDiversityStats
-
-```ts
-calculateDiversityStats(
-  population: GenomeWithMetrics[],
-  compatibilityComputer: CompatComputer,
-): DiversityStats | undefined
-```
-
-Compute diversity statistics for a NEAT population.
-
-Parameters:
-- `population` - - array of genome-like objects (nodes, connections, optional _depth)
-- `compatibilityComputer` - - object exposing _compatibilityDistance(a,b)
-
-Returns: DiversityStats object with all computed aggregates, or undefined if input empty
-
-### calculateStructuralEntropy
-
-```ts
-calculateStructuralEntropy(
-  graph: default,
-): number
-```
-
-Compute the Shannon-style entropy of a network's out-degree distribution.
-
-Parameters:
-- `graph` - - Network instance to evaluate.
-
-Returns: Shannon-style entropy value.
-
-### CompatComputer
-
-Minimal interface that provides a compatibility distance function.
-Implementors should expose a compatible signature with legacy NEAT code.
-
-### DiversityStats
-
-Diversity statistics returned by computeDiversityStats.
-Each field represents an aggregate metric for a NEAT population.
-
-### GenomeWithMetrics
-
-Minimal genome interface for diversity computations.
-
-### MAX_COMPATIBILITY_SAMPLE
-
-Maximum population sample size for compatibility comparisons.
-
-### MAX_LINEAGE_PAIR_SAMPLE
-
-Maximum lineage sample size for pairwise depth comparisons.
-
-### NodeWithConnections
-
-Minimal node interface with connections.
-
-## neat/neat.selection.utils.ts
-
-### calculateFitnessTotals
-
-```ts
-calculateFitnessTotals(
-  population: GenomeWithScore[],
-): { totalFitness: number; minFitnessShift: number; }
-```
-
-Compute the total fitness and minimal score shift for roulette selection.
-
-Parameters:
-- `population` - - Genomes in the current population.
-
-Returns: Aggregated fitness totals.
-
-### calculateTotalScore
-
-```ts
-calculateTotalScore(
-  population: GenomeWithScore[],
-): number
-```
-
-Calculate the total fitness across the population.
-
-Parameters:
-- `population` - - Genomes in the current population.
-
-Returns: The sum of all scores.
-
-### DEFAULT_POWER
-
-Default power exponent for POWER selection when none is configured.
-
-### DEFAULT_SCORE
-
-Default score when a genome has no explicit score.
-
-### DEFAULT_TOURNAMENT_PROBABILITY
-
-Default tournament win probability when none is configured.
-
-### DEFAULT_TOURNAMENT_SIZE
-
-Default tournament size when none is configured.
-
-### ensurePopulationEvaluated
-
-```ts
-ensurePopulationEvaluated(
-  internal: NeatLikeWithSelection,
-): void
-```
-
-Ensure population scores exist by running evaluation if needed.
-
-Parameters:
-- `internal` - - The Neat instance containing `population` and `evaluate`.
-
-Returns: void
-
-### ensurePopulationSortedDescending
-
-```ts
-ensurePopulationSortedDescending(
-  internal: NeatLikeWithSelection,
-): void
-```
-
-Ensure the population is sorted descending by score when out of order.
-
-Parameters:
-- `internal` - - The Neat instance containing `population`.
-
-Returns: void
-
-### ensurePopulationSortedDescendingForPower
-
-```ts
-ensurePopulationSortedDescendingForPower(
-  selectionContext: SelectionContext,
-): void
-```
-
-Ensure the population is sorted descending by score if the first two
-entries are out of order.
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-
-Returns: void
-
-### FIRST_INDEX
-
-Index of the first element in an array.
-
-### GenomeWithScore
-
-Genome with a fitness score and arbitrary additional metadata.
-
-Example:
-
-const genome: GenomeWithScore = { score: 42, id: 'g-1' };
-
-### getRandomPopulationMember
-
-```ts
-getRandomPopulationMember(
-  selectionContext: SelectionContext,
-): GenomeWithScore
-```
-
-Select a random population member using the configured RNG.
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-
-Returns: A randomly chosen genome.
-
-### INITIAL_CUMULATIVE_FITNESS
-
-Initial cumulative fitness value for threshold scans.
-
-### INITIAL_MOST_NEGATIVE_SCORE
-
-Initial most-negative score sentinel for fitness scans.
-
-### INITIAL_TOTAL_FITNESS
-
-Initial total fitness accumulator value.
-
-### LAST_ELEMENT_INDEX
-
-Index used with `at()` to access the last element.
-
-### LAST_INDEX_OFFSET
-
-Offset for retrieving the last element via length arithmetic.
-
-### LOOP_INDEX_INCREMENT
-
-Step size for index-based loops.
-
-### NeatLikeWithSelection
-
-NEAT-like instance extended with selection-specific state and helpers.
-
-Example:
-
-const selectionHost: NeatLikeWithSelection = {
-  population: [],
-  options: { selection: { name: 'TOURNAMENT', size: 3 } },
-  _getRNG: () => Math.random,
-  sort: () => undefined,
-} as NeatLikeWithSelection;
-
-### pickByShiftedThreshold
-
-```ts
-pickByShiftedThreshold(
-  population: GenomeWithScore[],
-  selectionThreshold: number,
-  minFitnessShift: number,
-): GenomeWithScore | undefined
-```
-
-Pick the first genome whose shifted cumulative fitness exceeds the threshold.
-
-Parameters:
-- `population` - - Genomes in the current population.
-- `selectionThreshold` - - Random threshold in shifted fitness space.
-- `minFitnessShift` - - Amount added to each score to shift negatives.
-
-Returns: The chosen genome if one crosses the threshold.
-
-### pickTournamentWinner
-
-```ts
-pickTournamentWinner(
-  selectionContext: SelectionContext,
-  sortedParticipants: GenomeWithScore[],
-): GenomeWithScore
-```
-
-Select a winner from sorted tournament participants.
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-- `sortedParticipants` - - Participants sorted by descending score.
-
-Returns: The chosen tournament winner.
-
-### resolveTournamentOverflow
-
-```ts
-resolveTournamentOverflow(
-  selectionContext: SelectionContext,
-): GenomeWithScore
-```
-
-Resolve what happens when the tournament size exceeds population size.
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-
-Returns: A fallback parent genome.
-
-### sampleTournamentParticipants
-
-```ts
-sampleTournamentParticipants(
-  selectionContext: SelectionContext,
-  tournamentSize: number,
-): GenomeWithScore[]
-```
-
-Sample a list of tournament participants (with possible repeats).
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-- `tournamentSize` - - Number of competitors to sample.
-
-Returns: Sampled participants.
-
-### SECOND_INDEX
-
-Index of the second element in an array.
-
-### selectParentByFitnessProportionate
-
-```ts
-selectParentByFitnessProportionate(
-  selectionContext: SelectionContext,
-): GenomeWithScore
-```
-
-Select a parent using roulette-wheel fitness proportionate selection.
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-
-Returns: The chosen parent genome.
-
-### selectParentByPower
-
-```ts
-selectParentByPower(
-  selectionContext: SelectionContext,
-): GenomeWithScore
-```
-
-Select a parent by power-law distribution on the sorted population.
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-
-Returns: The chosen parent genome.
-
-### selectParentByStrategy
-
-```ts
-selectParentByStrategy(
-  internal: NeatLikeWithSelection,
-): GenomeWithScore
-```
-
-Select a parent genome according to configured selection strategy.
-
-Parameters:
-- `internal` - - The Neat instance containing population and options.
-
-Returns: A genome object chosen as the parent.
-
-### selectParentByTournament
-
-```ts
-selectParentByTournament(
-  selectionContext: SelectionContext,
-): GenomeWithScore
-```
-
-Select a parent by tournament selection.
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-
-Returns: The chosen parent genome.
-
 ## neat/neat.telemetry.utils.ts
 
 ### applyComplexityStatsMonoObjective
@@ -8342,556 +5201,6 @@ Parameters:
 - `telemetryBufferRef` - - Buffer to trim in-place.
 - `maxEntries` - - Maximum entries to keep.
 
-## neat/neat.objectives.utils.ts
-
-### buildDefaultFitnessObjective
-
-```ts
-buildDefaultFitnessObjective(): ObjectiveDescriptor
-```
-
-Returns: Default fitness objective descriptor.
-
-### collectDefaultObjectives
-
-```ts
-collectDefaultObjectives(
-  neatInstance: NeatLikeWithObjectives,
-): ObjectiveDescriptor[]
-```
-
-Parameters:
-- `neatInstance` - - Instance providing objective settings.
-
-Returns: Default objectives when fitness is not suppressed.
-
-### collectUserObjectives
-
-```ts
-collectUserObjectives(
-  neatInstance: NeatLikeWithObjectives,
-): ObjectiveDescriptor[]
-```
-
-Parameters:
-- `neatInstance` - - Instance providing objective settings.
-
-Returns: Valid user-registered objectives when multi-objective is enabled.
-
-### ensureMultiObjectiveOptions
-
-```ts
-ensureMultiObjectiveOptions(
-  neatInstance: NeatLikeWithObjectives,
-): { enabled?: boolean | undefined; objectives?: ObjectiveDescriptor[] | undefined; }
-```
-
-Parameters:
-- `neatInstance` - - Instance receiving the multi-objective container.
-
-Returns: Initialized multi-objective options.
-
-### ensureObjectivesList
-
-```ts
-ensureObjectivesList(
-  multiObjectiveOptions: { enabled?: boolean | undefined; objectives?: ObjectiveDescriptor[] | undefined; },
-): ObjectiveDescriptor[]
-```
-
-Parameters:
-- `multiObjectiveOptions` - - Multi-objective container to hydrate.
-
-Returns: Objectives list for mutation-free operations.
-
-### getObjectiveCandidates
-
-```ts
-getObjectiveCandidates(
-  neatInstance: NeatLikeWithObjectives,
-): ObjectiveDescriptor[]
-```
-
-Parameters:
-- `neatInstance` - - Instance providing objective settings.
-
-Returns: Candidate objectives from configuration.
-
-### isMultiObjectiveEnabled
-
-```ts
-isMultiObjectiveEnabled(
-  neatInstance: NeatLikeWithObjectives,
-): boolean
-```
-
-Parameters:
-- `neatInstance` - - Instance providing objective settings.
-
-Returns: Whether multi-objective mode is enabled with a candidate list.
-
-### isValidObjective
-
-```ts
-isValidObjective(
-  candidateObjective: ObjectiveDescriptor | undefined,
-): boolean
-```
-
-Parameters:
-- `candidateObjective` - - Candidate descriptor to validate.
-
-Returns: True when the descriptor has the required shape.
-
-### NeatLikeWithObjectives
-
-Minimal interface for NEAT instances using objective management.
-
-This shape is intentionally small and only includes the pieces needed by
-`_getObjectives`, `registerObjective`, and `clearObjectives`.
-
-Example:
-
-```ts
-const neatLike: NeatLikeWithObjectives = {
-  options: { multiObjective: { enabled: true, objectives: [] } },
-};
-```
-
-### replaceObjectiveByKey
-
-```ts
-replaceObjectiveByKey(
-  objectivesList: ObjectiveDescriptor[],
-  objectiveKey: string,
-  objectiveDirection: "max" | "min",
-  objectiveAccessor: (genome: GenomeLike) => number,
-): ObjectiveDescriptor[]
-```
-
-Parameters:
-- `objectivesList` - - Existing objectives to update.
-- `objectiveKey` - - Key to replace.
-- `objectiveDirection` - - Direction for the new objective.
-- `objectiveAccessor` - - Accessor for the new objective.
-
-Returns: Updated objectives list with the new descriptor appended.
-
-## neat/neat.speciation.utils.ts
-
-Utility helpers for NEAT speciation orchestration.
-
-### adjustCompatibilityThreshold
-
-```ts
-adjustCompatibilityThreshold(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-  options: TOptions,
-  compatAdjust: { smoothingWindow?: number | undefined; decay?: number | undefined; kp?: number | undefined; ki?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; },
-  minCompatibilityThreshold: number,
-  maxCompatibilityThreshold: number,
-): void
-```
-
-Update the adaptive compatibility threshold and clamp to bounds.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-- `options` - - Speciation options.
-- `compatAdjust` - - Compatibility adjustment settings.
-- `minCompatibilityThreshold` - - Lower clamp bound.
-- `maxCompatibilityThreshold` - - Upper clamp bound.
-
-Returns: Nothing.
-
-### applyAgeProtection
-
-```ts
-applyAgeProtection(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-  options: TOptions,
-): void
-```
-
-Apply age protection penalties to old species.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-- `options` - - Speciation options.
-
-Returns: Nothing.
-
-### applyFitnessSharing
-
-```ts
-applyFitnessSharing(
-  speciationContext: FitnessSharingContext,
-  sharingSigma: number,
-): void
-```
-
-Apply fitness sharing to penalize similarity within species.
-
-Parameters:
-- `speciationContext` - - Neat instance context with species and distance function.
-- `sharingSigma` - - Sharing radius used for distance weighting.
-
-Returns: Nothing.
-
-### assignPopulationToSpecies
-
-```ts
-assignPopulationToSpecies(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-  options: TOptions,
-): void
-```
-
-Assign each genome in the population to a compatible species.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-- `options` - - Speciation options.
-
-Returns: Nothing.
-
-### averageNumbers
-
-```ts
-averageNumbers(
-  values: number[],
-): number
-```
-
-Average a list of numbers, returning zero when empty.
-
-Parameters:
-- `values` - - Numeric values to average.
-
-Returns: Mean of the values or zero.
-
-### buildExtendedHistoryStats
-
-```ts
-buildExtendedHistoryStats(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-  species: SpeciesLike,
-): Record<string, unknown>
-```
-
-Build extended history stats for a species.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-- `species` - - Species to snapshot.
-
-Returns: Extended history entry.
-
-### clampCompatibilityThreshold
-
-```ts
-clampCompatibilityThreshold(
-  options: SpeciationOptions,
-  minCompatibilityThreshold: number,
-  maxCompatibilityThreshold: number,
-): void
-```
-
-Clamp the compatibility threshold to configured bounds.
-
-Parameters:
-- `options` - - Speciation options.
-- `minCompatibilityThreshold` - - Lower clamp bound.
-- `maxCompatibilityThreshold` - - Upper clamp bound.
-
-Returns: Nothing.
-
-### CompatAdjust
-
-Resolved compatibility-threshold adjustment settings.
-
-This is the non-nullable form of {@link SpeciationOptions.compatAdjust} used
-by the speciation PID controller.
-
-### computePidThreshold
-
-```ts
-computePidThreshold(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-  options: TOptions,
-  compatAdjust: { smoothingWindow?: number | undefined; decay?: number | undefined; kp?: number | undefined; ki?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; },
-  currentThreshold: number,
-  minCompatibilityThreshold: number,
-  maxCompatibilityThreshold: number,
-): number
-```
-
-Compute a PID-based threshold update and clamp when needed.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-- `options` - - Speciation options.
-- `compatAdjust` - - Compatibility adjustment settings.
-- `currentThreshold` - - Current compatibility threshold.
-- `minCompatibilityThreshold` - - Lower clamp bound.
-- `maxCompatibilityThreshold` - - Upper clamp bound.
-
-Returns: Updated threshold.
-
-### createSpeciesForGenome
-
-```ts
-createSpeciesForGenome(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-  genome: GenomeDetailed,
-): void
-```
-
-Create a new species for the provided genome.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-- `genome` - - Genome that starts a new species.
-
-Returns: Nothing.
-
-### DEFAULT_COMPAT_INTEGRAL
-
-Default integral accumulator value.
-
-### DEFAULT_COMPATIBILITY_INTEGRAL_GAIN
-
-Default integral gain for compatibility PID.
-
-### DEFAULT_COMPATIBILITY_PROPORTIONAL_GAIN
-
-Default proportional gain for compatibility PID.
-
-### DEFAULT_COMPATIBILITY_THRESHOLD
-
-Default compatibility threshold when unspecified.
-
-### DEFAULT_LAST_IMPROVED_GENERATION
-
-Default last improved generation when missing.
-
-### DEFAULT_MAX_COMPATIBILITY_THRESHOLD
-
-Default maximum compatibility threshold.
-
-### DEFAULT_MEMBER_COUNT_FALLBACK
-
-Fallback divisor when member count is zero.
-
-### DEFAULT_MIN_COMPATIBILITY_THRESHOLD
-
-Default minimum compatibility threshold.
-
-### DEFAULT_SCORE_FALLBACK
-
-Fallback numeric score when missing.
-
-### DEFAULT_SHARING_SIGMA
-
-Default sigma for fitness sharing.
-
-### DEFAULT_SPECIES_AGE_GRACE
-
-Default grace period for young species.
-
-### DEFAULT_SPECIES_OLD_PENALTY
-
-Default penalty applied to old species.
-
-### DEFAULT_STAGNATION_WINDOW
-
-Default stagnation window in generations.
-
-### DEFAULT_TARGET_SPECIES
-
-Default target number of species for PID controller.
-
-### findCompatibleSpecies
-
-```ts
-findCompatibleSpecies(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-  options: TOptions,
-  genome: GenomeDetailed,
-): SpeciesLike | undefined
-```
-
-Find a compatible species representative for the given genome.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-- `options` - - Speciation options.
-- `genome` - - Genome to match.
-
-Returns: Matching species or undefined.
-
-### FitnessSharingContext
-
-Minimal context required to apply fitness sharing.
-
-Fitness sharing normalizes per-genome fitness within each species to reduce
-selection pressure toward dense clusters of very similar genomes.
-
-### HISTORY_BUFFER_MAX_ENTRIES
-
-Max number of history entries to keep.
-
-### InnovationAccumulator
-
-Accumulator for innovation-id statistics across a set of connections.
-
-Used for extended history telemetry (mean innovation, innovation range, and
-enabled/disabled ratios).
-
-### NEGATIVE_INFINITY
-
-Shared negative infinity constant for score initialization.
-
-### PENALTY_NO_EFFECT_THRESHOLD
-
-Penalty cutoff where no reduction should occur.
-
-### recordHistory
-
-```ts
-recordHistory(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-  options: TOptions,
-): void
-```
-
-Record the current species history snapshot.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-- `options` - - Speciation options.
-
-Returns: Nothing.
-
-### refreshSpeciesRepresentatives
-
-```ts
-refreshSpeciesRepresentatives(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-): void
-```
-
-Refresh representatives and remove empty species.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-
-Returns: Nothing.
-
-### resetSpeciesMembers
-
-```ts
-resetSpeciesMembers(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-): void
-```
-
-Clear member lists for all species.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-
-Returns: Nothing.
-
-### SHARING_MAX_CONTRIBUTION
-
-Maximum sharing contribution per peer.
-
-### SHARING_SELF_DISTANCE
-
-Distance used when comparing a member with itself.
-
-### SHARING_SUM_FLOOR
-
-Fallback divisor when sharing sum is zero.
-
-### snapshotPreviousMembers
-
-```ts
-snapshotPreviousMembers(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-): void
-```
-
-Snapshot current species memberships for telemetry.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-
-Returns: Nothing.
-
-### SPECIES_AGE_GRACE_MULTIPLIER
-
-Multiplier used to convert grace generations to age threshold.
-
-### StagnationContext
-
-Minimal context required to update species stagnation.
-
-Stagnation pruning removes species that have not improved their best score
-within a configured number of generations.
-
-### summarizeInnovations
-
-```ts
-summarizeInnovations(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-  members: GenomeDetailed[],
-): { meanInnovation: number; innovationRange: number; enabledRatio: number; }
-```
-
-Summarize innovation statistics for a set of members.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-- `members` - - Members to summarize.
-
-Returns: Innovation summary statistics.
-
-### trimHistory
-
-```ts
-trimHistory(
-  speciationContext: SpeciationHarnessContext<TOptions>,
-): void
-```
-
-Trim species history to the maximum buffer size.
-
-Parameters:
-- `speciationContext` - - Speciation harness context.
-
-Returns: Nothing.
-
-### updateSpeciesStagnation
-
-```ts
-updateSpeciesStagnation(
-  speciationContext: StagnationContext,
-  stagnationWindow: number,
-  sortSpeciesMembers: (species: SpeciesLike) => void,
-): void
-```
-
-Update stagnation counters and prune stagnant species.
-
-Parameters:
-- `speciationContext` - - Neat instance context with species array and generation counter.
-- `stagnationWindow` - - Allowed stagnation window.
-- `sortSpeciesMembers` - - Sort function for species members.
-
-Returns: Nothing.
-
 ## neat/neat.mutation.flow.utils.ts
 
 ### applyAddConnMutation
@@ -9760,53 +6069,6 @@ vectorDominates([0.9, 120], [0.9, 150], [
 // => true (equal accuracy, lower latency)
 ```
 
-## neat/neat.adaptive.phases.utils.ts
-
-### initializePhaseState
-
-```ts
-initializePhaseState(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; },
-): void
-```
-
-Ensure phase state is initialized.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Phased complexity configuration.
-
-### resolveNextPhase
-
-```ts
-resolveNextPhase(
-  currentPhase: string,
-): string
-```
-
-Resolve next phase name.
-
-Parameters:
-- `currentPhase` - - Current phase label.
-
-Returns: Next phase label.
-
-### togglePhaseIfNeeded
-
-```ts
-togglePhaseIfNeeded(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; phases?: { generation: number; maxNodes?: number | undefined; maxConns?: number | undefined; }[] | undefined; phaseLength?: number | undefined; initialPhase?: string | undefined; },
-): void
-```
-
-Toggle phase if the current phase has exceeded its length.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Phased complexity configuration.
-
 ## neat/neat.evolve.adaptive.utils.ts
 
 ### adaptReenableProbability
@@ -10131,25 +6393,6 @@ Parameters:
 - `internal` - - neat controller context
 
 Returns: sampled method or null
-
-## neat/neat.species.history.utils.ts
-
-Default slice size when exporting species history as JSONL.
-
-### exportSpeciesHistoryJsonl
-
-```ts
-exportSpeciesHistoryJsonl(
-  speciesHistory: unknown[],
-  maxEntries: number,
-): string
-```
-
-Export species history records as JSON Lines.
-
-### SPECIES_HISTORY_JSONL_MAX_DEFAULT
-
-Default slice size when exporting species history as JSONL.
 
 ## neat/neat.topology-intent.utils.ts
 
@@ -10529,412 +6772,6 @@ Trim the telemetry buffer to a maximum size.
 Parameters:
 - `telemetryBufferRef` - - Buffer to trim in-place.
 - `maxEntries` - - Maximum entries to keep.
-
-## neat/neat.adaptive.mutation.utils.ts
-
-### applyAnnealDelta
-
-```ts
-applyAnnealDelta(
-  baseDelta: number,
-  settings: MutationSettings,
-): number
-```
-
-Apply annealing adjustments to a delta.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `settings` - - Resolved settings.
-
-Returns: Adjusted delta.
-
-### applyExploreLowDelta
-
-```ts
-applyExploreLowDelta(
-  baseDelta: number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Apply explore-low adjustments to a delta.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `genome` - - Current genome.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Adjusted delta.
-
-### applyMutationAmount
-
-```ts
-applyMutationAmount(
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  settings: MutationSettings,
-  randomSource: () => number,
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): void
-```
-
-Apply mutation-amount adjustments to a genome.
-
-Parameters:
-- `genome` - - Current genome.
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-### applyMutationsToPopulation
-
-```ts
-applyMutationsToPopulation(
-  population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-  partitions: MutationPartitions,
-  settings: MutationSettings,
-  randomSource: () => number,
-): MutationOutcome
-```
-
-Apply mutation updates to the population.
-
-Parameters:
-- `population` - - Full population to mutate.
-- `partitions` - - Scored partitions.
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-
-Returns: Mutation outcome flags.
-
-### applyTwoTierAmountDelta
-
-```ts
-applyTwoTierAmountDelta(
-  baseDelta: number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Apply two-tier adjustments to amount delta.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Adjusted delta.
-
-### applyTwoTierDelta
-
-```ts
-applyTwoTierDelta(
-  baseDelta: number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Apply two-tier adjustments to a delta.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Adjusted delta.
-
-### applyTwoTierFallback
-
-```ts
-applyTwoTierFallback(
-  population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-  settings: MutationSettings,
-): void
-```
-
-Apply two-tier fallback balancing.
-
-Parameters:
-- `population` - - Population of genomes.
-- `settings` - - Resolved settings.
-
-### clampValue
-
-```ts
-clampValue(
-  value: number,
-  min: number,
-  max: number,
-): number
-```
-
-Clamp a value between min and max bounds.
-
-Parameters:
-- `value` - - Value to clamp.
-- `min` - - Minimum bound.
-- `max` - - Maximum bound.
-
-Returns: Clamped value.
-
-### collectScoredGenomes
-
-```ts
-collectScoredGenomes(
-  population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-): { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]
-```
-
-Collect genomes with numeric scores.
-
-Parameters:
-- `population` - - Population of genomes.
-
-Returns: Scored genomes.
-
-### createRandomDelta
-
-```ts
-createRandomDelta(
-  sigmaBase: number,
-  randomSource: () => number,
-): number
-```
-
-Create a signed random delta scaled by sigma.
-
-Parameters:
-- `sigmaBase` - - Sigma scaling factor.
-- `randomSource` - - Random number provider.
-
-Returns: Signed delta.
-
-### resolveAmountDelta
-
-```ts
-resolveAmountDelta(
-  settings: MutationSettings,
-  randomSource: () => number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Resolve mutation-amount delta based on strategy.
-
-Parameters:
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Signed mutation amount delta.
-
-### resolveMutationSettings
-
-```ts
-resolveMutationSettings(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; },
-): MutationSettings
-```
-
-Resolve mutation settings derived from configuration and engine state.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Adaptive mutation configuration.
-
-Returns: Resolved mutation settings.
-
-### resolveRandomSource
-
-```ts
-resolveRandomSource(
-  engine: NeatLikeWithAdaptive,
-): () => number
-```
-
-Resolve a random source that matches the legacy RNG usage.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Random number provider.
-
-### resolveRateDelta
-
-```ts
-resolveRateDelta(
-  settings: MutationSettings,
-  randomSource: () => number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Resolve mutation-rate delta based on strategy.
-
-Parameters:
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Signed mutation rate delta.
-
-### shouldAdaptThisGeneration
-
-```ts
-shouldAdaptThisGeneration(
-  generation: number,
-  config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; },
-): boolean
-```
-
-Check whether mutation adaptation should run this generation.
-
-Parameters:
-- `generation` - - Current generation index.
-- `config` - - Adaptive mutation configuration.
-
-Returns: True if adaptation should run.
-
-### shouldApplyTwoTierFallback
-
-```ts
-shouldApplyTwoTierFallback(
-  strategy: string,
-  outcome: MutationOutcome,
-): boolean
-```
-
-Determine whether a two-tier fallback is needed.
-
-Parameters:
-- `strategy` - - Mutation strategy identifier.
-- `outcome` - - Mutation outcome flags.
-
-Returns: True if fallback should run.
-
-### sortScoredGenomes
-
-```ts
-sortScoredGenomes(
-  scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-): { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]
-```
-
-Sort scored genomes in ascending score order.
-
-Parameters:
-- `scoredGenomes` - - Scored genomes.
-
-Returns: Sorted genomes.
-
-### splitScoredGenomes
-
-```ts
-splitScoredGenomes(
-  scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-): MutationPartitions
-```
-
-Split scored genomes into top and bottom halves.
-
-Parameters:
-- `scoredGenomes` - - Sorted scored genomes.
-
-Returns: Partitions used by strategy rules.
-
-## neat/neat.adaptive.operator.utils.ts
-
-### applyOperatorDecay
-
-```ts
-applyOperatorDecay(
-  stats: Map<string, { success: number; attempts: number; }>,
-  entries: [string, { success: number; attempts: number; }][],
-  decay: number,
-): void
-```
-
-Apply exponential decay to each operator statistic entry.
-
-Parameters:
-- `stats` - - Operator statistics map.
-- `entries` - - Operator stat entries to update.
-- `decay` - - Decay factor.
-
-### collectOperatorStatsEntries
-
-```ts
-collectOperatorStatsEntries(
-  stats: Map<string, { success: number; attempts: number; }>,
-): [string, { success: number; attempts: number; }][]
-```
-
-Collect operator statistic entries for processing.
-
-Parameters:
-- `stats` - - Operator statistics map.
-
-Returns: Array of operator stat entries.
-
-### decayOperatorStat
-
-```ts
-decayOperatorStat(
-  operatorStat: { success: number; attempts: number; },
-  decay: number,
-): { success: number; attempts: number; }
-```
-
-Apply decay to a single operator statistic record.
-
-Parameters:
-- `operatorStat` - - Operator statistic record.
-- `decay` - - Decay factor.
-
-Returns: Decayed operator statistic record.
-
-### resolveOperatorDecay
-
-```ts
-resolveOperatorDecay(
-  config: { enabled?: boolean | undefined; learningRate?: number | undefined; alpha?: number | undefined; decay?: number | undefined; },
-): number
-```
-
-Resolve the decay factor for operator statistics.
-
-Parameters:
-- `config` - - Operator adaptation configuration.
-
-Returns: Decay factor for exponential smoothing.
 
 ## neat/neat.evolve.objectives.utils.ts
 
@@ -12584,242 +8421,6 @@ readOperatorStats(
 ```
 
 Convert operator stats map into the public accessor shape.
-
-## neat/neat.adaptive.complexity.utils.ts
-
-### adjustConnectionBudget
-
-```ts
-adjustConnectionBudget(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-  trends: { improvement: number; slope: number; },
-  factors: { increaseFactor: number; stagnationFactor: number; },
-  noveltyFactor: number,
-  history: number[],
-): void
-```
-
-Adjust connection budget based on trends and factors.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-- `trends` - - Improvement and slope metrics.
-- `factors` - - Adjustment factors.
-- `noveltyFactor` - - Novelty multiplier.
-- `history` - - Rolling history for window checks.
-
-### adjustNodeBudget
-
-```ts
-adjustNodeBudget(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-  trends: { improvement: number; slope: number; },
-  factors: { increaseFactor: number; stagnationFactor: number; },
-  noveltyFactor: number,
-  history: number[],
-): void
-```
-
-Adjust node budget based on trends and factors.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-- `trends` - - Improvement and slope metrics.
-- `factors` - - Adjustment factors.
-- `noveltyFactor` - - Novelty multiplier.
-- `history` - - Rolling history for window checks.
-
-### applyAdaptiveSchedule
-
-```ts
-applyAdaptiveSchedule(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Apply adaptive complexity budget scheduling.
-
-Parameters:
-- `engine` - - NEAT engine instance with adaptive state.
-- `config` - - Complexity budget configuration.
-
-### applyComplexityBudgetSchedule
-
-```ts
-applyComplexityBudgetSchedule(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Apply the complexity budget schedule for the configured mode.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-### applyLinearSchedule
-
-```ts
-applyLinearSchedule(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Apply linear complexity budget scheduling.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-### clampNodeBudget
-
-```ts
-clampNodeBudget(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Clamp node budget to configured minimum.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-### computeAdjustmentFactors
-
-```ts
-computeAdjustmentFactors(
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-  trends: { improvement: number; slope: number; },
-  history: number[],
-): { increaseFactor: number; stagnationFactor: number; }
-```
-
-Compute adjustment factors for budget growth and decay.
-
-Parameters:
-- `config` - - Complexity budget configuration.
-- `trends` - - Improvement and slope metrics.
-- `history` - - Rolling history of best scores.
-
-Returns: Adjustment factors (increase and stagnation multipliers).
-
-### computeNoveltyFactor
-
-```ts
-computeNoveltyFactor(
-  engine: NeatLikeWithAdaptive,
-): number
-```
-
-Compute novelty factor based on archive size.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Novelty multiplier (0.9 if archive small, 1.0 otherwise).
-
-### computeSlope
-
-```ts
-computeSlope(
-  history: number[],
-): number
-```
-
-Compute linear regression slope using ordinary least squares.
-
-Parameters:
-- `history` - - Rolling history of best scores.
-
-Returns: OLS slope estimate.
-
-### computeTrends
-
-```ts
-computeTrends(
-  history: number[],
-): { improvement: number; slope: number; }
-```
-
-Compute improvement and slope trends from score history.
-
-Parameters:
-- `history` - - Rolling history of best scores.
-
-Returns: Trend metrics (improvement and slope).
-
-### initializeConnectionBudget
-
-```ts
-initializeConnectionBudget(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Initialize connection budget if undefined.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-### initializeNodeBudget
-
-```ts
-initializeNodeBudget(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): void
-```
-
-Initialize node budget if undefined.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-### normalizeSlope
-
-```ts
-normalizeSlope(
-  slope: number,
-  initialScore: number,
-): number
-```
-
-Normalize slope magnitude relative to initial score.
-
-Parameters:
-- `slope` - - Raw OLS slope.
-- `initialScore` - - First score in history window.
-
-Returns: Normalized slope clamped to [-2, 2].
-
-### updateScoreHistory
-
-```ts
-updateScoreHistory(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; },
-): number[]
-```
-
-Update rolling score history with current best score.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Complexity budget configuration.
-
-Returns: Rolling history array after update.
 
 ## neat/neat.evaluate.objectives.utils.ts
 
@@ -15060,248 +10661,3 @@ Example:
 ```ts
 const score = readObjectiveValue(genome, { accessor: (g) => g.score ?? 0 });
 ```
-
-## neat/neat.adaptive.minimal-criterion.utils.ts
-
-### applyRejection
-
-```ts
-applyRejection(
-  engine: NeatLikeWithAdaptive,
-  threshold: number,
-): void
-```
-
-Zero scores below the final threshold.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `threshold` - - Final MC threshold.
-
-### collectScores
-
-```ts
-collectScores(
-  engine: NeatLikeWithAdaptive,
-): number[]
-```
-
-Collect population scores into a snapshot array.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Array of scores (missing scores treated as 0).
-
-### computeAcceptance
-
-```ts
-computeAcceptance(
-  scores: number[],
-  threshold: number,
-): number
-```
-
-Compute acceptance metrics for the current threshold.
-
-Parameters:
-- `scores` - - Population score snapshot.
-- `threshold` - - Current MC threshold.
-
-Returns: Acceptance proportion.
-
-### initializeThreshold
-
-```ts
-initializeThreshold(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; },
-): void
-```
-
-Initialize MC threshold if missing.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Minimal-criterion adaptive configuration.
-
-### resolveTargetSettings
-
-```ts
-resolveTargetSettings(
-  config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; },
-): { targetAcceptance: number; adjustRate: number; }
-```
-
-Resolve target acceptance and adjust rate settings.
-
-Parameters:
-- `config` - - Minimal-criterion adaptive configuration.
-
-Returns: Target settings.
-
-### updateThreshold
-
-```ts
-updateThreshold(
-  engine: NeatLikeWithAdaptive,
-  acceptance: number,
-  tuning: { targetAcceptance: number; adjustRate: number; },
-): void
-```
-
-Update the MC threshold based on acceptance proportion.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `acceptance` - - Observed acceptance proportion.
-- `tuning` - - Target acceptance and adjustment settings.
-
-## neat/neat.adaptive.ancestor-uniqueness.utils.ts
-
-### applyEpsilonAdjustment
-
-```ts
-applyEpsilonAdjustment(
-  engine: NeatLikeWithAdaptive,
-  ancestorUniq: number,
-  thresholds: { lowThreshold: number; highThreshold: number; },
-  adjustMagnitude: number,
-): void
-```
-
-Apply dominance-epsilon adjustments when configured.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `ancestorUniq` - - Current ancestor uniqueness metric.
-- `thresholds` - - Threshold bounds for decisions.
-- `adjustMagnitude` - - Adjustment magnitude.
-
-### applyLineagePressureAdjustment
-
-```ts
-applyLineagePressureAdjustment(
-  engine: NeatLikeWithAdaptive,
-  ancestorUniq: number,
-  thresholds: { lowThreshold: number; highThreshold: number; },
-): void
-```
-
-Apply lineage pressure strength adjustments.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `ancestorUniq` - - Current ancestor uniqueness metric.
-- `thresholds` - - Threshold bounds for decisions.
-
-### applyUniquenessAdjustment
-
-```ts
-applyUniquenessAdjustment(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-  ancestorUniq: number,
-  thresholds: { lowThreshold: number; highThreshold: number; },
-  adjustMagnitude: number,
-): void
-```
-
-Apply an adjustment for the configured mode.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Ancestor uniqueness adaptive configuration.
-- `ancestorUniq` - - Current ancestor uniqueness metric.
-- `thresholds` - - Threshold bounds for decisions.
-- `adjustMagnitude` - - Adjustment magnitude.
-
-### ensureLineagePressureState
-
-```ts
-ensureLineagePressureState(
-  engine: NeatLikeWithAdaptive,
-): { enabled?: boolean | undefined; mode?: string | undefined; strength?: number | undefined; }
-```
-
-Ensure lineage pressure state is available.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Lineage pressure configuration object.
-
-### extractAncestorUniqueness
-
-```ts
-extractAncestorUniqueness(
-  engine: NeatLikeWithAdaptive,
-): number | undefined
-```
-
-Extract the latest ancestor-uniqueness metric from telemetry.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Ancestor uniqueness value or undefined when missing.
-
-### isCooldownSatisfied
-
-```ts
-isCooldownSatisfied(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-): boolean
-```
-
-Determine whether the cooldown window has elapsed.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Ancestor uniqueness adaptive configuration.
-
-Returns: True when adjustment is allowed.
-
-### recordAdjustment
-
-```ts
-recordAdjustment(
-  engine: NeatLikeWithAdaptive,
-): void
-```
-
-Record the generation when an adjustment is applied.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-### resolveAdjustmentMagnitude
-
-```ts
-resolveAdjustmentMagnitude(
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-): number
-```
-
-Resolve adjustment magnitude for nudging controlled parameters.
-
-Parameters:
-- `config` - - Ancestor uniqueness adaptive configuration.
-
-Returns: Adjustment magnitude.
-
-### resolveUniquenessThresholds
-
-```ts
-resolveUniquenessThresholds(
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-): { lowThreshold: number; highThreshold: number; }
-```
-
-Resolve thresholds for ancestor-uniqueness decisions.
-
-Parameters:
-- `config` - - Ancestor uniqueness adaptive configuration.
-
-Returns: Threshold bounds.

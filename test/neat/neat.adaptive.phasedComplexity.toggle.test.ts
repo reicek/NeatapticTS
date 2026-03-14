@@ -1,6 +1,6 @@
 import Neat from '../../src/neat';
-import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
-import { applyPhasedComplexity } from '../../src/neat/neat.adaptive';
+import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
+import { applyPhasedComplexity } from '../../src/neat/adaptive/adaptive';
 
 /** Tests for phase toggling edge (exact boundary) in phased complexity. */
 describe('Phased Complexity Toggle Boundary', () => {

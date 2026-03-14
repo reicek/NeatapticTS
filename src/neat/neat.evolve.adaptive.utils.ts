@@ -18,14 +18,14 @@ export async function applyAdaptiveComplexityControllers(
 ): Promise<void> {
   // Step 1: Apply complexity budget controller (optional).
   try {
-    const { applyComplexityBudget } = await import('./neat.adaptive');
+    const { applyComplexityBudget } = await import('./adaptive/adaptive');
     applyComplexityBudget.call(internal as never);
   } catch {
     // Empty catch: adaptive complexity budget may not be configured.
   }
   // Step 2: Apply phased complexity controller (optional).
   try {
-    const { applyPhasedComplexity } = await import('./neat.adaptive');
+    const { applyPhasedComplexity } = await import('./adaptive/adaptive');
     applyPhasedComplexity.call(internal as never);
   } catch {
     // Empty catch: phased complexity may not be configured.
@@ -42,7 +42,7 @@ export async function applyMinimalCriterionAdaptiveSafe(
 ): Promise<void> {
   // Step 1: Delegate to optional module.
   try {
-    const { applyMinimalCriterionAdaptive } = await import('./neat.adaptive');
+    const { applyMinimalCriterionAdaptive } = await import('./adaptive/adaptive');
     applyMinimalCriterionAdaptive.call(internal as never);
   } catch {
     // Empty catch: minimal criterion adaptation may not be configured.
@@ -59,7 +59,7 @@ export async function applyAncestorUniqAdaptiveSafe(
 ): Promise<void> {
   // Step 1: Delegate to adaptive module when present.
   try {
-    const adaptiveModule = await import('./neat.adaptive');
+    const adaptiveModule = await import('./adaptive/adaptive');
     adaptiveModule.applyAncestorUniqAdaptive.call(internal as never);
   } catch {
     // Empty catch: ancestor uniqueness adaptation is optional.
@@ -128,14 +128,14 @@ export async function applyPruningAndMutation(
 ): Promise<void> {
   // Step 1: Apply evolution-time pruning.
   try {
-    const pruningModule = await import('./neat.pruning');
+    const pruningModule = await import('./pruning/pruning');
     pruningModule.applyEvolutionPruning.call(internal as never);
   } catch {
     // Empty catch: evolution-time pruning is optional.
   }
   // Step 2: Apply adaptive pruning.
   try {
-    const pruningModule = await import('./neat.pruning');
+    const pruningModule = await import('./pruning/pruning');
     pruningModule.applyAdaptivePruning.call(internal as never);
   } catch {
     // Empty catch: adaptive pruning is optional.
@@ -144,7 +144,7 @@ export async function applyPruningAndMutation(
   await internal.mutate?.();
   // Step 4: Apply adaptive mutation if available.
   try {
-    const adaptiveModule = await import('./neat.adaptive');
+    const adaptiveModule = await import('./adaptive/adaptive');
     adaptiveModule.applyAdaptiveMutation.call(internal as never);
   } catch {
     // Empty catch: genome-level adaptive mutation is optional.
@@ -216,7 +216,7 @@ export async function applyOperatorAdaptationSafe(
 ): Promise<void> {
   // Step 1: Delegate to adaptive module when present.
   try {
-    const adaptiveModule = await import('./neat.adaptive');
+    const adaptiveModule = await import('./adaptive/adaptive');
     adaptiveModule.applyOperatorAdaptation.call(internal as never);
   } catch {
     // Empty catch: operator adaptation is optional.

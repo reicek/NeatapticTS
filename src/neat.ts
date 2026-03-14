@@ -25,13 +25,9 @@ import type {
   ParetoArchiveEntry,
   ObjectiveEvent,
 } from './neat/neat.types';
-import * as methods from './methods/methods';
-import { selection as selectionMethods } from './methods/selection';
 // Static imports (post-migration from runtime require delegates)
 import {
-  ensureMinHiddenNodes,
   selectMutationMethod,
-  ensureNoDeadEnds,
   mutate,
   mutateAddNodeReuse,
   mutateAddConnReuse,
@@ -39,57 +35,27 @@ import {
 import { evolve } from './neat/neat.evolve';
 import { evaluate } from './neat/neat.evaluate';
 import { createPool, spawnFromParent, addGenome } from './neat/neat.helpers';
-import {
-  _getObjectives,
-  registerObjective,
-  clearObjectives,
-} from './neat/neat.objectives';
+import { _getObjectives } from './neat/objectives/objectives';
 import {
   computeDiversityStats,
   structuralEntropy,
-} from './neat/neat.diversity';
-import type { DiversityStats } from './neat/neat.diversity';
-import { _fallbackInnov, _compatibilityDistance } from './neat/neat.compat';
+} from './neat/diversity/diversity';
+import type { DiversityStats } from './neat/diversity/diversity';
+import { _fallbackInnov, _compatibilityDistance } from './neat/compat/compat';
 import {
   _speciate,
   _applyFitnessSharing,
   _sortSpeciesMembers,
   _updateSpeciesStagnation,
-} from './neat/neat.speciation';
-import { getSpeciesStats, getSpeciesHistory } from './neat/neat.species';
+} from './neat/speciation/speciation';
+import { LINEAGE_SNAPSHOT_DEFAULT_LIMIT } from './neat/neat.telemetry.accessors.utils';
 import {
-  exportTelemetryJSONL,
-  exportTelemetryCSV,
-  exportSpeciesHistoryCSV,
-} from './neat/neat.telemetry.exports';
-import { readOperatorStats } from './neat/neat.telemetry.operator.utils';
-import {
-  buildLineageSnapshot,
-  clearTelemetryBuffer,
-  getCachedDiversityStats,
-  getObjectiveEventsSnapshot,
-  getPerformanceStatsSnapshot,
-  getTelemetryBuffer,
-  LINEAGE_SNAPSHOT_DEFAULT_LIMIT,
-} from './neat/neat.telemetry.accessors.utils';
-import {
-  buildMultiObjectiveMetrics,
   DEFAULT_MAX_PARETO_FRONTS,
   DEFAULT_PARETO_ARCHIVE_JSONL_MAX,
   DEFAULT_PARETO_ARCHIVE_MAX_ENTRIES,
-  exportParetoArchiveJsonl,
-  reconstructParetoFronts,
-  sliceParetoArchive,
 } from './neat/neat.multiobjective.metrics.utils';
-import {
-  exportSpeciesHistoryJsonl,
-  SPECIES_HISTORY_JSONL_MAX_DEFAULT,
-} from './neat/neat.species.history.utils';
-import {
-  getNoveltyArchiveSize as getNoveltyArchiveSizeHelper,
-  resetNoveltyArchive as resetNoveltyArchiveHelper,
-} from './neat/neat.novelty.utils';
-import { sort, getParent, getFittest, getAverage } from './neat/neat.selection';
+import { SPECIES_HISTORY_JSONL_MAX_DEFAULT } from './neat/species/history/species.history';
+import { getParent } from './neat/selection/selection';
 import {
   exportPopulation,
   importPopulation,
@@ -98,19 +64,21 @@ import {
   toJSONImpl,
   fromJSONImpl,
 } from './neat/neat.export';
-import {
-  getOrCreateRng,
-  importRngState as importRngStateHelper,
-  exportRngState as exportRngStateHelper,
-  restoreRngState as restoreRngStateHelper,
-  sampleRandomSequence as sampleRandomSequenceHelper,
-  snapshotRngState as snapshotRngStateHelper,
-  type RngHost,
-} from './neat/neat.rng';
-import { invalidateGenomeCaches } from './neat/neat.cache';
-import { computeMinimumHiddenSize } from './neat/neat.mutation.min-hidden.utils';
+import { getOrCreateRng, type RngHost } from './neat/rng/rng';
+import { invalidateGenomeCaches } from './neat/cache/cache';
 import { createOffspring } from './neat/neat.evolve.offspring.utils';
 import { warnIfNoBestGenome } from './neat/neat.evolve.warnings.utils';
+import { initializeNeatConstructor } from './neat/neat.init';
+import type { NeatMaintenanceFacadeHost } from './neat/neat.maintenance.facade';
+import type { NeatPopulationSummaryFacadeHost } from './neat/neat.population-summary.facade';
+import type { NeatPruningFacadeHost } from './neat/pruning/facade/pruning.facade';
+import type { NeatRngFacadeHost } from './neat/rng/facade/rng.facade';
+import type { NeatTelemetryFacadeHost } from './neat/neat.telemetry.facade';
+import * as neatMaintenanceFacade from './neat/neat.maintenance.facade';
+import * as neatPopulationSummaryFacade from './neat/neat.population-summary.facade';
+import * as neatPruningFacade from './neat/pruning/facade/pruning.facade';
+import * as neatRngFacade from './neat/rng/facade/rng.facade';
+import * as neatTelemetryFacade from './neat/neat.telemetry.facade';
 
 /**
  * Configuration options for Neat evolutionary runs.
@@ -159,6 +127,7 @@ export const DEFAULT_DIVERSITY_PAIR_SAMPLE = 20;
 export const DEFAULT_DIVERSITY_GRAPHLET_SAMPLE = 30;
 /** Default neighbor count for novelty search when k is unspecified. */
 export const DEFAULT_NOVELTY_K = 5;
+
 export default class Neat {
   input: number;
   output: number;
@@ -216,111 +185,27 @@ export default class Neat {
     this.fitness = fitness ?? (() => 0);
     this.options = options || {};
 
-    const opts: any = this.options;
-    if (opts.popsize === undefined) opts.popsize = DEFAULT_POPULATION_SIZE;
-    if (opts.elitism === undefined) opts.elitism = DEFAULT_ELITISM;
-    if (opts.provenance === undefined) opts.provenance = DEFAULT_PROVENANCE;
-    if (opts.mutationRate === undefined)
-      opts.mutationRate = DEFAULT_MUTATION_RATE;
-    if (opts.mutationAmount === undefined)
-      opts.mutationAmount = DEFAULT_MUTATION_AMOUNT;
-    if (opts.fitnessPopulation === undefined) opts.fitnessPopulation = false;
-    if (opts.clear === undefined) opts.clear = false;
-    if (opts.equal === undefined) opts.equal = false;
-    if (opts.compatibilityThreshold === undefined)
-      opts.compatibilityThreshold = DEFAULT_COMPATIBILITY_THRESHOLD;
-    if (opts.maxNodes === undefined) opts.maxNodes = DEFAULT_MAX_NODES;
-    if (opts.maxConns === undefined) opts.maxConns = DEFAULT_MAX_CONNS;
-    if (opts.maxGates === undefined) opts.maxGates = DEFAULT_MAX_GATES;
-    if (opts.excessCoeff === undefined) opts.excessCoeff = DEFAULT_EXCESS_COEFF;
-    if (opts.disjointCoeff === undefined)
-      opts.disjointCoeff = DEFAULT_DISJOINT_COEFF;
-    if (opts.weightDiffCoeff === undefined)
-      opts.weightDiffCoeff = DEFAULT_WEIGHT_DIFF_COEFF;
-    if (opts.mutation === undefined) {
-      opts.mutation = Array.isArray(methods.mutation.ALL)
-        ? methods.mutation.ALL.slice()
-        : methods.mutation.FFW
-          ? [methods.mutation.FFW]
-          : [];
-    }
-    if (opts.selection === undefined) {
-      opts.selection =
-        (selectionMethods && selectionMethods.TOURNAMENT) ||
-        (methods as any).selection?.TOURNAMENT ||
-        selectionMethods.FITNESS_PROPORTIONATE;
-    }
-    if (opts.crossover === undefined)
-      opts.crossover = methods.crossover
-        ? methods.crossover.SINGLE_POINT
-        : undefined;
-    if (opts.novelty === undefined) opts.novelty = { enabled: false };
-    if (opts.diversityMetrics === undefined)
-      opts.diversityMetrics = { enabled: true };
-    if (opts.fastMode && opts.diversityMetrics) {
-      if (opts.diversityMetrics.pairSample == null)
-        opts.diversityMetrics.pairSample = DEFAULT_DIVERSITY_PAIR_SAMPLE;
-      if (opts.diversityMetrics.graphletSample == null)
-        opts.diversityMetrics.graphletSample =
-          DEFAULT_DIVERSITY_GRAPHLET_SAMPLE;
-      if (opts.novelty?.enabled && opts.novelty.k == null)
-        opts.novelty.k = DEFAULT_NOVELTY_K;
-    }
-    (this as any)._noveltyArchive = [];
-    if (opts.speciation === undefined) opts.speciation = false;
-    if (
-      opts.multiObjective &&
-      opts.multiObjective.enabled &&
-      !Array.isArray(opts.multiObjective.objectives)
-    )
-      opts.multiObjective.objectives = [];
-
-    this.population = this.population || [];
-
-    const internalState = this as any;
-    if (!internalState._nodeSplitInnovations)
-      internalState._nodeSplitInnovations = new Map();
-    if (!internalState._connInnovations)
-      internalState._connInnovations = new Map();
-    if (internalState._nextGlobalInnovation === undefined)
-      internalState._nextGlobalInnovation = 0;
-    if (!Array.isArray(internalState._species)) internalState._species = [];
-    if (internalState._nextSpeciesId === undefined)
-      internalState._nextSpeciesId = 1;
-    if (!internalState._speciesCreated)
-      internalState._speciesCreated = new Map();
-    if (!internalState._prevSpeciesMembers)
-      internalState._prevSpeciesMembers = new Map();
-    if (!internalState._speciesLastStats)
-      internalState._speciesLastStats = new Map();
-    if (!internalState._objectiveAges) internalState._objectiveAges = new Map();
-    if (!Array.isArray(internalState._pendingObjectiveAdds))
-      internalState._pendingObjectiveAdds = [];
-    if (!Array.isArray(internalState._pendingObjectiveRemoves))
-      internalState._pendingObjectiveRemoves = [];
-    if (!internalState._objectiveStale)
-      internalState._objectiveStale = new Map();
-
-    try {
-      if ((this.options as any).network !== undefined)
-        this.createPool((this.options as any).network);
-      else if ((this.options as any).popsize) this.createPool(null);
-    } catch {
-      // Pool creation is best-effort; swallow errors to preserve initialization.
-    }
-
-    if (
-      (this.options as any).lineage?.enabled ||
-      (this.options as any).provenance > 0
-    )
-      this._lineageEnabled = true;
-    if ((this.options as any).lineageTracking === true)
-      this._lineageEnabled = true;
-    if (options.lineagePressure?.enabled && this._lineageEnabled !== true) {
-      this._lineageEnabled = true;
-    }
-
-    (this as any)._getRNG = this._getRNG.bind(this);
+    initializeNeatConstructor(this as any, {
+      optionBag: this.options as any,
+      rawOptions: options as any,
+      defaults: {
+        populationSize: DEFAULT_POPULATION_SIZE,
+        elitism: DEFAULT_ELITISM,
+        provenance: DEFAULT_PROVENANCE,
+        mutationRate: DEFAULT_MUTATION_RATE,
+        mutationAmount: DEFAULT_MUTATION_AMOUNT,
+        compatibilityThreshold: DEFAULT_COMPATIBILITY_THRESHOLD,
+        maxNodes: DEFAULT_MAX_NODES,
+        maxConns: DEFAULT_MAX_CONNS,
+        maxGates: DEFAULT_MAX_GATES,
+        excessCoeff: DEFAULT_EXCESS_COEFF,
+        disjointCoeff: DEFAULT_DISJOINT_COEFF,
+        weightDiffCoeff: DEFAULT_WEIGHT_DIFF_COEFF,
+        diversityPairSample: DEFAULT_DIVERSITY_PAIR_SAMPLE,
+        diversityGraphletSample: DEFAULT_DIVERSITY_GRAPHLET_SAMPLE,
+        noveltyK: DEFAULT_NOVELTY_K,
+      },
+    });
   }
 
   // === Static factories ===
@@ -366,7 +251,7 @@ export default class Neat {
    * Useful for deterministic test replay and debugging.
    */
   snapshotRNGState() {
-    return snapshotRngStateHelper(this as unknown as RngHost);
+    return neatRngFacade.snapshotRNGState(this as unknown as NeatRngFacadeHost);
   }
 
   /**
@@ -376,7 +261,7 @@ export default class Neat {
    * @param state Opaque numeric RNG state produced by `snapshotRNGState()`.
    */
   restoreRNGState(state: any) {
-    restoreRngStateHelper(this as unknown as RngHost, state);
+    neatRngFacade.restoreRNGState(this as unknown as NeatRngFacadeHost, state);
   }
 
   /**
@@ -384,14 +269,14 @@ export default class Neat {
    * @param state Numeric RNG state.
    */
   importRNGState(state: any) {
-    importRngStateHelper(this as unknown as RngHost, state);
+    neatRngFacade.importRNGState(this as unknown as NeatRngFacadeHost, state);
   }
 
   /**
    * Export the current RNG state for external persistence or tests.
    */
   exportRNGState() {
-    return exportRngStateHelper(this as unknown as RngHost);
+    return neatRngFacade.exportRNGState(this as unknown as NeatRngFacadeHost);
   }
 
   /**
@@ -401,7 +286,10 @@ export default class Neat {
    * @returns Array of deterministic random samples.
    */
   sampleRandom(sampleCount: number): number[] {
-    return sampleRandomSequenceHelper(this as unknown as RngHost, sampleCount);
+    return neatRngFacade.sampleRandom(
+      this as unknown as NeatRngFacadeHost,
+      sampleCount,
+    );
   }
 
   // === Evolution lifecycle ===
@@ -441,24 +329,18 @@ export default class Neat {
    * index and configuration in `options.evolutionPruning`.
    */
   async applyEvolutionPruning(): Promise<void> {
-    try {
-      const pruningModule = await import('./neat/neat.pruning');
-      pruningModule.applyEvolutionPruning.call(this as any);
-    } catch {
-      // Evolution-time pruning is optional; ignore failures.
-    }
+    return neatPruningFacade.applyEvolutionPruning(
+      this as unknown as NeatPruningFacadeHost,
+    );
   }
 
   /**
    * Run the adaptive pruning controller once.
    */
   async applyAdaptivePruning(): Promise<void> {
-    try {
-      const pruningModule = await import('./neat/neat.pruning');
-      pruningModule.applyAdaptivePruning.call(this as any);
-    } catch {
-      // Adaptive pruning is optional; ignore failures.
-    }
+    return neatPruningFacade.applyAdaptivePruning(
+      this as unknown as NeatPruningFacadeHost,
+    );
   }
 
   /** Emit a standardized warning when evolution loop finds no valid best genome (test hook). */
@@ -523,31 +405,26 @@ export default class Neat {
    * Ensure a network has the minimum number of hidden nodes according to configured policy.
    */
   ensureMinHiddenNodes(network: Network, multiplierOverride?: number) {
-    return ensureMinHiddenNodes.call(
-      this as any,
-      network as never,
+    return neatMaintenanceFacade.ensureMinHiddenNodes(
+      this as unknown as NeatMaintenanceFacadeHost,
+      network,
       multiplierOverride,
     );
   }
 
-  /** Delegate ensureNoDeadEnds to mutation module (added for backward compat). */
+  /** Repair dead-end connectivity through the focused maintenance facade. */
   ensureNoDeadEnds(network: Network) {
-    try {
-      return ensureNoDeadEnds.call(this as any, network as never);
-    } catch {
-      return;
-    }
+    return neatMaintenanceFacade.ensureNoDeadEnds(
+      this as unknown as NeatMaintenanceFacadeHost,
+      network,
+    );
   }
 
   /** Minimum hidden size considering explicit minHidden or multiplier policy. */
   getMinimumHiddenSize(multiplierOverride?: number): number {
-    const optionBag: any = this.options;
-    const multiplier = multiplierOverride ?? optionBag.minHiddenMultiplier;
-    return computeMinimumHiddenSize(
-      this.input,
-      this.output,
-      optionBag.minHidden,
-      multiplier,
+    return neatMaintenanceFacade.getMinimumHiddenSize(
+      this as unknown as NeatMaintenanceFacadeHost,
+      multiplierOverride,
     );
   }
 
@@ -556,28 +433,34 @@ export default class Neat {
    * Sorts the population in descending order of fitness scores.
    */
   sort(): void {
-    return sort.call(this as any);
+    return neatPopulationSummaryFacade.sort(
+      this as unknown as NeatPopulationSummaryFacadeHost,
+    );
   }
 
   /**
    * Retrieves the fittest genome from the population.
    */
   getFittest(): Network {
-    return getFittest.call(this as any) as unknown as Network;
+    return neatPopulationSummaryFacade.getFittest(
+      this as unknown as NeatPopulationSummaryFacadeHost,
+    );
   }
 
   /**
    * Calculates the average fitness score of the population.
    */
   getAverage(): number {
-    return getAverage.call(this as any);
+    return neatPopulationSummaryFacade.getAverage(
+      this as unknown as NeatPopulationSummaryFacadeHost,
+    );
   }
 
   // === Telemetry, objectives, and archives ===
   /** Public helper returning just the objective keys (tests rely on). */
   getObjectiveKeys(): string[] {
-    return (this._getObjectives() as ObjectiveDescriptor[]).map(
-      (objective) => objective.key,
+    return neatTelemetryFacade.getObjectiveKeys(
+      this as unknown as NeatTelemetryFacadeHost,
     );
   }
 
@@ -585,35 +468,41 @@ export default class Neat {
    * Return the internal telemetry buffer.
    */
   getTelemetry(): TelemetryEntry[] {
-    return getTelemetryBuffer(this as unknown as any);
+    return neatTelemetryFacade.getTelemetry(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /** Export telemetry as JSON Lines (one JSON object per line). */
   exportTelemetryJSONL(): string {
-    return exportTelemetryJSONL.call(this as any);
+    return neatTelemetryFacade.exportTelemetryJSONL(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /**
    * Export recent telemetry entries as CSV.
    */
   exportTelemetryCSV(maxEntries = 500): string {
-    return exportTelemetryCSV.call(this as any, maxEntries);
+    return neatTelemetryFacade.exportTelemetryCSV(
+      this as unknown as NeatTelemetryFacadeHost,
+      maxEntries,
+    );
   }
 
   /** Clear telemetry buffer and cached entries. */
   clearTelemetry() {
-    clearTelemetryBuffer(this as unknown as any);
+    neatTelemetryFacade.clearTelemetry(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /**
    * Return a lightweight list of registered objective keys and their directions.
    */
   getObjectives(): { key: string; direction: 'max' | 'min' }[] {
-    return (this._getObjectives() as ObjectiveDescriptor[]).map(
-      (objective) => ({
-        key: objective.key,
-        direction: objective.direction,
-      }),
+    return neatTelemetryFacade.getObjectives(
+      this as unknown as NeatTelemetryFacadeHost,
     );
   }
 
@@ -625,12 +514,19 @@ export default class Neat {
     direction: 'min' | 'max',
     accessor: (g: any) => number,
   ) {
-    return registerObjective.call(this as any, key, direction, accessor);
+    return neatTelemetryFacade.registerTelemetryObjective(
+      this as unknown as NeatTelemetryFacadeHost,
+      key,
+      direction,
+      accessor,
+    );
   }
 
   /** Clear all registered multi-objective objectives. */
   clearObjectives() {
-    return clearObjectives.call(this as any);
+    return neatTelemetryFacade.clearTelemetryObjectives(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /** Get recent objective add/remove events for telemetry exports and teaching. */
@@ -639,7 +535,9 @@ export default class Neat {
     type: 'add' | 'remove';
     key: string;
   }[] {
-    return getObjectiveEventsSnapshot(this as unknown as any);
+    return neatTelemetryFacade.getObjectiveEvents(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /**
@@ -648,19 +546,28 @@ export default class Neat {
   getLineageSnapshot(
     limit: number = LINEAGE_SNAPSHOT_DEFAULT_LIMIT,
   ): { id: number; parents: number[] }[] {
-    return buildLineageSnapshot(this.population as any, limit);
+    return neatTelemetryFacade.getLineageSnapshot(
+      this as unknown as NeatTelemetryFacadeHost,
+      limit,
+    );
   }
 
   /** Export species history as CSV rows for offline inspection. */
   exportSpeciesHistoryCSV(maxEntries = 200): string {
-    return exportSpeciesHistoryCSV.call(this as any, maxEntries);
+    return neatTelemetryFacade.exportSpeciesHistoryCSV(
+      this as unknown as NeatTelemetryFacadeHost,
+      maxEntries,
+    );
   }
 
   /** Export species history as JSON Lines for storage and analysis. */
   exportSpeciesHistoryJSONL(
     maxEntries = SPECIES_HISTORY_JSONL_MAX_DEFAULT,
   ): string {
-    return exportSpeciesHistoryJsonl(this._speciesHistory, maxEntries);
+    return neatTelemetryFacade.exportSpeciesHistoryJSONL(
+      this as unknown as NeatTelemetryFacadeHost,
+      maxEntries,
+    );
   }
 
   /** Return a concise summary for each current species. */
@@ -670,17 +577,23 @@ export default class Neat {
     bestScore: number;
     lastImproved: number;
   }[] {
-    return getSpeciesStats.call(this as any);
+    return neatTelemetryFacade.getSpeciesStats(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /** Returns the historical species statistics recorded each generation. */
   getSpeciesHistory(): SpeciesHistoryEntry[] {
-    return getSpeciesHistory.call(this as any) as SpeciesHistoryEntry[];
+    return neatTelemetryFacade.getSpeciesHistory(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /** Returns the number of entries currently stored in the novelty archive. */
   getNoveltyArchiveSize(): number {
-    return getNoveltyArchiveSizeHelper(this as unknown as any);
+    return neatTelemetryFacade.getNoveltyArchiveSize(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /** Returns compact multi-objective metrics for each genome in the current population. */
@@ -691,59 +604,70 @@ export default class Neat {
     nodes: number;
     connections: number;
   }[] {
-    return buildMultiObjectiveMetrics(this.population);
+    return neatTelemetryFacade.getMultiObjectiveMetrics(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /** Returns a summary of mutation/operator statistics used by operator adaptation. */
   getOperatorStats(): { name: string; success: number; attempts: number }[] {
-    return readOperatorStats(this._operatorStats as any);
+    return neatTelemetryFacade.getOperatorStats(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /** Reconstruct Pareto fronts for the current population snapshot. */
   getParetoFronts(maxFronts = DEFAULT_MAX_PARETO_FRONTS): Network[][] {
-    return reconstructParetoFronts(
-      this.population,
+    return neatTelemetryFacade.getParetoFronts(
+      this as unknown as NeatTelemetryFacadeHost,
       maxFronts,
-      Boolean(this.options.multiObjective?.enabled),
     );
   }
 
   /** Get recent Pareto archive entries (meta information about archived fronts). */
   getParetoArchive(maxEntries = DEFAULT_PARETO_ARCHIVE_MAX_ENTRIES) {
-    return sliceParetoArchive(this._paretoArchive, maxEntries);
+    return neatTelemetryFacade.getParetoArchive(
+      this as unknown as NeatTelemetryFacadeHost,
+      maxEntries,
+    );
   }
 
   /** Export Pareto front archive as JSON Lines for external analysis. */
   exportParetoFrontJSONL(
     maxEntries = DEFAULT_PARETO_ARCHIVE_JSONL_MAX,
   ): string {
-    return exportParetoArchiveJsonl(this._paretoObjectivesArchive, maxEntries);
+    return neatTelemetryFacade.exportParetoFrontJSONL(
+      this as unknown as NeatTelemetryFacadeHost,
+      maxEntries,
+    );
   }
 
   /** Return recent performance statistics for the most recent evaluation and evolve operations. */
   getPerformanceStats() {
-    return getPerformanceStatsSnapshot(this as unknown as any);
+    return neatTelemetryFacade.getPerformanceStats(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /** Return the latest cached diversity statistics. */
   getDiversityStats(): DiversityStats {
-    if (!this._diversityStats) {
-      return this._computeDiversityStats();
-    }
-    return (
-      getCachedDiversityStats(this as unknown as any) ??
-      buildEmptyDiversityStats(this.population.length)
+    return neatTelemetryFacade.getDiversityStats(
+      this as unknown as NeatTelemetryFacadeHost,
     );
   }
 
   /** Reset the novelty archive (clear entries). */
   resetNoveltyArchive() {
-    resetNoveltyArchiveHelper(this as unknown as any);
+    neatTelemetryFacade.resetNoveltyArchive(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   /** Clear the Pareto archive. */
   clearParetoArchive() {
-    this._paretoArchive = [];
+    neatTelemetryFacade.clearParetoArchive(
+      this as unknown as NeatTelemetryFacadeHost,
+    );
   }
 
   // === Export/import convenience ===

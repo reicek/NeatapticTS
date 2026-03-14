@@ -344,3 +344,9 @@ The highest risk items are:
 - rewriting crossover without breaking existing users’ expectations
 - reconciling recurrent/self/gating semantics across mutation/crossover/speciation
 - ensuring geneId/innovation counters remain consistent across pooling and serialization
+
+## Controller Folderization Progress
+
+- Completed species step after speciation: extracted current-species summaries into `src/neat/species/stats/species.stats.ts` and kept `src/neat/species/species.ts` focused on the public reporting flow.
+- Species history JSONL export remains isolated in `src/neat/species/history/species.history.ts`.
+- Next species follow-up: narrow `src/neat/species/core/species.core.ts` into clearer augmentation/shared chapters so extended-history policy and innovation-summary mechanics stop living in one file.

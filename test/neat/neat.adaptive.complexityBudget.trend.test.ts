@@ -1,6 +1,6 @@
 import Neat from '../../src/neat';
-import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
-import { applyComplexityBudget } from '../../src/neat/neat.adaptive';
+import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
+import { applyComplexityBudget } from '../../src/neat/adaptive/adaptive';
 
 /** Additional complexity budget tests covering adaptive shrink & connection budget. */
 describe('Adaptive Complexity Budget (trend & connection budget)', () => {

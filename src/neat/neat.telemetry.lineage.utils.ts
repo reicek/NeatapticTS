@@ -1,6 +1,6 @@
 import type { GenomeDetailed } from './neat.types';
-import type { NeatLineageContext as LineageContext } from './neat.lineage';
-import { buildAnc, computeAncestorUniqueness } from './neat.lineage';
+import type { NeatLineageContext as LineageContext } from './lineage/lineage';
+import { buildAnc, computeAncestorUniqueness } from './lineage/lineage';
 import type {
   TelemetryEntryRecord,
   TelemetryGenome,

@@ -1,5 +1,5 @@
 import type { TelemetryEntry } from './neat.types';
-import type { DiversityStats } from './neat.diversity.utils';
+import type { DiversityStats } from './diversity/core/diversity.types';
 
 /** Default limit for lineage snapshots to avoid large payloads. */
 export const LINEAGE_SNAPSHOT_DEFAULT_LIMIT = 20;
