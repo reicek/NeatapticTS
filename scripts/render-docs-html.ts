@@ -9,6 +9,10 @@ import fg from 'fast-glob';
 import path from 'path';
 import fs from 'fs-extra';
 import { marked } from 'marked';
+import {
+  buildDocsSidebarHtml,
+  buildExamplesTocLinksHtml,
+} from './render-docs-html.sidebar.js';
 
 const DOCS_DIR = path.resolve('docs');
 const THEME_CSS_SOURCE_PATH = path.resolve('scripts', 'assets', 'theme.css');
@@ -35,10 +39,6 @@ const NN_IMAGE_FALLBACK_SOURCE_PATH = path.resolve(
   'nn.jpg',
 );
 const NN_IMAGE_OUTPUT_PATH = path.join(DOCS_DIR, 'nn.jpg');
-const EXAMPLE_DEMOS = [
-  { dir: 'examples/asciiMaze', label: 'asciiMaze' },
-  { dir: 'examples/flappy_bird', label: 'flappy_bird' },
-];
 
 const RETRIABLE_FILE_SYSTEM_ERROR_CODES = new Set([
   'UNKNOWN',
@@ -234,17 +234,17 @@ try {
 </script>`;
 }
 
-function buildExamplesLinksHtml(currentDir: string): string {
-  return EXAMPLE_DEMOS.map((entry) => {
-    const copiedExampleAbs = path.resolve(DOCS_DIR, entry.dir, 'index.html');
-    if (!fs.existsSync(copiedExampleAbs)) return '';
+function buildRelativeDocsHref(currentDir: string, targetDir: string): string {
+  const relLink = path.posix.relative(currentDir || '.', targetDir || '.') || '.';
+  return (relLink === '.' ? '.' : relLink) + '/index.html';
+}
 
-    const relLink = path.posix.relative(currentDir || '.', entry.dir) || '.';
-    const href = (relLink === '.' ? '.' : relLink) + '/index.html';
-    return `<li><a href="${href}">${entry.label}</a></li>`;
-  })
-    .filter(Boolean)
-    .join('');
+function hasPublishedDocsPage(
+  relDir: string,
+  generatedPageDirectories: ReadonlySet<string>,
+): boolean {
+  if (generatedPageDirectories.has(relDir)) return true;
+  return fs.existsSync(path.resolve(DOCS_DIR, relDir, 'index.html'));
 }
 
 function collectMermaidBlocks(
@@ -347,66 +347,6 @@ async function main() {
   // Step 1: Validate Mermaid across the docs tree before emitting HTML pages.
   await validateMermaidBlocks(mermaidBlocks);
 
-  // Build nav list; group top-level folders similar to original sections.
-  const navHtmlFor = (currentDir: string) => {
-    // Group by first segment
-    interface Group {
-      name: string;
-      items: PageMeta[];
-    }
-    const groupsMap = new Map<string, Group>();
-    for (const p of pages) {
-      const seg = p.relDir.split('/')[0] || 'root';
-      if (!groupsMap.has(seg)) groupsMap.set(seg, { name: seg, items: [] });
-      groupsMap.get(seg)!.items.push(p);
-    }
-    const order = [
-      'root',
-      'architecture',
-      'methods',
-      'neat',
-      'multithreading',
-      'examples',
-    ];
-    const makeLink = (page: PageMeta) => {
-      const isCurrent = page.relDir === currentDir;
-      const relLink =
-        path.posix.relative(currentDir || '.', page.relDir || '.') || '.';
-      const href = (relLink === '.' ? '.' : relLink) + '/index.html';
-      const label =
-        page.relDir === '' ? 'Overview' : page.relDir.replace(/\\/g, '/');
-      return `<li${
-        isCurrent ? ' class="current"' : ''
-      }><a href="${href}">${label}${isCurrent ? '' : ''}</a></li>`;
-    };
-    const demoLinksHtml = buildExamplesLinksHtml(currentDir);
-    const groups = Array.from(groupsMap.values());
-    if (demoLinksHtml && !groupsMap.has('examples')) {
-      groups.push({ name: 'examples', items: [] });
-    }
-    const groupsHtml = groups
-      .sort((a, b) => {
-        const leftOrder = order.indexOf(a.name);
-        const rightOrder = order.indexOf(b.name);
-        const leftRank = leftOrder === -1 ? Number.MAX_SAFE_INTEGER : leftOrder;
-        const rightRank =
-          rightOrder === -1 ? Number.MAX_SAFE_INTEGER : rightOrder;
-        return leftRank - rightRank || a.name.localeCompare(b.name);
-      })
-      .map((g) => {
-        const items = g.items.sort((a, b) => a.relDir.localeCompare(b.relDir));
-        if (g.name === 'root')
-          return makeLink(items.find((i) => i.relDir === '')!);
-        return `<li class="group"><div class="g-head">${
-          g.name
-        }</div><ul>${items.map(makeLink).join('')}${
-          g.name === 'examples' ? demoLinksHtml : ''
-        }</ul></li>`;
-      })
-      .join('');
-    return `<ul class="sidebar-sections">${groupsHtml}</ul>`;
-  };
-
   for (const meta of pages) {
     const md = meta.markdown;
     // Extract headings for TOC (## file, ### symbol)
@@ -463,7 +403,22 @@ async function main() {
     };
     marked.use({ renderer });
     const htmlBody = marked.parse(md, { async: false });
-    const rootExamplesTocHtml = buildExamplesLinksHtml(meta.relDir);
+    const generatedPageDirectories = new Set(pages.map((page) => page.relDir));
+    const rootExamplesTocHtml = buildExamplesTocLinksHtml({
+      currentDir: meta.relDir,
+      generatedPageDirectories,
+      hasPublishedDocsPage,
+      buildRelativeDocsHref,
+      escapeHtml,
+    });
+    const navHtml = buildDocsSidebarHtml({
+      currentDir: meta.relDir,
+      pages,
+      generatedPageDirectories,
+      hasPublishedDocsPage,
+      buildRelativeDocsHref,
+      escapeHtml,
+    });
     const toc = fileHeadings.length
       ? `<div class="page-toc"><h2>Files</h2>${fileHeadings
           .map(
@@ -478,7 +433,7 @@ async function main() {
           )
           .join('')}</div>`
       : meta.relDir === '' && rootExamplesTocHtml
-        ? `<div class="page-toc"><h2>Examples</h2><div class="toc-file"><ul>${rootExamplesTocHtml}</ul></div></div>`
+        ? `<div class="page-toc"><h2>Examples</h2><div class="toc-file">${rootExamplesTocHtml}</div></div>`
         : '';
     const outFile = path.join(path.dirname(meta.abs), 'index.html');
     const relToRoot = path
@@ -498,15 +453,13 @@ async function main() {
       meta.title
     } – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">\n<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">\n<link rel="stylesheet" href="${cssHref}"></head><body class="${
       meta.relDir === '' ? 'is-root' : ''
-    }">\n<header class="topbar"><div class="inner"><div class="brand"><a href="${
+    }">\n<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="${
       relToRoot || '.'
-    }/index.html">NeatapticTS</a></div><nav class="main-nav"><a href="${
+    }/index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="${
       relToRoot || '.'
     }/index.html">Home</a><a href="${
       relToRoot || '.'
-    }/index.html"${docsActive}>Docs</a><a href="${examplesHref}"${examplesActive}>Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar docs-panel docs-panel-left">${navHtmlFor(
-      meta.relDir,
-    )}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right">${toc}</aside></div>${docsLayoutInteractionScript}${mermaidBootstrapScript}</body></html>`;
+    }/index.html"${docsActive}>Docs</a><a href="${examplesHref}"${examplesActive}>Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar docs-panel docs-panel-left">${navHtml}</aside><main class="content docs-panel docs-panel-center">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right">${toc}</aside></div>${docsLayoutInteractionScript}${mermaidBootstrapScript}</body></html>`;
     await writeFileWithRetry(outFile, page, 'utf8');
   }
   console.log('HTML docs generated.');
