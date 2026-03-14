@@ -65,6 +65,15 @@ Encoded maze representation with cell values.
 
 Encoded maze for simulation.
 
+### EvolutionEngineFacadeRuntimeState
+
+Mutable runtime state owned by the public EvolutionEngine facade.
+
+The extracted engine modules already share pooled buffers through
+`engineState`. This narrower state exists only for the facade-specific
+logits-ring bookkeeping that must survive across runs while keeping the
+class boundary orchestration-first.
+
 ### EvolutionGenomeLike
 
 Loose genome shape shared by engine telemetry and population-dynamics helpers.
@@ -93,6 +102,27 @@ Host-facing stop event emitted by the engine when a run finishes for a concrete 
 ### EvolutionLoopHelpers
 
 Helper functions for evolution.
+
+### EvolutionLoopRuntimeContext
+
+Shared runtime buffers and limits consumed by the evolution loop hot path.
+
+This context keeps the loop and simulation helpers from passing a long list
+of pooled ring buffers, scratch arrays, and capacity limits positionally.
+
+### EvolutionLoopSupportContext
+
+Shared scratch buffers and helper callbacks used across evolution-loop stages.
+
+This context groups the scratch arrays and analysis helpers that travel
+together through generation, simulation, and snapshot paths.
+
+### EvolutionLoopTelemetryContext
+
+Shared telemetry thresholds consumed by the evolution loop simulation pass.
+
+The loop owns these switches conceptually, but grouping them as one context
+keeps telemetry policy changes from widening hot-path function signatures.
 
 ### EvolutionOptions
 
@@ -1138,7 +1168,7 @@ await flushToFrame(); // Yield to host
 
 ### runEvolutionLoop
 
-`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("src/neat").default, opts: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionOptions, lamarckianTrainingSet: { input: number[]; output: number[]; }[], encodedMaze: number[][], startPosition: readonly [number, number], exitPosition: readonly [number, number], distanceMap: number[][], helpers: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LoopHelpers, doProfile: boolean, scratchLogitsRing: Float32Array<ArrayBufferLike>[], logitsRingCap: number, logitsRingCapMax: number, actionDim: number, logitsRingShared: boolean, scratchLogitsShared: Float32Array<ArrayBufferLike> | undefined, scratchLogitsSharedW: Int32Array<ArrayBufferLike> | undefined, scratchLogitsRingW: number, emptyVec: import("src/architecture/network").default[], scratchNodeIdx: Int32Array<ArrayBufferLike>, scratchSnapshotObj: Record<string, unknown>, scratchSnapshotTop: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").SnapshotEntry[], getNodeIndicesByType: (nodes: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], type: string) => number, collectHiddenToOutputConns: (hiddenNode: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode, nodesRef: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], outputCount: number) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkConnection[], constants: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").TrainingConstants & { DEFAULT_TRAIN_BATCH_LARGE: number; FITTEST_TRAIN_ITERATIONS: number; TELEMETRY_MINIMAL: boolean; SATURATION_PRUNE_THRESHOLD: number; RECENT_WINDOW: number; REDUCED_TELEMETRY: boolean; DISABLE_BALDWIN: boolean; }, speciesHistoryRef: number[]) => Promise<EvolutionLoopResult>`
+`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, neat: import("src/neat").default, opts: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionOptions, lamarckianTrainingSet: { input: number[]; output: number[]; }[], encodedMaze: number[][], startPosition: readonly [number, number], exitPosition: readonly [number, number], distanceMap: number[][], helpers: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LoopHelpers, doProfile: boolean, runtimeContext: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopRuntimeContext, initialRingState: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LogitsRingState, telemetryContext: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopTelemetryContext, supportContext: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopSupportContext, constants: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").TrainingConstants & { DEFAULT_TRAIN_BATCH_LARGE: number; FITTEST_TRAIN_ITERATIONS: number; TELEMETRY_MINIMAL: boolean; SATURATION_PRUNE_THRESHOLD: number; RECENT_WINDOW: number; REDUCED_TELEMETRY: boolean; DISABLE_BALDWIN: boolean; }) => Promise<EvolutionLoopResult>`
 
 Internal evolution loop that executes generations until a stop condition or cancellation.
 
@@ -1161,20 +1191,10 @@ Parameters:
 - `distanceMap` - - Optional precomputed distance map to speed simulation
 - `helpers` - - Helper utilities: { flushToFrame, fs, path, safeWrite }
 - `doProfile` - - When truthy collect and return millisecond timings in the result
-- `scratchLogitsRing` - - Pooled logits ring buffer
-- `logitsRingCap` - - Current ring capacity
-- `logitsRingCapMax` - - Maximum ring capacity
-- `actionDim` - - Number of action dimensions
-- `logitsRingShared` - - Whether shared mode is enabled
-- `scratchLogitsShared` - - Shared flat buffer (when shared mode)
-- `scratchLogitsSharedW` - - Shared atomic write index
-- `scratchLogitsRingW` - - Local ring write cursor
-- `emptyVec` - - Empty array fallback
-- `scratchNodeIdx` - - Pooled node index buffer
-- `scratchSnapshotObj` - - Reusable snapshot object
-- `scratchSnapshotTop` - - Reusable top-K snapshot buffer
-- `getNodeIndicesByType` - - Helper to collect node indices by type
-- `collectHiddenToOutputConns` - - Helper to collect connections
+- `runtimeContext` - - Shared pooled ring buffers and limits for the hot path.
+- `initialRingState` - - Current mutable ring state for this run.
+- `telemetryContext` - - Telemetry thresholds and verbosity switches used during simulation.
+- `supportContext` - - Shared scratch buffers and helper callbacks used by the loop.
 - `constants` - - Object containing all engine constants (DEFAULT_TRAIN_ERROR, etc.)
 
 Returns: Promise resolving to an object:
@@ -1267,7 +1287,7 @@ Simulation result with step outputs
 
 ### simulateAndPostprocess
 
-`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, fittest: import("src/architecture/network").default, encodedMaze: number[][], startPosition: readonly [number, number], exitPosition: readonly [number, number], distanceMap: number[][], maxSteps: number | undefined, doProfile: boolean, safeWrite: (msg: string) => void, logEvery: number, completedGenerations: number, neat: import("src/neat").default, scratchLogitsRing: Float32Array<ArrayBufferLike>[], logitsRingCap: number, logitsRingCapMax: number, actionDim: number, logitsRingShared: boolean, scratchLogitsShared: Float32Array<ArrayBufferLike> | undefined, scratchLogitsSharedW: Int32Array<ArrayBufferLike> | undefined, scratchLogitsRingW: number, telemetryMinimal: boolean, saturationPruneThreshold: number, recentWindow: number, reducedTelemetry: boolean, getNodeIndicesByType: (nodes: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], type: string) => number, collectHiddenToOutputConns: (hiddenNode: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode, nodesRef: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], outputCount: number) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkConnection[]) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").SimulationResult`
+`(engineState: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, fittest: import("src/architecture/network").default, encodedMaze: number[][], startPosition: readonly [number, number], exitPosition: readonly [number, number], distanceMap: number[][], maxSteps: number | undefined, doProfile: boolean, safeWrite: (msg: string) => void, logEvery: number, completedGenerations: number, neat: import("src/neat").default, runtimeContext: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopRuntimeContext, ringState: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LogitsRingState, telemetryContext: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopTelemetryContext, loopSupportContext: Pick<import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionLoopSupportContext, "loopHelpers">) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").SimulationResult`
 
 Simulate the supplied `fittest` genome/network and perform allocation-light postprocessing.
 
@@ -1306,20 +1326,10 @@ Parameters:
 - `logEvery` - - Emit telemetry every `logEvery` generations (0 disables periodic telemetry)
 - `completedGenerations` - - Current generation index used for conditional telemetry
 - `neat` - - NEAT driver instance passed to telemetry hooks
-- `scratchLogitsRing` - - Pooled logits ring buffer reference
-- `logitsRingCap` - - Current ring capacity (power of two)
-- `logitsRingCapMax` - - Maximum allowed ring capacity
-- `actionDim` - - Number of action dimensions (typically 4 for NESW)
-- `logitsRingShared` - - Whether shared SAB mode is enabled
-- `scratchLogitsShared` - - Shared flat Float32Array (when shared mode enabled)
-- `scratchLogitsSharedW` - - Shared atomic write index (when shared mode enabled)
-- `scratchLogitsRingW` - - Local ring write cursor (when not shared)
-- `telemetryMinimal` - - Whether minimal telemetry mode is active
-- `saturationPruneThreshold` - - Threshold above which to prune saturated outputs
-- `recentWindow` - - Size of telemetry tail window
-- `reducedTelemetry` - - Whether reduced telemetry mode is active
-- `getNodeIndicesByType` - - Helper to collect node indices by type
-- `collectHiddenToOutputConns` - - Helper to collect hidden-to-output connections
+- `runtimeContext` - - Shared pooled ring buffers and limits for logits telemetry.
+- `ringState` - - Current mutable ring state (capacity, shared-mode flag, write cursor).
+- `telemetryContext` - - Telemetry thresholds and verbosity switches used after simulation.
+- `loopSupportContext` - - Shared scratch buffers and helper callbacks used by the loop.
 
 Returns: An object { generationResult, simTime, updatedRingState } where simTime is ms when profiling is enabled
 
@@ -2839,6 +2849,119 @@ Minimum safe load factor applied when normalising visited-hash configuration.
 
 Knuth-derived 32-bit constant used when seeding the RNG state.
 
+## evolutionEngine/evolutionEngine.services.ts
+
+### applyEvolutionEngineRingState
+
+`(updatedRingState: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").LogitsRingState) => void`
+
+Apply the latest logits-ring runtime values returned by the evolution loop.
+
+Parameters:
+- `updatedRingState` - - New ring-capacity, shared-mode, and write-cursor values.
+
+### configureEvolutionEngineToggles
+
+`(reducedTelemetry: boolean, telemetryMinimal: boolean, disableBaldwinPhase: boolean) => void`
+
+Apply telemetry and Baldwin-phase toggles derived from one normalized run request.
+
+Parameters:
+- `reducedTelemetry` - - When true, keep only the essential telemetry metrics.
+- `telemetryMinimal` - - When true, disable verbose telemetry capture.
+- `disableBaldwinPhase` - - When true, skip the Baldwin refinement stage.
+
+### getEvolutionEngineFacadeRuntimeState
+
+`() => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").EvolutionEngineFacadeRuntimeState`
+
+Read the mutable facade-owned logits-ring runtime state.
+
+Returns: Current ring-capacity, shared-mode, and write-cursor state.
+
+### getEvolutionEngineMaxLogitsRingCapacity
+
+`() => number`
+
+Read the hard maximum ring capacity used by the public facade.
+
+Returns: Maximum ring capacity allowed for logits telemetry.
+
+### getEvolutionEngineSharedState
+
+`() => import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState`
+
+Return the shared engine singleton used by extracted engine modules.
+
+The public facade now depends on the same owner as the rest of the engine
+boundary instead of creating a private duplicate singleton.
+
+Returns: Shared engine state singleton.
+
+### resetEvolutionEngineRingState
+
+`() => void`
+
+Reset the facade-owned logits-ring runtime state to its baseline defaults.
+
+## evolutionEngine/evolutionEngine.constants.ts
+
+Stable tuning values consumed by the ASCII maze evolution facade.
+
+The public EvolutionEngine class should read as orchestration-first code.
+These constants live in a dedicated module so warm-start tuning, loop
+thresholds, and shared fallback arrays do not crowd the facade itself.
+
+### EVOLUTION_ENGINE_ACTION_DIMENSION
+
+Number of action outputs emitted by the ASCII maze policy network.
+
+Example:
+
+console.log(EVOLUTION_ENGINE_ACTION_DIMENSION); // 4
+
+### EVOLUTION_ENGINE_EMPTY_VECTOR
+
+Shared empty vector reused when engine helpers need a stable array fallback.
+
+Example:
+
+const outgoing = node.connections?.out ?? EVOLUTION_ENGINE_EMPTY_VECTOR;
+
+### EVOLUTION_ENGINE_INITIAL_LOGITS_RING_CAPACITY
+
+Initial ring-buffer capacity used for logits telemetry.
+
+The ring may grow at runtime, but the facade starts from this size so the
+first generations stay allocation-light.
+
+### EVOLUTION_ENGINE_LOOP_CONSTANTS
+
+Main-loop tuning values passed into the extracted evolution-loop helpers.
+
+This table keeps the public facade declarative while preserving the same
+runtime thresholds and training behaviour.
+
+### EVOLUTION_ENGINE_MAX_LOGITS_RING_CAPACITY
+
+Hard safety limit for the logits telemetry ring-buffer capacity.
+
+### EVOLUTION_ENGINE_PRETRAIN_CONSTANTS
+
+Pretraining controls used by the Lamarckian warm-start helpers.
+
+Example:
+
+const iterations = EVOLUTION_ENGINE_PRETRAIN_CONSTANTS.PRETRAIN_MAX_ITER;
+
+### EVOLUTION_ENGINE_WARM_START_CONSTANTS
+
+Warm-start curriculum samples used to bias early supervised guidance.
+
+These values shape the synthetic targets used before the main NEAT loop
+takes over, so they are grouped here instead of being scattered across the
+facade method body.
+
 ## evolutionEngine/engineState.utils.ts
 
 Pure utility helpers shared by the ASCII maze engine-state facade.
@@ -2975,3 +3098,51 @@ Returns: Clamped load factor with a fallback to the project default.
 Compute whether detailed profiling is enabled via the environment flag.
 
 Returns: True when the profiling environment flag is set.
+
+## evolutionEngine/evolutionEngine.utils.ts
+
+### collectEvolutionEngineHiddenToOutputConnections
+
+`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, hiddenNode: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode, nodes: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[], outputCount: number) => import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkConnection[]`
+
+Collect enabled outgoing connections from one hidden node into the shared scratch array.
+
+The evolution loop reuses this helper during network inspection to avoid
+allocating transient arrays while still keeping the public facade compact.
+
+Parameters:
+- `state` - - Shared engine state that owns the reusable scratch arrays.
+- `hiddenNode` - - Hidden node whose outgoing edges should be inspected.
+- `nodes` - - Full node list aligned with the scratch index buffer.
+- `outputCount` - - Number of output-node indices already staged in scratch.
+
+Returns: Shared scratch array containing enabled hidden-to-output connections.
+
+Example:
+
+const connections = collectEvolutionEngineHiddenToOutputConnections(
+  state,
+  hiddenNode,
+  nodes,
+  outputCount,
+);
+
+### collectEvolutionEngineNodeIndicesByType
+
+`(state: import("test/examples/asciiMaze/evolutionEngine/engineState.types").EngineState, nodes: import("test/examples/asciiMaze/evolutionEngine/evolutionEngine.types").NetworkNode[] | undefined, type: string) => number`
+
+Collect node indices of one requested type into the shared engine scratch buffer.
+
+This helper keeps the facade free of buffer-growth details while preserving
+the existing allocation-light behaviour used by the evolution loop.
+
+Parameters:
+- `state` - - Shared engine state that owns the reusable node-index buffer.
+- `nodes` - - Candidate nodes to scan.
+- `type` - - Node type to collect, such as `input`, `hidden`, or `output`.
+
+Returns: Number of matching indices written into the shared scratch buffer.
+
+Example:
+
+const outputCount = collectEvolutionEngineNodeIndicesByType(state, nodes, 'output');

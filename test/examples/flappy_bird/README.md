@@ -1,39 +1,38 @@
 # Flappy Bird (NeatapticTS)
 
-This folder is the repository's clearest end-to-end neuroevolution example.
+This folder is the repository's most complete answer to a practical question: what should neuroevolution feel like when it leaves toy problems and enters a real runtime?
 
-It uses a Flappy Bird-style control problem to show how NeatapticTS is meant to feel in a real project: deterministic simulation, fairer policy evaluation, staged NEAT selection, worker-based playback, and live network inspection in the browser.
+The example uses a Flappy Bird-style control task, but the game is not the real subject. The real subject is systems design under evolutionary pressure: deterministic world stepping, fairer policy comparison, staged selection, worker-backed playback, and a browser UI that teaches instead of merely entertaining.
 
-If you want one example that ties together training, replay, visualization, and engineering tradeoffs instead of showing them as isolated tricks, start here.
+If you want one example that shows the repo's broader taste in architecture, reproducibility, and educational tooling, start here.
 
-## Why This Example Exists
+## What This Folder Is Trying To Teach
 
-This is not just a game clone. It is a compact systems demo for the library.
+This example is organized around four reader questions:
 
-It is designed to answer four practical questions:
+1. How do you connect a NEAT population to a repeatable control problem instead of a one-off demo loop?
+2. How do you reduce lucky-rollout bias so evolution rewards robust behavior rather than fortunate seeds?
+3. How do you replay and inspect evolved behavior in the browser without moving simulation authority onto the main thread?
+4. How do you make the resulting network understandable enough to teach from, not just flashy enough to watch?
 
-1. How do you wire a NEAT population into a repeatable control problem?
-2. How do you reduce luck so selection pressure tracks policy quality instead of lucky seeds?
-3. How do you replay evolved behavior in the browser without moving simulation authority onto the main thread?
-4. How do you make the evolved network inspectable enough to teach with, not just impressive enough to watch?
+The folder matters because it answers all four questions in one coherent system. Training, evaluation, simulation, playback, and inspection are separate boundaries on purpose. That separation is what keeps the example readable when it grows beyond a single-file demo.
 
-The current trainer answers those questions with shared-seed, multi-stage evaluation rather than one-rollout-per-genome scoring. That makes the example useful both as a runnable demo and as a reference architecture for browser-friendly neuroevolution workflows.
+## Choose Your Route
 
-## Choose Your Reading Path
-
-If your goal is different from the next reader's goal, the best reading order changes.
+Different readers want different first files. Use the route that matches your question instead of reading everything linearly.
 
 | If you want to... | Start here | Then read |
 | --- | --- | --- |
-| Run the demo fast | [trainFlappyBird.ts](./trainFlappyBird.ts) or [index.html](./index.html) | [trainer/README.md](./trainer/README.md), [browser-entry/README.md](./browser-entry/README.md) |
-| Understand the control problem | [environment/README.md](./environment/README.md) | [simulation-shared/README.md](./simulation-shared/README.md), [evaluation/README.md](./evaluation/README.md) |
-| Tune fitness or fairness | [evaluation/README.md](./evaluation/README.md) | [trainer/README.md](./trainer/README.md) |
-| Change browser playback or UI | [browser-entry/README.md](./browser-entry/README.md) | [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) |
-| Understand the whole example as a system | this README | the module READMEs in the order listed near the end |
+| Run training immediately | [trainFlappyBird.ts](./trainFlappyBird.ts) | [trainer/README.md](./trainer/README.md), [evaluation/README.md](./evaluation/README.md) |
+| Open the browser demo and inspect the UI boundary | [index.html](./index.html) | [browser-entry/README.md](./browser-entry/README.md), [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) |
+| Understand the control problem itself | [environment/README.md](./environment/README.md) | [simulation-shared/README.md](./simulation-shared/README.md), [evaluation/README.md](./evaluation/README.md) |
+| Tune fairness, rollout policy, or fitness shaping | [evaluation/README.md](./evaluation/README.md) | [trainer/README.md](./trainer/README.md) |
+| Change worker playback or browser transport | [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) | [browser-entry/README.md](./browser-entry/README.md) |
+| Understand the whole example as a system | this README | the module READMEs listed in [Recommended Reading Order](#recommended-reading-order) |
 
-## Quick Start
+## Run The Example
 
-### Run training
+### Run training from Node
 
 From the repo root:
 
@@ -41,11 +40,11 @@ From the repo root:
 npx ts-node test/examples/flappy_bird/trainFlappyBird.ts
 ```
 
-You should see logs like:
+You should see compact generation logs such as:
 
 - `gen=1 best=... pipes=... frames=...`
 
-Training runs until you stop it with `Ctrl+C`.
+Training continues until you stop it with `Ctrl+C`.
 
 ### Run the browser demo
 
@@ -61,41 +60,33 @@ Then open:
 
 Important note:
 
-- the page loads bundles from `docs/assets`, so run `npm run docs` after code or documentation changes that affect the published example surface.
+- the page loads example bundles from `docs/assets`, so after code or documentation changes that affect the published example surface, run `npm run docs` to refresh the browser-facing assets and generated docs.
 
-## Mental Model In 60 Seconds
+## The Core Idea In One Glance
 
-Think of the example as five boundaries that cooperate without collapsing into one giant "game" file.
-
-1. `environment/` owns the deterministic world and frame stepping.
-2. `simulation-shared/` owns observation semantics that must stay consistent across training and playback.
-3. `evaluation/` turns one network or a batch of shared seeds into selection-ready metrics.
-4. `trainer/` decides how the population is ranked, mutated, and evolved over generations.
-5. `browser-entry/` plus `flappy-evolution-worker/` turn the same evolutionary story into a responsive, inspectable browser experience.
-
-The root files such as `index.ts`, `flappyEnvironment.ts`, and `flappyEvaluation.ts` are stable shelves for people who want the example's public entrypoints without learning the entire folder layout first.
-
-## System Map
-
-The main architectural idea is simple: keep simulation and evolution authoritative, keep the browser educational, and keep the worker boundary explicit.
+The architectural rule is simple: keep simulation and evolution authoritative, keep the browser explanatory, and keep the worker boundary explicit.
 
 ```mermaid
 flowchart LR
-	TrainEntry["trainFlappyBird.ts<br/>Node entrypoint"] --> Trainer["trainer/<br/>staged population loop"]
-	Trainer --> Evaluation["evaluation/<br/>shared-seed rollouts"]
-	Evaluation --> Environment["environment/<br/>deterministic world stepping"]
-	Environment --> Shared["simulation-shared/<br/>observation semantics"]
-	Shared --> Evaluation
+	subgraph NodePath[Node training path]
+		TrainEntry["trainFlappyBird.ts\ntraining entrypoint"] --> Trainer["trainer/\nstaged evolutionary orchestration"]
+		Trainer --> Evaluation["evaluation/\nshared-seed scoring"]
+		Evaluation --> Environment["environment/\ndeterministic world stepping"]
+		Environment --> Shared["simulation-shared/\nobservation semantics"]
+		Shared --> Evaluation
+	end
 
-	BrowserShell["index.html<br/>browser shell"] --> BrowserEntry["browser-entry/<br/>HUD, playback, network view"]
-	BrowserEntry --> Worker["flappy-evolution-worker/<br/>evolution and playback worker"]
-	Worker --> BrowserEntry
+	subgraph BrowserPath[Browser playback path]
+		BrowserShell["index.html\nlocal browser shell"] --> BrowserEntry["browser-entry/\nHUD, playback, network view"]
+		BrowserEntry --> Worker["flappy-evolution-worker/\noff-thread evolution and playback"]
+		Worker --> BrowserEntry
+	end
 
-	Constants["constants/<br/>shared knobs and palette"] -.-> Trainer
+	Constants["constants/\nshared knobs and palette"] -.-> Trainer
 	Constants -.-> Environment
 	Constants -.-> BrowserEntry
 
-	PublicShelf["index.ts + facade files<br/>stable entry shelves"] -.-> TrainEntry
+	PublicShelf["index.ts + facade files\nstable outside-facing shelves"] -.-> TrainEntry
 	PublicShelf -.-> Evaluation
 	PublicShelf -.-> Environment
 
@@ -108,111 +99,120 @@ flowchart LR
 	class BrowserEntry highlight;
 ```
 
-Read the diagram left to right:
+Read the diagram in two passes:
 
-- the Node path evolves policies against the deterministic world,
-- the browser path renders and explains results without stealing simulation authority,
-- the worker keeps heavy simulation and playback preparation off the main thread,
-- the facade files keep the example approachable from the outside.
+- the Node path evolves networks against a deterministic environment using shared-seed evaluation,
+- the browser path explains and replays that story without taking control away from the worker-owned runtime.
 
-## What Each Boundary Owns
+That split is the heart of the example. Once you understand it, the rest of the folder stops looking like many files and starts looking like a deliberate teaching system.
+
+## What Each Boundary Protects
+
+### `trainer/`: population policy
+
+The trainer is the outer evolutionary loop. It decides how a generation is evaluated, how mutation pressure is scheduled, how reevaluation works, and what summary gets reported back out.
+
+This boundary exists so the example's selection policy reads like policy instead of getting buried inside rollout mechanics or browser code.
+
+### `evaluation/`: fairness and score composition
+
+Evaluation answers two different questions that should never be confused:
+
+1. What happened in one rollout?
+2. How stable is this genome across a shared batch of deterministic seeds?
+
+That second question is the important one for evolution. The example deliberately prefers shared-seed batch evidence over one lucky episode.
 
 ### `environment/`: the world itself
 
-This is the deterministic episode state and frame-step logic.
+The environment owns bird state, pipe state, collision logic, pass credit, timeout behavior, and deterministic stepping. It is the simulation authority for one episode.
 
-- bird state, pipe state, collision, and pass-credit live here,
-- the environment can be understood without knowing anything about the browser,
-- stepping is deterministic when seeded, which is what makes evaluation fairness possible later.
+This boundary exists so the world can be reasoned about without needing to understand workers, DOM code, or training logs.
 
-### `simulation-shared/`: the policy's view of the world
+### `simulation-shared/`: what the policy is actually seeing
 
-This layer keeps the observation story consistent.
+This layer keeps observation semantics consistent across training, helper utilities, and browser playback-related tooling. If this boundary drifts, debugging becomes misleading because the policy may appear to be reacting to different worlds in different runtimes.
 
-That matters because the example has more than one runtime path. Training, browser playback, and helper utilities all need to agree on what the network is actually seeing. If observation semantics drift between those paths, debugging turns into guesswork.
+### `browser-entry/`: the teaching surface
 
-### `evaluation/`: fairness and score shaping
+The browser entry boundary turns the evolved system into something a human can inspect. It owns the host UI, playback rendering, HUD updates, and network visualization.
 
-Evaluation answers two different questions:
+It is intentionally not the source of truth for simulation. That keeps the UI responsive and keeps the educational surface honest.
 
-1. What happened in one episode?
-2. How robust is this genome across a shared batch of deterministic seeds?
+### `flappy-evolution-worker/`: off-thread authority
 
-That second question is the important one for selection. The trainer is deliberately not built around a single lucky rollout.
+The worker owns evolution and playback simulation on the hot path. It transports packed snapshots and generation summaries back to the browser host rather than exposing live mutable runtime objects.
 
-### `trainer/`: population-level decisions
+This boundary exists for both performance and clarity: message passing makes responsibility visible.
 
-The trainer owns the outer evolutionary loop.
+### `constants/` and the facade files: stability shelves
 
-It resolves staged evaluation plans, applies mutation scheduling, evolves the population, and emits compact generation summaries. This is the layer that turns low-level rollouts into population-level progress.
+The supporting boundaries matter too.
 
-### `browser-entry/` and `flappy-evolution-worker/`: explanation and replay
-
-The browser side is intentionally split into a thin main-thread runtime and a worker-owned heavy path.
-
-- the worker owns evolution, playback simulation, and packed snapshot transport,
-- the browser owns rendering, HUD updates, and network visualization,
-- the browser is educational and reactive, not the source of truth for evolution.
-
-That split keeps the UI responsive and makes the message boundary teachable.
+- `constants/` keeps cross-cutting knobs and visual defaults centralized.
+- `index.ts`, `flappyEnvironment.ts`, and `flappyEvaluation.ts` provide stable outside-facing shelves for readers who want the example's public surfaces without learning the full folder layout first.
 
 ## Two Execution Stories
 
+The same example tells two different runtime stories depending on where you enter.
+
 ### Training story
 
-1. `trainFlappyBird.ts` starts the trainer.
-2. `trainer/` resolves the generation's rollout budget and mutation schedule.
-3. `evaluation/` runs deterministic rollouts against shared seeds.
-4. `environment/` advances the world frame by frame.
+1. [trainFlappyBird.ts](./trainFlappyBird.ts) starts the Node-side trainer.
+2. [trainer/README.md](./trainer/README.md) resolves staged rollout plans and mutation scheduling.
+3. [evaluation/README.md](./evaluation/README.md) scores each genome across shared seeds.
+4. [environment/README.md](./environment/README.md) advances one deterministic world frame by frame.
 5. The trainer ranks genomes, logs the generation summary, and evolves again.
 
 ### Browser story
 
-1. `index.html` loads the browser bundle.
-2. `browser-entry/` creates the host UI and starts the worker channel.
-3. `flappy-evolution-worker/` evolves or simulates playback off-thread.
-4. The worker streams packed snapshots and generation summaries back.
-5. `browser-entry/playback/` reconstructs frames and renders the living flock.
-6. `browser-entry/network-view/` draws the currently interesting network for inspection.
+1. [index.html](./index.html) loads the browser shell.
+2. [browser-entry/README.md](./browser-entry/README.md) creates the UI, HUD, and worker channel.
+3. [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) evolves or simulates playback off-thread.
+4. The worker streams packed frame snapshots and generation summaries back to the main thread.
+5. The browser reconstructs frames, renders the flock, and visualizes the currently interesting network.
+
+The important teaching point is that both stories depend on the same world and observation logic, but they do not collapse into the same runtime boundary.
 
 ## The Most Important Design Bets
 
-Several design choices explain why this example is structured the way it is.
+Several design decisions explain why the folder looks the way it does.
 
-### Shared-seed evaluation instead of lucky-rollout selection
+### Shared-seed evaluation beats lucky-rollout selection
 
-Every genome in a comparison set sees the same rollout seeds. That pushes selection pressure toward genuinely better behavior instead of isolated fortunate runs.
+Genomes are compared on the same deterministic seeds. That makes fitness comparisons harsher, but also far more trustworthy. A network that wins under shared seeds is usually learning a policy, not just getting lucky.
 
-### Temporal observations instead of a single-frame snapshot
+### Temporal observations give feed-forward networks local memory
 
-The policy sees a 38-input observation built from current, previous, and two-frames-ago feature slices plus short action memory. That gives a feed-forward network some local temporal context without requiring recurrent state.
+The policy receives a 38-input observation assembled from current, previous, and two-frames-ago feature slices plus short action-memory signals. That gives a feed-forward controller short-horizon temporal context without requiring recurrent state.
 
-### Simple action semantics
+### Two outputs keep the action story simple
 
-The policy outputs two scores: `no flap` and `flap`. A flap happens when `output[1] > output[0]`.
+The action surface is intentionally narrow: `no flap` versus `flap`. A flap occurs when `output[1] > output[0]`.
 
-The simplicity is deliberate. It keeps the control problem focused on state quality and evaluation quality rather than on complicated action decoding.
+That simplicity is a teaching choice. It keeps the interesting complexity in state design, evaluation fairness, and runtime boundaries rather than in action decoding.
 
-### Decomposed fitness instead of a single opaque reward
+### Decomposed fitness makes failure interpretable
 
-Fitness combines survival, progress, dense shaping, and terminal shaping. That makes reward debugging much easier because a bad score has an explanation instead of being just one mysterious scalar.
+Fitness is not one opaque number. It is composed from survival, pipe progress, dense shaping, and terminal shaping. That means poor performance can be inspected by channel instead of being treated like a mysterious scalar.
 
-### Browser inspection as a first-class teaching tool
+### The browser is educational, not authoritative
 
-The browser does not only replay a champion. It can render the whole generation population, show the current leader clearly, and expose connection sign, connection strength, disabled edges, and node bias in the network panel.
+The browser can render a full generation, highlight the current leader, and show connection sign, connection strength, disabled edges, and node bias. But it does not own simulation truth.
+
+That distinction is what makes the example useful as a systems reference instead of only a visual demo.
 
 ## Observation And Fitness Cheat Sheet
 
-The observation vector focuses on control-relevant geometry rather than raw scene pixels.
+The observation vector focuses on control-relevant geometry rather than pixels. The policy sees a compressed description of the next decision, not a screenshot of the scene.
 
-The network sees signals about:
-
-- bird vertical position and vertical velocity,
-- distance and delta to the next gap,
-- next-gap bounds,
-- distance and delta to the second upcoming gap,
-- clearance and urgency features,
-- action-memory features that encode recent flap behavior.
+| Signal family | What it tells the policy | Why it matters |
+| --- | --- | --- |
+| Bird state | vertical position and vertical velocity | The network needs immediate kinematic context before deciding whether a flap is corrective or wasteful. |
+| Next gap geometry | distance to the next gap, gap bounds, and relative offset | This is the primary near-term survival problem. |
+| Second gap lookahead | distance and delta to the following opening | It discourages short-sighted behavior that solves one pipe but ruins the next one. |
+| Clearance and urgency features | how safe or dangerous the current approach is | These features help shape timing near failure cases. |
+| Action memory | recent flap behavior | It gives a feed-forward policy a small amount of temporal continuity. |
 
 Fitness then combines normalized channels with caps so one lucky dimension does not dominate selection:
 
@@ -221,22 +221,35 @@ Fitness then combines normalized channels with caps so one lucky dimension does 
 - dense shaping,
 - terminal shaping.
 
-Dense shaping still rewards practical flying behavior such as staying aligned to the next gap, approaching the next pipe productively, and preparing for the second upcoming gap.
+The result is a reward surface that still encourages practical flying behavior, but remains debuggable when evolution stalls or overfits to one pattern.
+
+## If You Want To Change Something, Read This First
+
+This is the shortest route to the right boundary when you are modifying the example.
+
+| Change goal | Read first | Why |
+| --- | --- | --- |
+| Adjust gravity, pipe spacing, collision, or deterministic stepping | [environment/README.md](./environment/README.md) | That is where world truth lives. |
+| Change what the network sees | [simulation-shared/README.md](./simulation-shared/README.md) | Observation semantics must stay aligned across training and playback-related helpers. |
+| Change score shaping or fairness policy | [evaluation/README.md](./evaluation/README.md) | This boundary owns rollout scoring and shared-seed aggregation. |
+| Change staged selection or mutation scheduling | [trainer/README.md](./trainer/README.md) | This is the population-policy layer. |
+| Change browser playback, HUD, or network inspection | [browser-entry/README.md](./browser-entry/README.md) | The browser teaching surface lives here. |
+| Change worker transport or off-thread playback behavior | [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) | The worker owns hot-path simulation and packed snapshot transport. |
 
 ## Folder Map
 
-The folder is split by responsibility, not by one enormous "game" module.
+The folder is split by responsibility, not by one giant "game" module.
 
 - `browser-entry/`: main-thread browser runtime, HUD, playback renderer, viewport helpers, telemetry, and network visualization.
 - `constants/`: shared visual, training, world, and playback constants.
-- `environment/`: deterministic state, stepping, collision/progress rules, and environment-facing observation helpers.
+- `environment/`: deterministic state, stepping, collision/progress rules, and environment-facing helpers.
 - `evaluation/`: rollout execution, seed batching, and fitness aggregation.
 - `flappy-evolution-worker/`: worker runtime for evolution, playback simulation, and snapshot transport.
-- `simulation-shared/`: simulation-facing feature logic reused across environment, trainer, and browser paths.
+- `simulation-shared/`: shared observation and simulation-facing feature logic reused across boundaries.
 - `trainer/`: Node-side orchestration, staged evaluation plans, mutation scheduling, and generation logging.
-- `flappyEnvironment.ts`: convenience facade for treating the example as a control environment.
-- `flappyEvaluation.ts`: convenience facade for treating the example as a policy-evaluation surface.
-- `flappyEvolution.worker.ts`: tiny worker bundle entry.
+- `flappyEnvironment.ts`: convenience facade for using the example as a control environment.
+- `flappyEvaluation.ts`: convenience facade for using the example as a policy-evaluation surface.
+- `flappyEvolution.worker.ts`: small worker bundle entry.
 - `trainFlappyBird.ts`: direct Node entrypoint for starting training.
 - `index.html`: local browser shell.
 - `index.ts`: example-level public shelf.
@@ -244,32 +257,33 @@ The folder is split by responsibility, not by one enormous "game" module.
 
 ## Recommended Reading Order
 
-If you are new to the example, this sequence usually gives the cleanest ramp:
+If you want the cleanest ramp into the example, this order usually pays off:
 
-1. this README for the big-picture map,
-2. `trainer/README.md` for the evolutionary loop,
-3. `evaluation/README.md` for rollout fairness and score aggregation,
-4. `environment/README.md` for deterministic world mechanics,
-5. `browser-entry/README.md` for the browser runtime and visualization path,
-6. `flappy-evolution-worker/README.md` for worker protocol and playback transport.
+1. this README for the system-level mental model,
+2. [trainer/README.md](./trainer/README.md) for the outer evolutionary loop,
+3. [evaluation/README.md](./evaluation/README.md) for fairness and score aggregation,
+4. [environment/README.md](./environment/README.md) for deterministic world mechanics,
+5. [simulation-shared/README.md](./simulation-shared/README.md) for observation semantics,
+6. [browser-entry/README.md](./browser-entry/README.md) for the browser runtime and inspection surface,
+7. [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) for worker protocol and playback transport.
 
 If you only care about one slice:
 
-- training and fitness tuning: start with `trainer/` and `evaluation/`,
-- environment changes or control-problem semantics: start with `environment/` and `simulation-shared/`,
-- browser playback or UI work: start with `browser-entry/` and `flappy-evolution-worker/`.
+- training and fairness: start with `trainer/` and `evaluation/`,
+- world mechanics and control semantics: start with `environment/` and `simulation-shared/`,
+- browser playback and UI boundaries: start with `browser-entry/` and `flappy-evolution-worker/`.
 
 ## Background Reading
 
-This example is self-explanatory enough to read from the code alone, but two external references are genuinely useful if you want the broader concepts behind the boundaries:
+This folder is readable from the code alone, but two external references genuinely help if you want the broader concepts behind the design:
 
-- Kenneth O. Stanley and Risto Miikkulainen, "Evolving Neural Networks through Augmenting Topologies," Evolutionary Computation 10(2), 2002: the canonical NEAT paper and the best conceptual backdrop for why topology and weights co-evolve.
-- Wikipedia contributors, "Message passing," Wikipedia, The Free Encyclopedia: a compact mental model for why the browser and worker communicate through an explicit protocol instead of sharing runtime authority.
+- Kenneth O. Stanley and Risto Miikkulainen, ["Evolving Neural Networks through Augmenting Topologies"](https://direct.mit.edu/evco/article/10/2/99/998), *Evolutionary Computation* 10(2), 2002. This is the canonical NEAT paper and the best conceptual backdrop for why topology and weights co-evolve.
+- Wikipedia contributors, ["Message passing"](https://en.wikipedia.org/wiki/Message_passing), *Wikipedia, The Free Encyclopedia*. This is useful background for understanding why the browser and worker communicate through an explicit protocol instead of sharing runtime authority.
 
-## Why This README Matters
+## Why Start Here
 
-This README is the tone-setter for the rest of the example.
+Many libraries look strong when explained as features. Fewer still look strong when asked to keep simulation deterministic, evaluation fair, browser playback responsive, and the resulting policy inspectable at the same time.
 
-The goal is not only to show that the library can evolve a bird controller. The goal is to show how NeatapticTS tries to balance algorithmic rigor, reproducibility, browser ergonomics, and teaching value inside one coherent example.
+That is why this README matters. The goal is not merely to show that NeatapticTS can evolve a bird controller. The goal is to show what the library's engineering values look like when they have to coexist inside one runnable example.
 
-If you want a single folder that demonstrates the repository's broader direction for runnable, inspectable, educational examples, this is the one.
+If you want one folder that demonstrates the repo's broader direction for inspectable, reproducible, educational neuroevolution examples, this is the one.

@@ -383,6 +383,48 @@ export interface EvolutionLoopHelpers {
   ) => NetworkConnection[];
 }
 
+/**
+ * Shared runtime buffers and limits consumed by the evolution loop hot path.
+ *
+ * This context keeps the loop and simulation helpers from passing a long list
+ * of pooled ring buffers, scratch arrays, and capacity limits positionally.
+ */
+export interface EvolutionLoopRuntimeContext {
+  scratchLogitsRing: Float32Array[];
+  logitsRingCapMax: number;
+  actionDim: number;
+  scratchLogitsShared?: Float32Array;
+  scratchLogitsSharedW?: Int32Array;
+}
+
+/**
+ * Shared telemetry thresholds consumed by the evolution loop simulation pass.
+ *
+ * The loop owns these switches conceptually, but grouping them as one context
+ * keeps telemetry policy changes from widening hot-path function signatures.
+ */
+export interface EvolutionLoopTelemetryContext {
+  telemetryMinimal: boolean;
+  saturationPruneThreshold: number;
+  recentWindow: number;
+  reducedTelemetry: boolean;
+}
+
+/**
+ * Shared scratch buffers and helper callbacks used across evolution-loop stages.
+ *
+ * This context groups the scratch arrays and analysis helpers that travel
+ * together through generation, simulation, and snapshot paths.
+ */
+export interface EvolutionLoopSupportContext {
+  emptyVec: NetworkInstance[];
+  scratchNodeIdx: Int32Array;
+  scratchSnapshotObj: Record<string, unknown>;
+  scratchSnapshotTop: SnapshotEntry[];
+  speciesHistoryRef: number[];
+  loopHelpers: EvolutionLoopHelpers;
+}
+
 /** Network node representation used by engine-side runtime adaptation helpers. */
 export interface NetworkNode {
   type?: string;
@@ -436,6 +478,16 @@ export interface LogitsRingState {
   logitsRingShared: boolean;
   scratchLogitsRingW: number;
 }
+
+/**
+ * Mutable runtime state owned by the public EvolutionEngine facade.
+ *
+ * The extracted engine modules already share pooled buffers through
+ * `engineState`. This narrower state exists only for the facade-specific
+ * logits-ring bookkeeping that must survive across runs while keeping the
+ * class boundary orchestration-first.
+ */
+export interface EvolutionEngineFacadeRuntimeState extends LogitsRingState {}
 
 /** Simulation result returned by generation evaluation helpers. */
 export interface SimulationResult {
