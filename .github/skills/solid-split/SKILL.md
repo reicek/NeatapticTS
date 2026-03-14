@@ -17,6 +17,12 @@ The skill defines the repository-specific split protocol, documentation bar,
 plan expectations, and validation checklist that should remain consistent across
 split sessions.
 
+This file is the canonical knowledge surface for solid-split work. The skill
+owns the durable repository workflow, discovery order, plan discipline,
+documentation expectations, and validation policy. Companion agents should be
+thin executors: they should pass the current task details into this skill,
+follow it, and avoid duplicating the same repository rules in their own prompt.
+
 ## When to Use
 
 - The user wants a SOLID split, folderization pass, or orchestration-first
@@ -46,6 +52,52 @@ Useful optional detail to include:
 - the plan file to follow if one already exists,
 - whether this session should map boundaries, create the plan, or complete one
   specific split step.
+
+## Responsibility Split
+
+Use this boundary intentionally:
+
+- The skill owns durable knowledge: repo conventions, README-first discovery,
+  plan sequencing, documentation guardrails, validation expectations, and the
+  split philosophy.
+- The agent owns execution mechanics: reading the current request, deciding the
+  single step to run now, applying edits, updating the plan, validating the
+  touched surface, and producing the handoff prompt.
+- The agent should not restate the full workflow from this skill unless a
+  shorter execution summary is needed for the current session.
+- If the skill and agent ever disagree, update the agent to follow this skill
+  rather than copying the disagreement forward.
+
+## Task Packet For Users And Agents
+
+When invoking this skill directly or through a companion agent, pass a compact
+task packet that includes all current-session specifics the skill itself should
+not have to infer.
+
+Preferred packet fields:
+
+- split root,
+- current target module, file, or folder boundary,
+- requested mode: boundary mapping, plan creation, or execution,
+- existing plan path if known,
+- exact current step if already defined,
+- whether stable import paths must remain unchanged,
+- expected validations for this step,
+- documentation expectations beyond the default JSDoc bar,
+- known worktree cautions such as generated README drift or unrelated edits.
+
+Compact example:
+
+```text
+Use solid-split for #file:flappy_bird.
+Mode: execute one durable step.
+Target boundary: browser-entry/playback.
+Plan: plans/flappy_browser_entry_split.md.
+Current step: Step 4 - extract playback snapshot boundary.
+Keep stable imports working.
+Validate with: npx tsc --noEmit -p tsconfig.test.json
+Worktree caution: generated README files may already be dirty from npm run docs.
+```
 
 ## Primary Resources
 
@@ -117,11 +169,31 @@ API, default, or runtime contract.
 9. Execute only one durable step unless the user explicitly asks for more.
 10. Improve JSDoc on touched exported and public surfaces so generated README
    output remains educational, example-driven, and conceptually clear.
-11. Run the minimum validation needed for touched files and the step's done
-   criteria.
-12. Update the plan immediately after the step completes.
-13. End with a next-session handoff prompt that can continue from the next step
-   without depending on prior chat history.
+11. Update the plan immediately after the step completes.
+12. Immediately run `educational-docs` as the next step on the touched
+  surface.
+  - This is mandatory even when the user invokes `solid-split` directly.
+  - Pass the changed boundary, the intended reader, whether the surface is
+    generated from source JSDoc, and any relevant doc needs such as tone
+    shaping, source mapping, Mermaid, citations, or media constraints.
+  - Treat this as a focused follow-up pass on the exact split changes, not as
+    permission to start a broad unrelated docs rewrite.
+13. Run the minimum validation needed for touched files, documentation output,
+  and the step's done criteria.
+14. End with a next-session handoff prompt that can continue from the next step
+  without depending on prior chat history.
+
+## Companion Agent Contract
+
+If a companion agent uses this skill, it should:
+
+1. Name this skill explicitly as `solid-split`.
+2. Pass the current task packet into the skill instead of paraphrasing it away.
+3. Reuse this skill's discovery order and guardrails instead of copying them
+  into the agent prompt at full length.
+4. Keep the agent prompt focused on execution-only concerns: one-step scope,
+  output shape, blocker handling, and handoff quality.
+5. Update the agent when this skill changes materially so both remain aligned.
 
 ## Documentation Delegation
 
@@ -132,9 +204,11 @@ Use `educational-docs` as the documentation policy for split work.
 - keep split sessions focused on boundary mapping, extraction order, facades,
   and validation,
 - improve JSDoc enough to keep the touched boundary coherent,
-- invoke `educational-docs` when the task becomes a true documentation pass,
-  when generated README output needs a tone lift, or when citations or
-  Wikimedia-safe visuals enter scope,
+- invoke `educational-docs` after every completed split step as the mandatory
+  follow-up pass on the touched boundary,
+- let that follow-up decide whether the change only needs source-JSDoc
+  tightening or whether generated README output also needs a stronger tone
+  lift, Mermaid, citations, or Wikimedia-safe visuals,
 - run `npm run docs` after doc-affecting edits when the split changes the
   generated surface.
 
@@ -187,6 +261,36 @@ Typical options:
 
 Do not run broad test suites unless they are truly needed for the current step.
 
+## Large-File Split Execution Mode
+
+When the task is a large-file split into submodules, this skill also owns the
+step-by-step execution protocol.
+
+Use this stricter mode:
+
+1. Plan first.
+   - Propose the file map before moving code.
+   - Keep exported APIs in the main file unless the user explicitly approves a
+     surface change.
+   - Define the intended seams clearly.
+2. Create a durable TODO checklist.
+   - Use ordered steps with one active step at a time.
+3. Execute in strict passes.
+   - Create target files first when needed.
+   - Move one responsibility category at a time.
+   - Delete moved source from the old file immediately after each category is
+     transferred.
+   - Do not batch multiple helper categories in one pass unless the user
+     explicitly overrides the safer sequence.
+4. Keep the main boundary orchestration-first.
+   - The main file should remain the readable public flow, not a pile of thin
+     wrappers.
+5. When the user requests user-confirmed stepwise execution, stop after each
+   completed durable step and wait for confirmation before continuing.
+6. Validate after the planned move set for the current step is complete.
+
+This mode exists so large splits remain resumable, reviewable, and low-risk.
+
 ## Guardrails
 
 - Do not hand-edit generated README files.
@@ -196,6 +300,8 @@ Do not run broad test suites unless they are truly needed for the current step.
 - Do not break stable import paths when a facade or compatibility shim is
   appropriate.
 - Do not leave a plan stale after reshaping a step.
+- Do not skip the `educational-docs` follow-up pass after a completed split
+  step unless the user explicitly overrides that policy.
 - Do not treat examples as the final place to hide library ergonomics gaps.
 - Do not lower the documentation bar during refactors; public-facing docs should
   get better as boundaries improve.

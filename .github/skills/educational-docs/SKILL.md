@@ -16,6 +16,19 @@ of the product experience, not an afterthought. A good documentation pass should
 help a first-time reader understand what the module is for, why its boundaries
 exist, how the pieces fit together, and where to read next.
 
+This skill is also the mandatory documentation follow-up for completed
+`solid-split` steps unless the user explicitly opts out. When invoked from a
+split workflow, treat the incoming changes as a focused boundary-sharpening
+pass: explain the touched module better, keep generated surfaces in sync, and
+avoid expanding into an unrelated repo-wide docs rewrite.
+
+This file is the canonical knowledge surface for documentation work in this
+repo. It owns the durable documentation workflow, tone model, source-mapping
+rules, Mermaid policy, and citation/media guardrails. Companion agents such as
+`Docs Scout` should stay thin: they should gather context, identify likely doc
+gaps, and hand those specifics back into this skill rather than re-defining the
+documentation bar themselves.
+
 ## When to Use
 
 - A generated README feels technically correct but emotionally flat or hard to
@@ -28,6 +41,67 @@ exist, how the pieces fit together, and where to read next.
 - A concept would benefit from carefully cited background reading.
 - A diagram or image from Wikimedia Commons could materially improve learning,
   and the license obligations can be satisfied.
+- A `solid-split` step has just completed and the touched boundary now needs a
+  focused educational-docs follow-up pass.
+
+## Companion Workflow Input
+
+When this skill is used as the follow-up step after `solid-split`, expect a
+compact handoff packet rather than a broad docs request.
+
+Preferred handoff fields:
+
+- changed boundary, folder, or file set,
+- intended reader,
+- whether the public surface is generated from source JSDoc,
+- the split step that just completed,
+- documentation needs discovered during the split,
+- whether Mermaid, citations, or Wikimedia-safe media are actually in scope,
+- validation expectations such as `npm run docs`.
+
+Compact example:
+
+```text
+Use educational-docs on the browser-entry/playback split that just finished.
+Reader: first-time contributor inspecting the new playback boundary.
+Generated surface: yes, source JSDoc feeds README output.
+Completed split step: Step 4 - extract playback snapshot boundary.
+Doc needs: tighten module purpose, explain new boundary ownership, add a small
+example only if the API is non-obvious.
+Mermaid: only if it materially reduces confusion.
+Validate with: npm run docs
+```
+
+## Responsibility Split
+
+Use this boundary intentionally:
+
+- The skill owns durable documentation knowledge: workflow, tone, teaching
+  standards, source mapping, visual policy, and attribution rules.
+- `Docs Scout` owns read-only reconnaissance: read the nearest README surface,
+  compare it with the smallest set of nearby source files, and surface likely
+  JSDoc or regeneration targets.
+- `Docs Scout` should not restate this skill's full documentation philosophy.
+  It should pass concrete findings into this skill.
+- If the skill and a companion agent drift, update the agent to follow this
+  skill rather than copying the drift forward.
+
+## Docs Scout Handoff
+
+When `Docs Scout` is used before or alongside this skill, the useful handoff is
+compact and evidence-based.
+
+Preferred handoff fields:
+
+- README files inspected,
+- short assessment of whether the README is sufficient, stale, or dry,
+- likely source-JSDoc targets,
+- whether docs probably only need regeneration,
+- user-facing explanation gaps,
+- any recommendation to run `npm run docs`.
+
+This handoff should narrow the doc pass. It should not replace the actual
+educational-docs workflow.
 
 ## Primary Resources
 
@@ -48,6 +122,11 @@ surface that does four things well:
 2. gives them a map before the details,
 3. explains design choices and tradeoffs instead of hiding them,
 4. points them toward the next useful file, concept, or experiment.
+
+For generated folder READMEs, that map should begin immediately under the top
+`#` heading. A blank title followed by file sections is not enough. If the
+current source mapping or generator cannot produce a real opening, improve that
+mechanism so the folder README starts with a genuine module introduction.
 
 When a visual explanation would teach faster than prose, the target surface
 should also include Mermaid Markdown diagrams or charts.
@@ -76,6 +155,19 @@ Apply that model broadly:
 - use named sections that create momentum,
 - teach architecture and behavior together,
 - finish with recommended reading or next steps when helpful.
+
+Treat heading depth as a teaching contract, not a formatting afterthought:
+
+- the `#` opening is the chapter introduction and should usually be the
+  longest, richest prose in the document,
+- the `#` opening should orient a first-time reader before file trivia or
+  symbol lists appear,
+- `##` sections should introduce one meaningful slice of the module with enough
+  context that the reader knows why that slice exists,
+- `###` sections should stay concise and specific, acting as the detail shelf
+  beneath a stronger parent section,
+- long runs of constants, options, or related exports should be introduced by
+  an umbrella explanation before the reader hits a wall of repeated headings.
 
 See the full rubric in [README tone model](./assets/readme-tone-model.md).
 See the visual rules in [Astro Bird visual style guide](./assets/visual-style-guide.md).
@@ -132,12 +224,34 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
    - Replace dry restatements with explanation.
    - Make the reading order obvious.
 
+## Post-Split Follow-Up Mode
+
+When invoked immediately after `solid-split`, apply this narrower execution
+mode:
+
+1. Start from the changed boundary rather than from the whole subsystem.
+2. Preserve the split's new ownership story and make it easier to read.
+3. Prefer source-JSDoc improvements first when the README surface is generated.
+4. Add diagrams only when the new boundary is still hard to understand without
+  one.
+5. Regenerate docs when the touched surface feeds generated README output.
+6. Report the doc pass as the follow-up to the completed split step so the
+  workflow remains legible.
+
+This mode exists to keep the follow-up deterministic: every completed split
+gets a documentation polish pass, but that pass stays proportional to the code
+change that triggered it.
+
 ## World-Class Standards
 
 ### 1. Start with purpose, not taxonomy
 
 A reader should understand the module's role before encountering file lists or
 signature details.
+
+For any document with a top-level `#` heading, the opening should read like the
+first pages of a chapter: define the problem space, explain why this boundary
+exists, and give the reader a clear path into the sections that follow.
 
 ### 2. Organize around questions, not only symbols
 
@@ -147,6 +261,13 @@ Good educational docs answer questions such as:
 - Why is the architecture split this way?
 - What does the runtime or algorithm assume?
 - What path should I read next if I want more depth?
+
+Match the amount of prose to the heading depth:
+
+- put the broadest motivation and mental model under `#`,
+- put section-level framing and reading order under `##`,
+- keep `###` entries compact unless one specific item genuinely needs extra
+  depth.
 
 ### 3. Make architecture legible
 
@@ -319,3 +440,16 @@ A strong educational-docs pass should report:
 - whether docs were regenerated,
 - any external sources or media added, with attribution and license notes,
 - any remaining doc gaps or follow-up opportunities.
+
+## Companion Agent Contract
+
+If a companion agent uses this skill, it should:
+
+1. Name this skill explicitly as `educational-docs`.
+2. Pass concrete reconnaissance findings into the skill instead of paraphrasing
+  them away.
+3. Keep the agent prompt focused on read-only discovery and gap reporting when
+  the agent is a scout.
+4. Avoid restating the full workflow, tone model, or guardrails that already
+  live here.
+5. Update the agent when this skill changes materially so both remain aligned.
