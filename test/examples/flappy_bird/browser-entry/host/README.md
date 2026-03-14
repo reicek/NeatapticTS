@@ -1,13 +1,18 @@
 # browser-entry/host
 
-## browser-entry/host/host.types.ts
-
-### CanvasHostResult
-
 Public type contracts for the browser-entry host boundary.
 
 These types describe what the host builder returns to the runtime and how HUD
 value updates are represented once the UI tree exists.
+
+## browser-entry/host/host.types.ts
+
+### CanvasHostResult
+
+Result payload returned after constructing the browser host UI tree.
+
+This is the runtime's handle into the rendered browser shell: the main canvas,
+its 2D context, the stats-cell lookup, and the network-panel draw callback.
 
 ### HostStatsPartialValues
 
@@ -192,8 +197,6 @@ Returns: Nothing.
 
 ## browser-entry/host/host.constants.ts
 
-### host.constants
-
 Shared presentation constants for browser host assembly.
 
 These values tune the spacing and responsiveness of the host HUD and side
@@ -201,17 +204,38 @@ panels without burying layout numbers inside DOM-building code.
 
 ### FLAPPY_HOST_PANEL_PADDING
 
+Shared panel padding used by the host stats container.
+
+This controls the interior breathing room of the main stats panel.
+
 ### FLAPPY_HOST_PANEL_TRANSITION
+
+Shared panel max-height transition.
+
+This supports the subtle host-panel resize behavior during responsive layout
+changes.
 
 ### FLAPPY_HOST_STATS_SPLIT_GAP
 
+Shared stats split gap.
+
+This controls the gutter between the table column and the network panel.
+
 ### FLAPPY_HOST_TABLE_FONT_SIZE
+
+Shared stats table font size.
+
+The table uses a compact monospace size so many HUD rows fit comfortably in
+the host panel.
 
 ### FLAPPY_HOST_TABLE_HOST_PADDING
 
-## browser-entry/host/host.dom.service.ts
+Shared table host padding used by the stats value section.
 
-### host.dom.service
+The table host gets slightly different padding so dense stat rows remain
+readable without wasting horizontal space.
+
+## browser-entry/host/host.dom.service.ts
 
 Low-level DOM safety helpers for the browser host boundary.
 
@@ -223,23 +247,38 @@ assembly begins.
 
 `(canvas: HTMLCanvasElement, errorMessage: string) => CanvasRenderingContext2D`
 
-Low-level DOM safety helpers for the browser host boundary.
+Resolves a required 2D context from a canvas element.
 
-Host assembly depends on several canvases. This helper turns the browser's
-nullable `getContext` API into a strict contract before higher-level host
-assembly begins.
+Failing early here keeps later rendering code free from repeated null checks.
+
+Parameters:
+- `canvas` - - Target canvas element.
+- `errorMessage` - - Error message when 2D context is unavailable.
+
+Returns: Canvas 2D rendering context.
 
 ## browser-entry/host/host.stats.service.ts
-
-### createAndAttachHostStatsTable
-
-`(statsTableHost: HTMLElement) => Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>`
 
 Stats-table creation and update helpers for the browser host HUD.
 
 The host treats the stats table as a small indexed dashboard: build it once,
 keep direct references to value cells, then apply partial text updates during
 the runtime loop.
+
+### createAndAttachHostStatsTable
+
+`(statsTableHost: HTMLElement) => Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>`
+
+Creates the host stats table, appends it into the provided host element, and
+initializes all HUD values to their baseline placeholders.
+
+The initial placeholders make the HUD legible before the first generation or
+playback frame has been processed.
+
+Parameters:
+- `statsTableHost` - - DOM host that receives the table.
+
+Returns: Lookup map for future incremental stat updates.
 
 ### updateStatsTableValues
 
@@ -258,8 +297,6 @@ Returns: Nothing.
 
 ## browser-entry/host/host.canvas.service.ts
 
-### host.canvas.service
-
 Canvas sizing helpers for the browser host boundary.
 
 These utilities keep host layout and backing-store sizing aligned so the
@@ -269,10 +306,17 @@ simulation and network canvases render crisply without stretching artifacts.
 
 `(canvas: HTMLCanvasElement, widthPx: number, heightPx: number) => boolean`
 
-Canvas sizing helpers for the browser host boundary.
+Applies a canvas backing store size and CSS width/height.
 
-These utilities keep host layout and backing-store sizing aligned so the
-simulation and network canvases render crisply without stretching artifacts.
+Browser canvases have both backing-store dimensions and CSS box dimensions;
+this helper updates both together.
+
+Parameters:
+- `canvas` - - Target canvas element.
+- `widthPx` - - Desired backing-store width in pixels.
+- `heightPx` - - Desired backing-store height in pixels.
+
+Returns: True when canvas dimensions changed.
 
 ### applySimulationCanvasBounds
 
@@ -311,8 +355,21 @@ Returns: Width/height pair in pixels.
 
 `(canvas: HTMLCanvasElement, containerElement: HTMLElement, mainSplitContainer: HTMLElement, statsContainer: HTMLElement, statsSplitContainer: HTMLElement, statsTableHost: HTMLElement, networkCanvas: HTMLCanvasElement, networkCanvasHost: HTMLElement, onNetworkResize: () => void) => void`
 
-Top-level responsive sizing orchestration for the browser host.
+Installs responsive viewport sizing for simulation and network canvases.
 
-This module wires the host resize lifecycle together: gather the relevant DOM
-elements, run the initial layout pass, and keep canvas sizing synchronized with
-viewport changes over time.
+This is the public entrypoint used by host assembly. It captures the elements,
+creates the deferred redraw policy, runs the first layout pass, and installs
+ongoing resize listeners.
+
+Parameters:
+- `canvas` - - Simulation canvas to resize.
+- `containerElement` - - Width/height source.
+- `mainSplitContainer` - - Main split panel host.
+- `statsContainer` - - Stats host element.
+- `statsSplitContainer` - - Stats split panel containing stats and network panes.
+- `statsTableHost` - - Stats table host element.
+- `networkCanvas` - - Network canvas.
+- `networkCanvasHost` - - Network host element.
+- `onNetworkResize` - - Callback after network resize.
+
+Returns: Nothing.

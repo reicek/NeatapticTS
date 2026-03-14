@@ -1,14 +1,23 @@
 # mazeMovement/runtime
 
-## mazeMovement/runtime/mazeMovement.runtime.ts
-
-### mazeMovement.runtime
-
 Runtime/environment helpers for the dedicated mazeMovement module.
 
-This file owns the low-level simulation primitives that do not define maze
-policy: cell-open checks, distance lookup, run-state creation, visit-ring
+This file is the environment-facing foundation beneath the rest of the
+mazeMovement stack. When the higher-level policy and shaping helpers need to
+ask what world the agent is actually inside, they depend on this boundary for
+cell-open checks, distance lookup, run-state creation, visit-ring
 bookkeeping, and perception-state updates.
+
+The point of this split is to keep "what the maze world currently is" apart
+from "what the policy wants to do next" and "how that action should be
+rewarded." That separation makes the public facade easier to read because the
+hot path can be understood as environment refresh first, decision second,
+shaping third, and result folding last.
+
+Read this file as the substrate for the rest of the module: runtime helpers
+define the world state that policy, shaping, and finalization build on top of.
+
+## mazeMovement/runtime/mazeMovement.runtime.ts
 
 ### buildMazeMovementVisionAndDistance
 

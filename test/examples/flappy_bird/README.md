@@ -25,10 +25,10 @@ If your goal is different from the next reader's goal, the best reading order ch
 
 | If you want to... | Start here | Then read |
 | --- | --- | --- |
-| Run the demo fast | `trainFlappyBird.ts` or `index.html` | `trainer/README.md`, `browser-entry/README.md` |
-| Understand the control problem | `environment/README.md` | `simulation-shared/README.md`, `evaluation/README.md` |
-| Tune fitness or fairness | `evaluation/README.md` | `trainer/README.md` |
-| Change browser playback or UI | `browser-entry/README.md` | `flappy-evolution-worker/README.md` |
+| Run the demo fast | [trainFlappyBird.ts](./trainFlappyBird.ts) or [index.html](./index.html) | [trainer/README.md](./trainer/README.md), [browser-entry/README.md](./browser-entry/README.md) |
+| Understand the control problem | [environment/README.md](./environment/README.md) | [simulation-shared/README.md](./simulation-shared/README.md), [evaluation/README.md](./evaluation/README.md) |
+| Tune fitness or fairness | [evaluation/README.md](./evaluation/README.md) | [trainer/README.md](./trainer/README.md) |
+| Change browser playback or UI | [browser-entry/README.md](./browser-entry/README.md) | [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) |
 | Understand the whole example as a system | this README | the module READMEs in the order listed near the end |
 
 ## Quick Start

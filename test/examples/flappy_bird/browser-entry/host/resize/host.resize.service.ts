@@ -17,6 +17,19 @@ import type {
  * This module wires the host resize lifecycle together: gather the relevant DOM
  * elements, run the initial layout pass, and keep canvas sizing synchronized with
  * viewport changes over time.
+ *
+ * The resize boundary exists because the Flappy demo is not a single canvas.
+ * It has to keep the simulation viewport, stats panel, and network panel in a
+ * coherent layout across mobile, tablet, and desktop sizes.
+ *
+ * Layout decision flow:
+ * ```mermaid
+ * flowchart LR
+ *     Measure["measure container"] --> Decide{"minimal mobile\nlayout?"}
+ *     Decide -->|Yes| Mobile["apply minimal mobile layout"]
+ *     Decide -->|No| Standard["apply standard split layout"]
+ *     Standard --> Resize["resize simulation + network canvases"]
+ * ```
  */
 
 /**

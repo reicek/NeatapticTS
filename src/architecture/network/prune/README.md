@@ -1,41 +1,5 @@
 # architecture/network/prune
 
-## architecture/network/prune/network.prune.utils.types.ts
-
-### ActivePruningConfig
-
-Non-nullable pruning schedule configuration shape used by helpers.
-
-### DEFAULT_PRUNE_FREQUENCY
-
-### MAX_EVOLUTIONARY_TARGET_SPARSITY
-
-### MAX_PROGRESS_FRACTION
-
-### MIN_PROGRESS_FRACTION
-
-### MIN_REMAINING_CONNECTION_COUNT
-
-### PRUNING_METHOD_MAGNITUDE
-
-### PRUNING_METHOD_SNIP
-
-### REGROW_ATTEMPT_MULTIPLIER
-
-## architecture/network/prune/network.prune.utils.ts
-
-### getCurrentSparsity
-
-`() => number`
-
-Current sparsity fraction relative to the training-time pruning baseline.
-
-Returns: Current sparsity in the [0,1] range when baseline is available.
-
-### maybePrune
-
-`(iteration: number) => void`
-
 Structured and dynamic pruning utilities for networks.
 
 Features:
@@ -53,6 +17,80 @@ Internal State Fields (attached to Network via `any` casting):
  - _rand: deterministic RNG function
  - _enforceAcyclic: boolean flag enforcing forward-only connectivity ordering
  - _topoDirty: topology order invalidation flag consumed by activation fast path / topological sorting
+
+Opportunistically perform scheduled pruning during gradient-based training.
+
+Scheduling model:
+ - start / end define an iteration window (inclusive) during which pruning may occur
+ - frequency defines cadence (every N iterations inside the window)
+ - targetSparsity is linearly annealed from 0 to its final value across the window
+ - method chooses ranking heuristic (magnitude | snip)
+ - optional regrowFraction allows dynamic sparse training: after removing edges we probabilistically regrow
+   a fraction of them at random unused positions (respecting acyclic constraint if enforced)
+
+SNIP heuristic:
+ - Uses |w * grad| style saliency approximation (here reusing stored delta stats as gradient proxy)
+ - Falls back to pure magnitude if gradient stats absent.
+
+## architecture/network/prune/network.prune.utils.types.ts
+
+### ActivePruningConfig
+
+Non-nullable pruning schedule configuration shape used by helpers.
+
+### DEFAULT_PRUNE_FREQUENCY
+
+Fallback prune cadence when schedule frequency is omitted or invalid.
+
+### MAX_EVOLUTIONARY_TARGET_SPARSITY
+
+Safety cap below full sparsity to avoid degenerate zero-connection networks.
+
+### MAX_PROGRESS_FRACTION
+
+Maximum normalized schedule progress value.
+
+### MIN_PROGRESS_FRACTION
+
+Minimum normalized schedule progress value.
+
+### MIN_REMAINING_CONNECTION_COUNT
+
+Lower bound to ensure at least one connection remains after pruning.
+
+### PRUNING_METHOD_MAGNITUDE
+
+Pruning method identifier for absolute-weight ranking.
+
+### PRUNING_METHOD_SNIP
+
+Pruning method identifier for SNIP-like saliency ranking.
+
+### REGROW_ATTEMPT_MULTIPLIER
+
+Retry multiplier to convert intended regrowth count into max attempts.
+
+## architecture/network/prune/network.prune.utils.ts
+
+### getCurrentSparsity
+
+`() => number`
+
+Current sparsity fraction relative to the training-time pruning baseline.
+
+Returns: Current sparsity in the [0,1] range when baseline is available.
+
+### maybePrune
+
+`(iteration: number) => void`
+
+Perform scheduled pruning at a given training iteration if conditions are met.
+
+Scheduling fields (cfg): start, end, frequency, targetSparsity, method ('magnitude' | 'snip'), regrowFraction.
+The target sparsity ramps linearly from 0 at start to cfg.targetSparsity at end.
+
+Parameters:
+- `iteration` - Current (0-based or 1-based) training iteration counter used for scheduling.
 
 ### pruneToSparsity
 

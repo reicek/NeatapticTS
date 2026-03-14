@@ -1,9 +1,5 @@
 # simulation-shared/observation
 
-## simulation-shared/observation/observation.ts
-
-### observation
-
 Shared observation public entry.
 
 This focused boundary keeps observation feature assembly separate from
@@ -19,6 +15,8 @@ closer to classic feature-engineering pipelines used in small control tasks.
 If you want background reading, the Wikipedia articles on "feature
 engineering" and "state space representation" give useful intuition for why
 this boundary exists at all.
+
+## simulation-shared/observation/observation.ts
 
 ### resolveCoreObservationVectorFromFeatures
 
@@ -41,6 +39,13 @@ Parameters:
 - `features` - - Structured observation features.
 
 Returns: Core per-frame vector.
+
+Example:
+
+```ts
+const coreFrame = resolveCoreObservationVectorFromFeatures(features);
+observationMemoryState.previousCoreFrames.push(coreFrame);
+```
 
 ### resolveObservationFeatures
 
@@ -72,6 +77,23 @@ Parameters:
 
 Returns: Structured observation features.
 
+Example:
+
+```ts
+const features = resolveObservationFeatures({
+  birdYPx: 120,
+  velocityYPxPerFrame: 2,
+  pipes,
+  visibleWorldWidthPx: 640,
+  difficultyProfile,
+  activeSpawnIntervalFrames: 90,
+});
+
+if (features.normalizedEntryUrgency > 0.8) {
+  // The bird is misaligned and running out of time to recover.
+}
+```
+
 ### resolveObservationVectorFromFeatures
 
 `(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
@@ -92,6 +114,13 @@ Parameters:
 
 Returns: Ordered feature vector.
 
+Example:
+
+```ts
+const features = resolveObservationFeatures(input);
+const networkInput = resolveObservationVectorFromFeatures(features);
+```
+
 ### resolveUpcomingPipes
 
 `(pipes: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
@@ -110,6 +139,12 @@ Parameters:
 - `pipeWidthPx` - - Pipe width.
 
 Returns: Tuple of first and second upcoming pipes.
+
+Example:
+
+```ts
+const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
+```
 
 ## simulation-shared/observation/observation.vector.utils.ts
 
@@ -135,6 +170,13 @@ Parameters:
 
 Returns: Core per-frame vector.
 
+Example:
+
+```ts
+const coreFrame = resolveCoreObservationVectorFromFeatures(features);
+observationMemoryState.previousCoreFrames.push(coreFrame);
+```
+
 ### resolveObservationVectorFromFeatures
 
 `(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
@@ -154,6 +196,13 @@ Parameters:
 - `features` - - Structured feature object.
 
 Returns: Ordered feature vector.
+
+Example:
+
+```ts
+const features = resolveObservationFeatures(input);
+const networkInput = resolveObservationVectorFromFeatures(features);
+```
 
 ## simulation-shared/observation/observation.features.utils.ts
 
@@ -217,6 +266,23 @@ Parameters:
 
 Returns: Structured observation features.
 
+Example:
+
+```ts
+const features = resolveObservationFeatures({
+  birdYPx: 120,
+  velocityYPxPerFrame: 2,
+  pipes,
+  visibleWorldWidthPx: 640,
+  difficultyProfile,
+  activeSpawnIntervalFrames: 90,
+});
+
+if (features.normalizedEntryUrgency > 0.8) {
+  // The bird is misaligned and running out of time to recover.
+}
+```
+
 ### resolvePredictedBirdYAtFrames
 
 `(startYPx: number, initialVerticalVelocityPxPerFrame: number, frameHorizon: number) => number`
@@ -253,3 +319,9 @@ Parameters:
 - `pipeWidthPx` - - Pipe width.
 
 Returns: Tuple of first and second upcoming pipes.
+
+Example:
+
+```ts
+const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
+```

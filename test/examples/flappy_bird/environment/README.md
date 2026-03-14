@@ -49,9 +49,22 @@ transport shapes used by the browser worker.
 
 ### FLAPPY_ENVIRONMENT_DEFAULT_CONTROL_SUBSTEPS_PER_FRAME
 
+Default number of control/physics substeps executed per simulation frame.
+
+Reusing the shared control-substep count keeps the environment and browser
+playback aligned on the same stepping granularity.
+
 ### FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE
 
+Default curriculum difficulty scale used by environment stepping.
+
+A value of `1` means the environment uses the full adaptive difficulty ramp.
+
 ### FLAPPY_ENVIRONMENT_MAX_FRAMES_PER_EPISODE
+
+Maximum frame budget before the environment forces timeout termination.
+
+Timeouts stop extremely long survival loops from dominating evaluation cost.
 
 ## environment/environment.step.service.ts
 
@@ -115,6 +128,12 @@ Parameters:
 - `rng` - - Random source used to generate initial pipe configuration.
 
 Returns: Initial state for one deterministic rollout.
+
+Example:
+
+```ts
+const state = createInitialFlappyState(rng);
+```
 
 ## environment/environment.collision.utils.ts
 
@@ -180,3 +199,9 @@ Parameters:
 - `difficultyScale` - - Curriculum difficulty scale in [0, 1].
 
 Returns: Named feature object.
+
+Example:
+
+```ts
+const features = getFlappyObservationFeatures(state, 1);
+```

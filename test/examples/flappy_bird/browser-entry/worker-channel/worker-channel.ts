@@ -5,6 +5,12 @@
  * create the worker, request a generation result, or request the next playback
  * step. The point is to keep the rest of the UI code thinking in terms of
  * intent rather than raw `postMessage` plumbing.
+ *
+ * Minimal usage sketch:
+ * ```ts
+ * const evolutionWorker = createEvolutionWorker();
+ * const generation = await requestWorkerGeneration(evolutionWorker);
+ * ```
  */
 export {
   createEvolutionWorker,

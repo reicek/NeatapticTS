@@ -1,3 +1,22 @@
+/**
+ * Staged population-evaluation service for the Flappy trainer.
+ *
+ * This module owns the trainer's ranking funnel: everyone gets a cheap shared-
+ * seed screen, fewer genomes advance to the costlier full pass, and the best
+ * candidates are reevaluated on a broader seed set before scores are committed.
+ *
+ * The point is not only speed. The point is to spend rollout budget where it
+ * improves ranking confidence the most.
+ *
+ * Stage funnel:
+ * ```mermaid
+ * flowchart LR
+ *     Population["full population"] --> Quick["quick stage\nsmall shared seed batch"]
+ *     Quick --> Full["full stage\nmore seeds for top candidates"]
+ *     Full --> Reevaluation["reevaluation stage\nlarger batch for leaders"]
+ *     Reevaluation --> Commit["commit final scores"]
+ * ```
+ */
 import type { FlappySeedBatchEvaluation } from '../../flappyEvaluation';
 import {
   FLAPPY_TRAINER_FULL_PASS_ELITISM_MULTIPLIER,
@@ -29,7 +48,6 @@ import type { PopulationStageEvaluationRequest } from './trainer.evaluation.serv
  * @param aggregateByGenome - Mutable aggregate cache keyed by genome.
  * @param provisionalScoresByGenome - Mutable provisional score map.
  * @returns Nothing.
- *
  * @example
  * ```ts
  * evaluatePopulationQuickStage(

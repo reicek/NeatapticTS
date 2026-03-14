@@ -7,5 +7,13 @@
  *
  * This is the public evaluation-layer shelf for callers that should not need to
  * know about the rollout subfolder layout.
+ *
+ * Minimal usage sketch:
+ * ```ts
+ * const result = rolloutEpisode(network, {
+ *   seed: 123,
+ *   normalizeFitness: true,
+ * });
+ * ```
  */
 export { rolloutEpisode } from './rollout/evaluation.rollout.service';

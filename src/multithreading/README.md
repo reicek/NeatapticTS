@@ -1,5 +1,7 @@
 # multithreading
 
+Shared types for multithreading helpers and test workers.
+
 ## multithreading/multi.ts
 
 ### multi
@@ -206,10 +208,6 @@ Workers for multi-threading
 
 ## multithreading/types.ts
 
-### types
-
-Shared types for multithreading helpers and test workers.
-
 ### ActivationFn
 
 `(x: number) => number`
@@ -251,6 +249,8 @@ Parameters:
 Returns: Activated outputs.
 
 ### ACTIVATION_FUNCTIONS
+
+Returns: Activation functions ordered for serialization compatibility.
 
 ### bentIdentityActivation
 

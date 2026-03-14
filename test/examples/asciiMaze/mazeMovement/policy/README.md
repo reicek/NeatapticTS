@@ -1,13 +1,22 @@
 # mazeMovement/policy
 
-## mazeMovement/policy/mazeMovement.policy.ts
-
-### mazeMovement.policy
-
 Action policy helpers for the dedicated mazeMovement module.
 
-This file owns direction selection, epsilon handling, short-horizon policy
-overrides, and saturation-driven bias control.
+This file is the decision-making shelf inside the mazeMovement module. Once
+runtime helpers have refreshed the agent's current world view, the policy
+boundary decides how logits, exploration pressure, and short-horizon
+heuristics combine into one movement choice.
+
+It owns direction selection, epsilon handling, short-horizon policy
+overrides, and saturation-driven bias control because those concerns answer a
+shared question: how should the next action be chosen before reward shaping
+reacts to the result?
+
+Read this after the runtime helpers if you want the clean handoff from
+perception into action choice. Then continue into shaping to see how the
+trainer judges the consequences of that choice.
+
+## mazeMovement/policy/mazeMovement.policy.ts
 
 ### applyMazeMovementEpsilonExploration
 

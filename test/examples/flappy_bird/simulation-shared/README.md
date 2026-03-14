@@ -1,13 +1,11 @@
 # simulation-shared
 
-## simulation-shared/simulation-shared.types.ts
-
-### simulation-shared.types
-
 Minimal deterministic random contract used by shared spawn helpers.
 
 The shared layer keeps its RNG contract intentionally small so the same spawn
 helpers can work with both Node-side and browser-side deterministic sources.
+
+## simulation-shared/simulation-shared.types.ts
 
 ### SharedDifficultyProfile
 
@@ -62,14 +60,17 @@ helpers can work with both Node-side and browser-side deterministic sources.
 
 ## simulation-shared/simulation-shared.errors.ts
 
-### simulation-shared.errors
-
 Prefix used when formatting unexpected shared-simulation errors.
 
 A stable prefix makes logs easier to scan when multiple Flappy subsystems are
 emitting diagnostics.
 
 ### FLAPPY_SHARED_SIMULATION_ERROR_PREFIX
+
+Prefix used when formatting unexpected shared-simulation errors.
+
+A stable prefix makes logs easier to scan when multiple Flappy subsystems are
+emitting diagnostics.
 
 ### formatSharedSimulationErrorMessage
 
@@ -88,26 +89,26 @@ Returns: Readable error message.
 
 ## simulation-shared/simulation-shared.constants.ts
 
-### simulation-shared.constants
-
 Default curriculum scale used when callers do not provide one.
 
 A value of `1` means full adaptive difficulty behavior is enabled.
 
 ### FLAPPY_SHARED_DEFAULT_DIFFICULTY_SCALE
 
+Default curriculum scale used when callers do not provide one.
+
+A value of `1` means full adaptive difficulty behavior is enabled.
+
 ### FLAPPY_SHARED_DEFAULT_NORMALIZATION_EPSILON
+
+Small positive epsilon used to guard divisions in normalized timing features.
+
+The epsilon avoids unstable divide-by-zero behavior when distances or speeds
+collapse toward zero during normalization.
 
 ## simulation-shared/simulation-shared.math.utils.ts
 
-### simulation-shared.math.utils
-
 Clamps a numeric value to the inclusive `[min, max]` interval.
-
-@param value - Candidate value.
-@param min - Inclusive lower bound.
-@param max - Inclusive upper bound.
-@returns Clamped value.
 
 ### clamp
 
@@ -254,6 +255,12 @@ Creates an empty temporal observation memory state.
 
 Returns: Fresh mutable memory buffers for one bird/controller.
 
+Example:
+
+```ts
+const memoryState = createSharedObservationMemoryState();
+```
+
 ### resolvePreviousCoreFramesWithPadding
 
 `(observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => number[][]`
@@ -302,8 +309,6 @@ Returns: Zero core frame.
 
 ## simulation-shared/simulation-shared.control.utils.ts
 
-### simulation-shared.control.utils
-
 Resolves flap/no-flap decision from network outputs.
 
 Educational note:
@@ -311,10 +316,6 @@ The shared control layer accepts both two-output competitive policies
 (`no flap` vs `flap`) and simpler single-output thresholded policies. That
 flexibility makes the helper reusable across experiments without forcing every
 caller to reshape its outputs first.
-
-@param rawOutputs - Activation output payload.
-@param flapThreshold - Scalar threshold for single-output policies.
-@returns True when flap should trigger.
 
 ### resolveFlapDecision
 
@@ -415,8 +416,6 @@ Returns: Population standard deviation.
 
 ## simulation-shared/simulation-shared.observation.utils.ts
 
-### simulation-shared.observation.utils
-
 Shared observation compatibility façade.
 
 The observation implementation now lives under `simulation-shared/observation/`
@@ -448,6 +447,13 @@ Parameters:
 
 Returns: Core per-frame vector.
 
+Example:
+
+```ts
+const coreFrame = resolveCoreObservationVectorFromFeatures(features);
+observationMemoryState.previousCoreFrames.push(coreFrame);
+```
+
 ### resolveObservationFeatures
 
 `(input: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
@@ -478,6 +484,23 @@ Parameters:
 
 Returns: Structured observation features.
 
+Example:
+
+```ts
+const features = resolveObservationFeatures({
+  birdYPx: 120,
+  velocityYPxPerFrame: 2,
+  pipes,
+  visibleWorldWidthPx: 640,
+  difficultyProfile,
+  activeSpawnIntervalFrames: 90,
+});
+
+if (features.normalizedEntryUrgency > 0.8) {
+  // The bird is misaligned and running out of time to recover.
+}
+```
+
 ### resolveObservationVectorFromFeatures
 
 `(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
@@ -498,6 +521,13 @@ Parameters:
 
 Returns: Ordered feature vector.
 
+Example:
+
+```ts
+const features = resolveObservationFeatures(input);
+const networkInput = resolveObservationVectorFromFeatures(features);
+```
+
 ### resolveUpcomingPipes
 
 `(pipes: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
@@ -516,3 +546,9 @@ Parameters:
 - `pipeWidthPx` - - Pipe width.
 
 Returns: Tuple of first and second upcoming pipes.
+
+Example:
+
+```ts
+const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
+```

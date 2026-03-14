@@ -1,8 +1,12 @@
 # mazeMovement
 
-## mazeMovement/mazeMovement.types.ts
+Public MazeMovement facade for the dedicated mazeMovement module boundary.
 
-### mazeMovement.types
+The folder now owns runtime helpers, policy helpers, shaping helpers, and
+finalization logic. This file keeps the user-facing API in one place while
+the implementation stays split into focused helpers.
+
+## mazeMovement/mazeMovement.types.ts
 
 Shared type surface for the dedicated mazeMovement module.
 
@@ -19,10 +23,10 @@ rederiving softmax statistics on hot paths.
 
 ### MazeMovementBufferPools
 
-Shared type surface for the dedicated mazeMovement module.
+Initialized pooled buffers shared across maze movement simulations.
 
-Step 2 moves internal simulation contracts here first so later helper files
-can depend on one narrow typed surface.
+These pools are reused between runs to keep the hot path allocation-light
+while preserving a narrow typed seam for service helpers.
 
 ### MazeMovementRunServiceState
 
@@ -54,14 +58,6 @@ Notes:
 - Property descriptions are explicit to surface helpful tooltips in editors.
 
 ## mazeMovement/mazeMovement.ts
-
-### mazeMovement
-
-Public MazeMovement facade for the dedicated mazeMovement module boundary.
-
-The folder now owns runtime helpers, policy helpers, shaping helpers, and
-finalization logic. This file keeps the user-facing API in one place while
-the implementation stays split into focused helpers.
 
 ### MazeMovement
 
@@ -125,6 +121,10 @@ Parameters:
 
 Returns: New position when the move is valid, otherwise the original position.
 
+Example:
+
+const moved = MazeMovement.moveAgent(encodedMaze, [3, 2], 1);
+
 #### selectDirection
 
 `(outputs: number[]) => import("test/examples/asciiMaze/mazeMovement/mazeMovement.types").DirectionSelectionStats`
@@ -135,6 +135,10 @@ Parameters:
 - `outputs` - - Raw action logits for the four maze directions.
 
 Returns: Chosen direction plus softmax and entropy diagnostics.
+
+Example:
+
+const stats = MazeMovement.selectDirection([0.2, 1.4, -0.1, 0]);
 
 #### simulateAgent
 
@@ -153,8 +157,6 @@ Parameters:
 Returns: Final simulation result including path, fitness, and progress.
 
 ## mazeMovement/mazeMovement.services.ts
-
-### mazeMovement.services
 
 Shared mutable services for the dedicated mazeMovement module.
 
@@ -261,14 +263,17 @@ Parameters:
 
 ## mazeMovement/mazeMovement.constants.ts
 
-### mazeMovement.constants
-
 Frozen tuning surface for the dedicated mazeMovement module.
 
 This constant table keeps simulation policy, shaping thresholds, and lookup
 tables in one place so the public facade can stay focused on orchestration.
 
 ### MAZE_MOVEMENT_CONSTANTS
+
+Frozen tuning surface for the dedicated mazeMovement module.
+
+This constant table keeps simulation policy, shaping thresholds, and lookup
+tables in one place so the public facade can stay focused on orchestration.
 
 ## mazeMovement/mazeMovement.utils.ts
 

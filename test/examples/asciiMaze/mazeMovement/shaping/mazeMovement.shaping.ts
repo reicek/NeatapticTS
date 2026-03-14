@@ -1,8 +1,19 @@
 /**
  * Reward-shaping helpers for the dedicated mazeMovement module.
  *
- * This file owns movement reward shaping, stagnation penalties, entropy-guided
- * bonuses, and other post-action fitness adjustments.
+ * This file is the judgment layer of the mazeMovement pipeline. After the
+ * policy boundary chooses a move, the shaping boundary decides how that move
+ * should affect learning pressure: which behaviors deserve reward, which should
+ * be penalized, and which patterns signal stagnation or useful exploration.
+ *
+ * It owns movement reward shaping, stagnation penalties, entropy-guided
+ * bonuses, and other post-action fitness adjustments so the main facade does
+ * not have to mix motion updates with reward math in one long control-flow
+ * block.
+ *
+ * Read this file as the bridge between "the agent moved" and "the run's score
+ * changed." Runtime supplies the world state, policy chooses the action, and
+ * this boundary turns the aftermath into training signal.
  */
 
 import { MAZE_MOVEMENT_CONSTANTS } from '../mazeMovement.constants';

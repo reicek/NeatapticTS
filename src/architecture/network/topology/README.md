@@ -1,10 +1,29 @@
 # architecture/network/topology
 
+Topology utilities.
+
+Provides:
+ - computeTopoOrder: Kahn-style topological sorting with graceful fallback when cycles detected.
+ - hasPath: depth-first reachability query (used to prevent cycle introduction when acyclicity enforced).
+
+Design Notes:
+ - We deliberately tolerate cycles by falling back to raw node ordering instead of throwing; this
+   allows callers performing interim structural mutations to proceed (e.g. during evolve phases)
+   while signaling that the fast acyclic optimizations should not be used.
+ - Input nodes are seeded into the queue immediately regardless of in-degree to keep them early in
+   the ordering even if an unusual inbound edge was added (defensive redundancy).
+ - Self loops are ignored for in-degree accounting and queue progression (they neither unlock new
+   nodes nor should they block ordering completion).
+
 ## architecture/network/topology/network.topology.utils.types.ts
 
 ### IN_DEGREE_DECREMENT
 
+Unit decrement/increment used for in-degree tally updates.
+
 ### INPUT_NODE_TYPE
+
+Input node-type discriminator used for queue seeding.
 
 ### PathSearchContext
 
@@ -28,26 +47,17 @@ Node instance type used by topology helpers.
 
 ### ZERO_COUNT
 
+Zero baseline used for degree counts and empty-size checks.
+
 ## architecture/network/topology/network.topology.utils.ts
 
 ### computeTopoOrder
 
 `() => void`
 
-Topology utilities.
-
-Provides:
- - computeTopoOrder: Kahn-style topological sorting with graceful fallback when cycles detected.
- - hasPath: depth-first reachability query (used to prevent cycle introduction when acyclicity enforced).
-
-Design Notes:
- - We deliberately tolerate cycles by falling back to raw node ordering instead of throwing; this
-   allows callers performing interim structural mutations to proceed (e.g. during evolve phases)
-   while signaling that the fast acyclic optimizations should not be used.
- - Input nodes are seeded into the queue immediately regardless of in-degree to keep them early in
-   the ordering even if an unusual inbound edge was added (defensive redundancy).
- - Self loops are ignored for in-degree accounting and queue progression (they neither unlock new
-   nodes nor should they block ordering completion).
+Compute a topological ordering (Kahn's algorithm) for the current directed acyclic graph.
+If cycles are detected (order shorter than node count) we fall back to raw node order to avoid breaking callers.
+In non-acyclic mode we simply clear cached order to signal use of sequential node array.
 
 ### createMLP
 
@@ -593,6 +603,13 @@ Parameters:
 
 Returns: Descriptor object.
 
+Example:
+
+```ts
+const descriptor = createArchitectureDescriptor([6, 3], false, 'graph-topology', 14, 25);
+// descriptor.totalNodes === 14
+```
+
 ### createDirectedEdgeList
 
 `(runtimeConnections: RuntimeConnectionLike[], nodeByIndex: Map<number, RuntimeNodeLike>) => { fromIndex: number; toIndex: number; }[]`
@@ -608,6 +625,13 @@ Parameters:
 
 Returns: Valid directed edges.
 
+Example:
+
+```ts
+const edges = createDirectedEdgeList(runtimeConnections, nodeByIndex);
+// edges -> [{ fromIndex: 0, toIndex: 3 }, ...]
+```
+
 ### createNodeIndexMap
 
 `(runtimeNodes: RuntimeNodeLike[]) => Map<number, RuntimeNodeLike>`
@@ -621,6 +645,13 @@ Parameters:
 - `runtimeNodes` - - Runtime nodes.
 
 Returns: Node map keyed by stable node index.
+
+Example:
+
+```ts
+const nodeByIndex = createNodeIndexMap(nodes);
+// nodeByIndex.get(0) -> first node or node with explicit index 0
+```
 
 ### describeArchitecture
 
@@ -642,6 +673,14 @@ Parameters:
 
 Returns: Stable architecture descriptor.
 
+Example:
+
+```ts
+const descriptor = describeArchitecture(network);
+// descriptor.hiddenLayerSizes -> [8, 4]
+// descriptor.source -> 'layer-metadata' | 'graph-topology' | 'inferred'
+```
+
 ### isHiddenNode
 
 `(runtimeNode: RuntimeNodeLike) => boolean`
@@ -653,6 +692,14 @@ Parameters:
 - `runtimeNode` - - Candidate node.
 
 Returns: True when node type is hidden.
+
+Example:
+
+```ts
+if (isHiddenNode(node)) {
+  // Include in hidden-layer counting
+}
+```
 
 ### resolveCycleStateAndTopoOrder
 
@@ -670,6 +717,12 @@ Parameters:
 
 Returns: Topological order and cycle status.
 
+Example:
+
+```ts
+const { topologicalOrder, hasCycles } = resolveCycleStateAndTopoOrder(nodeByIndex, edges);
+```
+
 ### resolveHiddenCountsByDepth
 
 `(nodeByIndex: Map<number, RuntimeNodeLike>, depthByNodeIndex: Map<number, number>) => Map<number, number>`
@@ -684,6 +737,12 @@ Parameters:
 - `depthByNodeIndex` - - Derived depths.
 
 Returns: Hidden-node counts by depth.
+
+Example:
+
+```ts
+const hiddenCountsByDepth = resolveHiddenCountsByDepth(nodeByIndex, depthByNodeIndex);
+```
 
 ### resolveHiddenLayerSizesFromGraphTopology
 
@@ -702,6 +761,12 @@ Parameters:
 
 Returns: Hidden-layer widths derived from acyclic topology and cycle flag.
 
+Example:
+
+```ts
+const { hiddenLayerSizes, hasCycles } = resolveHiddenLayerSizesFromGraphTopology(nodes, edges);
+```
+
 ### resolveHiddenLayerSizesFromLayerMetadata
 
 `(runtimeNodes: RuntimeNodeLike[]) => number[]`
@@ -716,6 +781,13 @@ Parameters:
 - `runtimeNodes` - - Runtime nodes.
 
 Returns: Hidden-layer widths from explicit node.layer metadata.
+
+Example:
+
+```ts
+// Hidden nodes in layers 1, 1, and 2 -> [2, 1]
+const sizes = resolveHiddenLayerSizesFromLayerMetadata(nodes);
+```
 
 ### resolveNodeDepthByIndex
 
@@ -732,3 +804,9 @@ Parameters:
 - `topologicalOrder` - - Acyclic topological order.
 
 Returns: Derived depth by node index.
+
+Example:
+
+```ts
+const depthByNodeIndex = resolveNodeDepthByIndex(nodeByIndex, edges, topologicalOrder);
+```

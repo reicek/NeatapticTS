@@ -70,6 +70,9 @@ import { resolveNetworkVisualizationLayers } from './network-view.topology.utils
  * drawing helpers. It resolves topology summaries, chooses panel size, lays out
  * nodes inside the drawable area, and coordinates overlays such as legends and
  * input-group bands.
+ *
+ * That one call is the high-level fold from an active network to a readable
+ * panel: background, graph layout, legend, and input-group overlays.
  */
 
 type NetworkTopologySummary = {
@@ -112,6 +115,11 @@ type PositionedNetworkGraphScene = {
  *
  * Conceptually, this is the main fold from network object to finished panel:
  * resolve scene state, compute layout, paint the graph, then paint overlays.
+ *
+ * @example
+ * ```ts
+ * drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
+ * ```
  *
  * @param context - Canvas 2D drawing context.
  * @param network - Network to visualize.
@@ -164,6 +172,11 @@ export function drawNetworkVisualization(
  *
  * Dense or deeper networks need more vertical room to stay readable, so panel
  * height is driven by topology rather than fixed to a single constant.
+ *
+ * @example
+ * ```ts
+ * const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
+ * ```
  *
  * @param network - Network to visualize.
  * @param inputSize - Input-layer size.

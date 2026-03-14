@@ -1,48 +1,100 @@
 # architecture/network/mutate
 
+Mutation orchestration entrypoint for network-level structural and parametric edits.
+
+This module intentionally stays lightweight:
+- It resolves the incoming mutation request into a dispatch key.
+- It selects a concrete handler from the dispatch table.
+- It delegates execution and marks topology caches dirty after successful handling.
+
+Handler-specific logic lives in dedicated helper files so this module remains a stable,
+high-level control surface for mutation flow.
+
 ## architecture/network/mutate/network.mutate.utils.types.ts
 
 ### BATCH_NORM_FLAG_KEY
 
+Internal node field used to enable batch normalization.
+
 ### DEFAULT_MUTATION_MAX
+
+Default maximum mutation value when no method override is provided.
 
 ### DEFAULT_MUTATION_MIN
 
+Default minimum mutation value when no method override is provided.
+
 ### ERROR_NO_MUTATE_METHOD
+
+Error emitted when mutate is called without a valid method.
 
 ### GATE_REASSIGN_THRESHOLD
 
+Threshold used for random 50/50 gating decisions.
+
 ### MIN_REDUNDANT_CONNECTION_COUNT
+
+Minimum redundant in/out degree required before removing a connection.
 
 ### MIN_SWAPPABLE_NODE_COUNT
 
+Minimum node count required to perform swap-node mutation.
+
 ### NODE_TYPE_HIDDEN
+
+Canonical node-type literal for hidden nodes.
 
 ### NODE_TYPE_INPUT
 
+Canonical node-type literal for input nodes.
+
 ### NODE_TYPE_OUTPUT
+
+Canonical node-type literal for output nodes.
 
 ### RECURRENT_BLOCK_GRU
 
+Canonical recurrent block literal for GRU expansion.
+
 ### RECURRENT_BLOCK_LSTM
+
+Canonical recurrent block literal for LSTM expansion.
 
 ### SINGLE_UNIT_RECURRENT_BLOCK_WIDTH
 
+Width used when creating a minimal recurrent block.
+
 ### SUB_NODE_STABILITY_WEIGHT_DELTA
+
+Weight delta used to keep mutation side effects numerically observable.
 
 ### UNKNOWN_MUTATION_WARNING_PREFIX
 
+Prefix for unknown-mutation warning logs.
+
 ### WARNING_ALL_CONNECTIONS_GATED
+
+Message emitted when gating cannot be added because all are already gated.
 
 ### WARNING_NO_ACTIVATION_MUTATION_TARGETS
 
+Message emitted when activation mutation has no eligible nodes.
+
 ### WARNING_NO_GATED_CONNECTIONS_TO_REMOVE
+
+Message emitted when no gate exists to remove.
 
 ### WARNING_NO_HIDDEN_NODES_TO_REMOVE
 
+Message emitted when no hidden node can be removed.
+
 ### WARNING_NO_SELF_CONNECTIONS_TO_REMOVE
 
+Message emitted when no self-connections are available to remove.
+
 ### WARNING_SELF_CONNECTIONS_ALREADY_PRESENT
+
+Message emitted when all self-connection candidates are already occupied.
 
 ## architecture/network/mutate/network.mutate.utils.ts
 
@@ -68,11 +120,27 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+network.mutate('ADD_NODE');
+network.mutate({ name: 'MOD_WEIGHT', min: -0.1, max: 0.1 });
+```
+
 ### MutationMethod
 
 Mutation method descriptor shape.
 
 ## architecture/network/mutate/network.mutate.dispatch.utils.ts
+
+Mutation-key normalization and warning helpers used by the mutate orchestrator.
+
+Responsibilities:
+- Normalize string/object/reference mutation inputs into a dispatch key.
+- Emit unknown-mutation warnings when warning mode is enabled.
+
+The helpers in this module are intentionally side-effect-light, except for optional
+warning emission, so orchestration code can remain deterministic and easy to inspect.
 
 ### findMutationKeyByIdentityReference
 
@@ -111,14 +179,23 @@ Returns: Direct key or undefined.
 
 `(method: import("src/architecture/network/network.types").MutationMethod) => string | undefined`
 
-Mutation-key normalization and warning helpers used by the mutate orchestrator.
+Resolves a mutation dispatch key from user-provided method input.
 
-Responsibilities:
-- Normalize string/object/reference mutation inputs into a dispatch key.
-- Emit unknown-mutation warnings when warning mode is enabled.
+Resolution order:
+1. Use string input directly.
+2. Use direct object identity fields (`name`, `type`, `identity`).
+3. Fall back to identity-reference comparison against known mutation objects.
 
-The helpers in this module are intentionally side-effect-light, except for optional
-warning emission, so orchestration code can remain deterministic and easy to inspect.
+Parameters:
+- `method` - - Mutation method input.
+
+Returns: Dispatch key or undefined.
+
+Example:
+
+```ts
+const key = resolveMutationKey('ADD_NODE');
+```
 
 ### resolveMutationKeyFromObject
 
@@ -146,6 +223,19 @@ Parameters:
 Returns: Nothing.
 
 ## architecture/network/mutate/network.mutate.handlers.utils.ts
+
+Concrete mutation handler implementations used by the network mutate orchestrator.
+
+Organization:
+- Exported functions represent public mutation operations mapped by dispatch key.
+- Internal helpers encapsulate candidate collection, validation, and graph rewiring.
+- Shared constants and warning strings are imported from `network.mutate.utils.types.ts`
+  to keep cross-file contracts explicit and avoid circular dependencies.
+
+Behavioral notes:
+- Handlers preserve fail-soft semantics where possible (return early when no candidate exists).
+- Acyclic mode checks are enforced in handlers that could introduce recurrence.
+- Randomness is sourced from network mutation internals for reproducible deterministic flows.
 
 ### addBackConn
 
@@ -299,18 +389,12 @@ Returns: Nothing.
 
 `(network: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkMutationProps`
 
-Concrete mutation handler implementations used by the network mutate orchestrator.
+Converts a network to its internal mutation runtime shape.
 
-Organization:
-- Exported functions represent public mutation operations mapped by dispatch key.
-- Internal helpers encapsulate candidate collection, validation, and graph rewiring.
-- Shared constants and warning strings are imported from `network.mutate.utils.types.ts`
-  to keep cross-file contracts explicit and avoid circular dependencies.
+Parameters:
+- `network` - - Network to convert.
 
-Behavioral notes:
-- Handlers preserve fail-soft semantics where possible (return early when no candidate exists).
-- Acyclic mode checks are enforced in handlers that could introduce recurrence.
-- Randomness is sourced from network mutation internals for reproducible deterministic flows.
+Returns: Runtime mutation props.
 
 ### batchNorm
 

@@ -6,6 +6,10 @@ import type { ColorTier } from '../browser-entry.types';
  * The Flappy Bird demo renders connection weights and node biases with tiered
  * neon ramps so humans can quickly read sign and magnitude without parsing raw
  * numbers on every edge and node.
+ *
+ * A useful mental model is that these types define the legend contract for the
+ * network panel: what range was observed, how values were bucketed, and which
+ * colors should be shown for each tier.
  */
 
 /**

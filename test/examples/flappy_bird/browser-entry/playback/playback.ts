@@ -1,7 +1,10 @@
 import type { PlaybackFrameStats } from '../browser-entry.types';
 import { renderPopulationFrame } from './frame-render/playback.frame-render.service';
 import { runPlaybackLoop } from './playback.iteration.services';
-import type { PlaybackEpisodeSummary } from './playback.orchestration.types';
+import type {
+  PlaybackChampionChangedEvent,
+  PlaybackEpisodeSummary,
+} from './playback.orchestration.types';
 import {
   initializePlaybackSessionContext,
   resolvePlaybackEpisodeSummary,
@@ -16,6 +19,16 @@ export type { PlaybackEpisodeSummary } from './playback.orchestration.types';
  * visualization. The worker advances the world and streams packed snapshots;
  * this layer mirrors enough state locally to animate those snapshots at browser
  * frame cadence, render trails and backgrounds, and emit HUD telemetry.
+ *
+ * Minimal usage sketch:
+ * ```ts
+ * const summary = await animatePopulationEpisode(
+ *   canvas,
+ *   context,
+ *   evolutionWorker,
+ *   (stats) => updateHud(stats),
+ * );
+ * ```
  */
 
 /**
@@ -44,12 +57,14 @@ export async function animatePopulationEpisode(
   context: CanvasRenderingContext2D,
   evolutionWorker: Worker,
   onFrameStats: (stats: PlaybackFrameStats) => void,
+  onChampionChanged?: (event: PlaybackChampionChangedEvent) => void,
 ): Promise<PlaybackEpisodeSummary> {
   return animatePopulationEpisodeInternal(
     canvas,
     context,
     evolutionWorker,
     onFrameStats,
+    onChampionChanged,
   );
 }
 
@@ -70,6 +85,7 @@ export async function animatePopulationEpisodeInternal(
   context: CanvasRenderingContext2D,
   evolutionWorker: Worker,
   onFrameStats: (stats: PlaybackFrameStats) => void,
+  onChampionChanged?: (event: PlaybackChampionChangedEvent) => void,
 ): Promise<PlaybackEpisodeSummary> {
   // Step 1: Initialize worker playback state and local render mirrors.
   const sessionContext = initializePlaybackSessionContext(
@@ -83,6 +99,7 @@ export async function animatePopulationEpisodeInternal(
     context,
     evolutionWorker,
     onFrameStats,
+    onChampionChanged,
     sessionContext,
   });
 

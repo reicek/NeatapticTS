@@ -1,5 +1,14 @@
 # flappy-evolution-worker
 
+Synthetic sample count used for generation-0 warm-start pretraining.
+
+Educational note:
+The warm-start service briefly trains a template network on a heuristic
+teacher before the first NEAT generation is evolved. This value controls how
+many synthetic state/action examples are generated for that bootstrap pass.
+Larger values usually make the teacher signal more stable, but they also
+increase startup latency inside the worker.
+
 ## flappy-evolution-worker/flappy-evolution-worker.types.ts
 
 ### SerializedNetwork
@@ -76,6 +85,19 @@ Educational note:
 `packed-v1` is a transport contract, not a rendering primitive. The versioned
 format string gives the browser host a stable way to decode snapshots even if
 the worker later gains additional packed fields or alternate transport modes.
+
+Example:
+
+```ts
+const message = {
+  type: 'playback-step',
+  payload: {
+    requestId: 7,
+    snapshot,
+    done: false,
+  },
+};
+```
 
 ### WorkerPlaybackState
 
@@ -233,6 +255,12 @@ Parameters:
 
 Returns: Worker message handler.
 
+Example:
+
+```ts
+self.onmessage = createWorkerMessageHandler(workerMutableRuntimeState);
+```
+
 ### createWorkerMutableRuntimeState
 
 `() => WorkerMutableRuntimeState`
@@ -341,6 +369,14 @@ Parameters:
 
 Returns: Worker error response message.
 
+Example:
+
+```ts
+postWorkerMessage(
+  createWorkerErrorMessage('Playback step requested before playback start.'),
+);
+```
+
 ### createWorkerErrorMessageFromUnknown
 
 `(error: unknown) => import("test/examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.types").WorkerErrorMessage`
@@ -358,9 +394,24 @@ Returns: Worker error response message.
 
 ### FLAPPY_WORKER_INIT_FAILED_ERROR_MESSAGE
 
+Worker error emitted when runtime initialization fails unexpectedly.
+
+This message is intentionally stable so the browser host can show a readable
+error without leaking internal exception shapes into the UI contract.
+
 ### FLAPPY_WORKER_PLAYBACK_START_REQUIRES_GENERATION_ERROR_MESSAGE
 
+Worker error emitted when playback start is requested before evolution output exists.
+
+Playback is defined over an already-evolved population snapshot. The host must
+request at least one generation before asking the worker to start playback.
+
 ### FLAPPY_WORKER_PLAYBACK_STEP_REQUIRES_START_ERROR_MESSAGE
+
+Worker error emitted when playback stepping is requested before playback start.
+
+The protocol is stateful: `start-playback` materializes the mutable playback
+state that later `request-playback-step` messages advance.
 
 ### resolveWorkerUnknownErrorMessage
 
@@ -380,7 +431,36 @@ Returns: Normalized error message string.
 
 ## flappy-evolution-worker/flappy-evolution-worker.constants.ts
 
-### flappy-evolution-worker.constants
+### FLAPPY_WORKER_GEN0_PRETRAIN_BATCH_SIZE
+
+Batch size for generation-0 warm-start pretraining.
+
+Smaller batches inject a bit more stochasticity into the bootstrap fit,
+while still keeping the pass cheap enough for a browser worker.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_BIAS_NOISE_STDDEV
+
+Gaussian standard deviation used for post-pretrain node-bias diversification.
+
+Bias noise is slightly smaller than weight noise so the warm-start remains a
+prior, not a rigid clone of the teacher-fitted template.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ITERATIONS
+
+Optimizer iteration budget for generation-0 warm-start pretraining.
+
+The goal is not to fully solve Flappy Bird with supervised learning. The
+worker only needs a short nudge away from completely random action logits so
+the first browser-visible generation looks less chaotic.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_RATE
+
+Learning rate for generation-0 warm-start pretraining.
+
+This is intentionally moderate: the template network should learn a simple
+corridor-following prior without overfitting the heuristic teacher.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_SAMPLE_COUNT
 
 Synthetic sample count used for generation-0 warm-start pretraining.
 
@@ -391,19 +471,21 @@ many synthetic state/action examples are generated for that bootstrap pass.
 Larger values usually make the teacher signal more stable, but they also
 increase startup latency inside the worker.
 
-### FLAPPY_WORKER_GEN0_PRETRAIN_BATCH_SIZE
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_BIAS_NOISE_STDDEV
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_ITERATIONS
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_RATE
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_SAMPLE_COUNT
-
 ### FLAPPY_WORKER_GEN0_PRETRAIN_VISIBLE_WORLD_WIDTH_PX
 
+Visible world width used when generating synthetic warm-start samples.
+
+This should roughly match the browser playback framing so the generated
+observation vectors look like the states the policy will later see during
+real worker playback.
+
 ### FLAPPY_WORKER_GEN0_PRETRAIN_WEIGHT_NOISE_STDDEV
+
+Gaussian standard deviation used for post-pretrain connection-weight diversification.
+
+After the template network is trained once, each genome receives a noisy copy
+of its weights. That keeps generation 0 visually coherent while preserving
+enough diversity for NEAT to search meaningfully.
 
 ## flappy-evolution-worker/flappy-evolution-worker.runtime.service.ts
 
@@ -432,6 +514,16 @@ Parameters:
 
 Returns: Initialized NEAT runtime.
 
+Example:
+
+```ts
+const neatRuntime = createInitializedWorkerRuntime({
+  populationSize: 50,
+  elitismCount: 10,
+  rngSeed: 12345,
+});
+```
+
 ## flappy-evolution-worker/flappy-evolution-worker.playback.service.ts
 
 ### beginWorkerPlaybackSession
@@ -451,6 +543,16 @@ Parameters:
 - `createPopulationRenderState` - - Callback that builds initial simulation state.
 
 Returns: Playback runtime state and deterministic RNG.
+
+Example:
+
+```ts
+const session = beginWorkerPlaybackSession({
+  currentPopulation,
+  payload: { visibleWorldWidthPx: 1280, visibleWorldHeightPx: 720 },
+  createPopulationRenderState,
+});
+```
 
 ### processWorkerPlaybackStep
 
@@ -493,6 +595,15 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+routeWorkerProtocolMessage(
+  { type: 'request-generation' },
+  workerProtocolHandlers,
+);
+```
+
 ### WorkerProtocolHandlers
 
 Callback bundle used by worker protocol routing.
@@ -519,6 +630,18 @@ Parameters:
 - `options` - - Evolution dependencies and runtime state accessors.
 
 Returns: Generation-ready worker response payload.
+
+Example:
+
+```ts
+const generationMessage = await evolveAndBuildGenerationReadyMessage({
+  initializationPromise,
+  neatRuntime,
+  isStopped: () => false,
+  warmStartGenerationZeroIfNeeded,
+  setCurrentPopulation,
+});
+```
 
 ### WorkerEvolutionServiceOptions
 
@@ -618,6 +741,15 @@ Parameters:
 - `warmStartState` - - Mutable warm-start lifecycle state.
 
 Returns: Promise resolved when warm-start evaluation finishes.
+
+Example:
+
+```ts
+await warmStartWorkerGenerationZeroIfNeeded(neatRuntime, {
+  workerInitSeed: 123,
+  generationZeroWarmStartApplied: false,
+});
+```
 
 ### WorkerWarmStartState
 
@@ -843,3 +975,14 @@ Parameters:
 - `initialVisibleWorldHeightPx` - - Initial viewport height from host.
 
 Returns: Fresh mutable playback state.
+
+Example:
+
+```ts
+const playbackState = createWorkerPopulationRenderState(
+  currentPopulation,
+  rng,
+  1280,
+  720,
+);
+```

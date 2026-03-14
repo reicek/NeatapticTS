@@ -1,54 +1,98 @@
 # architecture/network/standalone
 
-## architecture/network/standalone/network.standalone.utils.types.ts
-
-### network.standalone.utils.types
-
 Output node discriminator used for standalone precondition checks.
+
+## architecture/network/standalone/network.standalone.utils.types.ts
 
 ### ACTIVATION_PRECISION_F32
 
+Precision token selecting Float32 activation/state buffers.
+
 ### ARROW_TOKEN
+
+Arrow token used during function-source normalization.
 
 ### BUILTIN_ACTIVATION_SNIPPETS
 
+Built-in activation snippets emitted as named JavaScript function declarations.
+
+Values are intentionally compact so emitted standalone source remains deterministic and small.
+
 ### COVERAGE_CALL_REGEX
+
+Regex stripping Istanbul function invocations from source snippets.
 
 ### COVERAGE_COUNTER_REGEX
 
+Regex stripping Istanbul counters from stringified functions.
+
 ### COVERAGE_REPLACEMENT
+
+Empty replacement used while stripping coverage artifacts.
 
 ### EMPTY_TOKEN_REGEX
 
+Regex removing empty punctuation-only token lines.
+
 ### FALLBACK_IDENTITY_BODY
+
+Identity-function fallback body for invalid custom squash sources.
 
 ### FLOAT32_ARRAY_TYPE
 
+Typed-array constructor names used in generated source.
+
 ### FLOAT64_ARRAY_TYPE
+
+Typed-array constructor names used in generated source.
 
 ### FUNCTION_PREFIX
 
+Prefix token used when normalizing function sources.
+
 ### INPUT_LOOP_LINE
+
+Generated source line for copying external inputs into activation buffer.
 
 ### INVALID_INPUT_SIZE_ERROR_MIDDLE
 
+Input-size validation message fragments for generated activate guards.
+
 ### INVALID_INPUT_SIZE_ERROR_PREFIX
+
+Input-size validation message fragments for generated activate guards.
 
 ### ISTANBUL_IGNORE_BLOCK_REGEX
 
+Regex stripping Istanbul ignore blocks from stringified functions.
+
 ### MASK_MULTIPLIER_IDENTITY
+
+Multiplicative identity used to omit redundant mask expressions.
 
 ### NO_OUTPUT_NODES_ERROR
 
+Error message when attempting standalone generation without outputs.
+
 ### OUTPUT_NODE_TYPE
+
+Output node discriminator used for standalone precondition checks.
 
 ### REPEATED_SEMICOLON_REGEX
 
+Regex collapsing repeated semicolons.
+
 ### SINGLE_TERM_FALLBACK
+
+Fallback literal used when a node has no incoming terms.
 
 ### SOLITARY_SEMICOLON_REGEX
 
+Regex removing solitary semicolon lines created by instrumentation.
+
 ### SOURCE_MAP_REGEX
+
+Regex stripping sourceMappingURL comments from generated snippets.
 
 ### StandaloneSquashFunction
 
@@ -58,13 +102,13 @@ Activation function shape used by standalone source generation helpers.
 
 ### STRAY_COMMA_CLOSE_REGEX
 
+Regex normalizing stray commas near closing parentheses.
+
 ### STRAY_COMMA_OPEN_REGEX
 
+Regex normalizing stray commas near opening parentheses.
+
 ## architecture/network/standalone/network.standalone.utils.ts
-
-### generateStandalone
-
-`(net: import("src/architecture/network").default) => string`
 
 Standalone forward pass code generator.
 
@@ -91,6 +135,28 @@ Not Supported / Simplifications:
  - No dynamic dropout, noise injection, or stochastic depth—those would require runtime randomness.
  - Assumes all node indices are stable and sequential (enforced prior to generation).
  - Gradient / backprop logic intentionally omitted (forward inference only).
+
+### generateStandalone
+
+`(net: import("src/architecture/network").default) => string`
+
+Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.
+
+Implementation Steps:
+ 1. Validate presence of output nodes (must produce something observable).
+ 2. Assign stable sequential indices to nodes (used as array offsets in generated code).
+ 3. Collect initial activation/state values into typed array initializers for warm starting.
+ 4. For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
+    (post-activation output). Gating multiplies activation by gate activations; self-connection adds
+    recurrent term S[i] * weight before activation.
+ 5. De-duplicate activation functions: each unique squash name is emitted once; references become
+    indices into array F of function references for compactness.
+ 6. Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).
+
+Parameters:
+- `net` - Network instance to snapshot.
+
+Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.
 
 ## architecture/network/standalone/network.standalone.utils.loop.ts
 

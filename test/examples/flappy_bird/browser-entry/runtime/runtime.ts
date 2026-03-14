@@ -22,6 +22,8 @@ export type { RuntimeRunHandle as FlappyBirdRunHandle } from './runtime.types';
  * 3) run the evolve -> playback -> HUD fold loop until stopped,
  * 4) expose a small stop/isRunning/done handle for callers.
  *
+ * @param container - Element id or HTMLElement to host the demo.
+ * @returns Run handle for stop/state control.
  * @example
  * ```ts
  * const runHandle = await start('flappy-bird-output');
@@ -29,13 +31,10 @@ export type { RuntimeRunHandle as FlappyBirdRunHandle } from './runtime.types';
  * runHandle.stop();
  * await runHandle.done;
  * ```
- *
- * @param container - Element id or HTMLElement to host the demo.
- * @returns Run handle for stop/state control.
  */
-export const start = async (
+export async function start(
   container: RuntimeContainerTarget = DEFAULT_CONTAINER_ID,
-): Promise<RuntimeRunHandle> => {
+): Promise<RuntimeRunHandle> {
   // Step 1: Resolve the runtime view, worker, telemetry, and static config.
   const runtimeStartContext = createRuntimeStartContext(container);
 
@@ -58,6 +57,6 @@ export const start = async (
 
   // Step 5: Return the public lifecycle controls to the caller.
   return runtimeRunHandle;
-};
+}
 
 installRuntimeBrowserGlobals(start);

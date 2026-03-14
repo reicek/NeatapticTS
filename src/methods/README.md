@@ -1,9 +1,5 @@
 # methods
 
-## methods/cost.ts
-
-### cost
-
 Provides a collection of standard cost functions (also known as loss functions)
 used for evaluating the performance of neural networks during training.
 
@@ -13,7 +9,7 @@ the value of the cost function. The choice of cost function is crucial and
 depends on the specific task (e.g., regression, classification) and the
 desired behavior of the model.
 
-@see {@link https://en.wikipedia.org/wiki/Loss_function}
+## methods/cost.ts
 
 ### default
 
@@ -292,8 +288,6 @@ Returns: A function that calculates the decayed learning rate for a given iterat
 
 ## methods/gating.ts
 
-### gating
-
 Defines different methods for gating connections between neurons or groups of neurons.
 
 Gating mechanisms dynamically control the flow of information through connections
@@ -302,8 +296,6 @@ enabling more complex computations, memory functions, and adaptive behaviors.
 These mechanisms are inspired by biological neural processes where certain neurons
 can modulate the activity of others. Gating is particularly crucial in recurrent
 neural networks (RNNs) for managing information persistence over time.
-
-@see {@link https://en.wikipedia.org/wiki/Artificial_neural_network#Gating_mechanisms}
 
 ## methods/methods.ts
 
@@ -320,15 +312,94 @@ offer different strategies to balance exploration and exploitation during traini
 
 ### Activation
 
+Provides a collection of common activation functions used in neural networks.
+
+Activation functions introduce non-linearity into the network, allowing it to
+learn complex patterns. They determine the output of a node based on its
+weighted inputs and bias. The choice of activation function can significantly
+impact the network's performance and training dynamics.
+
+All methods in this class are static and can be called directly, e.g., `Activation.relu(x)`.
+Each method accepts an input value `x` and an optional boolean `derivate`.
+If `derivate` is true, the method returns the derivative of the activation function
+with respect to `x`; otherwise, it returns the activation function's output.
+
 ### crossover
+
+Crossover methods for genetic algorithms.
+
+These methods implement the crossover strategies described in the Instinct algorithm,
+enabling the creation of offspring with unique combinations of parent traits.
 
 ### gating
 
+Defines different methods for gating connections between neurons or groups of neurons.
+
+Gating mechanisms dynamically control the flow of information through connections
+in a neural network. This allows the network to selectively route information,
+enabling more complex computations, memory functions, and adaptive behaviors.
+These mechanisms are inspired by biological neural processes where certain neurons
+can modulate the activity of others. Gating is particularly crucial in recurrent
+neural networks (RNNs) for managing information persistence over time.
+
 ### groupConnection
+
+Specifies the manner in which two groups of nodes are connected.
 
 ### mutation
 
+Defines various mutation methods used in neuroevolution algorithms.
+
+Mutation introduces genetic diversity into the population by randomly
+altering parts of an individual's genome (the neural network structure or parameters).
+This is crucial for exploring the search space and escaping local optima.
+
+Common mutation strategies include adding or removing nodes and connections,
+modifying connection weights and node biases, and changing node activation functions.
+These operations allow the network topology and parameters to adapt over generations.
+
+The methods listed here are inspired by techniques used in algorithms like NEAT
+and particularly the Instinct algorithm, providing a comprehensive set of tools
+for evolving network architectures.
+
+## Supported Mutation Methods
+
+- `ADD_NODE`: Adds a new node by splitting an existing connection.
+- `SUB_NODE`: Removes a hidden node and its connections.
+- `ADD_CONN`: Adds a new connection between two unconnected nodes.
+- `SUB_CONN`: Removes an existing connection.
+- `MOD_WEIGHT`: Modifies the weight of an existing connection.
+- `MOD_BIAS`: Modifies the bias of a node.
+- `MOD_ACTIVATION`: Changes the activation function of a node.
+- `ADD_SELF_CONN`: Adds a self-connection (recurrent loop) to a node.
+- `SUB_SELF_CONN`: Removes a self-connection from a node.
+- `ADD_GATE`: Adds a gating mechanism to a connection.
+- `SUB_GATE`: Removes a gating mechanism from a connection.
+- `ADD_BACK_CONN`: Adds a recurrent (backward) connection between nodes.
+- `SUB_BACK_CONN`: Removes a recurrent (backward) connection.
+- `SWAP_NODES`: Swaps the roles (bias and activation) of two nodes.
+- `REINIT_WEIGHT`: Reinitializes all weights for a node.
+- `BATCH_NORM`: Marks a node for batch normalization (stub).
+- `ADD_LSTM_NODE`: Adds a new LSTM node (memory cell with gates).
+- `ADD_GRU_NODE`: Adds a new GRU node (gated recurrent unit).
+
+Also includes:
+- `ALL`: Array of all mutation methods.
+- `FFW`: Array of mutation methods suitable for feedforward networks.
+
 ### selection
+
+Defines various selection methods used in genetic algorithms to choose individuals
+for reproduction based on their fitness scores.
+
+Selection is a crucial step that determines which genetic traits are passed on
+to the next generation. Different methods offer varying balances between
+exploration (maintaining diversity) and exploitation (favoring high-fitness individuals).
+The choice of selection method significantly impacts the algorithm's convergence
+speed and the diversity of the population. High selection pressure (strongly
+favoring the fittest) can lead to faster convergence but may result in premature
+stagnation at suboptimal solutions. Conversely, lower pressure maintains diversity
+but can slow down the search process.
 
 ### default
 
@@ -583,26 +654,57 @@ Returns: A function that calculates the decayed learning rate for a given iterat
 
 ### mutation
 
+Defines various mutation methods used in neuroevolution algorithms.
+
+Mutation introduces genetic diversity into the population by randomly
+altering parts of an individual's genome (the neural network structure or parameters).
+This is crucial for exploring the search space and escaping local optima.
+
+Common mutation strategies include adding or removing nodes and connections,
+modifying connection weights and node biases, and changing node activation functions.
+These operations allow the network topology and parameters to adapt over generations.
+
+The methods listed here are inspired by techniques used in algorithms like NEAT
+and particularly the Instinct algorithm, providing a comprehensive set of tools
+for evolving network architectures.
+
+## Supported Mutation Methods
+
+- `ADD_NODE`: Adds a new node by splitting an existing connection.
+- `SUB_NODE`: Removes a hidden node and its connections.
+- `ADD_CONN`: Adds a new connection between two unconnected nodes.
+- `SUB_CONN`: Removes an existing connection.
+- `MOD_WEIGHT`: Modifies the weight of an existing connection.
+- `MOD_BIAS`: Modifies the bias of a node.
+- `MOD_ACTIVATION`: Changes the activation function of a node.
+- `ADD_SELF_CONN`: Adds a self-connection (recurrent loop) to a node.
+- `SUB_SELF_CONN`: Removes a self-connection from a node.
+- `ADD_GATE`: Adds a gating mechanism to a connection.
+- `SUB_GATE`: Removes a gating mechanism from a connection.
+- `ADD_BACK_CONN`: Adds a recurrent (backward) connection between nodes.
+- `SUB_BACK_CONN`: Removes a recurrent (backward) connection.
+- `SWAP_NODES`: Swaps the roles (bias and activation) of two nodes.
+- `REINIT_WEIGHT`: Reinitializes all weights for a node.
+- `BATCH_NORM`: Marks a node for batch normalization (stub).
+- `ADD_LSTM_NODE`: Adds a new LSTM node (memory cell with gates).
+- `ADD_GRU_NODE`: Adds a new GRU node (gated recurrent unit).
+
+Also includes:
+- `ALL`: Array of all mutation methods.
+- `FFW`: Array of mutation methods suitable for feedforward networks.
+
 ### MutationConfig
 
 Configuration object for a single mutation operation.
 
 ## methods/crossover.ts
 
-### crossover
-
 Crossover methods for genetic algorithms.
 
 These methods implement the crossover strategies described in the Instinct algorithm,
 enabling the creation of offspring with unique combinations of parent traits.
 
-@see Instinct Algorithm - Section 2 Crossover
-@see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6}
-@see {@link https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)}
-
 ## methods/selection.ts
-
-### selection
 
 Defines various selection methods used in genetic algorithms to choose individuals
 for reproduction based on their fitness scores.
@@ -616,28 +718,41 @@ favoring the fittest) can lead to faster convergence but may result in premature
 stagnation at suboptimal solutions. Conversely, lower pressure maintains diversity
 but can slow down the search process.
 
-@see {@link https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)|Selection (genetic algorithm) - Wikipedia}
-@see {@link https://en.wikipedia.org/wiki/Evolutionary_algorithm|Evolutionary algorithm - Wikipedia}
-
 ## methods/activation.ts
 
 ### Activation
+
+Provides a collection of common activation functions used in neural networks.
+
+Activation functions introduce non-linearity into the network, allowing it to
+learn complex patterns. They determine the output of a node based on its
+weighted inputs and bias. The choice of activation function can significantly
+impact the network's performance and training dynamics.
+
+All methods in this class are static and can be called directly, e.g., `Activation.relu(x)`.
+Each method accepts an input value `x` and an optional boolean `derivate`.
+If `derivate` is true, the method returns the derivative of the activation function
+with respect to `x`; otherwise, it returns the activation function's output.
 
 ### registerCustomActivation
 
 `(activationName: string, activationFunction: import("src/methods/activation.utils").ActivationFunction) => void`
 
-## methods/connection.ts
+Register a custom activation function at runtime.
 
-### connection
+## methods/connection.ts
 
 Specifies the manner in which two groups of nodes are connected.
 
 ### groupConnection
 
+Specifies the manner in which two groups of nodes are connected.
+
 ## methods/cost.utils.ts
 
 ### BINARY_CLASSIFICATION_THRESHOLD
+
+Threshold for binarizing probabilities into class predictions.
 
 ### clampProbability
 
@@ -798,17 +913,31 @@ Returns: Cross-entropy term for the sample.
 
 ### DEFAULT_FOCAL_ALPHA
 
+Default class balancing parameter for focal loss.
+
 ### DEFAULT_FOCAL_GAMMA
+
+Default focusing parameter for focal loss.
 
 ### DEFAULT_LABEL_SMOOTHING
 
+Default smoothing factor for label smoothing.
+
 ### HINGE_MARGIN
+
+Margin enforced by hinge loss.
 
 ### LABEL_SMOOTHING_BASELINE
 
+Baseline probability used when smoothing targets.
+
 ### LENGTH_MISMATCH_MESSAGE
 
+Error message thrown when target and output arrays differ in length.
+
 ### NEGATIVE_CLASS_LABEL
+
+Canonical negative label used by binary-oriented helpers.
 
 ### normalizeTargets
 
@@ -822,6 +951,8 @@ Parameters:
 Returns: Normalized target probabilities; returns a shallow copy when the sum is zero.
 
 ### POSITIVE_CLASS_LABEL
+
+Canonical positive label used by binary-oriented helpers.
 
 ### smoothTarget
 
@@ -837,6 +968,8 @@ Returns: Smoothed target probability.
 
 ### SOFTMAX_SUM_GUARD
 
+Lower bound for softmax denominator to avoid division by zero.
+
 ### stableSoftmax
 
 `(outputs: number[]) => number[]`
@@ -849,8 +982,6 @@ Parameters:
 Returns: Softmax probabilities corresponding to the inputs.
 
 ## methods/rate.utils.ts
-
-### rate.utils
 
 Learning rate schedule signature that maps a base rate and iteration index to a rate value.
 Useful for any stateless schedule strategy.
@@ -949,35 +1080,67 @@ Returns: A learning rate schedule implementing step decay.
 
 ### DEFAULT_COSINE_PERIOD
 
+Length of one cosine annealing cycle in iterations.
+
 ### DEFAULT_DECAY_STEP_SIZE
+
+Step decay interval in iterations; larger values mean fewer decay events.
 
 ### DEFAULT_EXPONENTIAL_DECAY_FACTOR
 
+Per-iteration exponential decay factor; values just below 1 create gentle decay.
+
 ### DEFAULT_INITIAL_PERIOD
+
+Initial period length for cosine-with-restarts before growth is applied.
 
 ### DEFAULT_INVERSE_DECAY_FACTOR
 
+Inverse decay multiplier; higher values push the denominator up faster and shrink the rate sooner.
+
 ### DEFAULT_INVERSE_POWER
+
+Inverse decay exponent; 1 makes decay linear in iteration, 2 makes it quadratic.
 
 ### DEFAULT_LINEAR_END_RATE
 
+Target rate after warmup-decay finishes; often zero or a small floor.
+
 ### DEFAULT_MINIMUM_RATE
+
+Floor learning rate for cosine schedules; keeps the rate from reaching zero.
 
 ### DEFAULT_PERIOD_GROWTH_MULTIPLIER
 
+Multiplier applied to the cosine cycle length after each restart (>= 1).
+
 ### DEFAULT_REDUCE_ON_PLATEAU_COOLDOWN
+
+Cooldown iterations after a reduction to avoid rapid successive cuts.
 
 ### DEFAULT_REDUCE_ON_PLATEAU_FACTOR
 
+Reduce-on-plateau shrink factor; halving (0.5) is a common conservative step.
+
 ### DEFAULT_REDUCE_ON_PLATEAU_MIN_DELTA
+
+Minimum required improvement to count as progress when monitoring error.
 
 ### DEFAULT_REDUCE_ON_PLATEAU_MIN_RATE
 
+Minimum rate allowed during reduce-on-plateau adjustments.
+
 ### DEFAULT_REDUCE_ON_PLATEAU_PATIENCE
+
+Patience for reduce-on-plateau in iterations before triggering a cut.
 
 ### DEFAULT_STEP_DECAY_FACTOR
 
+Step decay multiplier (close to 1 slows decay; smaller drops faster).
+
 ### DEFAULT_WARMUP_RATIO
+
+Default warmup share of the schedule; 0.1 means 10% of total steps.
 
 ### RateSchedule
 
@@ -995,12 +1158,7 @@ The third argument is optional and only needed when monitoring validation error.
 
 ## methods/activation.utils.ts
 
-### activation.utils
-
 Activation function implementation type.
-@param inputValue - Input to the activation function.
-@param shouldComputeDerivative - Whether to compute the derivative instead of the value.
-@returns Activation output or derivative at the input.
 
 ### absoluteActivation
 

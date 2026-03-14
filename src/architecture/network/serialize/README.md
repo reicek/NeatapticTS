@@ -27,6 +27,19 @@ Compact tuple payload used by `serialize` output.
 Tuple slots are intentionally positional to reduce payload size:
 0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size.
 
+Example:
+
+```ts
+const compactTuple: CompactSerializedNetworkTuple = [
+  [0.1, 0.2],
+  [0, 0],
+  ['identity', 'tanh'],
+  [{ from: 0, to: 1, weight: 0.5, gater: null }],
+  1,
+  1,
+];
+```
+
 ### ConnectionInternalsWithEnabled
 
 Connection view with optional enabled flag.
@@ -36,11 +49,25 @@ as implicitly enabled.
 
 ### DEFAULT_NUMERIC_VALUE
 
+Default numeric fallback for absent scalar values.
+
+This keeps import logic deterministic when optional numeric fields are missing.
+
 ### ERROR_INVALID_NETWORK_JSON
+
+Error text emitted for invalid verbose JSON payload roots.
 
 ### FALLBACK_ACTIVATION_KEY
 
+Fallback activation key used when no mapping is found.
+
+Identity is selected as the safest non-disruptive activation fallback.
+
 ### FIRST_CONNECTION_INDEX
+
+Index of the first created connection returned by `connect()`.
+
+The runtime API returns an array, and serializer logic consistently reads index `0`.
 
 ### JsonConnectionRebuildContext
 
@@ -56,6 +83,10 @@ Node entries are rebuilt in order and pushed into mutable runtime internals.
 
 ### NETWORK_JSON_FORMAT_VERSION
 
+Default format version for verbose serialization payloads.
+
+Consumers can use this value to identify the JSON schema revision.
+
 ### NetworkInternalsWithDropout
 
 Serialize internals with optional dropout field.
@@ -67,6 +98,19 @@ Verbose JSON snapshots normalize this value so readers can treat dropout as nume
 Verbose JSON payload representation used by `toJSONImpl` and `fromJSONImpl`.
 
 `formatVersion` enables compatibility checks and migration handling.
+
+Example:
+
+```ts
+const payload: NetworkJSON = {
+  formatVersion: 2,
+  input: 2,
+  output: 1,
+  dropout: 0,
+  nodes: [{ type: 'input', bias: 0, squash: 'identity', index: 0 }],
+  connections: [],
+};
+```
 
 ### NetworkJSONConnection
 
@@ -82,9 +126,15 @@ Node entries are self-describing and intended for readable, versioned snapshots.
 
 ### NODE_TYPE_HIDDEN
 
+Node type literal used for hidden layer nodes.
+
 ### NODE_TYPE_INPUT
 
+Node type literal used for input layer nodes.
+
 ### NODE_TYPE_OUTPUT
+
+Node type literal used for output layer nodes.
 
 ### ResolvedNetworkSizeContext
 
@@ -113,17 +163,31 @@ These fields are the minimal node state required to round-trip compact and JSON 
 
 ### WARNING_INVALID_CONNECTION_DURING_DESERIALIZE
 
+Warning emitted when compact deserialize sees invalid edge endpoints.
+
 ### WARNING_INVALID_CONNECTION_DURING_FROM_JSON
+
+Warning emitted when JSON deserialize sees invalid edge endpoints.
 
 ### WARNING_INVALID_GATER_DURING_DESERIALIZE
 
+Warning emitted when compact deserialize sees an invalid gater index.
+
 ### WARNING_INVALID_GATER_DURING_FROM_JSON
+
+Warning emitted when JSON deserialize sees an invalid gater index.
 
 ### WARNING_UNKNOWN_FORMAT_VERSION
 
+Warning emitted for unknown verbose format versions.
+
 ### WARNING_UNKNOWN_SQUASH_PREFIX
 
+Prefix used when warning about unknown activation keys.
+
 ### WARNING_UNKNOWN_SQUASH_SUFFIX
+
+Suffix used when warning about unknown activation keys.
 
 ## architecture/network/serialize/network.serialize.utils.ts
 
@@ -145,9 +209,47 @@ Returns: Nothing.
 
 `(data: import("src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
 
+Rebuilds a network instance from compact tuple form.
+
+Use this importer for compact payloads produced by `serialize`.
+Optional `inputSize` and `outputSize` let callers enforce shape overrides at import time.
+
+Parameters:
+- `data` - - Compact tuple payload.
+- `inputSize` - - Optional input-size override that takes precedence over serialized input.
+- `outputSize` - - Optional output-size override that takes precedence over serialized output.
+
+Returns: Reconstructed network instance.
+
+Example:
+
+```ts
+import { deserialize } from './network.serialize.utils';
+
+const rebuiltNetwork = deserialize(compactTuple, 2, 1);
+```
+
 ### fromJSONImpl
 
 `(json: import("src/architecture/network/network.types").NetworkJSON) => import("src/architecture/network").default`
+
+Reconstructs a network instance from the verbose JSON payload.
+
+This importer validates payload shape, restores dropout and topology, and then rebuilds
+connections, gating relationships, and optional enabled flags.
+
+Parameters:
+- `json` - - Verbose JSON payload.
+
+Returns: Reconstructed network instance.
+
+Example:
+
+```ts
+import { fromJSONImpl } from './network.serialize.utils';
+
+const rebuiltNetwork = fromJSONImpl(snapshotJson);
+```
 
 ### isArchitectureDescriptorShapeValid
 
@@ -172,6 +274,17 @@ Parameters:
 
 Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
 
+Example:
+
+```ts
+import Network from '../../network';
+import { deserialize, serialize } from './network.serialize.utils';
+
+const sourceNetwork = new Network(2, 1);
+const compactTuple = serialize.call(sourceNetwork);
+const rebuiltNetwork = deserialize(compactTuple);
+```
+
 ### SerializedConnection
 
 Serialized connection representation used by compact and JSON formats.
@@ -191,6 +304,17 @@ Parameters:
 - `this` - - Bound network instance.
 
 Returns: Versioned JSON payload with shape metadata, nodes, and connections.
+
+Example:
+
+```ts
+import Network from '../../network';
+import { fromJSONImpl, toJSONImpl } from './network.serialize.utils';
+
+const sourceNetwork = new Network(3, 1);
+const snapshotJson = toJSONImpl.call(sourceNetwork);
+const rebuiltNetwork = fromJSONImpl(snapshotJson);
+```
 
 ### default
 
@@ -217,6 +341,12 @@ Parameters:
 - `weight` - Optional initial weight.
 
 Returns: Reinitialized connection instance.
+
+Example:
+
+const conn = Connection.acquire(a, b);
+// ... use conn ...
+Connection.release(conn); // when permanently removed
 
 #### dcMask
 
@@ -284,6 +414,10 @@ Parameters:
 
 Returns: Unique non-negative integer derived from the ordered pair.
 
+Example:
+
+const id = Connection.innovationID(2, 5); // deterministic
+
 #### lookaheadShadowWeight
 
 Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).
@@ -325,6 +459,11 @@ You normally only call this at the start of an experiment or when deserializing 
 Parameters:
 - `value` - New starting value (default 1).
 
+Example:
+
+Connection.resetInnovationCounter();     // back to 1
+Connection.resetInnovationCounter(1000); // start counting from 1000
+
 #### secondMoment
 
 Second raw moment estimate (Adam family) (was opt_v).
@@ -345,6 +484,11 @@ Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
 Undefined indices are preserved as `undefined` to allow later resolution / remapping.
 
 Returns: Object with node indices, weight, gain, gater index (if any), innovation id & enabled flag.
+
+Example:
+
+const json = connection.toJSON();
+// => { from: 0, to: 3, weight: 0.12, gain: 1, innovation: 57, enabled: true }
 
 #### totalDeltaWeight
 
@@ -455,6 +599,12 @@ Parameters:
 
 Returns: Empty JSON shell with `formatVersion` and scalar metadata initialized.
 
+Example:
+
+```ts
+const networkJson = createEmptyNetworkJson(networkInternals);
+```
+
 ### createJsonConnection
 
 `(from: number, to: number, weight: number, gater: number | null, enabled: boolean) => import("src/architecture/network/network.types").NetworkJSONConnection`
@@ -554,6 +704,15 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+rebuildConnectionsFromJsonPayload({
+  networkInternals,
+  connectionJsonEntries,
+});
+```
+
 ### rebuildNodesFromJsonPayload
 
 `(jsonNodeContext: import("src/architecture/network/network.types").JsonNodeRebuildContext) => void`
@@ -564,6 +723,12 @@ Parameters:
 - `jsonNodeContext` - - JSON node rebuild context.
 
 Returns: Nothing.
+
+Example:
+
+```ts
+rebuildNodesFromJsonPayload({ networkInternals, nodeJsonEntries });
+```
 
 ### rebuildOneJsonConnection
 
@@ -758,6 +923,17 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+import { rebuildConnectionsFromCompactPayload } from './network.serialize.compact.utils';
+
+rebuildConnectionsFromCompactPayload({
+  networkInternals,
+  serializedConnections,
+});
+```
+
 ### rebuildNodesFromCompactPayload
 
 `(networkInternals: import("src/architecture/network/network.types").SerializeNetworkInternals, compactNodeContext: import("src/architecture/network/network.types").CompactNodeRebuildContext) => void`
@@ -771,6 +947,14 @@ Parameters:
 - `compactNodeContext` - - Compact node rebuild context.
 
 Returns: Nothing.
+
+Example:
+
+```ts
+import { rebuildNodesFromCompactPayload } from './network.serialize.compact.utils';
+
+rebuildNodesFromCompactPayload(networkInternals, compactNodeContext);
+```
 
 ### rebuildOneCompactConnection
 
@@ -871,6 +1055,12 @@ Parameters:
 - `data` - - Compact tuple payload.
 
 Returns: Normalized payload context.
+
+Example:
+
+```ts
+const compactPayload = createCompactPayloadContext(compactTuple);
+```
 
 ### createNetworkInstance
 
@@ -994,6 +1184,12 @@ Parameters:
 
 Returns: Activation function.
 
+Example:
+
+```ts
+const squashFunction = resolveActivationFunction('relu');
+```
+
 ### resolveActivationKey
 
 `(squashFunction: import("src/methods/activation.utils").ActivationFunction) => string`
@@ -1007,6 +1203,14 @@ Parameters:
 - `squashFunction` - - Activation function instance.
 
 Returns: Activation key.
+
+Example:
+
+```ts
+import * as methods from '../../../methods/methods';
+
+const key = resolveActivationKey(methods.Activation.tanh);
+```
 
 ### resolveNamedActivationFromFunction
 

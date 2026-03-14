@@ -1,13 +1,36 @@
 # browser-entry/playback
 
-## browser-entry/playback/playback.types.ts
+Public playback orchestration for the Flappy Bird browser demo.
 
-### PlaybackEdgeBounds
+Playback is the bridge between off-thread simulation and on-screen
+visualization. The worker advances the world and streams packed snapshots;
+this layer mirrors enough state locally to animate those snapshots at browser
+frame cadence, render trails and backgrounds, and emit HUD telemetry.
+
+Minimal usage sketch:
+```ts
+const summary = await animatePopulationEpisode(
+  canvas,
+  context,
+  evolutionWorker,
+  (stats) => updateHud(stats),
+);
+```
+
+## browser-entry/playback/playback.types.ts
 
 Shared playback utility types for the browser-entry subsystem.
 
 These types support rendering concerns that cut across multiple playback
 helpers, such as edge-aware trail fading and cached parallax backgrounds.
+
+### PlaybackEdgeBounds
+
+Axis-aligned visible world bounds used for edge-aware trail fading.
+
+Trail rendering needs a quick answer to "is this point still visually inside
+the active world rectangle?" so fading logic can taper paths near the edges
+instead of drawing abrupt cutoffs.
 
 ### PlaybackStarfieldLayerSpec
 
@@ -27,8 +50,6 @@ Separating the image type from the tile record lets the same starfield logic
 work with ordinary canvases and `OffscreenCanvas` when available.
 
 ## browser-entry/playback/playback.starfield.types.ts
-
-### playback.starfield.types
 
 Starfield and parallax rendering contracts for playback backgrounds.
 
@@ -77,21 +98,32 @@ work with ordinary canvases and `OffscreenCanvas` when available.
 
 ### StarTileImage
 
-Starfield and parallax rendering contracts for playback backgrounds.
+Shared type contract for starfield tile rendering layers.
 
-The playback view uses a cached layered starfield to add depth without paying
-a large per-frame rendering cost. These types define the tile, layer, and
-deterministic placement data needed for that effect.
+A tile is pre-rendered and repeated horizontally to draw efficient
+parallax backgrounds during playback.
 
 ## browser-entry/playback/playback.orchestration.types.ts
-
-### PlaybackEpisodeSummary
 
 Playback orchestration contracts for the Flappy Bird browser demo.
 
 These types describe the moving pieces of one playback episode: the public
 summary returned at the end, the mutable loop bookkeeping used while frames
 are streaming, and the session context mirrored locally in the browser.
+
+### PlaybackChampionChangedEvent
+
+Event emitted when the current playback champion changes.
+
+The event identifies which playback bird is currently highlighted as the red
+bird so the side-panel network view can stay synchronized with the renderer.
+
+### PlaybackEpisodeSummary
+
+Public aggregate playback summary returned after one episode completes.
+
+The summary captures the headline outcomes of the just-finished population
+run without exposing all internal frame-by-frame details.
 
 ### PlaybackIterationContext
 
@@ -128,18 +160,35 @@ orchestration.
 
 ### animatePopulationEpisode
 
-`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary>`
+`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void, onChampionChanged: ((event: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackChampionChangedEvent) => void) | undefined) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary>`
 
-Public playback orchestration for the Flappy Bird browser demo.
+Public playback entry point used by browser runtime orchestration.
 
-Playback is the bridge between off-thread simulation and on-screen
-visualization. The worker advances the world and streams packed snapshots;
-this layer mirrors enough state locally to animate those snapshots at browser
-frame cadence, render trails and backgrounds, and emit HUD telemetry.
+Conceptually, this answers: "play one worker-produced episode on the canvas
+until it is done, and tell me what happened along the way".
+
+Parameters:
+- `canvas` - - Target playback canvas.
+- `context` - - Canvas 2D context.
+- `evolutionWorker` - - Worker owning playback simulation state.
+- `onFrameStats` - - Callback receiving per-frame playback telemetry.
+
+Returns: Aggregate playback summary for the current episode.
+
+Example:
+
+```ts
+const summary = await animatePopulationEpisode(
+  canvas,
+  context,
+  evolutionWorker,
+  (stats) => updateHud(stats),
+);
+```
 
 ### animatePopulationEpisodeInternal
 
-`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary>`
+`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void, onChampionChanged: ((event: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackChampionChangedEvent) => void) | undefined) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary>`
 
 Internal playback orchestration entry retained for compatibility re-exports.
 
@@ -156,19 +205,18 @@ Returns: Aggregate playback summary for the current episode.
 
 ### PlaybackEpisodeSummary
 
-Playback orchestration contracts for the Flappy Bird browser demo.
+Public aggregate playback summary returned after one episode completes.
 
-These types describe the moving pieces of one playback episode: the public
-summary returned at the end, the mutable loop bookkeeping used while frames
-are streaming, and the session context mirrored locally in the browser.
+The summary captures the headline outcomes of the just-finished population
+run without exposing all internal frame-by-frame details.
 
 ## browser-entry/playback/playback.errors.ts
-
-### playback.errors
 
 Error message emitted when playback requires RAF but it is unavailable.
 
 ### PLAYBACK_ANIMATION_FRAME_UNAVAILABLE_ERROR_MESSAGE
+
+Error message emitted when playback requires RAF but it is unavailable.
 
 ### PlaybackAnimationFrameUnavailableError
 
@@ -178,11 +226,12 @@ Error thrown when a playback frame wait is requested without RAF support.
 
 ### cachedStarfieldTilesByHeight
 
+Shared in-memory cache for pre-rendered parallax starfield tiles.
+
+This cache is keyed by world height to avoid re-rendering identical
+offscreen tile strips across playback frames.
+
 ## browser-entry/playback/playback.loop.service.ts
-
-### nextAnimationFrame
-
-`() => Promise<void>`
 
 Browser frame-pacing helpers for playback animation.
 
@@ -190,6 +239,17 @@ The playback loop advances worker simulation in batches but still presents
 frames at browser animation cadence. This module isolates the
 `requestAnimationFrame` dependency so playback orchestration can read more
 clearly and fail with a targeted error when RAF is unavailable.
+
+### nextAnimationFrame
+
+`() => Promise<void>`
+
+Yields until the next browser animation frame.
+
+In browser rendering terms, this is the pacing boundary between simulation
+work and visible painting.
+
+Returns: Promise resolved on next animation frame.
 
 ## browser-entry/playback/playback.render.service.ts
 
@@ -209,6 +269,13 @@ Parameters:
 Returns: Nothing.
 
 ## browser-entry/playback/playback.session.services.ts
+
+Session initialization and summary-folding helpers for playback.
+
+These services answer three orchestration questions:
+1. What viewport is the browser currently showing?
+2. What local mirror state should exist before the first worker snapshot?
+3. How should mutable loop state be folded back into a public summary?
 
 ### createInitialPlaybackLoopState
 
@@ -281,12 +348,15 @@ Returns: Public playback episode summary.
 
 `(canvas: HTMLCanvasElement) => { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }`
 
-Session initialization and summary-folding helpers for playback.
+Resolves the current visible playback viewport dimensions from the canvas.
 
-These services answer three orchestration questions:
-1. What viewport is the browser currently showing?
-2. What local mirror state should exist before the first worker snapshot?
-3. How should mutable loop state be folded back into a public summary?
+Playback sizing is derived from the live canvas rather than a hard-coded
+constant so resizing can flow into the worker/session boundary cleanly.
+
+Parameters:
+- `canvas` - - Target playback canvas.
+
+Returns: Visible world width and height in pixels.
 
 ### syncPlaybackViewportDimensions
 
@@ -327,6 +397,33 @@ Applies the latest worker snapshot to render state and trail caches.
 Parameters:
 - `sessionContext` - - Shared mutable playback session state.
 - `snapshot` - - Worker snapshot for the current playback batch.
+
+Returns: Nothing.
+
+### emitChampionChangedEvent
+
+`(iterationContext: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackIterationContext) => void`
+
+Emits a champion-changed event when the red-bird champion changes.
+
+The detector compares the newly resolved champion bird index against the
+previously displayed champion index. This keeps the side panel aligned with
+the red bird even when leadership changes because the old champion dies.
+
+Parameters:
+- `iterationContext` - - Shared loop dependencies and mutable playback state.
+
+Returns: Nothing.
+
+### emitPlaybackChampionChanged
+
+`(onChampionChanged: ((event: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackChampionChangedEvent) => void) | undefined, championBirdIndex: number) => void`
+
+Calls the optional playback champion-changed callback with a structured payload.
+
+Parameters:
+- `onChampionChanged` - - Optional runtime callback.
+- `championBirdIndex` - - Current champion bird index.
 
 Returns: Nothing.
 
@@ -514,8 +611,6 @@ Returns: A 2D drawing context when rendering is supported.
 
 ## browser-entry/playback/playback.frame-render.service.ts
 
-### playback.frame-render.service
-
 Compatibility facade for playback frame rendering.
 
 Older imports still reach the frame renderer through this file while the
@@ -525,11 +620,23 @@ implementation now lives in the dedicated frame-render folder.
 
 `(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState) => void`
 
-High-level frame-render orchestration for playback.
+Draws one simulation frame for the current population state.
 
-This boundary coordinates one visual frame of the playback experience. It
-resolves the scene, prepares the canvas, paints the background and entities,
-and maintains the short champion trail used for motion emphasis.
+The render order matters: background first, then pipes, then birds, then
+trails and overlays that should visually sit on top.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `renderState` - - Mutable simulation state snapshot.
+- `trailState` - - Leader trail render cache.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+renderPopulationFrame(context, renderState, trailState);
+```
 
 ### updateTrailState
 
@@ -546,6 +653,12 @@ Parameters:
 - `renderState` - - Current render state.
 
 Returns: Nothing.
+
+Example:
+
+```ts
+updateTrailState(trailState, renderState);
+```
 
 ## browser-entry/playback/playback.starfield.layer.services.ts
 
@@ -654,6 +767,13 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+const trailPoints = [{ frameIndex: 10, yPx: 140 }];
+pushTrailPoint(trailPoints, 11, 136, 2);
+```
+
 ### resolveEdgeOpacityFactor
 
 `(pointXPx: number, pointYPx: number, edgeBounds: import("test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds) => number`
@@ -673,6 +793,14 @@ Parameters:
 - `edgeBounds` - - Visible world bounds used for edge distance checks.
 
 Returns: Opacity multiplier in [0, 1].
+
+Example:
+
+```ts
+const edgeOpacity = resolveEdgeOpacityFactor(120, 140, edgeBounds);
+const ageOpacity = resolveTrailLifetimeOpacityFactor(3, 12);
+const alpha = edgeOpacity * ageOpacity;
+```
 
 ### resolveTrailLifetimeOpacityFactor
 
@@ -726,8 +854,6 @@ Returns: Champion index or `-1` when no bird is alive.
 
 ## browser-entry/playback/playback.snapshot.utils.ts
 
-### playback.snapshot.utils
-
 Compatibility facade for playback snapshot helpers.
 
 Legacy imports still reach snapshot synchronization through this file while
@@ -737,21 +863,31 @@ the implementation now lives in the dedicated snapshot folder.
 
 `(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot) => void`
 
-Snapshot synchronization helpers for playback.
+Applies worker snapshot data to the mutable playback render state.
 
-The worker streams packed typed-array snapshots, while the browser renderer
-wants stable mutable arrays of pipes and birds. This module performs that
-translation in place so playback can stay fast and allocation-light.
+This is the top-level hydration step for one frame: copy scalar frame fields,
+then synchronize packed pipe and bird arrays into reusable browser-side
+objects.
+
+Parameters:
+- `renderState` - - Mutable render state mirror used by the browser.
+- `snapshot` - - Worker playback snapshot for the current render tick.
+
+Returns: Nothing.
 
 ### resolveLeaderFramesSurvived
 
 `(renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => number`
 
-Small summary helpers derived from hydrated playback render state.
+Resolves the maximum survived-frame count in the current render state.
 
-Once a packed snapshot has been synchronized into the browser render state,
-these helpers compute simple aggregate values needed by the HUD and playback
-reporting flow.
+This is the "leader frames survived" view of the current frame: the best raw
+frame count among all birds currently represented in the render state.
+
+Parameters:
+- `renderState` - - Current render state.
+
+Returns: Maximum frames survived by any bird.
 
 ## browser-entry/playback/playback.starfield.utils.ts
 
@@ -789,10 +925,10 @@ instead of long imported protocol names.
 
 ### PlaybackStepRequest
 
-Playback-specific worker-channel contracts.
+Request payload for one playback-step worker call.
 
-These types sit above the lower-level browser worker protocol and describe the
-request budgeting plus summary data flow used by the playback loop.
+The browser asks the worker to advance simulation by a small batch of steps
+and to package the result for the current viewport dimensions.
 
 ### resolvePlaybackCompletionSummary
 
@@ -815,20 +951,35 @@ Returns: Final aggregate playback summary.
 
 `(playbackStepPayload: { requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }, frameIndex: number, activeBirdCount: number, leaderPipesPassed: number, leaderFramesSurvived: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats`
 
-Summary and HUD helpers for playback worker-channel results.
+Resolves HUD playback frame stats from worker payload and leader metrics.
 
-Once the worker replies with a playback-step payload, these helpers turn that
-raw protocol data into the browser-facing telemetry and end-of-episode summary
-values used elsewhere in the playback loop.
+The frame-stats payload combines browser-derived leader information with any
+instrumentation values provided by the worker.
+
+Parameters:
+- `playbackStepPayload` - - Playback payload returned by worker.
+- `frameIndex` - - Current render frame index.
+- `activeBirdCount` - - Number of alive birds in current frame.
+- `leaderPipesPassed` - - Current frame leader pipes passed.
+- `leaderFramesSurvived` - - Current frame leader survived frames.
+
+Returns: Normalized per-frame HUD telemetry payload.
 
 ### resolvePlaybackStepRequest
 
 `(input: import("test/examples/flappy_bird/browser-entry/playback/worker-channel/playback.worker-channel.types").ResolvePlaybackStepRequestInput) => import("test/examples/flappy_bird/browser-entry/playback/worker-channel/playback.worker-channel.types").ResolvePlaybackStepRequestResult`
 
-Playback batch-request helpers for the browser worker channel.
+Resolves step count and request payload for the next worker playback batch.
 
-The playback loop accumulates simulation budget in fractional units, then
-converts that budget into integer worker step requests on each render tick.
+This is the pacing bridge between browser rendering and worker simulation.
+Rather than sending a fixed step count every frame, the loop carries forward
+fractional remainder so long-term playback speed stays closer to the intended
+emulation rate.
+
+Parameters:
+- `input` - - Current frame budget and viewport dimensions.
+
+Returns: Request payload plus carried-over fractional frame budget.
 
 ### ResolvePlaybackStepRequestInput
 

@@ -8,11 +8,15 @@ Internal deterministic network state shape used across deterministic utility mod
 
 ### RNG_WEYL_INCREMENT
 
+Fixed Weyl increment used to advance deterministic PRNG state.
+
 ### RNGSnapshot
 
 Snapshot payload for RNG state restore flows.
 
 ### UINT32_NORMALIZER
+
+Divisor used to normalize uint32 PRNG output into [0, 1).
 
 ## architecture/network/deterministic/network.deterministic.utils.ts
 
@@ -36,6 +40,12 @@ Parameters:
 
 Returns: Active RNG function, or `undefined` when deterministic RNG is not initialized.
 
+Example:
+
+```ts
+const randomFn = network.getRandomFn();
+```
+
 ### getRNGState
 
 `() => number | undefined`
@@ -51,6 +61,12 @@ Parameters:
 - `this` - - Bound network instance queried for deterministic RNG numeric state.
 
 Returns: Numeric RNG state value, or `undefined` when no deterministic state exists yet.
+
+Example:
+
+```ts
+const state = network.getRNGState();
+```
 
 ### restoreRNG
 
@@ -68,6 +84,12 @@ Parameters:
 - `fn` - - Deterministic RNG function to install (expected to return values in `[0, 1)`).
 
 Returns: Nothing.
+
+Example:
+
+```ts
+network.restoreRNG(restoredRandomFunction);
+```
 
 ### RNGSnapshot
 
@@ -90,6 +112,12 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+network.setRNGState(savedState);
+```
+
 ### setSeed
 
 `(seed: number) => void`
@@ -107,6 +135,12 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+network.setSeed(42);
+```
+
 ### snapshotRNG
 
 `() => import("src/architecture/network/network.types").RNGSnapshot`
@@ -122,6 +156,12 @@ Parameters:
 - `this` - - Bound network instance whose RNG lifecycle state is captured.
 
 Returns: Snapshot containing deterministic progress metadata and RNG state payload.
+
+Example:
+
+```ts
+const snapshot = network.snapshotRNG();
+```
 
 ## architecture/network/deterministic/network.deterministic.setup.utils.ts
 

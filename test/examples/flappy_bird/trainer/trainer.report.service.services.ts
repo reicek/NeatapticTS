@@ -1,3 +1,11 @@
+/**
+ * Small report-side helpers that keep the report facade orchestration-first.
+ *
+ * These helpers do the awkward work that a summary builder should not have to
+ * read inline: filtering non-finite scores, reusing cached aggregates when they
+ * exist, and falling back to a deterministic dummy network when a report still
+ * needs to be total in edge cases.
+ */
 import {
   evaluateFlappyFitnessAcrossSeeds,
   rolloutEpisode,
@@ -15,7 +23,8 @@ import type { FlappyTrainerNetwork } from './trainer.types';
  * Aggregate and representative rollout resolved for the best genome.
  *
  * Keeping these values together lets the report facade stay focused on
- * orchestration while this helper module owns cache fallback behavior.
+ * orchestration while this helper module owns cache fallback behavior and the
+ * "best summary plus one representative episode" pairing.
  */
 export interface ResolvedBestGenerationDetails {
   bestAggregate: FlappySeedBatchEvaluation;

@@ -1,5 +1,35 @@
 # architecture/network/slab
 
+Slab Packing / Structure‑of‑Arrays Backend (Educational Module)
+==============================================================
+Packs per‑connection data into parallel typed arrays (SoA) to accelerate
+forward passes and to illustrate memory/layout optimizations.
+
+Why SoA?
+ - Locality & fewer cache misses.
+ - Predictable tight numeric loops (JIT / SIMD friendly).
+ - Easy instrumentation (single contiguous blocks to measure & diff).
+
+Key Arrays (logical length = `used`): weights | from | to | flags | (optional) gain | (optional) plastic.
+Adjacency (CSR style): outStart (nodeCount+1), outOrder (per‑source permutation) enabling fast fan‑out.
+
+On‑Demand & Omission:
+ - Gain/plastic slabs allocated only when a non‑neutral value appears; freed if neutrality returns.
+ - `getConnectionSlab()` synthesizes a neutral gain view if omitted internally (keeps teaching tools simple).
+
+Capacity Strategy: geometric growth (1.25x browser / 1.75x Node) amortizes realloc cost.
+Pooling (config gated) reuses typed arrays (see `getSlabAllocationStats`).
+
+Rebuild Steps (sync): reindex nodes → grow/allocate if needed → single pass populate → optional slabs → version++.
+Async variant slices the population loop into microtasks to reduce long main‑thread blocks.
+
+Example (inspection):
+```ts
+const slab = (net as any).getConnectionSlab();
+console.log('Edges', slab.used, 'Version', slab.version, 'Cap', slab.capacity);
+console.log('First weight from->to', slab.weights[0], slab.from[0], slab.to[0]);
+```
+
 ## architecture/network/slab/network.slab.utils.types.ts
 
 ### BuildAdjacencyContext
@@ -48,13 +78,23 @@ Context for publishing fully built adjacency slabs to internal network state.
 
 ### SLAB_DEFAULT_ASYNC_CHUNK_SIZE
 
+Default async slab rebuild chunk size when no override is provided.
+
 ### SLAB_GROWTH_FACTOR_BROWSER
+
+Capacity growth factor for browser slab allocations.
 
 ### SLAB_GROWTH_FACTOR_NODE
 
+Capacity growth factor for Node.js slab allocations.
+
 ### SLAB_ONE
 
+Numeric one sentinel used for neutral gain defaults and index math.
+
 ### SLAB_ZERO
+
+Numeric zero sentinel used across slab orchestration and helper pipelines.
 
 ### SlabBuildContext
 
@@ -135,35 +175,16 @@ Returns: Read‑only style view (do not mutate) containing typed arrays + metada
 
 `() => { pool: { [x: string]: import("src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
 
-Slab Packing / Structure‑of‑Arrays Backend (Educational Module)
-==============================================================
-Packs per‑connection data into parallel typed arrays (SoA) to accelerate
-forward passes and to illustrate memory/layout optimizations.
+Allocation statistics snapshot for slab typed arrays.
 
-Why SoA?
- - Locality & fewer cache misses.
- - Predictable tight numeric loops (JIT / SIMD friendly).
- - Easy instrumentation (single contiguous blocks to measure & diff).
+Includes:
+ - fresh: number of newly constructed typed arrays since process start / metrics reset.
+ - pooled: number of arrays served from the pool.
+ - pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
 
-Key Arrays (logical length = `used`): weights | from | to | flags | (optional) gain | (optional) plastic.
-Adjacency (CSR style): outStart (nodeCount+1), outOrder (per‑source permutation) enabling fast fan‑out.
+NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.
 
-On‑Demand & Omission:
- - Gain/plastic slabs allocated only when a non‑neutral value appears; freed if neutrality returns.
- - `getConnectionSlab()` synthesizes a neutral gain view if omitted internally (keeps teaching tools simple).
-
-Capacity Strategy: geometric growth (1.25x browser / 1.75x Node) amortizes realloc cost.
-Pooling (config gated) reuses typed arrays (see `getSlabAllocationStats`).
-
-Rebuild Steps (sync): reindex nodes → grow/allocate if needed → single pass populate → optional slabs → version++.
-Async variant slices the population loop into microtasks to reduce long main‑thread blocks.
-
-Example (inspection):
-```ts
-const slab = (net as any).getConnectionSlab();
-console.log('Edges', slab.used, 'Version', slab.version, 'Cap', slab.capacity);
-console.log('First weight from->to', slab.weights[0], slab.from[0], slab.to[0]);
-```
+Returns: Plain object copy (safe to serialize) of current allocator counters.
 
 ### getSlabVersion
 
@@ -215,8 +236,6 @@ Parameters:
 Returns: Promise resolving once rebuild completes.
 
 ## architecture/network/slab/network.slab.pool.utils.ts
-
-### network.slab.pool.utils
 
 Internal slab pool/stat helpers extracted from network.slab.utils.ts.
 
@@ -364,8 +383,6 @@ Parameters:
 Returns: Nothing.
 
 ## architecture/network/slab/network.slab.rebuild.helpers.utils.ts
-
-### network.slab.rebuild.helpers.utils
 
 Internal slab rebuild helper functions extracted from network.slab.utils.ts.
 
@@ -703,8 +720,6 @@ Returns: Nothing.
 
 ## architecture/network/slab/network.slab.adjacency.helpers.utils.ts
 
-### network.slab.adjacency.helpers.utils
-
 Internal slab adjacency helpers extracted from network.slab.utils.ts.
 
 ### _buildAdjacency
@@ -941,8 +956,6 @@ Parameters:
 Returns: Nothing.
 
 ## architecture/network/slab/network.slab.fast-path.helpers.utils.ts
-
-### network.slab.fast-path.helpers.utils
 
 Internal fast slab activation helpers extracted from network.slab.utils.ts.
 

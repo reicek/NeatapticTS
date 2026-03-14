@@ -1,5 +1,9 @@
 # evaluation
 
+Default difficulty scale for rollouts when caller does not provide one.
+
+A value of `1` means full adaptive difficulty is enabled during evaluation.
+
 ## evaluation/evaluation.types.ts
 
 ### FlappyEpisodeResult
@@ -32,51 +36,90 @@ median, $p90$, stability, and average gameplay progress.
 
 ## evaluation/evaluation.constants.ts
 
-### evaluation.constants
+### FLAPPY_EVALUATION_DEFAULT_DIFFICULTY_SCALE
 
 Default difficulty scale for rollouts when caller does not provide one.
 
 A value of `1` means full adaptive difficulty is enabled during evaluation.
 
-### FLAPPY_EVALUATION_DEFAULT_DIFFICULTY_SCALE
-
 ### FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_CONSECUTIVE_FRAMES
+
+Default consecutive unrecoverable frames required for early termination.
 
 ### FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_GRACE_FRAMES
 
+Default grace period (frames) before early termination checks begin.
+
 ### FLAPPY_EVALUATION_DEFAULT_PIPE_PROGRESS_TARGET
+
+Default pipe-progress target used when normalizing rollout fitness.
+
+This target anchors the progress channel so normalization remains meaningful
+even when individual episodes vary widely in difficulty and duration.
 
 ### FLAPPY_EVALUATION_DENSE_SHAPING_FRAMES_NORMALIZER
 
+Dense shaping normalization factor per survived frame.
+
 ### FLAPPY_EVALUATION_NORMALIZED_DENSE_WEIGHT
+
+Dense-shaping channel weight in normalized fitness composition.
 
 ### FLAPPY_EVALUATION_NORMALIZED_PROGRESS_WEIGHT
 
+Pipe-progress channel weight in normalized fitness composition.
+
 ### FLAPPY_EVALUATION_NORMALIZED_SURVIVAL_WEIGHT
+
+Survival channel weight in normalized fitness composition.
 
 ### FLAPPY_EVALUATION_NORMALIZED_TERMINAL_WEIGHT
 
+Terminal-shaping channel weight in normalized fitness composition.
+
 ### FLAPPY_EVALUATION_ROBUST_STDDEV_PENALTY
+
+Robust fitness penalty multiplier applied to standard deviation.
+
+A higher value penalizes instability more strongly when computing robust
+fitness from a shared-seed batch.
 
 ### FLAPPY_EVALUATION_SEED_MIX_MULTIPLIER_A
 
+Seed-mix first multiplicative avalanche constant.
+
 ### FLAPPY_EVALUATION_SEED_MIX_MULTIPLIER_B
+
+Seed-mix second multiplicative avalanche constant.
 
 ### FLAPPY_EVALUATION_SEED_MIX_XOR_SALT
 
+Seed-mix additive constant used to decorrelate nearby genome ids.
+
+Together with the multiplicative constants below, this creates a small
+avalanche-style mixing pipeline for deterministic seed derivation.
+
 ### FLAPPY_EVALUATION_UNRECOVERABLE_ABOVE_GAP_DELTA
+
+Upper-gap delta threshold used by early termination heuristic.
 
 ### FLAPPY_EVALUATION_UNRECOVERABLE_BELOW_GAP_DELTA
 
+Lower-gap delta threshold used by early termination heuristic.
+
 ### FLAPPY_EVALUATION_UNRECOVERABLE_CLEARANCE_THRESHOLD
+
+Unrecoverable clearance threshold used by early termination heuristic.
 
 ### FLAPPY_EVALUATION_UNRECOVERABLE_FALLING_VELOCITY
 
+Falling-speed threshold used by early termination heuristic.
+
 ### FLAPPY_EVALUATION_UNRECOVERABLE_RISING_VELOCITY
 
-## evaluation/evaluation.rollout.service.ts
+Rising-speed threshold used by early termination heuristic.
 
-### evaluation.rollout.service
+## evaluation/evaluation.rollout.service.ts
 
 Public rollout compatibility facade.
 
@@ -86,6 +129,14 @@ rollout-owned module boundary.
 
 This is the public evaluation-layer shelf for callers that should not need to
 know about the rollout subfolder layout.
+
+Minimal usage sketch:
+```ts
+const result = rolloutEpisode(network, {
+  seed: 123,
+  normalizeFitness: true,
+});
+```
 
 ### rolloutEpisode
 
@@ -98,6 +149,18 @@ Parameters:
 - `rolloutOptions` - - Optional rollout controls.
 
 Returns: Episode result details.
+
+Example:
+
+```ts
+const result = rolloutEpisode(network, {
+  seed: 123,
+  normalizeFitness: true,
+  maxFrames: 2_000,
+});
+
+console.log(result.fitness, result.doneReason);
+```
 
 ## evaluation/evaluation.seed.utils.ts
 
@@ -153,3 +216,11 @@ Parameters:
 - `rolloutOptions` - - Optional rollout controls.
 
 Returns: Robust aggregate metrics for selection/ranking.
+
+Example:
+
+```ts
+const aggregate = evaluateFlappyFitnessAcrossSeeds(network, [11, 22, 33], {
+  normalizeFitness: true,
+});
+```

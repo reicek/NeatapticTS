@@ -1,24 +1,36 @@
 # architecture/network/evolve
 
-## architecture/network/evolve/network.evolve.utils.types.ts
-
-### network.evolve.utils.types
-
 Shared dataset compatibility error message.
+
+## architecture/network/evolve/network.evolve.utils.types.ts
 
 ### DATASET_COMPATIBILITY_ERROR_MESSAGE
 
+Shared dataset compatibility error message.
+
 ### DEFAULT_EVALUATION_AMOUNT
+
+Default repeated evaluation amount.
 
 ### DEFAULT_GROWTH
 
+Default complexity growth penalty.
+
 ### DEFAULT_LOG_INTERVAL
+
+Default logging frequency value.
 
 ### DEFAULT_TARGET_ERROR
 
+Default target error used when omitted.
+
 ### DEFAULT_THREAD_COUNT
 
+Default single-thread worker count.
+
 ### DISABLED_TARGET_ERROR
+
+Sentinel target error indicating that error-based stopping is disabled.
 
 ### EvolutionSummary
 
@@ -30,15 +42,27 @@ Structural counts used by complexity heuristics.
 
 ### MAX_CONSECUTIVE_INVALID_ERRORS
 
+Maximum consecutive invalid errors tolerated before loop abort.
+
 ### SMALL_POPULATION_MUTATION_AMOUNT
+
+Mutation amount fallback used for very small populations.
 
 ### SMALL_POPULATION_MUTATION_RATE
 
+Mutation rate fallback used for very small populations.
+
 ### SMALL_POPULATION_THRESHOLD
+
+Population threshold considered "small" for mutation heuristics.
 
 ### STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE
 
+Shared evolve stopping-condition validation error.
+
 ### ZERO_ITERATIONS
+
+Explicit zero-iteration value.
 
 ## architecture/network/evolve/network.evolve.utils.ts
 
@@ -65,6 +89,18 @@ Parameters:
 - `options` - - Evolution hyperparameters and stop conditions.
 
 Returns: Final summary containing best error estimate, generations processed, and elapsed milliseconds.
+
+Example:
+
+```ts
+const summary = await network.evolve(trainingSet, {
+  error: 0.02,
+  iterations: 500,
+  growth: 0.0005,
+  threads: 2,
+});
+console.log(summary.error, summary.iterations, summary.time);
+```
 
 ## architecture/network/evolve/network.evolve.loop.utils.ts
 

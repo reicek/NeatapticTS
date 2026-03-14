@@ -1,8 +1,34 @@
 # browser-entry
 
-## browser-entry/browser-entry.types.ts
+Browser demo public entry for the Flappy Bird example.
 
-### browser-entry.types
+This boundary is the hand-off point between library consumers and the demo's
+browser runtime. Calling `start` boots the canvas UI, worker channel, HUD,
+and playback loop without exposing all of that internal orchestration as part
+of the public API.
+
+In other words, this file is intentionally tiny because it acts like a clean
+facade over a much larger interactive system.
+
+Minimal browser start example:
+```ts
+import { start } from './browser-entry/browser-entry';
+
+const handle = start();
+// Later: handle.stop();
+```
+
+Startup path:
+```mermaid
+flowchart LR
+    Start["start()"] --> Runtime["runtime/\nbootstrap orchestration"]
+    Runtime --> Host["host/\nDOM and canvas shell"]
+    Runtime --> Channel["worker-channel/\nworker protocol"]
+    Channel --> Playback["playback/\npopulation rendering"]
+    Runtime --> Network["network-view + visualization/\nnetwork inspection"]
+```
+
+## browser-entry/browser-entry.types.ts
 
 Aggregated public type surface for the Flappy Bird browser runtime.
 
@@ -10,6 +36,26 @@ The browser demo spans several concerns at once: worker messaging, playback
 rendering, telemetry, viewport math, and network visualization. Re-exporting
 the public contracts from one place gives readers a compact map of that
 runtime without forcing them to know the internal folder layout first.
+
+A practical reading order is:
+
+- runtime types for lifecycle and top-level handles,
+- worker types for protocol boundaries,
+- simulation/render types for playback state,
+- visualization types for the network panel.
+
+Use this file when you want the browser runtime's public contract map. Use
+the neighboring runtime, playback, host, worker-channel, and visualization
+folders when you want the actual implementation story.
+
+Browser runtime map:
+```mermaid
+flowchart TB
+    PublicTypes["browser-entry.types"] --> Runtime["runtime types\nstart/stop lifecycle"]
+    PublicTypes --> Worker["worker types\nprotocol and payloads"]
+    PublicTypes --> Playback["simulation + render types\nframe state and HUD metrics"]
+    PublicTypes --> Viz["visualization types\nlegend and color scales"]
+```
 
 ### BrowserDifficultyProfile
 
@@ -20,10 +66,7 @@ course is: corridor width, pipe speed, and spawn cadence.
 
 ### BrowserPopulationBirdLike
 
-Simulation-facing browser contracts shared by playback helpers.
-
-These types describe the minimum world state the browser needs while it is
-reconstructing, rendering, or summarizing worker-produced frames.
+Bird shape used by utility winner/leader resolver helpers.
 
 ### BrowserPopulationPipeLike
 
@@ -90,12 +133,7 @@ audit when the protocol evolves.
 
 ### FlappyBirdRunHandle
 
-Public lifecycle contracts for the Flappy Bird browser runtime.
-
-These types describe how the demo is started, stopped, and exposed on the
-browser `window` object. They are intentionally small because callers should
-control the demo at a high level without depending on private implementation
-details.
+Handle returned by `start` for controlling demo execution lifecycle.
 
 ### FlappyStatsCategoryColors
 
@@ -106,11 +144,7 @@ still separating categories such as current run, telemetry, and best-so-far.
 
 ### FlappyStatsKey
 
-HUD and runtime stats contracts for the Flappy Bird browser demo.
-
-The browser HUD is intentionally declarative: keys describe what should be
-shown, and helper utilities map those keys to DOM rows and live values. That
-keeps the status panel readable even as telemetry grows.
+Runtime stats table key union used across browser-entry helpers.
 
 ### FlappyStatsRowDescriptor
 
@@ -142,12 +176,7 @@ to tune without hidden drawing constants.
 
 ### NetworkVisualizationHandle
 
-Network-visualization contracts for the Flappy Bird browser demo.
-
-One of the educational goals of the example is to let people watch evolved
-controllers as structures, not just as scores. These types describe the
-lightweight shapes used by the architecture panel so rendering logic can stay
-decoupled from the full internal network implementation.
+Draw callback contract for network architecture panel updates.
 
 ### PackedPlaybackBirdSnapshot
 
@@ -210,11 +239,7 @@ world and telemetry panels from the rest of the page.
 
 ### RenderStandaloneTitleBoxInput
 
-Canvas frame-layout contracts for the Flappy Bird browser demo.
-
-These types support the demo's deliberately stylized text-frame chrome: title
-boxes, outer borders, and viewport transforms that make the example feel more
-like an instrument panel than a plain canvas game.
+Input contract for standalone title frame rendering helper.
 
 ### RngLike
 
@@ -233,15 +258,7 @@ bundle as a module.
 
 ### SerializedNetwork
 
-Worker transport contracts for the Flappy Bird browser runtime.
-
-The browser UI and the evolution worker communicate through a deliberately
-explicit message protocol. The goal is educational as well as practical: it
-makes it obvious which values are computed off-thread, which snapshots are
-transferred frame-by-frame, and which events advance the demo state.
-
-If you want background reading, the Wikipedia article on "message passing"
-provides a useful conceptual frame for this boundary.
+Loose JSON-compatible network payload used by worker messages.
 
 ### TextFrameMetrics
 
@@ -287,8 +304,6 @@ while still exposing the semantic fields that matter visually.
 
 ## browser-entry/browser-entry.stats.types.ts
 
-### browser-entry.stats.types
-
 HUD and runtime stats contracts for the Flappy Bird browser demo.
 
 The browser HUD is intentionally declarative: keys describe what should be
@@ -311,11 +326,7 @@ still separating categories such as current run, telemetry, and best-so-far.
 
 ### FlappyStatsKey
 
-HUD and runtime stats contracts for the Flappy Bird browser demo.
-
-The browser HUD is intentionally declarative: keys describe what should be
-shown, and helper utilities map those keys to DOM rows and live values. That
-keeps the status panel readable even as telemetry grows.
+Runtime stats table key union used across browser-entry helpers.
 
 ### FlappyStatsRowDescriptor
 
@@ -333,8 +344,6 @@ cells directly without repeatedly querying the document.
 
 ## browser-entry/browser-entry.render.types.ts
 
-### browser-entry.render.types
-
 Canvas frame-layout contracts for the Flappy Bird browser demo.
 
 These types support the demo's deliberately stylized text-frame chrome: title
@@ -350,11 +359,7 @@ world and telemetry panels from the rest of the page.
 
 ### RenderStandaloneTitleBoxInput
 
-Canvas frame-layout contracts for the Flappy Bird browser demo.
-
-These types support the demo's deliberately stylized text-frame chrome: title
-boxes, outer borders, and viewport transforms that make the example feel more
-like an instrument panel than a plain canvas game.
+Input contract for standalone title frame rendering helper.
 
 ### TextFrameMetrics
 
@@ -371,8 +376,6 @@ These numbers answer the classic graphics question: how does one unit in the
 simulated world map into the current canvas rectangle?
 
 ## browser-entry/browser-entry.worker.types.ts
-
-### browser-entry.worker.types
 
 Worker transport contracts for the Flappy Bird browser runtime.
 
@@ -462,19 +465,9 @@ horizontal position plus the vertical corridor geometry.
 
 ### SerializedNetwork
 
-Worker transport contracts for the Flappy Bird browser runtime.
-
-The browser UI and the evolution worker communicate through a deliberately
-explicit message protocol. The goal is educational as well as practical: it
-makes it obvious which values are computed off-thread, which snapshots are
-transferred frame-by-frame, and which events advance the demo state.
-
-If you want background reading, the Wikipedia article on "message passing"
-provides a useful conceptual frame for this boundary.
+Loose JSON-compatible network payload used by worker messages.
 
 ## browser-entry/browser-entry.runtime.types.ts
-
-### browser-entry.runtime.types
 
 Public lifecycle contracts for the Flappy Bird browser runtime.
 
@@ -485,12 +478,7 @@ details.
 
 ### FlappyBirdRunHandle
 
-Public lifecycle contracts for the Flappy Bird browser runtime.
-
-These types describe how the demo is started, stopped, and exposed on the
-browser `window` object. They are intentionally small because callers should
-control the demo at a high level without depending on private implementation
-details.
+Handle returned by `start` for controlling demo execution lifecycle.
 
 ### RuntimeWindow
 
@@ -502,6 +490,11 @@ bundle as a module.
 
 ## browser-entry/browser-entry.simulation.types.ts
 
+Simulation-facing browser contracts shared by playback helpers.
+
+These types describe the minimum world state the browser needs while it is
+reconstructing, rendering, or summarizing worker-produced frames.
+
 ### BrowserDifficultyProfile
 
 Difficulty profile consumed by simulation observation helpers.
@@ -511,10 +504,7 @@ course is: corridor width, pipe speed, and spawn cadence.
 
 ### BrowserPopulationBirdLike
 
-Simulation-facing browser contracts shared by playback helpers.
-
-These types describe the minimum world state the browser needs while it is
-reconstructing, rendering, or summarizing worker-produced frames.
+Bird shape used by utility winner/leader resolver helpers.
 
 ### BrowserPopulationPipeLike
 
@@ -551,6 +541,13 @@ worker simulation state.
 
 ## browser-entry/browser-entry.visualization.types.ts
 
+Network-visualization contracts for the Flappy Bird browser demo.
+
+One of the educational goals of the example is to let people watch evolved
+controllers as structures, not just as scores. These types describe the
+lightweight shapes used by the architecture panel so rendering logic can stay
+decoupled from the full internal network implementation.
+
 ### ColorLegendRow
 
 Legend row model for network visualization color legends.
@@ -580,12 +577,7 @@ to tune without hidden drawing constants.
 
 ### NetworkVisualizationHandle
 
-Network-visualization contracts for the Flappy Bird browser demo.
-
-One of the educational goals of the example is to let people watch evolved
-controllers as structures, not just as scores. These types describe the
-lightweight shapes used by the architecture panel so rendering logic can stay
-decoupled from the full internal network implementation.
+Draw callback contract for network architecture panel updates.
 
 ### PositionedNetworkNodeLike
 
@@ -610,30 +602,35 @@ while still exposing the semantic fields that matter visually.
 
 ## browser-entry/browser-entry.ts
 
-### browser-entry
-
-Browser demo public entry for the Flappy Bird example.
-
-This boundary is the hand-off point between library consumers and the demo's
-browser runtime. Calling `start` boots the canvas UI, worker channel, HUD,
-and playback loop without exposing all of that internal orchestration as part
-of the public API.
-
-In other words, this file is intentionally tiny because it acts like a clean
-facade over a much larger interactive system.
-
 ### FlappyBirdRunHandle
 
-Public lifecycle contracts for the Flappy Bird browser runtime.
-
-These types describe how the demo is started, stopped, and exposed on the
-browser `window` object. They are intentionally small because callers should
-control the demo at a high level without depending on private implementation
-details.
+Handle returned by `start` for controlling demo execution lifecycle.
 
 ### start
 
 `(container: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle>`
+
+Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
+
+This function is intentionally orchestration-focused:
+1) resolve runtime dependencies (DOM host, worker, host UI),
+2) initialize worker and telemetry plumbing,
+3) run the evolve -> playback -> HUD fold loop until stopped,
+4) expose a small stop/isRunning/done handle for callers.
+
+Parameters:
+- `container` - - Element id or HTMLElement to host the demo.
+
+Returns: Run handle for stop/state control.
+
+Example:
+
+```ts
+const runHandle = await start('flappy-bird-output');
+// later
+runHandle.stop();
+await runHandle.done;
+```
 
 ## browser-entry/browser-entry.host.utils.ts
 
@@ -824,8 +821,6 @@ Returns: Line-broken label value.
 
 ## browser-entry/browser-entry.playback.utils.ts
 
-### browser-entry.playback.utils
-
 Compatibility facade for the browser-entry playback boundary.
 
 Older imports still reach playback through this file, while the real
@@ -835,7 +830,7 @@ into a clearer module boundary.
 
 ### animatePopulationEpisodeInternal
 
-`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary>`
+`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void, onChampionChanged: ((event: import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackChampionChangedEvent) => void) | undefined) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary>`
 
 Internal playback orchestration entry retained for compatibility re-exports.
 
@@ -1128,8 +1123,6 @@ Returns: Tuple of first and second upcoming pipes.
 
 ## browser-entry/browser-entry.network-view.utils.ts
 
-### browser-entry.network-view.utils
-
 Compatibility facade for browser-entry network-view helpers.
 
 Legacy imports still use this file while the network-view subsystem is split
@@ -1151,6 +1144,12 @@ Parameters:
 - `outputSize` - - Output-layer size.
 
 Returns: Nothing.
+
+Example:
+
+```ts
+drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
+```
 
 ### resolveNetworkArchitectureLabel
 
@@ -1184,19 +1183,35 @@ Parameters:
 
 Returns: Recommended height in pixels.
 
+Example:
+
+```ts
+const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
+```
+
 ### resolveNetworkVisualizationLayers
 
 `(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
-Topology resolution helpers for the browser network view.
+Resolves layered node groups for network-view layout and rendering.
 
-These helpers answer a key visualization question: how should the current
-network be partitioned into ordered layers so layout and architecture labels
-stay meaningful even when some metadata is missing?
+Educational note:
+Layer grouping is a network-view concern because it drives sizing, node
+placement, and architecture presentation. Visualization code can still reuse
+the result, but this helper now lives with the module that owns layout.
+
+The resolver prefers explicit layer metadata when it exists, then falls back
+to a topology-derived depth estimate so even loosely structured networks can
+still be drawn in an intelligible left-to-right order.
+
+Parameters:
+- `network` - - Runtime network instance.
+- `inputSize` - - Input count fallback.
+- `outputSize` - - Output count fallback.
+
+Returns: Layered nodes for rendering.
 
 ## browser-entry/browser-entry.visualization.utils.ts
-
-### browser-entry.visualization.utils
 
 Compatibility facade for browser-entry network visualization helpers.
 
@@ -1207,22 +1222,31 @@ is organized into smaller, clearer modules under the dedicated folder.
 
 `(scale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale, symbol: "w" | "b") => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]`
 
-Legend-layout helpers for network visualization.
+Creates legend rows from ordered tiers.
 
-The legend explains how colors map back to numeric weights and biases. These
-helpers turn color scales into labeled rows and place the legend so it stays
-readable across different canvas sizes.
+Each row describes one closed numeric interval and the swatch used to paint
+it, making the dynamic color scale legible to a human reader.
+
+Parameters:
+- `scale` - - Dynamic color scale containing bounds, tiers, and overflow color.
+- `symbol` - - Label symbol.
+
+Returns: Legend rows.
 
 ### createLogDivergingColorTiers
 
 `(input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; }) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[]`
 
-Color-scale synthesis helpers for network visualization.
+Builds logarithmic diverging color tiers with a center band and edge extension.
 
-These utilities convert raw connection weights and node biases into tiered
-neon color scales. The goal is not photorealism; it is interpretability. A
-reader should be able to glance at the network panel and see where strong
-positive, strong negative, and near-zero values live.
+Diverging scales are useful here because network parameters naturally split
+around zero. Negative and positive values should feel visually related, but
+not identical.
+
+Parameters:
+- `input` - - Tier creation options.
+
+Returns: Ordered tier list.
 
 ### drawBiasNodesLayer
 
@@ -1385,11 +1409,23 @@ Returns: Dynamic scales used by graph drawing and legend rows.
 
 `(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
-Topology resolution helpers for the browser network view.
+Resolves layered node groups for network-view layout and rendering.
 
-These helpers answer a key visualization question: how should the current
-network be partitioned into ordered layers so layout and architecture labels
-stay meaningful even when some metadata is missing?
+Educational note:
+Layer grouping is a network-view concern because it drives sizing, node
+placement, and architecture presentation. Visualization code can still reuse
+the result, but this helper now lives with the module that owns layout.
+
+The resolver prefers explicit layer metadata when it exists, then falls back
+to a topology-derived depth estimate so even loosely structured networks can
+still be drawn in an intelligible left-to-right order.
+
+Parameters:
+- `network` - - Runtime network instance.
+- `inputSize` - - Input count fallback.
+- `outputSize` - - Output count fallback.
+
+Returns: Layered nodes for rendering.
 
 ### resolveTierColor
 

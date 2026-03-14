@@ -5,6 +5,20 @@ import {
 import type { TrailPoint } from '../../browser-entry.types';
 
 /**
+ * Trail-history helpers for the playback renderer.
+ *
+ * This module owns the small rolling histories that create the flock's neon
+ * afterimage. The policy is intentionally simple: keep only a short recent
+ * window, and keep the champion trail even shorter and denser.
+ *
+ * Minimal usage sketch:
+ * ```ts
+ * const trailPoints = [{ frameIndex: 10, yPx: 140 }];
+ * pushTrailPoint(trailPoints, 11, 136, 2);
+ * ```
+ */
+
+/**
  * Appends one trail point while enforcing the maximum retained history length.
  *
  * Playback trails are intentionally modeled as short rolling histories rather
@@ -17,12 +31,10 @@ import type { TrailPoint } from '../../browser-entry.types';
  * @param yPosition - Bird y position.
  * @param maxRetainedPoints - Optional maximum retained trail history length.
  * @returns Nothing.
- *
  * @example
  * ```ts
  * const trailPoints = [{ frameIndex: 10, yPx: 140 }];
  * pushTrailPoint(trailPoints, 11, 136, 2);
- * // trailPoints now contains the two newest samples only.
  * ```
  */
 export function pushTrailPoint(

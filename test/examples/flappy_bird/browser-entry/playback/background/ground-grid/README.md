@@ -295,63 +295,183 @@ Returns: Nothing.
 
 ### FLAPPY_BACKGROUND_GROUND_GRID_STYLE
 
+Frozen neon style bundle reused by the playback ground-grid renderer.
+
+The values stay theme-owned but are materialized once so the renderer does
+not allocate a new style object during every frame.
+
 ### FLAPPY_GROUND_GRID_APPROX_FRAME_DURATION_MS
+
+Approximate playback frame duration used for deterministic pulse timing.
+
+The pulse system is designed to feel stable at ordinary browser animation
+cadence without requiring access to wall-clock time in every helper.
 
 ### FLAPPY_GROUND_GRID_DEPTH_CURVE_EXPONENT
 
+Non-linear exponent used to compress depth lines toward the horizon.
+
+This is the main perspective stylization control: higher values bunch more of
+the depth bands near the horizon and leave broader spacing near the viewer.
+
 ### FLAPPY_GROUND_GRID_FOG_ALPHA
+
+Peak opacity used by the lower-band neon fog wash.
+
+The fog should tint the band, not obscure the line geometry, so the opacity
+is intentionally modest.
 
 ### FLAPPY_GROUND_GRID_FOG_HEIGHT_RATIO
 
+Height ratio reserved for the subtle lower-band neon fog wash.
+
+The fog sits in the lower portion of the band so it enriches the foreground
+without muting the crisp horizon seam.
+
 ### FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT
+
+Number of horizontal depth bands used by the neon ground grid.
+
+More bands increase the sense of depth, but they also thicken the lower band
+visually and add more line work to each frame.
 
 ### FLAPPY_GROUND_GRID_MAX_ALPHA
 
+Maximum alpha used by the nearest depth and perspective lines.
+
 ### FLAPPY_GROUND_GRID_MAX_BLUR_PX
+
+Blur radius used by the farthest depth lines near the horizon.
 
 ### FLAPPY_GROUND_GRID_MAX_THICKNESS_PX
 
+Maximum stroke width used by near depth lines.
+
 ### FLAPPY_GROUND_GRID_MIN_ALPHA
+
+Minimum alpha used by the farthest horizontal depth lines.
 
 ### FLAPPY_GROUND_GRID_MIN_BLUR_PX
 
+Blur radius used by the nearest depth lines at the bottom edge.
+
 ### FLAPPY_GROUND_GRID_MIN_THICKNESS_PX
+
+Minimum stroke width used by far depth lines.
 
 ### FLAPPY_GROUND_GRID_MIN_VERTICAL_LINE_COUNT
 
+Minimum visible perspective-ray count used on very narrow viewports.
+
+Even on a small canvas, the grid still needs at least a few rays to read as
+perspective instead of a flat block of horizontal stripes.
+
 ### FLAPPY_GROUND_GRID_PIPE_CONNECTION_LINE_OFFSET_FROM_BOTTOM
+
+Near-edge horizontal line offset used for the lower-pipe floor illusion.
+
+`1` targets the first usable grid band above the bottom edge rather than the
+terminal line that coincides with the lower-band boundary itself.
 
 ### FLAPPY_GROUND_GRID_PULSE_ALPHA
 
+Peak opacity used by visible pulse squares.
+
 ### FLAPPY_GROUND_GRID_PULSE_INTERVAL_MS
+
+Interval between visible pulse events (milliseconds).
+
+A relatively slow cadence keeps the pulses as occasional accent lights rather
+than a constant distraction under the birds.
 
 ### FLAPPY_GROUND_GRID_PULSE_LIFETIME_MS
 
+Lifetime of one pulse as it travels across its chosen line (milliseconds).
+
+The lifetime is slightly shorter than the full interval so one pulse fades
+out before the next slot becomes active.
+
 ### FLAPPY_GROUND_GRID_PULSE_MAX_SIZE_PX
+
+Largest visible pulse square size (pixels).
 
 ### FLAPPY_GROUND_GRID_PULSE_MIN_ELIGIBLE_THICKNESS_PX
 
+Minimum horizontal line thickness eligible for pulse travel.
+
 ### FLAPPY_GROUND_GRID_PULSE_MIN_SIZE_PX
+
+Smallest visible pulse square size (pixels).
 
 ### FLAPPY_GROUND_GRID_PULSE_PREFERRED_HORIZONTAL_START_RATIO
 
+Earliest eligible slice of horizontal lines used for visible pulse picks.
+
+This biases horizontal pulses toward the more legible near-midground instead
+of the compressed lines nearest the horizon.
+
 ### FLAPPY_GROUND_GRID_PULSE_VISIBLE_VIEWPORT_INSET_PX
+
+Horizontal inset that keeps vertical pulse picks away from clipped edges.
 
 ### FLAPPY_GROUND_GRID_SCROLL_OFFSET_QUANTIZATION_DECIMALS
 
+Decimal precision used when quantizing the wrapped vertical-ray offset.
+
+Quantization stabilizes cache reuse by preventing tiny floating-point drift
+from generating effectively identical geometry variants.
+
 ### FLAPPY_GROUND_GRID_SCROLL_RATIO
+
+Scroll ratio applied to the moving vertical perspective rays.
+
+Keeping the rays slower than gameplay motion makes the grid feel like a deep
+environmental layer rather than a surface glued to the pipes.
 
 ### FLAPPY_GROUND_GRID_TARGET_VERTICAL_LINE_SPACING_PX
 
+Target visible spacing between adjacent vertical rays at the pipe floor.
+
+The lower pipes visually attach to a projected floor band in the grid. The
+important invariant is phase repeat, not just raw gap width: each new pipe at
+max difficulty should land on the same relative grid position as the previous
+one. That requires matching the full pipe-to-pipe pitch, not only the open
+edge-to-edge gap between pipe bodies.
+
 ### FLAPPY_GROUND_GRID_TARGET_VERTICAL_SEGMENT_HEIGHT_PX
+
+Target screen-space height for one vertical-ray style segment (pixels).
+
+Segmenting the rays lets the renderer vary alpha, thickness, and blur by
+depth rather than drawing each ray with one flat style.
 
 ### FLAPPY_GROUND_GRID_UNSIGNED_NORMALIZATION_DIVISOR
 
+Normalization divisor used for deterministic pulse hash generation.
+
+The pulse selection helpers convert unsigned integer hashes into stable
+floating-point picks in the unit interval.
+
 ### FLAPPY_GROUND_GRID_VERTICAL_OVERFLOW_COUNT
+
+Extra off-screen perspective rays drawn for seamless wrap.
+
+Overflow rays prevent the parallax cycle from exposing empty gaps when the
+wrapped scroll offset lands near a lane boundary.
 
 ### FLAPPY_GROUND_GRID_VERTICAL_PULSE_END_RATIO
 
+Latest progress ratio allowed for vertical pulse travel.
+
+Ending early keeps the pulse out of the extreme foreground, where its square
+would become too large and visually heavy.
+
 ### FLAPPY_GROUND_GRID_VERTICAL_PULSE_START_RATIO
+
+Earliest progress ratio allowed for vertical pulse travel.
+
+Vertical pulses start a little away from the horizon so they are visible as
+distinct squares instead of immediately disappearing into compressed depth.
 
 ## browser-entry/playback/background/ground-grid/playback.background.ground-grid.batch.services.ts
 

@@ -14,10 +14,12 @@ import type { PlaybackBackgroundRequest } from './playback.background.types';
  * lower band with a TRON-like perspective ground grid, and separates both
  * regions with a glowing horizon divider.
  *
+ * This is the background entrypoint the frame renderer uses when it wants one
+ * deterministic camera backdrop rather than a gameplay-aware scene graph.
+ *
  * @param context - Canvas 2D drawing context.
  * @param request - Narrow render input required for background composition.
  * @returns Nothing.
- *
  * @example
  * ```ts
  * renderPlaybackBackground(context, {

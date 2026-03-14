@@ -34,6 +34,11 @@ import {
  * The render order matters: background first, then pipes, then birds, then
  * trails and overlays that should visually sit on top.
  *
+ * @example
+ * ```ts
+ * renderPopulationFrame(context, renderState, trailState);
+ * ```
+ *
  * @param context - Canvas 2D drawing context.
  * @param renderState - Mutable simulation state snapshot.
  * @param trailState - Leader trail render cache.
@@ -79,6 +84,11 @@ export function renderPopulationFrame(
  * The renderer intentionally keeps only a short champion trail instead of full
  * history for every bird, which keeps the visual emphasis clear and the per-frame
  * work small.
+ *
+ * @example
+ * ```ts
+ * updateTrailState(trailState, renderState);
+ * ```
  *
  * @param trailState - Mutable trail state.
  * @param renderState - Current render state.

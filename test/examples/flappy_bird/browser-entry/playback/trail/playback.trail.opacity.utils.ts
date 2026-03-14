@@ -2,6 +2,21 @@ import { FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX } from '../../../constants/constants
 import type { PlaybackEdgeBounds } from '../playback.types';
 
 /**
+ * Opacity helpers for playback trail fading.
+ *
+ * The trail renderer blends two independent fade stories: lifetime and
+ * distance-to-edge. These helpers keep that math isolated so the draw path can
+ * stay focused on painting rather than re-deriving normalization rules.
+ *
+ * Minimal usage sketch:
+ * ```ts
+ * const edgeOpacity = resolveEdgeOpacityFactor(120, 140, edgeBounds);
+ * const ageOpacity = resolveTrailLifetimeOpacityFactor(3, 12);
+ * const alpha = edgeOpacity * ageOpacity;
+ * ```
+ */
+
+/**
  * Converts distance-to-edge into a normalized opacity factor.
  *
  * Trail points fade as they approach the viewport border so the rendered path
@@ -15,6 +30,12 @@ import type { PlaybackEdgeBounds } from '../playback.types';
  * @param pointYPx - Point y position.
  * @param edgeBounds - Visible world bounds used for edge distance checks.
  * @returns Opacity multiplier in [0, 1].
+ * @example
+ * ```ts
+ * const edgeOpacity = resolveEdgeOpacityFactor(120, 140, edgeBounds);
+ * const ageOpacity = resolveTrailLifetimeOpacityFactor(3, 12);
+ * const alpha = edgeOpacity * ageOpacity;
+ * ```
  */
 export function resolveEdgeOpacityFactor(
   pointXPx: number,

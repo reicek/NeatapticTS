@@ -1,9 +1,5 @@
 # browser-entry/playback/background
 
-## browser-entry/playback/background/playback.background.types.ts
-
-### playback.background.types
-
 Minimal render input required to draw the playback background.
 
 The background is intentionally treated as a deterministic camera effect
@@ -12,7 +8,8 @@ viewport geometry, frame index, and scroll position, the module can create a
 stable neon sky-ground composition without coupling itself to bird state,
 pipe arrays, or trail caches.
 
-@example
+Example:
+
 ```ts
 const request: PlaybackBackgroundRequest = {
   viewportLeftXPx: cameraLeftPx,
@@ -22,6 +19,8 @@ const request: PlaybackBackgroundRequest = {
   scrollBasePx: frameIndex * pipeSpeedPxPerFrame,
 };
 ```
+
+## browser-entry/playback/background/playback.background.types.ts
 
 ### PlaybackBackgroundLayout
 
@@ -51,6 +50,18 @@ rather than a gameplay-aware renderer. By restricting the contract to
 viewport geometry, frame index, and scroll position, the module can create a
 stable neon sky-ground composition without coupling itself to bird state,
 pipe arrays, or trail caches.
+
+Example:
+
+```ts
+const request: PlaybackBackgroundRequest = {
+  viewportLeftXPx: cameraLeftPx,
+  visibleWorldWidthPx: 288,
+  visibleWorldHeightPx: 512,
+  frameIndex,
+  scrollBasePx: frameIndex * pipeSpeedPxPerFrame,
+};
+```
 
 ### PlaybackBackgroundSceneContext
 
@@ -90,11 +101,26 @@ The composition keeps the top two-thirds for the neon starfield, fills the
 lower band with a TRON-like perspective ground grid, and separates both
 regions with a glowing horizon divider.
 
+This is the background entrypoint the frame renderer uses when it wants one
+deterministic camera backdrop rather than a gameplay-aware scene graph.
+
 Parameters:
 - `context` - - Canvas 2D drawing context.
 - `request` - - Narrow render input required for background composition.
 
 Returns: Nothing.
+
+Example:
+
+```ts
+renderPlaybackBackground(context, {
+  viewportLeftXPx: cameraLeftPx,
+  visibleWorldWidthPx: 288,
+  visibleWorldHeightPx: 512,
+  frameIndex,
+  scrollBasePx: frameIndex * pipeSpeedPxPerFrame,
+});
+```
 
 ## browser-entry/playback/background/playback.background.services.ts
 
@@ -150,31 +176,107 @@ Returns: Immutable scene context shared by the private render helpers.
 
 ### FLAPPY_BACKGROUND_COMPOSITE_LIGHTER
 
+Composite mode used when stacking glow-heavy starfield layers.
+
+The background currently resets to ordinary compositing for main passes, but
+this constant documents the additive blend mode used when glow layers need to
+visually accumulate rather than overwrite one another.
+
 ### FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER
+
+Composite mode used for standard opaque drawing passes.
+
+Most background passes should replace pixels normally so the scene remains
+predictable before selective glow passes are added on top.
 
 ### FLAPPY_BACKGROUND_HORIZON_GLOW_ALPHA
 
+Soft glow opacity applied during the horizon glow pass.
+
+The glow is intentionally strong enough to read as neon, but still shy of a
+full opaque bloom so the crisp core line remains visible.
+
 ### FLAPPY_BACKGROUND_HORIZON_GLOW_BLUR_PX
+
+Blur radius used to bloom the horizon divider glow (pixels).
+
+This is the main control for how far the horizon's light appears to bleed
+into the neighboring sky and ground bands.
 
 ### FLAPPY_BACKGROUND_HORIZON_HALF_THICKNESS_MULTIPLIER
 
+Half-thickness multiplier used to center the horizon line on the split.
+
+The layout computes the horizon around the sky/lower-band seam, so this
+multiplier converts stroke thickness into the offset needed to center the
+divider on that seam rather than placing it fully below it.
+
 ### FLAPPY_BACKGROUND_HORIZON_LINE_THICKNESS_PX
+
+Thickness of the neon horizon divider line (pixels).
+
+A slightly heavier stroke helps the divider remain legible against both the
+starfield and the bright grid below it.
 
 ### FLAPPY_BACKGROUND_HORIZON_STYLE
 
+Frozen neon paint bundle reused by the playback horizon renderer.
+
+Keeping this style object in the constants module prevents repeated
+allocation during every background frame while still keeping the palette
+centrally theme-owned.
+
 ### FLAPPY_BACKGROUND_MIN_VIEWPORT_DIMENSION_PX
+
+Minimum safe viewport dimension used by background render math (pixels).
+
+Canvas helpers in this module assume positive dimensions. Clamping tiny or
+temporarily zero-sized layouts to this floor prevents resize races from
+producing invalid cache keys or negative geometry.
 
 ### FLAPPY_BACKGROUND_ODD_STROKE_ALIGNMENT_OFFSET_PX
 
+Pixel offset used to align odd-width strokes to the device pixel grid.
+
+Offsetting odd-width lines by half a pixel is a standard raster technique
+for reducing blur in canvas line rendering.
+
 ### FLAPPY_BACKGROUND_ODD_STROKE_DIVISOR
+
+Divisor used to detect odd stroke widths for pixel snapping.
+
+Canvas 2D strokes look soft when odd-width lines are left on whole pixels.
+This constant supports the classic half-pixel alignment check used to keep
+the horizon divider visually crisp.
 
 ### FLAPPY_BACKGROUND_SKY_HEIGHT_RATIO
 
+Background layout ratio reserved for the starfield sky band.
+
+The top band intentionally occupies most of the scene so the future ground
+layer can take over the lower strip without competing with the stars.
+
 ### FLAPPY_BACKGROUND_TILE_ROW_BUFFER_COUNT
+
+Extra tile count rendered past the visible right edge for seamless wrap.
+
+The starfield is drawn as repeated cached strips. One buffered strip beyond
+the viewport prevents empty columns from appearing while the parallax offset
+advances between frames.
 
 ### FLAPPY_BACKGROUND_TILE_ROW_START_INDEX
 
+Index offset used to draw one extra tile before the visible left edge.
+
+Starting one tile early hides wrap seams when the parallax offset lands near
+a tile boundary and the camera reveals a sliver of content just off-screen.
+
 ### FLAPPY_BACKGROUND_TRANSPARENT_SHADOW_COLOR
+
+Transparent shadow color used to reset canvas glow state.
+
+Canvas shadow state is sticky, so explicit transparent resets prevent one
+glow-heavy pass from leaking blur into later solid fills or line work.
 
 ## browser-entry/playback/background/playback.background.draw.services.ts
 

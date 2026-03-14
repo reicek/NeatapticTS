@@ -1,9 +1,5 @@
 # utils
 
-## utils/memory.ts
-
-### memory
-
 Memory instrumentation utilities (Phase 0).
 
 Educational overview:
@@ -18,9 +14,18 @@ Design principles:
 - Cross‑environment: Works in both Browser and Node via feature detection.
 - Extensible: Shape deliberately includes draft sections for later precise accounting phases.
 
+## utils/memory.ts
+
 ### memoryStats
 
 `(targetNetworks: import("src/utils/memory").NetworkView | import("src/utils/memory").NetworkView[] | undefined) => import("src/utils/memory").MemoryStats`
+
+Capture heuristic memory statistics for one or more networks with a snapshot of active config flags.
+
+Parameters:
+- `targetNetworks` - - Optional single network or array. If omitted, uses registered networks.
+
+Returns: MemoryStats heuristic snapshot.
 
 ### MemoryStats
 
@@ -43,9 +48,26 @@ enabling typed local variables instead of `any` everywhere.
 
 `(network: import("src/utils/memory").NetworkView | null | undefined) => void`
 
+Register a network for inclusion in future `memoryStats()` calls made
+without explicit parameters.
+
+Duplicate registrations are ignored; insertion order is preserved which is
+useful for deterministic test snapshots.
+
+Parameters:
+- `network` - Network instance (loose shape, validated at runtime).
+
+Returns: void
+
 ### resetMemoryTracking
 
 `() => void`
+
+Clear the internal list of networks tracked by `memoryStats()` when no
+explicit networks are provided. This does NOT free memory; it only
+removes references held by the registry.
+
+Returns: void
 
 ### SlabAllocStats
 
@@ -55,6 +77,14 @@ include additional fields; we only rely on fresh/pooled counts.
 ### unregisterTrackedNetwork
 
 `(network: import("src/utils/memory").NetworkView) => void`
+
+Remove a previously registered network from the tracking registry.
+No-op if the network is not currently registered.
+
+Parameters:
+- `network` - Network instance to remove.
+
+Returns: void
 
 ## utils/memory.utils.ts
 
@@ -206,6 +236,9 @@ Keeps only the flags relevant to the memory snapshot to avoid leaking full confi
 
 ### CONNECTION_OBJECT_BYTES
 
+Estimated per-connection JS object footprint in bytes (includes metadata fields).
+Used as a fallback when typed-array parallel data is unavailable.
+
 ### createEmptyAccumulators
 
 `() => import("src/utils/memory.utils").Accumulators`
@@ -228,12 +261,18 @@ Returns: Estimated bytes per connection entry.
 
 ### HEURISTIC_BYTES
 
+Default heuristics mapping human-readable weights to their byte estimates.
+Centralizes the fallback values so downstream summaries stay consistent.
+
 ### HeuristicBytes
 
 Heuristic byte weights used to approximate per-object overhead in the allocator.
 These numbers represent typical JS object footprints, not exact runtime measurements.
 
 ### NODE_OBJECT_BYTES
+
+Estimated per-node JS object footprint in bytes, covering activation state and IDs.
+This heuristic keeps node weight comparable to connection objects during summaries.
 
 ### normalizeNetworks
 

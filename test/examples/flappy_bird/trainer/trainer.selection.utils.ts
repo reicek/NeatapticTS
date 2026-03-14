@@ -1,3 +1,10 @@
+/**
+ * Deterministic ranking helpers for trainer populations.
+ *
+ * These utilities keep score extraction and descending-order selection in one
+ * place so the staged evaluation services do not each reinvent the same sorting
+ * logic with slightly different fallback rules.
+ */
 import type { FlappyTrainerNetwork, ScoredGenomeEntry } from './trainer.types';
 
 /**
@@ -40,6 +47,10 @@ export function selectTopGenomesByScore(
 
 /**
  * Resolves the best genome by current score.
+ *
+ * This helper is intentionally tiny, but it gives the rest of the trainer a
+ * single vocabulary term for "the current best genome under whatever score shelf
+ * is currently populated."
  *
  * @param population - Current trainer population.
  * @returns Highest-scoring genome or `undefined` when population is empty.

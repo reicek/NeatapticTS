@@ -1,5 +1,11 @@
 # dashboardManager
 
+Public DashboardManager facade for the dedicated dashboardManager module boundary.
+
+The folder now owns local contracts, constants, pure formatting helpers, and
+stateful rendering and telemetry services. This facade keeps the established
+class-based API stable while delegating the heavy work to focused helpers.
+
 ## dashboardManager/dashboardManager.types.ts
 
 ### AsciiMazeComplexityStats
@@ -94,14 +100,6 @@ Stored solved-maze archive entry.
 
 ## dashboardManager/dashboardManager.ts
 
-### dashboardManager
-
-Public DashboardManager facade for the dedicated dashboardManager module boundary.
-
-The folder now owns local contracts, constants, pure formatting helpers, and
-stateful rendering and telemetry services. This facade keeps the established
-class-based API stable while delegating the heavy work to focused helpers.
-
 ### DashboardManager
 
 Rich ASCII maze dashboard used by browser and terminal example hosts.
@@ -192,14 +190,17 @@ Parameters:
 
 ## dashboardManager/dashboardManager.constants.ts
 
-### dashboardManager.constants
-
 Shared sizing, formatting, and top-N limits for the ASCII maze dashboard.
 
 These values are kept in one place so rendering, archive output, and
 telemetry helpers stay visually and semantically aligned.
 
 ### DASHBOARD_MANAGER_CONSTANTS
+
+Shared sizing, formatting, and top-N limits for the ASCII maze dashboard.
+
+These values are kept in one place so rendering, archive output, and
+telemetry helpers stay visually and semantically aligned.
 
 ## dashboardManager/dashboardManager.utils.ts
 

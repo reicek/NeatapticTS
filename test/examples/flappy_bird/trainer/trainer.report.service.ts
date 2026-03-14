@@ -1,3 +1,10 @@
+/**
+ * Generation-reporting facade for the Flappy trainer.
+ *
+ * The trainer deliberately logs more than one champion score. This file turns a
+ * finished generation into a compact distribution summary so humans can tell the
+ * difference between broad improvement and a single lucky genome.
+ */
 import {
   rolloutEpisode,
   type FlappySeedBatchEvaluation,
@@ -97,7 +104,8 @@ export function buildGenerationReport(
  *
  * The emitted line is designed for long-running terminal sessions: dense enough
  * to be useful, but stable enough that humans can visually scan progress over
- * hundreds of generations.
+ * hundreds of generations. The goal is not pretty output. The goal is a line
+ * that lets you spot drift, plateaus, and sudden regressions at a glance.
  *
  * @param generationLabel - Current generation label.
  * @param mutationSchedule - Active mutation schedule.

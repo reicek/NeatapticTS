@@ -1,5 +1,23 @@
 # architecture
 
+NodePool (Phase 2 – COMPLETE)
+=============================
+Lightweight object pool for `Node` instances mirroring (future) connection pooling patterns.
+
+Objectives:
+1. Reduce GC pressure during topology mutation / morphogenesis (frequent add/remove of nodes).
+2. Provide deterministic, fully-reset instances on `acquire()` so algorithms can assume a fresh state.
+3. Provide instrumentation (reused vs fresh, highWaterMark, recycledRatio) consumed by benchmarks.
+4. Serve as a future anchor for slab-backed / SoA node state (Phase 3) without altering the public API.
+
+Phase 2 Deliverables Implemented Here:
+- acquire / release with thorough reset and defensive scrub on release.
+- highWaterMark updated ONLY on release (tracks retained capacity not transient demand).
+- Counters reusedCount & freshCount powering recycledRatio assertions.
+- resetNodePool() for deterministic test harness setup.
+
+Deferred (Phase 3+): preWarm(count), adaptive trim(), leak pattern heuristics, slab field hydration.
+
 ## architecture/node.ts
 
 ### node
@@ -1177,10 +1195,8 @@ Original weights captured for weight-noise recovery.
 
 `(input: number[], training: boolean, _maxActivationDepth: number) => number[]`
 
-Activates the network using the given input array.
-Performs a forward pass through the network, calculating the activation of each node.
-
-Returns: An array of numerical values representing the activations of the network's output nodes.
+Standard activation API returning a plain number[] for backward compatibility.
+Internally may use pooled typed arrays; if so they are cloned before returning.
 
 #### activateBatch
 
@@ -1287,13 +1303,7 @@ Returns: A new, fully connected, layered MLP
 
 `(network1: import("src/architecture/network").default, network2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network").default`
 
-Creates a new offspring network by performing crossover between two parent networks.
-This method implements the crossover mechanism inspired by the NEAT algorithm and described
-in the Instinct paper, combining genes (nodes and connections) from both parents.
-Fitness scores can influence the inheritance process. Matching genes are inherited randomly,
-while disjoint/excess genes are typically inherited from the fitter parent (or randomly if fitness is equal or `equal` flag is set).
-
-Returns: A new Network instance representing the offspring.
+NEAT-style crossover delegate.
 
 #### describeArchitecture
 
@@ -1310,10 +1320,7 @@ Returns: Architecture descriptor with hidden-layer widths and provenance.
 
 `(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
 
-Creates a Network instance from serialized data produced by `serialize()`.
-Reconstructs the network structure and state based on the provided arrays.
-
-Returns: A new Network instance reconstructed from the serialized data.
+Static lightweight tuple deserializer delegate
 
 #### disableDropConnect
 
@@ -1378,10 +1385,7 @@ Returns: Activation output.
 
 `(json: Record<string, unknown>) => import("src/architecture/network").default`
 
-Reconstructs a network from a JSON object (latest standard).
-Handles formatVersion, robust error handling, and index-based references.
-
-Returns: The reconstructed network.
+Verbose JSON static deserializer
 
 #### gate
 
@@ -1699,11 +1703,7 @@ Force the next mixed-precision overflow path (test utility).
 
 `() => Record<string, unknown>`
 
-Converts the network into a JSON object representation (latest standard).
-Includes formatVersion, and only serializes properties needed for full reconstruction.
-All references are by index. Excludes runtime-only properties (activation, state, traces).
-
-Returns: A JSON-compatible object representing the network.
+Verbose JSON serializer delegate
 
 #### toONNX
 
@@ -1729,29 +1729,12 @@ Removes the connection from the network's `gates` list.
 
 ## architecture/nodePool.ts
 
-### nodePool
-
-NodePool (Phase 2 – COMPLETE)
-=============================
-Lightweight object pool for `Node` instances mirroring (future) connection pooling patterns.
-
-Objectives:
-1. Reduce GC pressure during topology mutation / morphogenesis (frequent add/remove of nodes).
-2. Provide deterministic, fully-reset instances on `acquire()` so algorithms can assume a fresh state.
-3. Provide instrumentation (reused vs fresh, highWaterMark, recycledRatio) consumed by benchmarks.
-4. Serve as a future anchor for slab-backed / SoA node state (Phase 3) without altering the public API.
-
-Phase 2 Deliverables Implemented Here:
-- acquire / release with thorough reset and defensive scrub on release.
-- highWaterMark updated ONLY on release (tracks retained capacity not transient demand).
-- Counters reusedCount & freshCount powering recycledRatio assertions.
-- resetNodePool() for deterministic test harness setup.
-
-Deferred (Phase 3+): preWarm(count), adaptive trim(), leak pattern heuristics, slab field hydration.
-
 ### acquireNode
 
 `(opts: import("src/architecture/nodePool").AcquireNodeOptions) => import("src/architecture/node").default`
+
+Acquire (obtain) a node instance from the pool (or construct a new one if empty).
+The node is guaranteed to have fully reset dynamic state (activation, gradients, error, connections).
 
 ### AcquireNodeOptions
 
@@ -1761,13 +1744,23 @@ Options bag for acquiring a node.
 
 `() => { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }`
 
+Get current pool statistics (for debugging / future leak detection).
+
 ### releaseNode
 
 `(node: import("src/architecture/node").default) => void`
 
+Release (recycle) a node back into the pool. The caller MUST ensure the node is fully detached
+from any network (connections arrays pruned, no external references maintained) to prevent leaks.
+After release, the node must be considered invalid until re-acquired.
+
+Phase 2: Automatically invoked by Network.remove() when pooling is enabled to recycle pruned nodes.
+
 ### resetNodePool
 
 `() => void`
+
+Reset the pool (drops all retained nodes). Intended for test harness cleanup.
 
 ## architecture/architect.ts
 
@@ -1891,8 +1884,6 @@ Returns: The constructed network with a randomized topology.
 
 ## architecture/connection.ts
 
-### connection
-
 Connection (Synapse / Edge)
 ===========================
 Directed weighted link between two nodes. Extends the minimal (from,to,weight)
@@ -1935,6 +1926,12 @@ Parameters:
 - `weight` - Optional initial weight.
 
 Returns: Reinitialized connection instance.
+
+Example:
+
+const conn = Connection.acquire(a, b);
+// ... use conn ...
+Connection.release(conn); // when permanently removed
 
 #### dcMask
 
@@ -2002,6 +1999,10 @@ Parameters:
 
 Returns: Unique non-negative integer derived from the ordered pair.
 
+Example:
+
+const id = Connection.innovationID(2, 5); // deterministic
+
 #### lookaheadShadowWeight
 
 Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).
@@ -2043,6 +2044,11 @@ You normally only call this at the start of an experiment or when deserializing 
 Parameters:
 - `value` - New starting value (default 1).
 
+Example:
+
+Connection.resetInnovationCounter();     // back to 1
+Connection.resetInnovationCounter(1000); // start counting from 1000
+
 #### secondMoment
 
 Second raw moment estimate (Adam family) (was opt_v).
@@ -2064,6 +2070,11 @@ Undefined indices are preserved as `undefined` to allow later resolution / remap
 
 Returns: Object with node indices, weight, gain, gater index (if any), innovation id & enabled flag.
 
+Example:
+
+const json = connection.toJSON();
+// => { from: 0, to: 3, weight: 0.12, gain: 1, innovation: 57, enabled: true }
+
 #### totalDeltaWeight
 
 Accumulated (batched) delta weight awaiting an apply step.
@@ -2077,8 +2088,6 @@ Scalar multiplier applied to the source activation (prior to gain modulation).
 Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration.
 
 ## architecture/activationArrayPool.ts
-
-### activationArrayPool
 
 Activation array pooling utilities.
 

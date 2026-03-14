@@ -19,6 +19,8 @@ Activation telemetry collected during a single activation pass.
 
 ### BATCH_INPUTS_COLLECTION_ERROR_MESSAGE
 
+Error message used when batch activation receives a non-array container.
+
 ### BatchActivationContext
 
 Shared state used by batch activation orchestration.
@@ -29,9 +31,15 @@ Shared state used while validating and activating one row in a batch.
 
 ### DEFAULT_MAX_ACTIVATION_DEPTH
 
+Default hard limit for recursive activation depth in raw activation mode.
+
 ### INITIAL_OUTPUT_WRITE_INDEX
 
+Initial write index used when collecting output activations.
+
 ### INPUT_NODE_TYPE
+
+Node role label used by activation traversal for input neurons.
 
 ### NetworkLayer
 
@@ -43,6 +51,8 @@ Node collection type attached to a single network layer.
 
 ### NO_TRACE_FAST_SLAB_TRAINING_FLAG
 
+Training flag value used by no-trace fast slab eligibility checks.
+
 ### NoTraceActivationContext
 
 Shared state used by no-trace activation orchestration and helpers.
@@ -53,7 +63,11 @@ Shared state used for node traversal during no-trace activation.
 
 ### OUTPUT_NODE_TYPE
 
+Node role label used by activation traversal for output neurons.
+
 ### OUTPUT_WRITE_INDEX_INCREMENT
+
+Increment applied after writing one output activation value.
 
 ### RawActivationContext
 
@@ -64,6 +78,8 @@ Shared state used by raw activation orchestration.
 Shared state used while activating one node during no-trace traversal.
 
 ### UNDEFINED_INPUT_LENGTH_TEXT
+
+Fallback text for undefined input lengths when formatting validation errors.
 
 ### WeightNoiseApplyResult
 
@@ -108,6 +124,11 @@ Parameters:
 
 Returns: 2‑D array: outputs[i] is the activation result for inputs[i].
 
+Example:
+
+const batchOut = net.activateBatch([[0,0,1],[1,0,0],[0,1,0]]);
+console.log(batchOut.length); // 3 rows
+
 ### activateRaw
 
 `(input: number[], training: boolean, maxActivationDepth: number) => number[]`
@@ -126,6 +147,10 @@ Parameters:
 - `maxActivationDepth` - - Guard against runaway recursion / cyclic activation attempts.
 
 Returns: Implementation-defined result of Network.activate (typically an output vector).
+
+Example:
+
+const y = net.activateRaw([0,1,0]);
 
 ### gaussianRand
 
@@ -174,6 +199,11 @@ Parameters:
 - `input` - - Flat numeric vector whose length must equal network.input.
 
 Returns: Array of output neuron activations (length == network.output).
+
+Example:
+
+const out = net.noTraceActivate([0.1, 0.2, 0.3]);
+console.log(out); // => e.g. [0.5123, 0.0441]
 
 ## architecture/network/activate/network.activate.raw.utils.ts
 

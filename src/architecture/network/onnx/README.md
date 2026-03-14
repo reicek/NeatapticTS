@@ -1,9 +1,5 @@
 # architecture/network/onnx
 
-## architecture/network/onnx/network.onnx.ts
-
-### network.onnx
-
 NeatapticTS ONNX-like serialization for networks.
 
 This module provides the two public entry points:
@@ -32,6 +28,8 @@ const jsonText = JSON.stringify(model);
 const modelRoundTrip = JSON.parse(jsonText);
 const restored = importFromONNX(modelRoundTrip);
 ```
+
+## architecture/network/onnx/network.onnx.ts
 
 ### Conv2DMapping
 
@@ -167,8 +165,6 @@ Import uses it to attach pooling-related runtime metadata back onto the reconstr
 network (when supported).
 
 ## architecture/network/onnx/network.onnx.utils.types.ts
-
-### network.onnx.utils.types
 
 Types for NeatapticTS’s ONNX-like JSON export/import.
 
@@ -911,8 +907,6 @@ Context for comparing two scalar weights with numeric tolerance.
 
 ## architecture/network/onnx/network.onnx.utils.ts
 
-### network.onnx.utils
-
 ONNX export/import utilities for a constrained, documented subset of networks.
 
 Phase Coverage (incremental roadmap implemented so far):
@@ -1023,6 +1017,13 @@ Parameters:
 - `options` - - Export options controlling metadata/recurrent/partial-connectivity behavior.
 
 Returns: ONNX-like model object representing graph nodes, tensors, and metadata.
+
+Example:
+
+```ts
+const layers = inferLayerOrdering(network);
+const model = buildOnnxModel(network, layers, { includeMetadata: true });
+```
 
 ### collectRecurrentLayerIndices
 

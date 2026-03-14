@@ -1,9 +1,5 @@
 # neat
 
-## neat/neat.types.ts
-
-### neat.types
-
 Speciation options for the NEAT speciation controller.
 
 Extends {@link NeatOptions} with speciation-specific configuration used by:
@@ -11,19 +7,12 @@ Extends {@link NeatOptions} with speciation-specific configuration used by:
 - Adaptive threshold controllers (PID-like)
 - Species allocation telemetry (history snapshots)
 
+## neat/neat.types.ts
+
 ### AnyObj
 
-Shared lightweight structural types for modular NEAT components.
-
-These are deliberately kept small & structural (duck-typed) so that helper
-modules can interoperate without importing the concrete (heavier) `Neat`
-class, avoiding circular references while the codebase is being
-progressively extracted / refactored.
-
-Guidelines:
-- Prefer adding narrowly scoped interfaces instead of widening existing ones.
-- Avoid leaking implementation details; keep contracts minimal.
-- Feature‑detect optional telemetry fields – they may be omitted to save cost.
+Generic map type used as a stop‑gap where the precise shape is still in flux.
+Prefer a specific interface once the surface stabilises.
 
 ### ComplexityMetrics
 
@@ -79,6 +68,26 @@ Map of objective key to age in generations since introduction.
 ### ObjectiveDescriptor
 
 Descriptor for a single optimisation objective (single or multi‑objective runs).
+
+Examples:
+
+Add a maximisation objective for accuracy
+```ts
+const accuracyObj: ObjectiveDescriptor = {
+  key: 'accuracy',
+  direction: 'max',
+  accessor: g => g.score ?? 0
+};
+```
+
+Add a minimisation objective for network complexity
+```ts
+const complexityObj: ObjectiveDescriptor = {
+  key: 'complexity',
+  direction: 'min',
+  accessor: g => (g.nodes.length + g.connections.length)
+};
+```
 
 ### ObjectiveEvent
 
@@ -165,6 +174,15 @@ Telemetry summary for one generation.
 
 Optional properties are feature‑dependent; consumers MUST test for presence.
 
+Example:
+
+```ts
+function logSummary(t: TelemetryEntry) {
+  console.log(`Gen ${t.gen} best=${t.best.toFixed(4)} species=${t.species}`);
+  if (t.diversity) console.log('Mean compat', t.diversity.meanCompat);
+}
+```
+
 ## neat/neat.evolve.types.ts
 
 ### GenomeWithMetadata
@@ -200,25 +218,31 @@ Runtime interface for species metadata used in allocation and stats.
 
 ## neat/neat.harness.types.ts
 
-### neat.harness.types
-
 Type helpers for test harnesses exercising Neat lineage behaviour.
 
 ### LineageTrackedNetwork
 
 Network subtype that surfaces lineage metadata fields for assertions.
 
+Example:
+
+const lineageAware = child as LineageTrackedNetwork;
+console.log(lineageAware._parents);
+
 ### NeatLineageHarness
 
 Narrow Neat surface exposing lineage helper methods used in tests.
+
+Example:
+
+const helper: NeatLineageHarness = neat as NeatLineageHarness;
+const child = helper.spawnFromParent(parent, 1);
 
 ### PhasedComplexityHarness
 
 Minimal surface exposing phased complexity internals for testing.
 
 ## neat/neat.mutation.types.ts
-
-### neat.mutation.types
 
 Type definitions for NEAT mutation operations.
 Extracted to avoid circular dependencies.
@@ -229,8 +253,8 @@ Runtime interface for a connection within a genome.
 
 ### GenomeWithMetadata
 
-Type definitions for NEAT mutation operations.
-Extracted to avoid circular dependencies.
+Runtime interface for a genome with mutation-related metadata.
+Avoids circular dependencies by defining only the properties accessed in mutation modules.
 
 ### MutationMethod
 
@@ -333,17 +357,27 @@ Parameters:
 
 ### RNG_DEFAULT_SEED_FALLBACK
 
+Fallback seed used when the derived seed would be zero (xorshift cannot use 0).
+
 ### RNG_NORMALIZATION_DIVISOR
+
+Divisor used to normalize the 32-bit integer state into [0, 1).
 
 ### RNG_POPULATION_OFFSET
 
+Minimum population offset added before scrambling to avoid zero seeds.
+
 ### RNG_SHIFT_LEFT_PRIMARY
+
+Bit-shift values for the xorshift32 variant.
 
 ### RNG_SHIFT_LEFT_SECONDARY
 
 ### RNG_SHIFT_RIGHT_PRIMARY
 
 ### RNG_TIME_SCRAMBLE_CONSTANT
+
+Constants used by the deterministic xorshift RNG helper.
 
 ### RngHost
 
@@ -389,9 +423,55 @@ Parameters:
 
 `(genomeA: import("src/neat/neat.compat.utils").GenomeLike, genomeB: import("src/neat/neat.compat.utils").GenomeLike) => number`
 
+Compute the NEAT compatibility distance between two genomes (networks).
+
+The compatibility distance is used for speciation in NEAT. It combines the
+number of excess and disjoint genes with the average weight difference of
+matching genes. A generation-scoped cache is used to avoid recomputing the
+same pair distances repeatedly within a generation.
+
+Formula:
+distance = (c1 * excess + c2 * disjoint) / N + c3 * avgWeightDiff
+where N = max(number of genes in genomeA, number of genes in genomeB)
+and c1,c2,c3 are coefficients provided in `this.options`.
+
+Example:
+const d = _compatibilityDistance.call(neatInstance, genomeA, genomeB);
+if (d < neatInstance.options.compatibilityThreshold) { // same species }
+
+Parameters:
+- `this` - - The NEAT instance / context which holds generation, options, and caches.
+- `genomeA` - - First genome (network) to compare. Expected to expose `_id` and `connections`.
+- `genomeB` - - Second genome (network) to compare. Expected to expose `_id` and `connections`.
+
+Returns: A numeric compatibility distance; lower means more similar.
+
 ### _fallbackInnov
 
 `(connection: import("src/neat/neat.compat.utils").ConnectionLike) => number`
+
+Generate a deterministic fallback innovation id for a connection when the
+connection does not provide an explicit innovation number.
+
+This function encodes the (from.index, to.index) pair into a single number
+by multiplying the `from` index by a large base and adding the `to` index.
+The large base reduces collisions between different pairs and keeps the id
+stable and deterministic across runs. It is intended as a fallback only —
+explicit innovation numbers (when present) should be preferred.
+
+Example:
+const conn = { from: { index: 2 }, to: { index: 5 } };
+const id = _fallbackInnov.call(neatContext, conn); // 200005
+
+Notes:
+- Not globally guaranteed unique, but deterministic for the same indices.
+- Useful during compatibility checks when some connections are missing innovation ids.
+
+Parameters:
+- `this` - - The NEAT instance / context (kept for symmetry with other helpers).
+- `connection` - - Connection object expected to contain `from.index` and `to.index`.
+
+Returns: A numeric innovation id derived from the (from, to) index pair.
 
 ## neat/neat.evolve.ts
 
@@ -424,63 +504,123 @@ Returns: a deep-cloned Network representing the best genome
 
 ### EVOLVE_AUTO_COMPAT_ADJUST_RATE
 
+Default auto-compatibility adjust rate.
+
 ### EVOLVE_AUTO_COMPAT_MAX_COEFF
+
+Default maximum compatibility coefficient.
 
 ### EVOLVE_AUTO_COMPAT_MIN_COEFF
 
+Default minimum compatibility coefficient.
+
 ### EVOLVE_AUTO_COMPAT_RANDOM_SCALE
+
+Random scale factor used when auto-compatibility has zero error.
 
 ### EVOLVE_AUTO_COMPAT_TARGET_MIN
 
+Minimum target species when auto-tuning compatibility coefficients.
+
 ### EVOLVE_AUTO_ENTROPY_ADD_AT
+
+Default auto-entropy activation generation.
 
 ### EVOLVE_CROSS_SPECIES_GUARD_LIMIT
 
+Guard limit for cross-species mating selection retries.
+
 ### EVOLVE_DEFAULT_EPSILON_ADJUST
+
+Default adjustment step for dominance epsilon.
 
 ### EVOLVE_DEFAULT_EPSILON_COOLDOWN
 
+Default cooldown (generations) between epsilon adjustments.
+
 ### EVOLVE_DEFAULT_EPSILON_MAX
+
+Default maximum dominance epsilon.
 
 ### EVOLVE_DEFAULT_EPSILON_MIN
 
+Default minimum dominance epsilon.
+
 ### EVOLVE_GLOBAL_STAGNATION_REPLACE_FRACTION
+
+Fraction of population to replace during global stagnation injection.
 
 ### EVOLVE_MIN_OFFSPRING_DEFAULT
 
+Default minimum offspring per species.
+
 ### EVOLVE_OLD_MULTIPLIER_DEFAULT
+
+Default old species fitness multiplier.
 
 ### EVOLVE_OLD_THRESHOLD_DEFAULT
 
+Default old species threshold (generations).
+
 ### EVOLVE_PARETO_ARCHIVE_MAX
+
+Maximum number of Pareto archive snapshots to retain.
 
 ### EVOLVE_PRUNE_RANGE_EPS_DEFAULT
 
+Default inactive objective range epsilon.
+
 ### EVOLVE_PRUNE_WINDOW_DEFAULT
+
+Default prune window (generations) for inactive objectives.
 
 ### EVOLVE_REENABLE_DELTA_SCALE
 
+Scale factor for re-enable probability adjustment.
+
 ### EVOLVE_REENABLE_MAX
+
+Maximum re-enable probability.
 
 ### EVOLVE_REENABLE_MIN
 
+Minimum re-enable probability.
+
 ### EVOLVE_REENABLE_MIN_SAMPLES
+
+Minimum samples required to adjust re-enable probability.
 
 ### EVOLVE_REENABLE_TARGET
 
+Target re-enable success ratio.
+
 ### EVOLVE_SPECIES_HISTORY_MAX
+
+Maximum number of species history snapshots to retain.
 
 ### EVOLVE_SURVIVAL_THRESHOLD_DEFAULT
 
+Default survival threshold for parent selection.
+
 ### EVOLVE_TARGET_FRONT_LOWER_RATIO
+
+Lower ratio threshold for Pareto front size vs target.
 
 ### EVOLVE_TARGET_FRONT_MIN
 
+Minimum target front size used for adaptive epsilon tuning.
+
 ### EVOLVE_TARGET_FRONT_UPPER_RATIO
+
+Upper ratio threshold for Pareto front size vs target.
 
 ### EVOLVE_YOUNG_MULTIPLIER_DEFAULT
 
+Default young species fitness multiplier.
+
 ### EVOLVE_YOUNG_THRESHOLD_DEFAULT
+
+Default young species threshold (generations).
 
 ## neat/neat.export.ts
 
@@ -663,6 +803,21 @@ const neat2 = Neat.fromJSONImpl(metaLoaded, fitnessFn); // empty population
 
 ## neat/neat.helpers.ts
 
+Helper utilities that augment the core NEAT (NeuroEvolution of Augmenting Topologies)
+implementation. These functions are kept separate from the main class so they can
+be tree‑shaken when unused and independently documented for educational purposes.
+
+The helpers focus on three core lifecycle operations:
+1. Spawning children from an existing parent genome with mutation ("sexual" reproduction not handled here).
+2. Registering externally created genomes so lineage & invariants remain consistent.
+3. Creating the initial population pool (bootstrapping evolution) either from a seed
+   network or by synthesizing fresh minimal networks.
+
+All helpers expect to be invoked with a `this` context that matches `NeatLike`.
+They intentionally use defensive try/catch blocks to avoid aborting broader
+evolutionary runs when an individual genome operation fails; this mirrors the
+tolerant/robust nature of many historical NEAT library implementations.
+
 ### addGenome
 
 `(genome: GenomeWithMetadata, parents: number[] | undefined) => void`
@@ -682,6 +837,13 @@ Parameters:
 internal metadata fields (`_id`, `_parents`, `_depth`, `_reenableProb`).
 - `parents` - Optional explicit list of parent genome IDs (e.g., 2 parents
 for crossover). If omitted, lineage metadata is left empty.
+
+Example:
+
+```ts
+const imported = Network.fromJSON(saved);
+neat.addGenome(imported, [parentA._id, parentB._id]);
+```
 
 ### createPool
 
@@ -707,6 +869,17 @@ Parameters:
 - `this` - Bound NEAT instance.
 - `seedNetwork` - Optional prototype network to clone for every initial genome.
 
+Example:
+
+```ts
+// Basic: create 50 fresh minimal networks
+neat.createPool(null);
+
+// Seeded: start with a known topology
+const seed = new Network(neat.input, neat.output, { minHidden: 4 });
+neat.createPool(seed);
+```
+
 ### GenomeWithMetadata
 
 Genome with NEAT-specific metadata and methods.
@@ -723,24 +896,45 @@ NEAT controller interface for helper functions.
 
 `(parentGenome: GenomeWithMetadata, mutateCount: number) => Promise<GenomeWithMetadata>`
 
-Helper utilities that augment the core NEAT (NeuroEvolution of Augmenting Topologies)
-implementation. These functions are kept separate from the main class so they can
-be tree‑shaken when unused and independently documented for educational purposes.
+Spawn (clone & mutate) a child genome from an existing parent genome.
 
-The helpers focus on three core lifecycle operations:
-1. Spawning children from an existing parent genome with mutation ("sexual" reproduction not handled here).
-2. Registering externally created genomes so lineage & invariants remain consistent.
-3. Creating the initial population pool (bootstrapping evolution) either from a seed
-   network or by synthesizing fresh minimal networks.
+The returned child is intentionally NOT auto‑inserted into the population;
+call {@link addGenome} (or the class method wrapper) once you decide to
+keep it. This separation allows callers to perform custom validation or
+scoring heuristics before committing the child genome.
 
-All helpers expect to be invoked with a `this` context that matches `NeatLike`.
-They intentionally use defensive try/catch blocks to avoid aborting broader
-evolutionary runs when an individual genome operation fails; this mirrors the
-tolerant/robust nature of many historical NEAT library implementations.
+Evolutionary rationale:
+- Cloning preserves the full topology & weights of the parent.
+- A configurable number of mutation passes are applied sequentially; each
+  pass may alter structure (add/remove nodes / connections) or weights.
+- Lineage annotations (`_parents`, `_depth`) enable later analytics (e.g.,
+  diversity statistics, genealogy visualization, pruning heuristics).
+
+Robustness philosophy: individual mutation failures are silently ignored so
+a single stochastic edge case (e.g., no valid structural mutation) does not
+derail evolutionary progress.
+
+Parameters:
+- `this` - Bound NEAT instance (inferred when used as a method).
+- `parentGenome` - Parent genome/network to clone. Must implement either
+`clone()` OR a pair of `toJSON()` / static `fromJSON()` for deep copying.
+- `mutateCount` - Number of sequential mutation operations to attempt; each
+iteration chooses a mutation method using the instance's selection logic.
+Defaults to 1 for conservative structural drift.
+
+Returns: A new genome (unregistered) whose score is reset and whose lineage
+metadata references the parent.
+
+Example:
+
+```ts
+// Assume `neat` is an instance implementing NeatLike and `parent` is a genome in neat.population
+const child = neat.spawnFromParent(parent, 3); // apply 3 mutation passes
+// Optionally inspect / filter the child before adding
+neat.addGenome(child, [parent._id]);
+```
 
 ## neat/neat.lineage.ts
-
-### neat.lineage
 
 Lineage / ancestry analysis helpers for NEAT populations.
 
@@ -780,6 +974,13 @@ Parameters:
 
 Returns: A Set of numeric ancestor IDs (deduplicated).
 
+Example:
+
+// Assuming `neat` is your NEAT instance and `g` a genome inside `neat.population`:
+import { buildAnc } from 'neataptic';
+const ancestorIds = buildAnc.call(neat, g);
+console.log([...ancestorIds]); // -> e.g. [12, 4, 9]
+
 ### computeAncestorUniqueness
 
 `() => number`
@@ -810,12 +1011,17 @@ Parameters:
 
 Returns: Mean Jaccard distance in [0,1]. Higher ⇒ more lineage uniqueness / diversity.
 
+Example:
+
+import { computeAncestorUniqueness } from 'neataptic';
+// inside an evolutionary loop, with `neat` as your NEAT instance:
+const uniqueness = computeAncestorUniqueness.call(neat);
+console.log('Ancestor uniqueness:', uniqueness); // e.g. 0.742
+
 ### GenomeLike
 
-Lineage / ancestry helper utilities for NEAT populations.
-
-This module centralizes helper logic used by the public lineage APIs to keep
-the main entry file small and orchestration-focused.
+Minimal shape assumed for a genome inside the NEAT population. Additional properties are
+intentionally left open (index signature) because user implementations may extend genomes.
 
 ### NeatLineageContext
 
@@ -935,15 +1141,58 @@ Returns: Array of per-species summaries suitable for reporting.
 
 ### ANNEAL_BASELINE_GENERATIONS
 
+Baseline generations for annealing progress.
+
 ### ANNEAL_PROGRESS_MAX
+
+Maximum progress ratio used in annealing.
 
 ### applyAdaptiveMutation
 
 `() => void`
 
+Self-adaptive per-genome mutation tuning.
+
+This function implements several strategies to adjust each genome's
+internal mutation rate (`g._mutRate`) and optionally its mutation
+amount (`g._mutAmount`) over time. Strategies include:
+- `twoTier`: push top and bottom halves in opposite directions to
+  create exploration/exploitation balance.
+- `exploreLow`: preferentially increase mutation for lower-scoring
+  genomes to promote exploration.
+- `anneal`: gradually reduce mutation deltas over time.
+
+The method reads `this.options.adaptiveMutation` for configuration
+and mutates genomes in-place.
+
+Example:
+
+// configuration example:
+// options.adaptiveMutation = { enabled: true, initialRate: 0.5, adaptEvery: 1, strategy: 'twoTier', minRate: 0.01, maxRate: 1 }
+engine.applyAdaptiveMutation();
+
 ### applyAncestorUniqAdaptive
 
 `() => void`
+
+Adaptive adjustments based on ancestor uniqueness telemetry.
+
+This helper inspects the most recent telemetry lineage block (if
+available) for an `ancestorUniq` metric indicating how unique
+ancestry is across the population. If ancestry uniqueness drifts
+outside configured thresholds, the method will adjust either the
+multi-objective dominance epsilon (if `mode === 'epsilon'`) or the
+lineage pressure strength (if `mode === 'lineagePressure'`).
+
+Typical usage: keep population lineage diversity within a healthy
+band. Low ancestor uniqueness means too many genomes share ancestors
+(risking premature convergence); high uniqueness might indicate
+excessive divergence.
+
+Example:
+
+// Adjusts `options.multiObjective.dominanceEpsilon` when configured
+engine.applyAncestorUniqAdaptive();
 
 ### applyComplexityBudget
 
@@ -973,6 +1222,12 @@ The method is intended to be called on the NEAT engine instance with
 Returns: Updates `this.options.maxNodes` and possibly
 `this.options.maxConns` in-place; no value is returned.
 
+Example:
+
+// inside a training loop where `engine` is your Neat instance:
+engine.applyComplexityBudget();
+// engine.options.maxNodes now holds the adjusted complexity cap
+
 ### applyMinimalCriterionAdaptive
 
 `() => void`
@@ -992,9 +1247,30 @@ Behavior summary:
 - Sets `g.score = 0` for genomes that fall below the final threshold
   — effectively rejecting them from selection.
 
+Example:
+
+// Example config snippet used by the engine
+// options.minimalCriterionAdaptive = { enabled: true, initialThreshold: 0.1, targetAcceptance: 0.5, adjustRate: 0.1 }
+engine.applyMinimalCriterionAdaptive();
+
 ### applyOperatorAdaptation
 
 `() => void`
+
+Decay operator adaptation statistics (success/attempt counters).
+
+Many adaptive operator-selection schemes keep running tallies of how
+successful each operator has been. This helper applies an exponential
+moving-average style decay to those counters so older outcomes
+progressively matter less.
+
+The `_operatorStats` map on `this` is expected to contain values of
+the shape `{ success: number, attempts: number }` keyed by operator
+id/name.
+
+Example:
+
+engine.applyOperatorAdaptation();
 
 ### applyPhasedComplexity
 
@@ -1012,51 +1288,102 @@ generations.
 
 Returns: Mutates `this._phase` and `this._phaseStartGeneration`.
 
+Example:
+
+// Called once per generation to update the phase state
+engine.applyPhasedComplexity();
+
 ### DEFAULT_ADAPT_EVERY
+
+Default adapt-every cadence for adaptive mutation.
 
 ### DEFAULT_ANCESTOR_UNIQ_ADJUST
 
+Default adjustment magnitude for uniqueness nudges.
+
 ### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
+
+Default cooldown (generations) for ancestor-uniqueness adjustments.
 
 ### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
 
+Default upper bound for acceptable ancestor uniqueness.
+
 ### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
+
+Default lower bound for acceptable ancestor uniqueness.
 
 ### DEFAULT_INITIAL_MUTATION_RATE
 
+Default initial mutation rate used for balance checks.
+
 ### DEFAULT_LINEAGE_PRESSURE_STRENGTH
+
+Default lineage pressure strength when initializing the option.
 
 ### DEFAULT_MAX_MUTATION_AMOUNT
 
+Default maximum mutation amount.
+
 ### DEFAULT_MAX_MUTATION_RATE
+
+Default maximum per-genome mutation rate.
 
 ### DEFAULT_MIN_MUTATION_AMOUNT
 
+Default minimum mutation amount.
+
 ### DEFAULT_MIN_MUTATION_RATE
+
+Default minimum per-genome mutation rate.
 
 ### DEFAULT_MUTATION_AMOUNT
 
+Default mutation amount when genome value is missing.
+
 ### DEFAULT_MUTATION_AMOUNT_SIGMA
+
+Default mutation amount sigma for perturbations.
 
 ### DEFAULT_MUTATION_SIGMA
 
+Default mutation sigma for adaptive mutation.
+
 ### EXPLORE_LOW_DECREASE_MULTIPLIER
+
+Multiplicative decay for explore-low strategy (top half).
 
 ### EXPLORE_LOW_INCREASE_MULTIPLIER
 
+Multiplicative boost for explore-low strategy (bottom half).
+
 ### HALF_INDEX_DIVISOR
+
+Divisor used to split populations in half.
 
 ### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
 
+Multiplier when decreasing lineage pressure strength.
+
 ### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
+
+Multiplier when increasing lineage pressure strength.
 
 ### MUTATION_SIGMA_SCALE
 
+Scale applied to mutation sigma for perturbations.
+
 ### MUTATION_STRATEGY_ANNEAL
+
+Strategy identifier for annealed mutation.
 
 ### MUTATION_STRATEGY_EXPLORE_LOW
 
+Strategy identifier for explore-low mutation.
+
 ### MUTATION_STRATEGY_TWO_TIER
+
+Strategy identifier for two-tier mutation.
 
 ### NeatLikeWithAdaptive
 
@@ -1065,41 +1392,77 @@ Exported for use in tests and type-safe function calls.
 
 ### RNG_CENTER_OFFSET
 
+Random offset for signed deltas.
+
 ### RNG_SPREAD_MULTIPLIER
+
+Random range multiplier for signed deltas.
 
 ## neat/neat.evaluate.ts
 
 ### AUTO_COEFF_ADJUST_DEFAULT
 
+Default adjustment rate for auto distance coefficient tuning.
+
 ### AUTO_COEFF_MAX_DEFAULT
+
+Default maximum coefficient for auto distance coefficient tuning.
 
 ### AUTO_COEFF_MIN_DEFAULT
 
+Default minimum coefficient for auto distance coefficient tuning.
+
 ### COMPAT_MAX_THRESHOLD_DEFAULT
+
+Default maximum compatibility threshold.
 
 ### COMPAT_MIN_THRESHOLD_DEFAULT
 
+Default minimum compatibility threshold.
+
 ### COMPAT_THRESHOLD_DEFAULT
+
+Default compatibility threshold when not provided.
 
 ### DISTANCE_COEFF_DEFAULT
 
+Default coefficient value when not provided.
+
 ### ENTROPY_ADJUST_DEFAULT
+
+Default adjustment rate for compatibility tuning.
 
 ### ENTROPY_DEADBAND_DEFAULT
 
+Default deadband for compatibility tuning.
+
 ### ENTROPY_TARGET_DEFAULT
+
+Default target entropy for compatibility tuning.
 
 ### ENTROPY_VAR_ADJUST_DEFAULT
 
+Default adjustment rate for entropy sharing.
+
 ### ENTROPY_VAR_HIGH_BAND
+
+Upper band multiplier for entropy variance tuning.
 
 ### ENTROPY_VAR_LOW_BAND
 
+Lower band multiplier for entropy variance tuning.
+
 ### ENTROPY_VAR_MAX_SIGMA_DEFAULT
+
+Default maximum sigma for entropy sharing.
 
 ### ENTROPY_VAR_MIN_SIGMA_DEFAULT
 
+Default minimum sigma for entropy sharing.
+
 ### ENTROPY_VAR_TARGET_DEFAULT
+
+Default target variance for entropy sharing.
 
 ### evaluate
 
@@ -1131,21 +1494,37 @@ Returns: Promise<void> resolves after evaluation and adaptive updates complete.
 
 ### NOVELTY_ARCHIVE_CAP
 
+Maximum number of entries stored in the novelty archive.
+
 ### NOVELTY_DEFAULT_BLEND
+
+Default blend factor for novelty vs. fitness.
 
 ### NOVELTY_DEFAULT_NEIGHBORS
 
+Default neighbor count for novelty calculation.
+
 ### VARIANCE_DECREASE_THRESHOLD
 
+Variance decrease threshold multiplier.
+
 ### VARIANCE_INCREASE_THRESHOLD
+
+Variance increase threshold multiplier.
 
 ## neat/neat.mutation.ts
 
 ### DEFAULT_CONNECTION_WEIGHT
 
+Default connection weight used for bootstrap and split in-edges.
+
 ### DEFAULT_GENE_ID
 
+Default gene id value when a node has no gene id.
+
 ### DEFAULT_INNOVATION_ID
+
+Default innovation id value when a connection has none.
 
 ### ensureMinHiddenNodes
 
@@ -1253,8 +1632,6 @@ returned for identity checks in tests.
 
 ## neat/neat.constants.ts
 
-### neat.constants
-
 Shared numerical / heuristic constants for NEAT modules.
 
 Keeping these in a single dependency‑free module avoids scattering magic
@@ -1262,11 +1639,19 @@ numbers and simplifies tuning while refactoring.
 
 ### EPSILON
 
+Numerical stability offset used inside log / division expressions.
+
 ### EXTRA_CONNECTION_PROBABILITY
+
+Probability of performing an opportunistic extra ADD_CONN mutation.
 
 ### NORM_EPSILON
 
+Epsilon used in normalization layers (variance smoothing).
+
 ### PROB_EPSILON
+
+Extremely small epsilon for log/ratio protections in probability losses.
 
 ## neat/neat.diversity.ts
 
@@ -1289,6 +1674,11 @@ Parameters:
 
 Returns: DiversityStats object with all computed aggregates, or undefined if input empty
 
+Example:
+
+const stats = computeDiversityStats(population, compatImpl);
+console.log(`Mean nodes: ${stats?.meanNodes}`);
+
 ### DiversityStats
 
 Diversity statistics returned by computeDiversityStats.
@@ -1296,7 +1686,11 @@ Each field represents an aggregate metric for a NEAT population.
 
 ### MAX_COMPATIBILITY_SAMPLE
 
+Maximum population sample size for compatibility comparisons.
+
 ### MAX_LINEAGE_PAIR_SAMPLE
+
+Maximum lineage sample size for pairwise depth comparisons.
 
 ### structuralEntropy
 
@@ -1310,17 +1704,33 @@ Educational note: structural entropy here is simply H = -sum(p_i log p_i)
 over the normalized out-degree histogram. It does not measure information
 content of weights or dynamics, but provides a quick structural fingerprint.
 
+Example:
+
+// network-like object shape expected by this helper:
+// const net = { nodes: [ { connections: { out: [] } }, ... ] };
+// const h = structuralEntropy(net);
+
 ## neat/neat.selection.ts
 
 ### DEFAULT_POWER
 
+Default power exponent for POWER selection when none is configured.
+
 ### DEFAULT_SCORE
+
+Default score when a genome has no explicit score.
 
 ### DEFAULT_TOURNAMENT_PROBABILITY
 
+Default tournament win probability when none is configured.
+
 ### DEFAULT_TOURNAMENT_SIZE
 
+Default tournament size when none is configured.
+
 ### FIRST_INDEX
+
+Index of the first element in an array.
 
 ### getAverage
 
@@ -1380,17 +1790,31 @@ Returns: A genome object chosen as the parent according to the selection strateg
 
 ### INITIAL_CUMULATIVE_FITNESS
 
+Initial cumulative fitness value for threshold scans.
+
 ### INITIAL_MOST_NEGATIVE_SCORE
+
+Initial most-negative score sentinel for fitness scans.
 
 ### INITIAL_TOTAL_FITNESS
 
+Initial total fitness accumulator value.
+
 ### LAST_ELEMENT_INDEX
+
+Index used with `at()` to access the last element.
 
 ### LAST_INDEX_OFFSET
 
+Offset for retrieving the last element via length arithmetic.
+
 ### LOOP_INDEX_INCREMENT
 
+Step size for index-based loops.
+
 ### SECOND_INDEX
+
+Index of the second element in an array.
 
 ### sort
 
@@ -1431,6 +1855,12 @@ Parameters:
 
 Returns: The filtered telemetry object (same reference as input).
 
+Example:
+
+// keep only 'gen', 'best', 'species' and 'diversity' fields
+neat._telemetrySelect = new Set(['diversity']);
+applyTelemetrySelect.call(neat, entry);
+
 ### buildTelemetryEntry
 
 `(fittest: Record<string, unknown>) => import("src/neat/neat.types").TelemetryEntry`
@@ -1451,6 +1881,12 @@ Parameters:
 
 Returns: A TelemetryEntry object suitable for recording/streaming.
 
+Example:
+
+// build a telemetry snapshot for the current generation
+const snapshot = neat.buildTelemetryEntry(neat.population[0]);
+neat.recordTelemetryEntry(snapshot);
+
 ### computeDiversityStats
 
 `() => void`
@@ -1458,6 +1894,13 @@ Returns: A TelemetryEntry object suitable for recording/streaming.
 Compute several diversity statistics used by telemetry reporting.
 
 This helper is intentionally conservative in runtime: when `fastMode` is enabled it will automatically tune a few sampling defaults to keep the computation cheap. The computed statistics are written to `this._diversityStats` as an object with keys like `meanCompat` and `graphletEntropy`.
+
+Example:
+
+// compute and store diversity stats onto the neat instance
+neat.options.diversityMetrics = { enabled: true };
+neat.computeDiversityStats();
+console.log(neat._diversityStats.meanCompat);
 
 ### createTelemetryEntryBase
 
@@ -1493,6 +1936,11 @@ Example:
 Parameters:
 - `entry` - - Telemetry entry to record.
 
+Example:
+
+// record a simple telemetry entry from inside the evolve loop
+neat.recordTelemetryEntry({ gen: neat.generation, best: neat.population[0].score });
+
 ### structuralEntropy
 
 `(graph: { [key: string]: unknown; nodes: { geneId: number; }[]; connections: { from: { geneId: number; }; to: { geneId: number; }; enabled: boolean; }[]; }) => number`
@@ -1510,6 +1958,11 @@ Parameters:
 - `graph` - - A genome-like object with `nodes` and `connections` arrays.
 
 Returns: A non-negative number approximating structural entropy.
+
+Example:
+
+const H = structuralEntropy.call(neat, genome);
+console.log(`Structure entropy: ${H.toFixed(3)}`);
 
 ### TelemetryContext
 
@@ -1585,8 +2038,6 @@ Notes:
 
 ## neat/neat.speciation.ts
 
-### neat.speciation
-
 Assign genomes into species based on compatibility distance and maintain species structures.
 This function creates new species for unassigned genomes, prunes empty species, updates
 dynamic compatibility threshold controllers, performs optional auto coefficient tuning, and
@@ -1635,17 +2086,23 @@ Parameters:
 
 ## neat/neat.rng.constants.ts
 
-### neat.rng.constants
-
 Constants used by the deterministic xorshift RNG helper.
 
 ### RNG_DEFAULT_SEED_FALLBACK
 
+Fallback seed used when the derived seed would be zero (xorshift cannot use 0).
+
 ### RNG_NORMALIZATION_DIVISOR
+
+Divisor used to normalize the 32-bit integer state into [0, 1).
 
 ### RNG_POPULATION_OFFSET
 
+Minimum population offset added before scrambling to avoid zero seeds.
+
 ### RNG_SHIFT_LEFT_PRIMARY
+
+Bit-shift values for the xorshift32 variant.
 
 ### RNG_SHIFT_LEFT_SECONDARY
 
@@ -1653,9 +2110,9 @@ Constants used by the deterministic xorshift RNG helper.
 
 ### RNG_TIME_SCRAMBLE_CONSTANT
 
-## neat/neat.multiobjective.ts
+Constants used by the deterministic xorshift RNG helper.
 
-### neat.multiobjective
+## neat/neat.multiobjective.ts
 
 Multi-objective helpers (fast non-dominated sorting + crowding distance).
 Extracted from `neat.ts` to keep the core class slimmer.
@@ -1695,107 +2152,193 @@ Returns: Array of Pareto fronts; each front is an array of `Network` genomes.
 
 ## neat/neat.adaptive.shared.ts
 
-### neat.adaptive.shared
-
 Constant: zero value.
 
 ### ACCEPTANCE_LOWER_MULTIPLIER
 
+Lower acceptance multiplier.
+
 ### ACCEPTANCE_UPPER_MULTIPLIER
+
+Upper acceptance multiplier.
 
 ### AdaptiveMutationConfig
 
 ### ADJUST_RATE_DEFAULT
 
+Default adjustment rate in minimal criterion.
+
 ### ANCESTOR_UNIQ_MODE_EPSILON
 
+Ancestor uniqueness epsilon mode.
+
 ### ANCESTOR_UNIQ_MODE_LINEAGE_PRESSURE
+
+Ancestor uniqueness lineage pressure mode.
 
 ### AncestorUniqAdaptiveConfig
 
 ### ANNEAL_BASELINE_GENERATIONS
 
+Baseline generations for annealing progress.
+
 ### ANNEAL_PROGRESS_MAX
+
+Maximum progress ratio used in annealing.
 
 ### BUDGET_GROWTH_MULTIPLIER
 
+Default budget growth multiplier.
+
 ### COMPLEXITY_MODE_ADAPTIVE
 
+Complexity budget adaptive mode string.
+
 ### COMPLEXITY_MODE_LINEAR
+
+Complexity budget linear mode string.
 
 ### ComplexityBudgetConfig
 
 ### DEFAULT_ADAPT_EVERY
 
+Default adapt-every cadence for adaptive mutation.
+
 ### DEFAULT_ANCESTOR_UNIQ_ADJUST
+
+Default adjustment magnitude for uniqueness nudges.
 
 ### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
 
+Default cooldown (generations) for ancestor-uniqueness adjustments.
+
 ### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
+
+Default upper bound for acceptable ancestor uniqueness.
 
 ### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
 
+Default lower bound for acceptable ancestor uniqueness.
+
 ### DEFAULT_CB_INCREASE_FACTOR
+
+Default increase factor for adaptive schedule.
 
 ### DEFAULT_CB_STAGNATION_FACTOR
 
+Default stagnation factor for adaptive schedule.
+
 ### DEFAULT_IMPROVEMENT_WINDOW
+
+Default score history window.
 
 ### DEFAULT_INITIAL_MUTATION_RATE
 
+Default initial mutation rate used for balance checks.
+
 ### DEFAULT_LINEAGE_PRESSURE_STRENGTH
+
+Default lineage pressure strength when initializing the option.
 
 ### DEFAULT_MAX_MUTATION_AMOUNT
 
+Default maximum mutation amount.
+
 ### DEFAULT_MAX_MUTATION_RATE
+
+Default maximum per-genome mutation rate.
 
 ### DEFAULT_MIN_MUTATION_AMOUNT
 
+Default minimum mutation amount.
+
 ### DEFAULT_MIN_MUTATION_RATE
+
+Default minimum per-genome mutation rate.
 
 ### DEFAULT_MUTATION_AMOUNT
 
+Default mutation amount when genome value is missing.
+
 ### DEFAULT_MUTATION_AMOUNT_SIGMA
+
+Default mutation amount sigma for perturbations.
 
 ### DEFAULT_MUTATION_SIGMA
 
+Default mutation sigma for adaptive mutation.
+
 ### DENOMINATOR_FALLBACK
+
+Fallback denominator to avoid divide-by-zero.
 
 ### EXPLORE_LOW_DECREASE_MULTIPLIER
 
+Multiplicative decay for explore-low strategy (top half).
+
 ### EXPLORE_LOW_INCREASE_MULTIPLIER
+
+Multiplicative boost for explore-low strategy (bottom half).
 
 ### FIVE
 
+Constant: five value.
+
 ### FOUR
+
+Constant: four value.
 
 ### Genome
 
 ### HALF_INDEX_DIVISOR
 
+Divisor used to split populations in half.
+
 ### HISTORY_MIN_IMPROVEMENT_COUNT
+
+Minimum history length to compute improvement.
 
 ### HISTORY_MIN_SLOPE_COUNT
 
+Minimum history length to compute slope.
+
 ### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
+
+Multiplier when decreasing lineage pressure strength.
 
 ### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
 
+Multiplier when increasing lineage pressure strength.
+
 ### LINEAGE_PRESSURE_MODE_SPREAD
+
+Lineage pressure spread mode.
 
 ### LINEAR_HORIZON_DEFAULT
 
+Default horizon for linear schedule.
+
 ### MINIMAL_TOPOLOGY_OFFSET
+
+Offset added to input/output for minimal topology.
 
 ### MinimalCriterionAdaptiveConfig
 
 ### MUTATION_SIGMA_SCALE
 
+Scale applied to mutation sigma for perturbations.
+
 ### MUTATION_STRATEGY_ANNEAL
+
+Strategy identifier for annealed mutation.
 
 ### MUTATION_STRATEGY_EXPLORE_LOW
 
+Strategy identifier for explore-low mutation.
+
 ### MUTATION_STRATEGY_TWO_TIER
+
+Strategy identifier for two-tier mutation.
 
 ### MutationOutcome
 
@@ -1810,49 +2353,91 @@ Exported for use in tests and type-safe function calls.
 
 ### NEGATIVE_ONE
 
+Constant: negative one for last index.
+
 ### NOVELTY_ARCHIVE_MIN_SIZE
+
+Novelty archive minimum size.
 
 ### NOVELTY_FACTOR_DEFAULT
 
+Novelty factor when archive is sufficient.
+
 ### NOVELTY_FACTOR_SMALL
+
+Novelty factor when archive is small.
 
 ### ONE
 
+Constant: one value.
+
 ### ONE_HUNDRED
 
+Constant: one hundred value.
+
 ### OPERATOR_DECAY_DEFAULT
+
+Default operator decay factor.
 
 ### OperatorAdaptationConfig
 
 ### PHASE_COMPLEXIFY
 
+Phase label for complexify.
+
 ### PHASE_LENGTH_DEFAULT
 
+Default phase length in generations.
+
 ### PHASE_SIMPLIFY
+
+Phase label for simplify.
 
 ### PhasedComplexityConfig
 
 ### PROGRESS_RATIO_MAX
 
+Maximum progress ratio for scheduling.
+
 ### RNG_CENTER_OFFSET
+
+Random offset for signed deltas.
 
 ### RNG_SPREAD_MULTIPLIER
 
+Random range multiplier for signed deltas.
+
 ### SLOPE_BOOST_MULTIPLIER
+
+Slope boost multiplier for adaptive increase factor.
 
 ### SLOPE_NORMALIZE_CLAMP
 
+Clamp magnitude for slope normalization.
+
 ### SLOPE_PENALTY_MULTIPLIER
+
+Slope penalty multiplier for stagnation factor.
 
 ### TARGET_ACCEPTANCE_DEFAULT
 
+Default target acceptance in minimal criterion.
+
 ### TEN
+
+Constant: ten value.
 
 ### THREE
 
+Constant: three value.
+
 ### TWO
 
+Constant: two value.
+
 ### ZERO
+
+Constant: zero value.
 
 ## neat/neat.telemetry.exports.ts
 
@@ -1886,15 +2471,27 @@ Collect header metadata from the raw telemetry entries.
 
 ### DEFAULT_SPECIES_BEST_SCORE
 
+Default fallback best score when missing.
+
 ### DEFAULT_SPECIES_HISTORY_GENERATION
+
+Default fallback generation when missing.
 
 ### DEFAULT_SPECIES_HISTORY_MAX_ENTRIES
 
+Default max entries for species history CSV exports.
+
 ### DEFAULT_SPECIES_ID
+
+Default fallback species id when missing.
 
 ### DEFAULT_SPECIES_LAST_IMPROVED
 
+Default fallback last improved when missing.
+
 ### DEFAULT_SPECIES_SIZE
+
+Default fallback species size when missing.
 
 ### exportSpeciesHistoryCSV
 
@@ -1963,19 +2560,21 @@ Shape describing collected telemetry header discovery info.
 
 ## neat/neat.evolve.offspring.constants.ts
 
-### neat.evolve.offspring.constants
-
 Index used when falling back to the first genome in the population.
 
 ### LINEAGE_BASE_DEPTH
 
+Baseline lineage depth when parent depth metadata is missing.
+
 ### LINEAGE_DEPTH_INCREMENT
+
+Depth increment applied when deriving a child from its parents.
 
 ### OFFSPRING_FALLBACK_INDEX
 
-## neat/neat.evaluate.utils.types.ts
+Index used when falling back to the first genome in the population.
 
-### neat.evaluate.utils.types
+## neat/neat.evaluate.utils.types.ts
 
 Genome with score, novelty, and clearing capabilities.
 
@@ -2054,6 +2653,15 @@ Notes:
   - `'min'`: lower is better
 - If `direction` is omitted, it defaults to `'max'`.
 
+Example:
+
+```ts
+const objectives: ObjectiveDescriptor[] = [
+  { accessor: (g) => g.score ?? 0, direction: 'max' },
+  { accessor: (g) => g.cost ?? 0, direction: 'min' },
+];
+```
+
 ## neat/neat.rng.utils.ts
 
 ### exportRngState
@@ -2127,11 +2735,7 @@ Returns: The numeric RNG state or undefined when uninitialized.
 
 ## neat/neat.cache.utils.ts
 
-### neat.cache.utils
-
 Invalidate per-genome caches used across compatibility and forward-pass logic.
-
-@param genomeCandidate - Genome object whose caches should be cleared.
 
 ### invalidateGenomeCaches
 
@@ -2144,13 +2748,7 @@ Parameters:
 
 ## neat/neat.compat.utils.ts
 
-### neat.compat.utils
-
 Compatibility-distance helper utilities.
-
-@remarks
-This module is intentionally dependency-free and provides small, focused
-helpers for use by the compatibility orchestration layer.
 
 ### buildPairKey
 
@@ -2194,7 +2792,7 @@ Returns: Final compatibility distance for the genome pair.
 
 ### ConnectionLike
 
-Compatibility-distance helper utilities.
+Shape of a connection entry used during compatibility checks.
 
 ### ensureGenerationCache
 
@@ -2576,6 +3174,8 @@ Returns: void.
 
 ### EVOLVE_NO_BEST_GENOME_WARNING
 
+Warning emitted when evolution finishes without a best genome.
+
 ### invalidateCompatibilityCaches
 
 `(internal: import("src/neat/neat.evolve.types").NeatControllerForEvolution) => void`
@@ -2589,9 +3189,15 @@ Returns: void.
 
 ### LINEAGE_BASE_DEPTH
 
+Baseline lineage depth when parent depth metadata is missing.
+
 ### LINEAGE_DEPTH_INCREMENT
 
+Depth increment applied when deriving a child from its parents.
+
 ### OFFSPRING_FALLBACK_INDEX
+
+Index used when falling back to the first genome in the population.
 
 ### OffspringContext
 
@@ -2707,8 +3313,6 @@ Emit the standard warning for runs that end without a valid best genome.
 
 ## neat/neat.lineage.utils.ts
 
-### neat.lineage.utils
-
 Lineage / ancestry helper utilities for NEAT populations.
 
 This module centralizes helper logic used by the public lineage APIs to keep
@@ -2823,10 +3427,8 @@ Index pair representing a sampled genome pair.
 
 ### GenomeLike
 
-Lineage / ancestry helper utilities for NEAT populations.
-
-This module centralizes helper logic used by the public lineage APIs to keep
-the main entry file small and orchestration-focused.
+Minimal shape assumed for a genome inside the NEAT population. Additional properties are
+intentionally left open (index signature) because user implementations may extend genomes.
 
 ### hasMinimumPopulation
 
@@ -2912,8 +3514,6 @@ Returns: Array of sampled index pairs.
 
 ## neat/neat.novelty.utils.ts
 
-### neat.novelty.utils
-
 Return the current size of the novelty archive.
 
 ### getNoveltyArchiveSize
@@ -2930,11 +3530,10 @@ Reset the novelty archive in place.
 
 ## neat/neat.pruning.utils.ts
 
-### neat.pruning.utils
-
 Minimal Neat instance contract required by pruning helpers.
 
-@example
+Example:
+
 const host: NeatLikeForPruning = {
   options: { evolutionPruning: { startGeneration: 5, targetSparsity: 0.4 } },
   generation: 10,
@@ -3046,6 +3645,14 @@ Parameters:
 
 Minimal Neat instance contract required by pruning helpers.
 
+Example:
+
+const host: NeatLikeForPruning = {
+  options: { evolutionPruning: { startGeneration: 5, targetSparsity: 0.4 } },
+  generation: 10,
+  population: [],
+} as NeatLikeForPruning;
+
 ### PopulationMetrics
 
 Summary of population metrics used by adaptive pruning.
@@ -3121,25 +3728,43 @@ Returns: True when extended history is enabled.
 
 ### SPECIES_HISTORY_DEFAULT_ENABLED_RATIO
 
+Default enabled ratio when no connections exist.
+
 ### SPECIES_HISTORY_DEFAULT_INNOVATION_ID
+
+Default innovation id when none is present.
 
 ### SPECIES_HISTORY_DEFAULT_INNOVATION_RANGE
 
+Default innovation range when data is missing.
+
 ### SPECIES_HISTORY_INITIAL_MAX_INNOVATION
+
+Initial max tracker for innovation range aggregation.
 
 ### SPECIES_HISTORY_INITIAL_MIN_INNOVATION
 
+Initial min tracker for innovation range aggregation.
+
 ### SPECIES_HISTORY_ZERO
+
+Shared zero value for counters and defaults.
 
 ## neat/neat.adaptive.utils.ts
 
 ### ACCEPTANCE_LOWER_MULTIPLIER
 
+Lower acceptance multiplier.
+
 ### ACCEPTANCE_UPPER_MULTIPLIER
+
+Upper acceptance multiplier.
 
 ### AdaptiveMutationConfig
 
 ### ADJUST_RATE_DEFAULT
+
+Default adjustment rate in minimal criterion.
 
 ### adjustConnectionBudget
 
@@ -3171,13 +3796,21 @@ Parameters:
 
 ### ANCESTOR_UNIQ_MODE_EPSILON
 
+Ancestor uniqueness epsilon mode.
+
 ### ANCESTOR_UNIQ_MODE_LINEAGE_PRESSURE
+
+Ancestor uniqueness lineage pressure mode.
 
 ### AncestorUniqAdaptiveConfig
 
 ### ANNEAL_BASELINE_GENERATIONS
 
+Baseline generations for annealing progress.
+
 ### ANNEAL_PROGRESS_MAX
+
+Maximum progress ratio used in annealing.
 
 ### applyAdaptiveSchedule
 
@@ -3361,6 +3994,8 @@ Parameters:
 
 ### BUDGET_GROWTH_MULTIPLIER
 
+Default budget growth multiplier.
+
 ### clampNodeBudget
 
 `(engine: import("src/neat/neat.adaptive.shared").NeatLikeWithAdaptive, config: { enabled?: boolean | undefined; mode?: string | undefined; improvementWindow?: number | undefined; increaseFactor?: number | undefined; stagnationFactor?: number | undefined; maxNodesStart?: number | undefined; maxNodesEnd?: number | undefined; minNodes?: number | undefined; maxConnsStart?: number | undefined; maxConnsEnd?: number | undefined; horizon?: number | undefined; }) => void`
@@ -3419,7 +4054,11 @@ Returns: Array of scores (missing scores treated as 0).
 
 ### COMPLEXITY_MODE_ADAPTIVE
 
+Complexity budget adaptive mode string.
+
 ### COMPLEXITY_MODE_LINEAR
+
+Complexity budget linear mode string.
 
 ### ComplexityBudgetConfig
 
@@ -3507,39 +4146,75 @@ Returns: Decayed operator statistic record.
 
 ### DEFAULT_ADAPT_EVERY
 
+Default adapt-every cadence for adaptive mutation.
+
 ### DEFAULT_ANCESTOR_UNIQ_ADJUST
+
+Default adjustment magnitude for uniqueness nudges.
 
 ### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
 
+Default cooldown (generations) for ancestor-uniqueness adjustments.
+
 ### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
+
+Default upper bound for acceptable ancestor uniqueness.
 
 ### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
 
+Default lower bound for acceptable ancestor uniqueness.
+
 ### DEFAULT_CB_INCREASE_FACTOR
+
+Default increase factor for adaptive schedule.
 
 ### DEFAULT_CB_STAGNATION_FACTOR
 
+Default stagnation factor for adaptive schedule.
+
 ### DEFAULT_IMPROVEMENT_WINDOW
+
+Default score history window.
 
 ### DEFAULT_INITIAL_MUTATION_RATE
 
+Default initial mutation rate used for balance checks.
+
 ### DEFAULT_LINEAGE_PRESSURE_STRENGTH
+
+Default lineage pressure strength when initializing the option.
 
 ### DEFAULT_MAX_MUTATION_AMOUNT
 
+Default maximum mutation amount.
+
 ### DEFAULT_MAX_MUTATION_RATE
+
+Default maximum per-genome mutation rate.
 
 ### DEFAULT_MIN_MUTATION_AMOUNT
 
+Default minimum mutation amount.
+
 ### DEFAULT_MIN_MUTATION_RATE
+
+Default minimum per-genome mutation rate.
 
 ### DEFAULT_MUTATION_AMOUNT
 
+Default mutation amount when genome value is missing.
+
 ### DEFAULT_MUTATION_AMOUNT_SIGMA
+
+Default mutation amount sigma for perturbations.
 
 ### DEFAULT_MUTATION_SIGMA
 
+Default mutation sigma for adaptive mutation.
+
 ### DENOMINATOR_FALLBACK
+
+Fallback denominator to avoid divide-by-zero.
 
 ### ensureLineagePressureState
 
@@ -3554,7 +4229,11 @@ Returns: Lineage pressure configuration object.
 
 ### EXPLORE_LOW_DECREASE_MULTIPLIER
 
+Multiplicative decay for explore-low strategy (top half).
+
 ### EXPLORE_LOW_INCREASE_MULTIPLIER
+
+Multiplicative boost for explore-low strategy (bottom half).
 
 ### extractAncestorUniqueness
 
@@ -3569,15 +4248,25 @@ Returns: Ancestor uniqueness value or undefined when missing.
 
 ### FIVE
 
+Constant: five value.
+
 ### FOUR
+
+Constant: four value.
 
 ### Genome
 
 ### HALF_INDEX_DIVISOR
 
+Divisor used to split populations in half.
+
 ### HISTORY_MIN_IMPROVEMENT_COUNT
 
+Minimum history length to compute improvement.
+
 ### HISTORY_MIN_SLOPE_COUNT
+
+Minimum history length to compute slope.
 
 ### initializeConnectionBudget
 
@@ -3633,23 +4322,41 @@ Returns: True when adjustment is allowed.
 
 ### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
 
+Multiplier when decreasing lineage pressure strength.
+
 ### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
+
+Multiplier when increasing lineage pressure strength.
 
 ### LINEAGE_PRESSURE_MODE_SPREAD
 
+Lineage pressure spread mode.
+
 ### LINEAR_HORIZON_DEFAULT
 
+Default horizon for linear schedule.
+
 ### MINIMAL_TOPOLOGY_OFFSET
+
+Offset added to input/output for minimal topology.
 
 ### MinimalCriterionAdaptiveConfig
 
 ### MUTATION_SIGMA_SCALE
 
+Scale applied to mutation sigma for perturbations.
+
 ### MUTATION_STRATEGY_ANNEAL
+
+Strategy identifier for annealed mutation.
 
 ### MUTATION_STRATEGY_EXPLORE_LOW
 
+Strategy identifier for explore-low mutation.
+
 ### MUTATION_STRATEGY_TWO_TIER
+
+Strategy identifier for two-tier mutation.
 
 ### MutationOutcome
 
@@ -3663,6 +4370,8 @@ Minimal interface for NEAT instances with adaptive features.
 Exported for use in tests and type-safe function calls.
 
 ### NEGATIVE_ONE
+
+Constant: negative one for last index.
 
 ### normalizeSlope
 
@@ -3678,27 +4387,47 @@ Returns: Normalized slope clamped to [-2, 2].
 
 ### NOVELTY_ARCHIVE_MIN_SIZE
 
+Novelty archive minimum size.
+
 ### NOVELTY_FACTOR_DEFAULT
+
+Novelty factor when archive is sufficient.
 
 ### NOVELTY_FACTOR_SMALL
 
+Novelty factor when archive is small.
+
 ### ONE
+
+Constant: one value.
 
 ### ONE_HUNDRED
 
+Constant: one hundred value.
+
 ### OPERATOR_DECAY_DEFAULT
+
+Default operator decay factor.
 
 ### OperatorAdaptationConfig
 
 ### PHASE_COMPLEXIFY
 
+Phase label for complexify.
+
 ### PHASE_LENGTH_DEFAULT
 
+Default phase length in generations.
+
 ### PHASE_SIMPLIFY
+
+Phase label for simplify.
 
 ### PhasedComplexityConfig
 
 ### PROGRESS_RATIO_MAX
+
+Maximum progress ratio for scheduling.
 
 ### recordAdjustment
 
@@ -3821,7 +4550,11 @@ Returns: Threshold bounds.
 
 ### RNG_CENTER_OFFSET
 
+Random offset for signed deltas.
+
 ### RNG_SPREAD_MULTIPLIER
+
+Random range multiplier for signed deltas.
 
 ### shouldAdaptThisGeneration
 
@@ -3849,9 +4582,15 @@ Returns: True if fallback should run.
 
 ### SLOPE_BOOST_MULTIPLIER
 
+Slope boost multiplier for adaptive increase factor.
+
 ### SLOPE_NORMALIZE_CLAMP
 
+Clamp magnitude for slope normalization.
+
 ### SLOPE_PENALTY_MULTIPLIER
+
+Slope penalty multiplier for stagnation factor.
 
 ### sortScoredGenomes
 
@@ -3877,9 +4616,15 @@ Returns: Partitions used by strategy rules.
 
 ### TARGET_ACCEPTANCE_DEFAULT
 
+Default target acceptance in minimal criterion.
+
 ### TEN
 
+Constant: ten value.
+
 ### THREE
+
+Constant: three value.
 
 ### togglePhaseIfNeeded
 
@@ -3892,6 +4637,8 @@ Parameters:
 - `config` - - Phased complexity configuration.
 
 ### TWO
+
+Constant: two value.
 
 ### updateScoreHistory
 
@@ -3918,21 +4665,37 @@ Parameters:
 
 ### ZERO
 
+Constant: zero value.
+
 ## neat/neat.evaluate.utils.ts
 
 ### AUTO_COEFF_ADJUST_DEFAULT
 
+Default adjustment rate for auto distance coefficient tuning.
+
 ### AUTO_COEFF_MAX_DEFAULT
+
+Default maximum coefficient for auto distance coefficient tuning.
 
 ### AUTO_COEFF_MIN_DEFAULT
 
+Default minimum coefficient for auto distance coefficient tuning.
+
 ### COMPAT_MAX_THRESHOLD_DEFAULT
+
+Default maximum compatibility threshold.
 
 ### COMPAT_MIN_THRESHOLD_DEFAULT
 
+Default minimum compatibility threshold.
+
 ### COMPAT_THRESHOLD_DEFAULT
 
+Default compatibility threshold when not provided.
+
 ### DISTANCE_COEFF_DEFAULT
+
+Default coefficient value when not provided.
 
 ### DiversityStats
 
@@ -3952,21 +4715,39 @@ Returns: void.
 
 ### ENTROPY_ADJUST_DEFAULT
 
+Default adjustment rate for compatibility tuning.
+
 ### ENTROPY_DEADBAND_DEFAULT
+
+Default deadband for compatibility tuning.
 
 ### ENTROPY_TARGET_DEFAULT
 
+Default target entropy for compatibility tuning.
+
 ### ENTROPY_VAR_ADJUST_DEFAULT
+
+Default adjustment rate for entropy sharing.
 
 ### ENTROPY_VAR_HIGH_BAND
 
+Upper band multiplier for entropy variance tuning.
+
 ### ENTROPY_VAR_LOW_BAND
+
+Lower band multiplier for entropy variance tuning.
 
 ### ENTROPY_VAR_MAX_SIGMA_DEFAULT
 
+Default maximum sigma for entropy sharing.
+
 ### ENTROPY_VAR_MIN_SIGMA_DEFAULT
 
+Default minimum sigma for entropy sharing.
+
 ### ENTROPY_VAR_TARGET_DEFAULT
+
+Default target variance for entropy sharing.
 
 ### GenomeForEvaluation
 
@@ -3986,9 +4767,15 @@ hooks.
 
 ### NOVELTY_ARCHIVE_CAP
 
+Maximum number of entries stored in the novelty archive.
+
 ### NOVELTY_DEFAULT_BLEND
 
+Default blend factor for novelty vs. fitness.
+
 ### NOVELTY_DEFAULT_NEIGHBORS
+
+Default neighbor count for novelty calculation.
 
 ### NoveltyArchiveEntry
 
@@ -4075,7 +4862,11 @@ Returns: void.
 
 ### VARIANCE_DECREASE_THRESHOLD
 
+Variance decrease threshold multiplier.
+
 ### VARIANCE_INCREASE_THRESHOLD
+
+Variance increase threshold multiplier.
 
 ## neat/neat.mutation.utils.ts
 
@@ -4669,6 +5460,8 @@ Returns: void
 
 ### MINIMUM_HIDDEN_BASELINE
 
+Baseline minimum hidden nodes when no configuration is provided.
+
 ### mutateGenome
 
 `(genome: import("src/neat/neat.mutation.types").GenomeWithMetadata, internal: import("src/neat/neat.mutation.types").NeatControllerForMutation, methods: { mutation: unknown; }) => Promise<void>`
@@ -4949,7 +5742,11 @@ Minimal genome interface for diversity computations.
 
 ### MAX_COMPATIBILITY_SAMPLE
 
+Maximum population sample size for compatibility comparisons.
+
 ### MAX_LINEAGE_PAIR_SAMPLE
+
+Maximum lineage sample size for pairwise depth comparisons.
 
 ### NodeWithConnections
 
@@ -4981,11 +5778,19 @@ Returns: The sum of all scores.
 
 ### DEFAULT_POWER
 
+Default power exponent for POWER selection when none is configured.
+
 ### DEFAULT_SCORE
+
+Default score when a genome has no explicit score.
 
 ### DEFAULT_TOURNAMENT_PROBABILITY
 
+Default tournament win probability when none is configured.
+
 ### DEFAULT_TOURNAMENT_SIZE
+
+Default tournament size when none is configured.
 
 ### ensurePopulationEvaluated
 
@@ -5023,9 +5828,15 @@ Returns: void
 
 ### FIRST_INDEX
 
+Index of the first element in an array.
+
 ### GenomeWithScore
 
 Genome with a fitness score and arbitrary additional metadata.
+
+Example:
+
+const genome: GenomeWithScore = { score: 42, id: 'g-1' };
 
 ### getRandomPopulationMember
 
@@ -5040,19 +5851,40 @@ Returns: A randomly chosen genome.
 
 ### INITIAL_CUMULATIVE_FITNESS
 
+Initial cumulative fitness value for threshold scans.
+
 ### INITIAL_MOST_NEGATIVE_SCORE
+
+Initial most-negative score sentinel for fitness scans.
 
 ### INITIAL_TOTAL_FITNESS
 
+Initial total fitness accumulator value.
+
 ### LAST_ELEMENT_INDEX
+
+Index used with `at()` to access the last element.
 
 ### LAST_INDEX_OFFSET
 
+Offset for retrieving the last element via length arithmetic.
+
 ### LOOP_INDEX_INCREMENT
+
+Step size for index-based loops.
 
 ### NeatLikeWithSelection
 
 NEAT-like instance extended with selection-specific state and helpers.
+
+Example:
+
+const selectionHost: NeatLikeWithSelection = {
+  population: [],
+  options: { selection: { name: 'TOURNAMENT', size: 3 } },
+  _getRNG: () => Math.random,
+  sort: () => undefined,
+} as NeatLikeWithSelection;
 
 ### pickByShiftedThreshold
 
@@ -5103,6 +5935,8 @@ Parameters:
 Returns: Sampled participants.
 
 ### SECOND_INDEX
+
+Index of the second element in an array.
 
 ### selectParentByFitnessProportionate
 
@@ -5680,6 +6514,8 @@ Returns: True when lineage stats should be computed.
 
 ### LINEAGE_SNAPSHOT_DEFAULT_LIMIT
 
+Default limit for lineage snapshots to avoid large payloads.
+
 ### mergeTelemetryCoreFields
 
 `(sourceEntry: Record<string, unknown>, coreSnapshot: Partial<Record<string, unknown>>) => Record<string, unknown>`
@@ -5894,6 +6730,14 @@ Minimal interface for NEAT instances using objective management.
 This shape is intentionally small and only includes the pieces needed by
 `_getObjectives`, `registerObjective`, and `clearObjectives`.
 
+Example:
+
+```ts
+const neatLike: NeatLikeWithObjectives = {
+  options: { multiObjective: { enabled: true, objectives: [] } },
+};
+```
+
 ### replaceObjectiveByKey
 
 `(objectivesList: import("src/neat/neat.types").ObjectiveDescriptor[], objectiveKey: string, objectiveDirection: "max" | "min", objectiveAccessor: (genome: import("src/neat/neat.types").GenomeLike) => number) => import("src/neat/neat.types").ObjectiveDescriptor[]`
@@ -5907,8 +6751,6 @@ Parameters:
 Returns: Updated objectives list with the new descriptor appended.
 
 ## neat/neat.speciation.utils.ts
-
-### neat.speciation.utils
 
 Utility helpers for NEAT speciation orchestration.
 
@@ -6036,31 +6878,59 @@ Returns: Nothing.
 
 ### DEFAULT_COMPAT_INTEGRAL
 
+Default integral accumulator value.
+
 ### DEFAULT_COMPATIBILITY_INTEGRAL_GAIN
+
+Default integral gain for compatibility PID.
 
 ### DEFAULT_COMPATIBILITY_PROPORTIONAL_GAIN
 
+Default proportional gain for compatibility PID.
+
 ### DEFAULT_COMPATIBILITY_THRESHOLD
+
+Default compatibility threshold when unspecified.
 
 ### DEFAULT_LAST_IMPROVED_GENERATION
 
+Default last improved generation when missing.
+
 ### DEFAULT_MAX_COMPATIBILITY_THRESHOLD
+
+Default maximum compatibility threshold.
 
 ### DEFAULT_MEMBER_COUNT_FALLBACK
 
+Fallback divisor when member count is zero.
+
 ### DEFAULT_MIN_COMPATIBILITY_THRESHOLD
+
+Default minimum compatibility threshold.
 
 ### DEFAULT_SCORE_FALLBACK
 
+Fallback numeric score when missing.
+
 ### DEFAULT_SHARING_SIGMA
+
+Default sigma for fitness sharing.
 
 ### DEFAULT_SPECIES_AGE_GRACE
 
+Default grace period for young species.
+
 ### DEFAULT_SPECIES_OLD_PENALTY
+
+Default penalty applied to old species.
 
 ### DEFAULT_STAGNATION_WINDOW
 
+Default stagnation window in generations.
+
 ### DEFAULT_TARGET_SPECIES
+
+Default target number of species for PID controller.
 
 ### findCompatibleSpecies
 
@@ -6084,6 +6954,8 @@ selection pressure toward dense clusters of very similar genomes.
 
 ### HISTORY_BUFFER_MAX_ENTRIES
 
+Max number of history entries to keep.
+
 ### InnovationAccumulator
 
 Accumulator for innovation-id statistics across a set of connections.
@@ -6093,7 +6965,11 @@ enabled/disabled ratios).
 
 ### NEGATIVE_INFINITY
 
+Shared negative infinity constant for score initialization.
+
 ### PENALTY_NO_EFFECT_THRESHOLD
+
+Penalty cutoff where no reduction should occur.
 
 ### recordHistory
 
@@ -6131,9 +7007,15 @@ Returns: Nothing.
 
 ### SHARING_MAX_CONTRIBUTION
 
+Maximum sharing contribution per peer.
+
 ### SHARING_SELF_DISTANCE
 
+Distance used when comparing a member with itself.
+
 ### SHARING_SUM_FLOOR
+
+Fallback divisor when sharing sum is zero.
 
 ### snapshotPreviousMembers
 
@@ -6147,6 +7029,8 @@ Parameters:
 Returns: Nothing.
 
 ### SPECIES_AGE_GRACE_MULTIPLIER
+
+Multiplier used to convert grace generations to age threshold.
 
 ### StagnationContext
 
@@ -6447,8 +7331,6 @@ Returns: void.
 
 ## neat/neat.multiobjective.utils.ts
 
-### neat.multiobjective.utils
-
 Barrel exports for multi-objective utilities.
 
 ### accumulateCrowdingForObjective
@@ -6629,9 +7511,15 @@ Returns: Objective values matrix.
 
 ### DEFAULT_MAX_PARETO_FRONTS
 
+Default number of Pareto fronts returned by accessors.
+
 ### DEFAULT_PARETO_ARCHIVE_JSONL_MAX
 
+Default slice size when exporting Pareto archive as JSONL.
+
 ### DEFAULT_PARETO_ARCHIVE_MAX_ENTRIES
+
+Default slice size when reading Pareto archive entries.
 
 ### DominanceState
 
@@ -6673,9 +7561,23 @@ Parameters:
 
 ### MAX_PARETO_ARCHIVE_FRONTS
 
+Maximum number of top Pareto fronts to retain per archive snapshot.
+
+Archival stores a compact representation (IDs only) for visualization or
+debugging.
+
 ### MAX_PARETO_ARCHIVE_LENGTH
 
+Maximum number of archive snapshots to retain.
+
+When the archive exceeds this length, the oldest snapshot is dropped.
+
 ### MAX_PARETO_FRONT_RANK_GUARD
+
+Maximum number of Pareto fronts to allow during ranking before aborting.
+
+This is a defensive guard against pathological conditions (e.g., corrupted
+dominance bookkeeping) that could otherwise cause long/infinite loops.
 
 ### NeatLikeWithMultiObjective
 
@@ -6710,6 +7612,15 @@ Notes:
   - `'min'`: lower is better
 - If `direction` is omitted, it defaults to `'max'`.
 
+Example:
+
+```ts
+const objectives: ObjectiveDescriptor[] = [
+  { accessor: (g) => g.score ?? 0, direction: 'max' },
+  { accessor: (g) => g.cost ?? 0, direction: 'min' },
+];
+```
+
 ### readObjectiveValue
 
 `(genomeItem: import("src/architecture/network").default, descriptor: import("src/neat/neat.multiobjective.utils.types").ObjectiveDescriptor) => number`
@@ -6729,6 +7640,12 @@ Parameters:
 - `descriptor` - - Objective descriptor providing an accessor.
 
 Returns: Numeric objective value; `0` if the accessor throws.
+
+Example:
+
+```ts
+const score = readObjectiveValue(genome, { accessor: (g) => g.score ?? 0 });
+```
 
 ### reconstructParetoFronts
 
@@ -6810,6 +7727,17 @@ Parameters:
 - `descriptors` - - Objective descriptors defining direction semantics.
 
 Returns: `true` if A dominates B; otherwise `false`.
+
+Example:
+
+```ts
+// Maximize accuracy, minimize latency:
+vectorDominates([0.9, 120], [0.9, 150], [
+  { accessor: () => 0, direction: 'max' },
+  { accessor: () => 0, direction: 'min' },
+]);
+// => true (equal accuracy, lower latency)
+```
 
 ## neat/neat.adaptive.phases.utils.ts
 
@@ -6937,11 +7865,11 @@ Returns: void.
 
 ## neat/neat.evolve.warnings.utils.ts
 
-### neat.evolve.warnings.utils
-
 Warning emitted when evolution finishes without a best genome.
 
 ### EVOLVE_NO_BEST_GENOME_WARNING
+
+Warning emitted when evolution finishes without a best genome.
 
 ### warnIfNoBestGenome
 
@@ -7079,8 +8007,6 @@ Returns: sampled method or null
 
 ## neat/neat.species.history.utils.ts
 
-### neat.species.history.utils
-
 Default slice size when exporting species history as JSONL.
 
 ### exportSpeciesHistoryJsonl
@@ -7090,6 +8016,8 @@ Default slice size when exporting species history as JSONL.
 Export species history records as JSON Lines.
 
 ### SPECIES_HISTORY_JSONL_MAX_DEFAULT
+
+Default slice size when exporting species history as JSONL.
 
 ## neat/neat.topology-intent.utils.ts
 
@@ -8611,51 +9539,91 @@ Returns: Pair of distinct indices.
 
 ## neat/neat.evaluate.constants.utils.ts
 
-### neat.evaluate.constants.utils
-
 Default neighbor count for novelty calculation.
 
 ### AUTO_COEFF_ADJUST_DEFAULT
 
+Default adjustment rate for auto distance coefficient tuning.
+
 ### AUTO_COEFF_MAX_DEFAULT
+
+Default maximum coefficient for auto distance coefficient tuning.
 
 ### AUTO_COEFF_MIN_DEFAULT
 
+Default minimum coefficient for auto distance coefficient tuning.
+
 ### COMPAT_MAX_THRESHOLD_DEFAULT
+
+Default maximum compatibility threshold.
 
 ### COMPAT_MIN_THRESHOLD_DEFAULT
 
+Default minimum compatibility threshold.
+
 ### COMPAT_THRESHOLD_DEFAULT
+
+Default compatibility threshold when not provided.
 
 ### DISTANCE_COEFF_DEFAULT
 
+Default coefficient value when not provided.
+
 ### ENTROPY_ADJUST_DEFAULT
+
+Default adjustment rate for compatibility tuning.
 
 ### ENTROPY_DEADBAND_DEFAULT
 
+Default deadband for compatibility tuning.
+
 ### ENTROPY_TARGET_DEFAULT
+
+Default target entropy for compatibility tuning.
 
 ### ENTROPY_VAR_ADJUST_DEFAULT
 
+Default adjustment rate for entropy sharing.
+
 ### ENTROPY_VAR_HIGH_BAND
+
+Upper band multiplier for entropy variance tuning.
 
 ### ENTROPY_VAR_LOW_BAND
 
+Lower band multiplier for entropy variance tuning.
+
 ### ENTROPY_VAR_MAX_SIGMA_DEFAULT
+
+Default maximum sigma for entropy sharing.
 
 ### ENTROPY_VAR_MIN_SIGMA_DEFAULT
 
+Default minimum sigma for entropy sharing.
+
 ### ENTROPY_VAR_TARGET_DEFAULT
+
+Default target variance for entropy sharing.
 
 ### NOVELTY_ARCHIVE_CAP
 
+Maximum number of entries stored in the novelty archive.
+
 ### NOVELTY_DEFAULT_BLEND
+
+Default blend factor for novelty vs. fitness.
 
 ### NOVELTY_DEFAULT_NEIGHBORS
 
+Default neighbor count for novelty calculation.
+
 ### VARIANCE_DECREASE_THRESHOLD
 
+Variance decrease threshold multiplier.
+
 ### VARIANCE_INCREASE_THRESHOLD
+
+Variance increase threshold multiplier.
 
 ## neat/neat.mutation.dead-ends.utils.ts
 
@@ -9095,6 +10063,8 @@ Returns: true when inputs and outputs are present
 
 ### MINIMUM_HIDDEN_BASELINE
 
+Baseline minimum hidden nodes when no configuration is provided.
+
 ### rebuildNetworkConnectionsForMinHidden
 
 `(networkToEdit: import("src/neat/neat.mutation.types").GenomeWithMetadata) => Promise<void>`
@@ -9178,6 +10148,8 @@ Snapshot performance timings for evaluation and evolution steps.
 Return the telemetry buffer, defaulting to an empty array when missing.
 
 ### LINEAGE_SNAPSHOT_DEFAULT_LIMIT
+
+Default limit for lineage snapshots to avoid large payloads.
 
 ### TelemetryAccessorHost
 
@@ -9599,6 +10571,11 @@ Returns: Incremented front rank.
 
 ### MAX_PARETO_FRONT_RANK_GUARD
 
+Maximum number of Pareto fronts to allow during ranking before aborting.
+
+This is a defensive guard against pathological conditions (e.g., corrupted
+dominance bookkeeping) that could otherwise cause long/infinite loops.
+
 ### shouldStopFrontRanking
 
 `(currentFrontRank: number, maxFrontRankGuard: number) => boolean`
@@ -9735,7 +10712,16 @@ Parameters:
 
 ### MAX_PARETO_ARCHIVE_FRONTS
 
+Maximum number of top Pareto fronts to retain per archive snapshot.
+
+Archival stores a compact representation (IDs only) for visualization or
+debugging.
+
 ### MAX_PARETO_ARCHIVE_LENGTH
+
+Maximum number of archive snapshots to retain.
+
+When the archive exceeds this length, the oldest snapshot is dropped.
 
 ## neat/neat.multiobjective.metrics.utils.ts
 
@@ -9747,9 +10733,15 @@ Build lightweight multi-objective metrics for each genome in the population.
 
 ### DEFAULT_MAX_PARETO_FRONTS
 
+Default number of Pareto fronts returned by accessors.
+
 ### DEFAULT_PARETO_ARCHIVE_JSONL_MAX
 
+Default slice size when exporting Pareto archive as JSONL.
+
 ### DEFAULT_PARETO_ARCHIVE_MAX_ENTRIES
+
+Default slice size when reading Pareto archive entries.
 
 ### exportParetoArchiveJsonl
 
@@ -10441,6 +11433,17 @@ Parameters:
 
 Returns: `true` if A dominates B; otherwise `false`.
 
+Example:
+
+```ts
+// Maximize accuracy, minimize latency:
+vectorDominates([0.9, 120], [0.9, 150], [
+  { accessor: () => 0, direction: 'max' },
+  { accessor: () => 0, direction: 'min' },
+]);
+// => true (equal accuracy, lower latency)
+```
+
 ## neat/neat.multiobjective.objectives.utils.ts
 
 ### buildGenomeValues
@@ -10493,6 +11496,12 @@ Parameters:
 - `descriptor` - - Objective descriptor providing an accessor.
 
 Returns: Numeric objective value; `0` if the accessor throws.
+
+Example:
+
+```ts
+const score = readObjectiveValue(genome, { accessor: (g) => g.score ?? 0 });
+```
 
 ## neat/neat.adaptive.minimal-criterion.utils.ts
 

@@ -1,5 +1,21 @@
 # architecture/network/stats
 
+Network statistics accessors.
+
+Currently exposes a single helper for retrieving the most recent regularization / stochasticity
+metrics snapshot recorded during training or evaluation. The internal `_lastStats` field (on the
+Network instance, typed as any) is expected to be populated elsewhere in the training loop with
+values such as:
+ - l1Penalty, l2Penalty
+ - dropoutApplied (fraction of units dropped last pass)
+ - weightNoiseStd (effective std dev used if noise injected)
+ - sparsityRatio, prunedConnections
+ - any custom user extensions (object is not strictly typed to allow experimentation)
+
+Design decision: We return a deep copy to prevent external mutation of internal accounting state.
+If the object is large and copying becomes a bottleneck, future versions could offer a freeze
+option or incremental diff interface.
+
 ## architecture/network/stats/network.stats.utils.ts
 
 ### getRegularizationStats

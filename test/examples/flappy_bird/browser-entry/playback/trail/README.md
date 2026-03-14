@@ -1,5 +1,17 @@
 # browser-entry/playback/trail
 
+Trail-history helpers for the playback renderer.
+
+This module owns the small rolling histories that create the flock's neon
+afterimage. The policy is intentionally simple: keep only a short recent
+window, and keep the champion trail even shorter and denser.
+
+Minimal usage sketch:
+```ts
+const trailPoints = [{ frameIndex: 10, yPx: 140 }];
+pushTrailPoint(trailPoints, 11, 136, 2);
+```
+
 ## browser-entry/playback/trail/playback.trail.history.services.ts
 
 ### pushChampionTrailPoint
@@ -39,7 +51,27 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+const trailPoints = [{ frameIndex: 10, yPx: 140 }];
+pushTrailPoint(trailPoints, 11, 136, 2);
+```
+
 ## browser-entry/playback/trail/playback.trail.opacity.utils.ts
+
+Opacity helpers for playback trail fading.
+
+The trail renderer blends two independent fade stories: lifetime and
+distance-to-edge. These helpers keep that math isolated so the draw path can
+stay focused on painting rather than re-deriving normalization rules.
+
+Minimal usage sketch:
+```ts
+const edgeOpacity = resolveEdgeOpacityFactor(120, 140, edgeBounds);
+const ageOpacity = resolveTrailLifetimeOpacityFactor(3, 12);
+const alpha = edgeOpacity * ageOpacity;
+```
 
 ### clamp01
 
@@ -75,6 +107,14 @@ Parameters:
 - `edgeBounds` - - Visible world bounds used for edge distance checks.
 
 Returns: Opacity multiplier in [0, 1].
+
+Example:
+
+```ts
+const edgeOpacity = resolveEdgeOpacityFactor(120, 140, edgeBounds);
+const ageOpacity = resolveTrailLifetimeOpacityFactor(3, 12);
+const alpha = edgeOpacity * ageOpacity;
+```
 
 ### resolveTrailLifetimeOpacityFactor
 

@@ -1,6 +1,27 @@
 # browser-entry/worker-channel
 
+Public worker-channel facade for the Flappy Bird browser runtime.
+
+This boundary wraps the lower-level message protocol in a smaller browser API:
+create the worker, request a generation result, or request the next playback
+step. The point is to keep the rest of the UI code thinking in terms of
+intent rather than raw `postMessage` plumbing.
+
+Minimal usage sketch:
+```ts
+const evolutionWorker = createEvolutionWorker();
+const generation = await requestWorkerGeneration(evolutionWorker);
+```
+
 ## browser-entry/worker-channel/worker-channel.types.ts
+
+Shared protocol contracts for the browser-entry worker channel.
+
+These types define the thin translation layer between generic worker messages
+and the specific request/response flows used by the Flappy Bird browser UI.
+
+If you want background reading, the Wikipedia article on "message passing"
+gives the right mental model for this boundary.
 
 ### WorkerChannelGenerationPayload
 
@@ -11,13 +32,10 @@ browser is ready to update its "best so far" view.
 
 ### WorkerChannelMessage
 
-Shared protocol contracts for the browser-entry worker channel.
+Aliases the shared worker message union for worker-channel modules.
 
-These types define the thin translation layer between generic worker messages
-and the specific request/response flows used by the Flappy Bird browser UI.
-
-If you want background reading, the Wikipedia article on "message passing"
-gives the right mental model for this boundary.
+Keeping the alias local makes submodules read as protocol-focused code rather
+than browser-entry plumbing.
 
 ### WorkerChannelPlaybackStepPayload
 
@@ -35,15 +53,6 @@ worker can package a frame that already matches the browser's current canvas
 world.
 
 ## browser-entry/worker-channel/worker-channel.ts
-
-### worker-channel
-
-Public worker-channel facade for the Flappy Bird browser runtime.
-
-This boundary wraps the lower-level message protocol in a smaller browser API:
-create the worker, request a generation result, or request the next playback
-step. The point is to keep the rest of the UI code thinking in terms of
-intent rather than raw `postMessage` plumbing.
 
 ### createEvolutionWorker
 
@@ -77,8 +86,6 @@ Parameters:
 Returns: Playback-step payload including snapshot and completion marker.
 
 ## browser-entry/worker-channel/worker-channel.errors.ts
-
-### worker-channel.errors
 
 Error raised when the evolution worker responds with an explicit protocol error payload.
 
@@ -126,16 +133,12 @@ could not be completed.
 
 ## browser-entry/worker-channel/worker-channel.url.service.ts
 
-### worker-channel.url.service
-
 Resolves the evolution worker bundle URL relative to the active browser-entry bundle.
 
 The browser bundle and worker bundle are emitted side-by-side by the docs/demo
 build. Resolving the worker URL relative to the currently loaded browser
 bundle keeps the demo portable across local files, static hosting, and docs
 builds without hard-coding absolute paths.
-
-@returns Absolute URL string for `flappy-evolution.worker.bundle.js`.
 
 ### resolveEvolutionWorkerBundleUrl
 
@@ -152,6 +155,12 @@ Returns: Absolute URL string for `flappy-evolution.worker.bundle.js`.
 
 ## browser-entry/worker-channel/worker-channel.request.service.ts
 
+Generic request/response helper for worker-channel interactions.
+
+This module implements a small RPC-like pattern on top of browser worker
+events. The browser sends one message, listens for the first matching reply,
+and normalizes protocol failures into ordinary `Error` instances.
+
 ### requestWorkerResponse
 
 `(options: import("test/examples/flappy_bird/browser-entry/worker-channel/worker-channel.request.service").WorkerChannelRequestOptions<ResponsePayload>) => Promise<ResponsePayload>`
@@ -167,13 +176,23 @@ Parameters:
 
 Returns: Promise resolving with the matched worker response payload.
 
+Example:
+
+```ts
+const generation = await requestWorkerResponse({
+  evolutionWorker,
+  requestMessage: { type: 'request-generation' },
+  resolveResponsePayload: (message) =>
+    message.type === 'generation-ready' ? message.payload : undefined,
+});
+```
+
 ### WorkerChannelRequestMessage
 
-Generic request/response helper for worker-channel interactions.
+Message shape sent to the worker request channel.
 
-This module implements a small RPC-like pattern on top of browser worker
-events. The browser sends one message, listens for the first matching reply,
-and normalizes protocol failures into ordinary `Error` instances.
+The worker protocol stays stringly-typed at the transport edge on purpose so
+the message stream is easy to inspect during debugging.
 
 ### WorkerChannelRequestOptions
 
@@ -210,6 +229,16 @@ Parameters:
 
 Returns: Playback-step payload including snapshot and completion marker.
 
+Example:
+
+```ts
+const playbackPayload = await requestWorkerPlaybackStep(evolutionWorker, {
+  simulationSteps: 2,
+  visibleWorldWidthPx: 640,
+  visibleWorldHeightPx: 480,
+});
+```
+
 ### resolvePlaybackWorkerChannelState
 
 `(evolutionWorker: Worker) => PlaybackWorkerChannelState`
@@ -227,12 +256,23 @@ Returns: Persistent playback worker-channel state for the worker.
 
 ## browser-entry/worker-channel/worker-channel.generation.service.ts
 
-### requestWorkerGeneration
-
-`(evolutionWorker: Worker) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionGenerationPayload>`
-
 Generation request helper for the browser-entry worker channel.
 
 This module asks the worker to evolve until the next generation boundary and
 then returns the summary payload the browser needs for HUD updates and best
 network visualization.
+
+### requestWorkerGeneration
+
+`(evolutionWorker: Worker) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionGenerationPayload>`
+
+Requests the next evolved generation payload from the worker channel.
+
+Unlike playback streaming, generation evolution is a simple single-response
+exchange: ask for the next generation and wait for the next
+`generation-ready` message.
+
+Parameters:
+- `evolutionWorker` - - Worker emitting generation-ready messages.
+
+Returns: Next generation payload.

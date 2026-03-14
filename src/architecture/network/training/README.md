@@ -1,8 +1,25 @@
 # architecture/network/training
 
+Training pipeline utilities (migrated from legacy architecture/network.train.ts).
+
+Provides:
+ - Gradient clipping (global / layerwise; norm / percentile variants).
+ - Mini & micro-batch gradient accumulation.
+ - Optimizer step dispatch (SGD + adaptive optimizers + lookahead wrapper).
+ - Simple mixed precision dynamic loss scaling (overflow detection heuristic).
+ - Multiple moving-average smoothing strategies for error monitoring (SMA, EMA, adaptive EMA,
+   median, gaussian, trimmed mean, WMA) plus separate plateau averaging.
+ - Early stopping, schedule hooks, pruning hooks, and checkpoint callbacks.
+
+Notes:
+ - This module intentionally keeps imperative style for clarity/perf (avoids heap churn in hot loops).
+ - Refactor changes here are documentation & naming only; numerical behavior preserved.
+
 ## architecture/network/training/network.training.utils.types.ts
 
 ### ALLOWED_OPTIMIZERS
+
+Set of supported optimizer identifiers accepted by training options.
 
 ### buildMonitoredSmoothingConfig
 
@@ -62,24 +79,14 @@ Training sample consumed by training set loops.
 
 ## architecture/network/training/network.training.utils.ts
 
-### network.training.utils
-
-Training pipeline utilities (migrated from legacy architecture/network.train.ts).
-
-Provides:
- - Gradient clipping (global / layerwise; norm / percentile variants).
- - Mini & micro-batch gradient accumulation.
- - Optimizer step dispatch (SGD + adaptive optimizers + lookahead wrapper).
- - Simple mixed precision dynamic loss scaling (overflow detection heuristic).
- - Multiple moving-average smoothing strategies for error monitoring (SMA, EMA, adaptive EMA,
-   median, gaussian, trimmed mean, WMA) plus separate plateau averaging.
- - Early stopping, schedule hooks, pruning hooks, and checkpoint callbacks.
-
-Notes:
- - This module intentionally keeps imperative style for clarity/perf (avoids heap churn in hot loops).
- - Refactor changes here are documentation & naming only; numerical behavior preserved.
-
 ### __trainingInternals
+
+Test-only internal helper bundle.
+
+This is exported so unit tests can cover edge-cases in the smoothing logic without
+running full end-to-end training loops.
+
+Important: this is **not** considered stable public API. It may change between releases.
 
 ### applyGradientClippingImpl
 
@@ -243,6 +250,13 @@ Parameters:
 
 Returns: Summary payload containing final error, iteration count, and elapsed time.
 
+Example:
+
+```ts
+const result = net.train(set, { iterations: 500, rate: 0.3 });
+console.log(result.error);
+```
+
 ### TrainingOptions
 
 Public training options accepted by the high-level training orchestration.
@@ -295,6 +309,21 @@ Returns: Mean cost across the processed samples.
 ### trainSetCore
 
 `(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], batchSize: number, accumulationSteps: number, currentRate: number, momentum: number, regularization: import("src/architecture/network/network.types").RegularizationConfig, costFunction: import("src/architecture/network/network.types").CostFunction | import("src/architecture/network/network.types").CostFunctionOrObject, optimizer: import("src/architecture/network/network.types").OptimizerConfigBase | undefined) => number`
+
+Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
+
+Parameters:
+- `net` - - Network instance being trained.
+- `set` - - Training sample set.
+- `batchSize` - - Mini-batch size.
+- `accumulationSteps` - - Micro-batches per optimizer step.
+- `currentRate` - - Learning rate for this pass.
+- `momentum` - - Momentum value used by propagation paths.
+- `regularization` - - Regularization settings passed into propagation calls.
+- `costFunction` - - Cost function or cost-function object.
+- `optimizer` - - Optional optimizer configuration.
+
+Returns: Mean cost over processed samples.
 
 ## architecture/network/training/network.training.backprop.utils.ts
 
@@ -437,18 +466,55 @@ Parameters:
 
 `(net: import("src/architecture/network").default, set: { input: number[]; output: number[]; }[], options: import("src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
 
+Run the full training orchestration loop with smoothing, callbacks, and early stopping.
+
+Parameters:
+- `net` - - Network instance to train.
+- `set` - - Training dataset.
+- `options` - - Training options.
+
+Returns: Final training summary including error, iteration count, and elapsed time.
+
 ## architecture/network/training/network.training.smoothing.utils.ts
 
 ### computeMonitoredError
 
 `(trainError: number, recentErrors: number[], cfg: import("src/architecture/network/network.types").MonitoredSmoothingConfig, state: import("src/architecture/network/network.types").PrimarySmoothingState) => number`
 
+Compute monitored training error using the configured smoothing strategy.
+
+Parameters:
+- `trainError` - - Raw training error for the current iteration.
+- `recentErrors` - - Chronological recent error window (oldest to newest).
+- `cfg` - - Monitored smoothing configuration.
+- `state` - - Mutable smoothing state for EMA-based modes.
+
+Returns: Smoothed monitored error.
+
 ### computePlateauMetric
 
 `(trainError: number, plateauErrors: number[], cfg: import("src/architecture/network/network.types").PlateauSmoothingConfig, state: import("src/architecture/network/network.types").PlateauSmoothingState) => number`
+
+Compute plateau metric using the configured plateau smoothing strategy.
+
+Parameters:
+- `trainError` - - Raw training error for the current iteration.
+- `plateauErrors` - - Plateau window of recent raw errors.
+- `cfg` - - Plateau smoothing configuration.
+- `state` - - Mutable state for plateau EMA.
+
+Returns: Smoothed plateau metric.
 
 ## architecture/network/training/network.training.gradient-clip.utils.ts
 
 ### applyGradientClippingCore
 
 `(net: import("src/architecture/network").default, cfg: import("src/architecture/network/training/network.training.utils.types").GradientClipRuntimeConfig) => void`
+
+Apply gradient clipping to accumulated connection and bias deltas.
+
+Parameters:
+- `net` - - Network instance whose accumulated gradients are clipped.
+- `cfg` - - Runtime clipping configuration.
+
+Returns: Nothing.

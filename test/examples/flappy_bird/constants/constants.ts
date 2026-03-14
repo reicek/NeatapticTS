@@ -6,9 +6,39 @@
  * existing imports continue to work while callers migrate gradually.
  *
  * Educational note:
- * Treat this file as the folder map, not the best place to learn individual
- * values. The category modules below are where the real documentation lives:
- * physics, pipes, observation, runtime, rendering, network layout, and so on.
+ * Treat this file as the folder map, not the best place to memorize individual
+ * values. The category modules below are where the real stories live: world
+ * geometry, physics, pipes, observation, runtime defaults, rendering chrome,
+ * network visualization, and browser HUD behavior.
+ *
+ * A useful way to read this folder is to ask one question first: "what kind of
+ * knob am I trying to change?"
+ *
+ * - If the bird feels wrong, start with physics.
+ * - If the course feels unfair or too easy, start with pipes and difficulty.
+ * - If the policy sees the wrong world, start with observation.
+ * - If the browser demo feels noisy or cramped, start with runtime, layout, and stats.
+ * - If the network panel is hard to read, start with network-view and palette.
+ *
+ * Quick import example:
+ * ```ts
+ * import {
+ *   FLAPPY_GRAVITY_PX_PER_FRAME2,
+ *   FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,
+ * } from './constants/constants';
+ * ```
+ *
+ * Constant-family map:
+ * ```mermaid
+ * flowchart TB
+ *     Constants["constants.ts"] --> World["world\ncourse geometry"]
+ *     Constants --> Physics["physics\ncontrol and motion"]
+ *     Constants --> Pipes["pipes + difficulty\nspawn cadence and spacing"]
+ *     Constants --> Observation["observation\nfeature scaling"]
+ *     Constants --> Runtime["runtime + stats\nbrowser defaults and HUD"]
+ *     Constants --> Rendering["frame + layout + birds + starfield\nvisual shell"]
+ *     Constants --> NetworkView["network-view + palette\ninspection and legend"]
+ * ```
  */
 
 export * from './constants.world';

@@ -1,5 +1,14 @@
 # browser-entry/playback/frame-render
 
+Local type contracts for playback frame rendering.
+
+These types are extracted from the broader frame renderer so scene state,
+bird geometry, and trail styling can evolve behind a dedicated module
+boundary.
+
+Together they describe the inputs and intermediate state needed to paint one
+world-space frame on the browser canvas.
+
 ## browser-entry/playback/frame-render/playback.frame-render.types.ts
 
 ### PlaybackBirdGeometry
@@ -27,14 +36,10 @@ independent from the detailed bird-paint implementation.
 
 ### PlaybackFrameSceneContext
 
-Local type contracts for playback frame rendering.
+Shared scene contract used by one playback frame render pass.
 
-These types are extracted from the broader frame renderer so scene state,
-bird geometry, and trail styling can evolve behind a dedicated module
-boundary.
-
-Together they describe the inputs and intermediate state needed to paint one
-world-space frame on the browser canvas.
+This collects the camera, viewport, and champion metadata that multiple frame
+render helpers need during the same paint pass.
 
 ### PlaybackTrailRenderer
 
@@ -63,15 +68,33 @@ without embedding color policy directly in the frame pass.
 
 ## browser-entry/playback/frame-render/playback.frame-render.service.ts
 
-### renderPopulationFrame
-
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState) => void`
-
 High-level frame-render orchestration for playback.
 
 This boundary coordinates one visual frame of the playback experience. It
 resolves the scene, prepares the canvas, paints the background and entities,
 and maintains the short champion trail used for motion emphasis.
+
+### renderPopulationFrame
+
+`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, trailState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailState) => void`
+
+Draws one simulation frame for the current population state.
+
+The render order matters: background first, then pipes, then birds, then
+trails and overlays that should visually sit on top.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `renderState` - - Mutable simulation state snapshot.
+- `trailState` - - Leader trail render cache.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+renderPopulationFrame(context, renderState, trailState);
+```
 
 ### updateTrailState
 
@@ -88,6 +111,12 @@ Parameters:
 - `renderState` - - Current render state.
 
 Returns: Nothing.
+
+Example:
+
+```ts
+updateTrailState(trailState, renderState);
+```
 
 ## browser-entry/playback/frame-render/playback.frame-render.services.ts
 
@@ -124,19 +153,31 @@ Returns: Nothing.
 
 `(context: CanvasRenderingContext2D) => void`
 
-Canvas-state helpers for playback frame rendering.
+Resets the target canvas and base paint state before frame drawing begins.
 
-These functions isolate the mutable canvas setup and teardown needed for one
-frame so the orchestration layer can read as declarative world rendering.
+This establishes a predictable baseline before world-space transforms and glow
+effects are applied.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+
+Returns: Nothing.
 
 ### renderPlaybackFrameBackground
 
 `(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
 
-Entity-layer rendering helpers for playback frames.
+Draws the split playback background for the current world viewport.
 
-These services paint the world-space contents of a frame once the scene and
-canvas transforms have already been resolved.
+Background painting is delegated to the dedicated background subsystem so this
+layer can stay focused on frame composition order.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `renderState` - - Mutable simulation state snapshot.
+- `sceneContext` - - Shared scene geometry for the frame.
+
+Returns: Nothing.
 
 ### renderPlaybackFrameBirds
 
@@ -195,25 +236,46 @@ Returns: Nothing.
 
 `(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext`
 
+Resolves the shared scene contract used by one frame render pass.
+
+The camera is anchored so the focal bird region stays at a readable screen
+position while the world scrolls beneath it.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `renderState` - - Mutable simulation state snapshot.
+
+Returns: Viewport, camera, and edge-bounds state for the frame.
+
+## browser-entry/playback/frame-render/playback.frame-render.scene.services.ts
+
 Scene-resolution helpers for playback frame rendering.
 
 Before anything can be painted, the renderer needs a camera-relative view of
 the world: viewport scale, visible bounds, camera origin, and which bird is
 currently the champion.
-
-## browser-entry/playback/frame-render/playback.frame-render.scene.services.ts
 
 ### resolvePlaybackFrameSceneContext
 
 `(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext`
 
-Scene-resolution helpers for playback frame rendering.
+Resolves the shared scene contract used by one frame render pass.
 
-Before anything can be painted, the renderer needs a camera-relative view of
-the world: viewport scale, visible bounds, camera origin, and which bird is
-currently the champion.
+The camera is anchored so the focal bird region stays at a readable screen
+position while the world scrolls beneath it.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `renderState` - - Mutable simulation state snapshot.
+
+Returns: Viewport, camera, and edge-bounds state for the frame.
 
 ## browser-entry/playback/frame-render/playback.frame-render.canvas.services.ts
+
+Canvas-state helpers for playback frame rendering.
+
+These functions isolate the mutable canvas setup and teardown needed for one
+frame so the orchestration layer can read as declarative world rendering.
 
 ### beginPlaybackFrameViewportTransform
 
@@ -248,21 +310,38 @@ Returns: Nothing.
 
 `(context: CanvasRenderingContext2D) => void`
 
-Canvas-state helpers for playback frame rendering.
+Resets the target canvas and base paint state before frame drawing begins.
 
-These functions isolate the mutable canvas setup and teardown needed for one
-frame so the orchestration layer can read as declarative world rendering.
+This establishes a predictable baseline before world-space transforms and glow
+effects are applied.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+
+Returns: Nothing.
 
 ## browser-entry/playback/frame-render/playback.frame-render.entity.services.ts
-
-### renderPlaybackFrameBackground
-
-`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
 
 Entity-layer rendering helpers for playback frames.
 
 These services paint the world-space contents of a frame once the scene and
 canvas transforms have already been resolved.
+
+### renderPlaybackFrameBackground
+
+`(context: CanvasRenderingContext2D, renderState: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").PopulationRenderState, sceneContext: import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackFrameSceneContext) => void`
+
+Draws the split playback background for the current world viewport.
+
+Background painting is delegated to the dedicated background subsystem so this
+layer can stay focused on frame composition order.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `renderState` - - Mutable simulation state snapshot.
+- `sceneContext` - - Shared scene geometry for the frame.
+
+Returns: Nothing.
 
 ### renderPlaybackFrameBirds
 
@@ -373,11 +452,18 @@ Returns: Nothing.
 
 `(context: CanvasRenderingContext2D, birdYPx: number, birdIndex: number, championBirdIndex: number) => void`
 
-Detailed bird-painting helpers for playback frames.
+Draws one active bird body and champion-only highlight passes.
 
-The bird renderer keeps the body intentionally simple and geometric: a neon
-square with optional champion glow passes. That makes the population readable
-at a glance even when many birds overlap.
+The champion receives an extra additive-outline treatment so viewers can spot
+the leading bird quickly during playback.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `birdYPx` - - Bird vertical position in world pixels.
+- `birdIndex` - - Index of the bird being rendered.
+- `championBirdIndex` - - Champion index for the current frame.
+
+Returns: Nothing.
 
 ### resolvePlaybackBirdBodyGlowBlur
 
@@ -411,12 +497,24 @@ Returns: Pixel-aligned square geometry for the bird body.
 
 `(birdIndex: number, championBirdIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailRenderStyle`
 
-Detailed trail-painting helpers for playback frames.
+Resolves the trail style used for one bird's stepped trail.
 
-Trails are rendered as stepped segments with both lifetime fading and edge
-fading so motion remains legible without overwhelming the scene.
+Champion trails are emphasized while non-champion trails, when present, are
+intentionally subdued.
+
+Parameters:
+- `birdIndex` - - Index of the bird being rendered.
+- `championBirdIndex` - - Champion index for the current frame.
+
+Returns: Base opacity and color for the bird trail.
 
 ## browser-entry/playback/frame-render/playback.frame-render.bird.utils.ts
+
+Detailed bird-painting helpers for playback frames.
+
+The bird renderer keeps the body intentionally simple and geometric: a neon
+square with optional champion glow passes. That makes the population readable
+at a glance even when many birds overlap.
 
 ### drawChampionPlaybackBirdGlow
 
@@ -453,11 +551,18 @@ Returns: Nothing.
 
 `(context: CanvasRenderingContext2D, birdYPx: number, birdIndex: number, championBirdIndex: number) => void`
 
-Detailed bird-painting helpers for playback frames.
+Draws one active bird body and champion-only highlight passes.
 
-The bird renderer keeps the body intentionally simple and geometric: a neon
-square with optional champion glow passes. That makes the population readable
-at a glance even when many birds overlap.
+The champion receives an extra additive-outline treatment so viewers can spot
+the leading bird quickly during playback.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `birdYPx` - - Bird vertical position in world pixels.
+- `birdIndex` - - Index of the bird being rendered.
+- `championBirdIndex` - - Champion index for the current frame.
+
+Returns: Nothing.
 
 ### resolvePlaybackBirdBodyGlowBlur
 
@@ -488,6 +593,11 @@ Parameters:
 Returns: Pixel-aligned square geometry for the bird body.
 
 ## browser-entry/playback/frame-render/playback.frame-render.trail.utils.ts
+
+Detailed trail-painting helpers for playback frames.
+
+Trails are rendered as stepped segments with both lifetime fading and edge
+fading so motion remains legible without overwhelming the scene.
 
 ### drawTrail
 
@@ -535,7 +645,13 @@ Returns: Nothing.
 
 `(birdIndex: number, championBirdIndex: number) => import("test/examples/flappy_bird/browser-entry/playback/frame-render/playback.frame-render.types").PlaybackTrailRenderStyle`
 
-Detailed trail-painting helpers for playback frames.
+Resolves the trail style used for one bird's stepped trail.
 
-Trails are rendered as stepped segments with both lifetime fading and edge
-fading so motion remains legible without overwhelming the scene.
+Champion trails are emphasized while non-champion trails, when present, are
+intentionally subdued.
+
+Parameters:
+- `birdIndex` - - Index of the bird being rendered.
+- `championBirdIndex` - - Champion index for the current frame.
+
+Returns: Base opacity and color for the bird trail.

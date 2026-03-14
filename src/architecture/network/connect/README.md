@@ -45,6 +45,10 @@ Parameters:
 
 Returns: Array of created  {@link Connection} objects (possibly empty if acyclicity rejected the edge).
 
+Example:
+
+const [edge] = net.connect(nodeA, nodeB, 0.5);
+
 ### disconnect
 
 `(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => void`
@@ -75,6 +79,10 @@ Parameters:
 - `this` - - Bound Network instance.
 - `from` - - Source node.
 - `to` - - Target node.
+
+Example:
+
+net.disconnect(nodeA, nodeB);
 
 ## architecture/network/connect/network.connect.create.utils.ts
 

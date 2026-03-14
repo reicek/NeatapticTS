@@ -1,8 +1,19 @@
+/**
+ * Formatting helpers for compact generation-log output.
+ *
+ * The trainer's console line is intentionally tokenized rather than narrated.
+ * This file keeps that token order stable so humans can build scanning habits
+ * across long runs and tools can parse the same line shape later if needed.
+ */
 import type { FlappyGenerationReport } from './trainer.types';
 import type { FlappyMutationSchedule } from './trainer.evaluation-plan.utils';
 
 /**
  * Builds one-line generation log tokens.
+ *
+ * The chosen order moves from identity (`gen`) to quality (`best`, `mean`,
+ * `median`, `p90`, `std`) and then into operational context (`difficulty`,
+ * mutation, seed counts).
  *
  * @param generationLabel - Generation label shown in logs.
  * @param bestFitness - Best resolved fitness value for this generation.

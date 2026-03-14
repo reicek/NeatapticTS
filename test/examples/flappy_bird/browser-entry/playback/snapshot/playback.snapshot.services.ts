@@ -9,6 +9,24 @@ import type {
  * The worker streams packed typed-array snapshots, while the browser renderer
  * wants stable mutable arrays of pipes and birds. This module performs that
  * translation in place so playback can stay fast and allocation-light.
+ *
+ * The design goal is stable browser-side state with minimal churn: allocate
+ * when the population grows, then mutate in place for the steady-state render loop.
+ *
+ * Snapshot flow:
+ * ```mermaid
+ * flowchart LR
+ *     Worker["worker snapshot\npacked typed arrays"] --> Hydrate["applyPlaybackSnapshot"]
+ *     Hydrate --> Pipes["sync pipes in place"]
+ *     Hydrate --> Birds["sync birds in place"]
+ *     Pipes --> RenderState["stable PopulationRenderState"]
+ *     Birds --> RenderState
+ * ```
+ *
+ * Minimal example:
+ * ```ts
+ * applyPlaybackSnapshot(renderState, payload.snapshot);
+ * ```
  */
 
 /**

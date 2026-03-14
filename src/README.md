@@ -1,5 +1,28 @@
 # src
 
+Global NeatapticTS configuration contract & default instance.
+
+WHY THIS EXISTS
+--------------
+A central `config` object offers a convenient, documented surface for end-users (and tests)
+to tweak library behaviour without digging through scattered constants. Centralization also
+lets us validate & evolve feature flags in a single place.
+
+USAGE PATTERN
+------------
+  import { config } from 'neataptic-ts';
+  config.warnings = true;              // enable runtime warnings
+  config.deterministicChainMode = true // opt into deterministic deep path construction
+
+Adjust BEFORE constructing networks / invoking evolutionary loops so that subsystems read
+the intended values while initializing internal buffers / metadata.
+
+DESIGN NOTES
+------------
+- We intentionally avoid setters / proxies to keep this a plain serializable object.
+- Optional flags are conservative by default (disabled) to preserve legacy stochastic
+  behaviour unless a test or user explicitly opts in.
+
 ## neat.ts
 
 ### neat
@@ -17,33 +40,63 @@ Returns: DiversityStats with zeroed aggregates.
 
 ### DEFAULT_COMPATIBILITY_THRESHOLD
 
+Default compatibility threshold controlling speciation distance.
+
 ### DEFAULT_DISJOINT_COEFF
+
+Default disjoint coefficient for NEAT compatibility distance.
 
 ### DEFAULT_DIVERSITY_GRAPHLET_SAMPLE
 
+Default graphlet sample size used by diversity metrics in fast mode.
+
 ### DEFAULT_DIVERSITY_PAIR_SAMPLE
+
+Default pair-sample size used by diversity metrics in fast mode.
 
 ### DEFAULT_ELITISM
 
+Default elitism count applied when unspecified.
+
 ### DEFAULT_EXCESS_COEFF
+
+Default excess coefficient for NEAT compatibility distance.
 
 ### DEFAULT_MAX_CONNS
 
+Default maximum allowed connections (Infinity = unbounded).
+
 ### DEFAULT_MAX_GATES
+
+Default maximum allowed gates (Infinity = unbounded).
 
 ### DEFAULT_MAX_NODES
 
+Default maximum allowed nodes (Infinity = unbounded).
+
 ### DEFAULT_MUTATION_AMOUNT
+
+Default number of mutation operations per genome.
 
 ### DEFAULT_MUTATION_RATE
 
+Default mutation rate tuned for test expectations.
+
 ### DEFAULT_NOVELTY_K
+
+Default neighbor count for novelty search when k is unspecified.
 
 ### DEFAULT_POPULATION_SIZE
 
+Default population size when caller does not specify `popsize`.
+
 ### DEFAULT_PROVENANCE
 
+Default provenance count applied when unspecified.
+
 ### DEFAULT_WEIGHT_DIFF_COEFF
+
+Default average weight difference coefficient for compatibility distance.
 
 ### NeatOptions
 
@@ -325,6 +378,11 @@ Returns: Aggregated evaluation result (implementation specific).
 Evolves the population by selecting, mutating, and breeding genomes.
 This method is delegated to `src/neat/neat.evolve.ts` during the migration.
 
+Example:
+
+// Run a single evolution step (async)
+await neat.evolve();
+
 #### export
 
 `() => any[]`
@@ -591,31 +649,6 @@ Spawn a new genome derived from a single parent while preserving Neat bookkeepin
 Serialize NEAT meta (without population) for persistence of innovation history.
 
 ## config.ts
-
-### config
-
-Global NeatapticTS configuration contract & default instance.
-
-WHY THIS EXISTS
---------------
-A central `config` object offers a convenient, documented surface for end-users (and tests)
-to tweak library behaviour without digging through scattered constants. Centralization also
-lets us validate & evolve feature flags in a single place.
-
-USAGE PATTERN
-------------
-  import { config } from 'neataptic-ts';
-  config.warnings = true;              // enable runtime warnings
-  config.deterministicChainMode = true // opt into deterministic deep path construction
-
-Adjust BEFORE constructing networks / invoking evolutionary loops so that subsystems read
-the intended values while initializing internal buffers / metadata.
-
-DESIGN NOTES
-------------
-- We intentionally avoid setters / proxies to keep this a plain serializable object.
-- Optional flags are conservative by default (disabled) to preserve legacy stochastic
-  behaviour unless a test or user explicitly opts in.
 
 ### NeatapticConfig
 
@@ -1154,14 +1187,18 @@ Parameters:
 
 Returns: Reinitialized connection instance.
 
+Example:
+
+const conn = Connection.acquire(a, b);
+// ... use conn ...
+Connection.release(conn); // when permanently removed
+
 #### activate
 
 `(input: number[], training: boolean, _maxActivationDepth: number) => number[]`
 
-Activates the network using the given input array.
-Performs a forward pass through the network, calculating the activation of each node.
-
-Returns: An array of numerical values representing the activations of the network's output nodes.
+Standard activation API returning a plain number[] for backward compatibility.
+Internally may use pooled typed arrays; if so they are cloned before returning.
 
 #### activate
 
@@ -1519,13 +1556,7 @@ Create initial population pool. Delegates to helpers if present.
 
 `(network1: import("src/architecture/network").default, network2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network").default`
 
-Creates a new offspring network by performing crossover between two parent networks.
-This method implements the crossover mechanism inspired by the NEAT algorithm and described
-in the Instinct paper, combining genes (nodes and connections) from both parents.
-Fitness scores can influence the inheritance process. Matching genes are inherited randomly,
-while disjoint/excess genes are typically inherited from the fitter parent (or randomly if fitness is equal or `equal` flag is set).
-
-Returns: A new Network instance representing the offspring.
+NEAT-style crossover delegate.
 
 #### dcMask
 
@@ -1564,10 +1595,7 @@ Returns: Architecture descriptor with hidden-layer widths and provenance.
 
 `(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
 
-Creates a Network instance from serialized data produced by `serialize()`.
-Reconstructs the network structure and state based on the provided arrays.
-
-Returns: A new Network instance reconstructed from the serialized data.
+Static lightweight tuple deserializer delegate
 
 #### disableDropConnect
 
@@ -1698,6 +1726,11 @@ Returns: Aggregated evaluation result (implementation specific).
 Evolves the population by selecting, mutating, and breeding genomes.
 This method is delegated to `src/neat/neat.evolve.ts` during the migration.
 
+Example:
+
+// Run a single evolution step (async)
+await neat.evolve();
+
 #### export
 
 `() => any[]`
@@ -1769,10 +1802,7 @@ The source (pre-synaptic) node supplying activation.
 
 `(json: Record<string, unknown>) => import("src/architecture/network").default`
 
-Reconstructs a network from a JSON object (latest standard).
-Handles formatVersion, robust error handling, and index-based references.
-
-Returns: The reconstructed network.
+Verbose JSON static deserializer
 
 #### fromJSON
 
@@ -2120,6 +2150,10 @@ Parameters:
 - `targetNodeId` - Target node integer id / index.
 
 Returns: Unique non-negative integer derived from the ordered pair.
+
+Example:
+
+const id = Connection.innovationID(2, 5); // deterministic
 
 #### input
 
@@ -2510,6 +2544,11 @@ You normally only call this at the start of an experiment or when deserializing 
 Parameters:
 - `value` - New starting value (default 1).
 
+Example:
+
+Connection.resetInnovationCounter();     // back to 1
+Connection.resetInnovationCounter(1000); // start counting from 1000
+
 #### resetNoveltyArchive
 
 `() => void`
@@ -2753,11 +2792,7 @@ Serialize NEAT meta (without population) for persistence of innovation history.
 
 `() => Record<string, unknown>`
 
-Converts the network into a JSON object representation (latest standard).
-Includes formatVersion, and only serializes properties needed for full reconstruction.
-All references are by index. Excludes runtime-only properties (activation, state, traces).
-
-Returns: A JSON-compatible object representing the network.
+Verbose JSON serializer delegate
 
 #### toJSON
 
@@ -2786,6 +2821,11 @@ Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
 Undefined indices are preserved as `undefined` to allow later resolution / remapping.
 
 Returns: Object with node indices, weight, gain, gater index (if any), innovation id & enabled flag.
+
+Example:
+
+const json = connection.toJSON();
+// => { from: 0, to: 3, weight: 0.12, gain: 1, innovation: 57, enabled: true }
 
 #### toONNX
 

@@ -1,16 +1,18 @@
 # evaluation/rollout
 
-## evaluation/rollout/evaluation.rollout.types.ts
-
-### evaluation.rollout.types
-
 Rollout-internal type contracts.
 
-This file will host runtime-only rollout types that should not widen the
-public evaluation-level API surface.
+These runtime-only types are the private vocabulary of one rollout episode.
+They keep the public evaluation API compact while still giving the rollout
+loop explicit names for the data it carries between phases.
 
-That separation keeps the public evaluation API compact even as rollout
-internals become more detailed.
+Read them as three layers:
+
+- `RolloutEpisodeContext`: immutable, normalized configuration.
+- `RolloutEpisodeRuntimeState`: mutable execution state.
+- fitness and shaping types: named reward channels used during folding.
+
+## evaluation/rollout/evaluation.rollout.types.ts
 
 ### DenseShapingRewardComponents
 
@@ -40,8 +42,6 @@ Named channels make reward design easier to audit than a single opaque number.
 
 ## evaluation/rollout/evaluation.rollout.service.ts
 
-### evaluation.rollout.service
-
 Rollout orchestration module.
 
 This file will host the internal rollout orchestration entry while the
@@ -51,6 +51,23 @@ Educational note:
 A rollout is one deterministic episode for one policy under one seed. This
 module keeps that lifecycle readable: normalize inputs, create runtime state,
 simulate until termination, then fold the result into a public episode report.
+
+That lifecycle matters because the trainer depends on rollouts being both
+repeatable and interpretable. A rollout is not only "did the bird crash?"
+It is the bridge between one seeded control problem and one scored episode
+that can be compared fairly with other genomes.
+
+Rollout pipeline:
+```mermaid
+flowchart LR
+    Options["network + rollout options"] --> Context["normalize context"]
+    Context --> Runtime["create runtime state"]
+    Runtime --> Loop["observe -> act -> step -> shape"]
+    Loop --> EarlyStop{"done or\nbudget exhausted?"}
+    EarlyStop -->|No| Loop
+    EarlyStop -->|Yes| Finalize["finalize timeout state"]
+    Finalize --> Result["compose FlappyEpisodeResult"]
+```
 
 ### rolloutEpisode
 
@@ -64,17 +81,48 @@ Parameters:
 
 Returns: Episode result details.
 
-## evaluation/rollout/evaluation.rollout.services.ts
+Example:
 
-### evaluation.rollout.services
+```ts
+const result = rolloutEpisode(network, {
+  seed: 123,
+  normalizeFitness: true,
+  maxFrames: 2_000,
+});
+
+console.log(result.fitness, result.doneReason);
+```
+
+## evaluation/rollout/evaluation.rollout.services.ts
 
 Rollout runtime services.
 
-This file will host context resolution, runtime initialization, frame loop,
-and early-termination behavior for rollout execution.
+This file owns the mechanics of running an episode once a caller has decided
+to do a rollout: normalize the options, create the seeded runtime, loop over
+frames, and stop early when continued simulation is no longer informative.
 
 The companion utils file owns reward shaping and result composition. This file
-owns the mechanics of actually running the episode.
+owns the episode heartbeat itself.
+
+Minimal usage sketch:
+```ts
+const rolloutEpisodeContext = resolveRolloutEpisodeContext(network, {
+  seed: 123,
+  enableEarlyTermination: true,
+});
+const rolloutEpisodeRuntimeState = createRolloutEpisodeRuntimeState(
+  rolloutEpisodeContext,
+);
+runRolloutEpisodeLoop(
+  network,
+  rolloutEpisodeContext,
+  rolloutEpisodeRuntimeState,
+);
+finalizeRolloutEpisodeState(
+  rolloutEpisodeContext,
+  rolloutEpisodeRuntimeState,
+);
+```
 
 ### applyRolloutEarlyTerminationIfNeeded
 
@@ -190,38 +238,53 @@ Returns: Nothing.
 
 ## evaluation/rollout/evaluation.rollout.constants.ts
 
-### evaluation.rollout.constants
-
 Rollout-local constants.
 
-This file will host rollout-only constants and sentinels that belong to the
-rollout subsystem rather than the wider evaluation surface.
+These constants are the small semantic anchors that keep the rollout code
+readable: default ids, minimum clamps, zero baselines, and explicit done
+reasons.
 
 Naming these sentinels explicitly keeps rollout code easier to read than a
 sea of raw `0`, `1`, and string literals.
 
 ### FLAPPY_ROLLOUT_DEFAULT_GENOME_ID
 
+Default genome id used when a network does not expose one.
+
 ### FLAPPY_ROLLOUT_DONE_REASON_COLLISION
+
+Rollout done reason used by heuristic early termination.
 
 ### FLAPPY_ROLLOUT_DONE_REASON_TIMEOUT
 
+Rollout done reason used when the episode exhausts its frame budget.
+
 ### FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_CONSECUTIVE_FRAMES
+
+Minimum unrecoverable-frame streak required for early termination.
 
 ### FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_GRACE_FRAMES
 
+Minimum grace period allowed before early termination can activate.
+
 ### FLAPPY_ROLLOUT_MIN_MAX_FRAMES
+
+Minimum positive frame-like scalar used by rollout normalization.
 
 ### FLAPPY_ROLLOUT_ZERO_FITNESS
 
-## evaluation/rollout/evaluation.rollout.utils.ts
+Shared zero baseline used across rollout fitness and counters.
 
-### evaluation.rollout.utils
+This acts as the semantic baseline for both shaping accumulation and several
+rollout guard conditions.
+
+## evaluation/rollout/evaluation.rollout.utils.ts
 
 Rollout shaping and result helpers.
 
-This file will host rollout-local fitness composition, shaping utilities,
-and terminal result assembly helpers.
+This file interprets an episode after the runtime services have determined
+what happened. In other words: services produce the trajectory, utils assign
+meaning to that trajectory.
 
 Educational note:
 The rollout subsystem separates simulation from scoring on purpose. The

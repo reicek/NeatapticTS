@@ -106,6 +106,8 @@ export async function runRuntimeEvolutionLoop(
     const bestNetwork = generationPayload.bestNetworkJson
       ? Network.fromJSON(generationPayload.bestNetworkJson)
       : undefined;
+    const generationPopulationNetworks =
+      resolveGenerationPopulationNetworks(generationPayload, bestNetwork);
     const bestArchitectureLabel = resolveNetworkArchitectureLabel(
       bestNetwork,
       inputSize,
@@ -158,6 +160,23 @@ export async function runRuntimeEvolutionLoop(
           ),
         });
       },
+      ({ championBirdIndex }) => {
+        // Step 3.5.3: Redraw the side panel from the current champion network.
+        const championNetwork =
+          generationPopulationNetworks[championBirdIndex] ?? bestNetwork;
+        if (!championNetwork) {
+          return;
+        }
+
+        updateStatsTableValues(statsValueByKey, {
+          currentArchitecture: resolveNetworkArchitectureLabel(
+            championNetwork,
+            inputSize,
+            outputSize,
+          ),
+        });
+        renderNetworkArchitecture(championNetwork, inputSize, outputSize);
+      },
     );
 
     // Step 3.6: Fold generation winner into cross-generation maxima.
@@ -186,4 +205,35 @@ export async function runRuntimeEvolutionLoop(
       // ignore console write issues
     }
   }
+}
+
+/**
+ * Resolves the browser-side network cache for the current playback generation.
+ *
+ * Playback birds are created from the generation population in stable array
+ * order, so the browser can reuse this ordered cache to redraw the network
+ * panel when the red-bird champion changes.
+ *
+ * @param generationPayload - Worker generation-ready payload.
+ * @param bestNetwork - Current generation best-network fallback.
+ * @returns Ordered population networks for the upcoming playback session.
+ */
+function resolveGenerationPopulationNetworks(
+  generationPayload: {
+    populationNetworksJson?: Array<Record<string, unknown>>;
+  },
+  bestNetwork: Network | undefined,
+): Network[] {
+  // Step 1: Prefer the full serialized population when the worker provides it.
+  if (
+    Array.isArray(generationPayload.populationNetworksJson) &&
+    generationPayload.populationNetworksJson.length > 0
+  ) {
+    return generationPayload.populationNetworksJson.map((populationNetwork) =>
+      Network.fromJSON(populationNetwork),
+    );
+  }
+
+  // Step 2: Fall back to the best network when no population payload exists.
+  return bestNetwork ? [bestNetwork] : [];
 }

@@ -19,12 +19,14 @@ const MERMAID_MODULE_SOURCE_PATH = path.resolve(
   'dist',
   'mermaid.esm.min.mjs',
 );
+const MERMAID_DIST_SOURCE_DIR = path.resolve('node_modules', 'mermaid', 'dist');
 const MERMAID_MODULE_OUTPUT_PATH = path.join(
   DOCS_DIR,
   'assets',
   'vendor',
   'mermaid.esm.min.mjs',
 );
+const MERMAID_DIST_OUTPUT_DIR = path.join(DOCS_DIR, 'assets', 'vendor');
 const MERMAID_CLI_SCRIPT_PATH = path.resolve('scripts', 'mermaid-cli.mjs');
 const NN_IMAGE_SOURCE_PATH = path.resolve('nn.jpg');
 const NN_IMAGE_FALLBACK_SOURCE_PATH = path.resolve(
@@ -117,9 +119,40 @@ async function ensureMermaidModule(): Promise<void> {
   const hasMermaidModule = await fs.pathExists(MERMAID_MODULE_SOURCE_PATH);
   if (!hasMermaidModule) return;
 
-  // Step 2: Copy the local Mermaid ESM bundle used by generated docs pages.
-  await fs.ensureDir(path.dirname(MERMAID_MODULE_OUTPUT_PATH));
-  await fs.copyFile(MERMAID_MODULE_SOURCE_PATH, MERMAID_MODULE_OUTPUT_PATH);
+  // Step 2: Copy the full Mermaid dist bundle so transitive chunk imports load.
+  await fs.ensureDir(MERMAID_DIST_OUTPUT_DIR);
+  await fs.copy(MERMAID_DIST_SOURCE_DIR, MERMAID_DIST_OUTPUT_DIR, {
+    overwrite: true,
+  });
+}
+
+function buildDocsLayoutInteractionScript(): string {
+  return `<script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script>`;
 }
 
 async function ensureStaticDocsAssets(): Promise<void> {
@@ -417,7 +450,8 @@ async function main() {
       const id = slugify(source);
       return `<h${depth} id="${id}">${text}</h${depth}>`;
     };
-    (renderer as any).code = ({ text, lang }: any) => {
+    (renderer as any).code = (codeToken: any) => {
+      const { text, lang } = codeToken;
       if ((lang ?? '').toString().trim().toLowerCase() === 'mermaid') {
         hasMermaidDiagram = true;
         return `<pre class="mermaid mermaid-diagram">${escapeHtml(
@@ -425,7 +459,7 @@ async function main() {
         )}</pre>`;
       }
 
-      return originalCode?.({ text, lang }) ?? '';
+      return originalCode?.(codeToken) ?? '';
     };
     marked.use({ renderer });
     const htmlBody = marked.parse(md, { async: false });
@@ -454,6 +488,7 @@ async function main() {
     const mermaidBootstrapScript = hasMermaidDiagram
       ? buildMermaidBootstrapScript(relToRoot)
       : '';
+    const docsLayoutInteractionScript = buildDocsLayoutInteractionScript();
     // Add Examples top-level nav; active when current dir starts with examples
     const examplesHref = (relToRoot || '.') + '/examples/index.html';
     const onExamples = meta.relDir.startsWith('examples');
@@ -469,9 +504,9 @@ async function main() {
       relToRoot || '.'
     }/index.html">Home</a><a href="${
       relToRoot || '.'
-    }/index.html"${docsActive}>Docs</a><a href="${examplesHref}"${examplesActive}>Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar">${navHtmlFor(
+    }/index.html"${docsActive}>Docs</a><a href="${examplesHref}"${examplesActive}>Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>\n<div class="layout"><aside class="sidebar docs-panel docs-panel-left">${navHtmlFor(
       meta.relDir,
-    )}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc">${toc}</aside></div>${mermaidBootstrapScript}</body></html>`;
+    )}</aside><main class="content">${htmlBody}<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right">${toc}</aside></div>${docsLayoutInteractionScript}${mermaidBootstrapScript}</body></html>`;
     await writeFileWithRetry(outFile, page, 'utf8');
   }
   console.log('HTML docs generated.');

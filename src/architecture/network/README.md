@@ -71,6 +71,19 @@ Compact tuple payload used by `serialize` output.
 Tuple slots are intentionally positional to reduce payload size:
 0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size.
 
+Example:
+
+```ts
+const compactTuple: CompactSerializedNetworkTuple = [
+  [0.1, 0.2],
+  [0, 0],
+  ['identity', 'tanh'],
+  [{ from: 0, to: 1, weight: 0.5, gater: null }],
+  1,
+  1,
+];
+```
+
 ### ConnectionGene
 
 Crossover connection-gene descriptor.
@@ -566,6 +579,19 @@ Verbose JSON snapshots normalize this value so readers can treat dropout as nume
 Verbose JSON payload representation used by `toJSONImpl` and `fromJSONImpl`.
 
 `formatVersion` enables compatibility checks and migration handling.
+
+Example:
+
+```ts
+const payload: NetworkJSON = {
+  formatVersion: 2,
+  input: 2,
+  output: 1,
+  dropout: 0,
+  nodes: [{ type: 'input', bias: 0, squash: 'identity', index: 0 }],
+  connections: [],
+};
+```
 
 ### NetworkJSONConnection
 
@@ -1294,13 +1320,23 @@ Fitness signature evaluating one genome.
 
 ### SLAB_DEFAULT_ASYNC_CHUNK_SIZE
 
+Default async slab rebuild chunk size when no override is provided.
+
 ### SLAB_GROWTH_FACTOR_BROWSER
+
+Capacity growth factor for browser slab allocations.
 
 ### SLAB_GROWTH_FACTOR_NODE
 
+Capacity growth factor for Node.js slab allocations.
+
 ### SLAB_ONE
 
+Numeric one sentinel used for neutral gain defaults and index math.
+
 ### SLAB_ZERO
+
+Numeric zero sentinel used across slab orchestration and helper pipelines.
 
 ### SlabBuildContext
 
@@ -1415,6 +1451,13 @@ Worker-local traversal context.
 
 ### __trainingInternals
 
+Test-only internal helper bundle.
+
+This is exported so unit tests can cover edge-cases in the smoothing logic without
+running full end-to-end training loops.
+
+Important: this is **not** considered stable public API. It may change between releases.
+
 ### activate
 
 `(input: number[], training: boolean) => number[]`
@@ -1448,6 +1491,11 @@ Parameters:
 
 Returns: 2‑D array: outputs[i] is the activation result for inputs[i].
 
+Example:
+
+const batchOut = net.activateBatch([[0,0,1],[1,0,0],[0,1,0]]);
+console.log(batchOut.length); // 3 rows
+
 ### activateRaw
 
 `(input: number[], training: boolean, maxActivationDepth: number) => number[]`
@@ -1466,6 +1514,10 @@ Parameters:
 - `maxActivationDepth` - - Guard against runaway recursion / cyclic activation attempts.
 
 Returns: Implementation-defined result of Network.activate (typically an output vector).
+
+Example:
+
+const y = net.activateRaw([0,1,0]);
 
 ### applyGradientClippingImpl
 
@@ -1504,20 +1556,9 @@ Parameters:
 
 `() => void`
 
-Topology utilities.
-
-Provides:
- - computeTopoOrder: Kahn-style topological sorting with graceful fallback when cycles detected.
- - hasPath: depth-first reachability query (used to prevent cycle introduction when acyclicity enforced).
-
-Design Notes:
- - We deliberately tolerate cycles by falling back to raw node ordering instead of throwing; this
-   allows callers performing interim structural mutations to proceed (e.g. during evolve phases)
-   while signaling that the fast acyclic optimizations should not be used.
- - Input nodes are seeded into the queue immediately regardless of in-degree to keep them early in
-   the ordering even if an unusual inbound edge was added (defensive redundancy).
- - Self loops are ignored for in-degree accounting and queue progression (they neither unlock new
-   nodes nor should they block ordering completion).
+Compute a topological ordering (Kahn's algorithm) for the current directed acyclic graph.
+If cycles are detected (order shorter than node count) we fall back to raw node order to avoid breaking callers.
+In non-acyclic mode we simply clear cached order to signal use of sequential node array.
 
 ### connect
 
@@ -1556,6 +1597,10 @@ Parameters:
 
 Returns: Array of created  {@link Connection} objects (possibly empty if acyclicity rejected the edge).
 
+Example:
+
+const [edge] = net.connect(nodeA, nodeB, 0.5);
+
 ### createMLP
 
 `(inputCount: number, hiddenCounts: number[], outputCount: number) => import("src/architecture/network").default`
@@ -1574,18 +1619,62 @@ Returns: Newly created MLP network.
 
 `(parentNetwork1: import("src/architecture/network").default, parentNetwork2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network").default`
 
-Genetic operator: NEAT‑style crossover (legacy merge operator removed).
+NEAT-inspired crossover between two parent networks producing a single offspring.
 
-This module now focuses solely on producing recombinant offspring via {@link crossOver}.
-The previous experimental `Network.merge` flow has been removed to reduce maintenance
-surface area and avoid implying a misleading sequential-composition guarantee.
+Conceptual model:
+- A "gene" corresponds to either a node choice at a structural index or a connection
+  keyed by innovation identity.
+- The offspring is assembled in two phases: node assignment first, then connection
+  materialization constrained by available offspring endpoints.
+- Fitness controls inheritance pressure unless `equal` is enabled, in which case both
+  parents contribute symmetrically where possible.
 
-Design notes:
-- The implementation favors deterministic, inspectable orchestration at the top level.
-- Gene-selection details are delegated to setup/materialization helpers so the public
-  crossover API stays compact and predictable.
-- The resulting offspring preserves the same input/output interface as both parents,
-  which keeps downstream evaluation and training pipelines compatible.
+Simplifications relative to canonical NEAT:
+ - Innovation ID is synthesized from (from.index, to.index) via Connection.innovationID instead of
+   maintaining a global innovation number per mutation event.
+ - Node alignment relies on current index ordering. This is weaker than historical innovation
+   tracking, but adequate for many lightweight evolutionary experiments.
+
+Compatibility assumptions:
+- Both parents must expose identical input/output counts.
+- Parent node index ordering should represent comparable structural positions.
+- Parent fitness scores are interpreted by setup helpers when deciding fitter-parent inheritance.
+
+High-level algorithm:
+ 1. Validate that parents have identical I/O dimensionality (required for compatibility).
+ 2. Decide offspring node array length:
+      - If equal flag set or scores tied: random length in [minNodes, maxNodes].
+      - Else: length of fitter parent.
+ 3. For each index up to chosen size, pick a node gene from parents per rules:
+      - Input indices: always from parent1 (assumes identical input interface).
+      - Output indices (aligned from end): randomly choose if both present else take existing.
+      - Hidden indices: if both present pick randomly; else inherit from fitter (or either if equal).
+ 4. Reindex offspring nodes.
+ 5. Collect connections (standard + self) from each parent into maps keyed by innovationID capturing
+    weight, enabled flag, and gater index.
+ 6. For overlapping genes (present in both), randomly choose one; if either disabled apply optional
+    re-enable probability (reenableProb) to possibly re-activate.
+ 7. For disjoint/excess genes, inherit only from fitter parent (or both if equal flag set / scores tied).
+ 8. Materialize selected connection genes if their endpoints both exist in offspring; set weight & enabled state.
+ 9. Reattach gating if gater node exists in offspring.
+
+Enabled reactivation probability:
+ - Parents may carry disabled connections; offspring may re-enable them with a probability derived
+   from parent-specific _reenableProb (or default 0.25). This allows dormant structures to resurface.
+
+Parameters:
+- `parentNetwork1` - - First parent (ties resolved in its favor when scores equal and equal=false for some cases).
+- `parentNetwork2` - - Second parent.
+- `equal` - - Force symmetric treatment regardless of fitness (true => node count random between sizes and both parents equally contribute disjoint genes).
+
+Returns: Offspring network instance.
+
+Example:
+
+```ts
+const offspring = crossOver(parentA, parentB);
+offspring.mutate();
+```
 
 ### describeArchitecture
 
@@ -1607,9 +1696,37 @@ Parameters:
 
 Returns: Stable architecture descriptor.
 
+Example:
+
+```ts
+const descriptor = describeArchitecture(network);
+// descriptor.hiddenLayerSizes -> [8, 4]
+// descriptor.source -> 'layer-metadata' | 'graph-topology' | 'inferred'
+```
+
 ### deserialize
 
 `(data: import("src/architecture/network/network.types").CompactSerializedNetworkTuple, inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
+
+Rebuilds a network instance from compact tuple form.
+
+Use this importer for compact payloads produced by `serialize`.
+Optional `inputSize` and `outputSize` let callers enforce shape overrides at import time.
+
+Parameters:
+- `data` - - Compact tuple payload.
+- `inputSize` - - Optional input-size override that takes precedence over serialized input.
+- `outputSize` - - Optional output-size override that takes precedence over serialized output.
+
+Returns: Reconstructed network instance.
+
+Example:
+
+```ts
+import { deserialize } from './network.serialize.utils';
+
+const rebuiltNetwork = deserialize(compactTuple, 2, 1);
+```
 
 ### disconnect
 
@@ -1642,6 +1759,10 @@ Parameters:
 - `from` - - Source node.
 - `to` - - Target node.
 
+Example:
+
+net.disconnect(nodeA, nodeB);
+
 ### evolveNetwork
 
 `(set: import("src/architecture/network/network.types").TrainingSample[], options: import("src/architecture/network/network.types").EvolveOptions) => Promise<{ error: number; iterations: number; time: number; }>`
@@ -1665,6 +1786,18 @@ Parameters:
 - `options` - - Evolution hyperparameters and stop conditions.
 
 Returns: Final summary containing best error estimate, generations processed, and elapsed milliseconds.
+
+Example:
+
+```ts
+const summary = await network.evolve(trainingSet, {
+  error: 0.02,
+  iterations: 500,
+  growth: 0.0005,
+  threads: 2,
+});
+console.log(summary.error, summary.iterations, summary.time);
+```
 
 ### fastSlabActivate
 
@@ -1690,6 +1823,24 @@ Returns: Output activations (detached plain array) of length `network.output`.
 ### fromJSONImpl
 
 `(json: import("src/architecture/network/network.types").NetworkJSON) => import("src/architecture/network").default`
+
+Reconstructs a network instance from the verbose JSON payload.
+
+This importer validates payload shape, restores dropout and topology, and then rebuilds
+connections, gating relationships, and optional enabled flags.
+
+Parameters:
+- `json` - - Verbose JSON payload.
+
+Returns: Reconstructed network instance.
+
+Example:
+
+```ts
+import { fromJSONImpl } from './network.serialize.utils';
+
+const rebuiltNetwork = fromJSONImpl(snapshotJson);
+```
 
 ### gate
 
@@ -1724,31 +1875,23 @@ Returns: Standard normal sample with mean 0 and variance 1.
 
 `(net: import("src/architecture/network").default) => string`
 
-Standalone forward pass code generator.
+Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.
 
-Purpose:
- Transforms a dynamic Network instance (object graph with Nodes / Connections / gating metadata)
- into a self-contained JavaScript function string that, when evaluated, returns an `activate(input)`
- function capable of performing forward propagation without the original library runtime.
+Implementation Steps:
+ 1. Validate presence of output nodes (must produce something observable).
+ 2. Assign stable sequential indices to nodes (used as array offsets in generated code).
+ 3. Collect initial activation/state values into typed array initializers for warm starting.
+ 4. For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
+    (post-activation output). Gating multiplies activation by gate activations; self-connection adds
+    recurrent term S[i] * weight before activation.
+ 5. De-duplicate activation functions: each unique squash name is emitted once; references become
+    indices into array F of function references for compactness.
+ 6. Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).
 
-Why generate code?
- - Deployment: Embed a compact, dependency‑free inference function in environments where bundling
-   the full evolutionary framework is unnecessary (e.g. model cards, edge scripts, CI sanity checks).
- - Performance: Remove dynamic indirection (property lookups, virtual dispatch) by specializing
-   the computation graph into straight‑line code and simple loops; JS engines can optimize this.
- - Readability: Emitted source is human-readable so users can inspect weighted sums and activations.
+Parameters:
+- `net` - Network instance to snapshot.
 
-Features Supported:
- - Standard feed‑forward connections with optional gating (multiplicative modulation).
- - Single self-connection per node (handled as recurrent term S[i] * weight before activation).
- - Arbitrary activation functions: built‑in ones are emitted via canonical snippets; custom user
-   functions are stringified and sanitized via stripCoverage(). Arrow or anonymous functions are
-   normalized into named `function <name>(...)` forms for clarity and stable ordering.
-
-Not Supported / Simplifications:
- - No dynamic dropout, noise injection, or stochastic depth—those would require runtime randomness.
- - Assumes all node indices are stable and sequential (enforced prior to generation).
- - Gradient / backprop logic intentionally omitted (forward inference only).
+Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.
 
 ### getConnectionSlab
 
@@ -1798,39 +1941,26 @@ Parameters:
 
 Returns: Numeric RNG state value, or `undefined` when no deterministic state exists yet.
 
+Example:
+
+```ts
+const state = network.getRNGState();
+```
+
 ### getSlabAllocationStats
 
 `() => { pool: { [x: string]: import("src/architecture/network/slab/network.slab.utils.types").PoolKeyMetrics; }; fresh: number; pooled: number; }`
 
-Slab Packing / Structure‑of‑Arrays Backend (Educational Module)
-==============================================================
-Packs per‑connection data into parallel typed arrays (SoA) to accelerate
-forward passes and to illustrate memory/layout optimizations.
+Allocation statistics snapshot for slab typed arrays.
 
-Why SoA?
- - Locality & fewer cache misses.
- - Predictable tight numeric loops (JIT / SIMD friendly).
- - Easy instrumentation (single contiguous blocks to measure & diff).
+Includes:
+ - fresh: number of newly constructed typed arrays since process start / metrics reset.
+ - pooled: number of arrays served from the pool.
+ - pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
 
-Key Arrays (logical length = `used`): weights | from | to | flags | (optional) gain | (optional) plastic.
-Adjacency (CSR style): outStart (nodeCount+1), outOrder (per‑source permutation) enabling fast fan‑out.
+NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.
 
-On‑Demand & Omission:
- - Gain/plastic slabs allocated only when a non‑neutral value appears; freed if neutrality returns.
- - `getConnectionSlab()` synthesizes a neutral gain view if omitted internally (keeps teaching tools simple).
-
-Capacity Strategy: geometric growth (1.25x browser / 1.75x Node) amortizes realloc cost.
-Pooling (config gated) reuses typed arrays (see `getSlabAllocationStats`).
-
-Rebuild Steps (sync): reindex nodes → grow/allocate if needed → single pass populate → optional slabs → version++.
-Async variant slices the population loop into microtasks to reduce long main‑thread blocks.
-
-Example (inspection):
-```ts
-const slab = (net as any).getConnectionSlab();
-console.log('Edges', slab.used, 'Version', slab.version, 'Cap', slab.capacity);
-console.log('First weight from->to', slab.weights[0], slab.from[0], slab.to[0]);
-```
+Returns: Plain object copy (safe to serialize) of current allocator counters.
 
 ### hasPath
 
@@ -1842,23 +1972,13 @@ Depth-first reachability test (avoids infinite loops via visited set).
 
 `(iteration: number) => void`
 
-Structured and dynamic pruning utilities for networks.
+Perform scheduled pruning at a given training iteration if conditions are met.
 
-Features:
- - Scheduled pruning during gradient-based training ({@link maybePrune}) with linear sparsity ramp.
- - Evolutionary generation pruning toward a target sparsity ({@link pruneToSparsity}).
- - Two ranking heuristics:
-     magnitude: |w|
-     snip: |w * g| approximation (g approximated via accumulated delta stats; falls back to |w|)
- - Optional stochastic regrowth during scheduled pruning (dynamic sparse training), preserving acyclic constraints.
+Scheduling fields (cfg): start, end, frequency, targetSparsity, method ('magnitude' | 'snip'), regrowFraction.
+The target sparsity ramps linearly from 0 at start to cfg.targetSparsity at end.
 
-Internal State Fields (attached to Network via `any` casting):
- - _pruningConfig: user-specified schedule & options (start, end, frequency, targetSparsity, method, regrowFraction, lastPruneIter)
- - _initialConnectionCount: baseline connection count captured outside (first training iteration)
- - _evoInitialConnCount: baseline for evolutionary pruning (first invocation of pruneToSparsity)
- - _rand: deterministic RNG function
- - _enforceAcyclic: boolean flag enforcing forward-only connectivity ordering
- - _topoDirty: topology order invalidation flag consumed by activation fast path / topological sorting
+Parameters:
+- `iteration` - Current (0-based or 1-based) training iteration counter used for scheduling.
 
 ### mutateImpl
 
@@ -1881,6 +2001,13 @@ Parameters:
 - `method` - - Mutation enum value or descriptor object.
 
 Returns: Nothing.
+
+Example:
+
+```ts
+network.mutate('ADD_NODE');
+network.mutate({ name: 'MOD_WEIGHT', min: -0.1, max: 0.1 });
+```
 
 ### noTraceActivate
 
@@ -1918,6 +2045,11 @@ Parameters:
 - `input` - - Flat numeric vector whose length must equal network.input.
 
 Returns: Array of output neuron activations (length == network.output).
+
+Example:
+
+const out = net.noTraceActivate([0.1, 0.2, 0.3]);
+console.log(out); // => e.g. [0.5123, 0.0441]
 
 ### propagate
 
@@ -2002,34 +2134,11 @@ Returns: Promise resolving once rebuild completes.
 
 `(node: import("src/architecture/node").default) => void`
 
-Node removal utilities.
-
-This module provides a focused implementation for removing a single hidden node from a network
-while attempting to preserve overall functional connectivity. The removal procedure mirrors the
-legacy Neataptic logic but augments it with clearer documentation and explicit invariants.
-
-High‑level algorithm (removeNode):
- 1. Guard: ensure the node exists and is not an input or output (those are structural anchors).
- 2. Ungate: detach any connections gated BY the node (we don't currently reassign gater roles).
- 3. Snapshot inbound / outbound connections (before mutation of adjacency lists).
- 4. Disconnect all inbound, outbound, and self connections.
- 5. Physically remove the node from the network's node array.
- 6. Simple path repair heuristic: for every former inbound source and outbound target, add a
-    direct connection if (a) both endpoints still exist, (b) they are distinct, and (c) no
-    direct connection already exists. This keeps forward information flow possibilities.
- 7. Mark topology / caches dirty so that subsequent activation / ordering passes rebuild state.
-
-Notes / Limitations:
- - We do NOT attempt to clone weights or distribute the removed node's function across new
-   connections (more sophisticated strategies could average or compose weights).
- - Gating effects involving the removed node as a gater are dropped; downstream behavior may
-   change—callers relying heavily on gating may want a custom remap strategy.
- - Self connections are simply removed; no attempt is made to emulate recursion via alternative
-   structures.
+Remove a hidden node from the network while minimally repairing connectivity.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `node` - - Hidden node to remove.
+- `this` - Network instance (bound implicitly via method-style call).
+- `node` - The node object to remove (must be of type 'hidden').
 
 ### restoreRNG
 
@@ -2048,6 +2157,12 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+network.restoreRNG(restoredRandomFunction);
+```
+
 ### serialize
 
 `() => import("src/architecture/network/network.types").CompactSerializedNetworkTuple`
@@ -2061,6 +2176,17 @@ Parameters:
 - `this` - - Bound network instance.
 
 Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
+
+Example:
+
+```ts
+import Network from '../../network';
+import { deserialize, serialize } from './network.serialize.utils';
+
+const sourceNetwork = new Network(2, 1);
+const compactTuple = serialize.call(sourceNetwork);
+const rebuiltNetwork = deserialize(compactTuple);
+```
 
 ### setRNGState
 
@@ -2079,6 +2205,12 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+network.setRNGState(savedState);
+```
+
 ### setSeed
 
 `(seed: number) => void`
@@ -2096,6 +2228,12 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+network.setSeed(42);
+```
+
 ### snapshotRNG
 
 `() => import("src/architecture/network/network.types").RNGSnapshot`
@@ -2111,6 +2249,12 @@ Parameters:
 - `this` - - Bound network instance whose RNG lifecycle state is captured.
 
 Returns: Snapshot containing deterministic progress metadata and RNG state payload.
+
+Example:
+
+```ts
+const snapshot = network.snapshotRNG();
+```
 
 ### testNetwork
 
@@ -2139,6 +2283,17 @@ Parameters:
 
 Returns: Versioned JSON payload with shape metadata, nodes, and connections.
 
+Example:
+
+```ts
+import Network from '../../network';
+import { fromJSONImpl, toJSONImpl } from './network.serialize.utils';
+
+const sourceNetwork = new Network(3, 1);
+const snapshotJson = toJSONImpl.call(sourceNetwork);
+const rebuiltNetwork = fromJSONImpl(snapshotJson);
+```
+
 ### trainImpl
 
 `(net: import("src/architecture/network").default, set: import("src/architecture/network/training/network.training.utils.types").TrainingSample[], options: import("src/architecture/network/network.types").TrainingOptions) => { error: number; iterations: number; time: number; }`
@@ -2153,6 +2308,13 @@ Parameters:
 - `options` - - Training options (stopping conditions, optimizer, hooks, etc.).
 
 Returns: Summary payload containing final error, iteration count, and elapsed time.
+
+Example:
+
+```ts
+const result = net.train(set, { iterations: 500, rate: 0.3 });
+console.log(result.error);
+```
 
 ### trainSetImpl
 

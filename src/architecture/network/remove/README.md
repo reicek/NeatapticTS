@@ -1,41 +1,5 @@
 # architecture/network/remove
 
-## architecture/network/remove/network.remove.utils.types.ts
-
-### ERROR_CANNOT_REMOVE_ANCHOR_NODE
-
-### ERROR_NODE_NOT_IN_NETWORK
-
-### FIRST_REMOVED_NODE_INDEX
-
-### NetworkRemoveProps
-
-Internal network properties accessed during remove operations.
-
-### NODE_NOT_FOUND_INDEX
-
-### NODE_TYPE_INPUT
-
-### NODE_TYPE_OUTPUT
-
-### NodeConnectionSnapshotContext
-
-Snapshot of node adjacency prior to removal.
-
-### NodeRemovalContext
-
-Immutable context for validated node-removal request.
-
-### ReconnectEndpointPairContext
-
-Endpoint pair for reconnecting bridged paths.
-
-## architecture/network/remove/network.remove.utils.ts
-
-### removeNode
-
-`(node: import("src/architecture/node").default) => void`
-
 Node removal utilities.
 
 This module provides a focused implementation for removing a single hidden node from a network
@@ -60,6 +24,60 @@ Notes / Limitations:
    change—callers relying heavily on gating may want a custom remap strategy.
  - Self connections are simply removed; no attempt is made to emulate recursion via alternative
    structures.
+
+## architecture/network/remove/network.remove.utils.types.ts
+
+### ERROR_CANNOT_REMOVE_ANCHOR_NODE
+
+Error emitted when trying to remove structural anchor nodes.
+
+### ERROR_NODE_NOT_IN_NETWORK
+
+Error emitted when target node is not part of the network.
+
+### FIRST_REMOVED_NODE_INDEX
+
+Index for selecting first spliced node.
+
+### NetworkRemoveProps
+
+Internal network properties accessed during remove operations.
+
+### NODE_NOT_FOUND_INDEX
+
+Sentinel index used when node is not found.
+
+### NODE_TYPE_INPUT
+
+Node type literal for input anchors.
+
+### NODE_TYPE_OUTPUT
+
+Node type literal for output anchors.
+
+### NodeConnectionSnapshotContext
+
+Snapshot of node adjacency prior to removal.
+
+### NodeRemovalContext
+
+Immutable context for validated node-removal request.
+
+### ReconnectEndpointPairContext
+
+Endpoint pair for reconnecting bridged paths.
+
+## architecture/network/remove/network.remove.utils.ts
+
+### removeNode
+
+`(node: import("src/architecture/node").default) => void`
+
+Remove a hidden node from the network while minimally repairing connectivity.
+
+Parameters:
+- `this` - Network instance (bound implicitly via method-style call).
+- `node` - The node object to remove (must be of type 'hidden').
 
 ## architecture/network/remove/network.remove.gates.utils.ts
 

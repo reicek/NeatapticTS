@@ -1,5 +1,23 @@
 # trainer/evaluation
 
+Staged population-evaluation service for the Flappy trainer.
+
+This module owns the trainer's ranking funnel: everyone gets a cheap shared-
+seed screen, fewer genomes advance to the costlier full pass, and the best
+candidates are reevaluated on a broader seed set before scores are committed.
+
+The point is not only speed. The point is to spend rollout budget where it
+improves ranking confidence the most.
+
+Stage funnel:
+```mermaid
+flowchart LR
+    Population["full population"] --> Quick["quick stage\nsmall shared seed batch"]
+    Quick --> Full["full stage\nmore seeds for top candidates"]
+    Full --> Reevaluation["reevaluation stage\nlarger batch for leaders"]
+    Reevaluation --> Commit["commit final scores"]
+```
+
 ## trainer/evaluation/trainer.evaluation.service.types.ts
 
 ### PopulationAggregateScoringContext
@@ -76,6 +94,17 @@ Parameters:
 - `provisionalScoresByGenome` - - Mutable provisional score map.
 
 Returns: Nothing.
+
+Example:
+
+```ts
+evaluatePopulationQuickStage(
+  population,
+  generationEvaluationPlan,
+  aggregateByGenome,
+  provisionalScoresByGenome,
+);
+```
 
 ### evaluatePopulationReevaluationStage
 
@@ -158,8 +187,6 @@ Returns: Nothing.
 
 ## trainer/evaluation/trainer.evaluation.service.constants.ts
 
-### trainer.evaluation.service.constants
-
 Fallback score assigned to genomes that have not yet been evaluated.
 
 Using negative infinity guarantees unevaluated genomes lose any ranking tie
@@ -167,7 +194,17 @@ against genomes that already have real aggregate results.
 
 ### FLAPPY_TRAINER_MIN_PIPE_PROGRESS
 
+Minimum pipe-progress baseline used when no aggregates are available.
+
+This keeps early-stage aggregate scoring well-defined even before any genome
+has established meaningful pipe progress.
+
 ### FLAPPY_TRAINER_NEGATIVE_INFINITY_SCORE
+
+Fallback score assigned to genomes that have not yet been evaluated.
+
+Using negative infinity guarantees unevaluated genomes lose any ranking tie
+against genomes that already have real aggregate results.
 
 ## trainer/evaluation/trainer.evaluation.service.utils.ts
 

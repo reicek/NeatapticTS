@@ -43,8 +43,9 @@ a:hover {
   border-bottom: 1px solid var(--line);
 }
 .topbar .inner {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding: 12px 18px;
   display: flex;
   align-items: center;
@@ -74,15 +75,19 @@ a:hover {
   text-decoration: none;
 }
 .layout {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 280px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
   gap: 20px;
   padding: 20px 18px 30px;
 }
 .sidebar,
 .toc {
+  flex: 0 0 18rem;
+  width: 18rem;
+  min-width: 0;
   position: sticky;
   top: 72px;
   max-height: calc(100vh - 90px);
@@ -91,13 +96,36 @@ a:hover {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px;
+  transition:
+    flex-basis 180ms ease,
+    width 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
 }
 .content {
+  flex: 1 1 auto;
   min-width: 0;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 24px;
+}
+.content > img,
+.content p > img:only-child {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100dvh - 8rem);
+  height: auto;
+  margin: 0 auto;
+  object-fit: contain;
+}
+.docs-panel.is-active {
+  flex-basis: 36rem;
+  width: 36rem;
+  border-color: rgba(94, 200, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(94, 200, 255, 0.22);
 }
 .sidebar-sections {
   list-style: none;
@@ -111,12 +139,47 @@ a:hover {
   list-style: none;
   padding-left: 12px;
   margin: 8px 0 0;
+  min-width: 0;
 }
 .sidebar-sections li a {
   display: block;
   padding: 5px 8px;
   border-radius: 7px;
   color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-sections li,
+.group,
+.page-toc,
+.toc-file,
+.toc-file ul,
+.toc-file li {
+  min-width: 0;
+}
+.g-head,
+.toc a {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toc ul {
+  min-width: 0;
+  padding-left: 14px;
+}
+.toc li {
+  min-width: 0;
+}
+.toc a {
+  color: var(--muted);
+}
+.toc a:hover {
+  color: #fff;
+  text-decoration: none;
 }
 .sidebar-sections li.current > a,
 .sidebar-sections li a:hover {
@@ -217,19 +280,27 @@ blockquote {
 }
 @media (max-width: 1180px) {
   .layout {
+    display: grid;
     grid-template-columns: 260px minmax(0, 1fr);
   }
   .toc {
     display: none;
   }
+  .sidebar {
+    width: auto;
+    flex-basis: auto;
+  }
 }
 @media (max-width: 900px) {
   .layout {
+    display: grid;
     grid-template-columns: 1fr;
   }
   .sidebar {
     position: static;
     max-height: none;
+    width: auto;
+    flex-basis: auto;
   }
   .content {
     padding: 18px;
