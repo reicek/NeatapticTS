@@ -79,9 +79,7 @@ function createPlaybackIterationContext(options: {
     done: boolean;
   }>;
   currentChampionBirdIndex: number;
-  onChampionChanged?: (event: {
-    championBirdIndex: number;
-  }) => void;
+  onChampionChanged?: (event: { championBirdIndex: number }) => void;
 }): PlaybackIterationContext {
   return {
     canvas: {} as HTMLCanvasElement,

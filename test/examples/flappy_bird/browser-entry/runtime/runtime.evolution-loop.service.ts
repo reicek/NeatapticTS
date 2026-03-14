@@ -106,8 +106,10 @@ export async function runRuntimeEvolutionLoop(
     const bestNetwork = generationPayload.bestNetworkJson
       ? Network.fromJSON(generationPayload.bestNetworkJson)
       : undefined;
-    const generationPopulationNetworks =
-      resolveGenerationPopulationNetworks(generationPayload, bestNetwork);
+    const generationPopulationNetworks = resolveGenerationPopulationNetworks(
+      generationPayload,
+      bestNetwork,
+    );
     const bestArchitectureLabel = resolveNetworkArchitectureLabel(
       bestNetwork,
       inputSize,
