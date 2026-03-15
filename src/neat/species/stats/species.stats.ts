@@ -1,4 +1,4 @@
-import type { NeatLike, SpeciesLike } from '../../neat.types';
+import type { NeatLike, SpeciesLike } from '../../shared/neat.shared.types';
 
 /**
  * Narrow host surface required by the species-stats chapter.

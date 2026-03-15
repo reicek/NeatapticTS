@@ -6,7 +6,7 @@ import type {
   SpeciesLike,
   SpeciationHarnessContext,
   SpeciesLastStats,
-} from '../../src/neat/neat.types';
+} from '../../src/neat/shared/neat.shared.types';
 
 type AgePenaltyContext = SpeciationHarnessContext<SpeciationOptions>;
 

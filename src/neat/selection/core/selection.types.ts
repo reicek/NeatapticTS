@@ -1,4 +1,4 @@
-import type { NeatLike } from '../../neat.types';
+import type { NeatLike } from '../../shared/neat.shared.types';
 
 /**
  * Genome with a fitness score and arbitrary additional metadata.

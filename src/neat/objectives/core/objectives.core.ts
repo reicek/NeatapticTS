@@ -1,4 +1,7 @@
-import type { GenomeLike, ObjectiveDescriptor } from '../../neat.types';
+import type {
+  GenomeLike,
+  ObjectiveDescriptor,
+} from '../../shared/neat.shared.types';
 import type { NeatLikeWithObjectives } from './objectives.types';
 
 /**

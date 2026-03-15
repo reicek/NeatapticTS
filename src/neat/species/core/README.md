@@ -12,7 +12,7 @@ innovation-range and enabled-ratio summaries from the current species state.
 ```ts
 backfillExtendedHistory(
   history: SpeciesHistoryEntry[],
-  context: { _species?: SpeciesLike[] | undefined; _fallbackInnov?: ((connection: ConnectionLike) => number) | undefined; },
+  context: SpeciesHistoryBackfillContext,
 ): void
 ```
 
@@ -38,27 +38,3 @@ Parameters:
 - `options` - - Current NEAT options.
 
 Returns: `true` when extended history is enabled.
-
-### SPECIES_HISTORY_DEFAULT_ENABLED_RATIO
-
-Default enabled ratio when no connections exist.
-
-### SPECIES_HISTORY_DEFAULT_INNOVATION_ID
-
-Default innovation id when none is present.
-
-### SPECIES_HISTORY_DEFAULT_INNOVATION_RANGE
-
-Default innovation range when data is missing.
-
-### SPECIES_HISTORY_INITIAL_MAX_INNOVATION
-
-Initial max tracker for innovation range aggregation.
-
-### SPECIES_HISTORY_INITIAL_MIN_INNOVATION
-
-Initial min tracker for innovation range aggregation.
-
-### SPECIES_HISTORY_ZERO
-
-Shared zero value for counters and defaults.

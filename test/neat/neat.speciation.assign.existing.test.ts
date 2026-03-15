@@ -5,7 +5,7 @@ import type {
   SpeciationOptions,
   SpeciationHarnessContext,
   SpeciesLastStats,
-} from '../../src/neat/neat.types';
+} from '../../src/neat/shared/neat.shared.types';
 
 type AssignmentOptions = SpeciationOptions & {
   compatibilityThreshold: number;

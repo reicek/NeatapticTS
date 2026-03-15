@@ -3,7 +3,7 @@ import type {
   SpeciesLike,
   SpeciationOptions,
   SpeciationHarnessContext,
-} from '../../neat.types';
+} from '../../shared/neat.shared.types';
 import {
   DEFAULT_COMPATIBILITY_THRESHOLD,
   NEGATIVE_INFINITY,

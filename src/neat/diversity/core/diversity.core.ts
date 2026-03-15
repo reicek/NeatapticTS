@@ -69,7 +69,9 @@ export function calculateDiversityStats(
     typeof genome._depth === 'number' ? [genome._depth] : [],
   );
   const nodeCounts = population.map((genome) => genome.nodes.length);
-  const connectionCounts = population.map((genome) => genome.connections.length);
+  const connectionCounts = population.map(
+    (genome) => genome.connections.length,
+  );
 
   // Step 3: Aggregate lineage and structural size metrics.
   const lineageMeanDepth = mean(lineageDepths);

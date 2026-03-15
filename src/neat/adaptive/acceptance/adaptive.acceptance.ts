@@ -5,9 +5,7 @@
  * genome is good enough to stay in play, making it easier to study selection
  * pressure separately from topology growth or mutation schedules.
  */
-export {
-  applyMinimalCriterionAdaptive,
-} from '../adaptive';
+export { applyMinimalCriterionAdaptive } from '../adaptive';
 export {
   applyRejection,
   collectScores,

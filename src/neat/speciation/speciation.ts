@@ -13,7 +13,7 @@ import type {
   SpeciesLike,
   SpeciationOptions,
   SpeciationHarnessContext,
-} from '../neat.types';
+} from '../shared/neat.shared.types';
 import {
   DEFAULT_MAX_COMPATIBILITY_THRESHOLD,
   DEFAULT_MIN_COMPATIBILITY_THRESHOLD,

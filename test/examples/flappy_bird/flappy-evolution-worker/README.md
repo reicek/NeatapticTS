@@ -515,6 +515,42 @@ Learning rate for generation-0 warm-start pretraining.
 This is intentionally moderate: the template network should learn a simple
 corridor-following prior without overfitting the heuristic teacher.
 
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_END
+
+Final node-bias noise scale for rollout-guided template refinement.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_START
+
+Initial node-bias noise scale for rollout-guided template refinement.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS
+
+Hill-climb step budget used by rollout-guided generation-0 template refinement.
+
+Each step perturbs the current best template, evaluates it on the shared
+rollout seed batch, and keeps the candidate only when it improves robust
+fitness. The budget stays intentionally small so worker startup remains fast.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_SEED_COUNT
+
+Shared-seed batch size used by rollout-guided generation-0 template refinement.
+
+After the heuristic teacher fit, the worker evaluates the fixed topology on a
+few real Flappy rollouts so the warm-start prior is pushed toward trajectories
+that actually survive the environment instead of only matching the synthetic
+teacher labels.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_END
+
+Final connection-weight noise scale for rollout-guided template refinement.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_START
+
+Initial connection-weight noise scale for rollout-guided template refinement.
+
+Early optimization steps search broadly, then later steps cool toward the
+smaller end scale below for finer local refinement.
+
 ### FLAPPY_WORKER_GEN0_PRETRAIN_SAMPLE_COUNT
 
 Synthetic sample count used for generation-0 warm-start pretraining.
@@ -778,6 +814,126 @@ Parameters:
 
 Returns: Supervised dataset of input/output pairs.
 
+### buildWarmStartRolloutSeedBatch
+
+```ts
+buildWarmStartRolloutSeedBatch(
+  rng: FlappyRng,
+  seedCount: number,
+): number[]
+```
+
+Builds the deterministic shared rollout seed batch used during warm-start refinement.
+
+Parameters:
+- `rng` - - Deterministic random source.
+- `seedCount` - - Requested seed count.
+
+Returns: Shared rollout seed batch.
+
+### evaluateWarmStartTemplateAcrossRollouts
+
+```ts
+evaluateWarmStartTemplateAcrossRollouts(
+  templateNetwork: default,
+  sharedRolloutSeeds: readonly number[],
+): FlappySeedBatchEvaluation
+```
+
+Evaluates one warm-start template across the shared rollout seed batch.
+
+Parameters:
+- `templateNetwork` - - Candidate template to score.
+- `sharedRolloutSeeds` - - Shared rollout seeds used for stable comparison.
+
+Returns: Aggregate shared-seed evaluation.
+
+### interpolateValue
+
+```ts
+interpolateValue(
+  startValue: number,
+  endValue: number,
+  ratio: number,
+): number
+```
+
+Linearly interpolates between two scalar values.
+
+Parameters:
+- `startValue` - - Value at ratio `0`.
+- `endValue` - - Value at ratio `1`.
+- `ratio` - - Interpolation ratio.
+
+Returns: Interpolated value.
+
+### isWarmStartEvaluationBetter
+
+```ts
+isWarmStartEvaluationBetter(
+  candidateEvaluation: FlappySeedBatchEvaluation,
+  bestEvaluation: FlappySeedBatchEvaluation,
+): boolean
+```
+
+Resolves whether the candidate batch evaluation beats the current best one.
+
+Robust fitness is the primary signal. Mean pipe progress and mean frame
+survival act as deterministic tie-breakers so upgrades remain stable when the
+robust score is identical.
+
+Parameters:
+- `candidateEvaluation` - - Newly scored candidate aggregate.
+- `bestEvaluation` - - Current best aggregate.
+
+Returns: True when the candidate should replace the incumbent template.
+
+### optimizeWarmStartTemplateNetwork
+
+```ts
+optimizeWarmStartTemplateNetwork(
+  templateNetwork: default,
+  workerInitSeed: number,
+): default
+```
+
+Refines the generation-0 template against real Flappy rollouts.
+
+The warm-start teacher gets the template out of pure-random territory, but it
+still only imitates a simple flap heuristic. This refinement pass keeps the
+topology fixed and searches the parameter surface directly against actual
+rollout fitness so the first visible generation starts closer to competent
+control.
+
+Parameters:
+- `templateNetwork` - - Heuristic-pretrained template network.
+- `workerInitSeed` - - Deterministic worker seed.
+
+Returns: Best rollout-refined template found within the bounded budget.
+
+### perturbNetworkParametersInPlace
+
+```ts
+perturbNetworkParametersInPlace(
+  network: default,
+  rng: FlappyRng,
+  noise: { weightStdDev: number; biasStdDev: number; },
+): void
+```
+
+Applies additive Gaussian noise to an existing network in-place.
+
+Unlike the later population seeding copy step, this helper perturbs the
+candidate template directly so the rollout optimizer can evaluate one local
+parameter move at a time while keeping the topology unchanged.
+
+Parameters:
+- `network` - - Candidate template to perturb.
+- `rng` - - Deterministic random source.
+- `noise` - - Standard deviations for weight and bias perturbations.
+
+Returns: Nothing.
+
 ### resolveHeuristicTeacherFlapDecision
 
 ```ts
@@ -796,6 +952,23 @@ Parameters:
 - `features` - - Structured observation features for one synthetic state.
 
 Returns: True when the teacher says to flap.
+
+### resolveWarmStartAnnealRatio
+
+```ts
+resolveWarmStartAnnealRatio(
+  optimizationStepIndex: number,
+  totalOptimizationSteps: number,
+): number
+```
+
+Resolves the annealing ratio for rollout-guided warm-start refinement.
+
+Parameters:
+- `optimizationStepIndex` - - Zero-based optimization step index.
+- `totalOptimizationSteps` - - Total number of optimization steps.
+
+Returns: Clamped ratio in the inclusive range [0, 1].
 
 ### sampleGaussian
 
@@ -823,6 +996,7 @@ Returns: One approximately standard-normal random value.
 warmStartWorkerGenerationZeroIfNeeded(
   neatController: default,
   warmStartState: WorkerWarmStartState,
+  dependencies: WorkerWarmStartDependencies,
 ): Promise<void>
 ```
 
@@ -851,6 +1025,14 @@ await warmStartWorkerGenerationZeroIfNeeded(neatRuntime, {
   generationZeroWarmStartApplied: false,
 });
 ```
+
+### WorkerWarmStartDependencies
+
+Dependency bag for generation-0 warm-start orchestration.
+
+The production path uses the real heuristic dataset builder and rollout-guided
+template refinement. Tests can override these seams to keep assertions small
+and deterministic.
 
 ### WorkerWarmStartState
 

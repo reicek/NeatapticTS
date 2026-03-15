@@ -8,9 +8,7 @@
  * vocabulary.
  */
 import type { NeatLikeWithAdaptive as NeatLikeWithAdaptiveType } from './core/adaptive.core.types';
-import {
-  applyComplexityBudgetSchedule,
-} from './complexity/adaptive.complexity.utils';
+import { applyComplexityBudgetSchedule } from './complexity/adaptive.complexity.utils';
 import {
   initializePhaseState,
   togglePhaseIfNeeded,

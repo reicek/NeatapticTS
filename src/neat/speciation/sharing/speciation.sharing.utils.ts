@@ -1,4 +1,7 @@
-import type { GenomeDetailed, SpeciesLike } from '../../neat.types';
+import type {
+  GenomeDetailed,
+  SpeciesLike,
+} from '../../shared/neat.shared.types';
 import {
   DEFAULT_LAST_IMPROVED_GENERATION,
   DEFAULT_MEMBER_COUNT_FALLBACK,

@@ -6,7 +6,7 @@
  * internal error is swallowed so that logging never impacts the evolution loop.
  */
 import type { Neat, Network } from '../../../../src/neataptic';
-import type { GenomeDetailed } from '../../../../src/neat/neat.types';
+import type { GenomeDetailed } from '../../../../src/neat/shared/neat.shared.types';
 import type { EngineState } from './engineState.types';
 import type {
   EvolutionGenomeLike,

@@ -2,14 +2,14 @@
  * Tests for getSpeciesHistory fallback computations in species module.
  * Single expectation per test.
  */
-import { getSpeciesHistory } from '../../src/neat/neat.species';
+import { getSpeciesHistory } from '../../src/neat/species/species';
 import type {
   ConnectionLike,
   GenomeDetailed,
   SpeciesHistoryEntry,
   SpeciesHistoryStatExtended,
   SpeciesLike,
-} from '../../src/neat/neat.types';
+} from '../../src/neat/shared/neat.shared.types';
 
 type SpeciesHistoryContext = {
   options: { speciesAllocation: { extendedHistory: boolean } } & Record<

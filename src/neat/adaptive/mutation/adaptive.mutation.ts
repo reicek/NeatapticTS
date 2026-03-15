@@ -5,9 +5,7 @@
  * operator success statistics are decayed so exploration stays responsive over
  * long training runs.
  */
-export {
-  applyAdaptiveMutation,
-} from '../adaptive';
+export { applyAdaptiveMutation } from '../adaptive';
 export {
   applyMutationsToPopulation,
   applyTwoTierFallback,

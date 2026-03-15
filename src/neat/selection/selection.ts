@@ -1,4 +1,4 @@
-import type { NeatLike } from '../neat.types';
+import type { NeatLike } from '../shared/neat.shared.types';
 import {
   calculateTotalScore,
   DEFAULT_SCORE,
@@ -31,10 +31,13 @@ export {
  * Parent-selection helpers for the NEAT controller.
  *
  * The root selection chapter keeps the public controller-facing methods small
- * and readable, while `core/` holds the selection strategy mechanics, constants,
- * and narrow runtime contracts.
+ * and readable, while `core/` holds the selection strategy mechanics,
+ * constants, and narrow runtime contracts. The sibling `facade/` chapter keeps
+ * the stable `Neat` class wrappers for callers that interact through the main
+ * controller entrypoint instead of the lower-level selection module.
  *
  * - `core/` explains score defaults, ordering checks, and parent-selection strategies.
+ * - `facade/` keeps the stable population-summary wrappers used by `Neat`.
  */
 
 /**

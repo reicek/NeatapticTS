@@ -1,6 +1,10 @@
 import type { Neat } from '../../../../src/neataptic';
 import type Network from '../../../../src/architecture/network';
 import { createXorshift32 } from '../rng';
+import {
+  evaluateFlappyFitnessAcrossSeeds,
+  type FlappySeedBatchEvaluation,
+} from '../flappyEvaluation';
 import { resolveObservationVector } from '../browser-entry/browser-entry.observation.utils';
 import type {
   WorkerHeuristicObservationFeatures,
@@ -8,11 +12,18 @@ import type {
 } from './flappy-evolution-worker.types';
 import {
   FLAPPY_BIRD_X_PX,
+  FLAPPY_MAX_FRAMES_PER_EPISODE,
   FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
   FLAPPY_WORLD_HEIGHT_PX,
 } from '../constants/constants';
 import {
   FLAPPY_WORKER_GEN0_PRETRAIN_BATCH_SIZE,
+  FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_END,
+  FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_START,
+  FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS,
+  FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_SEED_COUNT,
+  FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_END,
+  FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_START,
   FLAPPY_WORKER_GEN0_PRETRAIN_BIAS_NOISE_STDDEV,
   FLAPPY_WORKER_GEN0_PRETRAIN_ITERATIONS,
   FLAPPY_WORKER_GEN0_PRETRAIN_RATE,
@@ -36,6 +47,29 @@ export interface WorkerWarmStartState {
   workerInitSeed: number;
   generationZeroWarmStartApplied: boolean;
 }
+
+/**
+ * Dependency bag for generation-0 warm-start orchestration.
+ *
+ * The production path uses the real heuristic dataset builder and rollout-guided
+ * template refinement. Tests can override these seams to keep assertions small
+ * and deterministic.
+ */
+export interface WorkerWarmStartDependencies {
+  buildHeuristicPretrainSet: (
+    rng: ReturnType<typeof createXorshift32>,
+    sampleCount: number,
+  ) => Array<{ input: number[]; output: number[] }>;
+  optimizeWarmStartTemplateNetwork: (
+    templateNetwork: Network,
+    workerInitSeed: number,
+  ) => Network;
+}
+
+const DEFAULT_WORKER_WARM_START_DEPENDENCIES: WorkerWarmStartDependencies = {
+  buildHeuristicPretrainSet,
+  optimizeWarmStartTemplateNetwork: optimizeWarmStartTemplateNetwork,
+};
 
 /**
  * Applies a one-time generation-0 warm-start to improve initial demo quality.
@@ -63,6 +97,7 @@ export interface WorkerWarmStartState {
 export async function warmStartWorkerGenerationZeroIfNeeded(
   neatController: Neat,
   warmStartState: WorkerWarmStartState,
+  dependencies: WorkerWarmStartDependencies = DEFAULT_WORKER_WARM_START_DEPENDENCIES,
 ): Promise<void> {
   // Step 1: Exit fast when warm-start is already processed.
   if (warmStartState.generationZeroWarmStartApplied) return;
@@ -84,7 +119,7 @@ export async function warmStartWorkerGenerationZeroIfNeeded(
   const warmStartRng = createXorshift32(
     warmStartState.workerInitSeed ^ 0x9e37_79b9,
   );
-  const trainingSet = buildHeuristicPretrainSet(
+  const trainingSet = dependencies.buildHeuristicPretrainSet(
     warmStartRng,
     FLAPPY_WORKER_GEN0_PRETRAIN_SAMPLE_COUNT,
   );
@@ -108,12 +143,24 @@ export async function warmStartWorkerGenerationZeroIfNeeded(
     // If training fails for any reason, fall back to pure noise seeding.
   }
 
-  // Step 6: Copy trained weights/biases into each genome with small noise for diversity.
+  // Step 6: Refine the trained template with a short rollout-guided hill-climb.
+  const optimizedTemplateNetwork =
+    dependencies.optimizeWarmStartTemplateNetwork(
+      templateNetwork,
+      warmStartState.workerInitSeed,
+    );
+
+  // Step 7: Copy trained weights/biases into each genome with small noise for diversity.
   for (const genome of population) {
-    applyTemplateWeightsWithNoise(genome, templateNetwork, warmStartRng, {
-      weightStdDev: FLAPPY_WORKER_GEN0_PRETRAIN_WEIGHT_NOISE_STDDEV,
-      biasStdDev: FLAPPY_WORKER_GEN0_PRETRAIN_BIAS_NOISE_STDDEV,
-    });
+    applyTemplateWeightsWithNoise(
+      genome,
+      optimizedTemplateNetwork,
+      warmStartRng,
+      {
+        weightStdDev: FLAPPY_WORKER_GEN0_PRETRAIN_WEIGHT_NOISE_STDDEV,
+        biasStdDev: FLAPPY_WORKER_GEN0_PRETRAIN_BIAS_NOISE_STDDEV,
+      },
+    );
     (genome as unknown as { score?: number }).score = undefined;
   }
 
@@ -197,6 +244,229 @@ function buildHeuristicPretrainSet(
 
   // Step 3: Return immutable training pairs consumed by Network.train.
   return trainingSet;
+}
+
+/**
+ * Refines the generation-0 template against real Flappy rollouts.
+ *
+ * The warm-start teacher gets the template out of pure-random territory, but it
+ * still only imitates a simple flap heuristic. This refinement pass keeps the
+ * topology fixed and searches the parameter surface directly against actual
+ * rollout fitness so the first visible generation starts closer to competent
+ * control.
+ *
+ * @param templateNetwork - Heuristic-pretrained template network.
+ * @param workerInitSeed - Deterministic worker seed.
+ * @returns Best rollout-refined template found within the bounded budget.
+ */
+function optimizeWarmStartTemplateNetwork(
+  templateNetwork: Network,
+  workerInitSeed: number,
+): Network {
+  // Step 1: Build deterministic shared rollout seeds for candidate comparison.
+  const rolloutSeedRng = createXorshift32(workerInitSeed ^ 0xa341_316c);
+  const sharedRolloutSeeds = buildWarmStartRolloutSeedBatch(
+    rolloutSeedRng,
+    FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_SEED_COUNT,
+  );
+
+  // Step 2: Start from the teacher-fitted template as the current best policy.
+  const optimizationRng = createXorshift32(workerInitSeed ^ 0xc801_3ea4);
+  let bestTemplateNetwork = templateNetwork;
+  let bestTemplateEvaluation = evaluateWarmStartTemplateAcrossRollouts(
+    bestTemplateNetwork,
+    sharedRolloutSeeds,
+  );
+
+  // Step 3: Run a bounded topology-fixed hill-climb on actual rollout fitness.
+  for (
+    let optimizationStepIndex = 0;
+    optimizationStepIndex <
+    FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS;
+    optimizationStepIndex++
+  ) {
+    const candidateTemplateNetwork = bestTemplateNetwork.clone();
+    const annealRatio = resolveWarmStartAnnealRatio(
+      optimizationStepIndex,
+      FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS,
+    );
+
+    perturbNetworkParametersInPlace(candidateTemplateNetwork, optimizationRng, {
+      weightStdDev: interpolateValue(
+        FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_START,
+        FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_END,
+        annealRatio,
+      ),
+      biasStdDev: interpolateValue(
+        FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_START,
+        FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_END,
+        annealRatio,
+      ),
+    });
+
+    const candidateTemplateEvaluation = evaluateWarmStartTemplateAcrossRollouts(
+      candidateTemplateNetwork,
+      sharedRolloutSeeds,
+    );
+    if (
+      !isWarmStartEvaluationBetter(
+        candidateTemplateEvaluation,
+        bestTemplateEvaluation,
+      )
+    ) {
+      continue;
+    }
+
+    bestTemplateNetwork = candidateTemplateNetwork;
+    bestTemplateEvaluation = candidateTemplateEvaluation;
+  }
+
+  return bestTemplateNetwork;
+}
+
+/**
+ * Builds the deterministic shared rollout seed batch used during warm-start refinement.
+ *
+ * @param rng - Deterministic random source.
+ * @param seedCount - Requested seed count.
+ * @returns Shared rollout seed batch.
+ */
+function buildWarmStartRolloutSeedBatch(
+  rng: ReturnType<typeof createXorshift32>,
+  seedCount: number,
+): number[] {
+  // Step 1: Clamp the request and sample uint32-compatible rollout seeds.
+  const clampedSeedCount = Math.max(1, Math.trunc(seedCount));
+  return Array.from({ length: clampedSeedCount }, () =>
+    rng.nextInt(0, 0x1_0000_0000),
+  );
+}
+
+/**
+ * Evaluates one warm-start template across the shared rollout seed batch.
+ *
+ * @param templateNetwork - Candidate template to score.
+ * @param sharedRolloutSeeds - Shared rollout seeds used for stable comparison.
+ * @returns Aggregate shared-seed evaluation.
+ */
+function evaluateWarmStartTemplateAcrossRollouts(
+  templateNetwork: Network,
+  sharedRolloutSeeds: readonly number[],
+): FlappySeedBatchEvaluation {
+  // Step 1: Reset network state when the runtime exposes a clear hook.
+  const maybeClearableNetwork = templateNetwork as Network & {
+    clear?: () => void;
+  };
+  maybeClearableNetwork.clear?.();
+
+  // Step 2: Score the fixed topology on real Flappy rollouts.
+  return evaluateFlappyFitnessAcrossSeeds(templateNetwork, sharedRolloutSeeds, {
+    enableEarlyTermination: true,
+    maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
+  });
+}
+
+/**
+ * Resolves whether the candidate batch evaluation beats the current best one.
+ *
+ * Robust fitness is the primary signal. Mean pipe progress and mean frame
+ * survival act as deterministic tie-breakers so upgrades remain stable when the
+ * robust score is identical.
+ *
+ * @param candidateEvaluation - Newly scored candidate aggregate.
+ * @param bestEvaluation - Current best aggregate.
+ * @returns True when the candidate should replace the incumbent template.
+ */
+function isWarmStartEvaluationBetter(
+  candidateEvaluation: FlappySeedBatchEvaluation,
+  bestEvaluation: FlappySeedBatchEvaluation,
+): boolean {
+  // Step 1: Prefer higher robust shared-seed fitness.
+  if (candidateEvaluation.robustFitness !== bestEvaluation.robustFitness) {
+    return candidateEvaluation.robustFitness > bestEvaluation.robustFitness;
+  }
+
+  // Step 2: Break ties with more practical gameplay progress.
+  if (candidateEvaluation.meanPipesPassed !== bestEvaluation.meanPipesPassed) {
+    return candidateEvaluation.meanPipesPassed > bestEvaluation.meanPipesPassed;
+  }
+
+  return (
+    candidateEvaluation.meanFramesSurvived > bestEvaluation.meanFramesSurvived
+  );
+}
+
+/**
+ * Resolves the annealing ratio for rollout-guided warm-start refinement.
+ *
+ * @param optimizationStepIndex - Zero-based optimization step index.
+ * @param totalOptimizationSteps - Total number of optimization steps.
+ * @returns Clamped ratio in the inclusive range [0, 1].
+ */
+function resolveWarmStartAnnealRatio(
+  optimizationStepIndex: number,
+  totalOptimizationSteps: number,
+): number {
+  // Step 1: Collapse one-step schedules to the broad-search endpoint.
+  if (totalOptimizationSteps <= 1) {
+    return 0;
+  }
+
+  // Step 2: Convert the step index into a stable cooling ratio.
+  return Math.min(
+    1,
+    Math.max(0, optimizationStepIndex / (totalOptimizationSteps - 1)),
+  );
+}
+
+/**
+ * Applies additive Gaussian noise to an existing network in-place.
+ *
+ * Unlike the later population seeding copy step, this helper perturbs the
+ * candidate template directly so the rollout optimizer can evaluate one local
+ * parameter move at a time while keeping the topology unchanged.
+ *
+ * @param network - Candidate template to perturb.
+ * @param rng - Deterministic random source.
+ * @param noise - Standard deviations for weight and bias perturbations.
+ * @returns Nothing.
+ */
+function perturbNetworkParametersInPlace(
+  network: Network,
+  rng: ReturnType<typeof createXorshift32>,
+  noise: { weightStdDev: number; biasStdDev: number },
+): void {
+  // Step 1: Clamp noise scales to valid non-negative values.
+  const weightStdDev = Math.max(0, noise.weightStdDev);
+  const biasStdDev = Math.max(0, noise.biasStdDev);
+
+  // Step 2: Perturb node biases in-place.
+  for (const networkNode of network.nodes) {
+    networkNode.bias += sampleGaussian(rng) * biasStdDev;
+  }
+
+  // Step 3: Perturb connection weights in-place.
+  for (const networkConnection of network.connections) {
+    networkConnection.weight += sampleGaussian(rng) * weightStdDev;
+  }
+}
+
+/**
+ * Linearly interpolates between two scalar values.
+ *
+ * @param startValue - Value at ratio `0`.
+ * @param endValue - Value at ratio `1`.
+ * @param ratio - Interpolation ratio.
+ * @returns Interpolated value.
+ */
+function interpolateValue(
+  startValue: number,
+  endValue: number,
+  ratio: number,
+): number {
+  // Step 1: Clamp the ratio before blending.
+  const clampedRatio = Math.min(1, Math.max(0, ratio));
+  return startValue + (endValue - startValue) * clampedRatio;
 }
 
 /**

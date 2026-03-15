@@ -2,8 +2,11 @@
  * Tests for computeDiversityStats fast-mode tuning inside telemetry module.
  * Single expectation per test.
  */
-import { computeDiversityStats as telemetryComputeDiversityStats } from '../../src/neat/neat.telemetry';
-import type { GenomeDetailed, TelemetryEntry } from '../../src/neat/neat.types';
+import { computeDiversityStats as telemetryComputeDiversityStats } from '../../src/neat/telemetry/recorder/telemetry.recorder';
+import type {
+  GenomeDetailed,
+  TelemetryEntry,
+} from '../../src/neat/shared/neat.shared.types';
 
 type DiversityGenome = GenomeDetailed & {
   nodes: Array<{ geneId: number }>;

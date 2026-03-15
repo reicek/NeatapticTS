@@ -4,7 +4,7 @@ import type {
   SpeciesLike,
   SpeciationOptions,
   SpeciationHarnessContext,
-} from '../../neat.types';
+} from '../../shared/neat.shared.types';
 import {
   DEFAULT_SCORE_FALLBACK,
   DEFAULT_SPECIES_AGE_GRACE,

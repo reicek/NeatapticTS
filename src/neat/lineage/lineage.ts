@@ -8,10 +8,7 @@ import {
   normalizeParentIds,
   sampleGenomePairs,
 } from './core/lineage.core';
-import type {
-  GenomeLike,
-  NeatLineageContext,
-} from './core/lineage.types';
+import type { GenomeLike, NeatLineageContext } from './core/lineage.types';
 
 /** Common zero value for counters and defaults. */
 const ZERO_VALUE = 0;
@@ -66,9 +63,7 @@ export function buildAnc(
  * @param this - NEAT lineage context exposing the population and RNG provider.
  * @returns Mean sampled Jaccard distance across shallow ancestor sets.
  */
-export function computeAncestorUniqueness(
-  this: NeatLineageContext,
-): number {
+export function computeAncestorUniqueness(this: NeatLineageContext): number {
   const buildAncestorSet = buildAnc.bind(this);
   const populationSize = this.population.length;
   const maxSamplePairs = calculateMaxSamplePairs(populationSize);

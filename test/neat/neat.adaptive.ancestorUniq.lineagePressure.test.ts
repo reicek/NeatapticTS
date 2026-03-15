@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
 import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
-import { createTelemetryEntryBase } from '../../src/neat/neat.telemetry';
-import type { TelemetryEntry } from '../../src/neat/neat.types';
+import { createTelemetryEntryBase } from '../../src/neat/telemetry/recorder/telemetry.recorder';
+import type { TelemetryEntry } from '../../src/neat/shared/neat.shared.types';
 
 /** Tests ancestor uniqueness adaptive in lineagePressure mode (strength adjustments). */
 describe('Ancestor Uniqueness Adaptive (lineagePressure mode)', () => {

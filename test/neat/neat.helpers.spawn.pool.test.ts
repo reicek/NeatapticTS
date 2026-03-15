@@ -3,7 +3,7 @@ import Network from '../../src/architecture/network';
 import type {
   LineageTrackedNetwork,
   NeatLineageHarness,
-} from '../../src/neat/neat.harness.types';
+} from '../../src/neat/harness/neat.harness.types';
 
 /**
  * Tests for helper utilities in `neat.helpers.ts` (spawnFromParent, createPool, addGenome).

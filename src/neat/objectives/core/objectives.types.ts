@@ -1,4 +1,4 @@
-import type { ObjectiveDescriptor } from '../../neat.types';
+import type { ObjectiveDescriptor } from '../../shared/neat.shared.types';
 
 /**
  * Minimal NEAT host contract required by objective-management helpers.

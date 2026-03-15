@@ -97,7 +97,7 @@ Net effect:
 
 #### B2) Initial pool genomes aren’t identity-aligned
 
-The pool creation path in [src/neat/neat.helpers.ts](../../../neat/neat.helpers.ts) constructs each genome with `new Network(...)` (when no seed is supplied).
+The pool creation path in [src/neat/helpers/neat.helpers.ts](../../../neat/helpers/neat.helpers.ts) constructs each genome with `new Network(...)` (when no seed is supplied).
 
 That means:
 
@@ -197,7 +197,7 @@ This is the big lift. It’s mostly surgical but touches foundational code.
 
 #### 1.1 Fix pool bootstrapping (must-do)
 
-Target: [src/neat/neat.helpers.ts](../../../neat/neat.helpers.ts)
+Target: [src/neat/helpers/neat.helpers.ts](../../../neat/helpers/neat.helpers.ts)
 
 - [ ] When `seedNetwork` is null, create exactly **one** template genome (e.g., `new Network(input, output, ...)`) and then clone it `popsize` times using `toJSON()` / `Network.fromJSON()`.
 - [ ] Ensure template cloning preserves:
@@ -344,9 +344,3 @@ The highest risk items are:
 - rewriting crossover without breaking existing users’ expectations
 - reconciling recurrent/self/gating semantics across mutation/crossover/speciation
 - ensuring geneId/innovation counters remain consistent across pooling and serialization
-
-## Controller Folderization Progress
-
-- Completed species step after speciation: extracted current-species summaries into `src/neat/species/stats/species.stats.ts` and kept `src/neat/species/species.ts` focused on the public reporting flow.
-- Species history JSONL export remains isolated in `src/neat/species/history/species.history.ts`.
-- Next species follow-up: narrow `src/neat/species/core/species.core.ts` into clearer augmentation/shared chapters so extended-history policy and innovation-summary mechanics stop living in one file.

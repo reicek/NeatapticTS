@@ -133,9 +133,7 @@ export function resolveActiveAdaptivePruningOptions(
  * @param host - NEAT host exposing adaptive pruning state.
  * @returns Nothing. The shared prune level is initialized when missing.
  */
-export function initializeAdaptivePruningState(
-  host: NeatLikeForPruning,
-): void {
+export function initializeAdaptivePruningState(host: NeatLikeForPruning): void {
   // Step 1: Initialize the shared prune level when needed.
   if (host._adaptivePruneLevel === undefined) {
     host._adaptivePruneLevel = 0;

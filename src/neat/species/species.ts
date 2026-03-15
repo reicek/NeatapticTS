@@ -1,13 +1,8 @@
 import type {
-  ConnectionLike,
   NeatLike,
   SpeciesHistoryEntry,
-  SpeciesLike,
-} from '../neat.types';
-import {
-  backfillExtendedHistory,
-  shouldAugmentExtendedHistory,
-} from './core/species.core';
+} from '../shared/neat.shared.types';
+import { getSpeciesHistory as getSpeciesHistoryImpl } from './history/read/species.history.read';
 import { getSpeciesStats as getSpeciesStatsImpl } from './stats/species.stats';
 
 /**
@@ -53,21 +48,6 @@ export function getSpeciesStats(
  * @returns Generation-stamped species history snapshots.
  */
 export function getSpeciesHistory(this: NeatLike): SpeciesHistoryEntry[] {
-  const context = this as NeatLike & {
-    _speciesHistory?: SpeciesHistoryEntry[];
-    _species?: SpeciesLike[];
-    _fallbackInnov?: (connection: ConnectionLike) => number;
-  };
-
-  const speciesHistory = (context._speciesHistory as SpeciesHistoryEntry[]) || [];
-  const neatOptions = this.options as
-    | import('../neat.types').NeatOptions
-    | undefined;
-
-  // Step 1: Backfill extended fields only when explicitly enabled.
-  if (shouldAugmentExtendedHistory(neatOptions)) {
-    backfillExtendedHistory(speciesHistory, context);
-  }
-
-  return speciesHistory;
+  // Step 1: Delegate the history read flow to the dedicated history-read chapter.
+  return getSpeciesHistoryImpl(this);
 }

@@ -1,7 +1,7 @@
 import type {
   SpeciationOptions,
   SpeciationHarnessContext,
-} from '../../neat.types';
+} from '../../shared/neat.shared.types';
 import {
   DEFAULT_COMPATIBILITY_INTEGRAL_GAIN,
   DEFAULT_COMPATIBILITY_PROPORTIONAL_GAIN,

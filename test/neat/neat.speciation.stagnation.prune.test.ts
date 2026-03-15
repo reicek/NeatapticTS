@@ -2,7 +2,10 @@ import {
   _updateSpeciesStagnation,
   _sortSpeciesMembers,
 } from '../../src/neat/speciation/speciation';
-import type { GenomeDetailed, SpeciesLike } from '../../src/neat/neat.types';
+import type {
+  GenomeDetailed,
+  SpeciesLike,
+} from '../../src/neat/shared/neat.shared.types';
 
 type StagnationContext = {
   _species: SpeciesLike[];

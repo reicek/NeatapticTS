@@ -1623,7 +1623,7 @@ Returns: Architecture descriptor with hidden-layer widths and provenance.
 
 ```ts
 deserialize(
-  data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[],
+  data: unknown[] | [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number],
   inputSize: number | undefined,
   outputSize: number | undefined,
 ): default

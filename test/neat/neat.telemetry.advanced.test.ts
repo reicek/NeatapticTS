@@ -5,7 +5,7 @@ import type {
   SpeciesHistoryStat,
   SpeciesHistoryStatExtended,
   TelemetryEntry,
-} from '../../src/neat/neat.types';
+} from '../../src/neat/shared/neat.shared.types';
 
 // Each test single expectation.
 

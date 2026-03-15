@@ -1,6 +1,6 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
-import type { TelemetryEntry } from '../../src/neat/neat.types';
+import type { TelemetryEntry } from '../../src/neat/shared/neat.shared.types';
 
 describe('Lineage & Auto-Entropy Objective', () => {
   test('lineage parents tracked and entropy objective added', async () => {

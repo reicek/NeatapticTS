@@ -9,7 +9,7 @@ import type {
   GenomeDetailed,
   SpeciesLike,
   SpeciationOptions,
-} from '../../neat.types';
+} from '../../shared/neat.shared.types';
 
 /**
  * Resolved compatibility-threshold adjustment settings.

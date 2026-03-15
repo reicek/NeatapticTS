@@ -335,3 +335,14 @@ When splitting a large module into submodules, invoke `solid-split` and let it
 own the detailed stepwise execution protocol, including user-confirmed
 stepwise mode when requested.
 
+Quality thresholds and investigation rules
+------------------------------------------ 
+- End every user facing response with `(Certainty: NN%)`
+- If your certainty is below 90%, stop and investigate before proceeding
+- If your certainty is below 95%, investigate further and ask follow-up questions until the requirements and environment are clear enough
+
+Low context window mitigation
+-----------------------------
+When you need to make a change that requires more context than you have available:
+- Update the relevant source plan document with a NEXT: item describing the change and the reason for it, so that future work in that area has more context.
+- Provide a handoff prompt in a text-copy box with the relevant context and a clear question about how to proceed, so that a companion agent can pick it up and investigate.
