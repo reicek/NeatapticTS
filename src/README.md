@@ -397,7 +397,13 @@ Parameters:
 applyAdaptivePruning(): Promise<void>
 ```
 
-Run the adaptive pruning controller once.
+Run the adaptive pruning controller once using the controller's latest signals.
+
+Unlike scheduled pruning, this path reacts to the current search state,
+such as stagnation or complexity pressure, instead of only looking at the
+generation index.
+
+Returns: Promise resolving after adaptive pruning has completed.
 
 #### applyEvolutionPruning
 
@@ -405,8 +411,13 @@ Run the adaptive pruning controller once.
 applyEvolutionPruning(): Promise<void>
 ```
 
-Manually apply evolution-time pruning once using the current generation
-index and configuration in `options.evolutionPruning`.
+Manually apply the configured generation-based pruning policy once.
+
+This is mainly useful when you are experimenting with pruning behavior and
+want to trigger the controller's scheduled pruning logic outside the normal
+evolve loop.
+
+Returns: Promise resolving after the pruning policy has been evaluated.
 
 #### clearObjectives
 
@@ -414,7 +425,10 @@ index and configuration in `options.evolutionPruning`.
 clearObjectives(): void
 ```
 
-Clear all registered multi-objective objectives.
+Remove all custom objective registrations.
+
+Use this when a run is changing from one multi-objective regime to another
+and you want the controller to forget the previous objective schema.
 
 #### clearParetoArchive
 
@@ -422,7 +436,10 @@ Clear all registered multi-objective objectives.
 clearParetoArchive(): void
 ```
 
-Clear the Pareto archive.
+Clear the stored Pareto archive.
+
+Use this when a new phase of a run should stop comparing itself against the
+previous archive history.
 
 #### clearTelemetry
 
@@ -430,7 +447,11 @@ Clear the Pareto archive.
 clearTelemetry(): void
 ```
 
-Clear telemetry buffer and cached entries.
+Clear the recorded telemetry history.
+
+This does not reset the population or controller options. It only removes
+the accumulated diagnostic snapshots so a new experiment phase can start
+with a clean telemetry timeline.
 
 #### createPool
 
@@ -514,7 +535,11 @@ await neat.evolve();
 export(): any[]
 ```
 
-Exports the current population as an array of JSON objects.
+Export the current population as plain JSON objects.
+
+Choose this lighter snapshot when you only need the genomes themselves and
+do not need generation counters, innovation maps, or other controller-level
+state.
 
 Returns: JSON-safe population snapshot.
 
@@ -526,7 +551,15 @@ exportParetoFrontJSONL(
 ): string
 ```
 
-Export Pareto front archive as JSON Lines for external analysis.
+Export recent Pareto archive entries as JSON Lines.
+
+This is the easiest way to persist frontier history for offline analysis or
+later replay in notebooks and visualization tools.
+
+Parameters:
+- `maxEntries` - Maximum number of recent archive entries to export.
+
+Returns: JSONL payload for the requested Pareto archive window.
 
 #### exportRNGState
 
@@ -546,7 +579,15 @@ exportSpeciesHistoryCSV(
 ): string
 ```
 
-Export species history as CSV rows for offline inspection.
+Export recent species history as CSV.
+
+This is useful when you want to chart species growth, collapse, or
+stagnation in a spreadsheet or notebook without writing a custom parser.
+
+Parameters:
+- `maxEntries` - Maximum number of recent history entries to export.
+
+Returns: CSV payload representing recent species history snapshots.
 
 #### exportSpeciesHistoryJSONL
 
@@ -556,7 +597,15 @@ exportSpeciesHistoryJSONL(
 ): string
 ```
 
-Export species history as JSON Lines for storage and analysis.
+Export recent species history as JSON Lines.
+
+Choose this when you want machine-friendly archival output instead of the
+flatter spreadsheet-oriented CSV export.
+
+Parameters:
+- `maxEntries` - Maximum number of recent history entries to export.
+
+Returns: JSONL payload describing recent species-history entries.
 
 #### exportState
 
@@ -564,7 +613,11 @@ Export species history as JSON Lines for storage and analysis.
 exportState(): any
 ```
 
-Convenience: export full evolutionary state (meta + population genomes).
+Export the full controller state, including metadata and population.
+
+This is the pause-and-resume snapshot. It is the best choice when you want
+to continue the same run later with the same innovation history, generation
+counter, and serialized genomes.
 
 Returns: Full controller snapshot including metadata and population.
 
@@ -589,7 +642,12 @@ Returns: CSV string for quick spreadsheet or notebook analysis.
 exportTelemetryJSONL(): string
 ```
 
-Export telemetry as JSON Lines (one JSON object per line).
+Export the telemetry buffer as JSON Lines.
+
+JSONL is the easiest format to append to files, stream into data tools, or
+inspect generation-by-generation without loading a giant array into memory.
+
+Returns: JSONL payload with one telemetry entry per line.
 
 #### fromJSON
 
@@ -627,6 +685,12 @@ getDiversityStats(): DiversityStats
 ```
 
 Return the latest cached diversity statistics.
+
+Diversity summaries answer a different question than raw fitness: whether
+the population still explores varied structures or is collapsing toward a
+narrower family of genomes.
+
+Returns: Diversity metrics for the current population snapshot.
 
 #### getFittest
 
@@ -667,7 +731,12 @@ Minimum hidden size considering explicit minHidden or multiplier policy.
 getMultiObjectiveMetrics(): { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]
 ```
 
-Returns compact multi-objective metrics for each genome in the current population.
+Return compact multi-objective metrics for each genome in the current population.
+
+Use this when you want a flattened view of Pareto rank, crowding, raw score,
+and structural size without reconstructing the full fronts yourself.
+
+Returns: One compact metric record per genome.
 
 #### getNoveltyArchiveSize
 
@@ -675,7 +744,12 @@ Returns compact multi-objective metrics for each genome in the current populatio
 getNoveltyArchiveSize(): number
 ```
 
-Returns the number of entries currently stored in the novelty archive.
+Return the current novelty-archive size.
+
+This is a small diagnostic hook that tells you whether novelty search is
+actively accumulating behavior representatives or staying mostly unused.
+
+Returns: Number of archived novelty descriptors.
 
 #### getObjectiveEvents
 
@@ -709,8 +783,11 @@ Returns: Objective descriptors currently active on the controller.
 getOffspring(): default
 ```
 
-Generates an offspring by crossing over two parent networks.
-Uses the crossover method described in the Instinct algorithm.
+Build a child genome from parent selection and crossover.
+
+Use this when you want one reproduction event without running a full
+generation step. The method delegates the parent choice to `getParent()` so
+it still respects the controller's current breeding policy.
 
 Returns: New network created from selected parent genomes.
 
@@ -720,7 +797,12 @@ Returns: New network created from selected parent genomes.
 getOperatorStats(): { name: string; success: number; attempts: number; }[]
 ```
 
-Returns a summary of mutation/operator statistics used by operator adaptation.
+Return mutation-operator success statistics.
+
+These numbers are useful when operator adaptation is enabled and you want
+to inspect which mutation operators are being rewarded or ignored.
+
+Returns: Per-operator attempt and success counters.
 
 #### getParent
 
@@ -728,8 +810,11 @@ Returns a summary of mutation/operator statistics used by operator adaptation.
 getParent(): default
 ```
 
-Selects a parent genome for breeding based on the selection method.
-Supports multiple selection strategies, including POWER, FITNESS_PROPORTIONATE, and TOURNAMENT.
+Select a parent genome using the controller's configured selection strategy.
+
+Read this as the "who gets to reproduce" hook. The exact policy depends on
+the current selection configuration, but the intent is always the same:
+convert the scored population into a plausible breeding candidate.
 
 Returns: The selected parent genome.
 
@@ -741,7 +826,16 @@ getParetoArchive(
 ): ParetoArchiveEntry[]
 ```
 
-Get recent Pareto archive entries (meta information about archived fronts).
+Return recent Pareto archive entries.
+
+This is the metadata-oriented archive view. Use it when you want to inspect
+what front snapshots were retained over time without exporting the full JSONL
+payload first.
+
+Parameters:
+- `maxEntries` - Maximum number of recent archive entries to return.
+
+Returns: Recent Pareto archive metadata entries.
 
 #### getParetoFronts
 
@@ -764,7 +858,12 @@ Returns: Fronts ordered from most to least dominant under the active objectives.
 getPerformanceStats(): { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }
 ```
 
-Return recent performance statistics for the most recent evaluation and evolve operations.
+Return timing statistics for the latest evaluation and evolution steps.
+
+This is a lightweight performance probe for experiments and benchmarks that
+need to notice when scoring or breeding costs start drifting upward.
+
+Returns: Recent runtime statistics for evaluation and evolution work.
 
 #### getSpeciesHistory
 
@@ -772,7 +871,12 @@ Return recent performance statistics for the most recent evaluation and evolve o
 getSpeciesHistory(): SpeciesHistoryEntry[]
 ```
 
-Returns the historical species statistics recorded each generation.
+Return the recorded species-history timeline.
+
+Unlike `getSpeciesStats()`, which only reflects the current generation,
+this method exposes the historical view used for trend analysis.
+
+Returns: Species history entries in recorded order.
 
 #### getSpeciesStats
 
@@ -780,7 +884,13 @@ Returns the historical species statistics recorded each generation.
 getSpeciesStats(): { id: number; size: number; bestScore: number; lastImproved: number; }[]
 ```
 
-Return a concise summary for each current species.
+Return a compact per-species summary for the current population snapshot.
+
+This is the quickest inspection surface when you want to know how many
+niches currently exist, how large they are, and whether they have improved
+recently.
+
+Returns: One summary record per active species.
 
 #### getTelemetry
 
@@ -804,7 +914,11 @@ import(
 ): Promise<void>
 ```
 
-Imports a population from an array of JSON objects.
+Replace the current population with serialized genomes.
+
+This is the population-only restore path. It keeps the current controller
+instance, options, and metadata while swapping in a different genome set.
+Use `importState()` when you want to restore controller metadata too.
 
 Parameters:
 - `json` - Serialized population to import into the current controller.
@@ -853,9 +967,14 @@ Returns: A `Neat` instance ready to continue evolution from the imported state.
 mutate(): Promise<void>
 ```
 
-Applies mutations to the population based on the mutation rate and amount.
-Each genome is mutated using the selected mutation methods.
-Slightly increases the chance of ADD_CONN mutation for more connectivity.
+Apply mutation pressure to the current population without advancing generation bookkeeping.
+
+This is the direct "variation" lever. Use it when you want to perturb the
+current genomes in place for an experiment, a custom training loop, or a
+test harness that separates mutation from the rest of `evolve()`.
+In the normal NEAT workflow, `evolve()` is usually the better entry point
+because it coordinates parent selection, elitism, offspring creation, and
+mutation as one generation step.
 
 Returns: Promise resolving once mutation has been applied to the current population.
 
@@ -886,7 +1005,10 @@ Parameters:
 resetNoveltyArchive(): void
 ```
 
-Reset the novelty archive (clear entries).
+Reset the novelty archive.
+
+This is useful when you want to restart novelty pressure from a clean slate
+without rebuilding the whole controller.
 
 #### restoreRNGState
 
@@ -978,7 +1100,11 @@ Returns: Child genome registered with the same bookkeeping conventions as normal
 toJSON(): any
 ```
 
-Serialize controller metadata without the population.
+Serialize controller metadata without the concrete population.
+
+This is useful when you want to preserve run configuration and innovation
+bookkeeping separately from genome payloads, or when the population will be
+reconstructed by other means.
 
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
 
@@ -1374,7 +1500,13 @@ Parameters:
 applyAdaptivePruning(): Promise<void>
 ```
 
-Run the adaptive pruning controller once.
+Run the adaptive pruning controller once using the controller's latest signals.
+
+Unlike scheduled pruning, this path reacts to the current search state,
+such as stagnation or complexity pressure, instead of only looking at the
+generation index.
+
+Returns: Promise resolving after adaptive pruning has completed.
 
 #### applyEvolutionPruning
 
@@ -1382,8 +1514,13 @@ Run the adaptive pruning controller once.
 applyEvolutionPruning(): Promise<void>
 ```
 
-Manually apply evolution-time pruning once using the current generation
-index and configuration in `options.evolutionPruning`.
+Manually apply the configured generation-based pruning policy once.
+
+This is mainly useful when you are experimenting with pruning behavior and
+want to trigger the controller's scheduled pruning logic outside the normal
+evolve loop.
+
+Returns: Promise resolving after the pruning policy has been evaluated.
 
 #### clearObjectives
 
@@ -1391,7 +1528,10 @@ index and configuration in `options.evolutionPruning`.
 clearObjectives(): void
 ```
 
-Clear all registered multi-objective objectives.
+Remove all custom objective registrations.
+
+Use this when a run is changing from one multi-objective regime to another
+and you want the controller to forget the previous objective schema.
 
 #### clearParetoArchive
 
@@ -1399,7 +1539,10 @@ Clear all registered multi-objective objectives.
 clearParetoArchive(): void
 ```
 
-Clear the Pareto archive.
+Clear the stored Pareto archive.
+
+Use this when a new phase of a run should stop comparing itself against the
+previous archive history.
 
 #### clearTelemetry
 
@@ -1407,7 +1550,11 @@ Clear the Pareto archive.
 clearTelemetry(): void
 ```
 
-Clear telemetry buffer and cached entries.
+Clear the recorded telemetry history.
+
+This does not reset the population or controller options. It only removes
+the accumulated diagnostic snapshots so a new experiment phase can start
+with a clean telemetry timeline.
 
 #### createPool
 
@@ -1491,7 +1638,11 @@ await neat.evolve();
 export(): any[]
 ```
 
-Exports the current population as an array of JSON objects.
+Export the current population as plain JSON objects.
+
+Choose this lighter snapshot when you only need the genomes themselves and
+do not need generation counters, innovation maps, or other controller-level
+state.
 
 Returns: JSON-safe population snapshot.
 
@@ -1503,7 +1654,15 @@ exportParetoFrontJSONL(
 ): string
 ```
 
-Export Pareto front archive as JSON Lines for external analysis.
+Export recent Pareto archive entries as JSON Lines.
+
+This is the easiest way to persist frontier history for offline analysis or
+later replay in notebooks and visualization tools.
+
+Parameters:
+- `maxEntries` - Maximum number of recent archive entries to export.
+
+Returns: JSONL payload for the requested Pareto archive window.
 
 #### exportRNGState
 
@@ -1523,7 +1682,15 @@ exportSpeciesHistoryCSV(
 ): string
 ```
 
-Export species history as CSV rows for offline inspection.
+Export recent species history as CSV.
+
+This is useful when you want to chart species growth, collapse, or
+stagnation in a spreadsheet or notebook without writing a custom parser.
+
+Parameters:
+- `maxEntries` - Maximum number of recent history entries to export.
+
+Returns: CSV payload representing recent species history snapshots.
 
 #### exportSpeciesHistoryJSONL
 
@@ -1533,7 +1700,15 @@ exportSpeciesHistoryJSONL(
 ): string
 ```
 
-Export species history as JSON Lines for storage and analysis.
+Export recent species history as JSON Lines.
+
+Choose this when you want machine-friendly archival output instead of the
+flatter spreadsheet-oriented CSV export.
+
+Parameters:
+- `maxEntries` - Maximum number of recent history entries to export.
+
+Returns: JSONL payload describing recent species-history entries.
 
 #### exportState
 
@@ -1541,7 +1716,11 @@ Export species history as JSON Lines for storage and analysis.
 exportState(): any
 ```
 
-Convenience: export full evolutionary state (meta + population genomes).
+Export the full controller state, including metadata and population.
+
+This is the pause-and-resume snapshot. It is the best choice when you want
+to continue the same run later with the same innovation history, generation
+counter, and serialized genomes.
 
 Returns: Full controller snapshot including metadata and population.
 
@@ -1566,7 +1745,12 @@ Returns: CSV string for quick spreadsheet or notebook analysis.
 exportTelemetryJSONL(): string
 ```
 
-Export telemetry as JSON Lines (one JSON object per line).
+Export the telemetry buffer as JSON Lines.
+
+JSONL is the easiest format to append to files, stream into data tools, or
+inspect generation-by-generation without loading a giant array into memory.
+
+Returns: JSONL payload with one telemetry entry per line.
 
 #### fromJSON
 
@@ -1604,6 +1788,12 @@ getDiversityStats(): DiversityStats
 ```
 
 Return the latest cached diversity statistics.
+
+Diversity summaries answer a different question than raw fitness: whether
+the population still explores varied structures or is collapsing toward a
+narrower family of genomes.
+
+Returns: Diversity metrics for the current population snapshot.
 
 #### getFittest
 
@@ -1644,7 +1834,12 @@ Minimum hidden size considering explicit minHidden or multiplier policy.
 getMultiObjectiveMetrics(): { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]
 ```
 
-Returns compact multi-objective metrics for each genome in the current population.
+Return compact multi-objective metrics for each genome in the current population.
+
+Use this when you want a flattened view of Pareto rank, crowding, raw score,
+and structural size without reconstructing the full fronts yourself.
+
+Returns: One compact metric record per genome.
 
 #### getNoveltyArchiveSize
 
@@ -1652,7 +1847,12 @@ Returns compact multi-objective metrics for each genome in the current populatio
 getNoveltyArchiveSize(): number
 ```
 
-Returns the number of entries currently stored in the novelty archive.
+Return the current novelty-archive size.
+
+This is a small diagnostic hook that tells you whether novelty search is
+actively accumulating behavior representatives or staying mostly unused.
+
+Returns: Number of archived novelty descriptors.
 
 #### getObjectiveEvents
 
@@ -1686,8 +1886,11 @@ Returns: Objective descriptors currently active on the controller.
 getOffspring(): default
 ```
 
-Generates an offspring by crossing over two parent networks.
-Uses the crossover method described in the Instinct algorithm.
+Build a child genome from parent selection and crossover.
+
+Use this when you want one reproduction event without running a full
+generation step. The method delegates the parent choice to `getParent()` so
+it still respects the controller's current breeding policy.
 
 Returns: New network created from selected parent genomes.
 
@@ -1697,7 +1900,12 @@ Returns: New network created from selected parent genomes.
 getOperatorStats(): { name: string; success: number; attempts: number; }[]
 ```
 
-Returns a summary of mutation/operator statistics used by operator adaptation.
+Return mutation-operator success statistics.
+
+These numbers are useful when operator adaptation is enabled and you want
+to inspect which mutation operators are being rewarded or ignored.
+
+Returns: Per-operator attempt and success counters.
 
 #### getParent
 
@@ -1705,8 +1913,11 @@ Returns a summary of mutation/operator statistics used by operator adaptation.
 getParent(): default
 ```
 
-Selects a parent genome for breeding based on the selection method.
-Supports multiple selection strategies, including POWER, FITNESS_PROPORTIONATE, and TOURNAMENT.
+Select a parent genome using the controller's configured selection strategy.
+
+Read this as the "who gets to reproduce" hook. The exact policy depends on
+the current selection configuration, but the intent is always the same:
+convert the scored population into a plausible breeding candidate.
 
 Returns: The selected parent genome.
 
@@ -1718,7 +1929,16 @@ getParetoArchive(
 ): ParetoArchiveEntry[]
 ```
 
-Get recent Pareto archive entries (meta information about archived fronts).
+Return recent Pareto archive entries.
+
+This is the metadata-oriented archive view. Use it when you want to inspect
+what front snapshots were retained over time without exporting the full JSONL
+payload first.
+
+Parameters:
+- `maxEntries` - Maximum number of recent archive entries to return.
+
+Returns: Recent Pareto archive metadata entries.
 
 #### getParetoFronts
 
@@ -1741,7 +1961,12 @@ Returns: Fronts ordered from most to least dominant under the active objectives.
 getPerformanceStats(): { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }
 ```
 
-Return recent performance statistics for the most recent evaluation and evolve operations.
+Return timing statistics for the latest evaluation and evolution steps.
+
+This is a lightweight performance probe for experiments and benchmarks that
+need to notice when scoring or breeding costs start drifting upward.
+
+Returns: Recent runtime statistics for evaluation and evolution work.
 
 #### getSpeciesHistory
 
@@ -1749,7 +1974,12 @@ Return recent performance statistics for the most recent evaluation and evolve o
 getSpeciesHistory(): SpeciesHistoryEntry[]
 ```
 
-Returns the historical species statistics recorded each generation.
+Return the recorded species-history timeline.
+
+Unlike `getSpeciesStats()`, which only reflects the current generation,
+this method exposes the historical view used for trend analysis.
+
+Returns: Species history entries in recorded order.
 
 #### getSpeciesStats
 
@@ -1757,7 +1987,13 @@ Returns the historical species statistics recorded each generation.
 getSpeciesStats(): { id: number; size: number; bestScore: number; lastImproved: number; }[]
 ```
 
-Return a concise summary for each current species.
+Return a compact per-species summary for the current population snapshot.
+
+This is the quickest inspection surface when you want to know how many
+niches currently exist, how large they are, and whether they have improved
+recently.
+
+Returns: One summary record per active species.
 
 #### getTelemetry
 
@@ -1781,7 +2017,11 @@ import(
 ): Promise<void>
 ```
 
-Imports a population from an array of JSON objects.
+Replace the current population with serialized genomes.
+
+This is the population-only restore path. It keeps the current controller
+instance, options, and metadata while swapping in a different genome set.
+Use `importState()` when you want to restore controller metadata too.
 
 Parameters:
 - `json` - Serialized population to import into the current controller.
@@ -1830,9 +2070,14 @@ Returns: A `Neat` instance ready to continue evolution from the imported state.
 mutate(): Promise<void>
 ```
 
-Applies mutations to the population based on the mutation rate and amount.
-Each genome is mutated using the selected mutation methods.
-Slightly increases the chance of ADD_CONN mutation for more connectivity.
+Apply mutation pressure to the current population without advancing generation bookkeeping.
+
+This is the direct "variation" lever. Use it when you want to perturb the
+current genomes in place for an experiment, a custom training loop, or a
+test harness that separates mutation from the rest of `evolve()`.
+In the normal NEAT workflow, `evolve()` is usually the better entry point
+because it coordinates parent selection, elitism, offspring creation, and
+mutation as one generation step.
 
 Returns: Promise resolving once mutation has been applied to the current population.
 
@@ -1863,7 +2108,10 @@ Parameters:
 resetNoveltyArchive(): void
 ```
 
-Reset the novelty archive (clear entries).
+Reset the novelty archive.
+
+This is useful when you want to restart novelty pressure from a clean slate
+without rebuilding the whole controller.
 
 #### restoreRNGState
 
@@ -1955,7 +2203,11 @@ Returns: Child genome registered with the same bookkeeping conventions as normal
 toJSON(): any
 ```
 
-Serialize controller metadata without the population.
+Serialize controller metadata without the concrete population.
+
+This is useful when you want to preserve run configuration and innovation
+bookkeeping separately from genome payloads, or when the population will be
+reconstructed by other means.
 
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
 

@@ -13,6 +13,18 @@ Typical usage follows two tracks:
 - export or import the full state when you need innovation history,
   generation counters, and population data to resume a run faithfully.
 
+A useful way to read this chapter is as a pause-and-resume ladder:
+- `exportPopulation()` and `importPopulation()` move only candidate genomes
+- `toJSONImpl()` and `fromJSONImpl()` move only controller meta state
+- `exportState()` and `importStateImpl()` combine both layers into one full resume bundle
+
+That split matters because not every persistence use case is a full replay.
+Sometimes you want to archive candidate solutions for later inspection,
+benchmark the same population under a new fitness function, or ship genomes
+between environments without also freezing the controller's innovation
+history. Other times you need a true checkpoint that can continue evolving as
+if the process had never stopped.
+
 ## neat/export/neat.export.ts
 
 ### exportPopulation
@@ -50,6 +62,10 @@ Convenience helper that returns a full evolutionary snapshot: both NEAT meta
 information and the serialized population array. Use this when you want a
 truly pause-and-resume capability including innovation bookkeeping.
 
+In practice this is the "checkpoint" export. It is the safest default when
+you care about reproducible continuation rather than only preserving candidate
+genomes for later inspection.
+
 Example:
 
 ```ts
@@ -76,6 +92,10 @@ exported meta JSON produced by {@link toJSONImpl}. This does not restore a
 population; callers typically follow up with `importPopulation` or use
 {@link importStateImpl} for a complete restore.
 
+This helper is the mirror image of `toJSONImpl()`: rebuild the controller's
+evolution bookkeeping first, then decide separately whether the population
+should be restored from another source.
+
 Example:
 
 ```ts
@@ -97,9 +117,17 @@ produced by `Network#toJSON()` and re-hydrated via `Network.fromJSON()`. We use
 an open record signature here because the network architecture may evolve with
 plugins / future features (e.g. CPPNs, substrate metadata, ONNX export tags).
 
+Treat this as a persistence boundary rather than a strict schema promise. The
+export helpers preserve whatever `Network#toJSON()` emits, which lets the
+broader architecture evolve without forcing this chapter to hard-code every
+possible serialized field.
+
 ### GenomeWithSerialization
 
 Genome with toJSON serialization method.
+
+This is the smallest runtime contract needed by the export helpers when they
+only care about turning one genome into a JSON payload.
 
 ### importPopulation
 
@@ -112,6 +140,8 @@ importPopulation(
 Import (replace) the current population from an array of serialized genomes.
 This does not touch NEAT meta state (generation, innovations, etc.) - only the
 population array and implied `popsize` are updated.
+That makes it the right tool when you want to swap candidate solutions into an
+existing controller context instead of restoring a full historical checkpoint.
 
 Example:
 
@@ -128,6 +158,9 @@ Edge cases handled:
 Parameters:
 - `populationJSON` - Array of serialized genome objects.
 
+Returns: Promise that resolves once all genomes have been rehydrated and the
+controller population has been replaced.
+
 ### importStateImpl
 
 ```ts
@@ -142,6 +175,10 @@ produced by {@link exportState}. Invoke this with the NEAT class (not an
 instance) bound as `this`, e.g. `Neat.importStateImpl(bundle, fitnessFn)`.
 It constructs a new NEAT instance using the meta data, then imports the
 population (if present).
+
+This is the most complete restore path in the chapter. If a saved bundle is
+valid, the caller gets back a fresh controller that knows both where the run
+was in evolutionary time and which genomes were alive at that moment.
 
 Safety and validation:
 - Throws if the bundle is not an object.
@@ -165,13 +202,25 @@ Returns: Rehydrated NEAT instance ready to continue evolving.
 
 Connection innovation map entry.
 
+Innovation maps are serialized as `[key, value]` tuples so they can round-trip
+cleanly through JSON and later be restored into `Map` instances.
+
 ### NeatConstructor
 
 NEAT class constructor interface.
 
+Static-style restore helpers depend on this constructor shape so they can
+rebuild a controller instance from persisted meta data and then optionally
+rehydrate the population.
+
 ### NeatControllerForExport
 
 NEAT controller interface for export operations.
+
+The persistence helpers intentionally depend on this narrow host shape instead
+of the concrete `Neat` class. That keeps export and restore logic reusable in
+tests and static-style helper flows without coupling the file to the full
+controller implementation.
 
 ### NeatMetaJSON
 
@@ -185,9 +234,16 @@ Top-level bundle containing both NEAT meta information and the full array of
 serialized genomes (population). This is what you get from `exportState()` and
 feed into `importStateImpl()` to resume exactly where you left off.
 
+If `NeatMetaJSON` is the controller checkpoint and `GenomeJSON[]` is the pool
+of candidate solutions, `NeatStateJSON` is the combined pause-and-resume
+artifact that preserves both layers together.
+
 ### NetworkClass
 
 Network class with static fromJSON method.
+
+Import helpers use this contract when rebuilding genomes from serialized JSON
+without needing to know the concrete network implementation details.
 
 ### toJSONImpl
 
@@ -200,6 +256,9 @@ innovation history and experiment configuration. This is sufficient to
 recreate a blank NEAT run at the same evolutionary generation with the same
 innovation counters, enabling deterministic continuation when combined later
 with a saved population.
+
+Use this path when the controller context matters but the population payload
+should be stored, transferred, or versioned separately.
 
 Example:
 

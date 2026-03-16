@@ -12,6 +12,17 @@ The neighboring `telemetry/facade/*` chapters own public `Neat` wrappers.
 This exports chapter owns the actual serialization mechanics those wrappers
 delegate to.
 
+The main design constraint is determinism across uneven telemetry windows.
+A long-running experiment rarely records the same optional fields in every
+entry, especially when objective sets, lineage metadata, or Pareto state can
+change over time. The helpers in this file therefore do two jobs at once:
+they serialize entries, and they first discover a stable export shape so the
+resulting CSV can still be compared, plotted, or diffed reliably.
+
+Read this chapter when you want to understand how NeatapticTS turns rich but
+irregular telemetry objects into bounded JSONL streams and spreadsheet-ready
+CSV output without losing the meaning of sparse runtime fields.
+
 ## neat/telemetry/exports/telemetry.exports.ts
 
 ### buildSpeciesHistoryCsv
@@ -24,6 +35,11 @@ buildSpeciesHistoryCsv(
 ```
 
 Build the full CSV string for species history entries.
+
+Species history exports are row-expanded: each generation snapshot can produce
+multiple rows, one for each species stat recorded inside that generation. The
+helper therefore writes a single shared header line and then flattens the
+nested history structure into one CSV row per species snapshot.
 
 Parameters:
 - `recentHistory` - - History entries to export.
@@ -41,6 +57,11 @@ buildTelemetryHeaders(
 
 Build the ordered header list for telemetry CSV output.
 
+Once discovery is complete, this helper turns the collected key sets into the
+final column order. Group prefixes such as `complexity.` and `perf.` preserve
+meaning after flattening so spreadsheet readers can still tell which runtime
+family a value came from.
+
 Parameters:
 - `info` - - Collected header discovery state.
 
@@ -56,6 +77,11 @@ collectTelemetryHeaderInfo(
 
 Collect header metadata from the sampled telemetry entries.
 
+This is the discovery pass that makes CSV exports deterministic. Instead of
+assuming every telemetry entry has the same shape, the helper scans the
+window first and records which base fields, grouped metrics, and optional
+columns actually appear anywhere in the sample.
+
 Parameters:
 - `entries` - - Telemetry entries included in the export window.
 
@@ -63,27 +89,31 @@ Returns: Flattened header discovery state.
 
 ### DEFAULT_SPECIES_BEST_SCORE
 
-Default fallback best score when missing.
+Default fallback best score when a synthesized history row lacks a score.
 
 ### DEFAULT_SPECIES_HISTORY_GENERATION
 
-Default fallback generation when missing.
+Default fallback generation used when backfilling an early species snapshot.
 
 ### DEFAULT_SPECIES_HISTORY_MAX_ENTRIES
 
 Default max entries for species history CSV exports.
 
+This keeps spreadsheet-oriented history exports bounded by default so a long
+run does not accidentally dump an unmanageably large CSV when the caller only
+wants a recent analytical window.
+
 ### DEFAULT_SPECIES_ID
 
-Default fallback species id when missing.
+Default fallback species id when a synthesized history row lacks an id.
 
 ### DEFAULT_SPECIES_LAST_IMPROVED
 
-Default fallback last improved when missing.
+Default fallback last-improved generation when a synthesized row lacks one.
 
 ### DEFAULT_SPECIES_SIZE
 
-Default fallback species size when missing.
+Default fallback species size when a synthesized history row lacks a size.
 
 ### exportSpeciesHistoryCSV
 
@@ -106,6 +136,13 @@ Parameters:
 
 Returns: CSV payload describing one species row per generation snapshot.
 
+Example:
+
+```ts
+const csv = exportSpeciesHistoryCSV.call(neat, 25);
+console.log(csv.split('\n').slice(0, 2).join('\n'));
+```
+
 ### exportTelemetryCSV
 
 ```ts
@@ -115,6 +152,10 @@ exportTelemetryCSV(
 ```
 
 Export recent telemetry entries to a CSV string.
+
+This is the human-scanning export path. Instead of preserving the exact
+object graph like JSONL does, it discovers a stable column set across the
+sampled window and then flattens grouped metrics into prefixed columns.
 
 Flattening rules:
 - nested `complexity`, `perf`, `lineage`, and selected `diversity` fields
@@ -129,6 +170,13 @@ Parameters:
 
 Returns: CSV string containing headers plus one row per exported entry.
 
+Example:
+
+```ts
+const csv = exportTelemetryCSV.call(neat, 50);
+console.log(csv.split('\n')[0]);
+```
+
 ### exportTelemetryJSONL
 
 ```ts
@@ -136,6 +184,11 @@ exportTelemetryJSONL(): string
 ```
 
 Serialize telemetry as JSON Lines for stream-friendly log exports.
+
+JSONL keeps the export path almost lossless: each telemetry entry is emitted
+as one JSON object on one line, which makes the format easy to append to a
+file, stream through command-line tools, or reload in notebook code without
+flattening nested structures first.
 
 Parameters:
 - `this` - - Neat instance exposing the internal telemetry buffer.
@@ -160,6 +213,12 @@ serializeTelemetryEntry(
 
 Serialize one telemetry entry into a CSV row using the ordered headers.
 
+The serializer follows the header contract built for the whole export window.
+That means each row is shaped against the same column set even when a given
+entry is missing optional fields. Missing values become empty cells, while
+nested structures that do exist are serialized into the cell that matches the
+previously discovered column.
+
 Parameters:
 - `entry` - - Telemetry entry being serialized.
 - `headers` - - Ordered headers for the whole export window.
@@ -170,6 +229,11 @@ Returns: CSV row string.
 
 Shape describing collected telemetry header discovery info.
 
+Think of this as the temporary export blueprint for one CSV window. Before a
+telemetry entry can be flattened into cells, the exporter needs to know which
+top-level fields exist, which nested metric groups need prefixed columns, and
+which optional arrays or maps appeared anywhere in the sampled window.
+
 ## neat/telemetry/exports/telemetry.exports.utils.ts
 
 Shared header-discovery and species-row helpers for the telemetry exports chapter.
@@ -179,6 +243,12 @@ this companion utility file keeps the lower-level bookkeeping focused on two
 jobs: discover a stable flattened column set for telemetry CSV windows, and
 normalize species-history rows so early-run exports remain deterministic even
 when the live controller state is still sparse.
+
+In other words, this file is where the exporter does its careful prep work.
+The public helpers can promise deterministic CSV output because these utility
+functions first answer the low-level questions: which columns exist in this
+window, which optional structures actually appeared, which species-history
+fields must be backfilled, and how should one value become one safe CSV cell.
 
 ### buildSpeciesHistoryStats
 
@@ -194,6 +264,11 @@ buildSpeciesHistoryStats(
 
 Normalize raw species records into exportable history stats.
 
+Runtime species objects can arrive with slightly different shapes depending
+on when they were recorded or which legacy path produced them. This helper
+converts those permissive records into one compact export-ready model with
+explicit fallbacks for id, size, score, and last-improved generation.
+
 Parameters:
 - `speciesList` - - Raw species records to normalize.
 - `defaultSpeciesId` - - Default species id when missing.
@@ -202,6 +277,11 @@ Parameters:
 - `defaultLastImproved` - - Default last improved when missing.
 
 Returns: Normalized stats for CSV export.
+
+Example:
+
+const stats = buildSpeciesHistoryStats(neat._species ?? [], -1, 0, 0, 0);
+console.log(stats.length);
 
 ### collectBaseKeys
 
@@ -214,6 +294,10 @@ collectBaseKeys(
 ```
 
 Collect base (top-level) telemetry keys for a single entry.
+
+This is the first header-discovery pass. It records ordinary top-level fields
+while deliberately skipping grouped containers that will later be flattened
+under prefixed columns.
 
 Parameters:
 - `entry` - - Telemetry entry to inspect.
@@ -233,6 +317,10 @@ collectDiversityLineageMetrics(
 
 Collect curated diversity lineage metrics for stable CSV exports.
 
+Diversity objects can contain more information than the CSV surface needs.
+This helper intentionally exports only the lineage-related diversity metrics
+that are useful and stable enough to deserve fixed columns.
+
 Parameters:
 - `entry` - - Telemetry entry to inspect.
 - `state` - - Mutable header collection state.
@@ -249,6 +337,10 @@ collectGroupedMetricKeys(
 ```
 
 Collect nested metric keys for grouped telemetry fields.
+
+Grouped telemetry objects such as `complexity`, `perf`, and `lineage` become
+prefixed CSV columns. This helper discovers those nested keys without mixing
+them into the base top-level header set.
 
 Parameters:
 - `entry` - - Telemetry entry to inspect.
@@ -267,6 +359,11 @@ collectOptionalColumnPresence(
 
 Collect presence flags for optional telemetry columns.
 
+Some telemetry fields are sparse by design. Rather than creating columns for
+every optional structure unconditionally, the exporter first checks whether a
+field actually appears in the sampled window and only then enables the
+corresponding column.
+
 Parameters:
 - `entry` - - Telemetry entry to inspect.
 - `state` - - Mutable header collection state.
@@ -283,6 +380,10 @@ collectSpeciesHistoryHeaders(
 ```
 
 Collect ordered header keys for species history CSV export.
+
+Species history rows can grow new fields over time. This helper scans the
+selected history window and builds the union of all encountered stat keys so
+every emitted row follows one shared, predictable column order.
 
 Parameters:
 - `history` - - Recent species history entries.
@@ -306,6 +407,11 @@ ensureMinimalSpeciesSnapshot(
 
 Ensure a minimal species snapshot exists for deterministic CSV headers.
 
+Early in a run, live species data can exist before any formal history entry
+has been recorded. This helper bridges that gap by synthesizing one minimal
+history snapshot so header discovery and CSV output remain deterministic
+instead of depending on whether the first archival step has happened yet.
+
 Parameters:
 - `neatInstance` - - Neat instance with optional species history and species.
 - `history` - - Species history backing array.
@@ -317,6 +423,11 @@ Parameters:
 
 Returns: void. Mutates history when a minimal snapshot is needed.
 
+Example:
+
+const history = ensureSpeciesHistoryArray(neat);
+ensureMinimalSpeciesSnapshot(neat, history, 0, -1, 0, 0, 0);
+
 ### ensureSpeciesHistoryArray
 
 ```ts
@@ -326,6 +437,10 @@ ensureSpeciesHistoryArray(
 ```
 
 Ensure the species history array exists on the Neat instance.
+
+This helper gives the CSV path one stable backing array to work with, even in
+early or partially initialized controller states. It keeps later export code
+focused on serialization instead of defensive host checks.
 
 Parameters:
 - `neatInstance` - - Neat instance holding species history.
@@ -345,6 +460,10 @@ resolveSpeciesHistoryCellValue(
 
 Resolve a single species history cell value for the provided header.
 
+The generation column is special because it lives on the outer history entry,
+not on the species stat itself. All remaining headers are treated as dynamic
+species-stat fields and are read through the same record-style lookup path.
+
 Parameters:
 - `historyEntry` - - A single generation snapshot.
 - `speciesStat` - - A single species stat record.
@@ -362,6 +481,10 @@ safeStringifyCell(
 ```
 
 Serialize a CSV cell with JSON.stringify safeguards.
+
+The exporter uses JSON stringification for cells so numbers, strings, arrays,
+and nested values all flow through one escaping path. Undefined values remain
+empty cells to preserve the exporter’s existing sparse-column behavior.
 
 Parameters:
 - `value` - - Any value to stringify.
@@ -381,6 +504,11 @@ serializeSpeciesHistoryRow(
 
 Serialize one species history row using the provided headers.
 
+Species history CSV output is built row by row from one generation snapshot
+plus one species stat record. This helper guarantees that each row follows
+the same previously collected header order, even when some species records
+omit optional fields.
+
 Parameters:
 - `historyEntry` - - A single generation snapshot.
 - `speciesStat` - - A single species stat record for that generation.
@@ -392,3 +520,7 @@ Returns: CSV row string matching the provided header order.
 ### TelemetryHeaderCollectionState
 
 Mutable state container used while collecting telemetry header metadata.
+
+The header collector builds this structure incrementally while scanning a
+telemetry window. It acts as a temporary map from irregular runtime objects
+to the stable column layout that later CSV rows must follow.

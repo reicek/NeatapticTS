@@ -13,10 +13,20 @@ import type {
  * jobs: discover a stable flattened column set for telemetry CSV windows, and
  * normalize species-history rows so early-run exports remain deterministic even
  * when the live controller state is still sparse.
+ *
+ * In other words, this file is where the exporter does its careful prep work.
+ * The public helpers can promise deterministic CSV output because these utility
+ * functions first answer the low-level questions: which columns exist in this
+ * window, which optional structures actually appeared, which species-history
+ * fields must be backfilled, and how should one value become one safe CSV cell.
  */
 
 /**
  * Mutable state container used while collecting telemetry header metadata.
+ *
+ * The header collector builds this structure incrementally while scanning a
+ * telemetry window. It acts as a temporary map from irregular runtime objects
+ * to the stable column layout that later CSV rows must follow.
  */
 export interface TelemetryHeaderCollectionState {
   /** Top-level keys (excluding explicit grouped objects). */
@@ -45,6 +55,10 @@ export interface TelemetryHeaderCollectionState {
 
 /**
  * Collect base (top-level) telemetry keys for a single entry.
+ *
+ * This is the first header-discovery pass. It records ordinary top-level fields
+ * while deliberately skipping grouped containers that will later be flattened
+ * under prefixed columns.
  *
  * @param entry - Telemetry entry to inspect.
  * @param state - Mutable header collection state.
@@ -78,6 +92,10 @@ export function collectBaseKeys(
 /**
  * Collect nested metric keys for grouped telemetry fields.
  *
+ * Grouped telemetry objects such as `complexity`, `perf`, and `lineage` become
+ * prefixed CSV columns. This helper discovers those nested keys without mixing
+ * them into the base top-level header set.
+ *
  * @param entry - Telemetry entry to inspect.
  * @param state - Mutable header collection state.
  * @returns void. Mutates complexity/perf/lineage key sets.
@@ -102,6 +120,10 @@ export function collectGroupedMetricKeys(
 /**
  * Collect curated diversity lineage metrics for stable CSV exports.
  *
+ * Diversity objects can contain more information than the CSV surface needs.
+ * This helper intentionally exports only the lineage-related diversity metrics
+ * that are useful and stable enough to deserve fixed columns.
+ *
  * @param entry - Telemetry entry to inspect.
  * @param state - Mutable header collection state.
  * @returns void. Mutates diversity lineage key set.
@@ -120,6 +142,11 @@ export function collectDiversityLineageMetrics(
 
 /**
  * Collect presence flags for optional telemetry columns.
+ *
+ * Some telemetry fields are sparse by design. Rather than creating columns for
+ * every optional structure unconditionally, the exporter first checks whether a
+ * field actually appears in the sampled window and only then enables the
+ * corresponding column.
  *
  * @param entry - Telemetry entry to inspect.
  * @param state - Mutable header collection state.
@@ -142,6 +169,10 @@ export function collectOptionalColumnPresence(
 /**
  * Ensure the species history array exists on the Neat instance.
  *
+ * This helper gives the CSV path one stable backing array to work with, even in
+ * early or partially initialized controller states. It keeps later export code
+ * focused on serialization instead of defensive host checks.
+ *
  * @param neatInstance - Neat instance holding species history.
  * @returns Species history backing array (ensured on instance).
  */
@@ -157,6 +188,11 @@ export function ensureSpeciesHistoryArray(
 /**
  * Ensure a minimal species snapshot exists for deterministic CSV headers.
  *
+ * Early in a run, live species data can exist before any formal history entry
+ * has been recorded. This helper bridges that gap by synthesizing one minimal
+ * history snapshot so header discovery and CSV output remain deterministic
+ * instead of depending on whether the first archival step has happened yet.
+ *
  * @param neatInstance - Neat instance with optional species history and species.
  * @param history - Species history backing array.
  * @param fallbackGeneration - Generation fallback when missing.
@@ -165,6 +201,9 @@ export function ensureSpeciesHistoryArray(
  * @param defaultBestScore - Default best score when missing.
  * @param defaultLastImproved - Default last improved when missing.
  * @returns void. Mutates history when a minimal snapshot is needed.
+ * @example
+ * const history = ensureSpeciesHistoryArray(neat);
+ * ensureMinimalSpeciesSnapshot(neat, history, 0, -1, 0, 0, 0);
  */
 export function ensureMinimalSpeciesSnapshot(
   neatInstance: NeatLike & {
@@ -206,6 +245,10 @@ export function ensureMinimalSpeciesSnapshot(
 /**
  * Collect ordered header keys for species history CSV export.
  *
+ * Species history rows can grow new fields over time. This helper scans the
+ * selected history window and builds the union of all encountered stat keys so
+ * every emitted row follows one shared, predictable column order.
+ *
  * @param history - Recent species history entries.
  * @param generationHeader - Header label for generation column.
  * @returns Ordered header list for CSV output.
@@ -231,12 +274,20 @@ export function collectSpeciesHistoryHeaders(
 /**
  * Normalize raw species records into exportable history stats.
  *
+ * Runtime species objects can arrive with slightly different shapes depending
+ * on when they were recorded or which legacy path produced them. This helper
+ * converts those permissive records into one compact export-ready model with
+ * explicit fallbacks for id, size, score, and last-improved generation.
+ *
  * @param speciesList - Raw species records to normalize.
  * @param defaultSpeciesId - Default species id when missing.
  * @param defaultSpeciesSize - Default species size when missing.
  * @param defaultBestScore - Default best score when missing.
  * @param defaultLastImproved - Default last improved when missing.
  * @returns Normalized stats for CSV export.
+ * @example
+ * const stats = buildSpeciesHistoryStats(neat._species ?? [], -1, 0, 0, 0);
+ * console.log(stats.length);
  */
 export function buildSpeciesHistoryStats(
   speciesList: SpeciesHistoryStat[],
@@ -376,6 +427,11 @@ export function buildSpeciesHistoryStats(
 /**
  * Serialize one species history row using the provided headers.
  *
+ * Species history CSV output is built row by row from one generation snapshot
+ * plus one species stat record. This helper guarantees that each row follows
+ * the same previously collected header order, even when some species records
+ * omit optional fields.
+ *
  * @param historyEntry - A single generation snapshot.
  * @param speciesStat - A single species stat record for that generation.
  * @param orderedHeaders - Ordered header list for stable CSV.
@@ -405,6 +461,10 @@ export function serializeSpeciesHistoryRow(
 /**
  * Resolve a single species history cell value for the provided header.
  *
+ * The generation column is special because it lives on the outer history entry,
+ * not on the species stat itself. All remaining headers are treated as dynamic
+ * species-stat fields and are read through the same record-style lookup path.
+ *
  * @param historyEntry - A single generation snapshot.
  * @param speciesStat - A single species stat record.
  * @param headerName - Column header name.
@@ -428,6 +488,10 @@ export function resolveSpeciesHistoryCellValue(
 
 /**
  * Serialize a CSV cell with JSON.stringify safeguards.
+ *
+ * The exporter uses JSON stringification for cells so numbers, strings, arrays,
+ * and nested values all flow through one escaping path. Undefined values remain
+ * empty cells to preserve the exporter’s existing sparse-column behavior.
  *
  * @param value - Any value to stringify.
  * @returns JSON string or empty string when JSON.stringify returns undefined.

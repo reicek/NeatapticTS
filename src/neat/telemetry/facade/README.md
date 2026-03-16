@@ -2,10 +2,35 @@
 
 Public read-heavy facade helpers for Neat telemetry, objectives, and archive inspection.
 
-This module groups the parts of the Neat surface that mainly expose existing
-state rather than drive evolution. Keeping the public telemetry root beside
-its chapter folders lets `src/neat.ts` stay orchestration-first while the
-telemetry split now reads as one discoverable subtree.
+This chapter is the user-facing answer to a practical question: once a NEAT
+run has produced telemetry, where should a caller look first?
+The write-side telemetry chapters explain how evidence is recorded; this
+facade explains how that evidence comes back out as compact snapshots,
+species summaries, objective views, diversity reads, and export-friendly logs.
+
+A useful way to read the module is by inspection workflow:
+- buffer views answer "what happened recently?" via `getTelemetry()` and telemetry exports
+- objective and Pareto helpers answer "what tradeoffs are active right now?"
+- species and lineage helpers answer "which families are growing, stalling, or inheriting together?"
+- diversity and performance helpers answer "is search still broad, and how expensive was the last step?"
+- clearing helpers reset evidence buffers when you want a fresh observation window
+
+```mermaid
+flowchart LR
+  Run["Neat run"] --> Buffer["telemetry buffer<br/>recent generation entries"]
+  Run --> Species["species history<br/>and live species registry"]
+  Run --> Objectives["objective registry<br/>and Pareto archive"]
+  Run --> Runtime["cached diversity<br/>and timing snapshots"]
+  Buffer --> Inspect["inspect recent trend<br/>getTelemetry()"]
+  Species --> Compare["compare families<br/>getSpeciesStats() / getSpeciesHistory()"]
+  Objectives --> Tradeoffs["inspect tradeoffs<br/>getObjectives() / getParetoFronts()"]
+  Runtime --> Health["check search health<br/>getDiversityStats() / getPerformanceStats()"]
+  Buffer --> Export["share or archive<br/>CSV / JSONL exports"]
+```
+
+Read this chapter after `recorder/` when you care less about how a telemetry
+entry is built and more about how an experimenter, dashboard, notebook, or
+test can inspect the recorded state without reaching into controller internals.
 
 ## neat/telemetry/facade/telemetry.facade.ts
 
@@ -116,11 +141,20 @@ exportTelemetryCSV(
 
 Export recent telemetry entries as CSV for quick spreadsheet inspection.
 
+Prefer this when the reader is a person scanning a table instead of a script
+parsing nested JSON. The helper intentionally focuses on a recent window so a
+long run can still produce a compact worksheet.
+
 Parameters:
 - `host` - - `Neat` instance whose telemetry buffer should be exported.
 - `maxEntries` - - Maximum number of recent entries to include.
 
 Returns: CSV string containing the requested telemetry window.
+
+Example:
+
+const csv = exportTelemetryCSV(neat, 100);
+console.log(csv.split('\n').slice(0, 3).join('\n'));
 
 ### exportTelemetryJSONL
 
@@ -131,6 +165,10 @@ exportTelemetryJSONL(
 ```
 
 Export telemetry as JSON Lines so logs can stream into files or post-processors.
+
+JSONL is the most automation-friendly telemetry surface: one entry per line,
+easy to append to a file, easy to pipe into scripts, and stable enough for
+notebook or CLI post-processing.
 
 Parameters:
 - `host` - - `Neat` instance whose telemetry buffer should be serialized.
@@ -149,11 +187,18 @@ Return cached diversity metrics, computing a fallback snapshot when needed.
 
 This keeps the public facade resilient: callers can always ask for diversity
 stats even before a full metrics pass has run.
+The resulting snapshot is especially useful when you need to judge whether a
+run is still exploring many structural alternatives or converging too hard.
 
 Parameters:
 - `host` - - `Neat` instance exposing cached diversity state.
 
 Returns: Diversity metrics for the current population.
+
+Example:
+
+const diversity = getDiversityStats(neat);
+console.log(diversity.structuralEntropy, diversity.uniqueStructures);
 
 ### getLineageSnapshot
 
@@ -185,6 +230,9 @@ getMultiObjectiveMetrics(
 ```
 
 Build compact multi-objective metrics for the current population snapshot.
+
+This helper is meant for inspection surfaces that need the shape of the
+current Pareto landscape without pulling every genome field into view.
 
 Parameters:
 - `host` - - `Neat` instance whose population should be summarized.
@@ -260,6 +308,11 @@ Parameters:
 
 Returns: Compact objective summaries in evaluation order.
 
+Example:
+
+const objectives = getObjectives(neat);
+console.table(objectives);
+
 ### getOperatorStats
 
 ```ts
@@ -286,6 +339,11 @@ getParetoArchive(
 
 Return the most recent Pareto archive entries.
 
+Unlike `getParetoFronts()`, which reconstructs the current population view,
+this helper reads the historical archive that was captured while the run was
+evolving. It is better suited for replaying how the frontier changed over
+time.
+
 Parameters:
 - `host` - - `Neat` instance storing archived Pareto metadata.
 - `maxEntries` - - Maximum number of archive entries to return.
@@ -303,6 +361,10 @@ getParetoFronts(
 
 Reconstruct Pareto fronts from current rank annotations.
 
+Use this when the question is structural rather than historical: which fronts
+exist right now, and how many genomes are sitting on each layer of the
+current tradeoff surface?
+
 Parameters:
 - `host` - - `Neat` instance whose population should be partitioned.
 - `maxFronts` - - Maximum number of fronts to reconstruct.
@@ -319,10 +381,18 @@ getPerformanceStats(
 
 Return coarse timing metrics for the last evaluation and evolution passes.
 
+These timings are intentionally simple. They answer "which phase was expensive
+last time?" without pretending to replace a profiler.
+
 Parameters:
 - `host` - - `Neat` instance tracking performance timings.
 
 Returns: Snapshot of the last evaluation and evolution durations.
+
+Example:
+
+const timing = getPerformanceStats(neat);
+console.log(timing.lastEvalMs, timing.lastEvolveMs);
 
 ### getSpeciesHistory
 
@@ -334,10 +404,19 @@ getSpeciesHistory(
 
 Return recorded species history, lazily backfilling extended metrics when enabled.
 
+Use this when you need the story across generations rather than the current
+snapshot. It is the better surface for plots, regressions, and post-run
+analysis of stagnation or speciation churn.
+
 Parameters:
 - `host` - - `Neat` instance storing species history snapshots.
 
 Returns: Historical species entries for each recorded generation.
+
+Example:
+
+const historyWindow = getSpeciesHistory(neat).slice(-10);
+console.log(historyWindow.length);
 
 ### getSpeciesStats
 
@@ -349,10 +428,19 @@ getSpeciesStats(
 
 Return a concise summary for each current species.
 
+This is the fastest species-level diagnostic when you want to see whether the
+population is still split across several improving families or collapsing
+toward one dominant cluster.
+
 Parameters:
 - `host` - - `Neat` instance whose live species registry should be summarized.
 
 Returns: Array of current species summaries.
+
+Example:
+
+const speciesSummary = getSpeciesStats(neat);
+console.table(speciesSummary);
 
 ### getTelemetry
 
@@ -364,11 +452,24 @@ getTelemetry(
 
 Return the in-memory telemetry buffer.
 
+This is the fastest way to inspect the recent rhythm of a run: score trends,
+diversity changes, objective snapshots, and timing evidence exactly as they
+were recorded generation by generation.
+
 Parameters:
 - `host` - - `Neat` instance storing generation telemetry snapshots.
 
 Returns: Telemetry entries captured so far, or an empty array when telemetry
 is not initialized.
+
+Example:
+
+const telemetryWindow = getTelemetry(neat).slice(-5);
+console.table(telemetryWindow.map((entry) => ({
+  generation: entry.generation,
+  bestScore: entry.bestScore,
+  species: entry.species,
+})));
 
 ### NeatTelemetryFacadeHost
 

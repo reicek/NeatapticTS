@@ -28,10 +28,26 @@ import {
  * The neighboring `telemetry/facade/*` chapters own public `Neat` wrappers.
  * This exports chapter owns the actual serialization mechanics those wrappers
  * delegate to.
+ *
+ * The main design constraint is determinism across uneven telemetry windows.
+ * A long-running experiment rarely records the same optional fields in every
+ * entry, especially when objective sets, lineage metadata, or Pareto state can
+ * change over time. The helpers in this file therefore do two jobs at once:
+ * they serialize entries, and they first discover a stable export shape so the
+ * resulting CSV can still be compared, plotted, or diffed reliably.
+ *
+ * Read this chapter when you want to understand how NeatapticTS turns rich but
+ * irregular telemetry objects into bounded JSONL streams and spreadsheet-ready
+ * CSV output without losing the meaning of sparse runtime fields.
  */
 
 /**
  * Shape describing collected telemetry header discovery info.
+ *
+ * Think of this as the temporary export blueprint for one CSV window. Before a
+ * telemetry entry can be flattened into cells, the exporter needs to know which
+ * top-level fields exist, which nested metric groups need prefixed columns, and
+ * which optional arrays or maps appeared anywhere in the sampled window.
  */
 interface TelemetryHeaderInfo {
   /** Top-level keys (excluding explicit grouped objects). */
@@ -84,21 +100,32 @@ const HEADER_OBJ_IMPORTANCE = 'objImportance';
 /** Header label for generation column in species history CSV. */
 const HEADER_GENERATION = 'generation';
 
-/** Default max entries for species history CSV exports. */
+/**
+ * Default max entries for species history CSV exports.
+ *
+ * This keeps spreadsheet-oriented history exports bounded by default so a long
+ * run does not accidentally dump an unmanageably large CSV when the caller only
+ * wants a recent analytical window.
+ */
 export const DEFAULT_SPECIES_HISTORY_MAX_ENTRIES = 200;
-/** Default fallback species id when missing. */
+/** Default fallback species id when a synthesized history row lacks an id. */
 export const DEFAULT_SPECIES_ID = -1;
-/** Default fallback species size when missing. */
+/** Default fallback species size when a synthesized history row lacks a size. */
 export const DEFAULT_SPECIES_SIZE = 0;
-/** Default fallback best score when missing. */
+/** Default fallback best score when a synthesized history row lacks a score. */
 export const DEFAULT_SPECIES_BEST_SCORE = 0;
-/** Default fallback last improved when missing. */
+/** Default fallback last-improved generation when a synthesized row lacks one. */
 export const DEFAULT_SPECIES_LAST_IMPROVED = 0;
-/** Default fallback generation when missing. */
+/** Default fallback generation used when backfilling an early species snapshot. */
 export const DEFAULT_SPECIES_HISTORY_GENERATION = 0;
 
 /**
  * Serialize telemetry as JSON Lines for stream-friendly log exports.
+ *
+ * JSONL keeps the export path almost lossless: each telemetry entry is emitted
+ * as one JSON object on one line, which makes the format easy to append to a
+ * file, stream through command-line tools, or reload in notebook code without
+ * flattening nested structures first.
  *
  * @param this - Neat instance exposing the internal telemetry buffer.
  * @returns JSONL payload with one telemetry object per line.
@@ -120,6 +147,10 @@ export function exportTelemetryJSONL(
 /**
  * Export recent telemetry entries to a CSV string.
  *
+ * This is the human-scanning export path. Instead of preserving the exact
+ * object graph like JSONL does, it discovers a stable column set across the
+ * sampled window and then flattens grouped metrics into prefixed columns.
+ *
  * Flattening rules:
  * - nested `complexity`, `perf`, `lineage`, and selected `diversity` fields
  *   become `group.key` columns,
@@ -130,6 +161,11 @@ export function exportTelemetryJSONL(
  * @param this - Neat instance exposing the internal telemetry buffer.
  * @param maxEntries - Maximum number of recent telemetry rows to include.
  * @returns CSV string containing headers plus one row per exported entry.
+ * @example
+ * ```ts
+ * const csv = exportTelemetryCSV.call(neat, 50);
+ * console.log(csv.split('\n')[0]);
+ * ```
  */
 export function exportTelemetryCSV(
   this: NeatLike & { _telemetry: TelemetryEntry[] },
@@ -166,6 +202,11 @@ export function exportTelemetryCSV(
  * @param this - Neat instance exposing species history and optional live species.
  * @param maxEntries - Maximum number of recent history snapshots to include.
  * @returns CSV payload describing one species row per generation snapshot.
+ * @example
+ * ```ts
+ * const csv = exportSpeciesHistoryCSV.call(neat, 25);
+ * console.log(csv.split('\n').slice(0, 2).join('\n'));
+ * ```
  */
 export function exportSpeciesHistoryCSV(
   this: NeatLike & {
@@ -204,6 +245,11 @@ export function exportSpeciesHistoryCSV(
 /**
  * Collect header metadata from the sampled telemetry entries.
  *
+ * This is the discovery pass that makes CSV exports deterministic. Instead of
+ * assuming every telemetry entry has the same shape, the helper scans the
+ * window first and records which base fields, grouped metrics, and optional
+ * columns actually appear anywhere in the sample.
+ *
  * @param entries - Telemetry entries included in the export window.
  * @returns Flattened header discovery state.
  */
@@ -239,6 +285,11 @@ function collectTelemetryHeaderInfo(
 /**
  * Build the ordered header list for telemetry CSV output.
  *
+ * Once discovery is complete, this helper turns the collected key sets into the
+ * final column order. Group prefixes such as `complexity.` and `perf.` preserve
+ * meaning after flattening so spreadsheet readers can still tell which runtime
+ * family a value came from.
+ *
  * @param info - Collected header discovery state.
  * @returns Ordered header names used for serialization.
  */
@@ -267,6 +318,12 @@ function buildTelemetryHeaders(info: TelemetryHeaderInfo): string[] {
 
 /**
  * Serialize one telemetry entry into a CSV row using the ordered headers.
+ *
+ * The serializer follows the header contract built for the whole export window.
+ * That means each row is shaped against the same column set even when a given
+ * entry is missing optional fields. Missing values become empty cells, while
+ * nested structures that do exist are serialized into the cell that matches the
+ * previously discovered column.
  *
  * @param entry - Telemetry entry being serialized.
  * @param headers - Ordered headers for the whole export window.
@@ -374,6 +431,11 @@ function serializeTelemetryEntry(
 
 /**
  * Build the full CSV string for species history entries.
+ *
+ * Species history exports are row-expanded: each generation snapshot can produce
+ * multiple rows, one for each species stat recorded inside that generation. The
+ * helper therefore writes a single shared header line and then flattens the
+ * nested history structure into one CSV row per species snapshot.
  *
  * @param recentHistory - History entries to export.
  * @param headers - Ordered headers for the export window.

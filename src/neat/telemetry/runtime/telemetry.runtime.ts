@@ -13,10 +13,22 @@ import type {
  * together gives the telemetry subtree a direct internal chapter for the
  * "record and stream" path instead of leaving that write-side behavior in a
  * flat root utility file.
+ *
+ * The key idea is containment. The recorder chapter decides what a telemetry
+ * entry means; this runtime layer decides how that entry can be stored and
+ * observed safely while evolution is still in progress.
+ * By isolating buffer creation, callback delivery, and trimming here, the
+ * telemetry pipeline can remain useful to dashboards and experiments without
+ * letting diagnostics logic leak back into the evolutionary control flow.
  */
 
 /**
  * Ensure the telemetry buffer is initialized before a generation snapshot is recorded.
+ *
+ * This helper keeps telemetry opt-in and cheap. Runs that never inspect or
+ * export telemetry do not need an eager buffer allocation, while runs that do
+ * record telemetry can ask for a stable mutable array at the moment they need
+ * it.
  *
  * @param telemetryContext - Neat-like context holding the mutable telemetry buffer.
  * @returns Mutable telemetry buffer used for in-memory history.
@@ -42,6 +54,9 @@ export function ensureTelemetryBuffer(
  *
  * Callback failures are intentionally swallowed so diagnostics hooks cannot
  * destabilize an evolution run.
+ * This is the main runtime safety boundary between telemetry observers and the
+ * search loop: visibility is allowed, but observer failures must never become
+ * control-flow failures for evolution itself.
  *
  * @param telemetryContext - Neat-like context with optional telemetry stream settings.
  * @param telemetryEntry - Entry to forward to the configured stream callback.
@@ -80,6 +95,11 @@ export function safelyStreamTelemetryEntry(
 
 /**
  * Trim the telemetry buffer to its configured maximum size.
+ *
+ * Telemetry is useful precisely because it can span many generations, but an
+ * unbounded in-memory history would turn that visibility into a memory leak.
+ * This helper enforces the retention contract by keeping only the most recent
+ * slice of the run.
  *
  * @param telemetryBufferRef - Buffer to trim in place.
  * @param maxEntries - Maximum number of recent entries to keep.

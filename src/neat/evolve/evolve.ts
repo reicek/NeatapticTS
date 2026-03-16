@@ -1,3 +1,47 @@
+/**
+ * The evolution chapter is where one NEAT generation actually turns into the next.
+ *
+ * If the root `Neat` controller explains the public lifecycle, this module explains the
+ * orchestration core that makes that lifecycle real. The exported `evolve()` function is
+ * intentionally long in responsibility but short in local decision-making: it reads like a
+ * stage manager for one generation and delegates the detailed work to focused helpers under
+ * `adaptive/`, `objectives/`, `population/`, `runtime/`, `speciation/`, and `telemetry/`.
+ * That split matters because the controller has to coordinate many policies at once without
+ * collapsing them into one opaque algorithm blob.
+ *
+ * Read this chapter when you want to answer questions such as:
+ *
+ * - When does the controller force evaluation before selection starts?
+ * - Which adaptive hooks run before and after ranking?
+ * - Where do speciation, offspring construction, mutation, pruning, and telemetry fit?
+ * - Why does the method return the best network from the previous generation instead of the
+ *   newly mutated population?
+ *
+ * The high-level flow is easier to retain if you treat it as five phases:
+ *
+ * 1. make the current population comparable,
+ * 2. update adaptive and objective policies,
+ * 3. rank and summarize the current generation,
+ * 4. construct the next population,
+ * 5. finalize runtime state for the next loop.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Evaluate[Evaluate current population] --> Adapt[Apply adaptive controllers]
+ *   Adapt --> Rank[Sort, rank, and speciate]
+ *   Rank --> Snapshot[Snapshot best genome and telemetry evidence]
+ *   Snapshot --> Rebuild[Build next population via elitism, provenance, and offspring]
+ *   Rebuild --> Mutate[Apply pruning, mutation, and cache invalidation]
+ *   Mutate --> Finalize[Advance generation and maintain runtime history]
+ * ```
+ *
+ * Reading order:
+ * - start with {@link evolve} for the generation spine,
+ * - jump into `runtime/` when you need evaluation and timekeeping semantics,
+ * - jump into `speciation/` and `population/` when parent selection or offspring allocation is the question,
+ * - jump into `adaptive/` when you need to understand dynamic policy changes,
+ * - jump into `telemetry/` when you want to know which evidence gets recorded during the step.
+ */
 /*
  * ESLint configuration for intentional `any` usage in NEAT evolution module
  *
@@ -67,91 +111,172 @@ import {
 } from './telemetry/evolve.telemetry.utils';
 import type { NeatControllerForEvolution } from './evolve.types';
 
-/** Maximum number of Pareto archive snapshots to retain. */
+/**
+ * Maximum number of Pareto archive snapshots to retain.
+ *
+ * This keeps multi-objective history useful for inspection without letting archive state
+ * grow unbounded during long runs.
+ */
 export const EVOLVE_PARETO_ARCHIVE_MAX = 200;
-/** Minimum target front size used for adaptive epsilon tuning. */
+/**
+ * Minimum target front size used for adaptive epsilon tuning.
+ *
+ * Small Pareto fronts are easy to overfit, so the epsilon controller never aims below this floor.
+ */
 export const EVOLVE_TARGET_FRONT_MIN = 3;
-/** Upper ratio threshold for Pareto front size vs target. */
+/**
+ * Upper ratio threshold for Pareto front size vs target.
+ *
+ * When the first front grows beyond this band, the controller can tighten epsilon to recover pressure.
+ */
 export const EVOLVE_TARGET_FRONT_UPPER_RATIO = 1.2;
-/** Lower ratio threshold for Pareto front size vs target. */
+/**
+ * Lower ratio threshold for Pareto front size vs target.
+ *
+ * When the first front shrinks below this band, the controller can relax epsilon to avoid over-pruning.
+ */
 export const EVOLVE_TARGET_FRONT_LOWER_RATIO = 0.8;
-/** Default adjustment step for dominance epsilon. */
+/**
+ * Default adjustment step for dominance epsilon.
+ *
+ * The value is intentionally small because epsilon changes should steer ranking gradually rather than jerk it.
+ */
 export const EVOLVE_DEFAULT_EPSILON_ADJUST = 0.002;
-/** Default minimum dominance epsilon. */
+/** Minimum dominance epsilon floor used by adaptive Pareto tuning. */
 export const EVOLVE_DEFAULT_EPSILON_MIN = 0;
-/** Default maximum dominance epsilon. */
+/** Maximum dominance epsilon ceiling used by adaptive Pareto tuning. */
 export const EVOLVE_DEFAULT_EPSILON_MAX = 0.5;
-/** Default cooldown (generations) between epsilon adjustments. */
+/**
+ * Default cooldown in generations between epsilon adjustments.
+ *
+ * This prevents the controller from reacting to every short-lived fluctuation in front width.
+ */
 export const EVOLVE_DEFAULT_EPSILON_COOLDOWN = 2;
-/** Default prune window (generations) for inactive objectives. */
+/**
+ * Default inactivity window used before adaptive objective pruning considers removal.
+ */
 export const EVOLVE_PRUNE_WINDOW_DEFAULT = 5;
-/** Default inactive objective range epsilon. */
+/**
+ * Default numerical range epsilon for deciding whether an objective has effectively gone flat.
+ */
 export const EVOLVE_PRUNE_RANGE_EPS_DEFAULT = 1e-6;
-/** Default young species threshold (generations). */
+/** Generation threshold below which a species is still treated as young. */
 export const EVOLVE_YOUNG_THRESHOLD_DEFAULT = 5;
-/** Default young species fitness multiplier. */
+/** Fitness-sharing multiplier applied to species that are still in their early growth window. */
 export const EVOLVE_YOUNG_MULTIPLIER_DEFAULT = 1.3;
-/** Default old species threshold (generations). */
+/** Generation threshold after which a species is treated as old for age-based fitness shaping. */
 export const EVOLVE_OLD_THRESHOLD_DEFAULT = 30;
-/** Default old species fitness multiplier. */
+/** Fitness-sharing multiplier applied to older species so stale lineages lose selection privilege. */
 export const EVOLVE_OLD_MULTIPLIER_DEFAULT = 0.7;
-/** Default minimum offspring per species. */
+/**
+ * Minimum offspring allocation reserved for a surviving species during speciated reproduction.
+ */
 export const EVOLVE_MIN_OFFSPRING_DEFAULT = 1;
-/** Default survival threshold for parent selection. */
+/**
+ * Survivor fraction used when choosing the parent pool inside each species.
+ */
 export const EVOLVE_SURVIVAL_THRESHOLD_DEFAULT = 0.5;
-/** Guard limit for cross-species mating selection retries. */
+/**
+ * Retry limit for cross-species parent sampling before the controller falls back to a safer path.
+ */
 export const EVOLVE_CROSS_SPECIES_GUARD_LIMIT = 5;
-/** Default auto-entropy activation generation. */
+/**
+ * Default generation at which automatic entropy objective scheduling becomes eligible.
+ */
 export const EVOLVE_AUTO_ENTROPY_ADD_AT = 3;
-/** Fraction of population to replace during global stagnation injection. */
+/**
+ * Fraction of the population replaced with fresh genomes when global stagnation rescue triggers.
+ */
 export const EVOLVE_GLOBAL_STAGNATION_REPLACE_FRACTION = 0.2;
-/** Minimum samples required to adjust re-enable probability. */
+/**
+ * Minimum re-enable observations required before the controller trusts its adaptation signal.
+ */
 export const EVOLVE_REENABLE_MIN_SAMPLES = 20;
-/** Target re-enable success ratio. */
+/** Desired success ratio for connection re-enable attempts during adaptive mutation control. */
 export const EVOLVE_REENABLE_TARGET = 0.3;
-/** Scale factor for re-enable probability adjustment. */
+/**
+ * Scale factor that converts re-enable success error into a probability update.
+ */
 export const EVOLVE_REENABLE_DELTA_SCALE = 0.1;
-/** Minimum re-enable probability. */
+/** Lower bound for adaptive connection re-enable probability. */
 export const EVOLVE_REENABLE_MIN = 0.05;
-/** Maximum re-enable probability. */
+/** Upper bound for adaptive connection re-enable probability. */
 export const EVOLVE_REENABLE_MAX = 0.9;
-/** Minimum target species when auto-tuning compatibility coefficients. */
+/**
+ * Minimum target species count used by automatic compatibility tuning.
+ *
+ * The controller never tries to collapse diversity below this floor when adjusting coefficients.
+ */
 export const EVOLVE_AUTO_COMPAT_TARGET_MIN = 2;
-/** Default auto-compatibility adjust rate. */
+/**
+ * Default rate used when nudging compatibility coefficients toward the desired species count.
+ */
 export const EVOLVE_AUTO_COMPAT_ADJUST_RATE = 0.01;
-/** Default minimum compatibility coefficient. */
+/** Minimum compatibility coefficient allowed during automatic tuning. */
 export const EVOLVE_AUTO_COMPAT_MIN_COEFF = 0.1;
-/** Default maximum compatibility coefficient. */
+/** Maximum compatibility coefficient allowed during automatic tuning. */
 export const EVOLVE_AUTO_COMPAT_MAX_COEFF = 5;
-/** Random scale factor used when auto-compatibility has zero error. */
+/**
+ * Random perturbation scale used when compatibility tuning has no directional error to follow.
+ */
 export const EVOLVE_AUTO_COMPAT_RANDOM_SCALE = 0.5;
-/** Maximum number of species history snapshots to retain. */
+/**
+ * Maximum number of species-history snapshots to retain for telemetry and later export.
+ */
 export const EVOLVE_SPECIES_HISTORY_MAX = 200;
 
 /**
  * Run a single evolution step for this NEAT population.
  *
- * This method performs a full generation update: evaluation (if needed),
- * adaptive hooks, speciation and fitness sharing, multi-objective
- * processing, elitism/provenance, offspring allocation (within or without
- * species), mutation, pruning, and telemetry recording. It mutates the
- * controller state (`this.population`, `this.generation`, and telemetry
- * caches) and returns a copy of the best discovered `Network` for the
- * generation.
+ * This is the orchestration spine for one full generation update. The method does not try to
+ * implement every evolutionary policy inline; instead, it coordinates the major phases in a fixed
+ * order so the rest of the NEAT controller can remain modular and inspectable.
+ *
+ * The lifecycle is easiest to read in seven stages:
+ *
+ * 1. ensure the current population has fresh evaluation scores,
+ * 2. run adaptive controllers that may change complexity or objective policy,
+ * 3. rank the current generation through sorting, multi-objective processing, and speciation,
+ * 4. capture the best-network snapshot plus telemetry evidence while the generation is still intact,
+ * 5. build the next population through elitism, provenance, and offspring allocation,
+ * 6. mutate and prune the newly built population,
+ * 7. finalize runtime bookkeeping for the next call.
+ *
+ * A subtle but important design choice is that the returned {@link Network} represents the best
+ * genome from the generation that was just analyzed, not from the population after mutation. That
+ * makes the return value a stable evaluation artifact: callers can inspect or replay the winning
+ * candidate without worrying that post-selection mutation has already changed it.
+ *
+ * The method mutates controller-owned state such as `this.population`, `this.generation`,
+ * compatibility caches, telemetry buffers, objective snapshots, and species-history state.
+ * In other words, call this when you intend to advance the controller, not when you merely want a
+ * read-only score refresh.
  *
  * Important side-effects:
  * - Replaces `this.population` with the newly constructed generation.
  * - Increments `this.generation`.
  * - May register or remove dynamic objectives via adaptive controllers.
+ * - Refreshes telemetry, diversity, species-history, and timing snapshots.
+ *
+ * Use the surrounding helper folders as the next reading map:
+ * - `runtime/` explains evaluation readiness and loop timing.
+ * - `adaptive/` explains policy changes that respond to stagnation or controller statistics.
+ * - `speciation/` explains fitness sharing, compatibility tuning, and species history.
+ * - `population/` explains how elitism, provenance, and offspring fill the next generation.
+ * - `telemetry/` explains which traces are recorded while this method runs.
  *
  * Example:
+ *
+ * ```ts
  * // assuming `neat` is an instance with configured population/options
- * await neat.evolve();
+ * const bestNetwork = await neat.evolve();
  * console.log('generation:', neat.generation);
+ * console.log('output nodes:', bestNetwork.output);
+ * ```
  *
  * @this {NeatControllerForEvolution} the NEAT instance (contains population, options, RNG, etc.)
- * @returns {Promise<Network>} a deep-cloned Network representing the best genome
- *                              in the previous generation (useful for evaluation)
+ * @returns {Promise<Network>} a deep-cloned network snapshot representing the best genome from the
+ * previous generation, ready for inspection or external evaluation
  * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6 Instinct: neuro-evolution on steroids by Thomas Wagenaar}
  */
 export async function evolve(

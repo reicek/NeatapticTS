@@ -265,27 +265,27 @@ class Neat {
   private _diversityStats?: DiversityStats;
 
   /**
-    * Construct a new `Neat` controller around a fitness function and an option bag.
-    *
-    * The constructor does not just store values. It also normalizes the incoming
-    * options, seeds deterministic randomness when requested, applies root defaults,
-    * and prepares the controller so later chapter modules can assume a coherent host.
-    * That makes construction the moment where experiment intent becomes runtime policy.
+   * Construct a new `Neat` controller around a fitness function and an option bag.
+   *
+   * The constructor does not just store values. It also normalizes the incoming
+   * options, seeds deterministic randomness when requested, applies root defaults,
+   * and prepares the controller so later chapter modules can assume a coherent host.
+   * That makes construction the moment where experiment intent becomes runtime policy.
    *
    * @example
-    * const neat = new Neat(3, 1, (network) => {
-    *   const output = network.activate([0.2, 0.8, 1])[0];
-    *   return 1 - Math.abs(output - 0.75);
-    * }, {
-    *   popsize: 80,
-    *   mutationRate: 0.5,
-    *   seed: 42,
-    * });
-    *
-    * @param input Number of input neurons each genome should expose.
-    * @param output Number of output neurons each genome should expose.
-    * @param fitness Fitness function used during `evaluate()`.
-    * @param options Optional run configuration overriding the built-in defaults.
+   * const neat = new Neat(3, 1, (network) => {
+   *   const output = network.activate([0.2, 0.8, 1])[0];
+   *   return 1 - Math.abs(output - 0.75);
+   * }, {
+   *   popsize: 80,
+   *   mutationRate: 0.5,
+   *   seed: 42,
+   * });
+   *
+   * @param input Number of input neurons each genome should expose.
+   * @param output Number of output neurons each genome should expose.
+   * @param fitness Fitness function used during `evaluate()`.
+   * @param options Optional run configuration overriding the built-in defaults.
    */
   constructor(
     input?: number,
@@ -323,15 +323,15 @@ class Neat {
 
   // === Static factories ===
   /**
-    * Restore a full evolutionary snapshot produced by `exportState()`.
-    *
-    * Use this when you want a paused experiment to resume with its controller
-    * metadata, population, and archival context intact rather than rebuilding
-    * only the bare genomes.
-    *
-    * @param bundle Serialized object with the shape `{ neat, population }`.
-    * @param fitness Fitness function to attach to the restored controller.
-    * @returns A `Neat` instance ready to continue evolution from the imported state.
+   * Restore a full evolutionary snapshot produced by `exportState()`.
+   *
+   * Use this when you want a paused experiment to resume with its controller
+   * metadata, population, and archival context intact rather than rebuilding
+   * only the bare genomes.
+   *
+   * @param bundle Serialized object with the shape `{ neat, population }`.
+   * @param fitness Fitness function to attach to the restored controller.
+   * @returns A `Neat` instance ready to continue evolution from the imported state.
    */
   static async importState(
     bundle: any,
@@ -365,13 +365,13 @@ class Neat {
 
   // === Population setup & RNG ===
   /**
-    * Create the initial population pool, optionally cloning from a seed network.
-    *
-    * This is the explicit population bootstrap surface. Call it when you want to
-    * start from a known architecture template instead of relying on whatever setup
-    * a surrounding example or harness applies for you.
-    *
-    * @param network Optional template network copied into the initial pool.
+   * Create the initial population pool, optionally cloning from a seed network.
+   *
+   * This is the explicit population bootstrap surface. Call it when you want to
+   * start from a known architecture template instead of relying on whatever setup
+   * a surrounding example or harness applies for you.
+   *
+   * @param network Optional template network copied into the initial pool.
    */
   createPool(network: Network | null): void {
     try {
@@ -385,8 +385,8 @@ class Neat {
   /**
    * Return the current opaque RNG numeric state used by the instance.
    * Useful for deterministic test replay and debugging.
-    *
-    * @returns Snapshot of the current controller RNG state.
+   *
+   * @returns Snapshot of the current controller RNG state.
    */
   snapshotRNGState() {
     return neatRngFacade.snapshotRNGState(this as unknown as NeatRngFacadeHost);
@@ -397,7 +397,7 @@ class Neat {
    * seed but does not re-create the RNG function until next use.
    *
    * @param state Opaque numeric RNG state produced by `snapshotRNGState()`.
-  * @returns Nothing. The controller will resume from the restored RNG state on next use.
+   * @returns Nothing. The controller will resume from the restored RNG state on next use.
    */
   restoreRNGState(state: any) {
     neatRngFacade.restoreRNGState(this as unknown as NeatRngFacadeHost, state);
@@ -406,7 +406,7 @@ class Neat {
   /**
    * Import an RNG state (alias for restore; kept for compatibility).
    * @param state Numeric RNG state.
-  * @returns Nothing. This is a compatibility alias for `restoreRNGState()`.
+   * @returns Nothing. This is a compatibility alias for `restoreRNGState()`.
    */
   importRNGState(state: any) {
     neatRngFacade.importRNGState(this as unknown as NeatRngFacadeHost, state);
@@ -414,8 +414,8 @@ class Neat {
 
   /**
    * Export the current RNG state for external persistence or tests.
-    *
-    * @returns Opaque RNG snapshot suitable for later replay.
+   *
+   * @returns Opaque RNG snapshot suitable for later replay.
    */
   exportRNGState() {
     return neatRngFacade.exportRNGState(this as unknown as NeatRngFacadeHost);
@@ -436,20 +436,20 @@ class Neat {
 
   // === Evolution lifecycle ===
   /**
-    * Advance the evolutionary loop by one generation.
-    *
-    * Conceptually, `evolve()` is the reproduction half of NEAT. It selects parents,
-    * preserves elites and provenance when configured, applies structural and parametric
-    * mutation, updates search bookkeeping, and returns the best genome observed for the step.
-    * The heavy mechanics live in `src/neat/evolve/evolve.ts`; this method stays as the
-    * readable front door to that orchestration.
+   * Advance the evolutionary loop by one generation.
+   *
+   * Conceptually, `evolve()` is the reproduction half of NEAT. It selects parents,
+   * preserves elites and provenance when configured, applies structural and parametric
+   * mutation, updates search bookkeeping, and returns the best genome observed for the step.
+   * The heavy mechanics live in `src/neat/evolve/evolve.ts`; this method stays as the
+   * readable front door to that orchestration.
    *
    * @example
-    * // Score the current population first, then breed the next generation.
-    * await neat.evaluate();
+   * // Score the current population first, then breed the next generation.
+   * await neat.evaluate();
    * await neat.evolve();
-    *
-    * @returns Best genome selected by the evolution step.
+   *
+   * @returns Best genome selected by the evolution step.
    */
   async evolve(): Promise<Network> {
     return evolve.call(this as any);
@@ -459,11 +459,11 @@ class Neat {
    * Evaluate the current population using the configured fitness function.
    * Delegates to the migrated evaluation helper to keep this class thin.
    *
-    * In practice, this is the scoring half of the controller loop. It transforms a
-    * population of candidate networks into evidence the rest of the algorithm can use:
-    * fitness scores, objective values, telemetry, diversity statistics, and any derived
-    * signals needed by selection or pruning.
-    *
+   * In practice, this is the scoring half of the controller loop. It transforms a
+   * population of candidate networks into evidence the rest of the algorithm can use:
+   * fitness scores, objective values, telemetry, diversity statistics, and any derived
+   * signals needed by selection or pruning.
+   *
    * @returns Aggregated evaluation result (implementation specific).
    */
   async evaluate(): Promise<any> {
@@ -471,19 +471,29 @@ class Neat {
   }
 
   /**
-   * Applies mutations to the population based on the mutation rate and amount.
-   * Each genome is mutated using the selected mutation methods.
-   * Slightly increases the chance of ADD_CONN mutation for more connectivity.
-    *
-    * @returns Promise resolving once mutation has been applied to the current population.
+   * Apply mutation pressure to the current population without advancing generation bookkeeping.
+   *
+   * This is the direct "variation" lever. Use it when you want to perturb the
+   * current genomes in place for an experiment, a custom training loop, or a
+   * test harness that separates mutation from the rest of `evolve()`.
+   * In the normal NEAT workflow, `evolve()` is usually the better entry point
+   * because it coordinates parent selection, elitism, offspring creation, and
+   * mutation as one generation step.
+   *
+   * @returns Promise resolving once mutation has been applied to the current population.
    */
   async mutate(): Promise<void> {
     return mutate.call(this as any);
   }
 
   /**
-   * Manually apply evolution-time pruning once using the current generation
-   * index and configuration in `options.evolutionPruning`.
+   * Manually apply the configured generation-based pruning policy once.
+   *
+   * This is mainly useful when you are experimenting with pruning behavior and
+   * want to trigger the controller's scheduled pruning logic outside the normal
+   * evolve loop.
+   *
+   * @returns Promise resolving after the pruning policy has been evaluated.
    */
   async applyEvolutionPruning(): Promise<void> {
     return neatPruningFacade.applyEvolutionPruning(
@@ -492,7 +502,13 @@ class Neat {
   }
 
   /**
-   * Run the adaptive pruning controller once.
+   * Run the adaptive pruning controller once using the controller's latest signals.
+   *
+   * Unlike scheduled pruning, this path reacts to the current search state,
+   * such as stagnation or complexity pressure, instead of only looking at the
+   * generation index.
+   *
+   * @returns Promise resolving after adaptive pruning has completed.
    */
   async applyAdaptivePruning(): Promise<void> {
     return neatPruningFacade.applyAdaptivePruning(
@@ -507,8 +523,12 @@ class Neat {
 
   // === Reproduction & invariants ===
   /**
-   * Selects a parent genome for breeding based on the selection method.
-   * Supports multiple selection strategies, including POWER, FITNESS_PROPORTIONATE, and TOURNAMENT.
+   * Select a parent genome using the controller's configured selection strategy.
+   *
+   * Read this as the "who gets to reproduce" hook. The exact policy depends on
+   * the current selection configuration, but the intent is always the same:
+   * convert the scored population into a plausible breeding candidate.
+   *
    * @returns The selected parent genome.
    * @throws Error if tournament size exceeds population size.
    */
@@ -517,9 +537,13 @@ class Neat {
   }
 
   /**
-   * Generates an offspring by crossing over two parent networks.
-   * Uses the crossover method described in the Instinct algorithm.
-    * @returns New network created from selected parent genomes.
+   * Build a child genome from parent selection and crossover.
+   *
+   * Use this when you want one reproduction event without running a full
+   * generation step. The method delegates the parent choice to `getParent()` so
+   * it still respects the controller's current breeding policy.
+   *
+   * @returns New network created from selected parent genomes.
    */
   getOffspring(): Network {
     return createOffspring(this as unknown as any, this.getParent.bind(this));
@@ -527,10 +551,10 @@ class Neat {
 
   /**
    * Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
-    *
-    * @param parent Parent genome to clone and mutate.
-    * @param mutateCount Number of mutation passes to apply to the child.
-    * @returns Child genome registered with the same bookkeeping conventions as normal evolution.
+   *
+   * @param parent Parent genome to clone and mutate.
+   * @param mutateCount Number of mutation passes to apply to the child.
+   * @returns Child genome registered with the same bookkeeping conventions as normal evolution.
    */
   spawnFromParent(parent: Network, mutateCount: number = 1): Network {
     return spawnFromParent.call(
@@ -542,9 +566,9 @@ class Neat {
 
   /**
    * Register an externally-created genome into the `Neat` population.
-    *
-    * @param genome Genome to append into the population.
-    * @param parents Optional lineage metadata recorded for teaching and telemetry.
+   *
+   * @param genome Genome to append into the population.
+   * @param parents Optional lineage metadata recorded for teaching and telemetry.
    */
   addGenome(genome: Network, parents?: number[]): void {
     return addGenome.call(this as any, genome as any, parents as any);
@@ -552,10 +576,10 @@ class Neat {
 
   /**
    * Selects a mutation method for a given genome based on constraints.
-    *
-    * @param genome Genome being considered for mutation.
-    * @param rawReturnForTest Whether to expose raw selection output for test visibility.
-    * @returns Selected mutation method or `null` when no valid method can be chosen.
+   *
+   * @param genome Genome being considered for mutation.
+   * @param rawReturnForTest Whether to expose raw selection output for test visibility.
+   * @returns Selected mutation method or `null` when no valid method can be chosen.
    */
   selectMutationMethod(genome: Network, rawReturnForTest: boolean = true): any {
     try {
@@ -634,12 +658,12 @@ class Neat {
 
   /**
    * Return the internal telemetry buffer.
-    *
-    * Telemetry is the controller's teaching surface for understanding why a run is
-    * behaving a certain way. Instead of watching only the best score, you can inspect
-    * species counts, diversity, objective events, evaluation timing, and other search signals.
-    *
-    * @returns Recorded telemetry entries in chronological order.
+   *
+   * Telemetry is the controller's teaching surface for understanding why a run is
+   * behaving a certain way. Instead of watching only the best score, you can inspect
+   * species counts, diversity, objective events, evaluation timing, and other search signals.
+   *
+   * @returns Recorded telemetry entries in chronological order.
    */
   getTelemetry(): TelemetryEntry[] {
     return neatTelemetryFacade.getTelemetry(
@@ -647,7 +671,14 @@ class Neat {
     );
   }
 
-  /** Export telemetry as JSON Lines (one JSON object per line). */
+  /**
+   * Export the telemetry buffer as JSON Lines.
+   *
+   * JSONL is the easiest format to append to files, stream into data tools, or
+   * inspect generation-by-generation without loading a giant array into memory.
+   *
+   * @returns JSONL payload with one telemetry entry per line.
+   */
   exportTelemetryJSONL(): string {
     return neatTelemetryFacade.exportTelemetryJSONL(
       this as unknown as NeatTelemetryFacadeHost,
@@ -656,9 +687,9 @@ class Neat {
 
   /**
    * Export recent telemetry entries as CSV.
-    *
-    * @param maxEntries Maximum number of recent telemetry entries to export.
-    * @returns CSV string for quick spreadsheet or notebook analysis.
+   *
+   * @param maxEntries Maximum number of recent telemetry entries to export.
+   * @returns CSV string for quick spreadsheet or notebook analysis.
    */
   exportTelemetryCSV(maxEntries = 500): string {
     return neatTelemetryFacade.exportTelemetryCSV(
@@ -667,7 +698,13 @@ class Neat {
     );
   }
 
-  /** Clear telemetry buffer and cached entries. */
+  /**
+   * Clear the recorded telemetry history.
+   *
+   * This does not reset the population or controller options. It only removes
+   * the accumulated diagnostic snapshots so a new experiment phase can start
+   * with a clean telemetry timeline.
+   */
   clearTelemetry() {
     neatTelemetryFacade.clearTelemetry(
       this as unknown as NeatTelemetryFacadeHost,
@@ -676,8 +713,8 @@ class Neat {
 
   /**
    * Return a lightweight list of registered objective keys and their directions.
-    *
-    * @returns Objective descriptors currently active on the controller.
+   *
+   * @returns Objective descriptors currently active on the controller.
    */
   getObjectives(): { key: string; direction: 'max' | 'min' }[] {
     return neatTelemetryFacade.getObjectives(
@@ -687,14 +724,14 @@ class Neat {
 
   /**
    * Register a custom objective for multi-objective optimization.
-    *
-    * Register objectives when a single scalar score is too narrow to express the
-    * behavior you want. The controller can then reason about tradeoffs such as raw
-    * score versus simplicity, novelty, or domain-specific constraints.
-    *
-    * @param key Stable objective identifier used in exports and telemetry.
-    * @param direction Whether the objective should be minimized or maximized.
-    * @param accessor Function extracting the objective value from a genome.
+   *
+   * Register objectives when a single scalar score is too narrow to express the
+   * behavior you want. The controller can then reason about tradeoffs such as raw
+   * score versus simplicity, novelty, or domain-specific constraints.
+   *
+   * @param key Stable objective identifier used in exports and telemetry.
+   * @param direction Whether the objective should be minimized or maximized.
+   * @param accessor Function extracting the objective value from a genome.
    */
   registerObjective(
     key: string,
@@ -709,7 +746,12 @@ class Neat {
     );
   }
 
-  /** Clear all registered multi-objective objectives. */
+  /**
+   * Remove all custom objective registrations.
+   *
+   * Use this when a run is changing from one multi-objective regime to another
+   * and you want the controller to forget the previous objective schema.
+   */
   clearObjectives() {
     return neatTelemetryFacade.clearTelemetryObjectives(
       this as unknown as NeatTelemetryFacadeHost,
@@ -729,9 +771,9 @@ class Neat {
 
   /**
    * Return an array of {id, parents} for the first `limit` genomes in population.
-    *
-    * @param limit Maximum number of lineage records to return.
-    * @returns Compact lineage snapshot for debugging and teaching inheritance flow.
+   *
+   * @param limit Maximum number of lineage records to return.
+   * @returns Compact lineage snapshot for debugging and teaching inheritance flow.
    */
   getLineageSnapshot(
     limit: number = LINEAGE_SNAPSHOT_DEFAULT_LIMIT,
@@ -742,7 +784,15 @@ class Neat {
     );
   }
 
-  /** Export species history as CSV rows for offline inspection. */
+  /**
+   * Export recent species history as CSV.
+   *
+   * This is useful when you want to chart species growth, collapse, or
+   * stagnation in a spreadsheet or notebook without writing a custom parser.
+   *
+   * @param maxEntries Maximum number of recent history entries to export.
+   * @returns CSV payload representing recent species history snapshots.
+   */
   exportSpeciesHistoryCSV(maxEntries = 200): string {
     return neatTelemetryFacade.exportSpeciesHistoryCSV(
       this as unknown as NeatTelemetryFacadeHost,
@@ -750,7 +800,15 @@ class Neat {
     );
   }
 
-  /** Export species history as JSON Lines for storage and analysis. */
+  /**
+   * Export recent species history as JSON Lines.
+   *
+   * Choose this when you want machine-friendly archival output instead of the
+   * flatter spreadsheet-oriented CSV export.
+   *
+   * @param maxEntries Maximum number of recent history entries to export.
+   * @returns JSONL payload describing recent species-history entries.
+   */
   exportSpeciesHistoryJSONL(
     maxEntries = SPECIES_HISTORY_JSONL_MAX_DEFAULT,
   ): string {
@@ -760,7 +818,15 @@ class Neat {
     );
   }
 
-  /** Return a concise summary for each current species. */
+  /**
+   * Return a compact per-species summary for the current population snapshot.
+   *
+   * This is the quickest inspection surface when you want to know how many
+   * niches currently exist, how large they are, and whether they have improved
+   * recently.
+   *
+   * @returns One summary record per active species.
+   */
   getSpeciesStats(): {
     id: number;
     size: number;
@@ -772,21 +838,42 @@ class Neat {
     );
   }
 
-  /** Returns the historical species statistics recorded each generation. */
+  /**
+   * Return the recorded species-history timeline.
+   *
+   * Unlike `getSpeciesStats()`, which only reflects the current generation,
+   * this method exposes the historical view used for trend analysis.
+   *
+   * @returns Species history entries in recorded order.
+   */
   getSpeciesHistory(): SpeciesHistoryEntry[] {
     return neatTelemetryFacade.getSpeciesHistory(
       this as unknown as NeatTelemetryFacadeHost,
     );
   }
 
-  /** Returns the number of entries currently stored in the novelty archive. */
+  /**
+   * Return the current novelty-archive size.
+   *
+   * This is a small diagnostic hook that tells you whether novelty search is
+   * actively accumulating behavior representatives or staying mostly unused.
+   *
+   * @returns Number of archived novelty descriptors.
+   */
   getNoveltyArchiveSize(): number {
     return neatTelemetryFacade.getNoveltyArchiveSize(
       this as unknown as NeatTelemetryFacadeHost,
     );
   }
 
-  /** Returns compact multi-objective metrics for each genome in the current population. */
+  /**
+   * Return compact multi-objective metrics for each genome in the current population.
+   *
+   * Use this when you want a flattened view of Pareto rank, crowding, raw score,
+   * and structural size without reconstructing the full fronts yourself.
+   *
+   * @returns One compact metric record per genome.
+   */
   getMultiObjectiveMetrics(): {
     rank: number;
     crowding: number;
@@ -799,7 +886,14 @@ class Neat {
     );
   }
 
-  /** Returns a summary of mutation/operator statistics used by operator adaptation. */
+  /**
+   * Return mutation-operator success statistics.
+   *
+   * These numbers are useful when operator adaptation is enabled and you want
+   * to inspect which mutation operators are being rewarded or ignored.
+   *
+   * @returns Per-operator attempt and success counters.
+   */
   getOperatorStats(): { name: string; success: number; attempts: number }[] {
     return neatTelemetryFacade.getOperatorStats(
       this as unknown as NeatTelemetryFacadeHost,
@@ -819,7 +913,16 @@ class Neat {
     );
   }
 
-  /** Get recent Pareto archive entries (meta information about archived fronts). */
+  /**
+   * Return recent Pareto archive entries.
+   *
+   * This is the metadata-oriented archive view. Use it when you want to inspect
+   * what front snapshots were retained over time without exporting the full JSONL
+   * payload first.
+   *
+   * @param maxEntries Maximum number of recent archive entries to return.
+   * @returns Recent Pareto archive metadata entries.
+   */
   getParetoArchive(maxEntries = DEFAULT_PARETO_ARCHIVE_MAX_ENTRIES) {
     return neatTelemetryFacade.getParetoArchive(
       this as unknown as NeatTelemetryFacadeHost,
@@ -827,7 +930,15 @@ class Neat {
     );
   }
 
-  /** Export Pareto front archive as JSON Lines for external analysis. */
+  /**
+   * Export recent Pareto archive entries as JSON Lines.
+   *
+   * This is the easiest way to persist frontier history for offline analysis or
+   * later replay in notebooks and visualization tools.
+   *
+   * @param maxEntries Maximum number of recent archive entries to export.
+   * @returns JSONL payload for the requested Pareto archive window.
+   */
   exportParetoFrontJSONL(
     maxEntries = DEFAULT_PARETO_ARCHIVE_JSONL_MAX,
   ): string {
@@ -837,28 +948,53 @@ class Neat {
     );
   }
 
-  /** Return recent performance statistics for the most recent evaluation and evolve operations. */
+  /**
+   * Return timing statistics for the latest evaluation and evolution steps.
+   *
+   * This is a lightweight performance probe for experiments and benchmarks that
+   * need to notice when scoring or breeding costs start drifting upward.
+   *
+   * @returns Recent runtime statistics for evaluation and evolution work.
+   */
   getPerformanceStats() {
     return neatTelemetryFacade.getPerformanceStats(
       this as unknown as NeatTelemetryFacadeHost,
     );
   }
 
-  /** Return the latest cached diversity statistics. */
+  /**
+   * Return the latest cached diversity statistics.
+   *
+   * Diversity summaries answer a different question than raw fitness: whether
+   * the population still explores varied structures or is collapsing toward a
+   * narrower family of genomes.
+   *
+   * @returns Diversity metrics for the current population snapshot.
+   */
   getDiversityStats(): DiversityStats {
     return neatTelemetryFacade.getDiversityStats(
       this as unknown as NeatTelemetryFacadeHost,
     );
   }
 
-  /** Reset the novelty archive (clear entries). */
+  /**
+   * Reset the novelty archive.
+   *
+   * This is useful when you want to restart novelty pressure from a clean slate
+   * without rebuilding the whole controller.
+   */
   resetNoveltyArchive() {
     neatTelemetryFacade.resetNoveltyArchive(
       this as unknown as NeatTelemetryFacadeHost,
     );
   }
 
-  /** Clear the Pareto archive. */
+  /**
+   * Clear the stored Pareto archive.
+   *
+   * Use this when a new phase of a run should stop comparing itself against the
+   * previous archive history.
+   */
   clearParetoArchive() {
     neatTelemetryFacade.clearParetoArchive(
       this as unknown as NeatTelemetryFacadeHost,
@@ -867,35 +1003,51 @@ class Neat {
 
   // === Export/import convenience ===
   /**
-   * Exports the current population as an array of JSON objects.
-    *
-    * @returns JSON-safe population snapshot.
+   * Export the current population as plain JSON objects.
+   *
+   * Choose this lighter snapshot when you only need the genomes themselves and
+   * do not need generation counters, innovation maps, or other controller-level
+   * state.
+   *
+   * @returns JSON-safe population snapshot.
    */
   export(): any[] {
     return exportPopulation.call(this as any);
   }
 
   /**
-   * Imports a population from an array of JSON objects.
-    *
-    * @param json Serialized population to import into the current controller.
-    * @returns Promise resolving after the population is loaded.
+   * Replace the current population with serialized genomes.
+   *
+   * This is the population-only restore path. It keeps the current controller
+   * instance, options, and metadata while swapping in a different genome set.
+   * Use `importState()` when you want to restore controller metadata too.
+   *
+   * @param json Serialized population to import into the current controller.
+   * @returns Promise resolving after the population is loaded.
    */
   async import(json: any[]): Promise<void> {
     return importPopulation.call(this as any, json as any);
   }
 
   /**
-   * Convenience: export full evolutionary state (meta + population genomes).
-    *
-    * @returns Full controller snapshot including metadata and population.
+   * Export the full controller state, including metadata and population.
+   *
+   * This is the pause-and-resume snapshot. It is the best choice when you want
+   * to continue the same run later with the same innovation history, generation
+   * counter, and serialized genomes.
+   *
+   * @returns Full controller snapshot including metadata and population.
    */
   exportState(): any {
     return exportState.call(this as any);
   }
 
   /**
-   * Serialize controller metadata without the population.
+   * Serialize controller metadata without the concrete population.
+   *
+   * This is useful when you want to preserve run configuration and innovation
+   * bookkeeping separately from genome payloads, or when the population will be
+   * reconstructed by other means.
    *
    * @returns JSON-safe metadata snapshot useful for innovation-history persistence.
    */

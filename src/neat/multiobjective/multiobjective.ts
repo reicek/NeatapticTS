@@ -10,6 +10,21 @@
  * chapters own the narrow mechanics. This file exists so a reader can learn
  * the ranking pipeline from top to bottom without digging through those lower-
  * level helpers first.
+ *
+ * Multi-objective ranking answers a different question than ordinary single-
+ * score selection. Instead of asking "which genome has the highest score?",
+ * this chapter asks "which genomes are still competitive once several goals
+ * must be satisfied at the same time?"
+ * The result is a layered view of the population:
+ * - Pareto fronts separate clearly dominated genomes from still-competitive ones
+ * - crowding distances prefer spread along the frontier instead of collapsing to one region
+ * - optional archiving preserves the leading fronts for later telemetry and inspection
+ *
+ * A useful reading order is:
+ * 1. this orchestration file for the top-level ranking flow
+ * 2. `objectives/` for value extraction and direction handling
+ * 3. `dominance/` for pairwise comparison rules
+ * 4. `fronts/` and `crowding/` for frontier construction and diversity on the frontier
  */
 import type Network from '../../architecture/network';
 import { archiveParetoFrontsIfEnabled } from './archive/multiobjective.archive';
@@ -30,19 +45,42 @@ import type {
  * population of networks (genomes). This implements a standard NSGA-II style
  * non-dominated sorting followed by crowding distance assignment.
  *
+ * Conceptually, the function runs in four stages:
+ * 1. read the active objective schema from the controller,
+ * 2. build one objective-value vector per genome,
+ * 3. resolve dominance relationships into ordered Pareto fronts,
+ * 4. assign crowding distances so selection can prefer spread within each front.
+ *
+ * That final crowding step matters because a frontier alone only tells you that
+ * several genomes are non-dominated. It does not tell you whether those genomes
+ * represent a broad tradeoff surface or a tightly clustered patch of nearly
+ * identical solutions.
+ *
  * The function annotates genomes with two fields used elsewhere in the codebase:
  * - `_moRank`: integer Pareto front rank (0 = best/frontier)
  * - `_moCrowd`: numeric crowding distance (higher is better; Infinity for
  *   boundary solutions)
  *
- * Example
+ * This orchestration layer also decides when the leading fronts should be
+ * archived for later telemetry or inspection. That keeps the ranking story in
+ * one place: compute the competitive ordering now, and optionally preserve the
+ * resulting frontier snapshot for later analysis.
+ *
+ * Example:
  * ```ts
- * // inside a Neat class that exposes `_getObjectives()` and `options`
+ * // inside a Neat class that exposes `_getObjectives()` and Pareto archiving options
  * const fronts = fastNonDominated.call(neatInstance, population);
- * // fronts[0] is the Pareto-optimal set
+ *
+ * // fronts[0] contains the current Pareto-optimal genomes
+ * // genomes inside each front now also carry `_moRank` and `_moCrowd`
  * ```
  *
- * Notes for documentation generation:
+ * Read the return value like this:
+ * - `fronts[0]` is the current non-dominated frontier
+ * - `fronts[1]` contains genomes dominated only by the first front
+ * - larger `_moCrowd` values indicate genomes that sit in less crowded regions of the same front
+ *
+ * Important assumptions:
  * - Each objective descriptor returned by `_getObjectives()` must have an
  *   `accessor(genome: Network): number` function and may include
  *   `direction: 'max' | 'min'` to indicate optimization direction.

@@ -34,6 +34,11 @@ console.log(lineageSnapshot.at(-1)?.parents);
 
 Default limit for lineage snapshots to avoid large payloads.
 
+The lineage view is meant for inspection, tests, and compact summaries, not
+for exporting the full ancestry of every genome in a large population. This
+default keeps snapshots small enough to log or render quickly while still
+showing inheritance patterns near the front of the population.
+
 ### TelemetryFacadeLineageHost
 
 Narrow telemetry-facade host surface required by the lineage chapter.

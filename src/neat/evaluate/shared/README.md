@@ -46,88 +46,105 @@ Objectives are registered dynamically to guide evaluation and selection.
 
 ## neat/evaluate/shared/evaluate.constants.ts
 
-Default neighbor count for novelty calculation.
+Default number of nearest neighbors used when computing novelty.
+
+Small values keep novelty sensitive to local behavioral differences without requiring a large
+archive or population.
 
 ### AUTO_COEFF_ADJUST_DEFAULT
 
-Default adjustment rate for auto distance coefficient tuning.
+Default rate used when auto distance-coefficient tuning rebalances structural distance weights.
 
 ### AUTO_COEFF_MAX_DEFAULT
 
-Default maximum coefficient for auto distance coefficient tuning.
+Maximum structural-distance coefficient allowed during automatic tuning.
 
 ### AUTO_COEFF_MIN_DEFAULT
 
-Default minimum coefficient for auto distance coefficient tuning.
+Minimum structural-distance coefficient allowed during automatic tuning.
 
 ### COMPAT_MAX_THRESHOLD_DEFAULT
 
-Default maximum compatibility threshold.
+Maximum compatibility threshold allowed during automatic compatibility tuning.
 
 ### COMPAT_MIN_THRESHOLD_DEFAULT
 
-Default minimum compatibility threshold.
+Minimum compatibility threshold allowed during automatic compatibility tuning.
 
 ### COMPAT_THRESHOLD_DEFAULT
 
-Default compatibility threshold when not provided.
+Baseline compatibility threshold used when no explicit value is configured.
 
 ### DISTANCE_COEFF_DEFAULT
 
-Default coefficient value when not provided.
+Baseline structural-distance coefficient used before any automatic tuning occurs.
 
 ### ENTROPY_ADJUST_DEFAULT
 
-Default adjustment rate for compatibility tuning.
+Default rate used when compatibility tuning nudges the threshold upward or downward.
 
 ### ENTROPY_DEADBAND_DEFAULT
 
-Default deadband for compatibility tuning.
+Deadband around the entropy target where compatibility tuning intentionally does nothing.
 
 ### ENTROPY_TARGET_DEFAULT
 
-Default target entropy for compatibility tuning.
+Target mean entropy used when tuning the compatibility threshold.
+
+The goal is to keep speciation pressure near a stable diversity level instead of drifting toward
+either species collapse or fragmentation.
 
 ### ENTROPY_VAR_ADJUST_DEFAULT
 
-Default adjustment rate for entropy sharing.
+Default step size used when entropy-sharing tuning increases or decreases sharing sigma.
 
 ### ENTROPY_VAR_HIGH_BAND
 
-Upper band multiplier for entropy variance tuning.
+Upper tolerance band for deciding that observed entropy variance is meaningfully high.
 
 ### ENTROPY_VAR_LOW_BAND
 
-Lower band multiplier for entropy variance tuning.
+Lower tolerance band for deciding that observed entropy variance is meaningfully low.
 
 ### ENTROPY_VAR_MAX_SIGMA_DEFAULT
 
-Default maximum sigma for entropy sharing.
+Upper bound for the sharing sigma used by entropy-sharing adaptation.
 
 ### ENTROPY_VAR_MIN_SIGMA_DEFAULT
 
-Default minimum sigma for entropy sharing.
+Lower bound for the sharing sigma used by entropy-sharing adaptation.
 
 ### ENTROPY_VAR_TARGET_DEFAULT
 
-Default target variance for entropy sharing.
+Target variance used by entropy-sharing tuning.
+
+The controller nudges sharing sigma toward a population whose entropy spread is neither too flat
+nor too unstable.
 
 ### NOVELTY_ARCHIVE_CAP
 
-Maximum number of entries stored in the novelty archive.
+Maximum number of descriptors retained in the novelty archive.
+
+The cap keeps novelty history useful for exploration while preventing unbounded memory growth.
 
 ### NOVELTY_DEFAULT_BLEND
 
-Default blend factor for novelty vs. fitness.
+Default blend factor used when mixing novelty into an existing fitness score.
+
+A mid-range value keeps novelty influential without letting exploratory behavior completely drown
+out task performance.
 
 ### NOVELTY_DEFAULT_NEIGHBORS
 
-Default neighbor count for novelty calculation.
+Default number of nearest neighbors used when computing novelty.
+
+Small values keep novelty sensitive to local behavioral differences without requiring a large
+archive or population.
 
 ### VARIANCE_DECREASE_THRESHOLD
 
-Variance decrease threshold multiplier.
+Multiplier below which observed variance is treated as a meaningful decrease.
 
 ### VARIANCE_INCREASE_THRESHOLD
 
-Variance increase threshold multiplier.
+Multiplier above which observed variance is treated as a meaningful increase.
