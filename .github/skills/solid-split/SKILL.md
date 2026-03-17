@@ -190,6 +190,9 @@ API, default, or runtime contract.
 12. Delete obsolete flat or mirror files from the old location once direct
   imports are in place and validations pass.
 13. Update the plan immediately after the step completes.
+  - Use stable undated section titles in plan logs and handoff material.
+  - Prefer `### Playback boundary pass` over
+    `### YYYY-MM-DD - Playback boundary pass`.
 14. Immediately run `educational-docs` as the next step on the touched
   surface.
   - This is mandatory even when the user invokes `solid-split` directly.
@@ -253,6 +256,7 @@ The handoff prompt must:
 - state that the repo standard is the small-chapter README pattern,
 - state that this standard applies to any project area, not just library code,
 - summarize the validations already completed for the finished step,
+- avoid specific calendar dates in headings or status labels,
 - instruct the next session to continue without relying on prior chat history.
 
 Preferred ending sentence:

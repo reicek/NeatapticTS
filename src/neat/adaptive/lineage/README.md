@@ -22,10 +22,17 @@ outside configured thresholds, the method will adjust either the
 multi-objective dominance epsilon (if `mode === 'epsilon'`) or the
 lineage pressure strength (if `mode === 'lineagePressure'`).
 
+This makes the lineage controller the feedback bridge between telemetry and
+future search policy. It does not rewrite the current population directly;
+instead it nudges the options that govern how later multi-objective or
+lineage-pressure decisions behave.
+
 Typical usage: keep population lineage diversity within a healthy
 band. Low ancestor uniqueness means too many genomes share ancestors
 (risking premature convergence); high uniqueness might indicate
 excessive divergence.
+
+Returns: May update lineage-related controller options and record the most recent adjustment generation.
 
 Example:
 

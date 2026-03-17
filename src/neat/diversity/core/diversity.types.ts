@@ -45,8 +45,15 @@ export interface CompatComputer {
 /**
  * Diversity statistics returned by sampled population analysis.
  *
- * Each field captures one aggregate lens on the current population: lineage
- * spread, structural size, compatibility separation, or entropy.
+ * Treat this as a compact population-health snapshot rather than as a single
+ * scalar "diversity score." Each field captures one aggregate lens on the
+ * current population: lineage spread, structural size, compatibility
+ * separation, or entropy.
+ *
+ * Telemetry consumers usually compare these values across generations to answer
+ * practical questions such as whether speciation is preserving spread, whether
+ * topology growth is accelerating, or whether the run is collapsing toward a
+ * narrow family of similar structures.
  */
 export interface DiversityStats {
   /** Mean lineage depth across genomes that expose `_depth`. */

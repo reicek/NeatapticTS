@@ -49,6 +49,8 @@ of only consuming its current output.
   changes.
 - Do not overfit the analyzer to one trace unless the repo clearly needs that
   exact workflow.
+- Do not add specific calendar dates to generated report sections, example log
+  headings, or companion notes. Keep report titles stable and content-focused.
 - Do not add non-deterministic timestamps, colors, or formatting noise.
 - Do not pull in a new dependency unless the existing TypeScript runtime cannot
   reasonably support the change.

@@ -66,6 +66,9 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
 
 ## Guardrails
 
+- Do not prepend specific calendar dates to durable fix-plan headings, status
+   logs, or handoff sections. Use stable undated labels so the plan can be
+   revised cleanly across sessions.
 - Do not bounce between test execution and partial fixes when the workflow is
   still in the main repair phase.
 - Do not treat partial reruns as a substitute for a durable plan.

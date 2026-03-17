@@ -5,10 +5,23 @@ import type {
   GenomeWithMetrics,
 } from './diversity.types';
 
-/** Maximum lineage sample size for pairwise depth comparisons. */
+/**
+ * Maximum lineage sample size for pairwise depth comparisons.
+ *
+ * Lineage spread is useful for telemetry, but full all-pairs ancestry distance
+ * becomes expensive quickly. This cap keeps the lineage side of the report
+ * bounded while still surfacing whether ancestry depth is bunching up or
+ * staying distributed.
+ */
 export const MAX_LINEAGE_PAIR_SAMPLE = 30;
 
-/** Maximum population sample size for compatibility comparisons. */
+/**
+ * Maximum population sample size for compatibility comparisons.
+ *
+ * Compatibility distance is the most obviously quadratic part of the diversity
+ * report. Sampling lets the controller estimate genetic separation cheaply
+ * enough to keep diversity reporting on the hot path for telemetry.
+ */
 export const MAX_COMPATIBILITY_SAMPLE = 25;
 
 /**

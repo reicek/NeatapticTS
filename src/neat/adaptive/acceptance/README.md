@@ -21,6 +21,11 @@ individual genome is considered acceptable. It adapts the threshold
 based on the proportion of the population that meets the current
 threshold, trying to converge to a target acceptance rate.
 
+Use this controller when you want the population to earn the right to stay in
+play. Unlike the complexity and lineage controllers, this one writes back to
+the current population immediately by zeroing scores below the accepted bar,
+so it directly changes the selection landscape for the same generation.
+
 Behavior summary:
 - Initializes `_mcThreshold` from configuration if undefined.
 - Computes the proportion of genomes with score >= threshold.
@@ -28,6 +33,8 @@ Behavior summary:
   observed proportion towards `targetAcceptance`.
 - Sets `g.score = 0` for genomes that fall below the final threshold
   — effectively rejecting them from selection.
+
+Returns: Updates `_mcThreshold` over time and may zero out scores for currently rejected genomes.
 
 Example:
 

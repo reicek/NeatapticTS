@@ -1,15 +1,62 @@
 # neat/selection
 
-Parent-selection helpers for the NEAT controller.
+Controller-facing selection helpers for the NEAT lifecycle.
 
-The root selection chapter keeps the public controller-facing methods small
-and readable, while `core/` holds the selection strategy mechanics,
-constants, and narrow runtime contracts. The sibling `facade/` chapter keeps
-the stable `Neat` class wrappers for callers that interact through the main
-controller entrypoint instead of the lower-level selection module.
+Selection is the point where a scored population becomes something the rest
+of the controller can reason about. The helpers in this root chapter answer
+the questions that show up most often during evolution work: which genome is
+currently best, what is the current average score, should the population be
+re-ordered before inspection, and which parent should breed next under the
+active selection strategy.
 
-- `core/` explains score defaults, ordering checks, and parent-selection strategies.
-- `facade/` keeps the stable population-summary wrappers used by `Neat`.
+Keep the mental model in four steps:
+
+1. summary helpers such as {@link getFittest} and {@link getAverage} make
+   sure evaluation has happened before they report on the population,
+2. ordering helpers such as {@link sort} keep descending-score reads
+   deterministic,
+3. {@link getParent} delegates the actual parent choice to `core/`, where
+   POWER, FITNESS_PROPORTIONATE, and TOURNAMENT strategy mechanics live,
+4. `facade/` mirrors the stable `Neat` class entrypoints so callers can use
+   these same behaviors without importing the lower-level module directly.
+
+The re-exported constants in this file are the small tuning and traversal
+anchors that make those behaviors predictable: fallback scores for
+unevaluated genomes, default parameters for the built-in parent-selection
+strategies, and explicit index sentinels for threshold scans and tournament
+walks.
+
+Read this root chapter when you want the controller story first. Drop into
+`core/` when you need to understand the exact selection math, overflow rules,
+or threshold scans. Read `facade/` when you are tracing how the public
+`Neat` class exposes the same inspection helpers.
+
+```mermaid
+flowchart TD
+  Population[Population with scores or pending evaluation]
+  Summaries[Summary helpers<br/>getFittest / getAverage]
+  Ordering[Ordering helper<br/>sort]
+  ParentChoice[Parent helper<br/>getParent]
+  Core[core/<br/>strategy mechanics]
+  Facade[facade/<br/>stable Neat wrappers]
+
+  Population --> Summaries
+  Population --> Ordering
+  Population --> ParentChoice
+  Summaries --> Ordering
+  ParentChoice --> Core
+  Ordering --> Facade
+  Summaries --> Facade
+```
+
+Example:
+
+```ts
+neat.sort();
+const champion = neat.getFittest();
+const meanScore = neat.getAverage();
+const parent = neat.getParent();
+```
 
 ## neat/selection/selection.ts
 
@@ -41,7 +88,24 @@ getAverage(): number
 
 Compute the average fitness across the population.
 
+Use this when you want a coarse health signal for the whole generation rather
+than the single best genome. The helper ensures evaluation has happened,
+folds the total score across the full population, and returns the arithmetic
+mean that telemetry, progress logging, and quick sanity checks usually need.
+
+Unlike parent selection, this helper does not care about order. It reports on
+the population as a group, which makes it a convenient companion to
+{@link getFittest} when you want both "best genome" and "overall generation"
+signals side by side.
+
 Returns: Mean fitness across the current population.
+
+Example:
+
+```ts
+const meanScore = neat.getAverage();
+console.log(`Average score: ${meanScore}`);
+```
 
 ### getFittest
 
@@ -51,7 +115,23 @@ getFittest(): GenomeWithScore
 
 Return the fittest genome in the population.
 
+This is the safest "show me the current champion" helper for controller code,
+telemetry probes, and tests. If the population has not been evaluated yet,
+the existing evaluation path is triggered first. If scores exist but the
+population is out of descending order, the helper restores that order before
+returning the leading genome.
+
+That behavior keeps call sites simple: callers do not need to remember
+whether evaluation or sorting has already happened earlier in the generation.
+
 Returns: Genome with the highest current score.
+
+Example:
+
+```ts
+const champion = neat.getFittest();
+console.log(champion.score);
+```
 
 ### getParent
 
@@ -61,7 +141,26 @@ getParent(): GenomeWithScore
 
 Select a parent genome according to the configured selection strategy.
 
+This is the controller-facing gateway into the three built-in strategies:
+
+- `POWER` biases selection toward the front of the sorted population,
+- `FITNESS_PROPORTIONATE` performs roulette-style sampling and shifts
+  negative scores into a usable threshold space,
+- `TOURNAMENT` samples a temporary bracket and walks it with the configured
+  win probability.
+
+If the selection mode is unrecognized, the helper falls back to the first
+genome in the current population so the controller still has a deterministic
+parent candidate instead of failing deep inside crossover logic.
+
 Returns: Genome chosen according to the active selection strategy.
+
+Example:
+
+```ts
+const parent = neat.getParent();
+const strategyName = neat.options.selection?.name;
+```
 
 ### INITIAL_CUMULATIVE_FITNESS
 
@@ -99,4 +198,20 @@ sort(): void
 
 Sort the internal population in place by descending fitness.
 
+Use this when later controller steps should read the population in explicit
+best-first order. The helper applies the same fallback-score semantics used
+elsewhere in selection, so genomes without a score are treated as if they had
+{@link DEFAULT_SCORE} until evaluation supplies a real value.
+
+This helper is intentionally narrow: it only reorders the current population.
+It does not evaluate genomes, mutate them, or change the active parent
+selection strategy.
+
 Returns: Nothing. The population array is reordered in place.
+
+Example:
+
+```ts
+neat.sort();
+const bestScore = neat.population[0]?.score;
+```

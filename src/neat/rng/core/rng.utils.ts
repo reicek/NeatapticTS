@@ -12,9 +12,25 @@ import type { RngHost } from './rng.types';
 /**
  * Return a cached RNG or create a deterministic xorshift RNG when absent.
  *
- * The helper respects a user-provided RNG at `options.rng` when present.
- * Otherwise it seeds a xorshift32 RNG using the current time and population
- * size, guarding against the invalid zero seed.
+ * This is the root runtime entrypoint for randomness. The helper resolves the
+ * random stream in three ordered tiers:
+ *
+ * 1. reuse a previously created RNG when the stream already exists,
+ * 2. prefer a user-supplied RNG when the caller wants to own randomness
+ *    directly,
+ * 3. otherwise create a deterministic xorshift32 stream from restored state,
+ *    explicit seed, or a guarded default seed.
+ *
+ * That order matters for replay. Once state has been restored, later random
+ * draws should continue from the restored numeric state rather than silently
+ * reseeding the controller.
+ *
+ * @example
+ * ```ts
+ * const rng = getOrCreateRng(neat);
+ * const firstDraw = rng();
+ * const checkpoint = snapshotRngState(neat);
+ * ```
  *
  * @param host - Object holding RNG state and configuration.
  * @returns A function that yields a uniform random value in [0, 1).
@@ -59,6 +75,11 @@ export function getOrCreateRng(host: RngHost): () => number {
 /**
  * Snapshot the current RNG state for deterministic replay.
  *
+ * Use this when you want an in-memory checkpoint before a risky controller
+ * action such as a mutation batch, debugging session, or deterministic test.
+ * Unlike exporting a whole controller state, this is the smallest replay token:
+ * it captures only the numeric RNG position.
+ *
  * @param host - Object holding RNG state.
  * @returns The numeric RNG state or undefined when uninitialized.
  */
@@ -68,6 +89,16 @@ export function snapshotRngState(host: RngHost): number | undefined {
 
 /**
  * Restore a previously captured RNG state.
+ *
+ * Restoring state clears the cached RNG function so the next call to
+ * `getOrCreateRng()` rebuilds the stream from the restored numeric position
+ * instead of continuing from an older closure.
+ *
+ * @example
+ * ```ts
+ * const savedState = exportRngState(neat);
+ * restoreRngState(neat, savedState);
+ * ```
  *
  * @param host - Object holding RNG state.
  * @param state - Numeric RNG state to restore.
@@ -83,6 +114,9 @@ export function restoreRngState(
 /**
  * Alias for restoring RNG state kept for compatibility with prior surface.
  *
+ * This exists so older callers can keep using the import-style name while the
+ * underlying behavior remains the same replay boundary as `restoreRngState()`.
+ *
  * @param host - Object holding RNG state.
  * @param state - Numeric RNG state to restore.
  */
@@ -96,6 +130,10 @@ export function importRngState(
 /**
  * Export the current RNG state for persistence.
  *
+ * Use this when deterministic replay must cross a broader boundary such as
+ * JSON export, checkpointing, or test snapshots. The returned number is the
+ * compact controller-facing representation of the current random stream.
+ *
  * @param host - Object holding RNG state.
  * @returns The numeric RNG state or undefined when not set.
  */
@@ -105,6 +143,18 @@ export function exportRngState(host: RngHost): number | undefined {
 
 /**
  * Produce a sequence of random samples using the host RNG.
+ *
+ * This helper is mainly a diagnostics and testing convenience. It makes the
+ * deterministic stream observable without forcing every caller to hand-roll its
+ * own sampling loop, which is useful when comparing restored-state replay with
+ * fresh execution.
+ *
+ * @example
+ * ```ts
+ * const before = snapshotRngState(neat);
+ * const samples = sampleRandomSequence(neat, 3);
+ * restoreRngState(neat, before);
+ * ```
  *
  * @param host - Object holding RNG state.
  * @param sampleCount - Number of samples to generate.

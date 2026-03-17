@@ -431,6 +431,16 @@ For diagram selection, syntax caveats, and validation guidance, use
 
 ## Guardrails
 
+- Do not prepend specific calendar dates to plan logs, session headings, or
+  handoff sections. Use stable titles such as `### Compatibility chapter pass`
+  instead of `### YYYY-MM-DD - Compatibility chapter pass`.
+- When updating a running plan document after a completed pass, compress older
+  completed entries to the essentials: keep `Goals`, `Progress`, optional
+  `Achievements`, and `Decision`.
+- Remove `Validation` from completed passes after the result has been folded
+  into `Progress` or `Decision`.
+- Keep `Remaining gaps` and `Next step` only on the active latest pass unless
+  the user explicitly asks for a more verbose historical log.
 - Do not hand-edit generated `src/**/README.md` files.
 - Do not add external references that drown out the repo's own explanations.
 - Do not add decorative images with no teaching value.
@@ -457,6 +467,10 @@ A strong educational-docs pass should report:
 - whether docs were regenerated,
 - any external sources or media added, with attribution and license notes,
 - any remaining doc gaps or follow-up opportunities.
+
+When the task includes updating an in-repo plan log, the updated log should
+also leave only the active pass with forward-looking `Remaining gaps` and
+`Next step`; prior completed passes should stay compressed.
 
 ## Companion Agent Contract
 

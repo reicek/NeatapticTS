@@ -16,14 +16,17 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 **Outcome:** keep iteration speed high, reduce refactor risk, and finish the structural cleanup needed before broad mechanical modernization.
 
 - Demo refinement and learnability hardening [DONE]
-- asciiMaze SOLID split before ES2023 modernization [DONE]
-- Phase 0 remaining focus: ES2023 modernization (after the completed demo-structure pass)
-   - The `flappy_bird` reference split plan and the `asciiMaze` SOLID split plan are now both complete, so the remaining Phase 0 work is the repository-wide modernization pass and its validation gate.
+- `asciiMaze` SOLID split before ES2023 modernization [DONE]
+- `flappy_bird` reference demo split and documentation baseline [DONE]
+- Main app NEAT surface is already SOLID split [DONE]
+- Educational documentation pass across the split surfaces [WIP]
+   - Both demos are now solid split and documented, and the main app is already solid split.
+   - The remaining structural polish in Phase 0 is the ongoing documentation pass plus the repository-wide modernization pass and their validation gate.
 - ES2023 modernization (after the demo-structure pass; mechanical refactors + CI enforcement)
   - Plan: [ES2023 migration](ES2023%20migration)
   - Scope note: this phase is syntax/module modernization plus CI enforcement. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
 
-**Gate to Phase 1:** `flappy_bird` refinement is stable, the `asciiMaze` SOLID split is complete, and `npx tsc --noEmit -p tsconfig.json` plus `npm test` are green after the refactor pass.
+**Gate to Phase 1:** both demos are solid split and documented, the main app split is stable, the active documentation pass is complete enough to stop obscuring ownership boundaries, and `npx tsc --noEmit -p tsconfig.json` plus `npm test` are green after the modernization pass.
 
 ## Phase 1 — Core Correctness + Determinism Foundations (Critical Path)
 
@@ -134,7 +137,7 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: the project is still in **Phase 0**, with the demo-structure baseline complete (`flappy_bird` refinement and `asciiMaze` SOLID split) and repository-wide ES2023 modernization now the remaining Phase 0 focus.
+Current status: the project is still in **Phase 0**, with both demos solid split and documented, the main app already solid split, the educational documentation pass still in progress, and repository-wide ES2023 modernization still remaining in the Phase 0 lane.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes

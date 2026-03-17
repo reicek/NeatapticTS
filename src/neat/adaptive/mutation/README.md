@@ -28,6 +28,13 @@ amount (`g._mutAmount`) over time. Strategies include:
 The method reads `this.options.adaptiveMutation` for configuration
 and mutates genomes in-place.
 
+This is the adaptive controller that feeds most directly into the root
+mutation chapter. Rather than choosing one operator itself, it adjusts each
+genome's readiness for later mutation so the next structural-edit pass can be
+more exploratory or more conservative depending on recent success.
+
+Returns: Updates per-genome mutation-rate state in place when the current generation satisfies the adaptation cadence.
+
 Example:
 
 // configuration example:

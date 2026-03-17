@@ -82,6 +82,9 @@ surface for the library rather than the final destination for a workaround.
   summaries together.
 - Do not assume the worker is the bottleneck if renderer main-thread
   `FunctionCall` or `FireAnimationFrame` dominates.
+- Do not prepend specific calendar dates to report headings, action-plan logs,
+  or follow-up sections. Use stable undated titles that remain readable after
+  later revisions.
 - Do not edit generated `src/**/README.md` files. Improve source JSDoc instead.
 - If you modify trace tooling, keep the script deterministic and documented with
   JSDoc.

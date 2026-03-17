@@ -87,6 +87,9 @@ alignment workflow.
 
 ## Guardrails
 
+- Do not prepend specific calendar dates to plan logs, alignment notes, or
+  handoff sections. Use stable undated headings so plan history stays easy to
+  reuse and rewrite.
 - Do not recommend a plan file without explaining why it matches.
 - Do not read the entire `plans/` tree by default.
 - Do not default to demo-local compensation when the plan direction points to a

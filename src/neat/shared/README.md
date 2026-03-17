@@ -7,6 +7,35 @@ one direct-path location so speciation, telemetry, objectives, species, and
 tests can import the same contracts without depending on the heavier root
 `Neat` implementation.
 
+Read this file as the controller's common language layer. Most NEAT chapters
+answer behavioral questions such as how speciation works, what telemetry
+records, or how objective lists are resolved. This shared surface answers the
+structural question underneath them: what is the smallest contract each
+chapter needs in order to cooperate without pulling in the full runtime
+facade?
+
+The contracts cluster into five practical families:
+
+1. host and genome shapes such as `NeatLike`, `GenomeLike`, and
+   `GenomeDetailed`,
+2. objective contracts used by `objectives/` and `multiobjective/`,
+3. speciation and species-history contracts used by `speciation/` and
+   `species/`,
+4. telemetry and diagnostics contracts used by `telemetry/`, `diversity/`,
+   and `lineage/`,
+5. small test-facing seams reused by harnesses and extracted helpers.
+
+Practical reading order:
+
+1. Start with `NeatLike`, `GenomeLike`, and `GenomeDetailed` to understand
+   the base structural vocabulary.
+2. Continue to `NeatOptions` and `SpeciationOptions` when a helper reads or
+   rewrites controller policy.
+3. Read `TelemetryEntry`, `DiversityStats`, and `LineageSnapshot` when you
+   want the evidence layer shared across reporting chapters.
+4. Finish with species-history and archive contracts when you need the
+   longer-lived reporting or checkpoint surfaces.
+
 ## neat/shared/neat.shared.types.ts
 
 ### AnyObj
@@ -28,11 +57,23 @@ Diversity statistics captured each generation. Individual fields may be
 omitted in telemetry output if diversity tracking is partially disabled to
 reduce runtime cost.
 
+This contract is the compact summary that lets telemetry, diagnostics, and
+dashboards talk about population spread without rerunning the heavier
+compatibility, entropy, and lineage calculations. The fields are aggregated
+on purpose: they are meant for trend reading, not for reconstructing every
+pairwise comparison after the fact.
+
 ### GenomeDetailed
 
 More concrete genome surface used by telemetry and lineage helpers.
 Extends the minimal `GenomeLike` with node/connection shapes and a few
 internal bookkeeping fields used by telemetry.
+
+Use this contract when a helper needs more than anonymous structure. The
+extra fields here are the ones that repeatedly matter to the read-side NEAT
+chapters: stable genome identity, parent tracking, lineage depth, and the
+richer node and connection shapes needed for telemetry, history, and
+compatibility-adjacent reporting.
 
 ### GenomeLike
 
@@ -41,9 +82,20 @@ Minimal genome structural surface used by several helpers (incrementally expande
 NOTE: `nodes` and `connections` remain intentionally structural/opaque
 until a stable public abstraction is finalised.
 
+Read this as the portable genome contract. It is enough for helpers that
+need counts, loose structural access, or a primary score, but not enough to
+encode every network behavior. More specialized chapters should extend this
+shape only when they truly need richer node, connection, or lineage detail.
+
 ### LineageSnapshot
 
 Snapshot of lineage & ancestry statistics for the current generation.
+
+This is the ancestry companion to `DiversityStats`. Diversity answers how far
+apart genomes currently look; lineage answers how much recent family overlap
+still exists beneath those structures. Telemetry and adaptive controllers use
+both because structural spread and family spread are related but not
+interchangeable signals.
 
 ### NeatLike
 
@@ -52,10 +104,22 @@ extraction continues. Kept intentionally loose; prefer concrete fields
 when helpers are stabilised. Represented as a simple record to avoid an
 empty interface that duplicates its supertype.
 
+Treat this as the lowest common denominator host type. Serious helper
+chapters should usually narrow it quickly into a richer local contract, but
+keeping a tiny shared base makes extracted utilities easier to compose
+without inventing a fake monolithic controller interface.
+
 ### NeatOptions
 
 Options subset used by telemetry helpers. Kept narrow to avoid leaking
 full runtime options into the helper type surface.
+
+The purpose of this contract is not to model every `Neat` option. It is to
+capture the policy knobs that recur across extracted helper chapters:
+telemetry flags, diversity sampling, compatibility tuning, species history,
+novelty, and a few structural budget fields. If a helper needs more than
+this, that is usually a sign it wants a chapter-local host contract instead
+of a wider shared type.
 
 ### NodeLike
 
@@ -68,6 +132,12 @@ Map of objective key to age in generations since introduction.
 ### ObjectiveDescriptor
 
 Descriptor for a single optimisation objective (single or multi‑objective runs).
+
+This is the shared currency between the `objectives/` chapter that manages
+objective lists and the `multiobjective/` chapter that later ranks genomes by
+those objectives. The contract stays intentionally small: a stable key, a
+direction, and one accessor that can read the relevant numeric evidence from
+a genome.
 
 Examples:
 
@@ -124,14 +194,31 @@ Aggregated success / attempt counters over a window or entire run.
 
 Pareto archive entry capturing a genome plus its objective values.
 
+This contract is intentionally sparse because the archive is primarily a
+preservation boundary. The stored genome captures the candidate itself, while
+`objectives` preserves the exact multi-objective evidence that justified its
+place on the frontier at the time it was archived.
+
 ### PerformanceMetrics
 
 Timing metrics for coarse evolutionary phases (milliseconds).
+
+These timings are intentionally coarse. They exist to reveal where a run is
+spending time at the chapter level, not to replace a profiler. That makes
+them useful inside telemetry exports and regression-oriented dashboards where
+simple evaluation-versus-evolution trends are more valuable than exhaustive
+trace detail.
 
 ### SpeciationHarnessContext
 
 Minimal runtime surface required by speciation helpers.
 Tests and harnesses can narrow the options type via the generic parameter.
+
+This host contract is intentionally more specific than `NeatLike` because
+speciation is one of the most stateful controller phases. The helpers need
+the live population, the species registry, threshold-tuning accumulators,
+and the compatibility read itself, but they still do not need the entire
+public `Neat` facade.
 
 ### SpeciationOptions
 
@@ -142,6 +229,11 @@ Extends {@link NeatOptions} with speciation-specific configuration used by:
 - Adaptive threshold controllers (PID-like)
 - Species allocation telemetry (history snapshots)
 
+This is the shared policy slice that lets speciation helpers stay narrowly
+typed without importing the full controller configuration object. Read it as
+the option family that shapes how species are formed, protected, and recorded
+over time.
+
 ### SpeciesAlloc
 
 Offspring allocation for a species during reproduction.
@@ -149,6 +241,10 @@ Offspring allocation for a species during reproduction.
 ### SpeciesHistoryEntry
 
 Species statistics captured for a particular generation.
+
+This is the history-buffer unit used by the `species/` chapter. One entry
+answers "what did the species table look like at this generation boundary?"
+without requiring callers to inspect the live registry directly.
 
 ### SpeciesHistoryStat
 
@@ -164,15 +260,37 @@ that may be computed lazily (innovationRange, enabledRatio).
 Rolling statistics tracked for each species between generations.
 These values inform stagnation heuristics and adaptive controllers.
 
+These are controller-maintenance values rather than polished reporting rows.
+They exist so live speciation logic can remember recent behavior before the
+`species/` chapter later projects that state into user-facing summaries.
+
 ### SpeciesLike
 
 Internal species representation used by helpers. Kept minimal and structural.
+
+This is the live registry shape behind the stronger `speciation/` and
+`species/` chapters. It is intentionally not a polished reporting format;
+instead it holds the small amount of state those chapters repeatedly need to
+maintain or summarize: membership, best score, improvement timing, and room
+for implementation-specific bookkeeping.
 
 ### TelemetryEntry
 
 Telemetry summary for one generation.
 
 Optional properties are feature‑dependent; consumers MUST test for presence.
+
+This is the shared "one generation of evidence" contract behind the
+telemetry subtree. Instead of forcing callers to stitch together diversity,
+lineage, operator stats, objectives, complexity, and performance from many
+different buffers, the recorder and export helpers fold those signals into
+one generation-stamped summary row.
+
+Read the fields in families:
+- run position and headline outcome: `gen`, `best`, `species`, `hyper`
+- diversity and lineage evidence: `diversity`, `lineage`
+- objective and Pareto context: `objectives`, `objImportance`, `objAges`, `objEvents`, `fronts`
+- operator and runtime diagnostics: `ops`, `complexity`, `perf`, `rng`
 
 Example:
 

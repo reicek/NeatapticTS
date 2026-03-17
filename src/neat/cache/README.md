@@ -2,12 +2,51 @@
 
 Cache maintenance helpers for NEAT genomes.
 
-The root cache chapter stays intentionally small: it points readers to the
-focused core cache mechanics without leaving cache invalidation logic mixed
-into the wider `src/neat` monolith.
+This chapter explains one of the less glamorous but more important runtime
+boundaries in NEAT: derived genome caches are useful only while the genome
+they describe is still unchanged. Activation outputs, compatibility views,
+and tracing data can all be memoized for speed, but once mutation,
+crossover, repair, or another structural edit touches the genome, those
+memoized values stop being evidence and start being stale state.
+
+The root cache surface exists to answer three controller-facing questions:
+
+1. which genome-owned fields count as derived caches,
+2. when those fields must be invalidated,
+3. why one centralized invalidation helper is safer than letting each
+   mutation path remember its own cleanup list.
+
+```mermaid
+flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  genome[Genome with derived caches]:::base --> edit[Mutation or structural edit]:::accent
+  edit --> stale[Compatibility, output, and trace caches become stale]:::base
+  stale --> invalidate[Centralized cache invalidation]:::base
+  invalidate --> rebuild[Later reads rebuild fresh derived state]:::base
+```
+
+The root cache chapter stays intentionally compact because the actual cleanup
+mechanics are simple. What matters educationally is understanding why the
+invalidation boundary exists and why every structural edit path should reuse
+the same cleanup contract.
 
 - `core/` explains which per-genome caches exist and how to clear them
   safely after structural or weight changes.
+
+Practical reading order:
+
+1. Start with `GENOME_CACHE_FIELD_KEYS` to see the exact invalidation surface.
+2. Read `invalidateGenomeCaches()` to understand the centralized cleanup rule.
+3. Continue into `core/` only if you want the lower-level bookkeeping view.
+
+Example:
+
+```ts
+mutateAddConnReuse(neat, genome);
+invalidateGenomeCaches(genome);
+```
 
 ## neat/cache/cache.ts
 
@@ -16,8 +55,17 @@ into the wider `src/neat` monolith.
 Genome-owned cache fields that should be cleared when a mutation changes
 structure or outputs.
 
-These cache keys are grouped here so the cache chapter documents the
-invalidation surface in one place.
+Treat this list as the mechanical invalidation contract for genome objects.
+Each key names a field that may be cheap to rebuild but dangerous to trust
+after a write:
+
+- `_compatCache` stores derived compatibility-comparison views,
+- `_outputCache` stores memoized activation outputs,
+- `_traceCache` stores debugging or tracing artifacts.
+
+Keeping the list explicit makes review easier. When a new genome-owned cache
+is introduced, adding it here makes the invalidation surface visible instead
+of relying on scattered ad hoc cleanup.
 
 ### invalidateGenomeCaches
 
@@ -29,10 +77,29 @@ invalidateGenomeCaches(
 
 Invalidate the derived caches attached to a genome candidate.
 
-Mutation and crossover helpers attach memoized compatibility, activation,
-and trace data directly onto genome objects for speed. Once the genome
-changes, those values become stale. This helper centralizes that cleanup so
-every mutation path clears the same cache fields.
+Mutation, crossover, repair, and other genome-editing helpers attach or rely
+on memoized compatibility, activation, and trace data directly on genome
+objects for speed. That optimization only works when every write path also
+respects the invalidation boundary. Once the genome changes, those memoized
+values are stale and must be removed before any later read assumes they still
+describe the current structure.
+
+Centralizing the cleanup here avoids a fragile situation where each edit path
+remembers a slightly different subset of cache keys. One helper and one key
+list keeps invalidation deterministic across the controller. Read it as the
+"final broom" after a write: the structural edit owns the real behavior
+change, while this helper only removes the stale evidence that no longer
+matches the updated genome.
+
+The cleanup path stays intentionally simple:
+
+1. ignore non-object inputs,
+2. treat the remaining value as a genome-shaped record,
+3. delete every field named by `GENOME_CACHE_FIELD_KEYS`.
+
+That simplicity is part of the design. The helper should be safe to call from
+many write paths, even when some genomes do not currently carry every cached
+field.
 
 Parameters:
 - `genomeCandidate` - - Genome-shaped value whose attached caches should be cleared.

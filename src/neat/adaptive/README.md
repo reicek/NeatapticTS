@@ -3,10 +3,49 @@
 Adaptive NEAT controllers for complexity, acceptance, lineage diversity,
 and mutation-rate tuning.
 
-This root entrypoint stays intentionally small: it explains the high-level
-adaptive story, while the detailed heuristics now live in focused teaching
-folders for complexity, mutation, acceptance, lineage, and shared runtime
-vocabulary.
+Adaptive control is the NEAT controller's "change the rules while the run is
+in flight" chapter. These helpers do not mutate one genome directly for the
+sake of a single operator. Instead they watch population behavior over time
+and adjust thresholds, budgets, or rates that later generations inherit.
+
+The root chapter answers five practical controller questions:
+
+- when should network complexity budgets grow, shrink, or flip phase?
+- how should mutation intensity adapt as genomes succeed or stall?
+- when should the acceptance bar move so weak genomes stop consuming budget?
+- when should lineage-diversity telemetry feed back into controller options?
+- how should operator success history decay so recent outcomes matter more?
+
+The helper folders own the narrower heuristics:
+
+- `complexity/` manages node and connection budget scheduling plus phased growth.
+- `mutation/` manages per-genome mutation-rate tuning and operator-stat decay.
+- `acceptance/` owns the adaptive minimal-criterion threshold logic.
+- `lineage/` turns telemetry ancestry signals into diversity-pressure adjustments.
+- `core/` keeps the shared adaptive host contract small enough to reuse.
+
+Read this root chapter when you want the controller map of adaptive behavior:
+which adaptive loops exist, what long-lived state they keep, and which later
+stages of evolution they are meant to influence.
+
+```mermaid
+flowchart TD
+  Signals["scores, telemetry, generation count, operator stats"] --> Budget["applyComplexityBudget()"]
+  Signals --> Phase["applyPhasedComplexity()"]
+  Signals --> Acceptance["applyMinimalCriterionAdaptive()"]
+  Signals --> Lineage["applyAncestorUniqAdaptive()"]
+  Signals --> Mutation["applyAdaptiveMutation()"]
+  Signals --> Operators["applyOperatorAdaptation()"]
+  Budget --> Options["update controller limits and options"]
+  Phase --> Options
+  Acceptance --> Population["rewrite acceptance state on current genomes"]
+  Lineage --> Options
+  Mutation --> Population["update per-genome mutation fields"]
+  Operators --> Stats["decay operator success history"]
+  Options --> Later["later selection, mutation, and evolution passes"]
+  Population --> Later
+  Stats --> Later
+```
 
 ## neat/adaptive/adaptive.ts
 
@@ -30,6 +69,13 @@ amount (`g._mutAmount`) over time. Strategies include:
 The method reads `this.options.adaptiveMutation` for configuration
 and mutates genomes in-place.
 
+This is the adaptive controller that feeds most directly into the root
+mutation chapter. Rather than choosing one operator itself, it adjusts each
+genome's readiness for later mutation so the next structural-edit pass can be
+more exploratory or more conservative depending on recent success.
+
+Returns: Updates per-genome mutation-rate state in place when the current generation satisfies the adaptation cadence.
+
 Example:
 
 // configuration example:
@@ -51,10 +97,17 @@ outside configured thresholds, the method will adjust either the
 multi-objective dominance epsilon (if `mode === 'epsilon'`) or the
 lineage pressure strength (if `mode === 'lineagePressure'`).
 
+This makes the lineage controller the feedback bridge between telemetry and
+future search policy. It does not rewrite the current population directly;
+instead it nudges the options that govern how later multi-objective or
+lineage-pressure decisions behave.
+
 Typical usage: keep population lineage diversity within a healthy
 band. Low ancestor uniqueness means too many genomes share ancestors
 (risking premature convergence); high uniqueness might indicate
 excessive divergence.
+
+Returns: May update lineage-related controller options and record the most recent adjustment generation.
 
 Example:
 
@@ -68,6 +121,11 @@ applyComplexityBudget(): void
 ```
 
 Apply complexity budget scheduling to the evolving population.
+
+Use this controller when topology growth should be managed as a moving budget
+instead of a fixed hard cap. The adaptive loop observes recent run progress
+and rewrites the controller's complexity limits so later mutation and evolve
+passes know how much structural growth they should allow.
 
 This routine updates `this.options.maxNodes` (and optionally
 `this.options.maxConns`) according to a configured complexity budget
@@ -85,8 +143,9 @@ Internal state used/maintained on the `this` object:
 - `_cbMaxNodes`: current complexity budget for nodes.
 - `_cbMaxConns`: current complexity budget for connections (optional).
 
-The method is intended to be called on the NEAT engine instance with
-`this` bound appropriately (i.e. a NeatapticTS `Neat`-like object).
+The important distinction is that this helper does not mutate genomes
+directly. It mutates controller policy, so its effect is feed-forward into
+later structural decisions rather than an immediate topology rewrite.
 
 Returns: Updates `this.options.maxNodes` and possibly
 `this.options.maxConns` in-place; no value is returned.
@@ -110,6 +169,11 @@ individual genome is considered acceptable. It adapts the threshold
 based on the proportion of the population that meets the current
 threshold, trying to converge to a target acceptance rate.
 
+Use this controller when you want the population to earn the right to stay in
+play. Unlike the complexity and lineage controllers, this one writes back to
+the current population immediately by zeroing scores below the accepted bar,
+so it directly changes the selection landscape for the same generation.
+
 Behavior summary:
 - Initializes `_mcThreshold` from configuration if undefined.
 - Computes the proportion of genomes with score >= threshold.
@@ -117,6 +181,8 @@ Behavior summary:
   observed proportion towards `targetAcceptance`.
 - Sets `g.score = 0` for genomes that fall below the final threshold
   — effectively rejecting them from selection.
+
+Returns: Updates `_mcThreshold` over time and may zero out scores for currently rejected genomes.
 
 Example:
 
@@ -137,9 +203,16 @@ successful each operator has been. This helper applies an exponential
 moving-average style decay to those counters so older outcomes
 progressively matter less.
 
+Use this controller when operator adaptation is enabled and you want the
+mutation selector to favor recent evidence over stale wins from much earlier
+generations. It is a policy-maintenance helper, not an operator chooser by
+itself.
+
 The `_operatorStats` map on `this` is expected to contain values of
 the shape `{ success: number, attempts: number }` keyed by operator
 id/name.
+
+Returns: Decays `_operatorStats` in place so later mutation-method selection reflects more recent operator performance.
 
 Example:
 
@@ -157,11 +230,15 @@ Phased complexity supports alternating periods where the algorithm
 is encouraged to grow (complexify) or shrink (simplify) network
 structures. This can help escape local minima or reduce bloat.
 
+Use this controller when one static mutation policy is not enough. Instead of
+adjusting caps continuously like `applyComplexityBudget()`, this helper flips
+the controller into a new structural mood and records when that phase began.
+
 The current phase and its start generation are stored on `this` as
 `_phase` and `_phaseStartGeneration` so the state persists across
 generations.
 
-Returns: Mutates `this._phase` and `this._phaseStartGeneration`.
+Returns: Mutates `this._phase` and `this._phaseStartGeneration` so later mutation-selection code knows whether to favor growth or simplification.
 
 Example:
 

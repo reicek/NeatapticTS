@@ -18,8 +18,15 @@ NEAT controller implementation.
 
 Diversity statistics returned by sampled population analysis.
 
-Each field captures one aggregate lens on the current population: lineage
-spread, structural size, compatibility separation, or entropy.
+Treat this as a compact population-health snapshot rather than as a single
+scalar "diversity score." Each field captures one aggregate lens on the
+current population: lineage spread, structural size, compatibility
+separation, or entropy.
+
+Telemetry consumers usually compare these values across generations to answer
+practical questions such as whether speciation is preserving spread, whether
+topology growth is accelerating, or whether the run is collapsing toward a
+narrow family of similar structures.
 
 ### GenomeWithMetrics
 
@@ -115,9 +122,18 @@ Returns: Mean compatibility distance across the sampled pairs.
 
 Maximum population sample size for compatibility comparisons.
 
+Compatibility distance is the most obviously quadratic part of the diversity
+report. Sampling lets the controller estimate genetic separation cheaply
+enough to keep diversity reporting on the hot path for telemetry.
+
 ### MAX_LINEAGE_PAIR_SAMPLE
 
 Maximum lineage sample size for pairwise depth comparisons.
+
+Lineage spread is useful for telemetry, but full all-pairs ancestry distance
+becomes expensive quickly. This cap keeps the lineage side of the report
+bounded while still surfacing whether ancestry depth is bunching up or
+staying distributed.
 
 ### mean
 
