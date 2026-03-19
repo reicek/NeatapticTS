@@ -41,9 +41,9 @@ import type { NeatLikeWithObjectives } from './core/objectives.types';
  * flowchart TD
  *   Defaults[Default fitness objective]
  *   UserObjectives[User-registered objectives]
- *   Resolver[_getObjectives()<br/>final ordered list]
- *   Register[registerObjective()<br/>add or replace by key]
- *   Clear[clearObjectives()<br/>reset user layer]
+ *   Resolver[Final ordered list]
+ *   Register[Add or replace by key]
+ *   Clear[Reset user layer]
  *   Core[core/<br/>validation and list rules]
  *
  *   Defaults --> Resolver

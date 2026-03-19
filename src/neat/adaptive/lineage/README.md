@@ -5,6 +5,42 @@ Lineage-diversity adaptive controllers.
 This category explains how ancestor uniqueness telemetry feeds back into the
 search so the population can recover when family trees become too uniform.
 
+The lineage branch of the adaptive subtree is the feedback bridge between
+recorded telemetry and future search policy. It does not mutate genomes in
+place for the current generation. Instead it reads ancestry evidence from the
+latest telemetry snapshot, decides whether lineage diversity has drifted too
+low or too high, and nudges controller settings that later generations will
+feel.
+
+Read this chapter when you want to understand:
+
+- why lineage adaptation depends on telemetry rather than direct population
+  scans,
+- how cooldown checks, uniqueness thresholds, and mode-specific nudges fit
+  together,
+- where the public controller-facing entrypoint stops and the smaller
+  telemetry extraction plus adjustment helpers begin.
+
+The reading order is easiest to retain as one feedback loop:
+
+1. read the latest ancestor-uniqueness signal from telemetry,
+2. check whether the controller is allowed to adjust again yet,
+3. compare the signal with the configured low and high thresholds,
+4. nudge either dominance epsilon or lineage-pressure strength.
+
+```mermaid
+flowchart TD
+  Telemetry[Latest telemetry lineage block] --> Extract[Extract ancestor uniqueness]
+  Extract --> Cooldown{Cooldown satisfied?}
+  Cooldown -- No --> Wait[Keep current policy]
+  Cooldown -- Yes --> Thresholds[Resolve low and high thresholds]
+  Thresholds --> Mode{Configured adjustment mode}
+  Mode -- Epsilon --> Epsilon[Nudge dominance epsilon]
+  Mode -- Lineage --> Pressure[Nudge lineage pressure]
+  Epsilon --> Future[Future generations see updated policy]
+  Pressure --> Future
+```
+
 ## neat/adaptive/lineage/adaptive.lineage.ts
 
 ### applyAncestorUniqAdaptive
@@ -53,12 +89,18 @@ applyUniquenessAdjustment(
 
 Apply an adjustment for the configured mode.
 
+This dispatcher is the decision fork for lineage adaptation. The thresholds
+and telemetry signal have already been resolved by the time this helper runs,
+so its only job is to send the adjustment into the correct policy surface.
+
 Parameters:
 - `engine` - - NEAT engine instance.
 - `config` - - Ancestor uniqueness adaptive configuration.
 - `ancestorUniq` - - Current ancestor uniqueness metric.
 - `thresholds` - - Threshold bounds for decisions.
 - `adjustMagnitude` - - Adjustment magnitude.
+
+Returns: Nothing.
 
 ### extractAncestorUniqueness
 
@@ -69,6 +111,10 @@ extractAncestorUniqueness(
 ```
 
 Extract the latest ancestor-uniqueness metric from telemetry.
+
+Lineage adaptation only trusts the most recent telemetry snapshot because it
+represents the latest scored generation. Missing or non-numeric lineage
+evidence simply disables the adjustment for that cycle.
 
 Parameters:
 - `engine` - - NEAT engine instance.
@@ -85,6 +131,10 @@ isCooldownSatisfied(
 ```
 
 Determine whether the cooldown window has elapsed.
+
+Cooldowns prevent the controller from thrashing lineage policy on every
+generation. Once an adjustment has been recorded, later generations must wait
+for the configured gap before another nudge is allowed.
 
 Parameters:
 - `engine` - - NEAT engine instance.
@@ -102,12 +152,31 @@ resolveUniquenessThresholds(
 
 Resolve thresholds for ancestor-uniqueness decisions.
 
+These bounds define the acceptable ancestry-diversity band. Values below the
+lower threshold suggest the population is converging onto similar family
+trees, while values above the upper threshold suggest diversity pressure may
+already be stronger than needed.
+
 Parameters:
 - `config` - - Ancestor uniqueness adaptive configuration.
 
 Returns: Threshold bounds.
 
 ## neat/adaptive/lineage/adaptive.ancestor-uniqueness.utils.ts
+
+Ancestor-uniqueness helpers for adaptive lineage feedback.
+
+This file owns the small telemetry-to-policy loop behind lineage adaptation.
+It stays separate from the root controller entrypoint so the generated docs
+can explain how evidence is extracted, gated, interpreted, and translated
+into one of two policy nudges.
+
+The helper flow is intentionally compact:
+
+1. verify the cooldown window has elapsed,
+2. extract the most recent ancestor-uniqueness metric,
+3. resolve thresholds and adjustment magnitude,
+4. route the adjustment into epsilon or lineage-pressure mode.
 
 ### applyEpsilonAdjustment
 
@@ -122,11 +191,17 @@ applyEpsilonAdjustment(
 
 Apply dominance-epsilon adjustments when configured.
 
+Epsilon mode nudges the multi-objective dominance tolerance when ancestry is
+too uniform or too diffuse. That lets later Pareto comparisons become slightly
+more or less permissive without changing the current generation directly.
+
 Parameters:
 - `engine` - - NEAT engine instance.
 - `ancestorUniq` - - Current ancestor uniqueness metric.
 - `thresholds` - - Threshold bounds for decisions.
 - `adjustMagnitude` - - Adjustment magnitude.
+
+Returns: Nothing.
 
 ### applyLineagePressureAdjustment
 
@@ -140,10 +215,16 @@ applyLineagePressureAdjustment(
 
 Apply lineage pressure strength adjustments.
 
+Lineage-pressure mode keeps the feedback inside the ancestry-based selection
+settings themselves. Low uniqueness increases spread pressure, while high
+uniqueness relaxes it so the search does not over-penalize related genomes.
+
 Parameters:
 - `engine` - - NEAT engine instance.
 - `ancestorUniq` - - Current ancestor uniqueness metric.
 - `thresholds` - - Threshold bounds for decisions.
+
+Returns: Nothing.
 
 ### applyUniquenessAdjustment
 
@@ -159,12 +240,18 @@ applyUniquenessAdjustment(
 
 Apply an adjustment for the configured mode.
 
+This dispatcher is the decision fork for lineage adaptation. The thresholds
+and telemetry signal have already been resolved by the time this helper runs,
+so its only job is to send the adjustment into the correct policy surface.
+
 Parameters:
 - `engine` - - NEAT engine instance.
 - `config` - - Ancestor uniqueness adaptive configuration.
 - `ancestorUniq` - - Current ancestor uniqueness metric.
 - `thresholds` - - Threshold bounds for decisions.
 - `adjustMagnitude` - - Adjustment magnitude.
+
+Returns: Nothing.
 
 ### ensureLineagePressureState
 
@@ -175,6 +262,10 @@ ensureLineagePressureState(
 ```
 
 Ensure lineage pressure state is available.
+
+Some runs do not seed lineage-pressure options up front. This helper creates a
+minimal spread-oriented state only when lineage-feedback mode actually needs
+one.
 
 Parameters:
 - `engine` - - NEAT engine instance.
@@ -191,6 +282,10 @@ extractAncestorUniqueness(
 
 Extract the latest ancestor-uniqueness metric from telemetry.
 
+Lineage adaptation only trusts the most recent telemetry snapshot because it
+represents the latest scored generation. Missing or non-numeric lineage
+evidence simply disables the adjustment for that cycle.
+
 Parameters:
 - `engine` - - NEAT engine instance.
 
@@ -206,6 +301,10 @@ isCooldownSatisfied(
 ```
 
 Determine whether the cooldown window has elapsed.
+
+Cooldowns prevent the controller from thrashing lineage policy on every
+generation. Once an adjustment has been recorded, later generations must wait
+for the configured gap before another nudge is allowed.
 
 Parameters:
 - `engine` - - NEAT engine instance.
@@ -223,8 +322,13 @@ recordAdjustment(
 
 Record the generation when an adjustment is applied.
 
+Recording the adjustment generation is what makes the cooldown guard work on
+later cycles.
+
 Parameters:
 - `engine` - - NEAT engine instance.
+
+Returns: Nothing.
 
 ### resolveAdjustmentMagnitude
 
@@ -235,6 +339,9 @@ resolveAdjustmentMagnitude(
 ```
 
 Resolve adjustment magnitude for nudging controlled parameters.
+
+Magnitude resolution keeps defaulting logic away from the mode-specific
+adjusters so those helpers can focus on policy semantics.
 
 Parameters:
 - `config` - - Ancestor uniqueness adaptive configuration.
@@ -250,6 +357,11 @@ resolveUniquenessThresholds(
 ```
 
 Resolve thresholds for ancestor-uniqueness decisions.
+
+These bounds define the acceptable ancestry-diversity band. Values below the
+lower threshold suggest the population is converging onto similar family
+trees, while values above the upper threshold suggest diversity pressure may
+already be stronger than needed.
 
 Parameters:
 - `config` - - Ancestor uniqueness adaptive configuration.

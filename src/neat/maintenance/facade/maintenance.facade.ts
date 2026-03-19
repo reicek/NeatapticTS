@@ -14,16 +14,31 @@ type NeatMaintenanceOptions = NeatControllerForMutation['options'] & {
 /**
  * Public maintenance facade helpers for the stable `Neat` entrypoint.
  *
- * The mutation chapter owns the actual topology-repair mechanics, but the
- * stable `Neat` class still exposes a tiny maintenance surface for callers that
- * want to enforce a minimum hidden-node budget, repair dead ends, or inspect
- * the configured hidden-node floor. Keeping that wrapper layer in
- * `maintenance/facade/` makes the ownership story match the newer chaptered
- * layout used by the RNG, pruning, selection, and telemetry facades.
+ * This chapter is the public maintenance-policy bridge for callers who want to
+ * keep one concrete network structurally viable without stepping down into the
+ * broader mutation orchestration chapter. The heavy repair mechanics still live
+ * under `mutation/`, but the stable `Neat` facade preserves three small wrapper
+ * behaviors that users already expect: read the current hidden-node floor,
+ * enforce that floor when needed, and patch obvious dead ends without turning
+ * routine maintenance into a full mutation pass.
+ *
+ * Keeping those wrappers in `maintenance/facade/` preserves two boundaries at
+ * once. The mutation chapter stays responsible for topology-changing operator
+ * logic and repair mechanics, while this facade remains responsible for the
+ * stable public entrypoints and their intentionally conservative semantics.
+ * Read this file when you want the user-facing maintenance story rather than
+ * the lower-level graph-editing implementation details.
  *
  * Invariant: this boundary only maintains baseline structural viability for a
  * single network. It does not change mutation operator selection, speciation,
  * or public import paths.
+ *
+ * The three helpers form one small policy flow:
+ *
+ * - `getMinimumHiddenSize()` explains the current target,
+ * - `ensureMinHiddenNodes()` enforces that target,
+ * - `ensureNoDeadEnds()` repairs the most obvious connectivity failures after
+ *   edits or imports.
  */
 
 /**
@@ -32,6 +47,12 @@ type NeatMaintenanceOptions = NeatControllerForMutation['options'] & {
  * This boundary keeps the contract focused on topology-maintenance state:
  * mutation constraints, innovation bookkeeping, endpoint counts, and the
  * legacy helper used to compute a minimum hidden-node target.
+ *
+ * The facade does not need the full controller. It only needs enough state to
+ * forward repair work into the mutation layer while preserving the stable
+ * wrapper semantics of the public `Neat` API. Keeping the contract narrow makes
+ * it clearer that maintenance is a thin policy surface, not a second mutation
+ * facade.
  */
 export interface NeatMaintenanceFacadeHost extends Omit<
   NeatControllerForMutation,
@@ -46,14 +67,28 @@ export interface NeatMaintenanceFacadeHost extends Omit<
 /**
  * Ensure a network satisfies the configured minimum hidden-node policy.
  *
- * The underlying mutation helper may add hidden nodes and wire them into the
- * graph so later mutation and evaluation steps start from a minimally viable
- * structure.
+ * This is the enforcing half of the maintenance policy. The wrapper first uses
+ * the current `Neat` configuration as the source of truth for how much hidden
+ * capacity a network should keep, then delegates the actual graph edits to the
+ * mutation repair layer.
+ *
+ * The underlying helper may add hidden nodes and wire them into the graph so
+ * later mutation and evaluation steps start from a minimally viable structure.
+ * That makes this function more than a tiny threshold check: it is a targeted
+ * topology-maintenance pass that preserves user intent without exposing the
+ * larger mutation chapter as the primary public surface for routine upkeep.
  *
  * @param host - `Neat` instance exposing mutation constraints and innovation tables.
  * @param network - Network whose hidden-node floor should be enforced.
  * @param multiplierOverride - Optional one-off multiplier overriding the configured policy.
  * @returns Promise that resolves after any required topology repair finishes.
+ *
+ * @example
+ * ```ts
+ * const minimumHidden = neat.getMinimumHiddenSize();
+ * await neat.ensureMinHiddenNodes(network);
+ * console.log(minimumHidden <= network.nodes.length);
+ * ```
  */
 export async function ensureMinHiddenNodes(
   host: NeatMaintenanceFacadeHost,
@@ -70,9 +105,15 @@ export async function ensureMinHiddenNodes(
 /**
  * Repair input, output, and hidden nodes that have become structural dead ends.
  *
- * This preserves the historical best-effort behavior of `neat.ensureNoDeadEnds()`:
- * if the underlying repair helper throws, the public facade suppresses that
- * failure so maintenance stays additive rather than fatal.
+ * This wrapper preserves the historical best-effort behavior of
+ * `neat.ensureNoDeadEnds()`: maintenance should be additive and low-friction,
+ * not a new fatal step in the public workflow.
+ *
+ * Use it when an imported, repaired, or recently edited network may contain
+ * stranded inputs, outputs, or hidden nodes that would make later controller
+ * stages harder to interpret. The mutation chapter still owns the repair
+ * details; this facade owns the promise that routine cleanup attempts do not
+ * escalate into user-facing control-flow failures.
  *
  * @param host - `Neat` instance exposing mutation constraints and innovation tables.
  * @param network - Network whose endpoint connectivity should be repaired.
@@ -92,10 +133,13 @@ export function ensureNoDeadEnds(
 /**
  * Compute the minimum hidden-node target for the current `Neat` configuration.
  *
- * The public `Neat` facade historically exposed this as a read-only policy
- * helper. Keeping it beside the repair wrappers makes the generated docs tell a
- * clearer story: one boundary defines the target size, and the neighboring
- * helpers enforce it on concrete networks.
+ * This is the read-only half of the maintenance policy. The public `Neat`
+ * facade historically exposed it so callers could inspect the configured floor
+ * before deciding whether to repair, import, or validate a network.
+ *
+ * Keeping it beside the repair wrappers makes the generated docs tell the full
+ * story in one place: one helper defines the target size, one enforces it, and
+ * one cleans up obvious connectivity failures that remain after topology edits.
  *
  * @param host - `Neat` instance exposing input/output counts and maintenance options.
  * @param multiplierOverride - Optional one-off multiplier overriding the configured policy.

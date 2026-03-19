@@ -17,10 +17,51 @@ const DEFAULT_INNOVATION_ID = 0;
  *
  * This chapter owns the "split one connection into two" mechanics used by the
  * root mutation flow when preserving node-split innovation reuse.
+ *
+ * Add-node growth is the more identity-sensitive of the two structural mutation
+ * paths. Adding a node is not just "insert one hidden unit." The controller is
+ * trying to remember whether the exact same source-to-target split has already
+ * happened elsewhere so that later crossover and speciation can recognize the
+ * resulting structure as the same historical innovation rather than an
+ * unrelated accident.
+ *
+ * The lifecycle in this chapter is therefore deliberate:
+ *
+ * 1. ensure there is at least one connection worth splitting,
+ * 2. choose one enabled connection,
+ * 3. derive a stable split key from the source and target genes,
+ * 4. either reuse an existing split record or assign a brand-new one,
+ * 5. insert the new hidden node while preserving output ordering.
+ *
+ * Read this chapter from top to bottom when debugging structural growth by
+ * connection splitting. The early helpers prepare a valid split target. The
+ * middle helpers explain how one split becomes a reusable innovation record.
+ * The final helpers explain where the new node and edges land in the genome.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Seed[Genome enters add-node path] --> Bootstrap{Any connection to split?}
+ *   Bootstrap -->|no| Connect[Seed one input to output edge]
+ *   Bootstrap -->|yes| Enabled[Collect enabled connections]
+ *   Connect --> Enabled
+ *   Enabled --> Choose[Choose one connection to split]
+ *   Choose --> SplitKey[Build stable split descriptor]
+ *   SplitKey --> Record{Existing split record?}
+ *   Record -->|yes| Reuse[Reuse stored node and innovation ids]
+ *   Record -->|no| NewRecord[Create node and assign fresh innovations]
+ *   Reuse --> Insert[Insert hidden node and replacement edges]
+ *   NewRecord --> Insert
+ * ```
  */
 
 /**
  * Ensure the genome has at least one connection by linking input to output.
+ *
+ * A connection split only makes sense when a genome already has an edge to cut.
+ * This helper is the bootstrap escape hatch for extremely sparse genomes. It
+ * seeds the smallest possible forward connection so the add-node path can keep
+ * behaving like a split-based structural mutation instead of bailing out
+ * immediately.
  *
  * @param genomeToSeed - genome that may need a bootstrap connection
  * @param internal - neat controller context retained for compatibility with existing callers
@@ -51,6 +92,9 @@ export function ensureBootstrapConnection(
 /**
  * Find the first node of a given type.
  *
+ * The add-node bootstrap path only needs a minimal node lookup strategy, so
+ * this helper stays intentionally simple and deterministic.
+ *
  * @param genomeToSearch - genome whose nodes are searched
  * @param nodeType - node type to match
  * @returns the first matching node or undefined
@@ -68,6 +112,11 @@ export function findFirstNodeByType(
 /**
  * Collect all enabled connections from a genome.
  *
+ * Split mutations only operate on live structural edges. Disabled connections
+ * remain historical artifacts and should not become split candidates because
+ * doing so would grow new structure from topology the runtime is not currently
+ * using.
+ *
  * @param genomeToInspect - genome to inspect
  * @returns enabled connections list
  */
@@ -82,6 +131,10 @@ export function collectEnabledConnections(
 
 /**
  * Choose a random enabled connection to split.
+ *
+ * Once the candidate shelf is built, the split path keeps selection light: one
+ * RNG draw chooses the connection whose history may now branch into a hidden
+ * node insertion.
  *
  * @param enabledConnectionsList - candidate connections
  * @param internal - neat controller context
@@ -102,6 +155,10 @@ export function chooseConnectionForSplit(
 
 /**
  * Build the split descriptor used for innovation lookup and connection creation.
+ *
+ * The descriptor is the compact identity packet for a split. Its key captures
+ * which source and target genes were separated, while its preserved weight lets
+ * the outgoing replacement edge inherit the old signal strength.
  *
  * @param connectionToSplit - connection being split
  * @returns split descriptor
@@ -129,6 +186,10 @@ export function buildSplitDescriptor(
 /**
  * Disconnect the original connection before inserting the split node.
  *
+ * The add-node mutation is modeled as a real split, not as a parallel bypass.
+ * Removing the original edge first preserves the intended NEAT-style topology
+ * change: the signal must now pass through the new hidden node.
+ *
  * @param genomeToEdit - genome to edit
  * @param connectionToRemove - original connection to remove
  * @returns void
@@ -143,6 +204,11 @@ export function disconnectOriginalConnection(
 
 /**
  * Apply a split using an existing innovation record.
+ *
+ * This is the preferred path when the same structural split has already been
+ * observed elsewhere in the population history. Reusing the stored node gene id
+ * and edge innovation ids preserves historical identity, which makes later
+ * alignment-based operations treat equivalent splits as equivalent structure.
  *
  * @param genomeToEdit - genome being modified
  * @param connectionToSplit - connection being split
@@ -184,6 +250,10 @@ export function applySplitWithExistingRecord(
 /**
  * Apply a split and create a new innovation record.
  *
+ * This path handles genuinely novel structural growth. It inserts a fresh
+ * hidden node, assigns new innovations to the replacement edges, and records
+ * the resulting identity under the split key so future genomes can reuse it.
+ *
  * @param genomeToEdit - genome being modified
  * @param connectionToSplit - connection being split
  * @param splitDescriptor - metadata for the split
@@ -223,6 +293,10 @@ export function applySplitWithNewRecord(
 /**
  * Resolve the insertion index for a new node, keeping outputs at the end.
  *
+ * Node order matters in this codebase because output nodes are expected to stay
+ * grouped at the tail of the genome node list. This helper preserves that local
+ * invariant while still placing the new hidden node near the split target.
+ *
  * @param genomeToEdit - genome whose node list is updated
  * @param targetNode - original target node of the split connection
  * @returns insertion index
@@ -240,6 +314,11 @@ export function resolveInsertIndex(
 
 /**
  * Create the incoming and outgoing split connections.
+ *
+ * A split replaces one edge with two edges. The incoming edge starts with the
+ * chapter's default bootstrap weight, while the outgoing edge preserves the
+ * original connection weight so the pre-split signal can still pass forward in
+ * a comparable way.
  *
  * @param genomeToEdit - genome being modified
  * @param connectionToSplit - connection being split
@@ -275,6 +354,11 @@ export function connectSplitEdges(
 
 /**
  * Assign new innovations for a split and build the innovation record.
+ *
+ * New split records are the durable memory that turns a one-off structural edit
+ * into reusable innovation history. This helper assigns the next global
+ * innovation ids to the replacement edges and packages those ids together with
+ * the new node gene id so later equivalent splits can be recognized quickly.
  *
  * @param newNode - newly created hidden node
  * @param splitConnections - incoming/outgoing connections

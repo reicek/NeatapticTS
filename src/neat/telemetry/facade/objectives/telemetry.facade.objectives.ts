@@ -1,3 +1,30 @@
+/**
+ * Objective-inspection and lifecycle helpers inside the public telemetry facade.
+ *
+ * This chapter is the smallest public surface for answering three related
+ * questions about the active objective set:
+ *
+ * - which objectives are currently registered,
+ * - what compact descriptor summary should a dashboard show,
+ * - which add/remove events happened recently as the controller adapted.
+ *
+ * It also carries the two lifecycle controls that let a caller register a new
+ * objective or clear custom objectives without digging into the lower-level
+ * objective subsystem directly.
+ *
+ * Read this chapter after the root telemetry facade when the question is about
+ * objective policy itself rather than telemetry buffers, species history, or
+ * Pareto archive inspection.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Registry[Active objective registry] --> Keys[getObjectiveKeys()<br/>stable objective names]
+ *   Registry --> Summary[getObjectives()<br/>compact descriptors]
+ *   Events[Objective lifecycle events] --> History[getObjectiveEvents()<br/>recent add remove log]
+ *   Register[registerTelemetryObjective()] --> Registry
+ *   Clear[clearTelemetryObjectives()] --> Registry
+ * ```
+ */
 import {
   clearObjectives,
   registerObjective,
@@ -15,6 +42,10 @@ import type {
  * This chapter keeps objective lifecycle reads and registration helpers beside
  * each other so the root telemetry facade can delegate that policy cluster as a
  * single concept instead of mixing it with telemetry buffers or lineage reads.
+ *
+ * The host combines the read-side objective registry with the recent event log
+ * because callers often want to inspect both the current state and the recent
+ * policy changes in the same place.
  */
 export interface TelemetryFacadeObjectivesHost extends NeatLikeWithObjectives {
   _objectiveEvents?: { gen: number; type: 'add' | 'remove'; key: string }[];
@@ -30,6 +61,11 @@ export interface TelemetryFacadeObjectivesHost extends NeatLikeWithObjectives {
  *
  * @param host - `Neat` instance exposing objective descriptors.
  * @returns Ordered list of active objective keys.
+ *
+ * @example
+ * ```ts
+ * console.log(getObjectiveKeys(neat));
+ * ```
  */
 export function getObjectiveKeys(
   host: TelemetryFacadeObjectivesHost,
@@ -47,6 +83,11 @@ export function getObjectiveKeys(
  *
  * @param host - `Neat` instance exposing objective descriptors.
  * @returns Compact objective summaries in evaluation order.
+ *
+ * @example
+ * ```ts
+ * console.table(getObjectives(neat));
+ * ```
  */
 export function getObjectives(
   host: TelemetryFacadeObjectivesHost,
@@ -59,6 +100,10 @@ export function getObjectives(
 
 /**
  * Register or replace a custom objective.
+ *
+ * Use this when an experiment or dashboard wants to add a temporary objective
+ * to the live registry without reaching into the deeper objective subsystem
+ * directly through controller internals.
  *
  * @param host - `Neat` instance whose multi-objective registry should change.
  * @param key - Unique objective key.
@@ -78,6 +123,9 @@ export function registerTelemetryObjective(
 /**
  * Remove all registered custom objectives so only the default objective path remains.
  *
+ * Reach for this when an experiment wants to reset the objective surface to its
+ * baseline state without rebuilding the whole controller.
+ *
  * @param host - `Neat` instance whose objective registry should be cleared.
  * @returns Nothing. The helper mutates the objective registry in place.
  */
@@ -90,8 +138,18 @@ export function clearTelemetryObjectives(
 /**
  * Snapshot recent objective add/remove events for telemetry consumers.
  *
+ * This is the historical companion to {@link getObjectives}. The descriptor
+ * summary tells you what is active now; the event log tells you how the active
+ * set changed across recent generations.
+ *
  * @param host - `Neat` instance storing objective lifecycle events.
  * @returns Shallow copy of the recorded objective events.
+ *
+ * @example
+ * ```ts
+ * const recentEvents = getObjectiveEvents(neat);
+ * console.log(recentEvents.at(-1));
+ * ```
  */
 export function getObjectiveEvents(host: TelemetryFacadeObjectivesHost): {
   gen: number;

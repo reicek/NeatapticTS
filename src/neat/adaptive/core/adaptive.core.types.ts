@@ -1,8 +1,30 @@
 /**
- * Minimal NEAT controller shape required by the adaptive helper boundary.
+ * Shared host and config contracts for the adaptive helper boundary.
  *
- * The adaptive folders share this vocabulary so each teaching-oriented README
- * can focus on its local heuristics without redefining the controller surface.
+ * The adaptive subtree works because each policy chapter can stay focused on a
+ * single feedback loop while still speaking one consistent language about the
+ * controller state it is allowed to read or rewrite. This file is that shared
+ * language.
+ *
+ * Read the contracts in three passes:
+ *
+ * - start with `NeatLikeWithAdaptive` to see the runtime host surface,
+ * - continue with the exported `*Config` aliases to see how each adaptive
+ *   family slices the broader options object,
+ * - finish with `MutationSettings`, `MutationPartitions`, and
+ *   `MutationOutcome` when you want the normalized working shapes used inside
+ *   adaptive mutation helpers.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Host[NeatLikeWithAdaptive host] --> Options[Adaptive option families]
+ *   Host --> Population[Population runtime state]
+ *   Host --> Scratch[Adaptive scratch fields and telemetry]
+ *   Options --> Complexity[Complexity and phased schedules]
+ *   Options --> Acceptance[Acceptance and minimal criterion]
+ *   Options --> Mutation[Mutation and operator adaptation]
+ *   Options --> Lineage[Ancestor uniqueness and lineage pressure]
+ * ```
  */
 export interface NeatLikeWithAdaptive {
   /** Adaptive and scheduling configuration options for NEAT behaviors. */
@@ -217,25 +239,74 @@ export interface NeatLikeWithAdaptive {
   _getRNG?: () => () => number;
 }
 
+/**
+ * Shared config view for complexity-budget helpers.
+ *
+ * Use this alias when a helper only cares about node and connection caps,
+ * schedule shape, and improvement-window tuning for the adaptive budget loop.
+ */
 export type ComplexityBudgetConfig = NonNullable<
   NeatLikeWithAdaptive['options']['complexityBudget']
 >;
+
+/**
+ * Shared config view for phased-complexity helpers.
+ *
+ * This isolates the alternating complexify/simplify schedule from the broader
+ * adaptive options object so phase-oriented helpers can stay narrow.
+ */
 export type PhasedComplexityConfig = NonNullable<
   NeatLikeWithAdaptive['options']['phasedComplexity']
 >;
+
+/**
+ * Shared config view for adaptive minimal-criterion helpers.
+ *
+ * Helpers use this slice when they are only adjusting the acceptance
+ * threshold, not inspecting the rest of the controller policy surface.
+ */
 export type MinimalCriterionAdaptiveConfig = NonNullable<
   NeatLikeWithAdaptive['options']['minimalCriterionAdaptive']
 >;
+
+/**
+ * Shared config view for ancestor-uniqueness feedback helpers.
+ *
+ * This captures the thresholds, cooldowns, and mode switches used when the
+ * controller nudges diversity pressure in response to lineage concentration.
+ */
 export type AncestorUniqAdaptiveConfig = NonNullable<
   NeatLikeWithAdaptive['options']['ancestorUniqAdaptive']
 >;
+
+/**
+ * Shared config view for per-genome adaptive mutation helpers.
+ *
+ * The mutation adaptation loop reads this slice to clamp rates, normalize
+ * perturbation scales, and decide how often genome-local parameters are
+ * refreshed.
+ */
 export type AdaptiveMutationConfig = NonNullable<
   NeatLikeWithAdaptive['options']['adaptiveMutation']
 >;
+
+/**
+ * Shared config view for operator-stat adaptation helpers.
+ *
+ * This is the policy surface for helpers that bias mutation-operator choice
+ * using historical success and attempt statistics.
+ */
 export type OperatorAdaptationConfig = NonNullable<
   NeatLikeWithAdaptive['options']['operatorAdaptation']
 >;
 
+/**
+ * Normalized adaptive-mutation settings after config fallback resolution.
+ *
+ * This is the working form used after helpers merge user options with shared
+ * defaults, so downstream logic does not need to repeatedly re-interpret
+ * optional config fields.
+ */
 export type MutationSettings = {
   strategy: string;
   sigmaBase: number;
@@ -251,6 +322,11 @@ export type MutationSettings = {
   populationSize: number;
 };
 
+/** Outcome flags used to detect whether mutation pressure stayed balanced. */
 export type MutationOutcome = { hasIncrease: boolean; hasDecrease: boolean };
+
+/** Score-ranked population halves used by two-tier and explore-low strategies. */
 export type MutationPartitions = { topHalf: Genome[]; bottomHalf: Genome[] };
+
+/** Shared genome view used by the adaptive helpers. */
 export type Genome = NeatLikeWithAdaptive['population'][number];

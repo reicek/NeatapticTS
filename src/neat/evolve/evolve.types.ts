@@ -1,14 +1,55 @@
 import type Network from '../../architecture/network';
 
 /**
+ * Shared runtime contracts for the NEAT evolution orchestration chapter.
+ *
+ * The exported `evolve()` function in `evolve.ts` reads like a stage manager.
+ * This file explains the cast it is allowed to move around: genomes carrying
+ * runtime metadata, species snapshots used during allocation, objective
+ * descriptors reused by multi-objective ranking, and the narrow controller host
+ * surface that the evolve helpers coordinate.
+ *
+ * The contracts naturally group into four layers:
+ *
+ * 1. evolving genome state: `GenomeWithMetadata`,
+ * 2. species- and telemetry-facing summaries: `SpeciesWithMetadata` and
+ *    `SpeciesHistoryRecord`,
+ * 3. policy descriptors reused during the step: `MutationMethod`,
+ *    `ObjectiveDescriptor`, and `MultiObjectiveOptions`,
+ * 4. orchestration host state: `NeatControllerForEvolution`.
+ *
+ * Read this chapter when the evolve root chapter tells you *when* something
+ * happens but you still need to know *which state* that step is allowed to
+ * read or mutate.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Controller[NeatControllerForEvolution host] --> Population[Population genomes]
+ *   Population --> Genome[GenomeWithMetadata runtime state]
+ *   Controller --> Species[SpeciesWithMetadata live registry]
+ *   Species --> History[SpeciesHistoryRecord snapshots]
+ *   Controller --> Objectives[Objective and multi-objective policy]
+ *   Controller --> Hooks[Runtime hooks for evaluate sort mutate and telemetry]
+ * ```
+ */
+
+/**
  * Runtime interface for a genome carrying evolution metadata.
  *
  * This mirrors the dynamic properties attached at runtime during evolution,
  * without pulling in the full Genome class to avoid circular dependencies.
- *
- * @remarks
  * These fields are intentionally permissive because evolution attaches
- * metadata (ids, ancestry, multi-objective ranks) dynamically.
+ * metadata such as ids, ancestry, crowding, and objective ranks dynamically
+ * while one generation is being processed.
+ *
+ * Treat this as the per-genome working set for one generation. The structure
+ * fields (`nodes`, `connections`) describe the candidate itself. The underscored
+ * fields capture temporary or cached evidence produced while the controller is
+ * ranking, speciating, adapting, and tracking lineage.
+ *
+ * The important boundary is that this interface is richer than the minimal
+ * shared genome contracts used by read-side chapters, because evolve helpers are
+ * the place where new runtime metadata is actually attached.
  */
 export interface GenomeWithMetadata {
   /** Node list for the genome. */
@@ -51,6 +92,12 @@ export interface GenomeWithMetadata {
 
 /**
  * Runtime interface for species metadata used in allocation and stats.
+ *
+ * This is the live species record shape used during one evolve step. Helpers in
+ * `speciation/`, `population/`, and telemetry-oriented paths rely on it to ask
+ * practical generation-level questions: which genomes belong together now, how
+ * much shared fitness does the species have, and how many offspring should it
+ * receive next?
  */
 export interface SpeciesWithMetadata {
   /** Member genomes in this species. */
@@ -73,6 +120,11 @@ export interface SpeciesWithMetadata {
 
 /**
  * Species history snapshot record used for telemetry/exports.
+ *
+ * Unlike `SpeciesWithMetadata`, which describes the current live registry, this
+ * contract is archival. It captures the summarized species view that can be
+ * retained across generations for telemetry, historical diagnostics, and later
+ * export.
  */
 export interface SpeciesHistoryRecord {
   /** Generation for this snapshot. */
@@ -94,6 +146,11 @@ export interface SpeciesHistoryRecord {
 
 /**
  * Mutation method descriptor used by runtime mutation hooks.
+ *
+ * The evolve chapter only needs the stable operator identity, not the richer
+ * mutation policy metadata defined in the mutation subtree. That is why this
+ * local descriptor stays intentionally tiny: evolve orchestration mainly uses it
+ * as a token when handing work off to mutation-oriented hooks.
  */
 export interface MutationMethod {
   /** Mutation operator name. */
@@ -102,6 +159,11 @@ export interface MutationMethod {
 
 /**
  * Objective descriptor for multi-objective evaluation.
+ *
+ * This is the shared scoring token used when evolve orchestration hands the
+ * current population to objective-aware ranking logic. Each descriptor couples a
+ * stable key with the accessor that extracts that objective's numeric evidence
+ * from one genome.
  */
 export interface ObjectiveDescriptor {
   /** Objective key identifier. */
@@ -112,6 +174,11 @@ export interface ObjectiveDescriptor {
 
 /**
  * Multi-objective configuration block.
+ *
+ * This is the policy bundle evolve helpers consult when deciding how dynamic
+ * objective scheduling, epsilon tuning, and inactive-objective pruning should
+ * behave during a run. It is broader than one descriptor but narrower than the
+ * full controller options object.
  */
 export interface MultiObjectiveOptions {
   /** Enable multi-objective scoring and ranking. */
@@ -151,9 +218,25 @@ export interface MultiObjectiveOptions {
 /**
  * NEAT controller subset used by evolve orchestrations.
  *
- * @remarks
  * This is a minimal, runtime-focused surface used by evolve utilities
  * to avoid circular dependencies on the full controller class.
+ *
+ * This host contract is the backbone of the evolve subtree. It bundles five
+ * kinds of state that the orchestration step must coordinate:
+ *
+ * 1. population and generation state,
+ * 2. policy options that shape selection, mutation, pruning, and
+ *    multi-objective ranking,
+ * 3. live caches and archives such as species history or Pareto snapshots,
+ * 4. controller hooks that perform focused work like evaluation, mutation, or
+ *    telemetry recording,
+ * 5. adaptation and test seams that let utility chapters nudge policy without
+ *    depending on the full `Neat` class implementation.
+ *
+ * The interface is intentionally large because evolve orchestration really is
+ * the point where many chapter boundaries meet. Even so, it is still narrower
+ * than the full public controller API: only the state and callbacks needed for
+ * one generation step are surfaced here.
  */
 export interface NeatControllerForEvolution {
   /** Input size for new networks. */

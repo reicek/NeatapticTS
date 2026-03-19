@@ -3,8 +3,15 @@ import type { NeatLike } from '../../shared/neat.shared.types';
 /**
  * Genome with a fitness score and arbitrary additional metadata.
  *
- * This stays intentionally loose because selection only cares about the score
- * and should not over-constrain other genome metadata carried through the run.
+ * The selection core deliberately narrows its view of a genome to one decisive
+ * field: the score that earlier evaluation work produced. That keeps this
+ * boundary reusable across parent selection, ordering, and summary reads
+ * without forcing the selection chapter to understand topology, telemetry,
+ * lineage, or any other controller-owned metadata.
+ *
+ * Keep the contract loose when you add new genome-side fields elsewhere in the
+ * controller. If a selection helper can still do its job from score plus opaque
+ * metadata, the extra fields belong outside this boundary.
  */
 export interface GenomeWithScore {
   /** Fitness score used by selection strategies. */
@@ -15,6 +22,15 @@ export interface GenomeWithScore {
 
 /**
  * Selection strategy settings used by the NEAT controller.
+ *
+ * These options are intentionally small because the public selection story is
+ * already taught at the root selection chapter and exposed through the stable
+ * `Neat` wrappers. The core layer only needs the knobs that alter actual parent
+ * choice mechanics: which strategy runs, how strongly POWER biases toward the
+ * front, and how TOURNAMENT sizes and probabilistic winner walks behave.
+ *
+ * Keeping this contract narrow prevents the core chapter from turning into a
+ * second facade for broader controller policy.
  */
 export interface SelectionOptions {
   /** Strategy name, such as `POWER`, `FITNESS_PROPORTIONATE`, or `TOURNAMENT`. */
@@ -30,8 +46,19 @@ export interface SelectionOptions {
 /**
  * NEAT-like instance extended with selection-specific state and helpers.
  *
- * The selection boundary only needs population access, selection options, RNG,
- * optional tournament overflow suppression, and the in-place sort hook.
+ * This host contract captures the minimum runtime surface the mechanics need in
+ * order to preserve stable controller assumptions.
+ *
+ * Those assumptions are:
+ * - selection reads the current in-memory population rather than rebuilding it,
+ * - evaluation can be triggered before score-dependent reads when needed,
+ * - sorting remains centralized through the host's in-place population order,
+ * - randomness always comes from the controller's configured RNG stream,
+ * - tournament overflow behavior can be relaxed only through an explicit host
+ *   escape hatch.
+ *
+ * The result is a small, practical seam for selection behavior and tests rather
+ * than another public API surface.
  */
 export interface NeatLikeWithSelection extends NeatLike {
   /** Current population used by selection strategies. */
@@ -53,10 +80,22 @@ export interface NeatLikeWithSelection extends NeatLike {
 
 /**
  * Shared state passed through the internal selection strategies.
+ *
+ * This bundles the stable inputs that every strategy needs once dispatch has
+ * already decided which algorithm to run. It lets POWER, FITNESS_PROPORTIONATE,
+ * and TOURNAMENT share one context shape without each helper repeatedly pulling
+ * data off the host.
+ *
+ * Read this as the per-selection call frame: one host, one population view,
+ * one resolved selection-options object, and one RNG source.
  */
 export type SelectionContext = {
+  /** NEAT host that owns evaluation, sorting, and overflow policy hooks. */
   internal: NeatLikeWithSelection;
+  /** Current population snapshot used by the active selection strategy. */
   population: GenomeWithScore[];
+  /** Resolved strategy options for the current parent-selection call. */
   selectionOptions: SelectionOptions | undefined;
+  /** RNG accessor preserved from the controller so all strategies stay deterministic. */
   getRngFactory: () => () => number;
 };

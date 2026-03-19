@@ -7,13 +7,29 @@ import type {
 /**
  * Minimum-hidden repair helpers.
  *
- * This chapter owns the small maintenance pass that enforces a minimum hidden
- * node budget and rewires newly created hidden nodes so they remain connected
- * enough for later mutation and evaluation passes.
+ * This file owns the hidden-floor half of the mutation-repair chapter.
+ *
+ * Dead-end repair restores missing local connectivity in an already-sized
+ * network. This companion file answers a different question: when controller
+ * policy says the network should keep at least some hidden structure, how do we
+ * compute that floor, add missing hidden nodes, and reconnect them so they are
+ * immediately usable?
+ *
+ * Read this file when the network may be structurally valid in the narrowest
+ * sense but still too shallow for the controller's configured maintenance
+ * policy. The helpers here turn policy into concrete edits:
+ * 1. resolve the allowed size and minimum hidden requirement,
+ * 2. create hidden nodes until the floor is met,
+ * 3. wire those hidden nodes into usable inbound and outbound paths,
+ * 4. rebuild connection caches after the structural edits.
  */
 
 /**
  * Collect categorized node arrays for the network.
+ *
+ * This mirrors the dead-end repair grouping step so the hidden-floor helpers
+ * can reason about endpoints and hidden nodes without repeatedly rescanning the
+ * whole network.
  *
  * @param networkToInspect - network to inspect
  * @returns grouped node arrays
@@ -42,6 +58,10 @@ export function collectNodeGroupsForMinHidden(
 /**
  * Resolve the maximum node limit for the network.
  *
+ * The hidden-floor policy must stay inside the broader controller cap. This
+ * helper centralizes that read so later creation logic can treat "unbounded"
+ * and "explicitly capped" networks with one consistent limit value.
+ *
  * @param internal - neat controller context
  * @returns maximum node limit
  */
@@ -54,6 +74,10 @@ export function resolveMaxNodesForMinHidden(
 
 /**
  * Resolve the minimum hidden node requirement for the network.
+ *
+ * This converts controller policy into one concrete hidden-node target for the
+ * current network. The result respects both the configured minimum-hidden rule
+ * and the remaining room beneath the maximum-node limit.
  *
  * @param networkToInspect - network to inspect
  * @param maxNodesLimit - maximum allowed nodes
@@ -80,6 +104,10 @@ export function resolveMinHiddenForMinHidden(
 /**
  * Check whether the network has at least one input and output node.
  *
+ * Minimum-hidden enforcement only makes sense when there is an actual endpoint
+ * path to support. If either side is missing, the helper chapter stops before
+ * creating hidden nodes that would have nowhere useful to connect.
+ *
  * @param nodeGroupsToCheck - grouped node arrays
  * @returns true when inputs and outputs are present
  */
@@ -97,6 +125,10 @@ export function hasRequiredEndpointsForMinHidden(nodeGroupsToCheck: {
 /**
  * Emit a warning when the network lacks input or output nodes.
  *
+ * This preserves the chapter's best-effort maintenance contract: endpoint-free
+ * networks are notable enough to warn about, but not severe enough to justify a
+ * hard failure during repair.
+ *
  * @returns void
  */
 export function warnMissingEndpointsForMinHidden(): void {
@@ -112,6 +144,10 @@ export function warnMissingEndpointsForMinHidden(): void {
 
 /**
  * Ensure the network has at least the minimum number of hidden nodes.
+ *
+ * This is the chapter's structural growth step. It creates fresh hidden nodes
+ * only until the configured floor is met and stops early when the broader
+ * maximum-node cap would be violated.
  *
  * @param networkToEdit - network to edit
  * @param nodeGroupsToEdit - grouped node arrays
@@ -144,6 +180,11 @@ export async function ensureHiddenNodeCountForMinHidden(
 
 /**
  * Ensure hidden nodes have both incoming and outgoing connections.
+ *
+ * New hidden nodes are not useful until they sit on an actual path through the
+ * network. This helper treats the whole hidden set as a post-creation repair
+ * pass so newly added nodes and previously under-connected nodes both leave the
+ * function with usable inbound and outbound links.
  *
  * @param networkToEdit - network to edit
  * @param nodeGroupsToUse - grouped node arrays
@@ -182,6 +223,10 @@ export const MINIMUM_HIDDEN_BASELINE = 0;
 /**
  * Compute the minimum hidden node count using explicit or multiplier-based settings.
  *
+ * This is the policy-resolution helper for the file. An explicit minimum wins
+ * immediately; otherwise the helper derives a hidden target from the visible
+ * endpoint count and the configured multiplier.
+ *
  * @param inputCount - Number of input nodes in the network.
  * @param outputCount - Number of output nodes in the network.
  * @param explicitMinimumHidden - Optional explicit minimum hidden count.
@@ -207,6 +252,10 @@ export function computeMinimumHiddenSize(
 
 /**
  * Ensure a hidden node has at least one incoming connection.
+ *
+ * The helper prefers the smallest legal repair: if a hidden node already has an
+ * inbound edge it is left untouched; otherwise one random input or peer hidden
+ * node is allowed to become the new source.
  *
  * @param networkToEdit - network to edit
  * @param nodeGroupsToUse - grouped node arrays
@@ -245,6 +294,10 @@ export function ensureIncomingConnectionForMinHidden(
 /**
  * Ensure a hidden node has at least one outgoing connection.
  *
+ * This is the outbound twin of {@link ensureIncomingConnectionForMinHidden}.
+ * It reconnects a hidden node only when it would otherwise remain a sink with
+ * no downstream effect on outputs or later hidden nodes.
+ *
  * @param networkToEdit - network to edit
  * @param nodeGroupsToUse - grouped node arrays
  * @param hiddenNode - hidden node to connect
@@ -282,6 +335,10 @@ export function ensureOutgoingConnectionForMinHidden(
 /**
  * Choose a random node from a candidate list.
  *
+ * Like the dead-end repair selector, this helper keeps minimum-hidden
+ * enforcement policy-light: once a legal candidate pool exists, choose one
+ * using the controller RNG and keep the maintenance pass moving.
+ *
  * @param candidates - candidate nodes
  * @param internal - neat controller context
  * @returns selected node or null
@@ -301,6 +358,10 @@ export function chooseRandomNodeForMinHidden(
 
 /**
  * Rebuild connection caches after structural edits.
+ *
+ * Hidden-node creation and rewiring change the structural truth of the network.
+ * Rebuilding cached connection views here keeps later mutation, evaluation, and
+ * repair helpers aligned with the newly edited topology.
  *
  * @param networkToEdit - network to rebuild
  * @returns Promise resolving after rebuild completes

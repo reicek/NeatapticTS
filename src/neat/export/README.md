@@ -25,6 +25,24 @@ between environments without also freezing the controller's innovation
 history. Other times you need a true checkpoint that can continue evolving as
 if the process had never stopped.
 
+Read the chapter in this order:
+- start with `exportPopulation()` and `importPopulation()` when you only need
+  candidate genomes,
+- continue to `toJSONImpl()` and `fromJSONImpl()` when you need controller
+  metadata without the live population,
+- finish with `exportState()` and `importStateImpl()` when you need a full
+  pause-and-resume checkpoint.
+
+```mermaid
+flowchart TD
+  Runtime[Live NEAT controller] --> PopOnly[Population-only snapshot]
+  Runtime --> MetaOnly[Meta-only checkpoint]
+  Runtime --> FullState[Full state bundle]
+  PopOnly --> ImportPop[Replace population in an existing controller]
+  MetaOnly --> ImportMeta[Rebuild controller bookkeeping]
+  FullState --> Resume[Restore bookkeeping and population together]
+```
+
 ## neat/export/neat.export.ts
 
 ### exportPopulation

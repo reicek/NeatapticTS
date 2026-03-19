@@ -13,10 +13,46 @@ const DEFAULT_GENE_ID = 0;
  *
  * This chapter owns candidate-pair discovery, cycle guarding, and innovation-id
  * reuse for newly added structural connections.
+ *
+ * Where `add-node/` grows structure by splitting one existing edge, this
+ * chapter grows structure by discovering a legal pair of nodes that are not yet
+ * connected. That sounds simpler, but it still has several responsibilities:
+ * preserve innovation identity when the same node pair has been connected
+ * before, prefer historically meaningful or structurally useful candidates, and
+ * avoid illegal recurrent edges when acyclic topology is required.
+ *
+ * The flow is easiest to read as a pipeline:
+ *
+ * 1. enumerate legal candidate pairs,
+ * 2. narrow the pool toward reusable or hidden-hidden pairs when possible,
+ * 3. choose one pair,
+ * 4. resolve the innovation keys for that pair,
+ * 5. abort if the new edge would violate cycle policy,
+ * 6. connect the pair and assign a reused or fresh innovation id.
+ *
+ * Read this chapter in that order when debugging connection growth.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Genome[Genome enters add-connection path] --> Candidates[Collect legal node pairs]
+ *   Candidates --> Reuse[Filter pairs with known innovations]
+ *   Reuse --> Pool[Choose reuse pool or structural fallback pool]
+ *   Pool --> Pair[Choose one node pair]
+ *   Pair --> Keys[Resolve symmetric and legacy keys]
+ *   Keys --> Cycle{Would this edge create a cycle?}
+ *   Cycle -->|yes| Abort[Skip structural edit]
+ *   Cycle -->|no| Connect[Create new connection]
+ *   Connect --> Innovation[Reuse or assign innovation id]
+ * ```
  */
 
 /**
  * Collect legal (from,to) node pairs not already connected.
+ *
+ * This helper defines the search space for connection growth. It respects the
+ * node ordering conventions used by the genome representation so mutation does
+ * not propose obviously invalid source-target directions before any later cycle
+ * checks even run.
  *
  * @param genomeToInspect - genome to scan
  * @returns candidate node pairs
@@ -51,6 +87,11 @@ export function collectCandidatePairsForConn(
 /**
  * Filter candidate pairs that already have innovation reuse keys.
  *
+ * Reuse candidates are especially valuable because they let independently
+ * discovered structure share the same innovation identity. This helper pulls out
+ * those historically known pairs so the selection path can favor them when any
+ * exist.
+ *
  * @param pairs - candidate node pairs
  * @param internal - neat controller context
  * @returns reuse candidates
@@ -68,6 +109,11 @@ export function filterPairsWithInnovations(
 
 /**
  * Build the final selection pool based on reuse and hidden-node preference.
+ *
+ * Pool selection is opinionated but still simple: prefer pairs with known
+ * innovation history, otherwise prefer hidden-to-hidden growth, otherwise fall
+ * back to the full candidate set. That keeps the chapter's structural bias
+ * readable in one place.
  *
  * @param allPairs - all candidate pairs
  * @param reusePairs - pairs with historical innovations
@@ -93,6 +139,9 @@ export function selectPairPool(
 /**
  * Choose a pair deterministically when only one candidate exists.
  *
+ * The deterministic single-pair fast path avoids wasting randomness when the
+ * structural search has already collapsed to one legal option.
+ *
  * @param pairs - selection pool
  * @param internal - neat controller context
  * @returns chosen pair or null
@@ -115,6 +164,10 @@ export function choosePairForConn(
 
 /**
  * Resolve nodes and innovation key details for a chosen pair.
+ *
+ * Once selection has picked a pair, the mutation path needs more than the raw
+ * nodes. It also needs the symmetric key used for modern innovation reuse and
+ * the directional legacy keys kept for backward-compatible lookups.
  *
  * @param chosenPair - pair to connect
  * @returns resolved pair metadata
@@ -149,6 +202,10 @@ export function resolvePairNodes(
 /**
  * Determine whether adding the connection would create a cycle.
  *
+ * The add-connection path only enforces cycle checks when the genome requests
+ * acyclic topology. That keeps recurrent-capable runs permissive while still
+ * giving feed-forward-style runs one clear abort seam.
+ *
  * @param genomeToInspect - genome to inspect
  * @param pairNodes - resolved pair nodes
  * @returns true if the connection should be aborted
@@ -167,6 +224,10 @@ export function shouldAbortForCycle(
 /**
  * Create the connection for the chosen pair.
  *
+ * This helper is intentionally thin: by the time the flow reaches it, pair
+ * discovery, policy filtering, and cycle guards should already be complete.
+ * The remaining job is just to materialize the chosen edge.
+ *
  * @param genomeToEdit - genome to edit
  * @param pairNodes - resolved pair nodes
  * @returns created connection or undefined
@@ -184,6 +245,11 @@ export function connectChosenPair(
 
 /**
  * Assign an innovation id for a new connection, reusing when possible.
+ *
+ * Innovation assignment is the historical memory for connection growth. If the
+ * unordered node pair has been seen before, this helper reuses that innovation
+ * id. Otherwise it allocates a new global id and stores it under both the
+ * symmetric key and the legacy directional aliases.
  *
  * @param connection - newly created connection
  * @param pairNodes - resolved pair metadata
@@ -218,6 +284,10 @@ export function assignInnovationForConnection(
 /**
  * Build a symmetric innovation key for an unordered node pair.
  *
+ * The symmetric key is the preferred reuse identity because connection growth
+ * is treated as one structural relationship between two genes, not as a
+ * direction-specific novelty record.
+ *
  * @param sourceNode - source node
  * @param targetNode - target node
  * @returns symmetric innovation key
@@ -238,6 +308,10 @@ export function buildSymmetricKeyForConn(
 /**
  * Build a legacy directional innovation key.
  *
+ * Legacy directional keys are still stored so older code paths or preserved
+ * historical records can resolve to the same innovation id as the modern
+ * symmetric key.
+ *
  * @param sourceNode - source node
  * @param targetNode - target node
  * @returns directional innovation key
@@ -254,6 +328,10 @@ export function buildLegacyKeyForConn(
 
 /**
  * Detect whether adding a connection would create a cycle.
+ *
+ * The cycle check walks forward from the proposed target node and looks for a
+ * path back to the proposed source. If one exists, adding the new edge would
+ * close a loop and the caller can abort the structural edit for acyclic runs.
  *
  * @param sourceNode - source node of the new connection
  * @param targetNode - target node of the new connection

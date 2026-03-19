@@ -31,7 +31,30 @@ import type {
 } from '../core/adaptive.core.types';
 
 /**
+ * Per-genome adaptive mutation helpers.
+ *
+ * This file owns the mutation-pressure loop that turns one generation's scores
+ * into updated per-genome mutation-rate and mutation-amount fields. It stays
+ * separate from operator-stat decay so the generated chapter can distinguish
+ * "how hard should these genomes mutate?" from "how much should the controller
+ * trust older operator results?"
+ *
+ * The helper flow is intentionally compact:
+ *
+ * 1. decide whether the cadence allows adaptation,
+ * 2. collect and partition scored genomes,
+ * 3. resolve strategy-specific deltas,
+ * 4. clamp the updated mutation fields and apply fallback balancing if needed.
+ */
+
+/* Module introduction boundary for generated README output. */
+
+/**
  * Check whether mutation adaptation should run this generation.
+ *
+ * Cadence checks keep adaptive mutation from rewriting per-genome pressure on
+ * every generation unless the configuration explicitly asks for that. This lets
+ * runs choose between fast reaction and slower, more stable adjustment cycles.
  *
  * @param generation - Current generation index.
  * @param config - Adaptive mutation configuration.
@@ -48,6 +71,10 @@ export function shouldAdaptThisGeneration(
 /**
  * Collect genomes with numeric scores.
  *
+ * The adaptive mutation loop only partitions genomes that have meaningful score
+ * evidence. Unevaluated genomes stay out of the ranking split so the strategy
+ * logic only reacts to genomes the run has actually judged.
+ *
  * @param population - Population of genomes.
  * @returns Scored genomes.
  */
@@ -57,6 +84,10 @@ export function collectScoredGenomes(population: Genome[]): Genome[] {
 
 /**
  * Sort scored genomes in ascending score order.
+ *
+ * Sorting creates the stable ordering used by the two-tier and explore-low
+ * strategies. Lower-scoring genomes end up at the front, which makes the later
+ * top-half and bottom-half split read naturally.
  *
  * @param scoredGenomes - Scored genomes.
  * @returns Sorted genomes.
@@ -70,6 +101,10 @@ export function sortScoredGenomes(scoredGenomes: Genome[]): Genome[] {
 
 /**
  * Split scored genomes into top and bottom halves.
+ *
+ * The partition step is where population performance becomes strategy-friendly
+ * structure. Later helpers can ask whether a genome belongs to the exploratory
+ * bottom half or the conservative top half without re-deriving the split.
  *
  * @param scoredGenomes - Sorted scored genomes.
  * @returns Partitions used by strategy rules.
@@ -85,6 +120,11 @@ export function splitScoredGenomes(
 
 /**
  * Resolve mutation settings derived from configuration and engine state.
+ *
+ * This is the normalization boundary for adaptive mutation. It gathers all
+ * defaults, runtime counters, and mutation-amount settings into one typed
+ * object so later helpers can stay focused on strategy logic instead of config
+ * fallback bookkeeping.
  *
  * @param engine - NEAT engine instance.
  * @param config - Adaptive mutation configuration.
@@ -128,6 +168,9 @@ export function resolveMutationSettings(
 /**
  * Resolve a random source that matches the legacy RNG usage.
  *
+ * Adaptive mutation uses the same RNG access pattern as the older runtime so
+ * the pressure updates remain comparable with existing runs and tests.
+ *
  * @param engine - NEAT engine instance.
  * @returns Random number provider.
  */
@@ -140,6 +183,12 @@ export function resolveRandomSource(
 
 /**
  * Apply mutation updates to the population.
+ *
+ * This helper is the main write phase for adaptive mutation. It walks the full
+ * population, computes a strategy-specific delta for each eligible genome, and
+ * records whether the generation ended up with both upward and downward rate
+ * pressure. That outcome is later used to decide whether fallback balancing is
+ * needed to preserve the intended exploration-versus-exploitation contrast.
  *
  * @param population - Full population to mutate.
  * @param partitions - Scored partitions.
@@ -199,6 +248,11 @@ export function applyMutationsToPopulation(
 /**
  * Resolve mutation-rate delta based on strategy.
  *
+ * Strategy dispatch keeps the public mutation flow readable. Each strategy gets
+ * the same base random delta, then reshapes it according to its own policy for
+ * favoring exploration, rewarding stronger genomes with lower pressure, or
+ * annealing toward smaller adjustments over time.
+ *
  * @param settings - Resolved settings.
  * @param randomSource - Random number provider.
  * @param genome - Current genome.
@@ -241,6 +295,9 @@ export function resolveRateDelta(
 /**
  * Create a signed random delta scaled by sigma.
  *
+ * This is the small stochastic core shared by rate and amount adaptation.
+ * Later strategy helpers decide how to reinterpret the sign and magnitude.
+ *
  * @param sigmaBase - Sigma scaling factor.
  * @param randomSource - Random number provider.
  * @returns Signed delta.
@@ -255,6 +312,11 @@ export function createRandomDelta(
 
 /**
  * Apply two-tier adjustments to a delta.
+ *
+ * Two-tier mode deliberately pushes the two halves in opposite directions so
+ * one side becomes more exploratory while the other becomes more conservative.
+ * When the score split is not available, the helper falls back to index parity
+ * just to preserve that contrasting pressure pattern.
  *
  * @param baseDelta - Base random delta.
  * @param genome - Current genome.
@@ -283,6 +345,10 @@ export function applyTwoTierDelta(
 /**
  * Apply explore-low adjustments to a delta.
  *
+ * Explore-low treats weaker genomes as exploration candidates. Bottom-half
+ * genomes receive larger positive pressure, while the rest are gently pushed
+ * downward so the search budget does not inflate everywhere at once.
+ *
  * @param baseDelta - Base random delta.
  * @param genome - Current genome.
  * @param bottomHalfSet - Lookup for bottom-half genomes.
@@ -303,6 +369,9 @@ export function applyExploreLowDelta(
 /**
  * Apply annealing adjustments to a delta.
  *
+ * Annealing gradually shrinks the effective delta as the run ages, making early
+ * mutation-pressure updates more aggressive and later ones more conservative.
+ *
  * @param baseDelta - Base random delta.
  * @param settings - Resolved settings.
  * @returns Adjusted delta.
@@ -322,13 +391,17 @@ export function applyAnnealDelta(
 /**
  * Apply mutation-amount adjustments to a genome.
  *
+ * Rate and amount adaptation share the same high-level strategy vocabulary, but
+ * amount updates remain optional because some runs only want to tune how often
+ * mutation fires, not how large each mutation should be.
+ *
  * @param genome - Current genome.
  * @param settings - Resolved settings.
  * @param randomSource - Random number provider.
  * @param genomeIndex - Genome index.
  * @param topHalfSet - Lookup for top-half genomes.
  * @param bottomHalfSet - Lookup for bottom-half genomes.
- * @returns {void}
+ * @returns Nothing.
  */
 export function applyMutationAmount(
   genome: Genome,
@@ -358,6 +431,10 @@ export function applyMutationAmount(
 
 /**
  * Resolve mutation-amount delta based on strategy.
+ *
+ * Amount adaptation currently reuses the two-tier split when configured and
+ * otherwise keeps the raw stochastic delta. That keeps the amount policy easier
+ * to reason about than the richer rate-tuning branch.
  *
  * @param settings - Resolved settings.
  * @param randomSource - Random number provider.
@@ -393,6 +470,10 @@ export function resolveAmountDelta(
 /**
  * Apply two-tier adjustments to amount delta.
  *
+ * Amount deltas mirror the high-level two-tier idea from rate adaptation: give
+ * weaker genomes more room to roam and keep stronger genomes from drifting too
+ * far in one step.
+ *
  * @param baseDelta - Base random delta.
  * @param genome - Current genome.
  * @param genomeIndex - Genome index.
@@ -420,6 +501,10 @@ export function applyTwoTierAmountDelta(
 /**
  * Clamp a value between min and max bounds.
  *
+ * Clamping is the final safety guard that keeps adaptive mutation inside the
+ * configured rate and amount envelopes even when repeated random pressure would
+ * otherwise drift beyond them.
+ *
  * @param value - Value to clamp.
  * @param min - Minimum bound.
  * @param max - Maximum bound.
@@ -433,6 +518,10 @@ export function clampValue(value: number, min: number, max: number): number {
 
 /**
  * Determine whether a two-tier fallback is needed.
+ *
+ * Two-tier mode expects the generation to end with both increased and decreased
+ * mutation pressure across the population. If randomness or missing state makes
+ * the result one-sided, the caller can trigger a deterministic rebalance pass.
  *
  * @param strategy - Mutation strategy identifier.
  * @param outcome - Mutation outcome flags.
@@ -449,9 +538,14 @@ export function shouldApplyTwoTierFallback(
 /**
  * Apply two-tier fallback balancing.
  *
+ * Fallback balancing restores the intended contrast when the stochastic pass
+ * fails to produce both exploratory and conservative outcomes. It is narrower
+ * than the main update loop because it only nudges rates, leaving the richer
+ * strategy-specific reasoning to the first pass.
+ *
  * @param population - Population of genomes.
  * @param settings - Resolved settings.
- * @returns {void}
+ * @returns Nothing.
  */
 export function applyTwoTierFallback(
   population: Genome[],

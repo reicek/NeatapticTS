@@ -41,11 +41,11 @@ export type { GenomeLike, NeatLineageContext } from './core/lineage.types';
  *
  * ```mermaid
  * flowchart TD
- *   Genome[Genome with parent ids] --> Ancestors[buildAnc() shallow ancestor set]
+ *   Genome[Genome with parent ids] --> Ancestors[Shallow ancestor set]
  *   Population[Population genomes] --> Pairs[Sample genome pairs]
  *   Ancestors --> Distance[Compare ancestor overlap]
  *   Pairs --> Distance
- *   Distance --> Uniqueness[computeAncestorUniqueness()]
+ *   Distance --> Uniqueness[Ancestor uniqueness summary]
  *   Uniqueness --> Consumers[Telemetry diagnostics and adaptive lineage policy]
  * ```
  *

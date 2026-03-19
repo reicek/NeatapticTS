@@ -2,12 +2,27 @@
 
 Constructor bootstrap helpers for the shared NEAT controller facade.
 
-This chapter isolates the public `Neat` startup sequence so the main facade
-can stay focused on the long-lived class surface while constructor-time
-policy remains readable in one place. The helper deliberately preserves the
-legacy ordering that existing tests rely on: apply defaults, prepare internal
-controller state, attempt initial pool creation, then switch on lineage and
-deterministic RNG access.
+This chapter owns the one-time startup policy that would otherwise crowd the
+public `Neat` class with constructor-only bookkeeping. The main facade stays
+responsible for the long-lived API surface, while this file keeps the
+generation-zero setup readable in one place: apply option defaults, prepare
+controller-owned state, attempt the first population build, then enable the
+features that depend on that initial shape.
+
+That ordering is deliberate rather than cosmetic. Existing tests, migration
+seams, and several adjacent helper chapters assume the constructor behaves as
+a stable bootstrap pipeline instead of a grab-bag of independent writes. In
+particular, lineage tracking and RNG rebinding happen after the pool attempt
+so they observe the same host state that older constructor paths expected.
+
+Read this file when you want to answer three startup questions:
+
+- which public defaults become concrete controller policy during
+  construction,
+- which internal maps and arrays must exist before generation-zero work can
+  proceed safely,
+- why the constructor delegates here without turning this file into a second
+  public facade.
 
 ## neat/init/neat.init.ts
 
@@ -24,14 +39,29 @@ Apply the legacy constructor bootstrap sequence behind the public `Neat`
 facade.
 
 This helper exists to keep [src/neat.ts](src/neat.ts) focused on the public
-class surface while preserving the exact startup order that current tests and
-migrated helpers rely on: mutate the caller-supplied options bag in place,
-initialize controller state, optionally create the starting population, then
-enable lineage tracking and bind the RNG accessor.
+class surface while preserving the exact startup order that current tests,
+migrated helper chapters, and persistence-adjacent bootstrap paths already
+rely on.
+
+The helper coordinates five constructor responsibilities without becoming a
+second orchestration facade:
+
+1. materialize public defaults onto the caller-owned options bag,
+2. prepare controller bookkeeping maps and arrays,
+3. attempt generation-zero pool creation when a seed network or population
+   size is available,
+4. enable lineage only after the initial pool attempt has settled,
+5. rebind RNG access so later helpers see the live controller instance.
+
+The key design constraint is order preservation. Several later reads assume
+the host already owns concrete defaults and initialized internal state before
+pool creation runs, while lineage and RNG access should only activate once
+the bootstrap attempt has finished. Treat this helper as the constructor's
+setup pipeline, not as a general-purpose runtime entrypoint.
 
 Parameters:
 - `host` - - `Neat` instance receiving constructor-time side effects.
-- `request` - - Mutable options bag, raw constructor options, and public
+- `request` - - Mutable options bag, raw constructor intent, and public
 default values exported by the facade.
 
 Returns: Nothing. The helper mutates `host` and `request.optionBag` in place.
@@ -45,3 +75,26 @@ initializeNeatConstructor(this, {
   defaults: publicDefaults,
 });
 ```
+
+After the call returns, the instance has concrete startup policy, prepared
+controller state, and either an attempted generation-zero pool or a safely
+preserved empty population ready for later work.
+
+### InitializeNeatConstructorRequest
+
+Mutable constructor request packet consumed during bootstrap.
+
+`optionBag` is the live options object that the public facade keeps after the
+constructor returns, `rawOptions` preserves the caller's original intent for
+checks that should not be default-inflated, and `defaults` supplies the
+public baseline constants exported by the surrounding NEAT surface.
+
+### NeatInitializationHost
+
+Minimal constructor-time host contract required by the bootstrap helper.
+
+The boundary intentionally stays smaller than the full `Neat` class. This
+helper needs write access to a few controller-owned fields and one pool
+creation hook, but it does not own evaluation, evolution, or persistence.
+Keeping the contract narrow prevents the init chapter from quietly becoming a
+second facade.

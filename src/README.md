@@ -57,61 +57,123 @@ Returns: DiversityStats with zeroed aggregates.
 
 Default compatibility threshold controlling speciation distance.
 
+This starts the speciation-pressure family of defaults. It is the neutral
+boundary the controller uses before adaptive tuning or custom settings make
+species splits stricter or more permissive.
+
 ### DEFAULT_DISJOINT_COEFF
 
 Default disjoint coefficient for NEAT compatibility distance.
+
+Matching the excess coefficient by default gives the root controller a
+balanced structural view: excess and disjoint innovation gaps both count as
+first-class evidence during compatibility comparisons.
 
 ### DEFAULT_DIVERSITY_GRAPHLET_SAMPLE
 
 Default graphlet sample size used by diversity metrics in fast mode.
 
+Read this beside {@link DEFAULT_DIVERSITY_PAIR_SAMPLE}: pair samples give the
+controller quick distance evidence, while graphlet samples provide a small
+structural texture read without forcing whole-population analysis.
+
 ### DEFAULT_DIVERSITY_PAIR_SAMPLE
 
 Default pair-sample size used by diversity metrics in fast mode.
+
+This starts the observability-sampling family. The root controller uses a
+bounded sample instead of exhaustive pair checks so diversity reads stay
+cheap enough for ordinary runs.
 
 ### DEFAULT_ELITISM
 
 Default elitism count applied when unspecified.
 
+Read this beside {@link DEFAULT_POPULATION_SIZE} and
+{@link DEFAULT_PROVENANCE}: the trio defines how much of each generation is
+reserved for carry-over, how much is freshly injected, and how much capacity
+remains for ordinary offspring.
+
 ### DEFAULT_EXCESS_COEFF
 
 Default excess coefficient for NEAT compatibility distance.
 
+This begins the root compatibility-weight family. These coefficients explain
+which kinds of genome disagreement matter most when the controller decides
+whether two genomes still belong in the same species neighborhood.
+
 ### DEFAULT_MAX_CONNS
 
-Default maximum allowed connections (Infinity = unbounded).
+Default maximum allowed connections where `Infinity` means unbounded growth.
+
+This preserves the same baseline policy as {@link DEFAULT_MAX_NODES}: the
+controller does not impose a fixed connection ceiling unless the caller wants
+one.
 
 ### DEFAULT_MAX_GATES
 
-Default maximum allowed gates (Infinity = unbounded).
+Default maximum allowed gates where `Infinity` means unbounded growth.
+
+Gate limits stay in the same family as node and connection limits so the
+whole structural-cap story remains consistent at the root surface.
 
 ### DEFAULT_MAX_NODES
 
-Default maximum allowed nodes (Infinity = unbounded).
+Default maximum allowed nodes where `Infinity` means unbounded growth.
+
+Read the three `DEFAULT_MAX_*` exports as one structural-ceiling family.
+Leaving them unbounded by default tells the root controller to rely on
+mutation policy, pruning, and adaptive limits instead of an immediate hard
+cap.
 
 ### DEFAULT_MUTATION_AMOUNT
 
-Default number of mutation operations per genome.
+Default number of mutation operations applied per genome.
+
+The default keeps the baseline search policy conservative: most runs mutate
+often enough to keep topology moving, but each genome usually pays for only
+one structural or parametric change per mutation pass.
 
 ### DEFAULT_MUTATION_RATE
 
-Default mutation rate tuned for test expectations.
+Default mutation rate used by the root controller when no explicit rate is supplied.
+
+This belongs to the same search-tempo family as
+{@link DEFAULT_MUTATION_AMOUNT}. Together they define how often mutation is
+attempted and how many mutation steps a genome can receive once mutation is
+active.
 
 ### DEFAULT_NOVELTY_K
 
-Default neighbor count for novelty search when k is unspecified.
+Default neighbor count for novelty search when `k` is unspecified.
+
+This closes the root observability-and-exploration shelf. It controls how
+many nearby behaviors contribute to novelty before the caller tunes novelty
+search more explicitly.
 
 ### DEFAULT_POPULATION_SIZE
 
 Default population size when caller does not specify `popsize`.
 
+This opens the root defaults shelf's search-volume family. It controls how
+many genomes compete in each generation before elitism, provenance, or
+mutation pressure begin to reshape the population.
+
 ### DEFAULT_PROVENANCE
 
 Default provenance count applied when unspecified.
 
+Provenance is the root controller's small "fresh seed" policy. A value of
+`0` means the default run does not spend population budget on extra
+generation-zero style injections unless the caller asks for them.
+
 ### DEFAULT_WEIGHT_DIFF_COEFF
 
 Default average weight difference coefficient for compatibility distance.
+
+This keeps parameter drift relevant without letting weight deltas dominate
+the whole speciation read. In the default family, topology disagreement still
+carries more weight than modest edge-weight differences.
 
 ### Neat
 

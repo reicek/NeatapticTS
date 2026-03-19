@@ -30,12 +30,12 @@ enriched with extended metrics.
 
 ```mermaid
 flowchart TD
-  SpeciesRegistry[Current species registry]
-  Stats[getSpeciesStats()<br/>live snapshot]
-  History[getSpeciesHistory()<br/>cross-generation history]
-  StatsChapter[stats/<br/>compact projections]
-  HistoryChapter[history/<br/>history reads and JSONL]
-  CoreChapter[core/<br/>extended-history backfill]
+  SpeciesRegistry["Current species registry"]
+  Stats["getSpeciesStats()<br/>live snapshot"]
+  History["getSpeciesHistory()<br/>cross-generation history"]
+  StatsChapter["stats/<br/>compact projections"]
+  HistoryChapter["history/<br/>history reads and JSONL"]
+  CoreChapter["core/<br/>extended-history backfill"]
 
   SpeciesRegistry --> Stats
   SpeciesRegistry --> History

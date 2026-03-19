@@ -1,9 +1,42 @@
 /**
+ * Shared contracts for the NEAT evaluate chapter.
+ *
+ * This file is the common vocabulary layer beneath the evaluate subtree. The
+ * surrounding chapters each own one narrow stage of the evaluation pipeline,
+ * but they all need to agree on the same small set of contracts for genomes,
+ * controller state, diversity evidence, novelty archive rows, and dynamic
+ * objectives.
+ *
+ * Read this chapter when you want to answer questions such as:
+ * - Which genome shape is considered sufficient for evaluation helpers?
+ * - What controller fields are shared across fitness, novelty, and tuning
+ *   stages?
+ * - Why do the shared contracts stay permissive instead of mirroring the whole
+ *   runtime controller type exactly?
+ * - Which pieces of evidence are expected to survive long enough for later
+ *   tuning, selection, or multi-objective reads?
+ *
+ * The exports below fall into five small families:
+ * - genome evidence contracts,
+ * - novelty archive memory,
+ * - diversity-stat summaries,
+ * - objective registration vocabulary,
+ * - the controller host surface used across the evaluate subtree.
+ *
+ * This boundary stays intentionally small so the evaluate helpers can share one
+ * stable language without widening into a second full controller facade.
+ */
+
+// Shared evaluation contracts begin here.
+
+/**
  * Genome with score, novelty, and clearing capabilities.
  *
- * This interface describes the minimal genome shape required by evaluation
- * helpers. It intentionally stays permissive for compatibility with legacy
- * genome variants while documenting the expected properties.
+ * This interface describes the smallest practical genome shape that the
+ * evaluate subtree can reason about. It is intentionally permissive so legacy
+ * genome variants and downstream extensions can still participate in
+ * evaluation, while the documented fields mark the pieces of evidence that the
+ * shared helpers actually rely on.
  */
 export interface GenomeForEvaluation {
   /** Optional fitness score assigned during evaluation. */
@@ -33,8 +66,9 @@ export interface GenomeForEvaluation {
 /**
  * Novelty archive entry with descriptor and novelty score.
  *
- * Entries store a descriptor vector alongside the computed novelty so the
- * archive can seed future novelty calculations.
+ * Entries store one behavior descriptor alongside its novelty score so later
+ * evaluation passes can keep some memory of previously unusual behavior without
+ * retaining the entire population history.
  */
 export interface NoveltyArchiveEntry {
   /** Descriptor vector representing a genome's behavior. */
@@ -47,8 +81,10 @@ export interface NoveltyArchiveEntry {
 /**
  * Diversity statistics tracked during evaluation.
  *
- * The values are optional because different evaluations may only compute a
- * subset of metrics.
+ * The values are optional because different evaluation passes may compute only
+ * a subset of metrics. Tuning chapters read this structure opportunistically,
+ * which lets the evaluation pipeline add evidence incrementally instead of
+ * requiring every metric to exist on every pass.
  */
 export interface DiversityStats {
   /** Variance of entropy across the population. */
@@ -64,7 +100,9 @@ export interface DiversityStats {
 /**
  * Objective definition for multi-objective optimization.
  *
- * Objectives are registered dynamically to guide evaluation and selection.
+ * Objectives are registered dynamically so evaluation can surface additional
+ * evidence, such as entropy, without forcing the entire objective stack to be
+ * hard-coded at controller construction time.
  */
 export interface ObjectiveDef {
   /** Unique key used to reference the objective. */
@@ -81,8 +119,14 @@ export interface ObjectiveDef {
  * NEAT controller interface for evaluation.
  *
  * This interface models the subset of a NEAT controller used by the evaluation
- * helpers. It includes options, population data, and optional adaptive tuning
- * hooks.
+ * helpers. It includes the runtime options, population data, lightweight
+ * evidence caches, and optional hooks that the evaluate subtree needs in order
+ * to enrich one generation without taking ownership of the whole controller.
+ *
+ * The contract is intentionally broader than an individual helper needs but
+ * still much smaller than the full `Neat` surface. That tradeoff keeps the
+ * evaluate chapters interoperable while preserving a clear boundary between
+ * evaluation and the rest of the runtime.
  */
 export interface NeatControllerForEval {
   /** Runtime options that influence evaluation and tuning behavior. */

@@ -10,10 +10,40 @@ import type {
  *
  * This chapter holds the policy resolution and metric math that sit underneath
  * the public pruning entrypoints.
+ *
+ * The public pruning chapter explains *when* pruning is invoked. This file
+ * explains how both pruning modes reduce to one shared pipeline:
+ *
+ * 1. resolve the active policy block,
+ * 2. measure the population if adaptive control needs live evidence,
+ * 3. compute the target sparsity or shared prune level,
+ * 4. apply the resulting pruning instruction across compatible genomes.
+ *
+ * Scheduled pruning and adaptive pruning differ mainly in where the target
+ * comes from. Scheduled pruning derives it from generation timing and a ramp.
+ * Adaptive pruning derives it from current population metrics relative to a
+ * remembered baseline.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Schedule[Resolve scheduled options] --> Ramp[Compute current target sparsity]
+ *   Ramp --> ApplyScheduled[Prune compatible genomes in place]
+ *   Adaptive[Resolve adaptive options] --> Metrics[Measure population complexity]
+ *   Metrics --> Baseline[Resolve baseline and target remaining metric]
+ *   Baseline --> Drift{Drift exceeds tolerance?}
+ *   Drift -->|yes| Level[Update shared prune level]
+ *   Drift -->|no| Hold[Keep current prune level]
+ *   Level --> ApplyAdaptive[Prune compatible genomes in place]
+ *   Hold --> ApplyAdaptive
+ * ```
  */
 
 /**
  * Resolve scheduled pruning options when they are active for the current generation.
+ *
+ * This helper is the gatekeeper for the calendar-driven pruning path. It keeps
+ * the public pruning wrapper simple by answering one precise question: does the
+ * current generation actually belong to the configured pruning schedule?
  *
  * @param host - NEAT host exposing generation and pruning options.
  * @returns Evolution pruning options when active, otherwise `null`.
@@ -45,6 +75,10 @@ export function resolveActiveEvolutionPruningOptions(
 /**
  * Compute the target sparsity for the current generation.
  *
+ * Scheduled pruning ramps toward its configured sparsity target instead of
+ * snapping there immediately. This helper converts the current ramp progress
+ * into the exact target sparsity the active generation should use.
+ *
  * @param host - NEAT host exposing generation state.
  * @param options - Active scheduled pruning options.
  * @returns Target sparsity for the current generation.
@@ -63,6 +97,10 @@ export function computeTargetSparsityNow(
 
 /**
  * Compute the ramp completion fraction for scheduled pruning.
+ *
+ * The ramp fraction is the soft-start mechanism for scheduled pruning. It lets
+ * the controller phase sparsity in gradually over several generations so the
+ * population does not experience one abrupt structural shock.
  *
  * @param host - NEAT host exposing generation state.
  * @param options - Active scheduled pruning options.
@@ -86,6 +124,10 @@ export function computeRampFraction(
 
 /**
  * Apply scheduled pruning to each genome in the population.
+ *
+ * By the time this helper runs, policy resolution is already finished. Its job
+ * is simply to fan the computed scheduled sparsity target out across genomes
+ * that actually implement pruning support.
  *
  * @param host - NEAT host exposing the population.
  * @param options - Active scheduled pruning options.
@@ -112,6 +154,10 @@ export function applyPruningToPopulation(
 /**
  * Resolve adaptive pruning options when enabled.
  *
+ * This is the narrow on-ramp to the feedback-controller branch. It makes the
+ * rest of the adaptive helpers read linearly by collapsing disabled or missing
+ * configuration into one `null` check.
+ *
  * @param host - NEAT host exposing adaptive pruning options.
  * @returns Adaptive pruning options when enabled, otherwise `null`.
  */
@@ -130,6 +176,11 @@ export function resolveActiveAdaptivePruningOptions(
 /**
  * Ensure the adaptive pruning state exists on the host.
  *
+ * Adaptive pruning keeps one shared prune level on the host so the whole
+ * population can react coherently across generations. This helper bootstraps
+ * that state once, rather than making every downstream helper repeat the same
+ * initialization guard.
+ *
  * @param host - NEAT host exposing adaptive pruning state.
  * @returns Nothing. The shared prune level is initialized when missing.
  */
@@ -142,6 +193,11 @@ export function initializeAdaptivePruningState(host: NeatLikeForPruning): void {
 
 /**
  * Compute the population metrics used by adaptive pruning.
+ *
+ * Adaptive pruning reacts to the population as a whole, not to one genome at a
+ * time. This helper produces the small aggregate evidence packet that later
+ * helpers use to decide whether complexity is drifting away from the desired
+ * sparsity target.
  *
  * @param host - NEAT host exposing the population.
  * @returns Summary of mean node and connection counts.
@@ -158,6 +214,10 @@ export function computePopulationMetrics(
 
 /**
  * Compute the average node count per genome.
+ *
+ * Node count is one of the two complexity signals the adaptive controller can
+ * watch. It is intentionally averaged so population size changes do not by
+ * themselves distort the pruning signal.
  *
  * @param host - NEAT host exposing the population.
  * @returns Average number of nodes per genome.
@@ -176,6 +236,10 @@ export function computeMeanNodeCount(host: NeatLikeForPruning): number {
 /**
  * Compute the average connection count per genome.
  *
+ * Connection count is the denser complexity signal commonly used for sparsity
+ * control. Like node count, it is reduced to a population mean so the adaptive
+ * controller reacts to trend rather than to one outlier genome.
+ *
  * @param host - NEAT host exposing the population.
  * @returns Average number of connections per genome.
  */
@@ -192,6 +256,10 @@ export function computeMeanConnectionCount(host: NeatLikeForPruning): number {
 
 /**
  * Resolve the currently observed population metric for adaptive pruning.
+ *
+ * Adaptive pruning can watch either node count or connection count. This helper
+ * turns the configured metric name into the actual observed value that the rest
+ * of the controller math will compare with the target remaining complexity.
  *
  * @param options - Adaptive pruning options.
  * @param metrics - Population metric summary.
@@ -210,6 +278,10 @@ export function resolveObservedMetricValue(
 
 /**
  * Resolve and persist the adaptive pruning baseline.
+ *
+ * The baseline is adaptive pruning's memory of where the population started
+ * when the controller first engaged. Later drift calculations are measured
+ * against that remembered baseline rather than against a moving target.
  *
  * @param host - NEAT host exposing adaptive baseline state.
  * @param currentMetricValue - Currently observed metric value.
@@ -230,6 +302,11 @@ export function resolveAdaptivePruneBaseline(
 /**
  * Compute the target remaining metric implied by the desired sparsity.
  *
+ * Adaptive pruning expresses its goal as desired sparsity, but the feedback loop
+ * compares live complexity metrics. This helper bridges those two views by
+ * translating the baseline metric into the remaining amount of structure the
+ * controller wants to keep.
+ *
  * @param options - Adaptive pruning options.
  * @param adaptivePruneBaseline - Baseline metric value.
  * @returns Target remaining metric value.
@@ -247,6 +324,10 @@ export function computeTargetRemainingMetric(
 
 /**
  * Decide whether adaptive pruning should adjust the prune level.
+ *
+ * This is the dead-band check for the adaptive controller. Small fluctuations
+ * around the target are ignored so the prune level does not chatter on every
+ * minor metric wobble.
  *
  * @param options - Adaptive pruning options.
  * @param currentMetricValue - Current observed metric value.
@@ -272,6 +353,11 @@ export function shouldAdjustAdaptivePruning(
 
 /**
  * Compute the next adaptive prune level.
+ *
+ * Once the controller decides that drift is large enough, this helper turns the
+ * direction of that drift into a bounded update of the shared prune level.
+ * Higher-than-target complexity tightens pruning; lower-than-target complexity
+ * relaxes it.
  *
  * @param options - Adaptive pruning options.
  * @param currentPruneLevel - Current shared prune level.
@@ -301,6 +387,10 @@ export function computeNextAdaptivePruneLevel(
 
 /**
  * Apply the shared adaptive prune level to every compatible genome.
+ *
+ * This is the final fan-out step for adaptive pruning. The host maintains one
+ * shared prune level, and this helper applies that single controller decision
+ * uniformly across genomes that support sparsity pruning.
  *
  * @param host - NEAT host exposing the population.
  * @param pruneLevel - Prune level to apply.

@@ -111,37 +111,64 @@ console.log('best score after evaluation:', bestScore);
 
 Default rate used when auto distance-coefficient tuning rebalances structural distance weights.
 
+This shared step size controls how quickly excess and disjoint coefficients react when topology
+variance drifts away from the recent baseline.
+
 ### AUTO_COEFF_MAX_DEFAULT
 
 Maximum structural-distance coefficient allowed during automatic tuning.
+
+The upper bound prevents excess and disjoint penalties from dominating every later compatibility
+comparison.
 
 ### AUTO_COEFF_MIN_DEFAULT
 
 Minimum structural-distance coefficient allowed during automatic tuning.
 
+The lower bound keeps structural differences meaningful even when the auto-distance policy is
+softening species pressure.
+
 ### COMPAT_MAX_THRESHOLD_DEFAULT
 
 Maximum compatibility threshold allowed during automatic compatibility tuning.
+
+The upper clamp prevents compatibility from becoming so permissive that species boundaries lose
+practical meaning.
 
 ### COMPAT_MIN_THRESHOLD_DEFAULT
 
 Minimum compatibility threshold allowed during automatic compatibility tuning.
 
+The lower clamp prevents the threshold from collapsing until even small structural differences
+force unnecessary species fragmentation.
+
 ### COMPAT_THRESHOLD_DEFAULT
 
 Baseline compatibility threshold used when no explicit value is configured.
+
+This serves as the neutral starting point before entropy-based tuning or explicit user policy
+begins to reshape species pressure.
 
 ### DISTANCE_COEFF_DEFAULT
 
 Baseline structural-distance coefficient used before any automatic tuning occurs.
 
+This is the neutral starting point for the structural-distance fold before variance-driven
+updates begin to reshape it.
+
 ### ENTROPY_ADJUST_DEFAULT
 
 Default rate used when compatibility tuning nudges the threshold upward or downward.
 
+A conservative step size keeps the compatibility-threshold loop gradual enough that later
+speciation reads remain interpretable from one generation to the next.
+
 ### ENTROPY_DEADBAND_DEFAULT
 
 Deadband around the entropy target where compatibility tuning intentionally does nothing.
+
+The deadband reduces threshold jitter by treating small entropy deviations as normal noise
+rather than signals that demand a policy change.
 
 ### ENTROPY_TARGET_DEFAULT
 
@@ -154,21 +181,36 @@ either species collapse or fragmentation.
 
 Default step size used when entropy-sharing tuning increases or decreases sharing sigma.
 
+A modest default keeps the sigma controller responsive without letting one noisy variance read
+swing the sharing radius too aggressively.
+
 ### ENTROPY_VAR_HIGH_BAND
 
 Upper tolerance band for deciding that observed entropy variance is meaningfully high.
+
+Values above this multiplier mark a population whose entropy spread is noisier than the tuning
+target expects.
 
 ### ENTROPY_VAR_LOW_BAND
 
 Lower tolerance band for deciding that observed entropy variance is meaningfully low.
 
+Values below this multiplier mark a population whose entropy spread is flatter than the tuning
+target expects.
+
 ### ENTROPY_VAR_MAX_SIGMA_DEFAULT
 
 Upper bound for the sharing sigma used by entropy-sharing adaptation.
 
+The upper clamp prevents the radius from widening until entropy sharing loses practical
+contrast across the population.
+
 ### ENTROPY_VAR_MIN_SIGMA_DEFAULT
 
 Lower bound for the sharing sigma used by entropy-sharing adaptation.
+
+The lower clamp prevents the sharing radius from shrinking so far that later sharing pressure
+becomes hypersensitive to tiny entropy fluctuations.
 
 ### ENTROPY_VAR_TARGET_DEFAULT
 
@@ -182,8 +224,14 @@ nor too unstable.
 NEAT controller interface for evaluation.
 
 This interface models the subset of a NEAT controller used by the evaluation
-helpers. It includes options, population data, and optional adaptive tuning
-hooks.
+helpers. It includes the runtime options, population data, lightweight
+evidence caches, and optional hooks that the evaluate subtree needs in order
+to enrich one generation without taking ownership of the whole controller.
+
+The contract is intentionally broader than an individual helper needs but
+still much smaller than the full `Neat` surface. That tradeoff keeps the
+evaluate chapters interoperable while preserving a clear boundary between
+evaluation and the rest of the runtime.
 
 ### NOVELTY_ARCHIVE_CAP
 
@@ -209,6 +257,12 @@ archive or population.
 
 Multiplier below which observed variance is treated as a meaningful decrease.
 
+Drops below this band tell the auto-distance loop that topology sizes are converging relative to
+the recent baseline.
+
 ### VARIANCE_INCREASE_THRESHOLD
 
 Multiplier above which observed variance is treated as a meaningful increase.
+
+Values above this band tell the auto-distance loop that topology sizes are spreading relative to
+the recent baseline.
