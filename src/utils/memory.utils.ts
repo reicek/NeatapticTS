@@ -2,8 +2,42 @@ import type { nodePoolStats } from '../architecture/nodePool';
 import type { MemoryStats, NetworkView, SlabAllocStats } from './memory';
 
 /**
+ * Helper mechanics behind the heuristic memory snapshot.
+ *
+ * The root `memory.ts` chapter answers the user-facing question: "what does
+ * the memory picture look like right now?" This file answers the quieter
+ * mechanics question behind that snapshot: how do we turn loose runtime data
+ * into a stable educational summary without pretending we have an exact heap
+ * profiler?
+ *
+ * The helpers fall into four families:
+ *
+ * - normalization helpers decide which networks are in scope,
+ * - aggregation helpers count nodes, connections, typed arrays, and reserved
+ *   capacity,
+ * - environment helpers safely read browser or Node memory metrics,
+ * - snapshot builders assemble the final teaching-oriented payload.
+ *
+ * Read this file when you want to understand why the memory chapter can stay
+ * fast: each helper owns one narrow step, and the final snapshot is assembled
+ * from precomputed parts rather than one giant reflective walk.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   Targets[Targets or tracked registry] --> Normalize[normalizeNetworks]
+ *   Normalize --> Aggregate[aggregateNetworkStats]
+ *   Aggregate --> Build[buildMemoryStatsSnapshot]
+ *   Environment[captureEnvironmentMetrics] --> Build
+ *   Flags[buildFlagSnapshot] --> Build
+ *   Build --> Payload[MemoryStats]
+ * ```
+ */
+
+/**
  * Heuristic byte weights used to approximate per-object overhead in the allocator.
- * These numbers represent typical JS object footprints, not exact runtime measurements.
+ * These numbers represent typical JS object footprints, not exact runtime
+ * measurements. They are teaching weights: stable enough to compare runs and
+ * storage strategies even when the engine's true overhead is more complicated.
  */
 export interface HeuristicBytes {
   connectionObjectBytes: number;
@@ -12,7 +46,9 @@ export interface HeuristicBytes {
 
 /**
  * Running totals used while walking networks to summarize memory consumption.
- * Accumulates counts, slab byte totals, and reserved vs used capacity snapshots.
+ * Accumulates counts, slab byte totals, and reserved vs used capacity
+ * snapshots. This is the file's working ledger before the public-facing
+ * `MemoryStats` object is assembled.
  */
 export interface Accumulators {
   totalConnections: number;
@@ -28,7 +64,9 @@ export interface Accumulators {
 
 /**
  * Captured configuration knobs that influence memory usage and pooling behavior.
- * Keeps only the flags relevant to the memory snapshot to avoid leaking full config.
+ * Keeps only the flags relevant to the memory snapshot to avoid leaking full
+ * config. The goal is to explain the memory story, not to smuggle the entire
+ * runtime configuration surface into a diagnostic payload.
  */
 export interface ConfigSnapshot {
   warnings: unknown;
@@ -42,7 +80,9 @@ export interface ConfigSnapshot {
 
 /**
  * Structured inputs required to assemble a MemoryStats snapshot in one pass.
- * Bundles precomputed accumulators, environment info, allocator stats, and flags.
+ * Bundles precomputed accumulators, environment info, allocator stats, and
+ * flags. This keeps the final snapshot builder declarative: collect first,
+ * then fold into the public payload.
  */
 export interface BuildMemoryStatsInput {
   networks: NetworkView[];
@@ -75,6 +115,8 @@ const PERCENT_SCALE = 100;
 /**
  * Default heuristics mapping human-readable weights to their byte estimates.
  * Centralizes the fallback values so downstream summaries stay consistent.
+ * Read this as the chapter's shared baseline for "object-heavy" accounting
+ * when typed-array widths are unavailable or incomplete.
  */
 export const HEURISTIC_BYTES: HeuristicBytes = {
   connectionObjectBytes: CONNECTION_OBJECT_BYTES,
@@ -83,6 +125,10 @@ export const HEURISTIC_BYTES: HeuristicBytes = {
 
 /**
  * Normalize provided targets to an array of networks, falling back to tracked registry.
+ *
+ * This helper keeps the public entrypoint flexible without making later
+ * aggregation code branch on every call path.
+ *
  * @param targets Optional single network or array.
  * @param trackedNetworks Internal registry of tracked networks.
  * @returns Array of networks to summarize.
@@ -98,6 +144,11 @@ export function normalizeNetworks(
 
 /**
  * Safely read slab allocation stats, guarding against provider errors.
+ *
+ * Allocator telemetry is useful but optional. A failed probe should degrade the
+ * snapshot gracefully instead of turning diagnostics into a source of runtime
+ * failures.
+ *
  * @param getSlabAllocationStats Provider function returning allocator stats.
  * @returns Slab allocation stats or null on failure.
  */
@@ -115,6 +166,12 @@ export function safeGetSlabAllocationStats(
 
 /**
  * Aggregate per-network counters and slab metrics into a single accumulator.
+ *
+ * This is the file's main collection pass. It walks the chosen networks once,
+ * records the object-heavy counts that remain visible from the outside, and
+ * pairs them with slab and capacity hints when those newer storage paths are
+ * present.
+ *
  * @param networksToSummarize Networks to include in the snapshot.
  * @param heuristics Heuristic byte weights for connections and nodes.
  * @returns Accumulated summary of network metrics.
@@ -144,6 +201,12 @@ export function aggregateNetworkStats(
 
 /**
  * Capture environment memory metrics from browser or Node when available.
+ *
+ * The environment block complements the network-centric heuristics. It is not
+ * specific enough to explain every connection or node, but it helps readers see
+ * whether the broader runtime is moving in the same direction as the network
+ * summary.
+ *
  * @returns Environment metrics structure for the snapshot.
  */
 export function captureEnvironmentMetrics(): MemoryStats['env'] {
@@ -194,6 +257,11 @@ export function captureEnvironmentMetrics(): MemoryStats['env'] {
 
 /**
  * Build the full MemoryStats snapshot from precomputed components.
+ *
+ * This final fold is intentionally declarative: all measurement work has
+ * already happened, so the builder can stay focused on turning those pieces
+ * into a readable teaching payload.
+ *
  * @param input Structured inputs collected by the orchestrator.
  * @returns Complete MemoryStats snapshot.
  */
@@ -233,6 +301,11 @@ export function buildMemoryStatsSnapshot(
 
 /**
  * Build flag snapshot derived from config and allocator stats.
+ *
+ * Flag snapshots explain *why* the memory picture may look the way it does by
+ * capturing the small set of runtime options that materially alter pooling,
+ * slab layout, and feature-gated storage paths.
+ *
  * @param configSnapshot Relevant configuration values.
  * @param allocationStats Allocator stats (nullable on failure).
  * @returns Flags snapshot for MemoryStats.

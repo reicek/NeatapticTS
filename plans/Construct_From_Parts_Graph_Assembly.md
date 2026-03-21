@@ -1,5 +1,7 @@
 # Construct From Parts (Deterministic Graph Assembly) Plan
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Provide a deterministic, validated way to build a runnable `Network` from user-defined parts (nodes/groups/layers), with:

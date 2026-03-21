@@ -8,6 +8,13 @@ Purpose:
 - keep architectural work aligned with roadmap intent,
 - avoid loading the entire `plans/` directory into context.
 
+Status convention:
+
+- Every roadmap-tracked plan file should expose a top-level status line immediately under the title.
+- Use the exact format `**Status:** [DONE]`, `**Status:** [WIP]`, or `**Status:** [PLANNED]`.
+- Keep that top-level status aligned with [plans/Roadmap.md](Roadmap.md), which is the authoritative source for cross-plan sequencing and active priority.
+- Detailed phase-local status notes can still appear deeper in a plan when they add useful implementation detail.
+
 Recommended reading order:
 
 1. Read `plans/README.md` for the map.

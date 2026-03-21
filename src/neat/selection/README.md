@@ -20,11 +20,34 @@ Keep the mental model in four steps:
 4. `facade/` mirrors the stable `Neat` class entrypoints so callers can use
    these same behaviors without importing the lower-level module directly.
 
+That split matters because selection is where a NEAT controller turns raw
+evaluation into search pressure. Once genomes have scores, the controller has
+to answer two different practical questions without mixing them together:
+
+- inspection questions such as "who is winning right now?" and "what does
+  the generation average look like?"
+- breeding questions such as "which genome should parent the next child?"
+
+The public helpers stay readable by keeping those questions adjacent but not
+collapsed into one overloaded routine.
+
 The re-exported constants in this file are the small tuning and traversal
 anchors that make those behaviors predictable: fallback scores for
 unevaluated genomes, default parameters for the built-in parent-selection
 strategies, and explicit index sentinels for threshold scans and tournament
 walks.
+
+It helps to read those constants as three compact families instead of as one
+long shelf of numbers:
+
+- selection-pressure defaults such as {@link DEFAULT_POWER} and
+  {@link DEFAULT_TOURNAMENT_SIZE} explain how strongly the built-in
+  strategies lean toward front-running genomes,
+- score semantics such as {@link DEFAULT_SCORE} explain how selection stays
+  deterministic before or between evaluation passes,
+- traversal sentinels such as {@link FIRST_INDEX} and
+  {@link INITIAL_CUMULATIVE_FITNESS} keep the lower-level scans explicit and
+  self-consistent.
 
 Read this root chapter when you want the controller story first. Drop into
 `core/` when you need to understand the exact selection math, overflow rules,
@@ -47,6 +70,21 @@ flowchart TD
   ParentChoice --> Core
   Ordering --> Facade
   Summaries --> Facade
+```
+
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Selection[Selection chapter]:::accent --> Inspection[Inspection reads]:::base
+  Selection --> Breeding[Breeding read]:::base
+  Selection --> Constants[Shared constant families]:::base
+  Inspection --> Champion[getFittest / getAverage / sort]:::base
+  Breeding --> Parent[getParent]:::base
+  Constants --> Pressure[Strategy defaults]:::base
+  Constants --> Fallbacks[Score fallback semantics]:::base
+  Constants --> Traversal[Index and accumulator sentinels]:::base
 ```
 
 Example:
@@ -174,6 +212,9 @@ Default power exponent for POWER selection when none is configured.
 
 A value of `1` keeps POWER selection as a direct index-bias curve without
 adding extra front-loading beyond the strategy's normal rank preference.
+That makes this the mildest built-in pressure setting: strong enough to
+prefer the front of the sorted population, but not so aggressive that the
+champion becomes nearly inevitable on every draw.
 
 ### DEFAULT_TOURNAMENT_SIZE
 
@@ -181,50 +222,86 @@ Default tournament size when none is configured.
 
 The built-in bracket stays intentionally small so tournament selection keeps
 some competitive pressure without collapsing into near-deterministic champion
-picks.
+picks. In practice this means the default strategy samples just enough local
+competition to reward strong genomes while still letting non-champion genomes
+remain reachable.
 
 ### DEFAULT_TOURNAMENT_PROBABILITY
 
 Default tournament win probability when none is configured.
 
 This keeps the top sampled participant favored while still allowing weaker
-entrants to remain reachable later in the tournament walk.
+entrants to remain reachable later in the tournament walk. Read it as the
+tournament counterpart to selection pressure: a balanced default that keeps
+the bracket competitive instead of turning every mini-tournament into a
+guaranteed top-seed march.
 
 ### DEFAULT_SCORE
 
 Default score when a genome has no explicit score.
 
 Selection uses one shared fallback so summaries, sorting, and threshold scans
-all interpret unevaluated or missing scores consistently.
+all interpret unevaluated or missing scores consistently. That matters for
+chapter coherence as much as runtime behavior: every inspection helper and
+parent-selection guard speaks the same "missing score" language instead of
+inventing its own local default.
 
 ### FIRST_INDEX
 
 First element index used by guards, fallbacks, and best-first reads.
 
+Selection logic names this index explicitly because the front of the
+population has semantic meaning: it is where champion reads and sorted-bias
+strategies begin.
+
 ### SECOND_INDEX
 
 Second element index used by the cheap leading-edge ordering guard.
+
+Comparing the first two genomes is enough for the root helpers' fast
+"probably already sorted" check, so this constant marks the smallest useful
+comparison boundary.
 
 ### LAST_INDEX_OFFSET
 
 Offset for retrieving the last element via length arithmetic.
 
+This keeps tail access readable in places where explicit length math is more
+portable than `at()` for the surrounding helper shape.
+
 ### LOOP_INDEX_INCREMENT
 
 Loop step used by explicit tournament and threshold walks.
+
+Naming the increment makes the small index-based scans read like deliberate
+traversal code instead of scattered magic numbers.
 
 ### LAST_ELEMENT_INDEX
 
 Index used with `at()` when checking the tail of the population.
 
+The evaluation guard only needs the final genome to answer one practical
+question: has this generation already been scored all the way through?
+
 ### INITIAL_TOTAL_FITNESS
 
 Initial accumulator value for generation-wide score folds.
+
+Summary helpers begin from this neutral total so whole-population averages
+and other folds remain explicit about their starting score semantics.
 
 ### INITIAL_MOST_NEGATIVE_SCORE
 
 Initial most-negative score sentinel for shifted-fitness scans.
 
+FITNESS_PROPORTIONATE selection may need to lift negative scores into a
+usable roulette space, and this sentinel marks the baseline from which that
+most-negative search starts.
+
 ### INITIAL_CUMULATIVE_FITNESS
 
 Initial cumulative fitness value for roulette threshold scans.
+
+Roulette-style selection accumulates shifted fitness as it walks the
+population. This zero point keeps that running threshold explicit and aligned
+with the rest of the selection fallback semantics.

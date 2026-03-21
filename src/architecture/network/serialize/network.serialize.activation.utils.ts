@@ -1,5 +1,5 @@
 import * as methods from '../../../methods/methods';
-import type { ActivationFunction } from '../../../methods/activation.utils';
+import type { ActivationFunction } from '../../../methods/activation/activation.utils';
 import {
   FALLBACK_ACTIVATION_KEY,
   WARNING_UNKNOWN_SQUASH_PREFIX,

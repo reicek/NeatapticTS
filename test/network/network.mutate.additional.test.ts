@@ -1,6 +1,6 @@
 import Network from '../../src/architecture/network';
 import { mutateImpl } from '../../src/architecture/network/network.utils';
-import mutation from '../../src/methods/mutation';
+import mutation from '../../src/methods/mutation/mutation';
 
 /**
  * Additional mutation operator coverage for success paths and complex heuristics.

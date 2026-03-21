@@ -1,6 +1,8 @@
 ES2023 Migration Plan
 ====================================
 
+**Status:** [PLANNED]
+
 Objective
 ---------
 Aggressively modernize the codebase to idiomatic ES2023, leveraging the latest TypeScript and JavaScript features to improve code clarity, expressiveness, and maintainability. As an educational library, it should serve as an example of modern coding practices.

@@ -2,17 +2,45 @@
 
 Memory instrumentation utilities (Phase 0).
 
-Educational overview:
-These helpers expose a *heuristic* snapshot of memory usage for the
-evolutionary population and internal pools. The goal is to help learners
-reason about how design choices (slab storage, pooling, typed arrays)
-influence memory footprint *without* incurring heavy introspection costs.
+This chapter exists for one practical learning problem: memory behavior is
+one of the easiest parts of an evolutionary system to feel, but one of the
+hardest parts to explain from raw runtime objects alone. Networks grow,
+slabs reserve capacity ahead of immediate need, pools trade fresh allocation
+pressure for reuse, and the JavaScript engine adds object overhead that is
+hard to see directly from the outside.
+
+Instead of pretending to be a precise profiler, this boundary offers a fast,
+educational snapshot. The goal is to make design choices visible enough that
+readers can compare runs and ask better questions:
+
+- Did moving toward slab-backed storage reduce object-heavy overhead?
+- Is pooling shifting pressure away from fresh allocations?
+- How much reserved typed-array capacity is currently going unused?
+- Are browser or Node heap readings moving in the same direction as the
+  heuristic network summary?
+
+Read the chapter in three passes:
+
+1. {@link memoryStats} for the top-level snapshot and registry behavior.
+2. {@link MemoryStats} when you want to interpret the resulting sections.
+3. `memory.utils.ts` when you want the aggregation, environment probing, and
+   slab-accounting mechanics behind the snapshot.
 
 Design principles:
-- Lightweight: Avoid deep graph walks or JSON serialization.
-- Pay-for-use: If no networks are registered the function returns a small, fast object.
-- Cross‑environment: Works in both Browser and Node via feature detection.
-- Extensible: Shape deliberately includes draft sections for later precise accounting phases.
+
+- Lightweight: avoid deep graph walks or JSON serialization.
+- Pay-for-use: if no networks are registered the snapshot stays small.
+- Cross-environment: gather what the browser or Node can expose safely.
+- Extensible: keep room for later phases that add more exact accounting.
+
+```mermaid
+flowchart TD
+  Networks[Tracked or explicit networks] --> Aggregation[Heuristic network aggregation]
+  Aggregation --> Snapshot[MemoryStats snapshot]
+  Config[Config and allocator flags] --> Snapshot
+  Environment[Browser or Node heap probes] --> Snapshot
+  Snapshot --> Questions[Compare storage strategy, pooling, and capacity behavior]
+```
 
 ## utils/memory.ts
 
@@ -26,6 +54,16 @@ overhead varies; once slab (Structure of Arrays) storage dominates, these
 estimates get closer to real usage. Treat values as relative metrics for
 comparing configurations (e.g. before / after enabling pooling) rather than
 exact allocations.
+
+The payload is easiest to read as four cooperating layers:
+
+- `connections`, `nodes`, and `estimatedTotalBytes` summarize the tracked
+  network footprint itself,
+- `slabs` explains how much typed-array storage exists and how much of the
+  reserved connection capacity is currently used,
+- `pools` shows whether reusable allocation infrastructure is active,
+- `env` exposes the coarser browser or Node memory readings that surround the
+  heuristic network view.
 
 ### NetworkView
 
@@ -48,10 +86,28 @@ memoryStats(
 
 Capture heuristic memory statistics for one or more networks with a snapshot of active config flags.
 
+This is the main educational entrypoint for the utils chapter. It resolves
+which networks to inspect, safely samples allocator and environment signals,
+then folds those pieces into one comparable snapshot.
+
+The result is intentionally good at trend questions rather than forensic
+accuracy. Use it to compare configurations, validate that pooling or slabs
+changed the memory story in the expected direction, or teach why reserved and
+used bytes can diverge even when the active connection count stays stable.
+
 Parameters:
 - `targetNetworks` - - Optional single network or array. If omitted, uses registered networks.
 
 Returns: MemoryStats heuristic snapshot.
+
+Example:
+
+```ts
+registerTrackedNetwork(network);
+const snapshot = memoryStats();
+
+console.log(snapshot.estimatedTotalBytes, snapshot.slabs.fragmentationPct);
+```
 
 ### resetMemoryTracking
 
@@ -62,6 +118,9 @@ resetMemoryTracking(): void
 Clear the internal list of networks tracked by `memoryStats()` when no
 explicit networks are provided. This does NOT free memory; it only
 removes references held by the registry.
+
+Use this when a teaching example, benchmark, or test wants a fresh registry
+boundary before capturing the next snapshot.
 
 Returns: void
 
@@ -78,6 +137,9 @@ without explicit parameters.
 
 Duplicate registrations are ignored; insertion order is preserved which is
 useful for deterministic test snapshots.
+This makes the registry convenient for demos and repeated observations: code
+can opt into tracking once, then ask for snapshots later without threading a
+network list through every call site.
 
 Parameters:
 - `network` - Network instance (loose shape, validated at runtime).
@@ -95,12 +157,45 @@ unregisterTrackedNetwork(
 Remove a previously registered network from the tracking registry.
 No-op if the network is not currently registered.
 
+Use this when the chapter's tracked set should follow the active lifetime of
+a network instead of accumulating historical references.
+
 Parameters:
 - `network` - Network instance to remove.
 
 Returns: void
 
 ## utils/memory.utils.ts
+
+Helper mechanics behind the heuristic memory snapshot.
+
+The root `memory.ts` chapter answers the user-facing question: "what does
+the memory picture look like right now?" This file answers the quieter
+mechanics question behind that snapshot: how do we turn loose runtime data
+into a stable educational summary without pretending we have an exact heap
+profiler?
+
+The helpers fall into four families:
+
+- normalization helpers decide which networks are in scope,
+- aggregation helpers count nodes, connections, typed arrays, and reserved
+  capacity,
+- environment helpers safely read browser or Node memory metrics,
+- snapshot builders assemble the final teaching-oriented payload.
+
+Read this file when you want to understand why the memory chapter can stay
+fast: each helper owns one narrow step, and the final snapshot is assembled
+from precomputed parts rather than one giant reflective walk.
+
+```mermaid
+flowchart LR
+  Targets[Targets or tracked registry] --> Normalize[normalizeNetworks]
+  Normalize --> Aggregate[aggregateNetworkStats]
+  Aggregate --> Build[buildMemoryStatsSnapshot]
+  Environment[captureEnvironmentMetrics] --> Build
+  Flags[buildFlagSnapshot] --> Build
+  Build --> Payload[MemoryStats]
+```
 
 ### normalizeNetworks
 
@@ -112,6 +207,9 @@ normalizeNetworks(
 ```
 
 Normalize provided targets to an array of networks, falling back to tracked registry.
+
+This helper keeps the public entrypoint flexible without making later
+aggregation code branch on every call path.
 
 Parameters:
 - `targets` - Optional single network or array.
@@ -129,6 +227,10 @@ safeGetSlabAllocationStats(
 
 Safely read slab allocation stats, guarding against provider errors.
 
+Allocator telemetry is useful but optional. A failed probe should degrade the
+snapshot gracefully instead of turning diagnostics into a source of runtime
+failures.
+
 Parameters:
 - `getSlabAllocationStats` - Provider function returning allocator stats.
 
@@ -145,6 +247,11 @@ aggregateNetworkStats(
 
 Aggregate per-network counters and slab metrics into a single accumulator.
 
+This is the file's main collection pass. It walks the chosen networks once,
+records the object-heavy counts that remain visible from the outside, and
+pairs them with slab and capacity hints when those newer storage paths are
+present.
+
 Parameters:
 - `networksToSummarize` - Networks to include in the snapshot.
 - `heuristics` - Heuristic byte weights for connections and nodes.
@@ -159,6 +266,11 @@ captureEnvironmentMetrics(): { isBrowser: boolean; usedJSHeapSize?: number | und
 
 Capture environment memory metrics from browser or Node when available.
 
+The environment block complements the network-centric heuristics. It is not
+specific enough to explain every connection or node, but it helps readers see
+whether the broader runtime is moving in the same direction as the network
+summary.
+
 Returns: Environment metrics structure for the snapshot.
 
 ### buildMemoryStatsSnapshot
@@ -170,6 +282,10 @@ buildMemoryStatsSnapshot(
 ```
 
 Build the full MemoryStats snapshot from precomputed components.
+
+This final fold is intentionally declarative: all measurement work has
+already happened, so the builder can stay focused on turning those pieces
+into a readable teaching payload.
 
 Parameters:
 - `input` - Structured inputs collected by the orchestrator.
@@ -187,6 +303,10 @@ buildFlagSnapshot(
 
 Build flag snapshot derived from config and allocator stats.
 
+Flag snapshots explain *why* the memory picture may look the way it does by
+capturing the small set of runtime options that materially alter pooling,
+slab layout, and feature-gated storage paths.
+
 Parameters:
 - `configSnapshot` - Relevant configuration values.
 - `allocationStats` - Allocator stats (nullable on failure).
@@ -196,22 +316,30 @@ Returns: Flags snapshot for MemoryStats.
 ### HeuristicBytes
 
 Heuristic byte weights used to approximate per-object overhead in the allocator.
-These numbers represent typical JS object footprints, not exact runtime measurements.
+These numbers represent typical JS object footprints, not exact runtime
+measurements. They are teaching weights: stable enough to compare runs and
+storage strategies even when the engine's true overhead is more complicated.
 
 ### Accumulators
 
 Running totals used while walking networks to summarize memory consumption.
-Accumulates counts, slab byte totals, and reserved vs used capacity snapshots.
+Accumulates counts, slab byte totals, and reserved vs used capacity
+snapshots. This is the file's working ledger before the public-facing
+`MemoryStats` object is assembled.
 
 ### ConfigSnapshot
 
 Captured configuration knobs that influence memory usage and pooling behavior.
-Keeps only the flags relevant to the memory snapshot to avoid leaking full config.
+Keeps only the flags relevant to the memory snapshot to avoid leaking full
+config. The goal is to explain the memory story, not to smuggle the entire
+runtime configuration surface into a diagnostic payload.
 
 ### BuildMemoryStatsInput
 
 Structured inputs required to assemble a MemoryStats snapshot in one pass.
-Bundles precomputed accumulators, environment info, allocator stats, and flags.
+Bundles precomputed accumulators, environment info, allocator stats, and
+flags. This keeps the final snapshot builder declarative: collect first,
+then fold into the public payload.
 
 ### CONNECTION_OBJECT_BYTES
 
@@ -227,6 +355,8 @@ This heuristic keeps node weight comparable to connection objects during summari
 
 Default heuristics mapping human-readable weights to their byte estimates.
 Centralizes the fallback values so downstream summaries stay consistent.
+Read this as the chapter's shared baseline for "object-heavy" accounting
+when typed-array widths are unavailable or incomplete.
 
 ### createEmptyAccumulators
 

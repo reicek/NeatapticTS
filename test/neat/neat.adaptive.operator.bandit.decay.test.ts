@@ -2,7 +2,7 @@ import Neat from '../../src/neat';
 import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 import Network from '../../src/architecture/network';
 import { applyOperatorAdaptation } from '../../src/neat/adaptive/adaptive';
-import { mutation } from '../../src/methods/mutation';
+import { mutation } from '../../src/methods/mutation/mutation';
 
 /** Tests operator adaptation decay & bandit exploration bonus path. */
 describe('Operator Adaptation & Bandit', () => {

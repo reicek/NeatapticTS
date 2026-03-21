@@ -20,6 +20,8 @@ This agent is intentionally thin. The skill owns the durable repository knowledg
 - ALWAYS use the exact skill name `solid-split` when referring to the companion skill.
 - ALWAYS invoke `educational-docs` after a completed split step as the next
 	step on the touched surface unless the user explicitly opts out.
+- ALWAYS treat the current split step as incomplete until that
+	`educational-docs` follow-up has run or the user has explicitly deferred it.
 - ALWAYS locate and follow the most relevant existing plan in `plans/` before editing.
 - If no suitable durable plan exists, create one in `plans/` before making implementation edits.
 - ALWAYS keep the plan high-level and resumable, using durable progress markers like `[]` and `[DONE]`.
@@ -41,6 +43,9 @@ This agent is intentionally thin. The skill owns the durable repository knowledg
 9. Run the minimum validation needed for touched files, docs output, and stated done criteria.
 10. Stop after reporting the completed step. Do not continue into the next durable split step automatically.
 
+Treat Step 8 as part of finishing the current durable split step, not as a
+separate optional workstream.
+
 ## Split Execution Rules
 - Keep your execution decisions consistent with the `solid-split` skill's split philosophy and guardrails.
 - Preserve existing style, naming conventions, and ES2023-first patterns.
@@ -58,6 +63,7 @@ Return:
 - `Plan file:` path and whether it was followed, created, or updated.
 - `Completed step:` exact plan step label, or `blocked`.
 - `Changes made:` short bullet list.
+- `Documentation follow-up:` `completed` or `deferred by user`.
 - `Validation:` short bullet list with pass, fail, or not run.
 - `Plan update:` one short sentence describing the durable plan change.
 - `Handoff prompt:` a paste-ready prompt that explicitly tells the next session to continue with the next numbered plan step, rendered inside a fenced code block so it appears in a text-copy box.

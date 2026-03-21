@@ -1,3 +1,24 @@
+/**
+ * Runtime registry of built-in and custom activation functions.
+ *
+ * Read this surface as a behavior shelf for neurons rather than as a loose bag
+ * of math helpers. The chosen activation determines what each node can express:
+ * whether it saturates, stays sparse, preserves negative values, or responds
+ * smoothly enough for gradient-based updates.
+ *
+ * The built-in functions cluster into a few useful families:
+ *
+ * - saturating classics such as `logistic`, `sigmoid`, and `tanh` keep outputs
+ *   bounded and are easy to reason about,
+ * - piecewise linear choices such as `relu`, `hardTanh`, and `step` trade
+ *   smoothness for cheap evaluation and strong gating behavior,
+ * - localized or shape-heavy transforms such as `gaussian`, `sinusoid`, and
+ *   `bentIdentity` are useful when you want periodic, radial, or gentler
+ *   near-linear responses,
+ * - modern smooth hidden-layer options such as `softplus`, `swish`, `gelu`,
+ *   and `mish` aim to keep optimization stable without collapsing everything
+ *   into hard zero-or-one decisions.
+ */
 import {
   absoluteActivation,
   bentIdentityActivation,
@@ -23,17 +44,69 @@ import {
 } from './activation.utils';
 
 /**
- * Provides a collection of common activation functions used in neural networks.
+ * Runtime registry of built-in and custom activation functions.
  *
- * Activation functions introduce non-linearity into the network, allowing it to
- * learn complex patterns. They determine the output of a node based on its
- * weighted inputs and bias. The choice of activation function can significantly
- * impact the network's performance and training dynamics.
+ * Read this surface as a behavior shelf for neurons rather than as a loose bag
+ * of math helpers. The chosen activation determines what each node can express:
+ * whether it saturates, stays sparse, preserves negative values, or responds
+ * smoothly enough for gradient-based updates.
  *
- * All methods in this class are static and can be called directly, e.g., `Activation.relu(x)`.
- * Each method accepts an input value `x` and an optional boolean `derivate`.
- * If `derivate` is true, the method returns the derivative of the activation function
- * with respect to `x`; otherwise, it returns the activation function's output.
+ * The built-in functions cluster into a few useful families:
+ *
+ * - saturating classics such as `logistic`, `sigmoid`, and `tanh` keep outputs
+ *   bounded and are easy to reason about,
+ * - piecewise linear choices such as `relu`, `hardTanh`, and `step` trade
+ *   smoothness for cheap evaluation and strong gating behavior,
+ * - localized or shape-heavy transforms such as `gaussian`, `sinusoid`, and
+ *   `bentIdentity` are useful when you want periodic, radial, or gentler
+ *   near-linear responses,
+ * - modern smooth hidden-layer options such as `softplus`, `swish`, `gelu`,
+ *   and `mish` aim to keep optimization stable without collapsing everything
+ *   into hard zero-or-one decisions.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Shelf[Activation shelf] --> Bounded[Bounded classics]
+ *   Shelf --> Piecewise[Piecewise gates]
+ *   Shelf --> Specialized[Shape-specialized]
+ *   Shelf --> Smooth[Smooth modern]
+ *   Bounded --> BoundedExamples[logistic sigmoid tanh]
+ *   Piecewise --> PiecewiseExamples[relu hardTanh step]
+ *   Specialized --> SpecializedExamples[gaussian sinusoid bentIdentity]
+ *   Smooth --> SmoothExamples[softplus swish gelu mish]
+ * ```
+ *
+ * Every activation shares the same calling convention: pass the input value as
+ * the first argument and optionally pass `true` as the second argument when you
+ * want the local derivative instead of the forward value. That derivative mode
+ * keeps the registry compatible with the classic Neataptic API shape while also
+ * making the individual implementations easy to test in isolation.
+ *
+ * Minimal workflow:
+ *
+ * ```ts
+ * const hiddenValue = Activation.relu(weightedSum);
+ * const outputSlope = Activation.logistic(weightedSum, true);
+ *
+ * registerCustomActivation(
+ *   'cube',
+ *   (inputValue, shouldComputeDerivative = false) =>
+ *     shouldComputeDerivative ? 3 * inputValue * inputValue : inputValue ** 3,
+ * );
+ *
+ * const customValue = Activation.cube(0.5);
+ * ```
+ *
+ * A practical chooser for first experiments:
+ *
+ * - start with `relu` when you want a simple, sparse hidden-layer default,
+ * - prefer `tanh` when zero-centered bounded output helps reasoning or
+ *   compatibility with older recurrent setups,
+ * - reach for `softplus`, `swish`, `gelu`, or `mish` when you want a smoother
+ *   alternative to ReLU,
+ * - keep `logistic` or `sigmoid` for bounded probability-like outputs,
+ * - use `registerCustomActivation()` when the built-ins are close but not quite
+ *   the transfer curve your experiment needs.
  *
  * @see {@link https://en.wikipedia.org/wiki/Activation_function}
  * @see {@link https://en.wikipedia.org/wiki/Universal_approximation_theorem}
@@ -265,8 +338,28 @@ export const Activation: Record<string, ActivationFunction> = {
 
 /**
  * Register a custom activation function at runtime.
- * @param {string} activationName - Name for the custom activation.
- * @param {ActivationFunction} activationFunction - The activation function (should handle derivative if needed).
+ *
+ * Use this escape hatch when the built-in shelf is close to what you need but
+ * a specific experiment wants a different transfer curve. Registration mutates
+ * the shared {@link Activation} registry, so later lookups can call the custom
+ * function through the same surface as the built-ins.
+ *
+ * ```ts
+ * registerCustomActivation(
+ *   'leakySquare',
+ *   (inputValue, shouldComputeDerivative = false) => {
+ *     if (shouldComputeDerivative) {
+ *       return inputValue >= 0 ? 2 * inputValue : 0.1;
+ *     }
+ *
+ *     return inputValue >= 0 ? inputValue ** 2 : 0.1 * inputValue;
+ *   },
+ * );
+ * ```
+ *
+ * @param {string} activationName - Name used as the registry key.
+ * @param {ActivationFunction} activationFunction - Forward-and-derivative implementation for the custom transfer curve.
+ * @returns {void} Does not return a value; it mutates the shared activation registry.
  */
 export const registerCustomActivation = (
   activationName: string,

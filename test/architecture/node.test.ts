@@ -1,7 +1,7 @@
 import Node from '../../src/architecture/node';
 import Connection from '../../src/architecture/connection';
-import Activation from '../../src/methods/activation';
-import { mutation } from '../../src/methods/mutation';
+import Activation from '../../src/methods/activation/activation';
+import { mutation } from '../../src/methods/mutation/mutation';
 
 // Retry failed tests
 jest.retryTimes(3, { logErrorsBeforeRetry: true });

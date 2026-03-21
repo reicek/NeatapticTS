@@ -1,6 +1,6 @@
 import Network from '../../src/architecture/network';
 import { mutateImpl } from '../../src/architecture/network/network.utils';
-import mutation from '../../src/methods/mutation';
+import mutation from '../../src/methods/mutation/mutation';
 
 /** Edge case mutation tests targeting early-return / warning branches. */
 

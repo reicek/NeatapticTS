@@ -8,6 +8,62 @@
  * depends on the specific task (e.g., regression, classification) and the
  * desired behavior of the model.
  *
+ * Read this chapter as an answer to one practical modeling question: what kind
+ * of mistake do you want the network to care about most?
+ *
+ * The methods cluster into three teaching-friendly families:
+ *
+ * - classification losses such as `crossEntropy()`, `softmaxCrossEntropy()`,
+ *   `binary()`, and `hinge()` care about confidence, separability, or error
+ *   rate,
+ * - regression losses such as `mse()`, `mae()`, `mape()`, and `msle()` care
+ *   about scale, outliers, or percentage error,
+ * - calibration helpers such as `focalLoss()` and `labelSmoothing()` change how
+ *   harshly easy examples or overconfident predictions should be treated.
+ */
+/**
+ * Provides a collection of standard cost functions (also known as loss functions)
+ * used for evaluating the performance of neural networks during training.
+ *
+ * Cost functions quantify the difference between the network's predictions
+ * and the actual target values. The goal of training is typically to minimize
+ * the value of the cost function. The choice of cost function is crucial and
+ * depends on the specific task (e.g., regression, classification) and the
+ * desired behavior of the model.
+ *
+ * Read this chapter as an answer to one practical modeling question: what kind
+ * of mistake do you want the network to care about most?
+ *
+ * The methods cluster into three teaching-friendly families:
+ *
+ * - classification losses such as `crossEntropy()`, `softmaxCrossEntropy()`,
+ *   `binary()`, and `hinge()` care about confidence, separability, or error
+ *   rate,
+ * - regression losses such as `mse()`, `mae()`, `mape()`, and `msle()` care
+ *   about scale, outliers, or percentage error,
+ * - calibration helpers such as `focalLoss()` and `labelSmoothing()` change how
+ *   harshly easy examples or overconfident predictions should be treated.
+ *
+ * A useful reading order is:
+ *
+ * 1. start with `crossEntropy()` and `mse()` as the two baseline mental models,
+ * 2. compare `mae()`, `mape()`, and `msle()` when scale sensitivity matters,
+ * 3. finish with `focalLoss()` and `labelSmoothing()` when you need to tune the
+ *    model's confidence behavior rather than only its average error.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Goal[Training objective]:::accent --> Classify[Classification losses]:::base
+ *   Goal --> Regress[Regression losses]:::base
+ *   Goal --> Calibrate[Confidence-shaping losses]:::base
+ *   Classify --> CrossEntropy[crossEntropy softmaxCrossEntropy hinge binary]:::base
+ *   Regress --> Regression[mse mae mape msle]:::base
+ *   Calibrate --> Confidence[focalLoss labelSmoothing]:::base
+ * ```
+ *
  * @see {@link https://en.wikipedia.org/wiki/Loss_function}
  */
 import {

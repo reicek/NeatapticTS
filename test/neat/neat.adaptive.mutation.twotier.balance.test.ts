@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
 import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 import Network from '../../src/architecture/network';
-import { mutation } from '../../src/methods/mutation';
+import { mutation } from '../../src/methods/mutation/mutation';
 
 /** Tests twoTier adaptive mutation ensuring both up and down adjustments occur. */
 describe('Adaptive Mutation twoTier balancing', () => {

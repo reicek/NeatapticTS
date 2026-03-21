@@ -1,0 +1,16 @@
+{
+  "introFile": "methods.ts",
+  "fileOrder": [
+    "methods.ts"
+  ],
+  "folderOrder": [
+    "activation",
+    "cost",
+    "rate",
+    "selection",
+    "mutation",
+    "crossover",
+    "gating",
+    "connection"
+  ]
+}

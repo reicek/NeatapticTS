@@ -9,6 +9,9 @@ import type {
  *
  * A value of `1` keeps POWER selection as a direct index-bias curve without
  * adding extra front-loading beyond the strategy's normal rank preference.
+ * That makes this the mildest built-in pressure setting: strong enough to
+ * prefer the front of the sorted population, but not so aggressive that the
+ * champion becomes nearly inevitable on every draw.
  */
 export const DEFAULT_POWER = 1;
 
@@ -17,7 +20,9 @@ export const DEFAULT_POWER = 1;
  *
  * The built-in bracket stays intentionally small so tournament selection keeps
  * some competitive pressure without collapsing into near-deterministic champion
- * picks.
+ * picks. In practice this means the default strategy samples just enough local
+ * competition to reward strong genomes while still letting non-champion genomes
+ * remain reachable.
  */
 export const DEFAULT_TOURNAMENT_SIZE = 2;
 
@@ -25,7 +30,10 @@ export const DEFAULT_TOURNAMENT_SIZE = 2;
  * Default tournament win probability when none is configured.
  *
  * This keeps the top sampled participant favored while still allowing weaker
- * entrants to remain reachable later in the tournament walk.
+ * entrants to remain reachable later in the tournament walk. Read it as the
+ * tournament counterpart to selection pressure: a balanced default that keeps
+ * the bracket competitive instead of turning every mini-tournament into a
+ * guaranteed top-seed march.
  */
 export const DEFAULT_TOURNAMENT_PROBABILITY = 0.5;
 
@@ -33,32 +41,79 @@ export const DEFAULT_TOURNAMENT_PROBABILITY = 0.5;
  * Default score when a genome has no explicit score.
  *
  * Selection uses one shared fallback so summaries, sorting, and threshold scans
- * all interpret unevaluated or missing scores consistently.
+ * all interpret unevaluated or missing scores consistently. That matters for
+ * chapter coherence as much as runtime behavior: every inspection helper and
+ * parent-selection guard speaks the same "missing score" language instead of
+ * inventing its own local default.
  */
 export const DEFAULT_SCORE = 0;
 
-/** First element index used by guards, fallbacks, and best-first reads. */
+/**
+ * First element index used by guards, fallbacks, and best-first reads.
+ *
+ * Selection logic names this index explicitly because the front of the
+ * population has semantic meaning: it is where champion reads and sorted-bias
+ * strategies begin.
+ */
 export const FIRST_INDEX = 0;
 
-/** Second element index used by the cheap leading-edge ordering guard. */
+/**
+ * Second element index used by the cheap leading-edge ordering guard.
+ *
+ * Comparing the first two genomes is enough for the root helpers' fast
+ * "probably already sorted" check, so this constant marks the smallest useful
+ * comparison boundary.
+ */
 export const SECOND_INDEX = 1;
 
-/** Offset for retrieving the last element via length arithmetic. */
+/**
+ * Offset for retrieving the last element via length arithmetic.
+ *
+ * This keeps tail access readable in places where explicit length math is more
+ * portable than `at()` for the surrounding helper shape.
+ */
 export const LAST_INDEX_OFFSET = 1;
 
-/** Loop step used by explicit tournament and threshold walks. */
+/**
+ * Loop step used by explicit tournament and threshold walks.
+ *
+ * Naming the increment makes the small index-based scans read like deliberate
+ * traversal code instead of scattered magic numbers.
+ */
 export const LOOP_INDEX_INCREMENT = 1;
 
-/** Index used with `at()` when checking the tail of the population. */
+/**
+ * Index used with `at()` when checking the tail of the population.
+ *
+ * The evaluation guard only needs the final genome to answer one practical
+ * question: has this generation already been scored all the way through?
+ */
 export const LAST_ELEMENT_INDEX = -1;
 
-/** Initial accumulator value for generation-wide score folds. */
+/**
+ * Initial accumulator value for generation-wide score folds.
+ *
+ * Summary helpers begin from this neutral total so whole-population averages
+ * and other folds remain explicit about their starting score semantics.
+ */
 export const INITIAL_TOTAL_FITNESS = 0;
 
-/** Initial most-negative score sentinel for shifted-fitness scans. */
+/**
+ * Initial most-negative score sentinel for shifted-fitness scans.
+ *
+ * FITNESS_PROPORTIONATE selection may need to lift negative scores into a
+ * usable roulette space, and this sentinel marks the baseline from which that
+ * most-negative search starts.
+ */
 export const INITIAL_MOST_NEGATIVE_SCORE = 0;
 
-/** Initial cumulative fitness value for roulette threshold scans. */
+/**
+ * Initial cumulative fitness value for roulette threshold scans.
+ *
+ * Roulette-style selection accumulates shifted fitness as it walks the
+ * population. This zero point keeps that running threshold explicit and aligned
+ * with the rest of the selection fallback semantics.
+ */
 export const INITIAL_CUMULATIVE_FITNESS = 0;
 
 /**

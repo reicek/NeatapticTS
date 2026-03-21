@@ -22,6 +22,12 @@ split workflow, treat the incoming changes as a focused boundary-sharpening
 pass: explain the touched module better, keep generated surfaces in sync, and
 avoid expanding into an unrelated repo-wide docs rewrite.
 
+This skill also delegates in the other direction when documentation work proves
+the boundary is too broad. If a generated README surface is oversized,
+monolithic, or still hard to teach after normal source-first improvement,
+escalate to `solid-split` instead of continuing to pile prose onto the wrong
+module shape.
+
 This file is the canonical knowledge surface for documentation work in this
 repo. It owns the durable documentation workflow, tone model, source-mapping
 rules, Mermaid policy, and citation/media guardrails. Companion agents such as
@@ -33,6 +39,9 @@ documentation bar themselves.
 
 - A generated README feels technically correct but emotionally flat or hard to
   navigate.
+- A generated folder README has become so large or monolithic that the better
+  fix is to invoke `solid-split` and break the boundary into smaller chapter
+  folders before continuing the docs pass.
 - A folder under `src/` or `test/` needs richer JSDoc so doc generation becomes
   more useful.
 - A split or refactor changed a module boundary and the documentation story now
@@ -78,6 +87,9 @@ Use this boundary intentionally:
 
 - The skill owns durable documentation knowledge: workflow, tone, teaching
   standards, source mapping, visual policy, and attribution rules.
+- When the documentation problem is really a boundary problem, this skill hands
+  the work to `solid-split` with a compact split-focused packet instead of
+  compensating with more README prose.
 - `Docs Scout` owns read-only reconnaissance: read the nearest README surface,
   compare it with the smallest set of nearby source files, and surface likely
   JSDoc or regeneration targets.
@@ -102,6 +114,47 @@ Preferred handoff fields:
 
 This handoff should narrow the doc pass. It should not replace the actual
 educational-docs workflow.
+
+## Solid-Split Escalation
+
+When a docs task reveals that the folder boundary itself is the real problem,
+escalate to `solid-split` explicitly.
+
+Use that escalation when one or more of these are true:
+
+- the generated folder README is monolithic enough that the reading order is no
+  longer comfortable,
+- the best explanation would require inventing chapter structure that the file
+  and folder layout do not currently support,
+- `docs.order.json` can improve flow but cannot solve a fundamentally oversized
+  boundary,
+- the README keeps mixing multiple responsibility clusters that want separate
+  chapter folders,
+- a better documentation pass would mostly be describing seams that the code
+  has not actually expressed yet.
+
+Preferred escalation packet:
+
+- split root,
+- overloaded boundary or folder,
+- why the README is too large or monolithic,
+- likely chapter seams,
+- whether stable imports need to remain intact,
+- whether generated source JSDoc currently feeds the README,
+- validation expectations such as `npm run docs` or `npx tsc --noEmit -p tsconfig.json`.
+
+Compact example:
+
+```text
+Use solid-split for #file:methods.
+Reason: the generated folder README is too monolithic to stay readable even
+after source-first JSDoc improvement.
+Likely seams: activation, cost, rate, selection, mutation, crossover, gating,
+connection.
+Keep stable imports working.
+Generated surface: yes.
+Validate with: npm run docs, npx tsc --noEmit -p tsconfig.json
+```
 
 ## Primary Resources
 
@@ -190,6 +243,10 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
 1. Identify the documentation surface.
    - Decide whether the target is a generated folder README, a hand-written doc,
      or both.
+   - If a generated folder README has become monolithic enough that it is no
+     longer comfortably readable, stop treating it as a pure docs problem and
+     invoke `solid-split` to create smaller chapter folders before adding more
+     prose.
 2. Trace the source of truth.
    - If the README is generated, do not edit the README directly.
    - Build a source map for the exports, constants, classes, and orchestration
@@ -253,6 +310,9 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
    - Remove repetition.
    - Replace dry restatements with explanation.
    - Make the reading order obvious.
+   - Keep README surfaces within a readable size whenever the boundary allows;
+    if the chapter still feels monolithic after normal source-first improvement,
+     escalate to `solid-split` instead of accepting an oversized folder README.
 
 ## Post-Split Follow-Up Mode
 
@@ -515,6 +575,8 @@ A strong educational-docs pass should report:
 - any Mermaid diagrams or tables added and why they were chosen,
 - whether docs were regenerated,
 - any external sources or media added, with attribution and license notes,
+- whether the pass stayed within `educational-docs` or escalated to
+  `solid-split` because the boundary was too large,
 - any remaining doc gaps or follow-up opportunities.
 
 When the task includes updating an in-repo plan log, the updated log should
@@ -532,4 +594,6 @@ If a companion agent uses this skill, it should:
   the agent is a scout.
 4. Avoid restating the full workflow, tone model, or guardrails that already
   live here.
-5. Update the agent when this skill changes materially so both remain aligned.
+5. Recommend `solid-split` explicitly when reconnaissance shows the README is
+  too monolithic for a healthy docs-only pass.
+6. Update the agent when this skill changes materially so both remain aligned.

@@ -1,5 +1,7 @@
 # Standalone Inference Export Plan (Dependency-Free Runtime)
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Enable exporting a trained/evolved network into a **standalone inference artifact** that:

@@ -1,5 +1,5 @@
-import { mutation } from '../../src/methods/mutation';
-import Activation from '../../src/methods/activation';
+import { mutation } from '../../src/methods/mutation/mutation';
+import Activation from '../../src/methods/activation/activation';
 
 describe('Mutation Methods', () => {
   describe('ADD_NODE', () => {

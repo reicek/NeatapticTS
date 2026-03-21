@@ -1,7 +1,12 @@
-import Activation from './activation';
+import Activation from '../activation/activation';
 
 /**
- * Configuration object for a single mutation operation.
+ * Configuration shape for one mutation operator.
+ *
+ * Each mutation method carries a small policy object describing what kind of
+ * structural or parametric change it performs and any narrow knobs that shape
+ * that change. Read the fields as metadata for the evolutionary controller,
+ * not as a full runtime implementation.
  */
 interface MutationConfig {
   name: string;
@@ -28,7 +33,77 @@ interface MutationConfig {
  * and particularly the Instinct algorithm, providing a comprehensive set of tools
  * for evolving network architectures.
  *
- * ## Supported Mutation Methods
+ * Read this file as a mutation toolbox organized by what kind of change you
+ * want evolution to make:
+ *
+ * - topology-growth operators such as `ADD_NODE`, `ADD_CONN`,
+ *   `ADD_SELF_CONN`, and `ADD_BACK_CONN` make the graph more expressive,
+ * - topology-pruning operators such as `SUB_NODE`, `SUB_CONN`,
+ *   `SUB_SELF_CONN`, and `SUB_BACK_CONN` remove structure and can simplify an
+ *   overgrown search,
+ * - parameter-tuning operators such as `MOD_WEIGHT`, `MOD_BIAS`, and
+ *   `REINIT_WEIGHT` change numeric behavior without rewriting the graph,
+ * - behavior-shaping operators such as `MOD_ACTIVATION`, `ADD_GATE`,
+ *   `SUB_GATE`, and `SWAP_NODES` change how existing structure computes,
+ * - architecture-expansion operators such as `ADD_LSTM_NODE` and
+ *   `ADD_GRU_NODE` introduce memory-oriented building blocks.
+ *
+ * A practical reading order is:
+ *
+ * 1. start with `MOD_WEIGHT` and `MOD_BIAS` to understand the gentlest search
+ *    moves,
+ * 2. then compare `ADD_CONN` and `ADD_NODE` to see how structure starts to
+ *    grow,
+ * 3. then read the recurrent and gating operators when you want temporal
+ *    behavior or context-sensitive routing,
+ * 4. finish with `ALL` and `FFW`, which summarize which operators belong in a
+ *    broad search versus a strictly feedforward one.
+ *
+ * A practical chooser for first experiments:
+ *
+ * - begin with weight and bias mutations when the topology is already plausible
+ *   and you mainly want numeric refinement,
+ * - allow `ADD_CONN` and `ADD_NODE` when the current architecture feels too
+ *   rigid or too shallow,
+ * - enable gating or back-connections only when temporal memory or dynamic
+ *   routing is actually part of the task,
+ * - prefer `FFW` as the safe shelf when a run must remain strictly
+ *   feedforward.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Mutation[Mutation toolbox] --> Grow[Grow structure]
+ *   Mutation --> Prune[Prune structure]
+ *   Mutation --> Tune[Tune parameters]
+ *   Mutation --> Shape[Reshape behavior]
+ *   Mutation --> Memory[Add memory blocks]
+ *   Grow --> GrowItems[ADD_NODE ADD_CONN ADD_SELF_CONN ADD_BACK_CONN]
+ *   Prune --> PruneItems[SUB_NODE SUB_CONN SUB_SELF_CONN SUB_BACK_CONN]
+ *   Tune --> TuneItems[MOD_WEIGHT MOD_BIAS REINIT_WEIGHT]
+ *   Shape --> ShapeItems[MOD_ACTIVATION ADD_GATE SUB_GATE SWAP_NODES]
+ *   Memory --> MemoryItems[ADD_LSTM_NODE ADD_GRU_NODE]
+ * ```
+ *
+ * Minimal workflow:
+ *
+ * ```ts
+ * const safeFeedforwardShelf = mutation.FFW;
+ *
+ * const structuralSearchShelf = [
+ *   mutation.ADD_CONN,
+ *   mutation.ADD_NODE,
+ *   mutation.MOD_WEIGHT,
+ *   mutation.MOD_BIAS,
+ * ];
+ *
+ * const recurrentSearchShelf = [
+ *   ...structuralSearchShelf,
+ *   mutation.ADD_GATE,
+ *   mutation.ADD_BACK_CONN,
+ * ];
+ * ```
+ *
+ * Supported mutation families:
  *
  * - `ADD_NODE`: Adds a new node by splitting an existing connection.
  * - `SUB_NODE`: Removes a hidden node and its connections.
@@ -49,9 +124,9 @@ interface MutationConfig {
  * - `ADD_LSTM_NODE`: Adds a new LSTM node (memory cell with gates).
  * - `ADD_GRU_NODE`: Adds a new GRU node (gated recurrent unit).
  *
- * Also includes:
- * - `ALL`: Array of all mutation methods.
- * - `FFW`: Array of mutation methods suitable for feedforward networks.
+ * Summary shelves:
+ * - `ALL`: all mutation methods, including recurrent and memory-oriented ones.
+ * - `FFW`: the feedforward-safe subset that avoids recurrence and gating.
  *
  * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#3-mutation Instinct Algorithm - Section 3 Mutation}
  * @see {@link https://en.wikipedia.org/wiki/Mutation_(genetic_algorithm) Mutation (Genetic Algorithm) - Wikipedia}
@@ -289,7 +364,9 @@ export const mutation: {
 
 /**
  * A list containing all defined mutation methods.
- * Useful for scenarios where any type of structural or parameter mutation is allowed.
+ *
+ * Use this when the search is allowed to explore the whole mutation vocabulary,
+ * including recurrent, gating, and memory-oriented operators.
  */
 mutation.ALL = [
   mutation.ADD_NODE as MutationConfig,
@@ -317,6 +394,9 @@ mutation.ALL = [
  * Excludes mutations that introduce recurrence (ADD_SELF_CONN, ADD_BACK_CONN, ADD_GATE)
  * and related removal operations (SUB_SELF_CONN, SUB_BACK_CONN, SUB_GATE),
  * as these would violate the feedforward structure.
+ *
+ * This is the safest default shelf when the user intent is clearly feedforward
+ * and the runtime should never grow temporal loops or gated recurrent paths.
  */
 mutation.FFW = [
   mutation.ADD_NODE as MutationConfig,

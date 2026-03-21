@@ -1,5 +1,7 @@
 # Evolution–Training Interoperability Contracts Plan
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Make hybrid workflows (evolution + gradient fine-tuning) predictable and well-typed by defining **clear contracts** between:

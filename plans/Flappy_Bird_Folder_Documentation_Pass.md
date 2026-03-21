@@ -1,5 +1,7 @@
 # Flappy Bird Folder Documentation Pass
 
+**Status:** [WIP]
+
 ## Purpose
 
 Run a folder-focused documentation pass across every README-owning folder under

@@ -48,11 +48,34 @@ export {
  * 4. `facade/` mirrors the stable `Neat` class entrypoints so callers can use
  *    these same behaviors without importing the lower-level module directly.
  *
+ * That split matters because selection is where a NEAT controller turns raw
+ * evaluation into search pressure. Once genomes have scores, the controller has
+ * to answer two different practical questions without mixing them together:
+ *
+ * - inspection questions such as "who is winning right now?" and "what does
+ *   the generation average look like?"
+ * - breeding questions such as "which genome should parent the next child?"
+ *
+ * The public helpers stay readable by keeping those questions adjacent but not
+ * collapsed into one overloaded routine.
+ *
  * The re-exported constants in this file are the small tuning and traversal
  * anchors that make those behaviors predictable: fallback scores for
  * unevaluated genomes, default parameters for the built-in parent-selection
  * strategies, and explicit index sentinels for threshold scans and tournament
  * walks.
+ *
+ * It helps to read those constants as three compact families instead of as one
+ * long shelf of numbers:
+ *
+ * - selection-pressure defaults such as {@link DEFAULT_POWER} and
+ *   {@link DEFAULT_TOURNAMENT_SIZE} explain how strongly the built-in
+ *   strategies lean toward front-running genomes,
+ * - score semantics such as {@link DEFAULT_SCORE} explain how selection stays
+ *   deterministic before or between evaluation passes,
+ * - traversal sentinels such as {@link FIRST_INDEX} and
+ *   {@link INITIAL_CUMULATIVE_FITNESS} keep the lower-level scans explicit and
+ *   self-consistent.
  *
  * Read this root chapter when you want the controller story first. Drop into
  * `core/` when you need to understand the exact selection math, overflow rules,
@@ -75,6 +98,21 @@ export {
  *   ParentChoice --> Core
  *   Ordering --> Facade
  *   Summaries --> Facade
+ * ```
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Selection[Selection chapter]:::accent --> Inspection[Inspection reads]:::base
+ *   Selection --> Breeding[Breeding read]:::base
+ *   Selection --> Constants[Shared constant families]:::base
+ *   Inspection --> Champion[getFittest / getAverage / sort]:::base
+ *   Breeding --> Parent[getParent]:::base
+ *   Constants --> Pressure[Strategy defaults]:::base
+ *   Constants --> Fallbacks[Score fallback semantics]:::base
+ *   Constants --> Traversal[Index and accumulator sentinels]:::base
  * ```
  *
  * Example:

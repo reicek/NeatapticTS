@@ -1,4 +1,4 @@
-import { PROB_EPSILON } from '../neat/neat.constants';
+import { PROB_EPSILON } from '../../neat/neat.constants';
 
 /** Error message thrown when target and output arrays differ in length. */
 export const LENGTH_MISMATCH_MESSAGE =

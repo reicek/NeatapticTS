@@ -7,6 +7,13 @@
  * so keeping one dependency-free constants surface avoids inventing a fake
  * chapter boundary just to move a few numbers around.
  *
+ * That decision matters pedagogically as well as architecturally. These values
+ * are the small numeric assumptions that quietly shape the controller's tone:
+ * how cautious it is around unstable math, and how willing it is to spend a
+ * little extra effort on structural growth. Pulling them into one compact root
+ * chapter makes that personality readable in one place instead of scattering it
+ * across unrelated helpers.
+ *
  * Read this file in two passes:
  *
  * - start with the epsilon constants when you want to understand how the
@@ -23,6 +30,21 @@
  *
  * - numerical safety constants that prevent unstable math at very small scales,
  * - policy constants that communicate a default controller preference.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Constants[neat constants chapter] --> Safety[Numerical safety family]
+ *   Constants --> Policy[Default search-policy family]
+ *   Safety --> EPS[EPSILON general math guard]
+ *   Safety --> PROB[PROB_EPSILON probability guard]
+ *   Safety --> NORM[NORM_EPSILON normalization guard]
+ *   Policy --> EXTRA[EXTRA_CONNECTION_PROBABILITY occasional extra connectivity]
+ * ```
+ *
+ * The important reading move is to treat these as defaults, not as universal
+ * truths. Each constant is a small claim about what the controller should do
+ * when math approaches an unstable scale or when mutation has a chance to grow
+ * structure one step further.
  *
  * @example
  * ```ts
@@ -43,6 +65,10 @@
  * This is the "default" safety offset in the family. If a calculation is not
  * specifically probability-oriented or variance-oriented, this is usually the
  * right stabilizer to reach for first.
+ *
+ * Read it as the controller's everyday guard rail: small enough to stay out of
+ * the way of ordinary calculations, but present anywhere a divide-by-zero or a
+ * log-of-zero edge could quietly poison downstream training or telemetry.
  */
 export const EPSILON = 1e-9; // generic stability epsilon (moderate scale)
 
@@ -57,6 +83,10 @@ export const EPSILON = 1e-9; // generic stability epsilon (moderate scale)
  * than to "stabilize a general denominator". The smaller offset helps keep
  * loss-style or entropy-style quantities numerically safe while staying closer
  * to the original scale.
+ *
+ * In practice this constant teaches a useful distinction: not every safety fix
+ * should be equally large. Probability-like quantities often need a gentler
+ * nudge than general controller arithmetic.
  */
 export const PROB_EPSILON = 1e-15;
 
@@ -70,6 +100,11 @@ export const PROB_EPSILON = 1e-15;
  * deliberately larger member of the family. It is meant for "keep the
  * normalization step well-behaved" scenarios, not for preserving extremely
  * tiny probability magnitudes.
+ *
+ * This is the chapter's reminder that stability is scale-dependent. Variance,
+ * spread, and normalization math often benefit from a visibly larger floor than
+ * probability math, because the goal is smooth controller behavior rather than
+ * near-exact preservation of microscopic values.
  */
 export const NORM_EPSILON = 1e-5;
 
@@ -83,6 +118,11 @@ export const NORM_EPSILON = 1e-5;
  * Treat this as a small statement about controller personality: the default
  * search policy is willing to occasionally spend extra effort on connectivity
  * growth, but it does not force that gamble on every mutation cycle.
+ *
+ * That makes this constant the policy counterpart to the epsilon family. The
+ * epsilons say how carefully the controller protects its math; this value says
+ * how adventurous the default mutation policy is willing to be when a little
+ * extra connectivity might unlock better search.
  */
 export const EXTRA_CONNECTION_PROBABILITY = 0.5;
 

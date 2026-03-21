@@ -1,3 +1,28 @@
+/**
+ * Provides various methods for implementing learning rate schedules.
+ *
+ * Learning rate schedules dynamically adjust the learning rate during the training
+ * process of machine learning models, particularly neural networks. Adjusting the
+ * learning rate can significantly impact training speed and performance. A high
+ * rate might lead to overshooting the optimal solution, while a very low rate
+ * can result in slow convergence or getting stuck in local minima. These methods
+ * offer different strategies to balance exploration and exploitation during training.
+ *
+ * Read this chapter as a tempo-control guide for training. The base learning
+ * rate says how large a step feels reasonable at the start; the schedule says
+ * how that step should change once the run has momentum, noise, or stagnation.
+ *
+ * The schedules fall into four practical families:
+ *
+ * - fixed and smooth decay schedules (`fixed()`, `exp()`, `inv()`) for simple
+ *   long-run tempo control,
+ * - piecewise schedules (`step()`, `linearWarmupDecay()`) for explicit phase
+ *   changes,
+ * - cyclic schedules (`cosineAnnealing()`, `cosineAnnealingWarmRestarts()`) for
+ *   repeated exploration and settling,
+ * - reactive schedules (`reduceOnPlateau()`) for runs that should respond to a
+ *   monitored error signal.
+ */
 import {
   DEFAULT_COSINE_PERIOD,
   DEFAULT_DECAY_STEP_SIZE,
@@ -29,6 +54,37 @@ import {
  * can result in slow convergence or getting stuck in local minima. These methods
  * offer different strategies to balance exploration and exploitation during training.
  *
+ * Read this chapter as a tempo-control guide for training. The base learning
+ * rate says how large a step feels reasonable at the start; the schedule says
+ * how that step should change once the run has momentum, noise, or stagnation.
+ *
+ * The schedules fall into four practical families:
+ *
+ * - fixed and smooth decay schedules (`fixed()`, `exp()`, `inv()`) for simple
+ *   long-run tempo control,
+ * - piecewise schedules (`step()`, `linearWarmupDecay()`) for explicit phase
+ *   changes,
+ * - cyclic schedules (`cosineAnnealing()`, `cosineAnnealingWarmRestarts()`) for
+ *   repeated exploration and settling,
+ * - reactive schedules (`reduceOnPlateau()`) for runs that should respond to a
+ *   monitored error signal.
+ *
+ * Read the chapter in that same order: smooth baselines first, planned phase
+ * changes next, cyclic schedules after that, and stateful reactive control
+ * last.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Base[Base learning rate] --> Smooth[Smooth decay family]
+ *   Base --> Piecewise[Piecewise phase family]
+ *   Base --> Cyclic[Cyclic family]
+ *   Base --> Reactive[Reactive family]
+ *   Smooth --> SmoothItems[fixed exp inv]
+ *   Piecewise --> PieceItems[step linearWarmupDecay]
+ *   Cyclic --> CyclicItems[cosineAnnealing warmRestarts]
+ *   Reactive --> ReactiveItems[reduceOnPlateau]
+ * ```
+ *
  * @see {@link https://en.wikipedia.org/wiki/Learning_rate Learning Rate on Wikipedia}
  * @see {@link https://towardsdatascience.com/understanding-learning-rates-and-how-it-improves-performance-in-deep-learning-d0d4059c1c10 Understanding Learning Rates}
  */
@@ -39,7 +95,8 @@ export default class Rate {
    *
    * The learning rate remains constant throughout the entire training process.
    * This is the simplest schedule and serves as a baseline, but may not be
-   * optimal for complex problems.
+   * optimal for complex problems. Use it when you want the rest of the system,
+   * not the schedule, to carry the full burden of training stability.
    *
    * @returns A function that takes the base learning rate and the current iteration number, and always returns the base learning rate.
    * @param baseRate The initial learning rate, which will remain constant.
@@ -55,6 +112,8 @@ export default class Rate {
    * The learning rate is reduced by a multiplicative factor (`decayFactor`)
    * at predefined intervals (`decayStepSize` iterations). This allows for
    * faster initial learning, followed by finer adjustments as training progresses.
+   * It is a good fit when you want training to move through a few deliberate
+   * phases rather than one perfectly smooth curve.
    *
    * Formula: `learning_rate = baseRate * decayFactor ^ floor(iteration / decayStepSize)`
    *
@@ -76,7 +135,8 @@ export default class Rate {
    *
    * The learning rate decreases exponentially after each iteration, multiplying
    * by the decay factor `decayFactor`. This provides a smooth, continuous reduction
-   * in the learning rate over time.
+   * in the learning rate over time. Compared with step decay, the policy is less
+   * about distinct phases and more about a steady fade in aggressiveness.
    *
    * Formula: `learning_rate = baseRate * decayFactor ^ iteration`
    *
@@ -96,7 +156,9 @@ export default class Rate {
    *
    * The learning rate decreases as the inverse of the iteration number,
    * controlled by the decay factor `decayFactor` and exponent `decayPower`. The rate
-   * decreases more slowly over time compared to exponential decay.
+   * decreases more slowly over time compared to exponential decay. Use it when
+   * you want long training runs to keep some learning energy instead of cooling
+   * too quickly.
    *
    * Formula: `learning_rate = baseRate / (1 + decayFactor * iteration ** decayPower)`
    *
@@ -120,7 +182,9 @@ export default class Rate {
    * It starts at the `baseRate` and smoothly anneals down to `minimumRate` over a
    * specified `period` of iterations, then potentially repeats. This can help
    * the model escape local minima and explore the loss landscape more effectively.
-   * Often used with "warm restarts" where the cycle repeats.
+   * Often used with "warm restarts" where the cycle repeats. The mental model is
+   * deliberate breathing: ramp down to settle, then restart high enough to
+   * explore again.
    *
    * Formula: `learning_rate = minimumRate + 0.5 * (baseRate - minimumRate) * (1 + cos(pi * current_cycle_iteration / period))`
    *
@@ -140,6 +204,11 @@ export default class Rate {
 
   /**
    * Cosine Annealing with Warm Restarts (SGDR style) where the cycle length can grow by a multiplier after each restart.
+   *
+   * This variant keeps the exploratory reset behavior of cosine annealing while
+   * allowing later cycles to last longer. That makes it useful when early
+   * exploration should be frequent but later training should settle for longer
+   * stretches between restarts.
    *
    * @param initialPeriod Length of the first cycle in iterations.
    * @param minimumRate Minimum learning rate at valley.
@@ -162,6 +231,9 @@ export default class Rate {
    * Warmup linearly increases LR from near 0 up to baseRate over warmupStepCount, then linearly decays to endRate at totalStepCount.
    * Iterations beyond totalStepCount clamp to endRate.
    *
+   * This schedule is common when the earliest steps are the most unstable: start
+   * gentle, reach full speed, then taper predictably.
+   *
    * @param totalStepCount Total steps for full schedule (must be > 0).
    * @param warmupStepCount Steps for warmup (< totalStepCount). Defaults to 10% of totalStepCount.
    * @param endRate Final rate at totalStepCount.
@@ -183,6 +255,10 @@ export default class Rate {
    * and reduces rate by 'factor' if no improvement beyond 'minDelta' for 'patience' iterations.
    * Cooldown prevents immediate successive reductions.
    * NOTE: Requires the training loop to call with signature (baseRate, iteration, lastError).
+   *
+   * This is the chapter's reactive option. Instead of following a pre-planned
+   * calendar, the schedule listens for stalled improvement and responds only when
+   * the run appears to flatten out.
    */
   static reduceOnPlateau(options?: {
     factor?: number; // multiplicative decrease (0<f<1)

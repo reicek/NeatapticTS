@@ -1,5 +1,7 @@
 # Preconfigured Architectures (MLP + Sequence Builders) Plan
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Provide a set of **high-quality, preconfigured architecture builders** that are:

@@ -19,6 +19,18 @@
  * The harness boundary stays intentionally narrow so tests can ask precise
  * questions without importing unrelated controller behavior.
  *
+ * The important teaching move is to separate two kinds of truth:
+ *
+ * - harness types answer "what is the smallest surface a test needs to ask one
+ *   precise question?"
+ * - runtime chapters answer "what does that field or helper actually mean in
+ *   the live controller?"
+ *
+ * Without that split, tests tend to widen the public controller surface just to
+ * make assertions convenient. Over time that blurs the difference between a
+ * stable runtime contract and a narrow testing seam. This chapter exists to
+ * prevent that drift.
+ *
  * ```mermaid
  * flowchart TD
  *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
@@ -33,14 +45,35 @@
  *   phase --> chapters
  * ```
  *
- * Practical reading order:
+ * A good way to read the harness root is as a translation layer from test
+ * intent to runtime meaning:
  *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   tests[Test question]:::accent --> tracked[Did lineage metadata survive?]:::base
+ *   tests --> spawnQuestion[Can I spawn or register a genome?]:::base
+ *   tests --> phaseQuestion[Did adaptive phase change?]:::base
+ *   tracked --> lineageMeaning[lineage chapter explains ancestry meaning]:::base
+ *   spawnQuestion --> helpersMeaning[helpers chapter explains population-entry meaning]:::base
+ *   phaseQuestion --> adaptiveMeaning[adaptive chapter explains phase-policy meaning]:::base
+ * ```
+ *
+ * Practical reading order:
  * 1. Start with `LineageTrackedNetwork` when a test needs to inspect the
  *    metadata written onto a child genome.
  * 2. Continue to `NeatLineageHarness` when a test needs the minimal controller
  *    surface for spawning or registering genomes.
  * 3. Finish with `PhasedComplexityHarness` when a test needs to observe the
  *    adaptive phase flag without depending on the entire adaptive controller.
+ *
+ * Historically, this kind of boundary becomes necessary once a controller grows
+ * enough internal structure that test clarity and runtime API clarity start to
+ * pull in different directions. The harness chapter is the compromise: keep
+ * tests honest and precise without pretending those seams are the main user
+ * story of the library.
  */
 import type Neat from '../../neat';
 import type Network from '../../architecture/network';

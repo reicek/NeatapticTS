@@ -1,6 +1,6 @@
 import Activation, {
   registerCustomActivation,
-} from '../../src/methods/activation';
+} from '../../src/methods/activation/activation';
 
 describe('Activation', () => {
   const epsilon = 1e-9; // Tolerance for floating point comparisons

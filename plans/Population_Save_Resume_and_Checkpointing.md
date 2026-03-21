@@ -1,5 +1,7 @@
 # Population Save/Resume + Checkpointing Plan
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Allow long-running evolution to be paused/resumed and moved across machines by introducing a **versioned checkpoint format** that captures:

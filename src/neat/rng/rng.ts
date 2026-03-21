@@ -10,6 +10,13 @@
  * tests or diagnostics without coupling every caller to the full `Neat`
  * runtime.
  *
+ * The key idea is ownership. Sometimes the caller owns randomness by injecting
+ * an RNG directly. Sometimes the controller owns randomness by advancing and
+ * checkpointing its internal deterministic stream. Replay only makes sense when
+ * that ownership boundary stays explicit. Otherwise a restored run can look
+ * deterministic on paper while silently drawing from a different source of
+ * randomness.
+ *
  * Read this chapter as a replay-oriented map. The root README should help a
  * reader answer three practical questions quickly:
  *
@@ -29,6 +36,20 @@
  *   stream --> diagnostics[Test and diagnostics sampling]:::base
  * ```
  *
+ * A second way to read the chapter is as an ownership split:
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   caller[Caller intent]:::accent --> injected[Injected RNG<br/>caller owns randomness]:::base
+ *   caller --> internal[Internal xorshift stream<br/>controller owns replay state]:::base
+ *   internal --> snapshot[Snapshot export restore]:::base
+ *   injected --> diagnostics[Tests or custom experiments]:::base
+ *   snapshot --> replay[Deterministic replay path]:::base
+ * ```
+ *
  * The root RNG entrypoint stays small on purpose because the educational story
  * has two focused layers underneath it.
  *
@@ -46,6 +67,11 @@
  * 4. Use the exported constants when you want to understand the fixed xorshift
  *    and seed-guarding choices rather than just treat them as opaque numbers.
  * 5. Continue into `facade/` when you want the stable `Neat` wrapper methods.
+ *
+ * Historically, reproducible evolutionary runs become much easier to debug once
+ * randomness can be treated as state instead of mystery. This chapter is the
+ * controller-side expression of that shift: not less randomness, but randomness
+ * that can be inspected, exported, restored, and explained.
  *
  * @example
  * ```ts

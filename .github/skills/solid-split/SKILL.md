@@ -23,6 +23,10 @@ documentation expectations, and validation policy. Companion agents should be
 thin executors: they should pass the current task details into this skill,
 follow it, and avoid duplicating the same repository rules in their own prompt.
 
+A completed split step is not fully finished until the mandatory
+`educational-docs` follow-up has been executed on the touched boundary or the
+user has explicitly deferred that follow-up.
+
 ## When to Use
 
 - The user wants a SOLID split, folderization pass, or orchestration-first
@@ -201,6 +205,8 @@ API, default, or runtime contract.
     shaping, source mapping, Mermaid, citations, or media constraints.
   - Treat this as a focused follow-up pass on the exact split changes, not as
     permission to start a broad unrelated docs rewrite.
+  - Do not report the split step as complete until that follow-up has run or
+    the user has explicitly said to defer it.
 15. Run the minimum validation needed for touched files, documentation output,
   and the step's done criteria.
 16. End with a next-session handoff prompt that can continue from the next step
@@ -297,6 +303,11 @@ Use `educational-docs` as the documentation policy for split work.
 This keeps the split skill orchestration-focused and lets the companion skill
 own tone, source mapping, citation handling, and media compliance.
 
+Conversely, when `educational-docs` determines that a README surface is too
+large, too monolithic, or structurally confused for a healthy docs-only pass,
+that skill should hand the work back to `solid-split` with a compact boundary
+packet instead of compensating with more prose.
+
 ## Naming and File-Shape Rules
 
 Use the repo's standard architecture pattern where it fits the boundary:
@@ -386,6 +397,8 @@ This mode exists so large splits remain resumable, reviewable, and low-risk.
 - Do not leave a plan stale after reshaping a step.
 - Do not skip the `educational-docs` follow-up pass after a completed split
   step unless the user explicitly overrides that policy.
+- Do not describe a split as fully complete when the documentation follow-up is
+  still pending.
 - Do not treat examples as the final place to hide library ergonomics gaps.
 - Do not lower the documentation bar during refactors; public-facing docs should
   get better as boundaries improve.
@@ -397,6 +410,8 @@ The final response for a split step should include:
 - the plan file used or created,
 - the completed step label,
 - a short summary of the new boundary shape,
+- whether the required `educational-docs` follow-up was completed or explicitly
+  deferred,
 - validation results,
 - the durable plan update,
 - a fenced `text` handoff prompt for the next step.

@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
 import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 import Network from '../../src/architecture/network';
-import { mutation } from '../../src/methods/mutation';
+import { mutation } from '../../src/methods/mutation/mutation';
 
 /** Tests exploreLow adaptive mutation strategy (bottom half gets upward deltas). */
 describe('Adaptive Mutation exploreLow strategy', () => {

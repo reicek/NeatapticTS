@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
 import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 import Network from '../../src/architecture/network';
-import { mutation } from '../../src/methods/mutation';
+import { mutation } from '../../src/methods/mutation/mutation';
 
 /** Tests anneal adaptive mutation strategy (deltas shrink over progress). */
 describe('Adaptive Mutation anneal strategy', () => {

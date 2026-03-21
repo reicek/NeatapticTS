@@ -1,6 +1,6 @@
 import Network from '../../src/architecture/network';
 import Node from '../../src/architecture/node';
-import mutation from '../../src/methods/mutation';
+import mutation from '../../src/methods/mutation/mutation';
 import { gatingRemoveNode } from '../../src/architecture/network/network.utils';
 
 const getNetworkRng = (network: Network): (() => number) =>

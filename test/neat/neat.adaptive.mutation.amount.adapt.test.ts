@@ -1,6 +1,6 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
-import { mutation } from '../../src/methods/mutation';
+import { mutation } from '../../src/methods/mutation/mutation';
 import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 
 /** Covers adaptAmount branch in adaptive mutation (twoTier provides opposite deltas). */

@@ -27,6 +27,13 @@ import type {
  * is still local enough to compare within one species or broad enough to treat
  * as a separate search direction.
  *
+ * That distinction is worth stating plainly because compatibility is easy to
+ * misread when a project grows. It is not a fitness score, not an ancestry
+ * score, and not a whole-population diversity summary. It is the controller's
+ * structural proximity read. The question it answers is narrower and more
+ * useful: "if these two genomes meet right now, should the controller still
+ * treat them as neighbors?"
+ *
  * The root chapter stays intentionally compact because it is the controller
  * entrypoint, not the comparison laboratory. Read it as the public map for the
  * compatibility read flow, then step into `core/` for the list-walking and
@@ -45,6 +52,23 @@ import type {
  *   distance --> diagnostics[Convergence and drift diagnostics]:::base
  * ```
  *
+ * Compatibility also sits beside two nearby read families that answer different
+ * questions. That is the conceptual seam most readers need before they drop
+ * into the supporting chapters:
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   pair[Two genomes]:::base --> compat[compat<br/>Are these structures still neighbors?]:::accent
+ *   pair --> lineage[lineage<br/>Do these genomes share recent family history?]:::base
+ *   population[Population sample]:::base --> diversity[diversity<br/>How spread out is the current population?]:::base
+ *   compat --> speciation[Species boundary decisions]:::base
+ *   lineage --> ancestry[Ancestry collapse or branching reads]:::base
+ *   diversity --> spread[Population spread summaries]:::base
+ * ```
+ *
  * Practical reading order:
  *
  * 1. Start with `_compatibilityDistance()` to see the controller-facing
@@ -58,6 +82,12 @@ import type {
  *    and ancestry-adjacent evidence. Compatibility explains structural
  *    closeness, while lineage explains family overlap; the two signals are
  *    complementary rather than interchangeable.
+ *
+ * Historically, NEAT's compatibility idea matters because speciation only
+ * works if the controller can protect innovation before it is immediately
+ * outcompeted by a mature topology. This chapter is the modern controller-side
+ * expression of that older insight: measure structural closeness well enough to
+ * let novel structures survive among comparable peers.
  *
  * @example
  * ```ts

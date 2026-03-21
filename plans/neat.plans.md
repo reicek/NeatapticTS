@@ -1,5 +1,7 @@
 # Proper NEAT (No-Compromise) — Gap Analysis + Implementation Plan
 
+**Status:** [PLANNED]
+
 This document is the engineering plan to upgrade NeatapticTS from “NEAT‑inspired” topology evolution to **canonical NEAT with historical markings**, i.e. **proper innovation tracking, correct crossover alignment, and speciation that remains meaningful across the entire run**.
 
 It also includes an “ultimate” tier: improvements that go beyond the 2002 NEAT paper while keeping NEAT’s core guarantees.

@@ -1,5 +1,7 @@
 # Turnkey Multithread Evaluation API Plan (Node + Browser Workers)
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Provide a first-class API to evaluate many networks **in parallel** using workers, targeting the core use case:

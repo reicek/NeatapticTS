@@ -14,6 +14,40 @@
  * particular, lineage tracking and RNG rebinding happen after the pool attempt
  * so they observe the same host state that older constructor paths expected.
  *
+ * The controller-facing distinction to keep in mind is ownership over time.
+ * `init/` owns generation-zero setup. It does not own evaluation, evolution,
+ * telemetry, or persistence once the controller is already alive. That sounds
+ * obvious, but startup logic is one of the easiest places for a mature library
+ * to accumulate unrelated writes. When that happens, constructor behavior
+ * becomes hard to explain and even harder to preserve during refactors.
+ *
+ * This root chapter keeps the bootstrap contract readable by asking a narrower
+ * question: before the first generation can exist, what must become true about
+ * the controller state, and in what order?
+
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   options[Constructor options]:::base --> defaults[Apply public defaults]:::accent
+ *   defaults --> state[Prepare controller-owned state]:::base
+ *   state --> pool[Attempt generation-zero pool creation]:::base
+ *   pool --> lineage[Enable lineage after startup pool attempt]:::base
+ *   lineage --> rng[Rebind RNG access on live instance]:::base
+ * ```
+
+ * Bootstrap also sits beside later runtime chapters that answer different
+ * questions:
+
+ * ```mermaid
+ * flowchart LR
+ *   Startup[Constructor time] --> InitChapter[init: make the controller ready to exist]
+ *   Runtime[After startup] --> Evaluate[evaluate: score the population]
+ *   Runtime --> Evolve[evolve: breed and mutate]
+ *   Runtime --> Telemetry[telemetry: inspect what the run is doing]
+ * ```
+ *
  * Read this file when you want to answer three startup questions:
  *
  * - which public defaults become concrete controller policy during
@@ -22,11 +56,15 @@
  *   proceed safely,
  * - why the constructor delegates here without turning this file into a second
  *   public facade.
+ *
+ * Historically, startup helpers like this appear once a controller grows large
+ * enough that preserving constructor order becomes a compatibility problem, not
+ * just a style preference. This chapter is the explicit record of that order.
  */
 
 import type Network from '../../architecture/network';
 import * as methods from '../../methods/methods';
-import { selection as selectionMethods } from '../../methods/selection';
+import { selection as selectionMethods } from '../../methods/selection/selection';
 
 interface NeatConstructorDefaults {
   populationSize: number;

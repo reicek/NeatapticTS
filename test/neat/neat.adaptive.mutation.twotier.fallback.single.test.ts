@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
 import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 import Network from '../../src/architecture/network';
-import { mutation } from '../../src/methods/mutation';
+import { mutation } from '../../src/methods/mutation/mutation';
 
 /** Covers twoTier fallback balancing path when only one genome present (only anyUp set). */
 describe('Adaptive Mutation twoTier fallback (single genome)', () => {

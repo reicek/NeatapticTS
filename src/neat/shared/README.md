@@ -7,6 +7,14 @@ one direct-path location so speciation, telemetry, objectives, species, and
 tests can import the same contracts without depending on the heavier root
 `Neat` implementation.
 
+The practical value of this boundary is not that it lists many interfaces.
+Its value is that it gives the rest of the controller a common language.
+Without that common layer, every extracted chapter would gradually invent its
+own slightly different idea of what a genome looks like, which option slice
+matters, or which telemetry record is considered complete enough to share.
+That kind of drift is subtle but expensive: it makes later chapters harder to
+read, harder to compose, and harder to trust.
+
 Read this file as the controller's common language layer. Most NEAT chapters
 answer behavioral questions such as how speciation works, what telemetry
 records, or how objective lists are resolved. This shared surface answers the
@@ -24,6 +32,24 @@ The contracts cluster into five practical families:
 4. telemetry and diagnostics contracts used by `telemetry/`, `diversity/`,
    and `lineage/`,
 5. small test-facing seams reused by harnesses and extracted helpers.
+
+```mermaid
+flowchart TD
+  Shared[shared contract chapter] --> Host[Host and genome vocabulary]
+  Shared --> Policy[Policy slices and option families]
+  Shared --> Species[Speciation and species state]
+  Shared --> Evidence[Telemetry diversity and lineage evidence]
+  Shared --> TestSeams[Test and helper seams]
+  Host --> NeatLike[NeatLike GenomeLike GenomeDetailed]
+  Policy --> Options[NeatOptions SpeciationOptions]
+  Species --> Registry[SpeciesLike SpeciesLastStats SpeciationHarnessContext]
+  Evidence --> Telemetry[TelemetryEntry DiversityStats LineageSnapshot]
+```
+
+Treat the chapter as a reading map rather than a flat glossary. The strongest
+way to use it is to start with the smallest shared vocabulary, then move into
+the option families that shape controller policy, and only then descend into
+the richer evidence contracts used by telemetry and diagnostics.
 
 Practical reading order:
 
@@ -89,6 +115,10 @@ chapters should usually narrow it quickly into a richer local contract, but
 keeping a tiny shared base makes extracted utilities easier to compose
 without inventing a fake monolithic controller interface.
 
+Pedagogically, this is the chapter's "start here" host contract. It tells a
+reader that the shared layer values portability over completeness, and that a
+richer local host contract should only appear when a chapter can justify why.
+
 ### ObjectiveDescriptor
 
 Descriptor for a single optimisation objective (single or multi‑objective runs).
@@ -131,6 +161,10 @@ need counts, loose structural access, or a primary score, but not enough to
 encode every network behavior. More specialized chapters should extend this
 shape only when they truly need richer node, connection, or lineage detail.
 
+That restraint matters because this contract sits near the base of the shared
+vocabulary. If it grows too eager, every downstream chapter inherits more of
+the runtime than it actually needs.
+
 ### NodeLike
 
 Lightweight node representation used by telemetry and structural helpers.
@@ -150,6 +184,12 @@ extra fields here are the ones that repeatedly matter to the read-side NEAT
 chapters: stable genome identity, parent tracking, lineage depth, and the
 richer node and connection shapes needed for telemetry, history, and
 compatibility-adjacent reporting.
+
+In chapter terms, `GenomeDetailed` is the point where the shared vocabulary
+stops being merely structural and becomes historically meaningful. Once a
+helper needs `_id`, `_parents`, or `_depth`, it is no longer talking about a
+generic network shape; it is talking about a genome with an evolutionary
+past that later reporting chapters may want to inspect.
 
 ### SpeciesLike
 
@@ -173,6 +213,10 @@ novelty, and a few structural budget fields. If a helper needs more than
 this, that is usually a sign it wants a chapter-local host contract instead
 of a wider shared type.
 
+Read this as the shared policy slice, not the complete public options model.
+It exists so extracted chapters can agree on recurring controller settings
+without smuggling the full `Neat` facade through every helper signature.
+
 ### DiversityStats
 
 Diversity statistics captured each generation. Individual fields may be
@@ -184,6 +228,11 @@ dashboards talk about population spread without rerunning the heavier
 compatibility, entropy, and lineage calculations. The fields are aggregated
 on purpose: they are meant for trend reading, not for reconstructing every
 pairwise comparison after the fact.
+
+This is one half of the chapter's evidence language. Diversity tells the
+controller how structurally spread out the population currently looks, which
+is useful for dashboards, adaptive policies, and regression checks even when
+the full pairwise evidence would be too expensive to keep around.
 
 ### OperatorStat
 
@@ -230,6 +279,11 @@ still exists beneath those structures. Telemetry and adaptive controllers use
 both because structural spread and family spread are related but not
 interchangeable signals.
 
+Read `LineageSnapshot` and `DiversityStats` together. One describes present
+structural variety, the other describes how independent that variety really
+is. NEAT benefits from both views because a population can look diverse while
+still clustering around a narrow recent ancestry.
+
 ### ComplexityMetrics
 
 Aggregate structural complexity metrics capturing size & growth pressure.
@@ -255,6 +309,11 @@ telemetry subtree. Instead of forcing callers to stitch together diversity,
 lineage, operator stats, objectives, complexity, and performance from many
 different buffers, the recorder and export helpers fold those signals into
 one generation-stamped summary row.
+
+In the shared chapter, this is the fullest evidence contract. Earlier types
+define the vocabulary; `TelemetryEntry` shows how that vocabulary is folded
+into one readable generation snapshot that exporters, dashboards, tests, and
+diagnostics can all share.
 
 Read the fields in families:
 - run position and headline outcome: `gen`, `best`, `species`, `hyper`

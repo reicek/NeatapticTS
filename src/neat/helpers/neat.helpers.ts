@@ -24,11 +24,36 @@ import {
  * 3. `addGenome()` registers an externally sourced or newly accepted genome so
  *    lineage, cache, and structural invariants match the rest of the run.
  *
+ * Those three paths are related, but they are not interchangeable. That is the
+ * main pedagogical point of this root chapter:
+ *
+ * - `createPool()` creates generation-zero membership,
+ * - `spawnFromParent()` creates a candidate with meaningful lineage but without
+ *   guaranteed admission,
+ * - `addGenome()` is the commit step that makes a genome part of the live run.
+ *
  * Keeping those paths together prevents subtle drift in `_id`, `_parents`,
  * `_depth`, `_reenableProb`, feed-forward intent, and cache invalidation rules.
  * The public `Neat` facade still exposes the same methods, but this file now
  * reads as one small chapter about safe population entry instead of a grab bag
  * of leftover helpers.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   seed[Seed network or empty start]:::base --> pool[createPool<br/>build generation zero]:::accent
+ *   parent[Existing parent genome]:::base --> child[spawnFromParent<br/>produce provisional child]:::base
+ *   imported[Imported or custom genome]:::base --> admit[addGenome<br/>normalize and admit]:::accent
+ *   child --> admit
+ *   pool --> population[Live population with normalized metadata]:::base
+ *   admit --> population
+ * ```
+ *
+ * Read this chapter when you want to answer one practical controller question:
+ * before selection, evaluation, and speciation can trust a genome, how does it
+ * cross the boundary into the live population in a normalized state?
  */
 
 /**

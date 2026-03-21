@@ -8,12 +8,28 @@ import * as methods from '../../methods/methods';
  * to answer the same question: when does a genome already satisfy the stricter
  * feed-forward runtime assumptions exposed by the public mutation policy?
  *
+ * That question is easy to blur in evolutionary code. A mutation policy can
+ * request feed-forward behavior, but a concrete genome may still contain gates,
+ * self-connections, or backward edges that make a strict feed-forward runtime
+ * label misleading. This boundary exists so the controller does not confuse
+ * "the user asked for feed-forward search pressure" with "this exact graph is
+ * already safe to treat as feed-forward right now."
+ *
  * Read this as a policy bridge, not as a graph-rewrite chapter. Mutation
  * configuration can communicate feed-forward intent, but that intent should only
  * become a runtime topology contract when an actual genome already satisfies the
  * stricter structural rules. This boundary keeps those two questions together:
  * does the active mutation policy request feed-forward behavior, and is the
  * candidate genome already safe to promote without changing its meaning?
+ *
+ * Read this chapter in three passes:
+ *
+ * 1. start with `usesFeedForwardMutationPolicy()` when you want to know how the
+ *    controller recognizes the canonical public signal,
+ * 2. continue to `isGenomeEligibleForFeedForwardIntentPromotion()` when you want
+ *    the structural safety test,
+ * 3. finish with `promoteGenomeToFeedForwardIntentWhenEligible()` when you want
+ *    the exact point where policy becomes runtime contract.
  *
  * The helpers form one short decision flow:
  *
@@ -22,6 +38,22 @@ import * as methods from '../../methods/methods';
  *    current graph is already ordered like a feed-forward network.
  * 3. `promoteGenomeToFeedForwardIntentWhenEligible()` applies the public runtime
  *    contract only when both earlier checks agree.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Policy[Mutation policy configured] --> Signal{Canonical FFW signal?}
+ *   Signal -->|No| Leave[Keep unconstrained topology intent]
+ *   Signal -->|Yes| Inspect[Inspect current genome structure]
+ *   Inspect --> Eligible{No gates, no self loops, forward-only edges?}
+ *   Eligible -->|No| Preserve[Preserve current runtime interpretation]
+ *   Eligible -->|Yes| Promote[Promote genome to feed-forward intent]
+ * ```
+ *
+ * The historical idea behind this boundary is conservative labeling. NEAT-style
+ * search often experiments with topology, and the safest controller behavior is
+ * to promote a stricter runtime interpretation only when the graph already earns
+ * it. That keeps initialization and provenance code honest: they can respect
+ * feed-forward user intent without silently rewriting recurrent meaning.
  *
  * Move back to `mutation/` when you want the broader operator-policy story,
  * `init/` when you want constructor-time pool setup, and `helpers/` when you
@@ -40,6 +72,9 @@ import * as methods from '../../methods/methods';
  * The bridge only needs one stable piece of information from a mutation entry:
  * its public name. That keeps the topology-intent checks aligned with the
  * canonical feed-forward pool without importing the full mutation subsystem.
+ * Keeping the contract this small also makes the chapter's main teaching point
+ * easier to see: topology intent recognition is a public-policy comparison, not
+ * a second mutation-engine implementation.
  */
 export interface TopologyIntentMutationMethod {
   /** Optional mutation name used for canonical pool comparison. */
@@ -55,6 +90,10 @@ export interface TopologyIntentMutationMethod {
  * own general graph validation. It only needs the current node order, directed
  * connections, recurrent-only collections such as gates and self-connections,
  * and the public topology-intent setter exposed by `Network`.
+ *
+ * In other words, this contract captures just enough structure to answer the
+ * chapter's one real question: "would a feed-forward runtime label preserve the
+ * current graph's meaning, or would it over-promise?"
  */
 export interface TopologyIntentGenome {
   /** Runtime node array in current graph order. */
@@ -86,8 +125,20 @@ export interface TopologyIntentGenome {
  * recurrent, gated, or otherwise not yet eligible for the stricter runtime
  * contract.
  *
+ * Treat this as the chapter's public signal decoder. It translates several
+ * legacy and canonical configuration shapes into one yes-or-no answer that the
+ * rest of the controller can reuse consistently.
+ *
  * @param mutationConfig Configured mutation option.
  * @returns True when the option expresses canonical feed-forward intent.
+ *
+ * @example
+ * ```ts
+ * const shouldPromote = usesFeedForwardMutationPolicy(neat.options.mutation);
+ * if (!shouldPromote) {
+ *   console.log('keep unconstrained topology intent');
+ * }
+ * ```
  */
 export function usesFeedForwardMutationPolicy(
   mutationConfig:
@@ -133,9 +184,20 @@ export function usesFeedForwardMutationPolicy(
  * makes sure that intent is only written onto genomes that already behave like
  * feed-forward networks under the current node ordering.
  *
+ * This makes the helper especially important during bootstrap and provenance
+ * flows. Those code paths often need to preserve user intent across imported or
+ * cloned genomes, but they should not quietly reinterpret a graph that still
+ * contains recurrent features.
+ *
  * @param genome Genome candidate being inserted into a population.
  * @param shouldPromote Whether the active NEAT options request feed-forward semantics.
  * @returns Nothing.
+ *
+ * @example
+ * ```ts
+ * const shouldPromote = usesFeedForwardMutationPolicy(neat.options.mutation);
+ * promoteGenomeToFeedForwardIntentWhenEligible(candidateGenome, shouldPromote);
+ * ```
  */
 export function promoteGenomeToFeedForwardIntentWhenEligible(
   genome: TopologyIntentGenome,
@@ -163,6 +225,9 @@ export function promoteGenomeToFeedForwardIntentWhenEligible(
  * The comparison deliberately stays order-sensitive because the canonical pool
  * is treated as one explicit public signal rather than as a fuzzy set of
  * approximately similar operators.
+ * That strictness is a feature: it keeps the topology-intent story predictable
+ * for readers and users instead of letting near-matches silently acquire a
+ * stronger runtime meaning than they asked for.
  *
  * @param configuredPool Mutation pool configured on the NEAT instance.
  * @param canonicalPool Canonical feed-forward mutation pool.
@@ -195,6 +260,10 @@ function matchesCanonicalFeedForwardPool(
  * The helper therefore answers a structural-preservation question, not a graph
  * repair question. A `false` result does not mean the genome is invalid. It
  * means only that this bridge should not relabel it as feed-forward yet.
+ *
+ * This distinction is the chapter's core invariant. The helper is intentionally
+ * willing to say "not yet" to valid genomes, because false positives would be
+ * worse than conservative misses at this boundary.
  *
  * @param genome Genome candidate.
  * @returns True when the genome can safely adopt feed-forward intent.
