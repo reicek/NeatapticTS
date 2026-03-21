@@ -19,58 +19,14 @@ Pareto archive inspection.
 
 ```mermaid
 flowchart TD
-  Registry[Active objective registry] --> Keys[getObjectiveKeys()<br/>stable objective names]
-  Registry --> Summary[getObjectives()<br/>compact descriptors]
-  Events[Objective lifecycle events] --> History[getObjectiveEvents()<br/>recent add remove log]
-  Register[registerTelemetryObjective()] --> Registry
-  Clear[clearTelemetryObjectives()] --> Registry
+  Registry["Active objective registry"] --> Keys["getObjectiveKeys()<br/>stable objective names"]
+  Registry --> Summary["getObjectives()<br/>compact descriptors"]
+  Events["Objective lifecycle events"] --> History["getObjectiveEvents()<br/>recent add remove log"]
+  Register["registerTelemetryObjective()"] --> Registry
+  Clear["clearTelemetryObjectives()"] --> Registry
 ```
 
 ## neat/telemetry/facade/objectives/telemetry.facade.objectives.ts
-
-### clearTelemetryObjectives
-
-```ts
-clearTelemetryObjectives(
-  host: TelemetryFacadeObjectivesHost,
-): void
-```
-
-Remove all registered custom objectives so only the default objective path remains.
-
-Reach for this when an experiment wants to reset the objective surface to its
-baseline state without rebuilding the whole controller.
-
-Parameters:
-- `host` - - `Neat` instance whose objective registry should be cleared.
-
-Returns: Nothing. The helper mutates the objective registry in place.
-
-### getObjectiveEvents
-
-```ts
-getObjectiveEvents(
-  host: TelemetryFacadeObjectivesHost,
-): { gen: number; type: "add" | "remove"; key: string; }[]
-```
-
-Snapshot recent objective add/remove events for telemetry consumers.
-
-This is the historical companion to {@link getObjectives}. The descriptor
-summary tells you what is active now; the event log tells you how the active
-set changed across recent generations.
-
-Parameters:
-- `host` - - `Neat` instance storing objective lifecycle events.
-
-Returns: Shallow copy of the recorded objective events.
-
-Example:
-
-```ts
-const recentEvents = getObjectiveEvents(neat);
-console.log(recentEvents.at(-1));
-```
 
 ### getObjectiveKeys
 
@@ -147,6 +103,50 @@ Parameters:
 - `accessor` - - Function that reads the objective value from a genome.
 
 Returns: Nothing. The objective registry on `host` is updated in place.
+
+### clearTelemetryObjectives
+
+```ts
+clearTelemetryObjectives(
+  host: TelemetryFacadeObjectivesHost,
+): void
+```
+
+Remove all registered custom objectives so only the default objective path remains.
+
+Reach for this when an experiment wants to reset the objective surface to its
+baseline state without rebuilding the whole controller.
+
+Parameters:
+- `host` - - `Neat` instance whose objective registry should be cleared.
+
+Returns: Nothing. The helper mutates the objective registry in place.
+
+### getObjectiveEvents
+
+```ts
+getObjectiveEvents(
+  host: TelemetryFacadeObjectivesHost,
+): { gen: number; type: "add" | "remove"; key: string; }[]
+```
+
+Snapshot recent objective add/remove events for telemetry consumers.
+
+This is the historical companion to {@link getObjectives}. The descriptor
+summary tells you what is active now; the event log tells you how the active
+set changed across recent generations.
+
+Parameters:
+- `host` - - `Neat` instance storing objective lifecycle events.
+
+Returns: Shallow copy of the recorded objective events.
+
+Example:
+
+```ts
+const recentEvents = getObjectiveEvents(neat);
+console.log(recentEvents.at(-1));
+```
 
 ### TelemetryFacadeObjectivesHost
 

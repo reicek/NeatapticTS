@@ -21,10 +21,10 @@
  *
  * ```mermaid
  * flowchart TD
- *   Registry[Live species registry] --> Stats[getSpeciesStats()<br/>current roster]
- *   History[Recorded species history] --> Timeline[getSpeciesHistory()<br/>generation timeline]
- *   Timeline --> Csv[exportSpeciesHistoryCSV()<br/>spreadsheet-friendly export]
- *   Timeline --> Jsonl[exportSpeciesHistoryJSONL()<br/>script-friendly export]
+ *   Registry["Live species registry"] --> Stats["getSpeciesStats()<br/>current roster"]
+ *   History["Recorded species history"] --> Timeline["getSpeciesHistory()<br/>generation timeline"]
+ *   Timeline --> Csv["exportSpeciesHistoryCSV()<br/>spreadsheet-friendly export"]
+ *   Timeline --> Jsonl["exportSpeciesHistoryJSONL()<br/>script-friendly export"]
  * ```
  */
 import type {

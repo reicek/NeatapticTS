@@ -32,13 +32,50 @@ const ANCESTOR_DEPTH_WINDOW = 4;
 /**
  * Lineage-analysis mechanics used by NEAT ancestry helpers.
  *
- * This chapter holds the breadth-first ancestor traversal, sampled pair
- * generation, and Jaccard-distance aggregation logic behind the public lineage
- * metrics.
+ * This chapter is the mechanics layer beneath the controller-facing lineage
+ * helpers. Its job is to turn stored parent ids into a bounded ancestry signal
+ * that is cheap enough for telemetry and adaptive policy to read during a run.
+ *
+ * The pipeline has four stages:
+ *
+ * 1. normalize parent links into one consistent ancestry input shape,
+ * 2. walk outward through recent ancestors with a bounded breadth-first queue,
+ * 3. sample a limited set of genome pairs instead of exhaustively comparing the
+ *    full population,
+ * 4. measure ancestor-set overlap with Jaccard distance and fold the result
+ *    into one mean uniqueness signal.
+ *
+ * That staged split is what keeps the public lineage chapter readable. The
+ * root helpers can describe what lineage metrics mean, while this file owns the
+ * exact traversal, sampling, and distance math that makes those metrics stable.
+ *
+ * Read the chapter in this order: start with `normalizeParentIds()` and
+ * `createInitialQueue()`, continue through `collectAncestorIds()` for the
+ * breadth-first walk, then `sampleGenomePairs()` for the comparison budget, and
+ * end with `computePairDistances()` plus `computeAverageDistance()` for the
+ * final Jaccard-based fold.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   parents[Genome parent ids]:::base --> queue[Initial breadth-first queue]:::accent
+ *   queue --> traversal[Bounded ancestor traversal]:::base
+ *   traversal --> sets[Per-genome ancestor sets]:::base
+ *   population[Population plus deterministic RNG]:::base --> pairs[Sampled genome pairs]:::accent
+ *   pairs --> compare[Jaccard distance per pair]:::base
+ *   sets --> compare
+ *   compare --> mean[Mean ancestor uniqueness]:::accent
+ * ```
  */
 
 /**
  * Normalize the parent ID list for a genome.
+ *
+ * This helper is the first seam in the pipeline: it turns "maybe has lineage
+ * metadata" into a guaranteed array shape so the traversal code never needs to
+ * branch on missing parent storage.
  *
  * @param value - Genome to read parents from.
  * @returns Parent ID list, or an empty array when absent.
@@ -49,6 +86,11 @@ export function normalizeParentIds(value: GenomeLike): number[] {
 
 /**
  * Create the initial breadth-first queue from direct parent IDs.
+ *
+ * This queue is the bridge between stored lineage metadata and the traversal
+ * loop. Depth starts at the direct-parent layer because lineage uniqueness is a
+ * recent-family metric first; later queue expansion can then walk outward while
+ * still respecting the bounded depth window.
  *
  * @param parentIds - Direct parent IDs to seed the queue.
  * @param population - Current population for ID lookups.
@@ -67,6 +109,15 @@ export function createInitialQueue(
 
 /**
  * Collect ancestor IDs encountered within the configured depth window.
+ *
+ * This is the core ancestry walk. It uses a queue-backed breadth-first pass so
+ * near ancestors are explored before deeper ones, which matches the meaning of
+ * the metric: recent family overlap should dominate the signal more than very
+ * old shared history.
+ *
+ * The traversal stays bounded on purpose. Runtime lineage metrics do not need a
+ * full genealogy of the run; they need a stable recent-neighborhood view that
+ * remains cheap to recompute.
  *
  * @param queueEntries - Breadth-first queue seeded with direct parents.
  * @param population - Current population for ID lookups.
@@ -97,6 +148,10 @@ export function collectAncestorIds(
 /**
  * Check whether the population is large enough to form a sampled pair.
  *
+ * This guard exists because ancestor uniqueness is defined over genome
+ * comparisons, not individual genomes. A population smaller than two can still
+ * have ancestry data, but it cannot produce a meaningful pairwise distance.
+ *
  * @param size - Population size.
  * @returns `true` when at least two genomes exist.
  */
@@ -106,6 +161,10 @@ export function hasMinimumPopulation(size: number): boolean {
 
 /**
  * Compute the upper bound on sampled genome pairs.
+ *
+ * The uniqueness metric is intentionally sampled rather than exhaustive. This
+ * helper keeps that budget honest by capping the requested sample count to both
+ * the true combinatorial maximum and the chapter's global runtime limit.
  *
  * @param size - Population size.
  * @returns Sample cap respecting both the combinatorial count and the global limit.
@@ -118,6 +177,11 @@ export function calculateMaxSamplePairs(size: number): number {
 
 /**
  * Sample genome index pairs for ancestor uniqueness.
+ *
+ * The sampling policy chooses a bounded set of pair comparisons while keeping
+ * replay deterministic through the caller-supplied RNG factory. The result is
+ * not a canonical population ordering; it is a reproducible comparison budget
+ * for the current generation.
  *
  * @param sampleCount - Number of pairs to sample.
  * @param size - Population size for index bounds.
@@ -148,6 +212,11 @@ export function sampleGenomePairs(
 /**
  * Compute Jaccard distances for sampled genome pairs.
  *
+ * This stage turns sampled pair indices into actual lineage evidence. Each pair
+ * is resolved to two genomes, each genome is expanded into a shallow ancestor
+ * set, and those sets are compared using Jaccard distance so the final metric
+ * reflects overlap rather than raw ancestor counts.
+ *
  * @param pairs - Sampled index pairs.
  * @param population - Current population.
  * @param buildAncestorSet - Helper that builds ancestor sets for genomes.
@@ -173,6 +242,10 @@ export function computePairDistances(
 
 /**
  * Compute the mean ancestor distance across sampled pairs.
+ *
+ * This is the final fold from many local comparisons into one controller-facing
+ * scalar. Rounding is intentional: the value is meant to be a stable telemetry
+ * and adaptive-policy signal rather than a high-precision scientific output.
  *
  * @param distances - Pairwise Jaccard distances.
  * @returns Mean distance rounded to the configured decimal precision.

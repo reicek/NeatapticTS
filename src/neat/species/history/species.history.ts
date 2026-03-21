@@ -1,13 +1,19 @@
+import type { SpeciesHistoryEntry } from '../../shared/neat.shared.types';
+
 /**
  * Species-history export helpers for the NEAT controller.
  *
- * This chapter keeps the JSONL export surface separate from the broader
- * species-reporting helpers so generated docs stay tightly scoped to one
- * export concern.
+ * This chapter keeps the portable-export story separate from the broader
+ * species-reporting helpers so the generated docs can answer one narrow reader
+ * question cleanly: once you already have species history, how should you carry
+ * it into scripts, notebooks, files, or diff-friendly artifacts?
  *
- * The root `species/` chapter explains when to read historical species data.
- * This narrower boundary explains how that history is serialized once a caller
- * decides it needs a portable export or a compact append-friendly artifact.
+ * The neighboring read chapter explains how a caller asks the controller for a
+ * bounded history buffer. This export chapter begins one step later. It assumes
+ * the history rows already exist and focuses on the packaging decision: keep
+ * each generation snapshot independently parseable so downstream tools can
+ * stream, append, or inspect the data without first reconstructing one large
+ * array document.
  *
  * Read this chapter when you want to answer questions such as:
  * - Why does species history export live in its own tiny boundary?
@@ -24,6 +30,20 @@
  * That shape keeps exports easy to inspect, append, stream, and diff without
  * widening this chapter into the heavier history-reading and enrichment logic
  * owned elsewhere in the species subtree.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   Read["getSpeciesHistory()<br/>bounded in-memory history"]
+ *   Slice["keep recent export window"]
+ *   Serialize["JSON.stringify each generation row"]
+ *   Jsonl["JSONL output<br/>one snapshot per line"]
+ *   Uses["files, notebooks,<br/>streaming, diffing"]
+ *
+ *   Read --> Slice
+ *   Slice --> Serialize
+ *   Serialize --> Jsonl
+ *   Jsonl --> Uses
+ * ```
  */
 
 // Species history export surface begins here.
@@ -31,8 +51,13 @@
 /**
  * Default slice size when exporting species history as JSONL.
  *
- * The default keeps history exports large enough to explain recent species
- * trends without forcing every export to serialize the entire retained buffer.
+ * The default keeps exports large enough to show recent species turnover and
+ * improvement trends without forcing every notebook, script, or artifact to
+ * serialize the controller's full retained history buffer.
+ *
+ * Read this as an export convenience default rather than a storage policy. The
+ * history subsystem may retain more rows in memory; this constant simply picks
+ * a practical recent window when the caller has not asked for a custom slice.
  */
 export const SPECIES_HISTORY_JSONL_MAX_DEFAULT = 200;
 
@@ -44,20 +69,37 @@ export const SPECIES_HISTORY_JSONL_MAX_DEFAULT = 200;
  * storage, incremental processing, and quick inspection in tooling that prefers
  * one record per line.
  *
+ * Read this helper as the final packaging step after the history-read boundary
+ * has already decided which generation rows should exist. It does not enrich,
+ * recompute, or filter fields within each history entry. Its only job is to
+ * take the recent slice the caller asked for and preserve that slice in a
+ * format that moves well between scripts and artifacts.
+ *
+ * The export sequence is intentionally small:
+ *
+ * 1. trim the history buffer to the requested recent window,
+ * 2. serialize each retained generation snapshot independently,
+ * 3. join those serialized rows with newline separators.
+ *
  * @param speciesHistory - Recorded species history entries to serialize.
  * @param maxEntries - Maximum number of recent entries to include.
  * @returns JSONL payload containing the requested recent history slice.
  *
  * @example
  * ```ts
- * const jsonl = exportSpeciesHistoryJsonl(neat.getSpeciesHistory(), 50);
+ * const historyEntries = neat.getSpeciesHistory();
+ * const jsonl = exportSpeciesHistoryJsonl(historyEntries, 50);
+ *
  * console.log(jsonl.split('\n').length);
  * ```
  */
 export function exportSpeciesHistoryJsonl(
-  speciesHistory: unknown[],
+  speciesHistory: SpeciesHistoryEntry[],
   maxEntries: number = SPECIES_HISTORY_JSONL_MAX_DEFAULT,
 ): string {
+  // Step 1: Keep only the recent export window requested by the caller.
   const trimmedHistory = speciesHistory.slice(-maxEntries);
+
+  // Step 2: Emit one independently parseable history snapshot per line.
   return trimmedHistory.map((entry) => JSON.stringify(entry)).join('\n');
 }

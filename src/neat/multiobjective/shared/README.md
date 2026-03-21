@@ -25,33 +25,6 @@ still run, but they would be reasoning about the wrong objectives or genomes.
 
 ## neat/multiobjective/shared/multiobjective.types.ts
 
-### NeatLikeWithMultiObjective
-
-Minimal Neat-like interface required by the multi-objective helpers.
-
-This host contract stays intentionally small so the multi-objective helpers
-can be reused without depending on the entire `Neat` controller surface.
-The boundary owns only two kinds of state:
-- objective-schema access for the start of the ranking pass,
-- optional Pareto-archive state for the end of the ranking pass.
-
-Everything else stays outside this interface on purpose. `objectives/`,
-`dominance/`, `fronts/`, and `crowding/` operate on prepared vectors,
-bookkeeping structures, and annotated genomes rather than reaching back into
-controller internals mid-pass.
-
-### NetworkWithMOAnnotations
-
-Extends a genome/network with multi-objective annotations.
-
-These properties are transient ranking metadata. They are attached after the
-multi-objective helpers compute fronts and crowding distances, then consumed
-by later selection or inspection code as a compact summary of where a genome
-landed on the current Pareto surface.
-
-Treat these fields as derived evidence, not durable genome state. A later
-ranking pass is free to recompute or overwrite them.
-
 ### ObjectiveDescriptor
 
 Describes how to evaluate one objective for one genome.
@@ -83,3 +56,30 @@ const objectives: ObjectiveDescriptor[] = [
   { accessor: (genome) => genome.cost ?? 0, direction: 'min' },
 ];
 ```
+
+### NeatLikeWithMultiObjective
+
+Minimal Neat-like interface required by the multi-objective helpers.
+
+This host contract stays intentionally small so the multi-objective helpers
+can be reused without depending on the entire `Neat` controller surface.
+The boundary owns only two kinds of state:
+- objective-schema access for the start of the ranking pass,
+- optional Pareto-archive state for the end of the ranking pass.
+
+Everything else stays outside this interface on purpose. `objectives/`,
+`dominance/`, `fronts/`, and `crowding/` operate on prepared vectors,
+bookkeeping structures, and annotated genomes rather than reaching back into
+controller internals mid-pass.
+
+### NetworkWithMOAnnotations
+
+Extends a genome/network with multi-objective annotations.
+
+These properties are transient ranking metadata. They are attached after the
+multi-objective helpers compute fronts and crowding distances, then consumed
+by later selection or inspection code as a compact summary of where a genome
+landed on the current Pareto surface.
+
+Treat these fields as derived evidence, not durable genome state. A later
+ranking pass is free to recompute or overwrite them.

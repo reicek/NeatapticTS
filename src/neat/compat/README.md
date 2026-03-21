@@ -58,6 +58,49 @@ if (distance < neat.options.compatibilityThreshold) {
 
 ## neat/compat/compat.ts
 
+### _fallbackInnov
+
+```ts
+_fallbackInnov(
+  connection: ConnectionLike,
+): number
+```
+
+Generate a deterministic fallback innovation id for a connection when the
+connection does not provide an explicit innovation number.
+
+Innovation numbers are the canonical alignment key because they let NEAT
+distinguish matching genes from disjoint or excess ones across topology
+changes. This fallback only exists for the boundary cases where a connection
+arrives without that explicit identifier. In that case the helper derives a
+stable directional id from the connection endpoints so the comparison can
+still proceed instead of silently dropping structure from the distance read.
+
+Interpret the fallback as a bridge, not as a replacement for properly tracked
+innovations. It keeps compatibility useful for legacy, test, or partially
+normalized genomes, but explicit innovation numbers remain the source of
+truth whenever they are available. A fallback match should therefore be read
+as "these connections occupy the same directed slot" rather than "these two
+genes are proven to share the same historical innovation event."
+
+Parameters:
+- `this` - - NEAT context kept for symmetry with the other compatibility helpers.
+- `connection` - - Connection object expected to contain `from.index` and `to.index`.
+
+Returns: Numeric innovation id derived from the directional endpoint pair.
+
+Example:
+
+```ts
+const fallbackInnovation = neat._fallbackInnov({
+  from: { index: 4 },
+  to: { index: 9 },
+  weight: 0.75,
+});
+
+// The same endpoint pair always resolves to the same synthetic id.
+```
+
 ### _compatibilityDistance
 
 ```ts
@@ -110,47 +153,4 @@ Example:
 const speciesBoundaryDistance = neat._compatibilityDistance(genomeA, genomeB);
 const sameSpecies =
   speciesBoundaryDistance <= neat.options.compatibilityThreshold;
-```
-
-### _fallbackInnov
-
-```ts
-_fallbackInnov(
-  connection: ConnectionLike,
-): number
-```
-
-Generate a deterministic fallback innovation id for a connection when the
-connection does not provide an explicit innovation number.
-
-Innovation numbers are the canonical alignment key because they let NEAT
-distinguish matching genes from disjoint or excess ones across topology
-changes. This fallback only exists for the boundary cases where a connection
-arrives without that explicit identifier. In that case the helper derives a
-stable directional id from the connection endpoints so the comparison can
-still proceed instead of silently dropping structure from the distance read.
-
-Interpret the fallback as a bridge, not as a replacement for properly tracked
-innovations. It keeps compatibility useful for legacy, test, or partially
-normalized genomes, but explicit innovation numbers remain the source of
-truth whenever they are available. A fallback match should therefore be read
-as "these connections occupy the same directed slot" rather than "these two
-genes are proven to share the same historical innovation event."
-
-Parameters:
-- `this` - - NEAT context kept for symmetry with the other compatibility helpers.
-- `connection` - - Connection object expected to contain `from.index` and `to.index`.
-
-Returns: Numeric innovation id derived from the directional endpoint pair.
-
-Example:
-
-```ts
-const fallbackInnovation = neat._fallbackInnov({
-  from: { index: 4 },
-  to: { index: 9 },
-  weight: 0.75,
-});
-
-// The same endpoint pair always resolves to the same synthetic id.
 ```

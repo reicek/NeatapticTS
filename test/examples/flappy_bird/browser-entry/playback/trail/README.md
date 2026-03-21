@@ -14,30 +14,6 @@ pushTrailPoint(trailPoints, 11, 136, 2);
 
 ## browser-entry/playback/trail/playback.trail.history.services.ts
 
-### pushChampionTrailPoint
-
-```ts
-pushChampionTrailPoint(
-  trailPoints: TrailPoint[],
-  frameIndex: number,
-  yPosition: number,
-): void
-```
-
-Appends one point to the champion-only short trail history.
-
-The browser highlights the current leader with a shorter, denser trail than
-the rest of the flock. Using a dedicated helper keeps that policy explicit in
-the call site instead of scattering champion-specific retention numbers
-through the playback renderer.
-
-Parameters:
-- `trailPoints` - - Mutable champion trail collection.
-- `frameIndex` - - Source frame index.
-- `yPosition` - - Bird y position.
-
-Returns: Nothing.
-
 ### pushTrailPoint
 
 ```ts
@@ -71,6 +47,30 @@ const trailPoints = [{ frameIndex: 10, yPx: 140 }];
 pushTrailPoint(trailPoints, 11, 136, 2);
 ```
 
+### pushChampionTrailPoint
+
+```ts
+pushChampionTrailPoint(
+  trailPoints: TrailPoint[],
+  frameIndex: number,
+  yPosition: number,
+): void
+```
+
+Appends one point to the champion-only short trail history.
+
+The browser highlights the current leader with a shorter, denser trail than
+the rest of the flock. Using a dedicated helper keeps that policy explicit in
+the call site instead of scattering champion-specific retention numbers
+through the playback renderer.
+
+Parameters:
+- `trailPoints` - - Mutable champion trail collection.
+- `frameIndex` - - Source frame index.
+- `yPosition` - - Bird y position.
+
+Returns: Nothing.
+
 ## browser-entry/playback/trail/playback.trail.opacity.utils.ts
 
 Opacity helpers for playback trail fading.
@@ -85,25 +85,6 @@ const edgeOpacity = resolveEdgeOpacityFactor(120, 140, edgeBounds);
 const ageOpacity = resolveTrailLifetimeOpacityFactor(3, 12);
 const alpha = edgeOpacity * ageOpacity;
 ```
-
-### clamp01
-
-```ts
-clamp01(
-  value: number,
-): number
-```
-
-Clamps a number to the inclusive [0, 1] range.
-
-The trail renderer combines several normalized fade factors, so keeping this
-utility local to the module makes the intent obvious: every opacity channel
-must remain safe for direct canvas alpha use.
-
-Parameters:
-- `value` - - Candidate value.
-
-Returns: Clamped value.
 
 ### resolveEdgeOpacityFactor
 
@@ -161,3 +142,22 @@ Parameters:
 - `maxTrailFrameOffset` - - Oldest age offset currently retained by trail.
 
 Returns: Opacity multiplier in [0, 1].
+
+### clamp01
+
+```ts
+clamp01(
+  value: number,
+): number
+```
+
+Clamps a number to the inclusive [0, 1] range.
+
+The trail renderer combines several normalized fade factors, so keeping this
+utility local to the module makes the intent obvious: every opacity channel
+must remain safe for direct canvas alpha use.
+
+Parameters:
+- `value` - - Candidate value.
+
+Returns: Clamped value.

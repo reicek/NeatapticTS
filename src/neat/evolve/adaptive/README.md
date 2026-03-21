@@ -39,28 +39,6 @@ flowchart TD
 
 ## neat/evolve/adaptive/evolve.adaptive.utils.ts
 
-### adaptReenableProbability
-
-```ts
-adaptReenableProbability(
-  internal: NeatControllerForEvolution,
-  config: { minSamples: number; target: number; min: number; max: number; deltaScale: number; },
-): void
-```
-
-Adapt the re-enable probability based on recent success ratios.
-
-Re-enable adaptation turns the last generation's connection-revival outcomes
-into one controller-level probability update for the next generation. It
-aggregates success and attempt counters across the whole population, resets
-those per-genome counters once consumed, and only adjusts the shared
-probability when the sample size is large enough to be meaningful.
-
-Parameters:
-- `internal` - - NEAT controller instance.
-
-Returns: Nothing.
-
 ### applyAdaptiveComplexityControllers
 
 ```ts
@@ -81,6 +59,26 @@ Parameters:
 - `internal` - - NEAT controller instance.
 
 Returns: A promise that resolves after optional complexity controllers have run.
+
+### applyMinimalCriterionAdaptiveSafe
+
+```ts
+applyMinimalCriterionAdaptiveSafe(
+  internal: NeatControllerForEvolution,
+): Promise<void>
+```
+
+Apply minimal criterion adaptive controller if available.
+
+Minimal criterion adaptation is one of the few adaptive policies that can
+rewrite the current generation's score landscape immediately. Keeping it in a
+safe wrapper lets evolve apply that pressure when configured without forcing
+every runtime surface to include the full adaptive subtree.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: A promise that resolves after the optional acceptance controller runs.
 
 ### applyAncestorUniqAdaptiveSafe
 
@@ -130,46 +128,6 @@ Parameters:
 
 Returns: Nothing.
 
-### applyMinimalCriterionAdaptiveSafe
-
-```ts
-applyMinimalCriterionAdaptiveSafe(
-  internal: NeatControllerForEvolution,
-): Promise<void>
-```
-
-Apply minimal criterion adaptive controller if available.
-
-Minimal criterion adaptation is one of the few adaptive policies that can
-rewrite the current generation's score landscape immediately. Keeping it in a
-safe wrapper lets evolve apply that pressure when configured without forcing
-every runtime surface to include the full adaptive subtree.
-
-Parameters:
-- `internal` - - NEAT controller instance.
-
-Returns: A promise that resolves after the optional acceptance controller runs.
-
-### applyOperatorAdaptationSafe
-
-```ts
-applyOperatorAdaptationSafe(
-  internal: NeatControllerForEvolution,
-): Promise<void>
-```
-
-Apply operator adaptation if available.
-
-Operator adaptation is another best-effort policy-maintenance bridge. It
-decays long-running operator statistics so later mutation choices weight more
-recent evidence without forcing evolve to know the details of the adaptive
-operator-selection subsystem.
-
-Parameters:
-- `internal` - - NEAT controller instance.
-
-Returns: A promise that resolves after optional operator-stat decay runs.
-
 ### applyPruningAndMutation
 
 ```ts
@@ -217,3 +175,45 @@ Parameters:
 - `internal` - - NEAT controller instance.
 
 Returns: Nothing.
+
+### adaptReenableProbability
+
+```ts
+adaptReenableProbability(
+  internal: NeatControllerForEvolution,
+  config: { minSamples: number; target: number; min: number; max: number; deltaScale: number; },
+): void
+```
+
+Adapt the re-enable probability based on recent success ratios.
+
+Re-enable adaptation turns the last generation's connection-revival outcomes
+into one controller-level probability update for the next generation. It
+aggregates success and attempt counters across the whole population, resets
+those per-genome counters once consumed, and only adjusts the shared
+probability when the sample size is large enough to be meaningful.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: Nothing.
+
+### applyOperatorAdaptationSafe
+
+```ts
+applyOperatorAdaptationSafe(
+  internal: NeatControllerForEvolution,
+): Promise<void>
+```
+
+Apply operator adaptation if available.
+
+Operator adaptation is another best-effort policy-maintenance bridge. It
+decays long-running operator statistics so later mutation choices weight more
+recent evidence without forcing evolve to know the details of the adaptive
+operator-selection subsystem.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: A promise that resolves after optional operator-stat decay runs.

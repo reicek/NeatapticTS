@@ -78,23 +78,13 @@ flowchart TB
     ScoreEntry["ScoredGenomeEntry\nranking helper"] --> Network
 ```
 
-### FlappyGenerationEvaluationPlan
+### FlappyTrainerNetwork
 
-Generation-level rollout plans for staged evaluation.
+Network shape expected by the Flappy trainer.
 
-Each generation resolves one plan that answers three questions: how strong is
-the current mutation schedule, which shared seeds belong to each stage, and
-what rollout budget each stage is allowed to spend. This is the contract that
-makes quick screening, full passes, and reevaluation feel like one coherent
-policy instead of three unrelated helper calls.
-
-### FlappyGenerationReport
-
-Compact generation report used for training logs.
-
-The report is shaped for longitudinal monitoring rather than raw storage. It
-collects the distribution and best-run details needed to judge whether a
-generation improved robustly instead of producing one lucky outlier.
+The trainer only needs the evaluation-facing subset of a full network plus an
+optional score field used by staged ranking helpers. That narrow shape keeps
+the trainer decoupled from most of the broader network implementation.
 
 ### FlappyTrainerNeatController
 
@@ -105,13 +95,13 @@ documents only the methods and mutable options it actually depends on, which
 makes the orchestration code read more like policy and less like framework
 plumbing.
 
-### FlappyTrainerNetwork
+### FlappyGenerationReport
 
-Network shape expected by the Flappy trainer.
+Compact generation report used for training logs.
 
-The trainer only needs the evaluation-facing subset of a full network plus an
-optional score field used by staged ranking helpers. That narrow shape keeps
-the trainer decoupled from most of the broader network implementation.
+The report is shaped for longitudinal monitoring rather than raw storage. It
+collects the distribution and best-run details needed to judge whether a
+generation improved robustly instead of producing one lucky outlier.
 
 ### FlappyTrainerRuntimeState
 
@@ -129,6 +119,16 @@ These values define the static training shape before runtime state and staged
 evaluation are attached. Once created, the rest of the trainer can treat this
 as a stable configuration shelf rather than scattered ad hoc constants.
 
+### FlappyGenerationEvaluationPlan
+
+Generation-level rollout plans for staged evaluation.
+
+Each generation resolves one plan that answers three questions: how strong is
+the current mutation schedule, which shared seeds belong to each stage, and
+what rollout budget each stage is allowed to spend. This is the contract that
+makes quick screening, full passes, and reevaluation feel like one coherent
+policy instead of three unrelated helper calls.
+
 ### ScoredGenomeEntry
 
 Score carrier used for deterministic ordering helpers.
@@ -138,39 +138,6 @@ write and keeps score extraction explicit at sort time instead of letting it
 leak across multiple helpers.
 
 ## trainer/trainer.ts
-
-### handleTrainerMainError
-
-```ts
-handleTrainerMainError(
-  error: unknown,
-): void
-```
-
-Handles fatal `main` rejection path.
-
-The trainer keeps this boundary small so unexpected failures are formatted in
-one consistent place before reaching the CLI. That keeps shutdown behavior
-and terminal messaging consistent whether the failure came from setup,
-evaluation, or the loop itself.
-
-Parameters:
-- `error` - - Unknown rejection reason from trainer execution.
-
-Returns: Nothing.
-
-### isDirectTrainerExecution
-
-```ts
-isDirectTrainerExecution(): boolean
-```
-
-Resolves whether this module is the direct Node entrypoint.
-
-This lets the file behave as both a reusable module and a runnable script
-without duplicating the startup boundary in a second wrapper file.
-
-Returns: `true` when Node launched this file directly.
 
 ### runTrainer
 
@@ -209,6 +176,39 @@ Example:
 await runTrainer();
 ```
 
+### handleTrainerMainError
+
+```ts
+handleTrainerMainError(
+  error: unknown,
+): void
+```
+
+Handles fatal `main` rejection path.
+
+The trainer keeps this boundary small so unexpected failures are formatted in
+one consistent place before reaching the CLI. That keeps shutdown behavior
+and terminal messaging consistent whether the failure came from setup,
+evaluation, or the loop itself.
+
+Parameters:
+- `error` - - Unknown rejection reason from trainer execution.
+
+Returns: Nothing.
+
+### isDirectTrainerExecution
+
+```ts
+isDirectTrainerExecution(): boolean
+```
+
+Resolves whether this module is the direct Node entrypoint.
+
+This lets the file behave as both a reusable module and a runnable script
+without duplicating the startup boundary in a second wrapper file.
+
+Returns: `true` when Node launched this file directly.
+
 ## trainer/trainer.errors.ts
 
 Small CLI-facing error-rendering boundary for the trainer.
@@ -217,10 +217,6 @@ Keeping fatal-error formatting in one file prevents setup, evaluation, and
 shutdown paths from inventing slightly different terminal messages. That is a
 small detail, but it makes long-running scripts and quick debugging sessions
 easier to scan.
-
-### FLAPPY_TRAINER_UNEXPECTED_ERROR_PREFIX
-
-Prefix used when rendering unexpected trainer failures to stderr.
 
 ### formatTrainerErrorMessage
 
@@ -240,6 +236,10 @@ Parameters:
 - `error` - - Unknown rejection reason from trainer execution.
 
 Returns: Formatted error string for CLI logging.
+
+### FLAPPY_TRAINER_UNEXPECTED_ERROR_PREFIX
+
+Prefix used when rendering unexpected trainer failures to stderr.
 
 ## trainer/trainer.constants.ts
 
@@ -322,19 +322,19 @@ Reporting and terminal output:
 | `FLAPPY_TRAINER_LOG_PARTS_DELIMITER` | Keeps compact generation logs consistently tokenized. |
 | `FLAPPY_TRAINER_STOPPED_MESSAGE` | Gives graceful shutdown a stable terminal message. |
 
-### FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT
-
-Number of elite genomes preserved unchanged each generation.
-
-Preserving a small elite keeps the trainer from discarding clearly strong
-genomes while the rest of the population continues exploring.
-
 ### FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE
 
 Default population size used by the Flappy trainer NEAT run.
 
 The demo keeps this large enough for staged selection to matter while still
 remaining practical for local experimentation.
+
+### FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT
+
+Number of elite genomes preserved unchanged each generation.
+
+Preserving a small elite keeps the trainer from discarding clearly strong
+genomes while the rest of the population continues exploring.
 
 ### FLAPPY_TRAINER_DEFAULT_RNG_SEED
 
@@ -343,187 +343,12 @@ Deterministic trainer RNG seed used for reproducible training runs.
 Reusing the shared Flappy example seed makes trainer behavior easier to
 compare across doc examples, tests, and manual tuning sessions.
 
-### FLAPPY_TRAINER_DUMMY_FLAP_OUTPUT
+### FLAPPY_TRAINER_STOPPED_MESSAGE
 
-Dummy output channel value for the "flap" action score.
+Log message emitted when trainer loop exits cleanly.
 
-Keeping the flap score lower than the no-flap score produces a predictable
-never-flap dummy network for defensive report code paths.
-
-### FLAPPY_TRAINER_DUMMY_NETWORK_ID
-
-ID used by dummy fallback network for defensive reporting paths.
-
-The report helpers occasionally need a safe stand-in network so logging can
-stay total even when no real population data is available.
-
-### FLAPPY_TRAINER_DUMMY_NO_FLAP_OUTPUT
-
-Dummy output channel value for the "no flap" action score.
-
-The dummy network intentionally prefers the passive action so fallback report
-generation remains deterministic and simple.
-
-### FLAPPY_TRAINER_FRAME_PRIMARY_BASE_SCORE
-
-Base offset awarded to genomes that satisfy the mean-pipe progress filter.
-
-The large offset makes it obvious that surviving the gate is more important
-than tiny differences in the secondary frame-oriented terms.
-
-### FLAPPY_TRAINER_FRAME_PRIMARY_PIPE_WEIGHT
-
-Pipe-progress contribution weight for frame-primary scoring.
-
-This keeps pipe progress visible even inside the gated scoring branch so the
-ranking still prefers genuinely advancing policies.
-
-### FLAPPY_TRAINER_FRAME_PRIMARY_SURVIVAL_WEIGHT
-
-Survival contribution weight for frame-primary scoring.
-
-Once a genome passes the pipe-progress gate, extra survival time still matters
-because it often signals more stable control.
-
-### FLAPPY_TRAINER_FRAME_STABILITY_STDDEV_WEIGHT
-
-Penalty multiplier applied to fitness standard deviation in frame-primary scoring.
-
-Higher instability lowers the provisional score so a lucky but erratic genome
-is less likely to outrank a steadier competitor.
-
-### FLAPPY_TRAINER_FULL_PASS_ELITISM_MULTIPLIER
-
-Multiplier over elitism used to size full-pass candidate pool.
-
-This ties the full-pass budget to a familiar population concept so the deeper
-stage scales alongside the preserved elite.
-
-### FLAPPY_TRAINER_FULL_PASS_POPULATION_FRACTION
-
-Population fraction used to size full-pass candidate pool.
-
-The full stage uses the larger of this fraction and the elitism-based floor so
-promising mid-pack genomes are not excluded too aggressively.
-
-### FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES
-
-Consecutive unrecoverable frames needed to stop full rollout early.
-
-This longer streak makes the full stage less trigger-happy than the quick
-screen while still avoiding wasted rollout budget.
-
-### FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES
-
-Early-termination grace frames used during full rollout stage.
-
-The deeper stage allows more time before judging a trajectory unrecoverable
-because the trainer is now evaluating stronger candidates more carefully.
-
-### FLAPPY_TRAINER_FULL_ROLLOUT_PIPE_PROGRESS_TARGET
-
-Pipe-progress target used to normalize full and reevaluation rollout fitness.
-
-The deeper stages share a tougher target because they are used for robust
-ranking rather than first-pass elimination.
-
-### FLAPPY_TRAINER_LOG_PARTS_DELIMITER
-
-Delimiter used when composing compact generation log lines.
-
-A single-space delimiter keeps the log dense, stable, and easy to parse by eye
-during long-running terminal sessions.
-
-### FLAPPY_TRAINER_MUTATION_AMOUNT_END
-
-Final mutation amount reached after annealing window completes.
-
-Cooling the mutation amount along with the rate reduces late-generation noise
-without fully freezing structural search.
-
-### FLAPPY_TRAINER_MUTATION_AMOUNT_START
-
-Initial mutation amount at generation `0` before annealing.
-
-This controls how many mutation operations can be applied while the trainer
-is still in its exploratory phase.
-
-### FLAPPY_TRAINER_MUTATION_ANNEAL_GENERATIONS
-
-Generation count used to fully anneal mutation schedule from start to end values.
-
-Within this window the trainer gradually cools from more exploratory updates
-toward smaller, steadier changes.
-
-### FLAPPY_TRAINER_MUTATION_RATE_END
-
-Final mutation rate reached after annealing window completes.
-
-Lower late-stage mutation pressure helps good policies stabilize instead of
-being reshuffled as aggressively as the opening generations.
-
-### FLAPPY_TRAINER_MUTATION_RATE_START
-
-Initial mutation rate at generation `0` before annealing.
-
-The starting rate is intentionally aggressive so the early population can
-discover useful topologies quickly.
-
-### FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_AMOUNT
-
-Initial NEAT mutation amount before generation schedule annealing is applied.
-
-Matching the controller bootstrap to the trainer policy avoids a confusing
-mismatch between generation `0` and later loop behavior.
-
-### FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE
-
-Initial NEAT mutation rate before generation schedule annealing is applied.
-
-This seeds the controller with a sensible baseline before the per-generation
-planner starts taking over.
-
-### FLAPPY_TRAINER_PIPE_FALLBACK_PIPE_WEIGHT
-
-Pipe-progress contribution weight for fallback scoring path.
-
-The fallback path leans heavily on pipe progress because it is the clearest
-robust signal available before the primary gate is satisfied.
-
-### FLAPPY_TRAINER_PIPE_FILTER_TOLERANCE
-
-Allowed mean-pipes delta from the current best before frame-primary scoring applies.
-
-This acts like a gating tolerance: only genomes close enough in pipe progress
-get the more generous frame-primary score treatment.
-
-### FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES
-
-Consecutive unrecoverable frames needed to stop quick screening rollout early.
-
-Requiring a streak prevents one noisy frame from ending the screen too early
-while still saving time on clearly doomed trajectories.
-
-### FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES
-
-Early-termination grace frames used during quick screening rollout stage.
-
-This short grace period gives a policy a brief chance to stabilize before the
-unrecoverable-flight heuristic is allowed to stop the rollout.
-
-### FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES
-
-Frame cap used during quick screening rollout stage.
-
-The quick stage is supposed to eliminate obviously weak genomes cheaply, so
-its horizon is intentionally shorter than the full evaluation horizon.
-
-### FLAPPY_TRAINER_QUICK_ROLLOUT_PIPE_PROGRESS_TARGET
-
-Pipe-progress target used to normalize quick screening rollout fitness.
-
-The lower quick-stage target reflects the fact that this pass is a screen, not
-the trainer's final statement of policy quality.
+A dedicated constant keeps the shutdown path stable for humans and for any
+scripts that watch trainer output.
 
 ### FLAPPY_TRAINER_REEVALUATION_MIN_CANDIDATE_COUNT
 
@@ -546,12 +371,187 @@ Percentile used when reporting high-end population score (P90).
 The trainer uses `p90` as a quick "is the upper tail getting healthier?"
 signal without over-focusing on only the single best genome.
 
-### FLAPPY_TRAINER_STOPPED_MESSAGE
+### FLAPPY_TRAINER_MUTATION_ANNEAL_GENERATIONS
 
-Log message emitted when trainer loop exits cleanly.
+Generation count used to fully anneal mutation schedule from start to end values.
 
-A dedicated constant keeps the shutdown path stable for humans and for any
-scripts that watch trainer output.
+Within this window the trainer gradually cools from more exploratory updates
+toward smaller, steadier changes.
+
+### FLAPPY_TRAINER_MUTATION_RATE_START
+
+Initial mutation rate at generation `0` before annealing.
+
+The starting rate is intentionally aggressive so the early population can
+discover useful topologies quickly.
+
+### FLAPPY_TRAINER_MUTATION_RATE_END
+
+Final mutation rate reached after annealing window completes.
+
+Lower late-stage mutation pressure helps good policies stabilize instead of
+being reshuffled as aggressively as the opening generations.
+
+### FLAPPY_TRAINER_MUTATION_AMOUNT_START
+
+Initial mutation amount at generation `0` before annealing.
+
+This controls how many mutation operations can be applied while the trainer
+is still in its exploratory phase.
+
+### FLAPPY_TRAINER_MUTATION_AMOUNT_END
+
+Final mutation amount reached after annealing window completes.
+
+Cooling the mutation amount along with the rate reduces late-generation noise
+without fully freezing structural search.
+
+### FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE
+
+Initial NEAT mutation rate before generation schedule annealing is applied.
+
+This seeds the controller with a sensible baseline before the per-generation
+planner starts taking over.
+
+### FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_AMOUNT
+
+Initial NEAT mutation amount before generation schedule annealing is applied.
+
+Matching the controller bootstrap to the trainer policy avoids a confusing
+mismatch between generation `0` and later loop behavior.
+
+### FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES
+
+Frame cap used during quick screening rollout stage.
+
+The quick stage is supposed to eliminate obviously weak genomes cheaply, so
+its horizon is intentionally shorter than the full evaluation horizon.
+
+### FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES
+
+Early-termination grace frames used during quick screening rollout stage.
+
+This short grace period gives a policy a brief chance to stabilize before the
+unrecoverable-flight heuristic is allowed to stop the rollout.
+
+### FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES
+
+Consecutive unrecoverable frames needed to stop quick screening rollout early.
+
+Requiring a streak prevents one noisy frame from ending the screen too early
+while still saving time on clearly doomed trajectories.
+
+### FLAPPY_TRAINER_QUICK_ROLLOUT_PIPE_PROGRESS_TARGET
+
+Pipe-progress target used to normalize quick screening rollout fitness.
+
+The lower quick-stage target reflects the fact that this pass is a screen, not
+the trainer's final statement of policy quality.
+
+### FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES
+
+Early-termination grace frames used during full rollout stage.
+
+The deeper stage allows more time before judging a trajectory unrecoverable
+because the trainer is now evaluating stronger candidates more carefully.
+
+### FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES
+
+Consecutive unrecoverable frames needed to stop full rollout early.
+
+This longer streak makes the full stage less trigger-happy than the quick
+screen while still avoiding wasted rollout budget.
+
+### FLAPPY_TRAINER_FULL_ROLLOUT_PIPE_PROGRESS_TARGET
+
+Pipe-progress target used to normalize full and reevaluation rollout fitness.
+
+The deeper stages share a tougher target because they are used for robust
+ranking rather than first-pass elimination.
+
+### FLAPPY_TRAINER_FRAME_STABILITY_STDDEV_WEIGHT
+
+Penalty multiplier applied to fitness standard deviation in frame-primary scoring.
+
+Higher instability lowers the provisional score so a lucky but erratic genome
+is less likely to outrank a steadier competitor.
+
+### FLAPPY_TRAINER_PIPE_FILTER_TOLERANCE
+
+Allowed mean-pipes delta from the current best before frame-primary scoring applies.
+
+This acts like a gating tolerance: only genomes close enough in pipe progress
+get the more generous frame-primary score treatment.
+
+### FLAPPY_TRAINER_FRAME_PRIMARY_BASE_SCORE
+
+Base offset awarded to genomes that satisfy the mean-pipe progress filter.
+
+The large offset makes it obvious that surviving the gate is more important
+than tiny differences in the secondary frame-oriented terms.
+
+### FLAPPY_TRAINER_FRAME_PRIMARY_SURVIVAL_WEIGHT
+
+Survival contribution weight for frame-primary scoring.
+
+Once a genome passes the pipe-progress gate, extra survival time still matters
+because it often signals more stable control.
+
+### FLAPPY_TRAINER_FRAME_PRIMARY_PIPE_WEIGHT
+
+Pipe-progress contribution weight for frame-primary scoring.
+
+This keeps pipe progress visible even inside the gated scoring branch so the
+ranking still prefers genuinely advancing policies.
+
+### FLAPPY_TRAINER_PIPE_FALLBACK_PIPE_WEIGHT
+
+Pipe-progress contribution weight for fallback scoring path.
+
+The fallback path leans heavily on pipe progress because it is the clearest
+robust signal available before the primary gate is satisfied.
+
+### FLAPPY_TRAINER_FULL_PASS_ELITISM_MULTIPLIER
+
+Multiplier over elitism used to size full-pass candidate pool.
+
+This ties the full-pass budget to a familiar population concept so the deeper
+stage scales alongside the preserved elite.
+
+### FLAPPY_TRAINER_FULL_PASS_POPULATION_FRACTION
+
+Population fraction used to size full-pass candidate pool.
+
+The full stage uses the larger of this fraction and the elitism-based floor so
+promising mid-pack genomes are not excluded too aggressively.
+
+### FLAPPY_TRAINER_DUMMY_NETWORK_ID
+
+ID used by dummy fallback network for defensive reporting paths.
+
+The report helpers occasionally need a safe stand-in network so logging can
+stay total even when no real population data is available.
+
+### FLAPPY_TRAINER_DUMMY_NO_FLAP_OUTPUT
+
+Dummy output channel value for the "no flap" action score.
+
+The dummy network intentionally prefers the passive action so fallback report
+generation remains deterministic and simple.
+
+### FLAPPY_TRAINER_DUMMY_FLAP_OUTPUT
+
+Dummy output channel value for the "flap" action score.
+
+Keeping the flap score lower than the no-flap score produces a predictable
+never-flap dummy network for defensive report code paths.
+
+### FLAPPY_TRAINER_LOG_PARTS_DELIMITER
+
+Delimiter used when composing compact generation log lines.
+
+A single-space delimiter keeps the log dense, stable, and easy to parse by eye
+during long-running terminal sessions.
 
 ## trainer/trainer.loop.service.ts
 
@@ -571,45 +571,6 @@ flowchart LR
     Fallback --> Log["logGenerationSummary()"]
     Log --> Resolve
 ```
-
-### applyMutationSchedule
-
-```ts
-applyMutationSchedule(
-  neatController: FlappyTrainerNeatController,
-  mutationSchedule: FlappyMutationSchedule,
-): void
-```
-
-Applies mutation schedule values to the NEAT controller options.
-
-The schedule is resolved outside this helper so the loop can read as a clean
-"resolve -> apply -> evolve -> report" flow. That separation also makes it
-easier to inspect the active schedule in logs or tests.
-
-Parameters:
-- `neatController` - - Trainer NEAT controller.
-- `mutationSchedule` - - Mutation schedule for current generation.
-
-Returns: Nothing.
-
-### LogGenerationSummaryCallback
-
-```ts
-LogGenerationSummaryCallback(
-  generationLabel: number,
-  mutationSchedule: FlappyMutationSchedule,
-  report: FlappyGenerationReport | undefined,
-  fittestGenome: FlappyTrainerNetwork,
-  fallbackEpisode: FlappyEpisodeResult,
-): void
-```
-
-Callback signature for one-line generation logging.
-
-The loop owns evolution cadence, while the callback owns presentation.
-Keeping those concerns separate makes it easy to reuse the loop with richer
-reporting later.
 
 ### runTrainerEvolutionLoop
 
@@ -635,6 +596,45 @@ Parameters:
 
 Returns: Promise resolved when the trainer has been stopped.
 
+### LogGenerationSummaryCallback
+
+```ts
+LogGenerationSummaryCallback(
+  generationLabel: number,
+  mutationSchedule: FlappyMutationSchedule,
+  report: FlappyGenerationReport | undefined,
+  fittestGenome: FlappyTrainerNetwork,
+  fallbackEpisode: FlappyEpisodeResult,
+): void
+```
+
+Callback signature for one-line generation logging.
+
+The loop owns evolution cadence, while the callback owns presentation.
+Keeping those concerns separate makes it easy to reuse the loop with richer
+reporting later.
+
+### applyMutationSchedule
+
+```ts
+applyMutationSchedule(
+  neatController: FlappyTrainerNeatController,
+  mutationSchedule: FlappyMutationSchedule,
+): void
+```
+
+Applies mutation schedule values to the NEAT controller options.
+
+The schedule is resolved outside this helper so the loop can read as a clean
+"resolve -> apply -> evolve -> report" flow. That separation also makes it
+easier to inspect the active schedule in logs or tests.
+
+Parameters:
+- `neatController` - - Trainer NEAT controller.
+- `mutationSchedule` - - Mutation schedule for current generation.
+
+Returns: Nothing.
+
 ## trainer/trainer.setup.service.ts
 
 Bootstrap helpers for the trainer's static shape and initial NEAT runtime.
@@ -643,6 +643,34 @@ The trainer keeps setup separate from the main entry file so configuration and
 controller construction can be read, tested, and tuned without also reading
 the outer loop. This boundary answers a simple question: what does the demo
 need before the first generation can run?
+
+### createTrainerSetup
+
+```ts
+createTrainerSetup(): FlappyTrainerSetup
+```
+
+Creates immutable setup values for the trainer.
+
+Educational note:
+The setup object freezes the core training shape up front: input width,
+output width, population size, and elitism count. Centralizing those values
+makes the rest of the trainer read as policy rather than configuration noise.
+
+Returns: Default trainer setup values used for NEAT configuration.
+
+### createTrainerRuntimeState
+
+```ts
+createTrainerRuntimeState(): FlappyTrainerRuntimeState
+```
+
+Creates mutable runtime state container.
+
+The runtime state is intentionally tiny. It only tracks stop intent and the
+latest report so the outer loop can remain easy to reason about.
+
+Returns: Fresh runtime state used by loop orchestration.
 
 ### createNeatController
 
@@ -670,34 +698,6 @@ Example:
 const trainerSetup = createTrainerSetup();
 const neatController = createNeatController(trainerSetup);
 ```
-
-### createTrainerRuntimeState
-
-```ts
-createTrainerRuntimeState(): FlappyTrainerRuntimeState
-```
-
-Creates mutable runtime state container.
-
-The runtime state is intentionally tiny. It only tracks stop intent and the
-latest report so the outer loop can remain easy to reason about.
-
-Returns: Fresh runtime state used by loop orchestration.
-
-### createTrainerSetup
-
-```ts
-createTrainerSetup(): FlappyTrainerSetup
-```
-
-Creates immutable setup values for the trainer.
-
-Educational note:
-The setup object freezes the core training shape up front: input width,
-output width, population size, and elitism count. Centralizing those values
-makes the rest of the trainer read as policy rather than configuration noise.
-
-Returns: Default trainer setup values used for NEAT configuration.
 
 ### resolveNoopFitness
 
@@ -868,24 +868,6 @@ The trainer should stop between generations, not by tearing the process down
 in the middle of evaluation. This file converts OS-level stop signals into one
 shared runtime intent flag that the main loop can observe safely.
 
-### handleTrainerStopSignal
-
-```ts
-handleTrainerStopSignal(
-  trainerRuntimeState: FlappyTrainerRuntimeState,
-): void
-```
-
-Handles one stop signal update.
-
-The handler does the minimum possible work because signal paths should stay
-predictable and side-effect light.
-
-Parameters:
-- `trainerRuntimeState` - - Mutable trainer runtime state.
-
-Returns: Nothing.
-
 ### registerTrainerStopSignals
 
 ```ts
@@ -900,6 +882,24 @@ Educational note:
 Long-running evolutionary runs should stop cleanly when the user presses
 `Ctrl+C`. This service flips runtime intent instead of abruptly tearing down
 the process mid-generation.
+
+Parameters:
+- `trainerRuntimeState` - - Mutable trainer runtime state.
+
+Returns: Nothing.
+
+### handleTrainerStopSignal
+
+```ts
+handleTrainerStopSignal(
+  trainerRuntimeState: FlappyTrainerRuntimeState,
+): void
+```
+
+Handles one stop signal update.
+
+The handler does the minimum possible work because signal paths should stay
+predictable and side-effect light.
 
 Parameters:
 - `trainerRuntimeState` - - Mutable trainer runtime state.
@@ -1164,25 +1164,6 @@ These utilities keep score extraction and descending-order selection in one
 place so the staged evaluation services do not each reinvent the same sorting
 logic with slightly different fallback rules.
 
-### resolveBestGenomeByScore
-
-```ts
-resolveBestGenomeByScore(
-  population: readonly FlappyTrainerNetwork[],
-): FlappyTrainerNetwork | undefined
-```
-
-Resolves the best genome by current score.
-
-This helper is intentionally tiny, but it gives the rest of the trainer a
-single vocabulary term for "the current best genome under whatever score shelf
-is currently populated."
-
-Parameters:
-- `population` - - Current trainer population.
-
-Returns: Highest-scoring genome or `undefined` when population is empty.
-
 ### selectTopGenomesByScore
 
 ```ts
@@ -1201,6 +1182,25 @@ Parameters:
 - `targetCount` - - Maximum number of genomes to return.
 
 Returns: Highest-scoring genomes in descending score order.
+
+### resolveBestGenomeByScore
+
+```ts
+resolveBestGenomeByScore(
+  population: readonly FlappyTrainerNetwork[],
+): FlappyTrainerNetwork | undefined
+```
+
+Resolves the best genome by current score.
+
+This helper is intentionally tiny, but it gives the rest of the trainer a
+single vocabulary term for "the current best genome under whatever score shelf
+is currently populated."
+
+Parameters:
+- `population` - - Current trainer population.
+
+Returns: Highest-scoring genome or `undefined` when population is empty.
 
 ## trainer/trainer.evaluation-plan.utils.ts
 
@@ -1231,129 +1231,6 @@ flowchart TB
     FullOptions --> Plan
     ReevalOptions --> Plan
 ```
-
-### buildSharedSeedBatch
-
-```ts
-buildSharedSeedBatch(
-  generationIndex: number,
-  stageSalt: number,
-  seedCount: number,
-): number[]
-```
-
-Build deterministic shared seeds for one generation stage.
-
-Shared seeds are what make same-generation comparisons fair: genomes face the
-same sampled worlds instead of winning because they happened to get a kinder
-random rollout.
-
-Parameters:
-- `generationIndex` - - Zero-based generation index.
-- `stageSalt` - - Constant stage-specific salt.
-- `seedCount` - - Number of seeds to produce.
-
-Returns: Deterministic shared seed list.
-
-### createFullRolloutOptions
-
-```ts
-createFullRolloutOptions(
-  difficultyScale: number,
-): FlappyRolloutOptions
-```
-
-Builds full-stage rollout options.
-
-This stage gives stronger candidates a longer, stricter test so the trainer
-can refine the leaderboard before committing to expensive reevaluation.
-
-Parameters:
-- `difficultyScale` - - Difficulty scale for this generation.
-
-Returns: Full stage rollout options.
-
-### createQuickRolloutOptions
-
-```ts
-createQuickRolloutOptions(
-  difficultyScale: number,
-): FlappyRolloutOptions
-```
-
-Builds quick-screen rollout options.
-
-The quick stage is a cheap gate. It favors speed and comparability over fully
-trusted estimates because weak genomes only need enough evidence to be ruled
-out early.
-
-Parameters:
-- `difficultyScale` - - Difficulty scale for this generation.
-
-Returns: Quick stage rollout options.
-
-### createReevaluationRolloutOptions
-
-```ts
-createReevaluationRolloutOptions(
-  difficultyScale: number,
-): FlappyRolloutOptions
-```
-
-Builds high-confidence reevaluation rollout options.
-
-Reevaluation deliberately disables early termination so the strongest
-candidates are judged on a more faithful, less shortcut-heavy comparison.
-
-Parameters:
-- `difficultyScale` - - Difficulty scale for this generation.
-
-Returns: Reevaluation stage rollout options.
-
-### FlappyMutationSchedule
-
-Mutation schedule used by generation planning and outer loop logging.
-
-These two numbers are treated as a single policy decision because the trainer
-cools both the frequency and the size of mutations together.
-
-### mixSeed
-
-```ts
-mixSeed(
-  generationIndex: number,
-  stageSalt: number,
-): number
-```
-
-Mixes generation and stage salts into a deterministic uint32 RNG seed.
-
-The small mixing pipeline spreads nearby generation numbers apart so adjacent
-stages and generations do not accidentally reuse overly correlated seed sets.
-
-Parameters:
-- `generationIndex` - - Current generation index.
-- `stageSalt` - - Stage-specific salt.
-
-Returns: Mixed uint32 seed.
-
-### resolveCurriculumDifficultyScale
-
-```ts
-resolveCurriculumDifficultyScale(
-  generationIndex: number,
-): number
-```
-
-Resolve curriculum difficulty scale for the current generation.
-
-The course starts gentle, ramps through the middle generations, and then caps
-at full difficulty once the population has had time to discover viable flight.
-
-Parameters:
-- `generationIndex` - - Zero-based generation index.
-
-Returns: Difficulty scale in [0, 1].
 
 ### resolveGenerationEvaluationPlan
 
@@ -1392,3 +1269,126 @@ Parameters:
 - `generationIndex` - - Zero-based generation index.
 
 Returns: Mutation rate and mutation amount for this generation.
+
+### FlappyMutationSchedule
+
+Mutation schedule used by generation planning and outer loop logging.
+
+These two numbers are treated as a single policy decision because the trainer
+cools both the frequency and the size of mutations together.
+
+### createQuickRolloutOptions
+
+```ts
+createQuickRolloutOptions(
+  difficultyScale: number,
+): FlappyRolloutOptions
+```
+
+Builds quick-screen rollout options.
+
+The quick stage is a cheap gate. It favors speed and comparability over fully
+trusted estimates because weak genomes only need enough evidence to be ruled
+out early.
+
+Parameters:
+- `difficultyScale` - - Difficulty scale for this generation.
+
+Returns: Quick stage rollout options.
+
+### createFullRolloutOptions
+
+```ts
+createFullRolloutOptions(
+  difficultyScale: number,
+): FlappyRolloutOptions
+```
+
+Builds full-stage rollout options.
+
+This stage gives stronger candidates a longer, stricter test so the trainer
+can refine the leaderboard before committing to expensive reevaluation.
+
+Parameters:
+- `difficultyScale` - - Difficulty scale for this generation.
+
+Returns: Full stage rollout options.
+
+### createReevaluationRolloutOptions
+
+```ts
+createReevaluationRolloutOptions(
+  difficultyScale: number,
+): FlappyRolloutOptions
+```
+
+Builds high-confidence reevaluation rollout options.
+
+Reevaluation deliberately disables early termination so the strongest
+candidates are judged on a more faithful, less shortcut-heavy comparison.
+
+Parameters:
+- `difficultyScale` - - Difficulty scale for this generation.
+
+Returns: Reevaluation stage rollout options.
+
+### resolveCurriculumDifficultyScale
+
+```ts
+resolveCurriculumDifficultyScale(
+  generationIndex: number,
+): number
+```
+
+Resolve curriculum difficulty scale for the current generation.
+
+The course starts gentle, ramps through the middle generations, and then caps
+at full difficulty once the population has had time to discover viable flight.
+
+Parameters:
+- `generationIndex` - - Zero-based generation index.
+
+Returns: Difficulty scale in [0, 1].
+
+### buildSharedSeedBatch
+
+```ts
+buildSharedSeedBatch(
+  generationIndex: number,
+  stageSalt: number,
+  seedCount: number,
+): number[]
+```
+
+Build deterministic shared seeds for one generation stage.
+
+Shared seeds are what make same-generation comparisons fair: genomes face the
+same sampled worlds instead of winning because they happened to get a kinder
+random rollout.
+
+Parameters:
+- `generationIndex` - - Zero-based generation index.
+- `stageSalt` - - Constant stage-specific salt.
+- `seedCount` - - Number of seeds to produce.
+
+Returns: Deterministic shared seed list.
+
+### mixSeed
+
+```ts
+mixSeed(
+  generationIndex: number,
+  stageSalt: number,
+): number
+```
+
+Mixes generation and stage salts into a deterministic uint32 RNG seed.
+
+The small mixing pipeline spreads nearby generation numbers apart so adjacent
+stages and generations do not accidentally reuse overly correlated seed sets.
+
+Parameters:
+- `generationIndex` - - Current generation index.
+- `stageSalt` - - Stage-specific salt.
+
+Returns: Mixed uint32 seed.

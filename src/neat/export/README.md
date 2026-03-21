@@ -70,6 +70,38 @@ fs.writeFileSync('population.json', JSON.stringify(popSnapshot, null, 2));
 
 Returns: Array of genome JSON objects.
 
+### importPopulation
+
+```ts
+importPopulation(
+  populationJSON: GenomeJSON[],
+): Promise<void>
+```
+
+Import (replace) the current population from an array of serialized genomes.
+This does not touch NEAT meta state (generation, innovations, etc.) - only the
+population array and implied `popsize` are updated.
+That makes it the right tool when you want to swap candidate solutions into an
+existing controller context instead of restoring a full historical checkpoint.
+
+Example:
+
+```ts
+const populationData: GenomeJSON[] = JSON.parse(fs.readFileSync('population.json', 'utf8'));
+neat.importPopulation(populationData); // population replaced
+neat.evolve(); // continue evolving with new starting genomes
+```
+
+Edge cases handled:
+- Empty array => becomes an empty population (popsize=0).
+- Malformed entries will throw if `Network.fromJSON` rejects them.
+
+Parameters:
+- `populationJSON` - Array of serialized genome objects.
+
+Returns: Promise that resolves once all genomes have been rehydrated and the
+controller population has been replaced.
+
 ### exportState
 
 ```ts
@@ -95,6 +127,68 @@ const neat2 = Neat.importState(raw, fitnessFn); // identical evolutionary contex
 ```
 
 Returns: A  {@link NeatStateJSON} bundle containing meta + population.
+
+### importStateImpl
+
+```ts
+importStateImpl(
+  stateBundle: NeatStateJSON,
+  fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>,
+): Promise<NeatControllerForExport>
+```
+
+Static-style helper that rehydrates a full evolutionary state previously
+produced by {@link exportState}. Invoke this with the NEAT class (not an
+instance) bound as `this`, e.g. `Neat.importStateImpl(bundle, fitnessFn)`.
+It constructs a new NEAT instance using the meta data, then imports the
+population (if present).
+
+This is the most complete restore path in the chapter. If a saved bundle is
+valid, the caller gets back a fresh controller that knows both where the run
+was in evolutionary time and which genomes were alive at that moment.
+
+Safety and validation:
+- Throws if the bundle is not an object.
+- Silently skips population import if `population` is missing or not an array.
+
+Example:
+
+```ts
+const bundle: NeatStateJSON = JSON.parse(fs.readFileSync('state.json', 'utf8'));
+const neat = Neat.importStateImpl(bundle, fitnessFn);
+neat.evolve();
+```
+
+Parameters:
+- `stateBundle` - Full state bundle from  {@link exportState} .
+- `fitnessFunction` - Fitness evaluation callback used for new instance.
+
+Returns: Rehydrated NEAT instance ready to continue evolving.
+
+### toJSONImpl
+
+```ts
+toJSONImpl(): NeatMetaJSON
+```
+
+Serialize NEAT meta (excluding the mutable population) for persistence of
+innovation history and experiment configuration. This is sufficient to
+recreate a blank NEAT run at the same evolutionary generation with the same
+innovation counters, enabling deterministic continuation when combined later
+with a saved population.
+
+Use this path when the controller context matters but the population payload
+should be stored, transferred, or versioned separately.
+
+Example:
+
+```ts
+const meta = neat.toJSONImpl();
+fs.writeFileSync('neat-meta.json', JSON.stringify(meta));
+// ... later ...
+const metaLoaded = JSON.parse(fs.readFileSync('neat-meta.json', 'utf8')) as NeatMetaJSON;
+const neat2 = Neat.fromJSONImpl(metaLoaded, fitnessFn); // empty population
+```
 
 ### fromJSONImpl
 
@@ -140,106 +234,6 @@ export helpers preserve whatever `Network#toJSON()` emits, which lets the
 broader architecture evolve without forcing this chapter to hard-code every
 possible serialized field.
 
-### GenomeWithSerialization
-
-Genome with toJSON serialization method.
-
-This is the smallest runtime contract needed by the export helpers when they
-only care about turning one genome into a JSON payload.
-
-### importPopulation
-
-```ts
-importPopulation(
-  populationJSON: GenomeJSON[],
-): Promise<void>
-```
-
-Import (replace) the current population from an array of serialized genomes.
-This does not touch NEAT meta state (generation, innovations, etc.) - only the
-population array and implied `popsize` are updated.
-That makes it the right tool when you want to swap candidate solutions into an
-existing controller context instead of restoring a full historical checkpoint.
-
-Example:
-
-```ts
-const populationData: GenomeJSON[] = JSON.parse(fs.readFileSync('population.json', 'utf8'));
-neat.importPopulation(populationData); // population replaced
-neat.evolve(); // continue evolving with new starting genomes
-```
-
-Edge cases handled:
-- Empty array => becomes an empty population (popsize=0).
-- Malformed entries will throw if `Network.fromJSON` rejects them.
-
-Parameters:
-- `populationJSON` - Array of serialized genome objects.
-
-Returns: Promise that resolves once all genomes have been rehydrated and the
-controller population has been replaced.
-
-### importStateImpl
-
-```ts
-importStateImpl(
-  stateBundle: NeatStateJSON,
-  fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>,
-): Promise<NeatControllerForExport>
-```
-
-Static-style helper that rehydrates a full evolutionary state previously
-produced by {@link exportState}. Invoke this with the NEAT class (not an
-instance) bound as `this`, e.g. `Neat.importStateImpl(bundle, fitnessFn)`.
-It constructs a new NEAT instance using the meta data, then imports the
-population (if present).
-
-This is the most complete restore path in the chapter. If a saved bundle is
-valid, the caller gets back a fresh controller that knows both where the run
-was in evolutionary time and which genomes were alive at that moment.
-
-Safety and validation:
-- Throws if the bundle is not an object.
-- Silently skips population import if `population` is missing or not an array.
-
-Example:
-
-```ts
-const bundle: NeatStateJSON = JSON.parse(fs.readFileSync('state.json', 'utf8'));
-const neat = Neat.importStateImpl(bundle, fitnessFn);
-neat.evolve();
-```
-
-Parameters:
-- `stateBundle` - Full state bundle from  {@link exportState} .
-- `fitnessFunction` - Fitness evaluation callback used for new instance.
-
-Returns: Rehydrated NEAT instance ready to continue evolving.
-
-### InnovationMapEntry
-
-Connection innovation map entry.
-
-Innovation maps are serialized as `[key, value]` tuples so they can round-trip
-cleanly through JSON and later be restored into `Map` instances.
-
-### NeatConstructor
-
-NEAT class constructor interface.
-
-Static-style restore helpers depend on this constructor shape so they can
-rebuild a controller instance from persisted meta data and then optionally
-rehydrate the population.
-
-### NeatControllerForExport
-
-NEAT controller interface for export operations.
-
-The persistence helpers intentionally depend on this narrow host shape instead
-of the concrete `Neat` class. That keeps export and restore logic reusable in
-tests and static-style helper flows without coupling the file to the full
-controller implementation.
-
 ### NeatMetaJSON
 
 Serialized meta information describing a NEAT run, excluding the concrete
@@ -256,6 +250,29 @@ If `NeatMetaJSON` is the controller checkpoint and `GenomeJSON[]` is the pool
 of candidate solutions, `NeatStateJSON` is the combined pause-and-resume
 artifact that preserves both layers together.
 
+### InnovationMapEntry
+
+Connection innovation map entry.
+
+Innovation maps are serialized as `[key, value]` tuples so they can round-trip
+cleanly through JSON and later be restored into `Map` instances.
+
+### GenomeWithSerialization
+
+Genome with toJSON serialization method.
+
+This is the smallest runtime contract needed by the export helpers when they
+only care about turning one genome into a JSON payload.
+
+### NeatControllerForExport
+
+NEAT controller interface for export operations.
+
+The persistence helpers intentionally depend on this narrow host shape instead
+of the concrete `Neat` class. That keeps export and restore logic reusable in
+tests and static-style helper flows without coupling the file to the full
+controller implementation.
+
 ### NetworkClass
 
 Network class with static fromJSON method.
@@ -263,27 +280,10 @@ Network class with static fromJSON method.
 Import helpers use this contract when rebuilding genomes from serialized JSON
 without needing to know the concrete network implementation details.
 
-### toJSONImpl
+### NeatConstructor
 
-```ts
-toJSONImpl(): NeatMetaJSON
-```
+NEAT class constructor interface.
 
-Serialize NEAT meta (excluding the mutable population) for persistence of
-innovation history and experiment configuration. This is sufficient to
-recreate a blank NEAT run at the same evolutionary generation with the same
-innovation counters, enabling deterministic continuation when combined later
-with a saved population.
-
-Use this path when the controller context matters but the population payload
-should be stored, transferred, or versioned separately.
-
-Example:
-
-```ts
-const meta = neat.toJSONImpl();
-fs.writeFileSync('neat-meta.json', JSON.stringify(meta));
-// ... later ...
-const metaLoaded = JSON.parse(fs.readFileSync('neat-meta.json', 'utf8')) as NeatMetaJSON;
-const neat2 = Neat.fromJSONImpl(metaLoaded, fitnessFn); // empty population
-```
+Static-style restore helpers depend on this constructor shape so they can
+rebuild a controller instance from persisted meta data and then optionally
+rehydrate the population.

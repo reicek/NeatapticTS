@@ -48,155 +48,6 @@ flowchart TD
 
 ## neat/mutation/flow/mutation.flow.ts
 
-### applyAddConnMutation
-
-```ts
-applyAddConnMutation(
-  genome: GenomeWithMetadata,
-  internal: NeatControllerForMutation,
-  methods: { mutation: unknown; },
-): void
-```
-
-Apply an ADD_CONN mutation with reuse and weight nudging.
-
-This is the connection-growth companion to `applyAddNodeMutation()`. The
-structural edit itself is delegated to the reuse-aware connection helper so
-identical edge discoveries can still share innovation identity across the
-population.
-
-Parameters:
-- `genome` - - genome to mutate
-- `internal` - - neat controller context
-- `methods` - - mutation methods module
-
-Returns: void
-
-### applyAddNodeMutation
-
-```ts
-applyAddNodeMutation(
-  genome: GenomeWithMetadata,
-  internal: NeatControllerForMutation,
-  methods: { mutation: unknown; },
-): void
-```
-
-Apply an ADD_NODE mutation with reuse and weight nudging.
-
-The add-node path is special because it needs both innovation-aware
-structural growth and a post-split weight nudge that makes the topology
-change observable immediately in downstream behavior and tests. The helper
-intentionally treats cache invalidation as part of the operation rather than
-leaving it to callers.
-
-Parameters:
-- `genome` - - genome to mutate
-- `internal` - - neat controller context
-- `methods` - - mutation methods module
-
-Returns: void
-
-### applyMutationOperator
-
-```ts
-applyMutationOperator(
-  genome: GenomeWithMetadata,
-  mutationMethod: MutationMethod,
-  internal: NeatControllerForMutation,
-  methods: { mutation: unknown; },
-): void
-```
-
-Apply a mutation operator to a genome and invalidate caches as needed.
-
-This helper is the dispatch hinge between policy and topology. Structural
-growth operators such as `ADD_NODE` and `ADD_CONN` are routed through the
-innovation-reuse helpers because the controller cares about more than local
-graph edits; it also needs stable innovation history for later crossover and
-speciation.
-
-Non-structural operators stay delegated to the genome's own `mutate()`
-implementation. Cache invalidation is then handled separately so the flow can
-keep the expensive cleanup targeted to methods that plausibly changed the
-structural view of the genome.
-
-Parameters:
-- `genome` - - genome to mutate
-- `mutationMethod` - - mutation operator to apply
-- `internal` - - neat controller context
-- `methods` - - mutation methods module
-
-Returns: void
-
-### captureStructuralSizes
-
-```ts
-captureStructuralSizes(
-  genome: GenomeWithMetadata,
-): { beforeNodes: number; beforeConns: number; }
-```
-
-Capture structural sizes used to evaluate operator success.
-
-Operator adaptation in this subtree is intentionally coarse-grained: it asks
-whether an attempted mutation increased structural size, not whether the
-resulting genome later scored better. This helper records the pre-mutation
-node and connection counts that make that local success signal possible.
-
-Parameters:
-- `genome` - - genome to inspect
-
-Returns: structural size snapshot
-
-### initializeAdaptiveMutation
-
-```ts
-initializeAdaptiveMutation(
-  genome: GenomeWithMetadata,
-  internal: NeatControllerForMutation,
-): void
-```
-
-Initialize per-genome adaptive mutation parameters if configured.
-
-Adaptive mutation is stateful at the genome level, not just a controller
-default. This helper assigns the first persistent rate and optional amount so
-later generations can treat the genome as carrying its own mutation budget.
-
-The helper only writes when the genome has not yet been initialized. That is
-why it runs at the top of `mutateGenome()` on every pass: it behaves like a
-cheap bootstrap check rather than a repeated reset of evolved mutation
-behavior.
-
-Parameters:
-- `genome` - - genome to initialize
-- `internal` - - neat controller context
-
-Returns: void
-
-### maybeAddExtraConnection
-
-```ts
-maybeAddExtraConnection(
-  genome: GenomeWithMetadata,
-  internal: NeatControllerForMutation,
-): void
-```
-
-Optionally add an extra connection to increase exploration.
-
-This small post-operator hook gives the controller one extra chance to add
-connectivity after the main mutation has landed. It is intentionally
-probabilistic and lightweight: the flow uses it as a gentle exploration bump,
-not as a second full operator-selection phase.
-
-Parameters:
-- `genome` - - genome to mutate
-- `internal` - - neat controller context
-
-Returns: void
-
 ### mutateGenome
 
 ```ts
@@ -233,28 +84,31 @@ Parameters:
 
 Returns: Promise resolving after mutation attempts complete
 
-### resolveEffectiveAmount
+### initializeAdaptiveMutation
 
 ```ts
-resolveEffectiveAmount(
+initializeAdaptiveMutation(
   genome: GenomeWithMetadata,
   internal: NeatControllerForMutation,
-): number
+): void
 ```
 
-Resolve the effective mutation amount for a genome.
+Initialize per-genome adaptive mutation parameters if configured.
 
-Mutation amount answers a different question from mutation rate. Rate decides
-whether the genome enters the flow. Amount decides how many operator draws it
-receives once admitted. When adaptive mutation amount is enabled, the genome
-may carry its own evolving attempt budget; otherwise the controller-wide
-amount stays authoritative.
+Adaptive mutation is stateful at the genome level, not just a controller
+default. This helper assigns the first persistent rate and optional amount so
+later generations can treat the genome as carrying its own mutation budget.
+
+The helper only writes when the genome has not yet been initialized. That is
+why it runs at the top of `mutateGenome()` on every pass: it behaves like a
+cheap bootstrap check rather than a repeated reset of evolved mutation
+behavior.
 
 Parameters:
-- `genome` - - genome to resolve for
+- `genome` - - genome to initialize
 - `internal` - - neat controller context
 
-Returns: effective mutation amount
+Returns: void
 
 ### resolveEffectiveRate
 
@@ -283,6 +137,50 @@ Parameters:
 
 Returns: effective mutation rate
 
+### resolveEffectiveAmount
+
+```ts
+resolveEffectiveAmount(
+  genome: GenomeWithMetadata,
+  internal: NeatControllerForMutation,
+): number
+```
+
+Resolve the effective mutation amount for a genome.
+
+Mutation amount answers a different question from mutation rate. Rate decides
+whether the genome enters the flow. Amount decides how many operator draws it
+receives once admitted. When adaptive mutation amount is enabled, the genome
+may carry its own evolving attempt budget; otherwise the controller-wide
+amount stays authoritative.
+
+Parameters:
+- `genome` - - genome to resolve for
+- `internal` - - neat controller context
+
+Returns: effective mutation amount
+
+### shouldMutateGenome
+
+```ts
+shouldMutateGenome(
+  effectiveRate: number,
+  internal: NeatControllerForMutation,
+): boolean
+```
+
+Decide whether a genome should be mutated based on probability.
+
+This is the narrow admission gate for the per-genome flow. Keeping the RNG
+comparison in one helper makes the orchestration read clearly and gives tests
+one stable seam for deterministic gating behavior.
+
+Parameters:
+- `effectiveRate` - - effective mutation probability
+- `internal` - - neat controller context
+
+Returns: true when the genome should be mutated
+
 ### selectConcreteMutationMethod
 
 ```ts
@@ -308,6 +206,107 @@ Parameters:
 
 Returns: resolved mutation method or null
 
+### captureStructuralSizes
+
+```ts
+captureStructuralSizes(
+  genome: GenomeWithMetadata,
+): { beforeNodes: number; beforeConns: number; }
+```
+
+Capture structural sizes used to evaluate operator success.
+
+Operator adaptation in this subtree is intentionally coarse-grained: it asks
+whether an attempted mutation increased structural size, not whether the
+resulting genome later scored better. This helper records the pre-mutation
+node and connection counts that make that local success signal possible.
+
+Parameters:
+- `genome` - - genome to inspect
+
+Returns: structural size snapshot
+
+### applyMutationOperator
+
+```ts
+applyMutationOperator(
+  genome: GenomeWithMetadata,
+  mutationMethod: MutationMethod,
+  internal: NeatControllerForMutation,
+  methods: { mutation: unknown; },
+): void
+```
+
+Apply a mutation operator to a genome and invalidate caches as needed.
+
+This helper is the dispatch hinge between policy and topology. Structural
+growth operators such as `ADD_NODE` and `ADD_CONN` are routed through the
+innovation-reuse helpers because the controller cares about more than local
+graph edits; it also needs stable innovation history for later crossover and
+speciation.
+
+Non-structural operators stay delegated to the genome's own `mutate()`
+implementation. Cache invalidation is then handled separately so the flow can
+keep the expensive cleanup targeted to methods that plausibly changed the
+structural view of the genome.
+
+Parameters:
+- `genome` - - genome to mutate
+- `mutationMethod` - - mutation operator to apply
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: void
+
+### applyAddNodeMutation
+
+```ts
+applyAddNodeMutation(
+  genome: GenomeWithMetadata,
+  internal: NeatControllerForMutation,
+  methods: { mutation: unknown; },
+): void
+```
+
+Apply an ADD_NODE mutation with reuse and weight nudging.
+
+The add-node path is special because it needs both innovation-aware
+structural growth and a post-split weight nudge that makes the topology
+change observable immediately in downstream behavior and tests. The helper
+intentionally treats cache invalidation as part of the operation rather than
+leaving it to callers.
+
+Parameters:
+- `genome` - - genome to mutate
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: void
+
+### applyAddConnMutation
+
+```ts
+applyAddConnMutation(
+  genome: GenomeWithMetadata,
+  internal: NeatControllerForMutation,
+  methods: { mutation: unknown; },
+): void
+```
+
+Apply an ADD_CONN mutation with reuse and weight nudging.
+
+This is the connection-growth companion to `applyAddNodeMutation()`. The
+structural edit itself is delegated to the reuse-aware connection helper so
+identical edge discoveries can still share innovation identity across the
+population.
+
+Parameters:
+- `genome` - - genome to mutate
+- `internal` - - neat controller context
+- `methods` - - mutation methods module
+
+Returns: void
+
 ### shouldInvalidateCaches
 
 ```ts
@@ -330,26 +329,27 @@ Parameters:
 
 Returns: true when caches should be invalidated
 
-### shouldMutateGenome
+### maybeAddExtraConnection
 
 ```ts
-shouldMutateGenome(
-  effectiveRate: number,
+maybeAddExtraConnection(
+  genome: GenomeWithMetadata,
   internal: NeatControllerForMutation,
-): boolean
+): void
 ```
 
-Decide whether a genome should be mutated based on probability.
+Optionally add an extra connection to increase exploration.
 
-This is the narrow admission gate for the per-genome flow. Keeping the RNG
-comparison in one helper makes the orchestration read clearly and gives tests
-one stable seam for deterministic gating behavior.
+This small post-operator hook gives the controller one extra chance to add
+connectivity after the main mutation has landed. It is intentionally
+probabilistic and lightweight: the flow uses it as a gentle exploration bump,
+not as a second full operator-selection phase.
 
 Parameters:
-- `effectiveRate` - - effective mutation probability
+- `genome` - - genome to mutate
 - `internal` - - neat controller context
 
-Returns: true when the genome should be mutated
+Returns: void
 
 ### updateOperatorStatsIfNeeded
 

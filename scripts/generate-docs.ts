@@ -20,6 +20,7 @@ const FILE_SUMMARY_SYMBOL_NAME = '__file_summary__';
 const SOURCE_FILE_GLOBS = ['**/*.ts'];
 const SOURCE_FILE_IGNORE_GLOBS = ['**/*.d.ts'];
 const FOLDER_INDEX_FILE_NAME = 'FOLDERS.md';
+const DOCS_ORDER_CONFIG_FILE_NAME = 'docs.order.json';
 const WORKSPACE_ROOT_DIR = path.resolve('.');
 
 interface DocsTargetConfig {
@@ -62,6 +63,20 @@ interface FolderIndexNode {
   path: string;
   children: Map<string, FolderIndexNode>;
   fileCount?: number;
+}
+
+interface DirectoryDocsOrderConfig {
+  introFile?: string;
+  fileOrder?: string[];
+  symbolOrder?: Record<string, string[]>;
+  folderOrder?: string[];
+  hiddenFiles?: string[];
+  hiddenSymbols?: string[];
+}
+
+interface LoadedDirectoryDocsOrderConfig {
+  configPath: string;
+  config: DirectoryDocsOrderConfig;
 }
 
 interface RenderedFileSummary {
@@ -126,6 +141,14 @@ const project = new Project({
   tsConfigFilePath: path.resolve('tsconfig.json'),
   skipAddingFilesFromTsConfig: true,
 });
+const resolvedDirectoryDocsOrderConfigCache = new Map<
+  string,
+  LoadedDirectoryDocsOrderConfig | undefined
+>();
+const directoryDocsOrderConfigCache = new Map<
+  string,
+  Promise<LoadedDirectoryDocsOrderConfig | undefined>
+>();
 
 /**
  * Generates docs for the requested target.
@@ -781,6 +804,8 @@ async function emitDirectoryDocs(
         ? target.sourceDir
         : path.join(target.sourceDir, relativeDirectory);
 
+    await loadDirectoryDocsOrderConfig(sourceDirectory);
+
     const markdown = buildDirectoryReadme(
       relativeDirectory,
       fileSymbolMap,
@@ -814,6 +839,18 @@ async function emitFolderIndex(
   const relativeDirectories = [...directorySymbolMap.keys()]
     .map((directoryPath) => path.relative(target.sourceDir, directoryPath))
     .filter((relativeDirectory) => !relativeDirectory.startsWith('..'));
+
+  const directoriesWithConfigSupport = [
+    target.sourceDir,
+    ...relativeDirectories.map((relativeDirectory) =>
+      path.join(target.sourceDir, relativeDirectory),
+    ),
+  ];
+  await Promise.all(
+    [...new Set(directoriesWithConfigSupport)].map((directoryPath) =>
+      loadDirectoryDocsOrderConfig(directoryPath),
+    ),
+  );
 
   for (const relativeDirectory of relativeDirectories) {
     insertFolderIndexNode(
@@ -875,7 +912,10 @@ function insertFolderIndexNode(
   );
   const fileSymbolMap = directorySymbolMap.get(absoluteDirectoryPath);
   if (fileSymbolMap) {
-    currentNode.fileCount = fileSymbolMap.size;
+    currentNode.fileCount = resolveVisibleDirectoryFiles(
+      absoluteDirectoryPath,
+      [...fileSymbolMap.keys()],
+    ).length;
   }
 }
 
@@ -918,10 +958,58 @@ function renderFolderIndexNode(
 
   lines.push(`${indent}- [${label}](${node.path}/README.md)${countSuffix}`);
 
-  const childNames = [...node.children.keys()].sort();
+  const childNames = resolveSortedFolderIndexChildNames(node);
   for (const childName of childNames) {
     renderFolderIndexNode(node.children.get(childName)!, level + 1, lines);
   }
+}
+
+/**
+ * Resolves child-folder order for one folder-index node.
+ *
+ * Configured folder order only affects direct children of the current folder.
+ * Unspecified folders remain on the previous alphabetical fallback path.
+ *
+ * @param node - Folder index node whose children should be ordered.
+ * @returns Sorted child folder names.
+ */
+function resolveSortedFolderIndexChildNames(node: FolderIndexNode): string[] {
+  const loadedConfig = getCachedDirectoryDocsOrderConfig(path.resolve(node.path));
+  const configuredFolderOrder = loadedConfig?.config.folderOrder;
+
+  if (configuredFolderOrder?.length) {
+    warnForUnknownConfiguredFolderIndexChildren(
+      configuredFolderOrder,
+      [...node.children.keys()],
+      loadedConfig?.configPath,
+      node.path,
+    );
+  }
+
+  const explicitFolderOrderIndex = new Map(
+    (configuredFolderOrder ?? []).map((folderName, index) => [folderName, index] as const),
+  );
+
+  return [...node.children.keys()].toSorted((leftName, rightName) => {
+    const leftExplicitOrder = explicitFolderOrderIndex.get(leftName);
+    const rightExplicitOrder = explicitFolderOrderIndex.get(rightName);
+
+    if (leftExplicitOrder !== undefined || rightExplicitOrder !== undefined) {
+      if (leftExplicitOrder === undefined) {
+        return 1;
+      }
+
+      if (rightExplicitOrder === undefined) {
+        return -1;
+      }
+
+      if (leftExplicitOrder !== rightExplicitOrder) {
+        return leftExplicitOrder - rightExplicitOrder;
+      }
+    }
+
+    return leftName.localeCompare(rightName);
+  });
 }
 
 /**
@@ -1588,31 +1676,28 @@ function buildDirectoryReadme(
     '/',
   );
   const directoryBaseName = path.basename(relativeDirectory || sourceDir);
+  const directoryPath =
+    relativeDirectory === ''
+      ? sourceDir
+      : path.join(sourceDir, relativeDirectory);
   const lines = [`# ${title}`, ''];
 
-  const sortedFiles = [...fileSymbolMap.keys()].toSorted(
-    (leftFile, rightFile) => {
-      const leftRank = rankFileForDirectoryReadme(leftFile, fileSymbolMap);
-      const rightRank = rankFileForDirectoryReadme(rightFile, fileSymbolMap);
-
-      for (
-        let index = 0;
-        index < Math.max(leftRank.length, rightRank.length);
-        index += 1
-      ) {
-        const leftValue = leftRank[index] ?? 0;
-        const rightValue = rightRank[index] ?? 0;
-        if (leftValue !== rightValue) {
-          return leftValue - rightValue;
-        }
-      }
-
-      return leftFile.localeCompare(rightFile);
-    },
+  const sortedFiles = resolveSortedDirectoryFiles(
+    directoryPath,
+    fileSymbolMap,
+  );
+  const hiddenSymbolNames = resolveHiddenDirectorySymbolNames(
+    directoryPath,
+    fileSymbolMap,
+  );
+  const visibleSortedFiles = resolveVisibleDirectoryFiles(
+    directoryPath,
+    sortedFiles,
   );
 
   const primaryDirectoryIntro = resolvePrimaryDirectoryIntro(
-    sortedFiles,
+    directoryPath,
+    visibleSortedFiles,
     fileSymbolMap,
     directoryBaseName,
   );
@@ -1634,12 +1719,13 @@ function buildDirectoryReadme(
     }
   }
 
-  for (const filePath of sortedFiles) {
+  for (const filePath of visibleSortedFiles) {
     renderFileReadmeSection(
       lines,
       filePath,
       fileSymbolMap,
       sourceDir,
+      hiddenSymbolNames,
       primaryDirectoryIntro?.filePath === filePath,
     );
   }
@@ -1661,35 +1747,37 @@ function renderFileReadmeSection(
   filePath: string,
   fileSymbolMap: Map<string, RenderedSymbol[]>,
   sourceDir: string,
+  hiddenSymbolNames: ReadonlySet<string>,
   suppressFileSummary: boolean = false,
 ): void {
+  const visibleFileSymbols = (fileSymbolMap.get(filePath) ?? []).filter(
+    (symbol) => !hiddenSymbolNames.has(symbol.name),
+  );
+  const fileSummarySymbol = visibleFileSymbols.find(
+    (symbol) => symbol.kind === 'File',
+  );
+  const nonFileSummarySymbols = visibleFileSymbols.filter(
+    (symbol) => symbol.kind !== 'File',
+  );
+
+  if (
+    !fileSummarySymbol?.jsdoc.description &&
+    !fileSummarySymbol?.jsdoc.examples?.length &&
+    nonFileSummarySymbols.length === 0
+  ) {
+    return;
+  }
+
   const relativeFilePath = path
     .relative(sourceDir, filePath)
     .replace(/\\/g, '/');
   lines.push(`## ${relativeFilePath}`, '');
 
   const fileBaseName = path.basename(filePath, '.ts');
-  const sortedSymbols = (fileSymbolMap.get(filePath) ?? []).toSorted(
-    (left, right) => {
-      const leftIsPrimary = !left.parent && left.name === fileBaseName;
-      const rightIsPrimary = !right.parent && right.name === fileBaseName;
-      if (leftIsPrimary !== rightIsPrimary) {
-        return leftIsPrimary ? -1 : 1;
-      }
-
-      return (
-        (left.parent || left.name).localeCompare(right.parent || right.name) ||
-        left.name.localeCompare(right.name)
-      );
-    },
+  const sortedSymbols = visibleFileSymbols.toSorted((left, right) =>
+    compareFileSectionSymbols(left, right, fileBaseName),
   );
 
-  const fileSummarySymbol = sortedSymbols.find(
-    (symbol) => symbol.kind === 'File',
-  );
-  const nonFileSummarySymbols = sortedSymbols.filter(
-    (symbol) => symbol.kind !== 'File',
-  );
   if (!suppressFileSummary && fileSummarySymbol?.jsdoc.description) {
     lines.push(fileSummarySymbol.jsdoc.description, '');
   }
@@ -1705,8 +1793,9 @@ function renderFileReadmeSection(
     }
   }
 
-  const topLevelSymbols = nonFileSummarySymbols.filter(
-    (symbol) => !symbol.parent,
+  const topLevelSymbols = resolveSortedTopLevelFileSectionSymbols(
+    filePath,
+    nonFileSummarySymbols.filter((symbol) => !symbol.parent),
   );
   const symbolsByParent = groupSymbolsByParent(nonFileSummarySymbols);
 
@@ -1738,6 +1827,87 @@ function renderFileReadmeSection(
 }
 
 /**
+ * Compares file-section symbols using the pre-phase-3 stable fallback order.
+ *
+ * @param left - Left rendered symbol.
+ * @param right - Right rendered symbol.
+ * @param fileBaseName - Base file name without extension.
+ * @returns Negative when left sorts before right.
+ */
+function compareFileSectionSymbols(
+  left: RenderedSymbol,
+  right: RenderedSymbol,
+  fileBaseName: string,
+): number {
+  const leftIsPrimary = !left.parent && left.name === fileBaseName;
+  const rightIsPrimary = !right.parent && right.name === fileBaseName;
+  if (leftIsPrimary !== rightIsPrimary) {
+    return leftIsPrimary ? -1 : 1;
+  }
+
+  return (
+    (left.parent || left.name).localeCompare(right.parent || right.name) ||
+    left.name.localeCompare(right.name)
+  );
+}
+
+/**
+ * Resolves top-level symbol order for one rendered file section.
+ *
+ * Configured symbol order applies only to top-level entries for the current
+ * file. Unspecified symbols stay on the existing stable fallback path, and
+ * nested member ordering remains conservative elsewhere.
+ *
+ * @param filePath - Absolute source file path.
+ * @param topLevelSymbols - Stable fallback-sorted top-level symbols.
+ * @returns Top-level symbols ordered for rendering.
+ */
+function resolveSortedTopLevelFileSectionSymbols(
+  filePath: string,
+  topLevelSymbols: readonly RenderedSymbol[],
+): RenderedSymbol[] {
+  const directoryPath = path.dirname(filePath);
+  const loadedConfig = getCachedDirectoryDocsOrderConfig(directoryPath);
+  const configuredSymbolOrder = loadedConfig?.config.symbolOrder?.[path.basename(filePath)];
+
+  if (!configuredSymbolOrder?.length) {
+    return [...topLevelSymbols];
+  }
+
+  warnForUnknownConfiguredFileSectionSymbols(
+    configuredSymbolOrder,
+    topLevelSymbols,
+    loadedConfig?.configPath,
+    filePath,
+  );
+
+  const explicitSymbolOrderIndex = new Map(
+    configuredSymbolOrder.map((symbolName, index) => [symbolName, index] as const),
+  );
+
+  return [...topLevelSymbols].toSorted((leftSymbol, rightSymbol) => {
+    const leftExplicitOrder = explicitSymbolOrderIndex.get(leftSymbol.name);
+    const rightExplicitOrder = explicitSymbolOrderIndex.get(rightSymbol.name);
+
+    if (leftExplicitOrder !== undefined || rightExplicitOrder !== undefined) {
+      if (leftExplicitOrder === undefined) {
+        return 1;
+      }
+
+      if (rightExplicitOrder === undefined) {
+        return -1;
+      }
+
+      if (leftExplicitOrder !== rightExplicitOrder) {
+        return leftExplicitOrder - rightExplicitOrder;
+      }
+    }
+
+    return 0;
+  });
+}
+
+/**
  * Resolves the file-summary block that should be promoted into the directory
  * README opening.
  *
@@ -1746,10 +1916,40 @@ function renderFileReadmeSection(
  * @returns File path and summary when a promotable directory intro exists.
  */
 function resolvePrimaryDirectoryIntro(
+  directoryPath: string,
   sortedFiles: readonly string[],
   fileSymbolMap: Map<string, RenderedSymbol[]>,
   directoryBaseName: string,
 ): { filePath: string; summary: RenderedFileSummary } | undefined {
+  const loadedConfig = getCachedDirectoryDocsOrderConfig(directoryPath);
+  const configuredIntroFile = loadedConfig?.config.introFile;
+
+  if (configuredIntroFile) {
+    warnForUnknownConfiguredDirectoryIntroFile(
+      configuredIntroFile,
+      sortedFiles,
+      loadedConfig?.configPath,
+    );
+
+    const configuredIntroFilePath = sortedFiles.find(
+      (filePath) => path.basename(filePath) === configuredIntroFile,
+    );
+    const configuredSummary = configuredIntroFilePath
+      ? resolveRenderedFileSummary(configuredIntroFilePath, fileSymbolMap)
+      : undefined;
+
+    if (
+      configuredIntroFilePath &&
+      configuredSummary &&
+      (configuredSummary.description || configuredSummary.examples?.length)
+    ) {
+      return {
+        filePath: configuredIntroFilePath,
+        summary: configuredSummary,
+      };
+    }
+  }
+
   const prioritizedFiles = sortedFiles.toSorted((leftFile, rightFile) => {
     const leftBaseName = path.basename(leftFile, '.ts');
     const rightBaseName = path.basename(rightFile, '.ts');
@@ -1766,14 +1966,7 @@ function resolvePrimaryDirectoryIntro(
   });
 
   for (const filePath of prioritizedFiles) {
-    const fileSummarySymbol = (fileSymbolMap.get(filePath) ?? []).find(
-      (renderedSymbol) => renderedSymbol.kind === 'File',
-    );
-
-    const summary: RenderedFileSummary = {
-      description: fileSummarySymbol?.jsdoc.description,
-      examples: fileSummarySymbol?.jsdoc.examples,
-    };
+    const summary = resolveRenderedFileSummary(filePath, fileSymbolMap);
 
     if (summary.description || summary.examples?.length) {
       return { filePath, summary };
@@ -1781,6 +1974,27 @@ function resolvePrimaryDirectoryIntro(
   }
 
   return undefined;
+}
+
+/**
+ * Resolves the rendered file-summary block for one collected source file.
+ *
+ * @param filePath - Absolute source file path.
+ * @param fileSymbolMap - Symbols grouped by file within the directory.
+ * @returns Rendered file summary values when present.
+ */
+function resolveRenderedFileSummary(
+  filePath: string,
+  fileSymbolMap: Map<string, RenderedSymbol[]>,
+): RenderedFileSummary {
+  const fileSummarySymbol = (fileSymbolMap.get(filePath) ?? []).find(
+    (renderedSymbol) => renderedSymbol.kind === 'File',
+  );
+
+  return {
+    description: fileSummarySymbol?.jsdoc.description,
+    examples: fileSummarySymbol?.jsdoc.examples,
+  };
 }
 
 /**
@@ -1988,6 +2202,675 @@ function sanitizeTagBlockText(
     .trim();
 
   return normalizedBlock ? normalizedBlock : undefined;
+}
+
+/**
+ * Loads and caches the optional per-folder docs ordering config.
+ *
+ * Phase 1 only validates and stores config so later phases can consume it at
+ * the existing generator seams without changing default behavior today.
+ *
+ * @param directoryPath - Absolute directory path that may contain docs config.
+ * @returns Parsed and validated config when present.
+ */
+async function loadDirectoryDocsOrderConfig(
+  directoryPath: string,
+): Promise<LoadedDirectoryDocsOrderConfig | undefined> {
+  const normalizedDirectoryPath = path.resolve(directoryPath);
+  if (directoryDocsOrderConfigCache.has(normalizedDirectoryPath)) {
+    return directoryDocsOrderConfigCache.get(normalizedDirectoryPath)!;
+  }
+
+  const pendingConfig = readDirectoryDocsOrderConfig(normalizedDirectoryPath).then(
+    (loadedConfig) => {
+      resolvedDirectoryDocsOrderConfigCache.set(
+        normalizedDirectoryPath,
+        loadedConfig,
+      );
+      return loadedConfig;
+    },
+  );
+  directoryDocsOrderConfigCache.set(normalizedDirectoryPath, pendingConfig);
+  return pendingConfig;
+}
+
+/**
+ * Reads and validates one directory's `docs.order.json` file when present.
+ *
+ * @param directoryPath - Absolute directory path.
+ * @returns Parsed config or undefined when absent or invalid.
+ */
+async function readDirectoryDocsOrderConfig(
+  directoryPath: string,
+): Promise<LoadedDirectoryDocsOrderConfig | undefined> {
+  const configPath = path.join(directoryPath, DOCS_ORDER_CONFIG_FILE_NAME);
+  if (!(await fs.pathExists(configPath))) {
+    return undefined;
+  }
+
+  try {
+    const rawConfigText = await fs.readFile(configPath, 'utf8');
+    const parsedConfig: unknown = JSON.parse(rawConfigText);
+    const validatedConfig = validateDirectoryDocsOrderConfig(
+      parsedConfig,
+      configPath,
+    );
+    return validatedConfig ? { configPath, config: validatedConfig } : undefined;
+  } catch (error) {
+    warnDirectoryDocsOrderConfig(
+      configPath,
+      `Failed to read ${DOCS_ORDER_CONFIG_FILE_NAME}: ${getErrorMessage(error)}`,
+    );
+    return undefined;
+  }
+}
+
+/**
+ * Validates the supported phase-1 docs ordering config keys.
+ *
+ * @param parsedConfig - Raw parsed JSON value.
+ * @param configPath - Absolute config path used in warnings.
+ * @returns Sanitized config when at least one supported value is valid.
+ */
+function validateDirectoryDocsOrderConfig(
+  parsedConfig: unknown,
+  configPath: string,
+): DirectoryDocsOrderConfig | undefined {
+  if (!isRecord(parsedConfig)) {
+    warnDirectoryDocsOrderConfig(
+      configPath,
+      'Config must be a JSON object. Ignoring file.',
+    );
+    return undefined;
+  }
+
+  const supportedKeys = new Set([
+    'introFile',
+    'fileOrder',
+    'symbolOrder',
+    'folderOrder',
+    'hiddenFiles',
+    'hiddenSymbols',
+  ]);
+  for (const configKey of Object.keys(parsedConfig)) {
+    if (!supportedKeys.has(configKey)) {
+      warnDirectoryDocsOrderConfig(
+        configPath,
+        `Unknown key "${configKey}". Supported keys: ${[...supportedKeys].join(', ')}`,
+      );
+    }
+  }
+
+  const validatedConfig: DirectoryDocsOrderConfig = {};
+  const introFile = normalizeOptionalStringConfigValue(
+    parsedConfig.introFile,
+    'introFile',
+    configPath,
+  );
+  if (introFile) {
+    validatedConfig.introFile = introFile;
+  }
+
+  const fileOrder = normalizeStringArrayConfigValue(
+    parsedConfig.fileOrder,
+    'fileOrder',
+    configPath,
+  );
+  if (fileOrder) {
+    validatedConfig.fileOrder = fileOrder;
+  }
+
+  const symbolOrder = normalizeSymbolOrderConfigValue(
+    parsedConfig.symbolOrder,
+    configPath,
+  );
+  if (symbolOrder) {
+    validatedConfig.symbolOrder = symbolOrder;
+  }
+
+  const folderOrder = normalizeStringArrayConfigValue(
+    parsedConfig.folderOrder,
+    'folderOrder',
+    configPath,
+  );
+  if (folderOrder) {
+    validatedConfig.folderOrder = folderOrder;
+  }
+
+  const hiddenFiles = normalizeStringArrayConfigValue(
+    parsedConfig.hiddenFiles,
+    'hiddenFiles',
+    configPath,
+  );
+  if (hiddenFiles) {
+    validatedConfig.hiddenFiles = hiddenFiles;
+  }
+
+  const hiddenSymbols = normalizeStringArrayConfigValue(
+    parsedConfig.hiddenSymbols,
+    'hiddenSymbols',
+    configPath,
+  );
+  if (hiddenSymbols) {
+    validatedConfig.hiddenSymbols = hiddenSymbols;
+  }
+
+  return Object.keys(validatedConfig).length > 0 ? validatedConfig : {};
+}
+
+/**
+ * Returns the cached docs ordering config for a directory.
+ *
+ * The loader is called before directory emission, so this helper stays
+ * synchronous for render-time consumers in later phases.
+ *
+ * @param directoryPath - Absolute directory path.
+ * @returns Cached config when already loaded.
+ */
+function getCachedDirectoryDocsOrderConfig(
+  directoryPath: string,
+): LoadedDirectoryDocsOrderConfig | undefined {
+  return resolvedDirectoryDocsOrderConfigCache.get(path.resolve(directoryPath));
+}
+
+/**
+ * Resolves directory file order using config-first ordering with stable
+ * fallback to the existing heuristic rank.
+ *
+ * @param directoryPath - Absolute directory path.
+ * @param fileSymbolMap - Symbols grouped by file within the directory.
+ * @returns Files sorted for one directory README.
+ */
+function resolveSortedDirectoryFiles(
+  directoryPath: string,
+  fileSymbolMap: Map<string, RenderedSymbol[]>,
+): string[] {
+  const loadedConfig = getCachedDirectoryDocsOrderConfig(directoryPath);
+  const configuredFileOrder = loadedConfig?.config.fileOrder;
+
+  if (configuredFileOrder?.length) {
+    warnForUnknownConfiguredDirectoryFiles(
+      configuredFileOrder,
+      [...fileSymbolMap.keys()],
+      loadedConfig?.configPath,
+    );
+  }
+
+  const explicitFileOrderIndex = new Map(
+    (configuredFileOrder ?? []).map((fileName, index) => [fileName, index] as const),
+  );
+
+  return [...fileSymbolMap.keys()].toSorted((leftFile, rightFile) => {
+    const leftExplicitOrder = explicitFileOrderIndex.get(path.basename(leftFile));
+    const rightExplicitOrder = explicitFileOrderIndex.get(path.basename(rightFile));
+
+    if (leftExplicitOrder !== undefined || rightExplicitOrder !== undefined) {
+      if (leftExplicitOrder === undefined) {
+        return 1;
+      }
+
+      if (rightExplicitOrder === undefined) {
+        return -1;
+      }
+
+      if (leftExplicitOrder !== rightExplicitOrder) {
+        return leftExplicitOrder - rightExplicitOrder;
+      }
+    }
+
+    return compareDirectoryReadmeFiles(leftFile, rightFile, fileSymbolMap);
+  });
+}
+
+/**
+ * Resolves visible files for one directory README after applying optional
+ * `hiddenFiles` filtering.
+ *
+ * @param directoryPath - Absolute directory path.
+ * @param sortedFiles - Already sorted directory files.
+ * @returns Visible files that should remain in the generated output.
+ */
+function resolveVisibleDirectoryFiles(
+  directoryPath: string,
+  sortedFiles: readonly string[],
+): string[] {
+  const loadedConfig = getCachedDirectoryDocsOrderConfig(directoryPath);
+  const configuredHiddenFiles = loadedConfig?.config.hiddenFiles;
+
+  if (configuredHiddenFiles?.length) {
+    warnForUnknownConfiguredHiddenFiles(
+      configuredHiddenFiles,
+      sortedFiles,
+      loadedConfig?.configPath,
+    );
+  }
+
+  const hiddenFileNames = new Set(configuredHiddenFiles ?? []);
+  return sortedFiles.filter(
+    (filePath) => !hiddenFileNames.has(path.basename(filePath)),
+  );
+}
+
+/**
+ * Resolves hidden symbol names for one directory README.
+ *
+ * @param directoryPath - Absolute directory path.
+ * @param fileSymbolMap - Symbols grouped by file within the directory.
+ * @returns Hidden symbol-name set for render-time filtering.
+ */
+function resolveHiddenDirectorySymbolNames(
+  directoryPath: string,
+  fileSymbolMap: Map<string, RenderedSymbol[]>,
+): ReadonlySet<string> {
+  const loadedConfig = getCachedDirectoryDocsOrderConfig(directoryPath);
+  const configuredHiddenSymbols = loadedConfig?.config.hiddenSymbols;
+
+  if (configuredHiddenSymbols?.length) {
+    warnForUnknownConfiguredHiddenSymbols(
+      configuredHiddenSymbols,
+      fileSymbolMap,
+      loadedConfig?.configPath,
+    );
+  }
+
+  return new Set(configuredHiddenSymbols ?? []);
+}
+
+/**
+ * Warns when `fileOrder` references files missing from the current folder.
+ *
+ * @param configuredFileOrder - Configured file order entries.
+ * @param filePaths - Actual files in the current directory README.
+ * @param configPath - Absolute config path.
+ * @returns Nothing.
+ */
+function warnForUnknownConfiguredDirectoryFiles(
+  configuredFileOrder: readonly string[],
+  filePaths: readonly string[],
+  configPath: string | undefined,
+): void {
+  if (!configPath) {
+    return;
+  }
+
+  const knownFileNames = new Set(filePaths.map((filePath) => path.basename(filePath)));
+  const unknownFileNames = configuredFileOrder.filter(
+    (fileName) => !knownFileNames.has(fileName),
+  );
+
+  if (unknownFileNames.length === 0) {
+    return;
+  }
+
+  warnDirectoryDocsOrderConfig(
+    configPath,
+    `Field "fileOrder" references unknown files for this folder: ${unknownFileNames.join(', ')}`,
+  );
+}
+
+/**
+ * Warns when `hiddenFiles` references files missing from the current folder.
+ *
+ * @param configuredHiddenFiles - Configured hidden file entries.
+ * @param filePaths - Actual files in the current directory README.
+ * @param configPath - Absolute config path.
+ * @returns Nothing.
+ */
+function warnForUnknownConfiguredHiddenFiles(
+  configuredHiddenFiles: readonly string[],
+  filePaths: readonly string[],
+  configPath: string | undefined,
+): void {
+  if (!configPath) {
+    return;
+  }
+
+  const knownFileNames = new Set(filePaths.map((filePath) => path.basename(filePath)));
+  const unknownFileNames = configuredHiddenFiles.filter(
+    (fileName) => !knownFileNames.has(fileName),
+  );
+
+  if (unknownFileNames.length === 0) {
+    return;
+  }
+
+  warnDirectoryDocsOrderConfig(
+    configPath,
+    `Field "hiddenFiles" references unknown files for this folder: ${unknownFileNames.join(', ')}`,
+  );
+}
+
+/**
+ * Warns when `introFile` references a file missing from the current folder.
+ *
+ * @param configuredIntroFile - Configured intro file name.
+ * @param filePaths - Actual files in the current directory README.
+ * @param configPath - Absolute config path.
+ * @returns Nothing.
+ */
+function warnForUnknownConfiguredDirectoryIntroFile(
+  configuredIntroFile: string,
+  filePaths: readonly string[],
+  configPath: string | undefined,
+): void {
+  if (!configPath) {
+    return;
+  }
+
+  const knownFileNames = new Set(filePaths.map((filePath) => path.basename(filePath)));
+  if (knownFileNames.has(configuredIntroFile)) {
+    return;
+  }
+
+  warnDirectoryDocsOrderConfig(
+    configPath,
+    `Field "introFile" references an unknown file for this folder: ${configuredIntroFile}`,
+  );
+}
+
+/**
+ * Warns when `symbolOrder` references top-level symbols missing from one file
+ * section.
+ *
+ * @param configuredSymbolOrder - Configured symbol order entries.
+ * @param topLevelSymbols - Top-level symbols rendered for the current file.
+ * @param configPath - Absolute config path.
+ * @param filePath - Absolute source file path for warning context.
+ * @returns Nothing.
+ */
+function warnForUnknownConfiguredFileSectionSymbols(
+  configuredSymbolOrder: readonly string[],
+  topLevelSymbols: readonly RenderedSymbol[],
+  configPath: string | undefined,
+  filePath: string,
+): void {
+  if (!configPath) {
+    return;
+  }
+
+  const knownSymbolNames = new Set(topLevelSymbols.map((symbol) => symbol.name));
+  const unknownSymbolNames = configuredSymbolOrder.filter(
+    (symbolName) => !knownSymbolNames.has(symbolName),
+  );
+
+  if (unknownSymbolNames.length === 0) {
+    return;
+  }
+
+  warnDirectoryDocsOrderConfig(
+    configPath,
+    `Field "symbolOrder.${path.basename(filePath)}" references unknown top-level symbols for this file section: ${unknownSymbolNames.join(', ')}`,
+  );
+}
+
+/**
+ * Warns when `hiddenSymbols` references symbols missing from the current
+ * directory README.
+ *
+ * @param configuredHiddenSymbols - Configured hidden symbol entries.
+ * @param fileSymbolMap - Symbols grouped by file within the directory.
+ * @param configPath - Absolute config path.
+ * @returns Nothing.
+ */
+function warnForUnknownConfiguredHiddenSymbols(
+  configuredHiddenSymbols: readonly string[],
+  fileSymbolMap: Map<string, RenderedSymbol[]>,
+  configPath: string | undefined,
+): void {
+  if (!configPath) {
+    return;
+  }
+
+  const knownSymbolNames = new Set(
+    [...fileSymbolMap.values()].flatMap((renderedSymbols) =>
+      renderedSymbols.map((symbol) => symbol.name),
+    ),
+  );
+  const unknownSymbolNames = configuredHiddenSymbols.filter(
+    (symbolName) => !knownSymbolNames.has(symbolName),
+  );
+
+  if (unknownSymbolNames.length === 0) {
+    return;
+  }
+
+  warnDirectoryDocsOrderConfig(
+    configPath,
+    `Field "hiddenSymbols" references unknown symbols for this folder: ${unknownSymbolNames.join(', ')}`,
+  );
+}
+
+/**
+ * Warns when `folderOrder` references child folders missing from one folder
+ * index node.
+ *
+ * @param configuredFolderOrder - Configured folder order entries.
+ * @param childFolderNames - Actual child folder names under the current node.
+ * @param configPath - Absolute config path.
+ * @param nodePath - Relative folder-index node path for warning context.
+ * @returns Nothing.
+ */
+function warnForUnknownConfiguredFolderIndexChildren(
+  configuredFolderOrder: readonly string[],
+  childFolderNames: readonly string[],
+  configPath: string | undefined,
+  nodePath: string,
+): void {
+  if (!configPath) {
+    return;
+  }
+
+  const knownFolderNames = new Set(childFolderNames);
+  const unknownFolderNames = configuredFolderOrder.filter(
+    (folderName) => !knownFolderNames.has(folderName),
+  );
+
+  if (unknownFolderNames.length === 0) {
+    return;
+  }
+
+  warnDirectoryDocsOrderConfig(
+    configPath,
+    `Field "folderOrder" references unknown child folders for ${nodePath}: ${unknownFolderNames.join(', ')}`,
+  );
+}
+
+/**
+ * Compares two files using the pre-phase-2 directory README heuristic.
+ *
+ * @param leftFile - Left file path.
+ * @param rightFile - Right file path.
+ * @param fileSymbolMap - Symbols grouped by file within the directory.
+ * @returns Negative when left sorts before right.
+ */
+function compareDirectoryReadmeFiles(
+  leftFile: string,
+  rightFile: string,
+  fileSymbolMap: Map<string, RenderedSymbol[]>,
+): number {
+  const leftRank = rankFileForDirectoryReadme(leftFile, fileSymbolMap);
+  const rightRank = rankFileForDirectoryReadme(rightFile, fileSymbolMap);
+
+  for (
+    let index = 0;
+    index < Math.max(leftRank.length, rightRank.length);
+    index += 1
+  ) {
+    const leftValue = leftRank[index] ?? 0;
+    const rightValue = rightRank[index] ?? 0;
+    if (leftValue !== rightValue) {
+      return leftValue - rightValue;
+    }
+  }
+
+  return leftFile.localeCompare(rightFile);
+}
+
+/**
+ * Normalizes a single optional string config field.
+ *
+ * @param value - Raw config value.
+ * @param fieldName - Config field name.
+ * @param configPath - Absolute config path used in warnings.
+ * @returns Trimmed string when valid.
+ */
+function normalizeOptionalStringConfigValue(
+  value: unknown,
+  fieldName: string,
+  configPath: string,
+): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    warnDirectoryDocsOrderConfig(
+      configPath,
+      `Field "${fieldName}" must be a non-empty string. Ignoring value.`,
+    );
+    return undefined;
+  }
+
+  return value.trim();
+}
+
+/**
+ * Normalizes one string-array config field.
+ *
+ * @param value - Raw config value.
+ * @param fieldName - Config field name.
+ * @param configPath - Absolute config path used in warnings.
+ * @returns Unique non-empty strings when valid.
+ */
+function normalizeStringArrayConfigValue(
+  value: unknown,
+  fieldName: string,
+  configPath: string,
+): string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    warnDirectoryDocsOrderConfig(
+      configPath,
+      `Field "${fieldName}" must be an array of non-empty strings. Ignoring value.`,
+    );
+    return undefined;
+  }
+
+  const normalizedEntries = value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  if (normalizedEntries.length !== value.length) {
+    warnDirectoryDocsOrderConfig(
+      configPath,
+      `Field "${fieldName}" must contain only non-empty strings. Dropping invalid entries.`,
+    );
+  }
+
+  return normalizedEntries.length > 0
+    ? [...new Set(normalizedEntries)]
+    : undefined;
+}
+
+/**
+ * Normalizes the per-file symbol ordering map.
+ *
+ * @param value - Raw config value.
+ * @param configPath - Absolute config path used in warnings.
+ * @returns Sanitized symbol-order map when valid.
+ */
+function normalizeSymbolOrderConfigValue(
+  value: unknown,
+  configPath: string,
+): Record<string, string[]> | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!isRecord(value)) {
+    warnDirectoryDocsOrderConfig(
+      configPath,
+      'Field "symbolOrder" must be an object keyed by file name. Ignoring value.',
+    );
+    return undefined;
+  }
+
+  const normalizedSymbolOrderEntries = Object.entries(value)
+    .map(([fileName, symbolNames]) => {
+      const normalizedFileName = fileName.trim();
+      if (normalizedFileName.length === 0) {
+        warnDirectoryDocsOrderConfig(
+          configPath,
+          'Field "symbolOrder" contains an empty file key. Dropping entry.',
+        );
+        return undefined;
+      }
+
+      const normalizedSymbols = normalizeStringArrayConfigValue(
+        symbolNames,
+        `symbolOrder.${normalizedFileName}`,
+        configPath,
+      );
+      if (!normalizedSymbols) {
+        return undefined;
+      }
+
+      return [normalizedFileName, normalizedSymbols] as const;
+    })
+    .filter(
+      (
+        entry,
+      ): entry is readonly [string, string[]] => entry !== undefined,
+    );
+
+  return normalizedSymbolOrderEntries.length > 0
+    ? Object.fromEntries(normalizedSymbolOrderEntries)
+    : undefined;
+}
+
+/**
+ * Writes a scoped warning for one docs ordering config file.
+ *
+ * @param configPath - Absolute config path.
+ * @param message - Warning message.
+ * @returns Nothing.
+ */
+function warnDirectoryDocsOrderConfig(
+  configPath: string,
+  message: string,
+): void {
+  const relativeConfigPath = path
+    .relative(WORKSPACE_ROOT_DIR, configPath)
+    .replace(/\\/g, '/');
+  console.warn(`[docs] ${relativeConfigPath}: ${message}`);
+}
+
+/**
+ * Narrows unknown values to simple object records.
+ *
+ * @param value - Value to inspect.
+ * @returns True when the value is a plain record-like object.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Extracts a readable message from unknown thrown values.
+ *
+ * @param error - Thrown value.
+ * @returns Human-readable error text.
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
 }
 
 /**

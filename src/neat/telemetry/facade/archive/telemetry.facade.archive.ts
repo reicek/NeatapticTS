@@ -20,11 +20,11 @@
  *
  * ```mermaid
  * flowchart TD
- *   Population[Current population] --> Metrics[getMultiObjectiveMetrics()<br/>compact per-genome view]
- *   Population --> Fronts[getParetoFronts()<br/>live reconstructed fronts]
- *   Archive[Stored Pareto archive] --> Slice[getParetoArchive()<br/>recent snapshots]
- *   Slice --> Export[exportParetoFrontJSONL()<br/>portable archive export]
- *   Archive --> Clear[clearParetoArchive()<br/>reset archive state]
+ *   Population["Current population"] --> Metrics["getMultiObjectiveMetrics()<br/>compact per-genome view"]
+ *   Population --> Fronts["getParetoFronts()<br/>live reconstructed fronts"]
+ *   Archive["Stored Pareto archive"] --> Slice["getParetoArchive()<br/>recent snapshots"]
+ *   Slice --> Export["exportParetoFrontJSONL()<br/>portable archive export"]
+ *   Archive --> Clear["clearParetoArchive()<br/>reset archive state"]
  * ```
  */
 import type Network from '../../../../architecture/network';

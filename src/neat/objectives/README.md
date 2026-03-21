@@ -81,31 +81,6 @@ const objectives = neat._getObjectives();
 console.log(objectives.map((objective) => objective.key));
 ```
 
-### clearObjectives
-
-```ts
-clearObjectives(): void
-```
-
-Clear all registered multi-objectives.
-
-Use this when a run should fall back to its default objective behavior or
-when a test needs a clean objective slate before registering a new set. This
-clears the user-defined objective layer and invalidates the cached resolved
-list so the next read rebuilds it from the remaining controller defaults.
-
-Parameters:
-- `this` - - NEAT host exposing multi-objective options and the cached objective list.
-
-Returns: Nothing. Registered user objectives and the cached objective list are cleared.
-
-Example:
-
-```ts
-neat.clearObjectives();
-const objectives = neat._getObjectives();
-```
-
 ### registerObjective
 
 ```ts
@@ -139,4 +114,29 @@ Example:
 
 ```ts
 neat.registerObjective('energy', 'min', (genome) => genome.cost ?? 0);
+```
+
+### clearObjectives
+
+```ts
+clearObjectives(): void
+```
+
+Clear all registered multi-objectives.
+
+Use this when a run should fall back to its default objective behavior or
+when a test needs a clean objective slate before registering a new set. This
+clears the user-defined objective layer and invalidates the cached resolved
+list so the next read rebuilds it from the remaining controller defaults.
+
+Parameters:
+- `this` - - NEAT host exposing multi-objective options and the cached objective list.
+
+Returns: Nothing. Registered user objectives and the cached objective list are cleared.
+
+Example:
+
+```ts
+neat.clearObjectives();
+const objectives = neat._getObjectives();
 ```

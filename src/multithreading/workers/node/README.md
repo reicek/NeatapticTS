@@ -14,14 +14,6 @@ Interface for messages sent to the worker process.
 
 ## multithreading/workers/node/testworker.ts
 
-### CostFunction
-
-Interface for cost function used in worker evaluation.
-
-### SerializableNetwork
-
-Interface for serializable network used in worker evaluation.
-
 ### TestWorker
 
 TestWorker class for handling network evaluations in a Node.js environment using Worker Threads.
@@ -86,3 +78,11 @@ Example:
 const worker = new TestWorker([0, 1, 2], { name: 'mse' });
 // ...use worker.evaluate(...) as needed
 worker.terminate();
+
+### SerializableNetwork
+
+Interface for serializable network used in worker evaluation.
+
+### CostFunction
+
+Interface for cost function used in worker evaluation.

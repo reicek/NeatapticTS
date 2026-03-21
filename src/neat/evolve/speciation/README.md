@@ -37,36 +37,6 @@ flowchart TD
 
 ## neat/evolve/speciation/evolve.speciation.utils.ts
 
-### applyGlobalStagnationInjectionIfNeeded
-
-```ts
-applyGlobalStagnationInjectionIfNeeded(
-  internal: NeatControllerForEvolution,
-  helpers: { buildFreshGenomeForStagnation: () => Promise<GenomeWithMetadata>; replaceFraction: number; },
-): Promise<void>
-```
-
-Apply global stagnation injection if configured.
-
-This is the evolve loop's constrained recovery valve for long periods without
-global improvement. Instead of discarding the whole population or rebuilding
-the generation logic from scratch, the helper replaces only the worst-ranked
-fraction beyond elitism with fresh genomes, then resets the stagnation window
-so the controller can test whether the new search seeds reopen progress.
-
-The design is intentionally conservative:
-
-- elites are preserved,
-- the replacement fraction is bounded by the caller,
-- injected genomes still pass through the normal later evolution pipeline.
-
-Parameters:
-- `internal` - - NEAT controller instance.
-- `helpers` - - Helper callbacks for stagnation injection.
-- `helpers` - - Genome builder for injection.
-
-Returns: A promise that resolves after any bounded replacements are complete.
-
 ### applySpeciationAndSharingIfEnabled
 
 ```ts
@@ -120,52 +90,6 @@ Parameters:
 
 Returns: A new genome prepared for bounded stagnation rescue.
 
-### ensureHiddenNodeVariance
-
-```ts
-ensureHiddenNodeVariance(
-  internal: NeatControllerForEvolution,
-  genome: GenomeWithMetadata,
-): Promise<void>
-```
-
-Ensure a minimal hidden-node variance in injected genomes.
-
-Fresh stagnation-recovery genomes can otherwise collapse into the smallest
-legal topology and fail to contribute any structural novelty. This helper adds
-one conservative hidden-node bridge when the injected genome has no hidden
-layer at all, preserving the idea that rescue should re-open search space
-rather than only reshuffle minimal direct input-output paths.
-
-Parameters:
-- `internal` - - NEAT controller instance.
-- `genome` - - Genome to adjust.
-
-Returns: A promise that resolves after best-effort variance injection.
-
-### ensureSpeciesHistorySnapshot
-
-```ts
-ensureSpeciesHistorySnapshot(
-  internal: NeatControllerForEvolution,
-  maxHistory: number,
-): void
-```
-
-Ensure a minimal species history snapshot exists for exports.
-
-Export code may ask for species history after a generation that never took
-the heavier history-recording path. This helper backfills the same minimal
-summary shape used by {@link recordSpeciesHistorySnapshot} so export and
-inspection code can still rely on one bounded row per generation without
-forcing extended history to stay on permanently.
-
-Parameters:
-- `internal` - - NEAT controller instance.
-- `maxHistory` - - Maximum history length.
-
-Returns: Nothing.
-
 ### recordSpeciesHistorySnapshot
 
 ```ts
@@ -210,3 +134,79 @@ Parameters:
 - `internal` - - NEAT controller instance.
 
 Returns: Nothing.
+
+### applyGlobalStagnationInjectionIfNeeded
+
+```ts
+applyGlobalStagnationInjectionIfNeeded(
+  internal: NeatControllerForEvolution,
+  helpers: { buildFreshGenomeForStagnation: () => Promise<GenomeWithMetadata>; replaceFraction: number; },
+): Promise<void>
+```
+
+Apply global stagnation injection if configured.
+
+This is the evolve loop's constrained recovery valve for long periods without
+global improvement. Instead of discarding the whole population or rebuilding
+the generation logic from scratch, the helper replaces only the worst-ranked
+fraction beyond elitism with fresh genomes, then resets the stagnation window
+so the controller can test whether the new search seeds reopen progress.
+
+The design is intentionally conservative:
+
+- elites are preserved,
+- the replacement fraction is bounded by the caller,
+- injected genomes still pass through the normal later evolution pipeline.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `helpers` - - Helper callbacks for stagnation injection.
+- `helpers` - - Genome builder for injection.
+
+Returns: A promise that resolves after any bounded replacements are complete.
+
+### ensureSpeciesHistorySnapshot
+
+```ts
+ensureSpeciesHistorySnapshot(
+  internal: NeatControllerForEvolution,
+  maxHistory: number,
+): void
+```
+
+Ensure a minimal species history snapshot exists for exports.
+
+Export code may ask for species history after a generation that never took
+the heavier history-recording path. This helper backfills the same minimal
+summary shape used by {@link recordSpeciesHistorySnapshot} so export and
+inspection code can still rely on one bounded row per generation without
+forcing extended history to stay on permanently.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `maxHistory` - - Maximum history length.
+
+Returns: Nothing.
+
+### ensureHiddenNodeVariance
+
+```ts
+ensureHiddenNodeVariance(
+  internal: NeatControllerForEvolution,
+  genome: GenomeWithMetadata,
+): Promise<void>
+```
+
+Ensure a minimal hidden-node variance in injected genomes.
+
+Fresh stagnation-recovery genomes can otherwise collapse into the smallest
+legal topology and fail to contribute any structural novelty. This helper adds
+one conservative hidden-node bridge when the injected genome has no hidden
+layer at all, preserving the idea that rescue should re-open search space
+rather than only reshuffle minimal direct input-output paths.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `genome` - - Genome to adjust.
+
+Returns: A promise that resolves after best-effort variance injection.

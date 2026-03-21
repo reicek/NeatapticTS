@@ -1,11 +1,10 @@
 /**
- * Constants used by the deterministic xorshift RNG helper.
+ * Odd scramble factor used while deriving a default seed from time and host
+ * context.
  *
- * Read these values when you want to understand the fixed numeric choices that
- * shape seed guarding, time scrambling, and integer-to-float normalization.
- * The root RNG chapter uses these constants to make the replay contract
- * inspectable: none of these values are magic once you understand whether they
- * control initial seeding, xorshift mutation, or float normalization.
+ * This constant helps mix the fallback seed path before the xorshift stream is
+ * ever created. It matters only when callers did not already provide an RNG,
+ * explicit seed, or restored numeric state.
  */
 export const RNG_TIME_SCRAMBLE_CONSTANT = 0x9e3779b1;
 
@@ -14,6 +13,7 @@ export const RNG_TIME_SCRAMBLE_CONSTANT = 0x9e3779b1;
  *
  * Xorshift32 cannot advance from a zero state, so this constant is the guarded
  * non-zero escape hatch that keeps initialization and restore flows valid.
+ * It is the last-resort seed, not the normal source of entropy.
  */
 export const RNG_DEFAULT_SEED_FALLBACK = 0x1a2b3c4d;
 
@@ -28,7 +28,9 @@ export const RNG_SHIFT_LEFT_SECONDARY = 5;
  * Divisor used to normalize the 32-bit integer state into the `[0, 1)` range.
  *
  * This is the final step that turns a deterministic integer state transition
- * into the floating-point random samples consumed by the controller.
+ * into the floating-point random samples consumed by the controller. Keeping it
+ * named makes the integer-state phase and the outward-facing sample phase read
+ * like two explicit steps instead of one opaque formula.
  */
 export const RNG_NORMALIZATION_DIVISOR = 0xffffffff;
 
@@ -36,6 +38,7 @@ export const RNG_NORMALIZATION_DIVISOR = 0xffffffff;
  * Minimum population offset added before time scrambling during default seeding.
  *
  * The offset keeps empty or tiny populations from collapsing the derived seed
- * toward zero too easily during initialization.
+ * toward zero too easily during initialization. It exists to stabilize the
+ * fallback path, not to encode any meaningful NEAT population heuristic.
  */
 export const RNG_POPULATION_OFFSET = 1;

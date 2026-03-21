@@ -47,28 +47,6 @@ Connection view with optional enabled flag.
 Some serialized formats preserve per-edge enablement, while others treat missing values
 as implicitly enabled.
 
-### DEFAULT_NUMERIC_VALUE
-
-Default numeric fallback for absent scalar values.
-
-This keeps import logic deterministic when optional numeric fields are missing.
-
-### ERROR_INVALID_NETWORK_JSON
-
-Error text emitted for invalid verbose JSON payload roots.
-
-### FALLBACK_ACTIVATION_KEY
-
-Fallback activation key used when no mapping is found.
-
-Identity is selected as the safest non-disruptive activation fallback.
-
-### FIRST_CONNECTION_INDEX
-
-Index of the first created connection returned by `connect()`.
-
-The runtime API returns an array, and serializer logic consistently reads index `0`.
-
 ### JsonConnectionRebuildContext
 
 Context for JSON-connection reconstruction.
@@ -81,11 +59,12 @@ Context for JSON-node reconstruction.
 
 Node entries are rebuilt in order and pushed into mutable runtime internals.
 
-### NETWORK_JSON_FORMAT_VERSION
+### SerializeNetworkInternals
 
-Default format version for verbose serialization payloads.
+Runtime interface for accessing network internals during serialization.
 
-Consumers can use this value to identify the JSON schema revision.
+This is an internal bridge type used by serializer helpers to read and rebuild
+topology without exposing private implementation details in public APIs.
 
 ### NetworkInternalsWithDropout
 
@@ -124,17 +103,11 @@ Verbose JSON node representation.
 
 Node entries are self-describing and intended for readable, versioned snapshots.
 
-### NODE_TYPE_HIDDEN
+### SerializeNodeInternals
 
-Node type literal used for hidden layer nodes.
+Runtime node internals needed for serialization workflows.
 
-### NODE_TYPE_INPUT
-
-Node type literal used for input layer nodes.
-
-### NODE_TYPE_OUTPUT
-
-Node type literal used for output layer nodes.
+These fields are the minimal node state required to round-trip compact and JSON payloads.
 
 ### ResolvedNetworkSizeContext
 
@@ -148,18 +121,53 @@ Serialized connection representation used by compact and JSON formats.
 
 Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
 
-### SerializeNetworkInternals
+### NETWORK_JSON_FORMAT_VERSION
 
-Runtime interface for accessing network internals during serialization.
+Default format version for verbose serialization payloads.
 
-This is an internal bridge type used by serializer helpers to read and rebuild
-topology without exposing private implementation details in public APIs.
+Consumers can use this value to identify the JSON schema revision.
 
-### SerializeNodeInternals
+### DEFAULT_NUMERIC_VALUE
 
-Runtime node internals needed for serialization workflows.
+Default numeric fallback for absent scalar values.
 
-These fields are the minimal node state required to round-trip compact and JSON payloads.
+This keeps import logic deterministic when optional numeric fields are missing.
+
+### FIRST_CONNECTION_INDEX
+
+Index of the first created connection returned by `connect()`.
+
+The runtime API returns an array, and serializer logic consistently reads index `0`.
+
+### NODE_TYPE_INPUT
+
+Node type literal used for input layer nodes.
+
+### NODE_TYPE_HIDDEN
+
+Node type literal used for hidden layer nodes.
+
+### NODE_TYPE_OUTPUT
+
+Node type literal used for output layer nodes.
+
+### FALLBACK_ACTIVATION_KEY
+
+Fallback activation key used when no mapping is found.
+
+Identity is selected as the safest non-disruptive activation fallback.
+
+### ERROR_INVALID_NETWORK_JSON
+
+Error text emitted for invalid verbose JSON payload roots.
+
+### WARNING_UNKNOWN_FORMAT_VERSION
+
+Warning emitted for unknown verbose format versions.
+
+### WARNING_INVALID_GATER_DURING_DESERIALIZE
+
+Warning emitted when compact deserialize sees an invalid gater index.
 
 ### WARNING_INVALID_CONNECTION_DURING_DESERIALIZE
 
@@ -169,17 +177,9 @@ Warning emitted when compact deserialize sees invalid edge endpoints.
 
 Warning emitted when JSON deserialize sees invalid edge endpoints.
 
-### WARNING_INVALID_GATER_DURING_DESERIALIZE
-
-Warning emitted when compact deserialize sees an invalid gater index.
-
 ### WARNING_INVALID_GATER_DURING_FROM_JSON
 
 Warning emitted when JSON deserialize sees an invalid gater index.
-
-### WARNING_UNKNOWN_FORMAT_VERSION
-
-Warning emitted for unknown verbose format versions.
 
 ### WARNING_UNKNOWN_SQUASH_PREFIX
 
@@ -191,24 +191,65 @@ Suffix used when warning about unknown activation keys.
 
 ## architecture/network/serialize/network.serialize.utils.ts
 
-### network.serialize.utils
-
-### applyHydratedArchitectureDescriptor
+### serialize
 
 ```ts
-applyHydratedArchitectureDescriptor(
-  network: default,
-  architectureDescriptor: NetworkArchitectureDescriptor | undefined,
-): void
+serialize(): CompactSerializedNetworkTuple
 ```
 
-Applies hydrated architecture metadata to runtime network when shape is valid.
+Serializes a network instance into the compact tuple format.
+
+Use this format when payload size and serialization speed matter more than readability.
+The tuple layout is positional and optimized for transport/storage efficiency.
 
 Parameters:
-- `network` - - Rebuilt network instance.
-- `architectureDescriptor` - - Optional serialized descriptor.
+- `this` - - Bound network instance.
 
-Returns: Nothing.
+Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
+
+Example:
+
+```ts
+import Network from '../../network';
+import { deserialize, serialize } from './network.serialize.utils';
+
+const sourceNetwork = new Network(2, 1);
+const compactTuple = serialize.call(sourceNetwork);
+const rebuiltNetwork = deserialize(compactTuple);
+```
+
+### toJSONImpl
+
+```ts
+toJSONImpl(): NetworkJSON
+```
+
+Serializes a network instance into the verbose JSON format.
+
+Use this format when you need human-readable snapshots, explicit schema versioning,
+and better forward/backward compatibility handling.
+
+Parameters:
+- `this` - - Bound network instance.
+
+Returns: Versioned JSON payload with shape metadata, nodes, and connections.
+
+Example:
+
+```ts
+import Network from '../../network';
+import { fromJSONImpl, toJSONImpl } from './network.serialize.utils';
+
+const sourceNetwork = new Network(3, 1);
+const snapshotJson = toJSONImpl.call(sourceNetwork);
+const rebuiltNetwork = fromJSONImpl(snapshotJson);
+```
+
+### SerializedConnection
+
+Serialized connection representation used by compact and JSON formats.
+
+Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
 
 ### deserialize
 
@@ -266,6 +307,25 @@ import { fromJSONImpl } from './network.serialize.utils';
 const rebuiltNetwork = fromJSONImpl(snapshotJson);
 ```
 
+### network.serialize.utils
+
+### applyHydratedArchitectureDescriptor
+
+```ts
+applyHydratedArchitectureDescriptor(
+  network: default,
+  architectureDescriptor: NetworkArchitectureDescriptor | undefined,
+): void
+```
+
+Applies hydrated architecture metadata to runtime network when shape is valid.
+
+Parameters:
+- `network` - - Rebuilt network instance.
+- `architectureDescriptor` - - Optional serialized descriptor.
+
+Returns: Nothing.
+
 ### isArchitectureDescriptorShapeValid
 
 ```ts
@@ -278,66 +338,6 @@ Parameters:
 - `architectureDescriptor` - - Optional descriptor candidate.
 
 Returns: True when minimal descriptor shape is valid.
-
-### serialize
-
-```ts
-serialize(): CompactSerializedNetworkTuple
-```
-
-Serializes a network instance into the compact tuple format.
-
-Use this format when payload size and serialization speed matter more than readability.
-The tuple layout is positional and optimized for transport/storage efficiency.
-
-Parameters:
-- `this` - - Bound network instance.
-
-Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
-
-Example:
-
-```ts
-import Network from '../../network';
-import { deserialize, serialize } from './network.serialize.utils';
-
-const sourceNetwork = new Network(2, 1);
-const compactTuple = serialize.call(sourceNetwork);
-const rebuiltNetwork = deserialize(compactTuple);
-```
-
-### SerializedConnection
-
-Serialized connection representation used by compact and JSON formats.
-
-Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
-
-### toJSONImpl
-
-```ts
-toJSONImpl(): NetworkJSON
-```
-
-Serializes a network instance into the verbose JSON format.
-
-Use this format when you need human-readable snapshots, explicit schema versioning,
-and better forward/backward compatibility handling.
-
-Parameters:
-- `this` - - Bound network instance.
-
-Returns: Versioned JSON payload with shape metadata, nodes, and connections.
-
-Example:
-
-```ts
-import Network from '../../network';
-import { fromJSONImpl, toJSONImpl } from './network.serialize.utils';
-
-const sourceNetwork = new Network(3, 1);
-const snapshotJson = toJSONImpl.call(sourceNetwork);
-const rebuiltNetwork = fromJSONImpl(snapshotJson);
-```
 
 ### default
 
@@ -548,121 +548,6 @@ Extended trace structure for modulatory / eligibility propagation algorithms. Pa
 
 ## architecture/network/serialize/network.serialize.json.utils.ts
 
-### appendJsonForwardConnections
-
-```ts
-appendJsonForwardConnections(
-  networkInternals: SerializeNetworkInternals,
-  networkJson: NetworkJSON,
-): void
-```
-
-Appends JSON entries for forward connections.
-
-Non-finite endpoint indices are ignored to prevent malformed output records.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `networkJson` - - JSON accumulator.
-
-Returns: Nothing.
-
-### appendJsonNodesAndSelfConnections
-
-```ts
-appendJsonNodesAndSelfConnections(
-  networkInternals: SerializeNetworkInternals,
-  networkJson: NetworkJSON,
-): void
-```
-
-Appends JSON node entries and optional self-connections.
-
-Node indices are refreshed during this step so connection records can reference
-stable numeric endpoints.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `networkJson` - - Target JSON accumulator.
-
-Returns: Nothing.
-
-### appendJsonSelfConnectionWhenPresent
-
-```ts
-appendJsonSelfConnectionWhenPresent(
-  nodeInternals: SerializeNodeInternals,
-  nodeIndex: number,
-  networkJson: NetworkJSON,
-): void
-```
-
-Appends JSON self-connection when node has one.
-
-Parameters:
-- `nodeInternals` - - Node internals.
-- `nodeIndex` - - Node index.
-- `networkJson` - - JSON accumulator.
-
-Returns: Nothing.
-
-### assignJsonEnabledFlagWhenProvided
-
-```ts
-assignJsonEnabledFlagWhenProvided(
-  createdConnection: default | undefined,
-  enabled: boolean,
-): void
-```
-
-Assigns enabled flag when value is provided.
-
-Parameters:
-- `createdConnection` - - Created connection.
-- `enabled` - - Optional enabled value.
-
-Returns: Nothing.
-
-### assignJsonGaterWhenValid
-
-```ts
-assignJsonGaterWhenValid(
-  networkInternals: SerializeNetworkInternals,
-  gaterIndex: number | null,
-  createdConnection: default | undefined,
-): void
-```
-
-Assigns JSON gater when connection and gater index are valid.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `gaterIndex` - - Optional gater index.
-- `createdConnection` - - Created connection.
-
-Returns: Nothing.
-
-### createConnection
-
-```ts
-createConnection(
-  networkInternals: SerializeNetworkInternals,
-  sourceNode: default,
-  targetNode: default,
-  weight: number,
-): default | undefined
-```
-
-Creates one connection and returns first created instance.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `sourceNode` - - Source node.
-- `targetNode` - - Target node.
-- `weight` - - Connection weight.
-
-Returns: Created connection or undefined.
-
 ### createEmptyNetworkJson
 
 ```ts
@@ -687,193 +572,6 @@ Example:
 const networkJson = createEmptyNetworkJson(networkInternals);
 ```
 
-### createJsonConnection
-
-```ts
-createJsonConnection(
-  from: number,
-  to: number,
-  weight: number,
-  gater: number | null,
-  enabled: boolean,
-): NetworkJSONConnection
-```
-
-Creates one JSON connection entry.
-
-Parameters:
-- `from` - - Source index.
-- `to` - - Target index.
-- `weight` - - Connection weight.
-- `gater` - - Optional gater index.
-- `enabled` - - Enabled status.
-
-Returns: JSON connection entry.
-
-### createJsonNode
-
-```ts
-createJsonNode(
-  node: default,
-  nodeInternals: SerializeNodeInternals,
-  nodeIndex: number,
-): NetworkJSONNode
-```
-
-Creates one JSON node entry.
-
-Parameters:
-- `node` - - Runtime node.
-- `nodeInternals` - - Node internals.
-- `nodeIndex` - - Canonical index.
-
-Returns: JSON node entry.
-
-### createNodeWithType
-
-```ts
-createNodeWithType(
-  nodeType: string,
-): default
-```
-
-Creates one node with provided type.
-
-Parameters:
-- `nodeType` - - Node type.
-
-Returns: New node.
-
-### hydrateNodeFromJsonEntry
-
-```ts
-hydrateNodeFromJsonEntry(
-  rebuiltNode: default,
-  nodeJsonEntry: NetworkJSONNode,
-  nodeIndex: number,
-): void
-```
-
-Hydrates one node from JSON node entry.
-
-Parameters:
-- `rebuiltNode` - - Node to hydrate.
-- `nodeJsonEntry` - - JSON node entry.
-- `nodeIndex` - - Canonical node index.
-
-Returns: Nothing.
-
-### isConnectionEnabled
-
-```ts
-isConnectionEnabled(
-  connectionInstance: default,
-): boolean
-```
-
-Resolves enabled status from optional connection flag.
-
-Parameters:
-- `connectionInstance` - - Connection instance.
-
-Returns: True when connection is enabled.
-
-### isJsonConnectionInNodeBounds
-
-```ts
-isJsonConnectionInNodeBounds(
-  nodes: default[],
-  connectionJsonEntry: NetworkJSONConnection,
-): boolean
-```
-
-Checks JSON connection indices against node list bounds.
-
-Parameters:
-- `nodes` - - Node list.
-- `connectionJsonEntry` - - JSON connection entry.
-
-Returns: True when both indices are valid.
-
-### isJsonConnectionShapeValid
-
-```ts
-isJsonConnectionShapeValid(
-  connectionJsonEntry: NetworkJSONConnection,
-): boolean
-```
-
-Checks that JSON connection has numeric endpoint fields.
-
-Parameters:
-- `connectionJsonEntry` - - JSON connection entry.
-
-Returns: True when endpoint fields are numbers.
-
-### rebuildConnectionsFromJsonPayload
-
-```ts
-rebuildConnectionsFromJsonPayload(
-  jsonConnectionContext: JsonConnectionRebuildContext,
-): void
-```
-
-Rebuilds runtime connections from verbose JSON entries.
-
-Invalid entries are skipped with warnings so import continues for valid records.
-
-Parameters:
-- `jsonConnectionContext` - - JSON connection rebuild context.
-
-Returns: Nothing.
-
-Example:
-
-```ts
-rebuildConnectionsFromJsonPayload({
-  networkInternals,
-  connectionJsonEntries,
-});
-```
-
-### rebuildNodesFromJsonPayload
-
-```ts
-rebuildNodesFromJsonPayload(
-  jsonNodeContext: JsonNodeRebuildContext,
-): void
-```
-
-Rebuilds runtime nodes from verbose JSON entries.
-
-Parameters:
-- `jsonNodeContext` - - JSON node rebuild context.
-
-Returns: Nothing.
-
-Example:
-
-```ts
-rebuildNodesFromJsonPayload({ networkInternals, nodeJsonEntries });
-```
-
-### rebuildOneJsonConnection
-
-```ts
-rebuildOneJsonConnection(
-  networkInternals: SerializeNetworkInternals,
-  connectionJsonEntry: NetworkJSONConnection,
-): void
-```
-
-Rebuilds one verbose JSON connection entry.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `connectionJsonEntry` - - JSON connection entry.
-
-Returns: Nothing.
-
 ### resolveDropout
 
 ```ts
@@ -889,20 +587,44 @@ Parameters:
 
 Returns: Effective dropout.
 
-### resolveGaterIndex
+### appendJsonNodesAndSelfConnections
 
 ```ts
-resolveGaterIndex(
-  gaterNode: default | null,
-): number | null
+appendJsonNodesAndSelfConnections(
+  networkInternals: SerializeNetworkInternals,
+  networkJson: NetworkJSON,
+): void
 ```
 
-Resolves gater node index from gater reference.
+Appends JSON node entries and optional self-connections.
+
+Node indices are refreshed during this step so connection records can reference
+stable numeric endpoints.
 
 Parameters:
-- `gaterNode` - - Optional gater node.
+- `networkInternals` - - Runtime internals.
+- `networkJson` - - Target JSON accumulator.
 
-Returns: Gater index or null.
+Returns: Nothing.
+
+### appendJsonForwardConnections
+
+```ts
+appendJsonForwardConnections(
+  networkInternals: SerializeNetworkInternals,
+  networkJson: NetworkJSON,
+): void
+```
+
+Appends JSON entries for forward connections.
+
+Non-finite endpoint indices are ignored to prevent malformed output records.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `networkJson` - - JSON accumulator.
+
+Returns: Nothing.
 
 ### validateNetworkJsonOrThrow
 
@@ -934,103 +656,211 @@ Parameters:
 
 Returns: Nothing.
 
-## architecture/network/serialize/network.serialize.compact.utils.ts
-
-### assignCompactGaterWhenValid
+### rebuildNodesFromJsonPayload
 
 ```ts
-assignCompactGaterWhenValid(
-  networkInternals: SerializeNetworkInternals,
-  gaterIndex: number | null,
-  createdConnection: default | undefined,
+rebuildNodesFromJsonPayload(
+  jsonNodeContext: JsonNodeRebuildContext,
 ): void
 ```
 
-Assigns compact gater when both connection and gater index are valid.
+Rebuilds runtime nodes from verbose JSON entries.
 
 Parameters:
-- `networkInternals` - - Runtime internals.
-- `gaterIndex` - - Optional gater index.
-- `createdConnection` - - Created connection.
+- `jsonNodeContext` - - JSON node rebuild context.
 
 Returns: Nothing.
 
-### collectAllConnections
+Example:
 
 ```ts
-collectAllConnections(
-  networkInternals: SerializeNetworkInternals,
-): default[]
+rebuildNodesFromJsonPayload({ networkInternals, nodeJsonEntries });
 ```
 
-Collects all runtime connections into a single list.
+### rebuildConnectionsFromJsonPayload
+
+```ts
+rebuildConnectionsFromJsonPayload(
+  jsonConnectionContext: JsonConnectionRebuildContext,
+): void
+```
+
+Rebuilds runtime connections from verbose JSON entries.
+
+Invalid entries are skipped with warnings so import continues for valid records.
+
+Parameters:
+- `jsonConnectionContext` - - JSON connection rebuild context.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+rebuildConnectionsFromJsonPayload({
+  networkInternals,
+  connectionJsonEntries,
+});
+```
+
+### createJsonNode
+
+```ts
+createJsonNode(
+  node: default,
+  nodeInternals: SerializeNodeInternals,
+  nodeIndex: number,
+): NetworkJSONNode
+```
+
+Creates one JSON node entry.
+
+Parameters:
+- `node` - - Runtime node.
+- `nodeInternals` - - Node internals.
+- `nodeIndex` - - Canonical index.
+
+Returns: JSON node entry.
+
+### appendJsonSelfConnectionWhenPresent
+
+```ts
+appendJsonSelfConnectionWhenPresent(
+  nodeInternals: SerializeNodeInternals,
+  nodeIndex: number,
+  networkJson: NetworkJSON,
+): void
+```
+
+Appends JSON self-connection when node has one.
+
+Parameters:
+- `nodeInternals` - - Node internals.
+- `nodeIndex` - - Node index.
+- `networkJson` - - JSON accumulator.
+
+Returns: Nothing.
+
+### createJsonConnection
+
+```ts
+createJsonConnection(
+  from: number,
+  to: number,
+  weight: number,
+  gater: number | null,
+  enabled: boolean,
+): NetworkJSONConnection
+```
+
+Creates one JSON connection entry.
+
+Parameters:
+- `from` - - Source index.
+- `to` - - Target index.
+- `weight` - - Connection weight.
+- `gater` - - Optional gater index.
+- `enabled` - - Enabled status.
+
+Returns: JSON connection entry.
+
+### resolveGaterIndex
+
+```ts
+resolveGaterIndex(
+  gaterNode: default | null,
+): number | null
+```
+
+Resolves gater node index from gater reference.
+
+Parameters:
+- `gaterNode` - - Optional gater node.
+
+Returns: Gater index or null.
+
+### isConnectionEnabled
+
+```ts
+isConnectionEnabled(
+  connectionInstance: default,
+): boolean
+```
+
+Resolves enabled status from optional connection flag.
+
+Parameters:
+- `connectionInstance` - - Connection instance.
+
+Returns: True when connection is enabled.
+
+### hydrateNodeFromJsonEntry
+
+```ts
+hydrateNodeFromJsonEntry(
+  rebuiltNode: default,
+  nodeJsonEntry: NetworkJSONNode,
+  nodeIndex: number,
+): void
+```
+
+Hydrates one node from JSON node entry.
+
+Parameters:
+- `rebuiltNode` - - Node to hydrate.
+- `nodeJsonEntry` - - JSON node entry.
+- `nodeIndex` - - Canonical node index.
+
+Returns: Nothing.
+
+### rebuildOneJsonConnection
+
+```ts
+rebuildOneJsonConnection(
+  networkInternals: SerializeNetworkInternals,
+  connectionJsonEntry: NetworkJSONConnection,
+): void
+```
+
+Rebuilds one verbose JSON connection entry.
 
 Parameters:
 - `networkInternals` - - Runtime internals.
+- `connectionJsonEntry` - - JSON connection entry.
 
-Returns: Combined connections.
+Returns: Nothing.
 
-### collectNodeActivations
+### isJsonConnectionShapeValid
 
 ```ts
-collectNodeActivations(
-  nodes: default[],
-): number[]
+isJsonConnectionShapeValid(
+  connectionJsonEntry: NetworkJSONConnection,
+): boolean
 ```
 
-Collects node activation values in positional order.
+Checks that JSON connection has numeric endpoint fields.
+
+Parameters:
+- `connectionJsonEntry` - - JSON connection entry.
+
+Returns: True when endpoint fields are numbers.
+
+### isJsonConnectionInNodeBounds
+
+```ts
+isJsonConnectionInNodeBounds(
+  nodes: default[],
+  connectionJsonEntry: NetworkJSONConnection,
+): boolean
+```
+
+Checks JSON connection indices against node list bounds.
 
 Parameters:
 - `nodes` - - Node list.
+- `connectionJsonEntry` - - JSON connection entry.
 
-Returns: Activation list aligned to node indices.
-
-### collectNodeSquashKeys
-
-```ts
-collectNodeSquashKeys(
-  nodes: default[],
-): string[]
-```
-
-Collects node activation keys in positional order.
-
-Each function reference is normalized to a string key for compact transfer.
-
-Parameters:
-- `nodes` - - Node list.
-
-Returns: Squash-key list aligned to node indices.
-
-### collectNodeStates
-
-```ts
-collectNodeStates(
-  nodes: default[],
-): number[]
-```
-
-Collects node state values in positional order.
-
-Parameters:
-- `nodes` - - Node list.
-
-Returns: State list aligned to node indices.
-
-### collectSerializedConnections
-
-```ts
-collectSerializedConnections(
-  networkInternals: SerializeNetworkInternals,
-): SerializedConnection[]
-```
-
-Collects compact connection records from forward and self connection groups.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-
-Returns: Serialized connection list.
+Returns: True when both indices are valid.
 
 ### createConnection
 
@@ -1052,6 +882,245 @@ Parameters:
 - `weight` - - Connection weight.
 
 Returns: Created connection or undefined.
+
+### assignJsonGaterWhenValid
+
+```ts
+assignJsonGaterWhenValid(
+  networkInternals: SerializeNetworkInternals,
+  gaterIndex: number | null,
+  createdConnection: default | undefined,
+): void
+```
+
+Assigns JSON gater when connection and gater index are valid.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `gaterIndex` - - Optional gater index.
+- `createdConnection` - - Created connection.
+
+Returns: Nothing.
+
+### assignJsonEnabledFlagWhenProvided
+
+```ts
+assignJsonEnabledFlagWhenProvided(
+  createdConnection: default | undefined,
+  enabled: boolean,
+): void
+```
+
+Assigns enabled flag when value is provided.
+
+Parameters:
+- `createdConnection` - - Created connection.
+- `enabled` - - Optional enabled value.
+
+Returns: Nothing.
+
+### createNodeWithType
+
+```ts
+createNodeWithType(
+  nodeType: string,
+): default
+```
+
+Creates one node with provided type.
+
+Parameters:
+- `nodeType` - - Node type.
+
+Returns: New node.
+
+## architecture/network/serialize/network.serialize.compact.utils.ts
+
+### refreshNodeIndices
+
+```ts
+refreshNodeIndices(
+  nodes: default[],
+): void
+```
+
+Refreshes `node.index` for each node in list order.
+
+Canonical indices are required so compact connection records can store endpoints
+and gaters as stable numeric positions.
+
+Parameters:
+- `nodes` - - Node list.
+
+Returns: Nothing.
+
+### collectNodeActivations
+
+```ts
+collectNodeActivations(
+  nodes: default[],
+): number[]
+```
+
+Collects node activation values in positional order.
+
+Parameters:
+- `nodes` - - Node list.
+
+Returns: Activation list aligned to node indices.
+
+### collectNodeStates
+
+```ts
+collectNodeStates(
+  nodes: default[],
+): number[]
+```
+
+Collects node state values in positional order.
+
+Parameters:
+- `nodes` - - Node list.
+
+Returns: State list aligned to node indices.
+
+### collectNodeSquashKeys
+
+```ts
+collectNodeSquashKeys(
+  nodes: default[],
+): string[]
+```
+
+Collects node activation keys in positional order.
+
+Each function reference is normalized to a string key for compact transfer.
+
+Parameters:
+- `nodes` - - Node list.
+
+Returns: Squash-key list aligned to node indices.
+
+### collectSerializedConnections
+
+```ts
+collectSerializedConnections(
+  networkInternals: SerializeNetworkInternals,
+): SerializedConnection[]
+```
+
+Collects compact connection records from forward and self connection groups.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+
+Returns: Serialized connection list.
+
+### rebuildNodesFromCompactPayload
+
+```ts
+rebuildNodesFromCompactPayload(
+  networkInternals: SerializeNetworkInternals,
+  compactNodeContext: CompactNodeRebuildContext,
+): void
+```
+
+Rebuilds runtime nodes from compact payload arrays.
+
+Node type is inferred from index position relative to input/output boundaries.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `compactNodeContext` - - Compact node rebuild context.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+import { rebuildNodesFromCompactPayload } from './network.serialize.compact.utils';
+
+rebuildNodesFromCompactPayload(networkInternals, compactNodeContext);
+```
+
+### rebuildConnectionsFromCompactPayload
+
+```ts
+rebuildConnectionsFromCompactPayload(
+  compactConnectionContext: CompactConnectionRebuildContext,
+): void
+```
+
+Rebuilds runtime connections from compact connection records.
+
+Invalid endpoint or gater indices are skipped with warnings to preserve import flow.
+
+Parameters:
+- `compactConnectionContext` - - Compact connection rebuild context.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+import { rebuildConnectionsFromCompactPayload } from './network.serialize.compact.utils';
+
+rebuildConnectionsFromCompactPayload({
+  networkInternals,
+  serializedConnections,
+});
+```
+
+### collectAllConnections
+
+```ts
+collectAllConnections(
+  networkInternals: SerializeNetworkInternals,
+): default[]
+```
+
+Collects all runtime connections into a single list.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+
+Returns: Combined connections.
+
+### serializeOneConnection
+
+```ts
+serializeOneConnection(
+  connectionInstance: default,
+): SerializedConnection
+```
+
+Serializes one connection into compact indexed form.
+
+Parameters:
+- `connectionInstance` - - Runtime connection.
+
+Returns: Serialized connection record.
+
+### resolveNodeTypeFromCompactIndex
+
+```ts
+resolveNodeTypeFromCompactIndex(
+  nodeIndex: number,
+  totalNodeCount: number,
+  input: number,
+  output: number,
+): string
+```
+
+Resolves node type from compact tuple position.
+
+Parameters:
+- `nodeIndex` - - Node index.
+- `totalNodeCount` - - Total node count.
+- `input` - - Input size.
+- `output` - - Output size.
+
+Returns: Node type string.
 
 ### createNodeWithType
 
@@ -1091,78 +1160,6 @@ Parameters:
 
 Returns: Nothing.
 
-### isSerializedConnectionInNodeBounds
-
-```ts
-isSerializedConnectionInNodeBounds(
-  networkInternals: SerializeNetworkInternals,
-  serializedConnection: SerializedConnection,
-): boolean
-```
-
-Checks compact connection bounds against current node list.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `serializedConnection` - - Serialized connection record.
-
-Returns: True when endpoints are valid.
-
-### rebuildConnectionsFromCompactPayload
-
-```ts
-rebuildConnectionsFromCompactPayload(
-  compactConnectionContext: CompactConnectionRebuildContext,
-): void
-```
-
-Rebuilds runtime connections from compact connection records.
-
-Invalid endpoint or gater indices are skipped with warnings to preserve import flow.
-
-Parameters:
-- `compactConnectionContext` - - Compact connection rebuild context.
-
-Returns: Nothing.
-
-Example:
-
-```ts
-import { rebuildConnectionsFromCompactPayload } from './network.serialize.compact.utils';
-
-rebuildConnectionsFromCompactPayload({
-  networkInternals,
-  serializedConnections,
-});
-```
-
-### rebuildNodesFromCompactPayload
-
-```ts
-rebuildNodesFromCompactPayload(
-  networkInternals: SerializeNetworkInternals,
-  compactNodeContext: CompactNodeRebuildContext,
-): void
-```
-
-Rebuilds runtime nodes from compact payload arrays.
-
-Node type is inferred from index position relative to input/output boundaries.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-- `compactNodeContext` - - Compact node rebuild context.
-
-Returns: Nothing.
-
-Example:
-
-```ts
-import { rebuildNodesFromCompactPayload } from './network.serialize.compact.utils';
-
-rebuildNodesFromCompactPayload(networkInternals, compactNodeContext);
-```
-
 ### rebuildOneCompactConnection
 
 ```ts
@@ -1180,59 +1177,62 @@ Parameters:
 
 Returns: Nothing.
 
-### refreshNodeIndices
+### isSerializedConnectionInNodeBounds
 
 ```ts
-refreshNodeIndices(
-  nodes: default[],
+isSerializedConnectionInNodeBounds(
+  networkInternals: SerializeNetworkInternals,
+  serializedConnection: SerializedConnection,
+): boolean
+```
+
+Checks compact connection bounds against current node list.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `serializedConnection` - - Serialized connection record.
+
+Returns: True when endpoints are valid.
+
+### createConnection
+
+```ts
+createConnection(
+  networkInternals: SerializeNetworkInternals,
+  sourceNode: default,
+  targetNode: default,
+  weight: number,
+): default | undefined
+```
+
+Creates one connection and returns first created instance.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+- `sourceNode` - - Source node.
+- `targetNode` - - Target node.
+- `weight` - - Connection weight.
+
+Returns: Created connection or undefined.
+
+### assignCompactGaterWhenValid
+
+```ts
+assignCompactGaterWhenValid(
+  networkInternals: SerializeNetworkInternals,
+  gaterIndex: number | null,
+  createdConnection: default | undefined,
 ): void
 ```
 
-Refreshes `node.index` for each node in list order.
-
-Canonical indices are required so compact connection records can store endpoints
-and gaters as stable numeric positions.
+Assigns compact gater when both connection and gater index are valid.
 
 Parameters:
-- `nodes` - - Node list.
+- `networkInternals` - - Runtime internals.
+- `gaterIndex` - - Optional gater index.
+- `createdConnection` - - Created connection.
 
 Returns: Nothing.
-
-### resolveNodeTypeFromCompactIndex
-
-```ts
-resolveNodeTypeFromCompactIndex(
-  nodeIndex: number,
-  totalNodeCount: number,
-  input: number,
-  output: number,
-): string
-```
-
-Resolves node type from compact tuple position.
-
-Parameters:
-- `nodeIndex` - - Node index.
-- `totalNodeCount` - - Total node count.
-- `input` - - Input size.
-- `output` - - Output size.
-
-Returns: Node type string.
-
-### serializeOneConnection
-
-```ts
-serializeOneConnection(
-  connectionInstance: default,
-): SerializedConnection
-```
-
-Serializes one connection into compact indexed form.
-
-Parameters:
-- `connectionInstance` - - Runtime connection.
-
-Returns: Serialized connection record.
 
 ## architecture/network/serialize/network.serialize.runtime.utils.ts
 
@@ -1305,70 +1305,6 @@ Example:
 const compactPayload = createCompactPayloadContext(compactTuple);
 ```
 
-### createNetworkInstance
-
-```ts
-createNetworkInstance(
-  input: number,
-  output: number,
-): default
-```
-
-Creates a new network instance for deserialize workflows.
-
-Parameters:
-- `input` - - Input size.
-- `output` - - Output size.
-
-Returns: New network instance.
-
-### isFiniteIndex
-
-```ts
-isFiniteIndex(
-  index: number,
-): boolean
-```
-
-Checks whether a candidate index value is a finite number.
-
-Parameters:
-- `index` - - Candidate index value.
-
-Returns: True when finite number.
-
-### isNodeIndexInBounds
-
-```ts
-isNodeIndexInBounds(
-  nodes: default[],
-  index: number,
-): boolean
-```
-
-Checks whether an index is inside the bounds of a node array.
-
-Parameters:
-- `nodes` - - Node list.
-- `index` - - Candidate index.
-
-Returns: True when index is valid.
-
-### resetMutableRuntimeCollections
-
-```ts
-resetMutableRuntimeCollections(
-  networkInternals: SerializeNetworkInternals,
-): void
-```
-
-Clears mutable runtime collections before reconstruction.
-
-Parameters:
-- `networkInternals` - - Runtime internals.
-
-Returns: Nothing.
-
 ### resolveNetworkSize
 
 ```ts
@@ -1407,76 +1343,71 @@ Parameters:
 
 Returns: Effective size.
 
+### createNetworkInstance
+
+```ts
+createNetworkInstance(
+  input: number,
+  output: number,
+): default
+```
+
+Creates a new network instance for deserialize workflows.
+
+Parameters:
+- `input` - - Input size.
+- `output` - - Output size.
+
+Returns: New network instance.
+
+### resetMutableRuntimeCollections
+
+```ts
+resetMutableRuntimeCollections(
+  networkInternals: SerializeNetworkInternals,
+): void
+```
+
+Clears mutable runtime collections before reconstruction.
+
+Parameters:
+- `networkInternals` - - Runtime internals.
+
+Returns: Nothing.
+
+### isNodeIndexInBounds
+
+```ts
+isNodeIndexInBounds(
+  nodes: default[],
+  index: number,
+): boolean
+```
+
+Checks whether an index is inside the bounds of a node array.
+
+Parameters:
+- `nodes` - - Node list.
+- `index` - - Candidate index.
+
+Returns: True when index is valid.
+
+### isFiniteIndex
+
+```ts
+isFiniteIndex(
+  index: number,
+): boolean
+```
+
+Checks whether a candidate index value is a finite number.
+
+Parameters:
+- `index` - - Candidate index value.
+
+Returns: True when finite number.
+
 ## architecture/network/serialize/network.serialize.activation.utils.ts
-
-### findActivationByFunctionName
-
-```ts
-findActivationByFunctionName(
-  squashName: string | undefined,
-): ActivationFunction | undefined
-```
-
-Resolves activation by matching function.name.
-
-Parameters:
-- `squashName` - - Activation function name.
-
-Returns: Activation function or undefined.
-
-### findActivationByKey
-
-```ts
-findActivationByKey(
-  squashName: string | undefined,
-): ActivationFunction | undefined
-```
-
-Resolves activation by direct key lookup.
-
-Parameters:
-- `squashName` - - Activation key.
-
-Returns: Activation function or undefined.
-
-### findActivationEntryByReference
-
-```ts
-findActivationEntryByReference(
-  squashFunction: ActivationFunction,
-): [string, ActivationFunction] | undefined
-```
-
-Finds activation entry by function reference.
-
-Parameters:
-- `squashFunction` - - Activation function instance.
-
-Returns: Activation entry or undefined.
-
-### resolveActivationFunction
-
-```ts
-resolveActivationFunction(
-  squashName: string | undefined,
-): ActivationFunction
-```
-
-Resolves an activation function from a stored key or function name.
-
-Unknown values produce a warning and return the identity activation to keep
-deserialization deterministic and non-throwing.
-
-Parameters:
-- `squashName` - - Activation key or function name.
-
-Returns: Activation function.
-
-Example:
-
-```ts
-const squashFunction = resolveActivationFunction('relu');
-```
 
 ### resolveActivationKey
 
@@ -1504,6 +1435,45 @@ import * as methods from '../../../methods/methods';
 const key = resolveActivationKey(methods.Activation.tanh);
 ```
 
+### resolveActivationFunction
+
+```ts
+resolveActivationFunction(
+  squashName: string | undefined,
+): ActivationFunction
+```
+
+Resolves an activation function from a stored key or function name.
+
+Unknown values produce a warning and return the identity activation to keep
+deserialization deterministic and non-throwing.
+
+Parameters:
+- `squashName` - - Activation key or function name.
+
+Returns: Activation function.
+
+Example:
+
+```ts
+const squashFunction = resolveActivationFunction('relu');
+```
+
+### findActivationEntryByReference
+
+```ts
+findActivationEntryByReference(
+  squashFunction: ActivationFunction,
+): [string, ActivationFunction] | undefined
+```
+
+Finds activation entry by function reference.
+
+Parameters:
+- `squashFunction` - - Activation function instance.
+
+Returns: Activation entry or undefined.
+
 ### resolveNamedActivationFromFunction
 
 ```ts
@@ -1518,6 +1488,36 @@ Parameters:
 - `squashFunction` - - Activation function instance.
 
 Returns: Activation name or undefined.
+
+### findActivationByKey
+
+```ts
+findActivationByKey(
+  squashName: string | undefined,
+): ActivationFunction | undefined
+```
+
+Resolves activation by direct key lookup.
+
+Parameters:
+- `squashName` - - Activation key.
+
+Returns: Activation function or undefined.
+
+### findActivationByFunctionName
+
+```ts
+findActivationByFunctionName(
+  squashName: string | undefined,
+): ActivationFunction | undefined
+```
+
+Resolves activation by matching function.name.
+
+Parameters:
+- `squashName` - - Activation function name.
+
+Returns: Activation function or undefined.
 
 ### warnUnknownSquashName
 

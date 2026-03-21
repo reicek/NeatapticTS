@@ -37,6 +37,46 @@ flowchart TD
 
 ## neat/pruning/pruning.ts
 
+### applyEvolutionPruning
+
+```ts
+applyEvolutionPruning(): void
+```
+
+Apply evolution-time pruning to the current population.
+
+Use this path when pruning should follow the generation schedule rather than
+a live feedback loop. The evolve orchestration calls into this entrypoint to
+ask a simple controller question: "for this generation, should pruning run,
+and if so, how sparse should genomes become right now?"
+
+This function does not maintain long-lived adaptive controller state. Instead
+it reads the configured `evolutionPruning` schedule, checks whether the
+current generation is inside the active window, computes the ramped target
+sparsity for that moment in the run, and forwards the result to the genomes.
+The host generation counter is read but not mutated here.
+
+Choose this entrypoint when you want pruning to be predictable and tied to
+generation timing. Use `applyAdaptivePruning()` instead when pruning should
+react to observed population size or complexity metrics at runtime.
+
+Returns: Nothing. Compatible genomes may be pruned in place when the schedule is active, but no adaptive controller fields are updated.
+
+Example:
+
+```ts
+host.generation = 40;
+host.options.evolutionPruning = {
+  startGeneration: 20,
+  interval: 5,
+  rampGenerations: 10,
+  targetSparsity: 0.3,
+};
+
+applyEvolutionPruning.call(host);
+// Compatible genomes prune themselves using the schedule-derived sparsity.
+```
+
 ### applyAdaptivePruning
 
 ```ts
@@ -77,44 +117,4 @@ host.options.adaptivePruning = {
 applyAdaptivePruning.call(host);
 // The host may initialize its baseline, update _adaptivePruneLevel,
 // and prune compatible genomes if the metric drift is large enough.
-```
-
-### applyEvolutionPruning
-
-```ts
-applyEvolutionPruning(): void
-```
-
-Apply evolution-time pruning to the current population.
-
-Use this path when pruning should follow the generation schedule rather than
-a live feedback loop. The evolve orchestration calls into this entrypoint to
-ask a simple controller question: "for this generation, should pruning run,
-and if so, how sparse should genomes become right now?"
-
-This function does not maintain long-lived adaptive controller state. Instead
-it reads the configured `evolutionPruning` schedule, checks whether the
-current generation is inside the active window, computes the ramped target
-sparsity for that moment in the run, and forwards the result to the genomes.
-The host generation counter is read but not mutated here.
-
-Choose this entrypoint when you want pruning to be predictable and tied to
-generation timing. Use `applyAdaptivePruning()` instead when pruning should
-react to observed population size or complexity metrics at runtime.
-
-Returns: Nothing. Compatible genomes may be pruned in place when the schedule is active, but no adaptive controller fields are updated.
-
-Example:
-
-```ts
-host.generation = 40;
-host.options.evolutionPruning = {
-  startGeneration: 20,
-  interval: 5,
-  rampGenerations: 10,
-  targetSparsity: 0.3,
-};
-
-applyEvolutionPruning.call(host);
-// Compatible genomes prune themselves using the schedule-derived sparsity.
 ```

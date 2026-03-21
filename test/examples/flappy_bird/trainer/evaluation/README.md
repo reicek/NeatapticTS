@@ -20,13 +20,6 @@ flowchart LR
 
 ## trainer/evaluation/trainer.evaluation.service.types.ts
 
-### PopulationAggregateScoringContext
-
-Aggregate scoring context shared while computing frame-primary scores.
-
-The context precomputes population-wide reference values so per-genome scoring
-can stay simple and deterministic.
-
 ### PopulationStageEvaluationRequest
 
 Candidate-stage request used by the staged population evaluator.
@@ -39,55 +32,14 @@ This shape is intentionally stage-agnostic: quick, full, and reevaluation can
 all use the same execution helper by changing only candidate count, seed set,
 and rollout budget.
 
+### PopulationAggregateScoringContext
+
+Aggregate scoring context shared while computing frame-primary scores.
+
+The context precomputes population-wide reference values so per-genome scoring
+can stay simple and deterministic.
+
 ## trainer/evaluation/trainer.evaluation.service.ts
-
-### commitPopulationScores
-
-```ts
-commitPopulationScores(
-  population: readonly FlappyTrainerNetwork[],
-  provisionalScoresByGenome: ReadonlyMap<FlappyTrainerNetwork, number>,
-): void
-```
-
-Commits provisional scores to genome score fields.
-
-Provisional scores are kept in a map during staging so each phase can refresh
-them without mutating the genomes too early. This helper performs the final
-write-back once staged evaluation is complete.
-
-Parameters:
-- `population` - - Current population.
-- `provisionalScoresByGenome` - - Final provisional score map.
-
-Returns: Nothing.
-
-### evaluatePopulationFullStage
-
-```ts
-evaluatePopulationFullStage(
-  population: readonly FlappyTrainerNetwork[],
-  generationEvaluationPlan: FlappyGenerationEvaluationPlan,
-  aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
-  provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
-  elitismCount: number,
-): void
-```
-
-Executes the full evaluation stage over the top provisional candidates.
-
-This is the middle-cost stage in the ranking ladder: not every genome
-survives into it, but the survivors receive a more trustworthy estimate than
-the quick screen alone can provide.
-
-Parameters:
-- `population` - - Current population.
-- `generationEvaluationPlan` - - Per-generation staged evaluation plan.
-- `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
-- `provisionalScoresByGenome` - - Mutable provisional score map.
-- `elitismCount` - - Configured elitism count.
-
-Returns: Nothing.
 
 ### evaluatePopulationQuickStage
 
@@ -126,6 +78,33 @@ evaluatePopulationQuickStage(
 );
 ```
 
+### evaluatePopulationFullStage
+
+```ts
+evaluatePopulationFullStage(
+  population: readonly FlappyTrainerNetwork[],
+  generationEvaluationPlan: FlappyGenerationEvaluationPlan,
+  aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
+  provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
+  elitismCount: number,
+): void
+```
+
+Executes the full evaluation stage over the top provisional candidates.
+
+This is the middle-cost stage in the ranking ladder: not every genome
+survives into it, but the survivors receive a more trustworthy estimate than
+the quick screen alone can provide.
+
+Parameters:
+- `population` - - Current population.
+- `generationEvaluationPlan` - - Per-generation staged evaluation plan.
+- `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
+- `provisionalScoresByGenome` - - Mutable provisional score map.
+- `elitismCount` - - Configured elitism count.
+
+Returns: Nothing.
+
 ### evaluatePopulationReevaluationStage
 
 ```ts
@@ -151,6 +130,27 @@ Parameters:
 - `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
 - `provisionalScoresByGenome` - - Mutable provisional score map.
 - `elitismCount` - - Configured elitism count.
+
+Returns: Nothing.
+
+### commitPopulationScores
+
+```ts
+commitPopulationScores(
+  population: readonly FlappyTrainerNetwork[],
+  provisionalScoresByGenome: ReadonlyMap<FlappyTrainerNetwork, number>,
+): void
+```
+
+Commits provisional scores to genome score fields.
+
+Provisional scores are kept in a map during staging so each phase can refresh
+them without mutating the genomes too early. This helper performs the final
+write-back once staged evaluation is complete.
+
+Parameters:
+- `population` - - Current population.
+- `provisionalScoresByGenome` - - Final provisional score map.
 
 Returns: Nothing.
 
@@ -239,19 +239,19 @@ Fallback score assigned to genomes that have not yet been evaluated.
 Using negative infinity guarantees unevaluated genomes lose any ranking tie
 against genomes that already have real aggregate results.
 
-### FLAPPY_TRAINER_MIN_PIPE_PROGRESS
-
-Minimum pipe-progress baseline used when no aggregates are available.
-
-This keeps early-stage aggregate scoring well-defined even before any genome
-has established meaningful pipe progress.
-
 ### FLAPPY_TRAINER_NEGATIVE_INFINITY_SCORE
 
 Fallback score assigned to genomes that have not yet been evaluated.
 
 Using negative infinity guarantees unevaluated genomes lose any ranking tie
 against genomes that already have real aggregate results.
+
+### FLAPPY_TRAINER_MIN_PIPE_PROGRESS
+
+Minimum pipe-progress baseline used when no aggregates are available.
+
+This keeps early-stage aggregate scoring well-defined even before any genome
+has established meaningful pipe progress.
 
 ## trainer/evaluation/trainer.evaluation.service.utils.ts
 
@@ -319,26 +319,6 @@ Parameters:
 
 Returns: Highest mean pipe-progress value.
 
-### resolvePopulationAggregateScoringContext
-
-```ts
-resolvePopulationAggregateScoringContext(
-  population: readonly FlappyTrainerNetwork[],
-  aggregateByGenome: ReadonlyMap<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
-): PopulationAggregateScoringContext
-```
-
-Resolves the aggregate scoring context used by frame-primary scoring.
-
-This precomputation step keeps the per-genome scoring loop lean and avoids
-recomputing population-wide maxima for every genome.
-
-Parameters:
-- `population` - - Current population.
-- `aggregateByGenome` - - Aggregate cache keyed by genome.
-
-Returns: Aggregate scoring context.
-
 ### scoreAggregateFramePrimary
 
 ```ts
@@ -360,3 +340,23 @@ Parameters:
 - `maximumMeanPipesPassed` - - Best mean pipe progress in the population.
 
 Returns: Provisional score.
+
+### resolvePopulationAggregateScoringContext
+
+```ts
+resolvePopulationAggregateScoringContext(
+  population: readonly FlappyTrainerNetwork[],
+  aggregateByGenome: ReadonlyMap<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
+): PopulationAggregateScoringContext
+```
+
+Resolves the aggregate scoring context used by frame-primary scoring.
+
+This precomputation step keeps the per-genome scoring loop lean and avoids
+recomputing population-wide maxima for every genome.
+
+Parameters:
+- `population` - - Current population.
+- `aggregateByGenome` - - Aggregate cache keyed by genome.
+
+Returns: Aggregate scoring context.

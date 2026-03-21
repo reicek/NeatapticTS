@@ -19,12 +19,29 @@ The worker never posts live `Network` instances back to the browser host.
 Instead it sends the result of `network.toJSON()` so the payload stays
 structured-clone safe and easy to inspect in devtools.
 
-### WorkerErrorMessage
+### WorkerPopulationPipe
 
-Worker error response message.
+Mutable pipe state tracked by the worker playback simulation.
 
-Errors are normalized into a display-safe string so the host UI can surface
-failures without depending on worker-specific exception classes.
+These objects exist only inside the worker runtime. The host later receives a
+packed snapshot derived from them rather than these live mutable records.
+
+### WorkerPopulationBird
+
+Mutable bird state tracked by the worker playback simulation.
+
+Educational note:
+Each bird keeps both physics state and policy state. The observation-memory
+field lets feed-forward networks approximate short-term temporal memory by
+carrying previous observation features between simulation steps.
+
+### WorkerPlaybackState
+
+Mutable simulation state stored between worker playback requests.
+
+A `start-playback` message creates this state once, and each
+`request-playback-step` message advances it by a host-selected number of
+simulation steps.
 
 ### WorkerFrameBirdSnapshot
 
@@ -40,35 +57,6 @@ Render-only pipe snapshot DTO posted to host.
 Like `WorkerFrameBirdSnapshot`, this documents the logical payload shape even
 though the worker currently sends the packed transport form.
 
-### WorkerGenerationReadyMessage
-
-Worker generation-ready response message.
-
-The browser host uses this message to refresh HUD state and optionally render
-the current best network visualization.
-
-### WorkerHeuristicObservationFeatures
-
-Structured features used by heuristic generation-0 teacher policy.
-
-The warm-start service reuses the same high-level observation semantics as the
-real policy inference path, which keeps the heuristic teacher aligned with the
-features evolved networks will later see.
-
-### WorkerInitMessage
-
-Worker init request message.
-
-This is the first message the host should send. It seeds deterministic RNG
-state and configures the worker-local NEAT runtime.
-
-### WorkerPackedPlaybackBirdSnapshot
-
-Packed typed-array payload for playback bird snapshot transport.
-
-The host can reconstruct renderer-friendly bird views from these arrays while
-the worker keeps the authoritative mutable simulation objects private.
-
 ### WorkerPackedPlaybackPipeSnapshot
 
 Packed typed-array payload for playback pipe snapshot transport.
@@ -76,6 +64,13 @@ Packed typed-array payload for playback pipe snapshot transport.
 Packing the per-pipe fields into column-oriented typed arrays makes the
 browser/worker boundary cheaper than sending large arrays of object literals
 on every animation frame.
+
+### WorkerPackedPlaybackBirdSnapshot
+
+Packed typed-array payload for playback bird snapshot transport.
+
+The host can reconstruct renderer-friendly bird views from these arrays while
+the worker keeps the authoritative mutable simulation objects private.
 
 ### WorkerPlaybackFrameSnapshot
 
@@ -99,13 +94,57 @@ const message = {
 };
 ```
 
-### WorkerPlaybackState
+### WorkerInitMessage
 
-Mutable simulation state stored between worker playback requests.
+Worker init request message.
 
-A `start-playback` message creates this state once, and each
-`request-playback-step` message advances it by a host-selected number of
-simulation steps.
+This is the first message the host should send. It seeds deterministic RNG
+state and configures the worker-local NEAT runtime.
+
+### WorkerRequestGenerationMessage
+
+Worker request asking to evolve one generation.
+
+The worker responds with `generation-ready` once the NEAT runtime finishes
+one evolution pass.
+
+### WorkerStartPlaybackMessage
+
+Worker request asking to initialize playback state.
+
+This materializes the mutable world state for the current evolved population.
+After this message succeeds, the host can begin issuing playback-step
+requests.
+
+### WorkerRequestPlaybackStepMessage
+
+Worker request asking to advance playback by N simulation steps.
+
+The host typically sends this once per animation frame and chooses
+`simulationSteps` based on how much simulation throughput it wants relative to
+rendering smoothness.
+
+### WorkerStopMessage
+
+Worker stop request message.
+
+This is a cooperative shutdown signal. Long-running worker flows can observe
+the stopped flag and fail fast instead of continuing work the UI no longer
+cares about.
+
+### WorkerRequestMessage
+
+Union of inbound worker request messages.
+
+Reading this union top-to-bottom is the quickest way to understand the worker
+protocol: initialize, evolve, start playback, step playback, then stop.
+
+### WorkerGenerationReadyMessage
+
+Worker generation-ready response message.
+
+The browser host uses this message to refresh HUD state and optionally render
+the current best network visualization.
 
 ### WorkerPlaybackStepMessage
 
@@ -119,43 +158,12 @@ The split between per-frame snapshot data and end-of-run summary fields keeps
 the hot path compact while still giving the host enough telemetry to update
 HUD metrics when a playback session completes.
 
-### WorkerPopulationBird
+### WorkerErrorMessage
 
-Mutable bird state tracked by the worker playback simulation.
+Worker error response message.
 
-Educational note:
-Each bird keeps both physics state and policy state. The observation-memory
-field lets feed-forward networks approximate short-term temporal memory by
-carrying previous observation features between simulation steps.
-
-### WorkerPopulationPipe
-
-Mutable pipe state tracked by the worker playback simulation.
-
-These objects exist only inside the worker runtime. The host later receives a
-packed snapshot derived from them rather than these live mutable records.
-
-### WorkerRequestGenerationMessage
-
-Worker request asking to evolve one generation.
-
-The worker responds with `generation-ready` once the NEAT runtime finishes
-one evolution pass.
-
-### WorkerRequestMessage
-
-Union of inbound worker request messages.
-
-Reading this union top-to-bottom is the quickest way to understand the worker
-protocol: initialize, evolve, start playback, step playback, then stop.
-
-### WorkerRequestPlaybackStepMessage
-
-Worker request asking to advance playback by N simulation steps.
-
-The host typically sends this once per animation frame and chooses
-`simulationSteps` based on how much simulation throughput it wants relative to
-rendering smoothness.
+Errors are normalized into a display-safe string so the host UI can surface
+failures without depending on worker-specific exception classes.
 
 ### WorkerResponseMessage
 
@@ -164,21 +172,13 @@ Union of outbound worker response messages.
 Together with `WorkerRequestMessage`, this forms the full host/worker
 protocol contract for the demo.
 
-### WorkerStartPlaybackMessage
+### WorkerHeuristicObservationFeatures
 
-Worker request asking to initialize playback state.
+Structured features used by heuristic generation-0 teacher policy.
 
-This materializes the mutable world state for the current evolved population.
-After this message succeeds, the host can begin issuing playback-step
-requests.
-
-### WorkerStopMessage
-
-Worker stop request message.
-
-This is a cooperative shutdown signal. Long-running worker flows can observe
-the stopped flag and fail fast instead of continuing work the UI no longer
-cares about.
+The warm-start service reuses the same high-level observation semantics as the
+real policy inference path, which keeps the heuristic teacher aligned with the
+features evolved networks will later see.
 
 ## flappy-evolution-worker/flappy-evolution-worker.simulation.types.ts
 
@@ -194,65 +194,20 @@ argument sprawl across helper calls.
 
 ## flappy-evolution-worker/flappy-evolution-worker.ts
 
-### beginWorkerGenerationRequest
+### createWorkerMutableRuntimeState
 
 ```ts
-beginWorkerGenerationRequest(
-  workerMutableRuntimeState: WorkerMutableRuntimeState,
-): void
+createWorkerMutableRuntimeState(): WorkerMutableRuntimeState
 ```
 
-Begins one asynchronous generation request and captures failures.
+Creates the mutable worker runtime state container.
 
-This is intentionally fire-and-forget from the protocol perspective. The
-actual completion signal is the later `generation-ready` or `error` message
-posted back to the host.
+Educational note:
+The worker keeps one small mutable state bag instead of scattering globals.
+That makes the protocol flow easier to explain and lets the entrypoint pass a
+single dependency object through the orchestration helpers.
 
-Parameters:
-- `workerMutableRuntimeState` - - Mutable worker runtime state.
-
-Returns: Nothing.
-
-### beginWorkerInitialization
-
-```ts
-beginWorkerInitialization(
-  workerMutableRuntimeState: WorkerMutableRuntimeState,
-  initPayload: { populationSize: number; elitismCount: number; rngSeed: number; },
-): void
-```
-
-Begins worker initialization and captures asynchronous failures.
-
-The worker retains the initialization promise so later generation requests can
-await setup completion instead of racing against it.
-
-Parameters:
-- `workerMutableRuntimeState` - - Mutable worker runtime state.
-- `initPayload` - - Initialization payload.
-
-Returns: Nothing.
-
-### beginWorkerPlayback
-
-```ts
-beginWorkerPlayback(
-  workerMutableRuntimeState: WorkerMutableRuntimeState,
-  payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; },
-): void
-```
-
-Begins a new playback session from the current evolved population.
-
-A playback session is a deterministic simulation snapshot seeded from the
-current population. Each new session resets playback RNG and world state so
-the host can replay generations cleanly.
-
-Parameters:
-- `workerMutableRuntimeState` - - Mutable worker runtime state.
-- `payload` - - Playback start payload.
-
-Returns: Nothing.
+Returns: Mutable worker runtime state.
 
 ### createWorkerMessageHandler
 
@@ -279,21 +234,6 @@ Example:
 self.onmessage = createWorkerMessageHandler(workerMutableRuntimeState);
 ```
 
-### createWorkerMutableRuntimeState
-
-```ts
-createWorkerMutableRuntimeState(): WorkerMutableRuntimeState
-```
-
-Creates the mutable worker runtime state container.
-
-Educational note:
-The worker keeps one small mutable state bag instead of scattering globals.
-That makes the protocol flow easier to explain and lets the entrypoint pass a
-single dependency object through the orchestration helpers.
-
-Returns: Mutable worker runtime state.
-
 ### createWorkerProtocolHandlers
 
 ```ts
@@ -312,23 +252,6 @@ Parameters:
 - `workerMutableRuntimeState` - - Mutable worker runtime state.
 
 Returns: Protocol handler bundle.
-
-### evolveAndPublishGeneration
-
-```ts
-evolveAndPublishGeneration(
-  workerMutableRuntimeState: WorkerMutableRuntimeState,
-): Promise<void>
-```
-
-Evolves one generation and publishes the best-network summary message.
-
-Educational note:
-This method is the orchestration seam between evolutionary search and
-browser rendering: it runs evolution, snapshots the population, and emits
-a compact payload for UI state updates.
-
-Returns: Promise resolved after generation payload is posted.
 
 ### initializeRuntime
 
@@ -355,23 +278,80 @@ Parameters:
 
 Returns: Promise resolved when runtime setup is complete.
 
-### postWorkerMessage
+### evolveAndPublishGeneration
 
 ```ts
-postWorkerMessage(
-  workerMessage: WorkerResponseMessage,
-  transferList: Transferable[] | undefined,
+evolveAndPublishGeneration(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+): Promise<void>
+```
+
+Evolves one generation and publishes the best-network summary message.
+
+Educational note:
+This method is the orchestration seam between evolutionary search and
+browser rendering: it runs evolution, snapshots the population, and emits
+a compact payload for UI state updates.
+
+Returns: Promise resolved after generation payload is posted.
+
+### beginWorkerInitialization
+
+```ts
+beginWorkerInitialization(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+  initPayload: { populationSize: number; elitismCount: number; rngSeed: number; },
 ): void
 ```
 
-Posts a typed message from worker to host.
+Begins worker initialization and captures asynchronous failures.
 
-This is the narrowest possible transport helper: all message construction is
-done elsewhere so the README can point to one stable worker-to-host boundary.
+The worker retains the initialization promise so later generation requests can
+await setup completion instead of racing against it.
 
 Parameters:
-- `workerMessage` - - Outbound worker response payload.
-- `transferList` - - Optional transferable buffers moved with the payload.
+- `workerMutableRuntimeState` - - Mutable worker runtime state.
+- `initPayload` - - Initialization payload.
+
+Returns: Nothing.
+
+### beginWorkerGenerationRequest
+
+```ts
+beginWorkerGenerationRequest(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+): void
+```
+
+Begins one asynchronous generation request and captures failures.
+
+This is intentionally fire-and-forget from the protocol perspective. The
+actual completion signal is the later `generation-ready` or `error` message
+posted back to the host.
+
+Parameters:
+- `workerMutableRuntimeState` - - Mutable worker runtime state.
+
+Returns: Nothing.
+
+### beginWorkerPlayback
+
+```ts
+beginWorkerPlayback(
+  workerMutableRuntimeState: WorkerMutableRuntimeState,
+  payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; },
+): void
+```
+
+Begins a new playback session from the current evolved population.
+
+A playback session is a deterministic simulation snapshot seeded from the
+current population. Each new session resets playback RNG and world state so
+the host can replay generations cleanly.
+
+Parameters:
+- `workerMutableRuntimeState` - - Mutable worker runtime state.
+- `payload` - - Playback start payload.
 
 Returns: Nothing.
 
@@ -399,7 +379,47 @@ Parameters:
 
 Returns: Nothing.
 
+### postWorkerMessage
+
+```ts
+postWorkerMessage(
+  workerMessage: WorkerResponseMessage,
+  transferList: Transferable[] | undefined,
+): void
+```
+
+Posts a typed message from worker to host.
+
+This is the narrowest possible transport helper: all message construction is
+done elsewhere so the README can point to one stable worker-to-host boundary.
+
+Parameters:
+- `workerMessage` - - Outbound worker response payload.
+- `transferList` - - Optional transferable buffers moved with the payload.
+
+Returns: Nothing.
+
 ## flappy-evolution-worker/flappy-evolution-worker.errors.ts
+
+### resolveWorkerUnknownErrorMessage
+
+```ts
+resolveWorkerUnknownErrorMessage(
+  error: unknown,
+): string
+```
+
+Resolves unknown error-like values into display-safe worker error messages.
+
+Educational note:
+Browser workers can throw anything, including strings or arbitrary objects.
+Normalizing that value here gives the rest of the protocol a simple
+`string`-only error surface.
+
+Parameters:
+- `error` - - Unknown error value thrown by worker logic.
+
+Returns: Normalized error message string.
 
 ### createWorkerErrorMessage
 
@@ -464,92 +484,7 @@ Worker error emitted when playback stepping is requested before playback start.
 The protocol is stateful: `start-playback` materializes the mutable playback
 state that later `request-playback-step` messages advance.
 
-### resolveWorkerUnknownErrorMessage
-
-```ts
-resolveWorkerUnknownErrorMessage(
-  error: unknown,
-): string
-```
-
-Resolves unknown error-like values into display-safe worker error messages.
-
-Educational note:
-Browser workers can throw anything, including strings or arbitrary objects.
-Normalizing that value here gives the rest of the protocol a simple
-`string`-only error surface.
-
-Parameters:
-- `error` - - Unknown error value thrown by worker logic.
-
-Returns: Normalized error message string.
-
 ## flappy-evolution-worker/flappy-evolution-worker.constants.ts
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_BATCH_SIZE
-
-Batch size for generation-0 warm-start pretraining.
-
-Smaller batches inject a bit more stochasticity into the bootstrap fit,
-while still keeping the pass cheap enough for a browser worker.
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_BIAS_NOISE_STDDEV
-
-Gaussian standard deviation used for post-pretrain node-bias diversification.
-
-Bias noise is slightly smaller than weight noise so the warm-start remains a
-prior, not a rigid clone of the teacher-fitted template.
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_ITERATIONS
-
-Optimizer iteration budget for generation-0 warm-start pretraining.
-
-The goal is not to fully solve Flappy Bird with supervised learning. The
-worker only needs a short nudge away from completely random action logits so
-the first browser-visible generation looks less chaotic.
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_RATE
-
-Learning rate for generation-0 warm-start pretraining.
-
-This is intentionally moderate: the template network should learn a simple
-corridor-following prior without overfitting the heuristic teacher.
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_END
-
-Final node-bias noise scale for rollout-guided template refinement.
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_START
-
-Initial node-bias noise scale for rollout-guided template refinement.
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS
-
-Hill-climb step budget used by rollout-guided generation-0 template refinement.
-
-Each step perturbs the current best template, evaluates it on the shared
-rollout seed batch, and keeps the candidate only when it improves robust
-fitness. The budget stays intentionally small so worker startup remains fast.
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_SEED_COUNT
-
-Shared-seed batch size used by rollout-guided generation-0 template refinement.
-
-After the heuristic teacher fit, the worker evaluates the fixed topology on a
-few real Flappy rollouts so the warm-start prior is pushed toward trajectories
-that actually survive the environment instead of only matching the synthetic
-teacher labels.
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_END
-
-Final connection-weight noise scale for rollout-guided template refinement.
-
-### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_START
-
-Initial connection-weight noise scale for rollout-guided template refinement.
-
-Early optimization steps search broadly, then later steps cool toward the
-smaller end scale below for finer local refinement.
 
 ### FLAPPY_WORKER_GEN0_PRETRAIN_SAMPLE_COUNT
 
@@ -570,6 +505,64 @@ This should roughly match the browser playback framing so the generated
 observation vectors look like the states the policy will later see during
 real worker playback.
 
+### FLAPPY_WORKER_GEN0_PRETRAIN_ITERATIONS
+
+Optimizer iteration budget for generation-0 warm-start pretraining.
+
+The goal is not to fully solve Flappy Bird with supervised learning. The
+worker only needs a short nudge away from completely random action logits so
+the first browser-visible generation looks less chaotic.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_BATCH_SIZE
+
+Batch size for generation-0 warm-start pretraining.
+
+Smaller batches inject a bit more stochasticity into the bootstrap fit,
+while still keeping the pass cheap enough for a browser worker.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_RATE
+
+Learning rate for generation-0 warm-start pretraining.
+
+This is intentionally moderate: the template network should learn a simple
+corridor-following prior without overfitting the heuristic teacher.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_SEED_COUNT
+
+Shared-seed batch size used by rollout-guided generation-0 template refinement.
+
+After the heuristic teacher fit, the worker evaluates the fixed topology on a
+few real Flappy rollouts so the warm-start prior is pushed toward trajectories
+that actually survive the environment instead of only matching the synthetic
+teacher labels.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS
+
+Hill-climb step budget used by rollout-guided generation-0 template refinement.
+
+Each step perturbs the current best template, evaluates it on the shared
+rollout seed batch, and keeps the candidate only when it improves robust
+fitness. The budget stays intentionally small so worker startup remains fast.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_START
+
+Initial connection-weight noise scale for rollout-guided template refinement.
+
+Early optimization steps search broadly, then later steps cool toward the
+smaller end scale below for finer local refinement.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_END
+
+Final connection-weight noise scale for rollout-guided template refinement.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_START
+
+Initial node-bias noise scale for rollout-guided template refinement.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_END
+
+Final node-bias noise scale for rollout-guided template refinement.
+
 ### FLAPPY_WORKER_GEN0_PRETRAIN_WEIGHT_NOISE_STDDEV
 
 Gaussian standard deviation used for post-pretrain connection-weight diversification.
@@ -577,6 +570,13 @@ Gaussian standard deviation used for post-pretrain connection-weight diversifica
 After the template network is trained once, each genome receives a noisy copy
 of its weights. That keeps generation 0 visually coherent while preserving
 enough diversity for NEAT to search meaningfully.
+
+### FLAPPY_WORKER_GEN0_PRETRAIN_BIAS_NOISE_STDDEV
+
+Gaussian standard deviation used for post-pretrain node-bias diversification.
+
+Bias noise is slightly smaller than weight noise so the warm-start remains a
+prior, not a rigid clone of the teacher-fitted template.
 
 ## flappy-evolution-worker/flappy-evolution-worker.runtime.service.ts
 
@@ -767,229 +767,6 @@ slice of behavior.
 
 ## flappy-evolution-worker/flappy-evolution-worker.warm-start.service.ts
 
-### applyTemplateWeightsWithNoise
-
-```ts
-applyTemplateWeightsWithNoise(
-  genome: default,
-  template: default,
-  rng: FlappyRng,
-  noise: { weightStdDev: number; biasStdDev: number; },
-): void
-```
-
-Copies template parameters into a genome and injects small Gaussian noise.
-
-Educational note:
-The template network gives generation 0 a shared prior, while the noise terms
-restore diversity so the population is still worth evolving.
-
-Parameters:
-- `genome` - - Target genome to mutate in-place.
-- `template` - - Trained template source network.
-- `rng` - - Deterministic random source for noise sampling.
-- `noise` - - Standard deviations for weight and bias perturbations.
-
-Returns: Nothing.
-
-### buildHeuristicPretrainSet
-
-```ts
-buildHeuristicPretrainSet(
-  rng: FlappyRng,
-  sampleCount: number,
-): { input: number[]; output: number[]; }[]
-```
-
-Builds synthetic supervised samples for generation-0 behavior cloning.
-
-Educational note:
-These samples are not recorded gameplay traces. They are synthetic states
-generated from the same observation pipeline used during real playback so the
-teacher labels and the evolved policy inputs stay in the same feature space.
-
-Parameters:
-- `rng` - - Deterministic random source.
-- `sampleCount` - - Requested number of synthetic samples.
-
-Returns: Supervised dataset of input/output pairs.
-
-### buildWarmStartRolloutSeedBatch
-
-```ts
-buildWarmStartRolloutSeedBatch(
-  rng: FlappyRng,
-  seedCount: number,
-): number[]
-```
-
-Builds the deterministic shared rollout seed batch used during warm-start refinement.
-
-Parameters:
-- `rng` - - Deterministic random source.
-- `seedCount` - - Requested seed count.
-
-Returns: Shared rollout seed batch.
-
-### evaluateWarmStartTemplateAcrossRollouts
-
-```ts
-evaluateWarmStartTemplateAcrossRollouts(
-  templateNetwork: default,
-  sharedRolloutSeeds: readonly number[],
-): FlappySeedBatchEvaluation
-```
-
-Evaluates one warm-start template across the shared rollout seed batch.
-
-Parameters:
-- `templateNetwork` - - Candidate template to score.
-- `sharedRolloutSeeds` - - Shared rollout seeds used for stable comparison.
-
-Returns: Aggregate shared-seed evaluation.
-
-### interpolateValue
-
-```ts
-interpolateValue(
-  startValue: number,
-  endValue: number,
-  ratio: number,
-): number
-```
-
-Linearly interpolates between two scalar values.
-
-Parameters:
-- `startValue` - - Value at ratio `0`.
-- `endValue` - - Value at ratio `1`.
-- `ratio` - - Interpolation ratio.
-
-Returns: Interpolated value.
-
-### isWarmStartEvaluationBetter
-
-```ts
-isWarmStartEvaluationBetter(
-  candidateEvaluation: FlappySeedBatchEvaluation,
-  bestEvaluation: FlappySeedBatchEvaluation,
-): boolean
-```
-
-Resolves whether the candidate batch evaluation beats the current best one.
-
-Robust fitness is the primary signal. Mean pipe progress and mean frame
-survival act as deterministic tie-breakers so upgrades remain stable when the
-robust score is identical.
-
-Parameters:
-- `candidateEvaluation` - - Newly scored candidate aggregate.
-- `bestEvaluation` - - Current best aggregate.
-
-Returns: True when the candidate should replace the incumbent template.
-
-### optimizeWarmStartTemplateNetwork
-
-```ts
-optimizeWarmStartTemplateNetwork(
-  templateNetwork: default,
-  workerInitSeed: number,
-): default
-```
-
-Refines the generation-0 template against real Flappy rollouts.
-
-The warm-start teacher gets the template out of pure-random territory, but it
-still only imitates a simple flap heuristic. This refinement pass keeps the
-topology fixed and searches the parameter surface directly against actual
-rollout fitness so the first visible generation starts closer to competent
-control.
-
-Parameters:
-- `templateNetwork` - - Heuristic-pretrained template network.
-- `workerInitSeed` - - Deterministic worker seed.
-
-Returns: Best rollout-refined template found within the bounded budget.
-
-### perturbNetworkParametersInPlace
-
-```ts
-perturbNetworkParametersInPlace(
-  network: default,
-  rng: FlappyRng,
-  noise: { weightStdDev: number; biasStdDev: number; },
-): void
-```
-
-Applies additive Gaussian noise to an existing network in-place.
-
-Unlike the later population seeding copy step, this helper perturbs the
-candidate template directly so the rollout optimizer can evaluate one local
-parameter move at a time while keeping the topology unchanged.
-
-Parameters:
-- `network` - - Candidate template to perturb.
-- `rng` - - Deterministic random source.
-- `noise` - - Standard deviations for weight and bias perturbations.
-
-Returns: Nothing.
-
-### resolveHeuristicTeacherFlapDecision
-
-```ts
-resolveHeuristicTeacherFlapDecision(
-  features: SharedObservationFeatures,
-): boolean
-```
-
-Heuristic teacher policy used to label synthetic pretraining samples.
-
-The rule intentionally stays simple and interpretable: flap when the bird is
-meaningfully below the next gap center, not already rising fast, and either
-close to the gap entry or in an urgent approach state.
-
-Parameters:
-- `features` - - Structured observation features for one synthetic state.
-
-Returns: True when the teacher says to flap.
-
-### resolveWarmStartAnnealRatio
-
-```ts
-resolveWarmStartAnnealRatio(
-  optimizationStepIndex: number,
-  totalOptimizationSteps: number,
-): number
-```
-
-Resolves the annealing ratio for rollout-guided warm-start refinement.
-
-Parameters:
-- `optimizationStepIndex` - - Zero-based optimization step index.
-- `totalOptimizationSteps` - - Total number of optimization steps.
-
-Returns: Clamped ratio in the inclusive range [0, 1].
-
-### sampleGaussian
-
-```ts
-sampleGaussian(
-  rng: FlappyRng,
-): number
-```
-
-Samples one standard-normal value using the Box-Muller transform.
-
-If you are unfamiliar with the transform, the Wikipedia article on
-"Box-Muller transform" is a useful short background read. The worker uses it
-here because it is deterministic, dependency-light, and good enough for small
-noise injection during warm-start diversification.
-
-Parameters:
-- `rng` - - Deterministic random source.
-
-Returns: One approximately standard-normal random value.
-
 ### warmStartWorkerGenerationZeroIfNeeded
 
 ```ts
@@ -1026,14 +803,6 @@ await warmStartWorkerGenerationZeroIfNeeded(neatRuntime, {
 });
 ```
 
-### WorkerWarmStartDependencies
-
-Dependency bag for generation-0 warm-start orchestration.
-
-The production path uses the real heuristic dataset builder and rollout-guided
-template refinement. Tests can override these seams to keep assertions small
-and deterministic.
-
 ### WorkerWarmStartState
 
 State carried between generation requests for one worker runtime.
@@ -1042,7 +811,327 @@ The warm-start service is intentionally one-shot. These fields let the worker
 remember whether generation 0 has already been bootstrapped and which initial
 RNG seed should be reused for deterministic synthetic sample generation.
 
+### WorkerWarmStartDependencies
+
+Dependency bag for generation-0 warm-start orchestration.
+
+The production path uses the real heuristic dataset builder and rollout-guided
+template refinement. Tests can override these seams to keep assertions small
+and deterministic.
+
+### buildHeuristicPretrainSet
+
+```ts
+buildHeuristicPretrainSet(
+  rng: FlappyRng,
+  sampleCount: number,
+): { input: number[]; output: number[]; }[]
+```
+
+Builds synthetic supervised samples for generation-0 behavior cloning.
+
+Educational note:
+These samples are not recorded gameplay traces. They are synthetic states
+generated from the same observation pipeline used during real playback so the
+teacher labels and the evolved policy inputs stay in the same feature space.
+
+Parameters:
+- `rng` - - Deterministic random source.
+- `sampleCount` - - Requested number of synthetic samples.
+
+Returns: Supervised dataset of input/output pairs.
+
+### optimizeWarmStartTemplateNetwork
+
+```ts
+optimizeWarmStartTemplateNetwork(
+  templateNetwork: default,
+  workerInitSeed: number,
+): default
+```
+
+Refines the generation-0 template against real Flappy rollouts.
+
+The warm-start teacher gets the template out of pure-random territory, but it
+still only imitates a simple flap heuristic. This refinement pass keeps the
+topology fixed and searches the parameter surface directly against actual
+rollout fitness so the first visible generation starts closer to competent
+control.
+
+Parameters:
+- `templateNetwork` - - Heuristic-pretrained template network.
+- `workerInitSeed` - - Deterministic worker seed.
+
+Returns: Best rollout-refined template found within the bounded budget.
+
+### buildWarmStartRolloutSeedBatch
+
+```ts
+buildWarmStartRolloutSeedBatch(
+  rng: FlappyRng,
+  seedCount: number,
+): number[]
+```
+
+Builds the deterministic shared rollout seed batch used during warm-start refinement.
+
+Parameters:
+- `rng` - - Deterministic random source.
+- `seedCount` - - Requested seed count.
+
+Returns: Shared rollout seed batch.
+
+### evaluateWarmStartTemplateAcrossRollouts
+
+```ts
+evaluateWarmStartTemplateAcrossRollouts(
+  templateNetwork: default,
+  sharedRolloutSeeds: readonly number[],
+): FlappySeedBatchEvaluation
+```
+
+Evaluates one warm-start template across the shared rollout seed batch.
+
+Parameters:
+- `templateNetwork` - - Candidate template to score.
+- `sharedRolloutSeeds` - - Shared rollout seeds used for stable comparison.
+
+Returns: Aggregate shared-seed evaluation.
+
+### isWarmStartEvaluationBetter
+
+```ts
+isWarmStartEvaluationBetter(
+  candidateEvaluation: FlappySeedBatchEvaluation,
+  bestEvaluation: FlappySeedBatchEvaluation,
+): boolean
+```
+
+Resolves whether the candidate batch evaluation beats the current best one.
+
+Robust fitness is the primary signal. Mean pipe progress and mean frame
+survival act as deterministic tie-breakers so upgrades remain stable when the
+robust score is identical.
+
+Parameters:
+- `candidateEvaluation` - - Newly scored candidate aggregate.
+- `bestEvaluation` - - Current best aggregate.
+
+Returns: True when the candidate should replace the incumbent template.
+
+### resolveWarmStartAnnealRatio
+
+```ts
+resolveWarmStartAnnealRatio(
+  optimizationStepIndex: number,
+  totalOptimizationSteps: number,
+): number
+```
+
+Resolves the annealing ratio for rollout-guided warm-start refinement.
+
+Parameters:
+- `optimizationStepIndex` - - Zero-based optimization step index.
+- `totalOptimizationSteps` - - Total number of optimization steps.
+
+Returns: Clamped ratio in the inclusive range [0, 1].
+
+### perturbNetworkParametersInPlace
+
+```ts
+perturbNetworkParametersInPlace(
+  network: default,
+  rng: FlappyRng,
+  noise: { weightStdDev: number; biasStdDev: number; },
+): void
+```
+
+Applies additive Gaussian noise to an existing network in-place.
+
+Unlike the later population seeding copy step, this helper perturbs the
+candidate template directly so the rollout optimizer can evaluate one local
+parameter move at a time while keeping the topology unchanged.
+
+Parameters:
+- `network` - - Candidate template to perturb.
+- `rng` - - Deterministic random source.
+- `noise` - - Standard deviations for weight and bias perturbations.
+
+Returns: Nothing.
+
+### interpolateValue
+
+```ts
+interpolateValue(
+  startValue: number,
+  endValue: number,
+  ratio: number,
+): number
+```
+
+Linearly interpolates between two scalar values.
+
+Parameters:
+- `startValue` - - Value at ratio `0`.
+- `endValue` - - Value at ratio `1`.
+- `ratio` - - Interpolation ratio.
+
+Returns: Interpolated value.
+
+### resolveHeuristicTeacherFlapDecision
+
+```ts
+resolveHeuristicTeacherFlapDecision(
+  features: SharedObservationFeatures,
+): boolean
+```
+
+Heuristic teacher policy used to label synthetic pretraining samples.
+
+The rule intentionally stays simple and interpretable: flap when the bird is
+meaningfully below the next gap center, not already rising fast, and either
+close to the gap entry or in an urgent approach state.
+
+Parameters:
+- `features` - - Structured observation features for one synthetic state.
+
+Returns: True when the teacher says to flap.
+
+### applyTemplateWeightsWithNoise
+
+```ts
+applyTemplateWeightsWithNoise(
+  genome: default,
+  template: default,
+  rng: FlappyRng,
+  noise: { weightStdDev: number; biasStdDev: number; },
+): void
+```
+
+Copies template parameters into a genome and injects small Gaussian noise.
+
+Educational note:
+The template network gives generation 0 a shared prior, while the noise terms
+restore diversity so the population is still worth evolving.
+
+Parameters:
+- `genome` - - Target genome to mutate in-place.
+- `template` - - Trained template source network.
+- `rng` - - Deterministic random source for noise sampling.
+- `noise` - - Standard deviations for weight and bias perturbations.
+
+Returns: Nothing.
+
+### sampleGaussian
+
+```ts
+sampleGaussian(
+  rng: FlappyRng,
+): number
+```
+
+Samples one standard-normal value using the Box-Muller transform.
+
+If you are unfamiliar with the transform, the Wikipedia article on
+"Box-Muller transform" is a useful short background read. The worker uses it
+here because it is deterministic, dependency-light, and good enough for small
+noise injection during warm-start diversification.
+
+Parameters:
+- `rng` - - Deterministic random source.
+
+Returns: One approximately standard-normal random value.
+
 ## flappy-evolution-worker/flappy-evolution-worker.simulation.frame.service.ts
+
+### stepWorkerPopulationFrame
+
+```ts
+stepWorkerPopulationFrame(
+  renderState: WorkerPlaybackState,
+  rng: RngLike,
+  difficultyProfile: SharedDifficultyProfile,
+): number
+```
+
+Advances the whole population simulation by one logical frame.
+
+Educational note:
+One logical frame is internally split into smaller control substeps so the
+worker can make flap decisions, apply gravity, move pipes, spawn new pipes,
+and resolve collisions with better numerical stability than a single large
+integration jump.
+
+This function is the main simulation ownership boundary for the folder.
+The companion `simulation.utils` file creates initial state; this service is
+responsible for mutating that state over time.
+
+Parameters:
+- `renderState` - - Mutable simulation state.
+- `rng` - - Deterministic random source for spawn variation.
+- `difficultyProfile` - - Active dynamic difficulty profile.
+
+Returns: Number of policy activation calls made in this frame.
+
+### resolveCameraLeftXPx
+
+```ts
+resolveCameraLeftXPx(
+  visibleWorldWidthPx: number,
+): number
+```
+
+Resolves the current left-edge of the visible world in world-space pixels.
+
+Parameters:
+- `visibleWorldWidthPx` - - Current visible world width.
+
+Returns: Left edge x-position in world coordinates.
+
+### incrementLivingBirdFrameCounters
+
+```ts
+incrementLivingBirdFrameCounters(
+  renderState: WorkerPlaybackState,
+): void
+```
+
+Increments survival counters for birds that remain active at frame start.
+
+Parameters:
+- `renderState` - - Mutable playback state.
+
+Returns: Nothing.
+
+### runWorkerPopulationControlSubstep
+
+```ts
+runWorkerPopulationControlSubstep(
+  frameContext: WorkerPlaybackFrameContext,
+): number
+```
+
+Advances one control substep of the worker playback simulation.
+
+Parameters:
+- `frameContext` - - Shared frame context for this logical frame.
+
+Returns: Number of activation calls performed in the substep.
+
+### resolveBirdControlActions
+
+```ts
+resolveBirdControlActions(
+  frameContext: WorkerPlaybackFrameContext,
+): number
+```
+
+Runs policy evaluation and commits the resulting observation memory updates.
+
+Parameters:
+- `frameContext` - - Shared frame context for this logical frame.
+
+Returns: Number of activation calls performed in the substep.
 
 ### advanceBirdPhysics
 
@@ -1074,37 +1163,52 @@ Parameters:
 
 Returns: Nothing.
 
-### commitPassedPipeProgress
+### spawnPipeIfNeeded
 
 ```ts
-commitPassedPipeProgress(
-  bird: WorkerPopulationBird,
-  pipe: WorkerPopulationPipe,
+spawnPipeIfNeeded(
+  frameContext: WorkerPlaybackFrameContext,
 ): void
 ```
 
-Commits one passed-pipe progress increment for a bird when eligible.
+Spawns a new pipe when the substep budget crosses the spawn boundary.
+
+Parameters:
+- `frameContext` - - Shared frame context for this logical frame.
+
+Returns: Nothing.
+
+### resolveBirdTerminationAndProgress
+
+```ts
+resolveBirdTerminationAndProgress(
+  frameContext: WorkerPlaybackFrameContext,
+): void
+```
+
+Resolves bird deaths and passed-pipe progress after motion is applied.
+
+Parameters:
+- `frameContext` - - Shared frame context for this logical frame.
+
+Returns: Nothing.
+
+### resolveBirdOutOfBounds
+
+```ts
+resolveBirdOutOfBounds(
+  bird: WorkerPopulationBird,
+  visibleWorldHeightPx: number,
+): boolean
+```
+
+Resolves whether a bird has exceeded the vertical play area.
 
 Parameters:
 - `bird` - - Mutable bird state.
-- `pipe` - - Pipe candidate to mark as passed.
+- `visibleWorldHeightPx` - - Current visible world height.
 
-Returns: Nothing.
-
-### incrementLivingBirdFrameCounters
-
-```ts
-incrementLivingBirdFrameCounters(
-  renderState: WorkerPlaybackState,
-): void
-```
-
-Increments survival counters for birds that remain active at frame start.
-
-Parameters:
-- `renderState` - - Mutable playback state.
-
-Returns: Nothing.
+Returns: `true` when the bird is outside the vertical bounds.
 
 ### resolveBirdCollisionAgainstPipe
 
@@ -1125,126 +1229,22 @@ Parameters:
 
 Returns: `true` when the bird overlaps the pipe body instead of the gap.
 
-### resolveBirdControlActions
+### commitPassedPipeProgress
 
 ```ts
-resolveBirdControlActions(
-  frameContext: WorkerPlaybackFrameContext,
-): number
-```
-
-Runs policy evaluation and commits the resulting observation memory updates.
-
-Parameters:
-- `frameContext` - - Shared frame context for this logical frame.
-
-Returns: Number of activation calls performed in the substep.
-
-### resolveBirdOutOfBounds
-
-```ts
-resolveBirdOutOfBounds(
+commitPassedPipeProgress(
   bird: WorkerPopulationBird,
-  visibleWorldHeightPx: number,
-): boolean
+  pipe: WorkerPopulationPipe,
+): void
 ```
 
-Resolves whether a bird has exceeded the vertical play area.
+Commits one passed-pipe progress increment for a bird when eligible.
 
 Parameters:
 - `bird` - - Mutable bird state.
-- `visibleWorldHeightPx` - - Current visible world height.
-
-Returns: `true` when the bird is outside the vertical bounds.
-
-### resolveBirdTerminationAndProgress
-
-```ts
-resolveBirdTerminationAndProgress(
-  frameContext: WorkerPlaybackFrameContext,
-): void
-```
-
-Resolves bird deaths and passed-pipe progress after motion is applied.
-
-Parameters:
-- `frameContext` - - Shared frame context for this logical frame.
+- `pipe` - - Pipe candidate to mark as passed.
 
 Returns: Nothing.
-
-### resolveCameraLeftXPx
-
-```ts
-resolveCameraLeftXPx(
-  visibleWorldWidthPx: number,
-): number
-```
-
-Resolves the current left-edge of the visible world in world-space pixels.
-
-Parameters:
-- `visibleWorldWidthPx` - - Current visible world width.
-
-Returns: Left edge x-position in world coordinates.
-
-### runWorkerPopulationControlSubstep
-
-```ts
-runWorkerPopulationControlSubstep(
-  frameContext: WorkerPlaybackFrameContext,
-): number
-```
-
-Advances one control substep of the worker playback simulation.
-
-Parameters:
-- `frameContext` - - Shared frame context for this logical frame.
-
-Returns: Number of activation calls performed in the substep.
-
-### spawnPipeIfNeeded
-
-```ts
-spawnPipeIfNeeded(
-  frameContext: WorkerPlaybackFrameContext,
-): void
-```
-
-Spawns a new pipe when the substep budget crosses the spawn boundary.
-
-Parameters:
-- `frameContext` - - Shared frame context for this logical frame.
-
-Returns: Nothing.
-
-### stepWorkerPopulationFrame
-
-```ts
-stepWorkerPopulationFrame(
-  renderState: WorkerPlaybackState,
-  rng: RngLike,
-  difficultyProfile: SharedDifficultyProfile,
-): number
-```
-
-Advances the whole population simulation by one logical frame.
-
-Educational note:
-One logical frame is internally split into smaller control substeps so the
-worker can make flap decisions, apply gravity, move pipes, spawn new pipes,
-and resolve collisions with better numerical stability than a single large
-integration jump.
-
-This function is the main simulation ownership boundary for the folder.
-The companion `simulation.utils` file creates initial state; this service is
-responsible for mutating that state over time.
-
-Parameters:
-- `renderState` - - Mutable simulation state.
-- `rng` - - Deterministic random source for spawn variation.
-- `difficultyProfile` - - Active dynamic difficulty profile.
-
-Returns: Number of policy activation calls made in this frame.
 
 ## flappy-evolution-worker/flappy-evolution-worker.snapshot.utils.ts
 

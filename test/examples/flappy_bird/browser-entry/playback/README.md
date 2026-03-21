@@ -24,14 +24,6 @@ Shared playback utility types for the browser-entry subsystem.
 These types support rendering concerns that cut across multiple playback
 helpers, such as edge-aware trail fading and cached parallax backgrounds.
 
-### PlaybackEdgeBounds
-
-Axis-aligned visible world bounds used for edge-aware trail fading.
-
-Trail rendering needs a quick answer to "is this point still visually inside
-the active world rectangle?" so fading logic can taper paths near the edges
-instead of drawing abrupt cutoffs.
-
 ### PlaybackStarfieldLayerSpec
 
 Declarative recipe for building one cached starfield parallax layer.
@@ -49,6 +41,14 @@ parallax backgrounds during playback.
 Separating the image type from the tile record lets the same starfield logic
 work with ordinary canvases and `OffscreenCanvas` when available.
 
+### PlaybackEdgeBounds
+
+Axis-aligned visible world bounds used for edge-aware trail fading.
+
+Trail rendering needs a quick answer to "is this point still visually inside
+the active world rectangle?" so fading logic can taper paths near the edges
+instead of drawing abrupt cutoffs.
+
 ## browser-entry/playback/playback.starfield.types.ts
 
 Starfield and parallax rendering contracts for playback backgrounds.
@@ -57,12 +57,22 @@ The playback view uses a cached layered starfield to add depth without paying
 a large per-frame rendering cost. These types define the tile, layer, and
 deterministic placement data needed for that effect.
 
-### CreateStarTileCanvasOptions
+### StarTileImage
 
-Input contract for pre-rendering one deterministic starfield tile.
+Shared type contract for starfield tile rendering layers.
 
-The generated tile is cached and repeated horizontally during playback,
-so every field here affects both the visual look and the parallax cost.
+A tile is pre-rendered and repeated horizontally to draw efficient
+parallax backgrounds during playback.
+
+### StarTile
+
+Shared type contract for starfield tile rendering layers.
+
+A tile is pre-rendered and repeated horizontally to draw efficient
+parallax backgrounds during playback.
+
+Separating the image type from the tile record lets the same starfield logic
+work with ordinary canvases and `OffscreenCanvas` when available.
 
 ### PlaybackStarfieldLayerSpec
 
@@ -70,6 +80,13 @@ Declarative recipe for building one cached starfield parallax layer.
 
 Each layer spec describes how dense, bright, blurred, and fast one visual
 depth plane should feel.
+
+### CreateStarTileCanvasOptions
+
+Input contract for pre-rendering one deterministic starfield tile.
+
+The generated tile is cached and repeated horizontally during playback,
+so every field here affects both the visual look and the parallax cost.
 
 ### StarfieldCanvasDimensions
 
@@ -86,23 +103,6 @@ Deterministic placement and appearance for one rendered star sprite.
 Determinism matters here because cached starfield tiles should remain stable
 across redraws instead of sparkling randomly every frame.
 
-### StarTile
-
-Shared type contract for starfield tile rendering layers.
-
-A tile is pre-rendered and repeated horizontally to draw efficient
-parallax backgrounds during playback.
-
-Separating the image type from the tile record lets the same starfield logic
-work with ordinary canvases and `OffscreenCanvas` when available.
-
-### StarTileImage
-
-Shared type contract for starfield tile rendering layers.
-
-A tile is pre-rendered and repeated horizontally to draw efficient
-parallax backgrounds during playback.
-
 ## browser-entry/playback/playback.orchestration.types.ts
 
 Playback orchestration contracts for the Flappy Bird browser demo.
@@ -111,13 +111,6 @@ These types describe the moving pieces of one playback episode: the public
 summary returned at the end, the mutable loop bookkeeping used while frames
 are streaming, and the session context mirrored locally in the browser.
 
-### PlaybackChampionChangedEvent
-
-Event emitted when the current playback champion changes.
-
-The event identifies which playback bird is currently highlighted as the red
-bird so the side-panel network view can stay synchronized with the renderer.
-
 ### PlaybackEpisodeSummary
 
 Public aggregate playback summary returned after one episode completes.
@@ -125,20 +118,12 @@ Public aggregate playback summary returned after one episode completes.
 The summary captures the headline outcomes of the just-finished population
 run without exposing all internal frame-by-frame details.
 
-### PlaybackIterationContext
+### PlaybackChampionChangedEvent
 
-Shared dependencies and mutable state used by one playback iteration.
+Event emitted when the current playback champion changes.
 
-Grouping these fields into one context object keeps the iteration services
-declarative and avoids long parameter lists across the playback loop.
-
-### PlaybackLoopState
-
-Mutable loop bookkeeping shared across playback iterations.
-
-This is the browser-side state machine for the playback loop: how much
-simulation budget is being requested, whether the episode has finished, and
-what aggregate summary has been observed so far.
+The event identifies which playback bird is currently highlighted as the red
+bird so the side-panel network view can stay synchronized with the renderer.
 
 ### PlaybackMutableSummary
 
@@ -148,6 +133,14 @@ During playback the browser may need temporary "latest known" values before
 the worker emits final aggregate statistics, so the mutable form carries both
 final fields and rolling fallbacks.
 
+### PlaybackLoopState
+
+Mutable loop bookkeeping shared across playback iterations.
+
+This is the browser-side state machine for the playback loop: how much
+simulation budget is being requested, whether the episode has finished, and
+what aggregate summary has been observed so far.
+
 ### PlaybackSessionContext
 
 Shared mutable playback state mirrored locally while worker playback runs.
@@ -155,6 +148,13 @@ Shared mutable playback state mirrored locally while worker playback runs.
 The worker remains the source of truth for simulation, but the browser keeps
 lightweight mirrored state for rendering, trail accumulation, and loop
 orchestration.
+
+### PlaybackIterationContext
+
+Shared dependencies and mutable state used by one playback iteration.
+
+Grouping these fields into one context object keeps the iteration services
+declarative and avoids long parameter lists across the playback loop.
 
 ## browser-entry/playback/playback.ts
 
@@ -303,18 +303,23 @@ These services answer three orchestration questions:
 2. What local mirror state should exist before the first worker snapshot?
 3. How should mutable loop state be folded back into a public summary?
 
-### createInitialPlaybackLoopState
+### resolvePlaybackViewportDimensions
 
 ```ts
-createInitialPlaybackLoopState(): PlaybackLoopState
+resolvePlaybackViewportDimensions(
+  canvas: HTMLCanvasElement,
+): { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }
 ```
 
-Creates the mutable loop state used while processing playback steps.
+Resolves the current visible playback viewport dimensions from the canvas.
 
-This is the browser's running notebook for one episode: budget, completion
-flag, and the latest known aggregate outcome metrics.
+Playback sizing is derived from the live canvas rather than a hard-coded
+constant so resizing can flow into the worker/session boundary cleanly.
 
-Returns: Initialized loop state and aggregate summary values.
+Parameters:
+- `canvas` - - Target playback canvas.
+
+Returns: Visible world width and height in pixels.
 
 ### createInitialRenderState
 
@@ -348,6 +353,19 @@ playback frames are observed.
 
 Returns: Empty trail state for all birds.
 
+### createInitialPlaybackLoopState
+
+```ts
+createInitialPlaybackLoopState(): PlaybackLoopState
+```
+
+Creates the mutable loop state used while processing playback steps.
+
+This is the browser's running notebook for one episode: budget, completion
+flag, and the latest known aggregate outcome metrics.
+
+Returns: Initialized loop state and aggregate summary values.
+
 ### initializePlaybackSessionContext
 
 ```ts
@@ -369,42 +387,6 @@ Parameters:
 
 Returns: Session context shared across the playback loop.
 
-### resolvePlaybackEpisodeSummary
-
-```ts
-resolvePlaybackEpisodeSummary(
-  summary: PlaybackMutableSummary,
-): PlaybackEpisodeSummary
-```
-
-Folds the mutable loop summary into the public playback summary shape.
-
-The public summary is intentionally smaller than the internal loop state. It
-exposes the outcome, not the browser's intermediate bookkeeping.
-
-Parameters:
-- `summary` - - Mutable loop summary accumulated during playback.
-
-Returns: Public playback episode summary.
-
-### resolvePlaybackViewportDimensions
-
-```ts
-resolvePlaybackViewportDimensions(
-  canvas: HTMLCanvasElement,
-): { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }
-```
-
-Resolves the current visible playback viewport dimensions from the canvas.
-
-Playback sizing is derived from the live canvas rather than a hard-coded
-constant so resizing can flow into the worker/session boundary cleanly.
-
-Parameters:
-- `canvas` - - Target playback canvas.
-
-Returns: Visible world width and height in pixels.
-
 ### syncPlaybackViewportDimensions
 
 ```ts
@@ -425,6 +407,24 @@ Parameters:
 
 Returns: Nothing.
 
+### resolvePlaybackEpisodeSummary
+
+```ts
+resolvePlaybackEpisodeSummary(
+  summary: PlaybackMutableSummary,
+): PlaybackEpisodeSummary
+```
+
+Folds the mutable loop summary into the public playback summary shape.
+
+The public summary is intentionally smaller than the internal loop state. It
+exposes the outcome, not the browser's intermediate bookkeeping.
+
+Parameters:
+- `summary` - - Mutable loop summary accumulated during playback.
+
+Returns: Public playback episode summary.
+
 ## browser-entry/playback/playback.starfield.service.ts
 
 ### resolveStarfieldTiles
@@ -443,6 +443,51 @@ Parameters:
 Returns: Ordered far/mid/near starfield tiles.
 
 ## browser-entry/playback/playback.iteration.services.ts
+
+### runPlaybackLoop
+
+```ts
+runPlaybackLoop(
+  iterationContext: PlaybackIterationContext,
+): Promise<void>
+```
+
+Runs playback iterations until the worker reports that the episode is done.
+
+Parameters:
+- `iterationContext` - - Shared loop dependencies and mutable playback state.
+
+Returns: Nothing.
+
+### runPlaybackIteration
+
+```ts
+runPlaybackIteration(
+  iterationContext: PlaybackIterationContext,
+): Promise<void>
+```
+
+Executes one playback iteration from viewport sync through render pacing.
+
+Parameters:
+- `iterationContext` - - Shared loop dependencies and mutable playback state.
+
+Returns: Nothing.
+
+### requestPlaybackStepPayload
+
+```ts
+requestPlaybackStepPayload(
+  iterationContext: PlaybackIterationContext,
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
+```
+
+Requests one playback step batch from the evolution worker.
+
+Parameters:
+- `iterationContext` - - Shared loop dependencies and mutable playback state.
+
+Returns: Worker playback step payload for the current iteration.
 
 ### applyPlaybackStepSnapshot
 
@@ -480,23 +525,6 @@ Parameters:
 
 Returns: Nothing.
 
-### emitPlaybackChampionChanged
-
-```ts
-emitPlaybackChampionChanged(
-  onChampionChanged: ((event: PlaybackChampionChangedEvent) => void) | undefined,
-  championBirdIndex: number,
-): void
-```
-
-Calls the optional playback champion-changed callback with a structured payload.
-
-Parameters:
-- `onChampionChanged` - - Optional runtime callback.
-- `championBirdIndex` - - Current champion bird index.
-
-Returns: Nothing.
-
 ### emitPlaybackFrameStats
 
 ```ts
@@ -511,51 +539,6 @@ Resolves leader telemetry and emits the public frame-stats callback.
 Parameters:
 - `iterationContext` - - Shared loop dependencies and mutable playback state.
 - `playbackStepPayload` - - Worker playback result for the current iteration.
-
-Returns: Nothing.
-
-### requestPlaybackStepPayload
-
-```ts
-requestPlaybackStepPayload(
-  iterationContext: PlaybackIterationContext,
-): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
-```
-
-Requests one playback step batch from the evolution worker.
-
-Parameters:
-- `iterationContext` - - Shared loop dependencies and mutable playback state.
-
-Returns: Worker playback step payload for the current iteration.
-
-### runPlaybackIteration
-
-```ts
-runPlaybackIteration(
-  iterationContext: PlaybackIterationContext,
-): Promise<void>
-```
-
-Executes one playback iteration from viewport sync through render pacing.
-
-Parameters:
-- `iterationContext` - - Shared loop dependencies and mutable playback state.
-
-Returns: Nothing.
-
-### runPlaybackLoop
-
-```ts
-runPlaybackLoop(
-  iterationContext: PlaybackIterationContext,
-): Promise<void>
-```
-
-Runs playback iterations until the worker reports that the episode is done.
-
-Parameters:
-- `iterationContext` - - Shared loop dependencies and mutable playback state.
 
 Returns: Nothing.
 
@@ -576,22 +559,39 @@ Parameters:
 
 Returns: Nothing.
 
-## browser-entry/playback/playback.starfield.services.ts
-
-### createCanvasSizeFallback
+### emitPlaybackChampionChanged
 
 ```ts
-createCanvasSizeFallback(
-  canvasDimensions: StarfieldCanvasDimensions,
-): HTMLCanvasElement
+emitPlaybackChampionChanged(
+  onChampionChanged: ((event: PlaybackChampionChangedEvent) => void) | undefined,
+  championBirdIndex: number,
+): void
 ```
 
-Creates a size-only fallback so non-browser tests can skip rendering safely.
+Calls the optional playback champion-changed callback with a structured payload.
 
 Parameters:
-- `canvasDimensions` - - Already-normalized pixel dimensions.
+- `onChampionChanged` - - Optional runtime callback.
+- `championBirdIndex` - - Current champion bird index.
 
-Returns: Minimal canvas-shaped object cast to the compatible return type.
+Returns: Nothing.
+
+## browser-entry/playback/playback.starfield.services.ts
+
+### createStarTileCanvas
+
+```ts
+createStarTileCanvas(
+  options: CreateStarTileCanvasOptions,
+): StarTileImage
+```
+
+Pre-renders a deterministic tile that can be reused across animation frames.
+
+Parameters:
+- `options` - - Declarative drawing recipe for one parallax layer.
+
+Returns: Canvas image source containing the rendered star strip.
 
 ### createCompatibleCanvas
 
@@ -610,50 +610,20 @@ Parameters:
 
 Returns: Offscreen canvas when supported, otherwise a DOM canvas fallback.
 
-### createDocumentCanvasIfSupported
+### resolveStarTileContext
 
 ```ts
-createDocumentCanvasIfSupported(
-  canvasDimensions: StarfieldCanvasDimensions,
-): HTMLCanvasElement | null
+resolveStarTileContext(
+  canvas: HTMLCanvasElement | OffscreenCanvas,
+): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
 ```
 
-Creates a DOM canvas when document APIs are available.
+Resolves the rendering context used for star tile pre-rendering.
 
 Parameters:
-- `canvasDimensions` - - Already-normalized pixel dimensions.
+- `canvas` - - Compatible canvas returned by the runtime-specific factory.
 
-Returns: DOM canvas instance or `null` when unavailable.
-
-### createOffscreenCanvasIfSupported
-
-```ts
-createOffscreenCanvasIfSupported(
-  canvasDimensions: StarfieldCanvasDimensions,
-): OffscreenCanvas | null
-```
-
-Creates an offscreen canvas when the current runtime supports it.
-
-Parameters:
-- `canvasDimensions` - - Already-normalized pixel dimensions.
-
-Returns: Offscreen canvas instance or `null` when unavailable.
-
-### createStarTileCanvas
-
-```ts
-createStarTileCanvas(
-  options: CreateStarTileCanvasOptions,
-): StarTileImage
-```
-
-Pre-renders a deterministic tile that can be reused across animation frames.
-
-Parameters:
-- `options` - - Declarative drawing recipe for one parallax layer.
-
-Returns: Canvas image source containing the rendered star strip.
+Returns: A 2D drawing context when rendering is supported.
 
 ### initializeStarTileContext
 
@@ -669,23 +639,6 @@ Parameters:
 - `options` - - Context initialization dependencies.
 
 Returns: Nothing. The provided context is mutated in place.
-
-### normalizeCanvasDimensions
-
-```ts
-normalizeCanvasDimensions(
-  widthPx: number,
-  heightPx: number,
-): StarfieldCanvasDimensions
-```
-
-Normalizes requested canvas dimensions into positive integer pixel sizes.
-
-Parameters:
-- `widthPx` - - Requested width in pixels.
-- `heightPx` - - Requested height in pixels.
-
-Returns: Clamped integer dimensions safe for canvas allocation.
 
 ### renderSeededStars
 
@@ -717,6 +670,68 @@ Parameters:
 
 Returns: Nothing. The provided context is mutated in place.
 
+### normalizeCanvasDimensions
+
+```ts
+normalizeCanvasDimensions(
+  widthPx: number,
+  heightPx: number,
+): StarfieldCanvasDimensions
+```
+
+Normalizes requested canvas dimensions into positive integer pixel sizes.
+
+Parameters:
+- `widthPx` - - Requested width in pixels.
+- `heightPx` - - Requested height in pixels.
+
+Returns: Clamped integer dimensions safe for canvas allocation.
+
+### createOffscreenCanvasIfSupported
+
+```ts
+createOffscreenCanvasIfSupported(
+  canvasDimensions: StarfieldCanvasDimensions,
+): OffscreenCanvas | null
+```
+
+Creates an offscreen canvas when the current runtime supports it.
+
+Parameters:
+- `canvasDimensions` - - Already-normalized pixel dimensions.
+
+Returns: Offscreen canvas instance or `null` when unavailable.
+
+### createDocumentCanvasIfSupported
+
+```ts
+createDocumentCanvasIfSupported(
+  canvasDimensions: StarfieldCanvasDimensions,
+): HTMLCanvasElement | null
+```
+
+Creates a DOM canvas when document APIs are available.
+
+Parameters:
+- `canvasDimensions` - - Already-normalized pixel dimensions.
+
+Returns: DOM canvas instance or `null` when unavailable.
+
+### createCanvasSizeFallback
+
+```ts
+createCanvasSizeFallback(
+  canvasDimensions: StarfieldCanvasDimensions,
+): HTMLCanvasElement
+```
+
+Creates a size-only fallback so non-browser tests can skip rendering safely.
+
+Parameters:
+- `canvasDimensions` - - Already-normalized pixel dimensions.
+
+Returns: Minimal canvas-shaped object cast to the compatible return type.
+
 ### resolveStarPlacement
 
 ```ts
@@ -731,21 +746,6 @@ Parameters:
 - `options` - - Random source and star placement bounds.
 
 Returns: Pixel location, square size, and alpha for one rendered star.
-
-### resolveStarTileContext
-
-```ts
-resolveStarTileContext(
-  canvas: HTMLCanvasElement | OffscreenCanvas,
-): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
-```
-
-Resolves the rendering context used for star tile pre-rendering.
-
-Parameters:
-- `canvas` - - Compatible canvas returned by the runtime-specific factory.
-
-Returns: A 2D drawing context when rendering is supported.
 
 ## browser-entry/playback/playback.frame-render.service.ts
 
@@ -885,25 +885,6 @@ Returns: Path containing the outer pipe outline and optional entrance rim.
 
 ## browser-entry/playback/playback.trail.utils.ts
 
-### clamp01
-
-```ts
-clamp01(
-  value: number,
-): number
-```
-
-Clamps a number to the inclusive [0, 1] range.
-
-The trail renderer combines several normalized fade factors, so keeping this
-utility local to the module makes the intent obvious: every opacity channel
-must remain safe for direct canvas alpha use.
-
-Parameters:
-- `value` - - Candidate value.
-
-Returns: Clamped value.
-
 ### pushChampionTrailPoint
 
 ```ts
@@ -960,6 +941,25 @@ Example:
 const trailPoints = [{ frameIndex: 10, yPx: 140 }];
 pushTrailPoint(trailPoints, 11, 136, 2);
 ```
+
+### clamp01
+
+```ts
+clamp01(
+  value: number,
+): number
+```
+
+Clamps a number to the inclusive [0, 1] range.
+
+The trail renderer combines several normalized fade factors, so keeping this
+utility local to the module makes the intent obvious: every opacity channel
+must remain safe for direct canvas alpha use.
+
+Parameters:
+- `value` - - Candidate value.
+
+Returns: Clamped value.
 
 ### resolveEdgeOpacityFactor
 
@@ -1020,9 +1020,23 @@ Returns: Opacity multiplier in [0, 1].
 
 ## browser-entry/playback/playback.render.utils.ts
 
-### PlaybackBirdRenderStyle
+### resolveChampionBirdIndex
 
-Pure render-style result for one bird body draw pass.
+```ts
+resolveChampionBirdIndex(
+  renderState: PopulationRenderState,
+): number
+```
+
+Resolves the champion bird index for the current render frame.
+
+Champion selection first prefers the primary winner resolver and then
+falls back to the first alive bird when no winner index is available.
+
+Parameters:
+- `renderState` - - Current frame render snapshot.
+
+Returns: Champion index or `-1` when no bird is alive.
 
 ### resolveBirdRenderStyle
 
@@ -1041,23 +1055,9 @@ Parameters:
 
 Returns: Pure style payload used by the render service.
 
-### resolveChampionBirdIndex
+### PlaybackBirdRenderStyle
 
-```ts
-resolveChampionBirdIndex(
-  renderState: PopulationRenderState,
-): number
-```
-
-Resolves the champion bird index for the current render frame.
-
-Champion selection first prefers the primary winner resolver and then
-falls back to the first alive bird when no winner index is available.
-
-Parameters:
-- `renderState` - - Current frame render snapshot.
-
-Returns: Champion index or `-1` when no bird is alive.
+Pure render-style result for one bird body draw pass.
 
 ## browser-entry/playback/playback.snapshot.utils.ts
 
@@ -1155,6 +1155,40 @@ Request payload for one playback-step worker call.
 The browser asks the worker to advance simulation by a small batch of steps
 and to package the result for the current viewport dimensions.
 
+### ResolvePlaybackStepRequestInput
+
+Input used to resolve the next playback-step request and budget remainder.
+
+Playback uses a fractional frame budget so browser render cadence and worker
+simulation cadence can be smoothed together over time.
+
+### ResolvePlaybackStepRequestResult
+
+Output for the resolved playback-step request and frame-budget remainder.
+
+The resolved request records both the integer step batch to send now and the
+leftover fractional budget to carry into the next render tick.
+
+### resolvePlaybackStepRequest
+
+```ts
+resolvePlaybackStepRequest(
+  input: ResolvePlaybackStepRequestInput,
+): ResolvePlaybackStepRequestResult
+```
+
+Resolves step count and request payload for the next worker playback batch.
+
+This is the pacing bridge between browser rendering and worker simulation.
+Rather than sending a fixed step count every frame, the loop carries forward
+fractional remainder so long-term playback speed stays closer to the intended
+emulation rate.
+
+Parameters:
+- `input` - - Current frame budget and viewport dimensions.
+
+Returns: Request payload plus carried-over fractional frame budget.
+
 ### resolvePlaybackCompletionSummary
 
 ```ts
@@ -1203,37 +1237,3 @@ Parameters:
 - `leaderFramesSurvived` - - Current frame leader survived frames.
 
 Returns: Normalized per-frame HUD telemetry payload.
-
-### resolvePlaybackStepRequest
-
-```ts
-resolvePlaybackStepRequest(
-  input: ResolvePlaybackStepRequestInput,
-): ResolvePlaybackStepRequestResult
-```
-
-Resolves step count and request payload for the next worker playback batch.
-
-This is the pacing bridge between browser rendering and worker simulation.
-Rather than sending a fixed step count every frame, the loop carries forward
-fractional remainder so long-term playback speed stays closer to the intended
-emulation rate.
-
-Parameters:
-- `input` - - Current frame budget and viewport dimensions.
-
-Returns: Request payload plus carried-over fractional frame budget.
-
-### ResolvePlaybackStepRequestInput
-
-Input used to resolve the next playback-step request and budget remainder.
-
-Playback uses a fractional frame budget so browser render cadence and worker
-simulation cadence can be smoothed together over time.
-
-### ResolvePlaybackStepRequestResult
-
-Output for the resolved playback-step request and frame-budget remainder.
-
-The resolved request records both the integer step batch to send now and the
-leftover fractional budget to carry into the next render tick.

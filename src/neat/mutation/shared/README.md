@@ -37,15 +37,6 @@ flowchart TD
 
 ## neat/mutation/shared/mutation.types.ts
 
-### ConnectionWithMetadata
-
-Runtime interface for a connection within a genome.
-
-This is the minimum edge metadata required by the structural mutation paths.
-The add-node and add-conn chapters use it to preserve weights, inspect edge
-activation, and attach innovation ids that later support alignment-based
-crossover and speciation.
-
 ### GenomeWithMetadata
 
 Runtime interface for a genome with mutation-related metadata.
@@ -60,6 +51,24 @@ state such as `_mutRate` and `_mutAmount` travels with the genome itself,
 while global innovation tables and policy controls stay on the controller
 host contract.
 
+### NodeWithMetadata
+
+Runtime interface for a node within a genome.
+
+Mutation helpers only need a narrow node view: topology category, optional
+gene identity, adjacency lists, and one projection check. That narrowness is
+what lets the structural chapters reason about connection growth and cycle
+checks without depending on the whole node implementation.
+
+### ConnectionWithMetadata
+
+Runtime interface for a connection within a genome.
+
+This is the minimum edge metadata required by the structural mutation paths.
+The add-node and add-conn chapters use it to preserve weights, inspect edge
+activation, and attach innovation ids that later support alignment-based
+crossover and speciation.
+
 ### MutationMethod
 
 Runtime interface for a mutation method descriptor.
@@ -68,6 +77,24 @@ Mutation operators are represented as descriptive runtime objects rather than
 as enum literals alone. That gives selection helpers room to reason about
 operator families, sample-count hints, and output-mutation behavior without
 having to know the concrete implementation of each operator.
+
+### OperatorStats
+
+Runtime interface for operator statistics tracking.
+
+These counters support the adaptive side of mutation policy. They do not try
+to capture full fitness impact; instead they record a cheap local proxy for
+whether an attempted operator actually produced structure often enough to be
+favored later by adaptation or bandit logic.
+
+### NodeSplitRecord
+
+Runtime interface for node-split innovation records.
+
+A node-split record is the durable memory that tells the add-node path,
+"this exact split has happened before." Reusing the stored node gene id and
+paired edge innovations is how separate genomes can independently perform the
+same split and still remain historically alignable.
 
 ### NeatControllerForMutation
 
@@ -80,30 +107,3 @@ statistics, and the narrow controller callbacks that the mutation helpers need.
 The important boundary is that mutation chapters can mutate controller-owned
 bookkeeping through this interface, but they do not need the entire `Neat`
 class surface to do their work.
-
-### NodeSplitRecord
-
-Runtime interface for node-split innovation records.
-
-A node-split record is the durable memory that tells the add-node path,
-"this exact split has happened before." Reusing the stored node gene id and
-paired edge innovations is how separate genomes can independently perform the
-same split and still remain historically alignable.
-
-### NodeWithMetadata
-
-Runtime interface for a node within a genome.
-
-Mutation helpers only need a narrow node view: topology category, optional
-gene identity, adjacency lists, and one projection check. That narrowness is
-what lets the structural chapters reason about connection growth and cycle
-checks without depending on the whole node implementation.
-
-### OperatorStats
-
-Runtime interface for operator statistics tracking.
-
-These counters support the adaptive side of mutation policy. They do not try
-to capture full fitness impact; instead they record a cheap local proxy for
-whether an attempted operator actually produced structure often enough to be
-favored later by adaptation or bandit logic.

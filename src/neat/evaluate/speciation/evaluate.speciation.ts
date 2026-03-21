@@ -31,12 +31,41 @@ import type { NeatControllerForEval } from '../shared/evaluate.types';
  * policy. It only decides whether the existing speciation subsystem should be
  * asked to refresh after evaluation.
  *
+ * The key teaching point is that this file does not "do speciation during
+ * evaluation." It only protects a few read-after-score features from using
+ * stale species state. The heavy speciation work still belongs to the main
+ * speciation chapter; this boundary is just the narrow bridge between fresh
+ * evaluation evidence and the existing maintenance hook.
+ *
+ * Read the first chart as the outer yes-or-no gate. Read the second chart as a
+ * policy map for which feature families are strong enough to justify that gate.
+ *
  * ```mermaid
  * flowchart TD
  *   Evaluate[Evaluation has produced fresh evidence] --> Gate[Check speciation flag and dependent features]
  *   Gate --> Skip[Skip when no evaluation-time speciation feature is active]
  *   Gate --> Trigger[Run controller's existing _speciate hook]
  *   Trigger --> Next[Later reads see refreshed species state]
+ * ```
+ *
+ * ```mermaid
+ * flowchart LR
+ *   Features[Fresh evaluation evidence]
+ *   Target[Target-species tuning]
+ *   Compat[Compatibility adjustment]
+ *   History[Extended species history]
+ *   Gate{Speciation enabled?}
+ *   Refresh[Run lightweight speciation refresh]
+ *   Skip[Keep existing species state]
+ *
+ *   Features --> Target
+ *   Features --> Compat
+ *   Features --> History
+ *   Target --> Gate
+ *   Compat --> Gate
+ *   History --> Gate
+ *   Gate -->|yes and a dependent feature is active| Refresh
+ *   Gate -->|no| Skip
  * ```
  */
 
@@ -47,6 +76,12 @@ import type { NeatControllerForEval } from '../shared/evaluate.types';
  * It behaves like best-effort maintenance: evaluation may request a refresh of
  * species state when nearby tuning or history features rely on it, but failure
  * here should not invalidate the newly gathered score evidence.
+ *
+ * Read this as evaluation's narrow handshake with speciation. The helper does
+ * not choose representatives, retune thresholds itself, or reinterpret the
+ * resulting registry. It only asks one question: "have evaluation-time features
+ * made the current species snapshot stale enough that the existing speciation
+ * hook should run before later reads continue?"
  *
  * The helper preserves several important controller assumptions:
  * - current score and novelty evidence are left intact,
@@ -81,6 +116,17 @@ export function runLightweightSpeciation(
  * only when a feature such as target-species tuning, compatibility adjustment,
  * or extended species history would otherwise be reasoning from stale species
  * state.
+ *
+ * In practice, this helper is the chapter's policy gate:
+ *
+ * 1. bail out immediately when speciation is disabled for the run,
+ * 2. otherwise look only for the small family of evaluation-time features that
+ *    read or tune species state after scoring,
+ * 3. trigger nothing when those dependent features are absent.
+ *
+ * That narrow contract is what keeps the chapter lightweight. Evaluation does
+ * not gain a second speciation subsystem here; it only gains a way to avoid
+ * stale follow-up reads.
  *
  * @param evaluationOptions - Options object for the current evaluation pass.
  * @returns True when speciation should run.

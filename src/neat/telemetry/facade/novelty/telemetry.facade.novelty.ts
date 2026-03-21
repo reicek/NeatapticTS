@@ -18,8 +18,8 @@
  *
  * ```mermaid
  * flowchart TD
- *   Archive[Novelty archive] --> Size[getNoveltyArchiveSize()<br/>current memory size]
- *   Archive --> Reset[resetNoveltyArchive()<br/>fresh novelty window]
+ *   Archive["Novelty archive"] --> Size["getNoveltyArchiveSize()<br/>current memory size"]
+ *   Archive --> Reset["resetNoveltyArchive()<br/>fresh novelty window"]
  * ```
  */
 /**

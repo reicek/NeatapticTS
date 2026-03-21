@@ -8,12 +8,12 @@ configuration passed into the evolution loop.
 
 ## browser-entry/runtime/runtime.types.ts
 
-### RuntimeContainerTarget
+### RuntimeRunHandle
 
-Container argument accepted by the browser runtime start function.
+Public run handle returned by the browser runtime entrypoint.
 
-Callers can either pass a host element directly or provide an element id for
-late resolution inside the runtime startup path.
+The handle is intentionally minimal so callers can treat the demo like a
+long-running process with start/stop/status semantics.
 
 ### RuntimeGlobalWindow
 
@@ -21,6 +21,20 @@ Browser `window` extension shape used for global runtime wiring.
 
 This keeps the auto-start and compatibility globals typed without coupling
 the runtime modules directly to ad hoc window-property access.
+
+### RuntimeContainerTarget
+
+Container argument accepted by the browser runtime start function.
+
+Callers can either pass a host element directly or provide an element id for
+late resolution inside the runtime startup path.
+
+### RuntimeStartConfig
+
+Static runtime configuration resolved before the browser loop starts.
+
+These values define the high-level NEAT and network shape used for the whole
+browser session.
 
 ### RuntimeHostViewContext
 
@@ -36,20 +50,6 @@ Mutable lifecycle state used to coordinate stop semantics and completion.
 The runtime loop is asynchronous and long-lived, so the browser keeps a small
 shared lifecycle object for idempotent shutdown and completion signaling.
 
-### RuntimeRunHandle
-
-Public run handle returned by the browser runtime entrypoint.
-
-The handle is intentionally minimal so callers can treat the demo like a
-long-running process with start/stop/status semantics.
-
-### RuntimeStartConfig
-
-Static runtime configuration resolved before the browser loop starts.
-
-These values define the high-level NEAT and network shape used for the whole
-browser session.
-
 ### RuntimeStartContext
 
 Shared runtime startup dependencies created before evolution begins.
@@ -58,13 +58,6 @@ Once this context exists, the browser has everything it needs to launch the
 actual evolution/playback loop.
 
 ## browser-entry/runtime/runtime.ts
-
-### RuntimeRunHandle
-
-Public run handle returned by the browser runtime entrypoint.
-
-The handle is intentionally minimal so callers can treat the demo like a
-long-running process with start/stop/status semantics.
 
 ### start
 
@@ -95,6 +88,13 @@ const runHandle = await start('flappy-bird-output');
 runHandle.stop();
 await runHandle.done;
 ```
+
+### RuntimeRunHandle
+
+Public run handle returned by the browser runtime entrypoint.
+
+The handle is intentionally minimal so callers can treat the demo like a
+long-running process with start/stop/status semantics.
 
 ## browser-entry/runtime/runtime.errors.ts
 
@@ -155,19 +155,6 @@ These functions cover the pre-loop phase: resolve the host container, build a
 typed browser view, derive static config, create telemetry state, spawn the
 worker, and paint the initial HUD before evolution begins.
 
-### createRuntimeStartConfig
-
-```ts
-createRuntimeStartConfig(): RuntimeStartConfig
-```
-
-Resolves the static runtime configuration used during browser startup.
-
-Centralizing the configuration fold here makes the runtime entry read as
-orchestration instead of constant plumbing.
-
-Returns: Runtime configuration derived from shared constants.
-
 ### createRuntimeStartContext
 
 ```ts
@@ -204,6 +191,19 @@ Parameters:
 - `runtimeStartContext` - - Shared runtime start context.
 
 Returns: Nothing.
+
+### createRuntimeStartConfig
+
+```ts
+createRuntimeStartConfig(): RuntimeStartConfig
+```
+
+Resolves the static runtime configuration used during browser startup.
+
+Centralizing the configuration fold here makes the runtime entry read as
+orchestration instead of constant plumbing.
+
+Returns: Runtime configuration derived from shared constants.
 
 ## browser-entry/runtime/runtime.lifecycle.service.ts
 
@@ -336,27 +336,6 @@ for the next evolved generation, updates the HUD and network view, plays back
 that generation on the canvas, then folds the outcome into best-so-far
 browser state.
 
-### resolveGenerationPopulationNetworks
-
-```ts
-resolveGenerationPopulationNetworks(
-  generationPayload: { populationNetworksJson?: Record<string, unknown>[] | undefined; },
-  bestNetwork: default | undefined,
-): default[]
-```
-
-Resolves the browser-side network cache for the current playback generation.
-
-Playback birds are created from the generation population in stable array
-order, so the browser can reuse this ordered cache to redraw the network
-panel when the red-bird champion changes.
-
-Parameters:
-- `generationPayload` - - Worker generation-ready payload.
-- `bestNetwork` - - Current generation best-network fallback.
-
-Returns: Ordered population networks for the upcoming playback session.
-
 ### runRuntimeEvolutionLoop
 
 ```ts
@@ -385,6 +364,27 @@ Dependencies required to run the browser runtime evolution loop.
 
 Grouping these dependencies into one object keeps the public loop entry more
 declarative and avoids a long positional parameter list.
+
+### resolveGenerationPopulationNetworks
+
+```ts
+resolveGenerationPopulationNetworks(
+  generationPayload: { populationNetworksJson?: Record<string, unknown>[] | undefined; },
+  bestNetwork: default | undefined,
+): default[]
+```
+
+Resolves the browser-side network cache for the current playback generation.
+
+Playback birds are created from the generation population in stable array
+order, so the browser can reuse this ordered cache to redraw the network
+panel when the red-bird champion changes.
+
+Parameters:
+- `generationPayload` - - Worker generation-ready payload.
+- `bestNetwork` - - Current generation best-network fallback.
+
+Returns: Ordered population networks for the upcoming playback session.
 
 ## browser-entry/runtime/runtime.browser-globals.service.ts
 

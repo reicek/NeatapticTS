@@ -13,6 +13,13 @@
  * fields are authoritative after mutation, crossover, repair, or manual graph
  * edits. The core surface keeps that rule small and reviewable.
  *
+ * The key teaching point is ownership: the genome owns structure and weights,
+ * while these cache fields only mirror facts derived from that structure. The
+ * moment a write path edits the genome, cache ownership ends and invalidation
+ * begins. By making the stale-field list explicit here, the controller can keep
+ * every write-side caller honest without asking each caller to rediscover which
+ * read-side artifacts are no longer safe.
+ *
  * ```mermaid
  * flowchart TD
  *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
@@ -42,7 +49,9 @@
  *
  * Treat this list as the mechanical invalidation contract for genome objects.
  * Each key names a field that may be cheap to rebuild but dangerous to trust
- * after a write:
+ * after a write. The list is intentionally short because its job is not to
+ * describe every useful runtime view of a genome; its job is to name the cached
+ * fields whose ownership ends the moment the genome itself changes:
  *
  * - `_compatCache` stores derived compatibility-comparison views,
  * - `_outputCache` stores memoized activation outputs,
@@ -50,7 +59,9 @@
  *
  * Keeping the list explicit makes review easier. When a new genome-owned cache
  * is introduced, adding it here makes the invalidation surface visible instead
- * of relying on scattered ad hoc cleanup.
+ * of relying on scattered ad hoc cleanup. That gives contributors a simple
+ * review question: "if this new field is derived and stored on the genome,
+ * should it join the shared invalidation list?"
  */
 export const GENOME_CACHE_FIELD_KEYS = [
   '_compatCache',

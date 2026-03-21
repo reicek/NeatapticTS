@@ -31,6 +31,19 @@ import type {
  * volume. {@link updateSpeciesStagnation} then tracks whether each species is
  * still producing better members and prunes lineages that have gone stale.
  *
+ * Those concerns live together on purpose. Sharing answers the short-horizon
+ * pressure question, "how much advantage should this species keep right now?"
+ * Stagnation answers the longer-horizon survival question, "has this species
+ * earned another generation in the run?" Together they form the post-
+ * assignment pressure layer beneath later selection and maintenance steps.
+ *
+ * Read the exported helpers in this order:
+ *
+ * 1. {@link applyFitnessSharing} adjusts member scores inside each already-
+ *    assigned species,
+ * 2. {@link updateSpeciesStagnation} re-reads those species deterministically,
+ *    refreshes progress bookkeeping, and prunes stale lineages.
+ *
  * The boundary stays intentionally narrow. These helpers do not decide species
  * membership, adapt compatibility thresholds, or write history rows. They take
  * the current species registry as given and adjust how that registry affects
@@ -65,9 +78,22 @@ import type {
  * - uniform sharing, which falls back to dividing each member's score by the
  *   species size when no positive radius is configured.
  *
+ * The choice between those modes is really a choice about how much geometry the
+ * controller wants from the current species. Sigma-aware sharing says nearby
+ * neighbors should count more than distant ones inside the same species,
+ * producing a softer gradient of pressure. Uniform sharing says the controller
+ * only needs a simple crowding penalty, so every member of the species carries
+ * the same share burden regardless of fine-grained distance.
+ *
  * @param speciationContext - Neat instance context with species and distance function.
  * @param sharingSigma - Sharing radius used for distance weighting.
  * @returns Nothing.
+ *
+ * @example
+ * ```ts
+ * applyFitnessSharing(neat, 0);
+ * applyFitnessSharing(neat, 3);
+ * ```
  */
 export function applyFitnessSharing(
   speciationContext: FitnessSharingContext,
@@ -195,10 +221,20 @@ export function applyFitnessSharing(
  * population?" Species that keep improving remain eligible for future rounds;
  * species that stop improving long enough are pruned from the live registry.
  *
+ * Sorting first is not a cosmetic step. It makes the chapter's survival rule
+ * deterministic: the same scored roster yields the same best-member read, which
+ * means best-score updates and pruning decisions do not drift with incidental
+ * member ordering.
+ *
  * @param speciationContext - Neat instance context with species array and generation counter.
  * @param stagnationWindow - Allowed stagnation window.
  * @param sortSpeciesMembers - Sort function for species members.
  * @returns Nothing.
+ *
+ * @example
+ * ```ts
+ * updateSpeciesStagnation(neat, 15, neat._sortSpeciesMembers.bind(neat));
+ * ```
  */
 export function updateSpeciesStagnation(
   speciationContext: StagnationContext,

@@ -36,66 +36,20 @@ flowchart TD
 
 ## neat/evolve/runtime/evolve.runtime.utils.ts
 
-### buildFittestSnapshot
+### resolveStartTime
 
 ```ts
-buildFittestSnapshot(
-  internal: NeatControllerForEvolution,
-): default
+resolveStartTime(): number
 ```
 
-Build a cloned Network from the current best genome.
+Resolve the start time for an evolution step.
 
-The returned value from `evolve()` is meant to describe the generation that
-was just analyzed, not the mutable genome object that will continue through
-later controller operations. This helper therefore clones the current leader
-into a standalone {@link Network} snapshot and preserves its score so callers
-can inspect, serialize, or replay the champion without depending on mutable
-controller-owned references.
+Evolve needs one timing origin that works in both browser-like and Node-like
+environments. This helper centralizes that choice so later elapsed-time reads
+can stay simple and the main evolve loop does not have to repeat environment
+detection inline.
 
-Parameters:
-- `internal` - - NEAT controller instance.
-
-Returns: A detached best-network snapshot for the current generation.
-
-### clearPopulationScores
-
-```ts
-clearPopulationScores(
-  internal: NeatControllerForEvolution,
-): void
-```
-
-Clear genome scores to force re-evaluation.
-
-Once evolve has finished rebuilding and mutating the next population, the old
-scores are no longer trustworthy. This helper makes that contract explicit by
-clearing per-genome scores so the next call into the evolve or evaluate path
-cannot accidentally treat structurally changed genomes as already evaluated.
-
-Parameters:
-- `internal` - - NEAT controller instance.
-
-Returns: Nothing.
-
-### computeElapsedTime
-
-```ts
-computeElapsedTime(
-  startTimestamp: number,
-): number
-```
-
-Compute elapsed time since the start of evolve().
-
-Runtime reporting belongs here because evolve uses the result as generation
-bookkeeping rather than as a telemetry export concern. The helper mirrors the
-start-time environment fallback so timing stays comparable across runtimes.
-
-Parameters:
-- `startTimestamp` - - Start time resolved earlier.
-
-Returns: The elapsed runtime for the generation step.
+Returns: A timestamp in milliseconds or high-resolution timer units.
 
 ### ensurePopulationEvaluated
 
@@ -118,20 +72,26 @@ Parameters:
 
 Returns: A promise that resolves once evaluation is guaranteed.
 
-### resolveStartTime
+### updateGlobalBestTracking
 
 ```ts
-resolveStartTime(): number
+updateGlobalBestTracking(
+  internal: NeatControllerForEvolution,
+): void
 ```
 
-Resolve the start time for an evolution step.
+Update generation-level best score tracking.
 
-Evolve needs one timing origin that works in both browser-like and Node-like
-environments. This helper centralizes that choice so later elapsed-time reads
-can stay simple and the main evolve loop does not have to repeat environment
-detection inline.
+This helper maintains the controller's lightweight "best score seen in the
+current generation window" markers. Those markers are intentionally separate
+from the cloned best-network snapshot so the evolve loop can cheaply decide
+whether a fresh improvement occurred without conflating score bookkeeping with
+network serialization.
 
-Returns: A timestamp in milliseconds or high-resolution timer units.
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: Nothing.
 
 ### trackGlobalImprovement
 
@@ -156,23 +116,63 @@ Parameters:
 
 Returns: Nothing.
 
-### updateGlobalBestTracking
+### computeElapsedTime
 
 ```ts
-updateGlobalBestTracking(
+computeElapsedTime(
+  startTimestamp: number,
+): number
+```
+
+Compute elapsed time since the start of evolve().
+
+Runtime reporting belongs here because evolve uses the result as generation
+bookkeeping rather than as a telemetry export concern. The helper mirrors the
+start-time environment fallback so timing stays comparable across runtimes.
+
+Parameters:
+- `startTimestamp` - - Start time resolved earlier.
+
+Returns: The elapsed runtime for the generation step.
+
+### clearPopulationScores
+
+```ts
+clearPopulationScores(
   internal: NeatControllerForEvolution,
 ): void
 ```
 
-Update generation-level best score tracking.
+Clear genome scores to force re-evaluation.
 
-This helper maintains the controller's lightweight "best score seen in the
-current generation window" markers. Those markers are intentionally separate
-from the cloned best-network snapshot so the evolve loop can cheaply decide
-whether a fresh improvement occurred without conflating score bookkeeping with
-network serialization.
+Once evolve has finished rebuilding and mutating the next population, the old
+scores are no longer trustworthy. This helper makes that contract explicit by
+clearing per-genome scores so the next call into the evolve or evaluate path
+cannot accidentally treat structurally changed genomes as already evaluated.
 
 Parameters:
 - `internal` - - NEAT controller instance.
 
 Returns: Nothing.
+
+### buildFittestSnapshot
+
+```ts
+buildFittestSnapshot(
+  internal: NeatControllerForEvolution,
+): default
+```
+
+Build a cloned Network from the current best genome.
+
+The returned value from `evolve()` is meant to describe the generation that
+was just analyzed, not the mutable genome object that will continue through
+later controller operations. This helper therefore clones the current leader
+into a standalone {@link Network} snapshot and preserves its score so callers
+can inspect, serialize, or replay the champion without depending on mutable
+controller-owned references.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: A detached best-network snapshot for the current generation.

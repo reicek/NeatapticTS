@@ -48,49 +48,6 @@ annotations.
 
 Returns: Compact metrics aligned with the current population order.
 
-### DEFAULT_MAX_PARETO_FRONTS
-
-Default number of Pareto fronts returned by accessors.
-
-Read helpers stay deliberately bounded by default so inspection callers get a
-useful frontier summary without accidentally materializing every tail front.
-
-### DEFAULT_PARETO_ARCHIVE_JSONL_MAX
-
-Default slice size when exporting Pareto archive as JSONL.
-
-Export uses a slightly larger default window than in-memory reads so offline
-tooling can inspect a broader recent history without requiring the full
-archive.
-
-### DEFAULT_PARETO_ARCHIVE_MAX_ENTRIES
-
-Default slice size when reading Pareto archive entries.
-
-This favors recent history, which is usually the most relevant window for
-telemetry panels or interactive inspection.
-
-### exportParetoArchiveJsonl
-
-```ts
-exportParetoArchiveJsonl(
-  archive: unknown[],
-  maxEntries: number,
-): string
-```
-
-Export a Pareto archive slice as JSON Lines.
-
-JSONL keeps each archived snapshot on its own line, which makes the output
-easy to stream, diff, or feed into external tooling without inventing another
-archive-specific export format.
-
-Parameters:
-- `archive` - - Archive collection ordered from oldest to newest.
-- `maxEntries` - - Maximum number of recent entries to export.
-
-Returns: Newline-delimited JSON for the selected archive window.
-
 ### reconstructParetoFronts
 
 ```ts
@@ -138,3 +95,46 @@ Parameters:
 - `maxEntries` - - Maximum number of recent entries to keep.
 
 Returns: A trailing slice containing at most `maxEntries` items.
+
+### exportParetoArchiveJsonl
+
+```ts
+exportParetoArchiveJsonl(
+  archive: unknown[],
+  maxEntries: number,
+): string
+```
+
+Export a Pareto archive slice as JSON Lines.
+
+JSONL keeps each archived snapshot on its own line, which makes the output
+easy to stream, diff, or feed into external tooling without inventing another
+archive-specific export format.
+
+Parameters:
+- `archive` - - Archive collection ordered from oldest to newest.
+- `maxEntries` - - Maximum number of recent entries to export.
+
+Returns: Newline-delimited JSON for the selected archive window.
+
+### DEFAULT_MAX_PARETO_FRONTS
+
+Default number of Pareto fronts returned by accessors.
+
+Read helpers stay deliberately bounded by default so inspection callers get a
+useful frontier summary without accidentally materializing every tail front.
+
+### DEFAULT_PARETO_ARCHIVE_MAX_ENTRIES
+
+Default slice size when reading Pareto archive entries.
+
+This favors recent history, which is usually the most relevant window for
+telemetry panels or interactive inspection.
+
+### DEFAULT_PARETO_ARCHIVE_JSONL_MAX
+
+Default slice size when exporting Pareto archive as JSONL.
+
+Export uses a slightly larger default window than in-memory reads so offline
+tooling can inspect a broader recent history without requiring the full
+archive.

@@ -27,13 +27,25 @@ Notes / Limitations:
 
 ## architecture/network/remove/network.remove.utils.types.ts
 
-### ERROR_CANNOT_REMOVE_ANCHOR_NODE
+### NODE_TYPE_INPUT
 
-Error emitted when trying to remove structural anchor nodes.
+Node type literal for input anchors.
+
+### NODE_TYPE_OUTPUT
+
+Node type literal for output anchors.
 
 ### ERROR_NODE_NOT_IN_NETWORK
 
 Error emitted when target node is not part of the network.
+
+### ERROR_CANNOT_REMOVE_ANCHOR_NODE
+
+Error emitted when trying to remove structural anchor nodes.
+
+### NODE_NOT_FOUND_INDEX
+
+Sentinel index used when node is not found.
 
 ### FIRST_REMOVED_NODE_INDEX
 
@@ -43,25 +55,13 @@ Index for selecting first spliced node.
 
 Internal network properties accessed during remove operations.
 
-### NODE_NOT_FOUND_INDEX
+### NodeRemovalContext
 
-Sentinel index used when node is not found.
-
-### NODE_TYPE_INPUT
-
-Node type literal for input anchors.
-
-### NODE_TYPE_OUTPUT
-
-Node type literal for output anchors.
+Immutable context for validated node-removal request.
 
 ### NodeConnectionSnapshotContext
 
 Snapshot of node adjacency prior to removal.
-
-### NodeRemovalContext
-
-Immutable context for validated node-removal request.
 
 ### ReconnectEndpointPairContext
 
@@ -85,21 +85,6 @@ Parameters:
 
 ## architecture/network/remove/network.remove.gates.utils.ts
 
-### clearConnectionGater
-
-```ts
-clearConnectionGater(
-  candidateConnection: default,
-): void
-```
-
-Clears gater reference so legacy checks treat connection as ungated.
-
-Parameters:
-- `candidateConnection` - - Connection to clear.
-
-Returns: Nothing.
-
 ### detachGatesOwnedByNode
 
 ```ts
@@ -114,23 +99,6 @@ Parameters:
 - `removalContext` - - Immutable removal context.
 
 Returns: Nothing.
-
-### isGatedByRemovedNode
-
-```ts
-isGatedByRemovedNode(
-  candidateConnection: default,
-  removedNode: default,
-): boolean
-```
-
-Checks whether a gate candidate is currently gated by removed node.
-
-Parameters:
-- `candidateConnection` - - Gate candidate.
-- `removedNode` - - Removed node reference.
-
-Returns: True when removed node is gater.
 
 ### keepGateConnectionAfterNodeRemoval
 
@@ -149,37 +117,39 @@ Parameters:
 
 Returns: True when gate should remain in list.
 
+### isGatedByRemovedNode
+
+```ts
+isGatedByRemovedNode(
+  candidateConnection: default,
+  removedNode: default,
+): boolean
+```
+
+Checks whether a gate candidate is currently gated by removed node.
+
+Parameters:
+- `candidateConnection` - - Gate candidate.
+- `removedNode` - - Removed node reference.
+
+Returns: True when removed node is gater.
+
+### clearConnectionGater
+
+```ts
+clearConnectionGater(
+  candidateConnection: default,
+): void
+```
+
+Clears gater reference so legacy checks treat connection as ungated.
+
+Parameters:
+- `candidateConnection` - - Connection to clear.
+
+Returns: Nothing.
+
 ## architecture/network/remove/network.remove.finalize.utils.ts
-
-### markNetworkRemovalDirtyFlags
-
-```ts
-markNetworkRemovalDirtyFlags(
-  internalNetwork: NetworkRemoveProps,
-): void
-```
-
-Marks all cached removal-sensitive structures as dirty.
-
-Parameters:
-- `internalNetwork` - - Internal mutable network props.
-
-Returns: Nothing.
-
-### releaseRemovedNodeWhenPoolingEnabled
-
-```ts
-releaseRemovedNodeWhenPoolingEnabled(
-  removedNode: default | undefined,
-): void
-```
-
-Releases removed node to object pool when pooling is enabled.
-
-Parameters:
-- `removedNode` - - Removed node instance.
-
-Returns: Nothing.
 
 ### removeNodeFromNetworkStorage
 
@@ -193,6 +163,21 @@ Removes node from network storage and conditionally releases it to pool.
 
 Parameters:
 - `removalContext` - - Immutable removal context.
+
+Returns: Nothing.
+
+### markNetworkRemovalDirtyFlags
+
+```ts
+markNetworkRemovalDirtyFlags(
+  internalNetwork: NetworkRemoveProps,
+): void
+```
+
+Marks all cached removal-sensitive structures as dirty.
+
+Parameters:
+- `internalNetwork` - - Internal mutable network props.
 
 Returns: Nothing.
 
@@ -211,7 +196,54 @@ Parameters:
 
 Returns: Removed node or undefined.
 
+### releaseRemovedNodeWhenPoolingEnabled
+
+```ts
+releaseRemovedNodeWhenPoolingEnabled(
+  removedNode: default | undefined,
+): void
+```
+
+Releases removed node to object pool when pooling is enabled.
+
+Parameters:
+- `removedNode` - - Removed node instance.
+
+Returns: Nothing.
+
 ## architecture/network/remove/network.remove.snapshot.utils.ts
+
+### createNodeConnectionSnapshot
+
+```ts
+createNodeConnectionSnapshot(
+  removalContext: NodeRemovalContext,
+): NodeConnectionSnapshotContext
+```
+
+Creates immutable snapshots of node adjacency lists before mutation.
+
+Parameters:
+- `removalContext` - - Immutable removal context.
+
+Returns: Snapshot context.
+
+### disconnectAllNodeConnections
+
+```ts
+disconnectAllNodeConnections(
+  removalContext: NodeRemovalContext,
+  snapshotContext: NodeConnectionSnapshotContext,
+): void
+```
+
+Disconnects all inbound, outbound, and self-loop edges for removed node.
+
+Parameters:
+- `removalContext` - - Immutable removal context.
+- `snapshotContext` - - Immutable adjacency snapshot.
+
+Returns: Nothing.
 
 ### cloneInboundConnections
 
@@ -258,38 +290,6 @@ Parameters:
 
 Returns: Self-loop count.
 
-### createNodeConnectionSnapshot
-
-```ts
-createNodeConnectionSnapshot(
-  removalContext: NodeRemovalContext,
-): NodeConnectionSnapshotContext
-```
-
-Creates immutable snapshots of node adjacency lists before mutation.
-
-Parameters:
-- `removalContext` - - Immutable removal context.
-
-Returns: Snapshot context.
-
-### disconnectAllNodeConnections
-
-```ts
-disconnectAllNodeConnections(
-  removalContext: NodeRemovalContext,
-  snapshotContext: NodeConnectionSnapshotContext,
-): void
-```
-
-Disconnects all inbound, outbound, and self-loop edges for removed node.
-
-Parameters:
-- `removalContext` - - Immutable removal context.
-- `snapshotContext` - - Immutable adjacency snapshot.
-
-Returns: Nothing.
-
 ### disconnectConnectionGroup
 
 ```ts
@@ -328,6 +328,23 @@ Returns: Nothing.
 
 ## architecture/network/remove/network.remove.reconnect.utils.ts
 
+### reconnectBridgedPaths
+
+```ts
+reconnectBridgedPaths(
+  removalContext: NodeRemovalContext,
+  snapshotContext: NodeConnectionSnapshotContext,
+): void
+```
+
+Reconnects paths from former inbound sources to former outbound targets.
+
+Parameters:
+- `removalContext` - - Immutable removal context.
+- `snapshotContext` - - Immutable adjacency snapshot.
+
+Returns: Nothing.
+
 ### collectReconnectEndpointPairs
 
 ```ts
@@ -342,23 +359,6 @@ Parameters:
 - `snapshotContext` - - Immutable adjacency snapshot.
 
 Returns: Valid reconnect endpoint pairs.
-
-### connectPairWhenMissing
-
-```ts
-connectPairWhenMissing(
-  network: default,
-  reconnectPair: ReconnectEndpointPairContext,
-): void
-```
-
-Connects one endpoint pair only when direct edge does not already exist.
-
-Parameters:
-- `network` - - Target network.
-- `reconnectPair` - - Source/target pair.
-
-Returns: Nothing.
 
 ### createReconnectEndpointPair
 
@@ -377,23 +377,6 @@ Parameters:
 
 Returns: Reconnect pair or undefined.
 
-### doesDirectConnectionExist
-
-```ts
-doesDirectConnectionExist(
-  network: default,
-  reconnectPair: ReconnectEndpointPairContext,
-): boolean
-```
-
-Checks whether a direct connection already exists for reconnect pair.
-
-Parameters:
-- `network` - - Target network.
-- `reconnectPair` - - Source/target pair.
-
-Returns: True when direct edge already exists.
-
 ### isReconnectPairValid
 
 ```ts
@@ -411,22 +394,39 @@ Parameters:
 
 Returns: True when reconnect pair should be attempted.
 
-### reconnectBridgedPaths
+### connectPairWhenMissing
 
 ```ts
-reconnectBridgedPaths(
-  removalContext: NodeRemovalContext,
-  snapshotContext: NodeConnectionSnapshotContext,
+connectPairWhenMissing(
+  network: default,
+  reconnectPair: ReconnectEndpointPairContext,
 ): void
 ```
 
-Reconnects paths from former inbound sources to former outbound targets.
+Connects one endpoint pair only when direct edge does not already exist.
 
 Parameters:
-- `removalContext` - - Immutable removal context.
-- `snapshotContext` - - Immutable adjacency snapshot.
+- `network` - - Target network.
+- `reconnectPair` - - Source/target pair.
 
 Returns: Nothing.
+
+### doesDirectConnectionExist
+
+```ts
+doesDirectConnectionExist(
+  network: default,
+  reconnectPair: ReconnectEndpointPairContext,
+): boolean
+```
+
+Checks whether a direct connection already exists for reconnect pair.
+
+Parameters:
+- `network` - - Target network.
+- `reconnectPair` - - Source/target pair.
+
+Returns: True when direct edge already exists.
 
 ## architecture/network/remove/network.remove.validation.utils.ts
 
@@ -446,6 +446,23 @@ Parameters:
 - `targetNode` - - Node requested for removal.
 
 Returns: Validated removal context.
+
+### resolveNodeIndexOrThrow
+
+```ts
+resolveNodeIndexOrThrow(
+  network: default,
+  targetNode: default,
+): number
+```
+
+Resolves node index and throws when missing.
+
+Parameters:
+- `network` - - Target network.
+- `targetNode` - - Node being removed.
+
+Returns: Node index inside network list.
 
 ### ensureNodeIsNotStructuralAnchor
 
@@ -476,20 +493,3 @@ Parameters:
 - `targetNode` - - Node under evaluation.
 
 Returns: True when node is an anchor.
-
-### resolveNodeIndexOrThrow
-
-```ts
-resolveNodeIndexOrThrow(
-  network: default,
-  targetNode: default,
-): number
-```
-
-Resolves node index and throws when missing.
-
-Parameters:
-- `network` - - Target network.
-- `targetNode` - - Node being removed.
-
-Returns: Node index inside network list.

@@ -22,22 +22,6 @@ which configuration knobs belong to scheduled versus adaptive control.
 
 ## neat/pruning/core/pruning.types.ts
 
-### AdaptivePruningOptions
-
-Adaptive pruning options extracted from the NEAT host.
-
-These options drive the feedback-controller path: which population metric is
-observed, what sparsity target should remain, how large a drift is tolerated,
-and how quickly the shared prune level is allowed to move.
-
-### EvolutionPruningOptions
-
-Evolution pruning options extracted from the NEAT host.
-
-These options drive the calendar-like pruning path: when pruning starts, how
-often it repeats, how quickly the target sparsity ramps in, and which pruning
-method is forwarded to compatible genomes.
-
 ### NeatLikeForPruning
 
 Minimal NEAT host contract required by pruning helpers.
@@ -59,6 +43,22 @@ The contracts divide into three roles:
 Read this chapter before `pruning.core.ts` when you need to know which state
 the pruning helpers are allowed to read, which state they may write back, and
 which configuration knobs belong to scheduled versus adaptive control.
+
+### EvolutionPruningOptions
+
+Evolution pruning options extracted from the NEAT host.
+
+These options drive the calendar-like pruning path: when pruning starts, how
+often it repeats, how quickly the target sparsity ramps in, and which pruning
+method is forwarded to compatible genomes.
+
+### AdaptivePruningOptions
+
+Adaptive pruning options extracted from the NEAT host.
+
+These options drive the feedback-controller path: which population metric is
+observed, what sparsity target should remain, how large a drift is tolerated,
+and how quickly the shared prune level is allowed to move.
 
 ### PopulationMetrics
 
@@ -102,26 +102,66 @@ flowchart TD
   Hold --> ApplyAdaptive
 ```
 
-### applyAdaptivePruneLevelToPopulation
+### resolveActiveEvolutionPruningOptions
 
 ```ts
-applyAdaptivePruneLevelToPopulation(
+resolveActiveEvolutionPruningOptions(
   host: NeatLikeForPruning,
-  pruneLevel: number,
-): void
+): { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; } | null
 ```
 
-Apply the shared adaptive prune level to every compatible genome.
+Resolve scheduled pruning options when they are active for the current generation.
 
-This is the final fan-out step for adaptive pruning. The host maintains one
-shared prune level, and this helper applies that single controller decision
-uniformly across genomes that support sparsity pruning.
+This helper is the gatekeeper for the calendar-driven pruning path. It keeps
+the public pruning wrapper simple by answering one precise question: does the
+current generation actually belong to the configured pruning schedule?
 
 Parameters:
-- `host` - - NEAT host exposing the population.
-- `pruneLevel` - - Prune level to apply.
+- `host` - - NEAT host exposing generation and pruning options.
 
-Returns: Nothing. Compatible genomes are pruned in place.
+Returns: Evolution pruning options when active, otherwise `null`.
+
+### computeTargetSparsityNow
+
+```ts
+computeTargetSparsityNow(
+  host: NeatLikeForPruning,
+  options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; },
+): number
+```
+
+Compute the target sparsity for the current generation.
+
+Scheduled pruning ramps toward its configured sparsity target instead of
+snapping there immediately. This helper converts the current ramp progress
+into the exact target sparsity the active generation should use.
+
+Parameters:
+- `host` - - NEAT host exposing generation state.
+- `options` - - Active scheduled pruning options.
+
+Returns: Target sparsity for the current generation.
+
+### computeRampFraction
+
+```ts
+computeRampFraction(
+  host: NeatLikeForPruning,
+  options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; },
+): number
+```
+
+Compute the ramp completion fraction for scheduled pruning.
+
+The ramp fraction is the soft-start mechanism for scheduled pruning. It lets
+the controller phase sparsity in gradually over several generations so the
+population does not experience one abrupt structural shock.
+
+Parameters:
+- `host` - - NEAT host exposing generation state.
+- `options` - - Active scheduled pruning options.
+
+Returns: Fraction in `[0, 1]` indicating ramp completion.
 
 ### applyPruningToPopulation
 
@@ -146,24 +186,64 @@ Parameters:
 
 Returns: Nothing. Genomes are pruned in place when supported.
 
-### computeMeanConnectionCount
+### resolveActiveAdaptivePruningOptions
 
 ```ts
-computeMeanConnectionCount(
+resolveActiveAdaptivePruningOptions(
   host: NeatLikeForPruning,
-): number
+): { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; } | null
 ```
 
-Compute the average connection count per genome.
+Resolve adaptive pruning options when enabled.
 
-Connection count is the denser complexity signal commonly used for sparsity
-control. Like node count, it is reduced to a population mean so the adaptive
-controller reacts to trend rather than to one outlier genome.
+This is the narrow on-ramp to the feedback-controller branch. It makes the
+rest of the adaptive helpers read linearly by collapsing disabled or missing
+configuration into one `null` check.
+
+Parameters:
+- `host` - - NEAT host exposing adaptive pruning options.
+
+Returns: Adaptive pruning options when enabled, otherwise `null`.
+
+### initializeAdaptivePruningState
+
+```ts
+initializeAdaptivePruningState(
+  host: NeatLikeForPruning,
+): void
+```
+
+Ensure the adaptive pruning state exists on the host.
+
+Adaptive pruning keeps one shared prune level on the host so the whole
+population can react coherently across generations. This helper bootstraps
+that state once, rather than making every downstream helper repeat the same
+initialization guard.
+
+Parameters:
+- `host` - - NEAT host exposing adaptive pruning state.
+
+Returns: Nothing. The shared prune level is initialized when missing.
+
+### computePopulationMetrics
+
+```ts
+computePopulationMetrics(
+  host: NeatLikeForPruning,
+): PopulationMetrics
+```
+
+Compute the population metrics used by adaptive pruning.
+
+Adaptive pruning reacts to the population as a whole, not to one genome at a
+time. This helper produces the small aggregate evidence packet that later
+helpers use to decide whether complexity is drifting away from the desired
+sparsity target.
 
 Parameters:
 - `host` - - NEAT host exposing the population.
 
-Returns: Average number of connections per genome.
+Returns: Summary of mean node and connection counts.
 
 ### computeMeanNodeCount
 
@@ -183,6 +263,114 @@ Parameters:
 - `host` - - NEAT host exposing the population.
 
 Returns: Average number of nodes per genome.
+
+### computeMeanConnectionCount
+
+```ts
+computeMeanConnectionCount(
+  host: NeatLikeForPruning,
+): number
+```
+
+Compute the average connection count per genome.
+
+Connection count is the denser complexity signal commonly used for sparsity
+control. Like node count, it is reduced to a population mean so the adaptive
+controller reacts to trend rather than to one outlier genome.
+
+Parameters:
+- `host` - - NEAT host exposing the population.
+
+Returns: Average number of connections per genome.
+
+### resolveObservedMetricValue
+
+```ts
+resolveObservedMetricValue(
+  options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; },
+  metrics: PopulationMetrics,
+): number
+```
+
+Resolve the currently observed population metric for adaptive pruning.
+
+Adaptive pruning can watch either node count or connection count. This helper
+turns the configured metric name into the actual observed value that the rest
+of the controller math will compare with the target remaining complexity.
+
+Parameters:
+- `options` - - Adaptive pruning options.
+- `metrics` - - Population metric summary.
+
+Returns: Current observed metric value used for adaptation.
+
+### resolveAdaptivePruneBaseline
+
+```ts
+resolveAdaptivePruneBaseline(
+  host: NeatLikeForPruning,
+  currentMetricValue: number,
+): number
+```
+
+Resolve and persist the adaptive pruning baseline.
+
+The baseline is adaptive pruning's memory of where the population started
+when the controller first engaged. Later drift calculations are measured
+against that remembered baseline rather than against a moving target.
+
+Parameters:
+- `host` - - NEAT host exposing adaptive baseline state.
+- `currentMetricValue` - - Currently observed metric value.
+
+Returns: Baseline metric value used for adaptation.
+
+### computeTargetRemainingMetric
+
+```ts
+computeTargetRemainingMetric(
+  options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; },
+  adaptivePruneBaseline: number,
+): number
+```
+
+Compute the target remaining metric implied by the desired sparsity.
+
+Adaptive pruning expresses its goal as desired sparsity, but the feedback loop
+compares live complexity metrics. This helper bridges those two views by
+translating the baseline metric into the remaining amount of structure the
+controller wants to keep.
+
+Parameters:
+- `options` - - Adaptive pruning options.
+- `adaptivePruneBaseline` - - Baseline metric value.
+
+Returns: Target remaining metric value.
+
+### shouldAdjustAdaptivePruning
+
+```ts
+shouldAdjustAdaptivePruning(
+  options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; },
+  currentMetricValue: number,
+  targetRemainingMetric: number,
+  adaptivePruneBaseline: number,
+): boolean
+```
+
+Decide whether adaptive pruning should adjust the prune level.
+
+This is the dead-band check for the adaptive controller. Small fluctuations
+around the target are ignored so the prune level does not chatter on every
+minor metric wobble.
+
+Parameters:
+- `options` - - Adaptive pruning options.
+- `currentMetricValue` - - Current observed metric value.
+- `targetRemainingMetric` - - Target remaining metric value.
+- `adaptivePruneBaseline` - - Baseline metric value.
+
+Returns: `true` when the normalized drift exceeds the configured tolerance.
 
 ### computeNextAdaptivePruneLevel
 
@@ -210,211 +398,23 @@ Parameters:
 
 Returns: Updated prune level clamped into the valid sparsity range.
 
-### computePopulationMetrics
+### applyAdaptivePruneLevelToPopulation
 
 ```ts
-computePopulationMetrics(
+applyAdaptivePruneLevelToPopulation(
   host: NeatLikeForPruning,
-): PopulationMetrics
-```
-
-Compute the population metrics used by adaptive pruning.
-
-Adaptive pruning reacts to the population as a whole, not to one genome at a
-time. This helper produces the small aggregate evidence packet that later
-helpers use to decide whether complexity is drifting away from the desired
-sparsity target.
-
-Parameters:
-- `host` - - NEAT host exposing the population.
-
-Returns: Summary of mean node and connection counts.
-
-### computeRampFraction
-
-```ts
-computeRampFraction(
-  host: NeatLikeForPruning,
-  options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; },
-): number
-```
-
-Compute the ramp completion fraction for scheduled pruning.
-
-The ramp fraction is the soft-start mechanism for scheduled pruning. It lets
-the controller phase sparsity in gradually over several generations so the
-population does not experience one abrupt structural shock.
-
-Parameters:
-- `host` - - NEAT host exposing generation state.
-- `options` - - Active scheduled pruning options.
-
-Returns: Fraction in `[0, 1]` indicating ramp completion.
-
-### computeTargetRemainingMetric
-
-```ts
-computeTargetRemainingMetric(
-  options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; },
-  adaptivePruneBaseline: number,
-): number
-```
-
-Compute the target remaining metric implied by the desired sparsity.
-
-Adaptive pruning expresses its goal as desired sparsity, but the feedback loop
-compares live complexity metrics. This helper bridges those two views by
-translating the baseline metric into the remaining amount of structure the
-controller wants to keep.
-
-Parameters:
-- `options` - - Adaptive pruning options.
-- `adaptivePruneBaseline` - - Baseline metric value.
-
-Returns: Target remaining metric value.
-
-### computeTargetSparsityNow
-
-```ts
-computeTargetSparsityNow(
-  host: NeatLikeForPruning,
-  options: { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; },
-): number
-```
-
-Compute the target sparsity for the current generation.
-
-Scheduled pruning ramps toward its configured sparsity target instead of
-snapping there immediately. This helper converts the current ramp progress
-into the exact target sparsity the active generation should use.
-
-Parameters:
-- `host` - - NEAT host exposing generation state.
-- `options` - - Active scheduled pruning options.
-
-Returns: Target sparsity for the current generation.
-
-### initializeAdaptivePruningState
-
-```ts
-initializeAdaptivePruningState(
-  host: NeatLikeForPruning,
+  pruneLevel: number,
 ): void
 ```
 
-Ensure the adaptive pruning state exists on the host.
+Apply the shared adaptive prune level to every compatible genome.
 
-Adaptive pruning keeps one shared prune level on the host so the whole
-population can react coherently across generations. This helper bootstraps
-that state once, rather than making every downstream helper repeat the same
-initialization guard.
-
-Parameters:
-- `host` - - NEAT host exposing adaptive pruning state.
-
-Returns: Nothing. The shared prune level is initialized when missing.
-
-### resolveActiveAdaptivePruningOptions
-
-```ts
-resolveActiveAdaptivePruningOptions(
-  host: NeatLikeForPruning,
-): { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; } | null
-```
-
-Resolve adaptive pruning options when enabled.
-
-This is the narrow on-ramp to the feedback-controller branch. It makes the
-rest of the adaptive helpers read linearly by collapsing disabled or missing
-configuration into one `null` check.
+This is the final fan-out step for adaptive pruning. The host maintains one
+shared prune level, and this helper applies that single controller decision
+uniformly across genomes that support sparsity pruning.
 
 Parameters:
-- `host` - - NEAT host exposing adaptive pruning options.
+- `host` - - NEAT host exposing the population.
+- `pruneLevel` - - Prune level to apply.
 
-Returns: Adaptive pruning options when enabled, otherwise `null`.
-
-### resolveActiveEvolutionPruningOptions
-
-```ts
-resolveActiveEvolutionPruningOptions(
-  host: NeatLikeForPruning,
-): { startGeneration?: number | undefined; interval?: number | undefined; rampGenerations?: number | undefined; targetSparsity?: number | undefined; method?: string | undefined; } | null
-```
-
-Resolve scheduled pruning options when they are active for the current generation.
-
-This helper is the gatekeeper for the calendar-driven pruning path. It keeps
-the public pruning wrapper simple by answering one precise question: does the
-current generation actually belong to the configured pruning schedule?
-
-Parameters:
-- `host` - - NEAT host exposing generation and pruning options.
-
-Returns: Evolution pruning options when active, otherwise `null`.
-
-### resolveAdaptivePruneBaseline
-
-```ts
-resolveAdaptivePruneBaseline(
-  host: NeatLikeForPruning,
-  currentMetricValue: number,
-): number
-```
-
-Resolve and persist the adaptive pruning baseline.
-
-The baseline is adaptive pruning's memory of where the population started
-when the controller first engaged. Later drift calculations are measured
-against that remembered baseline rather than against a moving target.
-
-Parameters:
-- `host` - - NEAT host exposing adaptive baseline state.
-- `currentMetricValue` - - Currently observed metric value.
-
-Returns: Baseline metric value used for adaptation.
-
-### resolveObservedMetricValue
-
-```ts
-resolveObservedMetricValue(
-  options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; },
-  metrics: PopulationMetrics,
-): number
-```
-
-Resolve the currently observed population metric for adaptive pruning.
-
-Adaptive pruning can watch either node count or connection count. This helper
-turns the configured metric name into the actual observed value that the rest
-of the controller math will compare with the target remaining complexity.
-
-Parameters:
-- `options` - - Adaptive pruning options.
-- `metrics` - - Population metric summary.
-
-Returns: Current observed metric value used for adaptation.
-
-### shouldAdjustAdaptivePruning
-
-```ts
-shouldAdjustAdaptivePruning(
-  options: { enabled?: boolean | undefined; metric?: string | undefined; targetSparsity?: number | undefined; learningRate?: number | undefined; tolerance?: number | undefined; adjustRate?: number | undefined; },
-  currentMetricValue: number,
-  targetRemainingMetric: number,
-  adaptivePruneBaseline: number,
-): boolean
-```
-
-Decide whether adaptive pruning should adjust the prune level.
-
-This is the dead-band check for the adaptive controller. Small fluctuations
-around the target are ignored so the prune level does not chatter on every
-minor metric wobble.
-
-Parameters:
-- `options` - - Adaptive pruning options.
-- `currentMetricValue` - - Current observed metric value.
-- `targetRemainingMetric` - - Target remaining metric value.
-- `adaptivePruneBaseline` - - Baseline metric value.
-
-Returns: `true` when the normalized drift exceeds the configured tolerance.
+Returns: Nothing. Compatible genomes are pruned in place.

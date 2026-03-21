@@ -22,6 +22,12 @@ import type { NeatLikeWithSelection } from '../core/selection.types';
  * champion, or read the population mean without importing the lower-level
  * selection module directly.
  *
+ * Read this as the stable public contract, not as a second mechanics chapter.
+ * If a caller only needs class-friendly inspection helpers, this is the right
+ * boundary. If the caller needs to understand parent-choice strategy or the
+ * exact guard rails beneath those reads, the root selection chapter and
+ * `core/` own that deeper explanation.
+ *
  * Read these helpers as one compact summary flow:
  *
  * 1. {@link sort} restores descending score order when an explicit best-first
@@ -34,6 +40,13 @@ import type { NeatLikeWithSelection } from '../core/selection.types';
  * Keeping that wrapper surface in `selection/facade/` makes the ownership story
  * match the generated docs and the direct-path chapter layout used by the newer
  * RNG, pruning, and telemetry facades.
+ *
+ * Read the symbols in this order:
+ * - `NeatPopulationSummaryFacadeHost` defines the narrow host seam.
+ * - `FittestNetwork` names the champion-shaped return contract used by the
+ *   public `getFittest()` wrapper.
+ * - `sort`, `getFittest`, and `getAverage` form the stable summary flow that
+ *   remains on the `Neat` surface.
  *
  * Invariant: this boundary only summarizes or reorders the current population.
  * It does not change parent-selection strategy, crossover policy, or mutation
@@ -59,6 +72,23 @@ export interface NeatPopulationSummaryFacadeHost extends NeatLikeWithSelection {
 }
 
 /**
+ * Champion-shaped network returned by the public `getFittest()` facade.
+ *
+ * The facade intentionally returns the real network instance from the current
+ * population rather than a detached summary object. That keeps the stable
+ * `Neat` contract aligned with long-standing usage patterns where callers read
+ * the champion's score and then continue inspecting the network itself.
+ *
+ * The extra `score` field is called out here so the generated README can name
+ * the returned shape explicitly instead of falling back to a rough imported
+ * default-type rendering.
+ */
+export interface FittestNetwork extends Network {
+  /** Score currently associated with the champion network. */
+  score?: number;
+}
+
+/**
  * Sort the population in descending fitness order.
  *
  * This preserves the historical `neat.sort()` behavior while keeping the
@@ -69,6 +99,9 @@ export interface NeatPopulationSummaryFacadeHost extends NeatLikeWithSelection {
  * deterministic test assertion. The wrapper deliberately stays narrow: it only
  * forwards to the shared selection ordering helper and keeps the familiar class
  * method available at the stable `Neat` surface.
+ *
+ * This is the facade's one explicit reordering primitive. Everything else in
+ * the chapter is read-only population inspection.
  *
  * @param host - `Neat` instance exposing population sorting state.
  * @returns Nothing. The population array is reordered in place.
@@ -95,8 +128,12 @@ export function sort(host: NeatPopulationSummaryFacadeHost): void {
  * sites can ask for the current champion without remembering whether
  * evaluation or sorting already happened earlier in the generation.
  *
+ * In the public `Neat` surface, this is the highest-value inspection read: it
+ * answers "who is winning right now?" without exposing lower-level parent
+ * strategy mechanics that belong to root selection and `core/`.
+ *
  * @param host - `Neat` instance exposing population and evaluation state.
- * @returns Genome with the highest current score.
+ * @returns Champion network with the highest current score.
  *
  * @example
  * ```ts
@@ -104,8 +141,10 @@ export function sort(host: NeatPopulationSummaryFacadeHost): void {
  * console.log(champion.score);
  * ```
  */
-export function getFittest(host: NeatPopulationSummaryFacadeHost): Network {
-  return getFittestGenome.call(host as never) as Network;
+export function getFittest(
+  host: NeatPopulationSummaryFacadeHost,
+): FittestNetwork {
+  return getFittestGenome.call(host as never) as FittestNetwork;
 }
 
 /**
@@ -120,6 +159,9 @@ export function getFittest(host: NeatPopulationSummaryFacadeHost): Network {
  * a small leading group. Because this wrapper stays at the summary layer, it
  * reports on population state without drifting into parent-choice or breeding
  * policy.
+ *
+ * Together, `getFittest()` and `getAverage()` are the facade's public promise:
+ * one read for the leader and one read for the generation as a whole.
  *
  * @param host - `Neat` instance exposing population and evaluation state.
  * @returns Mean score across the current population.

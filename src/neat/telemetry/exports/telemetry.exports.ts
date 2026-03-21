@@ -39,6 +39,33 @@ import {
  * Read this chapter when you want to understand how NeatapticTS turns rich but
  * irregular telemetry objects into bounded JSONL streams and spreadsheet-ready
  * CSV output without losing the meaning of sparse runtime fields.
+ *
+ * Read the boundary as three export decisions instead of one big serialization
+ * shelf:
+ *
+ * 1. `exportTelemetryJSONL()` when downstream tools want each full-fidelity
+ *    runtime entry on its own line,
+ * 2. `exportTelemetryCSV()` when a notebook or spreadsheet needs one stable
+ *    telemetry table across a bounded recent window,
+ * 3. `exportSpeciesHistoryCSV()` when the question is specifically about
+ *    species turnover, growth, stagnation, and timing over generations.
+ *
+ * The distinction matters because "export telemetry" is not one reader need.
+ * Log pipelines want raw objects that preserve nested detail. Human analysis
+ * tools usually want a fixed rectangular table. Species history often deserves
+ * its own table entirely because one generation can contain multiple species
+ * rows and because early runs may need a synthesized first snapshot before the
+ * broader telemetry stream becomes interesting.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   Buffer[Telemetry buffer and species history] --> Choice{What do you need to inspect?}
+ *   Choice --> JSONL[Full-fidelity event stream\nexportTelemetryJSONL]
+ *   Choice --> TelemetryCsv[Bounded telemetry table\nexportTelemetryCSV]
+ *   Choice --> SpeciesCsv[Species timeline table\nexportSpeciesHistoryCSV]
+ *   TelemetryCsv --> Headers[Discover stable headers\nacross the sampled window]
+ *   SpeciesCsv --> Backfill[Backfill an early snapshot\nwhen history has not started yet]
+ * ```
  */
 
 /**
@@ -106,17 +133,48 @@ const HEADER_GENERATION = 'generation';
  * This keeps spreadsheet-oriented history exports bounded by default so a long
  * run does not accidentally dump an unmanageably large CSV when the caller only
  * wants a recent analytical window.
+ *
+ * The default is intentionally generous enough for short trend analysis while
+ * still nudging callers toward deliberate windowing. Species history is often
+ * most useful as a recent timeline, not as an accidental full-run dump.
  */
 export const DEFAULT_SPECIES_HISTORY_MAX_ENTRIES = 200;
-/** Default fallback species id when a synthesized history row lacks an id. */
+/**
+ * Default fallback species id when a synthesized history row lacks an id.
+ *
+ * This only appears in the synthetic early-history path where live species
+ * exist but a formal history snapshot has not been archived yet.
+ */
 export const DEFAULT_SPECIES_ID = -1;
-/** Default fallback species size when a synthesized history row lacks a size. */
+/**
+ * Default fallback species size when a synthesized history row lacks a size.
+ *
+ * The exporter prefers an explicit neutral size over leaving the cell absent so
+ * spreadsheets and notebooks can still treat the backfilled row as a stable
+ * member of the same column contract.
+ */
 export const DEFAULT_SPECIES_SIZE = 0;
-/** Default fallback best score when a synthesized history row lacks a score. */
+/**
+ * Default fallback best score when a synthesized history row lacks a score.
+ *
+ * This preserves a numeric best-score column even when the runtime only has a
+ * minimally reconstructed species snapshot.
+ */
 export const DEFAULT_SPECIES_BEST_SCORE = 0;
-/** Default fallback last-improved generation when a synthesized row lacks one. */
+/**
+ * Default fallback last-improved generation when a synthesized row lacks one.
+ *
+ * A neutral default keeps the CSV shape deterministic without pretending the
+ * exporter knows more improvement history than the controller has actually
+ * recorded.
+ */
 export const DEFAULT_SPECIES_LAST_IMPROVED = 0;
-/** Default fallback generation used when backfilling an early species snapshot. */
+/**
+ * Default fallback generation used when backfilling an early species snapshot.
+ *
+ * The synthetic row still prefers the controller's live generation when it is
+ * available. This constant is the final floor for partially initialized hosts.
+ */
 export const DEFAULT_SPECIES_HISTORY_GENERATION = 0;
 
 /**
@@ -158,6 +216,10 @@ export function exportTelemetryJSONL(
  *   the sampled window,
  * - the most recent `maxEntries` records are exported to keep output bounded.
  *
+ * Use this path when the reader question is comparative rather than archival:
+ * you want to sort, filter, chart, or diff recent runtime behavior in a tool
+ * that understands rows and columns better than nested objects.
+ *
  * @param this - Neat instance exposing the internal telemetry buffer.
  * @param maxEntries - Maximum number of recent telemetry rows to include.
  * @returns CSV string containing headers plus one row per exported entry.
@@ -198,6 +260,11 @@ export function exportTelemetryCSV(
  * union of keys across the requested history window. When history has not been
  * recorded yet but live species data exists, the helper synthesizes a minimal
  * snapshot so early-run CSV exports remain deterministic.
+ *
+ * This is the most timeline-oriented export in the chapter. Instead of one row
+ * per telemetry entry, it expands each generation snapshot into one row per
+ * species so a reader can inspect turnover, stagnation, and size changes with
+ * ordinary tabular tools.
  *
  * @param this - Neat instance exposing species history and optional live species.
  * @param maxEntries - Maximum number of recent history snapshots to include.
@@ -250,6 +317,10 @@ export function exportSpeciesHistoryCSV(
  * window first and records which base fields, grouped metrics, and optional
  * columns actually appear anywhere in the sample.
  *
+ * Conceptually, this is where an irregular event stream becomes a table plan.
+ * The rest of the CSV path is simpler because this helper commits to one export
+ * shape before any row serialization starts.
+ *
  * @param entries - Telemetry entries included in the export window.
  * @returns Flattened header discovery state.
  */
@@ -290,6 +361,10 @@ function collectTelemetryHeaderInfo(
  * meaning after flattening so spreadsheet readers can still tell which runtime
  * family a value came from.
  *
+ * The output order is intentionally grouped rather than purely alphabetical. It
+ * keeps top-level run facts first, then nested metric families, then sparse
+ * optional payload columns that behave more like attachments.
+ *
  * @param info - Collected header discovery state.
  * @returns Ordered header names used for serialization.
  */
@@ -324,6 +399,10 @@ function buildTelemetryHeaders(info: TelemetryHeaderInfo): string[] {
  * entry is missing optional fields. Missing values become empty cells, while
  * nested structures that do exist are serialized into the cell that matches the
  * previously discovered column.
+ *
+ * This separation is what makes the exporter robust: header discovery decides
+ * what the table means, and row serialization only answers how one entry fits
+ * inside that already chosen shape.
  *
  * @param entry - Telemetry entry being serialized.
  * @param headers - Ordered headers for the whole export window.
@@ -436,6 +515,11 @@ function serializeTelemetryEntry(
  * multiple rows, one for each species stat recorded inside that generation. The
  * helper therefore writes a single shared header line and then flattens the
  * nested history structure into one CSV row per species snapshot.
+ *
+ * The important teaching point is that species history is not a one-row-per-
+ * generation export. A generation can contain several contemporaneous species,
+ * so the serializer preserves that multiplicity instead of forcing species data
+ * into one over-packed cell.
  *
  * @param recentHistory - History entries to export.
  * @param headers - Ordered headers for the export window.

@@ -34,28 +34,6 @@ flowchart TD
 
 ## neat/mutation/repair/mutation.dead-ends.ts
 
-### chooseRandomNodeForDeadEnds
-
-```ts
-chooseRandomNodeForDeadEnds(
-  candidates: NodeWithMetadata[],
-  internal: NeatControllerForMutation,
-): NodeWithMetadata | null
-```
-
-Choose a random node from candidates for dead-end repair.
-
-Repair deliberately stays lightweight and non-optimizing. Once a helper has
-found a legal candidate pool, this selector uses the controller RNG to pick
-one reconnection target or source without imposing another ranking policy on
-the maintenance path.
-
-Parameters:
-- `candidates` - - candidate nodes
-- `internal` - - neat controller context
-
-Returns: selected node or null
-
 ### collectNodeGroupsForDeadEnds
 
 ```ts
@@ -74,58 +52,6 @@ Parameters:
 - `networkToInspect` - - network to inspect
 
 Returns: grouped node arrays
-
-### connectIfCandidatesExistForDeadEnds
-
-```ts
-connectIfCandidatesExistForDeadEnds(
-  networkToEdit: GenomeWithMetadata,
-  anchorNode: NodeWithMetadata,
-  candidates: NodeWithMetadata[],
-  reverse: boolean,
-  internal: NeatControllerForMutation,
-): void
-```
-
-Connect a node to a random candidate if candidates exist.
-
-This is the chapter's small best-effort wiring primitive. It does not decide
-whether repair should happen; it only applies one candidate connection in the
-requested direction and tolerates incompatible node pairs without turning a
-maintenance pass into a fatal error.
-
-Parameters:
-- `networkToEdit` - - network to edit
-- `anchorNode` - - node to connect from/to
-- `candidates` - - candidate nodes for connection
-- `reverse` - - whether to connect candidate -> anchor
-- `internal` - - neat controller context
-
-Returns: void
-
-### ensureHiddenConnectivityForDeadEnds
-
-```ts
-ensureHiddenConnectivityForDeadEnds(
-  networkToEdit: GenomeWithMetadata,
-  nodeGroupsToUse: { inputNodes: NodeWithMetadata[]; outputNodes: NodeWithMetadata[]; hiddenNodes: NodeWithMetadata[]; },
-  internal: NeatControllerForMutation,
-): void
-```
-
-Ensure hidden nodes have both incoming and outgoing connections.
-
-Hidden nodes are the most delicate repair family because they must stay on a
-usable path through the network. A hidden node with only one side connected
-is structural dead weight, so this helper repairs the missing side without
-disturbing hidden nodes that are already participating in a path.
-
-Parameters:
-- `networkToEdit` - - network to edit
-- `nodeGroupsToUse` - - grouped node arrays
-- `internal` - - neat controller context
-
-Returns: void
 
 ### ensureInputConnectivityForDeadEnds
 
@@ -175,6 +101,76 @@ Parameters:
 
 Returns: void
 
+### ensureHiddenConnectivityForDeadEnds
+
+```ts
+ensureHiddenConnectivityForDeadEnds(
+  networkToEdit: GenomeWithMetadata,
+  nodeGroupsToUse: { inputNodes: NodeWithMetadata[]; outputNodes: NodeWithMetadata[]; hiddenNodes: NodeWithMetadata[]; },
+  internal: NeatControllerForMutation,
+): void
+```
+
+Ensure hidden nodes have both incoming and outgoing connections.
+
+Hidden nodes are the most delicate repair family because they must stay on a
+usable path through the network. A hidden node with only one side connected
+is structural dead weight, so this helper repairs the missing side without
+disturbing hidden nodes that are already participating in a path.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `internal` - - neat controller context
+
+Returns: void
+
+### connectIfCandidatesExistForDeadEnds
+
+```ts
+connectIfCandidatesExistForDeadEnds(
+  networkToEdit: GenomeWithMetadata,
+  anchorNode: NodeWithMetadata,
+  candidates: NodeWithMetadata[],
+  reverse: boolean,
+  internal: NeatControllerForMutation,
+): void
+```
+
+Connect a node to a random candidate if candidates exist.
+
+This is the chapter's small best-effort wiring primitive. It does not decide
+whether repair should happen; it only applies one candidate connection in the
+requested direction and tolerates incompatible node pairs without turning a
+maintenance pass into a fatal error.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `anchorNode` - - node to connect from/to
+- `candidates` - - candidate nodes for connection
+- `reverse` - - whether to connect candidate -> anchor
+- `internal` - - neat controller context
+
+Returns: void
+
+### hasOutgoingForDeadEnds
+
+```ts
+hasOutgoingForDeadEnds(
+  node: NodeWithMetadata,
+): boolean
+```
+
+Check whether a node has any outgoing connections.
+
+Dead-end repair uses this as the smallest possible structural predicate: if
+the outgoing list is empty, the node cannot currently send signal forward.
+
+Parameters:
+- `node` - - node to inspect
+
+Returns: true when outgoing connections exist
+
 ### hasIncomingForDeadEnds
 
 ```ts
@@ -194,23 +190,27 @@ Parameters:
 
 Returns: true when incoming connections exist
 
-### hasOutgoingForDeadEnds
+### chooseRandomNodeForDeadEnds
 
 ```ts
-hasOutgoingForDeadEnds(
-  node: NodeWithMetadata,
-): boolean
+chooseRandomNodeForDeadEnds(
+  candidates: NodeWithMetadata[],
+  internal: NeatControllerForMutation,
+): NodeWithMetadata | null
 ```
 
-Check whether a node has any outgoing connections.
+Choose a random node from candidates for dead-end repair.
 
-Dead-end repair uses this as the smallest possible structural predicate: if
-the outgoing list is empty, the node cannot currently send signal forward.
+Repair deliberately stays lightweight and non-optimizing. Once a helper has
+found a legal candidate pool, this selector uses the controller RNG to pick
+one reconnection target or source without imposing another ranking policy on
+the maintenance path.
 
 Parameters:
-- `node` - - node to inspect
+- `candidates` - - candidate nodes
+- `internal` - - neat controller context
 
-Returns: true when outgoing connections exist
+Returns: selected node or null
 
 ## neat/mutation/repair/mutation.min-hidden.ts
 
@@ -232,27 +232,6 @@ policy. The helpers here turn policy into concrete edits:
 3. wire those hidden nodes into usable inbound and outbound paths,
 4. rebuild connection caches after the structural edits.
 
-### chooseRandomNodeForMinHidden
-
-```ts
-chooseRandomNodeForMinHidden(
-  candidates: NodeWithMetadata[],
-  internal: NeatControllerForMutation,
-): NodeWithMetadata | null
-```
-
-Choose a random node from a candidate list.
-
-Like the dead-end repair selector, this helper keeps minimum-hidden
-enforcement policy-light: once a legal candidate pool exists, choose one
-using the controller RNG and keep the maintenance pass moving.
-
-Parameters:
-- `candidates` - - candidate nodes
-- `internal` - - neat controller context
-
-Returns: selected node or null
-
 ### collectNodeGroupsForMinHidden
 
 ```ts
@@ -272,52 +251,80 @@ Parameters:
 
 Returns: grouped node arrays
 
-### computeMinimumHiddenSize
+### resolveMaxNodesForMinHidden
 
 ```ts
-computeMinimumHiddenSize(
-  inputCount: number,
-  outputCount: number,
-  explicitMinimumHidden: number | undefined,
-  hiddenMultiplier: number | undefined,
+resolveMaxNodesForMinHidden(
+  internal: NeatControllerForMutation,
 ): number
 ```
 
-Compute the minimum hidden node count using explicit or multiplier-based settings.
+Resolve the maximum node limit for the network.
 
-This is the policy-resolution helper for the file. An explicit minimum wins
-immediately; otherwise the helper derives a hidden target from the visible
-endpoint count and the configured multiplier.
+The hidden-floor policy must stay inside the broader controller cap. This
+helper centralizes that read so later creation logic can treat "unbounded"
+and "explicitly capped" networks with one consistent limit value.
 
 Parameters:
-- `inputCount` - - Number of input nodes in the network.
-- `outputCount` - - Number of output nodes in the network.
-- `explicitMinimumHidden` - - Optional explicit minimum hidden count.
-- `hiddenMultiplier` - - Optional multiplier used when explicit minimum is absent.
+- `internal` - - neat controller context
 
-Returns: Minimum hidden node requirement.
+Returns: maximum node limit
 
-### ensureHiddenConnectivityForMinHidden
+### resolveMinHiddenForMinHidden
 
 ```ts
-ensureHiddenConnectivityForMinHidden(
-  networkToEdit: GenomeWithMetadata,
-  nodeGroupsToUse: { inputNodes: NodeWithMetadata[]; outputNodes: NodeWithMetadata[]; hiddenNodes: NodeWithMetadata[]; },
+resolveMinHiddenForMinHidden(
+  networkToInspect: GenomeWithMetadata,
+  maxNodesLimit: number,
+  multiplier: number | undefined,
   internal: NeatControllerForMutation,
-): void
+): number
 ```
 
-Ensure hidden nodes have both incoming and outgoing connections.
+Resolve the minimum hidden node requirement for the network.
 
-New hidden nodes are not useful until they sit on an actual path through the
-network. This helper treats the whole hidden set as a post-creation repair
-pass so newly added nodes and previously under-connected nodes both leave the
-function with usable inbound and outbound links.
+This converts controller policy into one concrete hidden-node target for the
+current network. The result respects both the configured minimum-hidden rule
+and the remaining room beneath the maximum-node limit.
 
 Parameters:
-- `networkToEdit` - - network to edit
-- `nodeGroupsToUse` - - grouped node arrays
+- `networkToInspect` - - network to inspect
+- `maxNodesLimit` - - maximum allowed nodes
+- `multiplier` - - optional size multiplier
 - `internal` - - neat controller context
+
+Returns: minimum hidden node count
+
+### hasRequiredEndpointsForMinHidden
+
+```ts
+hasRequiredEndpointsForMinHidden(
+  nodeGroupsToCheck: { inputNodes: NodeWithMetadata[]; outputNodes: NodeWithMetadata[]; },
+): boolean
+```
+
+Check whether the network has at least one input and output node.
+
+Minimum-hidden enforcement only makes sense when there is an actual endpoint
+path to support. If either side is missing, the helper chapter stops before
+creating hidden nodes that would have nowhere useful to connect.
+
+Parameters:
+- `nodeGroupsToCheck` - - grouped node arrays
+
+Returns: true when inputs and outputs are present
+
+### warnMissingEndpointsForMinHidden
+
+```ts
+warnMissingEndpointsForMinHidden(): void
+```
+
+Emit a warning when the network lacks input or output nodes.
+
+This preserves the chapter's best-effort maintenance contract: endpoint-free
+networks are notable enough to warn about, but not severe enough to justify a
+hard failure during repair.
 
 Returns: void
 
@@ -345,6 +352,55 @@ Parameters:
 - `maxNodesLimit` - - maximum allowed nodes
 
 Returns: Promise resolving when nodes are created
+
+### ensureHiddenConnectivityForMinHidden
+
+```ts
+ensureHiddenConnectivityForMinHidden(
+  networkToEdit: GenomeWithMetadata,
+  nodeGroupsToUse: { inputNodes: NodeWithMetadata[]; outputNodes: NodeWithMetadata[]; hiddenNodes: NodeWithMetadata[]; },
+  internal: NeatControllerForMutation,
+): void
+```
+
+Ensure hidden nodes have both incoming and outgoing connections.
+
+New hidden nodes are not useful until they sit on an actual path through the
+network. This helper treats the whole hidden set as a post-creation repair
+pass so newly added nodes and previously under-connected nodes both leave the
+function with usable inbound and outbound links.
+
+Parameters:
+- `networkToEdit` - - network to edit
+- `nodeGroupsToUse` - - grouped node arrays
+- `internal` - - neat controller context
+
+Returns: void
+
+### computeMinimumHiddenSize
+
+```ts
+computeMinimumHiddenSize(
+  inputCount: number,
+  outputCount: number,
+  explicitMinimumHidden: number | undefined,
+  hiddenMultiplier: number | undefined,
+): number
+```
+
+Compute the minimum hidden node count using explicit or multiplier-based settings.
+
+This is the policy-resolution helper for the file. An explicit minimum wins
+immediately; otherwise the helper derives a hidden target from the visible
+endpoint count and the configured multiplier.
+
+Parameters:
+- `inputCount` - - Number of input nodes in the network.
+- `outputCount` - - Number of output nodes in the network.
+- `explicitMinimumHidden` - - Optional explicit minimum hidden count.
+- `hiddenMultiplier` - - Optional multiplier used when explicit minimum is absent.
+
+Returns: Minimum hidden node requirement.
 
 ### ensureIncomingConnectionForMinHidden
 
@@ -396,28 +452,26 @@ Parameters:
 
 Returns: void
 
-### hasRequiredEndpointsForMinHidden
+### chooseRandomNodeForMinHidden
 
 ```ts
-hasRequiredEndpointsForMinHidden(
-  nodeGroupsToCheck: { inputNodes: NodeWithMetadata[]; outputNodes: NodeWithMetadata[]; },
-): boolean
+chooseRandomNodeForMinHidden(
+  candidates: NodeWithMetadata[],
+  internal: NeatControllerForMutation,
+): NodeWithMetadata | null
 ```
 
-Check whether the network has at least one input and output node.
+Choose a random node from a candidate list.
 
-Minimum-hidden enforcement only makes sense when there is an actual endpoint
-path to support. If either side is missing, the helper chapter stops before
-creating hidden nodes that would have nowhere useful to connect.
+Like the dead-end repair selector, this helper keeps minimum-hidden
+enforcement policy-light: once a legal candidate pool exists, choose one
+using the controller RNG and keep the maintenance pass moving.
 
 Parameters:
-- `nodeGroupsToCheck` - - grouped node arrays
+- `candidates` - - candidate nodes
+- `internal` - - neat controller context
 
-Returns: true when inputs and outputs are present
-
-### MINIMUM_HIDDEN_BASELINE
-
-Baseline minimum hidden nodes when no configuration is provided.
+Returns: selected node or null
 
 ### rebuildNetworkConnectionsForMinHidden
 
@@ -438,60 +492,6 @@ Parameters:
 
 Returns: Promise resolving after rebuild completes
 
-### resolveMaxNodesForMinHidden
+### MINIMUM_HIDDEN_BASELINE
 
-```ts
-resolveMaxNodesForMinHidden(
-  internal: NeatControllerForMutation,
-): number
-```
-
-Resolve the maximum node limit for the network.
-
-The hidden-floor policy must stay inside the broader controller cap. This
-helper centralizes that read so later creation logic can treat "unbounded"
-and "explicitly capped" networks with one consistent limit value.
-
-Parameters:
-- `internal` - - neat controller context
-
-Returns: maximum node limit
-
-### resolveMinHiddenForMinHidden
-
-```ts
-resolveMinHiddenForMinHidden(
-  networkToInspect: GenomeWithMetadata,
-  maxNodesLimit: number,
-  multiplier: number | undefined,
-  internal: NeatControllerForMutation,
-): number
-```
-
-Resolve the minimum hidden node requirement for the network.
-
-This converts controller policy into one concrete hidden-node target for the
-current network. The result respects both the configured minimum-hidden rule
-and the remaining room beneath the maximum-node limit.
-
-Parameters:
-- `networkToInspect` - - network to inspect
-- `maxNodesLimit` - - maximum allowed nodes
-- `multiplier` - - optional size multiplier
-- `internal` - - neat controller context
-
-Returns: minimum hidden node count
-
-### warnMissingEndpointsForMinHidden
-
-```ts
-warnMissingEndpointsForMinHidden(): void
-```
-
-Emit a warning when the network lacks input or output nodes.
-
-This preserves the chapter's best-effort maintenance contract: endpoint-free
-networks are notable enough to warn about, but not severe enough to justify a
-hard failure during repair.
-
-Returns: void
+Baseline minimum hidden nodes when no configuration is provided.

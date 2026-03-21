@@ -131,6 +131,16 @@ mechanism so the folder README starts with a genuine module introduction.
 When a visual explanation would teach faster than prose, the target surface
 should also include Mermaid Markdown diagrams or charts.
 
+Bias toward charts more often than a typical codebase would. In this repo,
+visual aids are not decoration; they are one of the fastest ways to help a
+reader hold a neural-network concept in working memory.
+
+For this repository's educational surfaces, aim higher than API reference
+quality. The strongest chapters should read like parts of a neural-networks
+book for builders: they should explain what the boundary does, why that
+boundary exists, what it lets a practitioner try, and, when useful, the small
+historical idea that made the boundary worth inventing in the first place.
+
 Those visuals should default to Astro Bird's neon-retro-arcade language: dark
 backgrounds, blue-led structural lines, high-contrast labels, and restrained
 glow on the component or path that matters most.
@@ -151,9 +161,12 @@ Apply that model broadly:
 
 - lead with what the module is for,
 - explain why the boundary exists,
+- make the README feel like a chapter, not a symbol dump,
 - answer real user or reader questions,
 - use named sections that create momentum,
 - teach architecture and behavior together,
+- connect the boundary back to neural-network practice and motivation,
+- include concise historical framing when it teaches faster than pure API prose,
 - finish with recommended reading or next steps when helpful.
 
 Treat heading depth as a teaching contract, not a formatting afterthought:
@@ -184,6 +197,9 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
 3. Read before rewriting.
    - Read the nearest folder README, then the nearest useful parent README.
    - Read the smallest set of source files that own the public story.
+  - Judge the README's flow like a chapter outline: opening promise, reading
+    order, conceptual bridges, and whether the symbol sequence helps or hurts
+    learning.
 4. Define the reader questions.
    - What is this for?
    - Why is it shaped this way?
@@ -193,13 +209,27 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
    - Add or improve JSDoc so it explains what, why, and when.
    - Add short examples where behavior is non-obvious.
    - Add performance notes, invariants, and error semantics where they matter.
-6. Add concept bridges when useful.
+   - Prefer chapter-building bridges between related symbols so constants,
+     types, and helpers read like grouped ideas rather than isolated shelves.
+6. Use ordering controls when chapter flow needs them.
+   - If the generated README is still fighting the intended reading order,
+     prefer narrow `docs.order.json` controls over piling on workaround prose.
+   - Use `symbolOrder`, `fileOrder`, `introFile`, `folderOrder`,
+     `hiddenFiles`, and `hiddenSymbols` conservatively to support teaching
+     order, not to create a second authoring layer.
+7. Add concept bridges when useful.
    - If a concept is central and not obvious, add concise background reading in
      prose with a properly attributed source.
    - Prefer one high-value reference over a noisy list.
-7. Evaluate Mermaid-first visuals deliberately.
+8. Evaluate Mermaid-first visuals deliberately.
   - Prefer Mermaid Markdown for architecture overviews, data flows, decision
     flows, state transitions, timelines, simple charts, and structural maps.
+  - When a chapter contains multiple policy modes, stages, or grouped option
+    families, assume at least one chart should probably exist unless the prose
+    is already unusually compact and obvious.
+  - Prefer adding a second chart when it answers a different reader question
+    than the first one, for example: one chart for execution flow and one chart
+    for mode comparison, taxonomy, or metric condensation.
   - Treat GitHub README rendering as the primary Mermaid compatibility target
     unless the task explicitly says the diagram only needs to work in the
     generated HTML docs.
@@ -212,14 +242,14 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
     available.
   - Prefer conservative Mermaid syntax when the README itself is a primary
     surface on GitHub.
-8. Evaluate external visuals deliberately.
+9. Evaluate external visuals deliberately.
   - Add images only when they improve understanding, not for decoration.
   - Prefer Wikimedia Commons files with clear free-license metadata.
   - Record author, source URL, license, and modification status.
-9. Regenerate and inspect.
+10. Regenerate and inspect.
    - Run `npm run docs` after doc-affecting edits to generated surfaces.
    - Re-read the generated output as if you were new to the module.
-10. Tighten the experience.
+11. Tighten the experience.
    - Remove repetition.
    - Replace dry restatements with explanation.
    - Make the reading order obvious.
@@ -252,6 +282,10 @@ signature details.
 For any document with a top-level `#` heading, the opening should read like the
 first pages of a chapter: define the problem space, explain why this boundary
 exists, and give the reader a clear path into the sections that follow.
+
+When the surface belongs to a neural-network subsystem, also answer the silent
+reader question behind most educational passes: "What does this let the network
+learn, preserve, or control that it otherwise could not?"
 
 ### 2. Organize around questions, not only symbols
 
@@ -341,6 +375,7 @@ When the target documentation is generated:
 - treat the README as a compiled artifact,
 - identify which source files own each section of the public story,
 - edit those sources,
+- use `docs.order.json` when generated chapter flow is the real problem,
 - regenerate docs,
 - compare the output against the intended teaching experience.
 
@@ -403,8 +438,22 @@ Good defaults:
 - `stateDiagram-v2` for stateful runtime behavior,
 - `classDiagram` for public type relationships,
 - `erDiagram` for domain and storage relationships,
+- `pie` for compact proportional policy explanations,
+- `timeline` for bounded historical framing,
 - `xychart-beta` for simple metrics and trend views,
 - Markdown tables when a table is clearer than a diagram.
+
+Pedagogical chart heuristics:
+
+- If the reader needs to compare modes, prefer a compact chart over a long
+  comparative paragraph.
+- If the reader needs to remember a lifecycle, prefer a sequence or state view
+  over prose alone.
+- If the reader needs to retain grouped defaults or policy families, add a
+  chart that visually clusters them before they reach the symbol shelf.
+- If a chapter already has one strong architectural diagram, look for one more
+  place where a chart can compress comparison, history, or tradeoff without
+  becoming repetitive.
 
 Fast recipe index:
 

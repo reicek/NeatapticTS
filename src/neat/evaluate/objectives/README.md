@@ -43,23 +43,6 @@ flowchart TD
 
 ## neat/evaluate/objectives/evaluate.objectives.ts
 
-### registerEntropyObjective
-
-```ts
-registerEntropyObjective(
-  controller: NeatControllerForEval,
-): void
-```
-
-Register the entropy objective and invalidate the cached objective list.
-
-Registering the objective is only half of the job. The cached objective list
-must also be invalidated so later ranking stages resolve the updated
-objective set instead of continuing to use stale ordering information.
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-
 ### runAutoEntropyObjectiveInjection
 
 ```ts
@@ -110,3 +93,20 @@ Parameters:
 - `evaluationOptions` - - Options object for the current evaluation pass.
 
 Returns: True when entropy should be injected.
+
+### registerEntropyObjective
+
+```ts
+registerEntropyObjective(
+  controller: NeatControllerForEval,
+): void
+```
+
+Register the entropy objective and invalidate the cached objective list.
+
+Registering the objective is only half of the job. The cached objective list
+must also be invalidated so later ranking stages resolve the updated
+objective set instead of continuing to use stale ordering information.
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.

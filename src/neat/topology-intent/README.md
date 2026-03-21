@@ -34,53 +34,32 @@ promoteGenomeToFeedForwardIntentWhenEligible(genome, shouldPromote);
 
 ## neat/topology-intent/neat.topology-intent.ts
 
-### isGenomeEligibleForFeedForwardIntentPromotion
+### usesFeedForwardMutationPolicy
 
 ```ts
-isGenomeEligibleForFeedForwardIntentPromotion(
-  genome: TopologyIntentGenome,
+usesFeedForwardMutationPolicy(
+  mutationConfig: unknown,
 ): boolean
 ```
 
-Check whether a genome can safely adopt feed-forward topology intent.
+Determine whether the configured mutation policy communicates feed-forward intent.
 
-Eligibility is intentionally conservative: the graph must already be free of
-gates and self-connections, and every normal connection must follow the
-current node ordering. This keeps the helper focused on preserving an
-already-feed-forward structure instead of rewriting arbitrary graphs into a
-different interpretation.
+Accepts the canonical mutation pool reference, the legacy single-item array
+wrapper, or a flattened pool that exactly matches the canonical feed-forward
+operator order. The comparison stays strict on purpose so the controller does
+not silently reinterpret custom mutation pools as feed-forward mode.
 
-The helper therefore answers a structural-preservation question, not a graph
-repair question. A `false` result does not mean the genome is invalid. It
-means only that this bridge should not relabel it as feed-forward yet.
-
-Parameters:
-- `genome` - Genome candidate.
-
-Returns: True when the genome can safely adopt feed-forward intent.
-
-### matchesCanonicalFeedForwardPool
-
-```ts
-matchesCanonicalFeedForwardPool(
-  configuredPool: TopologyIntentMutationMethod[],
-  canonicalPool: TopologyIntentMutationMethod[],
-): boolean
-```
-
-Check whether a configured mutation pool matches the canonical FFW pool.
-
-This helper exists so callers can recognize the feed-forward mutation policy
-even after options have been flattened, copied, or wrapped by legacy code.
-The comparison deliberately stays order-sensitive because the canonical pool
-is treated as one explicit public signal rather than as a fuzzy set of
-approximately similar operators.
+In practice this helper answers the policy question only. It does not inspect
+a concrete genome, and it does not attempt any runtime promotion by itself.
+That separation is important because a caller may request feed-forward
+mutation semantics while still holding seed genomes whose current graphs are
+recurrent, gated, or otherwise not yet eligible for the stricter runtime
+contract.
 
 Parameters:
-- `configuredPool` - Mutation pool configured on the NEAT instance.
-- `canonicalPool` - Canonical feed-forward mutation pool.
+- `mutationConfig` - Configured mutation option.
 
-Returns: True when both pools align by operator name and order.
+Returns: True when the option expresses canonical feed-forward intent.
 
 ### promoteGenomeToFeedForwardIntentWhenEligible
 
@@ -109,6 +88,14 @@ Parameters:
 
 Returns: Nothing.
 
+### TopologyIntentMutationMethod
+
+Minimal mutation descriptor used by topology-intent helpers.
+
+The bridge only needs one stable piece of information from a mutation entry:
+its public name. That keeps the topology-intent checks aligned with the
+canonical feed-forward pool without importing the full mutation subsystem.
+
 ### TopologyIntentGenome
 
 Minimal genome surface required to promote feed-forward intent safely.
@@ -118,37 +105,50 @@ own general graph validation. It only needs the current node order, directed
 connections, recurrent-only collections such as gates and self-connections,
 and the public topology-intent setter exposed by `Network`.
 
-### TopologyIntentMutationMethod
-
-Minimal mutation descriptor used by topology-intent helpers.
-
-The bridge only needs one stable piece of information from a mutation entry:
-its public name. That keeps the topology-intent checks aligned with the
-canonical feed-forward pool without importing the full mutation subsystem.
-
-### usesFeedForwardMutationPolicy
+### matchesCanonicalFeedForwardPool
 
 ```ts
-usesFeedForwardMutationPolicy(
-  mutationConfig: unknown,
+matchesCanonicalFeedForwardPool(
+  configuredPool: TopologyIntentMutationMethod[],
+  canonicalPool: TopologyIntentMutationMethod[],
 ): boolean
 ```
 
-Determine whether the configured mutation policy communicates feed-forward intent.
+Check whether a configured mutation pool matches the canonical FFW pool.
 
-Accepts the canonical mutation pool reference, the legacy single-item array
-wrapper, or a flattened pool that exactly matches the canonical feed-forward
-operator order. The comparison stays strict on purpose so the controller does
-not silently reinterpret custom mutation pools as feed-forward mode.
-
-In practice this helper answers the policy question only. It does not inspect
-a concrete genome, and it does not attempt any runtime promotion by itself.
-That separation is important because a caller may request feed-forward
-mutation semantics while still holding seed genomes whose current graphs are
-recurrent, gated, or otherwise not yet eligible for the stricter runtime
-contract.
+This helper exists so callers can recognize the feed-forward mutation policy
+even after options have been flattened, copied, or wrapped by legacy code.
+The comparison deliberately stays order-sensitive because the canonical pool
+is treated as one explicit public signal rather than as a fuzzy set of
+approximately similar operators.
 
 Parameters:
-- `mutationConfig` - Configured mutation option.
+- `configuredPool` - Mutation pool configured on the NEAT instance.
+- `canonicalPool` - Canonical feed-forward mutation pool.
 
-Returns: True when the option expresses canonical feed-forward intent.
+Returns: True when both pools align by operator name and order.
+
+### isGenomeEligibleForFeedForwardIntentPromotion
+
+```ts
+isGenomeEligibleForFeedForwardIntentPromotion(
+  genome: TopologyIntentGenome,
+): boolean
+```
+
+Check whether a genome can safely adopt feed-forward topology intent.
+
+Eligibility is intentionally conservative: the graph must already be free of
+gates and self-connections, and every normal connection must follow the
+current node ordering. This keeps the helper focused on preserving an
+already-feed-forward structure instead of rewriting arbitrary graphs into a
+different interpretation.
+
+The helper therefore answers a structural-preservation question, not a graph
+repair question. A `false` result does not mean the genome is invalid. It
+means only that this bridge should not relabel it as feed-forward yet.
+
+Parameters:
+- `genome` - Genome candidate.
+
+Returns: True when the genome can safely adopt feed-forward intent.

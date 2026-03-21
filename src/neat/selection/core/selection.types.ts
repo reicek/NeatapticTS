@@ -1,6 +1,25 @@
 import type { NeatLike } from '../../shared/neat.shared.types';
 
 /**
+ * Contracts for the bounded parent-selection mechanics chapter.
+ *
+ * The selection core only needs a small runtime seam to answer one practical
+ * question repeatedly during evolution: given an evaluated population, which
+ * genome should parent the next child? These contracts keep that seam narrow so
+ * the mechanics chapter can focus on guard rails, strategy dispatch, and
+ * strategy-specific choice flow rather than broader controller policy.
+ *
+ * Read the chapter in this order:
+ * - `GenomeWithScore` narrows the per-genome view to the score-centered fields
+ *   selection actually consumes.
+ * - `SelectionOptions` describes the small set of knobs that alter parent
+ *   choice behavior.
+ * - `NeatLikeWithSelection` captures the host hooks for evaluation, sorting,
+ *   and RNG access.
+ * - `SelectionContext` is the per-call packet shared after dispatch begins.
+ */
+
+/**
  * Genome with a fitness score and arbitrary additional metadata.
  *
  * The selection core deliberately narrows its view of a genome to one decisive
@@ -35,11 +54,11 @@ export interface GenomeWithScore {
 export interface SelectionOptions {
   /** Strategy name, such as `POWER`, `FITNESS_PROPORTIONATE`, or `TOURNAMENT`. */
   name?: string;
-  /** Power exponent for POWER selection. */
+  /** Power exponent that controls how strongly POWER favors the sorted front. */
   power?: number;
-  /** Participant count for TOURNAMENT selection. */
+  /** Participant count for the temporary TOURNAMENT bracket. */
   size?: number;
-  /** Win probability for TOURNAMENT selection. */
+  /** Win probability used when walking the sorted TOURNAMENT bracket. */
   probability?: number;
 }
 
@@ -92,7 +111,7 @@ export interface NeatLikeWithSelection extends NeatLike {
 export type SelectionContext = {
   /** NEAT host that owns evaluation, sorting, and overflow policy hooks. */
   internal: NeatLikeWithSelection;
-  /** Current population snapshot used by the active selection strategy. */
+  /** Current population view used by the active selection strategy. */
   population: GenomeWithScore[];
   /** Resolved strategy options for the current parent-selection call. */
   selectionOptions: SelectionOptions | undefined;

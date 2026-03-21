@@ -178,6 +178,111 @@ The helper flow is intentionally compact:
 3. resolve thresholds and adjustment magnitude,
 4. route the adjustment into epsilon or lineage-pressure mode.
 
+### isCooldownSatisfied
+
+```ts
+isCooldownSatisfied(
+  engine: NeatLikeWithAdaptive,
+  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
+): boolean
+```
+
+Determine whether the cooldown window has elapsed.
+
+Cooldowns prevent the controller from thrashing lineage policy on every
+generation. Once an adjustment has been recorded, later generations must wait
+for the configured gap before another nudge is allowed.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Ancestor uniqueness adaptive configuration.
+
+Returns: True when adjustment is allowed.
+
+### extractAncestorUniqueness
+
+```ts
+extractAncestorUniqueness(
+  engine: NeatLikeWithAdaptive,
+): number | undefined
+```
+
+Extract the latest ancestor-uniqueness metric from telemetry.
+
+Lineage adaptation only trusts the most recent telemetry snapshot because it
+represents the latest scored generation. Missing or non-numeric lineage
+evidence simply disables the adjustment for that cycle.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+
+Returns: Ancestor uniqueness value or undefined when missing.
+
+### resolveUniquenessThresholds
+
+```ts
+resolveUniquenessThresholds(
+  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
+): { lowThreshold: number; highThreshold: number; }
+```
+
+Resolve thresholds for ancestor-uniqueness decisions.
+
+These bounds define the acceptable ancestry-diversity band. Values below the
+lower threshold suggest the population is converging onto similar family
+trees, while values above the upper threshold suggest diversity pressure may
+already be stronger than needed.
+
+Parameters:
+- `config` - - Ancestor uniqueness adaptive configuration.
+
+Returns: Threshold bounds.
+
+### resolveAdjustmentMagnitude
+
+```ts
+resolveAdjustmentMagnitude(
+  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
+): number
+```
+
+Resolve adjustment magnitude for nudging controlled parameters.
+
+Magnitude resolution keeps defaulting logic away from the mode-specific
+adjusters so those helpers can focus on policy semantics.
+
+Parameters:
+- `config` - - Ancestor uniqueness adaptive configuration.
+
+Returns: Adjustment magnitude.
+
+### applyUniquenessAdjustment
+
+```ts
+applyUniquenessAdjustment(
+  engine: NeatLikeWithAdaptive,
+  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
+  ancestorUniq: number,
+  thresholds: { lowThreshold: number; highThreshold: number; },
+  adjustMagnitude: number,
+): void
+```
+
+Apply an adjustment for the configured mode.
+
+This dispatcher is the decision fork for lineage adaptation. The thresholds
+and telemetry signal have already been resolved by the time this helper runs,
+so its only job is to send the adjustment into the correct policy surface.
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `config` - - Ancestor uniqueness adaptive configuration.
+- `ancestorUniq` - - Current ancestor uniqueness metric.
+- `thresholds` - - Threshold bounds for decisions.
+- `adjustMagnitude` - - Adjustment magnitude.
+
+Returns: Nothing.
+
 ### applyEpsilonAdjustment
 
 ```ts
@@ -226,33 +331,6 @@ Parameters:
 
 Returns: Nothing.
 
-### applyUniquenessAdjustment
-
-```ts
-applyUniquenessAdjustment(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-  ancestorUniq: number,
-  thresholds: { lowThreshold: number; highThreshold: number; },
-  adjustMagnitude: number,
-): void
-```
-
-Apply an adjustment for the configured mode.
-
-This dispatcher is the decision fork for lineage adaptation. The thresholds
-and telemetry signal have already been resolved by the time this helper runs,
-so its only job is to send the adjustment into the correct policy surface.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Ancestor uniqueness adaptive configuration.
-- `ancestorUniq` - - Current ancestor uniqueness metric.
-- `thresholds` - - Threshold bounds for decisions.
-- `adjustMagnitude` - - Adjustment magnitude.
-
-Returns: Nothing.
-
 ### ensureLineagePressureState
 
 ```ts
@@ -272,46 +350,6 @@ Parameters:
 
 Returns: Lineage pressure configuration object.
 
-### extractAncestorUniqueness
-
-```ts
-extractAncestorUniqueness(
-  engine: NeatLikeWithAdaptive,
-): number | undefined
-```
-
-Extract the latest ancestor-uniqueness metric from telemetry.
-
-Lineage adaptation only trusts the most recent telemetry snapshot because it
-represents the latest scored generation. Missing or non-numeric lineage
-evidence simply disables the adjustment for that cycle.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-
-Returns: Ancestor uniqueness value or undefined when missing.
-
-### isCooldownSatisfied
-
-```ts
-isCooldownSatisfied(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-): boolean
-```
-
-Determine whether the cooldown window has elapsed.
-
-Cooldowns prevent the controller from thrashing lineage policy on every
-generation. Once an adjustment has been recorded, later generations must wait
-for the configured gap before another nudge is allowed.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Ancestor uniqueness adaptive configuration.
-
-Returns: True when adjustment is allowed.
-
 ### recordAdjustment
 
 ```ts
@@ -329,41 +367,3 @@ Parameters:
 - `engine` - - NEAT engine instance.
 
 Returns: Nothing.
-
-### resolveAdjustmentMagnitude
-
-```ts
-resolveAdjustmentMagnitude(
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-): number
-```
-
-Resolve adjustment magnitude for nudging controlled parameters.
-
-Magnitude resolution keeps defaulting logic away from the mode-specific
-adjusters so those helpers can focus on policy semantics.
-
-Parameters:
-- `config` - - Ancestor uniqueness adaptive configuration.
-
-Returns: Adjustment magnitude.
-
-### resolveUniquenessThresholds
-
-```ts
-resolveUniquenessThresholds(
-  config: { enabled?: boolean | undefined; cooldown?: number | undefined; lowThreshold?: number | undefined; highThreshold?: number | undefined; adjust?: number | undefined; mode?: string | undefined; },
-): { lowThreshold: number; highThreshold: number; }
-```
-
-Resolve thresholds for ancestor-uniqueness decisions.
-
-These bounds define the acceptable ancestry-diversity band. Values below the
-lower threshold suggest the population is converging onto similar family
-trees, while values above the upper threshold suggest diversity pressure may
-already be stronger than needed.
-
-Parameters:
-- `config` - - Ancestor uniqueness adaptive configuration.
-
-Returns: Threshold bounds.

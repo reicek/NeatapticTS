@@ -27,13 +27,27 @@ export const MAX_COMPATIBILITY_SAMPLE = 25;
 /**
  * Diversity-statistics mechanics used by telemetry and diagnostics.
  *
- * This chapter holds the reusable folds behind population diversity reports:
- * structural entropy, sampled lineage distance, sampled compatibility, and the
- * small numeric helpers used to aggregate those signals.
+ * This core chapter assembles one bounded diversity report from four
+ * complementary measurements:
+ *
+ * - lineage depth spread explains how ancestry is fanning out or collapsing,
+ * - node and connection counts describe topology size and uneven growth,
+ * - sampled compatibility distance estimates genetic separation,
+ * - structural entropy captures topology shape beyond raw size alone.
+ *
+ * The helpers stay deliberately cheap. Instead of running exhaustive all-pairs
+ * analysis, they sample the expensive comparisons and fold the results into a
+ * report that is accurate enough for telemetry trends, diagnostics, and
+ * generation-over-generation comparisons.
  */
 
 /**
  * Compute the Shannon-style entropy of a network's out-degree distribution.
+ *
+ * This is the chapter's shape metric. Two genomes can share similar node and
+ * connection counts while still distributing edges very differently, so the
+ * entropy read adds a lightweight topology fingerprint beside the raw size
+ * aggregates.
  *
  * @param graph - Network instance to evaluate.
  * @returns Shannon-style entropy value.
@@ -64,9 +78,28 @@ export function calculateStructuralEntropy(graph: Network): number {
 /**
  * Compute diversity statistics for a NEAT population.
  *
+ * This is the orchestration step for the bounded diversity report. It projects
+ * lineage depths, structure counts, sampled compatibility distances, and per-
+ * genome structural entropy into one object that callers can log, chart, or
+ * compare across generations.
+ *
+ * The returned metrics are intentionally read-oriented rather than prescriptive.
+ * They help answer questions such as whether species are collapsing toward a
+ * narrow family of similar genomes or whether structural experimentation is
+ * still producing spread.
+ *
  * @param population - Population genomes exposing nodes, connections, and optional `_depth`.
  * @param compatibilityComputer - Object exposing `_compatibilityDistance(a, b)`.
  * @returns Diversity report or `undefined` when the population is empty.
+ *
+ * @example
+ * ```ts
+ * const diversity = calculateDiversityStats(neat.population, neat);
+ *
+ * if (diversity) {
+ *   console.log(diversity.lineageMeanPairDist, diversity.graphletEntropy);
+ * }
+ * ```
  */
 export function calculateDiversityStats(
   population: GenomeWithMetrics[],
@@ -124,6 +157,10 @@ export function calculateDiversityStats(
 /**
  * Compute the arithmetic mean of a numeric array.
  *
+ * The diversity report uses this helper for the direct summary columns such as
+ * average lineage depth, average node count, average connection count, and the
+ * mean entropy across genomes.
+ *
  * @param values - Values to average.
  * @returns Arithmetic mean, or `0` when the array is empty.
  */
@@ -135,6 +172,9 @@ function mean(values: number[]): number {
 
 /**
  * Compute the population variance of a numeric array.
+ *
+ * Variance complements the raw averages by showing whether the population is
+ * staying structurally tight or spreading into a wider range of topology sizes.
  *
  * @param values - Values to evaluate.
  * @returns Population variance, or `0` when the array is empty.
@@ -150,6 +190,11 @@ function variance(values: number[]): number {
 
 /**
  * Compute the mean absolute pairwise distance across a sampled value list.
+ *
+ * The diversity report uses this for lineage depth because the question is not
+ * just "how deep are genomes on average?" but also "how far apart are sampled
+ * genomes along that depth axis?" Sampling keeps that pairwise comparison
+ * cheap enough for repeated telemetry reads.
  *
  * @param values - Values to compare.
  * @param sampleLimit - Maximum number of sampled values to include.
@@ -188,6 +233,11 @@ function computeMeanAbsolutePairDistance(
 
 /**
  * Compute the mean compatibility distance across sampled genome pairs.
+ *
+ * Compatibility is the most expensive dimension in the report because it needs
+ * host-provided pairwise comparisons. This helper bounds the work by sampling
+ * a prefix of genomes, then averaging the pair distances so callers get a
+ * stable separation trend instead of an exhaustive matrix.
  *
  * @param genomes - Population genomes to compare.
  * @param compatibilityComputer - Compatibility-distance provider.

@@ -35,6 +35,11 @@ Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent c
 assignment works in algorithms like RTRL / policy gradients. They are updated only when
 using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
+### NodeOptimizerProps
+
+Internal interface for accessing dynamic optimizer properties on Node instances.
+These properties are lazily allocated and not part of the main class definition.
+
 ### Node
 
 Node (Neuron)
@@ -49,11 +54,6 @@ function (squash) and emits an activation value. Supports:
 Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
 assignment works in algorithms like RTRL / policy gradients. They are updated only when
 using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
-
-### NodeOptimizerProps
-
-Internal interface for accessing dynamic optimizer properties on Node instances.
-These properties are lazily allocated and not part of the main class definition.
 
 ### default
 
@@ -482,19 +482,6 @@ Parameters:
 
 ## architecture/onnx.ts
 
-### Conv2DMapping
-
-Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
-
-This does **not** magically turn an MLP into a convolutional network at runtime.
-It annotates a particular export-layer index with a conv interpretation so that:
-- The exported graph uses conv-shaped tensors/operators, and
-- Import can re-attach pooling/flatten metadata appropriately.
-
-Pitfall: mappings must match the actual layer sizes. If `inHeight * inWidth * inChannels`
-does not correspond to the prior layer width (and similarly for outputs), export or import
-may reject the model.
-
 ### exportToONNX
 
 ```ts
@@ -572,6 +559,19 @@ Parameters:
 - `onnx` - ONNX-like model to reconstruct.
 
 Returns: Reconstructed network ready for inference/evolution workflows.
+
+### Conv2DMapping
+
+Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
+
+This does **not** magically turn an MLP into a convolutional network at runtime.
+It annotates a particular export-layer index with a conv interpretation so that:
+- The exported graph uses conv-shaped tensors/operators, and
+- Import can re-attach pooling/flatten metadata appropriately.
+
+Pitfall: mappings must match the actual layer sizes. If `inHeight * inWidth * inChannels`
+does not correspond to the prior layer width (and similarly for outputs), export or import
+may reject the model.
 
 ### OnnxExportOptions
 
@@ -1096,23 +1096,6 @@ Parameters:
 
 ### network
 
-### resolveAcyclicEnforcement
-
-```ts
-resolveAcyclicEnforcement(
-  options: NetworkConstructorOptions | undefined,
-  topologyIntent: NetworkTopologyIntent,
-): boolean
-```
-
-Resolves whether acyclic enforcement should be enabled for one constructor call.
-
-Parameters:
-- `options` - Optional constructor options.
-- `topologyIntent` - Resolved public topology intent.
-
-Returns: True when acyclic enforcement should be enabled.
-
 ### resolveTopologyIntent
 
 ```ts
@@ -1142,6 +1125,23 @@ Parameters:
 - `options` - Optional constructor options.
 
 Returns: Nothing.
+
+### resolveAcyclicEnforcement
+
+```ts
+resolveAcyclicEnforcement(
+  options: NetworkConstructorOptions | undefined,
+  topologyIntent: NetworkTopologyIntent,
+): boolean
+```
+
+Resolves whether acyclic enforcement should be enabled for one constructor call.
+
+Parameters:
+- `options` - Optional constructor options.
+- `topologyIntent` - Resolved public topology intent.
+
+Returns: True when acyclic enforcement should be enabled.
 
 ### default
 
@@ -2183,6 +2183,10 @@ Removes the connection from the network's `gates` list.
 
 ## architecture/nodePool.ts
 
+### AcquireNodeOptions
+
+Options bag for acquiring a node.
+
 ### acquireNode
 
 ```ts
@@ -2193,18 +2197,6 @@ acquireNode(
 
 Acquire (obtain) a node instance from the pool (or construct a new one if empty).
 The node is guaranteed to have fully reset dynamic state (activation, gradients, error, connections).
-
-### AcquireNodeOptions
-
-Options bag for acquiring a node.
-
-### nodePoolStats
-
-```ts
-nodePoolStats(): { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }
-```
-
-Get current pool statistics (for debugging / future leak detection).
 
 ### releaseNode
 
@@ -2219,6 +2211,14 @@ from any network (connections arrays pruned, no external references maintained) 
 After release, the node must be considered invalid until re-acquired.
 
 Phase 2: Automatically invoked by Network.remove() when pooling is enabled to recycle pruned nodes.
+
+### nodePoolStats
+
+```ts
+nodePoolStats(): { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }
+```
+
+Get current pool statistics (for debugging / future leak detection).
 
 ### resetNodePool
 

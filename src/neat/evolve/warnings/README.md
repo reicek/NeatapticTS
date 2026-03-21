@@ -19,16 +19,6 @@ Read this chapter when you want to understand:
 
 ## neat/evolve/warnings/evolve.warnings.utils.ts
 
-### EVOLVE_NO_BEST_GENOME_WARNING
-
-Warning emitted when evolution finishes without a best genome.
-
-This message signals that the generation loop completed without producing a
-champion snapshot that the controller considers safe to return. That usually
-points to an upstream evaluation or population-state problem rather than to a
-normal low-fitness generation, so the wording intentionally distinguishes
-"no valid best genome" from merely "no improvement."
-
 ### warnIfNoBestGenome
 
 ```ts
@@ -41,3 +31,13 @@ The helper is deliberately conservative: it tries to warn, but it does not
 let missing or restricted console support destabilize the evolve loop further.
 That keeps warning emission informative for normal runtimes while preserving a
 best-effort contract for test harnesses and embedded environments.
+
+### EVOLVE_NO_BEST_GENOME_WARNING
+
+Warning emitted when evolution finishes without a best genome.
+
+This message signals that the generation loop completed without producing a
+champion snapshot that the controller considers safe to return. That usually
+points to an upstream evaluation or population-state problem rather than to a
+normal low-fitness generation, so the wording intentionally distinguishes
+"no valid best genome" from merely "no improvement."

@@ -22,27 +22,6 @@ const request: PlaybackBackgroundRequest = {
 
 ## browser-entry/playback/background/playback.background.types.ts
 
-### PlaybackBackgroundLayout
-
-Resolved vertical scene split used by playback background composition.
-
-The layout fixes the classic synthwave composition used by this demo: a tall
-sky band for layered starfield parallax and a compressed lower strip for the
-perspective grid. Caching this structure by viewport size keeps redraws cheap
-when the scene is otherwise stable.
-
-### PlaybackBackgroundLayoutFactory
-
-```ts
-PlaybackBackgroundLayoutFactory(): PlaybackBackgroundLayout
-```
-
-Zero-argument builder used to lazily construct one cached background layout.
-
-The cache service accepts a factory instead of raw data so callers can defer
-the slightly more expensive layout computation until a viewport-size cache
-miss actually occurs.
-
 ### PlaybackBackgroundRequest
 
 Minimal render input required to draw the playback background.
@@ -74,13 +53,26 @@ resolves the sky/lower-band split, vanishing point, and horizon styling once
 so the draw passes can stay orchestration-first and avoid repeating geometry
 math every frame.
 
-### PlaybackHorizonLineRequest
+### PlaybackBackgroundLayout
 
-Draw request for the horizon divider line.
+Resolved vertical scene split used by playback background composition.
 
-This narrow contract is the final handoff from layout math to the canvas
-stroke helper: world-space x extents, the pixel-snapped y position, and the
-resolved glow style needed for both line passes.
+The layout fixes the classic synthwave composition used by this demo: a tall
+sky band for layered starfield parallax and a compressed lower strip for the
+perspective grid. Caching this structure by viewport size keeps redraws cheap
+when the scene is otherwise stable.
+
+### PlaybackBackgroundLayoutFactory
+
+```ts
+PlaybackBackgroundLayoutFactory(): PlaybackBackgroundLayout
+```
+
+Zero-argument builder used to lazily construct one cached background layout.
+
+The cache service accepts a factory instead of raw data so callers can defer
+the slightly more expensive layout computation until a viewport-size cache
+miss actually occurs.
 
 ### PlaybackHorizonStyle
 
@@ -90,6 +82,14 @@ The horizon is rendered as both a crisp divider and a glow source, much like
 the luminous skyline separator common in synthwave and TRON-inspired poster
 art. Keeping those paint properties bundled makes it easier to reason about
 the horizon as one semantic effect instead of a pile of canvas state.
+
+### PlaybackHorizonLineRequest
+
+Draw request for the horizon divider line.
+
+This narrow contract is the final handoff from layout math to the canvas
+stroke helper: world-space x extents, the pixel-snapped y position, and the
+resolved glow style needed for both line passes.
 
 ## browser-entry/playback/background/playback.background.ts
 
@@ -201,6 +201,66 @@ Returns: Immutable scene context shared by the private render helpers.
 
 ## browser-entry/playback/background/playback.background.constants.ts
 
+### FLAPPY_BACKGROUND_SKY_HEIGHT_RATIO
+
+Background layout ratio reserved for the starfield sky band.
+
+The top band intentionally occupies most of the scene so the future ground
+layer can take over the lower strip without competing with the stars.
+
+### FLAPPY_BACKGROUND_MIN_VIEWPORT_DIMENSION_PX
+
+Minimum safe viewport dimension used by background render math (pixels).
+
+Canvas helpers in this module assume positive dimensions. Clamping tiny or
+temporarily zero-sized layouts to this floor prevents resize races from
+producing invalid cache keys or negative geometry.
+
+### FLAPPY_BACKGROUND_TILE_ROW_START_INDEX
+
+Index offset used to draw one extra tile before the visible left edge.
+
+Starting one tile early hides wrap seams when the parallax offset lands near
+a tile boundary and the camera reveals a sliver of content just off-screen.
+
+### FLAPPY_BACKGROUND_TILE_ROW_BUFFER_COUNT
+
+Extra tile count rendered past the visible right edge for seamless wrap.
+
+The starfield is drawn as repeated cached strips. One buffered strip beyond
+the viewport prevents empty columns from appearing while the parallax offset
+advances between frames.
+
+### FLAPPY_BACKGROUND_HORIZON_HALF_THICKNESS_MULTIPLIER
+
+Half-thickness multiplier used to center the horizon line on the split.
+
+The layout computes the horizon around the sky/lower-band seam, so this
+multiplier converts stroke thickness into the offset needed to center the
+divider on that seam rather than placing it fully below it.
+
+### FLAPPY_BACKGROUND_ODD_STROKE_DIVISOR
+
+Divisor used to detect odd stroke widths for pixel snapping.
+
+Canvas 2D strokes look soft when odd-width lines are left on whole pixels.
+This constant supports the classic half-pixel alignment check used to keep
+the horizon divider visually crisp.
+
+### FLAPPY_BACKGROUND_ODD_STROKE_ALIGNMENT_OFFSET_PX
+
+Pixel offset used to align odd-width strokes to the device pixel grid.
+
+Offsetting odd-width lines by half a pixel is a standard raster technique
+for reducing blur in canvas line rendering.
+
+### FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER
+
+Composite mode used for standard opaque drawing passes.
+
+Most background passes should replace pixels normally so the scene remains
+predictable before selective glow passes are added on top.
+
 ### FLAPPY_BACKGROUND_COMPOSITE_LIGHTER
 
 Composite mode used when stacking glow-heavy starfield layers.
@@ -209,12 +269,19 @@ The background currently resets to ordinary compositing for main passes, but
 this constant documents the additive blend mode used when glow layers need to
 visually accumulate rather than overwrite one another.
 
-### FLAPPY_BACKGROUND_COMPOSITE_SOURCE_OVER
+### FLAPPY_BACKGROUND_TRANSPARENT_SHADOW_COLOR
 
-Composite mode used for standard opaque drawing passes.
+Transparent shadow color used to reset canvas glow state.
 
-Most background passes should replace pixels normally so the scene remains
-predictable before selective glow passes are added on top.
+Canvas shadow state is sticky, so explicit transparent resets prevent one
+glow-heavy pass from leaking blur into later solid fills or line work.
+
+### FLAPPY_BACKGROUND_HORIZON_LINE_THICKNESS_PX
+
+Thickness of the neon horizon divider line (pixels).
+
+A slightly heavier stroke helps the divider remain legible against both the
+starfield and the bright grid below it.
 
 ### FLAPPY_BACKGROUND_HORIZON_GLOW_ALPHA
 
@@ -230,21 +297,6 @@ Blur radius used to bloom the horizon divider glow (pixels).
 This is the main control for how far the horizon's light appears to bleed
 into the neighboring sky and ground bands.
 
-### FLAPPY_BACKGROUND_HORIZON_HALF_THICKNESS_MULTIPLIER
-
-Half-thickness multiplier used to center the horizon line on the split.
-
-The layout computes the horizon around the sky/lower-band seam, so this
-multiplier converts stroke thickness into the offset needed to center the
-divider on that seam rather than placing it fully below it.
-
-### FLAPPY_BACKGROUND_HORIZON_LINE_THICKNESS_PX
-
-Thickness of the neon horizon divider line (pixels).
-
-A slightly heavier stroke helps the divider remain legible against both the
-starfield and the bright grid below it.
-
 ### FLAPPY_BACKGROUND_HORIZON_STYLE
 
 Frozen neon paint bundle reused by the playback horizon renderer.
@@ -253,70 +305,18 @@ Keeping this style object in the constants module prevents repeated
 allocation during every background frame while still keeping the palette
 centrally theme-owned.
 
-### FLAPPY_BACKGROUND_MIN_VIEWPORT_DIMENSION_PX
-
-Minimum safe viewport dimension used by background render math (pixels).
-
-Canvas helpers in this module assume positive dimensions. Clamping tiny or
-temporarily zero-sized layouts to this floor prevents resize races from
-producing invalid cache keys or negative geometry.
-
-### FLAPPY_BACKGROUND_ODD_STROKE_ALIGNMENT_OFFSET_PX
-
-Pixel offset used to align odd-width strokes to the device pixel grid.
-
-Offsetting odd-width lines by half a pixel is a standard raster technique
-for reducing blur in canvas line rendering.
-
-### FLAPPY_BACKGROUND_ODD_STROKE_DIVISOR
-
-Divisor used to detect odd stroke widths for pixel snapping.
-
-Canvas 2D strokes look soft when odd-width lines are left on whole pixels.
-This constant supports the classic half-pixel alignment check used to keep
-the horizon divider visually crisp.
-
-### FLAPPY_BACKGROUND_SKY_HEIGHT_RATIO
-
-Background layout ratio reserved for the starfield sky band.
-
-The top band intentionally occupies most of the scene so the future ground
-layer can take over the lower strip without competing with the stars.
-
-### FLAPPY_BACKGROUND_TILE_ROW_BUFFER_COUNT
-
-Extra tile count rendered past the visible right edge for seamless wrap.
-
-The starfield is drawn as repeated cached strips. One buffered strip beyond
-the viewport prevents empty columns from appearing while the parallax offset
-advances between frames.
-
-### FLAPPY_BACKGROUND_TILE_ROW_START_INDEX
-
-Index offset used to draw one extra tile before the visible left edge.
-
-Starting one tile early hides wrap seams when the parallax offset lands near
-a tile boundary and the camera reveals a sliver of content just off-screen.
-
-### FLAPPY_BACKGROUND_TRANSPARENT_SHADOW_COLOR
-
-Transparent shadow color used to reset canvas glow state.
-
-Canvas shadow state is sticky, so explicit transparent resets prevent one
-glow-heavy pass from leaking blur into later solid fills or line work.
-
 ## browser-entry/playback/background/playback.background.draw.services.ts
 
-### drawPlaybackBackgroundHorizon
+### paintPlaybackBackgroundBase
 
 ```ts
-drawPlaybackBackgroundHorizon(
+paintPlaybackBackgroundBase(
   context: CanvasRenderingContext2D,
   sceneContext: PlaybackBackgroundSceneContext,
 ): void
 ```
 
-Draws the glowing horizon divider across the visible viewport.
+Paints the base background fill for the currently visible viewport.
 
 Parameters:
 - `context` - - Canvas 2D drawing context.
@@ -343,20 +343,20 @@ Parameters:
 
 Returns: Nothing.
 
-### drawPlaybackHorizonLine
+### drawPlaybackBackgroundHorizon
 
 ```ts
-drawPlaybackHorizonLine(
+drawPlaybackBackgroundHorizon(
   context: CanvasRenderingContext2D,
-  request: PlaybackHorizonLineRequest,
+  sceneContext: PlaybackBackgroundSceneContext,
 ): void
 ```
 
-Draws the glowing horizon divider using the provided neon style.
+Draws the glowing horizon divider across the visible viewport.
 
 Parameters:
 - `context` - - Canvas 2D drawing context.
-- `request` - - Width, aligned y-position, and style for the divider.
+- `sceneContext` - - Derived scene geometry and style contract.
 
 Returns: Nothing.
 
@@ -385,20 +385,20 @@ Parameters:
 
 Returns: Nothing.
 
-### paintPlaybackBackgroundBase
+### drawPlaybackHorizonLine
 
 ```ts
-paintPlaybackBackgroundBase(
+drawPlaybackHorizonLine(
   context: CanvasRenderingContext2D,
-  sceneContext: PlaybackBackgroundSceneContext,
+  request: PlaybackHorizonLineRequest,
 ): void
 ```
 
-Paints the base background fill for the currently visible viewport.
+Draws the glowing horizon divider using the provided neon style.
 
 Parameters:
 - `context` - - Canvas 2D drawing context.
-- `sceneContext` - - Derived scene geometry and style contract.
+- `request` - - Width, aligned y-position, and style for the divider.
 
 Returns: Nothing.
 
@@ -424,6 +424,23 @@ Parameters:
 - `visibleWorldHeightPx` - - Current visible world height in pixels.
 
 Returns: Stable viewport-size cache key for the current frame.
+
+### resolvePlaybackBackgroundViewportCacheKey
+
+```ts
+resolvePlaybackBackgroundViewportCacheKey(
+  visibleWorldWidthPx: number,
+  visibleWorldHeightPx: number,
+): string
+```
+
+Resolves the stable viewport-size cache key used by background caches.
+
+Parameters:
+- `visibleWorldWidthPx` - - Current visible world width in pixels.
+- `visibleWorldHeightPx` - - Current visible world height in pixels.
+
+Returns: Cache key that changes whenever the page size changes.
 
 ### resolveCachedPlaybackBackgroundLayout
 
@@ -459,23 +476,6 @@ Parameters:
 
 Returns: Cached tile coverage count for the active viewport width.
 
-### resolvePlaybackBackgroundViewportCacheKey
-
-```ts
-resolvePlaybackBackgroundViewportCacheKey(
-  visibleWorldWidthPx: number,
-  visibleWorldHeightPx: number,
-): string
-```
-
-Resolves the stable viewport-size cache key used by background caches.
-
-Parameters:
-- `visibleWorldWidthPx` - - Current visible world width in pixels.
-- `visibleWorldHeightPx` - - Current visible world height in pixels.
-
-Returns: Cache key that changes whenever the page size changes.
-
 ## browser-entry/playback/background/playback.background.scene.services.ts
 
 ### resolvePlaybackBackgroundSceneContext
@@ -494,23 +494,6 @@ Parameters:
 Returns: Immutable scene context shared by the private render helpers.
 
 ## browser-entry/playback/background/playback.background.utils.ts
-
-### resolveAlignedHorizonYPx
-
-```ts
-resolveAlignedHorizonYPx(
-  horizonYPx: number,
-  lineThicknessPx: number,
-): number
-```
-
-Resolves pixel-snapped horizon positioning for crisp canvas strokes.
-
-Parameters:
-- `horizonYPx` - - Logical horizon centerline in pixels.
-- `lineThicknessPx` - - Stroke thickness in pixels.
-
-Returns: Pixel-snapped y-position for the stroke.
 
 ### resolvePlaybackBackgroundLayout
 
@@ -536,6 +519,23 @@ resolvePlaybackHorizonStyle(): PlaybackHorizonStyle
 Resolves the neon paint settings for the horizon divider.
 
 Returns: Reusable draw style for both the glow and crisp line passes.
+
+### resolveAlignedHorizonYPx
+
+```ts
+resolveAlignedHorizonYPx(
+  horizonYPx: number,
+  lineThicknessPx: number,
+): number
+```
+
+Resolves pixel-snapped horizon positioning for crisp canvas strokes.
+
+Parameters:
+- `horizonYPx` - - Logical horizon centerline in pixels.
+- `lineThicknessPx` - - Stroke thickness in pixels.
+
+Returns: Pixel-snapped y-position for the stroke.
 
 ### resolveSafeBackgroundDimension
 

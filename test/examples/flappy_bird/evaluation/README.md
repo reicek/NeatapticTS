@@ -6,13 +6,6 @@ A value of `1` means full adaptive difficulty is enabled during evaluation.
 
 ## evaluation/evaluation.types.ts
 
-### FlappyEpisodeResult
-
-Summary metrics for a single Flappy episode rollout.
-
-The result intentionally keeps both a single scalar `fitness` and the channel
-breakdown that produced it, which makes reward debugging much easier.
-
 ### FlappyNetworkLike
 
 Minimal network contract required by Flappy evaluation.
@@ -26,6 +19,13 @@ Runtime controls for one rollout evaluation.
 
 This is the public control surface for evaluation callers. The rollout layer
 later normalizes these options into execution-safe context values.
+
+### FlappyEpisodeResult
+
+Summary metrics for a single Flappy episode rollout.
+
+The result intentionally keeps both a single scalar `fitness` and the channel
+breakdown that produced it, which makes reward debugging much easier.
 
 ### FlappySeedBatchEvaluation
 
@@ -42,13 +42,13 @@ Default difficulty scale for rollouts when caller does not provide one.
 
 A value of `1` means full adaptive difficulty is enabled during evaluation.
 
-### FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_CONSECUTIVE_FRAMES
-
-Default consecutive unrecoverable frames required for early termination.
-
 ### FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_GRACE_FRAMES
 
 Default grace period (frames) before early termination checks begin.
+
+### FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_CONSECUTIVE_FRAMES
+
+Default consecutive unrecoverable frames required for early termination.
 
 ### FLAPPY_EVALUATION_DEFAULT_PIPE_PROGRESS_TARGET
 
@@ -61,17 +61,17 @@ even when individual episodes vary widely in difficulty and duration.
 
 Dense shaping normalization factor per survived frame.
 
-### FLAPPY_EVALUATION_NORMALIZED_DENSE_WEIGHT
+### FLAPPY_EVALUATION_NORMALIZED_SURVIVAL_WEIGHT
 
-Dense-shaping channel weight in normalized fitness composition.
+Survival channel weight in normalized fitness composition.
 
 ### FLAPPY_EVALUATION_NORMALIZED_PROGRESS_WEIGHT
 
 Pipe-progress channel weight in normalized fitness composition.
 
-### FLAPPY_EVALUATION_NORMALIZED_SURVIVAL_WEIGHT
+### FLAPPY_EVALUATION_NORMALIZED_DENSE_WEIGHT
 
-Survival channel weight in normalized fitness composition.
+Dense-shaping channel weight in normalized fitness composition.
 
 ### FLAPPY_EVALUATION_NORMALIZED_TERMINAL_WEIGHT
 
@@ -84,13 +84,25 @@ Robust fitness penalty multiplier applied to standard deviation.
 A higher value penalizes instability more strongly when computing robust
 fitness from a shared-seed batch.
 
-### FLAPPY_EVALUATION_SEED_MIX_MULTIPLIER_A
+### FLAPPY_EVALUATION_UNRECOVERABLE_CLEARANCE_THRESHOLD
 
-Seed-mix first multiplicative avalanche constant.
+Unrecoverable clearance threshold used by early termination heuristic.
 
-### FLAPPY_EVALUATION_SEED_MIX_MULTIPLIER_B
+### FLAPPY_EVALUATION_UNRECOVERABLE_BELOW_GAP_DELTA
 
-Seed-mix second multiplicative avalanche constant.
+Lower-gap delta threshold used by early termination heuristic.
+
+### FLAPPY_EVALUATION_UNRECOVERABLE_FALLING_VELOCITY
+
+Falling-speed threshold used by early termination heuristic.
+
+### FLAPPY_EVALUATION_UNRECOVERABLE_ABOVE_GAP_DELTA
+
+Upper-gap delta threshold used by early termination heuristic.
+
+### FLAPPY_EVALUATION_UNRECOVERABLE_RISING_VELOCITY
+
+Rising-speed threshold used by early termination heuristic.
 
 ### FLAPPY_EVALUATION_SEED_MIX_XOR_SALT
 
@@ -99,25 +111,13 @@ Seed-mix additive constant used to decorrelate nearby genome ids.
 Together with the multiplicative constants below, this creates a small
 avalanche-style mixing pipeline for deterministic seed derivation.
 
-### FLAPPY_EVALUATION_UNRECOVERABLE_ABOVE_GAP_DELTA
+### FLAPPY_EVALUATION_SEED_MIX_MULTIPLIER_A
 
-Upper-gap delta threshold used by early termination heuristic.
+Seed-mix first multiplicative avalanche constant.
 
-### FLAPPY_EVALUATION_UNRECOVERABLE_BELOW_GAP_DELTA
+### FLAPPY_EVALUATION_SEED_MIX_MULTIPLIER_B
 
-Lower-gap delta threshold used by early termination heuristic.
-
-### FLAPPY_EVALUATION_UNRECOVERABLE_CLEARANCE_THRESHOLD
-
-Unrecoverable clearance threshold used by early termination heuristic.
-
-### FLAPPY_EVALUATION_UNRECOVERABLE_FALLING_VELOCITY
-
-Falling-speed threshold used by early termination heuristic.
-
-### FLAPPY_EVALUATION_UNRECOVERABLE_RISING_VELOCITY
-
-Rising-speed threshold used by early termination heuristic.
+Seed-mix second multiplicative avalanche constant.
 
 ## evaluation/evaluation.rollout.service.ts
 

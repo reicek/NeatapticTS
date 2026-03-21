@@ -48,17 +48,18 @@ This is the "default" safety offset in the family. If a calculation is not
 specifically probability-oriented or variance-oriented, this is usually the
 right stabilizer to reach for first.
 
-### EXTRA_CONNECTION_PROBABILITY
+### PROB_EPSILON
 
-Default heuristic for one opportunistic extra add-connection attempt.
+Probability-scale safety constant for very small ratios and logarithms.
 
-This is a heuristic rather than a numerical safety constant. It slightly
-increases the chance that a genome gains new connectivity during mutation
-without making extra-connection attempts mandatory on every pass.
+This is intentionally smaller than {@link EPSILON} because probability terms
+often need protection without materially changing the magnitude of already
+tiny values.
 
-Treat this as a small statement about controller personality: the default
-search policy is willing to occasionally spend extra effort on connectivity
-growth, but it does not force that gamble on every mutation cycle.
+Reach for this when the math is closer to "protect a probability-like term"
+than to "stabilize a general denominator". The smaller offset helps keep
+loss-style or entropy-style quantities numerically safe while staying closer
+to the original scale.
 
 ### NORM_EPSILON
 
@@ -72,15 +73,14 @@ deliberately larger member of the family. It is meant for "keep the
 normalization step well-behaved" scenarios, not for preserving extremely
 tiny probability magnitudes.
 
-### PROB_EPSILON
+### EXTRA_CONNECTION_PROBABILITY
 
-Probability-scale safety constant for very small ratios and logarithms.
+Default heuristic for one opportunistic extra add-connection attempt.
 
-This is intentionally smaller than {@link EPSILON} because probability terms
-often need protection without materially changing the magnitude of already
-tiny values.
+This is a heuristic rather than a numerical safety constant. It slightly
+increases the chance that a genome gains new connectivity during mutation
+without making extra-connection attempts mandatory on every pass.
 
-Reach for this when the math is closer to "protect a probability-like term"
-than to "stabilize a general denominator". The smaller offset helps keep
-loss-style or entropy-style quantities numerically safe while staying closer
-to the original scale.
+Treat this as a small statement about controller personality: the default
+search policy is willing to occasionally spend extra effort on connectivity
+growth, but it does not force that gamble on every mutation cycle.

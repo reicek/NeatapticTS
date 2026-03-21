@@ -224,34 +224,25 @@ The helper flow is intentionally compact:
 3. measure how much of the population clears the bar,
 4. retune the threshold and reject genomes that still miss it.
 
-### applyRejection
+### initializeThreshold
 
 ```ts
-applyRejection(
+initializeThreshold(
   engine: NeatLikeWithAdaptive,
-  threshold: number,
+  config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; },
 ): void
 ```
 
-Zero scores below the final threshold.
+Initialize MC threshold if missing.
 
-Rejection is the acceptance chapter's most direct intervention. Instead of
-queuing a future policy change, it rewrites the current generation's scores so
-the same selection pass immediately treats low-performing genomes as filtered
-out.
-
-Example:
-
-```ts
-const scores = collectScores(engine);
-const acceptance = computeAcceptance(scores, engine._mcThreshold ?? 0);
-updateThreshold(engine, acceptance, resolveTargetSettings(config));
-applyRejection(engine, engine._mcThreshold ?? 0);
-```
+Threshold initialization is lazy because many runs never enable adaptive
+acceptance at all. The first invocation seeds the long-lived threshold, and
+later generations reuse the updated value rather than restarting from the
+original configuration each time.
 
 Parameters:
 - `engine` - - NEAT engine instance.
-- `threshold` - - Final MC threshold.
+- `config` - - Minimal-criterion adaptive configuration.
 
 Returns: Nothing.
 
@@ -297,28 +288,6 @@ Parameters:
 
 Returns: Acceptance proportion.
 
-### initializeThreshold
-
-```ts
-initializeThreshold(
-  engine: NeatLikeWithAdaptive,
-  config: { enabled?: boolean | undefined; initialThreshold?: number | undefined; targetAcceptance?: number | undefined; adjustRate?: number | undefined; },
-): void
-```
-
-Initialize MC threshold if missing.
-
-Threshold initialization is lazy because many runs never enable adaptive
-acceptance at all. The first invocation seeds the long-lived threshold, and
-later generations reuse the updated value rather than restarting from the
-original configuration each time.
-
-Parameters:
-- `engine` - - NEAT engine instance.
-- `config` - - Minimal-criterion adaptive configuration.
-
-Returns: Nothing.
-
 ### resolveTargetSettings
 
 ```ts
@@ -357,5 +326,36 @@ Parameters:
 - `engine` - - NEAT engine instance.
 - `acceptance` - - Observed acceptance proportion.
 - `tuning` - - Target acceptance and adjustment settings.
+
+Returns: Nothing.
+
+### applyRejection
+
+```ts
+applyRejection(
+  engine: NeatLikeWithAdaptive,
+  threshold: number,
+): void
+```
+
+Zero scores below the final threshold.
+
+Rejection is the acceptance chapter's most direct intervention. Instead of
+queuing a future policy change, it rewrites the current generation's scores so
+the same selection pass immediately treats low-performing genomes as filtered
+out.
+
+Example:
+
+```ts
+const scores = collectScores(engine);
+const acceptance = computeAcceptance(scores, engine._mcThreshold ?? 0);
+updateThreshold(engine, acceptance, resolveTargetSettings(config));
+applyRejection(engine, engine._mcThreshold ?? 0);
+```
+
+Parameters:
+- `engine` - - NEAT engine instance.
+- `threshold` - - Final MC threshold.
 
 Returns: Nothing.

@@ -17,9 +17,22 @@ Notes:
 
 ## architecture/network/training/network.training.utils.types.ts
 
-### ALLOWED_OPTIMIZERS
+### resolveEmaAlpha
 
-Set of supported optimizer identifiers accepted by training options.
+```ts
+resolveEmaAlpha(
+  smoothingWindow: number,
+  explicitAlpha: number | undefined,
+): number
+```
+
+Resolve default EMA alpha using a window length.
+
+Parameters:
+- `smoothingWindow` - - Window length for moving average operations.
+- `explicitAlpha` - - Optional user-provided alpha override.
+
+Returns: A valid EMA alpha in the range (0, 1].
 
 ### buildMonitoredSmoothingConfig
 
@@ -42,6 +55,14 @@ Parameters:
 
 Returns: Normalized monitored smoothing configuration.
 
+### NetworkNode
+
+Local node shape alias used by training utility modules.
+
+### RegularizationArgument
+
+Regularization argument accepted by node-level propagation.
+
 ### CostDerivative
 
 ```ts
@@ -53,14 +74,6 @@ CostDerivative(
 
 Cost-derivative callback shape for output-node backpropagation.
 
-### GradientClipRuntimeConfig
-
-Runtime gradient clipping configuration normalized from training options.
-
-### NetworkNode
-
-Local node shape alias used by training utility modules.
-
 ### OutputNodeWithCostDerivative
 
 Extended output-node contract that supports custom cost derivatives.
@@ -69,41 +82,19 @@ Extended output-node contract that supports custom cost derivatives.
 
 Shared immutable context for network propagation helpers.
 
-### RegularizationArgument
-
-Regularization argument accepted by node-level propagation.
-
-### resolveEmaAlpha
-
-```ts
-resolveEmaAlpha(
-  smoothingWindow: number,
-  explicitAlpha: number | undefined,
-): number
-```
-
-Resolve default EMA alpha using a window length.
-
-Parameters:
-- `smoothingWindow` - - Window length for moving average operations.
-- `explicitAlpha` - - Optional user-provided alpha override.
-
-Returns: A valid EMA alpha in the range (0, 1].
-
 ### TrainingSample
 
 Training sample consumed by training set loops.
 
+### GradientClipRuntimeConfig
+
+Runtime gradient clipping configuration normalized from training options.
+
+### ALLOWED_OPTIMIZERS
+
+Set of supported optimizer identifiers accepted by training options.
+
 ## architecture/network/training/network.training.utils.ts
-
-### __trainingInternals
-
-Test-only internal helper bundle.
-
-This is exported so unit tests can cover edge-cases in the smoothing logic without
-running full end-to-end training loops.
-
-Important: this is **not** considered stable public API. It may change between releases.
 
 ### applyGradientClippingImpl
 
@@ -122,12 +113,91 @@ Parameters:
 - `net` - - Network instance to update.
 - `cfg` - - Normalized clipping settings.
 
-### CheckpointConfig
+### trainSetImpl
 
-Checkpoint callback configuration.
+```ts
+trainSetImpl(
+  net: default,
+  set: TrainingSample[],
+  batchSize: number,
+  accumulationSteps: number,
+  currentRate: number,
+  momentum: number,
+  regularization: RegularizationConfig,
+  costFunction: CostFunction | CostFunctionOrObject,
+  optimizer: OptimizerConfigBase | undefined,
+): number
+```
 
-Training can periodically call `save(...)` with a serialized network snapshot.
-You can persist these snapshots to disk, upload them, or keep them in-memory.
+Execute one full pass over dataset (epoch) with optional accumulation & adaptive optimizer.
+Returns mean cost across processed samples.
+
+This is the core "one epoch" primitive used by higher-level training orchestration.
+
+Parameters:
+- `net` - - Network instance receiving training updates.
+- `set` - - Training samples.
+- `batchSize` - - Mini-batch size (use 1 for pure SGD).
+- `accumulationSteps` - - Micro-batch accumulation steps.
+- `currentRate` - - Current learning rate (may be scheduled by caller).
+- `momentum` - - Momentum used by some optimizers (when applicable).
+- `regularization` - - Regularization configuration passed down to nodes.
+- `costFunction` - - Cost function selector (function or compatible object).
+- `optimizer` - - Optional optimizer configuration.
+
+Returns: Mean cost across the processed samples.
+
+### trainImpl
+
+```ts
+trainImpl(
+  net: default,
+  set: TrainingSample[],
+  options: TrainingOptions,
+): { error: number; iterations: number; time: number; }
+```
+
+High-level training orchestration with early stopping, smoothing & callbacks.
+
+This is the main entrypoint used by `Network.train(...)`-style APIs.
+
+Parameters:
+- `net` - - Network instance to train.
+- `set` - - Training dataset.
+- `options` - - Training options (stopping conditions, optimizer, hooks, etc.).
+
+Returns: Summary payload containing final error, iteration count, and elapsed time.
+
+Example:
+
+```ts
+const result = net.train(set, { iterations: 500, rate: 0.3 });
+console.log(result.error);
+```
+
+### propagate
+
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  target: number[],
+  regularization: number,
+  costDerivative: CostDerivative | undefined,
+): void
+```
+
+Propagate output and hidden errors backward through the network.
+
+Parameters:
+- `this` - Bound network instance.
+- `rate` - Learning rate.
+- `momentum` - Momentum factor.
+- `update` - Whether to apply updates immediately.
+- `target` - Output target values.
+- `regularization` - L2 regularization factor.
+- `costDerivative` - Optional output-node derivative override.
 
 ### clearState
 
@@ -139,6 +209,13 @@ Clear all node runtime traces and states.
 
 Parameters:
 - `this` - Bound network instance.
+
+### CheckpointConfig
+
+Checkpoint callback configuration.
+
+Training can periodically call `save(...)` with a serialized network snapshot.
+You can persist these snapshots to disk, upload them, or keep them in-memory.
 
 ### CostFunction
 
@@ -239,30 +316,6 @@ Notes:
 - Exact supported `type` values are validated by training utilities.
 - Unspecified fields fall back to sensible defaults per optimizer.
 
-### propagate
-
-```ts
-propagate(
-  rate: number,
-  momentum: number,
-  update: boolean,
-  target: number[],
-  regularization: number,
-  costDerivative: CostDerivative | undefined,
-): void
-```
-
-Propagate output and hidden errors backward through the network.
-
-Parameters:
-- `this` - Bound network instance.
-- `rate` - Learning rate.
-- `momentum` - Momentum factor.
-- `update` - Whether to apply updates immediately.
-- `target` - Output target values.
-- `regularization` - L2 regularization factor.
-- `costDerivative` - Optional output-node derivative override.
-
 ### ScheduleConfig
 
 Schedule callback configuration.
@@ -276,34 +329,6 @@ Serialized network payload used in checkpoint callbacks.
 
 This is intentionally loose: serialization formats evolve and may include nested
 structures. Treat this as an opaque snapshot blob.
-
-### trainImpl
-
-```ts
-trainImpl(
-  net: default,
-  set: TrainingSample[],
-  options: TrainingOptions,
-): { error: number; iterations: number; time: number; }
-```
-
-High-level training orchestration with early stopping, smoothing & callbacks.
-
-This is the main entrypoint used by `Network.train(...)`-style APIs.
-
-Parameters:
-- `net` - - Network instance to train.
-- `set` - - Training dataset.
-- `options` - - Training options (stopping conditions, optimizer, hooks, etc.).
-
-Returns: Summary payload containing final error, iteration count, and elapsed time.
-
-Example:
-
-```ts
-const result = net.train(set, { iterations: 500, rate: 0.3 });
-console.log(result.error);
-```
 
 ### TrainingOptions
 
@@ -330,39 +355,14 @@ Stopping conditions:
 - Provide at least one of `iterations` or `error`.
 - `earlyStopPatience` adds an additional "stop when no improvement" guard.
 
-### trainSetImpl
+### __trainingInternals
 
-```ts
-trainSetImpl(
-  net: default,
-  set: TrainingSample[],
-  batchSize: number,
-  accumulationSteps: number,
-  currentRate: number,
-  momentum: number,
-  regularization: RegularizationConfig,
-  costFunction: CostFunction | CostFunctionOrObject,
-  optimizer: OptimizerConfigBase | undefined,
-): number
-```
+Test-only internal helper bundle.
 
-Execute one full pass over dataset (epoch) with optional accumulation & adaptive optimizer.
-Returns mean cost across processed samples.
+This is exported so unit tests can cover edge-cases in the smoothing logic without
+running full end-to-end training loops.
 
-This is the core "one epoch" primitive used by higher-level training orchestration.
-
-Parameters:
-- `net` - - Network instance receiving training updates.
-- `set` - - Training samples.
-- `batchSize` - - Mini-batch size (use 1 for pure SGD).
-- `accumulationSteps` - - Micro-batch accumulation steps.
-- `currentRate` - - Current learning rate (may be scheduled by caller).
-- `momentum` - - Momentum used by some optimizers (when applicable).
-- `regularization` - - Regularization configuration passed down to nodes.
-- `costFunction` - - Cost function selector (function or compatible object).
-- `optimizer` - - Optional optimizer configuration.
-
-Returns: Mean cost across the processed samples.
+Important: this is **not** considered stable public API. It may change between releases.
 
 ## architecture/network/training/network.training.loop.utils.ts
 
@@ -399,18 +399,29 @@ Returns: Mean cost over processed samples.
 
 ## architecture/network/training/network.training.backprop.utils.ts
 
-### clearNodeState
+### propagate
 
 ```ts
-clearNodeState(
-  node: default,
+propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  target: number[],
+  regularization: number,
+  costDerivative: CostDerivative | undefined,
 ): void
 ```
 
-Clear runtime state for a single node.
+Propagate output and hidden errors backward through the network.
 
 Parameters:
-- `node` - Node to clear.
+- `this` - Bound network instance.
+- `rate` - Learning rate.
+- `momentum` - Momentum factor.
+- `update` - Whether to apply updates immediately.
+- `target` - Output target values.
+- `regularization` - L2 regularization factor.
+- `costDerivative` - Optional output-node derivative override.
 
 ### clearState
 
@@ -422,6 +433,21 @@ Clear all node runtime traces and states.
 
 Parameters:
 - `this` - Bound network instance.
+
+### validateTargetLength
+
+```ts
+validateTargetLength(
+  network: default,
+  target: number[],
+): void
+```
+
+Validate that target output count matches the network output width.
+
+Parameters:
+- `network` - Network instance receiving backpropagation.
+- `target` - Output target vector.
 
 ### createPropagationContext
 
@@ -448,73 +474,6 @@ Parameters:
 
 Returns: Immutable context consumed by propagation helpers.
 
-### getLastNodeIndex
-
-```ts
-getLastNodeIndex(
-  network: default,
-): number
-```
-
-Resolve the last node index in the network.
-
-Parameters:
-- `network` - Network instance.
-
-Returns: Last valid node index.
-
-### getOutputLayerStartIndex
-
-```ts
-getOutputLayerStartIndex(
-  network: default,
-): number
-```
-
-Resolve the first index of the output layer.
-
-Parameters:
-- `network` - Network instance.
-
-Returns: Index at which output nodes begin.
-
-### propagate
-
-```ts
-propagate(
-  rate: number,
-  momentum: number,
-  update: boolean,
-  target: number[],
-  regularization: number,
-  costDerivative: CostDerivative | undefined,
-): void
-```
-
-Propagate output and hidden errors backward through the network.
-
-Parameters:
-- `this` - Bound network instance.
-- `rate` - Learning rate.
-- `momentum` - Momentum factor.
-- `update` - Whether to apply updates immediately.
-- `target` - Output target values.
-- `regularization` - L2 regularization factor.
-- `costDerivative` - Optional output-node derivative override.
-
-### propagateHiddenLayer
-
-```ts
-propagateHiddenLayer(
-  context: PropagationContext,
-): void
-```
-
-Propagate all hidden nodes in reverse topological order.
-
-Parameters:
-- `context` - Shared propagation context.
-
 ### propagateOutputLayer
 
 ```ts
@@ -529,6 +488,51 @@ Propagate all output nodes with explicit targets.
 Parameters:
 - `context` - Shared propagation context.
 - `target` - Output target vector.
+
+### propagateHiddenLayer
+
+```ts
+propagateHiddenLayer(
+  context: PropagationContext,
+): void
+```
+
+Propagate all hidden nodes in reverse topological order.
+
+Parameters:
+- `context` - Shared propagation context.
+
+### propagateSingleOutputNode
+
+```ts
+propagateSingleOutputNode(
+  context: PropagationContext,
+  node: default,
+  targetValue: number,
+): void
+```
+
+Propagate a single output node with a target value.
+
+Parameters:
+- `context` - Shared propagation context.
+- `node` - Output node to propagate.
+- `targetValue` - Expected output value for this node.
+
+### propagateSingleHiddenNode
+
+```ts
+propagateSingleHiddenNode(
+  context: PropagationContext,
+  node: default,
+): void
+```
+
+Propagate a single hidden node without a target value.
+
+Parameters:
+- `context` - Shared propagation context.
+- `node` - Hidden node to propagate.
 
 ### propagateOutputNodeWithCostDerivative
 
@@ -549,52 +553,48 @@ Parameters:
 - `targetValue` - Expected output value for this node.
 - `costDerivative` - Cost derivative callback.
 
-### propagateSingleHiddenNode
+### getOutputLayerStartIndex
 
 ```ts
-propagateSingleHiddenNode(
-  context: PropagationContext,
-  node: default,
-): void
-```
-
-Propagate a single hidden node without a target value.
-
-Parameters:
-- `context` - Shared propagation context.
-- `node` - Hidden node to propagate.
-
-### propagateSingleOutputNode
-
-```ts
-propagateSingleOutputNode(
-  context: PropagationContext,
-  node: default,
-  targetValue: number,
-): void
-```
-
-Propagate a single output node with a target value.
-
-Parameters:
-- `context` - Shared propagation context.
-- `node` - Output node to propagate.
-- `targetValue` - Expected output value for this node.
-
-### validateTargetLength
-
-```ts
-validateTargetLength(
+getOutputLayerStartIndex(
   network: default,
-  target: number[],
+): number
+```
+
+Resolve the first index of the output layer.
+
+Parameters:
+- `network` - Network instance.
+
+Returns: Index at which output nodes begin.
+
+### getLastNodeIndex
+
+```ts
+getLastNodeIndex(
+  network: default,
+): number
+```
+
+Resolve the last node index in the network.
+
+Parameters:
+- `network` - Network instance.
+
+Returns: Last valid node index.
+
+### clearNodeState
+
+```ts
+clearNodeState(
+  node: default,
 ): void
 ```
 
-Validate that target output count matches the network output width.
+Clear runtime state for a single node.
 
 Parameters:
-- `network` - Network instance receiving backpropagation.
-- `target` - Output target vector.
+- `node` - Node to clear.
 
 ## architecture/network/training/network.training.finalize.utils.ts
 

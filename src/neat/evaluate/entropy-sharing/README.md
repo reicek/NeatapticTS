@@ -46,49 +46,6 @@ flowchart TD
 
 ## neat/evaluate/entropy-sharing/evaluate.entropy-sharing.ts
 
-### computeNextSharingSigma
-
-```ts
-computeNextSharingSigma(
-  entropySharingOptions: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; },
-  currentVarEntropy: number,
-  currentSigma: number,
-): number
-```
-
-Compute the next sharing sigma value from the observed entropy variance.
-
-The tuning rule is intentionally small and band-driven instead of trying to
-build a full controller inside evaluation. When observed variance drops below
-the low band, sigma is reduced so the next pass applies a tighter sharing
-radius. When variance rises above the high band, sigma is increased so the
-next pass smooths pressure across a wider neighborhood. Values inside the
-band keep the current sigma unchanged.
-
-The returned value is always clamped to the configured minimum and maximum,
-which keeps tuning predictable even when entropy measurements swing sharply.
-
-Parameters:
-- `entropySharingOptions` - - Tuning options that define the target
-entropy variance, adjustment rate, and clamp bounds.
-- `currentVarEntropy` - - Freshly observed variance of structural entropy
-for the current population.
-- `currentSigma` - - Current sharing sigma before this adjustment.
-
-Returns: Next sharing sigma value to carry into later controller passes.
-
-Example:
-
-```ts
-const nextSigma = computeNextSharingSigma(
-  { enabled: true, targetEntropyVar: 0.2, adjustRate: 0.1, minSigma: 0.5, maxSigma: 3 },
-  0.28,
-  1,
-);
-
-console.log(nextSigma);
-```
-
 ### ensureDiversityStatsContainer
 
 ```ts
@@ -144,4 +101,47 @@ controller._diversityStats!.varEntropy = 0.18;
 
 runEntropySharingTuning(controller, controller.options);
 console.log(controller.options.sharingSigma);
+```
+
+### computeNextSharingSigma
+
+```ts
+computeNextSharingSigma(
+  entropySharingOptions: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; },
+  currentVarEntropy: number,
+  currentSigma: number,
+): number
+```
+
+Compute the next sharing sigma value from the observed entropy variance.
+
+The tuning rule is intentionally small and band-driven instead of trying to
+build a full controller inside evaluation. When observed variance drops below
+the low band, sigma is reduced so the next pass applies a tighter sharing
+radius. When variance rises above the high band, sigma is increased so the
+next pass smooths pressure across a wider neighborhood. Values inside the
+band keep the current sigma unchanged.
+
+The returned value is always clamped to the configured minimum and maximum,
+which keeps tuning predictable even when entropy measurements swing sharply.
+
+Parameters:
+- `entropySharingOptions` - - Tuning options that define the target
+entropy variance, adjustment rate, and clamp bounds.
+- `currentVarEntropy` - - Freshly observed variance of structural entropy
+for the current population.
+- `currentSigma` - - Current sharing sigma before this adjustment.
+
+Returns: Next sharing sigma value to carry into later controller passes.
+
+Example:
+
+```ts
+const nextSigma = computeNextSharingSigma(
+  { enabled: true, targetEntropyVar: 0.2, adjustRate: 0.1, minSigma: 0.5, maxSigma: 3 },
+  0.28,
+  1,
+);
+
+console.log(nextSigma);
 ```

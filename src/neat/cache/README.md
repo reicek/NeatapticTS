@@ -57,7 +57,9 @@ structure or outputs.
 
 Treat this list as the mechanical invalidation contract for genome objects.
 Each key names a field that may be cheap to rebuild but dangerous to trust
-after a write:
+after a write. The list is intentionally short because its job is not to
+describe every useful runtime view of a genome; its job is to name the cached
+fields whose ownership ends the moment the genome itself changes:
 
 - `_compatCache` stores derived compatibility-comparison views,
 - `_outputCache` stores memoized activation outputs,
@@ -65,7 +67,9 @@ after a write:
 
 Keeping the list explicit makes review easier. When a new genome-owned cache
 is introduced, adding it here makes the invalidation surface visible instead
-of relying on scattered ad hoc cleanup.
+of relying on scattered ad hoc cleanup. That gives contributors a simple
+review question: "if this new field is derived and stored on the genome,
+should it join the shared invalidation list?"
 
 ### invalidateGenomeCaches
 
@@ -99,7 +103,9 @@ The cleanup path stays intentionally simple:
 
 That simplicity is part of the design. The helper should be safe to call from
 many write paths, even when some genomes do not currently carry every cached
-field.
+field. In practice, that means mutation flows, crossover assembly, repair
+passes, and manual graph-edit utilities can all reuse the same final cleanup
+contract instead of maintaining subtly different invalidation rules.
 
 Parameters:
 - `genomeCandidate` - - Genome-shaped value whose attached caches should be cleared.
@@ -109,7 +115,13 @@ Returns: Nothing. The helper mutates the candidate in place when it is an object
 Example:
 
 ```ts
-const genome = { _compatCache: {}, _outputCache: [1, 0] };
+const genome = {
+  _compatCache: { neighbor: 0.42 },
+  _outputCache: [1, 0],
+  connections: [{ from: 0, to: 1, weight: 0.9 }],
+};
+
+genome.connections[0].weight = 1.1;
 invalidateGenomeCaches(genome);
 console.log('_compatCache' in genome, '_outputCache' in genome);
 ```

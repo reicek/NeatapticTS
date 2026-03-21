@@ -2,6 +2,10 @@
 
 ## architecture/network/deterministic/network.deterministic.utils.types.ts
 
+### RNGSnapshot
+
+Snapshot payload for RNG state restore flows.
+
 ### NetworkInternals
 
 Internal deterministic network state shape used across deterministic utility modules.
@@ -10,125 +14,11 @@ Internal deterministic network state shape used across deterministic utility mod
 
 Fixed Weyl increment used to advance deterministic PRNG state.
 
-### RNGSnapshot
-
-Snapshot payload for RNG state restore flows.
-
 ### UINT32_NORMALIZER
 
 Divisor used to normalize uint32 PRNG output into [0, 1).
 
 ## architecture/network/deterministic/network.deterministic.utils.ts
-
-### network.deterministic.utils
-
-Default export bundle for convenient named imports.
-
-### getRandomFn
-
-```ts
-getRandomFn(): (() => number) | undefined
-```
-
-Returns the active deterministic RNG function currently attached to the network.
-
-Overview:
-- Use this when tooling or diagnostics need direct RNG access.
-- Returning the function allows advanced integration code to inspect or reuse the random stream.
-- For most persistence workflows, prefer `snapshotRNG` and `getRNGState` over direct function plumbing.
-
-Parameters:
-- `this` - - Bound network instance queried for active RNG function.
-
-Returns: Active RNG function, or `undefined` when deterministic RNG is not initialized.
-
-Example:
-
-```ts
-const randomFn = network.getRandomFn();
-```
-
-### getRNGState
-
-```ts
-getRNGState(): number | undefined
-```
-
-Returns the current deterministic RNG numeric state, when available.
-
-Overview:
-- Use this for lightweight checkpointing when full lifecycle snapshots are unnecessary.
-- The value can be persisted and later reapplied through `setRNGState`.
-- This is commonly used by tests that assert deterministic continuity across operations.
-
-Parameters:
-- `this` - - Bound network instance queried for deterministic RNG numeric state.
-
-Returns: Numeric RNG state value, or `undefined` when no deterministic state exists yet.
-
-Example:
-
-```ts
-const state = network.getRNGState();
-```
-
-### restoreRNG
-
-```ts
-restoreRNG(
-  fn: () => number,
-): void
-```
-
-Restores deterministic RNG lifecycle behavior from a provided RNG function.
-
-Overview:
-- Use this when replaying deterministic flows after custom serialization, hydration, or test setup.
-- The restored RNG function becomes the active random source used by the network lifecycle helpers.
-- This keeps deterministic plumbing explicit when external code owns RNG reconstruction.
-
-Parameters:
-- `this` - - Bound network instance receiving the restored RNG lifecycle function.
-- `fn` - - Deterministic RNG function to install (expected to return values in `[0, 1)`).
-
-Returns: Nothing.
-
-Example:
-
-```ts
-network.restoreRNG(restoredRandomFunction);
-```
-
-### RNGSnapshot
-
-Snapshot payload for RNG state restore flows.
-
-### setRNGState
-
-```ts
-setRNGState(
-  state: number,
-): void
-```
-
-Applies a deterministic RNG numeric state to continue from a known checkpoint.
-
-Overview:
-- Pair this with `getRNGState` to pause/resume deterministic sequences.
-- Useful for reproducible tests, multi-stage training workflows, and deterministic replay.
-- Delegation keeps the write path consistent with the rest of deterministic state utilities.
-
-Parameters:
-- `this` - - Bound network instance receiving deterministic RNG state.
-- `state` - - Numeric RNG state checkpoint to install.
-
-Returns: Nothing.
-
-Example:
-
-```ts
-network.setRNGState(savedState);
-```
 
 ### setSeed
 
@@ -181,52 +71,148 @@ Example:
 const snapshot = network.snapshotRNG();
 ```
 
+### restoreRNG
+
+```ts
+restoreRNG(
+  fn: () => number,
+): void
+```
+
+Restores deterministic RNG lifecycle behavior from a provided RNG function.
+
+Overview:
+- Use this when replaying deterministic flows after custom serialization, hydration, or test setup.
+- The restored RNG function becomes the active random source used by the network lifecycle helpers.
+- This keeps deterministic plumbing explicit when external code owns RNG reconstruction.
+
+Parameters:
+- `this` - - Bound network instance receiving the restored RNG lifecycle function.
+- `fn` - - Deterministic RNG function to install (expected to return values in `[0, 1)`).
+
+Returns: Nothing.
+
+Example:
+
+```ts
+network.restoreRNG(restoredRandomFunction);
+```
+
+### getRNGState
+
+```ts
+getRNGState(): number | undefined
+```
+
+Returns the current deterministic RNG numeric state, when available.
+
+Overview:
+- Use this for lightweight checkpointing when full lifecycle snapshots are unnecessary.
+- The value can be persisted and later reapplied through `setRNGState`.
+- This is commonly used by tests that assert deterministic continuity across operations.
+
+Parameters:
+- `this` - - Bound network instance queried for deterministic RNG numeric state.
+
+Returns: Numeric RNG state value, or `undefined` when no deterministic state exists yet.
+
+Example:
+
+```ts
+const state = network.getRNGState();
+```
+
+### setRNGState
+
+```ts
+setRNGState(
+  state: number,
+): void
+```
+
+Applies a deterministic RNG numeric state to continue from a known checkpoint.
+
+Overview:
+- Pair this with `getRNGState` to pause/resume deterministic sequences.
+- Useful for reproducible tests, multi-stage training workflows, and deterministic replay.
+- Delegation keeps the write path consistent with the rest of deterministic state utilities.
+
+Parameters:
+- `this` - - Bound network instance receiving deterministic RNG state.
+- `state` - - Numeric RNG state checkpoint to install.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+network.setRNGState(savedState);
+```
+
+### getRandomFn
+
+```ts
+getRandomFn(): (() => number) | undefined
+```
+
+Returns the active deterministic RNG function currently attached to the network.
+
+Overview:
+- Use this when tooling or diagnostics need direct RNG access.
+- Returning the function allows advanced integration code to inspect or reuse the random stream.
+- For most persistence workflows, prefer `snapshotRNG` and `getRNGState` over direct function plumbing.
+
+Parameters:
+- `this` - - Bound network instance queried for active RNG function.
+
+Returns: Active RNG function, or `undefined` when deterministic RNG is not initialized.
+
+Example:
+
+```ts
+const randomFn = network.getRandomFn();
+```
+
+### RNGSnapshot
+
+Snapshot payload for RNG state restore flows.
+
+### network.deterministic.utils
+
+Default export bundle for convenient named imports.
+
 ## architecture/network/deterministic/network.deterministic.setup.utils.ts
 
-### advanceStateWithWeylIncrement
+### setSeed
 
 ```ts
-advanceStateWithWeylIncrement(
-  currentState: number | undefined,
+setSeed(
+  seed: number,
+): void
+```
+
+Seed the internal PRNG and install a deterministic random() implementation on the Network instance.
+
+Parameters:
+- `this` - - Bound Network instance.
+- `seed` - - Any finite number; only its lower 32 bits are used.
+
+Returns: Nothing.
+
+### toUint32
+
+```ts
+toUint32(
+  numericValue: number,
 ): number
 ```
 
-Advance state using a fixed Weyl increment with uint32 wraparound.
+Convert a numeric value into unsigned 32-bit state.
 
 Parameters:
-- `currentState` - - Current state word (possibly undefined).
+- `numericValue` - - Numeric value to normalize.
 
-Returns: Next unsigned 32-bit state.
-
-### createDeterministicRandomFunction
-
-```ts
-createDeterministicRandomFunction(
-  internalState: DeterministicNetworkInternals,
-): () => number
-```
-
-Create deterministic PRNG function bound to provided internal state holder.
-
-Parameters:
-- `internalState` - - Runtime network internals used by deterministic RNG pipeline.
-
-Returns: PRNG function returning values in [0,1).
-
-### mixStateWord
-
-```ts
-mixStateWord(
-  stateWord: number,
-): number
-```
-
-Mix state word with xorshift and multiplication steps.
-
-Parameters:
-- `stateWord` - - Unsigned 32-bit state word.
-
-Returns: Mixed unsigned 32-bit word.
+Returns: Unsigned 32-bit representation.
 
 ### setInternalSeedState
 
@@ -262,36 +248,50 @@ Parameters:
 
 Returns: Nothing.
 
-### setSeed
+### createDeterministicRandomFunction
 
 ```ts
-setSeed(
-  seed: number,
-): void
+createDeterministicRandomFunction(
+  internalState: DeterministicNetworkInternals,
+): () => number
 ```
 
-Seed the internal PRNG and install a deterministic random() implementation on the Network instance.
+Create deterministic PRNG function bound to provided internal state holder.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `seed` - - Any finite number; only its lower 32 bits are used.
+- `internalState` - - Runtime network internals used by deterministic RNG pipeline.
 
-Returns: Nothing.
+Returns: PRNG function returning values in [0,1).
 
-### toUint32
+### advanceStateWithWeylIncrement
 
 ```ts
-toUint32(
-  numericValue: number,
+advanceStateWithWeylIncrement(
+  currentState: number | undefined,
 ): number
 ```
 
-Convert a numeric value into unsigned 32-bit state.
+Advance state using a fixed Weyl increment with uint32 wraparound.
 
 Parameters:
-- `numericValue` - - Numeric value to normalize.
+- `currentState` - - Current state word (possibly undefined).
 
-Returns: Unsigned 32-bit representation.
+Returns: Next unsigned 32-bit state.
+
+### mixStateWord
+
+```ts
+mixStateWord(
+  stateWord: number,
+): number
+```
+
+Mix state word with xorshift and multiplication steps.
+
+Parameters:
+- `stateWord` - - Unsigned 32-bit state word.
+
+Returns: Mixed unsigned 32-bit word.
 
 ### toUnitInterval
 
@@ -310,19 +310,6 @@ Returns: Unit-interval floating-point value.
 
 ## architecture/network/deterministic/network.deterministic.state.utils.ts
 
-### getRandomFn
-
-```ts
-getRandomFn(): (() => number) | undefined
-```
-
-Retrieve the active random function reference.
-
-Parameters:
-- `this` - - Bound Network instance.
-
-Returns: Function producing numbers in [0,1). May be undefined if never seeded.
-
 ### getRNGState
 
 ```ts
@@ -335,21 +322,6 @@ Parameters:
 - `this` - - Bound Network instance.
 
 Returns: Unsigned 32-bit state integer or undefined if generator not yet seeded or was reset.
-
-### isNumericState
-
-```ts
-isNumericState(
-  candidateState: number,
-): boolean
-```
-
-Check whether incoming state is numeric.
-
-Parameters:
-- `candidateState` - - Candidate state value.
-
-Returns: True when state is numeric.
 
 ### setRNGState
 
@@ -366,6 +338,34 @@ Parameters:
 - `state` - - Any finite number (only low 32 bits used). Ignored if not numeric.
 
 Returns: Nothing.
+
+### getRandomFn
+
+```ts
+getRandomFn(): (() => number) | undefined
+```
+
+Retrieve the active random function reference.
+
+Parameters:
+- `this` - - Bound Network instance.
+
+Returns: Function producing numbers in [0,1). May be undefined if never seeded.
+
+### isNumericState
+
+```ts
+isNumericState(
+  candidateState: number,
+): boolean
+```
+
+Check whether incoming state is numeric.
+
+Parameters:
+- `candidateState` - - Candidate state value.
+
+Returns: True when state is numeric.
 
 ### toUint32
 
@@ -384,20 +384,18 @@ Returns: Unsigned 32-bit state.
 
 ## architecture/network/deterministic/network.deterministic.lifecycle.utils.ts
 
-### clearStoredRngState
+### snapshotRNG
 
 ```ts
-clearStoredRngState(
-  internalState: DeterministicNetworkInternals,
-): void
+snapshotRNG(): RNGSnapshot
 ```
 
-Clear stored numeric RNG state.
+Capture a snapshot of the RNG state together with the network's training step.
 
 Parameters:
-- `internalState` - - Runtime network internals used by deterministic RNG pipeline.
+- `this` - - Bound Network instance.
 
-Returns: Nothing.
+Returns: Object containing current training step and 32-bit RNG state.
 
 ### restoreRNG
 
@@ -432,15 +430,17 @@ Parameters:
 
 Returns: Nothing.
 
-### snapshotRNG
+### clearStoredRngState
 
 ```ts
-snapshotRNG(): RNGSnapshot
+clearStoredRngState(
+  internalState: DeterministicNetworkInternals,
+): void
 ```
 
-Capture a snapshot of the RNG state together with the network's training step.
+Clear stored numeric RNG state.
 
 Parameters:
-- `this` - - Bound Network instance.
+- `internalState` - - Runtime network internals used by deterministic RNG pipeline.
 
-Returns: Object containing current training step and 32-bit RNG state.
+Returns: Nothing.

@@ -7,6 +7,20 @@ helpers can work with both Node-side and browser-side deterministic sources.
 
 ## simulation-shared/simulation-shared.types.ts
 
+### SharedRngLike
+
+Minimal deterministic random contract used by shared spawn helpers.
+
+The shared layer keeps its RNG contract intentionally small so the same spawn
+helpers can work with both Node-side and browser-side deterministic sources.
+
+### SharedPipeLike
+
+Common pipe shape consumed by observation helpers.
+
+This is the narrowest useful pipe contract for feature synthesis: horizontal
+position plus the vertical gap geometry seen by the bird.
+
 ### SharedDifficultyProfile
 
 Shared runtime difficulty profile used by browser and environment simulators.
@@ -24,14 +38,6 @@ These features make the policy input interpretable. The example does not feed
 raw pixels into NEAT; it feeds geometric signals such as distance to the next
 pipe, corridor clearance, and urgency of recovering to the gap center.
 
-### SharedObservationInput
-
-Input shape for observation-feature synthesis.
-
-This object is the raw world snapshot from which normalized features are
-derived. It intentionally separates world geometry from the later feature
-projection step.
-
 ### SharedObservationMemoryState
 
 Mutable temporal memory attached to one policy-controlled bird.
@@ -44,28 +50,15 @@ If you want background reading, the Wikipedia article on "frame stacking"
 captures the basic idea of giving a feed-forward policy a short motion trail
 instead of full recurrent state.
 
-### SharedPipeLike
+### SharedObservationInput
 
-Common pipe shape consumed by observation helpers.
+Input shape for observation-feature synthesis.
 
-This is the narrowest useful pipe contract for feature synthesis: horizontal
-position plus the vertical gap geometry seen by the bird.
-
-### SharedRngLike
-
-Minimal deterministic random contract used by shared spawn helpers.
-
-The shared layer keeps its RNG contract intentionally small so the same spawn
-helpers can work with both Node-side and browser-side deterministic sources.
+This object is the raw world snapshot from which normalized features are
+derived. It intentionally separates world geometry from the later feature
+projection step.
 
 ## simulation-shared/simulation-shared.errors.ts
-
-Prefix used when formatting unexpected shared-simulation errors.
-
-A stable prefix makes logs easier to scan when multiple Flappy subsystems are
-emitting diagnostics.
-
-### FLAPPY_SHARED_SIMULATION_ERROR_PREFIX
 
 Prefix used when formatting unexpected shared-simulation errors.
 
@@ -91,6 +84,13 @@ Parameters:
 
 Returns: Readable error message.
 
+### FLAPPY_SHARED_SIMULATION_ERROR_PREFIX
+
+Prefix used when formatting unexpected shared-simulation errors.
+
+A stable prefix makes logs easier to scan when multiple Flappy subsystems are
+emitting diagnostics.
+
 ## simulation-shared/simulation-shared.constants.ts
 
 Default curriculum scale used when callers do not provide one.
@@ -114,17 +114,17 @@ collapse toward zero during normalization.
 
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
-### clamp
+### clampValue
 
 ```ts
-clamp(
+clampValue(
   value: number,
   min: number,
   max: number,
 ): number
 ```
 
-Internal clamp primitive.
+Clamps a numeric value to the inclusive `[min, max]` interval.
 
 Parameters:
 - `value` - - Candidate value.
@@ -148,25 +148,6 @@ Parameters:
 
 Returns: Value clamped between 0 and 1.
 
-### clampValue
-
-```ts
-clampValue(
-  value: number,
-  min: number,
-  max: number,
-): number
-```
-
-Clamps a numeric value to the inclusive `[min, max]` interval.
-
-Parameters:
-- `value` - - Candidate value.
-- `min` - - Inclusive lower bound.
-- `max` - - Inclusive upper bound.
-
-Returns: Clamped value.
-
 ### interpolateValue
 
 ```ts
@@ -186,7 +167,46 @@ Parameters:
 
 Returns: Interpolated value.
 
+### clamp
+
+```ts
+clamp(
+  value: number,
+  min: number,
+  max: number,
+): number
+```
+
+Internal clamp primitive.
+
+Parameters:
+- `value` - - Candidate value.
+- `min` - - Inclusive lower bound.
+- `max` - - Inclusive upper bound.
+
+Returns: Clamped value.
+
 ## simulation-shared/simulation-shared.spawn.utils.ts
+
+### sampleGapCenterY
+
+```ts
+sampleGapCenterY(
+  rng: SharedRngLike,
+  maximumGapCenterYPx: number,
+): number
+```
+
+Samples a random gap center y-position.
+
+The sampled center is bounded so the resulting pipe gap always remains inside
+the visible play area.
+
+Parameters:
+- `rng` - - Deterministic RNG.
+- `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
+
+Returns: Sampled y-position.
 
 ### resolveNextSpawnGapCenterY
 
@@ -256,50 +276,7 @@ Parameters:
 
 Returns: Next spawn interval in frames.
 
-### sampleGapCenterY
-
-```ts
-sampleGapCenterY(
-  rng: SharedRngLike,
-  maximumGapCenterYPx: number,
-): number
-```
-
-Samples a random gap center y-position.
-
-The sampled center is bounded so the resulting pipe gap always remains inside
-the visible play area.
-
-Parameters:
-- `rng` - - Deterministic RNG.
-- `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
-
-Returns: Sampled y-position.
-
 ## simulation-shared/simulation-shared.memory.utils.ts
-
-### commitSharedObservationMemoryStep
-
-```ts
-commitSharedObservationMemoryStep(
-  observationMemoryState: SharedObservationMemoryState,
-  features: SharedObservationFeatures,
-  didFlap: boolean,
-): void
-```
-
-Commits one observation-action step into temporal memory.
-
-The memory update happens after the decision is made so the next step can see
-both the recent observation context and the action history that produced the
-current trajectory.
-
-Parameters:
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-- `features` - - Structured observation features used for the decision.
-- `didFlap` - - Decision taken at this step.
-
-Returns: Nothing.
 
 ### createSharedObservationMemoryState
 
@@ -316,24 +293,6 @@ Example:
 ```ts
 const memoryState = createSharedObservationMemoryState();
 ```
-
-### resolvePreviousCoreFramesWithPadding
-
-```ts
-resolvePreviousCoreFramesWithPadding(
-  observationMemoryState: SharedObservationMemoryState,
-): number[][]
-```
-
-Resolves previous core frames (newest-first) with deterministic zero padding.
-
-Zero padding keeps the policy input width stable during the first few frames
-of an episode before enough history has accumulated.
-
-Parameters:
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-
-Returns: Previous core frame list with fixed target length.
 
 ### resolveTemporalObservationVector
 
@@ -363,6 +322,47 @@ Parameters:
 - `observationMemoryState` - - Mutable temporal memory for the active bird.
 
 Returns: Ordered temporal input vector for policy activation.
+
+### commitSharedObservationMemoryStep
+
+```ts
+commitSharedObservationMemoryStep(
+  observationMemoryState: SharedObservationMemoryState,
+  features: SharedObservationFeatures,
+  didFlap: boolean,
+): void
+```
+
+Commits one observation-action step into temporal memory.
+
+The memory update happens after the decision is made so the next step can see
+both the recent observation context and the action history that produced the
+current trajectory.
+
+Parameters:
+- `observationMemoryState` - - Mutable temporal memory for the active bird.
+- `features` - - Structured observation features used for the decision.
+- `didFlap` - - Decision taken at this step.
+
+Returns: Nothing.
+
+### resolvePreviousCoreFramesWithPadding
+
+```ts
+resolvePreviousCoreFramesWithPadding(
+  observationMemoryState: SharedObservationMemoryState,
+): number[][]
+```
+
+Resolves previous core frames (newest-first) with deterministic zero padding.
+
+Zero padding keeps the policy input width stable during the first few frames
+of an episode before enough history has accumulated.
+
+Parameters:
+- `observationMemoryState` - - Mutable temporal memory for the active bird.
+
+Returns: Previous core frame list with fixed target length.
 
 ### resolveZeroCoreObservationFrame
 
@@ -437,23 +437,6 @@ Returns: Active difficulty profile.
 
 ## simulation-shared/simulation-shared.statistics.utils.ts
 
-### compareNumbersAscending
-
-```ts
-compareNumbersAscending(
-  leftValue: number,
-  rightValue: number,
-): number
-```
-
-Compares two numeric values in ascending order.
-
-Parameters:
-- `leftValue` - - Left numeric value.
-- `rightValue` - - Right numeric value.
-
-Returns: Comparator delta for `Array.prototype.toSorted`.
-
 ### computeMean
 
 ```ts
@@ -468,26 +451,6 @@ Parameters:
 - `values` - - Numeric samples.
 
 Returns: Arithmetic mean.
-
-### computePercentile
-
-```ts
-computePercentile(
-  values: readonly number[],
-  percentile: number,
-): number
-```
-
-Computes percentile value via linear interpolation between nearest ranks.
-
-Percentiles are useful in the trainer because they reveal whether strong
-performance is broad across the population or concentrated in a single outlier.
-
-Parameters:
-- `values` - - Numeric samples.
-- `percentile` - - Percentile in [0, 1].
-
-Returns: Percentile value, or `Number.NaN` when `values` is empty.
 
 ### computePopulationStandardDeviation
 
@@ -510,6 +473,43 @@ Parameters:
 
 Returns: Population standard deviation.
 
+### computePercentile
+
+```ts
+computePercentile(
+  values: readonly number[],
+  percentile: number,
+): number
+```
+
+Computes percentile value via linear interpolation between nearest ranks.
+
+Percentiles are useful in the trainer because they reveal whether strong
+performance is broad across the population or concentrated in a single outlier.
+
+Parameters:
+- `values` - - Numeric samples.
+- `percentile` - - Percentile in [0, 1].
+
+Returns: Percentile value, or `Number.NaN` when `values` is empty.
+
+### compareNumbersAscending
+
+```ts
+compareNumbersAscending(
+  leftValue: number,
+  rightValue: number,
+): number
+```
+
+Compares two numeric values in ascending order.
+
+Parameters:
+- `leftValue` - - Left numeric value.
+- `rightValue` - - Right numeric value.
+
+Returns: Comparator delta for `Array.prototype.toSorted`.
+
 ## simulation-shared/simulation-shared.observation.utils.ts
 
 Shared observation compatibility façade.
@@ -521,37 +521,36 @@ boundary. This file stays as the stable import path for existing callers.
 That split keeps the high-level import path simple while allowing the
 observation subsystem to grow into its own documented folder.
 
-### resolveCoreObservationVectorFromFeatures
+### resolveUpcomingPipes
 
 ```ts
-resolveCoreObservationVectorFromFeatures(
-  features: SharedObservationFeatures,
-): number[]
+resolveUpcomingPipes(
+  pipes: SharedPipeLike[],
+  birdCenterXPx: number,
+  birdRadiusPx: number,
+  pipeWidthPx: number,
+): [SharedPipeLike | undefined, SharedPipeLike | undefined]
 ```
 
-Resolves the compact core vector used for temporal stacking.
+Resolves the next two upcoming pipes in front of the bird.
 
-The core intentionally keeps directly observed kinematic and geometric
-channels while dropping derived one-step predictors that become redundant
-once short-term temporal memory is available.
-
-This is the representation used when the example wants a short history of raw
-observation slices. The idea is similar to frame stacking in reinforcement
-learning: a feed-forward policy can recover some sense of motion by looking
-at several recent compact frames at once.
-
-The Wikipedia article on "frame stacking" is a useful conceptual reference.
+The observation pipeline only cares about the immediate near future, because
+Flappy Bird decisions are dominated by the next gap and the transition after
+it. Looking further ahead adds noise faster than it adds useful control
+signal.
 
 Parameters:
-- `features` - - Structured observation features.
+- `pipes` - - Current pipe list.
+- `birdCenterXPx` - - Bird center x-position.
+- `birdRadiusPx` - - Bird radius.
+- `pipeWidthPx` - - Pipe width.
 
-Returns: Core per-frame vector.
+Returns: Tuple of first and second upcoming pipes.
 
 Example:
 
 ```ts
-const coreFrame = resolveCoreObservationVectorFromFeatures(features);
-observationMemoryState.previousCoreFrames.push(coreFrame);
+const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
 ```
 
 ### resolveObservationFeatures
@@ -636,34 +635,35 @@ const features = resolveObservationFeatures(input);
 const networkInput = resolveObservationVectorFromFeatures(features);
 ```
 
-### resolveUpcomingPipes
+### resolveCoreObservationVectorFromFeatures
 
 ```ts
-resolveUpcomingPipes(
-  pipes: SharedPipeLike[],
-  birdCenterXPx: number,
-  birdRadiusPx: number,
-  pipeWidthPx: number,
-): [SharedPipeLike | undefined, SharedPipeLike | undefined]
+resolveCoreObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
 ```
 
-Resolves the next two upcoming pipes in front of the bird.
+Resolves the compact core vector used for temporal stacking.
 
-The observation pipeline only cares about the immediate near future, because
-Flappy Bird decisions are dominated by the next gap and the transition after
-it. Looking further ahead adds noise faster than it adds useful control
-signal.
+The core intentionally keeps directly observed kinematic and geometric
+channels while dropping derived one-step predictors that become redundant
+once short-term temporal memory is available.
+
+This is the representation used when the example wants a short history of raw
+observation slices. The idea is similar to frame stacking in reinforcement
+learning: a feed-forward policy can recover some sense of motion by looking
+at several recent compact frames at once.
+
+The Wikipedia article on "frame stacking" is a useful conceptual reference.
 
 Parameters:
-- `pipes` - - Current pipe list.
-- `birdCenterXPx` - - Bird center x-position.
-- `birdRadiusPx` - - Bird radius.
-- `pipeWidthPx` - - Pipe width.
+- `features` - - Structured observation features.
 
-Returns: Tuple of first and second upcoming pipes.
+Returns: Core per-frame vector.
 
 Example:
 
 ```ts
-const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
+const coreFrame = resolveCoreObservationVectorFromFeatures(features);
+observationMemoryState.previousCoreFrames.push(coreFrame);
 ```

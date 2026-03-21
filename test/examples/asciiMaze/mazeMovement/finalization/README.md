@@ -20,20 +20,22 @@ pile of counters.
 
 ## mazeMovement/finalization/mazeMovement.finalization.ts
 
-### computeMazeMovementActionEntropy
+### finalizeSuccessfulMazeMovementRun
 
 ```ts
-computeMazeMovementActionEntropy(
-  directionCounts: number[],
-): number
+finalizeSuccessfulMazeMovementRun(
+  state: SimulationState,
+  maxSteps: number,
+): MazeMovementSimulationResult
 ```
 
-Compute the normalized action-entropy summary for a finished run.
+Build the finalized payload for a successful maze run.
 
 Parameters:
-- `directionCounts` - - Per-direction action counts recorded during the run.
+- `state` - - Completed simulation state for the successful run.
+- `maxSteps` - - Maximum allowed step budget for the run.
 
-Returns: Normalized entropy in the range `[0, 1]`.
+Returns: Success result with fitness, path, and diagnostic summaries.
 
 ### finalizeFailedMazeMovementRun
 
@@ -58,19 +60,17 @@ Parameters:
 
 Returns: Failure result with shaped fitness, path, and diagnostic summaries.
 
-### finalizeSuccessfulMazeMovementRun
+### computeMazeMovementActionEntropy
 
 ```ts
-finalizeSuccessfulMazeMovementRun(
-  state: SimulationState,
-  maxSteps: number,
-): MazeMovementSimulationResult
+computeMazeMovementActionEntropy(
+  directionCounts: number[],
+): number
 ```
 
-Build the finalized payload for a successful maze run.
+Compute the normalized action-entropy summary for a finished run.
 
 Parameters:
-- `state` - - Completed simulation state for the successful run.
-- `maxSteps` - - Maximum allowed step budget for the run.
+- `directionCounts` - - Per-direction action counts recorded during the run.
 
-Returns: Success result with fitness, path, and diagnostic summaries.
+Returns: Normalized entropy in the range `[0, 1]`.

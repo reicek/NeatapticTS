@@ -26,6 +26,56 @@ of leftover helpers.
 
 ## neat/helpers/neat.helpers.ts
 
+### spawnFromParent
+
+```ts
+spawnFromParent(
+  parentGenome: GenomeWithMetadata,
+  mutateCount: number,
+): Promise<GenomeWithMetadata>
+```
+
+Spawn (clone & mutate) a child genome from an existing parent genome.
+
+Read this helper as the provisional provenance path. It produces a candidate
+offspring whose lineage is already meaningful, but whose membership in the
+active population is still undecided. That split is important when a caller
+wants to preview, filter, score, or compare several children before allowing
+one of them to join the population through {@link addGenome}.
+
+Evolutionary rationale:
+- Cloning preserves the full topology and weights of the parent.
+- A configurable number of mutation passes are applied sequentially; each
+  pass may alter structure (add/remove nodes or connections) or weights.
+- Lineage annotations (`_parents`, `_depth`) enable later analytics such as
+  diversity statistics, genealogy visualization, and pruning heuristics.
+- Cache invalidation happens before the child is returned so later admission
+  or evaluation logic never observes stale derived state from the clone.
+
+Robustness philosophy: individual mutation failures are silently ignored so a
+single stochastic edge case does not derail evolutionary progress.
+
+Parameters:
+- `this` - Bound NEAT instance (inferred when used as a method).
+- `parentGenome` - Parent genome/network to clone. Must implement either
+`clone()` OR a pair of `toJSON()` / static `fromJSON()` for deep copying.
+- `mutateCount` - Number of sequential mutation operations to attempt; each
+iteration chooses a mutation method using the instance's selection
+logic. Defaults to 1 for conservative structural drift.
+
+Returns: A new genome whose score and derived caches are reset, whose lineage
+metadata references the parent, and whose final admission into the
+live population is left to the caller.
+
+Example:
+
+```ts
+// Assume `neat` is an instance implementing NeatLike and `parent` is a genome in neat.population
+const child = neat.spawnFromParent(parent, 3); // apply 3 mutation passes
+// Optionally inspect / filter the child before adding
+neat.addGenome(child, [parent._id]);
+```
+
 ### addGenome
 
 ```ts
@@ -155,53 +205,3 @@ In practice this seam protects two invariants:
 - every entering genome receives the same controller-owned metadata shape,
 - every entry path applies the same best-effort cleanup before later chapters
   read the genome.
-
-### spawnFromParent
-
-```ts
-spawnFromParent(
-  parentGenome: GenomeWithMetadata,
-  mutateCount: number,
-): Promise<GenomeWithMetadata>
-```
-
-Spawn (clone & mutate) a child genome from an existing parent genome.
-
-Read this helper as the provisional provenance path. It produces a candidate
-offspring whose lineage is already meaningful, but whose membership in the
-active population is still undecided. That split is important when a caller
-wants to preview, filter, score, or compare several children before allowing
-one of them to join the population through {@link addGenome}.
-
-Evolutionary rationale:
-- Cloning preserves the full topology and weights of the parent.
-- A configurable number of mutation passes are applied sequentially; each
-  pass may alter structure (add/remove nodes or connections) or weights.
-- Lineage annotations (`_parents`, `_depth`) enable later analytics such as
-  diversity statistics, genealogy visualization, and pruning heuristics.
-- Cache invalidation happens before the child is returned so later admission
-  or evaluation logic never observes stale derived state from the clone.
-
-Robustness philosophy: individual mutation failures are silently ignored so a
-single stochastic edge case does not derail evolutionary progress.
-
-Parameters:
-- `this` - Bound NEAT instance (inferred when used as a method).
-- `parentGenome` - Parent genome/network to clone. Must implement either
-`clone()` OR a pair of `toJSON()` / static `fromJSON()` for deep copying.
-- `mutateCount` - Number of sequential mutation operations to attempt; each
-iteration chooses a mutation method using the instance's selection
-logic. Defaults to 1 for conservative structural drift.
-
-Returns: A new genome whose score and derived caches are reset, whose lineage
-metadata references the parent, and whose final admission into the
-live population is left to the caller.
-
-Example:
-
-```ts
-// Assume `neat` is an instance implementing NeatLike and `parent` is a genome in neat.population
-const child = neat.spawnFromParent(parent, 3); // apply 3 mutation passes
-// Optionally inspect / filter the child before adding
-neat.addGenome(child, [parent._id]);
-```

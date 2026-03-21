@@ -2,18 +2,6 @@
 
 ## architecture/network/gating/network.gating.utils.types.ts
 
-### BridgingConnectionList
-
-Newly created connections that can be assigned preserved gaters.
-
-### ConnectedNodeList
-
-Predecessor or successor node collection used during bridge construction.
-
-### MutableNetworkGatingProps
-
-Network shape extension used to flag node index cache invalidation.
-
 ### NodeRemovalMutationConfig
 
 Normalized SUB_NODE mutation configuration used during node-removal rewiring.
@@ -21,6 +9,18 @@ Normalized SUB_NODE mutation configuration used during node-removal rewiring.
 ### PreservedGaters
 
 Mutable gater collection retained while removing a hidden node.
+
+### ConnectedNodeList
+
+Predecessor or successor node collection used during bridge construction.
+
+### BridgingConnectionList
+
+Newly created connections that can be assigned preserved gaters.
+
+### MutableNetworkGatingProps
+
+Network shape extension used to flag node index cache invalidation.
 
 ## architecture/network/gating/network.gating.utils.ts
 
@@ -46,6 +46,26 @@ Parameters:
 - `this` - - Bound Network instance.
 - `node` - - Candidate gater node (must belong to network).
 - `connection` - - Connection to gate.
+
+### ungate
+
+```ts
+ungate(
+  connection: default,
+): void
+```
+
+Remove gating from a connection, restoring its static weight contribution.
+
+Idempotent: If the connection is not currently gated, the call performs no structural changes
+(and optionally logs a warning). After ungating, the connection's weight will be used directly
+without modulation by a gater activation.
+
+Complexity: O(n) where n = number of gated connections (indexOf lookup) – typically small.
+
+Parameters:
+- `this` - - Bound Network instance.
+- `connection` - - Connection to ungate.
 
 ### removeNode
 
@@ -83,26 +103,6 @@ Parameters:
 - `this` - - Bound Network instance.
 - `node` - - Hidden node to remove.
 
-### ungate
-
-```ts
-ungate(
-  connection: default,
-): void
-```
-
-Remove gating from a connection, restoring its static weight contribution.
-
-Idempotent: If the connection is not currently gated, the call performs no structural changes
-(and optionally logs a warning). After ungating, the connection's weight will be used directly
-without modulation by a gater activation.
-
-Complexity: O(n) where n = number of gated connections (indexOf lookup) – typically small.
-
-Parameters:
-- `this` - - Bound Network instance.
-- `connection` - - Connection to ungate.
-
 ## architecture/network/gating/network.gating.gate.utils.ts
 
 ### assertGaterNodeBelongsToNetwork
@@ -119,6 +119,31 @@ Validate that a candidate gater node belongs to the target network.
 Parameters:
 - `network` - - Network performing the gating operation.
 - `node` - - Candidate gater node.
+
+Returns: Nothing.
+
+### isConnectionAlreadyGated
+
+```ts
+isConnectionAlreadyGated(
+  connection: default,
+): boolean
+```
+
+Determine whether a connection already has a gater node assigned.
+
+Parameters:
+- `connection` - - Connection candidate.
+
+Returns: True when a gater is already set; otherwise false.
+
+### warnConnectionAlreadyGated
+
+```ts
+warnConnectionAlreadyGated(): void
+```
+
+Emit a warning when a gate operation is skipped due to existing gating.
 
 Returns: Nothing.
 
@@ -141,21 +166,6 @@ Parameters:
 
 Returns: Nothing.
 
-### detachConnectionFromGater
-
-```ts
-detachConnectionFromGater(
-  connection: default,
-): void
-```
-
-Remove reverse gater bookkeeping from a connection's gater node.
-
-Parameters:
-- `connection` - - Connection to detach from its gater.
-
-Returns: Nothing.
-
 ### findGateIndex
 
 ```ts
@@ -173,20 +183,15 @@ Parameters:
 
 Returns: Zero-based index in the gates list, or -1 when absent.
 
-### isConnectionAlreadyGated
+### warnMissingGateConnection
 
 ```ts
-isConnectionAlreadyGated(
-  connection: default,
-): boolean
+warnMissingGateConnection(): void
 ```
 
-Determine whether a connection already has a gater node assigned.
+Emit a warning when an ungate request targets a non-tracked connection.
 
-Parameters:
-- `connection` - - Connection candidate.
-
-Returns: True when a gater is already set; otherwise false.
+Returns: Nothing.
 
 ### removeGateAtIndex
 
@@ -205,23 +210,18 @@ Parameters:
 
 Returns: Nothing.
 
-### warnConnectionAlreadyGated
+### detachConnectionFromGater
 
 ```ts
-warnConnectionAlreadyGated(): void
+detachConnectionFromGater(
+  connection: default,
+): void
 ```
 
-Emit a warning when a gate operation is skipped due to existing gating.
+Remove reverse gater bookkeeping from a connection's gater node.
 
-Returns: Nothing.
-
-### warnMissingGateConnection
-
-```ts
-warnMissingGateConnection(): void
-```
-
-Emit a warning when an ungate request targets a non-tracked connection.
+Parameters:
+- `connection` - - Connection to detach from its gater.
 
 Returns: Nothing.
 
@@ -244,24 +244,32 @@ Parameters:
 
 Returns: Index of the node in the network node list.
 
-### createBridgingConnections
+### resolveSubNodeMutationConfig
 
 ```ts
-createBridgingConnections(
-  network: default,
-  predecessorNodes: ConnectedNodeList,
-  successorNodes: ConnectedNodeList,
-): BridgingConnectionList
+resolveSubNodeMutationConfig(): NodeRemovalMutationConfig
 ```
 
-Create bridging connections from each predecessor to each successor when valid.
+Resolve the active SUB_NODE mutation configuration shape.
+
+Returns: Normalized SUB_NODE config when available; otherwise undefined.
+
+### disconnectNodeSelfLoop
+
+```ts
+disconnectNodeSelfLoop(
+  network: default,
+  node: default,
+): void
+```
+
+Disconnect a node self-loop before broader edge rewiring.
 
 Parameters:
-- `network` - - Network where bridge connections are created.
-- `predecessorNodes` - - Source nodes collected from inbound edges.
-- `successorNodes` - - Target nodes collected from outbound edges.
+- `network` - - Network being updated.
+- `node` - - Node whose self-loop should be removed.
 
-Returns: Newly created bridge connections.
+Returns: Nothing.
 
 ### disconnectInboundConnections
 
@@ -284,23 +292,6 @@ Parameters:
 
 Returns: Predecessor nodes that previously projected into the removed node.
 
-### disconnectNodeSelfLoop
-
-```ts
-disconnectNodeSelfLoop(
-  network: default,
-  node: default,
-): void
-```
-
-Disconnect a node self-loop before broader edge rewiring.
-
-Parameters:
-- `network` - - Network being updated.
-- `node` - - Node whose self-loop should be removed.
-
-Returns: Nothing.
-
 ### disconnectOutboundConnections
 
 ```ts
@@ -321,6 +312,78 @@ Parameters:
 - `subNodeConfig` - - Current SUB_NODE mutation settings.
 
 Returns: Successor nodes that were previously targeted by the removed node.
+
+### createBridgingConnections
+
+```ts
+createBridgingConnections(
+  network: default,
+  predecessorNodes: ConnectedNodeList,
+  successorNodes: ConnectedNodeList,
+): BridgingConnectionList
+```
+
+Create bridging connections from each predecessor to each successor when valid.
+
+Parameters:
+- `network` - - Network where bridge connections are created.
+- `predecessorNodes` - - Source nodes collected from inbound edges.
+- `successorNodes` - - Target nodes collected from outbound edges.
+
+Returns: Newly created bridge connections.
+
+### reassignPreservedGaters
+
+```ts
+reassignPreservedGaters(
+  network: default,
+  preservedGaters: PreservedGaters,
+  bridgingConnections: BridgingConnectionList,
+): void
+```
+
+Reattach preserved gaters to randomly selected newly-created bridge connections.
+
+Parameters:
+- `network` - - Network performing reassignment.
+- `preservedGaters` - - Gaters retained during node removal.
+- `bridgingConnections` - - Available bridge connections for reassignment.
+
+Returns: Nothing.
+
+### ungateConnectionsGatedByNode
+
+```ts
+ungateConnectionsGatedByNode(
+  network: default,
+  node: default,
+): void
+```
+
+Ungate all connections that are currently gated by the removed node.
+
+Parameters:
+- `network` - - Network performing ungate operations.
+- `node` - - Node whose gated connections should be released.
+
+Returns: Nothing.
+
+### removeNodeAtIndex
+
+```ts
+removeNodeAtIndex(
+  network: default,
+  nodeIndex: number,
+): void
+```
+
+Remove a node from the network list and mark node indexing as dirty.
+
+Parameters:
+- `network` - - Network being mutated.
+- `nodeIndex` - - Index of the node to remove.
+
+Returns: Nothing.
 
 ### preserveGaterForReassignment
 
@@ -343,67 +406,6 @@ Parameters:
 
 Returns: Nothing.
 
-### reassignPreservedGaters
-
-```ts
-reassignPreservedGaters(
-  network: default,
-  preservedGaters: PreservedGaters,
-  bridgingConnections: BridgingConnectionList,
-): void
-```
-
-Reattach preserved gaters to randomly selected newly-created bridge connections.
-
-Parameters:
-- `network` - - Network performing reassignment.
-- `preservedGaters` - - Gaters retained during node removal.
-- `bridgingConnections` - - Available bridge connections for reassignment.
-
-Returns: Nothing.
-
-### removeNodeAtIndex
-
-```ts
-removeNodeAtIndex(
-  network: default,
-  nodeIndex: number,
-): void
-```
-
-Remove a node from the network list and mark node indexing as dirty.
-
-Parameters:
-- `network` - - Network being mutated.
-- `nodeIndex` - - Index of the node to remove.
-
-Returns: Nothing.
-
-### resolveSubNodeMutationConfig
-
-```ts
-resolveSubNodeMutationConfig(): NodeRemovalMutationConfig
-```
-
-Resolve the active SUB_NODE mutation configuration shape.
-
-Returns: Normalized SUB_NODE config when available; otherwise undefined.
-
-### selectRandomIndex
-
-```ts
-selectRandomIndex(
-  length: number,
-): number
-```
-
-Select a uniformly random integer index in the range [0, length).
-
-Parameters:
-- `length` - - Upper bound (exclusive).
-
-Returns: Random zero-based index.
-
 ### shouldCreateBridgeConnection
 
 ```ts
@@ -421,19 +423,17 @@ Parameters:
 
 Returns: True when the pair is distinct and no projection already exists.
 
-### ungateConnectionsGatedByNode
+### selectRandomIndex
 
 ```ts
-ungateConnectionsGatedByNode(
-  network: default,
-  node: default,
-): void
+selectRandomIndex(
+  length: number,
+): number
 ```
 
-Ungate all connections that are currently gated by the removed node.
+Select a uniformly random integer index in the range [0, length).
 
 Parameters:
-- `network` - - Network performing ungate operations.
-- `node` - - Node whose gated connections should be released.
+- `length` - - Upper bound (exclusive).
 
-Returns: Nothing.
+Returns: Random zero-based index.

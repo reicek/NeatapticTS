@@ -19,8 +19,8 @@ history, Pareto fronts, or operator diagnostics.
 
 ```mermaid
 flowchart TD
-  Archive[Novelty archive] --> Size[getNoveltyArchiveSize()<br/>current memory size]
-  Archive --> Reset[resetNoveltyArchive()<br/>fresh novelty window]
+  Archive["Novelty archive"] --> Size["getNoveltyArchiveSize()<br/>current memory size"]
+  Archive --> Reset["resetNoveltyArchive()<br/>fresh novelty window"]
 ```
 
 ## neat/telemetry/facade/novelty/telemetry.facade.novelty.ts

@@ -1,3 +1,18 @@
+/**
+ * Replay utilities for the deterministic NEAT RNG.
+ *
+ * This file turns the small {@link RngHost} contract into one coherent
+ * lifecycle: resolve who owns randomness, create or reuse the active stream,
+ * capture a checkpoint before a risky operation, export that state when it must
+ * cross a persistence boundary, and restore it later so the next draw resumes
+ * from the same numeric position.
+ *
+ * The helpers are intentionally small and composable because different callers
+ * care about different slices of that lifecycle. The controller mostly wants a
+ * live RNG, tests often want checkpoints plus short sample runs, and export
+ * logic usually only needs the compact numeric state.
+ */
+
 import {
   RNG_DEFAULT_SEED_FALLBACK,
   RNG_NORMALIZATION_DIVISOR,
@@ -13,17 +28,21 @@ import type { RngHost } from './rng.types';
  * Return a cached RNG or create a deterministic xorshift RNG when absent.
  *
  * This is the root runtime entrypoint for randomness. The helper resolves the
- * random stream in three ordered tiers:
+ * random stream in four ordered tiers:
  *
  * 1. reuse a previously created RNG when the stream already exists,
  * 2. prefer a user-supplied RNG when the caller wants to own randomness
  *    directly,
- * 3. otherwise create a deterministic xorshift32 stream from restored state,
- *    explicit seed, or a guarded default seed.
+ * 3. otherwise rebuild the internal stream from restored numeric state or an
+ *    explicit seed,
+ * 4. if neither exists, derive a guarded default seed from lightweight host
+ *    context.
  *
  * That order matters for replay. Once state has been restored, later random
  * draws should continue from the restored numeric state rather than silently
- * reseeding the controller.
+ * reseeding the controller. It also matters for ownership: an injected RNG is a
+ * deliberate opt-out from the internal xorshift lifecycle, not just another
+ * fallback.
  *
  * @example
  * ```ts
@@ -80,6 +99,10 @@ export function getOrCreateRng(host: RngHost): () => number {
  * Unlike exporting a whole controller state, this is the smallest replay token:
  * it captures only the numeric RNG position.
  *
+ * Prefer this helper when the state is staying in memory inside the current
+ * process. Use `exportRngState()` when the same token is about to cross a wider
+ * boundary such as JSON serialization, checkpoint files, or fixture snapshots.
+ *
  * @param host - Object holding RNG state.
  * @returns The numeric RNG state or undefined when uninitialized.
  */
@@ -92,7 +115,9 @@ export function snapshotRngState(host: RngHost): number | undefined {
  *
  * Restoring state clears the cached RNG function so the next call to
  * `getOrCreateRng()` rebuilds the stream from the restored numeric position
- * instead of continuing from an older closure.
+ * instead of continuing from an older closure. This separation is deliberate:
+ * the restore step changes replay state immediately, while stream recreation is
+ * deferred until a caller actually needs the next random draw.
  *
  * @example
  * ```ts
@@ -134,6 +159,10 @@ export function importRngState(
  * JSON export, checkpointing, or test snapshots. The returned number is the
  * compact controller-facing representation of the current random stream.
  *
+ * Unlike `snapshotRngState()`, this helper is named for the portability use
+ * case: the returned token is meant to leave the immediate call site and later
+ * come back through `restoreRngState()` or `importRngState()`.
+ *
  * @param host - Object holding RNG state.
  * @returns The numeric RNG state or undefined when not set.
  */
@@ -148,6 +177,10 @@ export function exportRngState(host: RngHost): number | undefined {
  * deterministic stream observable without forcing every caller to hand-roll its
  * own sampling loop, which is useful when comparing restored-state replay with
  * fresh execution.
+ *
+ * Sampling advances the same live stream used by the controller. Callers that
+ * want a "peek" rather than a committed advance should snapshot first, sample,
+ * then restore the saved state.
  *
  * @example
  * ```ts

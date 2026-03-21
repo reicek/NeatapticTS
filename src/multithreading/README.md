@@ -311,28 +311,30 @@ ActivationFn(
 
 Shared types for multithreading helpers and test workers.
 
-### SerializableNetwork
-
 ### SerializedSample
 
-### TestWorkerConstructor
+### SerializableNetwork
 
 ### TestWorkerInstance
 
+### TestWorkerConstructor
+
 ## multithreading/multi.utils.ts
 
-### absoluteActivation
+### serializeDataSet
 
 ```ts
-absoluteActivation(
-  value: number,
-): number
+serializeDataSet(
+  dataSet: { input: number[]; output: number[]; }[],
+): number[]
 ```
 
-Parameters:
-- `value` - - Input value.
+Serializes a dataset into a flat numeric array.
 
-Returns: Absolute activation.
+Parameters:
+- `dataSet` - - Collection of samples with input and output arrays.
+
+Returns: Flat serialized representation [inputCount, outputCount, ...samples].
 
 ### activateSerializedNetwork
 
@@ -357,9 +359,124 @@ Parameters:
 
 Returns: Activated outputs.
 
-### ACTIVATION_FUNCTIONS
+### deserializeDataSet
 
-Returns: Activation functions ordered for serialization compatibility.
+```ts
+deserializeDataSet(
+  serializedSet: number[],
+): SerializedSample[]
+```
+
+Deserializes a dataset from its flat representation.
+
+Parameters:
+- `serializedSet` - - Flat serialized dataset array.
+
+Returns: Array of input/output sample pairs.
+
+### logisticActivation
+
+```ts
+logisticActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Logistic activation.
+
+### tanhActivation
+
+```ts
+tanhActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Hyperbolic tangent activation.
+
+### identityActivation
+
+```ts
+identityActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Identity activation.
+
+### stepActivation
+
+```ts
+stepActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Step activation.
+
+### reluActivation
+
+```ts
+reluActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - - Input value.
+
+Returns: ReLU activation.
+
+### softsignActivation
+
+```ts
+softsignActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Softsign activation.
+
+### sinusoidActivation
+
+```ts
+sinusoidActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Sinusoid activation.
+
+### gaussianActivation
+
+```ts
+gaussianActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - - Input value.
+
+Returns: Gaussian activation.
 
 ### bentIdentityActivation
 
@@ -400,34 +517,6 @@ Parameters:
 
 Returns: Bipolar sigmoid activation.
 
-### deserializeDataSet
-
-```ts
-deserializeDataSet(
-  serializedSet: number[],
-): SerializedSample[]
-```
-
-Deserializes a dataset from its flat representation.
-
-Parameters:
-- `serializedSet` - - Flat serialized dataset array.
-
-Returns: Array of input/output sample pairs.
-
-### gaussianActivation
-
-```ts
-gaussianActivation(
-  value: number,
-): number
-```
-
-Parameters:
-- `value` - - Input value.
-
-Returns: Gaussian activation.
-
 ### hardTanhActivation
 
 ```ts
@@ -441,10 +530,10 @@ Parameters:
 
 Returns: Hard tanh activation.
 
-### identityActivation
+### absoluteActivation
 
 ```ts
-identityActivation(
+absoluteActivation(
   value: number,
 ): number
 ```
@@ -452,7 +541,7 @@ identityActivation(
 Parameters:
 - `value` - - Input value.
 
-Returns: Identity activation.
+Returns: Absolute activation.
 
 ### inverseActivation
 
@@ -467,32 +556,6 @@ Parameters:
 
 Returns: Inverse activation.
 
-### logisticActivation
-
-```ts
-logisticActivation(
-  value: number,
-): number
-```
-
-Parameters:
-- `value` - - Input value.
-
-Returns: Logistic activation.
-
-### reluActivation
-
-```ts
-reluActivation(
-  value: number,
-): number
-```
-
-Parameters:
-- `value` - - Input value.
-
-Returns: ReLU activation.
-
 ### seluActivation
 
 ```ts
@@ -506,34 +569,6 @@ Parameters:
 
 Returns: SELU activation.
 
-### serializeDataSet
-
-```ts
-serializeDataSet(
-  dataSet: { input: number[]; output: number[]; }[],
-): number[]
-```
-
-Serializes a dataset into a flat numeric array.
-
-Parameters:
-- `dataSet` - - Collection of samples with input and output arrays.
-
-Returns: Flat serialized representation [inputCount, outputCount, ...samples].
-
-### sinusoidActivation
-
-```ts
-sinusoidActivation(
-  value: number,
-): number
-```
-
-Parameters:
-- `value` - - Input value.
-
-Returns: Sinusoid activation.
-
 ### softplusActivation
 
 ```ts
@@ -546,45 +581,6 @@ Parameters:
 - `value` - - Input value.
 
 Returns: Softplus activation.
-
-### softsignActivation
-
-```ts
-softsignActivation(
-  value: number,
-): number
-```
-
-Parameters:
-- `value` - - Input value.
-
-Returns: Softsign activation.
-
-### stepActivation
-
-```ts
-stepActivation(
-  value: number,
-): number
-```
-
-Parameters:
-- `value` - - Input value.
-
-Returns: Step activation.
-
-### tanhActivation
-
-```ts
-tanhActivation(
-  value: number,
-): number
-```
-
-Parameters:
-- `value` - - Input value.
-
-Returns: Hyperbolic tangent activation.
 
 ### testSerializedSet
 
@@ -610,3 +606,7 @@ Parameters:
 - `activationFunctions` - - Activation functions to apply.
 
 Returns: Average cost or NaN when invalid input.
+
+### ACTIVATION_FUNCTIONS
+
+Returns: Activation functions ordered for serialization compatibility.

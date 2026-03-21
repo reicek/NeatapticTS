@@ -39,6 +39,31 @@ public read flow and the meaning of the resulting summary.
 
 ## neat/diversity/diversity.ts
 
+### structuralEntropy
+
+```ts
+structuralEntropy(
+  graph: default,
+): number
+```
+
+Compute the Shannon-style entropy of a network's out-degree distribution.
+
+Structural entropy here is a lightweight topology fingerprint: it measures
+how evenly outgoing connections are distributed across nodes. It does not
+inspect weights or recurrent dynamics, so it works well as a cheap structural
+diversity signal.
+
+Use this when you want to compare the shape of individual networks or add one
+more structural signal beside raw node and connection counts. Higher values
+generally mean connectivity is spread across more nodes instead of being
+concentrated into a few hubs.
+
+Parameters:
+- `graph` - - Network to summarize structurally.
+
+Returns: Shannon-style entropy of the out-degree distribution.
+
 ### computeDiversityStats
 
 ```ts
@@ -85,15 +110,18 @@ if (diversity) {
 
 Diversity statistics returned by sampled population analysis.
 
-Treat this as a compact population-health snapshot rather than as a single
-scalar "diversity score." Each field captures one aggregate lens on the
-current population: lineage spread, structural size, compatibility
-separation, or entropy.
+Treat this as a compact population-health report rather than as a single
+scalar "diversity score." The fields are grouped deliberately:
 
-Telemetry consumers usually compare these values across generations to answer
-practical questions such as whether speciation is preserving spread, whether
-topology growth is accelerating, or whether the run is collapsing toward a
-narrow family of similar structures.
+- lineage fields show whether ancestry depth is spreading or collapsing,
+- node and connection fields show average structural size and unevenness,
+- compatibility sampling estimates how genetically separated sampled peers
+  remain,
+- entropy adds a shape signal that raw size counts cannot capture.
+
+In practice, telemetry consumers compare this object across generations to
+see whether mutation, speciation, and pruning are still producing meaningful
+variation without paying for exhaustive all-pairs analysis.
 
 ### MAX_COMPATIBILITY_SAMPLE
 
@@ -111,28 +139,3 @@ Lineage spread is useful for telemetry, but full all-pairs ancestry distance
 becomes expensive quickly. This cap keeps the lineage side of the report
 bounded while still surfacing whether ancestry depth is bunching up or
 staying distributed.
-
-### structuralEntropy
-
-```ts
-structuralEntropy(
-  graph: default,
-): number
-```
-
-Compute the Shannon-style entropy of a network's out-degree distribution.
-
-Structural entropy here is a lightweight topology fingerprint: it measures
-how evenly outgoing connections are distributed across nodes. It does not
-inspect weights or recurrent dynamics, so it works well as a cheap structural
-diversity signal.
-
-Use this when you want to compare the shape of individual networks or add one
-more structural signal beside raw node and connection counts. Higher values
-generally mean connectivity is spread across more nodes instead of being
-concentrated into a few hubs.
-
-Parameters:
-- `graph` - - Network to summarize structurally.
-
-Returns: Shannon-style entropy of the out-degree distribution.

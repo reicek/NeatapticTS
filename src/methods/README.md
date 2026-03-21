@@ -414,13 +414,6 @@ Each method accepts an input value `x` and an optional boolean `derivate`.
 If `derivate` is true, the method returns the derivative of the activation function
 with respect to `x`; otherwise, it returns the activation function's output.
 
-### crossover
-
-Crossover methods for genetic algorithms.
-
-These methods implement the crossover strategies described in the Instinct algorithm,
-enabling the creation of offspring with unique combinations of parent traits.
-
 ### gating
 
 Defines different methods for gating connections between neurons or groups of neurons.
@@ -431,10 +424,6 @@ enabling more complex computations, memory functions, and adaptive behaviors.
 These mechanisms are inspired by biological neural processes where certain neurons
 can modulate the activity of others. Gating is particularly crucial in recurrent
 neural networks (RNNs) for managing information persistence over time.
-
-### groupConnection
-
-Specifies the manner in which two groups of nodes are connected.
 
 ### mutation
 
@@ -490,6 +479,17 @@ speed and the diversity of the population. High selection pressure (strongly
 favoring the fittest) can lead to faster convergence but may result in premature
 stagnation at suboptimal solutions. Conversely, lower pressure maintains diversity
 but can slow down the search process.
+
+### crossover
+
+Crossover methods for genetic algorithms.
+
+These methods implement the crossover strategies described in the Instinct algorithm,
+enabling the creation of offspring with unique combinations of parent traits.
+
+### groupConnection
+
+Specifies the manner in which two groups of nodes are connected.
 
 ### default
 
@@ -935,57 +935,6 @@ Specifies the manner in which two groups of nodes are connected.
 
 ## methods/cost.utils.ts
 
-### BINARY_CLASSIFICATION_THRESHOLD
-
-Threshold for binarizing probabilities into class predictions.
-
-### clampProbability
-
-```ts
-clampProbability(
-  probability: number,
-): number
-```
-
-Clamps a probability into the inclusive bounds defined by PROBABILITY_LOWER_BOUND and PROBABILITY_UPPER_BOUND.
-
-Parameters:
-- `probability` - - Raw probability value to bound.
-
-Returns: Probability constrained to the numeric stability range.
-
-### classifyBinary
-
-```ts
-classifyBinary(
-  probability: number,
-): number
-```
-
-Converts a probability into a binary class label using the configured threshold.
-
-Parameters:
-- `probability` - - Probability to classify.
-
-Returns: POSITIVE_CLASS_LABEL when above or equal to threshold; otherwise NEGATIVE_CLASS_LABEL.
-
-### computeBinaryError
-
-```ts
-computeBinaryError(
-  targets: number[],
-  outputs: number[],
-): number
-```
-
-Computes binary classification error rate.
-
-Parameters:
-- `targets` - - Target labels (0 or 1).
-- `outputs` - - Predicted probabilities.
-
-Returns: Proportion of misclassified samples.
-
 ### computeCrossEntropy
 
 ```ts
@@ -1003,62 +952,56 @@ Parameters:
 
 Returns: Mean cross-entropy error across all samples.
 
-### computeFocalLoss
+### computeSoftmaxCrossEntropy
 
 ```ts
-computeFocalLoss(
+computeSoftmaxCrossEntropy(
   targets: number[],
   outputs: number[],
-  gamma: number,
-  alpha: number,
 ): number
 ```
 
-Computes focal loss for imbalanced classification tasks.
+Computes the softmax cross entropy given targets and raw score outputs.
 
 Parameters:
-- `targets` - - Target labels (0 or 1) or soft labels.
+- `targets` - - Desired target probabilities that should sum to 1 (will be normalized if not).
+- `outputs` - - Raw logits or scores for each class.
+
+Returns: Total (non-averaged) softmax cross-entropy loss.
+
+### computeMeanSquaredError
+
+```ts
+computeMeanSquaredError(
+  targets: number[],
+  outputs: number[],
+): number
+```
+
+Computes mean squared error between targets and outputs.
+
+Parameters:
+- `targets` - - Desired target values.
+- `outputs` - - Model outputs.
+
+Returns: Mean squared error.
+
+### computeBinaryError
+
+```ts
+computeBinaryError(
+  targets: number[],
+  outputs: number[],
+): number
+```
+
+Computes binary classification error rate.
+
+Parameters:
+- `targets` - - Target labels (0 or 1).
 - `outputs` - - Predicted probabilities.
-- `gamma` - - Focusing parameter controlling hard example emphasis.
-- `alpha` - - Balancing parameter for class weighting.
 
-Returns: Mean focal loss.
-
-### computeHingeLoss
-
-```ts
-computeHingeLoss(
-  targets: number[],
-  outputs: number[],
-): number
-```
-
-Computes hinge loss for margin-based classification.
-
-Parameters:
-- `targets` - - Target labels encoded as -1 or 1.
-- `outputs` - - Model outputs (raw scores).
-
-Returns: Mean hinge loss.
-
-### computeLabelSmoothingLoss
-
-```ts
-computeLabelSmoothingLoss(
-  targets: number[],
-  outputs: number[],
-  smoothing: number,
-): number
-```
-
-Computes cross entropy with label smoothing applied to targets.
-
-Parameters:
-- `targets` - - Target labels (0 or 1) or soft labels.
-- `outputs` - - Predicted probabilities.
-- `smoothing` - - Smoothing factor between 0 and 1.
-
-Returns: Mean cross-entropy loss with smoothed targets.
+Returns: Proportion of misclassified samples.
 
 ### computeMeanAbsoluteError
 
@@ -1094,23 +1037,6 @@ Parameters:
 
 Returns: Mean absolute percentage error (fractional form).
 
-### computeMeanSquaredError
-
-```ts
-computeMeanSquaredError(
-  targets: number[],
-  outputs: number[],
-): number
-```
-
-Computes mean squared error between targets and outputs.
-
-Parameters:
-- `targets` - - Desired target values.
-- `outputs` - - Model outputs.
-
-Returns: Mean squared error.
-
 ### computeMeanSquaredLogarithmicError
 
 ```ts
@@ -1128,22 +1054,117 @@ Parameters:
 
 Returns: Mean squared logarithmic error.
 
-### computeSoftmaxCrossEntropy
+### computeHingeLoss
 
 ```ts
-computeSoftmaxCrossEntropy(
+computeHingeLoss(
   targets: number[],
   outputs: number[],
 ): number
 ```
 
-Computes the softmax cross entropy given targets and raw score outputs.
+Computes hinge loss for margin-based classification.
 
 Parameters:
-- `targets` - - Desired target probabilities that should sum to 1 (will be normalized if not).
-- `outputs` - - Raw logits or scores for each class.
+- `targets` - - Target labels encoded as -1 or 1.
+- `outputs` - - Model outputs (raw scores).
 
-Returns: Total (non-averaged) softmax cross-entropy loss.
+Returns: Mean hinge loss.
+
+### computeFocalLoss
+
+```ts
+computeFocalLoss(
+  targets: number[],
+  outputs: number[],
+  gamma: number,
+  alpha: number,
+): number
+```
+
+Computes focal loss for imbalanced classification tasks.
+
+Parameters:
+- `targets` - - Target labels (0 or 1) or soft labels.
+- `outputs` - - Predicted probabilities.
+- `gamma` - - Focusing parameter controlling hard example emphasis.
+- `alpha` - - Balancing parameter for class weighting.
+
+Returns: Mean focal loss.
+
+### computeLabelSmoothingLoss
+
+```ts
+computeLabelSmoothingLoss(
+  targets: number[],
+  outputs: number[],
+  smoothing: number,
+): number
+```
+
+Computes cross entropy with label smoothing applied to targets.
+
+Parameters:
+- `targets` - - Target labels (0 or 1) or soft labels.
+- `outputs` - - Predicted probabilities.
+- `smoothing` - - Smoothing factor between 0 and 1.
+
+Returns: Mean cross-entropy loss with smoothed targets.
+
+### LENGTH_MISMATCH_MESSAGE
+
+Error message thrown when target and output arrays differ in length.
+
+### POSITIVE_CLASS_LABEL
+
+Canonical positive label used by binary-oriented helpers.
+
+### NEGATIVE_CLASS_LABEL
+
+Canonical negative label used by binary-oriented helpers.
+
+### BINARY_CLASSIFICATION_THRESHOLD
+
+Threshold for binarizing probabilities into class predictions.
+
+### HINGE_MARGIN
+
+Margin enforced by hinge loss.
+
+### DEFAULT_FOCAL_GAMMA
+
+Default focusing parameter for focal loss.
+
+### DEFAULT_FOCAL_ALPHA
+
+Default class balancing parameter for focal loss.
+
+### DEFAULT_LABEL_SMOOTHING
+
+Default smoothing factor for label smoothing.
+
+### LABEL_SMOOTHING_BASELINE
+
+Baseline probability used when smoothing targets.
+
+### SOFTMAX_SUM_GUARD
+
+Lower bound for softmax denominator to avoid division by zero.
+
+### clampProbability
+
+```ts
+clampProbability(
+  probability: number,
+): number
+```
+
+Clamps a probability into the inclusive bounds defined by PROBABILITY_LOWER_BOUND and PROBABILITY_UPPER_BOUND.
+
+Parameters:
+- `probability` - - Raw probability value to bound.
+
+Returns: Probability constrained to the numeric stability range.
 
 ### crossEntropyTerm
 
@@ -1162,34 +1183,6 @@ Parameters:
 
 Returns: Cross-entropy term for the sample.
 
-### DEFAULT_FOCAL_ALPHA
-
-Default class balancing parameter for focal loss.
-
-### DEFAULT_FOCAL_GAMMA
-
-Default focusing parameter for focal loss.
-
-### DEFAULT_LABEL_SMOOTHING
-
-Default smoothing factor for label smoothing.
-
-### HINGE_MARGIN
-
-Margin enforced by hinge loss.
-
-### LABEL_SMOOTHING_BASELINE
-
-Baseline probability used when smoothing targets.
-
-### LENGTH_MISMATCH_MESSAGE
-
-Error message thrown when target and output arrays differ in length.
-
-### NEGATIVE_CLASS_LABEL
-
-Canonical negative label used by binary-oriented helpers.
-
 ### normalizeTargets
 
 ```ts
@@ -1205,9 +1198,35 @@ Parameters:
 
 Returns: Normalized target probabilities; returns a shallow copy when the sum is zero.
 
-### POSITIVE_CLASS_LABEL
+### stableSoftmax
 
-Canonical positive label used by binary-oriented helpers.
+```ts
+stableSoftmax(
+  outputs: number[],
+): number[]
+```
+
+Computes a numerically stable softmax from raw output scores.
+
+Parameters:
+- `outputs` - - Raw logits or scores.
+
+Returns: Softmax probabilities corresponding to the inputs.
+
+### classifyBinary
+
+```ts
+classifyBinary(
+  probability: number,
+): number
+```
+
+Converts a probability into a binary class label using the configured threshold.
+
+Parameters:
+- `probability` - - Probability to classify.
+
+Returns: POSITIVE_CLASS_LABEL when above or equal to threshold; otherwise NEGATIVE_CLASS_LABEL.
 
 ### smoothTarget
 
@@ -1226,29 +1245,69 @@ Parameters:
 
 Returns: Smoothed target probability.
 
-### SOFTMAX_SUM_GUARD
-
-Lower bound for softmax denominator to avoid division by zero.
-
-### stableSoftmax
-
-```ts
-stableSoftmax(
-  outputs: number[],
-): number[]
-```
-
-Computes a numerically stable softmax from raw output scores.
-
-Parameters:
-- `outputs` - - Raw logits or scores.
-
-Returns: Softmax probabilities corresponding to the inputs.
-
 ## methods/rate.utils.ts
 
 Learning rate schedule signature that maps a base rate and iteration index to a rate value.
 Useful for any stateless schedule strategy.
+
+### createFixedRateSchedule
+
+```ts
+createFixedRateSchedule(): RateSchedule
+```
+
+Returns a schedule that always yields the base learning rate.
+
+Returns: A learning rate schedule that ignores iteration and returns baseRate.
+
+### createStepRateSchedule
+
+```ts
+createStepRateSchedule(
+  decayFactor: number,
+  decayStepSize: number,
+): RateSchedule
+```
+
+Returns a step decay learning rate schedule.
+
+Parameters:
+- `decayFactor` - Multiplicative decay applied at each decay step.
+- `decayStepSize` - Number of iterations before applying another decay step.
+
+Returns: A learning rate schedule implementing step decay.
+
+### createExponentialRateSchedule
+
+```ts
+createExponentialRateSchedule(
+  decayFactor: number,
+): RateSchedule
+```
+
+Returns an exponential decay learning rate schedule.
+
+Parameters:
+- `decayFactor` - Multiplicative decay applied every iteration.
+
+Returns: A learning rate schedule implementing exponential decay.
+
+### createInverseRateSchedule
+
+```ts
+createInverseRateSchedule(
+  decayFactor: number,
+  decayPower: number,
+): RateSchedule
+```
+
+Returns an inverse decay learning rate schedule.
+
+Parameters:
+- `decayFactor` - Decay factor controlling the decay rate.
+- `decayPower` - Exponent that shapes the decay curve.
+
+Returns: A learning rate schedule implementing inverse decay.
 
 ### createCosineAnnealingRateSchedule
 
@@ -1286,48 +1345,6 @@ Parameters:
 
 Returns: A learning rate schedule implementing SGDR-style warm restarts.
 
-### createExponentialRateSchedule
-
-```ts
-createExponentialRateSchedule(
-  decayFactor: number,
-): RateSchedule
-```
-
-Returns an exponential decay learning rate schedule.
-
-Parameters:
-- `decayFactor` - Multiplicative decay applied every iteration.
-
-Returns: A learning rate schedule implementing exponential decay.
-
-### createFixedRateSchedule
-
-```ts
-createFixedRateSchedule(): RateSchedule
-```
-
-Returns a schedule that always yields the base learning rate.
-
-Returns: A learning rate schedule that ignores iteration and returns baseRate.
-
-### createInverseRateSchedule
-
-```ts
-createInverseRateSchedule(
-  decayFactor: number,
-  decayPower: number,
-): RateSchedule
-```
-
-Returns an inverse decay learning rate schedule.
-
-Parameters:
-- `decayFactor` - Decay factor controlling the decay rate.
-- `decayPower` - Exponent that shapes the decay curve.
-
-Returns: A learning rate schedule implementing inverse decay.
-
 ### createLinearWarmupDecaySchedule
 
 ```ts
@@ -1362,87 +1379,6 @@ Parameters:
 
 Returns: A stateful schedule that reacts to lack of improvement.
 
-### createStepRateSchedule
-
-```ts
-createStepRateSchedule(
-  decayFactor: number,
-  decayStepSize: number,
-): RateSchedule
-```
-
-Returns a step decay learning rate schedule.
-
-Parameters:
-- `decayFactor` - Multiplicative decay applied at each decay step.
-- `decayStepSize` - Number of iterations before applying another decay step.
-
-Returns: A learning rate schedule implementing step decay.
-
-### DEFAULT_COSINE_PERIOD
-
-Length of one cosine annealing cycle in iterations.
-
-### DEFAULT_DECAY_STEP_SIZE
-
-Step decay interval in iterations; larger values mean fewer decay events.
-
-### DEFAULT_EXPONENTIAL_DECAY_FACTOR
-
-Per-iteration exponential decay factor; values just below 1 create gentle decay.
-
-### DEFAULT_INITIAL_PERIOD
-
-Initial period length for cosine-with-restarts before growth is applied.
-
-### DEFAULT_INVERSE_DECAY_FACTOR
-
-Inverse decay multiplier; higher values push the denominator up faster and shrink the rate sooner.
-
-### DEFAULT_INVERSE_POWER
-
-Inverse decay exponent; 1 makes decay linear in iteration, 2 makes it quadratic.
-
-### DEFAULT_LINEAR_END_RATE
-
-Target rate after warmup-decay finishes; often zero or a small floor.
-
-### DEFAULT_MINIMUM_RATE
-
-Floor learning rate for cosine schedules; keeps the rate from reaching zero.
-
-### DEFAULT_PERIOD_GROWTH_MULTIPLIER
-
-Multiplier applied to the cosine cycle length after each restart (>= 1).
-
-### DEFAULT_REDUCE_ON_PLATEAU_COOLDOWN
-
-Cooldown iterations after a reduction to avoid rapid successive cuts.
-
-### DEFAULT_REDUCE_ON_PLATEAU_FACTOR
-
-Reduce-on-plateau shrink factor; halving (0.5) is a common conservative step.
-
-### DEFAULT_REDUCE_ON_PLATEAU_MIN_DELTA
-
-Minimum required improvement to count as progress when monitoring error.
-
-### DEFAULT_REDUCE_ON_PLATEAU_MIN_RATE
-
-Minimum rate allowed during reduce-on-plateau adjustments.
-
-### DEFAULT_REDUCE_ON_PLATEAU_PATIENCE
-
-Patience for reduce-on-plateau in iterations before triggering a cut.
-
-### DEFAULT_STEP_DECAY_FACTOR
-
-Step decay multiplier (close to 1 slows decay; smaller drops faster).
-
-### DEFAULT_WARMUP_RATIO
-
-Default warmup share of the schedule; 0.1 means 10% of total steps.
-
 ### RateSchedule
 
 ```ts
@@ -1468,43 +1404,209 @@ ReduceOnPlateauSchedule(
 Stateful ReduceLROnPlateau schedule signature that can react to a loss signal.
 The third argument is optional and only needed when monitoring validation error.
 
+### DEFAULT_STEP_DECAY_FACTOR
+
+Step decay multiplier (close to 1 slows decay; smaller drops faster).
+
+### DEFAULT_DECAY_STEP_SIZE
+
+Step decay interval in iterations; larger values mean fewer decay events.
+
+### DEFAULT_EXPONENTIAL_DECAY_FACTOR
+
+Per-iteration exponential decay factor; values just below 1 create gentle decay.
+
+### DEFAULT_INVERSE_DECAY_FACTOR
+
+Inverse decay multiplier; higher values push the denominator up faster and shrink the rate sooner.
+
+### DEFAULT_INVERSE_POWER
+
+Inverse decay exponent; 1 makes decay linear in iteration, 2 makes it quadratic.
+
+### DEFAULT_COSINE_PERIOD
+
+Length of one cosine annealing cycle in iterations.
+
+### DEFAULT_MINIMUM_RATE
+
+Floor learning rate for cosine schedules; keeps the rate from reaching zero.
+
+### DEFAULT_INITIAL_PERIOD
+
+Initial period length for cosine-with-restarts before growth is applied.
+
+### DEFAULT_PERIOD_GROWTH_MULTIPLIER
+
+Multiplier applied to the cosine cycle length after each restart (>= 1).
+
+### DEFAULT_LINEAR_END_RATE
+
+Target rate after warmup-decay finishes; often zero or a small floor.
+
+### DEFAULT_WARMUP_RATIO
+
+Default warmup share of the schedule; 0.1 means 10% of total steps.
+
+### DEFAULT_REDUCE_ON_PLATEAU_FACTOR
+
+Reduce-on-plateau shrink factor; halving (0.5) is a common conservative step.
+
+### DEFAULT_REDUCE_ON_PLATEAU_PATIENCE
+
+Patience for reduce-on-plateau in iterations before triggering a cut.
+
+### DEFAULT_REDUCE_ON_PLATEAU_MIN_DELTA
+
+Minimum required improvement to count as progress when monitoring error.
+
+### DEFAULT_REDUCE_ON_PLATEAU_COOLDOWN
+
+Cooldown iterations after a reduction to avoid rapid successive cuts.
+
+### DEFAULT_REDUCE_ON_PLATEAU_MIN_RATE
+
+Minimum rate allowed during reduce-on-plateau adjustments.
+
 ## methods/activation.utils.ts
 
 Activation function implementation type.
 
-### absoluteActivation
+### logisticActivation
 
 ```ts
-absoluteActivation(
+logisticActivation(
   inputValue: number,
   shouldComputeDerivative: boolean,
 ): number
 ```
 
-Absolute activation implementation.
+Logistic (sigmoid) activation implementation.
 
 Parameters:
 - `inputValue` - - Input to evaluate.
 - `shouldComputeDerivative` - - Whether to compute the derivative.
 
-Returns: Absolute output or derivative.
+Returns: Logistic output or derivative.
 
-### ActivationFunction
+### tanhActivation
 
 ```ts
-ActivationFunction(
+tanhActivation(
   inputValue: number,
-  shouldComputeDerivative: boolean | undefined,
+  shouldComputeDerivative: boolean,
 ): number
 ```
 
-Activation function implementation type.
+Hyperbolic tangent activation implementation.
 
 Parameters:
-- `inputValue` - - Input to the activation function.
-- `shouldComputeDerivative` - - Whether to compute the derivative instead of the value.
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
 
-Returns: Activation output or derivative at the input.
+Returns: Tanh output or derivative.
+
+### identityActivation
+
+```ts
+identityActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
+
+Identity activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Identity output or derivative.
+
+### stepActivation
+
+```ts
+stepActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
+
+Step activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Step output or derivative.
+
+### reluActivation
+
+```ts
+reluActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
+
+Rectified Linear Unit (ReLU) activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: ReLU output or derivative.
+
+### softsignActivation
+
+```ts
+softsignActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
+
+Softsign activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Softsign output or derivative.
+
+### sinusoidActivation
+
+```ts
+sinusoidActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
+
+Sinusoid activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Sinusoid output or derivative.
+
+### gaussianActivation
+
+```ts
+gaussianActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
+
+Gaussian activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Gaussian output or derivative.
 
 ### bentIdentityActivation
 
@@ -1557,40 +1659,6 @@ Parameters:
 
 Returns: Bipolar sigmoid output or derivative.
 
-### gaussianActivation
-
-```ts
-gaussianActivation(
-  inputValue: number,
-  shouldComputeDerivative: boolean,
-): number
-```
-
-Gaussian activation implementation.
-
-Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
-
-Returns: Gaussian output or derivative.
-
-### geluActivation
-
-```ts
-geluActivation(
-  inputValue: number,
-  shouldComputeDerivative: boolean,
-): number
-```
-
-Gaussian Error Linear Unit (GELU) activation implementation.
-
-Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
-
-Returns: GELU output or derivative.
-
 ### hardTanhActivation
 
 ```ts
@@ -1608,22 +1676,22 @@ Parameters:
 
 Returns: Hard tanh output or derivative.
 
-### identityActivation
+### absoluteActivation
 
 ```ts
-identityActivation(
+absoluteActivation(
   inputValue: number,
   shouldComputeDerivative: boolean,
 ): number
 ```
 
-Identity activation implementation.
+Absolute activation implementation.
 
 Parameters:
 - `inputValue` - - Input to evaluate.
 - `shouldComputeDerivative` - - Whether to compute the derivative.
 
-Returns: Identity output or derivative.
+Returns: Absolute output or derivative.
 
 ### inverseActivation
 
@@ -1642,57 +1710,6 @@ Parameters:
 
 Returns: Inverse output or derivative.
 
-### logisticActivation
-
-```ts
-logisticActivation(
-  inputValue: number,
-  shouldComputeDerivative: boolean,
-): number
-```
-
-Logistic (sigmoid) activation implementation.
-
-Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
-
-Returns: Logistic output or derivative.
-
-### mishActivation
-
-```ts
-mishActivation(
-  inputValue: number,
-  shouldComputeDerivative: boolean,
-): number
-```
-
-Mish activation implementation.
-
-Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
-
-Returns: Mish output or derivative.
-
-### reluActivation
-
-```ts
-reluActivation(
-  inputValue: number,
-  shouldComputeDerivative: boolean,
-): number
-```
-
-Rectified Linear Unit (ReLU) activation implementation.
-
-Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
-
-Returns: ReLU output or derivative.
-
 ### seluActivation
 
 ```ts
@@ -1709,40 +1726,6 @@ Parameters:
 - `shouldComputeDerivative` - - Whether to compute the derivative.
 
 Returns: SELU output or derivative.
-
-### sigmoidActivation
-
-```ts
-sigmoidActivation(
-  inputValue: number,
-  shouldComputeDerivative: boolean,
-): number
-```
-
-Sigmoid alias activation implementation.
-
-Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
-
-Returns: Sigmoid output or derivative.
-
-### sinusoidActivation
-
-```ts
-sinusoidActivation(
-  inputValue: number,
-  shouldComputeDerivative: boolean,
-): number
-```
-
-Sinusoid activation implementation.
-
-Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
-
-Returns: Sinusoid output or derivative.
 
 ### softplusActivation
 
@@ -1761,40 +1744,6 @@ Parameters:
 
 Returns: Softplus output or derivative.
 
-### softsignActivation
-
-```ts
-softsignActivation(
-  inputValue: number,
-  shouldComputeDerivative: boolean,
-): number
-```
-
-Softsign activation implementation.
-
-Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
-
-Returns: Softsign output or derivative.
-
-### stepActivation
-
-```ts
-stepActivation(
-  inputValue: number,
-  shouldComputeDerivative: boolean,
-): number
-```
-
-Step activation implementation.
-
-Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
-
-Returns: Step output or derivative.
-
 ### swishActivation
 
 ```ts
@@ -1812,19 +1761,70 @@ Parameters:
 
 Returns: Swish output or derivative.
 
-### tanhActivation
+### geluActivation
 
 ```ts
-tanhActivation(
+geluActivation(
   inputValue: number,
   shouldComputeDerivative: boolean,
 ): number
 ```
 
-Hyperbolic tangent activation implementation.
+Gaussian Error Linear Unit (GELU) activation implementation.
 
 Parameters:
 - `inputValue` - - Input to evaluate.
 - `shouldComputeDerivative` - - Whether to compute the derivative.
 
-Returns: Tanh output or derivative.
+Returns: GELU output or derivative.
+
+### mishActivation
+
+```ts
+mishActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
+
+Mish activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Mish output or derivative.
+
+### sigmoidActivation
+
+```ts
+sigmoidActivation(
+  inputValue: number,
+  shouldComputeDerivative: boolean,
+): number
+```
+
+Sigmoid alias activation implementation.
+
+Parameters:
+- `inputValue` - - Input to evaluate.
+- `shouldComputeDerivative` - - Whether to compute the derivative.
+
+Returns: Sigmoid output or derivative.
+
+### ActivationFunction
+
+```ts
+ActivationFunction(
+  inputValue: number,
+  shouldComputeDerivative: boolean | undefined,
+): number
+```
+
+Activation function implementation type.
+
+Parameters:
+- `inputValue` - - Input to the activation function.
+- `shouldComputeDerivative` - - Whether to compute the derivative instead of the value.
+
+Returns: Activation output or derivative at the input.

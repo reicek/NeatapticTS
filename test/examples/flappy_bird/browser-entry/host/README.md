@@ -59,77 +59,25 @@ Parameters:
 
 Returns: Canvas handles, stats cells and network render callback.
 
-### createHeaderFrameRenderer
+### updateStatsTableValues
 
 ```ts
-createHeaderFrameRenderer(
-  headerCanvas: HTMLCanvasElement,
-  headerContext: CanvasRenderingContext2D,
-): () => void
+updateStatsTableValues(
+  statsValueByKey: Partial<Record<FlappyStatsKey, HTMLTableCellElement>>,
+  partialValues: Partial<Record<FlappyStatsKey, string>>,
+): void
 ```
 
-Creates the reusable title-frame renderer for the header canvas.
+Applies partial stat updates to the rendered stats table.
+
+The runtime writes HUD values incrementally, so the host exposes a narrow
+partial-update helper rather than requiring full table redraws.
 
 Parameters:
-- `headerCanvas` - - Header canvas element.
-- `headerContext` - - Header canvas 2D context.
+- `statsValueByKey` - - Lookup of stat keys to value cells.
+- `partialValues` - - Subset of values to write this tick.
 
-Returns: Callback that redraws the framed title.
-
-### createHostCanvasElements
-
-```ts
-createHostCanvasElements(
-  hostVisualPrimitives: HostVisualPrimitives,
-): HostCanvasElements
-```
-
-Creates the canvases and 2D contexts used by the host UI.
-
-The host manages three canvas surfaces with different jobs: a title/header
-frame, the main simulation view, and the side-panel network visualization.
-
-Parameters:
-- `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
-
-Returns: Simulation, header, and network canvases with required contexts.
-
-### createHostLayoutElements
-
-```ts
-createHostLayoutElements(
-  hostVisualPrimitives: HostVisualPrimitives,
-): HostLayoutElements
-```
-
-Creates the host layout elements used to assemble the browser UI tree.
-
-This creates the structural DOM only. Canvases, stats content, and
-visualization wiring are layered on afterward.
-
-Parameters:
-- `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
-
-Returns: Layout elements grouped by host responsibility.
-
-### createHostNetworkVisualizationController
-
-```ts
-createHostNetworkVisualizationController(
-  networkCanvasHost: HTMLDivElement,
-  networkCanvas: HTMLCanvasElement,
-  networkContext: CanvasRenderingContext2D,
-): HostNetworkVisualizationController
-```
-
-Creates the network visualization renderer and redraw controller.
-
-Parameters:
-- `networkCanvasHost` - - Host element wrapping the network canvas.
-- `networkCanvas` - - Network visualization canvas.
-- `networkContext` - - Network visualization 2D context.
-
-Returns: Renderer and redraw callbacks for the network panel.
+Returns: Nothing.
 
 ### HostVisualPrimitives
 
@@ -139,69 +87,6 @@ The host boundary is responsible for building the browser-side shell around
 the simulation: framed title, main canvas, stats panel, and network
 visualization panel. It does not run evolution itself; it prepares the stage
 on which the runtime loop renders.
-
-### installCanvasHostResizeHooks
-
-```ts
-installCanvasHostResizeHooks(
-  canvas: HTMLCanvasElement,
-  hostLayoutElements: HostLayoutElements,
-  networkCanvas: HTMLCanvasElement,
-  drawHeaderFrame: () => void,
-  hostNetworkVisualizationController: HostNetworkVisualizationController,
-): void
-```
-
-Installs responsive resize hooks for the simulation canvas and side panel.
-
-Parameters:
-- `canvas` - - Simulation canvas.
-- `hostLayoutElements` - - Prepared layout containers.
-- `networkCanvas` - - Network visualization canvas.
-- `drawHeaderFrame` - - Callback that redraws the header title.
-- `hostNetworkVisualizationController` - - Network panel resize/redraw controller.
-
-Returns: Nothing.
-
-### mountCanvasHostTree
-
-```ts
-mountCanvasHostTree(
-  containerElement: HTMLElement,
-  hostLayoutElements: HostLayoutElements,
-  headerCanvas: HTMLCanvasElement,
-  canvas: HTMLCanvasElement,
-  networkCanvas: HTMLCanvasElement,
-): void
-```
-
-Mounts the completed host DOM tree into the container in final order.
-
-Parameters:
-- `containerElement` - - Root host container.
-- `hostLayoutElements` - - Prepared layout containers.
-- `headerCanvas` - - Header title canvas.
-- `canvas` - - Main simulation canvas.
-- `networkCanvas` - - Network visualization canvas.
-
-Returns: Nothing.
-
-### renderInitialCanvasHostState
-
-```ts
-renderInitialCanvasHostState(
-  drawHeaderFrame: () => void,
-  renderNetworkArchitecture: (network: default | undefined, inputSize: number, outputSize: number) => void,
-): void
-```
-
-Renders the initial header and placeholder network visualization state.
-
-Parameters:
-- `drawHeaderFrame` - - Callback that redraws the header title.
-- `renderNetworkArchitecture` - - Network visualization renderer.
-
-Returns: Nothing.
 
 ### resetHostContainer
 
@@ -234,23 +119,138 @@ structure instead of duplicating presentation constants everywhere.
 
 Returns: Shared visual primitives reused across host sections.
 
-### updateStatsTableValues
+### createHostLayoutElements
 
 ```ts
-updateStatsTableValues(
-  statsValueByKey: Partial<Record<FlappyStatsKey, HTMLTableCellElement>>,
-  partialValues: Partial<Record<FlappyStatsKey, string>>,
+createHostLayoutElements(
+  hostVisualPrimitives: HostVisualPrimitives,
+): HostLayoutElements
+```
+
+Creates the host layout elements used to assemble the browser UI tree.
+
+This creates the structural DOM only. Canvases, stats content, and
+visualization wiring are layered on afterward.
+
+Parameters:
+- `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
+
+Returns: Layout elements grouped by host responsibility.
+
+### createHostCanvasElements
+
+```ts
+createHostCanvasElements(
+  hostVisualPrimitives: HostVisualPrimitives,
+): HostCanvasElements
+```
+
+Creates the canvases and 2D contexts used by the host UI.
+
+The host manages three canvas surfaces with different jobs: a title/header
+frame, the main simulation view, and the side-panel network visualization.
+
+Parameters:
+- `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
+
+Returns: Simulation, header, and network canvases with required contexts.
+
+### createHeaderFrameRenderer
+
+```ts
+createHeaderFrameRenderer(
+  headerCanvas: HTMLCanvasElement,
+  headerContext: CanvasRenderingContext2D,
+): () => void
+```
+
+Creates the reusable title-frame renderer for the header canvas.
+
+Parameters:
+- `headerCanvas` - - Header canvas element.
+- `headerContext` - - Header canvas 2D context.
+
+Returns: Callback that redraws the framed title.
+
+### createHostNetworkVisualizationController
+
+```ts
+createHostNetworkVisualizationController(
+  networkCanvasHost: HTMLDivElement,
+  networkCanvas: HTMLCanvasElement,
+  networkContext: CanvasRenderingContext2D,
+): HostNetworkVisualizationController
+```
+
+Creates the network visualization renderer and redraw controller.
+
+Parameters:
+- `networkCanvasHost` - - Host element wrapping the network canvas.
+- `networkCanvas` - - Network visualization canvas.
+- `networkContext` - - Network visualization 2D context.
+
+Returns: Renderer and redraw callbacks for the network panel.
+
+### mountCanvasHostTree
+
+```ts
+mountCanvasHostTree(
+  containerElement: HTMLElement,
+  hostLayoutElements: HostLayoutElements,
+  headerCanvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement,
+  networkCanvas: HTMLCanvasElement,
 ): void
 ```
 
-Applies partial stat updates to the rendered stats table.
-
-The runtime writes HUD values incrementally, so the host exposes a narrow
-partial-update helper rather than requiring full table redraws.
+Mounts the completed host DOM tree into the container in final order.
 
 Parameters:
-- `statsValueByKey` - - Lookup of stat keys to value cells.
-- `partialValues` - - Subset of values to write this tick.
+- `containerElement` - - Root host container.
+- `hostLayoutElements` - - Prepared layout containers.
+- `headerCanvas` - - Header title canvas.
+- `canvas` - - Main simulation canvas.
+- `networkCanvas` - - Network visualization canvas.
+
+Returns: Nothing.
+
+### installCanvasHostResizeHooks
+
+```ts
+installCanvasHostResizeHooks(
+  canvas: HTMLCanvasElement,
+  hostLayoutElements: HostLayoutElements,
+  networkCanvas: HTMLCanvasElement,
+  drawHeaderFrame: () => void,
+  hostNetworkVisualizationController: HostNetworkVisualizationController,
+): void
+```
+
+Installs responsive resize hooks for the simulation canvas and side panel.
+
+Parameters:
+- `canvas` - - Simulation canvas.
+- `hostLayoutElements` - - Prepared layout containers.
+- `networkCanvas` - - Network visualization canvas.
+- `drawHeaderFrame` - - Callback that redraws the header title.
+- `hostNetworkVisualizationController` - - Network panel resize/redraw controller.
+
+Returns: Nothing.
+
+### renderInitialCanvasHostState
+
+```ts
+renderInitialCanvasHostState(
+  drawHeaderFrame: () => void,
+  renderNetworkArchitecture: (network: default | undefined, inputSize: number, outputSize: number) => void,
+): void
+```
+
+Renders the initial header and placeholder network visualization state.
+
+Parameters:
+- `drawHeaderFrame` - - Callback that redraws the header title.
+- `renderNetworkArchitecture` - - Network visualization renderer.
 
 Returns: Nothing.
 
@@ -267,6 +267,20 @@ Shared panel padding used by the host stats container.
 
 This controls the interior breathing room of the main stats panel.
 
+### FLAPPY_HOST_TABLE_HOST_PADDING
+
+Shared table host padding used by the stats value section.
+
+The table host gets slightly different padding so dense stat rows remain
+readable without wasting horizontal space.
+
+### FLAPPY_HOST_TABLE_FONT_SIZE
+
+Shared stats table font size.
+
+The table uses a compact monospace size so many HUD rows fit comfortably in
+the host panel.
+
 ### FLAPPY_HOST_PANEL_TRANSITION
 
 Shared panel max-height transition.
@@ -279,20 +293,6 @@ changes.
 Shared stats split gap.
 
 This controls the gutter between the table column and the network panel.
-
-### FLAPPY_HOST_TABLE_FONT_SIZE
-
-Shared stats table font size.
-
-The table uses a compact monospace size so many HUD rows fit comfortably in
-the host panel.
-
-### FLAPPY_HOST_TABLE_HOST_PADDING
-
-Shared table host padding used by the stats value section.
-
-The table host gets slightly different padding so dense stat rows remain
-readable without wasting horizontal space.
 
 ## browser-entry/host/host.dom.service.ts
 

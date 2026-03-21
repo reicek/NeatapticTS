@@ -1,0 +1,12 @@
+{
+  "symbolOrder": {
+    "speciation.assignment.utils.ts": [
+      "snapshotPreviousMembers",
+      "resetSpeciesMembers",
+      "assignPopulationToSpecies",
+      "findCompatibleSpecies",
+      "createSpeciesForGenome",
+      "refreshSpeciesRepresentatives"
+    ]
+  }
+}

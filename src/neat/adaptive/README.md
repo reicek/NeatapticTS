@@ -49,71 +49,6 @@ flowchart TD
 
 ## neat/adaptive/adaptive.ts
 
-### applyAdaptiveMutation
-
-```ts
-applyAdaptiveMutation(): void
-```
-
-Self-adaptive per-genome mutation tuning.
-
-This function implements several strategies to adjust each genome's
-internal mutation rate (`g._mutRate`) and optionally its mutation
-amount (`g._mutAmount`) over time. Strategies include:
-- `twoTier`: push top and bottom halves in opposite directions to
-  create exploration/exploitation balance.
-- `exploreLow`: preferentially increase mutation for lower-scoring
-  genomes to promote exploration.
-- `anneal`: gradually reduce mutation deltas over time.
-
-The method reads `this.options.adaptiveMutation` for configuration
-and mutates genomes in-place.
-
-This is the adaptive controller that feeds most directly into the root
-mutation chapter. Rather than choosing one operator itself, it adjusts each
-genome's readiness for later mutation so the next structural-edit pass can be
-more exploratory or more conservative depending on recent success.
-
-Returns: Updates per-genome mutation-rate state in place when the current generation satisfies the adaptation cadence.
-
-Example:
-
-// configuration example:
-// options.adaptiveMutation = { enabled: true, initialRate: 0.5, adaptEvery: 1, strategy: 'twoTier', minRate: 0.01, maxRate: 1 }
-engine.applyAdaptiveMutation();
-
-### applyAncestorUniqAdaptive
-
-```ts
-applyAncestorUniqAdaptive(): void
-```
-
-Adaptive adjustments based on ancestor uniqueness telemetry.
-
-This helper inspects the most recent telemetry lineage block (if
-available) for an `ancestorUniq` metric indicating how unique
-ancestry is across the population. If ancestry uniqueness drifts
-outside configured thresholds, the method will adjust either the
-multi-objective dominance epsilon (if `mode === 'epsilon'`) or the
-lineage pressure strength (if `mode === 'lineagePressure'`).
-
-This makes the lineage controller the feedback bridge between telemetry and
-future search policy. It does not rewrite the current population directly;
-instead it nudges the options that govern how later multi-objective or
-lineage-pressure decisions behave.
-
-Typical usage: keep population lineage diversity within a healthy
-band. Low ancestor uniqueness means too many genomes share ancestors
-(risking premature convergence); high uniqueness might indicate
-excessive divergence.
-
-Returns: May update lineage-related controller options and record the most recent adjustment generation.
-
-Example:
-
-// Adjusts `options.multiObjective.dominanceEpsilon` when configured
-engine.applyAncestorUniqAdaptive();
-
 ### applyComplexityBudget
 
 ```ts
@@ -156,6 +91,33 @@ Example:
 engine.applyComplexityBudget();
 // engine.options.maxNodes now holds the adjusted complexity cap
 
+### applyPhasedComplexity
+
+```ts
+applyPhasedComplexity(): void
+```
+
+Toggle phased complexity mode between 'complexify' and 'simplify'.
+
+Phased complexity supports alternating periods where the algorithm
+is encouraged to grow (complexify) or shrink (simplify) network
+structures. This can help escape local minima or reduce bloat.
+
+Use this controller when one static mutation policy is not enough. Instead of
+adjusting caps continuously like `applyComplexityBudget()`, this helper flips
+the controller into a new structural mood and records when that phase began.
+
+The current phase and its start generation are stored on `this` as
+`_phase` and `_phaseStartGeneration` so the state persists across
+generations.
+
+Returns: Mutates `this._phase` and `this._phaseStartGeneration` so later mutation-selection code knows whether to favor growth or simplification.
+
+Example:
+
+// Called once per generation to update the phase state
+engine.applyPhasedComplexity();
+
 ### applyMinimalCriterionAdaptive
 
 ```ts
@@ -190,6 +152,106 @@ Example:
 // options.minimalCriterionAdaptive = { enabled: true, initialThreshold: 0.1, targetAcceptance: 0.5, adjustRate: 0.1 }
 engine.applyMinimalCriterionAdaptive();
 
+### NeatLikeWithAdaptive
+
+Contract map for the adaptive helper boundary.
+
+The adaptive subtree works because each policy chapter can stay focused on a
+single feedback loop while still sharing one precise agreement about what it
+may read, what it may rewrite, and which option family owns each tuning
+decision. This file is that agreement.
+
+Read the contracts in three passes:
+
+- start with `NeatLikeWithAdaptive` to see the runtime host surface and the
+  scratch fields adaptive controllers are allowed to maintain,
+- continue with the exported `*Config` aliases to see how complexity,
+  acceptance, mutation, operator adaptation, and lineage feedback each slice
+  the broader options object,
+- finish with `Genome`, `MutationSettings`, `MutationPartitions`, and
+  `MutationOutcome` when you want the normalized working shapes used inside
+  adaptive mutation helpers.
+
+The matching defaults and mode labels live in `adaptive.core.constants.ts`.
+This file stays focused on contracts so the generated chapter reads as a
+bounded vocabulary map rather than a second controller implementation.
+
+```mermaid
+flowchart TD
+  Host[NeatLikeWithAdaptive host] --> Options[Adaptive option families]
+  Host --> Population[Population runtime state]
+  Host --> Scratch[Adaptive scratch fields and telemetry]
+  Options --> Complexity[Complexity and phased schedules]
+  Options --> Acceptance[Acceptance and minimal criterion]
+  Options --> Mutation[Mutation and operator adaptation]
+  Options --> Lineage[Ancestor uniqueness and lineage pressure]
+```
+
+### applyAncestorUniqAdaptive
+
+```ts
+applyAncestorUniqAdaptive(): void
+```
+
+Adaptive adjustments based on ancestor uniqueness telemetry.
+
+This helper inspects the most recent telemetry lineage block (if
+available) for an `ancestorUniq` metric indicating how unique
+ancestry is across the population. If ancestry uniqueness drifts
+outside configured thresholds, the method will adjust either the
+multi-objective dominance epsilon (if `mode === 'epsilon'`) or the
+lineage pressure strength (if `mode === 'lineagePressure'`).
+
+This makes the lineage controller the feedback bridge between telemetry and
+future search policy. It does not rewrite the current population directly;
+instead it nudges the options that govern how later multi-objective or
+lineage-pressure decisions behave.
+
+Typical usage: keep population lineage diversity within a healthy
+band. Low ancestor uniqueness means too many genomes share ancestors
+(risking premature convergence); high uniqueness might indicate
+excessive divergence.
+
+Returns: May update lineage-related controller options and record the most recent adjustment generation.
+
+Example:
+
+// Adjusts `options.multiObjective.dominanceEpsilon` when configured
+engine.applyAncestorUniqAdaptive();
+
+### applyAdaptiveMutation
+
+```ts
+applyAdaptiveMutation(): void
+```
+
+Self-adaptive per-genome mutation tuning.
+
+This function implements several strategies to adjust each genome's
+internal mutation rate (`g._mutRate`) and optionally its mutation
+amount (`g._mutAmount`) over time. Strategies include:
+- `twoTier`: push top and bottom halves in opposite directions to
+  create exploration/exploitation balance.
+- `exploreLow`: preferentially increase mutation for lower-scoring
+  genomes to promote exploration.
+- `anneal`: gradually reduce mutation deltas over time.
+
+The method reads `this.options.adaptiveMutation` for configuration
+and mutates genomes in-place.
+
+This is the adaptive controller that feeds most directly into the root
+mutation chapter. Rather than choosing one operator itself, it adjusts each
+genome's readiness for later mutation so the next structural-edit pass can be
+more exploratory or more conservative depending on recent success.
+
+Returns: Updates per-genome mutation-rate state in place when the current generation satisfies the adaptation cadence.
+
+Example:
+
+// configuration example:
+// options.adaptiveMutation = { enabled: true, initialRate: 0.5, adaptEvery: 1, strategy: 'twoTier', minRate: 0.01, maxRate: 1 }
+engine.applyAdaptiveMutation();
+
 ### applyOperatorAdaptation
 
 ```ts
@@ -217,59 +279,3 @@ Returns: Decays `_operatorStats` in place so later mutation-method selection ref
 Example:
 
 engine.applyOperatorAdaptation();
-
-### applyPhasedComplexity
-
-```ts
-applyPhasedComplexity(): void
-```
-
-Toggle phased complexity mode between 'complexify' and 'simplify'.
-
-Phased complexity supports alternating periods where the algorithm
-is encouraged to grow (complexify) or shrink (simplify) network
-structures. This can help escape local minima or reduce bloat.
-
-Use this controller when one static mutation policy is not enough. Instead of
-adjusting caps continuously like `applyComplexityBudget()`, this helper flips
-the controller into a new structural mood and records when that phase began.
-
-The current phase and its start generation are stored on `this` as
-`_phase` and `_phaseStartGeneration` so the state persists across
-generations.
-
-Returns: Mutates `this._phase` and `this._phaseStartGeneration` so later mutation-selection code knows whether to favor growth or simplification.
-
-Example:
-
-// Called once per generation to update the phase state
-engine.applyPhasedComplexity();
-
-### NeatLikeWithAdaptive
-
-Shared host and config contracts for the adaptive helper boundary.
-
-The adaptive subtree works because each policy chapter can stay focused on a
-single feedback loop while still speaking one consistent language about the
-controller state it is allowed to read or rewrite. This file is that shared
-language.
-
-Read the contracts in three passes:
-
-- start with `NeatLikeWithAdaptive` to see the runtime host surface,
-- continue with the exported `*Config` aliases to see how each adaptive
-  family slices the broader options object,
-- finish with `MutationSettings`, `MutationPartitions`, and
-  `MutationOutcome` when you want the normalized working shapes used inside
-  adaptive mutation helpers.
-
-```mermaid
-flowchart TD
-  Host[NeatLikeWithAdaptive host] --> Options[Adaptive option families]
-  Host --> Population[Population runtime state]
-  Host --> Scratch[Adaptive scratch fields and telemetry]
-  Options --> Complexity[Complexity and phased schedules]
-  Options --> Acceptance[Acceptance and minimal criterion]
-  Options --> Mutation[Mutation and operator adaptation]
-  Options --> Lineage[Ancestor uniqueness and lineage pressure]
-```

@@ -18,22 +18,77 @@ this boundary turns the aftermath into training signal.
 
 ## mazeMovement/shaping/mazeMovement.shaping.ts
 
-### applyMazeMovementEntropyGuidanceShaping
+### executeMazeMovementAndRewards
 
 ```ts
-applyMazeMovementEntropyGuidanceShaping(
+executeMazeMovementAndRewards(
+  state: SimulationState,
+  encodedMaze: number[][],
+  distanceMap: number[][] | undefined,
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): void
+```
+
+Execute the chosen move and apply the shaping terms tied to that move.
+
+Parameters:
+- `state` - - Mutable simulation state for the active run.
+- `encodedMaze` - - Maze grid used for move validity and distance lookup.
+- `distanceMap` - - Optional precomputed distance map.
+- `coordinateScratch` - - Reused coordinate scratch buffer.
+
+### applyMazeMovementPostActionPenalties
+
+```ts
+applyMazeMovementPostActionPenalties(
+  state: SimulationState,
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): void
+```
+
+Apply the post-action shaping and penalty aggregation phase.
+
+Parameters:
+- `state` - - Mutable simulation state for the active run.
+- `coordinateScratch` - - Reused coordinate scratch buffer.
+
+### applyMazeMovementLocalAreaPenalty
+
+```ts
+applyMazeMovementLocalAreaPenalty(
   state: SimulationState,
   rewardScale: number,
   coordinateScratch: Int32Array<ArrayBufferLike>,
 ): void
 ```
 
-Apply entropy-guided shaping based on confidence and perceptual guidance.
+Apply a local-area stagnation penalty when the run oscillates in a tight window.
 
 Parameters:
 - `state` - - Mutable simulation state for the active run.
-- `rewardScale` - - Global reward scale used by the penalties and bonuses.
+- `rewardScale` - - Global reward scale used for the penalty magnitude.
 - `coordinateScratch` - - Reused coordinate scratch buffer.
+
+### applyMazeMovementProgressShaping
+
+```ts
+applyMazeMovementProgressShaping(
+  state: SimulationState,
+  distanceDelta: number,
+  improved: boolean,
+  worsened: boolean,
+  rewardScale: number,
+): void
+```
+
+Apply progress and away-from-goal shaping after a move.
+
+Parameters:
+- `state` - - Mutable simulation state for the active run.
+- `distanceDelta` - - Positive when the agent moved closer to the goal.
+- `improved` - - True when the move improved distance to the goal.
+- `worsened` - - True when the move increased distance to the goal.
+- `rewardScale` - - Global reward scale used by the shaping terms.
 
 ### applyMazeMovementExplorationVisitAdjustment
 
@@ -71,59 +126,6 @@ Parameters:
 - `rewardScale` - - Global reward scale used by the bonus magnitude.
 - `coordinateScratch` - - Reused coordinate scratch buffer.
 
-### applyMazeMovementLocalAreaPenalty
-
-```ts
-applyMazeMovementLocalAreaPenalty(
-  state: SimulationState,
-  rewardScale: number,
-  coordinateScratch: Int32Array<ArrayBufferLike>,
-): void
-```
-
-Apply a local-area stagnation penalty when the run oscillates in a tight window.
-
-Parameters:
-- `state` - - Mutable simulation state for the active run.
-- `rewardScale` - - Global reward scale used for the penalty magnitude.
-- `coordinateScratch` - - Reused coordinate scratch buffer.
-
-### applyMazeMovementPostActionPenalties
-
-```ts
-applyMazeMovementPostActionPenalties(
-  state: SimulationState,
-  coordinateScratch: Int32Array<ArrayBufferLike>,
-): void
-```
-
-Apply the post-action shaping and penalty aggregation phase.
-
-Parameters:
-- `state` - - Mutable simulation state for the active run.
-- `coordinateScratch` - - Reused coordinate scratch buffer.
-
-### applyMazeMovementProgressShaping
-
-```ts
-applyMazeMovementProgressShaping(
-  state: SimulationState,
-  distanceDelta: number,
-  improved: boolean,
-  worsened: boolean,
-  rewardScale: number,
-): void
-```
-
-Apply progress and away-from-goal shaping after a move.
-
-Parameters:
-- `state` - - Mutable simulation state for the active run.
-- `distanceDelta` - - Positive when the agent moved closer to the goal.
-- `improved` - - True when the move improved distance to the goal.
-- `worsened` - - True when the move increased distance to the goal.
-- `rewardScale` - - Global reward scale used by the shaping terms.
-
 ### applyMazeMovementRepetitionAndBacktrackPenalties
 
 ```ts
@@ -141,6 +143,23 @@ Parameters:
 - `rewardScale` - - Global reward scale used by the penalties.
 - `coordinateScratch` - - Reused coordinate scratch buffer.
 
+### applyMazeMovementEntropyGuidanceShaping
+
+```ts
+applyMazeMovementEntropyGuidanceShaping(
+  state: SimulationState,
+  rewardScale: number,
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): void
+```
+
+Apply entropy-guided shaping based on confidence and perceptual guidance.
+
+Parameters:
+- `state` - - Mutable simulation state for the active run.
+- `rewardScale` - - Global reward scale used by the penalties and bonuses.
+- `coordinateScratch` - - Reused coordinate scratch buffer.
+
 ### applyMazeMovementSaturationPenaltyCycle
 
 ```ts
@@ -156,25 +175,6 @@ Apply the periodic saturation penalty cycle.
 Parameters:
 - `state` - - Mutable simulation state for the active run.
 - `rewardScale` - - Global reward scale used by the penalties.
-- `coordinateScratch` - - Reused coordinate scratch buffer.
-
-### executeMazeMovementAndRewards
-
-```ts
-executeMazeMovementAndRewards(
-  state: SimulationState,
-  encodedMaze: number[][],
-  distanceMap: number[][] | undefined,
-  coordinateScratch: Int32Array<ArrayBufferLike>,
-): void
-```
-
-Execute the chosen move and apply the shaping terms tied to that move.
-
-Parameters:
-- `state` - - Mutable simulation state for the active run.
-- `encodedMaze` - - Maze grid used for move validity and distance lookup.
-- `distanceMap` - - Optional precomputed distance map.
 - `coordinateScratch` - - Reused coordinate scratch buffer.
 
 ### maybeTerminateMazeMovementDeepStagnation

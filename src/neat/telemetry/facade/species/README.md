@@ -22,10 +22,10 @@ into the dedicated `species/` reporting chapters.
 
 ```mermaid
 flowchart TD
-  Registry[Live species registry] --> Stats[getSpeciesStats()<br/>current roster]
-  History[Recorded species history] --> Timeline[getSpeciesHistory()<br/>generation timeline]
-  Timeline --> Csv[exportSpeciesHistoryCSV()<br/>spreadsheet-friendly export]
-  Timeline --> Jsonl[exportSpeciesHistoryJSONL()<br/>script-friendly export]
+  Registry["Live species registry"] --> Stats["getSpeciesStats()<br/>current roster"]
+  History["Recorded species history"] --> Timeline["getSpeciesHistory()<br/>generation timeline"]
+  Timeline --> Csv["exportSpeciesHistoryCSV()<br/>spreadsheet-friendly export"]
+  Timeline --> Jsonl["exportSpeciesHistoryJSONL()<br/>script-friendly export"]
 ```
 
 ## neat/telemetry/facade/species/telemetry.facade.species.ts
@@ -91,6 +91,33 @@ const jsonl = exportSpeciesHistoryJSONL(neat, 50);
 console.log(jsonl.split('\n').at(0));
 ```
 
+### getSpeciesStats
+
+```ts
+getSpeciesStats(
+  host: TelemetryFacadeSpeciesHost,
+): { id: number; size: number; bestScore: number; lastImproved: number; }[]
+```
+
+Return a concise summary for each current species.
+
+This is the "what does the roster look like right now?" read path.
+Reach for it when you want dashboard-friendly state such as current species
+sizes, best scores, and recent improvement markers without paying for the
+heavier historical buffer.
+
+Parameters:
+- `host` - - `Neat` instance whose live species registry should be summarized.
+
+Returns: Array of current species summaries.
+
+Example:
+
+```ts
+const speciesStats = getSpeciesStats(neat);
+console.table(speciesStats);
+```
+
 ### getSpeciesHistory
 
 ```ts
@@ -120,33 +147,6 @@ Example:
 ```ts
 const speciesHistory = getSpeciesHistory(neat);
 console.log(speciesHistory.at(-1));
-```
-
-### getSpeciesStats
-
-```ts
-getSpeciesStats(
-  host: TelemetryFacadeSpeciesHost,
-): { id: number; size: number; bestScore: number; lastImproved: number; }[]
-```
-
-Return a concise summary for each current species.
-
-This is the "what does the roster look like right now?" read path.
-Reach for it when you want dashboard-friendly state such as current species
-sizes, best scores, and recent improvement markers without paying for the
-heavier historical buffer.
-
-Parameters:
-- `host` - - `Neat` instance whose live species registry should be summarized.
-
-Returns: Array of current species summaries.
-
-Example:
-
-```ts
-const speciesStats = getSpeciesStats(neat);
-console.table(speciesStats);
 ```
 
 ### TelemetryFacadeSpeciesHost

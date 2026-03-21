@@ -38,52 +38,47 @@ Recommended reading after this root chapter:
 
 ## neat.ts
 
-### buildEmptyDiversityStats
+### NeatOptions
+
+Public configuration bag for `Neat` evolutionary runs.
+
+`NeatOptions` collects the knobs that shape how search pressure is applied.
+In practice, readers can think about the options in four teaching-friendly groups:
+
+- search size and tempo: `popsize`, `elitism`, `provenance`, `mutationRate`, `mutationAmount`
+- species formation: compatibility threshold plus the excess, disjoint, and weight-difference coefficients
+- observability: telemetry, lineage, diversity sampling, species history, Pareto archive controls
+- reproducibility: `seed`, imported RNG state, and exported run state
+
+That organization matters because most experiment tuning questions are really
+questions about pressure: how many candidates compete, how disruptive mutation
+should feel, how aggressively genomes split into species, and how much evidence
+you want to retain while the run is unfolding.
 
 ```ts
-buildEmptyDiversityStats(
-  populationSize: number,
-): DiversityStats
+const options: NeatOptions = {
+  popsize: 150,
+  elitism: 5,
+  mutationRate: 0.6,
+  compatibilityThreshold: 3,
+  fastMode: true,
+  seed: 42,
+};
+
+const neat = new Neat(3, 1, fitness, options);
 ```
 
-Build a zeroed diversity stats snapshot to use when no population metrics exist yet.
+This alias stays intentionally permissive for compatibility with legacy callers.
+Prefer treating it as the stable front door and the narrower helper-level types in
+`src/neat/**` as implementation detail.
 
-Parameters:
-- `populationSize` - Population size used to populate the snapshot.
+### DEFAULT_POPULATION_SIZE
 
-Returns: DiversityStats with zeroed aggregates.
+Default population size when caller does not specify `popsize`.
 
-### DEFAULT_COMPATIBILITY_THRESHOLD
-
-Default compatibility threshold controlling speciation distance.
-
-This starts the speciation-pressure family of defaults. It is the neutral
-boundary the controller uses before adaptive tuning or custom settings make
-species splits stricter or more permissive.
-
-### DEFAULT_DISJOINT_COEFF
-
-Default disjoint coefficient for NEAT compatibility distance.
-
-Matching the excess coefficient by default gives the root controller a
-balanced structural view: excess and disjoint innovation gaps both count as
-first-class evidence during compatibility comparisons.
-
-### DEFAULT_DIVERSITY_GRAPHLET_SAMPLE
-
-Default graphlet sample size used by diversity metrics in fast mode.
-
-Read this beside {@link DEFAULT_DIVERSITY_PAIR_SAMPLE}: pair samples give the
-controller quick distance evidence, while graphlet samples provide a small
-structural texture read without forcing whole-population analysis.
-
-### DEFAULT_DIVERSITY_PAIR_SAMPLE
-
-Default pair-sample size used by diversity metrics in fast mode.
-
-This starts the observability-sampling family. The root controller uses a
-bounded sample instead of exhaustive pair checks so diversity reads stay
-cheap enough for ordinary runs.
+This opens the root defaults shelf's search-volume family. It controls how
+many genomes compete in each generation before elitism, provenance, or
+mutation pressure begin to reshape the population.
 
 ### DEFAULT_ELITISM
 
@@ -94,13 +89,47 @@ Read this beside {@link DEFAULT_POPULATION_SIZE} and
 reserved for carry-over, how much is freshly injected, and how much capacity
 remains for ordinary offspring.
 
-### DEFAULT_EXCESS_COEFF
+### DEFAULT_PROVENANCE
 
-Default excess coefficient for NEAT compatibility distance.
+Default provenance count applied when unspecified.
 
-This begins the root compatibility-weight family. These coefficients explain
-which kinds of genome disagreement matter most when the controller decides
-whether two genomes still belong in the same species neighborhood.
+Provenance is the root controller's small "fresh seed" policy. A value of
+`0` means the default run does not spend population budget on extra
+generation-zero style injections unless the caller asks for them.
+
+### DEFAULT_MUTATION_RATE
+
+Default mutation rate used by the root controller when no explicit rate is supplied.
+
+This belongs to the same search-tempo family as
+{@link DEFAULT_MUTATION_AMOUNT}. Together they define how often mutation is
+attempted and how many mutation steps a genome can receive once mutation is
+active.
+
+### DEFAULT_MUTATION_AMOUNT
+
+Default number of mutation operations applied per genome.
+
+The default keeps the baseline search policy conservative: most runs mutate
+often enough to keep topology moving, but each genome usually pays for only
+one structural or parametric change per mutation pass.
+
+### DEFAULT_COMPATIBILITY_THRESHOLD
+
+Default compatibility threshold controlling speciation distance.
+
+This starts the speciation-pressure family of defaults. It is the neutral
+boundary the controller uses before adaptive tuning or custom settings make
+species splits stricter or more permissive.
+
+### DEFAULT_MAX_NODES
+
+Default maximum allowed nodes where `Infinity` means unbounded growth.
+
+Read the three `DEFAULT_MAX_*` exports as one structural-ceiling family.
+Leaving them unbounded by default tells the root controller to rely on
+mutation policy, pruning, and adaptive limits instead of an immediate hard
+cap.
 
 ### DEFAULT_MAX_CONNS
 
@@ -117,55 +146,21 @@ Default maximum allowed gates where `Infinity` means unbounded growth.
 Gate limits stay in the same family as node and connection limits so the
 whole structural-cap story remains consistent at the root surface.
 
-### DEFAULT_MAX_NODES
+### DEFAULT_EXCESS_COEFF
 
-Default maximum allowed nodes where `Infinity` means unbounded growth.
+Default excess coefficient for NEAT compatibility distance.
 
-Read the three `DEFAULT_MAX_*` exports as one structural-ceiling family.
-Leaving them unbounded by default tells the root controller to rely on
-mutation policy, pruning, and adaptive limits instead of an immediate hard
-cap.
+This begins the root compatibility-weight family. These coefficients explain
+which kinds of genome disagreement matter most when the controller decides
+whether two genomes still belong in the same species neighborhood.
 
-### DEFAULT_MUTATION_AMOUNT
+### DEFAULT_DISJOINT_COEFF
 
-Default number of mutation operations applied per genome.
+Default disjoint coefficient for NEAT compatibility distance.
 
-The default keeps the baseline search policy conservative: most runs mutate
-often enough to keep topology moving, but each genome usually pays for only
-one structural or parametric change per mutation pass.
-
-### DEFAULT_MUTATION_RATE
-
-Default mutation rate used by the root controller when no explicit rate is supplied.
-
-This belongs to the same search-tempo family as
-{@link DEFAULT_MUTATION_AMOUNT}. Together they define how often mutation is
-attempted and how many mutation steps a genome can receive once mutation is
-active.
-
-### DEFAULT_NOVELTY_K
-
-Default neighbor count for novelty search when `k` is unspecified.
-
-This closes the root observability-and-exploration shelf. It controls how
-many nearby behaviors contribute to novelty before the caller tunes novelty
-search more explicitly.
-
-### DEFAULT_POPULATION_SIZE
-
-Default population size when caller does not specify `popsize`.
-
-This opens the root defaults shelf's search-volume family. It controls how
-many genomes compete in each generation before elitism, provenance, or
-mutation pressure begin to reshape the population.
-
-### DEFAULT_PROVENANCE
-
-Default provenance count applied when unspecified.
-
-Provenance is the root controller's small "fresh seed" policy. A value of
-`0` means the default run does not spend population budget on extra
-generation-zero style injections unless the caller asks for them.
+Matching the excess coefficient by default gives the root controller a
+balanced structural view: excess and disjoint innovation gaps both count as
+first-class evidence during compatibility comparisons.
 
 ### DEFAULT_WEIGHT_DIFF_COEFF
 
@@ -174,6 +169,30 @@ Default average weight difference coefficient for compatibility distance.
 This keeps parameter drift relevant without letting weight deltas dominate
 the whole speciation read. In the default family, topology disagreement still
 carries more weight than modest edge-weight differences.
+
+### DEFAULT_DIVERSITY_PAIR_SAMPLE
+
+Default pair-sample size used by diversity metrics in fast mode.
+
+This starts the observability-sampling family. The root controller uses a
+bounded sample instead of exhaustive pair checks so diversity reads stay
+cheap enough for ordinary runs.
+
+### DEFAULT_DIVERSITY_GRAPHLET_SAMPLE
+
+Default graphlet sample size used by diversity metrics in fast mode.
+
+Read this beside {@link DEFAULT_DIVERSITY_PAIR_SAMPLE}: pair samples give the
+controller quick distance evidence, while graphlet samples provide a small
+structural texture read without forcing whole-population analysis.
+
+### DEFAULT_NOVELTY_K
+
+Default neighbor count for novelty search when `k` is unspecified.
+
+This closes the root observability-and-exploration shelf. It controls how
+many nearby behaviors contribute to novelty before the caller tunes novelty
+search more explicitly.
 
 ### Neat
 
@@ -1170,46 +1189,27 @@ reconstructed by other means.
 
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
 
-### NeatOptions
-
-Public configuration bag for `Neat` evolutionary runs.
-
-`NeatOptions` collects the knobs that shape how search pressure is applied.
-In practice, readers can think about the options in four teaching-friendly groups:
-
-- search size and tempo: `popsize`, `elitism`, `provenance`, `mutationRate`, `mutationAmount`
-- species formation: compatibility threshold plus the excess, disjoint, and weight-difference coefficients
-- observability: telemetry, lineage, diversity sampling, species history, Pareto archive controls
-- reproducibility: `seed`, imported RNG state, and exported run state
-
-That organization matters because most experiment tuning questions are really
-questions about pressure: how many candidates compete, how disruptive mutation
-should feel, how aggressively genomes split into species, and how much evidence
-you want to retain while the run is unfolding.
-
-```ts
-const options: NeatOptions = {
-  popsize: 150,
-  elitism: 5,
-  mutationRate: 0.6,
-  compatibilityThreshold: 3,
-  fastMode: true,
-  seed: 42,
-};
-
-const neat = new Neat(3, 1, fitness, options);
-```
-
-This alias stays intentionally permissive for compatibility with legacy callers.
-Prefer treating it as the stable front door and the narrower helper-level types in
-`src/neat/**` as implementation detail.
-
 ### Options
 
 Internal permissive option bag backing the public `NeatOptions` alias.
 
 The root controller still accepts a wide option surface while the chaptered
 implementation modules keep migrating toward narrower local contracts.
+
+### buildEmptyDiversityStats
+
+```ts
+buildEmptyDiversityStats(
+  populationSize: number,
+): DiversityStats
+```
+
+Build a zeroed diversity stats snapshot to use when no population metrics exist yet.
+
+Parameters:
+- `populationSize` - Population size used to populate the snapshot.
+
+Returns: DiversityStats with zeroed aggregates.
 
 ## config.ts
 
@@ -1263,21 +1263,6 @@ DESIGN NOTES
 
 ## neataptic.ts
 
-### neataptic
-
-Node (Neuron)
-=============
-Fundamental computational unit: aggregates weighted inputs, applies an activation
-function (squash) and emits an activation value. Supports:
- - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
- - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
- - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
-   a variety of learning rules beyond simple backprop).
-
-Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
-assignment works in algorithms like RTRL / policy gradients. They are updated only when
-using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
-
 ### Neat
 
 High-level NEAT controller that keeps the public workflow linear while the implementation stays chaptered.
@@ -2272,6 +2257,21 @@ bookkeeping separately from genome payloads, or when the population will be
 reconstructed by other means.
 
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
+
+### neataptic
+
+Node (Neuron)
+=============
+Fundamental computational unit: aggregates weighted inputs, applies an activation
+function (squash) and emits an activation value. Supports:
+ - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
+ - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
+ - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
+   a variety of learning rules beyond simple backprop).
+
+Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
+assignment works in algorithms like RTRL / policy gradients. They are updated only when
+using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
 ### default
 

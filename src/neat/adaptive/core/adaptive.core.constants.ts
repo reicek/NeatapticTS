@@ -5,6 +5,11 @@
  * stable vocabulary for thresholds, strategy names, phase labels, and fallback
  * numbers instead of redefining those values inline.
  *
+ * Read this after the contract map in `adaptive.core.types.ts`. The types file
+ * answers "which knobs and scratch fields exist?" while this file answers
+ * "what should those knobs and scratch fields default to when the caller does
+ * not override them?"
+ *
  * Read the exports as four families rather than one long constant shelf:
  *
  * - tiny numeric helpers such as `ZERO`, `ONE`, and `NEGATIVE_ONE` keep the
@@ -16,6 +21,11 @@
  *   `MUTATION_STRATEGY_ANNEAL` give the helper files one shared vocabulary,
  * - clamp and multiplier values define the safe operating envelope for
  *   acceptance tuning, lineage pressure, and mutation adaptation.
+ *
+ * The goal is not to memorize every export. The goal is to see that the
+ * adaptive subtree reuses one glossary for tiny math helpers, schedule timing,
+ * mode names, and safety clamps instead of scattering unrelated literals across
+ * each control loop.
  */
 
 /** Zero baseline reused by tiny adaptive arithmetic helpers. */

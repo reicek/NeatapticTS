@@ -20,10 +20,10 @@
  *
  * ```mermaid
  * flowchart TD
- *   Buffer[In-memory telemetry buffer] --> Inspect[getTelemetry()<br/>recent generation entries]
- *   Buffer --> Csv[exportTelemetryCSV()<br/>spreadsheet review]
- *   Buffer --> Jsonl[exportTelemetryJSONL()<br/>script or file export]
- *   Buffer --> Clear[clearTelemetry()<br/>fresh observation window]
+ *   Buffer["In-memory telemetry buffer"] --> Inspect["getTelemetry()<br/>recent generation entries"]
+ *   Buffer --> Csv["exportTelemetryCSV()<br/>spreadsheet review"]
+ *   Buffer --> Jsonl["exportTelemetryJSONL()<br/>script or file export"]
+ *   Buffer --> Clear["clearTelemetry()<br/>fresh observation window"]
  * ```
  */
 import type { TelemetryEntry } from '../../../shared/neat.shared.types';

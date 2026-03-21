@@ -15,13 +15,6 @@ plus `0.4` carried forward to the next render tick.
 
 ## browser-entry/playback/worker-channel/playback.worker-channel.types.ts
 
-### PlaybackStepPayload
-
-Shared alias for the worker playback-step payload.
-
-This keeps the playback worker-channel modules focused on playback semantics
-instead of long imported protocol names.
-
 ### PlaybackStepRequest
 
 Request payload for one playback-step worker call.
@@ -42,6 +35,13 @@ Output for the resolved playback-step request and frame-budget remainder.
 
 The resolved request records both the integer step batch to send now and the
 leftover fractional budget to carry into the next render tick.
+
+### PlaybackStepPayload
+
+Shared alias for the worker playback-step payload.
+
+This keeps the playback worker-channel modules focused on playback semantics
+instead of long imported protocol names.
 
 ## browser-entry/playback/worker-channel/playback.worker-channel.request.services.ts
 
@@ -78,29 +78,6 @@ Once the worker replies with a playback-step payload, these helpers turn that
 raw protocol data into the browser-facing telemetry and end-of-episode summary
 values used elsewhere in the playback loop.
 
-### resolvePlaybackCompletionSummary
-
-```ts
-resolvePlaybackCompletionSummary(
-  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; },
-  latestLeaderPipesPassed: number,
-  latestLeaderFramesSurvived: number,
-): { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; }
-```
-
-Resolves final playback summary values when the worker reports completion.
-
-Some end-of-episode aggregates may be omitted from the worker payload, so the
-browser falls back to the latest leader values it has already observed during
-playback.
-
-Parameters:
-- `playbackStepPayload` - - Playback payload returned by worker.
-- `latestLeaderPipesPassed` - - Last observed leader pipes passed fallback.
-- `latestLeaderFramesSurvived` - - Last observed leader frames fallback.
-
-Returns: Final aggregate playback summary.
-
 ### resolvePlaybackFrameStats
 
 ```ts
@@ -126,3 +103,26 @@ Parameters:
 - `leaderFramesSurvived` - - Current frame leader survived frames.
 
 Returns: Normalized per-frame HUD telemetry payload.
+
+### resolvePlaybackCompletionSummary
+
+```ts
+resolvePlaybackCompletionSummary(
+  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; },
+  latestLeaderPipesPassed: number,
+  latestLeaderFramesSurvived: number,
+): { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; }
+```
+
+Resolves final playback summary values when the worker reports completion.
+
+Some end-of-episode aggregates may be omitted from the worker payload, so the
+browser falls back to the latest leader values it has already observed during
+playback.
+
+Parameters:
+- `playbackStepPayload` - - Playback payload returned by worker.
+- `latestLeaderPipesPassed` - - Last observed leader pipes passed fallback.
+- `latestLeaderFramesSurvived` - - Last observed leader frames fallback.
+
+Returns: Final aggregate playback summary.

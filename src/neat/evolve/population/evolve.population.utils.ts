@@ -42,6 +42,18 @@ import {
  * 3. fill the remaining budget through speciated or unspeciated offspring,
  * 4. reapply minimum hidden-node and dead-end constraints to the final result.
  *
+ * The two questions that usually make this chapter feel denser than the rest
+ * of `evolve/` are:
+ *
+ * 1. where the remaining population budget actually goes once elites and
+ *    provenance have already claimed space,
+ * 2. why species-aware offspring filling is split into allocation math first
+ *    and child construction second.
+ *
+ * Read the first chart as the outer generation-building spine. Read the second
+ * chart as the inner reproduction-budget story that only activates when a live
+ * species registry exists.
+ *
  * ```mermaid
  * flowchart TD
  *   Ranked[Ranked current generation] --> Elites[Copy elites]
@@ -53,6 +65,24 @@ import {
  *   Global --> Offspring
  *   Offspring --> Constraints[Enforce structural constraints]
  *   Constraints --> Ready[Next population ready for mutation]
+ * ```
+ *
+ * ```mermaid
+ * flowchart LR
+ *   Budget[Remaining population slots]
+ *   Fitness[Adjusted species fitness]
+ *   Floor[Floor raw offspring shares]
+ *   Minimum[Protect minimum offspring when affordable]
+ *   Remainders[Spend leftover slots by remainder]
+ *   Trim[Trim oversubscription if guarantees went too far]
+ *   Breed[Breed species-local offspring]
+ *
+ *   Budget --> Fitness
+ *   Fitness --> Floor
+ *   Floor --> Minimum
+ *   Minimum --> Remainders
+ *   Remainders --> Trim
+ *   Trim --> Breed
  * ```
  */
 
@@ -67,6 +97,11 @@ import {
  * spend the remaining capacity on offspring generation. The mutation and prune
  * phases happen later; this boundary only answers how the raw next population is
  * assembled before those later transforms run.
+ *
+ * Pedagogically, this is the chapter's "packing list" helper. It does not yet
+ * ask whether the chosen genomes are structurally clean enough for the next
+ * loop. It only decides which genomes enter the first draft of the next
+ * population, and in which order those admission rules are applied.
  *
  * Example:
  *
@@ -114,6 +149,11 @@ export async function buildNextPopulation(
  * population already satisfies the controller's minimum hidden-node and
  * dead-end expectations.
  *
+ * Keeping this repair pass at the end is a deliberate architecture choice. If
+ * every earlier helper tried to repair genomes inline, the chapter would blur
+ * slot-allocation policy together with structural-safety policy. Centralizing
+ * cleanup here keeps the earlier helpers focused on population composition.
+ *
  * @param internal - NEAT controller instance.
  * @param nextPopulation - Population to validate.
  * @returns A promise that resolves after best-effort structural cleanup.
@@ -136,6 +176,10 @@ export async function enforcePopulationConstraints(
  * Elitism reserves the deterministic carry-over portion of the population.
  * These genomes bypass parent selection entirely so the best ranked candidates
  * from the current generation survive into the next one unchanged.
+ *
+ * Read this as the chapter's continuity rule. Before the controller starts
+ * gambling on new offspring, it preserves a small slice of already-proven
+ * genomes so the next generation cannot forget the current best evidence.
  *
  * @param internal - NEAT controller instance.
  * @param nextPopulation - Target population array.
@@ -165,6 +209,10 @@ export function applyElitism(
  * selection pressure. They either clone the configured seed network or create a
  * new minimal network, then optionally preserve feed-forward intent so the
  * resulting generation stays aligned with the runtime topology contract.
+ *
+ * This makes provenance the chapter's controlled exploration valve. Elites
+ * preserve what is already working; provenance reintroduces known-safe or fresh
+ * starting material without asking the current parent pool for permission.
  *
  * @param internal - NEAT controller instance.
  * @param nextPopulation - Target population array.
@@ -227,6 +275,11 @@ export function applyProvenance(
  * when the controller currently maintains a species registry, or global parent
  * selection when it does not.
  *
+ * That branch is the main conceptual seam in the chapter. Everything before
+ * this point is deterministic packing. This helper is where the controller asks
+ * whether the remaining search budget should respect live species boundaries or
+ * whether it should fall back to one global parent pool.
+ *
  * @param internal - NEAT controller instance.
  * @param nextPopulation - Target population array.
  * @param helpers - Helper callbacks for offspring selection.
@@ -274,6 +327,16 @@ export async function addOffspring(
  *
  * The helper stays intentionally focused on allocation and local survivor
  * pools. It does not re-run speciation or mutate the produced children.
+ *
+ * The important teaching split is that this helper does two different jobs in
+ * sequence:
+ *
+ * 1. decide how much reproductive budget each species deserves,
+ * 2. spend each species-local budget through survivor-based crossover.
+ *
+ * Keeping those jobs together makes the generated chapter longer, but it also
+ * keeps the species-aware branch readable in one place instead of scattering the
+ * allocation rationale across several tiny helpers.
  *
  * @param internal - NEAT controller instance.
  * @param nextPopulation - Target population array.
@@ -383,6 +446,15 @@ export async function addUnspeciatedOffspring(
  * counts, then layers in minimum-offspring protection plus remainder handling so
  * the final distribution stays both policy-aware and population-size safe.
  *
+ * Read this as a small budgeting pipeline rather than one opaque formula:
+ *
+ * 1. adjust each species' effective fitness with age-sensitive multipliers,
+ * 2. translate those adjusted values into fractional offspring shares,
+ * 3. turn the shares into integers without losing all protection for small but
+ *    still-viable species,
+ * 4. repair rounding drift so the final counts still match the remaining slot
+ *    budget exactly.
+ *
  * @param internal - NEAT controller instance.
  * @param remainingSlots - Slots remaining to fill.
  * @param config - Allocation constants.
@@ -450,6 +522,9 @@ function computeOffspringAllocation(
  * dominant lineages when the remaining slot budget is large enough to preserve
  * a broader search frontier.
  *
+ * In other words, this is the chapter's anti-monoculture guard. It only runs
+ * when the slot budget is big enough to afford that diversity protection.
+ *
  * @param internal - NEAT controller instance.
  * @param allocation - Allocation array to adjust.
  * @param remainingSlots - Total slots available.
@@ -480,6 +555,10 @@ function enforceMinimumOffspring(
  * Flooring raw shares rarely sums exactly to the remaining slot budget. This
  * helper spends the leftover capacity by largest remainder so the final integer
  * allocation stays as close as possible to the original fractional intent.
+ *
+ * This is the allocation chapter's rounding-fairness step. Without it, small
+ * systematic flooring losses would quietly bias the final child counts away
+ * from the fractional budget that the controller just computed.
  *
  * @param allocation - Allocation array to adjust.
  * @param rawShares - Raw fractional shares.
@@ -518,6 +597,10 @@ function distributeRemainingSlots(
  * Minimum-offspring guarantees can occasionally oversubscribe the remaining
  * budget. This helper trims from the largest allocations first while still
  * respecting the minimum line preserved for each surviving species.
+ *
+ * Read it as the final safety rail after the diversity protections have done
+ * their work. The helper is not changing the policy goal; it is only forcing
+ * the final integer allocation back inside the available slot budget.
  *
  * @param internal - NEAT controller instance.
  * @param allocation - Allocation array to adjust.
@@ -564,11 +647,17 @@ function trimOversubscription(
  * runtime lineage metadata so the resulting genome is ready for later telemetry,
  * lineage, and inbreeding reads.
  *
+ * Conceptually, this is where the abstract allocation budget becomes one real
+ * experiment. Everything above this helper is still about counts and survivor
+ * pools; this helper is where the controller finally spends one unit of that
+ * budget on one concrete child genome.
+ *
  * @param internal - NEAT controller instance.
  * @param survivors - Survivors pool for selection.
  * @param speciesIndex - Species index.
  * @param crossSpeciesProbability - Cross-species mating probability.
  * @param crossSpeciesGuardLimit - Retry guard for cross-species selection.
+ * @param survivalThresholdDefault - Default survivor-window policy used when cross-species selection samples another species.
  * @returns Offspring genome carrying runtime metadata.
  */
 function buildSpeciesOffspring(
@@ -625,11 +714,17 @@ function buildSpeciesOffspring(
  * applies a retry guard so the search for another species cannot spiral in edge
  * cases where the registry is sparse or unstable.
  *
+ * This keeps cross-species mating opportunistic instead of dominant. The helper
+ * first treats inter-species mating as an exception worth asking for, then
+ * bounds the search so that a sparse registry cannot trap population assembly in
+ * an expensive parent hunt.
+ *
  * @param internal - NEAT controller instance.
  * @param survivors - Survivors pool from the current species.
  * @param speciesIndex - Current species index.
  * @param crossSpeciesProbability - Probability to cross species.
  * @param crossSpeciesGuardLimit - Retry guard for cross-species selection.
+ * @param survivalThresholdDefault - Default survivor-window policy used when sampling another species.
  * @returns Chosen parent genome from the current or another species.
  */
 function selectSecondParent(

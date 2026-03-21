@@ -17,8 +17,8 @@
  *
  * ```mermaid
  * flowchart TD
- *   Runtime[Recent controller state] --> Diversity[getDiversityStats()<br/>search breadth snapshot]
- *   Runtime --> Timing[getPerformanceStats()<br/>latest timing snapshot]
+ *   Runtime["Recent controller state"] --> Diversity["getDiversityStats()<br/>search breadth snapshot"]
+ *   Runtime --> Timing["getPerformanceStats()<br/>latest timing snapshot"]
  *   Diversity --> Health[Controller health view]
  *   Timing --> Health
  * ```

@@ -14,12 +14,28 @@ import type { NeatLikeForPruning } from '../core/pruning.types';
  * adaptive pruning, while this facade answers the public-API question of how a
  * caller safely reaches those controllers from `Neat` itself.
  *
+ * Read this as the stable public contract, not as a second pruning engine.
+ * The facade keeps two entrypoints on `Neat` because callers often need to say
+ * "run the scheduled pruning path" or "run the adaptive pruning path" without
+ * also importing the broader pruning chapter or its policy helpers directly.
+ *
  * Read this file when you want the stable wrapper story:
  *
  * - `applyEvolutionPruning()` forwards scheduled generation-time pruning,
  * - `applyAdaptivePruning()` forwards metric-driven pruning,
  * - both helpers preserve best-effort lazy loading instead of turning pruning
  *   into a mandatory runtime dependency.
+ *
+ * Read the symbols in this order:
+ * - `NeatPruningFacadeHost` defines the narrow host seam preserved by the
+ *   public `Neat` methods,
+ * - `applyEvolutionPruning()` covers predictable schedule-driven pruning,
+ * - `applyAdaptivePruning()` covers feedback-driven pruning based on live
+ *   population metrics.
+ *
+ * Invariant: this facade decides how callers reach pruning from `Neat`, but it
+ * does not resolve pruning schedules, adaptive thresholds, or pruning math on
+ * its own.
  */
 
 /**
@@ -31,6 +47,9 @@ import type { NeatLikeForPruning } from '../core/pruning.types';
  * The facade does not own the pruning math itself. It only needs the host
  * state that the root pruning chapter already consumes, which keeps this layer
  * from becoming a second public pruning implementation.
+ *
+ * Read this seam as the minimum public bridge: enough controller state to reach
+ * pruning safely, but not enough to teach the internal pruning policies here.
  */
 export interface NeatPruningFacadeHost extends NeatLikeForPruning {}
 
@@ -44,6 +63,11 @@ export interface NeatPruningFacadeHost extends NeatLikeForPruning {}
  * The underlying pruning module is loaded lazily so pruning remains optional,
  * and the facade preserves the same best-effort behavior as before the pruning
  * logic was extracted out of the main `Neat` class.
+ *
+ * This wrapper is the predictable pruning entrypoint: it says "consult the
+ * generation schedule and prune if the current run state says it is time."
+ * That makes it the better fit for orchestrated evolve loops and deterministic
+ * experiments where pruning should follow a known calendar.
  *
  * @param host - `Neat` instance exposing pruning options, generation state, and population.
  * @returns Promise that resolves after the best-effort pruning attempt finishes.
@@ -74,6 +98,11 @@ export async function applyEvolutionPruning(
  * The facade keeps the same lazy optional-loading behavior so callers can
  * continue to treat adaptive pruning as an additive maintenance feature rather
  * than a required runtime dependency.
+ *
+ * This wrapper is the reactive pruning entrypoint: it says "inspect the live
+ * population metrics and adjust the shared prune level only if the drift is big
+ * enough to matter." That makes it the better fit for maintenance-style runs
+ * where pruning should respond to observed complexity rather than the calendar.
  *
  * @param host - `Neat` instance exposing adaptive pruning state and population metrics.
  * @returns Promise that resolves after the best-effort adaptive pruning attempt finishes.

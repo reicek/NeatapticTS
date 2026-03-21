@@ -36,6 +36,26 @@ flowchart TD
 
 ## neat/species/core/species.core.ts
 
+### shouldAugmentExtendedHistory
+
+```ts
+shouldAugmentExtendedHistory(
+  options: NeatOptions | undefined,
+): boolean
+```
+
+Check whether extended species history should be augmented.
+
+This is the policy gate for the whole chapter. The read-side species history
+flow uses it to decide whether returning the recorded rows is already enough
+or whether the caller explicitly asked for the richer innovation-range and
+enabled-ratio view.
+
+Parameters:
+- `options` - - Current NEAT options.
+
+Returns: `true` when extended history is enabled.
+
 ### backfillExtendedHistory
 
 ```ts
@@ -70,23 +90,3 @@ if (shouldAugmentExtendedHistory(neat.options)) {
   backfillExtendedHistory(history, neat);
 }
 ```
-
-### shouldAugmentExtendedHistory
-
-```ts
-shouldAugmentExtendedHistory(
-  options: NeatOptions | undefined,
-): boolean
-```
-
-Check whether extended species history should be augmented.
-
-This is the policy gate for the whole chapter. The read-side species history
-flow uses it to decide whether returning the recorded rows is already enough
-or whether the caller explicitly asked for the richer innovation-range and
-enabled-ratio view.
-
-Parameters:
-- `options` - - Current NEAT options.
-
-Returns: `true` when extended history is enabled.

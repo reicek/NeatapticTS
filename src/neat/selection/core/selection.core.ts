@@ -4,40 +4,61 @@ import type {
   SelectionContext,
 } from './selection.types';
 
-/** Default power exponent for POWER selection when none is configured. */
+/**
+ * Default power exponent for POWER selection when none is configured.
+ *
+ * A value of `1` keeps POWER selection as a direct index-bias curve without
+ * adding extra front-loading beyond the strategy's normal rank preference.
+ */
 export const DEFAULT_POWER = 1;
 
-/** Default tournament size when none is configured. */
+/**
+ * Default tournament size when none is configured.
+ *
+ * The built-in bracket stays intentionally small so tournament selection keeps
+ * some competitive pressure without collapsing into near-deterministic champion
+ * picks.
+ */
 export const DEFAULT_TOURNAMENT_SIZE = 2;
 
-/** Default tournament win probability when none is configured. */
+/**
+ * Default tournament win probability when none is configured.
+ *
+ * This keeps the top sampled participant favored while still allowing weaker
+ * entrants to remain reachable later in the tournament walk.
+ */
 export const DEFAULT_TOURNAMENT_PROBABILITY = 0.5;
 
-/** Default score when a genome has no explicit score. */
+/**
+ * Default score when a genome has no explicit score.
+ *
+ * Selection uses one shared fallback so summaries, sorting, and threshold scans
+ * all interpret unevaluated or missing scores consistently.
+ */
 export const DEFAULT_SCORE = 0;
 
-/** Index of the first element in an array. */
+/** First element index used by guards, fallbacks, and best-first reads. */
 export const FIRST_INDEX = 0;
 
-/** Index of the second element in an array. */
+/** Second element index used by the cheap leading-edge ordering guard. */
 export const SECOND_INDEX = 1;
 
 /** Offset for retrieving the last element via length arithmetic. */
 export const LAST_INDEX_OFFSET = 1;
 
-/** Step size for index-based loops. */
+/** Loop step used by explicit tournament and threshold walks. */
 export const LOOP_INDEX_INCREMENT = 1;
 
-/** Index used with `at()` to access the last element. */
+/** Index used with `at()` when checking the tail of the population. */
 export const LAST_ELEMENT_INDEX = -1;
 
-/** Initial total fitness accumulator value. */
+/** Initial accumulator value for generation-wide score folds. */
 export const INITIAL_TOTAL_FITNESS = 0;
 
-/** Initial most-negative score sentinel for fitness scans. */
+/** Initial most-negative score sentinel for shifted-fitness scans. */
 export const INITIAL_MOST_NEGATIVE_SCORE = 0;
 
-/** Initial cumulative fitness value for threshold scans. */
+/** Initial cumulative fitness value for roulette threshold scans. */
 export const INITIAL_CUMULATIVE_FITNESS = 0;
 
 /**
@@ -61,6 +82,11 @@ export const INITIAL_CUMULATIVE_FITNESS = 0;
  * chapter stays readable and controller-facing, the facade chapter keeps the
  * stable `Neat` wrappers thin, and this layer owns the exact mechanics and
  * fallback rules those higher surfaces rely on.
+ *
+ * The exported constants also belong to that story rather than standing alone:
+ * they define the shared defaults, sentinels, and traversal anchors that keep
+ * summary reads, ordering guards, roulette scans, and tournament walks aligned
+ * with one another.
  *
  * Read the chapter in this order: start with the evaluation and ordering
  * guards, then the strategy dispatcher, then the strategy-specific helpers for
@@ -101,6 +127,12 @@ export const INITIAL_CUMULATIVE_FITNESS = 0;
  *
  * @param internal - NEAT host containing population, options, and RNG access.
  * @returns A genome chosen according to the active selection strategy.
+ *
+ * @example
+ * ```ts
+ * const parent = selectParentByStrategy(neat);
+ * const strategyName = neat.options.selection?.name;
+ * ```
  */
 export function selectParentByStrategy(
   internal: NeatLikeWithSelection,
@@ -182,6 +214,9 @@ export function ensurePopulationSortedDescending(
  * This is the simplest "treat the generation as one pool" fold used by summary
  * reads. Missing scores are interpreted with the shared selection fallback so
  * total-score calculations stay aligned with the rest of the chapter.
+ * This helper is not itself a parent-selection strategy, but it lives in the
+ * same mechanics layer because the controller's summary reads should speak the
+ * same score semantics as the parent-selection pipeline.
  *
  * @param population - Genomes in the current population.
  * @returns Sum of all scores with missing scores treated as zero.
@@ -200,6 +235,8 @@ export function calculateTotalScore(population: GenomeWithScore[]): number {
  * toward the front of that ranking. Lower random samples stay near the leading
  * genomes, while the configured exponent controls how quickly the chance falls
  * away from the champion.
+ * Read this as the lightest built-in strategy: it does not inspect absolute
+ * score gaps, only the current descending order.
  *
  * @param selectionContext - Shared selection state.
  * @returns The chosen parent genome.
@@ -227,6 +264,9 @@ function selectParentByPower(
  * some genomes have negative scores, the helper first shifts the whole fitness
  * space upward so every participant still occupies a non-negative span on the
  * roulette wheel.
+ * That makes this strategy the most score-sensitive branch in the chapter: it
+ * reacts to relative score magnitude rather than only rank or sampled bracket
+ * ordering.
  *
  * @param selectionContext - Shared selection state.
  * @returns The chosen parent genome.
@@ -257,6 +297,9 @@ function selectParentByFitnessProportionate(
  * score, then walks from strongest to weakest using the configured win
  * probability. This gives the controller a middle ground between pure
  * best-first bias and fully score-proportional roulette.
+ * The sampled bracket is intentionally local: the strategy asks "who wins this
+ * small contest?" rather than "how does the whole population distribute
+ * weight?"
  *
  * @param selectionContext - Shared selection state.
  * @returns The chosen parent genome.
@@ -317,6 +360,8 @@ function ensurePopulationSortedDescendingForPower(
  * negative scores. This helper records the most-negative value, converts that
  * into a uniform upward shift, and returns the adjusted total that the later
  * threshold scan uses.
+ * In other words, it prepares the roulette space so every genome still gets a
+ * measurable slice even when raw scores dip below zero.
  *
  * @param population - Genomes in the current population.
  * @returns Aggregate fitness totals with the negative-score shift.
@@ -351,6 +396,7 @@ function calculateFitnessTotals(population: GenomeWithScore[]): {
  * Read this as the second half of roulette selection. Once the threshold has
  * been sampled, the helper walks the population once, expanding a cumulative
  * shifted-fitness window until the threshold lands inside one genome's slice.
+ * This keeps the selection flow linear and deterministic for a fixed RNG draw.
  *
  * @param population - Genomes in the current population.
  * @param selectionThreshold - Random threshold in shifted fitness space.
@@ -381,6 +427,8 @@ function pickByShiftedThreshold(
  * default behavior is to fail loudly. Tests and a few tolerant call sites can
  * opt into the host-level suppression flag when "best effort" random fallback
  * is more useful than a hard error.
+ * That separation keeps the normal controller path strict while still leaving a
+ * narrow escape hatch for compatibility scenarios.
  *
  * @param selectionContext - Shared selection state.
  * @returns A fallback parent genome.
@@ -402,6 +450,7 @@ function resolveTournamentOverflow(
  * the current population rather than a unique bracket seeding pass. That keeps
  * the implementation small and preserves the controller's existing stochastic
  * behavior.
+ * The result is a lightweight temporary bracket, not a durable roster object.
  *
  * @param selectionContext - Shared selection state.
  * @param tournamentSize - Number of competitors to sample.
@@ -423,6 +472,7 @@ function sampleTournamentParticipants(
  * front and gives each participant a chance to win immediately. The configured
  * probability therefore controls how often the top entrant wins outright versus
  * how often weaker entrants remain reachable later in the walk.
+ * This is what makes tournament selection tunable instead of purely greedy.
  *
  * @param selectionContext - Shared selection state.
  * @param sortedParticipants - Participants sorted by descending score.
@@ -459,6 +509,8 @@ function pickTournamentWinner(
  * This is the small shared fallback used by roulette misses and suppressed
  * tournament overflow. Centralizing it here keeps every selection path tied to
  * the same controller RNG stream.
+ * It also makes the fallback semantics explicit instead of hiding ad hoc random
+ * picks inside individual strategies.
  *
  * @param selectionContext - Shared selection state.
  * @returns Randomly chosen genome from the current population.

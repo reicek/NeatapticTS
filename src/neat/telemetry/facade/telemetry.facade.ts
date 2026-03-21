@@ -14,6 +14,15 @@
  * - diversity and performance helpers answer "is search still broad, and how expensive was the last step?"
  * - clearing helpers reset evidence buffers when you want a fresh observation window
  *
+ * The chapter can feel broad because it deliberately gathers many read paths in
+ * one public facade. The unifying idea is not implementation similarity; it is
+ * inspection intent. Every helper here exists so a caller can ask a practical
+ * post-run or mid-run question without reaching into controller internals.
+ *
+ * Read the first chart as the main inspection map. Read the generated helper
+ * sections in clusters rather than strict file order: recent buffer reads,
+ * species and lineage reads, objective and archive reads, then reset helpers.
+ *
  * ```mermaid
  * flowchart LR
  *   Run["Neat run"] --> Buffer["telemetry buffer<br/>recent generation entries"]
@@ -185,6 +194,10 @@ export function exportTelemetryCSV(
 /**
  * Clear cached telemetry entries.
  *
+ * Use this when you want a fresh observation window without restarting the run.
+ * It is especially useful in notebooks, UI sessions, or targeted experiments
+ * where older telemetry would otherwise drown out the next few generations.
+ *
  * @param host - `Neat` instance whose telemetry buffer should be reset.
  * @returns Nothing. The helper mutates the host buffer in place.
  */
@@ -215,6 +228,11 @@ export function getObjectives(
 /**
  * Register or replace a custom objective.
  *
+ * This is the facade's write-side escape hatch for objective inspection flows.
+ * Use it when a dashboard, script, or experiment wants the telemetry and
+ * archive surfaces to start tracking a new tradeoff dimension without dropping
+ * into the lower-level objective modules first.
+ *
  * @param host - `Neat` instance whose multi-objective registry should change.
  * @param key - Unique objective key.
  * @param direction - Whether lower or higher values are considered better.
@@ -233,6 +251,10 @@ export function registerTelemetryObjective(
 /**
  * Remove all registered custom objectives so only the default objective path remains.
  *
+ * Read this as the reset companion to {@link registerTelemetryObjective}. It is
+ * useful when one inspection session temporarily added custom objectives and the
+ * caller wants to return the controller to its simpler baseline objective view.
+ *
  * @param host - `Neat` instance whose objective registry should be cleared.
  * @returns Nothing. The helper mutates the objective registry in place.
  */
@@ -242,6 +264,11 @@ export function clearTelemetryObjectives(host: NeatTelemetryFacadeHost): void {
 
 /**
  * Snapshot recent objective add/remove events for telemetry consumers.
+ *
+ * This gives read-side tooling a lightweight history of objective churn without
+ * forcing it to replay the full controller lifecycle. Use it when the question
+ * is "when did the objective set change?" rather than "what are the active
+ * objectives right now?"
  *
  * @param host - `Neat` instance storing objective lifecycle events.
  * @returns Shallow copy of the recorded objective events.
@@ -261,6 +288,10 @@ export function getObjectiveEvents(host: NeatTelemetryFacadeHost): {
  * keeps payloads small by clipping the returned slice while still showing which
  * genomes share parents.
  *
+ * This is the facade's ancestry peek rather than a full genealogy export. Reach
+ * for it when you want a fast sanity check on inheritance patterns without
+ * paying the cost of a larger lineage report.
+ *
  * @param host - `Neat` instance whose population lineage should be sampled.
  * @param limit - Maximum number of genomes to include in the snapshot.
  * @returns Array of `{ id, parents }` lineage entries.
@@ -275,6 +306,10 @@ export function getLineageSnapshot(
 /**
  * Export species history as CSV rows.
  *
+ * Prefer this when the reader is a person first and a program second. CSV is
+ * the quickest path from species history into spreadsheets, ad-hoc inspection,
+ * or lightweight experiment notes.
+ *
  * @param host - `Neat` instance whose species history should be exported.
  * @param maxEntries - Maximum number of recent history entries to include.
  * @returns CSV payload for offline species analysis.
@@ -288,6 +323,10 @@ export function exportSpeciesHistoryCSV(
 
 /**
  * Export species history as JSON Lines.
+ *
+ * Prefer this when the next consumer is a script, notebook, or append-friendly
+ * file sink. JSONL keeps each generation independently parseable while still
+ * preserving the richer row structure that CSV flattens away.
  *
  * @param host - `Neat` instance whose species history should be serialized.
  * @param maxEntries - Maximum number of recent history entries to include.
@@ -344,6 +383,10 @@ export function getSpeciesHistory(
 /**
  * Return the current novelty archive size.
  *
+ * This is the smallest novelty-health read in the facade. Use it when you do
+ * not need descriptor payloads, only a quick sense of whether novelty search is
+ * still collecting distinct behaviors or has gone quiet.
+ *
  * @param host - `Neat` instance tracking novelty behavior descriptors.
  * @returns Number of archived novelty descriptors.
  */
@@ -356,6 +399,10 @@ export function getNoveltyArchiveSize(host: NeatTelemetryFacadeHost): number {
  *
  * This helper is meant for inspection surfaces that need the shape of the
  * current Pareto landscape without pulling every genome field into view.
+ *
+ * Read it as the facade's tradeoff-summary helper: enough information to see
+ * rank layers, crowding pressure, and rough structural size, but not so much
+ * detail that dashboards or quick diagnostics have to unpack whole genomes.
  *
  * @param host - `Neat` instance whose population should be summarized.
  * @returns Rank, crowding, score, and size metrics per genome.
@@ -372,6 +419,10 @@ export function getMultiObjectiveMetrics(host: NeatTelemetryFacadeHost): {
 
 /**
  * Return aggregated mutation/operator statistics.
+ *
+ * This is the fastest way to answer "which operators are being tried, and are
+ * they paying off?" without digging through raw telemetry rows generation by
+ * generation.
  *
  * @param host - `Neat` instance recording operator attempts and successes.
  * @returns Operator summaries suitable for dashboards and debugging.
@@ -424,6 +475,11 @@ export function getParetoArchive(
 /**
  * Export recent Pareto archive entries as JSON Lines.
  *
+ * Use this when the archive needs to leave the controller for offline analysis,
+ * regression fixtures, or notebook-driven frontier inspection. Compared with
+ * `getParetoArchive()`, the emphasis here is portability rather than immediate
+ * in-memory inspection.
+ *
  * @param host - `Neat` instance storing Pareto objective snapshots.
  * @param maxEntries - Maximum number of entries to serialize.
  * @returns JSONL payload for recent Pareto archive entries.
@@ -474,6 +530,9 @@ export function getDiversityStats(
 /**
  * Clear the novelty archive.
  *
+ * This is useful when a caller wants to restart the novelty observation window
+ * without also resetting the rest of telemetry or the broader controller state.
+ *
  * @param host - `Neat` instance whose novelty archive should be reset.
  * @returns Nothing. The archive is mutated in place.
  */
@@ -483,6 +542,10 @@ export function resetNoveltyArchive(host: NeatTelemetryFacadeHost): void {
 
 /**
  * Clear the Pareto archive metadata stored on the host.
+ *
+ * Use this when multi-objective inspection should restart from a clean archive
+ * window, for example between experiments or before capturing a focused new
+ * frontier snapshot.
  *
  * @param host - `Neat` instance whose Pareto archive should be emptied.
  * @returns Nothing. The archive buffer is reset in place.

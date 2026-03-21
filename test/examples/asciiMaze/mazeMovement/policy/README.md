@@ -18,6 +18,77 @@ trainer judges the consequences of that choice.
 
 ## mazeMovement/policy/mazeMovement.policy.ts
 
+### computeMazeMovementEpsilon
+
+```ts
+computeMazeMovementEpsilon(
+  stepNumber: number,
+  stepsSinceImprovement: number,
+  distHere: number,
+  saturations: number,
+): number
+```
+
+Compute the adaptive epsilon used for policy exploration.
+
+Parameters:
+- `stepNumber` - - Global step number inside the active simulation.
+- `stepsSinceImprovement` - - Number of steps without improvement.
+- `distHere` - - Current distance to goal for the active position.
+- `saturations` - - Rolling saturation count from the shared run state.
+
+Returns: Exploration epsilon in the range `[0, 1]`.
+
+### selectMazeMovementDirection
+
+```ts
+selectMazeMovementDirection(
+  outputs: number[],
+): DirectionSelectionStats
+```
+
+Convert raw network outputs into a chosen direction plus diagnostics.
+
+Parameters:
+- `outputs` - - Raw action logits for the four maze directions.
+
+Returns: Chosen direction plus softmax and entropy diagnostics.
+
+### decideMazeMovementDirection
+
+```ts
+decideMazeMovementDirection(
+  state: SimulationState,
+  network: INetwork,
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): void
+```
+
+Activate the network, record output history, and choose the next direction.
+
+Parameters:
+- `state` - - Mutable simulation state for the active run.
+- `network` - - Policy network used for the current step.
+
+### applyMazeMovementProximityGreedy
+
+```ts
+applyMazeMovementProximityGreedy(
+  state: SimulationState,
+  encodedMaze: number[][],
+  distanceMap: number[][] | undefined,
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): void
+```
+
+Apply the short-horizon proximity-greedy override near the maze exit.
+
+Parameters:
+- `state` - - Mutable simulation state for the active run.
+- `encodedMaze` - - Maze grid used for move validity checks.
+- `distanceMap` - - Optional precomputed distance map.
+- `coordinateScratch` - - Reused coordinate scratch buffer.
+
 ### applyMazeMovementEpsilonExploration
 
 ```ts
@@ -52,25 +123,6 @@ Parameters:
 - `encodedMaze` - - Maze grid used for move validity checks.
 - `coordinateScratch` - - Reused coordinate scratch buffer.
 
-### applyMazeMovementProximityGreedy
-
-```ts
-applyMazeMovementProximityGreedy(
-  state: SimulationState,
-  encodedMaze: number[][],
-  distanceMap: number[][] | undefined,
-  coordinateScratch: Int32Array<ArrayBufferLike>,
-): void
-```
-
-Apply the short-horizon proximity-greedy override near the maze exit.
-
-Parameters:
-- `state` - - Mutable simulation state for the active run.
-- `encodedMaze` - - Maze grid used for move validity checks.
-- `distanceMap` - - Optional precomputed distance map.
-- `coordinateScratch` - - Reused coordinate scratch buffer.
-
 ### applyMazeMovementSaturationAndBiasAdjust
 
 ```ts
@@ -89,55 +141,3 @@ Parameters:
 - `outputs` - - Raw network logits for the current step.
 - `network` - - Policy network that produced the logits.
 - `coordinateScratch` - - Reused scratch buffer for temporary penalties.
-
-### computeMazeMovementEpsilon
-
-```ts
-computeMazeMovementEpsilon(
-  stepNumber: number,
-  stepsSinceImprovement: number,
-  distHere: number,
-  saturations: number,
-): number
-```
-
-Compute the adaptive epsilon used for policy exploration.
-
-Parameters:
-- `stepNumber` - - Global step number inside the active simulation.
-- `stepsSinceImprovement` - - Number of steps without improvement.
-- `distHere` - - Current distance to goal for the active position.
-- `saturations` - - Rolling saturation count from the shared run state.
-
-Returns: Exploration epsilon in the range `[0, 1]`.
-
-### decideMazeMovementDirection
-
-```ts
-decideMazeMovementDirection(
-  state: SimulationState,
-  network: INetwork,
-  coordinateScratch: Int32Array<ArrayBufferLike>,
-): void
-```
-
-Activate the network, record output history, and choose the next direction.
-
-Parameters:
-- `state` - - Mutable simulation state for the active run.
-- `network` - - Policy network used for the current step.
-
-### selectMazeMovementDirection
-
-```ts
-selectMazeMovementDirection(
-  outputs: number[],
-): DirectionSelectionStats
-```
-
-Convert raw network outputs into a chosen direction plus diagnostics.
-
-Parameters:
-- `outputs` - - Raw action logits for the four maze directions.
-
-Returns: Chosen direction plus softmax and entropy diagnostics.

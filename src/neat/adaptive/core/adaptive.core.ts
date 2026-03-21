@@ -1,26 +1,22 @@
 /**
- * Shared vocabulary for the adaptive controllers.
+ * Index and reading map for the adaptive shared-vocabulary chapter.
  *
- * Read this folder when you need the common constants, config shapes, and
- * runtime contracts that the other adaptive categories build on.
+ * This file is intentionally thin. It does not define one more adaptive
+ * control loop; it points the rest of the subtree at the shared language that
+ * complexity, acceptance, mutation, and lineage helpers all reuse.
  *
- * The adaptive subtree is easier to understand when each local chapter can stay
- * focused on one control loop. This root file exists so complexity, acceptance,
- * mutation, and lineage helpers can all share one stable language for host
- * fields, option slices, runtime scratch state, and common labels.
+ * Read this chapter when you want the shortest route into `adaptive/core/`:
  *
- * Read this chapter when you want to understand:
+ * 1. start with `adaptive.core.types.ts` to see the host contract, option
+ *    slices, and normalized working shapes,
+ * 2. use the re-exported aliases in this file as the public index into that
+ *    contract map,
+ * 3. finish with `adaptive.core.constants.ts` for the defaults, labels, and
+ *    guard rails that keep those adaptive loops speaking one vocabulary.
  *
- * - which controller fields adaptive helpers are allowed to inspect or rewrite,
- * - how the major adaptive configuration families are grouped,
- * - why the subtree reuses one shared pool of constants and type aliases.
- *
- * The reading order is easiest to retain in three layers:
- *
- * 1. start with `adaptive.core.types.ts` for the host contract and typed config
- *    slices,
- * 2. read the exported aliases that package those slices for helper files,
- * 3. scan `adaptive.core.constants.ts` for the shared defaults and mode labels.
+ * Think of this file as the chapter's table of contents. The deeper semantics
+ * live in the types and constants files; this surface exists so downstream
+ * helpers can import one stable adaptive vocabulary from a single place.
  */
 export type {
   AdaptiveMutationConfig,

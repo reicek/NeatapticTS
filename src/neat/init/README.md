@@ -80,15 +80,6 @@ After the call returns, the instance has concrete startup policy, prepared
 controller state, and either an attempted generation-zero pool or a safely
 preserved empty population ready for later work.
 
-### InitializeNeatConstructorRequest
-
-Mutable constructor request packet consumed during bootstrap.
-
-`optionBag` is the live options object that the public facade keeps after the
-constructor returns, `rawOptions` preserves the caller's original intent for
-checks that should not be default-inflated, and `defaults` supplies the
-public baseline constants exported by the surrounding NEAT surface.
-
 ### NeatInitializationHost
 
 Minimal constructor-time host contract required by the bootstrap helper.
@@ -98,3 +89,12 @@ helper needs write access to a few controller-owned fields and one pool
 creation hook, but it does not own evaluation, evolution, or persistence.
 Keeping the contract narrow prevents the init chapter from quietly becoming a
 second facade.
+
+### InitializeNeatConstructorRequest
+
+Mutable constructor request packet consumed during bootstrap.
+
+`optionBag` is the live options object that the public facade keeps after the
+constructor returns, `rawOptions` preserves the caller's original intent for
+checks that should not be default-inflated, and `defaults` supplies the
+public baseline constants exported by the surrounding NEAT surface.

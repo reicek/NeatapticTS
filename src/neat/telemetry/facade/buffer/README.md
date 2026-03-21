@@ -21,31 +21,66 @@ multi-objective tradeoffs, or derived diversity snapshots.
 
 ```mermaid
 flowchart TD
-  Buffer[In-memory telemetry buffer] --> Inspect[getTelemetry()<br/>recent generation entries]
-  Buffer --> Csv[exportTelemetryCSV()<br/>spreadsheet review]
-  Buffer --> Jsonl[exportTelemetryJSONL()<br/>script or file export]
-  Buffer --> Clear[clearTelemetry()<br/>fresh observation window]
+  Buffer["In-memory telemetry buffer"] --> Inspect["getTelemetry()<br/>recent generation entries"]
+  Buffer --> Csv["exportTelemetryCSV()<br/>spreadsheet review"]
+  Buffer --> Jsonl["exportTelemetryJSONL()<br/>script or file export"]
+  Buffer --> Clear["clearTelemetry()<br/>fresh observation window"]
 ```
 
 ## neat/telemetry/facade/buffer/telemetry.facade.buffer.ts
 
-### clearTelemetry
+### getTelemetry
 
 ```ts
-clearTelemetry(
+getTelemetry(
   host: TelemetryFacadeBufferHost,
-): void
+): TelemetryEntry[]
 ```
 
-Clear cached telemetry entries.
+Return the in-memory telemetry buffer.
 
-Reach for this when you want a fresh telemetry observation window between
-experiment phases without rebuilding the rest of the controller.
+This chapter groups the lowest-level telemetry reads with the export helpers
+so callers can treat "inspect the buffer" and "serialize the buffer" as one
+concept cluster inside the broader telemetry facade.
 
 Parameters:
-- `host` - - `Neat` instance whose telemetry buffer should be reset.
+- `host` - - `Neat` instance storing generation telemetry snapshots.
 
-Returns: Nothing. The helper mutates the host buffer in place.
+Returns: Telemetry entries captured so far, or an empty array when telemetry
+is not initialized.
+
+Example:
+
+```ts
+const recentTelemetry = getTelemetry(neat);
+console.log(recentTelemetry.at(-1)?.gen);
+```
+
+### exportTelemetryJSONL
+
+```ts
+exportTelemetryJSONL(
+  host: TelemetryFacadeBufferHost,
+): string
+```
+
+Export telemetry as JSON Lines so logs can stream into files or post-processors.
+
+Prefer this when telemetry is leaving the process boundary. JSONL keeps the
+append-and-pipe workflow simple: one generation snapshot per line, easy to
+write to disk, ingest from scripts, or scan in notebooks.
+
+Parameters:
+- `host` - - `Neat` instance whose telemetry buffer should be serialized.
+
+Returns: JSONL payload with one telemetry object per line.
+
+Example:
+
+```ts
+const jsonl = exportTelemetryJSONL(neat);
+console.log(jsonl.split('\n').at(0));
+```
 
 ### exportTelemetryCSV
 
@@ -75,58 +110,23 @@ const csv = exportTelemetryCSV(neat, 100);
 console.log(csv.split('\n').slice(0, 3).join('\n'));
 ```
 
-### exportTelemetryJSONL
+### clearTelemetry
 
 ```ts
-exportTelemetryJSONL(
+clearTelemetry(
   host: TelemetryFacadeBufferHost,
-): string
+): void
 ```
 
-Export telemetry as JSON Lines so logs can stream into files or post-processors.
+Clear cached telemetry entries.
 
-Prefer this when telemetry is leaving the process boundary. JSONL keeps the
-append-and-pipe workflow simple: one generation snapshot per line, easy to
-write to disk, ingest from scripts, or scan in notebooks.
+Reach for this when you want a fresh telemetry observation window between
+experiment phases without rebuilding the rest of the controller.
 
 Parameters:
-- `host` - - `Neat` instance whose telemetry buffer should be serialized.
+- `host` - - `Neat` instance whose telemetry buffer should be reset.
 
-Returns: JSONL payload with one telemetry object per line.
-
-Example:
-
-```ts
-const jsonl = exportTelemetryJSONL(neat);
-console.log(jsonl.split('\n').at(0));
-```
-
-### getTelemetry
-
-```ts
-getTelemetry(
-  host: TelemetryFacadeBufferHost,
-): TelemetryEntry[]
-```
-
-Return the in-memory telemetry buffer.
-
-This chapter groups the lowest-level telemetry reads with the export helpers
-so callers can treat "inspect the buffer" and "serialize the buffer" as one
-concept cluster inside the broader telemetry facade.
-
-Parameters:
-- `host` - - `Neat` instance storing generation telemetry snapshots.
-
-Returns: Telemetry entries captured so far, or an empty array when telemetry
-is not initialized.
-
-Example:
-
-```ts
-const recentTelemetry = getTelemetry(neat);
-console.log(recentTelemetry.at(-1)?.gen);
-```
+Returns: Nothing. The helper mutates the host buffer in place.
 
 ### TelemetryFacadeBufferHost
 

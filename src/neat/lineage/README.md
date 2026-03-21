@@ -117,18 +117,25 @@ if (ancestorUniqueness < 0.2) {
 
 Minimal genome shape used by lineage helpers.
 
-Lineage analysis only needs the genome id and optional parent ids, so this
-boundary intentionally leaves the rest of the genome open-ended. That keeps
-the ancestry helpers reusable anywhere the controller can provide stable
-genome identifiers and recorded parentage, even if the surrounding runtime
-object carries much richer state.
+Lineage analysis only needs two structural facts from each genome: a stable
+identifier and the identifiers of its recorded parents. Everything else is
+intentionally left open-ended so ancestry helpers can run against richer
+runtime objects without importing or depending on all of their fields.
+
+In practice this interface is the bridge between reproduction-time lineage
+bookkeeping and read-side lineage metrics. If those ids are present and
+stable, the rest of the ancestry pipeline can stay decoupled from mutation,
+evaluation, telemetry, and speciation internals.
 
 ### NeatLineageContext
 
 Minimal NEAT context required by lineage helpers.
 
 The lineage boundary only needs the current population and the RNG provider
-used for sampled ancestor uniqueness. The small host contract makes it clear
-that lineage reporting is a read-side controller concern: it inspects the
-current population and sampling behavior without owning mutation, speciation,
-or telemetry storage itself.
+used for sampled ancestor uniqueness. That small host contract makes the
+ownership model explicit: lineage reporting is a read-side controller
+concern, not a stateful subsystem with its own storage or mutation rules.
+
+The population supplies the ancestry graph to inspect. The RNG provider keeps
+sampled uniqueness deterministic so the same run can replay the same sampled
+comparisons during tests or exported-state debugging.

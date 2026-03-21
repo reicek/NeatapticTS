@@ -42,6 +42,102 @@ flowchart TD
 
 ## neat/mutation/select/mutation.select.ts
 
+### resolveFFWPolicyForSelect
+
+```ts
+resolveFFWPolicyForSelect(
+  internal: NeatControllerForMutation,
+  methods: { mutation: unknown; },
+  rawReturnForTest: boolean,
+): MutationMethod | MutationMethod[] | null
+```
+
+Resolve legacy FFW policy behavior, including test-specific returns.
+
+Older feed-forward configuration paths can encode mutation policy in shapes
+that do not look like the newer flat operator pool. This helper isolates that
+compatibility layer so the rest of selection can operate on a predictable
+surface.
+
+The `rawReturnForTest` flag exists because some tests assert the preserved
+legacy pool shape rather than one sampled method. Production mutation flow,
+by contrast, normally wants one concrete operator.
+
+Parameters:
+- `internal` - - neat controller context
+- `methods` - - methods module
+- `rawReturnForTest` - - whether to return raw FFW array for tests
+
+Returns: mutation method or null when not handled
+
+### normalizeMutationPoolForSelect
+
+```ts
+normalizeMutationPoolForSelect(
+  internal: NeatControllerForMutation,
+  methods: { mutation: unknown; },
+  rawReturnForTest: boolean,
+): MutationMethod[]
+```
+
+Normalize the configured mutation pool to a flat operator list.
+
+This helper is the bridge from loose policy configuration to a concrete
+candidate shelf. It flattens nested legacy arrays and preserves the special
+FFW path when tests explicitly need the historical representation.
+
+Parameters:
+- `internal` - - neat controller context
+- `methods` - - methods module
+- `rawReturnForTest` - - whether to return raw FFW for tests
+
+Returns: normalized mutation pool
+
+### isLegacyFFWPoolForSelect
+
+```ts
+isLegacyFFWPoolForSelect(
+  configuredPool: MutationMethod[],
+  methods: { mutation: unknown; },
+): boolean
+```
+
+Check whether a pool matches the legacy FFW operator ordering.
+
+The selection boundary uses this check as a compatibility detector, not as a
+generic equality helper. Matching the canonical FFW ordering tells the caller
+that the configured pool is really a feed-forward preset that may deserve
+special handling.
+
+Parameters:
+- `configuredPool` - - configured operator pool
+- `methods` - - methods module
+
+Returns: true when the pool matches FFW
+
+### applyPhasedComplexityForSelect
+
+```ts
+applyPhasedComplexityForSelect(
+  pool: MutationMethod[],
+  internal: NeatControllerForMutation,
+): MutationMethod[]
+```
+
+Apply phased complexity adjustments to the pool when enabled.
+
+Phased complexity nudges operator choice without banning the rest of the
+pool outright. In simplify mode the helper duplicates subtractive operators.
+In complexify mode it duplicates additive operators. That duplication acts as
+a soft bias rather than a hard switch, which keeps the controller from losing
+all policy diversity when it changes search phase.
+
+Parameters:
+- `pool` - - base operator pool
+- `internal` - - neat controller context
+
+Returns: pool with phased complexity adjustments
+
 ### applyOperatorAdaptationForSelect
 
 ```ts
@@ -67,6 +163,74 @@ Parameters:
 - `internal` - - neat controller context
 
 Returns: augmented pool
+
+### sampleFromPoolForSelect
+
+```ts
+sampleFromPoolForSelect(
+  pool: MutationMethod[],
+  internal: NeatControllerForMutation,
+): MutationMethod | null
+```
+
+Sample a random method from the pool.
+
+This is the uncomplicated fallback selector. It is useful both for direct
+legacy sampling paths and for any configuration that wants weighted random
+choice without the stronger opinion of the operator bandit.
+
+Parameters:
+- `pool` - - operator pool
+- `internal` - - neat controller context
+
+Returns: sampled method or null
+
+### isOperatorNamePrefixedForSelect
+
+```ts
+isOperatorNamePrefixedForSelect(
+  method: MutationMethod,
+  prefix: string,
+): boolean
+```
+
+Check whether an operator name uses a specific prefix.
+
+Prefix checks let the selection layer describe families of operators without
+hard-coding every method in multiple places. That keeps phased complexity
+logic concise while still making the intent readable in the generated docs.
+
+Parameters:
+- `method` - - mutation operator
+- `prefix` - - name prefix to match
+
+Returns: true when the operator name matches the prefix
+
+### isBlockedByStructuralLimitsForSelect
+
+```ts
+isBlockedByStructuralLimitsForSelect(
+  mutationMethod: MutationMethod,
+  genome: GenomeWithMetadata,
+  internal: NeatControllerForMutation,
+  methods: { mutation: unknown; },
+): boolean
+```
+
+Check whether a mutation is blocked by structural limits.
+
+This helper is one of the hard guard rails after softer policy shaping has
+already happened. Even if an operator is favored by phase bias or adaptation,
+it must still respect controller-wide caps such as maximum nodes,
+connections, or gates.
+
+Parameters:
+- `mutationMethod` - - mutation operator to check
+- `genome` - - genome to inspect
+- `internal` - - neat controller context
+- `methods` - - methods module
+
+Returns: true when the mutation should be blocked
 
 ### applyOperatorBanditForSelect
 
@@ -97,29 +261,6 @@ Parameters:
 
 Returns: selected method
 
-### applyPhasedComplexityForSelect
-
-```ts
-applyPhasedComplexityForSelect(
-  pool: MutationMethod[],
-  internal: NeatControllerForMutation,
-): MutationMethod[]
-```
-
-Apply phased complexity adjustments to the pool when enabled.
-
-Phased complexity nudges operator choice without banning the rest of the
-pool outright. In simplify mode the helper duplicates subtractive operators.
-In complexify mode it duplicates additive operators. That duplication acts as
-a soft bias rather than a hard switch, which keeps the controller from losing
-all policy diversity when it changes search phase.
-
-Parameters:
-- `pool` - - base operator pool
-- `internal` - - neat controller context
-
-Returns: pool with phased complexity adjustments
-
 ### isBlockedByRecurrentPolicyForSelect
 
 ```ts
@@ -142,144 +283,3 @@ Parameters:
 - `methods` - - methods module
 
 Returns: true when the mutation should be blocked
-
-### isBlockedByStructuralLimitsForSelect
-
-```ts
-isBlockedByStructuralLimitsForSelect(
-  mutationMethod: MutationMethod,
-  genome: GenomeWithMetadata,
-  internal: NeatControllerForMutation,
-  methods: { mutation: unknown; },
-): boolean
-```
-
-Check whether a mutation is blocked by structural limits.
-
-This helper is one of the hard guard rails after softer policy shaping has
-already happened. Even if an operator is favored by phase bias or adaptation,
-it must still respect controller-wide caps such as maximum nodes,
-connections, or gates.
-
-Parameters:
-- `mutationMethod` - - mutation operator to check
-- `genome` - - genome to inspect
-- `internal` - - neat controller context
-- `methods` - - methods module
-
-Returns: true when the mutation should be blocked
-
-### isLegacyFFWPoolForSelect
-
-```ts
-isLegacyFFWPoolForSelect(
-  configuredPool: MutationMethod[],
-  methods: { mutation: unknown; },
-): boolean
-```
-
-Check whether a pool matches the legacy FFW operator ordering.
-
-The selection boundary uses this check as a compatibility detector, not as a
-generic equality helper. Matching the canonical FFW ordering tells the caller
-that the configured pool is really a feed-forward preset that may deserve
-special handling.
-
-Parameters:
-- `configuredPool` - - configured operator pool
-- `methods` - - methods module
-
-Returns: true when the pool matches FFW
-
-### isOperatorNamePrefixedForSelect
-
-```ts
-isOperatorNamePrefixedForSelect(
-  method: MutationMethod,
-  prefix: string,
-): boolean
-```
-
-Check whether an operator name uses a specific prefix.
-
-Prefix checks let the selection layer describe families of operators without
-hard-coding every method in multiple places. That keeps phased complexity
-logic concise while still making the intent readable in the generated docs.
-
-Parameters:
-- `method` - - mutation operator
-- `prefix` - - name prefix to match
-
-Returns: true when the operator name matches the prefix
-
-### normalizeMutationPoolForSelect
-
-```ts
-normalizeMutationPoolForSelect(
-  internal: NeatControllerForMutation,
-  methods: { mutation: unknown; },
-  rawReturnForTest: boolean,
-): MutationMethod[]
-```
-
-Normalize the configured mutation pool to a flat operator list.
-
-This helper is the bridge from loose policy configuration to a concrete
-candidate shelf. It flattens nested legacy arrays and preserves the special
-FFW path when tests explicitly need the historical representation.
-
-Parameters:
-- `internal` - - neat controller context
-- `methods` - - methods module
-- `rawReturnForTest` - - whether to return raw FFW for tests
-
-Returns: normalized mutation pool
-
-### resolveFFWPolicyForSelect
-
-```ts
-resolveFFWPolicyForSelect(
-  internal: NeatControllerForMutation,
-  methods: { mutation: unknown; },
-  rawReturnForTest: boolean,
-): MutationMethod | MutationMethod[] | null
-```
-
-Resolve legacy FFW policy behavior, including test-specific returns.
-
-Older feed-forward configuration paths can encode mutation policy in shapes
-that do not look like the newer flat operator pool. This helper isolates that
-compatibility layer so the rest of selection can operate on a predictable
-surface.
-
-The `rawReturnForTest` flag exists because some tests assert the preserved
-legacy pool shape rather than one sampled method. Production mutation flow,
-by contrast, normally wants one concrete operator.
-
-Parameters:
-- `internal` - - neat controller context
-- `methods` - - methods module
-- `rawReturnForTest` - - whether to return raw FFW array for tests
-
-Returns: mutation method or null when not handled
-
-### sampleFromPoolForSelect
-
-```ts
-sampleFromPoolForSelect(
-  pool: MutationMethod[],
-  internal: NeatControllerForMutation,
-): MutationMethod | null
-```
-
-Sample a random method from the pool.
-
-This is the uncomplicated fallback selector. It is useful both for direct
-legacy sampling paths and for any configuration that wants weighted random
-choice without the stronger opinion of the operator bandit.
-
-Parameters:
-- `pool` - - operator pool
-- `internal` - - neat controller context
-
-Returns: sampled method or null

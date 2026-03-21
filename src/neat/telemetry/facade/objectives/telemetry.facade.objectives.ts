@@ -18,11 +18,11 @@
  *
  * ```mermaid
  * flowchart TD
- *   Registry[Active objective registry] --> Keys[getObjectiveKeys()<br/>stable objective names]
- *   Registry --> Summary[getObjectives()<br/>compact descriptors]
- *   Events[Objective lifecycle events] --> History[getObjectiveEvents()<br/>recent add remove log]
- *   Register[registerTelemetryObjective()] --> Registry
- *   Clear[clearTelemetryObjectives()] --> Registry
+ *   Registry["Active objective registry"] --> Keys["getObjectiveKeys()<br/>stable objective names"]
+ *   Registry --> Summary["getObjectives()<br/>compact descriptors"]
+ *   Events["Objective lifecycle events"] --> History["getObjectiveEvents()<br/>recent add remove log"]
+ *   Register["registerTelemetryObjective()"] --> Registry
+ *   Clear["clearTelemetryObjectives()"] --> Registry
  * ```
  */
 import {

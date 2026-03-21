@@ -16,7 +16,7 @@
  *
  * ```mermaid
  * flowchart TD
- *   Stats[Recorded operator counters] --> Summary[getOperatorStats()<br/>name success attempts]
+ *   Stats["Recorded operator counters"] --> Summary["getOperatorStats()<br/>name success attempts"]
  *   Summary --> Inspect[Adaptive tuning and diagnostics]
  * ```
  */

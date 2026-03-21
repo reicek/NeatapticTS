@@ -84,25 +84,6 @@ must exist by default, middle helpers gather and validate user intent, and
 later helpers hydrate missing containers or replace one objective without
 mutating an older list in place.
 
-### buildDefaultFitnessObjective
-
-```ts
-buildDefaultFitnessObjective(): ObjectiveDescriptor
-```
-
-Build the default fitness objective descriptor.
-
-The default fitness objective is the anchor that keeps ordinary NEAT runs
-meaningful even when no richer objective policy has been configured yet.
-Core resolution builds it on demand so callers do not need a special
-bootstrap path elsewhere.
-
-Keeping this builder separate from the collection logic also makes the core
-flow easier to teach: one helper decides *whether* the default should exist,
-this helper decides *what* that default descriptor looks like.
-
-Returns: Default fitness objective descriptor.
-
 ### collectDefaultObjectives
 
 ```ts
@@ -149,6 +130,90 @@ Parameters:
 
 Returns: Valid user objective descriptors.
 
+### buildDefaultFitnessObjective
+
+```ts
+buildDefaultFitnessObjective(): ObjectiveDescriptor
+```
+
+Build the default fitness objective descriptor.
+
+The default fitness objective is the anchor that keeps ordinary NEAT runs
+meaningful even when no richer objective policy has been configured yet.
+Core resolution builds it on demand so callers do not need a special
+bootstrap path elsewhere.
+
+Keeping this builder separate from the collection logic also makes the core
+flow easier to teach: one helper decides *whether* the default should exist,
+this helper decides *what* that default descriptor looks like.
+
+Returns: Default fitness objective descriptor.
+
+### isMultiObjectiveEnabled
+
+```ts
+isMultiObjectiveEnabled(
+  neatInstance: NeatLikeWithObjectives,
+): boolean
+```
+
+Check whether multi-objective mode is enabled with a candidate list.
+
+This guard is intentionally strict: enabling multi-objective mode without an
+objective array is treated as incomplete configuration, so downstream helpers
+can avoid reasoning about half-hydrated state.
+
+That strictness keeps later helpers simpler because they can assume that a
+`true` result means both the mode and the candidate container are present.
+
+Parameters:
+- `neatInstance` - - NEAT host exposing objective settings.
+
+Returns: `true` when multi-objective mode is enabled and an objective list exists.
+
+### getObjectiveCandidates
+
+```ts
+getObjectiveCandidates(
+  neatInstance: NeatLikeWithObjectives,
+): ObjectiveDescriptor[]
+```
+
+Get the configured objective candidates.
+
+This helper exposes the raw configured candidates before validation so the
+rest of the mechanics layer can separate retrieval from filtering.
+That separation makes the later validation helpers easier to test and easier
+to explain in the generated docs.
+
+Parameters:
+- `neatInstance` - - NEAT host exposing objective settings.
+
+Returns: Objective candidates from configuration.
+
+### isValidObjective
+
+```ts
+isValidObjective(
+  candidateObjective: ObjectiveDescriptor | undefined,
+): boolean
+```
+
+Validate that an objective descriptor has the required shape.
+
+Core resolution only requires a stable key and an accessor function. Other
+fields can remain lightweight because this layer's job is to reject clearly
+unsafe descriptors, not to impose a heavier policy than the public chapter
+promises.
+
+This is intentionally a safety check, not a semantic ranking policy. It tells
+the controller whether a descriptor is usable, not whether it is a good idea.
+
+Parameters:
+- `candidateObjective` - - Candidate descriptor to validate.
+
+Returns: `true` when the descriptor can be used safely.
+
 ### ensureMultiObjectiveOptions
 
 ```ts
@@ -192,71 +257,6 @@ Parameters:
 - `multiObjectiveOptions` - - Multi-objective container to hydrate.
 
 Returns: Objectives list ready for non-destructive operations.
-
-### getObjectiveCandidates
-
-```ts
-getObjectiveCandidates(
-  neatInstance: NeatLikeWithObjectives,
-): ObjectiveDescriptor[]
-```
-
-Get the configured objective candidates.
-
-This helper exposes the raw configured candidates before validation so the
-rest of the mechanics layer can separate retrieval from filtering.
-That separation makes the later validation helpers easier to test and easier
-to explain in the generated docs.
-
-Parameters:
-- `neatInstance` - - NEAT host exposing objective settings.
-
-Returns: Objective candidates from configuration.
-
-### isMultiObjectiveEnabled
-
-```ts
-isMultiObjectiveEnabled(
-  neatInstance: NeatLikeWithObjectives,
-): boolean
-```
-
-Check whether multi-objective mode is enabled with a candidate list.
-
-This guard is intentionally strict: enabling multi-objective mode without an
-objective array is treated as incomplete configuration, so downstream helpers
-can avoid reasoning about half-hydrated state.
-
-That strictness keeps later helpers simpler because they can assume that a
-`true` result means both the mode and the candidate container are present.
-
-Parameters:
-- `neatInstance` - - NEAT host exposing objective settings.
-
-Returns: `true` when multi-objective mode is enabled and an objective list exists.
-
-### isValidObjective
-
-```ts
-isValidObjective(
-  candidateObjective: ObjectiveDescriptor | undefined,
-): boolean
-```
-
-Validate that an objective descriptor has the required shape.
-
-Core resolution only requires a stable key and an accessor function. Other
-fields can remain lightweight because this layer's job is to reject clearly
-unsafe descriptors, not to impose a heavier policy than the public chapter
-promises.
-
-This is intentionally a safety check, not a semantic ranking policy. It tells
-the controller whether a descriptor is usable, not whether it is a good idea.
-
-Parameters:
-- `candidateObjective` - - Candidate descriptor to validate.
-
-Returns: `true` when the descriptor can be used safely.
 
 ### replaceObjectiveByKey
 

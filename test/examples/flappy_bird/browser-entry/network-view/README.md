@@ -17,36 +17,6 @@ used to render that group marker.
 
 ## browser-entry/network-view/network-view.ts
 
-### clampRecommendedNetworkHeightPx
-
-```ts
-clampRecommendedNetworkHeightPx(
-  recommendedHeightPx: number,
-): number
-```
-
-Clamps a recommended network height into the configured panel range.
-
-Parameters:
-- `recommendedHeightPx` - - Recommended panel height.
-
-Returns: Clamped panel height.
-
-### createPositionByNodeIndex
-
-```ts
-createPositionByNodeIndex(
-  centeredPositionedNodes: PositionedNetworkNodeLike[],
-): Map<number, PositionedNetworkNodeLike>
-```
-
-Builds a node-index lookup map for resolved positioned nodes.
-
-Parameters:
-- `centeredPositionedNodes` - - Positioned nodes after centering.
-
-Returns: Map keyed by node index.
-
 ### drawNetworkVisualization
 
 ```ts
@@ -77,202 +47,6 @@ Example:
 drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
 ```
 
-### drawPositionedNetworkGraph
-
-```ts
-drawPositionedNetworkGraph(
-  context: CanvasRenderingContext2D,
-  networkVisualizationScene: NetworkVisualizationScene,
-  positionedNetworkGraphScene: PositionedNetworkGraphScene,
-): void
-```
-
-Draws the positioned graph layers and optional guide overlays.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `networkVisualizationScene` - - Frame scene context.
-- `positionedNetworkGraphScene` - - Positioned graph scene.
-
-Returns: Nothing.
-
-### formatArchitectureLabel
-
-```ts
-formatArchitectureLabel(
-  architectureInputSize: number,
-  hiddenLayersLabel: string,
-  architectureOutputSize: number,
-  totalNodeCount: number,
-  totalConnectionCount: number,
-): string
-```
-
-Formats the two-line architecture label used by the header and legend.
-
-Parameters:
-- `architectureInputSize` - - Input layer size.
-- `hiddenLayersLabel` - - Hidden-layer description.
-- `architectureOutputSize` - - Output layer size.
-- `totalNodeCount` - - Total node count.
-- `totalConnectionCount` - - Total connection count.
-
-Returns: Formatted architecture label.
-
-### NetworkTopologySummary
-
-Network-view orchestration for the browser-side architecture panel.
-
-This subsystem sits between raw network data and the lower-level visualization
-drawing helpers. It resolves topology summaries, chooses panel size, lays out
-nodes inside the drawable area, and coordinates overlays such as legends and
-input-group bands.
-
-That one call is the high-level fold from an active network to a readable
-panel: background, graph layout, legend, and input-group overlays.
-
-### paintNetworkVisualizationCanvasBase
-
-```ts
-paintNetworkVisualizationCanvasBase(
-  context: CanvasRenderingContext2D,
-  networkVisualizationScene: NetworkVisualizationScene,
-): void
-```
-
-Paints the static background fill for the network visualization canvas.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `networkVisualizationScene` - - Frame scene context.
-
-Returns: Nothing.
-
-### resolveAdjustedGraphPaddingContext
-
-```ts
-resolveAdjustedGraphPaddingContext(
-  context: CanvasRenderingContext2D,
-  network: default | undefined,
-  canvasWidthPx: number,
-  hideNetworkOverlays: boolean,
-  graphPaddingContext: NetworkGraphPaddingContext,
-): Pick<NetworkGraphPaddingContext, "graphLeftPaddingPx" | "graphRightPaddingPx">
-```
-
-Adjusts graph-side padding to keep the floating legend from overlapping nodes.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `network` - - Network to visualize.
-- `canvasWidthPx` - - Canvas width.
-- `hideNetworkOverlays` - - Whether overlays are hidden.
-- `graphPaddingContext` - - Base graph padding context.
-
-Returns: Adjusted graph padding context.
-
-### resolveBaseGraphPaddingContext
-
-```ts
-resolveBaseGraphPaddingContext(): NetworkGraphPaddingContext
-```
-
-Resolves the base graph padding before legend-aware adjustments are applied.
-
-Returns: Base graph padding context.
-
-### resolveHiddenLayersLabel
-
-```ts
-resolveHiddenLayersLabel(
-  hiddenLayerSizes: number[],
-  architectureSource: "layer-metadata" | "graph-topology" | "inferred",
-): string
-```
-
-Resolves the hidden-layer portion of the compact architecture label.
-
-Parameters:
-- `hiddenLayerSizes` - - Hidden-layer sizes.
-- `architectureSource` - - Architecture source metadata.
-
-Returns: Hidden-layer label.
-
-### resolveNetworkArchitectureLabel
-
-```ts
-resolveNetworkArchitectureLabel(
-  network: default | undefined,
-  inputSize: number,
-  outputSize: number,
-): string
-```
-
-Resolves compact architecture label text for headers and HUD rows.
-
-The label compresses the active network into a short human-readable summary:
-input size, hidden-layer structure, output size, and graph size metadata.
-
-Parameters:
-- `network` - - Network to describe.
-- `inputSize` - - Configured input size.
-- `outputSize` - - Configured output size.
-
-Returns: Readable architecture label.
-
-### resolveNetworkDrawableArea
-
-```ts
-resolveNetworkDrawableArea(
-  networkVisualizationScene: NetworkVisualizationScene,
-): NetworkDrawableArea
-```
-
-Resolves the drawable graph area after scene padding is applied.
-
-Parameters:
-- `networkVisualizationScene` - - Frame scene context.
-
-Returns: Drawable area dimensions.
-
-### resolveNetworkNodeDimensionsFromTopologySummary
-
-```ts
-resolveNetworkNodeDimensionsFromTopologySummary(
-  networkTopologySummary: NetworkTopologySummary,
-  drawableWidthPx: number,
-  drawableHeightPx: number,
-): NetworkNodeDimensionsLike
-```
-
-Resolves node rectangle dimensions from topology density and drawable bounds.
-
-Parameters:
-- `networkTopologySummary` - - Topology summary.
-- `drawableWidthPx` - - Drawable graph width.
-- `drawableHeightPx` - - Drawable graph height.
-
-Returns: Node dimensions.
-
-### resolveNetworkTopologySummary
-
-```ts
-resolveNetworkTopologySummary(
-  network: default | undefined,
-  inputSize: number,
-  outputSize: number,
-): NetworkTopologySummary
-```
-
-Resolves a reusable topology summary for layout and sizing helpers.
-
-Parameters:
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
-
-Returns: Topology summary.
-
 ### resolveNetworkVisualizationHeightPx
 
 ```ts
@@ -301,6 +75,40 @@ Example:
 const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
 ```
 
+### resolveNetworkArchitectureLabel
+
+```ts
+resolveNetworkArchitectureLabel(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): string
+```
+
+Resolves compact architecture label text for headers and HUD rows.
+
+The label compresses the active network into a short human-readable summary:
+input size, hidden-layer structure, output size, and graph size metadata.
+
+Parameters:
+- `network` - - Network to describe.
+- `inputSize` - - Configured input size.
+- `outputSize` - - Configured output size.
+
+Returns: Readable architecture label.
+
+### NetworkTopologySummary
+
+Network-view orchestration for the browser-side architecture panel.
+
+This subsystem sits between raw network data and the lower-level visualization
+drawing helpers. It resolves topology summaries, chooses panel size, lays out
+nodes inside the drawable area, and coordinates overlays such as legends and
+input-group bands.
+
+That one call is the high-level fold from an active network to a readable
+panel: background, graph layout, legend, and input-group overlays.
+
 ### resolveNetworkVisualizationScene
 
 ```ts
@@ -325,6 +133,23 @@ Parameters:
 
 Returns: Scene context for the current frame.
 
+### paintNetworkVisualizationCanvasBase
+
+```ts
+paintNetworkVisualizationCanvasBase(
+  context: CanvasRenderingContext2D,
+  networkVisualizationScene: NetworkVisualizationScene,
+): void
+```
+
+Paints the static background fill for the network visualization canvas.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `networkVisualizationScene` - - Frame scene context.
+
+Returns: Nothing.
+
 ### resolvePositionedNetworkGraphScene
 
 ```ts
@@ -346,52 +171,34 @@ Parameters:
 
 Returns: Positioned graph scene.
 
-### resolveRecommendedNetworkHeightPx
+### drawPositionedNetworkGraph
 
 ```ts
-resolveRecommendedNetworkHeightPx(
-  networkTopologySummary: NetworkTopologySummary,
-  topologyDrivenHeightPx: number,
-): number
+drawPositionedNetworkGraph(
+  context: CanvasRenderingContext2D,
+  networkVisualizationScene: NetworkVisualizationScene,
+  positionedNetworkGraphScene: PositionedNetworkGraphScene,
+): void
 ```
 
-Resolves the recommended panel height from topology and density adjustments.
+Draws the positioned graph layers and optional guide overlays.
 
 Parameters:
-- `networkTopologySummary` - - Topology summary.
-- `topologyDrivenHeightPx` - - Minimum readable topology height.
+- `context` - - Canvas 2D drawing context.
+- `networkVisualizationScene` - - Frame scene context.
+- `positionedNetworkGraphScene` - - Positioned graph scene.
 
-Returns: Recommended panel height.
+Returns: Nothing.
 
-### resolveRuntimeConnections
+### resolveBaseGraphPaddingContext
 
 ```ts
-resolveRuntimeConnections(
-  network: default | undefined,
-): VisualNetworkConnectionLike[]
+resolveBaseGraphPaddingContext(): NetworkGraphPaddingContext
 ```
 
-Resolves the runtime connection array from the active network.
+Resolves the base graph padding before legend-aware adjustments are applied.
 
-Parameters:
-- `network` - - Network to visualize.
-
-Returns: Runtime connection list.
-
-### resolveTopologyDrivenHeightPx
-
-```ts
-resolveTopologyDrivenHeightPx(
-  networkTopologySummary: NetworkTopologySummary,
-): number
-```
-
-Resolves the topology-driven minimum readable height.
-
-Parameters:
-- `networkTopologySummary` - - Topology summary.
-
-Returns: Minimum readable height in pixels.
+Returns: Base graph padding context.
 
 ### shouldHideNetworkOverlays
 
@@ -409,6 +216,199 @@ Parameters:
 - `fallbackViewportWidthPx` - - Fallback viewport width.
 
 Returns: True when overlays should be hidden.
+
+### resolveAdjustedGraphPaddingContext
+
+```ts
+resolveAdjustedGraphPaddingContext(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+  canvasWidthPx: number,
+  hideNetworkOverlays: boolean,
+  graphPaddingContext: NetworkGraphPaddingContext,
+): Pick<NetworkGraphPaddingContext, "graphLeftPaddingPx" | "graphRightPaddingPx">
+```
+
+Adjusts graph-side padding to keep the floating legend from overlapping nodes.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `network` - - Network to visualize.
+- `canvasWidthPx` - - Canvas width.
+- `hideNetworkOverlays` - - Whether overlays are hidden.
+- `graphPaddingContext` - - Base graph padding context.
+
+Returns: Adjusted graph padding context.
+
+### resolveNetworkDrawableArea
+
+```ts
+resolveNetworkDrawableArea(
+  networkVisualizationScene: NetworkVisualizationScene,
+): NetworkDrawableArea
+```
+
+Resolves the drawable graph area after scene padding is applied.
+
+Parameters:
+- `networkVisualizationScene` - - Frame scene context.
+
+Returns: Drawable area dimensions.
+
+### resolveNetworkTopologySummary
+
+```ts
+resolveNetworkTopologySummary(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): NetworkTopologySummary
+```
+
+Resolves a reusable topology summary for layout and sizing helpers.
+
+Parameters:
+- `network` - - Network to visualize.
+- `inputSize` - - Input-layer size.
+- `outputSize` - - Output-layer size.
+
+Returns: Topology summary.
+
+### resolveNetworkNodeDimensionsFromTopologySummary
+
+```ts
+resolveNetworkNodeDimensionsFromTopologySummary(
+  networkTopologySummary: NetworkTopologySummary,
+  drawableWidthPx: number,
+  drawableHeightPx: number,
+): NetworkNodeDimensionsLike
+```
+
+Resolves node rectangle dimensions from topology density and drawable bounds.
+
+Parameters:
+- `networkTopologySummary` - - Topology summary.
+- `drawableWidthPx` - - Drawable graph width.
+- `drawableHeightPx` - - Drawable graph height.
+
+Returns: Node dimensions.
+
+### resolveTopologyDrivenHeightPx
+
+```ts
+resolveTopologyDrivenHeightPx(
+  networkTopologySummary: NetworkTopologySummary,
+): number
+```
+
+Resolves the topology-driven minimum readable height.
+
+Parameters:
+- `networkTopologySummary` - - Topology summary.
+
+Returns: Minimum readable height in pixels.
+
+### resolveRecommendedNetworkHeightPx
+
+```ts
+resolveRecommendedNetworkHeightPx(
+  networkTopologySummary: NetworkTopologySummary,
+  topologyDrivenHeightPx: number,
+): number
+```
+
+Resolves the recommended panel height from topology and density adjustments.
+
+Parameters:
+- `networkTopologySummary` - - Topology summary.
+- `topologyDrivenHeightPx` - - Minimum readable topology height.
+
+Returns: Recommended panel height.
+
+### clampRecommendedNetworkHeightPx
+
+```ts
+clampRecommendedNetworkHeightPx(
+  recommendedHeightPx: number,
+): number
+```
+
+Clamps a recommended network height into the configured panel range.
+
+Parameters:
+- `recommendedHeightPx` - - Recommended panel height.
+
+Returns: Clamped panel height.
+
+### createPositionByNodeIndex
+
+```ts
+createPositionByNodeIndex(
+  centeredPositionedNodes: PositionedNetworkNodeLike[],
+): Map<number, PositionedNetworkNodeLike>
+```
+
+Builds a node-index lookup map for resolved positioned nodes.
+
+Parameters:
+- `centeredPositionedNodes` - - Positioned nodes after centering.
+
+Returns: Map keyed by node index.
+
+### resolveRuntimeConnections
+
+```ts
+resolveRuntimeConnections(
+  network: default | undefined,
+): VisualNetworkConnectionLike[]
+```
+
+Resolves the runtime connection array from the active network.
+
+Parameters:
+- `network` - - Network to visualize.
+
+Returns: Runtime connection list.
+
+### formatArchitectureLabel
+
+```ts
+formatArchitectureLabel(
+  architectureInputSize: number,
+  hiddenLayersLabel: string,
+  architectureOutputSize: number,
+  totalNodeCount: number,
+  totalConnectionCount: number,
+): string
+```
+
+Formats the two-line architecture label used by the header and legend.
+
+Parameters:
+- `architectureInputSize` - - Input layer size.
+- `hiddenLayersLabel` - - Hidden-layer description.
+- `architectureOutputSize` - - Output layer size.
+- `totalNodeCount` - - Total node count.
+- `totalConnectionCount` - - Total connection count.
+
+Returns: Formatted architecture label.
+
+### resolveHiddenLayersLabel
+
+```ts
+resolveHiddenLayersLabel(
+  hiddenLayerSizes: number[],
+  architectureSource: "layer-metadata" | "graph-topology" | "inferred",
+): string
+```
+
+Resolves the hidden-layer portion of the compact architecture label.
+
+Parameters:
+- `hiddenLayerSizes` - - Hidden-layer sizes.
+- `architectureSource` - - Architecture source metadata.
+
+Returns: Hidden-layer label.
 
 ## browser-entry/network-view/network-view.constants.ts
 
@@ -501,36 +501,6 @@ Once topology has been resolved into layers, these helpers place nodes inside
 the drawable panel and then center the final graph so it feels balanced inside
 the available canvas space.
 
-### centerPositionedNodesInDrawableArea
-
-```ts
-centerPositionedNodesInDrawableArea(
-  positionedNodes: PositionedNetworkNodeLike[],
-  leftPaddingPx: number,
-  topPaddingPx: number,
-  drawableWidthPx: number,
-  drawableHeightPx: number,
-  nodeLayoutPaddingPx: number,
-  nodeDimensions: NetworkNodeDimensionsLike,
-): PositionedNetworkNodeLike[]
-```
-
-Centers positioned nodes within the drawable graph area.
-
-Positioning establishes relative structure first; centering then shifts the
-whole graph as a block so it sits comfortably within the padded draw region.
-
-Parameters:
-- `positionedNodes` - - Positioned nodes before centering.
-- `leftPaddingPx` - - Left graph padding.
-- `topPaddingPx` - - Top graph padding.
-- `drawableWidthPx` - - Drawable graph width.
-- `drawableHeightPx` - - Drawable graph height.
-- `nodeLayoutPaddingPx` - - Inner graph padding.
-- `nodeDimensions` - - Node dimensions.
-
-Returns: Center-aligned positioned nodes.
-
 ### positionNetworkNodes
 
 ```ts
@@ -560,6 +530,36 @@ Parameters:
 - `nodeDimensions` - - Node dimensions.
 
 Returns: Positioned nodes.
+
+### centerPositionedNodesInDrawableArea
+
+```ts
+centerPositionedNodesInDrawableArea(
+  positionedNodes: PositionedNetworkNodeLike[],
+  leftPaddingPx: number,
+  topPaddingPx: number,
+  drawableWidthPx: number,
+  drawableHeightPx: number,
+  nodeLayoutPaddingPx: number,
+  nodeDimensions: NetworkNodeDimensionsLike,
+): PositionedNetworkNodeLike[]
+```
+
+Centers positioned nodes within the drawable graph area.
+
+Positioning establishes relative structure first; centering then shifts the
+whole graph as a block so it sits comfortably within the padded draw region.
+
+Parameters:
+- `positionedNodes` - - Positioned nodes before centering.
+- `leftPaddingPx` - - Left graph padding.
+- `topPaddingPx` - - Top graph padding.
+- `drawableWidthPx` - - Drawable graph width.
+- `drawableHeightPx` - - Drawable graph height.
+- `nodeLayoutPaddingPx` - - Inner graph padding.
+- `nodeDimensions` - - Node dimensions.
+
+Returns: Center-aligned positioned nodes.
 
 ## browser-entry/network-view/network-view.topology.utils.ts
 

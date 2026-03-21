@@ -17,37 +17,37 @@ Design Notes:
 
 ## architecture/network/topology/network.topology.utils.types.ts
 
-### IN_DEGREE_DECREMENT
-
-Unit decrement/increment used for in-degree tally updates.
-
 ### INPUT_NODE_TYPE
 
 Input node-type discriminator used for queue seeding.
 
-### PathSearchContext
+### ZERO_COUNT
 
-Mutable context used while running iterative DFS reachability checks.
+Zero baseline used for degree counts and empty-size checks.
 
-### TopologyBuildContext
+### IN_DEGREE_DECREMENT
 
-Mutable context used while building Kahn topological order.
-
-### TopologyNetwork
-
-Network instance type used by topology helpers.
+Unit decrement/increment used for in-degree tally updates.
 
 ### TopologyNetworkProps
 
 Internal topology state view carried across helper groups.
 
+### TopologyBuildContext
+
+Mutable context used while building Kahn topological order.
+
+### PathSearchContext
+
+Mutable context used while running iterative DFS reachability checks.
+
+### TopologyNetwork
+
+Network instance type used by topology helpers.
+
 ### TopologyNode
 
 Node instance type used by topology helpers.
-
-### ZERO_COUNT
-
-Zero baseline used for degree counts and empty-size checks.
 
 ## architecture/network/topology/network.topology.utils.ts
 
@@ -60,6 +60,17 @@ computeTopoOrder(): void
 Compute a topological ordering (Kahn's algorithm) for the current directed acyclic graph.
 If cycles are detected (order shorter than node count) we fall back to raw node order to avoid breaking callers.
 In non-acyclic mode we simply clear cached order to signal use of sequential node array.
+
+### hasPath
+
+```ts
+hasPath(
+  from: default,
+  to: default,
+): boolean
+```
+
+Depth-first reachability test (avoids infinite loops via visited set).
 
 ### createMLP
 
@@ -81,17 +92,6 @@ Parameters:
 
 Returns: Newly created MLP network.
 
-### hasPath
-
-```ts
-hasPath(
-  from: default,
-  to: default,
-): boolean
-```
-
-Depth-first reachability test (avoids infinite loops via visited set).
-
 ### rebuildConnections
 
 ```ts
@@ -107,71 +107,35 @@ Parameters:
 
 ## architecture/network/topology/network.topology.loop.utils.ts
 
-### appendTopoNode
+### seedProcessingQueue
 
 ```ts
-appendTopoNode(
-  topoOrder: default[],
-  node: default,
+seedProcessingQueue(
+  buildContext: TopologyBuildContext,
 ): void
 ```
 
-Append one node to topological order output.
+Seed Kahn queue with input nodes and zero in-degree nodes.
 
 Parameters:
-- `topoOrder` - Accumulated topological order.
-- `node` - Node to append.
+- `buildContext` - Mutable build context.
 
 Returns: Void.
 
-### decrementNodeInDegree
+### processKahnQueue
 
 ```ts
-decrementNodeInDegree(
+processKahnQueue(
   buildContext: TopologyBuildContext,
-  node: default,
-): number
+): void
 ```
 
-Decrement node in-degree and return remaining value.
+Process queue until all available nodes are emitted.
 
 Parameters:
 - `buildContext` - Mutable build context.
-- `node` - Target node.
 
-Returns: Remaining in-degree after decrement.
-
-### getInDegree
-
-```ts
-getInDegree(
-  buildContext: TopologyBuildContext,
-  node: default,
-): number
-```
-
-Read in-degree for a node with zero fallback.
-
-Parameters:
-- `buildContext` - Mutable build context.
-- `node` - Candidate node.
-
-Returns: In-degree value.
-
-### isInputNode
-
-```ts
-isInputNode(
-  node: default,
-): boolean
-```
-
-Test whether a node is an input node.
-
-Parameters:
-- `node` - Candidate node.
-
-Returns: True when node type is input.
+Returns: Void.
 
 ### isQueueSeedNode
 
@@ -190,35 +154,67 @@ Parameters:
 
 Returns: True when node is input-type or has zero in-degree.
 
-### isSelfConnection
+### isInputNode
 
 ```ts
-isSelfConnection(
-  from: default,
-  to: default,
+isInputNode(
+  node: default,
 ): boolean
 ```
 
-Test whether a connection is a self-loop.
+Test whether a node is an input node.
 
 Parameters:
-- `from` - Source node.
-- `to` - Target node.
+- `node` - Candidate node.
 
-Returns: True when source and target are the same node.
+Returns: True when node type is input.
 
-### processKahnQueue
+### getInDegree
 
 ```ts
-processKahnQueue(
+getInDegree(
   buildContext: TopologyBuildContext,
-): void
+  node: default,
+): number
 ```
 
-Process queue until all available nodes are emitted.
+Read in-degree for a node with zero fallback.
 
 Parameters:
 - `buildContext` - Mutable build context.
+- `node` - Candidate node.
+
+Returns: In-degree value.
+
+### takeNextQueueNode
+
+```ts
+takeNextQueueNode(
+  processingQueue: default[],
+): default
+```
+
+Shift and return the next queue node.
+
+Parameters:
+- `processingQueue` - Queue of pending nodes.
+
+Returns: Next node.
+
+### appendTopoNode
+
+```ts
+appendTopoNode(
+  topoOrder: default[],
+  node: default,
+): void
+```
+
+Append one node to topological order output.
+
+Parameters:
+- `topoOrder` - Accumulated topological order.
+- `node` - Node to append.
 
 Returns: Void.
 
@@ -239,35 +235,39 @@ Parameters:
 
 Returns: Void.
 
-### seedProcessingQueue
+### decrementNodeInDegree
 
 ```ts
-seedProcessingQueue(
+decrementNodeInDegree(
   buildContext: TopologyBuildContext,
-): void
+  node: default,
+): number
 ```
 
-Seed Kahn queue with input nodes and zero in-degree nodes.
+Decrement node in-degree and return remaining value.
 
 Parameters:
 - `buildContext` - Mutable build context.
+- `node` - Target node.
 
-Returns: Void.
+Returns: Remaining in-degree after decrement.
 
-### takeNextQueueNode
+### isSelfConnection
 
 ```ts
-takeNextQueueNode(
-  processingQueue: default[],
-): default
+isSelfConnection(
+  from: default,
+  to: default,
+): boolean
 ```
 
-Shift and return the next queue node.
+Test whether a connection is a self-loop.
 
 Parameters:
-- `processingQueue` - Queue of pending nodes.
+- `from` - Source node.
+- `to` - Target node.
 
-Returns: Next node.
+Returns: True when source and target are the same node.
 
 ## architecture/network/topology/network.topology.path.utils.ts
 
@@ -288,22 +288,20 @@ Parameters:
 
 Returns: Initialized path-search context.
 
-### hasVisitedNode
+### traversePathSearch
 
 ```ts
-hasVisitedNode(
-  visitedNodes: Set<default>,
-  node: default,
+traversePathSearch(
+  searchContext: PathSearchContext,
 ): boolean
 ```
 
-Test whether a node has already been visited.
+Traverse DFS search stack and test reachability.
 
 Parameters:
-- `visitedNodes` - Visited-node set.
-- `node` - Candidate node.
+- `searchContext` - Mutable search context.
 
-Returns: True when node is already visited.
+Returns: True when target node is reachable.
 
 ### isSameNode
 
@@ -322,22 +320,37 @@ Parameters:
 
 Returns: True when references are identical.
 
-### isSelfConnection
+### takeNextStackNode
 
 ```ts
-isSelfConnection(
-  from: default,
-  to: default,
+takeNextStackNode(
+  nodesToVisitStack: default[],
+): default
+```
+
+Pop and return next DFS stack node.
+
+Parameters:
+- `nodesToVisitStack` - DFS stack.
+
+Returns: Next node to process.
+
+### hasVisitedNode
+
+```ts
+hasVisitedNode(
+  visitedNodes: Set<default>,
+  node: default,
 ): boolean
 ```
 
-Test whether a connection is a self-loop.
+Test whether a node has already been visited.
 
 Parameters:
-- `from` - Source node.
-- `to` - Target node.
+- `visitedNodes` - Visited-node set.
+- `node` - Candidate node.
 
-Returns: True when source and target are the same node.
+Returns: True when node is already visited.
 
 ### markVisited
 
@@ -373,52 +386,24 @@ Parameters:
 
 Returns: Void.
 
-### takeNextStackNode
+### isSelfConnection
 
 ```ts
-takeNextStackNode(
-  nodesToVisitStack: default[],
-): default
-```
-
-Pop and return next DFS stack node.
-
-Parameters:
-- `nodesToVisitStack` - DFS stack.
-
-Returns: Next node to process.
-
-### traversePathSearch
-
-```ts
-traversePathSearch(
-  searchContext: PathSearchContext,
+isSelfConnection(
+  from: default,
+  to: default,
 ): boolean
 ```
 
-Traverse DFS search stack and test reachability.
+Test whether a connection is a self-loop.
 
 Parameters:
-- `searchContext` - Mutable search context.
+- `from` - Source node.
+- `to` - Target node.
 
-Returns: True when target node is reachable.
+Returns: True when source and target are the same node.
 
 ## architecture/network/topology/network.topology.setup.utils.ts
-
-### applyIncomingEdgeCounts
-
-```ts
-applyIncomingEdgeCounts(
-  buildContext: TopologyBuildContext,
-): void
-```
-
-Apply in-degree increments from non-self connections.
-
-Parameters:
-- `buildContext` - Mutable build context.
-
-Returns: Void.
 
 ### asTopologyProps
 
@@ -434,6 +419,21 @@ Parameters:
 - `network` - Network instance.
 
 Returns: Internal topology props view.
+
+### shouldUseRawNodeOrder
+
+```ts
+shouldUseRawNodeOrder(
+  internalTopologyProps: TopologyNetworkProps,
+): boolean
+```
+
+Determine whether topological order should be bypassed.
+
+Parameters:
+- `internalTopologyProps` - Internal topology props view.
+
+Returns: True when acyclic mode is disabled.
 
 ### clearCachedTopoOrder
 
@@ -467,6 +467,36 @@ Parameters:
 
 Returns: Initialized build context.
 
+### initializeAllNodeInDegreeCounts
+
+```ts
+initializeAllNodeInDegreeCounts(
+  buildContext: TopologyBuildContext,
+): void
+```
+
+Initialize all nodes with zero in-degree.
+
+Parameters:
+- `buildContext` - Mutable build context.
+
+Returns: Void.
+
+### applyIncomingEdgeCounts
+
+```ts
+applyIncomingEdgeCounts(
+  buildContext: TopologyBuildContext,
+): void
+```
+
+Apply in-degree increments from non-self connections.
+
+Parameters:
+- `buildContext` - Mutable build context.
+
+Returns: Void.
+
 ### finalizeTopoOrder
 
 ```ts
@@ -482,37 +512,20 @@ Parameters:
 
 Returns: Void.
 
-### incrementNodeInDegree
+### resolveFinalOrder
 
 ```ts
-incrementNodeInDegree(
+resolveFinalOrder(
   buildContext: TopologyBuildContext,
-  node: default,
-): void
+): default[]
 ```
 
-Increment in-degree for a node in the tally map.
-
-Parameters:
-- `buildContext` - Mutable build context.
-- `node` - Target node.
-
-Returns: Void.
-
-### initializeAllNodeInDegreeCounts
-
-```ts
-initializeAllNodeInDegreeCounts(
-  buildContext: TopologyBuildContext,
-): void
-```
-
-Initialize all nodes with zero in-degree.
+Resolve final topological order with cycle fallback.
 
 Parameters:
 - `buildContext` - Mutable build context.
 
-Returns: Void.
+Returns: Fully valid topological order or raw node order fallback.
 
 ### isSelfConnection
 
@@ -531,140 +544,24 @@ Parameters:
 
 Returns: True when source and target are the same node.
 
-### resolveFinalOrder
+### incrementNodeInDegree
 
 ```ts
-resolveFinalOrder(
+incrementNodeInDegree(
   buildContext: TopologyBuildContext,
-): default[]
+  node: default,
+): void
 ```
 
-Resolve final topological order with cycle fallback.
+Increment in-degree for a node in the tally map.
 
 Parameters:
 - `buildContext` - Mutable build context.
+- `node` - Target node.
 
-Returns: Fully valid topological order or raw node order fallback.
-
-### shouldUseRawNodeOrder
-
-```ts
-shouldUseRawNodeOrder(
-  internalTopologyProps: TopologyNetworkProps,
-): boolean
-```
-
-Determine whether topological order should be bypassed.
-
-Parameters:
-- `internalTopologyProps` - Internal topology props view.
-
-Returns: True when acyclic mode is disabled.
+Returns: Void.
 
 ## architecture/network/topology/network.topology.factory.utils.ts
-
-### addOutgoingConnectionsToSet
-
-```ts
-addOutgoingConnectionsToSet(
-  outgoingConnections: default[],
-  allConnections: Set<default>,
-): void
-```
-
-Add all outgoing connections to a deduplication set.
-
-Parameters:
-- `outgoingConnections` - Outgoing connections from one node.
-- `allConnections` - Deduplication set for network connections.
-
-### assignNetworkNodes
-
-```ts
-assignNetworkNodes(
-  networkInstance: default,
-  mlpNodeLayers: MlpNodeLayers,
-): void
-```
-
-Assign ordered nodes to the network instance.
-
-Parameters:
-- `networkInstance` - Target network.
-- `mlpNodeLayers` - Grouped node layers for this MLP.
-
-### collectUniqueOutgoingConnections
-
-```ts
-collectUniqueOutgoingConnections(
-  networkInstance: default,
-): Set<default>
-```
-
-Collect unique outgoing connections across all network nodes.
-
-Parameters:
-- `networkInstance` - Target network.
-
-Returns: Set of unique outgoing connections.
-
-### connectLayerPair
-
-```ts
-connectLayerPair(
-  sourceLayer: default[],
-  targetLayer: default[],
-): void
-```
-
-Fully connect every source node to every target node.
-
-Parameters:
-- `sourceLayer` - Source layer.
-- `targetLayer` - Target layer.
-
-### connectMlpLayers
-
-```ts
-connectMlpLayers(
-  mlpNodeLayers: MlpNodeLayers,
-): void
-```
-
-Fully connect each adjacent layer in MLP order.
-
-Parameters:
-- `mlpNodeLayers` - Grouped node layers for this MLP.
-
-### convertConnectionSetToArray
-
-```ts
-convertConnectionSetToArray(
-  uniqueConnections: Set<default>,
-): default[]
-```
-
-Convert a connection set into the canonical array format.
-
-Parameters:
-- `uniqueConnections` - Unique network connections.
-
-Returns: Array of network connections.
-
-### createHiddenLayers
-
-```ts
-createHiddenLayers(
-  hiddenCounts: number[],
-): default[][]
-```
-
-Create all hidden layers for an MLP topology.
-
-Parameters:
-- `hiddenCounts` - Hidden-layer node counts.
-
-Returns: Hidden layers in forward order.
 
 ### createMLP
 
@@ -686,6 +583,19 @@ Parameters:
 
 Returns: Newly created MLP network.
 
+### rebuildConnections
+
+```ts
+rebuildConnections(
+  networkInstance: default,
+): void
+```
+
+Rebuild the canonical connection array from per-node outgoing lists.
+
+Parameters:
+- `networkInstance` - Target network.
+
 ### createMlpNodeLayers
 
 ```ts
@@ -705,6 +615,40 @@ Parameters:
 
 Returns: Grouped node layers for MLP assembly.
 
+### instantiateNetwork
+
+```ts
+instantiateNetwork(
+  networkFactory: NetworkConstructor,
+  inputCount: number,
+  outputCount: number,
+): default
+```
+
+Instantiate a new network using the runtime constructor.
+
+Parameters:
+- `networkFactory` - Network constructor function.
+- `inputCount` - Number of input nodes.
+- `outputCount` - Number of output nodes.
+
+Returns: Newly instantiated network.
+
+### assignNetworkNodes
+
+```ts
+assignNetworkNodes(
+  networkInstance: default,
+  mlpNodeLayers: MlpNodeLayers,
+): void
+```
+
+Assign ordered nodes to the network instance.
+
+Parameters:
+- `networkInstance` - Target network.
+- `mlpNodeLayers` - Grouped node layers for this MLP.
+
 ### createNodesOfType
 
 ```ts
@@ -721,6 +665,21 @@ Parameters:
 - `nodeType` - Node type identifier.
 
 Returns: Node list of the requested type.
+
+### createHiddenLayers
+
+```ts
+createHiddenLayers(
+  hiddenCounts: number[],
+): default[][]
+```
+
+Create all hidden layers for an MLP topology.
+
+Parameters:
+- `hiddenCounts` - Hidden-layer node counts.
+
+Returns: Hidden layers in forward order.
 
 ### createOrderedNodeList
 
@@ -752,24 +711,33 @@ Parameters:
 
 Returns: Flattened node list.
 
-### instantiateNetwork
+### connectMlpLayers
 
 ```ts
-instantiateNetwork(
-  networkFactory: NetworkConstructor,
-  inputCount: number,
-  outputCount: number,
-): default
+connectMlpLayers(
+  mlpNodeLayers: MlpNodeLayers,
+): void
 ```
 
-Instantiate a new network using the runtime constructor.
+Fully connect each adjacent layer in MLP order.
 
 Parameters:
-- `networkFactory` - Network constructor function.
-- `inputCount` - Number of input nodes.
-- `outputCount` - Number of output nodes.
+- `mlpNodeLayers` - Grouped node layers for this MLP.
 
-Returns: Newly instantiated network.
+### connectLayerPair
+
+```ts
+connectLayerPair(
+  sourceLayer: default[],
+  targetLayer: default[],
+): void
+```
+
+Fully connect every source node to every target node.
+
+Parameters:
+- `sourceLayer` - Source layer.
+- `targetLayer` - Target layer.
 
 ### markTopologyDirty
 
@@ -784,20 +752,84 @@ Mark a network topology as dirty after structural edits.
 Parameters:
 - `networkInstance` - Network instance to mark.
 
-### rebuildConnections
+### collectUniqueOutgoingConnections
 
 ```ts
-rebuildConnections(
+collectUniqueOutgoingConnections(
   networkInstance: default,
-): void
+): Set<default>
 ```
 
-Rebuild the canonical connection array from per-node outgoing lists.
+Collect unique outgoing connections across all network nodes.
 
 Parameters:
 - `networkInstance` - Target network.
 
+Returns: Set of unique outgoing connections.
+
+### addOutgoingConnectionsToSet
+
+```ts
+addOutgoingConnectionsToSet(
+  outgoingConnections: default[],
+  allConnections: Set<default>,
+): void
+```
+
+Add all outgoing connections to a deduplication set.
+
+Parameters:
+- `outgoingConnections` - Outgoing connections from one node.
+- `allConnections` - Deduplication set for network connections.
+
+### convertConnectionSetToArray
+
+```ts
+convertConnectionSetToArray(
+  uniqueConnections: Set<default>,
+): default[]
+```
+
+Convert a connection set into the canonical array format.
+
+Parameters:
+- `uniqueConnections` - Unique network connections.
+
+Returns: Array of network connections.
+
 ## architecture/network/topology/network.topology.architecture.utils.ts
+
+### describeArchitecture
+
+```ts
+describeArchitecture(
+  network: default,
+): NetworkArchitectureDescriptor
+```
+
+Describes network architecture for diagnostics, telemetry, and UI rendering.
+
+This function prefers factual sources over heuristics so downstream tooling
+can rely on the descriptor while still receiving useful output for partially
+specified runtime graphs.
+
+Resolution priority is intentionally explicit:
+1) node `layer` metadata (factual when present)
+2) graph-derived feed-forward depth layering (factual for acyclic graphs)
+3) hidden-node count fallback (heuristic inference)
+
+Parameters:
+- `network` - - Runtime network instance.
+
+Returns: Stable architecture descriptor.
+
+Example:
+
+```ts
+const descriptor = describeArchitecture(network);
+// descriptor.hiddenLayerSizes -> [8, 4]
+// descriptor.source -> 'layer-metadata' | 'graph-topology' | 'inferred'
+```
 
 ### createArchitectureDescriptor
 
@@ -832,165 +864,30 @@ const descriptor = createArchitectureDescriptor([6, 3], false, 'graph-topology',
 // descriptor.totalNodes === 14
 ```
 
-### createDirectedEdgeList
+### resolveHiddenLayerSizesFromLayerMetadata
 
 ```ts
-createDirectedEdgeList(
-  runtimeConnections: RuntimeConnectionLike[],
-  nodeByIndex: Map<number, RuntimeNodeLike>,
-): { fromIndex: number; toIndex: number; }[]
-```
-
-Produces a validated list of enabled directed edges.
-
-Invalid references, disabled connections, and self-loops are removed so the
-remaining edge list can be consumed safely by cycle and depth algorithms.
-
-Parameters:
-- `runtimeConnections` - - Runtime connections.
-- `nodeByIndex` - - Indexed nodes.
-
-Returns: Valid directed edges.
-
-Example:
-
-```ts
-const edges = createDirectedEdgeList(runtimeConnections, nodeByIndex);
-// edges -> [{ fromIndex: 0, toIndex: 3 }, ...]
-```
-
-### createNodeIndexMap
-
-```ts
-createNodeIndexMap(
+resolveHiddenLayerSizesFromLayerMetadata(
   runtimeNodes: RuntimeNodeLike[],
-): Map<number, RuntimeNodeLike>
+): number[]
 ```
 
-Builds a node lookup table keyed by stable index.
+Resolves hidden-layer widths from explicit `node.layer` metadata.
 
-Runtime objects may omit `index`; in that case the current array position is
-used as a deterministic fallback to keep downstream graph logic total.
+This is treated as the most trustworthy source because layer assignment is
+usually produced by architecture-aware builders and does not depend on
+topological reconstruction.
 
 Parameters:
 - `runtimeNodes` - - Runtime nodes.
 
-Returns: Node map keyed by stable node index.
+Returns: Hidden-layer widths from explicit node.layer metadata.
 
 Example:
 
 ```ts
-const nodeByIndex = createNodeIndexMap(nodes);
-// nodeByIndex.get(0) -> first node or node with explicit index 0
-```
-
-### describeArchitecture
-
-```ts
-describeArchitecture(
-  network: default,
-): NetworkArchitectureDescriptor
-```
-
-Describes network architecture for diagnostics, telemetry, and UI rendering.
-
-This function prefers factual sources over heuristics so downstream tooling
-can rely on the descriptor while still receiving useful output for partially
-specified runtime graphs.
-
-Resolution priority is intentionally explicit:
-1) node `layer` metadata (factual when present)
-2) graph-derived feed-forward depth layering (factual for acyclic graphs)
-3) hidden-node count fallback (heuristic inference)
-
-Parameters:
-- `network` - - Runtime network instance.
-
-Returns: Stable architecture descriptor.
-
-Example:
-
-```ts
-const descriptor = describeArchitecture(network);
-// descriptor.hiddenLayerSizes -> [8, 4]
-// descriptor.source -> 'layer-metadata' | 'graph-topology' | 'inferred'
-```
-
-### isHiddenNode
-
-```ts
-isHiddenNode(
-  runtimeNode: RuntimeNodeLike,
-): boolean
-```
-
-Identifies whether a runtime node should be treated as hidden for topology
-reconstruction and fallback inference.
-
-Parameters:
-- `runtimeNode` - - Candidate node.
-
-Returns: True when node type is hidden.
-
-Example:
-
-```ts
-if (isHiddenNode(node)) {
-  // Include in hidden-layer counting
-}
-```
-
-### resolveCycleStateAndTopoOrder
-
-```ts
-resolveCycleStateAndTopoOrder(
-  nodeByIndex: Map<number, RuntimeNodeLike>,
-  directedEdges: { fromIndex: number; toIndex: number; }[],
-): { topologicalOrder: number[]; hasCycles: boolean; }
-```
-
-Resolves cycle presence and, when possible, returns a topological order
-using Kahn's algorithm.
-
-A complete topological ordering implies an acyclic graph. If some nodes
-remain unprocessed, at least one cycle exists.
-
-Parameters:
-- `nodeByIndex` - - Indexed nodes.
-- `directedEdges` - - Directed edges.
-
-Returns: Topological order and cycle status.
-
-Example:
-
-```ts
-const { topologicalOrder, hasCycles } = resolveCycleStateAndTopoOrder(nodeByIndex, edges);
-```
-
-### resolveHiddenCountsByDepth
-
-```ts
-resolveHiddenCountsByDepth(
-  nodeByIndex: Map<number, RuntimeNodeLike>,
-  depthByNodeIndex: Map<number, number>,
-): Map<number, number>
-```
-
-Aggregates hidden-node counts per derived depth.
-
-This is the final transformation before emitting architecture widths:
-hidden nodes are grouped by depth and counted in insertion-safe maps.
-
-Parameters:
-- `nodeByIndex` - - Indexed nodes.
-- `depthByNodeIndex` - - Derived depths.
-
-Returns: Hidden-node counts by depth.
-
-Example:
-
-```ts
-const hiddenCountsByDepth = resolveHiddenCountsByDepth(nodeByIndex, depthByNodeIndex);
+// Hidden nodes in layers 1, 1, and 2 -> [2, 1]
+const sizes = resolveHiddenLayerSizesFromLayerMetadata(nodes);
 ```
 
 ### resolveHiddenLayerSizesFromGraphTopology
@@ -1021,30 +918,83 @@ Example:
 const { hiddenLayerSizes, hasCycles } = resolveHiddenLayerSizesFromGraphTopology(nodes, edges);
 ```
 
-### resolveHiddenLayerSizesFromLayerMetadata
+### createNodeIndexMap
 
 ```ts
-resolveHiddenLayerSizesFromLayerMetadata(
+createNodeIndexMap(
   runtimeNodes: RuntimeNodeLike[],
-): number[]
+): Map<number, RuntimeNodeLike>
 ```
 
-Resolves hidden-layer widths from explicit `node.layer` metadata.
+Builds a node lookup table keyed by stable index.
 
-This is treated as the most trustworthy source because layer assignment is
-usually produced by architecture-aware builders and does not depend on
-topological reconstruction.
+Runtime objects may omit `index`; in that case the current array position is
+used as a deterministic fallback to keep downstream graph logic total.
 
 Parameters:
 - `runtimeNodes` - - Runtime nodes.
 
-Returns: Hidden-layer widths from explicit node.layer metadata.
+Returns: Node map keyed by stable node index.
 
 Example:
 
 ```ts
-// Hidden nodes in layers 1, 1, and 2 -> [2, 1]
-const sizes = resolveHiddenLayerSizesFromLayerMetadata(nodes);
+const nodeByIndex = createNodeIndexMap(nodes);
+// nodeByIndex.get(0) -> first node or node with explicit index 0
+```
+
+### createDirectedEdgeList
+
+```ts
+createDirectedEdgeList(
+  runtimeConnections: RuntimeConnectionLike[],
+  nodeByIndex: Map<number, RuntimeNodeLike>,
+): { fromIndex: number; toIndex: number; }[]
+```
+
+Produces a validated list of enabled directed edges.
+
+Invalid references, disabled connections, and self-loops are removed so the
+remaining edge list can be consumed safely by cycle and depth algorithms.
+
+Parameters:
+- `runtimeConnections` - - Runtime connections.
+- `nodeByIndex` - - Indexed nodes.
+
+Returns: Valid directed edges.
+
+Example:
+
+```ts
+const edges = createDirectedEdgeList(runtimeConnections, nodeByIndex);
+// edges -> [{ fromIndex: 0, toIndex: 3 }, ...]
+```
+
+### resolveCycleStateAndTopoOrder
+
+```ts
+resolveCycleStateAndTopoOrder(
+  nodeByIndex: Map<number, RuntimeNodeLike>,
+  directedEdges: { fromIndex: number; toIndex: number; }[],
+): { topologicalOrder: number[]; hasCycles: boolean; }
+```
+
+Resolves cycle presence and, when possible, returns a topological order
+using Kahn's algorithm.
+
+A complete topological ordering implies an acyclic graph. If some nodes
+remain unprocessed, at least one cycle exists.
+
+Parameters:
+- `nodeByIndex` - - Indexed nodes.
+- `directedEdges` - - Directed edges.
+
+Returns: Topological order and cycle status.
+
+Example:
+
+```ts
+const { topologicalOrder, hasCycles } = resolveCycleStateAndTopoOrder(nodeByIndex, edges);
 ```
 
 ### resolveNodeDepthByIndex
@@ -1073,4 +1023,54 @@ Example:
 
 ```ts
 const depthByNodeIndex = resolveNodeDepthByIndex(nodeByIndex, edges, topologicalOrder);
+```
+
+### resolveHiddenCountsByDepth
+
+```ts
+resolveHiddenCountsByDepth(
+  nodeByIndex: Map<number, RuntimeNodeLike>,
+  depthByNodeIndex: Map<number, number>,
+): Map<number, number>
+```
+
+Aggregates hidden-node counts per derived depth.
+
+This is the final transformation before emitting architecture widths:
+hidden nodes are grouped by depth and counted in insertion-safe maps.
+
+Parameters:
+- `nodeByIndex` - - Indexed nodes.
+- `depthByNodeIndex` - - Derived depths.
+
+Returns: Hidden-node counts by depth.
+
+Example:
+
+```ts
+const hiddenCountsByDepth = resolveHiddenCountsByDepth(nodeByIndex, depthByNodeIndex);
+```
+
+### isHiddenNode
+
+```ts
+isHiddenNode(
+  runtimeNode: RuntimeNodeLike,
+): boolean
+```
+
+Identifies whether a runtime node should be treated as hidden for topology
+reconstruction and fallback inference.
+
+Parameters:
+- `runtimeNode` - - Candidate node.
+
+Returns: True when node type is hidden.
+
+Example:
+
+```ts
+if (isHiddenNode(node)) {
+  // Include in hidden-layer counting
+}
 ```

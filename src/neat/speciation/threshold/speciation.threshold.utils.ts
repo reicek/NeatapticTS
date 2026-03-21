@@ -26,12 +26,25 @@ import type { CompatAdjust } from '../shared/speciation.shared';
  * 3. clamp the result so the controller never drifts outside the configured
  *    minimum and maximum threshold range.
  *
+ * Read the exported helpers in this order:
+ *
+ * 1. {@link adjustCompatibilityThreshold} is the controller-facing entrypoint
+ *    used by the speciation pass,
+ * 2. {@link computePidThreshold} converts species-count error into the next
+ *    threshold candidate,
+ * 3. {@link clampCompatibilityThreshold} is the last safety rail that keeps
+ *    the resolved threshold inside the shared bounds.
+ *
  * The boundary stays intentionally narrow. These helpers adjust only the
  * compatibility threshold and its integral state. They do not re-run
  * assignment, mutate species membership directly, or decide how history and
  * sharing consume the resulting registry. That separation keeps speciation
  * readable: assignment groups genomes, threshold tuning updates the next
  * boundary, and later chapters interpret the resulting species state.
+ *
+ * The `compatAdjust` parameter that appears in the generated signatures is the
+ * resolved shared PID policy slice from `shared/`. Read it as one compact bag
+ * of threshold-controller knobs rather than as a new chapter-local type story.
  *
  * ```mermaid
  * flowchart TD
@@ -59,12 +72,29 @@ import type { CompatAdjust } from '../shared/speciation.shared';
  * global bounds unconditionally so downstream passes never read an out-of-range
  * threshold.
  *
+ * Read this as the threshold chapter's orchestration helper. It does not own
+ * the control math itself; it prepares the controller state, delegates the
+ * signed error calculation to {@link computePidThreshold}, and then guarantees
+ * that the public compatibility threshold remains safe for the next speciation
+ * cycle.
+ *
  * @param speciationContext - Speciation harness context.
  * @param options - Speciation options.
- * @param compatAdjust - Compatibility adjustment settings.
+ * @param compatAdjust - Resolved threshold-controller gains and bounds from the shared speciation vocabulary.
  * @param minCompatibilityThreshold - Lower clamp bound.
  * @param maxCompatibilityThreshold - Upper clamp bound.
  * @returns Nothing.
+ *
+ * @example
+ * ```ts
+ * adjustCompatibilityThreshold(
+ *   neat,
+ *   neat.options,
+ *   { kp: 0.5, ki: 0.05 },
+ *   1,
+ *   10,
+ * );
+ * ```
  */
 export function adjustCompatibilityThreshold<
   TOptions extends SpeciationOptions = SpeciationOptions,
@@ -111,13 +141,30 @@ export function adjustCompatibilityThreshold<
  * threshold rises and future passes become more willing to group genomes
  * together.
  *
+ * This helper is the chapter's control-law core. If the generated README feels
+ * more mathematical than the surrounding speciation chapters, start here: the
+ * only real question it answers is whether the next pass should make forming
+ * new species easier or harder.
+ *
  * @param speciationContext - Speciation harness context.
  * @param options - Speciation options.
- * @param compatAdjust - Compatibility adjustment settings.
+ * @param compatAdjust - Resolved threshold-controller gains shared across speciation helpers.
  * @param currentThreshold - Current compatibility threshold.
  * @param minCompatibilityThreshold - Lower clamp bound.
  * @param maxCompatibilityThreshold - Upper clamp bound.
  * @returns Updated threshold.
+ *
+ * @example
+ * ```ts
+ * const nextThreshold = computePidThreshold(
+ *   neat,
+ *   neat.options,
+ *   { kp: 0.5, ki: 0.05 },
+ *   3,
+ *   1,
+ *   10,
+ * );
+ * ```
  */
 function computePidThreshold<
   TOptions extends SpeciationOptions = SpeciationOptions,
@@ -234,10 +281,20 @@ function computePidThreshold<
  * above, this helper only limits the option value itself; it does not interpret
  * species-count error or recalculate the integral term.
  *
+ * Read this as the small "no surprises" helper at the end of the loop. Once
+ * the controller has chosen a new threshold candidate, this function makes the
+ * public option safe to persist into the next generation even if the caller did
+ * not come through the full PID path.
+ *
  * @param options - Speciation options.
  * @param minCompatibilityThreshold - Lower clamp bound.
  * @param maxCompatibilityThreshold - Upper clamp bound.
  * @returns Nothing.
+ *
+ * @example
+ * ```ts
+ * clampCompatibilityThreshold(neat.options, 1, 10);
+ * ```
  */
 function clampCompatibilityThreshold(
   options: SpeciationOptions,

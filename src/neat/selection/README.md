@@ -60,77 +60,30 @@ const parent = neat.getParent();
 
 ## neat/selection/selection.ts
 
-### DEFAULT_POWER
-
-Default power exponent for POWER selection when none is configured.
-
-### DEFAULT_SCORE
-
-Default score when a genome has no explicit score.
-
-### DEFAULT_TOURNAMENT_PROBABILITY
-
-Default tournament win probability when none is configured.
-
-### DEFAULT_TOURNAMENT_SIZE
-
-Default tournament size when none is configured.
-
-### FIRST_INDEX
-
-Index of the first element in an array.
-
-### getAverage
+### sort
 
 ```ts
-getAverage(): number
+sort(): void
 ```
 
-Compute the average fitness across the population.
+Sort the internal population in place by descending fitness.
 
-Use this when you want a coarse health signal for the whole generation rather
-than the single best genome. The helper ensures evaluation has happened,
-folds the total score across the full population, and returns the arithmetic
-mean that telemetry, progress logging, and quick sanity checks usually need.
+Use this when later controller steps should read the population in explicit
+best-first order. The helper applies the same fallback-score semantics used
+elsewhere in selection, so genomes without a score are treated as if they had
+{@link DEFAULT_SCORE} until evaluation supplies a real value.
 
-Unlike parent selection, this helper does not care about order. It reports on
-the population as a group, which makes it a convenient companion to
-{@link getFittest} when you want both "best genome" and "overall generation"
-signals side by side.
+This helper is intentionally narrow: it only reorders the current population.
+It does not evaluate genomes, mutate them, or change the active parent
+selection strategy.
 
-Returns: Mean fitness across the current population.
+Returns: Nothing. The population array is reordered in place.
 
 Example:
 
 ```ts
-const meanScore = neat.getAverage();
-console.log(`Average score: ${meanScore}`);
-```
-
-### getFittest
-
-```ts
-getFittest(): GenomeWithScore
-```
-
-Return the fittest genome in the population.
-
-This is the safest "show me the current champion" helper for controller code,
-telemetry probes, and tests. If the population has not been evaluated yet,
-the existing evaluation path is triggered first. If scores exist but the
-population is out of descending order, the helper restores that order before
-returning the leading genome.
-
-That behavior keeps call sites simple: callers do not need to remember
-whether evaluation or sorting has already happened earlier in the generation.
-
-Returns: Genome with the highest current score.
-
-Example:
-
-```ts
-const champion = neat.getFittest();
-console.log(champion.score);
+neat.sort();
+const bestScore = neat.population[0]?.score;
 ```
 
 ### getParent
@@ -162,21 +115,95 @@ const parent = neat.getParent();
 const strategyName = neat.options.selection?.name;
 ```
 
-### INITIAL_CUMULATIVE_FITNESS
+### getFittest
 
-Initial cumulative fitness value for threshold scans.
+```ts
+getFittest(): GenomeWithScore
+```
 
-### INITIAL_MOST_NEGATIVE_SCORE
+Return the fittest genome in the population.
 
-Initial most-negative score sentinel for fitness scans.
+This is the safest "show me the current champion" helper for controller code,
+telemetry probes, and tests. If the population has not been evaluated yet,
+the existing evaluation path is triggered first. If scores exist but the
+population is out of descending order, the helper restores that order before
+returning the leading genome.
 
-### INITIAL_TOTAL_FITNESS
+That behavior keeps call sites simple: callers do not need to remember
+whether evaluation or sorting has already happened earlier in the generation.
 
-Initial total fitness accumulator value.
+Returns: Genome with the highest current score.
 
-### LAST_ELEMENT_INDEX
+Example:
 
-Index used with `at()` to access the last element.
+```ts
+const champion = neat.getFittest();
+console.log(champion.score);
+```
+
+### getAverage
+
+```ts
+getAverage(): number
+```
+
+Compute the average fitness across the population.
+
+Use this when you want a coarse health signal for the whole generation rather
+than the single best genome. The helper ensures evaluation has happened,
+folds the total score across the full population, and returns the arithmetic
+mean that telemetry, progress logging, and quick sanity checks usually need.
+
+Unlike parent selection, this helper does not care about order. It reports on
+the population as a group, which makes it a convenient companion to
+{@link getFittest} when you want both "best genome" and "overall generation"
+signals side by side.
+
+Returns: Mean fitness across the current population.
+
+Example:
+
+```ts
+const meanScore = neat.getAverage();
+console.log(`Average score: ${meanScore}`);
+```
+
+### DEFAULT_POWER
+
+Default power exponent for POWER selection when none is configured.
+
+A value of `1` keeps POWER selection as a direct index-bias curve without
+adding extra front-loading beyond the strategy's normal rank preference.
+
+### DEFAULT_TOURNAMENT_SIZE
+
+Default tournament size when none is configured.
+
+The built-in bracket stays intentionally small so tournament selection keeps
+some competitive pressure without collapsing into near-deterministic champion
+picks.
+
+### DEFAULT_TOURNAMENT_PROBABILITY
+
+Default tournament win probability when none is configured.
+
+This keeps the top sampled participant favored while still allowing weaker
+entrants to remain reachable later in the tournament walk.
+
+### DEFAULT_SCORE
+
+Default score when a genome has no explicit score.
+
+Selection uses one shared fallback so summaries, sorting, and threshold scans
+all interpret unevaluated or missing scores consistently.
+
+### FIRST_INDEX
+
+First element index used by guards, fallbacks, and best-first reads.
+
+### SECOND_INDEX
+
+Second element index used by the cheap leading-edge ordering guard.
 
 ### LAST_INDEX_OFFSET
 
@@ -184,34 +211,20 @@ Offset for retrieving the last element via length arithmetic.
 
 ### LOOP_INDEX_INCREMENT
 
-Step size for index-based loops.
+Loop step used by explicit tournament and threshold walks.
 
-### SECOND_INDEX
+### LAST_ELEMENT_INDEX
 
-Index of the second element in an array.
+Index used with `at()` when checking the tail of the population.
 
-### sort
+### INITIAL_TOTAL_FITNESS
 
-```ts
-sort(): void
-```
+Initial accumulator value for generation-wide score folds.
 
-Sort the internal population in place by descending fitness.
+### INITIAL_MOST_NEGATIVE_SCORE
 
-Use this when later controller steps should read the population in explicit
-best-first order. The helper applies the same fallback-score semantics used
-elsewhere in selection, so genomes without a score are treated as if they had
-{@link DEFAULT_SCORE} until evaluation supplies a real value.
+Initial most-negative score sentinel for shifted-fitness scans.
 
-This helper is intentionally narrow: it only reorders the current population.
-It does not evaluate genomes, mutate them, or change the active parent
-selection strategy.
+### INITIAL_CUMULATIVE_FITNESS
 
-Returns: Nothing. The population array is reordered in place.
-
-Example:
-
-```ts
-neat.sort();
-const bestScore = neat.population[0]?.score;
-```
+Initial cumulative fitness value for roulette threshold scans.
