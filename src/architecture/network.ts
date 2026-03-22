@@ -4,7 +4,7 @@ import {
   acquireNode as _acquireNode,
   releaseNode as _releaseNode,
 } from './nodePool';
-import Connection from './connection';
+import Connection from './connection/connection';
 import * as methods from '../methods/methods';
 import { config } from '../config'; // Import configuration settings
 import { activationArrayPool } from './activationArrayPool';

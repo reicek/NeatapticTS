@@ -1,16 +1,23 @@
 /**
- * Shared wiring patterns for connecting one node group to another.
+ * Defines the small wiring-policy shelf for connecting one node group to another.
  *
- * Read this file as a small topology vocabulary. These policies do not decide
- * weights, learning, or mutation pressure; they decide the shape of the edge
- * pattern before those later concerns matter.
+ * Read this file as a topology chooser rather than a bag of connection names.
+ * These policies do not decide weights, learning, or mutation pressure; they
+ * answer a narrower structural question first: what edge pattern should exist
+ * between the source group and the target group before later optimization
+ * details matter?
  *
- * The three built-ins answer three different structural questions:
+ * The three built-ins answer three different wiring intents:
  *
  * - `ALL_TO_ALL` asks for the densest possible bridge between the groups,
  * - `ALL_TO_ELSE` keeps that dense bridge but avoids trivial self-links when
  *   the source and target are the same group,
  * - `ONE_TO_ONE` preserves positional pairing instead of creating a dense mesh.
+ *
+ * Those choices matter because they create very different starting biases. A
+ * dense bridge maximizes routing freedom, a dense-without-self-links bridge is
+ * often the cleanest way to describe intra-group recurrence, and one-to-one
+ * wiring preserves explicit alignment instead of encouraging cross-talk.
  *
  * A practical chooser for first experiments:
  *
@@ -31,9 +38,11 @@
  * Minimal workflow:
  *
  * ```ts
- * const denseBridge = groupConnection.ALL_TO_ALL;
- * const denseWithoutSelfLoops = groupConnection.ALL_TO_ELSE;
- * const alignedBridge = groupConnection.ONE_TO_ONE;
+ * const wiringShelf = {
+ *   denseBridge: groupConnection.ALL_TO_ALL,
+ *   denseWithoutSelfLoops: groupConnection.ALL_TO_ELSE,
+ *   alignedBridge: groupConnection.ONE_TO_ONE,
+ * };
  * ```
  */
 export const groupConnection = Object.freeze({
@@ -43,6 +52,11 @@ export const groupConnection = Object.freeze({
    *
    * This is the default dense pattern: maximum routing freedom at the cost of
    * more edges, more parameters, and less built-in structural restraint.
+   *
+   * @example
+   * ```ts
+   * const denseBridge = groupConnection.ALL_TO_ALL;
+   * ```
    */
   ALL_TO_ALL: Object.freeze({
     name: 'ALL_TO_ALL', // Renamed name
@@ -54,6 +68,11 @@ export const groupConnection = Object.freeze({
    *
    * Use this when you want near-dense recurrence or intra-group communication
    * without letting a node connect directly back into itself.
+   *
+   * @example
+   * ```ts
+   * const denseWithoutSelfLoops = groupConnection.ALL_TO_ELSE;
+   * ```
    */
   ALL_TO_ELSE: Object.freeze({
     name: 'ALL_TO_ELSE', // Renamed name
@@ -64,6 +83,11 @@ export const groupConnection = Object.freeze({
    *
    * This is the file's most structured pattern. It keeps positional alignment
    * intact and requires both groups to have matching size.
+   *
+   * @example
+   * ```ts
+   * const alignedBridge = groupConnection.ONE_TO_ONE;
+   * ```
    */
   ONE_TO_ONE: Object.freeze({
     name: 'ONE_TO_ONE', // Renamed name

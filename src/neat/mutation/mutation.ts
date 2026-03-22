@@ -65,6 +65,16 @@ export const DEFAULT_INNOVATION_ID = 0;
  * bandit-weighted operator choice, and `repair/` when you need to understand
  * why mutation sometimes adds maintenance edges after the main structural edit.
  *
+ * A practical reading order:
+ *
+ * 1. start with `mutate()` to see where the whole-population pass begins,
+ * 2. continue to `selectMutationMethod()` to understand how one operator is
+ *    resolved for the current genome,
+ * 3. compare `mutateAddNodeReuse()` and `mutateAddConnReuse()` for the two main
+ *    structural-growth paths,
+ * 4. finish with `ensureMinHiddenNodes()` and `ensureNoDeadEnds()` to see how
+ *    the controller repairs fragile topologies before later stages inspect them.
+ *
  * ```mermaid
  * flowchart TD
  *   Start["generation ready for structure edits"] --> Mutate["mutate()\nwalk every genome"]
@@ -112,7 +122,7 @@ export const DEFAULT_INNOVATION_ID = 0;
  * ```
  *
  * @returns Promise that resolves after every genome has gone through the mutation flow for this pass.
- * @this NeatLike - instance of a Neat controller with population and options
+ * @this NeatLike Instance of a Neat controller with population and options.
  */
 export async function mutate(this: NeatLike): Promise<void> {
   const internal = this as unknown as NeatControllerForMutation;
@@ -153,8 +163,8 @@ export async function mutate(this: NeatLike): Promise<void> {
  * neat._mutateAddNodeReuse(genome);
  * ```
  *
- * @this NeatLike - neat controller context (holds innovation tables)
- * @param genome - genome to modify in-place
+ * @this NeatLike Neat controller context that holds innovation tables.
+ * @param genome Genome to modify in place.
  * @returns Promise that resolves after the split has either reused an existing innovation record or created a new one.
  */
 export async function mutateAddNodeReuse(
@@ -233,8 +243,8 @@ export async function mutateAddNodeReuse(
  * comparable for later crossover and speciation rather than treating it as a
  * completely unrelated event.
  *
- * @this NeatLike - neat controller context (holds innovation tables)
- * @param genome - genome to modify in-place
+ * @this NeatLike Neat controller context that holds innovation tables.
+ * @param genome Genome to modify in place.
  * @returns Nothing. The genome may gain one new connection and the controller innovation map may be consulted or extended.
  */
 export function mutateAddConnReuse(
@@ -287,8 +297,8 @@ export function mutateAddConnReuse(
  * connection structures, so callers should treat it as a topology-maintenance
  * pass rather than a tiny invariant check.
  *
- * @param network - Genome whose hidden-node budget and connectivity should be repaired.
- * @param multiplierOverride - Optional override for the configured hidden-node multiplier.
+ * @param network Genome whose hidden-node budget and connectivity should be repaired.
+ * @param multiplierOverride Optional override for the configured hidden-node multiplier.
  * @returns Promise that resolves after hidden-node and connectivity repairs have completed.
  */
 export async function ensureMinHiddenNodes(
@@ -343,7 +353,7 @@ export async function ensureMinHiddenNodes(
  * later evaluation and does not carry obviously broken topology into the next
  * controller stage.
  *
- * @param network - Genome whose endpoint and hidden-node connectivity should be repaired.
+ * @param network Genome whose endpoint and hidden-node connectivity should be repaired.
  * @returns Nothing. The network may gain repair connections in place.
  */
 export function ensureNoDeadEnds(
@@ -398,8 +408,8 @@ export function ensureNoDeadEnds(
  * // structural limits, not just a random sample from the raw configured pool.
  * ```
  *
- * @param genome - Genome whose current structure constrains which operators are legal.
- * @param rawReturnForTest - Preserves legacy array-return behavior for test-only FFW checks.
+ * @param genome Genome whose current structure constrains which operators are legal.
+ * @param rawReturnForTest Preserves legacy array-return behavior for test-only FFW checks.
  * @returns Resolved mutation method, legacy FFW array for compatibility tests, or `null` when no operator should run.
  */
 export async function selectMutationMethod(

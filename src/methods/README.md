@@ -15,7 +15,10 @@ one subsystem:
 - `Rate` defines how aggressively learning rates should change over time,
 - `selection`, `mutation`, and `crossover` define how evolutionary search
   applies pressure and creates variation,
-- `gating` and `groupConnection` describe smaller structural control choices.
+- `gating` and `groupConnection` define the smaller structural vocabulary:
+  `gating` decides where control is applied on an existing connection,
+  while `groupConnection` decides what wiring pattern should exist between
+  groups before weight values even matter.
 
 Read the chapter in three passes:
 
@@ -24,7 +27,27 @@ Read the chapter in three passes:
 2. continue to `selection`, `mutation`, and `crossover` when you are
    thinking like an evolutionary controller tuning search pressure,
 3. finish with `gating` and `groupConnection` when you need lower-level
-   structural wiring vocabulary.
+   structural vocabulary and want to distinguish routing control from raw
+   wiring layout.
+
+The structural pair is intentionally small but conceptually different:
+`groupConnection` answers how groups should be wired, while `gating` answers
+how an already-existing connection should be modulated at runtime.
+
+```mermaid
+flowchart TD
+  Methods[methods chapter] --> Training[Training and optimization vocabulary]
+  Methods --> Evolution[Evolutionary search vocabulary]
+  Methods --> Structure[Structural control vocabulary]
+  Training --> Activation[Activation]
+  Training --> Cost[Cost]
+  Training --> Rate[Rate]
+  Evolution --> Selection[selection]
+  Evolution --> Mutation[mutation]
+  Evolution --> Crossover[crossover]
+  Structure --> Gating[gating]
+  Structure --> Connection[groupConnection]
+```
 
 ## methods/methods.ts
 
@@ -368,18 +391,25 @@ flowchart LR
 
 ### groupConnection
 
-Shared wiring patterns for connecting one node group to another.
+Defines the small wiring-policy shelf for connecting one node group to another.
 
-Read this file as a small topology vocabulary. These policies do not decide
-weights, learning, or mutation pressure; they decide the shape of the edge
-pattern before those later concerns matter.
+Read this file as a topology chooser rather than a bag of connection names.
+These policies do not decide weights, learning, or mutation pressure; they
+answer a narrower structural question first: what edge pattern should exist
+between the source group and the target group before later optimization
+details matter?
 
-The three built-ins answer three different structural questions:
+The three built-ins answer three different wiring intents:
 
 - `ALL_TO_ALL` asks for the densest possible bridge between the groups,
 - `ALL_TO_ELSE` keeps that dense bridge but avoids trivial self-links when
   the source and target are the same group,
 - `ONE_TO_ONE` preserves positional pairing instead of creating a dense mesh.
+
+Those choices matter because they create very different starting biases. A
+dense bridge maximizes routing freedom, a dense-without-self-links bridge is
+often the cleanest way to describe intra-group recurrence, and one-to-one
+wiring preserves explicit alignment instead of encouraging cross-talk.
 
 A practical chooser for first experiments:
 
@@ -400,9 +430,11 @@ flowchart LR
 Minimal workflow:
 
 ```ts
-const denseBridge = groupConnection.ALL_TO_ALL;
-const denseWithoutSelfLoops = groupConnection.ALL_TO_ELSE;
-const alignedBridge = groupConnection.ONE_TO_ONE;
+const wiringShelf = {
+  denseBridge: groupConnection.ALL_TO_ALL,
+  denseWithoutSelfLoops: groupConnection.ALL_TO_ELSE,
+  alignedBridge: groupConnection.ONE_TO_ONE,
+};
 ```
 
 ### default
@@ -475,6 +507,8 @@ Parameters:
 - `initialPeriod` - Length of the first cycle in iterations.
 - `minimumRate` - Minimum learning rate at valley.
 - `periodGrowthMultiplier` - Factor to multiply the period after each restart (>=1).
+
+Returns: A function that replays cosine cycles whose length can grow after each restart.
 
 #### crossEntropy
 
@@ -637,6 +671,8 @@ Parameters:
 - `warmupStepCount` - Steps for warmup (< totalStepCount). Defaults to 10% of totalStepCount.
 - `endRate` - Final rate at totalStepCount.
 
+Returns: A function that warms the learning rate up, then decays it toward a fixed floor.
+
 #### mae
 
 ```ts
@@ -723,6 +759,11 @@ NOTE: Requires the training loop to call with signature (baseRate, iteration, la
 This is the chapter's reactive option. Instead of following a pre-planned
 calendar, the schedule listens for stalled improvement and responds only when
 the run appears to flatten out.
+
+Parameters:
+- `options` - Optional reactive-control settings such as patience, cooldown, and minimum rate floor.
+
+Returns: A stateful schedule function that may lower the learning rate when the monitored error stops improving.
 
 #### softmaxCrossEntropy
 

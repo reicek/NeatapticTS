@@ -3,7 +3,7 @@ import Layer from './layer';
 import Group from './group';
 import Network from './network';
 import * as methods from '../methods/methods';
-import Connection from './connection'; // Ensure Connection is imported for type checking
+import Connection from './connection/connection'; // Ensure Connection is imported for type checking
 
 /**
  * Provides static methods for constructing various predefined neural network architectures.

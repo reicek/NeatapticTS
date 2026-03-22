@@ -1,17 +1,24 @@
 # methods/connection
 
-Shared wiring patterns for connecting one node group to another.
+Defines the small wiring-policy shelf for connecting one node group to another.
 
-Read this file as a small topology vocabulary. These policies do not decide
-weights, learning, or mutation pressure; they decide the shape of the edge
-pattern before those later concerns matter.
+Read this file as a topology chooser rather than a bag of connection names.
+These policies do not decide weights, learning, or mutation pressure; they
+answer a narrower structural question first: what edge pattern should exist
+between the source group and the target group before later optimization
+details matter?
 
-The three built-ins answer three different structural questions:
+The three built-ins answer three different wiring intents:
 
 - `ALL_TO_ALL` asks for the densest possible bridge between the groups,
 - `ALL_TO_ELSE` keeps that dense bridge but avoids trivial self-links when
   the source and target are the same group,
 - `ONE_TO_ONE` preserves positional pairing instead of creating a dense mesh.
+
+Those choices matter because they create very different starting biases. A
+dense bridge maximizes routing freedom, a dense-without-self-links bridge is
+often the cleanest way to describe intra-group recurrence, and one-to-one
+wiring preserves explicit alignment instead of encouraging cross-talk.
 
 A practical chooser for first experiments:
 
@@ -32,27 +39,36 @@ flowchart LR
 Minimal workflow:
 
 ```ts
-const denseBridge = groupConnection.ALL_TO_ALL;
-const denseWithoutSelfLoops = groupConnection.ALL_TO_ELSE;
-const alignedBridge = groupConnection.ONE_TO_ONE;
+const wiringShelf = {
+  denseBridge: groupConnection.ALL_TO_ALL,
+  denseWithoutSelfLoops: groupConnection.ALL_TO_ELSE,
+  alignedBridge: groupConnection.ONE_TO_ONE,
+};
 ```
 
 ## methods/connection/connection.ts
 
 ### groupConnection
 
-Shared wiring patterns for connecting one node group to another.
+Defines the small wiring-policy shelf for connecting one node group to another.
 
-Read this file as a small topology vocabulary. These policies do not decide
-weights, learning, or mutation pressure; they decide the shape of the edge
-pattern before those later concerns matter.
+Read this file as a topology chooser rather than a bag of connection names.
+These policies do not decide weights, learning, or mutation pressure; they
+answer a narrower structural question first: what edge pattern should exist
+between the source group and the target group before later optimization
+details matter?
 
-The three built-ins answer three different structural questions:
+The three built-ins answer three different wiring intents:
 
 - `ALL_TO_ALL` asks for the densest possible bridge between the groups,
 - `ALL_TO_ELSE` keeps that dense bridge but avoids trivial self-links when
   the source and target are the same group,
 - `ONE_TO_ONE` preserves positional pairing instead of creating a dense mesh.
+
+Those choices matter because they create very different starting biases. A
+dense bridge maximizes routing freedom, a dense-without-self-links bridge is
+often the cleanest way to describe intra-group recurrence, and one-to-one
+wiring preserves explicit alignment instead of encouraging cross-talk.
 
 A practical chooser for first experiments:
 
@@ -73,7 +89,9 @@ flowchart LR
 Minimal workflow:
 
 ```ts
-const denseBridge = groupConnection.ALL_TO_ALL;
-const denseWithoutSelfLoops = groupConnection.ALL_TO_ELSE;
-const alignedBridge = groupConnection.ONE_TO_ONE;
+const wiringShelf = {
+  denseBridge: groupConnection.ALL_TO_ALL,
+  denseWithoutSelfLoops: groupConnection.ALL_TO_ELSE,
+  alignedBridge: groupConnection.ONE_TO_ONE,
+};
 ```

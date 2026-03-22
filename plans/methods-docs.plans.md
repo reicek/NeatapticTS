@@ -1,6 +1,6 @@
 # Methods Docs Plan
 
-**Status:** [WIP]
+**Status:** [DONE]
 
 ## Scope
 
@@ -17,6 +17,7 @@ Primary surfaces:
 - [src/methods/rate/rate.ts](../src/methods/rate/rate.ts)
 - [src/methods/selection/selection.ts](../src/methods/selection/selection.ts)
 - [src/methods/gating/gating.ts](../src/methods/gating/gating.ts)
+- [src/methods/connection/connection.ts](../src/methods/connection/connection.ts)
 - [src/methods/README.md](../src/methods/README.md)
 
 ## Session Log
@@ -88,3 +89,85 @@ Remaining gaps:
 Next step:
 - Move to the connection family next and give its structural wiring vocabulary
   the same chooser-first treatment used for gating.
+
+### Connection chapter pass
+
+Goals:
+- Make the connection family read like a wiring-policy chooser instead of a
+  terse list of topology names.
+- Clarify when dense connectivity, dense-without-self-links, and one-to-one
+  alignment are the right structural defaults.
+
+Progress:
+- Reframed [src/methods/connection/connection.ts](../src/methods/connection/connection.ts)
+  around the structural question the family answers, with stronger source-first
+  guidance for the three built-in wiring patterns.
+- Tightened each connection policy entry so the generated chapter explains the
+  wiring bias each option introduces and includes a minimal example for quick
+  recall.
+
+Remaining gaps:
+- The thin structural families are now better aligned, so future work here is
+  more likely to be polish than rescue.
+- If the methods root chapter gets another pass later, its short structural
+  summaries for both gating and connection can be harmonized again for tone.
+
+Next step:
+- Re-read the methods root chapter and decide whether the next highest-value
+  pass is a small root-summary alignment pass or a deeper polish pass on one of
+  the larger method families.
+
+### Methods root alignment pass
+
+Goals:
+- Re-align the root methods introduction so its structural summary matches the
+  stronger gating and connection chapters.
+- Keep the top-level chapter compact while making the difference between
+  routing control and wiring layout explicit.
+
+Progress:
+- Tightened [src/methods/methods.ts](../src/methods/methods.ts) so the root
+  chapter now describes `gating` and `groupConnection` as different parts of
+  the structural vocabulary instead of bundling them together too loosely.
+- Cleaned the duplicated top-level module JSDoc in
+  [src/methods/methods.ts](../src/methods/methods.ts) so the generated root
+  opening stays compact and source-first.
+
+Remaining gaps:
+- The methods root is now aligned with the thin structural chapters, so the
+  next useful pass is more likely to be selective polish than root framing.
+- Larger families such as mutation or rate may still benefit from later
+  refinement, but they no longer block the root chapter from reading clearly.
+
+Next step:
+- Choose the next highest-value polish pass among the larger method families,
+  or stop here if the methods shelf is sufficiently aligned for now.
+
+### Rate and mutation polish pass
+
+Goals:
+- Smooth the generated docs for two larger method-adjacent chapters without
+  reopening their runtime behavior.
+- Remove remaining generated-doc rough edges such as duplicated framing and
+  awkward parameter prose.
+
+Progress:
+- Tightened [src/methods/rate/rate.ts](../src/methods/rate/rate.ts) so the
+  class-level chapter no longer repeats the full module opening and instead
+  acts like a practical chooser for schedule builders.
+- Filled the missing return and option guidance for the reactive and warm
+  restart rate helpers in
+  [src/methods/rate/rate.ts](../src/methods/rate/rate.ts) so the generated API
+  shelf reads more evenly.
+- Polished [src/neat/mutation/mutation.ts](../src/neat/mutation/mutation.ts)
+  with a clearer root reading order and cleaner parameter descriptions so the
+  generated mutation chapter reads less like raw annotation output.
+
+Decision:
+- Stop the methods documentation lane here for now; the root and the highest-
+  leverage family chapters now read coherently enough that further work is
+  polish, not structural rescue.
+
+Next step:
+- Pause this plan and revisit only if a later docs pass exposes a specific
+  regression, stale generated wording, or a newly expanded method family.

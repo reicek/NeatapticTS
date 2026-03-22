@@ -309,6 +309,31 @@ const rebuiltNetwork = fromJSONImpl(snapshotJson);
 
 ### network.serialize.utils
 
+Connection (Synapse / Edge)
+===========================
+Directed weighted link between two nodes. The connection keeps the everyday
+graph fields (`from`, `to`, `weight`, `innovation`) directly on the instance,
+then pushes rarer capabilities behind symbol-backed accessors so large
+populations do not pay object-shape costs for features they are not using.
+
+This makes the boundary useful in three different modes:
+
+- ordinary feed-forward links that only need endpoints and weight,
+- gated or plastic links that gradually opt into extra runtime state,
+- optimizer-heavy training paths that need moment buffers without turning
+  every connection into a bloated record.
+
+Example:
+
+```ts
+const source = new Node('input');
+const target = new Node('output');
+const edge = new Connection(source, target, 0.42);
+
+edge.gain = 1.5;
+edge.enabled = true;
+```
+
 ### applyHydratedArchitectureDescriptor
 
 ```ts
@@ -360,9 +385,8 @@ acquire(
 ): default
 ```
 
-Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
-a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
-topology frequently to reduce GC pressure.
+Acquire a connection from the internal pool, or construct a fresh one when the pool is empty.
+This is the low-allocation path used by topology mutation and other edge-churn heavy flows.
 
 Parameters:
 - `from` - Source node.
@@ -371,15 +395,9 @@ Parameters:
 
 Returns: Reinitialized connection instance.
 
-Example:
-
-const conn = Connection.acquire(a, b);
-// ... use conn ...
-Connection.release(conn); // when permanently removed
-
 #### dcMask
 
-DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass.
+DropConnect active mask: `1` means active for this stochastic pass, `0` means dropped.
 
 #### dropConnectActiveMask
 
@@ -391,11 +409,11 @@ Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment).
 
 #### enabled
 
-Whether the gene (connection) is currently expressed (participates in forward pass).
+Whether the gene is currently expressed and participates in the forward pass.
 
 #### firstMoment
 
-First moment estimate (Adam / AdamW) (was opt_m).
+First moment estimate used by Adam-family optimizers.
 
 #### from
 
@@ -403,25 +421,23 @@ The source (pre-synaptic) node supplying activation.
 
 #### gain
 
-Multiplicative modulation applied *after* weight. Default is `1` (neutral). We only store an
-internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
-large populations where most connections are ungated.
+Multiplicative modulation applied after weight. Neutral gain `1` is omitted from storage.
 
 #### gater
 
-Optional gating node whose activation can modulate effective weight (symbol-backed).
+Optional gating node whose activation modulates effective weight.
 
 #### gradientAccumulator
 
-Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).
+Generic gradient accumulator used by RMSProp and AdaGrad.
 
 #### hasGater
 
-Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.
+Whether a gater node is assigned to modulate this connection's effective weight.
 
 #### infinityNorm
 
-Adamax: Exponential moving infinity norm (was opt_u).
+Adamax infinity norm accumulator.
 
 #### innovation
 
@@ -436,37 +452,37 @@ innovationID(
 ): number
 ```
 
-Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
-Useful when you want a stable innovation id without relying on global mutable counters
-(e.g., for hashing or reproducible experiments).
-
-NOTE: For large indices this can overflow 53-bit safe integer space; keep node indices reasonable.
+Deterministic Cantor pairing function for a `(sourceNodeId, targetNodeId)` pair.
+Use it when you need a stable edge identifier without relying on the mutable
+auto-increment counter.
 
 Parameters:
-- `sourceNodeId` - Source node integer id / index.
-- `targetNodeId` - Target node integer id / index.
+- `sourceNodeId` - Source node integer id or index.
+- `targetNodeId` - Target node integer id or index.
 
 Returns: Unique non-negative integer derived from the ordered pair.
 
 Example:
 
-const id = Connection.innovationID(2, 5); // deterministic
+```ts
+const id = Connection.innovationID(2, 5);
+```
 
 #### lookaheadShadowWeight
 
-Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).
+Lookahead slow-weight snapshot.
 
 #### maxSecondMoment
 
-AMSGrad: Maximum of past second moment (was opt_vhat).
+AMSGrad maximum of past second-moment estimates.
 
 #### plastic
 
-Whether this connection participates in plastic adaptation (rate > 0).
+Whether this connection participates in plastic adaptation.
 
 #### plasticityRate
 
-Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag.
+Per-connection plasticity rate. `0` means the connection is not plastic.
 
 #### previousDeltaWeight
 
@@ -480,12 +496,13 @@ release(
 ): void
 ```
 
-Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
-afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
-scrubbed here (they're overwritten during `acquire`).
+Return a connection instance to the internal pool for later reuse.
+Treat the instance as surrendered after calling this method.
 
 Parameters:
 - `conn` - The connection instance to recycle.
+
+Returns: Nothing.
 
 #### resetInnovationCounter
 
@@ -495,24 +512,21 @@ resetInnovationCounter(
 ): void
 ```
 
-Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
-You normally only call this at the start of an experiment or when deserializing a full population.
+Reset the monotonic innovation counter used for newly constructed or pooled connections.
+You usually call this at the start of an experiment or before rebuilding a whole population.
 
 Parameters:
-- `value` - New starting value (default 1).
+- `value` - New starting value.
 
-Example:
-
-Connection.resetInnovationCounter();     // back to 1
-Connection.resetInnovationCounter(1000); // start counting from 1000
+Returns: Nothing.
 
 #### secondMoment
 
-Second raw moment estimate (Adam family) (was opt_v).
+Second raw moment estimate used by Adam-family optimizers.
 
 #### secondMomentum
 
-Secondary momentum (Lion variant) (was opt_m2).
+Secondary momentum buffer used by Lion-style updates.
 
 #### to
 
@@ -524,15 +538,17 @@ The target (post-synaptic) node receiving activation.
 toJSON(): { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }
 ```
 
-Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
-Undefined indices are preserved as `undefined` to allow later resolution / remapping.
+Serialize to a minimal JSON-friendly shape used by genome and network save flows.
+Undefined node indices are preserved so callers can resolve or remap them later.
 
-Returns: Object with node indices, weight, gain, gater index (if any), innovation id & enabled flag.
+Returns: Object with node indices, weight, gain, innovation id, enabled flag, and gater index when one exists.
 
 Example:
 
+```ts
 const json = connection.toJSON();
 // => { from: 0, to: 3, weight: 0.12, gain: 1, innovation: 57, enabled: true }
+```
 
 #### totalDeltaWeight
 

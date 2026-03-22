@@ -29,6 +29,16 @@ Follow `flow/` for the actual per-genome loop, `select/` for policy and
 bandit-weighted operator choice, and `repair/` when you need to understand
 why mutation sometimes adds maintenance edges after the main structural edit.
 
+A practical reading order:
+
+1. start with `mutate()` to see where the whole-population pass begins,
+2. continue to `selectMutationMethod()` to understand how one operator is
+   resolved for the current genome,
+3. compare `mutateAddNodeReuse()` and `mutateAddConnReuse()` for the two main
+   structural-growth paths,
+4. finish with `ensureMinHiddenNodes()` and `ensureNoDeadEnds()` to see how
+   the controller repairs fragile topologies before later stages inspect them.
+
 ```mermaid
 flowchart TD
   Start["generation ready for structure edits"] --> Mutate["mutate()\nwalk every genome"]
@@ -116,7 +126,7 @@ Method steps (high-level):
   deterministic position to preserve ordering for downstream algorithms.
 
 Parameters:
-- `genome` - - genome to modify in-place
+- `genome` - Genome to modify in place.
 
 Returns: Promise that resolves after the split has either reused an existing innovation record or created a new one.
 
@@ -162,7 +172,7 @@ comparable for later crossover and speciation rather than treating it as a
 completely unrelated event.
 
 Parameters:
-- `genome` - - genome to modify in-place
+- `genome` - Genome to modify in place.
 
 Returns: Nothing. The genome may gain one new connection and the controller innovation map may be consulted or extended.
 
@@ -187,8 +197,8 @@ connection structures, so callers should treat it as a topology-maintenance
 pass rather than a tiny invariant check.
 
 Parameters:
-- `network` - - Genome whose hidden-node budget and connectivity should be repaired.
-- `multiplierOverride` - - Optional override for the configured hidden-node multiplier.
+- `network` - Genome whose hidden-node budget and connectivity should be repaired.
+- `multiplierOverride` - Optional override for the configured hidden-node multiplier.
 
 Returns: Promise that resolves after hidden-node and connectivity repairs have completed.
 
@@ -209,7 +219,7 @@ later evaluation and does not carry obviously broken topology into the next
 controller stage.
 
 Parameters:
-- `network` - - Genome whose endpoint and hidden-node connectivity should be repaired.
+- `network` - Genome whose endpoint and hidden-node connectivity should be repaired.
 
 Returns: Nothing. The network may gain repair connections in place.
 
@@ -235,8 +245,8 @@ Mirrors legacy implementation from `neat.ts` to preserve test expectations.
 returned for identity checks in tests.
 
 Parameters:
-- `genome` - - Genome whose current structure constrains which operators are legal.
-- `rawReturnForTest` - - Preserves legacy array-return behavior for test-only FFW checks.
+- `genome` - Genome whose current structure constrains which operators are legal.
+- `rawReturnForTest` - Preserves legacy array-return behavior for test-only FFW checks.
 
 Returns: Resolved mutation method, legacy FFW array for compatibility tests, or `null` when no operator should run.
 

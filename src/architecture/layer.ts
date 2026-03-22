@@ -1,5 +1,5 @@
 import Node from './node';
-import Connection from './connection';
+import Connection from './connection/connection';
 import Group from './group';
 import {
   activateLayer as activateLayerUtils,

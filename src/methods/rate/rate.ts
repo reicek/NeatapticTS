@@ -213,6 +213,7 @@ export default class Rate {
    * @param initialPeriod Length of the first cycle in iterations.
    * @param minimumRate Minimum learning rate at valley.
    * @param periodGrowthMultiplier Factor to multiply the period after each restart (>=1).
+   * @returns A function that replays cosine cycles whose length can grow after each restart.
    */
   static cosineAnnealingWarmRestarts(
     initialPeriod: number = DEFAULT_INITIAL_PERIOD,
@@ -237,6 +238,7 @@ export default class Rate {
    * @param totalStepCount Total steps for full schedule (must be > 0).
    * @param warmupStepCount Steps for warmup (< totalStepCount). Defaults to 10% of totalStepCount.
    * @param endRate Final rate at totalStepCount.
+   * @returns A function that warms the learning rate up, then decays it toward a fixed floor.
    */
   static linearWarmupDecay(
     totalStepCount: number,
@@ -259,6 +261,9 @@ export default class Rate {
    * This is the chapter's reactive option. Instead of following a pre-planned
    * calendar, the schedule listens for stalled improvement and responds only when
    * the run appears to flatten out.
+   *
+   * @param options Optional reactive-control settings such as patience, cooldown, and minimum rate floor.
+   * @returns A stateful schedule function that may lower the learning rate when the monitored error stops improving.
    */
   static reduceOnPlateau(options?: {
     factor?: number; // multiplicative decrease (0<f<1)

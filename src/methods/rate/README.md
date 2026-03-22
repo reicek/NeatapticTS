@@ -121,6 +121,8 @@ Parameters:
 - `minimumRate` - Minimum learning rate at valley.
 - `periodGrowthMultiplier` - Factor to multiply the period after each restart (>=1).
 
+Returns: A function that replays cosine cycles whose length can grow after each restart.
+
 #### exp
 
 ```ts
@@ -213,6 +215,8 @@ Parameters:
 - `warmupStepCount` - Steps for warmup (< totalStepCount). Defaults to 10% of totalStepCount.
 - `endRate` - Final rate at totalStepCount.
 
+Returns: A function that warms the learning rate up, then decays it toward a fixed floor.
+
 #### reduceOnPlateau
 
 ```ts
@@ -229,6 +233,11 @@ NOTE: Requires the training loop to call with signature (baseRate, iteration, la
 This is the chapter's reactive option. Instead of following a pre-planned
 calendar, the schedule listens for stalled improvement and responds only when
 the run appears to flatten out.
+
+Parameters:
+- `options` - Optional reactive-control settings such as patience, cooldown, and minimum rate floor.
+
+Returns: A stateful schedule function that may lower the learning rate when the monitored error stops improving.
 
 #### step
 

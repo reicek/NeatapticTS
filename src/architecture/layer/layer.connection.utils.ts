@@ -1,4 +1,4 @@
-import Connection from '../connection';
+import Connection from '../connection/connection';
 import Group from '../group';
 import * as methods from '../../methods/methods';
 import Node from '../node';

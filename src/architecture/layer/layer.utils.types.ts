@@ -1,4 +1,4 @@
-import type Connection from '../connection';
+import type Connection from '../connection/connection';
 import type Group from '../group';
 import type Node from '../node';
 

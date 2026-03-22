@@ -1,5 +1,5 @@
 import Node from './node';
-import Connection from './connection';
+import Connection from './connection/connection';
 import Layer from './layer';
 import { config } from '../config';
 import * as methods from '../methods/methods';
