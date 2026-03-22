@@ -24,7 +24,7 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
    - [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [WIP]
    - [methods-solid-split.plans.md](methods-solid-split.plans.md) [DONE]
    - [methods-docs.plans.md](methods-docs.plans.md) [DONE]
-   - [docs.plans.md](docs.plans.md) [WIP]
+   - [neat-docs.plans.md](neat-docs.plans.md) [WIP]
    - [utils-docs.plans.md](utils-docs.plans.md) [DONE]
    - Both demos are now solid split and documented enough to stop being structural blockers.
    - The remaining structural polish in Phase 0 is the broader educational-docs lane outside methods, the architecture folderization pass, and the repository-wide modernization pass with their validation gate.

@@ -1,6 +1,6 @@
 import type Network from '../../network';
 import type Connection from '../../connection';
-import Layer from '../../layer';
+import Layer from '../../layer/layer';
 import Node from '../../node';
 import mutation from '../../../methods/mutation/mutation';
 import { config } from '../../../config';

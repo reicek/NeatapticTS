@@ -762,15 +762,6 @@ complex network structures like Dense, LSTM, GRU, or Memory layers.
 They manage the collective behavior of their nodes, including activation,
 propagation, and connection to other network components.
 
-### Layer
-
-Represents a functional layer within a neural network architecture.
-
-Layers act as organizational units for nodes, facilitating the creation of
-complex network structures like Dense, LSTM, GRU, or Memory layers.
-They manage the collective behavior of their nodes, including activation,
-propagation, and connection to other network components.
-
 ### default
 
 #### activate

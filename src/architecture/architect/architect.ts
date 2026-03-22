@@ -15,7 +15,7 @@
  *    recurrent presets built from the lower-level architecture chapters.
  */
 import Node from '../node/node';
-import Layer from '../layer';
+import Layer from '../layer/layer';
 import Group from '../group/group';
 import Network from '../network';
 import * as methods from '../../methods/methods';

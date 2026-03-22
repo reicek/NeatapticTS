@@ -16,7 +16,7 @@
  */
 import Node from '../node/node';
 import Connection from '../connection/connection';
-import Layer from '../layer';
+import Layer from '../layer/layer';
 import { config } from '../../config';
 import * as methods from '../../methods/methods';
 

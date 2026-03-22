@@ -1,5 +1,19 @@
 # architecture/network
 
+Chapter-local `Network` anchor for the network boundary.
+
+This file gives the network chapter a local entrypoint before the public
+`Network` class itself is relocated out of the architecture root. Keeping
+this anchor narrow lets helper chapters start depending on the chapter-owned
+path without reopening the full public and test surface in one pass.
+
+Read this file as a migration seam:
+
+1. today it forwards the existing root implementation,
+2. nearby chapter files can retarget to this local anchor first,
+3. a later pass can move the class implementation here and leave the root
+   file as the public compatibility facade.
+
 ## architecture/network/network.types.ts
 
 ### NetworkRuntimeProps
@@ -1494,6 +1508,1046 @@ Context for constructing source-grouped outgoing connection order.
 ### PublishAdjacencyContext
 
 Context for publishing fully built adjacency slabs to internal network state.
+
+## architecture/network/network.ts
+
+### default
+
+#### _accumulationReduction
+
+Accumulation reduction mode.
+
+#### _activationPool
+
+Cached pooled activation output array.
+
+#### _activationPrecision
+
+Typed-array precision used by compiled activation paths.
+
+#### _adjDirty
+
+Adjacency dirty marker for slab structures.
+
+#### _applyGradientClipping
+
+```ts
+_applyGradientClipping(
+  cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; },
+): void
+```
+
+Apply gradient clipping configuration.
+
+Parameters:
+- `cfg` - Gradient clipping configuration.
+
+#### _canUseFastSlab
+
+```ts
+_canUseFastSlab(
+  training: boolean,
+): boolean
+```
+
+Check if fast-slab activation can be used.
+
+Parameters:
+- `training` - Whether training mode is active.
+
+Returns: True when fast-slab activation can be used.
+
+#### _computeTopoOrder
+
+```ts
+_computeTopoOrder(): void
+```
+
+Recompute and cache topological node ordering.
+
+Returns: Topological order payload from the delegate.
+
+#### _connFrom
+
+Packed connection slab source indices.
+
+#### _connTo
+
+Packed connection slab target indices.
+
+#### _connWeights
+
+Packed connection slab weights.
+
+#### _currentGradClip
+
+Gradient clip configuration for the current step.
+
+#### _dropConnectProb
+
+DropConnect probability.
+
+#### _enforceAcyclic
+
+Whether to enforce acyclic connectivity.
+
+#### _evoInitialConnCount
+
+Baseline connection count used by evolution-time pruning.
+
+#### _fastA
+
+Cached fast activation array A.
+
+#### _fastS
+
+Cached fast activation array S.
+
+#### _fastSlabActivate
+
+```ts
+_fastSlabActivate(
+  input: number[],
+): number[]
+```
+
+Execute the fast slab activation path.
+
+Parameters:
+- `input` - Input vector.
+
+Returns: Activation output.
+
+#### _forceNextOverflow
+
+Flag to force a mixed-precision overflow path.
+
+#### _gaussianRand
+
+```ts
+_gaussianRand(
+  rng: () => number,
+): number
+```
+
+Sample a Gaussian random value with an optional RNG.
+
+Parameters:
+- `rng` - RNG function.
+
+Returns: Gaussian random value.
+
+#### _globalEpoch
+
+Global epoch counter.
+
+#### _gradAccumMicroBatches
+
+Accumulated micro-batch counter.
+
+#### _gradClipSeparateBias
+
+Whether to apply separate bias clipping.
+
+#### _hasPath
+
+```ts
+_hasPath(
+  from: default,
+  to: default,
+): boolean
+```
+
+Check whether a directed path exists between two nodes.
+
+Parameters:
+- `from` - Source node.
+- `to` - Target node.
+
+Returns: True when a path exists.
+
+#### _initialConnectionCount
+
+Initial connection count used for pruning baselines.
+
+#### _lastGradClipGroupCount
+
+Last gradient clipping group count.
+
+#### _lastGradNorm
+
+Last recorded gradient norm.
+
+#### _lastOverflowStep
+
+Last overflow training step index.
+
+#### _lastRawGradNorm
+
+Last recorded raw (pre-update) gradient norm.
+
+#### _lastStats
+
+Last recorded stats payload.
+
+#### _maybePrune
+
+```ts
+_maybePrune(
+  iteration: number,
+): void
+```
+
+Apply scheduled pruning if current iteration matches pruning policy.
+
+Parameters:
+- `iteration` - Current training iteration.
+
+Returns: Delegate result for pruning attempt.
+
+#### _mixedPrecision
+
+Mixed precision runtime configuration.
+
+#### _mixedPrecisionState
+
+Mixed precision state counters.
+
+#### _nodeIndexDirty
+
+Node index dirty marker.
+
+#### _optimizerStep
+
+Optimizer step counter.
+
+#### _outOrder
+
+Output-order array for slab forward pass.
+
+#### _outStart
+
+Output-start array for slab forward pass.
+
+#### _preferredChainEdge
+
+Preferred linear-chain edge for node-split mutations.
+
+#### _pruningConfig
+
+Pruning configuration for scheduled pruning.
+
+#### _rand
+
+```ts
+_rand(): number
+```
+
+Random number generator used for stochastic operations.
+
+#### _returnTypedActivations
+
+Whether pooled typed activations can be returned directly.
+
+#### _reuseActivationArrays
+
+Whether pooled activation arrays are reused across activations.
+
+#### _rngState
+
+Raw RNG state word.
+
+#### _slabDirty
+
+Slab dirty marker.
+
+#### _stochasticDepth
+
+Stochastic depth schedule values.
+
+#### _stochasticDepthSchedule
+
+Dynamic stochastic depth schedule.
+
+#### _topoDirty
+
+Topology dirty marker.
+
+#### _topologyIntent
+
+Public topology intent used to preserve semantic API choices.
+
+#### _topoOrder
+
+Cached topological order.
+
+#### _trainingStep
+
+Training step counter.
+
+#### _useFloat32Weights
+
+Whether to store slab weights in float32.
+
+#### _weightNoisePerHidden
+
+Per-hidden-layer weight-noise standard deviations.
+
+#### _weightNoiseSchedule
+
+Dynamic weight-noise schedule function.
+
+#### _weightNoiseStd
+
+Global weight-noise standard deviation.
+
+#### _wnOrig
+
+Original weights captured for weight-noise recovery.
+
+#### activate
+
+```ts
+activate(
+  input: number[],
+  training: boolean,
+  _maxActivationDepth: number,
+): number[]
+```
+
+Standard activation API returning a plain number[] for backward compatibility.
+Internally may use pooled typed arrays; if so they are cloned before returning.
+
+#### activateBatch
+
+```ts
+activateBatch(
+  inputs: number[][],
+  training: boolean,
+): number[][]
+```
+
+Activate the network over a batch of input vectors (micro-batching).
+
+Currently iterates sample-by-sample while reusing the network's internal
+fast-path allocations. Outputs are cloned number[] arrays for API
+compatibility. Future optimizations can vectorize this path.
+
+Parameters:
+- `inputs` - Array of input vectors, each length must equal this.input
+- `training` - Whether to run with training-time stochastic features
+
+Returns: Array of output vectors, each length equals this.output
+
+#### activateRaw
+
+```ts
+activateRaw(
+  input: number[],
+  training: boolean,
+  maxActivationDepth: number,
+): ActivationArray
+```
+
+Raw activation that can return a typed array when pooling is enabled (zero-copy).
+If reuseActivationArrays=false falls back to standard activate().
+
+Parameters:
+- `input` - Input vector.
+- `training` - Whether to enable training-time stochastic paths.
+- `maxActivationDepth` - Maximum graph depth for activation.
+
+Returns: Output activations (typed array when pooling is enabled).
+
+#### addNodeBetween
+
+```ts
+addNodeBetween(): void
+```
+
+Split a random existing connection by inserting one hidden node.
+
+#### adjustRateForAccumulation
+
+```ts
+adjustRateForAccumulation(
+  rate: number,
+  accumulationSteps: number,
+  reduction: "average" | "sum",
+): number
+```
+
+Utility: adjust rate for accumulation mode (use result when switching to 'sum' to mimic 'average').
+
+#### clear
+
+```ts
+clear(): void
+```
+
+Clears the internal state of all nodes in the network.
+Resets node activation, state, eligibility traces, and extended traces to their initial values (usually 0).
+This is typically done before processing a new input sequence in recurrent networks or between training epochs if desired.
+
+#### clearStochasticDepthSchedule
+
+```ts
+clearStochasticDepthSchedule(): void
+```
+
+Clear stochastic-depth schedule function.
+
+#### clearWeightNoiseSchedule
+
+```ts
+clearWeightNoiseSchedule(): void
+```
+
+Clear the dynamic global weight-noise schedule.
+
+#### clone
+
+```ts
+clone(): default
+```
+
+Creates a deep copy of the network.
+
+Returns: A new Network instance that is a clone of the current network.
+
+#### configurePruning
+
+```ts
+configurePruning(
+  cfg: { start: number; end: number; targetSparsity: number; regrowFraction?: number | undefined; frequency?: number | undefined; method?: "magnitude" | "snip" | undefined; },
+): void
+```
+
+Configure scheduled pruning during training.
+
+Parameters:
+- `cfg` - Pruning schedule and strategy configuration.
+
+#### connect
+
+```ts
+connect(
+  from: default,
+  to: default,
+  weight: number | undefined,
+): default[]
+```
+
+Creates a connection between two nodes in the network.
+Handles both regular connections and self-connections.
+Adds the new connection object(s) to the appropriate network list (`connections` or `selfconns`).
+
+Returns: An array containing the newly created connection object(s). Typically contains one connection, but might be empty or contain more in specialized node types.
+
+#### connections
+
+Connection list.
+
+#### createMLP
+
+```ts
+createMLP(
+  inputCount: number,
+  hiddenCounts: number[],
+  outputCount: number,
+): default
+```
+
+Creates a fully connected, strictly layered MLP network.
+
+Returns: A new, fully connected, layered MLP
+
+#### crossOver
+
+```ts
+crossOver(
+  network1: default,
+  network2: default,
+  equal: boolean,
+): default
+```
+
+NEAT-style crossover delegate.
+
+#### describeArchitecture
+
+```ts
+describeArchitecture(): NetworkArchitectureDescriptor
+```
+
+Resolves a stable architecture descriptor for telemetry/UI consumers.
+
+Prefers live graph analysis and only falls back to hydrated serialization
+metadata when graph-based resolution is purely inferred.
+
+Returns: Architecture descriptor with hidden-layer widths and provenance.
+
+#### deserialize
+
+```ts
+deserialize(
+  data: unknown[] | [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number],
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): default
+```
+
+Static lightweight tuple deserializer delegate
+
+#### disableDropConnect
+
+```ts
+disableDropConnect(): void
+```
+
+Disable DropConnect.
+
+#### disableStochasticDepth
+
+```ts
+disableStochasticDepth(): void
+```
+
+Disable stochastic depth.
+
+#### disableWeightNoise
+
+```ts
+disableWeightNoise(): void
+```
+
+Disable all weight-noise settings.
+
+#### disconnect
+
+```ts
+disconnect(
+  from: default,
+  to: default,
+): void
+```
+
+Disconnects two nodes, removing the connection between them.
+Handles both regular connections and self-connections.
+If the connection being removed was gated, it is also ungated.
+
+#### dropout
+
+Dropout probability.
+
+#### enableDropConnect
+
+```ts
+enableDropConnect(
+  p: number,
+): void
+```
+
+Enable DropConnect with a probability in $[0,1)$.
+
+Parameters:
+- `p` - DropConnect probability.
+
+#### enableWeightNoise
+
+```ts
+enableWeightNoise(
+  stdDev: number | { perHiddenLayer: number[]; },
+): void
+```
+
+Enable weight noise using either a global standard deviation or per-hidden-layer values.
+
+Parameters:
+- `stdDev` - Global standard deviation or hidden-layer schedule.
+
+#### fastSlabActivate
+
+```ts
+fastSlabActivate(
+  input: number[],
+): number[]
+```
+
+Public wrapper for fast slab forward pass.
+
+Parameters:
+- `input` - Input vector.
+
+Returns: Activation output.
+
+#### fromJSON
+
+```ts
+fromJSON(
+  json: Record<string, unknown>,
+): default
+```
+
+Verbose JSON static deserializer
+
+#### gate
+
+```ts
+gate(
+  node: default,
+  connection: default,
+): void
+```
+
+Gates a connection with a specified node.
+The activation of the `node` (gater) will modulate the weight of the `connection`.
+Adds the connection to the network's `gates` list.
+
+#### gates
+
+Network gates collection.
+
+#### getConnectionSlab
+
+```ts
+getConnectionSlab(): ConnectionSlabView
+```
+
+Read slab structures for fast activation.
+
+Returns: Slab connection structures.
+
+#### getCurrentSparsity
+
+```ts
+getCurrentSparsity(): number
+```
+
+Compute the current connection sparsity ratio.
+
+Returns: Current sparsity in $[0,1]$.
+
+#### getLastGradClipGroupCount
+
+```ts
+getLastGradClipGroupCount(): number
+```
+
+Returns last gradient clipping group count (0 if no clipping yet).
+
+#### getLossScale
+
+```ts
+getLossScale(): number
+```
+
+Returns current mixed precision loss scale (1 if disabled).
+
+#### getRawGradientNorm
+
+```ts
+getRawGradientNorm(): number
+```
+
+Returns last recorded raw (pre-update) gradient L2 norm.
+
+#### getRegularizationStats
+
+```ts
+getRegularizationStats(): Record<string, unknown> | null
+```
+
+Read regularization statistics collected during training.
+
+Returns: Regularization stats payload.
+
+#### getRNGState
+
+```ts
+getRNGState(): number | undefined
+```
+
+Read the raw deterministic RNG state word.
+
+Returns: RNG state value when present.
+
+#### getTopologyIntent
+
+```ts
+getTopologyIntent(): NetworkTopologyIntent
+```
+
+Returns the public topology intent for this network.
+
+Returns: Current topology intent.
+
+#### getTrainingStats
+
+```ts
+getTrainingStats(): { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }
+```
+
+Consolidated training stats snapshot.
+
+#### input
+
+Input node count.
+
+#### lastSkippedLayers
+
+Last skipped stochastic-depth layers from activation runtime state.
+
+#### layers
+
+Optional layered view cache.
+
+#### mutate
+
+```ts
+mutate(
+  method: MutationMethod,
+): void
+```
+
+Mutates the network's structure or parameters according to the specified method.
+This is a core operation for neuro-evolutionary algorithms (like NEAT).
+The method argument should be one of the mutation types defined in `methods.mutation`.
+
+Parameters:
+- `method` - - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+  Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
+
+#### nodes
+
+Network node collection.
+
+#### noTraceActivate
+
+```ts
+noTraceActivate(
+  input: number[],
+): number[]
+```
+
+Activates the network without calculating eligibility traces.
+This is a performance optimization for scenarios where backpropagation is not needed,
+such as during testing, evaluation, or deployment (inference).
+
+Returns: An array of numerical values representing the activations of the network's output nodes.
+
+#### output
+
+Output node count.
+
+#### propagate
+
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  target: number[],
+  regularization: number,
+  costDerivative: ((target: number, output: number) => number) | undefined,
+): void
+```
+
+Propagates the error backward through the network (backpropagation).
+Calculates the error gradient for each node and connection.
+If `update` is true, it adjusts the weights and biases based on the calculated gradients,
+learning rate, momentum, and optional L2 regularization.
+
+The process starts from the output nodes and moves backward layer by layer (or topologically for recurrent nets).
+
+#### pruneToSparsity
+
+```ts
+pruneToSparsity(
+  targetSparsity: number,
+  method: "magnitude" | "snip",
+): void
+```
+
+Immediately prune connections to reach (or approach) a target sparsity fraction.
+Used by evolutionary pruning (generation-based) independent of training iteration schedule.
+
+Parameters:
+- `targetSparsity` - fraction in (0,1). 0.8 means keep 20% of original (if first call sets baseline)
+- `method` - 'magnitude' | 'snip'
+
+#### rebuildConnections
+
+```ts
+rebuildConnections(
+  net: default,
+): void
+```
+
+Rebuilds the network's connections array from all per-node connections.
+This ensures that the network.connections array is consistent with the actual
+outgoing connections of all nodes. Useful after manual wiring or node manipulation.
+
+Returns: Example usage:
+  Network.rebuildConnections(net);
+
+#### rebuildConnectionSlab
+
+```ts
+rebuildConnectionSlab(
+  force: boolean,
+): void
+```
+
+Rebuild slab structures for fast activation.
+
+Parameters:
+- `force` - Whether to force a rebuild.
+
+Returns: Slab rebuild result.
+
+#### remove
+
+```ts
+remove(
+  node: default,
+): void
+```
+
+Removes a node from the network.
+This involves:
+1. Disconnecting all incoming and outgoing connections associated with the node.
+2. Removing any self-connections.
+3. Removing the node from the `nodes` array.
+4. Attempting to reconnect the node's direct predecessors to its direct successors
+   to maintain network flow, if possible and configured.
+5. Handling gates involving the removed node (ungating connections gated *by* this node,
+   and potentially re-gating connections that were gated *by other nodes* onto the removed node's connections).
+
+#### resetDropoutMasks
+
+```ts
+resetDropoutMasks(): void
+```
+
+Resets all masks in the network to 1 (no dropout). Applies to both node-level and layer-level dropout.
+Should be called after training to ensure inference is unaffected by previous dropout.
+
+#### restoreRNG
+
+```ts
+restoreRNG(
+  fn: () => number,
+): void
+```
+
+Restore deterministic RNG function from a snapshot source.
+
+Parameters:
+- `fn` - RNG function to restore.
+
+#### score
+
+Optional fitness score.
+
+#### selfconns
+
+Self-connection list.
+
+#### serialize
+
+```ts
+serialize(): [number[], number[], string[], SerializedConnection[], number, number]
+```
+
+Lightweight tuple serializer delegating to network.serialize.ts
+
+#### set
+
+```ts
+set(
+  values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; },
+): void
+```
+
+Sets specified properties (e.g., bias, squash function) for all nodes in the network.
+Useful for initializing or resetting node properties uniformly.
+
+#### setEnforceAcyclic
+
+```ts
+setEnforceAcyclic(
+  flag: boolean,
+): void
+```
+
+Enable or disable acyclic topology enforcement.
+
+Parameters:
+- `flag` - Whether to enforce acyclic connectivity.
+
+#### setRandom
+
+```ts
+setRandom(
+  fn: () => number,
+): void
+```
+
+Replace the network random number generator.
+
+Parameters:
+- `fn` - RNG function returning values in $[0,1)$.
+
+#### setRNGState
+
+```ts
+setRNGState(
+  state: number,
+): void
+```
+
+Set the raw deterministic RNG state word.
+
+Parameters:
+- `state` - RNG state value.
+
+#### setSeed
+
+```ts
+setSeed(
+  seed: number,
+): void
+```
+
+Seed the internal deterministic RNG.
+
+Parameters:
+- `seed` - Seed value.
+
+#### setStochasticDepth
+
+```ts
+setStochasticDepth(
+  survival: number[],
+): void
+```
+
+Configure stochastic depth with survival probabilities per hidden layer.
+
+Parameters:
+- `survival` - Survival probabilities for hidden layers.
+
+#### setStochasticDepthSchedule
+
+```ts
+setStochasticDepthSchedule(
+  fn: (step: number, current: number[]) => number[],
+): void
+```
+
+Set stochastic-depth schedule function.
+
+Parameters:
+- `fn` - Function mapping step and current schedule to next schedule.
+
+#### setTopologyIntent
+
+```ts
+setTopologyIntent(
+  topologyIntent: NetworkTopologyIntent,
+): void
+```
+
+Sets the public topology intent and keeps acyclic enforcement aligned.
+
+Parameters:
+- `topologyIntent` - Desired topology intent.
+
+Returns: Nothing.
+
+#### setWeightNoiseSchedule
+
+```ts
+setWeightNoiseSchedule(
+  fn: (step: number) => number,
+): void
+```
+
+Set a dynamic scheduler for global weight noise.
+
+Parameters:
+- `fn` - Function mapping training step to noise standard deviation.
+
+#### snapshotRNG
+
+```ts
+snapshotRNG(): RNGSnapshot
+```
+
+Snapshot deterministic RNG runtime state.
+
+Returns: Current RNG snapshot.
+
+#### test
+
+```ts
+test(
+  set: { input: number[]; output: number[]; }[],
+  cost: ((target: number[], output: number[]) => number) | undefined,
+): { error: number; time: number; }
+```
+
+Tests the network's performance on a given dataset.
+Calculates the average error over the dataset using a specified cost function.
+Uses `noTraceActivate` for efficiency as gradients are not needed.
+Handles dropout scaling if dropout was used during training.
+
+Returns: An object containing the calculated average error over the dataset and the time taken for the test in milliseconds.
+
+#### testForceOverflow
+
+```ts
+testForceOverflow(): void
+```
+
+Force the next mixed-precision overflow path (test utility).
+
+#### toJSON
+
+```ts
+toJSON(): Record<string, unknown>
+```
+
+Verbose JSON serializer delegate
+
+#### toONNX
+
+```ts
+toONNX(): OnnxModel
+```
+
+Exports the network to ONNX format (JSON object, minimal MLP support).
+Only standard feedforward architectures and standard activations are supported.
+Gating, custom activations, and evolutionary features are ignored or replaced with Identity.
+
+Returns: ONNX model as a JSON object.
+
+#### trainingStep
+
+Current training step counter.
+
+#### ungate
+
+```ts
+ungate(
+  connection: default,
+): void
+```
+
+Removes the gate from a specified connection.
+The connection will no longer be modulated by its gater node.
+Removes the connection from the network's `gates` list.
 
 ## architecture/network/network.utils.ts
 

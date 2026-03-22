@@ -18,7 +18,7 @@
  */
 
 import Connection from '../../connection';
-import type Layer from '../../layer';
+import type Layer from '../../layer/layer';
 import type Network from '../../network';
 import type NeatapticNode from '../../node';
 

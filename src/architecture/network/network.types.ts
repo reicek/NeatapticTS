@@ -1,4 +1,4 @@
-import type Network from '../network';
+import type Network from './network';
 import type Node from '../node';
 import type Connection from '../connection/connection';
 import type { TestWorkerInstance } from '../../multithreading/types';

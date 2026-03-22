@@ -1,5 +1,359 @@
 # architecture/layer
 
+Core layer chapter for the architecture surface.
+
+This folder owns the public `Layer` class that turns node-level primitives
+into reusable feed-forward and recurrent building blocks. The helper files in
+this chapter keep activation, connection, propagation, and factory policies
+focused, while this file preserves the orchestration story that readers and
+callers actually meet first.
+
+Read this chapter in three passes:
+
+1. start with the `Layer` class overview to understand why the boundary
+   exists above raw nodes and groups,
+2. continue to `activate()`, `propagate()`, `connect()`, and `input()` when
+   you need the runtime wiring surface,
+3. finish with the static factory methods when you want named layer shapes
+   such as dense, recurrent, normalization, or experimental blocks.
+
+## architecture/layer/layer.ts
+
+### Layer
+
+Represents a functional layer within a neural network architecture.
+
+Layers act as organizational units for nodes, facilitating the creation of
+complex network structures like Dense, LSTM, GRU, or Memory layers.
+They manage the collective behavior of their nodes, including activation,
+propagation, and connection to other network components.
+
+### default
+
+#### activate
+
+```ts
+activate(
+  value: number[] | undefined,
+  training: boolean,
+): number[]
+```
+
+Activates all nodes within the layer, computing their output values.
+
+If an input `value` array is provided, it's used as the initial activation
+for the corresponding nodes in the layer. Otherwise, nodes compute their
+activation based on their incoming connections.
+
+During training, layer-level dropout is applied, masking all nodes in the layer together.
+During inference, all masks are set to 1.
+
+Parameters:
+- `value` - - An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
+- `training` - - A boolean indicating whether the layer is in training mode. Defaults to false.
+
+Returns: An array containing the activation value of each node in the layer after activation.
+
+#### attention
+
+```ts
+attention(
+  size: number,
+  heads: number,
+): default
+```
+
+Creates a multi-head self-attention layer (stub implementation).
+
+Parameters:
+- `size` - - Number of output nodes.
+- `heads` - - Number of attention heads (default 1).
+
+Returns: A new Layer instance representing an attention layer.
+
+#### batchNorm
+
+```ts
+batchNorm(
+  size: number,
+): default
+```
+
+Creates a batch normalization layer.
+Applies batch normalization to the activations of the nodes in this layer during activation.
+
+Parameters:
+- `size` - - The number of nodes in this layer.
+
+Returns: A new Layer instance configured as a batch normalization layer.
+
+#### clear
+
+```ts
+clear(): void
+```
+
+Resets the activation state of all nodes within the layer.
+This is typically done before processing a new input sequence or sample.
+
+#### connect
+
+```ts
+connect(
+  target: default | default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
+
+Connects this layer's output to a target component (Layer, Group, or Node).
+
+This method delegates the connection logic primarily to the layer's `output` group
+or the target layer's `input` method. It establishes the forward connections
+necessary for signal propagation.
+
+Parameters:
+- `target` - - The destination Layer, Group, or Node to connect to.
+- `method` - - The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
+- `weight` - - An optional fixed weight to assign to all created connections.
+
+Returns: An array containing the newly created connection objects.
+
+#### connections
+
+Stores connection information related to this layer. This is often managed
+by the network or higher-level structures rather than directly by the layer itself.
+`in`: Incoming connections to the layer's nodes.
+`out`: Outgoing connections from the layer's nodes.
+`self`: Self-connections within the layer's nodes.
+
+#### conv1d
+
+```ts
+conv1d(
+  size: number,
+  kernelSize: number,
+  stride: number,
+  padding: number,
+): default
+```
+
+Creates a 1D convolutional layer (stub implementation).
+
+Parameters:
+- `size` - - Number of output nodes (filters).
+- `kernelSize` - - Size of the convolution kernel.
+- `stride` - - Stride of the convolution (default 1).
+- `padding` - - Padding (default 0).
+
+Returns: A new Layer instance representing a 1D convolutional layer.
+
+#### dense
+
+```ts
+dense(
+  size: number,
+): default
+```
+
+Creates a standard fully connected (dense) layer.
+
+All nodes in the source layer/group will connect to all nodes in this layer
+when using the default `ALL_TO_ALL` connection method via `layer.input()`.
+
+Parameters:
+- `size` - - The number of nodes (neurons) in this layer.
+
+Returns: A new Layer instance configured as a dense layer.
+
+#### disconnect
+
+```ts
+disconnect(
+  target: default | default,
+  twosided: boolean | undefined,
+): void
+```
+
+Removes connections between this layer's nodes and a target Group or Node.
+
+Parameters:
+- `target` - - The Group or Node to disconnect from.
+- `twosided` - - If true, removes connections in both directions (from this layer to target, and from target to this layer). Defaults to false.
+
+#### dropout
+
+Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
+Layer-level dropout takes precedence over node-level dropout for nodes in this layer.
+
+#### gate
+
+```ts
+gate(
+  connections: default[],
+  method: unknown,
+): void
+```
+
+Applies gating to a set of connections originating from this layer's output group.
+
+Gating allows the activity of nodes in this layer (specifically, the output group)
+to modulate the flow of information through the specified `connections`.
+
+Parameters:
+- `connections` - - An array of connection objects to be gated.
+- `method` - - The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
+
+#### gru
+
+```ts
+gru(
+  size: number,
+): default
+```
+
+Creates a Gated Recurrent Unit (GRU) layer.
+
+GRUs are another type of recurrent neural network cell, often considered
+simpler than LSTMs but achieving similar performance on many tasks.
+They use an update gate and a reset gate to manage information flow.
+
+Parameters:
+- `size` - - The number of GRU units (and nodes in each gate/cell group).
+
+Returns: A new Layer instance configured as a GRU layer.
+
+#### input
+
+```ts
+input(
+  from: default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
+
+Handles the connection logic when this layer is the *target* of a connection.
+
+It connects the output of the `from` layer or group to this layer's primary
+input mechanism (which is often the `output` group itself, but depends on the layer type).
+This method is usually called by the `connect` method of the source layer/group.
+
+Parameters:
+- `from` - - The source Layer or Group connecting *to* this layer.
+- `method` - - The connection method (e.g., `ALL_TO_ALL`). Defaults to `ALL_TO_ALL`.
+- `weight` - - An optional fixed weight for the connections.
+
+Returns: An array containing the newly created connection objects.
+
+#### layerNorm
+
+```ts
+layerNorm(
+  size: number,
+): default
+```
+
+Creates a layer normalization layer.
+Applies layer normalization to the activations of the nodes in this layer during activation.
+
+Parameters:
+- `size` - - The number of nodes in this layer.
+
+Returns: A new Layer instance configured as a layer normalization layer.
+
+#### lstm
+
+```ts
+lstm(
+  size: number,
+): default
+```
+
+Creates a Long Short-Term Memory (LSTM) layer.
+
+LSTMs are a type of recurrent neural network (RNN) cell capable of learning
+long-range dependencies. This implementation uses standard LSTM architecture
+with input, forget, and output gates, and a memory cell.
+
+Parameters:
+- `size` - - The number of LSTM units (and nodes in each gate/cell group).
+
+Returns: A new Layer instance configured as an LSTM layer.
+
+#### memory
+
+```ts
+memory(
+  size: number,
+  memory: number,
+): default
+```
+
+Creates a Memory layer, designed to hold state over a fixed number of time steps.
+
+This layer consists of multiple groups (memory blocks), each holding the state
+from a previous time step. The input connects to the most recent block, and
+information propagates backward through the blocks. The layer's output
+concatenates the states of all memory blocks.
+
+Parameters:
+- `size` - - The number of nodes in each memory block (must match the input size).
+- `memory` - - The number of time steps to remember (number of memory blocks).
+
+Returns: A new Layer instance configured as a Memory layer.
+
+#### nodes
+
+An array containing all the nodes (neurons or groups) that constitute this layer.
+The order of nodes might be relevant depending on the layer type and its connections.
+
+#### output
+
+Represents the primary output group of nodes for this layer.
+This group is typically used when connecting this layer *to* another layer or group.
+It might be null if the layer is not yet fully constructed or is an input layer.
+
+#### propagate
+
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  target: number[] | undefined,
+): void
+```
+
+Propagates the error backward through all nodes in the layer.
+
+This is a core step in the backpropagation algorithm used for training.
+If a `target` array is provided (typically for the output layer), it's used
+to calculate the initial error for each node. Otherwise, nodes calculate
+their error based on the error propagated from subsequent layers.
+
+Parameters:
+- `rate` - - The learning rate, controlling the step size of weight adjustments.
+- `momentum` - - The momentum factor, used to smooth weight updates and escape local minima.
+- `target` - - An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
+
+#### set
+
+```ts
+set(
+  values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; type?: string | undefined; },
+): void
+```
+
+Configures properties for all nodes within the layer.
+
+Allows batch setting of common node properties like bias, activation function (`squash`),
+or node type. If a node within the `nodes` array is actually a `Group` (e.g., in memory layers),
+the configuration is applied recursively to the nodes within that group.
+
+Parameters:
+- `values` - - An object containing the properties and their values to set.
+  Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
+
 ## architecture/layer/layer.utils.types.ts
 
 ### LayerActivationContext

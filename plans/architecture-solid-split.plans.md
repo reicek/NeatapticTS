@@ -56,8 +56,8 @@ root. Keep exactly one boundary pass active at a time.
 4. Architect boundary
 5. NodePool ownership follow-through
 6. ActivationArrayPool ownership follow-through
-7. Layer facade normalization if still needed
-8. Network facade normalization if still needed
+7. Layer facade normalization
+8. Network facade normalization
 9. ONNX root-shim review if public-import cleanup becomes necessary
 
 ## Session Log
@@ -359,3 +359,158 @@ Next step:
 
 - Review whether layer facade normalization is still needed now that the root
   pooling helpers have converged on chapter-owned implementations.
+
+### Layer facade normalization
+
+Goals:
+
+- Move the public `Layer` class into the
+  [src/architecture/layer](../src/architecture/layer/README.md) chapter so the
+  folder owns both the helper implementation story and the public class that
+  readers actually use.
+- Keep the flat [src/architecture/layer.ts](../src/architecture/layer.ts)
+  import path stable while retargeting the nearest architecture-local imports
+  to the direct chapter path.
+
+Progress:
+
+- Moved the implementation from
+  [src/architecture/layer.ts](../src/architecture/layer.ts) to
+  [src/architecture/layer/layer.ts](../src/architecture/layer/layer.ts) so the
+  layer chapter now owns the public class surface instead of only the helper
+  files under the folder.
+- Replaced the old flat file with a thin compatibility facade at
+  [src/architecture/layer.ts](../src/architecture/layer.ts) so the existing
+  public export in [src/neataptic.ts](../src/neataptic.ts) and the remaining
+  flat-path tests can keep the stable import surface during this pass.
+- Updated the nearest architecture-local imports to the direct chapter path in
+  [src/architecture/network.ts](../src/architecture/network.ts),
+  [src/architecture/group/group.ts](../src/architecture/group/group.ts),
+  [src/architecture/architect/architect.ts](../src/architecture/architect/architect.ts),
+  [src/architecture/network/mutate/network.mutate.handlers.utils.ts](../src/architecture/network/mutate/network.mutate.handlers.utils.ts),
+  [src/architecture/network/onnx/network.onnx.runtime-load.utils.ts](../src/architecture/network/onnx/network.onnx.runtime-load.utils.ts),
+  and
+  [src/architecture/network/onnx/network.onnx.utils.types.ts](../src/architecture/network/onnx/network.onnx.utils.types.ts)
+  so the runtime and import-heavy architecture chapters depend less on the flat
+  root shelf.
+- Added chapter-opening JSDoc in
+  [src/architecture/layer/layer.ts](../src/architecture/layer/layer.ts) so the
+  generated [src/architecture/layer/README.md](../src/architecture/layer/README.md)
+  now opens with the public Layer story instead of only helper-oriented file
+  summaries, then refreshed docs and reran `npx tsc --noEmit -p tsconfig.json`
+  for the normalized surface.
+
+Decision:
+
+- Keep the temporary root facade for Layer during this pass because the stable
+  public export in [src/neataptic.ts](../src/neataptic.ts) and the remaining
+  flat-path tests still depend on it.
+- Treat network facade normalization as the next review point now that the
+  layer chapter owns both the helper implementation and the public class
+  surface.
+
+Next step:
+
+- Review whether network facade normalization is still needed now that the root
+  pooling helpers and the layer class have converged on chapter-owned
+  implementations.
+
+### Network facade normalization review
+
+Goals:
+
+- Decide whether the root
+  [src/architecture/network.ts](../src/architecture/network.ts) file is still
+  the right long-term orchestration surface or whether the public `Network`
+  class should move into the
+  [src/architecture/network](../src/architecture/network/README.md) chapter.
+- Judge the question as both a documentation ownership problem and an
+  import-graph risk problem before attempting another large boundary move.
+
+Progress:
+
+- Re-read the generated network chapter at
+  [src/architecture/network/README.md](../src/architecture/network/README.md),
+  the root architecture overview at
+  [src/architecture/README.md](../src/architecture/README.md), and the current
+  root implementation in
+  [src/architecture/network.ts](../src/architecture/network.ts).
+- Confirmed that the
+  [src/architecture/network](../src/architecture/network/README.md) chapter
+  already owns a wide helper tree including `activate`, `connect`,
+  `deterministic`, `evolve`, `gating`, `genetic`, `mutate`, `onnx`, `prune`,
+  `remove`, `serialize`, `slab`, `standalone`, `stats`, `topology`, and
+  `training`, but does not yet own the public `Network` class because there is
+  still no chapter file at `src/architecture/network/network.ts`.
+- Confirmed that the root architecture README still documents the public
+  network surface from [src/architecture/network.ts](../src/architecture/network.ts),
+  which means the educational center of gravity for the network boundary is
+  still split between the root shelf and the chapter folder.
+- Confirmed that the internal import graph is much broader than the earlier
+  layer pass: a large portion of the helper tree currently imports the root
+  network path via `../../network` or `../network`, and the flat public path is
+  also used by the public exports in [src/neataptic.ts](../src/neataptic.ts),
+  the higher-level NEAT surfaces under [src/neat](../src/neat), and extensive
+  benchmark, network, ONNX, training, and NEAT tests under [test](../test).
+
+Decision:
+
+- Network facade normalization is still needed.
+- Unlike the layer pass, this is no longer a narrow compatibility-facade move:
+  the network boundary already spans a chapter-sized helper ecosystem plus a
+  very broad repo-local and test import surface, so the normalization should be
+  treated as its own dedicated multi-pass split instead of a quick follow-through.
+- Keep the temporary root facade-orchestration role for
+  [src/architecture/network.ts](../src/architecture/network.ts) for now while
+  the next pass identifies the smallest safe first move inside the network
+  chapter.
+
+Next step:
+
+- Start a dedicated network facade normalization planning pass that identifies
+  the smallest safe first sub-step for moving the public `Network` class toward
+  the chapter folder, including whether `src/architecture/network/network.ts`
+  should be introduced first and which local imports can be retargeted without
+  reopening the entire public/test surface in one edit burst.
+
+### Network chapter anchor pass
+
+Goals:
+
+- Introduce a chapter-local `Network` anchor so the network folder can start
+  owning its own import seam before the public class moves out of the root
+  shelf.
+- Retarget one shared chapter file to that local anchor and stop before
+  reopening the broader public export and test surface.
+
+Progress:
+
+- Added [src/architecture/network/network.ts](../src/architecture/network/network.ts)
+  as a narrow chapter-local passthrough to the current default export in
+  [src/architecture/network.ts](../src/architecture/network.ts), giving the
+  folder its missing `network/network.ts` seam without changing runtime
+  behavior.
+- Retargeted
+  [src/architecture/network/network.types.ts](../src/architecture/network/network.types.ts)
+  from the root `../network` import to the chapter-local `./network` anchor so
+  the shared type surface now depends on the local chapter path first.
+- Added migration-focused JSDoc to the new chapter anchor so the generated
+  [src/architecture/network/README.md](../src/architecture/network/README.md)
+  can start teaching the ownership transition instead of implying that the
+  folder has no local `Network` entrypoint.
+- Refreshed docs and reran `npx tsc --noEmit -p tsconfig.json` for the touched
+  network surface.
+
+Decision:
+
+- Keep [src/architecture/network.ts](../src/architecture/network.ts) unchanged
+  during this first sub-step.
+- Use the new chapter-local anchor as the staging seam for future internal
+  retargets before the full `Network` class relocation is attempted.
+
+Next step:
+
+- Choose the next bounded internal retarget set that can safely move from the
+  root `../../network` path to the chapter-local `../../network/network`
+  anchor, then reassess whether the remaining root file is thin enough for a
+  later facade conversion.
