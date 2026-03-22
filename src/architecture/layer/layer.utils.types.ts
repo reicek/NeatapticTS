@@ -1,5 +1,5 @@
 import type Connection from '../connection/connection';
-import type Group from '../group';
+import type Group from '../group/group';
 import type Node from '../node';
 
 /**

@@ -1,6 +1,6 @@
 import type Network from '../../network';
-import { activationArrayPool } from '../../activationArrayPool';
-import type { ActivationArray } from '../../activationArrayPool';
+import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
+import type { ActivationArray } from '../../activationArrayPool/activationArrayPool';
 import { config } from '../../../config';
 import {
   INITIAL_OUTPUT_WRITE_INDEX,

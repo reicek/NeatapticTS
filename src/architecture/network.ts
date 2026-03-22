@@ -3,12 +3,12 @@ import Layer from './layer';
 import {
   acquireNode as _acquireNode,
   releaseNode as _releaseNode,
-} from './nodePool';
+} from './nodePool/nodePool';
 import Connection from './connection/connection';
 import * as methods from '../methods/methods';
 import { config } from '../config'; // Import configuration settings
-import { activationArrayPool } from './activationArrayPool';
-import type { ActivationArray } from './activationArrayPool';
+import { activationArrayPool } from './activationArrayPool/activationArrayPool';
+import type { ActivationArray } from './activationArrayPool/activationArrayPool';
 import { exportToONNX } from './onnx';
 import {
   generateStandalone,

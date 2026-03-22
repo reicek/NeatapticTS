@@ -1,23 +1,5 @@
 # architecture
 
-NodePool (Phase 2 – COMPLETE)
-=============================
-Lightweight object pool for `Node` instances mirroring (future) connection pooling patterns.
-
-Objectives:
-1. Reduce GC pressure during topology mutation / morphogenesis (frequent add/remove of nodes).
-2. Provide deterministic, fully-reset instances on `acquire()` so algorithms can assume a fresh state.
-3. Provide instrumentation (reused vs fresh, highWaterMark, recycledRatio) consumed by benchmarks.
-4. Serve as a future anchor for slab-backed / SoA node state (Phase 3) without altering the public API.
-
-Phase 2 Deliverables Implemented Here:
-- acquire / release with thorough reset and defensive scrub on release.
-- highWaterMark updated ONLY on release (tracks retained capacity not transient demand).
-- Counters reusedCount & freshCount powering recycledRatio assertions.
-- resetNodePool() for deterministic test harness setup.
-
-Deferred (Phase 3+): preWarm(count), adaptive trim(), leak pattern heuristics, slab field hydration.
-
 ## architecture/node.ts
 
 ### node
@@ -608,13 +590,31 @@ network (when supported).
 
 ### group
 
-Represents a collection of nodes functioning as a single unit within a network architecture.
-Groups facilitate operations like collective activation, propagation, and connection management.
+Composite node block for architecture construction.
 
-### Group
+A group is the first place where the architecture surface stops talking about
+one primitive at a time and starts exposing small graph motifs. It owns a set
+of nodes plus the connection bookkeeping needed to treat that set as one
+wiring target, one wiring source, and one propagation unit.
 
-Represents a collection of nodes functioning as a single unit within a network architecture.
-Groups facilitate operations like collective activation, propagation, and connection management.
+This makes the boundary useful in three different modes:
+
+- dense or structured connection building between graph regions,
+- collective activation and propagation when a block should act as one unit,
+- recurrent and gated substructures where node-level behavior is still
+  needed but orchestration should stay above the single-neuron level.
+
+Example:
+
+```ts
+const encoderBlock = new Group(4);
+const decoderBlock = new Group(4);
+
+encoderBlock.connect(
+  decoderBlock,
+  methods.groupConnection.ONE_TO_ONE,
+);
+```
 
 ### default
 
@@ -626,11 +626,12 @@ activate(
 ): number[]
 ```
 
-Activates all nodes in the group. If input values are provided, they are assigned
-sequentially to the nodes before activation. Otherwise, nodes activate based on their
-existing states and incoming connections.
+Activates all nodes in the group.
 
-Returns: An array containing the activation value of each node in the group, in order.
+Parameters:
+- `value` - Optional array of input values. Its length must match the number of nodes in the group.
+
+Returns: Activation value of each node in the group, in order.
 
 #### clear
 
@@ -638,9 +639,9 @@ Returns: An array containing the activation value of each node in the group, in 
 clear(): void
 ```
 
-Resets the state of all nodes in the group. This typically involves clearing
-activation values, state, and propagated errors, preparing the group for a new input pattern,
-especially relevant in recurrent networks or sequence processing.
+Resets the state of all nodes in the group.
+
+Returns: Nothing.
 
 #### connect
 
@@ -652,17 +653,21 @@ connect(
 ): default[]
 ```
 
-Establishes connections from all nodes in this group to a target Group, Layer, or Node.
-The connection pattern (e.g., all-to-all, one-to-one) can be specified.
+Establishes connections from all nodes in this group to a target group, layer, or node.
 
-Returns: An array containing all the connection objects created.
+Parameters:
+- `target` - Destination entity to connect to.
+- `method` - Connection pattern to use.
+- `weight` - Optional fixed weight for all created connections.
+
+Returns: All connection objects created during this wiring step.
 
 #### connections
 
 Stores connection information related to this group.
 `in`: Connections coming into any node in this group from outside.
 `out`: Connections going out from any node in this group to outside.
-`self`: Connections between nodes within this same group (e.g., in ONE_TO_ONE connections).
+`self`: Connections between nodes within this same group.
 
 #### disconnect
 
@@ -673,7 +678,13 @@ disconnect(
 ): void
 ```
 
-Removes connections between nodes in this group and a target Group or Node.
+Removes connections between nodes in this group and a target group or node.
+
+Parameters:
+- `target` - Group or node to disconnect from.
+- `twosided` - Whether to also remove reciprocal connections.
+
+Returns: Nothing.
 
 #### gate
 
@@ -684,8 +695,13 @@ gate(
 ): void
 ```
 
-Configures nodes within this group to act as gates for the specified connection(s).
-Gating allows the output of a node in this group to modulate the flow of signal through the gated connection.
+Configures nodes within this group to act as gates for the specified connection set.
+
+Parameters:
+- `connections` - Single connection or list of connections to gate.
+- `method` - Gating mechanism to use.
+
+Returns: Nothing.
 
 #### nodes
 
@@ -701,9 +717,14 @@ propagate(
 ): void
 ```
 
-Propagates the error backward through all nodes in the group. If target values are provided,
-the error is calculated against these targets (typically for output layers). Otherwise,
-the error is calculated based on the error propagated from subsequent layers/nodes.
+Propagates the error backward through all nodes in the group.
+
+Parameters:
+- `rate` - Learning rate to apply during weight updates.
+- `momentum` - Momentum factor to apply during weight updates.
+- `target` - Optional target values for error calculation. Its length must match the number of nodes.
+
+Returns: Nothing.
 
 #### set
 
@@ -713,7 +734,12 @@ set(
 ): void
 ```
 
-Sets specific properties (like bias, squash function, or type) for all nodes within the group.
+Sets specific properties for all nodes within the group.
+
+Parameters:
+- `values` - Property values to apply to every node.
+
+Returns: Nothing.
 
 #### toJSON
 
@@ -722,9 +748,8 @@ toJSON(): { size: number; nodeIndices: (number | undefined)[]; connections: { in
 ```
 
 Serializes the group into a JSON-compatible format, avoiding circular references.
-Only includes node indices and connection counts.
 
-Returns: A JSON-compatible representation of the group.
+Returns: JSON-friendly representation with node indices and connection counts.
 
 ## architecture/layer.ts
 
@@ -2163,10 +2188,6 @@ Removes the connection from the network's `gates` list.
 
 ## architecture/nodePool.ts
 
-### AcquireNodeOptions
-
-Options bag for acquiring a node.
-
 ### acquireNode
 
 ```ts
@@ -2175,8 +2196,26 @@ acquireNode(
 ): default
 ```
 
-Acquire (obtain) a node instance from the pool (or construct a new one if empty).
-The node is guaranteed to have fully reset dynamic state (activation, gradients, error, connections).
+Acquire a node instance from the pool, or construct a fresh one when the
+pool is empty.
+
+The returned node is guaranteed to have detached connections, cleared error
+state, and a fresh gene id for its next lifecycle.
+
+Parameters:
+- `opts` - Optional acquisition settings.
+
+Returns: A ready-to-use node instance.
+
+### nodePoolStats
+
+```ts
+nodePoolStats(): { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }
+```
+
+Get current pool statistics for diagnostics and memory reporting.
+
+Returns: Pool size, reuse counters, and the long-run recycled ratio.
 
 ### releaseNode
 
@@ -2186,19 +2225,15 @@ releaseNode(
 ): void
 ```
 
-Release (recycle) a node back into the pool. The caller MUST ensure the node is fully detached
-from any network (connections arrays pruned, no external references maintained) to prevent leaks.
-After release, the node must be considered invalid until re-acquired.
+Release a detached node back into the pool.
 
-Phase 2: Automatically invoked by Network.remove() when pooling is enabled to recycle pruned nodes.
+Callers must ensure the node is no longer part of any live graph. The pool
+keeps the object shell, not the prior topology membership.
 
-### nodePoolStats
+Parameters:
+- `node` - Detached node instance to recycle.
 
-```ts
-nodePoolStats(): { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }
-```
-
-Get current pool statistics (for debugging / future leak detection).
+Returns: Nothing.
 
 ### resetNodePool
 
@@ -2206,33 +2241,40 @@ Get current pool statistics (for debugging / future leak detection).
 resetNodePool(): void
 ```
 
-Reset the pool (drops all retained nodes). Intended for test harness cleanup.
+Drop all retained pooled nodes and reset instrumentation counters.
+
+Returns: Nothing.
+
+### AcquireNodeOptions
+
+Options bag for acquiring a node.
 
 ## architecture/architect.ts
 
 ### architect
 
-Provides static methods for constructing various predefined neural network architectures.
+Provides static methods for constructing predefined neural network
+architectures.
 
-The Architect class simplifies the creation of common network types like Multi-Layer Perceptrons (MLPs),
-Long Short-Term Memory (LSTM) networks, Gated Recurrent Units (GRUs), and more complex structures
-inspired by neuro-evolutionary algorithms. It leverages the underlying `Layer`, `Group`, and `Node`
-components to build interconnected `Network` objects.
+`Architect` is the point where the low-level graph primitives stop being
+raw building blocks and start becoming named network recipes. It assembles
+nodes, groups, and layers into complete graphs, then normalizes the final
+`Network` surface so callers can activate, train, serialize, or evolve the
+result without manually wiring each primitive.
 
-Methods often utilize helper functions from `Layer` (e.g., `Layer.dense`, `Layer.lstm`) and
-connection strategies from `methods.groupConnection`.
+This boundary matters when you want one of three things:
 
-### Architect
+- a deterministic builder for common feed-forward shapes,
+- a quick way to sample or mutate topology-oriented starting graphs,
+- recurrent presets that reuse the same lower-level chapters instead of
+  hiding a separate graph implementation.
 
-Provides static methods for constructing various predefined neural network architectures.
+Example:
 
-The Architect class simplifies the creation of common network types like Multi-Layer Perceptrons (MLPs),
-Long Short-Term Memory (LSTM) networks, Gated Recurrent Units (GRUs), and more complex structures
-inspired by neuro-evolutionary algorithms. It leverages the underlying `Layer`, `Group`, and `Node`
-components to build interconnected `Network` objects.
-
-Methods often utilize helper functions from `Layer` (e.g., `Layer.dense`, `Layer.lstm`) and
-connection strategies from `methods.groupConnection`.
+```ts
+const network = Architect.perceptron(2, 4, 1);
+const output = network.activate([0, 1]);
+```
 
 ### default
 
@@ -2244,14 +2286,18 @@ construct(
 ): default
 ```
 
-Constructs a Network instance from an array of interconnected Layers, Groups, or Nodes.
+Constructs a network instance from an array of interconnected layers,
+groups, or nodes.
 
-This method processes the input list, extracts all unique nodes, identifies connections,
-gates, and self-connections, and determines the network's input and output sizes based
-on the `type` property ('input' or 'output') set on the nodes. It uses Sets internally
-for efficient handling of unique elements during construction.
+This method is the bridge between manual graph assembly and a runnable
+`Network`. It walks the supplied primitives, collects the unique nodes and
+connections they reference, infers input/output counts from node types, and
+folds the result into one normalized network object.
 
-Returns: A Network object representing the constructed architecture.
+Parameters:
+- `list` - Building blocks that are already interconnected.
+
+Returns: A network representing the supplied architecture.
 
 #### enforceMinimumHiddenLayerSizes
 
@@ -2263,10 +2309,10 @@ enforceMinimumHiddenLayerSizes(
 
 Enforces the minimum hidden layer size rule on a network.
 
-This ensures that all hidden layers have at least min(input, output) + 1 nodes,
-which is a common heuristic to ensure networks have adequate representation capacity.
+Parameters:
+- `network` - The network to normalize.
 
-Returns: The same network with properly sized hidden layers
+Returns: The same network with hidden layers grown to the minimum size when needed.
 
 #### gru
 
@@ -2276,9 +2322,10 @@ gru(
 ): default
 ```
 
-Creates a Gated Recurrent Unit (GRU) network.
-GRUs are another type of recurrent neural network, similar to LSTMs but often simpler.
-This constructor uses `Layer.gru` to create the core GRU blocks.
+Creates a Gated Recurrent Unit network.
+
+Parameters:
+- `layers` - Layer sizes starting with input and ending with output.
 
 Returns: The constructed GRU network.
 
@@ -2291,8 +2338,9 @@ hopfield(
 ```
 
 Creates a Hopfield network.
-Hopfield networks are a form of recurrent neural network often used for associative memory tasks.
-This implementation creates a simple, fully connected structure.
+
+Parameters:
+- `size` - The number of nodes in the network.
 
 Returns: The constructed Hopfield network.
 
@@ -2304,9 +2352,10 @@ lstm(
 ): default
 ```
 
-Creates a Long Short-Term Memory (LSTM) network.
-LSTMs are a type of recurrent neural network (RNN) capable of learning long-range dependencies.
-This constructor uses `Layer.lstm` to create the core LSTM blocks.
+Creates a Long Short-Term Memory network.
+
+Parameters:
+- `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed LSTM network.
 
@@ -2322,10 +2371,14 @@ narx(
 ): default
 ```
 
-Creates a Nonlinear AutoRegressive network with eXogenous inputs (NARX).
-NARX networks are recurrent networks often used for time series prediction.
-They predict the next value of a time series based on previous values of the series
-and previous values of external (exogenous) input series.
+Creates a Nonlinear AutoRegressive network with eXogenous inputs.
+
+Parameters:
+- `inputSize` - The exogenous input size at each time step.
+- `hiddenLayers` - Hidden layer sizes, or zero / empty for none.
+- `outputSize` - The prediction output size.
+- `previousInput` - The number of delayed input steps.
+- `previousOutput` - The number of delayed output steps.
 
 Returns: The constructed NARX network.
 
@@ -2337,13 +2390,15 @@ perceptron(
 ): default
 ```
 
-Creates a standard Multi-Layer Perceptron (MLP) network.
-An MLP consists of an input layer, one or more hidden layers, and an output layer,
-fully connected layer by layer.
+Creates a standard multi-layer perceptron network.
 
 The returned network is marked with the public `feed-forward` topology
 intent so acyclic enforcement and slab fast-path eligibility stay aligned
 with the builder users already chose.
+
+Parameters:
+- `layers` - Layer sizes starting with input, followed by hidden layers,
+and ending with output.
 
 Returns: The constructed MLP network.
 
@@ -2358,14 +2413,16 @@ random(
 ): default
 ```
 
-Creates a randomly structured network based on specified node counts and connection options.
+Creates a randomly structured network based on node counts and connection
+options.
 
-This method allows for the generation of networks with a less rigid structure than MLPs.
-It initializes a network with input and output nodes and then iteratively adds hidden nodes
-and various types of connections (forward, backward, self) and gates using mutation methods.
-This approach is inspired by neuro-evolution techniques where network topology evolves.
+Parameters:
+- `input` - The number of input nodes.
+- `hidden` - The number of hidden nodes to add.
+- `output` - The number of output nodes.
+- `options` - Optional configuration for connection counts and gates.
 
-Returns: The constructed network with a randomized topology.
+Returns: The constructed randomized network.
 
 ## architecture/connection.ts
 
@@ -2596,25 +2653,14 @@ Extended trace structure for modulatory / eligibility propagation algorithms. Pa
 
 ## architecture/activationArrayPool.ts
 
-Activation array pooling utilities.
-
-Size-bucketed pool for reusable activation arrays to reduce allocations in
-hot forward paths. Reused arrays are zero-filled to prevent stale data.
-Array type honors global precision via `config.float32Mode`.
-
 ### ActivationArray
 
 Allowed activation array shapes for pooling.
-- number[]: default JS array
-- Float32Array: compact typed array when float32 mode is enabled
-- Float64Array: supported for compatibility with typed math paths
 
-### ActivationArrayPool
+The runtime prefers typed arrays when float32 mode is enabled, but keeps
+plain numeric arrays available for code paths that expect standard JS array
+behavior.
 
-A size-bucketed pool of activation arrays.
+### activationArrayPool
 
-Buckets map array length -> stack of arrays. Acquire pops and zero-fills, or
-allocates a new array when empty. Release pushes back up to a configurable
-per-bucket cap to avoid unbounded growth.
-
-Note: not thread-safe; intended for typical single-threaded JS execution.
+Shared singleton instance used across the library for maximal reuse.

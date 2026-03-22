@@ -2273,7 +2273,17 @@ Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent c
 assignment works in algorithms like RTRL / policy gradients. They are updated only when
 using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
-Example:
+Examples:
+
+```ts
+const encoderBlock = new Group(4);
+const decoderBlock = new Group(4);
+
+encoderBlock.connect(
+  decoderBlock,
+  methods.groupConnection.ONE_TO_ONE,
+);
+```
 
 ```ts
 const source = new Node('input');
@@ -2282,6 +2292,11 @@ const edge = new Connection(source, target, 0.42);
 
 edge.gain = 1.5;
 edge.enabled = true;
+```
+
+```ts
+const network = Architect.perceptron(2, 4, 1);
+const output = network.activate([0, 1]);
 ```
 
 ### default
@@ -2709,11 +2724,12 @@ activate(
 ): number[]
 ```
 
-Activates all nodes in the group. If input values are provided, they are assigned
-sequentially to the nodes before activation. Otherwise, nodes activate based on their
-existing states and incoming connections.
+Activates all nodes in the group.
 
-Returns: An array containing the activation value of each node in the group, in order.
+Parameters:
+- `value` - Optional array of input values. Its length must match the number of nodes in the group.
+
+Returns: Activation value of each node in the group, in order.
 
 #### activateBatch
 
@@ -2999,10 +3015,14 @@ connect(
 ): default[]
 ```
 
-Establishes connections from all nodes in this group to a target Group, Layer, or Node.
-The connection pattern (e.g., all-to-all, one-to-one) can be specified.
+Establishes connections from all nodes in this group to a target group, layer, or node.
 
-Returns: An array containing all the connection objects created.
+Parameters:
+- `target` - Destination entity to connect to.
+- `method` - Connection pattern to use.
+- `weight` - Optional fixed weight for all created connections.
+
+Returns: All connection objects created during this wiring step.
 
 #### connections
 
@@ -3016,14 +3036,18 @@ construct(
 ): default
 ```
 
-Constructs a Network instance from an array of interconnected Layers, Groups, or Nodes.
+Constructs a network instance from an array of interconnected layers,
+groups, or nodes.
 
-This method processes the input list, extracts all unique nodes, identifies connections,
-gates, and self-connections, and determines the network's input and output sizes based
-on the `type` property ('input' or 'output') set on the nodes. It uses Sets internally
-for efficient handling of unique elements during construction.
+This method is the bridge between manual graph assembly and a runnable
+`Network`. It walks the supplied primitives, collects the unique nodes and
+connections they reference, infers input/output counts from node types, and
+folds the result into one normalized network object.
 
-Returns: A Network object representing the constructed architecture.
+Parameters:
+- `list` - Building blocks that are already interconnected.
+
+Returns: A network representing the supplied architecture.
 
 #### conv1d
 
@@ -3199,7 +3223,13 @@ disconnect(
 ): void
 ```
 
-Removes connections between nodes in this group and a target Group or Node.
+Removes connections between nodes in this group and a target group or node.
+
+Parameters:
+- `target` - Group or node to disconnect from.
+- `twosided` - Whether to also remove reciprocal connections.
+
+Returns: Nothing.
 
 #### dropConnectActiveMask
 
@@ -3253,10 +3283,10 @@ enforceMinimumHiddenLayerSizes(
 
 Enforces the minimum hidden layer size rule on a network.
 
-This ensures that all hidden layers have at least min(input, output) + 1 nodes,
-which is a common heuristic to ensure networks have adequate representation capacity.
+Parameters:
+- `network` - The network to normalize.
 
-Returns: The same network with properly sized hidden layers
+Returns: The same network with hidden layers grown to the minimum size when needed.
 
 #### error
 
@@ -3368,8 +3398,13 @@ gate(
 ): void
 ```
 
-Configures nodes within this group to act as gates for the specified connection(s).
-Gating allows the output of a node in this group to modulate the flow of signal through the gated connection.
+Configures nodes within this group to act as gates for the specified connection set.
+
+Parameters:
+- `connections` - Single connection or list of connections to gate.
+- `method` - Gating mechanism to use.
+
+Returns: Nothing.
 
 #### gater
 
@@ -3496,9 +3531,10 @@ gru(
 ): default
 ```
 
-Creates a Gated Recurrent Unit (GRU) network.
-GRUs are another type of recurrent neural network, similar to LSTMs but often simpler.
-This constructor uses `Layer.gru` to create the core GRU blocks.
+Creates a Gated Recurrent Unit network.
+
+Parameters:
+- `layers` - Layer sizes starting with input and ending with output.
 
 Returns: The constructed GRU network.
 
@@ -3515,8 +3551,9 @@ hopfield(
 ```
 
 Creates a Hopfield network.
-Hopfield networks are a form of recurrent neural network often used for associative memory tasks.
-This implementation creates a simple, fully connected structure.
+
+Parameters:
+- `size` - The number of nodes in the network.
 
 Returns: The constructed Hopfield network.
 
@@ -3690,9 +3727,10 @@ lstm(
 ): default
 ```
 
-Creates a Long Short-Term Memory (LSTM) network.
-LSTMs are a type of recurrent neural network (RNN) capable of learning long-range dependencies.
-This constructor uses `Layer.lstm` to create the core LSTM blocks.
+Creates a Long Short-Term Memory network.
+
+Parameters:
+- `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed LSTM network.
 
@@ -3770,10 +3808,14 @@ narx(
 ): default
 ```
 
-Creates a Nonlinear AutoRegressive network with eXogenous inputs (NARX).
-NARX networks are recurrent networks often used for time series prediction.
-They predict the next value of a time series based on previous values of the series
-and previous values of external (exogenous) input series.
+Creates a Nonlinear AutoRegressive network with eXogenous inputs.
+
+Parameters:
+- `inputSize` - The exogenous input size at each time step.
+- `hiddenLayers` - Hidden layer sizes, or zero / empty for none.
+- `outputSize` - The prediction output size.
+- `previousInput` - The number of delayed input steps.
+- `previousOutput` - The number of delayed output steps.
 
 Returns: The constructed NARX network.
 
@@ -3828,13 +3870,15 @@ perceptron(
 ): default
 ```
 
-Creates a standard Multi-Layer Perceptron (MLP) network.
-An MLP consists of an input layer, one or more hidden layers, and an output layer,
-fully connected layer by layer.
+Creates a standard multi-layer perceptron network.
 
 The returned network is marked with the public `feed-forward` topology
 intent so acyclic enforcement and slab fast-path eligibility stay aligned
 with the builder users already chose.
+
+Parameters:
+- `layers` - Layer sizes starting with input, followed by hidden layers,
+and ending with output.
 
 Returns: The constructed MLP network.
 
@@ -3957,14 +4001,16 @@ random(
 ): default
 ```
 
-Creates a randomly structured network based on specified node counts and connection options.
+Creates a randomly structured network based on node counts and connection
+options.
 
-This method allows for the generation of networks with a less rigid structure than MLPs.
-It initializes a network with input and output nodes and then iteratively adds hidden nodes
-and various types of connections (forward, backward, self) and gates using mutation methods.
-This approach is inspired by neuro-evolution techniques where network topology evolves.
+Parameters:
+- `input` - The number of input nodes.
+- `hidden` - The number of hidden nodes to add.
+- `output` - The number of output nodes.
+- `options` - Optional configuration for connection counts and gates.
 
-Returns: The constructed network with a randomized topology.
+Returns: The constructed randomized network.
 
 #### rebuildConnections
 
@@ -4327,9 +4373,8 @@ toJSON(): { size: number; nodeIndices: (number | undefined)[]; connections: { in
 ```
 
 Serializes the group into a JSON-compatible format, avoiding circular references.
-Only includes node indices and connection counts.
 
-Returns: A JSON-compatible representation of the group.
+Returns: JSON-friendly representation with node indices and connection counts.
 
 #### toJSON
 

@@ -220,7 +220,8 @@ export default class Connection {
     let connectionInstance: Connection;
     if (Connection._pool.length) {
       connectionInstance = Connection._pool.pop()!;
-      const symbolProps = connectionInstance as unknown as ConnectionSymbolProps;
+      const symbolProps =
+        connectionInstance as unknown as ConnectionSymbolProps;
       const mutableConnection = connectionInstance as unknown as {
         from: Node;
         to: Node;
@@ -425,13 +426,16 @@ export default class Connection {
   /** Per-connection plasticity rate. `0` means the connection is not plastic. */
   get plasticityRate(): number {
     const symbolProps = this as unknown as ConnectionSymbolProps;
-    return symbolProps[kPlasticRate] === undefined ? 0 : symbolProps[kPlasticRate];
+    return symbolProps[kPlasticRate] === undefined
+      ? 0
+      : symbolProps[kPlasticRate];
   }
 
   set plasticityRate(value: number) {
     const symbolProps = this as unknown as ConnectionSymbolProps;
     if (value === undefined || value === 0) {
-      if (symbolProps[kPlasticRate] !== undefined) delete symbolProps[kPlasticRate];
+      if (symbolProps[kPlasticRate] !== undefined)
+        delete symbolProps[kPlasticRate];
       this._flags &= ~0b1000;
       return;
     }

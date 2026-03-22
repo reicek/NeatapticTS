@@ -1,6 +1,6 @@
 import Node from './node';
 import Connection from './connection/connection';
-import Group from './group';
+import Group from './group/group';
 import {
   activateLayer as activateLayerUtils,
   createAttentionLayer as createAttentionLayerUtils,

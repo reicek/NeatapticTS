@@ -1,4 +1,4 @@
-import type Group from '../group';
+import type Group from '../group/group';
 
 const FUNCTION_TYPE_NAME = 'function';
 

@@ -1,5 +1,5 @@
 import type Connection from '../connection/connection';
-import Group from '../group';
+import Group from '../group/group';
 import * as methods from '../../methods/methods';
 import Node from '../node';
 import { isGroup as isGroupUtils } from './layer.guard.utils';

@@ -1,5 +1,5 @@
 import type Network from '../../network';
-import { activationArrayPool } from '../../activationArrayPool';
+import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import type { ActivateNetworkInternals as NetworkInternals } from '../network.types';
 
 /**
