@@ -1,5 +1,20 @@
 # environment
 
+Canonical world-state contract for one Flappy Bird episode.
+
+This file is the environment chapter's conceptual starting point because it
+names the pieces that every other environment helper manipulates: the bird,
+the pipe field, the episode clock, and the termination reason.
+
+Read this boundary as the simulation's truth surface. Evaluation uses it to
+score policies, the trainer uses it to compare genomes fairly, and browser
+playback-related tooling depends on it staying compact and deterministic.
+
+The important design choice is restraint. The environment keeps only the
+state needed to advance one episode correctly. It does not store DOM-facing
+data, worker transport payloads, or trainer policy metadata. That smaller
+contract is what makes deterministic stepping and reward debugging practical.
+
 ## environment/environment.types.ts
 
 ### FlappyPipe
@@ -66,6 +81,34 @@ Maximum frame budget before the environment forces timeout termination.
 
 Timeouts stop extremely long survival loops from dominating evaluation cost.
 
+## environment/environment.state.service.ts
+
+### createInitialFlappyState
+
+```ts
+createInitialFlappyState(
+  rng: FlappyRng,
+): FlappyGameState
+```
+
+Create a fresh Flappy Bird episode state.
+
+Educational note:
+A new episode starts with one initial pipe already materialized so the first
+observation is meaningful immediately. That avoids a cold-start phase where a
+policy would receive mostly empty-space inputs.
+
+Parameters:
+- `rng` - - Random source used to generate initial pipe configuration.
+
+Returns: Initial state for one deterministic rollout.
+
+Example:
+
+```ts
+const state = createInitialFlappyState(rng);
+```
+
 ## environment/environment.step.service.ts
 
 ### stepFlappyState
@@ -125,34 +168,6 @@ Parameters:
 - `controlSubstepsPerFrame` - - Number of substeps to run this frame.
 
 Returns: Nothing.
-
-## environment/environment.state.service.ts
-
-### createInitialFlappyState
-
-```ts
-createInitialFlappyState(
-  rng: FlappyRng,
-): FlappyGameState
-```
-
-Create a fresh Flappy Bird episode state.
-
-Educational note:
-A new episode starts with one initial pipe already materialized so the first
-observation is meaningful immediately. That avoids a cold-start phase where a
-policy would receive mostly empty-space inputs.
-
-Parameters:
-- `rng` - - Random source used to generate initial pipe configuration.
-
-Returns: Initial state for one deterministic rollout.
-
-Example:
-
-```ts
-const state = createInitialFlappyState(rng);
-```
 
 ## environment/environment.collision.utils.ts
 

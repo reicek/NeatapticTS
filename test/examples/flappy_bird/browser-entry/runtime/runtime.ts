@@ -14,6 +14,20 @@ import type { RuntimeContainerTarget, RuntimeRunHandle } from './runtime.types';
 export type { RuntimeRunHandle as FlappyBirdRunHandle } from './runtime.types';
 
 /**
+ * Top-level browser runtime facade for the Flappy Bird example.
+ *
+ * This is the narrowest public browser entry with real behavior behind it.
+ * Calling `start` resolves the DOM host, installs the worker-backed runtime,
+ * initializes the HUD, and launches the evolve-to-playback loop that powers the
+ * demo. The surrounding services keep those responsibilities split, but this
+ * file is the place where they are folded back into one lifecycle.
+ *
+ * The boundary matters because the browser demo is more than a canvas render:
+ * it is host setup, worker orchestration, telemetry, HUD updates, and shutdown
+ * control presented as one small API.
+ */
+
+/**
  * Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
  *
  * This function is intentionally orchestration-focused:

@@ -1,25 +1,16 @@
 # browser-entry/host
 
-Public type contracts for the browser-entry host boundary.
+Browser host assembly for the Flappy Bird demo UI.
 
-These types describe what the host builder returns to the runtime and how HUD
-value updates are represented once the UI tree exists.
+The host boundary builds the stage that the rest of the browser runtime plays
+on: title frame, simulation canvas, HUD table, and the network-inspection
+panel. It is deliberately separate from runtime orchestration so DOM setup and
+responsive layout stay understandable without also reading worker or playback
+code.
 
-## browser-entry/host/host.types.ts
-
-### CanvasHostResult
-
-Result payload returned after constructing the browser host UI tree.
-
-This is the runtime's handle into the rendered browser shell: the main canvas,
-its 2D context, the stats-cell lookup, and the network-panel draw callback.
-
-### HostStatsPartialValues
-
-Partial stats update map keyed by stats-table keys.
-
-Using a partial map lets the runtime update only the HUD fields that changed
-on a given tick.
+Read this module as a browser chapter about presentation ownership:
+resolve the shell, mount the panels, keep the canvases sized correctly, then
+hand the runtime narrow handles for drawing and HUD updates.
 
 ## browser-entry/host/host.ts
 
@@ -78,15 +69,6 @@ Parameters:
 - `partialValues` - - Subset of values to write this tick.
 
 Returns: Nothing.
-
-### HostVisualPrimitives
-
-Browser host assembly for the Flappy Bird demo UI.
-
-The host boundary is responsible for building the browser-side shell around
-the simulation: framed title, main canvas, stats panel, and network
-visualization panel. It does not run evolution itself; it prepares the stage
-on which the runtime loop renders.
 
 ### resetHostContainer
 
@@ -254,6 +236,27 @@ Parameters:
 
 Returns: Nothing.
 
+## browser-entry/host/host.types.ts
+
+Public type contracts for the browser-entry host boundary.
+
+These types describe what the host builder returns to the runtime and how HUD
+value updates are represented once the UI tree exists.
+
+### CanvasHostResult
+
+Result payload returned after constructing the browser host UI tree.
+
+This is the runtime's handle into the rendered browser shell: the main canvas,
+its 2D context, the stats-cell lookup, and the network-panel draw callback.
+
+### HostStatsPartialValues
+
+Partial stats update map keyed by stats-table keys.
+
+Using a partial map lets the runtime update only the HUD fields that changed
+on a given tick.
+
 ## browser-entry/host/host.constants.ts
 
 Shared presentation constants for browser host assembly.
@@ -293,6 +296,77 @@ changes.
 Shared stats split gap.
 
 This controls the gutter between the table column and the network panel.
+
+## browser-entry/host/host.canvas.service.ts
+
+Canvas sizing helpers for the browser host boundary.
+
+These utilities keep host layout and backing-store sizing aligned so the
+simulation and network canvases render crisply without stretching artifacts.
+
+### applyCanvasBackingSize
+
+```ts
+applyCanvasBackingSize(
+  canvas: HTMLCanvasElement,
+  widthPx: number,
+  heightPx: number,
+): boolean
+```
+
+Applies a canvas backing store size and CSS width/height.
+
+Browser canvases have both backing-store dimensions and CSS box dimensions;
+this helper updates both together.
+
+Parameters:
+- `canvas` - - Target canvas element.
+- `widthPx` - - Desired backing-store width in pixels.
+- `heightPx` - - Desired backing-store height in pixels.
+
+Returns: True when canvas dimensions changed.
+
+### applySimulationCanvasBounds
+
+```ts
+applySimulationCanvasBounds(
+  canvas: HTMLCanvasElement,
+  widthPx: number,
+  heightPx: number,
+): boolean
+```
+
+Applies fixed simulation-canvas bounds so layout does not stretch unexpectedly.
+
+The main simulation canvas uses fixed bounds because the world renderer is
+tuned for a controlled viewport rather than fluid DOM stretching.
+
+Parameters:
+- `canvas` - - Simulation canvas element.
+- `widthPx` - - Desired width in pixels.
+- `heightPx` - - Desired height in pixels.
+
+Returns: True when backing-store dimensions changed.
+
+### resolveNetworkCanvasSizePx
+
+```ts
+resolveNetworkCanvasSizePx(
+  networkCanvasHost: HTMLElement,
+  hostInsetPx: number,
+): { widthPx: number; heightPx: number; }
+```
+
+Computes the drawable network canvas size from host element dimensions.
+
+The side-panel network view needs the drawable size after panel insets are
+accounted for, not just the raw host client box.
+
+Parameters:
+- `networkCanvasHost` - - Host element wrapping the network canvas.
+- `hostInsetPx` - - Total inset to subtract from both dimensions.
+
+Returns: Width/height pair in pixels.
 
 ## browser-entry/host/host.dom.service.ts
 
@@ -367,77 +441,6 @@ Parameters:
 - `partialValues` - - Subset of values to write this tick.
 
 Returns: Nothing.
-
-## browser-entry/host/host.canvas.service.ts
-
-Canvas sizing helpers for the browser host boundary.
-
-These utilities keep host layout and backing-store sizing aligned so the
-simulation and network canvases render crisply without stretching artifacts.
-
-### applyCanvasBackingSize
-
-```ts
-applyCanvasBackingSize(
-  canvas: HTMLCanvasElement,
-  widthPx: number,
-  heightPx: number,
-): boolean
-```
-
-Applies a canvas backing store size and CSS width/height.
-
-Browser canvases have both backing-store dimensions and CSS box dimensions;
-this helper updates both together.
-
-Parameters:
-- `canvas` - - Target canvas element.
-- `widthPx` - - Desired backing-store width in pixels.
-- `heightPx` - - Desired backing-store height in pixels.
-
-Returns: True when canvas dimensions changed.
-
-### applySimulationCanvasBounds
-
-```ts
-applySimulationCanvasBounds(
-  canvas: HTMLCanvasElement,
-  widthPx: number,
-  heightPx: number,
-): boolean
-```
-
-Applies fixed simulation-canvas bounds so layout does not stretch unexpectedly.
-
-The main simulation canvas uses fixed bounds because the world renderer is
-tuned for a controlled viewport rather than fluid DOM stretching.
-
-Parameters:
-- `canvas` - - Simulation canvas element.
-- `widthPx` - - Desired width in pixels.
-- `heightPx` - - Desired height in pixels.
-
-Returns: True when backing-store dimensions changed.
-
-### resolveNetworkCanvasSizePx
-
-```ts
-resolveNetworkCanvasSizePx(
-  networkCanvasHost: HTMLElement,
-  hostInsetPx: number,
-): { widthPx: number; heightPx: number; }
-```
-
-Computes the drawable network canvas size from host element dimensions.
-
-The side-panel network view needs the drawable size after panel insets are
-accounted for, not just the raw host client box.
-
-Parameters:
-- `networkCanvasHost` - - Host element wrapping the network canvas.
-- `hostInsetPx` - - Total inset to subtract from both dimensions.
-
-Returns: Width/height pair in pixels.
 
 ## browser-entry/host/host.resize.service.ts
 

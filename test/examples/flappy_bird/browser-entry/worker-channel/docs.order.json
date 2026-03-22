@@ -1,0 +1,12 @@
+{
+  "introFile": "worker-channel.ts",
+  "fileOrder": [
+    "worker-channel.ts",
+    "worker-channel.types.ts",
+    "worker-channel.request.service.ts",
+    "worker-channel.generation.service.ts",
+    "worker-channel.playback.service.ts",
+    "worker-channel.url.service.ts",
+    "worker-channel.errors.ts"
+  ]
+}

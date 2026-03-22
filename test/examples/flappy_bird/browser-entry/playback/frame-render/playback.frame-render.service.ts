@@ -23,9 +23,15 @@ import {
 /**
  * High-level frame-render orchestration for playback.
  *
- * This boundary coordinates one visual frame of the playback experience. It
- * resolves the scene, prepares the canvas, paints the background and entities,
- * and maintains the short champion trail used for motion emphasis.
+ * This is the browser playback chapter where one worker-produced snapshot turns
+ * into one complete on-screen frame. The boundary exists to keep render order,
+ * viewport setup, and champion-trail policy explicit in one place instead of
+ * leaking them across many drawing helpers.
+ *
+ * Read it as a fixed visual pipeline: prepare the canvas, enter viewport space,
+ * paint background and entities in stable order, then restore the caller state.
+ * That predictability is what makes the generated README useful to readers who
+ * need to understand where a playback visual decision actually lives.
  */
 
 /**

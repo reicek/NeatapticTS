@@ -165,72 +165,6 @@ const coreFrame = resolveCoreObservationVectorFromFeatures(features);
 observationMemoryState.previousCoreFrames.push(coreFrame);
 ```
 
-## simulation-shared/observation/observation.vector.utils.ts
-
-### resolveObservationVectorFromFeatures
-
-```ts
-resolveObservationVectorFromFeatures(
-  features: SharedObservationFeatures,
-): number[]
-```
-
-Converts observation features to the canonical 12-value network input vector.
-
-Educational note:
-This module owns the network-shape projection so feature semantics can change
-independently from how the policy input is ordered.
-
-The 12-value vector is the compact feed-forward policy input used by the main
-evaluation and training flow. Its ordering is stable on purpose: once a
-network topology has evolved against one input layout, silent channel
-reshuffles would invalidate learned behavior.
-
-Parameters:
-- `features` - - Structured feature object.
-
-Returns: Ordered feature vector.
-
-Example:
-
-```ts
-const features = resolveObservationFeatures(input);
-const networkInput = resolveObservationVectorFromFeatures(features);
-```
-
-### resolveCoreObservationVectorFromFeatures
-
-```ts
-resolveCoreObservationVectorFromFeatures(
-  features: SharedObservationFeatures,
-): number[]
-```
-
-Resolves the compact core vector used for temporal stacking.
-
-The core intentionally keeps directly observed kinematic and geometric
-channels while dropping derived one-step predictors that become redundant
-once short-term temporal memory is available.
-
-This is the representation used when the example wants a short history of raw
-observation slices. The idea is similar to frame stacking in reinforcement
-learning: a feed-forward policy can recover some sense of motion by looking
-at several recent compact frames at once.
-
-The Wikipedia article on "frame stacking" is a useful conceptual reference.
-
-Parameters:
-- `features` - - Structured observation features.
-
-Returns: Core per-frame vector.
-
-Example:
-
-```ts
-const coreFrame = resolveCoreObservationVectorFromFeatures(features);
-observationMemoryState.previousCoreFrames.push(coreFrame);
-```
-
 ## simulation-shared/observation/observation.features.utils.ts
 
 ### resolveUpcomingPipes
@@ -379,3 +313,69 @@ Parameters:
 - `value` - - Candidate value.
 
 Returns: Value clamped between 0 and 1.
+
+## simulation-shared/observation/observation.vector.utils.ts
+
+### resolveObservationVectorFromFeatures
+
+```ts
+resolveObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
+
+Converts observation features to the canonical 12-value network input vector.
+
+Educational note:
+This module owns the network-shape projection so feature semantics can change
+independently from how the policy input is ordered.
+
+The 12-value vector is the compact feed-forward policy input used by the main
+evaluation and training flow. Its ordering is stable on purpose: once a
+network topology has evolved against one input layout, silent channel
+reshuffles would invalidate learned behavior.
+
+Parameters:
+- `features` - - Structured feature object.
+
+Returns: Ordered feature vector.
+
+Example:
+
+```ts
+const features = resolveObservationFeatures(input);
+const networkInput = resolveObservationVectorFromFeatures(features);
+```
+
+### resolveCoreObservationVectorFromFeatures
+
+```ts
+resolveCoreObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
+
+Resolves the compact core vector used for temporal stacking.
+
+The core intentionally keeps directly observed kinematic and geometric
+channels while dropping derived one-step predictors that become redundant
+once short-term temporal memory is available.
+
+This is the representation used when the example wants a short history of raw
+observation slices. The idea is similar to frame stacking in reinforcement
+learning: a feed-forward policy can recover some sense of motion by looking
+at several recent compact frames at once.
+
+The Wikipedia article on "frame stacking" is a useful conceptual reference.
+
+Parameters:
+- `features` - - Structured observation features.
+
+Returns: Core per-frame vector.
+
+Example:
+
+```ts
+const coreFrame = resolveCoreObservationVectorFromFeatures(features);
+observationMemoryState.previousCoreFrames.push(coreFrame);
+```

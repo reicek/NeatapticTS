@@ -1,0 +1,8 @@
+{
+  "introFile": "observation.ts",
+  "fileOrder": [
+    "observation.ts",
+    "observation.features.utils.ts",
+    "observation.vector.utils.ts"
+  ]
+}

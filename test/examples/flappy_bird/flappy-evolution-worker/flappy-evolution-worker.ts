@@ -1,3 +1,22 @@
+/**
+ * Off-thread evolution and playback authority for the Flappy Bird browser demo.
+ *
+ * This worker boundary exists to keep the browser honest. The main thread owns
+ * explanation, HUD rendering, and network inspection, while the worker owns the
+ * hot path: evolving generations, materializing playback state, advancing the
+ * simulation, and packaging compact snapshots back to the host.
+ *
+ * Read this file as the worker chapter's public spine. It is not the place for
+ * low-level simulation math or message-shape detail. Instead it shows how the
+ * worker turns a small typed protocol into one long-lived deterministic runtime.
+ *
+ * Protocol flow at a glance:
+ * 1. `init` seeds deterministic worker state and creates the NEAT runtime.
+ * 2. `request-generation` evolves one generation and posts a summary message.
+ * 3. `start-playback` materializes worker-local simulation state.
+ * 4. `request-playback-step` advances playback and streams packed snapshots.
+ * 5. `stop` marks the worker as cooperatively stopped.
+ */
 /// <reference lib="webworker" />
 
 import { Neat } from '../../../../src/neataptic';

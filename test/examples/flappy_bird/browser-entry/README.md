@@ -28,6 +28,42 @@ flowchart LR
     Runtime --> Network["network-view + visualization/\nnetwork inspection"]
 ```
 
+## browser-entry/browser-entry.ts
+
+### start
+
+```ts
+start(
+  container: RuntimeContainerTarget,
+): Promise<FlappyBirdRunHandle>
+```
+
+Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
+
+This function is intentionally orchestration-focused:
+1) resolve runtime dependencies (DOM host, worker, host UI),
+2) initialize worker and telemetry plumbing,
+3) run the evolve -> playback -> HUD fold loop until stopped,
+4) expose a small stop/isRunning/done handle for callers.
+
+Parameters:
+- `container` - - Element id or HTMLElement to host the demo.
+
+Returns: Run handle for stop/state control.
+
+Example:
+
+```ts
+const runHandle = await start('flappy-bird-output');
+// later
+runHandle.stop();
+await runHandle.done;
+```
+
+### FlappyBirdRunHandle
+
+Handle returned by `start` for controlling demo execution lifecycle.
+
 ## browser-entry/browser-entry.types.ts
 
 Aggregated public type surface for the Flappy Bird browser runtime.
@@ -599,42 +635,6 @@ Pixel dimensions used for network-node rectangle rendering.
 
 Keeping node box dimensions explicit makes legend and topology layout easier
 to tune without hidden drawing constants.
-
-## browser-entry/browser-entry.ts
-
-### start
-
-```ts
-start(
-  container: RuntimeContainerTarget,
-): Promise<FlappyBirdRunHandle>
-```
-
-Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
-
-This function is intentionally orchestration-focused:
-1) resolve runtime dependencies (DOM host, worker, host UI),
-2) initialize worker and telemetry plumbing,
-3) run the evolve -> playback -> HUD fold loop until stopped,
-4) expose a small stop/isRunning/done handle for callers.
-
-Parameters:
-- `container` - - Element id or HTMLElement to host the demo.
-
-Returns: Run handle for stop/state control.
-
-Example:
-
-```ts
-const runHandle = await start('flappy-bird-output');
-// later
-runHandle.stop();
-await runHandle.done;
-```
-
-### FlappyBirdRunHandle
-
-Handle returned by `start` for controlling demo execution lifecycle.
 
 ## browser-entry/browser-entry.host.utils.ts
 

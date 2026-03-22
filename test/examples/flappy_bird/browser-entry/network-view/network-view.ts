@@ -1,3 +1,18 @@
+/**
+ * Network-view orchestration for the browser-side architecture panel.
+ *
+ * This module is the browser-facing fold from a live evolved controller to a
+ * readable inspection panel. It does not own the low-level drawing primitives,
+ * and it does not invent topology semantics from scratch. Instead it composes
+ * both into one higher-level question: how should this network be laid out so a
+ * human can actually learn from it?
+ *
+ * The boundary exists because "draw the network" hides several distinct jobs:
+ * summarize topology, size the panel, place nodes, choose overlay policy, and
+ * then delegate the final painting work. Keeping those steps together here makes
+ * the generated README read like an inspection chapter instead of a pile of
+ * canvas helpers.
+ */
 import Network from '../../../../../src/architecture/network';
 import {
   FLAPPY_NETWORK_ARCHITECTURE_COLUMN_SEPARATOR,
@@ -62,18 +77,6 @@ import {
   positionNetworkNodes,
 } from './network-view.layout.utils';
 import { resolveNetworkVisualizationLayers } from './network-view.topology.utils';
-
-/**
- * Network-view orchestration for the browser-side architecture panel.
- *
- * This subsystem sits between raw network data and the lower-level visualization
- * drawing helpers. It resolves topology summaries, chooses panel size, lays out
- * nodes inside the drawable area, and coordinates overlays such as legends and
- * input-group bands.
- *
- * That one call is the high-level fold from an active network to a readable
- * panel: background, graph layout, legend, and input-group overlays.
- */
 
 type NetworkTopologySummary = {
   networkLayers: ReturnType<typeof resolveNetworkVisualizationLayers>;

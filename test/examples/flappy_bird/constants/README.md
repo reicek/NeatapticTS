@@ -1172,166 +1172,100 @@ Declarative layer specs for the default starfield parallax bands.
 Keeping the layer recipe in data form makes it easier to swap the lower
 segment to a different parallax family without changing the tile builder.
 
-## constants/constants.birds.ts
+## constants/constants.world.ts
 
-Bird, trail, and champion-highlight rendering constants.
+Flappy world and episode-shape constants.
 
-This module centralizes all per-bird visual treatments so appearance tuning
-stays decoupled from simulation and UI layout logic.
+This module groups stable geometry and run-budget values that define the
+simulation envelope. Keeping these together makes it easier to reason about
+how large the world is, where the bird is anchored, and when an episode ends.
 
-### FLAPPY_TRAIL_MAX_POINTS
+### FLAPPY_WORLD_WIDTH_PX
 
-Maximum number of trail points retained per bird trail polyline.
+Width of the simulated world (pixels).
 
-### FLAPPY_CHAMPION_TRAIL_MAX_POINTS
+### FLAPPY_WORLD_HEIGHT_PX
 
-Maximum number of trail points retained for the champion-only short trail.
+Height of the simulated world (pixels).
 
-### FLAPPY_TRAIL_LINE_WIDTH_PX
+### FLAPPY_BIRD_X_PX
 
-Stroke width used for per-bird trail line rendering.
+Fixed horizontal position of the bird (pixels).
 
-### FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX
+A fixed x-anchor turns the task into primarily vertical control while pipes
+move left, making policy behavior easier to visualize and debug.
 
-Distance from world edge over which trails fade to transparent (pixels).
+### FLAPPY_BIRD_RADIUS_PX
 
-### FLAPPY_NON_CHAMPION_OPACITY
+Bird collision radius (pixels).
 
-Opacity used for non-champion bird fills and trails.
+### FLAPPY_BIRD_HEIGHT_PX
 
-### FLAPPY_BIRD_BODY_GLOW_BLUR_PX
+Bird collision height (diameter, pixels).
 
-Base neon blur radius used for bird body glow.
+### FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION
 
-### FLAPPY_NON_CHAMPION_BODY_GLOW_BLUR_PX
+Enables runtime telemetry counters used for profiling diagnostics.
 
-Glow blur radius used for simplified non-champion bird bodies.
+Keep disabled during normal demo runs to avoid instrumentation overhead and
+to preserve a cleaner educational rendering path.
 
-### FLAPPY_BIRD_AURA_ALPHA
+### FLAPPY_MAX_FRAMES_PER_EPISODE
 
-Opacity used for the extra Radiant-style aura around each bird.
+Episode terminates after this many frames even if still alive.
 
-This is intentionally subtle: it should read as a soft bloom that lifts the
-bird off the background, without turning the bird into a big glowing blob.
+This prevents extremely long outlier episodes from dominating generation
+runtime and keeps evolution throughput predictable.
 
-### FLAPPY_BIRD_AURA_EXPAND_PX
+## constants/constants.physics.ts
 
-Pixel expansion used for the Radiant-style bird aura plate.
+Flappy physics and control-cadence constants.
 
-### FLAPPY_BIRD_AURA_BLUR_MULTIPLIER
+Values in this module shape how quickly the bird falls, how strongly a flap
+responds, and how often a policy can react inside each visible frame.
 
-Blur multiplier used for the Radiant-style bird aura plate.
+Small changes here have outsized behavioral impact because they reshape the
+control problem the policy is trying to solve.
 
-### FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX
+### FLAPPY_GRAVITY_PX_PER_FRAME2
 
-Additional blur radius applied to the champion red body glow.
+Gravity acceleration applied each frame (pixels/frame²).
 
-This keeps the champion body bloom aligned with the same neon blur
-intensity used by the pipe outline glow, so the leader reads with
-comparable visual weight.
+Slightly increased so birds settle faster after each flap and can make
+finer vertical corrections around narrow targets.
 
-### FLAPPY_TRAIL_MIN_HORIZONTAL_SEGMENT_PX
+### FLAPPY_FLAP_VELOCITY_PX_PER_FRAME
 
-Minimum horizontal segment length used by stepped trail rendering.
+Instantaneous upward velocity applied on flap (pixels/frame).
 
-### FLAPPY_TRAIL_MIN_VERTICAL_SEGMENT_PX
+Reduced so each flap produces a smaller hop, improving precision when
+threading tighter gaps.
 
-Minimum vertical segment length used by stepped trail rendering.
+### FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME
 
-## constants/constants.frame.ts
+Maximum downward speed clamp (pixels/frame).
 
-Glyph frame and text-layout constants for browser HUD rendering.
+This cap limits runaway fall acceleration and keeps trajectories learnable.
 
-These values keep the box-drawing title/header and text frame deterministic
-across browsers with slightly different font metrics.
+### FLAPPY_CONTROL_SUBSTEPS_PER_FRAME
 
-### FLAPPY_FRAME_MONOSPACE_FONT
+Number of policy decision substeps executed inside each logical frame.
 
-Reusable monospaced HUD font for glyph-based frame rendering.
+Values > 1 give agents finer temporal control in tight scenarios by allowing
+multiple react-and-integrate passes before the frame counter advances.
 
-### FLAPPY_MONOSPACE_FONT_FAMILY
+This is one of the main levers that keeps high-speed play numerically stable
+without forcing the visible frame rate to explode.
 
-Shared monospace font stack used by all HUD and visualization text.
+### FLAPPY_TARGET_FLAP_INTERVAL_FRAMES
 
-### FLAPPY_HEADER_TITLE_TEXT
+Target control cadence used for endgame reachability calculations.
 
-Title rendered inside the standalone header box.
+A smaller value means the policy is expected to correct more frequently
+(effectively "jumping more often"), which supports narrower endgame gaps.
 
-### FLAPPY_HEADER_CANVAS_HEIGHT_PX
-
-Header canvas fixed height (pixels).
-
-### FLAPPY_FRAME_GLYPH_ROW_HEIGHT_PX
-
-Glyph-row height used for box-drawing rows (pixels).
-
-### FLAPPY_FRAME_MIN_GLYPH_WIDTH_PX
-
-Minimum measured glyph width fallback (pixels).
-
-### FLAPPY_FRAME_MIN_COLUMNS
-
-Minimum glyph columns to keep frame readable on narrow widths.
-
-### FLAPPY_FRAME_RESERVED_COLUMNS
-
-Reserved columns to keep right edge in bounds during metrics fit.
-
-### FLAPPY_TITLE_BOX_MIN_WIDTH
-
-Minimum box width when building standalone title frame.
-
-### FLAPPY_TITLE_BOX_MARGIN_COLUMNS
-
-Total side margin columns reserved around centered title box.
-
-### FLAPPY_TITLE_BOX_WIDTH_RATIO
-
-Preferred title width relative to available frame width.
-
-### FLAPPY_TITLE_BOX_MIN_HALF_SPAN
-
-Minimum half-span when clamping centered title extents.
-
-### FLAPPY_TITLE_BOX_MIN_OUTER_GAP_COLUMNS
-
-Minimum columns between title box and outer rails.
-
-### FLAPPY_BOX_MIN_COLUMNS
-
-Minimum safe columns for box-drawing helper output.
-
-### FLAPPY_BOX_MIN_ROWS
-
-Minimum safe rows for box-drawing helper output.
-
-### FLAPPY_GLYPH_TOP_LEFT
-
-Glyph character for top-left box corner.
-
-### FLAPPY_GLYPH_TOP_RIGHT
-
-Glyph character for top-right box corner.
-
-### FLAPPY_GLYPH_BOTTOM_LEFT
-
-Glyph character for bottom-left box corner.
-
-### FLAPPY_GLYPH_BOTTOM_RIGHT
-
-Glyph character for bottom-right box corner.
-
-### FLAPPY_GLYPH_HORIZONTAL
-
-Glyph character for horizontal box segment.
-
-### FLAPPY_GLYPH_VERTICAL
-
-Glyph character for vertical box segment.
-
-### FLAPPY_GLYPH_SPACE
-
-Glyph character for interior spacing.
+The value is used analytically when estimating whether a late recovery is
+still plausible, not as the direct execution cadence of the simulation loop.
 
 ## constants/constants.pipes.ts
 
@@ -1403,89 +1337,292 @@ Minimum allowed gap center height (pixels).
 
 Maximum allowed gap center height (pixels).
 
-## constants/constants.stats.ts
+## constants/constants.difficulty.ts
 
-Browser HUD stats table constants.
+Adaptive-difficulty constants for Flappy runs.
 
-This module defines table ordering, hidden groups, and row metadata for the
-runtime status panel shown during playback.
+This module defines how spacing, speed, and gap variability tighten as
+agents become more capable. Keeping it separate helps tune curriculum
+behavior without mixing with core physics or rendering.
 
-### FLAPPY_STATS_KEYS
+### FLAPPY_MIN_CLEARANCE_MARGIN_PX
 
-Ordered keys for the runtime stats table.
+Small geometric buffer so "barely possible" remains physically solvable.
 
-### FLAPPY_STATS_ROWS
+### FLAPPY_MIN_PIPE_RECOVERY_FRAMES
 
-Ordered row descriptors rendered into the runtime stats table.
+Hard floor on time between pipes at max speed so controllers can recover.
 
-### FLAPPY_INSTRUMENTATION_STATS_KEYS
+This prevents endgame spacing from becoming too tight for realistic policy
+reaction and vertical correction.
 
-Stats keys that are hidden when runtime instrumentation is disabled.
+### FLAPPY_MIN_EDGE_TO_EDGE_PIPE_SPACING_PX
 
-### FLAPPY_STATS_SECTION_KEYS
+Minimum edge-to-edge spacing needed to recover between consecutive pipes.
 
-Stats keys rendered as section headers rather than key/value rows.
+Derived from bird size + expected control drop budget + a small margin.
 
-### FLAPPY_STATS_ARCHITECTURE_KEYS
+### FLAPPY_PIPE_GAP_MIN_PX
 
-Stats keys whose values should render multi-line architecture content.
+Minimum pipe gap used at peak adaptive difficulty.
 
-### FLAPPY_UI_STATS_ROW_BORDER
+### FLAPPY_PIPE_GAP_START_MULTIPLIER
 
-Border style for regular stats rows.
+Initial spawn gap multiplier relative to the current hardest gap target.
 
-### FLAPPY_UI_STATS_SECTION_BORDER
+### FLAPPY_PIPE_GAP_SHRINK_PER_PIPE_PX
 
-Border style for stats section headers.
+Per-pipe gap shrink step toward the current hardest target gap (pixels).
 
-### FLAPPY_NETWORK_LEGEND_HEADER_COLOR
+### FLAPPY_PIPE_GAP_RANDOM_JITTER_PX
 
-Legend header color.
+Random jitter range applied to each spawned pipe gap (pixels).
 
-## constants/constants.world.ts
+### FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX
 
-Flappy world and episode-shape constants.
+Maximum allowed vertical jump between consecutive pipe gap centers (pixels).
 
-This module groups stable geometry and run-budget values that define the
-simulation envelope. Keeping these together makes it easier to reason about
-how large the world is, where the bird is anchored, and when an episode ends.
+This reduces abrupt zig-zag transitions that are often unrecoverable once
+spacing tightens at higher difficulty.
 
-### FLAPPY_WORLD_WIDTH_PX
+### FLAPPY_PIPE_SPEED_MAX_PX_PER_FRAME
 
-Width of the simulated world (pixels).
+Maximum pipe speed used at peak adaptive difficulty.
 
-### FLAPPY_WORLD_HEIGHT_PX
+### FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES
 
-Height of the simulated world (pixels).
+Minimum spawn interval used at peak adaptive difficulty.
 
-### FLAPPY_BIRD_X_PX
+### FLAPPY_MAX_DIFFICULTY_EDGE_TO_EDGE_PIPE_SPACING_PX
 
-Fixed horizontal position of the bird (pixels).
+Actual edge-to-edge spacing produced at peak adaptive difficulty.
 
-A fixed x-anchor turns the task into primarily vertical control while pipes
-move left, making policy behavior easier to visualize and debug.
+The recovery target above is a lower bound, but the runtime cadence is
+ultimately quantized by whole frames. This value is the real rendered pipe
+spacing once the minimum spawn interval has been rounded to an integer.
 
-### FLAPPY_BIRD_RADIUS_PX
+### FLAPPY_MAX_DIFFICULTY_PIPE_PITCH_PX
 
-Bird collision radius (pixels).
+Full pipe-to-pipe pitch produced at peak adaptive difficulty.
 
-### FLAPPY_BIRD_HEIGHT_PX
+This is the distance from one pipe's leading edge to the next pipe's leading
+edge at the hardest steady-state cadence. It is the periodicity the ground
+grid must match if each spawned pipe should land on the same grid phase.
 
-Bird collision height (diameter, pixels).
+### FLAPPY_PIPE_SPAWN_INTERVAL_START_MULTIPLIER
 
-### FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION
+Initial spawn-interval multiplier relative to the current hardest interval target.
 
-Enables runtime telemetry counters used for profiling diagnostics.
+### FLAPPY_PIPE_SPAWN_INTERVAL_SHRINK_PER_PIPE_FRAMES
 
-Keep disabled during normal demo runs to avoid instrumentation overhead and
-to preserve a cleaner educational rendering path.
+Per-pipe spawn-interval shrink step toward the current hardest interval target (frames).
 
-### FLAPPY_MAX_FRAMES_PER_EPISODE
+### FLAPPY_DIFFICULTY_RAMP_PIPES
 
-Episode terminates after this many frames even if still alive.
+Pipe-pass count needed to reach maximum adaptive difficulty.
 
-This prevents extremely long outlier episodes from dominating generation
-runtime and keeps evolution throughput predictable.
+After this point, spacing does not tighten further, so proficient agents can
+sustain long runs without additional spacing compression.
+
+## constants/constants.observation.ts
+
+Shared observation-normalization constants.
+
+These values are used by both browser playback and headless environment
+simulation when building normalized feature vectors.
+
+Keeping normalization constants shared is important because even tiny drift in
+feature scaling would make trainer, worker, and browser policies "see"
+different worlds.
+
+### FLAPPY_NORMALIZATION_EPSILON
+
+Small epsilon divisor guard for world/physics normalization.
+
+Prevents division by near-zero values when view-dependent scales are very
+small, keeping feature values numerically stable.
+
+If you want a quick refresher on why feature scaling matters, the Wikipedia
+article on "feature scaling" is a useful background reference.
+
+## constants/constants.network.ts
+
+Flappy policy-network and temporal memory constants.
+
+This module defines observation window shape and initial architecture sizing
+used when seeding agents for evolution.
+
+### FLAPPY_MEMORY_CORE_FEATURE_COUNT
+
+Number of core per-frame observation features retained for temporal stacking.
+
+### FLAPPY_MEMORY_STACKED_FRAME_COUNT
+
+Number of temporal frames included in the stacked observation window.
+
+### FLAPPY_MEMORY_ACTION_WINDOW_STEPS
+
+Number of past actions retained for the action-memory channel.
+
+### FLAPPY_NETWORK_INPUT_SIZE
+
+Number of observation features fed into each Flappy policy network.
+
+### FLAPPY_NETWORK_OUTPUT_SIZE
+
+Number of output action scores emitted by each Flappy policy network.
+
+### FLAPPY_NETWORK_HIDDEN_LAYER_SIZES
+
+Hidden-layer sizes used to seed initial Flappy policy architectures.
+
+Using at least two hidden layers improves representational flexibility for
+precise vertical control near narrow, fast-changing pipe targets.
+
+## constants/constants.fitness.ts
+
+Flappy reward-shaping constants.
+
+These values tune the learning signal seen by evolution. Separating them from
+world/physics constants keeps behavior tuning explicit and easier to teach.
+
+### FLAPPY_FITNESS_BONUS_PER_PIPE
+
+Fitness bonus added per pipe successfully passed.
+
+### FLAPPY_FITNESS_SURVIVAL_WEIGHT
+
+Fraction of raw frame-survival reward kept in total fitness.
+
+Lower values reduce the incentive to merely stay alive and increase pressure
+to center on gaps and pass pipes cleanly.
+
+### FLAPPY_FITNESS_ALIGNMENT_WEIGHT_PER_FRAME
+
+Per-frame reward weight for staying vertically aligned with the next gap.
+
+### FLAPPY_FITNESS_APPROACH_PROGRESS_WEIGHT
+
+Reward scale for reducing distance to the next pipe between consecutive frames.
+
+### FLAPPY_FITNESS_CENTERING_PROGRESS_WEIGHT
+
+Reward scale for reducing vertical error to the next gap center.
+
+### FLAPPY_FITNESS_CLEARANCE_WEIGHT_PER_FRAME
+
+Per-frame reward weight for keeping the bird inside next-gap clearance.
+
+### FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME
+
+Per-frame reward weight for pre-aligning with the second upcoming gap.
+
+### FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME
+
+Per-frame reward weight for maintaining controllable vertical velocity.
+
+### FLAPPY_FITNESS_TERMINAL_ALIGNMENT_BONUS_WEIGHT
+
+Terminal bonus based on final alignment with the next gap center.
+
+### FLAPPY_FITNESS_TERMINAL_PROGRESS_BONUS_WEIGHT
+
+Terminal bonus based on final progress toward the next pipe.
+
+## constants/constants.runtime.ts
+
+Browser runtime and telemetry constants for the Flappy demo.
+
+These values control startup defaults, emulation cadence, and common
+placeholder/status values rendered by the UI.
+
+This module is less about game physics and more about operator experience:
+what the browser shows while loading, how frequently HUD numbers refresh, and
+which defaults the demo uses when bootstrapping the worker.
+
+### DEFAULT_CONTAINER_ID
+
+Default host container id for the browser demo mount point.
+
+### FLAPPY_EMULATION_SPEED_MULTIPLIER
+
+Emulation speed multiplier for browser playback (1.5 => 50% faster).
+
+### FLAPPY_HUD_UPDATE_INTERVAL_FRAMES
+
+Update HUD counters every N simulation frames to reduce DOM churn.
+
+The value trades freshness for stability. Updating every frame would make the
+numbers twitchier and force more frequent DOM work on the main thread.
+
+### FLAPPY_BROWSER_POPULATION_SIZE
+
+Default population size for browser playback worker initialization.
+
+The browser default is intentionally smaller than the long-running trainer so
+the interactive demo remains responsive.
+
+### FLAPPY_BROWSER_ELITISM_COUNT
+
+Default elitism count for browser playback worker initialization.
+
+Keeping elitism small in the browser demo emphasizes visible variety over raw
+training efficiency.
+
+### FLAPPY_DEFAULT_RNG_SEED
+
+Deterministic default RNG seed shared by browser runtime and trainer flows.
+
+Reusing one canonical seed makes debugging and README examples more
+repeatable.
+
+### FLAPPY_FLAP_THRESHOLD
+
+Normalized decision threshold used for scalar output flap policies.
+
+### FLAPPY_NORMALIZATION_EPSILON
+
+Small epsilon divisor guard for world/physics normalization.
+
+### FLAPPY_HALF
+
+Canonical half multiplier for centering and gap math.
+
+### FLAPPY_HUD_ZERO_TEXT
+
+Shared HUD value for integer zero fields.
+
+### FLAPPY_HUD_ZERO_DECIMAL_TEXT
+
+Shared HUD value for decimal zero fields.
+
+### FLAPPY_HUD_OFF_TEXT
+
+Shared HUD value when a metric is intentionally disabled.
+
+### FLAPPY_HUD_INITIALIZING_TEXT
+
+Initial status text displayed before evolution starts.
+
+### FLAPPY_STATUS_PLAYING_TEXT
+
+Runtime status text shown while a generation playback is running.
+
+### FLAPPY_STATUS_EVOLVING_TEXT
+
+Runtime status text shown between playback episodes.
+
+### FLAPPY_HUD_UPDATES_WINDOW_MS
+
+HUD sliding-window size used when computing updates-per-second metric.
+
+### FLAPPY_HUD_UPDATES_WINDOW_SECONDS
+
+HUD updates window duration in seconds for per-second conversion.
+
+### FLAPPY_MINOR_GC_WINDOW_MS
+
+Sliding-window size used when computing minor GC events per minute.
 
 ## constants/constants.layout.ts
 
@@ -1596,297 +1733,139 @@ Width breakpoint below which only title + main simulation canvas are shown.
 In this minimal mobile layout, stats and network-visualization panels are
 hidden to maximize readable gameplay area.
 
-## constants/constants.fitness.ts
+## constants/constants.stats.ts
 
-Flappy reward-shaping constants.
+Browser HUD stats table constants.
 
-These values tune the learning signal seen by evolution. Separating them from
-world/physics constants keeps behavior tuning explicit and easier to teach.
+This module defines table ordering, hidden groups, and row metadata for the
+runtime status panel shown during playback.
 
-### FLAPPY_FITNESS_BONUS_PER_PIPE
+### FLAPPY_STATS_KEYS
 
-Fitness bonus added per pipe successfully passed.
+Ordered keys for the runtime stats table.
 
-### FLAPPY_FITNESS_SURVIVAL_WEIGHT
+### FLAPPY_STATS_ROWS
 
-Fraction of raw frame-survival reward kept in total fitness.
+Ordered row descriptors rendered into the runtime stats table.
 
-Lower values reduce the incentive to merely stay alive and increase pressure
-to center on gaps and pass pipes cleanly.
+### FLAPPY_INSTRUMENTATION_STATS_KEYS
 
-### FLAPPY_FITNESS_ALIGNMENT_WEIGHT_PER_FRAME
+Stats keys that are hidden when runtime instrumentation is disabled.
 
-Per-frame reward weight for staying vertically aligned with the next gap.
+### FLAPPY_STATS_SECTION_KEYS
 
-### FLAPPY_FITNESS_APPROACH_PROGRESS_WEIGHT
+Stats keys rendered as section headers rather than key/value rows.
 
-Reward scale for reducing distance to the next pipe between consecutive frames.
+### FLAPPY_STATS_ARCHITECTURE_KEYS
 
-### FLAPPY_FITNESS_CENTERING_PROGRESS_WEIGHT
+Stats keys whose values should render multi-line architecture content.
 
-Reward scale for reducing vertical error to the next gap center.
+### FLAPPY_UI_STATS_ROW_BORDER
 
-### FLAPPY_FITNESS_CLEARANCE_WEIGHT_PER_FRAME
+Border style for regular stats rows.
 
-Per-frame reward weight for keeping the bird inside next-gap clearance.
+### FLAPPY_UI_STATS_SECTION_BORDER
 
-### FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME
+Border style for stats section headers.
 
-Per-frame reward weight for pre-aligning with the second upcoming gap.
+### FLAPPY_NETWORK_LEGEND_HEADER_COLOR
 
-### FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME
+Legend header color.
 
-Per-frame reward weight for maintaining controllable vertical velocity.
+## constants/constants.frame.ts
 
-### FLAPPY_FITNESS_TERMINAL_ALIGNMENT_BONUS_WEIGHT
+Glyph frame and text-layout constants for browser HUD rendering.
 
-Terminal bonus based on final alignment with the next gap center.
+These values keep the box-drawing title/header and text frame deterministic
+across browsers with slightly different font metrics.
 
-### FLAPPY_FITNESS_TERMINAL_PROGRESS_BONUS_WEIGHT
+### FLAPPY_FRAME_MONOSPACE_FONT
 
-Terminal bonus based on final progress toward the next pipe.
+Reusable monospaced HUD font for glyph-based frame rendering.
 
-## constants/constants.network.ts
+### FLAPPY_MONOSPACE_FONT_FAMILY
 
-Flappy policy-network and temporal memory constants.
+Shared monospace font stack used by all HUD and visualization text.
 
-This module defines observation window shape and initial architecture sizing
-used when seeding agents for evolution.
+### FLAPPY_HEADER_TITLE_TEXT
 
-### FLAPPY_MEMORY_CORE_FEATURE_COUNT
+Title rendered inside the standalone header box.
 
-Number of core per-frame observation features retained for temporal stacking.
+### FLAPPY_HEADER_CANVAS_HEIGHT_PX
 
-### FLAPPY_MEMORY_STACKED_FRAME_COUNT
+Header canvas fixed height (pixels).
 
-Number of temporal frames included in the stacked observation window.
+### FLAPPY_FRAME_GLYPH_ROW_HEIGHT_PX
 
-### FLAPPY_MEMORY_ACTION_WINDOW_STEPS
+Glyph-row height used for box-drawing rows (pixels).
 
-Number of past actions retained for the action-memory channel.
+### FLAPPY_FRAME_MIN_GLYPH_WIDTH_PX
 
-### FLAPPY_NETWORK_INPUT_SIZE
+Minimum measured glyph width fallback (pixels).
 
-Number of observation features fed into each Flappy policy network.
+### FLAPPY_FRAME_MIN_COLUMNS
 
-### FLAPPY_NETWORK_OUTPUT_SIZE
+Minimum glyph columns to keep frame readable on narrow widths.
 
-Number of output action scores emitted by each Flappy policy network.
+### FLAPPY_FRAME_RESERVED_COLUMNS
 
-### FLAPPY_NETWORK_HIDDEN_LAYER_SIZES
+Reserved columns to keep right edge in bounds during metrics fit.
 
-Hidden-layer sizes used to seed initial Flappy policy architectures.
+### FLAPPY_TITLE_BOX_MIN_WIDTH
 
-Using at least two hidden layers improves representational flexibility for
-precise vertical control near narrow, fast-changing pipe targets.
+Minimum box width when building standalone title frame.
 
-## constants/constants.palette.ts
+### FLAPPY_TITLE_BOX_MARGIN_COLUMNS
 
-Browser visual palette constants for the Flappy demo.
+Total side margin columns reserved around centered title box.
 
-This module centralizes theme colors and diverging ramps so visual tuning is
-easy to find and consistent across HUD, birds, pipes, and network overlays.
+### FLAPPY_TITLE_BOX_WIDTH_RATIO
 
-### FLAPPY_NEON_PALETTE
+Preferred title width relative to available frame width.
 
-TRON-like neon palette matching asciiMaze style.
+### FLAPPY_TITLE_BOX_MIN_HALF_SPAN
 
-### FLAPPY_NEON_BIRD_PALETTE
+Minimum half-span when clamping centered title extents.
 
-Neon bird palette for per-agent render color assignment.
+### FLAPPY_TITLE_BOX_MIN_OUTER_GAP_COLUMNS
 
-### FLAPPY_REGULAR_NEON_RAMP
+Minimum columns between title box and outer rails.
 
-Regular neon ramp used for strong positive/baseline scales.
+### FLAPPY_BOX_MIN_COLUMNS
 
-### FLAPPY_LIGHT_NEON_RAMP
+Minimum safe columns for box-drawing helper output.
 
-Light neon ramp used for high-contrast negative scales.
+### FLAPPY_BOX_MIN_ROWS
 
-### FLAPPY_CENTER_BLUE_RAMP
+Minimum safe rows for box-drawing helper output.
 
-Neutral-center blue ramp for near-zero diverging tiers.
+### FLAPPY_GLYPH_TOP_LEFT
 
-### FLAPPY_TIER_ABOVE_COLOR
+Glyph character for top-left box corner.
 
-Fallback color when a value exceeds all configured tiers.
+### FLAPPY_GLYPH_TOP_RIGHT
 
-### FLAPPY_NETWORK_LEGEND_CONNECTION_TITLE_COLOR
+Glyph character for top-right box corner.
 
-Legend section title color for connection weight rows.
+### FLAPPY_GLYPH_BOTTOM_LEFT
 
-### FLAPPY_NETWORK_LEGEND_BIAS_TITLE_COLOR
+Glyph character for bottom-left box corner.
 
-Legend section title color for node bias rows.
+### FLAPPY_GLYPH_BOTTOM_RIGHT
 
-### FLAPPY_NETWORK_LEGEND_ROW_TEXT_COLOR
+Glyph character for bottom-right box corner.
 
-Legend row text color.
+### FLAPPY_GLYPH_HORIZONTAL
 
-### FLAPPY_NETWORK_HEADER_TEXT_COLOR
+Glyph character for horizontal box segment.
 
-Header text color for architecture label in visualization.
+### FLAPPY_GLYPH_VERTICAL
 
-### FLAPPY_NETWORK_NODE_LABEL_FILL_COLOR
+Glyph character for vertical box segment.
 
-Dark fill color used for node bias labels.
+### FLAPPY_GLYPH_SPACE
 
-### FLAPPY_NETWORK_OUTPUT_NODE_STROKE_COLOR
-
-Output-node stroke color.
-
-### FLAPPY_NETWORK_HIDDEN_NODE_STROKE_COLOR
-
-Hidden-node stroke color.
-
-### FLAPPY_NETWORK_OUTPUT_NODE_GLOW_COLOR
-
-Output-node glow color.
-
-## constants/constants.physics.ts
-
-Flappy physics and control-cadence constants.
-
-Values in this module shape how quickly the bird falls, how strongly a flap
-responds, and how often a policy can react inside each visible frame.
-
-Small changes here have outsized behavioral impact because they reshape the
-control problem the policy is trying to solve.
-
-### FLAPPY_GRAVITY_PX_PER_FRAME2
-
-Gravity acceleration applied each frame (pixels/frame²).
-
-Slightly increased so birds settle faster after each flap and can make
-finer vertical corrections around narrow targets.
-
-### FLAPPY_FLAP_VELOCITY_PX_PER_FRAME
-
-Instantaneous upward velocity applied on flap (pixels/frame).
-
-Reduced so each flap produces a smaller hop, improving precision when
-threading tighter gaps.
-
-### FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME
-
-Maximum downward speed clamp (pixels/frame).
-
-This cap limits runaway fall acceleration and keeps trajectories learnable.
-
-### FLAPPY_CONTROL_SUBSTEPS_PER_FRAME
-
-Number of policy decision substeps executed inside each logical frame.
-
-Values > 1 give agents finer temporal control in tight scenarios by allowing
-multiple react-and-integrate passes before the frame counter advances.
-
-This is one of the main levers that keeps high-speed play numerically stable
-without forcing the visible frame rate to explode.
-
-### FLAPPY_TARGET_FLAP_INTERVAL_FRAMES
-
-Target control cadence used for endgame reachability calculations.
-
-A smaller value means the policy is expected to correct more frequently
-(effectively "jumping more often"), which supports narrower endgame gaps.
-
-The value is used analytically when estimating whether a late recovery is
-still plausible, not as the direct execution cadence of the simulation loop.
-
-## constants/constants.runtime.ts
-
-Browser runtime and telemetry constants for the Flappy demo.
-
-These values control startup defaults, emulation cadence, and common
-placeholder/status values rendered by the UI.
-
-This module is less about game physics and more about operator experience:
-what the browser shows while loading, how frequently HUD numbers refresh, and
-which defaults the demo uses when bootstrapping the worker.
-
-### DEFAULT_CONTAINER_ID
-
-Default host container id for the browser demo mount point.
-
-### FLAPPY_EMULATION_SPEED_MULTIPLIER
-
-Emulation speed multiplier for browser playback (1.5 => 50% faster).
-
-### FLAPPY_HUD_UPDATE_INTERVAL_FRAMES
-
-Update HUD counters every N simulation frames to reduce DOM churn.
-
-The value trades freshness for stability. Updating every frame would make the
-numbers twitchier and force more frequent DOM work on the main thread.
-
-### FLAPPY_BROWSER_POPULATION_SIZE
-
-Default population size for browser playback worker initialization.
-
-The browser default is intentionally smaller than the long-running trainer so
-the interactive demo remains responsive.
-
-### FLAPPY_BROWSER_ELITISM_COUNT
-
-Default elitism count for browser playback worker initialization.
-
-Keeping elitism small in the browser demo emphasizes visible variety over raw
-training efficiency.
-
-### FLAPPY_DEFAULT_RNG_SEED
-
-Deterministic default RNG seed shared by browser runtime and trainer flows.
-
-Reusing one canonical seed makes debugging and README examples more
-repeatable.
-
-### FLAPPY_FLAP_THRESHOLD
-
-Normalized decision threshold used for scalar output flap policies.
-
-### FLAPPY_NORMALIZATION_EPSILON
-
-Small epsilon divisor guard for world/physics normalization.
-
-### FLAPPY_HALF
-
-Canonical half multiplier for centering and gap math.
-
-### FLAPPY_HUD_ZERO_TEXT
-
-Shared HUD value for integer zero fields.
-
-### FLAPPY_HUD_ZERO_DECIMAL_TEXT
-
-Shared HUD value for decimal zero fields.
-
-### FLAPPY_HUD_OFF_TEXT
-
-Shared HUD value when a metric is intentionally disabled.
-
-### FLAPPY_HUD_INITIALIZING_TEXT
-
-Initial status text displayed before evolution starts.
-
-### FLAPPY_STATUS_PLAYING_TEXT
-
-Runtime status text shown while a generation playback is running.
-
-### FLAPPY_STATUS_EVOLVING_TEXT
-
-Runtime status text shown between playback episodes.
-
-### FLAPPY_HUD_UPDATES_WINDOW_MS
-
-HUD sliding-window size used when computing updates-per-second metric.
-
-### FLAPPY_HUD_UPDATES_WINDOW_SECONDS
-
-HUD updates window duration in seconds for per-second conversion.
-
-### FLAPPY_MINOR_GC_WINDOW_MS
-
-Sliding-window size used when computing minor GC events per minute.
+Glyph character for interior spacing.
 
 ## constants/constants.rendering.ts
 
@@ -1900,6 +1879,114 @@ in shared Flappy constants to keep legacy imports stable during migration.
 Fraction of parent bird opacity used for drawing trails.
 
 For example, `0.5` means a bird at 20% opacity gets a 10% opacity trail.
+
+## constants/constants.birds.ts
+
+Bird, trail, and champion-highlight rendering constants.
+
+This module centralizes all per-bird visual treatments so appearance tuning
+stays decoupled from simulation and UI layout logic.
+
+### FLAPPY_TRAIL_MAX_POINTS
+
+Maximum number of trail points retained per bird trail polyline.
+
+### FLAPPY_CHAMPION_TRAIL_MAX_POINTS
+
+Maximum number of trail points retained for the champion-only short trail.
+
+### FLAPPY_TRAIL_LINE_WIDTH_PX
+
+Stroke width used for per-bird trail line rendering.
+
+### FLAPPY_TRAIL_EDGE_FADE_DISTANCE_PX
+
+Distance from world edge over which trails fade to transparent (pixels).
+
+### FLAPPY_NON_CHAMPION_OPACITY
+
+Opacity used for non-champion bird fills and trails.
+
+### FLAPPY_BIRD_BODY_GLOW_BLUR_PX
+
+Base neon blur radius used for bird body glow.
+
+### FLAPPY_NON_CHAMPION_BODY_GLOW_BLUR_PX
+
+Glow blur radius used for simplified non-champion bird bodies.
+
+### FLAPPY_BIRD_AURA_ALPHA
+
+Opacity used for the extra Radiant-style aura around each bird.
+
+This is intentionally subtle: it should read as a soft bloom that lifts the
+bird off the background, without turning the bird into a big glowing blob.
+
+### FLAPPY_BIRD_AURA_EXPAND_PX
+
+Pixel expansion used for the Radiant-style bird aura plate.
+
+### FLAPPY_BIRD_AURA_BLUR_MULTIPLIER
+
+Blur multiplier used for the Radiant-style bird aura plate.
+
+### FLAPPY_BIRD_CHAMPION_EXTRA_GLOW_BLUR_PX
+
+Additional blur radius applied to the champion red body glow.
+
+This keeps the champion body bloom aligned with the same neon blur
+intensity used by the pipe outline glow, so the leader reads with
+comparable visual weight.
+
+### FLAPPY_TRAIL_MIN_HORIZONTAL_SEGMENT_PX
+
+Minimum horizontal segment length used by stepped trail rendering.
+
+### FLAPPY_TRAIL_MIN_VERTICAL_SEGMENT_PX
+
+Minimum vertical segment length used by stepped trail rendering.
+
+## constants/constants.pipe-render.ts
+
+Browser-only pipe rendering constants.
+
+This module bridges simulation pipe geometry with visual glow/outline passes
+used by the canvas renderer.
+
+### FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX
+
+Visual gap between the pipe body and its outline on the sides (pixels).
+
+### FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX
+
+Visual gap between the pipe body and its outline at the pipe entrance rim (pixels).
+
+### FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX
+
+Stroke width used for the pipe outline (pixels).
+
+### FLAPPY_PIPE_OUTLINE_GLOW_ALPHA
+
+Opacity used for the soft pipe glow stroke pass.
+
+### FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX
+
+Stroke width used for the soft pipe glow stroke pass (pixels).
+
+### FLAPPY_PIPE_ENTRY_RIM_INSET_PX
+
+Inset used for the pipe entrance rim line measured from the gap-facing edge.
+
+### FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR
+
+Cyan neon glow used for pipe outline shadow.
+
+This intentionally matches the asciiMaze `neonCyan` ANSI color (`\x1b[38;5;87m`)
+which maps to xterm color 87 ~= rgb(95, 255, 255) / hex `#5fffff`.
+
+### FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX
+
+Blur radius used for the cyan pipe outline glow (pixels).
 
 ## constants/constants.starfield.ts
 
@@ -1986,156 +2073,6 @@ Declarative layer specs for the default starfield parallax bands.
 
 Keeping the layer recipe in data form makes it easier to swap the lower
 segment to a different parallax family without changing the tile builder.
-
-## constants/constants.difficulty.ts
-
-Adaptive-difficulty constants for Flappy runs.
-
-This module defines how spacing, speed, and gap variability tighten as
-agents become more capable. Keeping it separate helps tune curriculum
-behavior without mixing with core physics or rendering.
-
-### FLAPPY_MIN_CLEARANCE_MARGIN_PX
-
-Small geometric buffer so "barely possible" remains physically solvable.
-
-### FLAPPY_MIN_PIPE_RECOVERY_FRAMES
-
-Hard floor on time between pipes at max speed so controllers can recover.
-
-This prevents endgame spacing from becoming too tight for realistic policy
-reaction and vertical correction.
-
-### FLAPPY_MIN_EDGE_TO_EDGE_PIPE_SPACING_PX
-
-Minimum edge-to-edge spacing needed to recover between consecutive pipes.
-
-Derived from bird size + expected control drop budget + a small margin.
-
-### FLAPPY_PIPE_GAP_MIN_PX
-
-Minimum pipe gap used at peak adaptive difficulty.
-
-### FLAPPY_PIPE_GAP_START_MULTIPLIER
-
-Initial spawn gap multiplier relative to the current hardest gap target.
-
-### FLAPPY_PIPE_GAP_SHRINK_PER_PIPE_PX
-
-Per-pipe gap shrink step toward the current hardest target gap (pixels).
-
-### FLAPPY_PIPE_GAP_RANDOM_JITTER_PX
-
-Random jitter range applied to each spawned pipe gap (pixels).
-
-### FLAPPY_PIPE_GAP_CENTER_MAX_DELTA_PX
-
-Maximum allowed vertical jump between consecutive pipe gap centers (pixels).
-
-This reduces abrupt zig-zag transitions that are often unrecoverable once
-spacing tightens at higher difficulty.
-
-### FLAPPY_PIPE_SPEED_MAX_PX_PER_FRAME
-
-Maximum pipe speed used at peak adaptive difficulty.
-
-### FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES
-
-Minimum spawn interval used at peak adaptive difficulty.
-
-### FLAPPY_MAX_DIFFICULTY_EDGE_TO_EDGE_PIPE_SPACING_PX
-
-Actual edge-to-edge spacing produced at peak adaptive difficulty.
-
-The recovery target above is a lower bound, but the runtime cadence is
-ultimately quantized by whole frames. This value is the real rendered pipe
-spacing once the minimum spawn interval has been rounded to an integer.
-
-### FLAPPY_MAX_DIFFICULTY_PIPE_PITCH_PX
-
-Full pipe-to-pipe pitch produced at peak adaptive difficulty.
-
-This is the distance from one pipe's leading edge to the next pipe's leading
-edge at the hardest steady-state cadence. It is the periodicity the ground
-grid must match if each spawned pipe should land on the same grid phase.
-
-### FLAPPY_PIPE_SPAWN_INTERVAL_START_MULTIPLIER
-
-Initial spawn-interval multiplier relative to the current hardest interval target.
-
-### FLAPPY_PIPE_SPAWN_INTERVAL_SHRINK_PER_PIPE_FRAMES
-
-Per-pipe spawn-interval shrink step toward the current hardest interval target (frames).
-
-### FLAPPY_DIFFICULTY_RAMP_PIPES
-
-Pipe-pass count needed to reach maximum adaptive difficulty.
-
-After this point, spacing does not tighten further, so proficient agents can
-sustain long runs without additional spacing compression.
-
-## constants/constants.observation.ts
-
-Shared observation-normalization constants.
-
-These values are used by both browser playback and headless environment
-simulation when building normalized feature vectors.
-
-Keeping normalization constants shared is important because even tiny drift in
-feature scaling would make trainer, worker, and browser policies "see"
-different worlds.
-
-### FLAPPY_NORMALIZATION_EPSILON
-
-Small epsilon divisor guard for world/physics normalization.
-
-Prevents division by near-zero values when view-dependent scales are very
-small, keeping feature values numerically stable.
-
-If you want a quick refresher on why feature scaling matters, the Wikipedia
-article on "feature scaling" is a useful background reference.
-
-## constants/constants.pipe-render.ts
-
-Browser-only pipe rendering constants.
-
-This module bridges simulation pipe geometry with visual glow/outline passes
-used by the canvas renderer.
-
-### FLAPPY_PIPE_OUTLINE_SIDE_GAP_PX
-
-Visual gap between the pipe body and its outline on the sides (pixels).
-
-### FLAPPY_PIPE_OUTLINE_ENTRANCE_GAP_PX
-
-Visual gap between the pipe body and its outline at the pipe entrance rim (pixels).
-
-### FLAPPY_PIPE_OUTLINE_STROKE_WIDTH_PX
-
-Stroke width used for the pipe outline (pixels).
-
-### FLAPPY_PIPE_OUTLINE_GLOW_ALPHA
-
-Opacity used for the soft pipe glow stroke pass.
-
-### FLAPPY_PIPE_OUTLINE_GLOW_STROKE_WIDTH_PX
-
-Stroke width used for the soft pipe glow stroke pass (pixels).
-
-### FLAPPY_PIPE_ENTRY_RIM_INSET_PX
-
-Inset used for the pipe entrance rim line measured from the gap-facing edge.
-
-### FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR
-
-Cyan neon glow used for pipe outline shadow.
-
-This intentionally matches the asciiMaze `neonCyan` ANSI color (`\x1b[38;5;87m`)
-which maps to xterm color 87 ~= rgb(95, 255, 255) / hex `#5fffff`.
-
-### FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX
-
-Blur radius used for the cyan pipe outline glow (pixels).
 
 ## constants/constants.network-view.ts
 
@@ -2453,3 +2390,66 @@ Separator used between architecture columns in the compact header label.
 ### FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR
 
 Line separator used by the two-line architecture label block.
+
+## constants/constants.palette.ts
+
+Browser visual palette constants for the Flappy demo.
+
+This module centralizes theme colors and diverging ramps so visual tuning is
+easy to find and consistent across HUD, birds, pipes, and network overlays.
+
+### FLAPPY_NEON_PALETTE
+
+TRON-like neon palette matching asciiMaze style.
+
+### FLAPPY_NEON_BIRD_PALETTE
+
+Neon bird palette for per-agent render color assignment.
+
+### FLAPPY_REGULAR_NEON_RAMP
+
+Regular neon ramp used for strong positive/baseline scales.
+
+### FLAPPY_LIGHT_NEON_RAMP
+
+Light neon ramp used for high-contrast negative scales.
+
+### FLAPPY_CENTER_BLUE_RAMP
+
+Neutral-center blue ramp for near-zero diverging tiers.
+
+### FLAPPY_TIER_ABOVE_COLOR
+
+Fallback color when a value exceeds all configured tiers.
+
+### FLAPPY_NETWORK_LEGEND_CONNECTION_TITLE_COLOR
+
+Legend section title color for connection weight rows.
+
+### FLAPPY_NETWORK_LEGEND_BIAS_TITLE_COLOR
+
+Legend section title color for node bias rows.
+
+### FLAPPY_NETWORK_LEGEND_ROW_TEXT_COLOR
+
+Legend row text color.
+
+### FLAPPY_NETWORK_HEADER_TEXT_COLOR
+
+Header text color for architecture label in visualization.
+
+### FLAPPY_NETWORK_NODE_LABEL_FILL_COLOR
+
+Dark fill color used for node bias labels.
+
+### FLAPPY_NETWORK_OUTPUT_NODE_STROKE_COLOR
+
+Output-node stroke color.
+
+### FLAPPY_NETWORK_HIDDEN_NODE_STROKE_COLOR
+
+Hidden-node stroke color.
+
+### FLAPPY_NETWORK_OUTPUT_NODE_GLOW_COLOR
+
+Output-node glow color.

@@ -1,0 +1,7 @@
+{
+  "introFile": "playback.trail.history.services.ts",
+  "fileOrder": [
+    "playback.trail.history.services.ts",
+    "playback.trail.opacity.utils.ts"
+  ]
+}

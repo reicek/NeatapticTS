@@ -1,3 +1,16 @@
+/**
+ * Browser host assembly for the Flappy Bird demo UI.
+ *
+ * The host boundary builds the stage that the rest of the browser runtime plays
+ * on: title frame, simulation canvas, HUD table, and the network-inspection
+ * panel. It is deliberately separate from runtime orchestration so DOM setup and
+ * responsive layout stay understandable without also reading worker or playback
+ * code.
+ *
+ * Read this module as a browser chapter about presentation ownership:
+ * resolve the shell, mount the panels, keep the canvases sized correctly, then
+ * hand the runtime narrow handles for drawing and HUD updates.
+ */
 import type Network from '../../../../../src/architecture/network';
 import {
   FLAPPY_FRAME_MONOSPACE_FONT,
@@ -47,15 +60,6 @@ import {
   updateStatsTableValues as updateHostStatsTableValues,
 } from './host.stats.service';
 import type { CanvasHostResult, HostStatsPartialValues } from './host.types';
-
-/**
- * Browser host assembly for the Flappy Bird demo UI.
- *
- * The host boundary is responsible for building the browser-side shell around
- * the simulation: framed title, main canvas, stats panel, and network
- * visualization panel. It does not run evolution itself; it prepares the stage
- * on which the runtime loop renders.
- */
 
 type HostVisualPrimitives = {
   unifiedBorder: string;

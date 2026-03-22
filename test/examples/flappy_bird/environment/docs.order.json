@@ -1,0 +1,11 @@
+{
+  "introFile": "environment.types.ts",
+  "fileOrder": [
+    "environment.types.ts",
+    "environment.constants.ts",
+    "environment.state.service.ts",
+    "environment.step.service.ts",
+    "environment.collision.utils.ts",
+    "environment.observation.utils.ts"
+  ]
+}

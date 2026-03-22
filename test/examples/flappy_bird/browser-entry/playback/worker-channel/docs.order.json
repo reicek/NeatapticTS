@@ -1,0 +1,8 @@
+{
+  "introFile": "playback.worker-channel.types.ts",
+  "fileOrder": [
+    "playback.worker-channel.types.ts",
+    "playback.worker-channel.request.services.ts",
+    "playback.worker-channel.summary.services.ts"
+  ]
+}

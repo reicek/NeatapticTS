@@ -1,0 +1,13 @@
+{
+  "introFile": "evaluation.types.ts",
+  "fileOrder": [
+    "evaluation.types.ts",
+    "evaluation.constants.ts",
+    "evaluation.fitness.utils.ts",
+    "evaluation.seed.utils.ts",
+    "evaluation.rollout.service.ts"
+  ],
+  "folderOrder": [
+    "rollout"
+  ]
+}

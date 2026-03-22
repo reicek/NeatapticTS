@@ -1,9 +1,18 @@
 # simulation-shared
 
-Minimal deterministic random contract used by shared spawn helpers.
+Shared simulation vocabulary reused across environment, evaluation, worker,
+and browser-adjacent helpers.
 
-The shared layer keeps its RNG contract intentionally small so the same spawn
-helpers can work with both Node-side and browser-side deterministic sources.
+This boundary exists so the example can share observation semantics and
+deterministic spawn logic without letting every runtime invent its own near-
+duplicate types. The payoff is consistency: when a policy sees a gap, or when
+a helper estimates urgency, those meanings stay aligned across the whole
+example.
+
+Read this file as the common language layer beneath the larger subsystems.
+It is intentionally small, geometry-heavy, and runtime-neutral so the same
+concepts can move cleanly between Node training, worker playback, and browser
+inspection tools.
 
 ## simulation-shared/simulation-shared.types.ts
 
@@ -57,39 +66,6 @@ Input shape for observation-feature synthesis.
 This object is the raw world snapshot from which normalized features are
 derived. It intentionally separates world geometry from the later feature
 projection step.
-
-## simulation-shared/simulation-shared.errors.ts
-
-Prefix used when formatting unexpected shared-simulation errors.
-
-A stable prefix makes logs easier to scan when multiple Flappy subsystems are
-emitting diagnostics.
-
-### formatSharedSimulationErrorMessage
-
-```ts
-formatSharedSimulationErrorMessage(
-  error: unknown,
-): string
-```
-
-Formats unknown shared-simulation errors for stable logs.
-
-Shared utilities are used from several runtime contexts, so this helper keeps
-the error surface human-readable even when the thrown value is not an
-`Error` instance.
-
-Parameters:
-- `error` - - Unknown error value.
-
-Returns: Readable error message.
-
-### FLAPPY_SHARED_SIMULATION_ERROR_PREFIX
-
-Prefix used when formatting unexpected shared-simulation errors.
-
-A stable prefix makes logs easier to scan when multiple Flappy subsystems are
-emitting diagnostics.
 
 ## simulation-shared/simulation-shared.constants.ts
 
@@ -186,6 +162,34 @@ Parameters:
 
 Returns: Clamped value.
 
+## simulation-shared/simulation-shared.difficulty.utils.ts
+
+### resolveAdaptiveDifficultyProfile
+
+```ts
+resolveAdaptiveDifficultyProfile(
+  pipesPassed: number,
+  difficultyScale: number,
+): SharedDifficultyProfile
+```
+
+Resolves adaptive difficulty profile from passed-pipe progress.
+
+Educational note:
+Difficulty is ramped as a smooth profile rather than as a sequence of hard
+level jumps. That keeps the task readable for humans and less noisy for
+evolution.
+
+The idea is closely related to curriculum learning: easier versions of the
+task dominate early, then the example interpolates toward the harder target
+settings as progress increases.
+
+Parameters:
+- `pipesPassed` - - Number of passed pipes.
+- `difficultyScale` - - Curriculum scale in `[0, 1]`.
+
+Returns: Active difficulty profile.
+
 ## simulation-shared/simulation-shared.spawn.utils.ts
 
 ### sampleGapCenterY
@@ -275,240 +279,6 @@ Parameters:
 - `difficultyProfile` - - Active difficulty profile.
 
 Returns: Next spawn interval in frames.
-
-## simulation-shared/simulation-shared.memory.utils.ts
-
-### createSharedObservationMemoryState
-
-```ts
-createSharedObservationMemoryState(): SharedObservationMemoryState
-```
-
-Creates an empty temporal observation memory state.
-
-Returns: Fresh mutable memory buffers for one bird/controller.
-
-Example:
-
-```ts
-const memoryState = createSharedObservationMemoryState();
-```
-
-### resolveTemporalObservationVector
-
-```ts
-resolveTemporalObservationVector(
-  features: SharedObservationFeatures,
-  observationMemoryState: SharedObservationMemoryState,
-): number[]
-```
-
-Builds the temporal policy input vector (stacked observation + action memory).
-
-Educational note:
-This helper turns an interpretable feature object into the exact flat vector a
-feed-forward network consumes. That is why the output layout is documented so
-explicitly: changing the order would change the meaning of every trained
-weight in the policy.
-
-Output layout:
-1) current core observation frame
-2) previous core frames (newest to oldest) with zero padding
-3) last-action channel
-4) recent flap-rate channel over a fixed window
-
-Parameters:
-- `features` - - Structured observation features for the current decision step.
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-
-Returns: Ordered temporal input vector for policy activation.
-
-### commitSharedObservationMemoryStep
-
-```ts
-commitSharedObservationMemoryStep(
-  observationMemoryState: SharedObservationMemoryState,
-  features: SharedObservationFeatures,
-  didFlap: boolean,
-): void
-```
-
-Commits one observation-action step into temporal memory.
-
-The memory update happens after the decision is made so the next step can see
-both the recent observation context and the action history that produced the
-current trajectory.
-
-Parameters:
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-- `features` - - Structured observation features used for the decision.
-- `didFlap` - - Decision taken at this step.
-
-Returns: Nothing.
-
-### resolvePreviousCoreFramesWithPadding
-
-```ts
-resolvePreviousCoreFramesWithPadding(
-  observationMemoryState: SharedObservationMemoryState,
-): number[][]
-```
-
-Resolves previous core frames (newest-first) with deterministic zero padding.
-
-Zero padding keeps the policy input width stable during the first few frames
-of an episode before enough history has accumulated.
-
-Parameters:
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-
-Returns: Previous core frame list with fixed target length.
-
-### resolveZeroCoreObservationFrame
-
-```ts
-resolveZeroCoreObservationFrame(): number[]
-```
-
-Builds a zero-valued core frame with canonical length.
-
-Returns: Zero core frame.
-
-## simulation-shared/simulation-shared.control.utils.ts
-
-Resolves flap/no-flap decision from network outputs.
-
-Educational note:
-The shared control layer accepts both two-output competitive policies
-(`no flap` vs `flap`) and simpler single-output thresholded policies. That
-flexibility makes the helper reusable across experiments without forcing every
-caller to reshape its outputs first.
-
-### resolveFlapDecision
-
-```ts
-resolveFlapDecision(
-  rawOutputs: unknown,
-  flapThreshold: number,
-): boolean
-```
-
-Resolves flap/no-flap decision from network outputs.
-
-Educational note:
-The shared control layer accepts both two-output competitive policies
-(`no flap` vs `flap`) and simpler single-output thresholded policies. That
-flexibility makes the helper reusable across experiments without forcing every
-caller to reshape its outputs first.
-
-Parameters:
-- `rawOutputs` - - Activation output payload.
-- `flapThreshold` - - Scalar threshold for single-output policies.
-
-Returns: True when flap should trigger.
-
-## simulation-shared/simulation-shared.difficulty.utils.ts
-
-### resolveAdaptiveDifficultyProfile
-
-```ts
-resolveAdaptiveDifficultyProfile(
-  pipesPassed: number,
-  difficultyScale: number,
-): SharedDifficultyProfile
-```
-
-Resolves adaptive difficulty profile from passed-pipe progress.
-
-Educational note:
-Difficulty is ramped as a smooth profile rather than as a sequence of hard
-level jumps. That keeps the task readable for humans and less noisy for
-evolution.
-
-The idea is closely related to curriculum learning: easier versions of the
-task dominate early, then the example interpolates toward the harder target
-settings as progress increases.
-
-Parameters:
-- `pipesPassed` - - Number of passed pipes.
-- `difficultyScale` - - Curriculum scale in `[0, 1]`.
-
-Returns: Active difficulty profile.
-
-## simulation-shared/simulation-shared.statistics.utils.ts
-
-### computeMean
-
-```ts
-computeMean(
-  values: readonly number[],
-): number
-```
-
-Computes arithmetic mean for numeric samples.
-
-Parameters:
-- `values` - - Numeric samples.
-
-Returns: Arithmetic mean.
-
-### computePopulationStandardDeviation
-
-```ts
-computePopulationStandardDeviation(
-  values: readonly number[],
-  meanValue: number,
-): number
-```
-
-Computes population standard deviation.
-
-This uses population variance rather than sample variance because the trainer
-is summarizing the whole evolved population for that generation, not estimating
-a larger hidden distribution from a subsample.
-
-Parameters:
-- `values` - - Numeric samples.
-- `meanValue` - - Precomputed mean.
-
-Returns: Population standard deviation.
-
-### computePercentile
-
-```ts
-computePercentile(
-  values: readonly number[],
-  percentile: number,
-): number
-```
-
-Computes percentile value via linear interpolation between nearest ranks.
-
-Percentiles are useful in the trainer because they reveal whether strong
-performance is broad across the population or concentrated in a single outlier.
-
-Parameters:
-- `values` - - Numeric samples.
-- `percentile` - - Percentile in [0, 1].
-
-Returns: Percentile value, or `Number.NaN` when `values` is empty.
-
-### compareNumbersAscending
-
-```ts
-compareNumbersAscending(
-  leftValue: number,
-  rightValue: number,
-): number
-```
-
-Compares two numeric values in ascending order.
-
-Parameters:
-- `leftValue` - - Left numeric value.
-- `rightValue` - - Right numeric value.
-
-Returns: Comparator delta for `Array.prototype.toSorted`.
 
 ## simulation-shared/simulation-shared.observation.utils.ts
 
@@ -667,3 +437,242 @@ Example:
 const coreFrame = resolveCoreObservationVectorFromFeatures(features);
 observationMemoryState.previousCoreFrames.push(coreFrame);
 ```
+
+## simulation-shared/simulation-shared.control.utils.ts
+
+Resolves flap/no-flap decision from network outputs.
+
+Educational note:
+The shared control layer accepts both two-output competitive policies
+(`no flap` vs `flap`) and simpler single-output thresholded policies. That
+flexibility makes the helper reusable across experiments without forcing every
+caller to reshape its outputs first.
+
+### resolveFlapDecision
+
+```ts
+resolveFlapDecision(
+  rawOutputs: unknown,
+  flapThreshold: number,
+): boolean
+```
+
+Resolves flap/no-flap decision from network outputs.
+
+Educational note:
+The shared control layer accepts both two-output competitive policies
+(`no flap` vs `flap`) and simpler single-output thresholded policies. That
+flexibility makes the helper reusable across experiments without forcing every
+caller to reshape its outputs first.
+
+Parameters:
+- `rawOutputs` - - Activation output payload.
+- `flapThreshold` - - Scalar threshold for single-output policies.
+
+Returns: True when flap should trigger.
+
+## simulation-shared/simulation-shared.memory.utils.ts
+
+### createSharedObservationMemoryState
+
+```ts
+createSharedObservationMemoryState(): SharedObservationMemoryState
+```
+
+Creates an empty temporal observation memory state.
+
+Returns: Fresh mutable memory buffers for one bird/controller.
+
+Example:
+
+```ts
+const memoryState = createSharedObservationMemoryState();
+```
+
+### resolveTemporalObservationVector
+
+```ts
+resolveTemporalObservationVector(
+  features: SharedObservationFeatures,
+  observationMemoryState: SharedObservationMemoryState,
+): number[]
+```
+
+Builds the temporal policy input vector (stacked observation + action memory).
+
+Educational note:
+This helper turns an interpretable feature object into the exact flat vector a
+feed-forward network consumes. That is why the output layout is documented so
+explicitly: changing the order would change the meaning of every trained
+weight in the policy.
+
+Output layout:
+1) current core observation frame
+2) previous core frames (newest to oldest) with zero padding
+3) last-action channel
+4) recent flap-rate channel over a fixed window
+
+Parameters:
+- `features` - - Structured observation features for the current decision step.
+- `observationMemoryState` - - Mutable temporal memory for the active bird.
+
+Returns: Ordered temporal input vector for policy activation.
+
+### commitSharedObservationMemoryStep
+
+```ts
+commitSharedObservationMemoryStep(
+  observationMemoryState: SharedObservationMemoryState,
+  features: SharedObservationFeatures,
+  didFlap: boolean,
+): void
+```
+
+Commits one observation-action step into temporal memory.
+
+The memory update happens after the decision is made so the next step can see
+both the recent observation context and the action history that produced the
+current trajectory.
+
+Parameters:
+- `observationMemoryState` - - Mutable temporal memory for the active bird.
+- `features` - - Structured observation features used for the decision.
+- `didFlap` - - Decision taken at this step.
+
+Returns: Nothing.
+
+### resolvePreviousCoreFramesWithPadding
+
+```ts
+resolvePreviousCoreFramesWithPadding(
+  observationMemoryState: SharedObservationMemoryState,
+): number[][]
+```
+
+Resolves previous core frames (newest-first) with deterministic zero padding.
+
+Zero padding keeps the policy input width stable during the first few frames
+of an episode before enough history has accumulated.
+
+Parameters:
+- `observationMemoryState` - - Mutable temporal memory for the active bird.
+
+Returns: Previous core frame list with fixed target length.
+
+### resolveZeroCoreObservationFrame
+
+```ts
+resolveZeroCoreObservationFrame(): number[]
+```
+
+Builds a zero-valued core frame with canonical length.
+
+Returns: Zero core frame.
+
+## simulation-shared/simulation-shared.statistics.utils.ts
+
+### computeMean
+
+```ts
+computeMean(
+  values: readonly number[],
+): number
+```
+
+Computes arithmetic mean for numeric samples.
+
+Parameters:
+- `values` - - Numeric samples.
+
+Returns: Arithmetic mean.
+
+### computePopulationStandardDeviation
+
+```ts
+computePopulationStandardDeviation(
+  values: readonly number[],
+  meanValue: number,
+): number
+```
+
+Computes population standard deviation.
+
+This uses population variance rather than sample variance because the trainer
+is summarizing the whole evolved population for that generation, not estimating
+a larger hidden distribution from a subsample.
+
+Parameters:
+- `values` - - Numeric samples.
+- `meanValue` - - Precomputed mean.
+
+Returns: Population standard deviation.
+
+### computePercentile
+
+```ts
+computePercentile(
+  values: readonly number[],
+  percentile: number,
+): number
+```
+
+Computes percentile value via linear interpolation between nearest ranks.
+
+Percentiles are useful in the trainer because they reveal whether strong
+performance is broad across the population or concentrated in a single outlier.
+
+Parameters:
+- `values` - - Numeric samples.
+- `percentile` - - Percentile in [0, 1].
+
+Returns: Percentile value, or `Number.NaN` when `values` is empty.
+
+### compareNumbersAscending
+
+```ts
+compareNumbersAscending(
+  leftValue: number,
+  rightValue: number,
+): number
+```
+
+Compares two numeric values in ascending order.
+
+Parameters:
+- `leftValue` - - Left numeric value.
+- `rightValue` - - Right numeric value.
+
+Returns: Comparator delta for `Array.prototype.toSorted`.
+
+## simulation-shared/simulation-shared.errors.ts
+
+Prefix used when formatting unexpected shared-simulation errors.
+
+A stable prefix makes logs easier to scan when multiple Flappy subsystems are
+emitting diagnostics.
+
+### formatSharedSimulationErrorMessage
+
+```ts
+formatSharedSimulationErrorMessage(
+  error: unknown,
+): string
+```
+
+Formats unknown shared-simulation errors for stable logs.
+
+Shared utilities are used from several runtime contexts, so this helper keeps
+the error surface human-readable even when the thrown value is not an
+`Error` instance.
+
+Parameters:
+- `error` - - Unknown error value.
+
+Returns: Readable error message.
+
+### FLAPPY_SHARED_SIMULATION_ERROR_PREFIX
+
+Prefix used when formatting unexpected shared-simulation errors.
+
+A stable prefix makes logs easier to scan when multiple Flappy subsystems are
+emitting diagnostics.

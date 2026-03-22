@@ -1,73 +1,16 @@
 # browser-entry/host/resize
 
-Shared contracts for responsive browser-host sizing.
-
-The resize subsystem coordinates several DOM elements and several layout modes
-at once, so these types capture the measured viewport state, the active mode
-flags, and the grouped DOM handles needed by the appliers.
-
-## browser-entry/host/resize/host.resize.service.types.ts
-
-### ResponsiveViewportSizingElements
-
-DOM elements that participate in responsive host sizing.
-
-Keeping the participating elements together makes the responsive helpers read
-as layout orchestration rather than long DOM parameter lists.
-
-### DeferredNetworkRedrawController
-
-Deferred redraw controller used after layout-affecting changes.
-
-The network panel redraw is deferred because flexbox and canvas sizing can
-settle over multiple animation frames.
-
-### ResponsiveViewportMeasurements
-
-Measured viewport and panel budgets for responsive layout.
-
-These values are the raw numeric inputs to the resize policy before any mode
-branching happens.
-
-### ResponsiveViewportLayoutFlags
-
-Layout-mode flags resolved from the current viewport.
-
-The host currently distinguishes between minimal mobile, landscape split, and
-compact network-only variants.
-
-### ResponsiveViewportLayoutContext
-
-Full responsive layout context shared across sizing helpers.
-
-This merges measurements and mode flags into the one context object used by
-the resize appliers.
-
-### StatsPanelDimensions
-
-Resolved height and width budgets for the stats panel.
-
-The stats panel dimensions are derived from the current viewport budget after
-minimum readable canvas space is reserved.
-
-### SimulationCanvasBounds
-
-Width and height bounds for the simulation canvas.
-
-These are the final pixel budgets the simulation canvas may consume for the
-current responsive layout.
-
-## browser-entry/host/resize/host.resize.service.ts
-
 Top-level responsive sizing orchestration for the browser host.
 
-This module wires the host resize lifecycle together: gather the relevant DOM
-elements, run the initial layout pass, and keep canvas sizing synchronized with
-viewport changes over time.
+The resize boundary keeps one educational promise intact: the browser demo
+should still read like one coherent instrument panel even as the viewport
+shifts from desktop to narrow mobile layouts. That means sizing is not just a
+cosmetic concern. It decides whether the simulation canvas, HUD table, and
+network panel remain readable together.
 
-The resize boundary exists because the Flappy demo is not a single canvas.
-It has to keep the simulation viewport, stats panel, and network panel in a
-coherent layout across mobile, tablet, and desktop sizes.
+This module owns that policy at the top level: measure the current host,
+choose the appropriate layout mode, resize canvases, and schedule any network
+redraws needed after the geometry changes.
 
 Layout decision flow:
 ```mermaid
@@ -77,6 +20,8 @@ flowchart LR
     Decide -->|No| Standard["apply standard split layout"]
     Standard --> Resize["resize simulation + network canvases"]
 ```
+
+## browser-entry/host/resize/host.resize.service.ts
 
 ### installResponsiveViewportSizing
 
@@ -134,6 +79,91 @@ Parameters:
 - `onNetworkResize` - - Immediate network resize callback.
 
 Returns: Nothing.
+
+## browser-entry/host/resize/host.resize.service.types.ts
+
+Shared contracts for responsive browser-host sizing.
+
+The resize subsystem coordinates several DOM elements and several layout modes
+at once, so these types capture the measured viewport state, the active mode
+flags, and the grouped DOM handles needed by the appliers.
+
+### ResponsiveViewportSizingElements
+
+DOM elements that participate in responsive host sizing.
+
+Keeping the participating elements together makes the responsive helpers read
+as layout orchestration rather than long DOM parameter lists.
+
+### DeferredNetworkRedrawController
+
+Deferred redraw controller used after layout-affecting changes.
+
+The network panel redraw is deferred because flexbox and canvas sizing can
+settle over multiple animation frames.
+
+### ResponsiveViewportMeasurements
+
+Measured viewport and panel budgets for responsive layout.
+
+These values are the raw numeric inputs to the resize policy before any mode
+branching happens.
+
+### ResponsiveViewportLayoutFlags
+
+Layout-mode flags resolved from the current viewport.
+
+The host currently distinguishes between minimal mobile, landscape split, and
+compact network-only variants.
+
+### ResponsiveViewportLayoutContext
+
+Full responsive layout context shared across sizing helpers.
+
+This merges measurements and mode flags into the one context object used by
+the resize appliers.
+
+### StatsPanelDimensions
+
+Resolved height and width budgets for the stats panel.
+
+The stats panel dimensions are derived from the current viewport budget after
+minimum readable canvas space is reserved.
+
+### SimulationCanvasBounds
+
+Width and height bounds for the simulation canvas.
+
+These are the final pixel budgets the simulation canvas may consume for the
+current responsive layout.
+
+## browser-entry/host/resize/host.resize.service.constants.ts
+
+Shared constants for responsive host sizing.
+
+These values keep the resize policy readable by naming the split ratio, the
+minimum positive dimension, and the CSS token bundle used by layout appliers.
+
+### FLAPPY_HOST_RESIZE_STYLE_TOKENS
+
+Shared CSS tokens used by the host resize layout appliers.
+
+Centralizing these string tokens reduces repetition across the responsive DOM
+style appliers.
+
+### FLAPPY_HOST_RESIZE_SPLIT_RATIO
+
+Split ratio used when dividing the viewport between simulation and stats.
+
+A value of `0.5` means the standard stacked layout begins from an even split
+before clamping against minimum-height constraints.
+
+### FLAPPY_HOST_RESIZE_MIN_DIMENSION_PX
+
+Minimum positive dimension enforced by resize math.
+
+This prevents zero or negative canvas sizes from leaking into downstream
+layout and backing-store calculations.
 
 ## browser-entry/host/resize/host.resize.service.services.ts
 
@@ -329,34 +359,6 @@ Parameters:
 - `statsPanelDimensions` - - Resolved stats panel dimensions.
 
 Returns: Nothing.
-
-## browser-entry/host/resize/host.resize.service.constants.ts
-
-Shared constants for responsive host sizing.
-
-These values keep the resize policy readable by naming the split ratio, the
-minimum positive dimension, and the CSS token bundle used by layout appliers.
-
-### FLAPPY_HOST_RESIZE_STYLE_TOKENS
-
-Shared CSS tokens used by the host resize layout appliers.
-
-Centralizing these string tokens reduces repetition across the responsive DOM
-style appliers.
-
-### FLAPPY_HOST_RESIZE_SPLIT_RATIO
-
-Split ratio used when dividing the viewport between simulation and stats.
-
-A value of `0.5` means the standard stacked layout begins from an even split
-before clamping against minimum-height constraints.
-
-### FLAPPY_HOST_RESIZE_MIN_DIMENSION_PX
-
-Minimum positive dimension enforced by resize math.
-
-This prevents zero or negative canvas sizes from leaking into downstream
-layout and backing-store calculations.
 
 ## browser-entry/host/resize/host.resize.service.utils.ts
 

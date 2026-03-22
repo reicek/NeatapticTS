@@ -1,4 +1,19 @@
 /**
+ * Shared simulation vocabulary reused across environment, evaluation, worker,
+ * and browser-adjacent helpers.
+ *
+ * This boundary exists so the example can share observation semantics and
+ * deterministic spawn logic without letting every runtime invent its own near-
+ * duplicate types. The payoff is consistency: when a policy sees a gap, or when
+ * a helper estimates urgency, those meanings stay aligned across the whole
+ * example.
+ *
+ * Read this file as the common language layer beneath the larger subsystems.
+ * It is intentionally small, geometry-heavy, and runtime-neutral so the same
+ * concepts can move cleanly between Node training, worker playback, and browser
+ * inspection tools.
+ */
+/**
  * Minimal deterministic random contract used by shared spawn helpers.
  *
  * The shared layer keeps its RNG contract intentionally small so the same spawn

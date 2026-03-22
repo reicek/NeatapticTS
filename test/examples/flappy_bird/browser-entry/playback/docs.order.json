@@ -1,0 +1,23 @@
+{
+  "introFile": "playback.ts",
+  "fileOrder": [
+    "playback.ts",
+    "playback.orchestration.types.ts",
+    "playback.session.services.ts",
+    "playback.loop.service.ts",
+    "playback.iteration.services.ts",
+    "playback.frame-render.service.ts",
+    "playback.render.service.ts",
+    "playback.render.utils.ts",
+    "playback.trail.utils.ts",
+    "playback.constants.ts",
+    "playback.errors.ts"
+  ],
+  "folderOrder": [
+    "background",
+    "frame-render",
+    "snapshot",
+    "trail",
+    "worker-channel"
+  ]
+}

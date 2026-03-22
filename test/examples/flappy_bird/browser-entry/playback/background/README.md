@@ -1,5 +1,54 @@
 # browser-entry/playback/background
 
+Layered playback background composition for the browser demo.
+
+This boundary keeps atmosphere separate from gameplay entities. The frame
+renderer can ask for one deterministic scenic backdrop while this module owns
+the details of sky styling, ground-grid composition, and the glowing seam
+that ties both halves together.
+
+## browser-entry/playback/background/playback.background.ts
+
+### renderPlaybackBackground
+
+```ts
+renderPlaybackBackground(
+  context: CanvasRenderingContext2D,
+  request: PlaybackBackgroundRequest,
+): void
+```
+
+Draws the layered playback background.
+
+This boundary exists to keep atmosphere separate from gameplay entities. The
+frame renderer should be able to ask for a complete backdrop in one call
+without also absorbing starfield policy, horizon styling, and ground-grid
+composition details.
+
+The composition is intentionally chapter-like: sky first, ground second,
+horizon seam last. That ordering gives the playback scene a stable visual
+identity while keeping the background deterministic and cheap to re-render.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `request` - - Narrow render input required for background composition.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+renderPlaybackBackground(context, {
+  viewportLeftXPx: cameraLeftPx,
+  visibleWorldWidthPx: 288,
+  visibleWorldHeightPx: 512,
+  frameIndex,
+  scrollBasePx: frameIndex * pipeSpeedPxPerFrame,
+});
+```
+
+## browser-entry/playback/background/playback.background.types.ts
+
 Minimal render input required to draw the playback background.
 
 The background is intentionally treated as a deterministic camera effect
@@ -19,8 +68,6 @@ const request: PlaybackBackgroundRequest = {
   scrollBasePx: frameIndex * pipeSpeedPxPerFrame,
 };
 ```
-
-## browser-entry/playback/background/playback.background.types.ts
 
 ### PlaybackBackgroundRequest
 
@@ -90,114 +137,6 @@ Draw request for the horizon divider line.
 This narrow contract is the final handoff from layout math to the canvas
 stroke helper: world-space x extents, the pixel-snapped y position, and the
 resolved glow style needed for both line passes.
-
-## browser-entry/playback/background/playback.background.ts
-
-### renderPlaybackBackground
-
-```ts
-renderPlaybackBackground(
-  context: CanvasRenderingContext2D,
-  request: PlaybackBackgroundRequest,
-): void
-```
-
-Draws the layered playback background.
-
-The composition keeps the top two-thirds for the neon starfield, fills the
-lower band with a TRON-like perspective ground grid, and separates both
-regions with a glowing horizon divider.
-
-This is the background entrypoint the frame renderer uses when it wants one
-deterministic camera backdrop rather than a gameplay-aware scene graph.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `request` - - Narrow render input required for background composition.
-
-Returns: Nothing.
-
-Example:
-
-```ts
-renderPlaybackBackground(context, {
-  viewportLeftXPx: cameraLeftPx,
-  visibleWorldWidthPx: 288,
-  visibleWorldHeightPx: 512,
-  frameIndex,
-  scrollBasePx: frameIndex * pipeSpeedPxPerFrame,
-});
-```
-
-## browser-entry/playback/background/playback.background.services.ts
-
-### drawPlaybackBackgroundHorizon
-
-```ts
-drawPlaybackBackgroundHorizon(
-  context: CanvasRenderingContext2D,
-  sceneContext: PlaybackBackgroundSceneContext,
-): void
-```
-
-Draws the glowing horizon divider across the visible viewport.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `sceneContext` - - Derived scene geometry and style contract.
-
-Returns: Nothing.
-
-### drawPlaybackBackgroundSky
-
-```ts
-drawPlaybackBackgroundSky(
-  context: CanvasRenderingContext2D,
-  sceneContext: PlaybackBackgroundSceneContext,
-  request: PlaybackBackgroundRequest,
-): void
-```
-
-Draws the starfield parallax clipped to the upper sky band.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `sceneContext` - - Derived scene geometry and style contract.
-- `request` - - Narrow render input required for background composition.
-
-Returns: Nothing.
-
-### paintPlaybackBackgroundBase
-
-```ts
-paintPlaybackBackgroundBase(
-  context: CanvasRenderingContext2D,
-  sceneContext: PlaybackBackgroundSceneContext,
-): void
-```
-
-Paints the base background fill for the currently visible viewport.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `sceneContext` - - Derived scene geometry and style contract.
-
-Returns: Nothing.
-
-### resolvePlaybackBackgroundSceneContext
-
-```ts
-resolvePlaybackBackgroundSceneContext(
-  request: PlaybackBackgroundRequest,
-): PlaybackBackgroundSceneContext
-```
-
-Resolves the derived scene contract required by the background passes.
-
-Parameters:
-- `request` - - Narrow render input required for background composition.
-
-Returns: Immutable scene context shared by the private render helpers.
 
 ## browser-entry/playback/background/playback.background.constants.ts
 
@@ -304,6 +243,93 @@ Frozen neon paint bundle reused by the playback horizon renderer.
 Keeping this style object in the constants module prevents repeated
 allocation during every background frame while still keeping the palette
 centrally theme-owned.
+
+## browser-entry/playback/background/playback.background.services.ts
+
+### drawPlaybackBackgroundHorizon
+
+```ts
+drawPlaybackBackgroundHorizon(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackBackgroundSceneContext,
+): void
+```
+
+Draws the glowing horizon divider across the visible viewport.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `sceneContext` - - Derived scene geometry and style contract.
+
+Returns: Nothing.
+
+### drawPlaybackBackgroundSky
+
+```ts
+drawPlaybackBackgroundSky(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackBackgroundSceneContext,
+  request: PlaybackBackgroundRequest,
+): void
+```
+
+Draws the starfield parallax clipped to the upper sky band.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `sceneContext` - - Derived scene geometry and style contract.
+- `request` - - Narrow render input required for background composition.
+
+Returns: Nothing.
+
+### paintPlaybackBackgroundBase
+
+```ts
+paintPlaybackBackgroundBase(
+  context: CanvasRenderingContext2D,
+  sceneContext: PlaybackBackgroundSceneContext,
+): void
+```
+
+Paints the base background fill for the currently visible viewport.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `sceneContext` - - Derived scene geometry and style contract.
+
+Returns: Nothing.
+
+### resolvePlaybackBackgroundSceneContext
+
+```ts
+resolvePlaybackBackgroundSceneContext(
+  request: PlaybackBackgroundRequest,
+): PlaybackBackgroundSceneContext
+```
+
+Resolves the derived scene contract required by the background passes.
+
+Parameters:
+- `request` - - Narrow render input required for background composition.
+
+Returns: Immutable scene context shared by the private render helpers.
+
+## browser-entry/playback/background/playback.background.scene.services.ts
+
+### resolvePlaybackBackgroundSceneContext
+
+```ts
+resolvePlaybackBackgroundSceneContext(
+  request: PlaybackBackgroundRequest,
+): PlaybackBackgroundSceneContext
+```
+
+Resolves the derived scene contract required by the background passes.
+
+Parameters:
+- `request` - - Narrow render input required for background composition.
+
+Returns: Immutable scene context shared by the private render helpers.
 
 ## browser-entry/playback/background/playback.background.draw.services.ts
 
@@ -475,23 +501,6 @@ Parameters:
 - `factory` - - Lazy coverage builder used when the cache misses.
 
 Returns: Cached tile coverage count for the active viewport width.
-
-## browser-entry/playback/background/playback.background.scene.services.ts
-
-### resolvePlaybackBackgroundSceneContext
-
-```ts
-resolvePlaybackBackgroundSceneContext(
-  request: PlaybackBackgroundRequest,
-): PlaybackBackgroundSceneContext
-```
-
-Resolves the derived scene contract required by the background passes.
-
-Parameters:
-- `request` - - Narrow render input required for background composition.
-
-Returns: Immutable scene context shared by the private render helpers.
 
 ## browser-entry/playback/background/playback.background.utils.ts
 

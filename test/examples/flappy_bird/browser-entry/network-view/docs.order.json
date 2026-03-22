@@ -1,0 +1,12 @@
+{
+  "introFile": "network-view.ts",
+  "fileOrder": [
+    "network-view.ts",
+    "network-view.types.ts",
+    "network-view.constants.ts",
+    "network-view.layout.utils.ts",
+    "network-view.topology.utils.ts",
+    "network-view.draw.service.ts",
+    "network-view.labels.utils.ts"
+  ]
+}

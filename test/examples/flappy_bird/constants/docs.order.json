@@ -1,0 +1,23 @@
+{
+  "introFile": "constants.ts",
+  "fileOrder": [
+    "constants.ts",
+    "constants.world.ts",
+    "constants.physics.ts",
+    "constants.pipes.ts",
+    "constants.difficulty.ts",
+    "constants.observation.ts",
+    "constants.network.ts",
+    "constants.fitness.ts",
+    "constants.runtime.ts",
+    "constants.layout.ts",
+    "constants.stats.ts",
+    "constants.frame.ts",
+    "constants.rendering.ts",
+    "constants.birds.ts",
+    "constants.pipe-render.ts",
+    "constants.starfield.ts",
+    "constants.network-view.ts",
+    "constants.palette.ts"
+  ]
+}

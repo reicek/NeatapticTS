@@ -1,5 +1,76 @@
 # browser-entry/playback/frame-render
 
+High-level frame-render orchestration for playback.
+
+This is the browser playback chapter where one worker-produced snapshot turns
+into one complete on-screen frame. The boundary exists to keep render order,
+viewport setup, and champion-trail policy explicit in one place instead of
+leaking them across many drawing helpers.
+
+Read it as a fixed visual pipeline: prepare the canvas, enter viewport space,
+paint background and entities in stable order, then restore the caller state.
+That predictability is what makes the generated README useful to readers who
+need to understand where a playback visual decision actually lives.
+
+## browser-entry/playback/frame-render/playback.frame-render.service.ts
+
+### renderPopulationFrame
+
+```ts
+renderPopulationFrame(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  trailState: TrailState,
+): void
+```
+
+Draws one simulation frame for the current population state.
+
+The render order matters: background first, then pipes, then birds, then
+trails and overlays that should visually sit on top.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `renderState` - - Mutable simulation state snapshot.
+- `trailState` - - Leader trail render cache.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+renderPopulationFrame(context, renderState, trailState);
+```
+
+### updateTrailState
+
+```ts
+updateTrailState(
+  trailState: TrailState,
+  renderState: PopulationRenderState,
+): void
+```
+
+Updates the trail cache from the latest frame snapshot.
+
+The renderer intentionally keeps only a short champion trail instead of full
+history for every bird, which keeps the visual emphasis clear and the per-frame
+work small.
+
+Parameters:
+- `trailState` - - Mutable trail state.
+- `renderState` - - Current render state.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+updateTrailState(trailState, renderState);
+```
+
+## browser-entry/playback/frame-render/playback.frame-render.types.ts
+
 Local type contracts for playback frame rendering.
 
 These types are extracted from the broader frame renderer so scene state,
@@ -8,8 +79,6 @@ boundary.
 
 Together they describe the inputs and intermediate state needed to paint one
 world-space frame on the browser canvas.
-
-## browser-entry/playback/frame-render/playback.frame-render.types.ts
 
 ### PlaybackFrameSceneContext
 
@@ -86,69 +155,6 @@ Bird-paint input shared by the bird render helper module.
 
 This combines geometry and style into one small input object for lower-level
 drawing helpers.
-
-## browser-entry/playback/frame-render/playback.frame-render.service.ts
-
-High-level frame-render orchestration for playback.
-
-This boundary coordinates one visual frame of the playback experience. It
-resolves the scene, prepares the canvas, paints the background and entities,
-and maintains the short champion trail used for motion emphasis.
-
-### renderPopulationFrame
-
-```ts
-renderPopulationFrame(
-  context: CanvasRenderingContext2D,
-  renderState: PopulationRenderState,
-  trailState: TrailState,
-): void
-```
-
-Draws one simulation frame for the current population state.
-
-The render order matters: background first, then pipes, then birds, then
-trails and overlays that should visually sit on top.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `trailState` - - Leader trail render cache.
-
-Returns: Nothing.
-
-Example:
-
-```ts
-renderPopulationFrame(context, renderState, trailState);
-```
-
-### updateTrailState
-
-```ts
-updateTrailState(
-  trailState: TrailState,
-  renderState: PopulationRenderState,
-): void
-```
-
-Updates the trail cache from the latest frame snapshot.
-
-The renderer intentionally keeps only a short champion trail instead of full
-history for every bird, which keeps the visual emphasis clear and the per-frame
-work small.
-
-Parameters:
-- `trailState` - - Mutable trail state.
-- `renderState` - - Current render state.
-
-Returns: Nothing.
-
-Example:
-
-```ts
-updateTrailState(trailState, renderState);
-```
 
 ## browser-entry/playback/frame-render/playback.frame-render.services.ts
 

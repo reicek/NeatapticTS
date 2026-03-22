@@ -18,32 +18,6 @@ const layers = resolveNetworkVisualizationLayers(network, 38, 2);
 console.log(layers.length);
 ```
 
-## browser-entry/visualization/visualization.types.ts
-
-Visualization-specific color-scale contracts for network rendering.
-
-The Flappy Bird demo renders connection weights and node biases with tiered
-neon ramps so humans can quickly read sign and magnitude without parsing raw
-numbers on every edge and node.
-
-A useful mental model is that these types define the legend contract for the
-network panel: what range was observed, how values were bucketed, and which
-colors should be shown for each tier.
-
-### DynamicColorScale
-
-Dynamic tiered color scale used by visualization render layers.
-
-The scale records the observed numeric range plus the ordered threshold tiers
-used to map values into colors.
-
-### NetworkVisualizationColorScales
-
-Grouped color scales for connection and bias channels.
-
-Keeping the two scales together ensures the legend and drawing code read from
-one consistent view of the active network range.
-
 ## browser-entry/visualization/visualization.ts
 
 ### resolveNetworkVisualizationLayers
@@ -74,32 +48,31 @@ Parameters:
 
 Returns: Layered nodes for rendering.
 
-## browser-entry/visualization/visualization.errors.ts
+## browser-entry/visualization/visualization.types.ts
 
-Error text for non-finite legend bounds.
+Visualization-specific color-scale contracts for network rendering.
 
-### assertFiniteLegendBound
+The Flappy Bird demo renders connection weights and node biases with tiered
+neon ramps so humans can quickly read sign and magnitude without parsing raw
+numbers on every edge and node.
 
-```ts
-assertFiniteLegendBound(
-  value: number,
-): void
-```
+A useful mental model is that these types define the legend contract for the
+network panel: what range was observed, how values were bucketed, and which
+colors should be shown for each tier.
 
-Guards legend-bound formatting against non-finite values.
+### DynamicColorScale
 
-Parameters:
-- `value` - - Legend bound candidate.
+Dynamic tiered color scale used by visualization render layers.
 
-Returns: Nothing.
+The scale records the observed numeric range plus the ordered threshold tiers
+used to map values into colors.
 
-### FLAPPY_VISUALIZATION_NON_FINITE_BOUND_ERROR_MESSAGE
+### NetworkVisualizationColorScales
 
-Error text for non-finite legend bounds.
+Grouped color scales for connection and bias channels.
 
-### VisualizationNonFiniteBoundError
-
-Thrown when a legend bound cannot be safely formatted.
+Keeping the two scales together ensures the legend and drawing code read from
+one consistent view of the active network range.
 
 ## browser-entry/visualization/visualization.constants.ts
 
@@ -631,6 +604,78 @@ Parameters:
 
 Returns: Nothing.
 
+## browser-entry/visualization/visualization.legend.utils.ts
+
+Legend-layout helpers for network visualization.
+
+The legend explains how colors map back to numeric weights and biases. These
+helpers turn color scales into labeled rows and place the legend so it stays
+readable across different canvas sizes.
+
+### createColorLegendRows
+
+```ts
+createColorLegendRows(
+  scale: DynamicColorScale,
+  symbol: "w" | "b",
+): ColorLegendRow[]
+```
+
+Creates legend rows from ordered tiers.
+
+Each row describes one closed numeric interval and the swatch used to paint
+it, making the dynamic color scale legible to a human reader.
+
+Parameters:
+- `scale` - - Dynamic color scale containing bounds, tiers, and overflow color.
+- `symbol` - - Label symbol.
+
+Returns: Legend rows.
+
+### resolveNetworkLegendLayout
+
+```ts
+resolveNetworkLegendLayout(
+  context: CanvasRenderingContext2D,
+  connectionLegendRows: ColorLegendRow[],
+  biasLegendRows: ColorLegendRow[],
+): NetworkLegendLayout
+```
+
+Resolves network legend layout from canvas constraints.
+
+The legend layout adapts between regular and compact modes so the network
+panel can stay informative on smaller viewports without swallowing the whole
+canvas.
+
+Parameters:
+- `context` - - Render context.
+- `connectionLegendRows` - - Connection legend rows.
+- `biasLegendRows` - - Bias legend rows.
+
+Returns: Computed legend layout.
+
+### resolveDefaultNetworkLegendLayout
+
+```ts
+resolveDefaultNetworkLegendLayout(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+): NetworkLegendLayout
+```
+
+Resolves default legend layout from internal tier definitions.
+
+This convenience helper is used when the caller wants a layout driven by the
+currently active network and does not need to assemble the intermediate rows
+manually.
+
+Parameters:
+- `context` - - Render context.
+- `network` - - Active network instance.
+
+Returns: Legend layout.
+
 ## browser-entry/visualization/visualization.colors.utils.ts
 
 Color-scale synthesis helpers for network visualization.
@@ -736,78 +781,6 @@ Parameters:
 
 Returns: Dynamic scales used by graph drawing and legend rows.
 
-## browser-entry/visualization/visualization.legend.utils.ts
-
-Legend-layout helpers for network visualization.
-
-The legend explains how colors map back to numeric weights and biases. These
-helpers turn color scales into labeled rows and place the legend so it stays
-readable across different canvas sizes.
-
-### createColorLegendRows
-
-```ts
-createColorLegendRows(
-  scale: DynamicColorScale,
-  symbol: "w" | "b",
-): ColorLegendRow[]
-```
-
-Creates legend rows from ordered tiers.
-
-Each row describes one closed numeric interval and the swatch used to paint
-it, making the dynamic color scale legible to a human reader.
-
-Parameters:
-- `scale` - - Dynamic color scale containing bounds, tiers, and overflow color.
-- `symbol` - - Label symbol.
-
-Returns: Legend rows.
-
-### resolveNetworkLegendLayout
-
-```ts
-resolveNetworkLegendLayout(
-  context: CanvasRenderingContext2D,
-  connectionLegendRows: ColorLegendRow[],
-  biasLegendRows: ColorLegendRow[],
-): NetworkLegendLayout
-```
-
-Resolves network legend layout from canvas constraints.
-
-The legend layout adapts between regular and compact modes so the network
-panel can stay informative on smaller viewports without swallowing the whole
-canvas.
-
-Parameters:
-- `context` - - Render context.
-- `connectionLegendRows` - - Connection legend rows.
-- `biasLegendRows` - - Bias legend rows.
-
-Returns: Computed legend layout.
-
-### resolveDefaultNetworkLegendLayout
-
-```ts
-resolveDefaultNetworkLegendLayout(
-  context: CanvasRenderingContext2D,
-  network: default | undefined,
-): NetworkLegendLayout
-```
-
-Resolves default legend layout from internal tier definitions.
-
-This convenience helper is used when the caller wants a layout driven by the
-currently active network and does not need to assemble the intermediate rows
-manually.
-
-Parameters:
-- `context` - - Render context.
-- `network` - - Active network instance.
-
-Returns: Legend layout.
-
 ## browser-entry/visualization/visualization.topology.utils.ts
 
 Shared topology formatting helpers used by network-view and visualization.
@@ -861,3 +834,30 @@ Parameters:
 - `outputSize` - - Output count fallback.
 
 Returns: Layered nodes for rendering.
+
+## browser-entry/visualization/visualization.errors.ts
+
+Error text for non-finite legend bounds.
+
+### assertFiniteLegendBound
+
+```ts
+assertFiniteLegendBound(
+  value: number,
+): void
+```
+
+Guards legend-bound formatting against non-finite values.
+
+Parameters:
+- `value` - - Legend bound candidate.
+
+Returns: Nothing.
+
+### FLAPPY_VISUALIZATION_NON_FINITE_BOUND_ERROR_MESSAGE
+
+Error text for non-finite legend bounds.
+
+### VisualizationNonFiniteBoundError
+
+Thrown when a legend bound cannot be safely formatted.

@@ -1,8 +1,22 @@
 # evaluation
 
-Default difficulty scale for rollouts when caller does not provide one.
+Public evaluation contracts for scoring Flappy Bird policies.
 
-A value of `1` means full adaptive difficulty is enabled during evaluation.
+This folder exists to answer a narrower question than the trainer does:
+given one network, one or more deterministic seeds, and one scoring policy,
+what evidence should evolution use when deciding whether that network is any
+good?
+
+The answer in this example is intentionally stricter than a toy demo. A
+single rollout is useful for inspection, but shared-seed batches are the real
+selection surface because they reduce luck and expose instability.
+
+Read the exports in that order:
+
+- `FlappyRolloutOptions` defines what a caller may ask evaluation to do.
+- `FlappyEpisodeResult` captures what happened in one seeded episode.
+- `FlappySeedBatchEvaluation` captures the trainer-facing evidence used to
+  rank genomes more fairly.
 
 ## evaluation/evaluation.types.ts
 
@@ -35,6 +49,10 @@ These statistics are the trainer-facing view of evaluation quality: mean,
 median, $p90$, stability, and average gameplay progress.
 
 ## evaluation/evaluation.constants.ts
+
+Default difficulty scale for rollouts when caller does not provide one.
+
+A value of `1` means full adaptive difficulty is enabled during evaluation.
 
 ### FLAPPY_EVALUATION_DEFAULT_DIFFICULTY_SCALE
 
@@ -119,78 +137,6 @@ Seed-mix first multiplicative avalanche constant.
 
 Seed-mix second multiplicative avalanche constant.
 
-## evaluation/evaluation.rollout.service.ts
-
-Public rollout compatibility facade.
-
-Keeping this file at the evaluation layer preserves the established import
-path while the actual rollout orchestration lives behind the dedicated
-rollout-owned module boundary.
-
-This is the public evaluation-layer shelf for callers that should not need to
-know about the rollout subfolder layout.
-
-Minimal usage sketch:
-```ts
-const result = rolloutEpisode(network, {
-  seed: 123,
-  normalizeFitness: true,
-});
-```
-
-### rolloutEpisode
-
-```ts
-rolloutEpisode(
-  network: FlappyNetworkLike,
-  rolloutOptions: FlappyRolloutOptions,
-): FlappyEpisodeResult
-```
-
-Roll out an episode and return details.
-
-Parameters:
-- `network` - - Genome/network to evaluate.
-- `rolloutOptions` - - Optional rollout controls.
-
-Returns: Episode result details.
-
-Example:
-
-```ts
-const result = rolloutEpisode(network, {
-  seed: 123,
-  normalizeFitness: true,
-  maxFrames: 2_000,
-});
-
-console.log(result.fitness, result.doneReason);
-```
-
-## evaluation/evaluation.seed.utils.ts
-
-### mixGenomeEvaluationSeed
-
-```ts
-mixGenomeEvaluationSeed(
-  genomeId: number,
-): number
-```
-
-Mixes a genome identifier into a stable uint32 rollout seed.
-
-This keeps evaluation deterministic per genome while still spreading nearby
-genome ids across the RNG state space to reduce correlated rollouts.
-
-If you want background reading, the Wikipedia article on "hash function"
-gives a reasonable intuition for why a few avalanche-style mixing steps help
-nearby ids map to less-correlated seed values.
-
-Parameters:
-- `genomeId` - - Genome id from NEAT bookkeeping.
-
-Returns: Mixed uint32 seed.
-
 ## evaluation/evaluation.fitness.utils.ts
 
 ### evaluateFlappyFitness
@@ -243,4 +189,76 @@ Example:
 const aggregate = evaluateFlappyFitnessAcrossSeeds(network, [11, 22, 33], {
   normalizeFitness: true,
 });
+```
+
+## evaluation/evaluation.seed.utils.ts
+
+### mixGenomeEvaluationSeed
+
+```ts
+mixGenomeEvaluationSeed(
+  genomeId: number,
+): number
+```
+
+Mixes a genome identifier into a stable uint32 rollout seed.
+
+This keeps evaluation deterministic per genome while still spreading nearby
+genome ids across the RNG state space to reduce correlated rollouts.
+
+If you want background reading, the Wikipedia article on "hash function"
+gives a reasonable intuition for why a few avalanche-style mixing steps help
+nearby ids map to less-correlated seed values.
+
+Parameters:
+- `genomeId` - - Genome id from NEAT bookkeeping.
+
+Returns: Mixed uint32 seed.
+
+## evaluation/evaluation.rollout.service.ts
+
+Public rollout compatibility facade.
+
+Keeping this file at the evaluation layer preserves the established import
+path while the actual rollout orchestration lives behind the dedicated
+rollout-owned module boundary.
+
+This is the public evaluation-layer shelf for callers that should not need to
+know about the rollout subfolder layout.
+
+Minimal usage sketch:
+```ts
+const result = rolloutEpisode(network, {
+  seed: 123,
+  normalizeFitness: true,
+});
+```
+
+### rolloutEpisode
+
+```ts
+rolloutEpisode(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+): FlappyEpisodeResult
+```
+
+Roll out an episode and return details.
+
+Parameters:
+- `network` - - Genome/network to evaluate.
+- `rolloutOptions` - - Optional rollout controls.
+
+Returns: Episode result details.
+
+Example:
+
+```ts
+const result = rolloutEpisode(network, {
+  seed: 123,
+  normalizeFitness: true,
+  maxFrames: 2_000,
+});
+
+console.log(result.fitness, result.doneReason);
 ```

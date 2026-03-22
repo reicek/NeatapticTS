@@ -20,19 +20,19 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 - `flappy_bird` reference demo split and documentation baseline [DONE]
 - Main app NEAT surface is already SOLID split [DONE]
 - Educational documentation and split follow-through lane [WIP]
-   - [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md) [WIP]
+   - [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md) [DONE]
    - [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [WIP]
    - [methods-solid-split.plans.md](methods-solid-split.plans.md) [DONE]
    - [methods-docs.plans.md](methods-docs.plans.md) [DONE]
    - [neat-docs.plans.md](neat-docs.plans.md) [WIP]
    - [utils-docs.plans.md](utils-docs.plans.md) [DONE]
-   - Both demos are now solid split and documented enough to stop being structural blockers.
+   - Both demos are now solid split and the Flappy Bird documentation pass is complete enough to stop being a documentation blocker.
    - The remaining structural polish in Phase 0 is the broader educational-docs lane outside methods, the architecture folderization pass, and the repository-wide modernization pass with their validation gate.
 - ES2023 modernization (after the demo-structure pass; mechanical refactors + CI enforcement) [PLANNED]
    - Plan: [ES2023 migration](ES2023%20migration)
    - Scope note: this phase is syntax/module modernization plus CI enforcement. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
 
-**Gate to Phase 1:** both demos are solid split and documented, the main app split is stable, the active documentation pass is complete enough to stop obscuring ownership boundaries, and `npx tsc --noEmit -p tsconfig.json` plus `npm test` are green after the modernization pass.
+**Gate to Phase 1:** both demos are solid split and documented, the main app split is stable, the remaining documentation work is no longer obscuring ownership boundaries, and `npx tsc --noEmit -p tsconfig.json` plus `npm test` are green after the modernization pass.
 
 ## Phase 1 — Core Correctness + Determinism Foundations (Critical Path)
 
@@ -145,7 +145,7 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: the project is still in **Phase 0**, with both demos solid split and documented, the main app already solid split, the methods documentation pass now closed, the architecture split pass now active, the broader educational documentation lane still in progress, and repository-wide ES2023 modernization still remaining in the Phase 0 lane.
+Current status: the project is still in **Phase 0**, with both demos solid split and documented, the Flappy Bird documentation pass now closed, the main app already solid split, the architecture split pass now active, the broader educational documentation lane still in progress outside Flappy Bird, and repository-wide ES2023 modernization still remaining in the Phase 0 lane.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
@@ -159,7 +159,7 @@ file has a visible place in the roadmap.
 
 ### Phase 0 inventory
 
-1. [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md) [WIP]
+1. [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md) [DONE]
 2. [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [WIP]
 3. [methods-solid-split.plans.md](methods-solid-split.plans.md) [DONE]
 4. [methods-docs.plans.md](methods-docs.plans.md) [DONE]

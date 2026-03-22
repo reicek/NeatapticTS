@@ -1,0 +1,15 @@
+{
+  "introFile": "host.ts",
+  "fileOrder": [
+    "host.ts",
+    "host.types.ts",
+    "host.constants.ts",
+    "host.canvas.service.ts",
+    "host.dom.service.ts",
+    "host.stats.service.ts",
+    "host.resize.service.ts"
+  ],
+  "folderOrder": [
+    "resize"
+  ]
+}

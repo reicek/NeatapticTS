@@ -1,0 +1,13 @@
+{
+  "introFile": "visualization.ts",
+  "fileOrder": [
+    "visualization.ts",
+    "visualization.types.ts",
+    "visualization.constants.ts",
+    "visualization.draw.service.ts",
+    "visualization.legend.utils.ts",
+    "visualization.colors.utils.ts",
+    "visualization.topology.utils.ts",
+    "visualization.errors.ts"
+  ]
+}

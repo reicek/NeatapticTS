@@ -1,0 +1,16 @@
+{
+  "introFile": "playback.background.ts",
+  "fileOrder": [
+    "playback.background.ts",
+    "playback.background.types.ts",
+    "playback.background.constants.ts",
+    "playback.background.services.ts",
+    "playback.background.scene.services.ts",
+    "playback.background.draw.services.ts",
+    "playback.background.cache.services.ts",
+    "playback.background.utils.ts"
+  ],
+  "folderOrder": [
+    "ground-grid"
+  ]
+}

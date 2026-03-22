@@ -1,0 +1,15 @@
+{
+  "introFile": "browser-entry.ts",
+  "fileOrder": [
+    "browser-entry.ts",
+    "browser-entry.types.ts"
+  ],
+  "folderOrder": [
+    "runtime",
+    "host",
+    "worker-channel",
+    "playback",
+    "network-view",
+    "visualization"
+  ]
+}

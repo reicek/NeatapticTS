@@ -13,45 +13,6 @@ const evolutionWorker = createEvolutionWorker();
 const generation = await requestWorkerGeneration(evolutionWorker);
 ```
 
-## browser-entry/worker-channel/worker-channel.types.ts
-
-Shared protocol contracts for the browser-entry worker channel.
-
-These types define the thin translation layer between generic worker messages
-and the specific request/response flows used by the Flappy Bird browser UI.
-
-If you want background reading, the Wikipedia article on "message passing"
-gives the right mental model for this boundary.
-
-### WorkerChannelMessage
-
-Aliases the shared worker message union for worker-channel modules.
-
-Keeping the alias local makes submodules read as protocol-focused code rather
-than browser-entry plumbing.
-
-### WorkerChannelGenerationPayload
-
-Aliases the generation payload contract returned by the worker.
-
-This payload arrives when one NEAT generation has finished evolving and the
-browser is ready to update its "best so far" view.
-
-### WorkerChannelPlaybackStepPayload
-
-Aliases the playback-step payload contract returned by the worker.
-
-This is the browser-side shape of one streamed playback frame plus its
-accompanying aggregate telemetry.
-
-### WorkerChannelPlaybackStepRequest
-
-Request payload sent when asking the worker to advance playback simulation.
-
-The request declares both simulation budget and viewport dimensions so the
-worker can package a frame that already matches the browser's current canvas
-world.
-
 ## browser-entry/worker-channel/worker-channel.ts
 
 ### createEvolutionWorker
@@ -96,84 +57,44 @@ Parameters:
 
 Returns: Playback-step payload including snapshot and completion marker.
 
-## browser-entry/worker-channel/worker-channel.errors.ts
+## browser-entry/worker-channel/worker-channel.types.ts
 
-Error raised when the evolution worker responds with an explicit protocol error payload.
+Shared protocol contracts for the browser-entry worker channel.
 
-Protocol errors are different from runtime worker crashes: the worker is
-alive, but it is explicitly telling the browser that the requested operation
-could not be completed.
+These types define the thin translation layer between generic worker messages
+and the specific request/response flows used by the Flappy Bird browser UI.
 
-### createWorkerChannelResponseError
+If you want background reading, the Wikipedia article on "message passing"
+gives the right mental model for this boundary.
 
-```ts
-createWorkerChannelResponseError(
-  message: string,
-): Error
-```
+### WorkerChannelMessage
 
-Converts worker protocol error payloads into typed worker-channel errors.
+Aliases the shared worker message union for worker-channel modules.
 
-Using a dedicated error class makes it easier for browser code to distinguish
-"worker rejected my request" from "the worker crashed".
+Keeping the alias local makes submodules read as protocol-focused code rather
+than browser-entry plumbing.
 
-Parameters:
-- `message` - - Message supplied by the worker error payload.
+### WorkerChannelGenerationPayload
 
-Returns: Typed worker-channel protocol error.
+Aliases the generation payload contract returned by the worker.
 
-### resolveWorkerChannelRuntimeError
+This payload arrives when one NEAT generation has finished evolving and the
+browser is ready to update its "best so far" view.
 
-```ts
-resolveWorkerChannelRuntimeError(
-  errorLike: unknown,
-  fallbackMessage: string,
-): Error
-```
+### WorkerChannelPlaybackStepPayload
 
-Resolves a worker `ErrorEvent` into a normalized `Error` instance.
+Aliases the playback-step payload contract returned by the worker.
 
-Browser worker errors are not always surfaced as proper `Error` objects, so
-this helper converts the event payload into a predictable error shape before
-it escapes the channel layer.
+This is the browser-side shape of one streamed playback frame plus its
+accompanying aggregate telemetry.
 
-Parameters:
-- `errorLike` - - Optional `event.error` payload.
-- `fallbackMessage` - - Fallback message from `event.message`.
+### WorkerChannelPlaybackStepRequest
 
-Returns: Normalized runtime error.
+Request payload sent when asking the worker to advance playback simulation.
 
-### WorkerChannelResponseError
-
-Error raised when the evolution worker responds with an explicit protocol error payload.
-
-Protocol errors are different from runtime worker crashes: the worker is
-alive, but it is explicitly telling the browser that the requested operation
-could not be completed.
-
-## browser-entry/worker-channel/worker-channel.url.service.ts
-
-Resolves the evolution worker bundle URL relative to the active browser-entry bundle.
-
-The browser bundle and worker bundle are emitted side-by-side by the docs/demo
-build. Resolving the worker URL relative to the currently loaded browser
-bundle keeps the demo portable across local files, static hosting, and docs
-builds without hard-coding absolute paths.
-
-### resolveEvolutionWorkerBundleUrl
-
-```ts
-resolveEvolutionWorkerBundleUrl(): string
-```
-
-Resolves the evolution worker bundle URL relative to the active browser-entry bundle.
-
-The browser bundle and worker bundle are emitted side-by-side by the docs/demo
-build. Resolving the worker URL relative to the currently loaded browser
-bundle keeps the demo portable across local files, static hosting, and docs
-builds without hard-coding absolute paths.
-
-Returns: Absolute URL string for `flappy-evolution.worker.bundle.js`.
+The request declares both simulation budget and viewport dimensions so the
+worker can package a frame that already matches the browser's current canvas
+world.
 
 ## browser-entry/worker-channel/worker-channel.request.service.ts
 
@@ -226,6 +147,33 @@ Configuration used for one worker request/response lifecycle.
 
 Callers provide the worker, the outbound message, and the predicate that says
 which inbound worker message should satisfy the request.
+
+## browser-entry/worker-channel/worker-channel.generation.service.ts
+
+Generation request helper for the browser-entry worker channel.
+
+This module asks the worker to evolve until the next generation boundary and
+then returns the summary payload the browser needs for HUD updates and best
+network visualization.
+
+### requestWorkerGeneration
+
+```ts
+requestWorkerGeneration(
+  evolutionWorker: Worker,
+): Promise<EvolutionGenerationPayload>
+```
+
+Requests the next evolved generation payload from the worker channel.
+
+Unlike playback streaming, generation evolution is a simple single-response
+exchange: ask for the next generation and wait for the next
+`generation-ready` message.
+
+Parameters:
+- `evolutionWorker` - - Worker emitting generation-ready messages.
+
+Returns: Next generation payload.
 
 ## browser-entry/worker-channel/worker-channel.playback.service.ts
 
@@ -289,29 +237,81 @@ Parameters:
 
 Returns: Persistent playback worker-channel state for the worker.
 
-## browser-entry/worker-channel/worker-channel.generation.service.ts
+## browser-entry/worker-channel/worker-channel.url.service.ts
 
-Generation request helper for the browser-entry worker channel.
+Resolves the evolution worker bundle URL relative to the active browser-entry bundle.
 
-This module asks the worker to evolve until the next generation boundary and
-then returns the summary payload the browser needs for HUD updates and best
-network visualization.
+The browser bundle and worker bundle are emitted side-by-side by the docs/demo
+build. Resolving the worker URL relative to the currently loaded browser
+bundle keeps the demo portable across local files, static hosting, and docs
+builds without hard-coding absolute paths.
 
-### requestWorkerGeneration
+### resolveEvolutionWorkerBundleUrl
 
 ```ts
-requestWorkerGeneration(
-  evolutionWorker: Worker,
-): Promise<EvolutionGenerationPayload>
+resolveEvolutionWorkerBundleUrl(): string
 ```
 
-Requests the next evolved generation payload from the worker channel.
+Resolves the evolution worker bundle URL relative to the active browser-entry bundle.
 
-Unlike playback streaming, generation evolution is a simple single-response
-exchange: ask for the next generation and wait for the next
-`generation-ready` message.
+The browser bundle and worker bundle are emitted side-by-side by the docs/demo
+build. Resolving the worker URL relative to the currently loaded browser
+bundle keeps the demo portable across local files, static hosting, and docs
+builds without hard-coding absolute paths.
+
+Returns: Absolute URL string for `flappy-evolution.worker.bundle.js`.
+
+## browser-entry/worker-channel/worker-channel.errors.ts
+
+Error raised when the evolution worker responds with an explicit protocol error payload.
+
+Protocol errors are different from runtime worker crashes: the worker is
+alive, but it is explicitly telling the browser that the requested operation
+could not be completed.
+
+### createWorkerChannelResponseError
+
+```ts
+createWorkerChannelResponseError(
+  message: string,
+): Error
+```
+
+Converts worker protocol error payloads into typed worker-channel errors.
+
+Using a dedicated error class makes it easier for browser code to distinguish
+"worker rejected my request" from "the worker crashed".
 
 Parameters:
-- `evolutionWorker` - - Worker emitting generation-ready messages.
+- `message` - - Message supplied by the worker error payload.
 
-Returns: Next generation payload.
+Returns: Typed worker-channel protocol error.
+
+### resolveWorkerChannelRuntimeError
+
+```ts
+resolveWorkerChannelRuntimeError(
+  errorLike: unknown,
+  fallbackMessage: string,
+): Error
+```
+
+Resolves a worker `ErrorEvent` into a normalized `Error` instance.
+
+Browser worker errors are not always surfaced as proper `Error` objects, so
+this helper converts the event payload into a predictable error shape before
+it escapes the channel layer.
+
+Parameters:
+- `errorLike` - - Optional `event.error` payload.
+- `fallbackMessage` - - Fallback message from `event.message`.
+
+Returns: Normalized runtime error.
+
+### WorkerChannelResponseError
+
+Error raised when the evolution worker responds with an explicit protocol error payload.
+
+Protocol errors are different from runtime worker crashes: the worker is
+alive, but it is explicitly telling the browser that the requested operation
+could not be completed.

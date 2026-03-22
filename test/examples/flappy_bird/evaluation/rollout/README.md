@@ -1,47 +1,5 @@
 # evaluation/rollout
 
-Rollout-internal type contracts.
-
-These runtime-only types are the private vocabulary of one rollout episode.
-They keep the public evaluation API compact while still giving the rollout
-loop explicit names for the data it carries between phases.
-
-Read them as three layers:
-
-- `RolloutEpisodeContext`: immutable, normalized configuration.
-- `RolloutEpisodeRuntimeState`: mutable execution state.
-- fitness and shaping types: named reward channels used during folding.
-
-## evaluation/rollout/evaluation.rollout.types.ts
-
-### RolloutEpisodeContext
-
-Immutable rollout options normalized into execution-safe ranges.
-
-Every field here is ready for direct use inside the episode loop.
-
-### RolloutEpisodeRuntimeState
-
-Mutable runtime state accumulated while one rollout episode executes.
-
-This is the mutable side of the rollout: world state, RNG, temporal memory,
-and the counters accumulated during execution.
-
-### RolloutFitnessBreakdown
-
-Fitness-channel breakdown used to compose the public episode result.
-
-Named channels make reward design easier to audit than a single opaque number.
-
-### DenseShapingRewardComponents
-
-Per-frame dense shaping channels resolved from consecutive observations.
-
-The shaping system rewards more than survival: it also tracks approach,
-centering, clearance, and stable motion.
-
-## evaluation/rollout/evaluation.rollout.service.ts
-
 Rollout orchestration module.
 
 This file will host the internal rollout orchestration entry while the
@@ -68,6 +26,8 @@ flowchart LR
     EarlyStop -->|Yes| Finalize["finalize timeout state"]
     Finalize --> Result["compose FlappyEpisodeResult"]
 ```
+
+## evaluation/rollout/evaluation.rollout.service.ts
 
 ### rolloutEpisode
 
@@ -279,48 +239,6 @@ Parameters:
 
 Returns: Nothing.
 
-## evaluation/rollout/evaluation.rollout.constants.ts
-
-Rollout-local constants.
-
-These constants are the small semantic anchors that keep the rollout code
-readable: default ids, minimum clamps, zero baselines, and explicit done
-reasons.
-
-Naming these sentinels explicitly keeps rollout code easier to read than a
-sea of raw `0`, `1`, and string literals.
-
-### FLAPPY_ROLLOUT_DEFAULT_GENOME_ID
-
-Default genome id used when a network does not expose one.
-
-### FLAPPY_ROLLOUT_MIN_MAX_FRAMES
-
-Minimum positive frame-like scalar used by rollout normalization.
-
-### FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_GRACE_FRAMES
-
-Minimum grace period allowed before early termination can activate.
-
-### FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_CONSECUTIVE_FRAMES
-
-Minimum unrecoverable-frame streak required for early termination.
-
-### FLAPPY_ROLLOUT_ZERO_FITNESS
-
-Shared zero baseline used across rollout fitness and counters.
-
-This acts as the semantic baseline for both shaping accumulation and several
-rollout guard conditions.
-
-### FLAPPY_ROLLOUT_DONE_REASON_COLLISION
-
-Rollout done reason used by heuristic early termination.
-
-### FLAPPY_ROLLOUT_DONE_REASON_TIMEOUT
-
-Rollout done reason used when the episode exhausts its frame budget.
-
 ## evaluation/rollout/evaluation.rollout.utils.ts
 
 Rollout shaping and result helpers.
@@ -503,3 +421,85 @@ Parameters:
 - `pipeProgressTarget` - - Optional target used to normalize pipe progress.
 
 Returns: Normalized composite fitness.
+
+## evaluation/rollout/evaluation.rollout.types.ts
+
+Rollout-internal type contracts.
+
+These runtime-only types are the private vocabulary of one rollout episode.
+They keep the public evaluation API compact while still giving the rollout
+loop explicit names for the data it carries between phases.
+
+Read them as three layers:
+
+- `RolloutEpisodeContext`: immutable, normalized configuration.
+- `RolloutEpisodeRuntimeState`: mutable execution state.
+- fitness and shaping types: named reward channels used during folding.
+
+### RolloutEpisodeContext
+
+Immutable rollout options normalized into execution-safe ranges.
+
+Every field here is ready for direct use inside the episode loop.
+
+### RolloutEpisodeRuntimeState
+
+Mutable runtime state accumulated while one rollout episode executes.
+
+This is the mutable side of the rollout: world state, RNG, temporal memory,
+and the counters accumulated during execution.
+
+### RolloutFitnessBreakdown
+
+Fitness-channel breakdown used to compose the public episode result.
+
+Named channels make reward design easier to audit than a single opaque number.
+
+### DenseShapingRewardComponents
+
+Per-frame dense shaping channels resolved from consecutive observations.
+
+The shaping system rewards more than survival: it also tracks approach,
+centering, clearance, and stable motion.
+
+## evaluation/rollout/evaluation.rollout.constants.ts
+
+Rollout-local constants.
+
+These constants are the small semantic anchors that keep the rollout code
+readable: default ids, minimum clamps, zero baselines, and explicit done
+reasons.
+
+Naming these sentinels explicitly keeps rollout code easier to read than a
+sea of raw `0`, `1`, and string literals.
+
+### FLAPPY_ROLLOUT_DEFAULT_GENOME_ID
+
+Default genome id used when a network does not expose one.
+
+### FLAPPY_ROLLOUT_MIN_MAX_FRAMES
+
+Minimum positive frame-like scalar used by rollout normalization.
+
+### FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_GRACE_FRAMES
+
+Minimum grace period allowed before early termination can activate.
+
+### FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_CONSECUTIVE_FRAMES
+
+Minimum unrecoverable-frame streak required for early termination.
+
+### FLAPPY_ROLLOUT_ZERO_FITNESS
+
+Shared zero baseline used across rollout fitness and counters.
+
+This acts as the semantic baseline for both shaping accumulation and several
+rollout guard conditions.
+
+### FLAPPY_ROLLOUT_DONE_REASON_COLLISION
+
+Rollout done reason used by heuristic early termination.
+
+### FLAPPY_ROLLOUT_DONE_REASON_TIMEOUT
+
+Rollout done reason used when the episode exhausts its frame budget.

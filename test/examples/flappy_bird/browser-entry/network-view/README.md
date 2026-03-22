@@ -1,19 +1,18 @@
 # browser-entry/network-view
 
-Shared type contracts for network-view overlays.
+Network-view orchestration for the browser-side architecture panel.
 
-The most notable overlay is the input-group label band system, which annotates
-stacked temporal observation channels so the input layer reads as grouped
-semantics instead of a flat strip of anonymous nodes.
+This module is the browser-facing fold from a live evolved controller to a
+readable inspection panel. It does not own the low-level drawing primitives,
+and it does not invent topology semantics from scratch. Instead it composes
+both into one higher-level question: how should this network be laid out so a
+human can actually learn from it?
 
-## browser-entry/network-view/network-view.types.ts
-
-### InputGroupLabelBand
-
-Input-group label band geometry and style contract.
-
-Each band identifies a contiguous span of input nodes and the visual style
-used to render that group marker.
+The boundary exists because "draw the network" hides several distinct jobs:
+summarize topology, size the panel, place nodes, choose overlay policy, and
+then delegate the final painting work. Keeping those steps together here makes
+the generated README read like an inspection chapter instead of a pile of
+canvas helpers.
 
 ## browser-entry/network-view/network-view.ts
 
@@ -96,18 +95,6 @@ Parameters:
 - `outputSize` - - Configured output size.
 
 Returns: Readable architecture label.
-
-### NetworkTopologySummary
-
-Network-view orchestration for the browser-side architecture panel.
-
-This subsystem sits between raw network data and the lower-level visualization
-drawing helpers. It resolves topology summaries, chooses panel size, lays out
-nodes inside the drawable area, and coordinates overlays such as legends and
-input-group bands.
-
-That one call is the high-level fold from an active network to a readable
-panel: background, graph layout, legend, and input-group overlays.
 
 ### resolveNetworkVisualizationScene
 
@@ -410,6 +397,21 @@ Parameters:
 
 Returns: Hidden-layer label.
 
+## browser-entry/network-view/network-view.types.ts
+
+Shared type contracts for network-view overlays.
+
+The most notable overlay is the input-group label band system, which annotates
+stacked temporal observation channels so the input layer reads as grouped
+semantics instead of a flat strip of anonymous nodes.
+
+### InputGroupLabelBand
+
+Input-group label band geometry and style contract.
+
+Each band identifies a contiguous span of input nodes and the visual style
+used to render that group marker.
+
 ## browser-entry/network-view/network-view.constants.ts
 
 Ordered labels for grouped Flappy network input bands.
@@ -417,81 +419,6 @@ Ordered labels for grouped Flappy network input bands.
 ### FLAPPY_INPUT_GROUP_LABELS
 
 Ordered labels for grouped Flappy network input bands.
-
-## browser-entry/network-view/network-view.draw.service.ts
-
-Overlay drawing helpers specific to the network-view panel.
-
-These helpers render semantic guides that sit on top of the raw graph, most
-notably the colored input-group bands that explain how temporal observation
-channels are organized.
-
-### drawInputGroupLabelBands
-
-```ts
-drawInputGroupLabelBands(
-  context: CanvasRenderingContext2D,
-  positionedNodes: PositionedNetworkNodeLike[],
-  nodeDimensions: NetworkNodeDimensionsLike,
-): void
-```
-
-Draws vertical neon bands that label semantic groups in the input layer.
-
-The bands make the input layer readable as domain features rather than just a
-numbered stack of nodes.
-
-Parameters:
-- `context` - - Canvas 2D rendering context.
-- `positionedNodes` - - Positioned nodes in graph coordinates.
-- `nodeDimensions` - - Resolved node dimensions.
-
-Returns: Nothing.
-
-### drawRoundedRect
-
-```ts
-drawRoundedRect(
-  context: CanvasRenderingContext2D,
-  leftXPx: number,
-  topYPx: number,
-  widthPx: number,
-  heightPx: number,
-  radiusPx: number,
-  fillColor: string,
-): void
-```
-
-Draws a filled rounded rectangle path.
-
-This is the small geometry primitive used by the input-group band renderer.
-
-## browser-entry/network-view/network-view.labels.utils.ts
-
-Semantic input-label helpers for the network-view panel.
-
-The Flappy controller input layer is not just a list of anonymous scalars; it
-is organized into stacked observation frames plus action-history channels.
-These helpers recover that grouping for visual annotation.
-
-### resolveInputGroupLabelBands
-
-```ts
-resolveInputGroupLabelBands(
-  inputNodeCount: number,
-): InputGroupLabelBand[]
-```
-
-Resolves input-layer semantic label bands for Flappy temporal observation channels.
-
-When the input size matches the expected temporal-memory layout, the view can
-annotate groups such as stacked frames and action channels directly beside the
-input layer.
-
-Parameters:
-- `inputNodeCount` - - Input-layer node count.
-
-Returns: Group label ranges with band colors.
 
 ## browser-entry/network-view/network-view.layout.utils.ts
 
@@ -596,3 +523,78 @@ Parameters:
 - `outputSize` - - Output count fallback.
 
 Returns: Layered nodes for rendering.
+
+## browser-entry/network-view/network-view.draw.service.ts
+
+Overlay drawing helpers specific to the network-view panel.
+
+These helpers render semantic guides that sit on top of the raw graph, most
+notably the colored input-group bands that explain how temporal observation
+channels are organized.
+
+### drawInputGroupLabelBands
+
+```ts
+drawInputGroupLabelBands(
+  context: CanvasRenderingContext2D,
+  positionedNodes: PositionedNetworkNodeLike[],
+  nodeDimensions: NetworkNodeDimensionsLike,
+): void
+```
+
+Draws vertical neon bands that label semantic groups in the input layer.
+
+The bands make the input layer readable as domain features rather than just a
+numbered stack of nodes.
+
+Parameters:
+- `context` - - Canvas 2D rendering context.
+- `positionedNodes` - - Positioned nodes in graph coordinates.
+- `nodeDimensions` - - Resolved node dimensions.
+
+Returns: Nothing.
+
+### drawRoundedRect
+
+```ts
+drawRoundedRect(
+  context: CanvasRenderingContext2D,
+  leftXPx: number,
+  topYPx: number,
+  widthPx: number,
+  heightPx: number,
+  radiusPx: number,
+  fillColor: string,
+): void
+```
+
+Draws a filled rounded rectangle path.
+
+This is the small geometry primitive used by the input-group band renderer.
+
+## browser-entry/network-view/network-view.labels.utils.ts
+
+Semantic input-label helpers for the network-view panel.
+
+The Flappy controller input layer is not just a list of anonymous scalars; it
+is organized into stacked observation frames plus action-history channels.
+These helpers recover that grouping for visual annotation.
+
+### resolveInputGroupLabelBands
+
+```ts
+resolveInputGroupLabelBands(
+  inputNodeCount: number,
+): InputGroupLabelBand[]
+```
+
+Resolves input-layer semantic label bands for Flappy temporal observation channels.
+
+When the input size matches the expected temporal-memory layout, the view can
+annotate groups such as stacked frames and action channels directly beside the
+input layer.
+
+Parameters:
+- `inputNodeCount` - - Input-layer node count.
+
+Returns: Group label ranges with band colors.

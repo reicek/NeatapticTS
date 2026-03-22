@@ -1,12 +1,63 @@
 # browser-entry/runtime
 
+Top-level browser runtime facade for the Flappy Bird example.
+
+This is the narrowest public browser entry with real behavior behind it.
+Calling `start` resolves the DOM host, installs the worker-backed runtime,
+initializes the HUD, and launches the evolve-to-playback loop that powers the
+demo. The surrounding services keep those responsibilities split, but this
+file is the place where they are folded back into one lifecycle.
+
+The boundary matters because the browser demo is more than a canvas render:
+it is host setup, worker orchestration, telemetry, HUD updates, and shutdown
+control presented as one small API.
+
+## browser-entry/runtime/runtime.ts
+
+### start
+
+```ts
+start(
+  container: RuntimeContainerTarget,
+): Promise<FlappyBirdRunHandle>
+```
+
+Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
+
+This function is intentionally orchestration-focused:
+1) resolve runtime dependencies (DOM host, worker, host UI),
+2) initialize worker and telemetry plumbing,
+3) run the evolve -> playback -> HUD fold loop until stopped,
+4) expose a small stop/isRunning/done handle for callers.
+
+Parameters:
+- `container` - - Element id or HTMLElement to host the demo.
+
+Returns: Run handle for stop/state control.
+
+Example:
+
+```ts
+const runHandle = await start('flappy-bird-output');
+// later
+runHandle.stop();
+await runHandle.done;
+```
+
+### RuntimeRunHandle
+
+Public run handle returned by the browser runtime entrypoint.
+
+The handle is intentionally minimal so callers can treat the demo like a
+long-running process with start/stop/status semantics.
+
+## browser-entry/runtime/runtime.types.ts
+
 Core runtime contracts for the Flappy Bird browser demo.
 
 The runtime boundary is where the browser-side application comes together:
 DOM host setup, worker creation, telemetry wiring, lifecycle control, and the
 configuration passed into the evolution loop.
-
-## browser-entry/runtime/runtime.types.ts
 
 ### RuntimeRunHandle
 
@@ -56,96 +107,6 @@ Shared runtime startup dependencies created before evolution begins.
 
 Once this context exists, the browser has everything it needs to launch the
 actual evolution/playback loop.
-
-## browser-entry/runtime/runtime.ts
-
-### start
-
-```ts
-start(
-  container: RuntimeContainerTarget,
-): Promise<FlappyBirdRunHandle>
-```
-
-Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
-
-This function is intentionally orchestration-focused:
-1) resolve runtime dependencies (DOM host, worker, host UI),
-2) initialize worker and telemetry plumbing,
-3) run the evolve -> playback -> HUD fold loop until stopped,
-4) expose a small stop/isRunning/done handle for callers.
-
-Parameters:
-- `container` - - Element id or HTMLElement to host the demo.
-
-Returns: Run handle for stop/state control.
-
-Example:
-
-```ts
-const runHandle = await start('flappy-bird-output');
-// later
-runHandle.stop();
-await runHandle.done;
-```
-
-### RuntimeRunHandle
-
-Public run handle returned by the browser runtime entrypoint.
-
-The handle is intentionally minimal so callers can treat the demo like a
-long-running process with start/stop/status semantics.
-
-## browser-entry/runtime/runtime.errors.ts
-
-Runtime-specific error helpers for the browser entrypoint.
-
-These errors normalize two user-facing failure modes: the browser cannot find
-the requested host container, or the runtime needs to report an unexpected
-failure back into the HUD.
-
-### resolveRequiredRuntimeHostElement
-
-```ts
-resolveRequiredRuntimeHostElement(
-  container: RuntimeContainerTarget,
-): HTMLElement
-```
-
-Resolves and validates the browser runtime host element.
-
-The runtime accepts either a string id or a concrete element so this helper
-folds that loose input into one validated host node.
-
-Parameters:
-- `container` - - Element id or HTMLElement provided to runtime start.
-
-Returns: Resolved host element.
-
-### resolveRuntimeHudErrorStatus
-
-```ts
-resolveRuntimeHudErrorStatus(
-  error: unknown,
-): string
-```
-
-Formats unknown runtime failures into a stable HUD status string.
-
-The HUD should not need to understand arbitrary thrown values, so this helper
-normalizes anything throwable into one readable status line.
-
-Parameters:
-- `error` - - Unknown runtime exception value.
-
-Returns: Normalized status string for HUD output.
-
-### RuntimeContainerNotFoundError
-
-Error raised when the browser runtime host container cannot be resolved.
-
-This usually means the caller passed the wrong element id or attempted to
-start the demo before the target container existed in the DOM.
 
 ## browser-entry/runtime/runtime.startup.service.ts
 
@@ -247,6 +208,95 @@ Parameters:
 
 Returns: Public run handle exposed to callers.
 
+## browser-entry/runtime/runtime.evolution-launch.service.ts
+
+Launch wrapper for the long-running browser runtime loop.
+
+The evolution loop itself is asynchronous and may surface unexpected errors.
+This launcher keeps the entrypoint clean by centralizing the catch path that
+routes failures into the HUD before shutting the runtime down.
+
+### launchRuntimeEvolution
+
+```ts
+launchRuntimeEvolution(
+  runtimeStartContext: RuntimeStartContext,
+  runtimeLifecycleState: RuntimeMutableLifecycleState,
+  stop: () => void,
+): void
+```
+
+Starts the runtime evolution loop and routes unexpected failures to the HUD.
+
+This is the boundary between normal browser startup and the long-running async
+loop that drives evolution plus playback.
+
+Parameters:
+- `runtimeStartContext` - - Shared runtime start context.
+- `runtimeLifecycleState` - - Mutable lifecycle state used for stop checks.
+- `stop` - - Idempotent stop function bound to the current runtime handle.
+
+Returns: Nothing.
+
+## browser-entry/runtime/runtime.evolution-loop.service.ts
+
+Long-running evolution/playback orchestration for the browser runtime.
+
+This loop is the heart of the interactive demo. It repeatedly asks the worker
+for the next evolved generation, updates the HUD and network view, plays back
+that generation on the canvas, then folds the outcome into best-so-far
+browser state.
+
+### runRuntimeEvolutionLoop
+
+```ts
+runRuntimeEvolutionLoop(
+  options: RuntimeEvolutionLoopOptions,
+): Promise<void>
+```
+
+Runs generation orchestration and playback until a stop signal is observed.
+
+The loop alternates between two phases:
+1. Evolve off-thread until the worker emits the next best-generation summary.
+2. Play that generation back on the main thread while streaming HUD updates.
+
+This rhythm makes the demo feel like a live training dashboard instead of a
+one-shot batch job.
+
+Parameters:
+- `options` - - Runtime evolution dependencies and mutable state accessors.
+
+Returns: Nothing.
+
+### RuntimeEvolutionLoopOptions
+
+Dependencies required to run the browser runtime evolution loop.
+
+Grouping these dependencies into one object keeps the public loop entry more
+declarative and avoids a long positional parameter list.
+
+### resolveGenerationPopulationNetworks
+
+```ts
+resolveGenerationPopulationNetworks(
+  generationPayload: { populationNetworksJson?: Record<string, unknown>[] | undefined; },
+  bestNetwork: default | undefined,
+): default[]
+```
+
+Resolves the browser-side network cache for the current playback generation.
+
+Playback birds are created from the generation population in stable array
+order, so the browser can reuse this ordered cache to redraw the network
+panel when the red-bird champion changes.
+
+Parameters:
+- `generationPayload` - - Worker generation-ready payload.
+- `bestNetwork` - - Current generation best-network fallback.
+
+Returns: Ordered population networks for the upcoming playback session.
+
 ## browser-entry/runtime/runtime.telemetry.service.ts
 
 Runtime telemetry helpers for live browser HUD updates.
@@ -327,65 +377,6 @@ Runtime telemetry mutable state used for rolling HUD metrics.
 The state keeps timestamp windows rather than pre-aggregated counters so the
 HUD can report smoothed recent rates instead of lifetime totals.
 
-## browser-entry/runtime/runtime.evolution-loop.service.ts
-
-Long-running evolution/playback orchestration for the browser runtime.
-
-This loop is the heart of the interactive demo. It repeatedly asks the worker
-for the next evolved generation, updates the HUD and network view, plays back
-that generation on the canvas, then folds the outcome into best-so-far
-browser state.
-
-### runRuntimeEvolutionLoop
-
-```ts
-runRuntimeEvolutionLoop(
-  options: RuntimeEvolutionLoopOptions,
-): Promise<void>
-```
-
-Runs generation orchestration and playback until a stop signal is observed.
-
-The loop alternates between two phases:
-1. Evolve off-thread until the worker emits the next best-generation summary.
-2. Play that generation back on the main thread while streaming HUD updates.
-
-This rhythm makes the demo feel like a live training dashboard instead of a
-one-shot batch job.
-
-Parameters:
-- `options` - - Runtime evolution dependencies and mutable state accessors.
-
-Returns: Nothing.
-
-### RuntimeEvolutionLoopOptions
-
-Dependencies required to run the browser runtime evolution loop.
-
-Grouping these dependencies into one object keeps the public loop entry more
-declarative and avoids a long positional parameter list.
-
-### resolveGenerationPopulationNetworks
-
-```ts
-resolveGenerationPopulationNetworks(
-  generationPayload: { populationNetworksJson?: Record<string, unknown>[] | undefined; },
-  bestNetwork: default | undefined,
-): default[]
-```
-
-Resolves the browser-side network cache for the current playback generation.
-
-Playback birds are created from the generation population in stable array
-order, so the browser can reuse this ordered cache to redraw the network
-panel when the red-bird champion changes.
-
-Parameters:
-- `generationPayload` - - Worker generation-ready payload.
-- `bestNetwork` - - Current generation best-network fallback.
-
-Returns: Ordered population networks for the upcoming playback session.
-
 ## browser-entry/runtime/runtime.browser-globals.service.ts
 
 Browser-global wiring for the Flappy Bird runtime entrypoint.
@@ -431,32 +422,53 @@ The signature accepts an optional host target so global callers can either
 rely on the default container or explicitly direct the runtime to another
 element.
 
-## browser-entry/runtime/runtime.evolution-launch.service.ts
+## browser-entry/runtime/runtime.errors.ts
 
-Launch wrapper for the long-running browser runtime loop.
+Runtime-specific error helpers for the browser entrypoint.
 
-The evolution loop itself is asynchronous and may surface unexpected errors.
-This launcher keeps the entrypoint clean by centralizing the catch path that
-routes failures into the HUD before shutting the runtime down.
+These errors normalize two user-facing failure modes: the browser cannot find
+the requested host container, or the runtime needs to report an unexpected
+failure back into the HUD.
 
-### launchRuntimeEvolution
+### resolveRequiredRuntimeHostElement
 
 ```ts
-launchRuntimeEvolution(
-  runtimeStartContext: RuntimeStartContext,
-  runtimeLifecycleState: RuntimeMutableLifecycleState,
-  stop: () => void,
-): void
+resolveRequiredRuntimeHostElement(
+  container: RuntimeContainerTarget,
+): HTMLElement
 ```
 
-Starts the runtime evolution loop and routes unexpected failures to the HUD.
+Resolves and validates the browser runtime host element.
 
-This is the boundary between normal browser startup and the long-running async
-loop that drives evolution plus playback.
+The runtime accepts either a string id or a concrete element so this helper
+folds that loose input into one validated host node.
 
 Parameters:
-- `runtimeStartContext` - - Shared runtime start context.
-- `runtimeLifecycleState` - - Mutable lifecycle state used for stop checks.
-- `stop` - - Idempotent stop function bound to the current runtime handle.
+- `container` - - Element id or HTMLElement provided to runtime start.
 
-Returns: Nothing.
+Returns: Resolved host element.
+
+### resolveRuntimeHudErrorStatus
+
+```ts
+resolveRuntimeHudErrorStatus(
+  error: unknown,
+): string
+```
+
+Formats unknown runtime failures into a stable HUD status string.
+
+The HUD should not need to understand arbitrary thrown values, so this helper
+normalizes anything throwable into one readable status line.
+
+Parameters:
+- `error` - - Unknown runtime exception value.
+
+Returns: Normalized status string for HUD output.
+
+### RuntimeContainerNotFoundError
+
+Error raised when the browser runtime host container cannot be resolved.
+
+This usually means the caller passed the wrong element id or attempted to
+start the demo before the target container existed in the DOM.

@@ -1,3 +1,11 @@
+/**
+ * Neon ground-grid composition for the playback background.
+ *
+ * This sub-boundary turns lower-band scene geometry into the synthwave-style
+ * motion cue that anchors the browser demo's visual identity. Geometry helpers,
+ * pulse timing, batching, and styling all serve one teaching goal: let the
+ * lower third imply depth and travel without distracting from the birds.
+ */
 import { drawPlaybackGroundGrid } from './playback.background.ground-grid.services';
 import { FLAPPY_BACKGROUND_GROUND_GRID_STYLE } from './playback.background.ground-grid.constants';
 import type {
@@ -13,9 +21,14 @@ import {
 /**
  * Draws the neon lower-band ground grid beneath the horizon.
  *
- * The grid is intentionally stylized rather than physically realistic: fixed
- * horizontal depth bands compress toward the horizon, while moving perspective
- * rays slide sideways but still converge to the centered vanishing point.
+ * The ground grid is the playback background's strongest style cue, but it also
+ * serves a structural purpose: it gives the lower third of the screen a sense
+ * of forward motion without competing with the pipes and birds for attention.
+ *
+ * This module owns the fold from shared lower-band scene data to one finished
+ * grid pass. Geometry, pulse timing, batching, and styling all exist so the
+ * final effect reads as depth and motion rather than as a collection of loose
+ * line helpers.
  *
  * @param context - Canvas 2D drawing context.
  * @param sourceScene - Shared lower-band geometry from the background module.
