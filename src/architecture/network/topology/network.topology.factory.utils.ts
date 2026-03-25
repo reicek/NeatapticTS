@@ -1,7 +1,8 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type Connection from '../../connection';
 import Node from '../../node';
 import type { TopologyNetworkProps } from '../network.types';
+import { setTopologyIntent } from './network.topology.contract.utils';
 
 type NetworkConstructor = new (input: number, output: number) => Network;
 
@@ -47,6 +48,9 @@ export function createMLP(
 
   // Step 6: Mark topology as requiring refresh.
   markTopologyDirty(networkInstance);
+
+  // Step 7: Preserve the public feed-forward contract for layered MLP builders.
+  setTopologyIntent.call(networkInstance, 'feed-forward');
 
   return networkInstance;
 }

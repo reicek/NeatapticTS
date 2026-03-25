@@ -10,8 +10,9 @@ import {
   inferLayerOrdering,
   rebuildConnectionsLocal,
   validateLayerHomogeneityAndConnectivity,
-} from './network.onnx.layer-analysis.utils';
-import type { OnnxExportOptions, OnnxModel } from './network.onnx.utils.types';
+} from '../network.onnx.layer-analysis.utils';
+import type { OnnxExportOptions } from './network.onnx.export.types';
+import type { OnnxModel } from '../schema/network.onnx.schema.types';
 
 /**
  * Execute the complete ONNX export flow for one network instance.

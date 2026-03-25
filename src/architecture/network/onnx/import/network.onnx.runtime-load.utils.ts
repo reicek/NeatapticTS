@@ -1,4 +1,4 @@
-import Layer from '../../layer/layer';
+import Layer from '../../../layer/layer';
 import Network from '../../network';
 import type {
   OnnxPerceptronBuildContext,
@@ -7,7 +7,7 @@ import type {
   OnnxRuntimeLayerFactory,
   OnnxRuntimeLayerModule,
   OnnxRuntimePerceptronFactory,
-} from './network.onnx.utils.types';
+} from './network.onnx.runtime-load.types';
 
 /** Minimum number of layer-size values needed for input/output perceptron construction. */
 const MINIMUM_PERCEPTRON_SIZE_COUNT = 2;

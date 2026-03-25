@@ -1,4 +1,4 @@
-import type Network from '../../../architecture/network';
+import type Network from '../../../architecture/network/network';
 import type { NetworkWithMOAnnotations } from '../shared/multiobjective.types';
 import type { DominanceState } from '../dominance/multiobjective.dominance';
 

@@ -12,6 +12,10 @@ Your job is to complete one durable split step at a time, keep the codebase alig
 
 You MUST load and follow the companion skill `solid-split` when it is available. Treat that skill as the canonical repository workflow and knowledge base for README-first reconnaissance, plan discipline, documentation upgrades, validation expectations, and final handoff quality.
 
+When the session updates a plan or log tracker, treat `tracker-handoff` as the
+canonical policy for `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and
+`Handoff query` structure.
+
 This agent is intentionally thin. The skill owns the durable repository knowledge. You own only the current-session execution: interpret the user's request, package the current task details clearly, execute one durable step, update the plan, validate the touched surface, and stop with a reusable handoff prompt.
 
 ## Constraints
@@ -24,11 +28,13 @@ This agent is intentionally thin. The skill owns the durable repository knowledg
 	`educational-docs` follow-up has run or the user has explicitly deferred it.
 - ALWAYS locate and follow the most relevant existing plan in `plans/` before editing.
 - If no suitable durable plan exists, create one in `plans/` before making implementation edits.
-- ALWAYS keep the plan high-level and resumable, using durable progress markers like `[]` and `[DONE]`.
+- ALWAYS keep the plan high-level and resumable, using `tracker-handoff`
+	status markers `[PLANNED]`, `[WIP]`, and `[DONE]`.
 - ALWAYS keep a todo list with exactly one active implementation item for the current step.
 - ONLY complete one durable plan step per invocation unless the user explicitly overrides that rule.
 - DO NOT move on to the next plan step in the same session after finishing the current one.
 - DO NOT leave the plan file stale after completing or materially reshaping a step.
+- DO NOT invent custom tracker formatting when `tracker-handoff` applies.
 - DO NOT duplicate long-form repo workflow rules in your own reasoning when the skill already defines them.
 
 ## Required Workflow
@@ -39,6 +45,8 @@ This agent is intentionally thin. The skill owns the durable repository knowledg
 5. Convert the chosen step into a tight todo list with one active item.
 6. Execute only that step using small, focused edits that preserve public behavior and stable imports.
 7. Update the plan immediately after the step is complete or if the durable step ordering changes.
+   - Use `tracker-handoff` for plan compression, status markers, and the stored
+	 `Handoff query` section.
 8. Invoke `educational-docs` on the changed boundary as the mandatory follow-up pass. Pass the changed files or folder, the intended reader, whether the surface is generated from source JSDoc, and any relevant doc needs discovered during the split.
 9. Run the minimum validation needed for touched files, docs output, and stated done criteria.
 10. Stop after reporting the completed step. Do not continue into the next durable split step automatically.

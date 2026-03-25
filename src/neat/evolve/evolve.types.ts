@@ -1,4 +1,4 @@
-import type Network from '../../architecture/network';
+import type Network from '../../architecture/network/network';
 
 /**
  * Shared runtime contracts for the NEAT evolution orchestration chapter.

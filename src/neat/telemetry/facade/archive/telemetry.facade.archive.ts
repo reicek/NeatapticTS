@@ -27,7 +27,7 @@
  *   Archive --> Clear["clearParetoArchive()<br/>reset archive state"]
  * ```
  */
-import type Network from '../../../../architecture/network';
+import type Network from '../../../../architecture/network/network';
 import type { NeatLikeWithObjectives } from '../../../objectives/core/objectives.types';
 import type { ParetoArchiveEntry } from '../../../shared/neat.shared.types';
 import {

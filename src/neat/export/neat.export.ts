@@ -218,7 +218,7 @@ export async function importPopulation(
   this: NeatLike,
   populationJSON: GenomeJSON[],
 ): Promise<void> {
-  const { default: Network } = await import('../../architecture/network');
+  const { default: Network } = await import('../../architecture/network/network');
   const internal = this as unknown as NeatControllerForExport;
   internal.population = populationJSON.map((serializedGenome) =>
     (Network as unknown as NetworkClass).fromJSON(serializedGenome),

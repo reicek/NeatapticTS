@@ -1,4 +1,4 @@
-import type Network from '../../../architecture/network';
+import type Network from '../../../architecture/network/network';
 
 type MultiObjectiveAnnotatedNetwork = Network & {
   _moRank?: number;

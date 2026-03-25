@@ -60,7 +60,7 @@
  * All `any` usage here is intentional, documented, and necessary for the evolution architecture.
  */
 
-import Network from '../../architecture/network';
+import Network from '../../architecture/network/network';
 import { processMultiObjective } from '../multiobjective/category/multiobjective.category';
 import {
   applyAdaptiveComplexityControllers,

@@ -1,7 +1,7 @@
 /**
  * Internal slab rebuild helper functions extracted from network.slab.utils.ts.
  */
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type Connection from '../../connection';
 import { config } from '../../../config';
 import { _acquireTA, _releaseTA } from './network.slab.pool.utils';

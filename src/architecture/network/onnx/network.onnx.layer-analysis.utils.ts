@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import Connection from '../../connection';
 import type NeatapticNode from '../../node';
 import type {

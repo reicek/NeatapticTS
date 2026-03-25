@@ -40,7 +40,7 @@
  * entry is built and more about how an experimenter, dashboard, notebook, or
  * test can inspect the recorded state without reaching into controller internals.
  */
-import type Network from '../../../architecture/network';
+import type Network from '../../../architecture/network/network';
 import type { DiversityStats } from '../../diversity/diversity';
 import type {
   SpeciesHistoryEntry,

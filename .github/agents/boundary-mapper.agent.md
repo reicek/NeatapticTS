@@ -17,6 +17,9 @@ intentionally thin: you gather structural evidence, identify safe seams, and
 prepare a compact handoff for the implementation workflow. You do not redefine
 the repo's refactor or docs standards yourself.
 
+If your boundary map implies a tracker update, assume `tracker-handoff` owns
+the `.plans.md` or `.logs.md` shape.
+
 ## Constraints
 - ALWAYS use the exact skill name `solid-split` when referring to the split
 	workflow or implementation follow-up.

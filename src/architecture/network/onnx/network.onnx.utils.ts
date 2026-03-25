@@ -1,6 +1,26 @@
 /**
  * ONNX export/import utilities for a constrained, documented subset of networks.
  *
+ * This file is the root compatibility barrel for the ONNX execution helpers.
+ * It exists so callers can keep a stable import surface while the heavier
+ * exporter and importer logic lives in the narrower `export/` and `import/`
+ * chapters.
+ *
+ * How to read this file:
+ * - Start here if you want the thin orchestration-facing helpers that still
+ *   bridge the public root API to the split implementation files.
+ * - Continue into `export/` when you want the full graph-emission pipeline.
+ * - Continue into `import/` when you want the reconstruction pipeline.
+ * - Treat this file as a compatibility and forwarding surface, not the main
+ *   home of ONNX execution details.
+ *
+ * What still belongs here:
+ * - Re-exports that are intentionally stable for root ONNX callers.
+ * - Thin wrappers such as `buildOnnxModel()` that preserve a predictable
+ *   orchestration surface while delegating the real work into smaller chapters.
+ * - A small amount of roadmap context that helps readers understand why some
+ *   recurrent and mixed-activation helpers still look transitional.
+ *
  * Phase Coverage (incremental roadmap implemented so far):
  *  - Phase 1: Deterministic layered MLP export (Gemm + Activation pairs) with basic metadata.
  *  - Phase 2: Optional partial connectivity (missing edges -> 0 weight) and mixed per-neuron activations
@@ -43,35 +63,36 @@
  * NOT supported. Experimental fused recurrent nodes are best-effort and may silently degrade if shapes mismatch.
  */
 
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type NeatapticNode from '../../node';
-import type { OnnxExportOptions, OnnxModel } from './network.onnx.utils.types';
-export type { OnnxModel } from './network.onnx.utils.types';
+import type { OnnxExportOptions } from './network.onnx.utils.types';
+import type { OnnxModel } from './schema/network.onnx.schema.types';
+export type { OnnxModel } from './schema/network.onnx.schema.types';
 
 export {
   inferLayerOrdering,
   rebuildConnectionsLocal,
   validateLayerHomogeneityAndConnectivity,
 } from './network.onnx.layer-analysis.utils';
-export { runOnnxExportFlow } from './network.onnx.export-flow.utils';
-export { runOnnxImportFlow } from './network.onnx.import-flow.utils';
-import { buildOnnxModel as buildOnnxModelImpl } from './network.onnx.export-build.utils';
-export { assignActivationFunctions } from './network.onnx.import-activations.utils';
+export { runOnnxExportFlow } from './export/network.onnx.export-flow.utils';
+export { runOnnxImportFlow } from './import/network.onnx.import-flow.utils';
+import { buildOnnxModel as buildOnnxModelImpl } from './export/network.onnx.export-build.utils';
+export { assignActivationFunctions } from './import/network.onnx.import-activations.utils';
 export {
   assignWeightsAndBiases,
   deriveHiddenLayerSizes,
-} from './network.onnx.import-weights.utils';
+} from './import/network.onnx.import-weights.utils';
 export {
   applyModelMetadata,
   collectRecurrentLayerIndices,
   createBaseModel,
   createGraphDimensions,
-} from './network.onnx.export-setup.utils';
-export { emitLayerGraph } from './network.onnx.export-layer-graph.utils';
+} from './export/network.onnx.export-setup.utils';
+export { emitLayerGraph } from './export/layers/network.onnx.export-layer-graph.utils';
 export {
   emitFusedRecurrentHeuristics,
   finalizeExportMetadata,
-} from './network.onnx.export-postprocess.utils';
+} from './export/network.onnx.export-postprocess.utils';
 
 // ---------------------------------------------------------------------------
 // Helper functions consumed by network.onnx.ts

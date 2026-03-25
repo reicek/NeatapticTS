@@ -8,12 +8,34 @@ import {
   restoreRecurrentSelfConnections,
 } from './network.onnx.import-orchestrators.utils';
 import { assignWeightsAndBiases } from './network.onnx.import-weights.utils';
-import { rebuildConnectionsLocal } from './network.onnx.layer-analysis.utils';
+import { rebuildConnectionsLocal } from '../network.onnx.layer-analysis.utils';
 import { loadRuntimeFactories } from './network.onnx.runtime-load.utils';
+import type { OnnxModel } from '../schema/network.onnx.schema.types';
 import type {
-  OnnxModel,
   OnnxRuntimeLayerFactoryMap,
-} from './network.onnx.utils.types';
+} from '../network.onnx.utils.types';
+
+/**
+ * ONNX import orchestration for rebuilding a NeatapticTS runtime network.
+ *
+ * This file is the chapter-level tour guide for the import folder. The import
+ * path is intentionally staged so a reader can follow the same questions the
+ * runtime asks while restoring a model:
+ * 1. What architecture should be rebuilt?
+ * 2. Which runtime factories should own the scaffold?
+ * 3. How do dense weights and activations map back onto nodes?
+ * 4. Which recurrent and pooling hints need a second pass?
+ *
+ * The neighboring files each own one of those stages. Keeping this overview on
+ * the flow file makes the generated folder README read like an import pipeline
+ * instead of an alphabetical pile of helper files.
+ *
+ * Example:
+ * ```ts
+ * const restored = runOnnxImportFlow(onnxModel);
+ * const output = restored.activate([0.2, 0.8]);
+ * ```
+ */
 
 /**
  * Execute the complete ONNX import flow and reconstruct a runtime network.

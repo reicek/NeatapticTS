@@ -19,6 +19,7 @@ Follow these rules:
 - Prefer communicating ongoing work through markdown tracker files instead of chat when the task spans multiple steps.
 - Use `.plans.md` files for work in progress, pending decisions, next steps, and handoff context.
 - Use `.logs.md` files for completed work, concise pass history, and done-state records.
+- When creating or reshaping tracker files, use `tracker-handoff` as the canonical workflow for `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and `Handoff query` structure.
 - When both chat and tracker files are available, treat the tracker files as the primary source of detailed continuity and keep chat as a thin status layer.
 
 Skill and companion-agent ownership model
@@ -47,6 +48,9 @@ Current intended ownership split:
    test failures.
 - `plan-alignment`: canonical workflow for selecting and applying roadmap/plan
    context.
+- `tracker-handoff`: canonical workflow for `.plans.md` and `.logs.md`
+   structure, `[PLANNED]/[WIP]/[DONE]` status markers, compression, and
+   `Handoff query` continuity.
 - `Boundary Mapper`: read-only seam mapping and structural handoff into
    `solid-split`.
 - `Docs Scout`: read-only documentation reconnaissance and handoff into
@@ -55,6 +59,10 @@ Current intended ownership split:
    `plan-alignment`.
 
 Use `educational-docs` by default when the task is primarily about documentation quality, generated README tone, source-mapped JSDoc improvement, Mermaid diagrams, citations, or Wikimedia-safe visuals.
+
+Use `tracker-handoff` by default when the task includes creating, compressing,
+or updating `.plans.md` or `.logs.md` files, especially when the tracker needs
+safe session continuation via a `Handoff query` section.
 
 For split or refactor work with meaningful documentation scope, let `solid-split` own the boundary work and `educational-docs` own documentation quality.
 

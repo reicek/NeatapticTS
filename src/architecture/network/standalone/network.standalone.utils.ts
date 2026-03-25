@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import { assembleStandaloneSource } from './network.standalone.utils.finalize';
 import { collectOutputIndexes } from './network.standalone.utils.graph';
 import {

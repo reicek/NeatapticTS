@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import { _getSlabAllocationStatsSnapshot } from './network.slab.pool.utils';
 import {
   _createSlabBuildContext,

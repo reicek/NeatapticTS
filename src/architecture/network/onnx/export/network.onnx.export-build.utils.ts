@@ -1,22 +1,22 @@
 import type Network from '../../network';
-import type NeatapticNode from '../../node';
+import type NeatapticNode from '../../../node';
+import type { OnnxModel } from '../schema/network.onnx.schema.types';
 import type {
-  OnnxGraphDimensions,
   OnnxBuildResolvedOptions,
   OnnxExportOptions,
+  OnnxGraphDimensions,
   OnnxLayerEmissionContext,
   OnnxLayerEmissionResult,
-  OnnxModel,
   OnnxPostProcessingContext,
   OnnxRecurrentCollectionContext,
-} from './network.onnx.utils.types';
+} from './network.onnx.export.types';
 import {
   applyModelMetadata,
   collectRecurrentLayerIndices,
   createBaseModel,
   createGraphDimensions,
 } from './network.onnx.export-setup.utils';
-import { emitLayerGraph } from './network.onnx.export-layer-graph.utils';
+import { emitLayerGraph } from './layers/network.onnx.export-layer-graph.utils';
 import {
   emitFusedRecurrentHeuristics,
   finalizeExportMetadata,

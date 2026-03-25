@@ -15,6 +15,9 @@ This skill is the canonical workflow for multi-failure test repair in this
 repo. It owns the durable planning sequence, validation cadence, and the rule
 that broad test execution happens only after the planned fixes are applied.
 
+When this workflow updates a durable fix tracker, `tracker-handoff` owns the
+canonical tracker format and continuation prompt shape.
+
 ## When to Use
 
 - The user asks to fix multiple test failures.
@@ -49,6 +52,9 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
 ## Required Workflow
 
 1. Create or update a durable fix plan before changing code.
+    - If the tracker format itself is being created or rewritten, follow
+       `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and
+       `Handoff query` structure.
 2. Group failures by class.
    - Typical buckets: TypeScript compilation blockers, runtime logic, async or
      sequencing issues, assertion drift, and investigation-required failures.
@@ -69,6 +75,8 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
 - Do not prepend specific calendar dates to durable fix-plan headings, status
    logs, or handoff sections. Use stable undated labels so the plan can be
    revised cleanly across sessions.
+- Do not use ad hoc plan markers when a fix tracker is updated; use
+   `tracker-handoff` conventions instead.
 - Do not bounce between test execution and partial fixes when the workflow is
   still in the main repair phase.
 - Do not treat partial reruns as a substitute for a durable plan.

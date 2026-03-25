@@ -1,7 +1,6 @@
-import type NeatapticNode from '../../node';
+import type NeatapticNode from '../../../../node';
+import type { OnnxModel } from '../../schema/network.onnx.schema.types';
 import type {
-  NodeInternals,
-  OnnxModel,
   RecurrentActivationEmissionContext,
   RecurrentGemmEmissionContext,
   RecurrentGraphNames,
@@ -10,12 +9,13 @@ import type {
   RecurrentInitializerValues,
   RecurrentLayerEmissionContext,
   RecurrentLayerEmissionParams,
-} from './network.onnx.utils.types';
+} from '../network.onnx.export.types';
+import type { NodeInternals } from '../../network.onnx.utils.types';
 import {
   buildDenseWeightsAndBiases,
   buildDiagonalRecurrentWeights,
 } from './network.onnx.export-layer-common.utils';
-import { mapActivationToOnnx } from './network.onnx.layer-analysis.utils';
+import { mapActivationToOnnx } from '../../network.onnx.layer-analysis.utils';
 
 /** ONNX float tensor data type id. */
 const ONNX_FLOAT_DATA_TYPE = 1;
@@ -59,10 +59,31 @@ const BASE_PREVIOUS_HIDDEN_INPUT_NAME = 'hidden_prev';
 const PREVIOUS_HIDDEN_LAYER_INPUT_PREFIX = 'hidden_prev_l';
 
 /**
- * Emit recurrent single-step layer representation.
+ * Emit the constrained recurrent single-step export path for one hidden layer.
+ *
+ * This boundary models recurrence with two parallel Gemm branches:
+ * one for the feed-forward input and one for the previous hidden state. The
+ * recurrent branch uses a diagonal matrix derived from self-connections only,
+ * which keeps the exported shape simple and matches the importer's current
+ * reconstruction contract.
+ *
+ * Hidden-state inputs are named `hidden_prev` for the first recurrent layer and
+ * `hidden_prev_l{n}` for later recurrent layers. Mixed activations are not
+ * supported on this path because the single activation node is applied after
+ * the input and recurrent branches are summed.
  *
  * @param params Recurrent emission parameters.
  * @returns Output tensor name.
+ * @example
+ * ```ts
+ * const outputName = emitRecurrentLayer({
+ *   model,
+ *   layerIndex: 1,
+ *   previousOutputName: 'input',
+ *   previousLayerNodes,
+ *   currentLayerNodes,
+ * });
+ * ```
  */
 export function emitRecurrentLayer(
   params: RecurrentLayerEmissionParams,

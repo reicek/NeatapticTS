@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type { RNGSnapshot } from './network.deterministic.utils.types';
 import { setSeed as setupSeed } from './network.deterministic.setup.utils';
 import {

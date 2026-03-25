@@ -1,5 +1,5 @@
 import { config } from '../../../config';
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type {
   CostFunction,
   CostFunctionOrObject,

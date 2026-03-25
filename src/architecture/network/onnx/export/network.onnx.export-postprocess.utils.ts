@@ -1,4 +1,9 @@
-import type NeatapticNode from '../../node';
+import type NeatapticNode from '../../../node';
+import type {
+  OnnxGraph,
+  OnnxMetadataProperty,
+  OnnxModel,
+} from '../schema/network.onnx.schema.types';
 import type {
   ConvLayerPairContext,
   ConvKernelConsistencyContext,
@@ -12,11 +17,6 @@ import type {
   GruEmissionContext,
   HiddenLayerHeuristicContext,
   LstmEmissionContext,
-  NodeInternals,
-  OnnxConvKernelCoordinate,
-  OnnxGraph,
-  OnnxMetadataProperty,
-  OnnxModel,
   OnnxExportOptions,
   RecurrentGateBlockCollectionContext,
   RecurrentGateParameterCollectionResult,
@@ -24,7 +24,11 @@ import type {
   RecurrentGateRowCollectionContext,
   RecurrentHeuristicEmissionContext,
   WeightToleranceComparisonContext,
-} from './network.onnx.utils.types';
+} from './network.onnx.export.types';
+import type {
+  NodeInternals,
+  OnnxConvKernelCoordinate,
+} from '../network.onnx.utils.types';
 
 /** Minimum hidden-node count for LSTM heuristic eligibility. */
 const LSTM_MIN_SIZE = 10;

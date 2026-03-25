@@ -1,12 +1,32 @@
-import type NeatapticNode from '../../node';
+/**
+ * Decision router for ONNX layer emission.
+ *
+ * This boundary does not build tensors directly. Its job is to inspect one
+ * export layer and choose the smallest valid emission strategy:
+ * Conv when an explicit mapping is present, recurrent single-step when the
+ * layer owns self-connections, compact dense export when activations are
+ * homogeneous, or per-neuron decomposition when activations differ.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Start[Layer inputs] --> Conv{Conv mapping for layer?}
+ *   Conv -->|Yes| ConvEmit[Emit Conv path]
+ *   Conv -->|No| Recurrent{Self-recurrent hidden layer?}
+ *   Recurrent -->|Yes| RecEmit[Emit recurrent single-step path]
+ *   Recurrent -->|No| Mixed{Mixed activations?}
+ *   Mixed -->|No| DenseEmit[Emit dense Gemm + activation]
+ *   Mixed -->|Yes| PerNeuron[Emit per-neuron Gemm + activation + Concat]
+ * ```
+ */
+import type NeatapticNode from '../../../../node';
 import type {
   LayerActivationContext,
-  NodeInternals,
   LayerBuildContext,
   LayerRecurrentDecisionContext,
   LayerTraversalContext,
   OnnxExportOptions,
-} from './network.onnx.utils.types';
+} from '../network.onnx.export.types';
+import type { NodeInternals } from '../../network.onnx.utils.types';
 import {
   emitDenseLayer,
   emitPerNeuronLayer,
@@ -15,10 +35,37 @@ import { tryEmitConvLayer } from './network.onnx.export-conv.utils';
 import { emitRecurrentLayer } from './network.onnx.export-recurrent.utils';
 
 /**
- * Emit one export layer graph segment and return the produced output tensor name.
+ * Emit one export layer graph segment by routing the layer through the correct
+ * ONNX emission strategy.
+ *
+ * Dispatch order matters:
+ * - explicit Conv mappings win first,
+ * - recurrent single-step export is considered only for hidden layers with
+ *   self-connections,
+ * - non-recurrent layers fall back to compact dense emission or mixed-activation
+ *   per-neuron decomposition.
+ *
+ * Important invariants:
+ * - recurrent mixed activations are rejected elsewhere rather than silently
+ *   decomposed here,
+ * - `allowMixedActivations` only affects the dense-family fallback path,
+ * - the returned tensor name is the canonical input for the next layer.
  *
  * @param context Layer build context.
  * @returns Output tensor name produced by this layer.
+ * @example
+ * ```ts
+ * const outputName = emitLayerGraph({
+ *   model,
+ *   layers,
+ *   layerIndex: 2,
+ *   previousOutputName: 'Layer_1',
+ *   options: { allowMixedActivations: true },
+ *   recurrentLayerIndices: [],
+ *   batchDimension: false,
+ *   legacyNodeOrdering: false,
+ * });
+ * ```
  */
 export function emitLayerGraph(context: LayerBuildContext): string {
   const layerTraversalContext = createLayerTraversalContext(context);

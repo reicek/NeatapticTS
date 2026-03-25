@@ -371,6 +371,6 @@ export async function rebuildNetworkConnectionsForMinHidden(
 ): Promise<void> {
   // Step 1: rebuild using the Network class helper.
   const { default: NetworkClass } =
-    await import('../../../architecture/network');
+    await import('../../../architecture/network/network');
   NetworkClass.rebuildConnections(networkToEdit as never);
 }

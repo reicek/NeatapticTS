@@ -17,6 +17,9 @@ The skill defines the repository-specific split protocol, documentation bar,
 plan expectations, and validation checklist that should remain consistent across
 split sessions.
 
+Tracker shape, status markers, compression, and `Handoff query` structure are
+owned by the companion skill `tracker-handoff`.
+
 This file is the canonical knowledge surface for solid-split work. The skill
 owns the durable repository workflow, discovery order, plan discipline,
 documentation expectations, and validation policy. Companion agents should be
@@ -108,6 +111,7 @@ Worktree caution: generated README files may already be dirty from npm run docs.
 - [Split workflow checklist](./assets/split-workflow-checklist.md)
 - [Split plan template](./assets/split-plan-template.md)
 - [Documentation improvement checklist](./assets/docs-checklist.md)
+- Companion skill: `tracker-handoff`
 - Companion skill: `educational-docs`
 - Existing split execution agent: `solid-split`
 
@@ -194,6 +198,8 @@ API, default, or runtime contract.
 12. Delete obsolete flat or mirror files from the old location once direct
   imports are in place and validations pass.
 13. Update the plan immediately after the step completes.
+  - Follow `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, compression,
+    and `Handoff query` structure.
   - Use stable undated section titles in plan logs and handoff material.
   - Prefer `### Playback boundary pass` over
     `### YYYY-MM-DD - Playback boundary pass`.
@@ -250,6 +256,9 @@ the repo is being split.
 
 Every completed split step must end with a handoff prompt that is ready to use
 in a fresh chat with this skill attached.
+
+Use `tracker-handoff` as the canonical policy for how that prompt is stored in
+the plan file and how active versus completed tracker sections are marked.
 
 The handoff prompt must:
 

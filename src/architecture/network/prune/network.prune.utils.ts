@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type { PruningMethod } from '../network.types';
 import {
   buildEvolutionaryPruneSelection,

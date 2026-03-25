@@ -5,6 +5,7 @@ Topology utilities.
 Provides:
  - computeTopoOrder: Kahn-style topological sorting with graceful fallback when cycles detected.
  - hasPath: depth-first reachability query (used to prevent cycle introduction when acyclicity enforced).
+ - topology contract helpers: public intent accessors that keep semantic API state aligned with low-level runtime flags.
 
 Design Notes:
  - We deliberately tolerate cycles by falling back to raw node ordering instead of throwing; this
@@ -71,6 +72,61 @@ hasPath(
 ```
 
 Depth-first reachability test (avoids infinite loops via visited set).
+
+### getTopologyIntent
+
+```ts
+getTopologyIntent(): NetworkTopologyIntent
+```
+
+Read the public topology intent preserved on a network instance.
+
+This accessor keeps the semantic contract visible to callers even though the
+lower-level runtime ultimately enforces acyclicity through booleans and cache
+invalidation.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Current topology intent.
+
+### setEnforceAcyclic
+
+```ts
+setEnforceAcyclic(
+  flag: boolean,
+): void
+```
+
+Toggle low-level acyclic enforcement while preserving a coherent public contract.
+
+This exists for backward compatibility with callers that still use the legacy
+boolean API instead of the semantic `topologyIntent` field.
+
+Parameters:
+- `this` - Target network instance.
+- `flag` - Whether to enforce acyclic connectivity.
+
+Returns: Nothing.
+
+### setTopologyIntent
+
+```ts
+setTopologyIntent(
+  topologyIntent: NetworkTopologyIntent,
+): void
+```
+
+Set the public topology intent and synchronize low-level runtime flags.
+
+Updating the semantic contract also updates acyclic enforcement and marks the
+topological cache dirty so later activation paths rebuild consistent state.
+
+Parameters:
+- `this` - Target network instance.
+- `topologyIntent` - Desired topology intent.
+
+Returns: Nothing.
 
 ### createMLP
 
@@ -797,6 +853,63 @@ Parameters:
 
 Returns: Array of network connections.
 
+## architecture/network/topology/network.topology.contract.utils.ts
+
+### getTopologyIntent
+
+```ts
+getTopologyIntent(): NetworkTopologyIntent
+```
+
+Read the public topology intent preserved on a network instance.
+
+This accessor keeps the semantic contract visible to callers even though the
+lower-level runtime ultimately enforces acyclicity through booleans and cache
+invalidation.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Current topology intent.
+
+### setTopologyIntent
+
+```ts
+setTopologyIntent(
+  topologyIntent: NetworkTopologyIntent,
+): void
+```
+
+Set the public topology intent and synchronize low-level runtime flags.
+
+Updating the semantic contract also updates acyclic enforcement and marks the
+topological cache dirty so later activation paths rebuild consistent state.
+
+Parameters:
+- `this` - Target network instance.
+- `topologyIntent` - Desired topology intent.
+
+Returns: Nothing.
+
+### setEnforceAcyclic
+
+```ts
+setEnforceAcyclic(
+  flag: boolean,
+): void
+```
+
+Toggle low-level acyclic enforcement while preserving a coherent public contract.
+
+This exists for backward compatibility with callers that still use the legacy
+boolean API instead of the semantic `topologyIntent` field.
+
+Parameters:
+- `this` - Target network instance.
+- `flag` - Whether to enforce acyclic connectivity.
+
+Returns: Nothing.
+
 ## architecture/network/topology/network.topology.architecture.utils.ts
 
 ### describeArchitecture
@@ -830,6 +943,44 @@ const descriptor = describeArchitecture(network);
 // descriptor.hiddenLayerSizes -> [8, 4]
 // descriptor.source -> 'layer-metadata' | 'graph-topology' | 'inferred'
 ```
+
+### resolveArchitectureDescriptor
+
+```ts
+resolveArchitectureDescriptor(
+  network: default,
+): NetworkArchitectureDescriptor
+```
+
+Resolve the public architecture descriptor, preferring live graph facts and
+falling back to hydrated serialization metadata only when the live result is
+still purely inferred.
+
+This helper keeps the descriptor ownership story in one chapter: topology
+owns the live analysis while serialization can optionally hydrate a cached
+descriptor that remains safe to reuse when the runtime graph shape matches.
+
+Parameters:
+- `network` - Runtime network instance.
+
+Returns: Public architecture descriptor for telemetry and UI consumers.
+
+### isHydratedDescriptorCompatible
+
+```ts
+isHydratedDescriptorCompatible(
+  network: default,
+  hydratedDescriptor: NetworkArchitectureDescriptor | undefined,
+): boolean
+```
+
+Check whether hydrated descriptor metadata still matches the current graph shape.
+
+Parameters:
+- `network` - Runtime network instance.
+- `hydratedDescriptor` - Optional hydrated descriptor candidate.
+
+Returns: True when hydrated descriptor can safely stand in for the inferred result.
 
 ### createArchitectureDescriptor
 

@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 export { testNetwork } from './network.stats.test.utils';
 import type {
   GlobalThisWithStructuredClone,

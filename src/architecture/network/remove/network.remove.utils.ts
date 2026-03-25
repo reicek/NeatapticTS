@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type Node from '../../node';
 import { createValidatedNodeRemovalContext } from './network.remove.validation.utils';
 import { detachGatesOwnedByNode } from './network.remove.gates.utils';

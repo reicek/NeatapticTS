@@ -62,7 +62,7 @@
  * just a style preference. This chapter is the explicit record of that order.
  */
 
-import type Network from '../../architecture/network';
+import type Network from '../../architecture/network/network';
 import * as methods from '../../methods/methods';
 import { selection as selectionMethods } from '../../methods/selection/selection';
 

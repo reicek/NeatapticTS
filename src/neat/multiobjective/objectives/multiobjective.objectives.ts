@@ -1,4 +1,4 @@
-import type Network from '../../../architecture/network';
+import type Network from '../../../architecture/network/network';
 import type { ObjectiveDescriptor } from '../shared/multiobjective.types';
 
 /**

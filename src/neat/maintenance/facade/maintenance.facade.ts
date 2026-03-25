@@ -1,4 +1,4 @@
-import type Network from '../../../architecture/network';
+import type Network from '../../../architecture/network/network';
 import {
   ensureMinHiddenNodes as ensureMinHiddenNodesImpl,
   ensureNoDeadEnds as ensureNoDeadEndsImpl,

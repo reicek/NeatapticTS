@@ -26,7 +26,7 @@
  * 3. `dominance/` for pairwise comparison rules
  * 4. `fronts/` and `crowding/` for frontier construction and diversity on the frontier
  */
-import type Network from '../../architecture/network';
+import type Network from '../../architecture/network/network';
 import { archiveParetoFrontsIfEnabled } from './archive/multiobjective.archive';
 import { buildValuesMatrix } from './objectives/multiobjective.objectives';
 import { buildDominanceState } from './dominance/multiobjective.dominance';

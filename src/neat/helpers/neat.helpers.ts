@@ -1,5 +1,5 @@
 import type { NeatLike } from '../shared/neat.shared.types';
-import Network from '../../architecture/network';
+import Network from '../../architecture/network/network';
 import {
   promoteGenomeToFeedForwardIntentWhenEligible,
   usesFeedForwardMutationPolicy,
@@ -187,7 +187,7 @@ export async function spawnFromParent(
     clone = parentGenome.clone();
   } else {
     const { default: NetworkClass } =
-      await import('../../architecture/network');
+      await import('../../architecture/network/network');
     clone = NetworkClass.fromJSON(
       parentGenome.toJSON?.() ?? {},
     ) as unknown as GenomeWithMetadata;

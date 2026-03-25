@@ -1,9 +1,13 @@
 import type Network from '../../network';
-import Connection from '../../connection';
-import type NeatapticNode from '../../node';
+import Connection from '../../../connection';
+import type NeatapticNode from '../../../node';
 import type {
   Conv2DMapping,
-  NodeInternals,
+  OnnxMetadataProperty,
+  OnnxModel,
+  OnnxTensor,
+} from '../schema/network.onnx.schema.types';
+import type {
   OnnxImportAggregatedLayerAssignmentContext,
   OnnxImportAggregatedNeuronAssignmentContext,
   OnnxImportConvCoordinateAssignmentContext,
@@ -24,11 +28,11 @@ import type {
   OnnxImportPerNeuronLayerAssignmentContext,
   OnnxImportWeightAssignmentContext,
   OnnxImportWeightAssignmentBuildParams,
+} from './network.onnx.import-weights.types';
+import type {
+  NodeInternals,
   OnnxConvKernelCoordinate,
-  OnnxMetadataProperty,
-  OnnxModel,
-  OnnxTensor,
-} from './network.onnx.utils.types';
+} from '../network.onnx.utils.types';
 
 const METADATA_KEY_LAYER_SIZES = 'layer_sizes';
 const METADATA_KEY_CONV2D_LAYERS = 'conv2d_layers';

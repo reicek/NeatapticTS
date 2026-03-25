@@ -1,0 +1,1515 @@
+# architecture/network/onnx/import
+
+ONNX import orchestration for rebuilding a NeatapticTS runtime network.
+
+This file is the chapter-level tour guide for the import folder. The import
+path is intentionally staged so a reader can follow the same questions the
+runtime asks while restoring a model:
+1. What architecture should be rebuilt?
+2. Which runtime factories should own the scaffold?
+3. How do dense weights and activations map back onto nodes?
+4. Which recurrent and pooling hints need a second pass?
+
+The neighboring files each own one of those stages. Keeping this overview on
+the flow file makes the generated folder README read like an import pipeline
+instead of an alphabetical pile of helper files.
+
+Example:
+```ts
+const restored = runOnnxImportFlow(onnxModel);
+const output = restored.activate([0.2, 0.8]);
+```
+
+## architecture/network/onnx/import/network.onnx.import-flow.utils.ts
+
+### runOnnxImportFlow
+
+```ts
+runOnnxImportFlow(
+  onnx: OnnxModel,
+): default
+```
+
+Execute the complete ONNX import flow and reconstruct a runtime network.
+
+High-level behavior:
+ 1. Extract architecture dimensions and build a perceptron scaffold.
+ 2. Restore dense parameters and activation functions.
+ 3. Reconstruct recurrent/pooling metadata and rebuild connection caches.
+
+Parameters:
+- `onnx` - ONNX-like model payload to reconstruct.
+
+Returns: Reconstructed network instance.
+
+## architecture/network/onnx/import/network.onnx.runtime-load.types.ts
+
+Import-owned types for ONNX runtime factory loading.
+
+These payloads describe the small runtime bootstrap contract that the import
+flow uses to rebuild a perceptron scaffold and attach recurrent layer
+constructors without making the parser own a hard-coded constructor shape.
+
+Example:
+```ts
+const runtimeFactories: OnnxRuntimeFactories = {
+  perceptronFactory,
+  layerModule,
+};
+```
+
+### OnnxRuntimePerceptronFactory
+
+```ts
+OnnxRuntimePerceptronFactory(
+  sizes: number[],
+): default
+```
+
+Runtime perceptron factory signature used by ONNX import orchestration.
+
+### OnnxRuntimeLayerFactory
+
+```ts
+OnnxRuntimeLayerFactory(
+  size: number,
+): default
+```
+
+Runtime layer-constructor signature used for recurrent layer reconstruction.
+
+### OnnxRuntimeLayerModule
+
+Runtime layer module shape consumed by ONNX import orchestration.
+
+### OnnxRuntimeFactories
+
+Runtime factories consumed during ONNX import network reconstruction.
+
+### OnnxPerceptronSizeValidationContext
+
+Validation context for perceptron size-list checks during ONNX import.
+
+### OnnxPerceptronBuildContext
+
+Build context for mapping ONNX layer sizes into a Neataptic MLP factory call.
+
+## architecture/network/onnx/import/network.onnx.runtime-load.utils.ts
+
+### loadRuntimeFactories
+
+```ts
+loadRuntimeFactories(): OnnxRuntimeFactories
+```
+
+Resolve runtime factories used by ONNX import orchestration.
+
+Returns: Perceptron factory and layer module object.
+
+### createPerceptronFactory
+
+```ts
+createPerceptronFactory(): OnnxRuntimePerceptronFactory
+```
+
+Create an ONNX import network factory from modern static constructors.
+
+Returns: Perceptron-compatible factory function.
+
+### createRuntimeLayerModule
+
+```ts
+createRuntimeLayerModule(): OnnxRuntimeLayerModule
+```
+
+Create the runtime layer-module wiring used by ONNX import orchestrators.
+
+Returns: Runtime recurrent-layer module object.
+
+### foldRuntimeFactories
+
+```ts
+foldRuntimeFactories(
+  perceptronFactory: OnnxRuntimePerceptronFactory,
+  layerModule: OnnxRuntimeLayerModule,
+): OnnxRuntimeFactories
+```
+
+Fold runtime perceptron and layer module into a transport payload.
+
+Parameters:
+- `perceptronFactory` - Perceptron factory function.
+- `layerModule` - Runtime recurrent-layer constructors.
+
+Returns: Runtime factories payload.
+
+### foldRuntimeLayerModule
+
+```ts
+foldRuntimeLayerModule(
+  lstmFactory: OnnxRuntimeLayerFactory,
+  gruFactory: OnnxRuntimeLayerFactory,
+): OnnxRuntimeLayerModule
+```
+
+Fold LSTM/GRU factories into a runtime layer module payload.
+
+Parameters:
+- `lstmFactory` - Runtime LSTM layer factory.
+- `gruFactory` - Runtime GRU layer factory.
+
+Returns: Runtime layer module.
+
+### resolveLayerFactory
+
+```ts
+resolveLayerFactory(
+  layerKey: keyof OnnxRuntimeLayerModule,
+): OnnxRuntimeLayerFactory
+```
+
+Resolve one runtime layer factory by module key.
+
+Parameters:
+- `layerKey` - Runtime layer key.
+
+Returns: Matching layer factory.
+
+### createPerceptronSizeValidationContext
+
+```ts
+createPerceptronSizeValidationContext(
+  sizes: number[],
+): OnnxPerceptronSizeValidationContext
+```
+
+Build perceptron-size validation context.
+
+Parameters:
+- `sizes` - Layer-size payload.
+
+Returns: Validation context.
+
+### validatePerceptronSizes
+
+```ts
+validatePerceptronSizes(
+  validationContext: OnnxPerceptronSizeValidationContext,
+): void
+```
+
+Validate perceptron size-list constraints.
+
+Parameters:
+- `validationContext` - Validation context.
+
+Returns: Nothing. Throws on invalid size-list.
+
+### createPerceptronBuildContext
+
+```ts
+createPerceptronBuildContext(
+  sizes: number[],
+): OnnxPerceptronBuildContext
+```
+
+Build perceptron-network construction context.
+
+Parameters:
+- `sizes` - Layer-size payload.
+
+Returns: Build context.
+
+### buildPerceptronNetwork
+
+```ts
+buildPerceptronNetwork(
+  buildContext: OnnxPerceptronBuildContext,
+): default
+```
+
+Build a perceptron network from size-extraction context.
+
+Parameters:
+- `buildContext` - Perceptron build context.
+
+Returns: Reconstructed network instance.
+
+## architecture/network/onnx/import/network.onnx.import-weights.types.ts
+
+Import-owned types for ONNX weight restoration and Conv reconstruction.
+
+This chapter explains the state carried through the importer's heaviest
+restoration pass: hidden-size derivation, dense and per-neuron tensor
+assignment, and the optional Conv metadata replay that maps flattened ONNX
+initializers back onto runtime connections.
+
+Keeping these types near the weight importer makes the generated import README
+read like a reconstruction guide instead of scattering the execution model
+across the root compatibility barrel.
+
+Example:
+```ts
+const assignmentContext: OnnxImportWeightAssignmentContext = {
+  onnx,
+  hiddenLayerSizes,
+  metadataProps,
+  initializerMap,
+  sortedLayerIndices,
+  inputNodes,
+  hiddenNodes,
+  outputNodes,
+};
+```
+
+### OnnxImportLayerWeightBucket
+
+Bucketed ONNX dense/per-neuron tensors for one exported layer index.
+
+### OnnxImportHiddenSizeDerivationContext
+
+Context for deriving hidden layer sizes from initializer tensors and metadata.
+
+### OnnxImportWeightAssignmentContext
+
+Shared weight-assignment context built once per ONNX import.
+
+### OnnxImportWeightAssignmentBuildParams
+
+Build params for creating shared ONNX import weight-assignment context.
+
+### OnnxImportLayerNodePair
+
+Node slices for one sequential imported layer assignment pass.
+
+### OnnxImportLayerNodePairBuildParams
+
+Build params for one sequential layer node-pair slice operation.
+
+### OnnxImportLayerTensorNames
+
+Weight tensor names for one imported layer index.
+
+### OnnxImportAggregatedLayerAssignmentContext
+
+Context for assigning aggregated dense tensors for one layer.
+
+### OnnxImportPerNeuronLayerAssignmentContext
+
+Context for assigning per-neuron tensors for one layer.
+
+### OnnxImportAggregatedNeuronAssignmentContext
+
+Context for assigning one aggregated dense target neuron row.
+
+### OnnxImportPerNeuronAssignmentContext
+
+Context for assigning one per-neuron imported target node.
+
+### OnnxImportConvMetadata
+
+Parsed Conv metadata payload used for optional reconstruction pass.
+
+### OnnxImportConvLayerContext
+
+Context for reconstructing one Conv layer's imported connectivity.
+
+### OnnxImportConvLayerContextBuildParams
+
+Build params for creating one Conv reconstruction layer context.
+
+### OnnxImportConvTensorContext
+
+Resolved Conv initializer tensors and dimensions for one layer.
+
+### OnnxImportConvNodeSlices
+
+Layer node slices used while applying Conv reconstruction assignments.
+
+### OnnxImportConvOutputCoordinate
+
+Coordinate for one Conv output neuron traversal position.
+
+### OnnxImportConvCoordinateAssignmentContext
+
+Context for applying Conv weights and bias at one output coordinate.
+
+### OnnxImportInboundConnectionMap
+
+Inbound connection lookup map keyed by source node for one target neuron.
+
+### OnnxImportConvKernelAssignmentContext
+
+Context for assigning one concrete Conv kernel connection weight.
+
+## architecture/network/onnx/import/network.onnx.import-weights.utils.ts
+
+### deriveHiddenLayerSizes
+
+```ts
+deriveHiddenLayerSizes(
+  initializers: OnnxTensor[],
+  metadataProps: OnnxMetadataProperty[] | undefined,
+): number[]
+```
+
+Extract hidden layer sizes from ONNX initializers (weight tensors).
+
+Parameters:
+- `initializers` - ONNX initializer tensors.
+- `metadataProps` - Optional ONNX metadata properties.
+
+Returns: Hidden layer sizes in order.
+
+### assignWeightsAndBiases
+
+```ts
+assignWeightsAndBiases(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadataProps: OnnxMetadataProperty[] | undefined,
+): void
+```
+
+Assign weights and biases from ONNX initializers to a newly created network.
+
+Parameters:
+- `network` - Target network to mutate.
+- `onnx` - Source ONNX model.
+- `hiddenLayerSizes` - Hidden layer sizes.
+- `metadataProps` - Optional ONNX metadata properties.
+
+Returns: Nothing.
+
+### parseMetadataLayerSizes
+
+```ts
+parseMetadataLayerSizes(
+  metadataProps: OnnxMetadataProperty[],
+): number[] | null
+```
+
+Parse explicit metadata-driven hidden layer sizes.
+
+Parameters:
+- `metadataProps` - ONNX metadata properties.
+
+Returns: Parsed hidden layer sizes when available.
+
+### collectLayerWeightBuckets
+
+```ts
+collectLayerWeightBuckets(
+  initializers: OnnxTensor[],
+): Record<string, OnnxImportLayerWeightBucket>
+```
+
+Collect ONNX weight tensor buckets grouped by export layer index.
+
+Parameters:
+- `initializers` - ONNX initializer tensors.
+
+Returns: Layer-weight buckets keyed by export layer index.
+
+### collectSortedLayerIndices
+
+```ts
+collectSortedLayerIndices(
+  layerWeightBuckets: Record<string, OnnxImportLayerWeightBucket>,
+): number[]
+```
+
+Collect sorted layer indices from weight buckets.
+
+Parameters:
+- `layerWeightBuckets` - Layer-weight buckets.
+
+Returns: Ascending export layer indices.
+
+### buildHiddenLayerSizesFromBuckets
+
+```ts
+buildHiddenLayerSizesFromBuckets(
+  layerWeightBuckets: Record<string, OnnxImportLayerWeightBucket>,
+  sortedLayerIndices: number[],
+): number[]
+```
+
+Build hidden-layer sizes from weight buckets while excluding output layer.
+
+Parameters:
+- `layerWeightBuckets` - Layer-weight buckets.
+- `sortedLayerIndices` - Ascending layer indices.
+
+Returns: Hidden-layer sizes.
+
+### resolveLayerHiddenSize
+
+```ts
+resolveLayerHiddenSize(
+  layerWeightBuckets: Record<string, OnnxImportLayerWeightBucket>,
+  layerIndex: number,
+): number
+```
+
+Resolve one hidden-layer size from its weight bucket.
+
+Parameters:
+- `layerWeightBuckets` - Layer-weight buckets.
+- `layerIndex` - Export layer index.
+
+Returns: Hidden-layer size.
+
+### buildWeightAssignmentContext
+
+```ts
+buildWeightAssignmentContext(
+  params: OnnxImportWeightAssignmentBuildParams,
+): OnnxImportWeightAssignmentContext
+```
+
+Build the shared assignment context for import weight restoration.
+
+Parameters:
+- `params` - Assignment context input params.
+
+Returns: Shared assignment context.
+
+### parseLayerIndexFromWeightTensor
+
+```ts
+parseLayerIndexFromWeightTensor(
+  tensorName: string,
+): number | null
+```
+
+Parse layer index from dense/per-neuron weight tensor name.
+
+Parameters:
+- `tensorName` - Tensor name.
+
+Returns: Parsed layer index or null.
+
+### parseWeightTensorName
+
+```ts
+parseWeightTensorName(
+  tensorName: string,
+): { layerIndex: string; neuronIndex: number | null; } | null
+```
+
+Parse layer/neuron components from a weight tensor name.
+
+Parameters:
+- `tensorName` - Tensor name.
+
+Returns: Parsed layer+neuron components when matched.
+
+### buildInitializerMap
+
+```ts
+buildInitializerMap(
+  initializers: OnnxTensor[],
+): Record<string, OnnxTensor>
+```
+
+Build ONNX initializer map keyed by tensor name.
+
+Parameters:
+- `initializers` - ONNX initializer list.
+
+Returns: Tensor map by name.
+
+### collectSortedUniqueLayerIndices
+
+```ts
+collectSortedUniqueLayerIndices(
+  initializerMap: Record<string, OnnxTensor>,
+): number[]
+```
+
+Collect unique sorted layer indices from initializer weight tensors.
+
+Parameters:
+- `initializerMap` - Initializer map keyed by tensor name.
+
+Returns: Unique sorted layer indices.
+
+### collectNodesByType
+
+```ts
+collectNodesByType(
+  nodes: default[],
+  nodeType: "input" | "output" | "hidden",
+): default[]
+```
+
+Collect nodes by runtime node type discriminator.
+
+Parameters:
+- `nodes` - Network nodes.
+- `nodeType` - Runtime node type.
+
+Returns: Filtered nodes.
+
+### applyDenseWeightAssignments
+
+```ts
+applyDenseWeightAssignments(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+): void
+```
+
+Apply dense/per-neuron assignments for all sorted layer indices.
+
+Parameters:
+- `assignmentContext` - Shared assignment context.
+
+Returns: Nothing.
+
+### buildLayerNodePair
+
+```ts
+buildLayerNodePair(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+  params: OnnxImportLayerNodePairBuildParams,
+): OnnxImportLayerNodePair
+```
+
+Build current/previous node slices for one sequential import layer pass.
+
+Parameters:
+- `assignmentContext` - Shared assignment context.
+- `params` - Sequential traversal params.
+
+Returns: Layer node pair.
+
+### resolveCurrentLayerNodes
+
+```ts
+resolveCurrentLayerNodes(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+  params: { sequentialIndex: number; },
+): default[]
+```
+
+Resolve current layer nodes for one sequential layer assignment pass.
+
+Parameters:
+- `assignmentContext` - Shared assignment context.
+- `params` - Sequential traversal params.
+
+Returns: Current layer nodes.
+
+### resolvePreviousLayerNodes
+
+```ts
+resolvePreviousLayerNodes(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+  params: { sequentialIndex: number; },
+): default[]
+```
+
+Resolve previous layer nodes for one sequential layer assignment pass.
+
+Parameters:
+- `assignmentContext` - Shared assignment context.
+- `params` - Sequential traversal params.
+
+Returns: Previous layer nodes.
+
+### sumHiddenSizesToIndex
+
+```ts
+sumHiddenSizesToIndex(
+  hiddenLayerSizes: number[],
+  exclusiveEndIndex: number,
+): number
+```
+
+Sum hidden-layer sizes from index `0` to `exclusiveEndIndex`.
+
+Parameters:
+- `hiddenLayerSizes` - Hidden-layer size list.
+- `exclusiveEndIndex` - Exclusive end index.
+
+Returns: Prefix sum.
+
+### assignLayerWeights
+
+```ts
+assignLayerWeights(
+  initializerMap: Record<string, OnnxTensor>,
+  nodePair: OnnxImportLayerNodePair,
+): void
+```
+
+Assign one layer's weights using aggregated or per-neuron tensors.
+
+Parameters:
+- `initializerMap` - ONNX initializer map.
+- `nodePair` - Current/previous node slices.
+
+Returns: Nothing.
+
+### hasAggregatedLayerWeights
+
+```ts
+hasAggregatedLayerWeights(
+  aggregatedContext: OnnxImportAggregatedLayerAssignmentContext,
+): boolean
+```
+
+Determine whether the layer has aggregated weight tensor data.
+
+Parameters:
+- `aggregatedContext` - Aggregated assignment context.
+
+Returns: True when aggregated tensor exists.
+
+### buildLayerTensorNames
+
+```ts
+buildLayerTensorNames(
+  layerIndex: number,
+): OnnxImportLayerTensorNames
+```
+
+Build dense weight/bias tensor names for one layer index.
+
+Parameters:
+- `layerIndex` - Export layer index.
+
+Returns: Layer tensor names.
+
+### applyAggregatedLayerWeights
+
+```ts
+applyAggregatedLayerWeights(
+  aggregatedContext: OnnxImportAggregatedLayerAssignmentContext,
+): void
+```
+
+Apply aggregated dense tensor assignments for one layer.
+
+Parameters:
+- `aggregatedContext` - Aggregated assignment context.
+
+Returns: Nothing.
+
+### applyAggregatedNeuronAssignment
+
+```ts
+applyAggregatedNeuronAssignment(
+  neuronContext: OnnxImportAggregatedNeuronAssignmentContext,
+): void
+```
+
+Apply aggregated dense row weights and bias for one target neuron.
+
+Parameters:
+- `neuronContext` - Aggregated neuron assignment context.
+
+Returns: Nothing.
+
+### applyPerNeuronLayerWeights
+
+```ts
+applyPerNeuronLayerWeights(
+  perNeuronContext: OnnxImportPerNeuronLayerAssignmentContext,
+): void
+```
+
+Apply per-neuron tensor assignments for one layer.
+
+Parameters:
+- `perNeuronContext` - Per-neuron layer assignment context.
+
+Returns: Nothing.
+
+### buildPerNeuronTensorNames
+
+```ts
+buildPerNeuronTensorNames(
+  layerIndex: number,
+  neuronIndex: number,
+): OnnxImportLayerTensorNames
+```
+
+Build per-neuron tensor names for one layer and neuron index.
+
+Parameters:
+- `layerIndex` - Export layer index.
+- `neuronIndex` - Neuron index in layer.
+
+Returns: Per-neuron tensor names.
+
+### applyPerNeuronAssignment
+
+```ts
+applyPerNeuronAssignment(
+  perNeuronAssignmentContext: OnnxImportPerNeuronAssignmentContext,
+): void
+```
+
+Apply one per-neuron weight vector and bias assignment.
+
+Parameters:
+- `perNeuronAssignmentContext` - Per-neuron assignment context.
+
+Returns: Nothing.
+
+### applyOptionalConvReconstruction
+
+```ts
+applyOptionalConvReconstruction(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+): void
+```
+
+Apply optional Conv2D reconstruction pass from metadata payloads.
+
+Parameters:
+- `assignmentContext` - Shared assignment context.
+
+Returns: Nothing.
+
+### parseConvMetadata
+
+```ts
+parseConvMetadata(
+  metadataProps: OnnxMetadataProperty[],
+): OnnxImportConvMetadata | null
+```
+
+Parse Conv reconstruction metadata payload.
+
+Parameters:
+- `metadataProps` - ONNX metadata properties.
+
+Returns: Parsed Conv metadata.
+
+### buildConvLayerContext
+
+```ts
+buildConvLayerContext(
+  params: OnnxImportConvLayerContextBuildParams,
+): OnnxImportConvLayerContext | null
+```
+
+Build one Conv layer reconstruction context.
+
+Parameters:
+- `params` - Conv context input params.
+
+Returns: Conv layer context when valid.
+
+### applyConvLayerReconstruction
+
+```ts
+applyConvLayerReconstruction(
+  layerContext: OnnxImportConvLayerContext,
+): void
+```
+
+Apply Conv reconstruction for one validated Conv layer context.
+
+Parameters:
+- `layerContext` - Conv layer context.
+
+Returns: Nothing.
+
+### buildConvNodeSlices
+
+```ts
+buildConvNodeSlices(
+  layerContext: OnnxImportConvLayerContext,
+): OnnxImportConvNodeSlices
+```
+
+Build Conv current/previous node slices for one layer context.
+
+Parameters:
+- `layerContext` - Conv layer context.
+
+Returns: Node slice payload.
+
+### buildConvTensorContext
+
+```ts
+buildConvTensorContext(
+  layerContext: OnnxImportConvLayerContext,
+): OnnxImportConvTensorContext | null
+```
+
+Build validated Conv tensor context for one layer.
+
+Parameters:
+- `layerContext` - Conv layer context.
+
+Returns: Conv tensor context when valid.
+
+### collectConvOutputCoordinates
+
+```ts
+collectConvOutputCoordinates(
+  convSpec: Conv2DMapping,
+  outChannels: number,
+): OnnxImportConvOutputCoordinate[]
+```
+
+Collect all output traversal coordinates for one Conv layer.
+
+Parameters:
+- `convSpec` - Conv mapping spec.
+- `outChannels` - Output channel count.
+
+Returns: Output traversal coordinates.
+
+### applyConvCoordinateAssignment
+
+```ts
+applyConvCoordinateAssignment(
+  coordinateContext: OnnxImportConvCoordinateAssignmentContext,
+): void
+```
+
+Apply Conv bias and kernel weights for one output coordinate.
+
+Parameters:
+- `coordinateContext` - Conv coordinate assignment context.
+
+Returns: Nothing.
+
+### buildConvNeuronLinearIndex
+
+```ts
+buildConvNeuronLinearIndex(
+  coordinate: OnnxImportConvOutputCoordinate,
+  convSpec: Conv2DMapping,
+): number
+```
+
+Build flattened linear index for one Conv output coordinate.
+
+Parameters:
+- `coordinate` - Conv output coordinate.
+- `convSpec` - Conv mapping spec.
+
+Returns: Linear neuron index.
+
+### collectConvKernelCoordinates
+
+```ts
+collectConvKernelCoordinates(
+  inChannels: number,
+  kernelHeight: number,
+  kernelWidth: number,
+): OnnxConvKernelCoordinate[]
+```
+
+Collect all kernel traversal coordinates for one Conv output position.
+
+Parameters:
+- `inChannels` - Input channel count.
+- `kernelHeight` - Kernel height.
+- `kernelWidth` - Kernel width.
+
+Returns: Kernel traversal coordinates.
+
+### assignConvKernelWeight
+
+```ts
+assignConvKernelWeight(
+  kernelAssignmentContext: OnnxImportConvKernelAssignmentContext,
+): void
+```
+
+Assign one Conv kernel weight to the matching inbound neuron connection.
+
+Parameters:
+- `kernelAssignmentContext` - Conv kernel assignment context.
+
+Returns: Nothing.
+
+### buildInputCoordinate
+
+```ts
+buildInputCoordinate(
+  kernelAssignmentContext: OnnxImportConvKernelAssignmentContext,
+): { inputRow: number; inputColumn: number; } | null
+```
+
+Build input-space coordinate for one Conv kernel element.
+
+Parameters:
+- `kernelAssignmentContext` - Conv kernel assignment context.
+
+Returns: Input coordinate when in bounds.
+
+### buildInputFeatureLinearIndex
+
+```ts
+buildInputFeatureLinearIndex(
+  convSpec: Conv2DMapping,
+  inChannelIndex: number,
+  inputRow: number,
+  inputColumn: number,
+): number
+```
+
+Build linear feature index in input feature space.
+
+Parameters:
+- `convSpec` - Conv mapping spec.
+- `inChannelIndex` - Input channel index.
+- `inputRow` - Input row index.
+- `inputColumn` - Input column index.
+
+Returns: Linear input feature index.
+
+### buildInboundConnectionMap
+
+```ts
+buildInboundConnectionMap(
+  neuronInternal: NodeInternals,
+): OnnxImportInboundConnectionMap
+```
+
+Build inbound connection lookup map for one neuron.
+
+Parameters:
+- `neuronInternal` - Neuron internals.
+
+Returns: Inbound connection map keyed by source node.
+
+### readConvKernelWeight
+
+```ts
+readConvKernelWeight(
+  kernelAssignmentContext: OnnxImportConvKernelAssignmentContext,
+): number
+```
+
+Read one Conv kernel weight from flattened ONNX tensor payload.
+
+Parameters:
+- `kernelAssignmentContext` - Conv kernel assignment context.
+
+Returns: Kernel weight.
+
+## architecture/network/onnx/import/network.onnx.import-activations.utils.ts
+
+### assignActivationFunctions
+
+```ts
+assignActivationFunctions(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+): void
+```
+
+Assign node activation functions from ONNX activation nodes.
+
+Parameters:
+- `network` - Target network to mutate.
+- `onnx` - Source ONNX model.
+- `hiddenLayerSizes` - Hidden layer size list.
+
+Returns: Nothing.
+
+## architecture/network/onnx/import/network.onnx.import-orchestrators.types.ts
+
+Import-owned type surface for ONNX architecture reconstruction orchestration.
+
+These payloads stay close to the orchestration helpers that parse terminal
+dimensions, restore recurrent self-connections, and attach pooling metadata.
+Keeping them here makes the import chapter explain its own execution state
+without forcing the root ONNX compatibility barrel to remain the ownership
+home for importer-only details.
+
+### OnnxImportArchitectureResult
+
+Parsed architecture dimensions extracted from ONNX import graph payloads.
+
+### OnnxImportArchitectureContext
+
+Shared architecture extraction context with resolved graph dimensions.
+
+### OnnxImportDimensionRecord
+
+Loose ONNX shape-dimension record used by legacy import payload access.
+
+### OnnxImportRecurrentRestorationContext
+
+Context for recurrent self-connection restoration from ONNX metadata and tensors.
+
+### OnnxImportHiddenLayerSpan
+
+Hidden-layer span payload with one-based layer numbering and global offset.
+
+### OnnxImportLayerConnectionContext
+
+Execution context for assigning one hidden-layer recurrent diagonal tensor.
+
+### OnnxImportSelfConnectionUpsertContext
+
+Context for upserting one hidden node self-connection from recurrent weight.
+
+### OnnxImportPoolingMetadata
+
+Parsed pooling metadata payload attached to imported network instances.
+
+### NetworkWithOnnxImportPooling
+
+Network instance augmented with optional imported ONNX pooling metadata.
+
+## architecture/network/onnx/import/network.onnx.import-orchestrators.utils.ts
+
+### extractOnnxArchitecture
+
+```ts
+extractOnnxArchitecture(
+  onnx: OnnxModel,
+): OnnxImportArchitectureResult
+```
+
+Extract input/output counts and hidden layer sizes from ONNX model.
+
+Parameters:
+- `onnx` - Source ONNX model.
+
+Returns: Parsed architecture dimensions.
+
+### pruneSingleLayerHiddenPlaceholders
+
+```ts
+pruneSingleLayerHiddenPlaceholders(
+  network: default,
+  hiddenLayerSizes: number[],
+): void
+```
+
+Remove placeholder hidden nodes for single-layer perceptron imports.
+
+Parameters:
+- `network` - Target network.
+- `hiddenLayerSizes` - Hidden layer sizes.
+
+Returns: Nothing.
+
+### restoreRecurrentSelfConnections
+
+```ts
+restoreRecurrentSelfConnections(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadata: OnnxMetadataProperty[],
+): void
+```
+
+Restore recurrent self-connections from recurrent metadata and R tensors.
+
+Parameters:
+- `network` - Target network.
+- `onnx` - Source ONNX model.
+- `hiddenLayerSizes` - Hidden layer sizes.
+- `metadata` - Parsed metadata properties.
+
+Returns: Nothing.
+
+### attachOnnxPoolingMetadata
+
+```ts
+attachOnnxPoolingMetadata(
+  network: default,
+  metadata: OnnxMetadataProperty[],
+): void
+```
+
+Attach optional pooling metadata from ONNX model to network instance.
+
+Parameters:
+- `network` - Target network.
+- `metadata` - ONNX metadata.
+
+Returns: Nothing.
+
+### reconstructFusedRecurrentLayers
+
+```ts
+reconstructFusedRecurrentLayers(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  layerFactory: OnnxLayerFactory,
+  metadata: OnnxMetadataProperty[],
+): void
+```
+
+Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
+
+Parameters:
+- `network` - Target network.
+- `onnx` - Source ONNX model.
+- `hiddenLayerSizes` - Hidden layer sizes.
+- `layerFactory` - Dynamic layer module.
+- `metadata` - ONNX metadata properties.
+
+Returns: Nothing.
+
+### parseRecurrentLayerIndices
+
+```ts
+parseRecurrentLayerIndices(
+  rawMetadataValue: string,
+): number[]
+```
+
+Parse recurrent layer indices metadata.
+
+Parameters:
+- `rawMetadataValue` - Raw metadata JSON string.
+
+Returns: Normalized recurrent layer indices.
+
+### applyLayerSelfConnections
+
+```ts
+applyLayerSelfConnections(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): void
+```
+
+Apply one hidden layer diagonal recurrent self-weights.
+
+Parameters:
+- `layerConnectionContext` - Layer connection context.
+
+Returns: Nothing.
+
+### buildArchitectureContext
+
+```ts
+buildArchitectureContext(
+  onnx: OnnxModel,
+): OnnxImportArchitectureContext
+```
+
+Build architecture extraction context from ONNX graph state.
+
+Parameters:
+- `onnx` - Source ONNX model.
+
+Returns: Normalized architecture extraction context.
+
+### readLastDimensionValue
+
+```ts
+readLastDimensionValue(
+  dimensions: { dim_value?: number | undefined; }[],
+): number
+```
+
+Read the terminal ONNX shape dimension value from one shape array.
+
+Parameters:
+- `dimensions` - ONNX shape dimensions.
+
+Returns: Terminal `dim_value` payload.
+
+### isSingleLayerPerceptronImport
+
+```ts
+isSingleLayerPerceptronImport(
+  hiddenLayerSizes: number[],
+): boolean
+```
+
+Determine whether import shape corresponds to a single-layer perceptron.
+
+Parameters:
+- `hiddenLayerSizes` - Hidden-layer size list.
+
+Returns: True when no hidden layers exist.
+
+### collectPerceptronBoundaryNodes
+
+```ts
+collectPerceptronBoundaryNodes(
+  nodes: default[],
+): default[]
+```
+
+Collect input and output boundary nodes for perceptron imports.
+
+Parameters:
+- `nodes` - Full network node list.
+
+Returns: Input/output-only node list.
+
+### collectNodesByType
+
+```ts
+collectNodesByType(
+  nodes: default[],
+  nodeType: "input" | "output" | "hidden",
+): default[]
+```
+
+Collect nodes matching one runtime node-type discriminator.
+
+Parameters:
+- `nodes` - Node list.
+- `nodeType` - Runtime node type.
+
+Returns: Filtered node list.
+
+### collectRecurrentLayerSpans
+
+```ts
+collectRecurrentLayerSpans(
+  restorationContext: OnnxImportRecurrentRestorationContext,
+): OnnxImportHiddenLayerSpan[]
+```
+
+Resolve recurrent-target hidden-layer spans from metadata + hidden sizes.
+
+Parameters:
+- `restorationContext` - Recurrent restoration context.
+
+Returns: Hidden-layer spans requiring recurrent restoration.
+
+### resolveRecurrentLayerIndices
+
+```ts
+resolveRecurrentLayerIndices(
+  metadata: OnnxMetadataProperty[],
+): number[]
+```
+
+Resolve recurrent layer indices from ONNX metadata.
+
+Parameters:
+- `metadata` - ONNX metadata payload.
+
+Returns: Parsed recurrent layer indices.
+
+### findMetadataProperty
+
+```ts
+findMetadataProperty(
+  metadata: OnnxMetadataProperty[],
+  metadataKey: string,
+): OnnxMetadataProperty | undefined
+```
+
+Find one ONNX metadata property by key.
+
+Parameters:
+- `metadata` - ONNX metadata array.
+- `metadataKey` - Metadata key.
+
+Returns: Matching metadata property when present.
+
+### buildHiddenLayerSpans
+
+```ts
+buildHiddenLayerSpans(
+  hiddenLayerSizes: number[],
+): OnnxImportHiddenLayerSpan[]
+```
+
+Build hidden-layer spans with one-based layer numbering and global offsets.
+
+Parameters:
+- `hiddenLayerSizes` - Hidden-layer size list.
+
+Returns: Hidden-layer span payload list.
+
+### normalizeRecurrentLayerIndices
+
+```ts
+normalizeRecurrentLayerIndices(
+  parsedMetadataValue: string | number | boolean | number[] | Record<string, number> | null,
+): number[]
+```
+
+Normalize recurrent layer indices parsed from metadata JSON.
+
+Parameters:
+- `parsedMetadataValue` - Parsed metadata JSON value.
+
+Returns: Recurrent layer indices.
+
+### findRecurrentInitializer
+
+```ts
+findRecurrentInitializer(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): { name: string; float_data: number[]; } | undefined
+```
+
+Resolve recurrent initializer tensor for one hidden-layer span.
+
+Parameters:
+- `layerConnectionContext` - Layer connection context.
+
+Returns: Recurrent initializer tensor when available.
+
+### sliceLayerHiddenNodes
+
+```ts
+sliceLayerHiddenNodes(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): default[]
+```
+
+Slice hidden nodes for one hidden-layer span.
+
+Parameters:
+- `layerConnectionContext` - Layer connection context.
+
+Returns: Hidden nodes belonging to the span.
+
+### collectDiagonalRecurrentWeights
+
+```ts
+collectDiagonalRecurrentWeights(
+  recurrentTensorWeights: number[],
+  hiddenLayerSize: number,
+): number[]
+```
+
+Collect diagonal recurrent weights from flattened layer tensor data.
+
+Parameters:
+- `recurrentTensorWeights` - Flattened recurrent tensor weights.
+- `hiddenLayerSize` - Hidden-layer width.
+
+Returns: Diagonal recurrent self-weights.
+
+### upsertSelfConnection
+
+```ts
+upsertSelfConnection(
+  selfConnectionContext: OnnxImportSelfConnectionUpsertContext,
+): void
+```
+
+Upsert one node self-connection for recurrent import restoration.
+
+Parameters:
+- `selfConnectionContext` - Self-connection upsert context.
+
+Returns: Nothing.
+
+### parsePoolingMetadata
+
+```ts
+parsePoolingMetadata(
+  metadata: OnnxMetadataProperty[],
+): OnnxImportPoolingMetadata | null
+```
+
+Parse pooling metadata payload from ONNX metadata.
+
+Parameters:
+- `metadata` - ONNX metadata entries.
+
+Returns: Parsed pooling metadata payload.
+
+### attachParsedPoolingMetadata
+
+```ts
+attachParsedPoolingMetadata(
+  network: default,
+  poolingMetadata: OnnxImportPoolingMetadata,
+): void
+```
+
+Attach parsed pooling metadata to imported network instance.
+
+Parameters:
+- `network` - Target network.
+- `poolingMetadata` - Parsed pooling metadata payload.
+
+Returns: Nothing.
+
+## architecture/network/onnx/import/network.onnx.import-fused-recurrent.types.ts
+
+### OnnxFusedRecurrentKind
+
+Supported fused recurrent operator families recognized during ONNX import.
+
+### OnnxFusedLayerRuntime
+
+Runtime interface of a reconstructed fused recurrent layer instance.
+
+The importer only relies on a narrow runtime contract: access to the
+reconstructed nodes, an input wiring hook, and an optional output group that
+can be reconnected to the next restored layer.
+
+### OnnxFusedRecurrentSpec
+
+Fused recurrent family specification used during import reconstruction.
+
+This tells the importer how to interpret one emitted ONNX recurrent family:
+how many gates to expect, what order those gates were serialized in, and
+which gate owns the self-recurrent diagonal replay.
+
+### OnnxFusedLayerNeighborhood
+
+Hidden-layer neighborhood slices around a reconstructed fused layer.
+
+### OnnxFusedTensorPayload
+
+Fused recurrent tensor payload read from ONNX initializers.
+
+The importer resolves the three recurrent tensor families up front so the
+reconstruction pass can focus on wiring and row assignment instead of
+repeatedly re-looking up initializers.
+
+### OnnxFusedLayerReconstructionContext
+
+Execution context for one fused recurrent layer reconstruction.
+
+### OnnxFusedGateApplicationContext
+
+Gate-weight application context for one reconstructed fused layer.
+
+### OnnxFusedGateRowAssignmentContext
+
+Context for assigning one gate-neuron row from flattened ONNX tensors.
+
+### OnnxIncomingWeightAssignmentContext
+
+Context for assigning dense incoming weights for one gate-neuron row.
+
+## architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts
+
+### reconstructFusedRecurrentLayers
+
+```ts
+reconstructFusedRecurrentLayers(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  layerFactory: OnnxLayerFactory,
+  metadata: OnnxMetadataProperty[],
+): void
+```
+
+Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
+
+Parameters:
+- `network` - Target network.
+- `onnx` - Source ONNX model.
+- `hiddenLayerSizes` - Hidden layer sizes.
+- `layerFactory` - Dynamic layer module.
+- `metadata` - ONNX metadata properties.
+
+Returns: Nothing.

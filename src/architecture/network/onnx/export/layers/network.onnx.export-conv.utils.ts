@@ -1,27 +1,55 @@
-import type NeatapticNode from '../../node';
+import type NeatapticNode from '../../../../node';
 import type {
   Conv2DMapping,
-  NodeInternals,
+  Pool2DMapping,
+} from '../../schema/network.onnx.schema.types';
+import type {
   OnnxConvEmissionContext,
   OnnxConvEmissionParams,
-  OnnxConvKernelCoordinate,
   OnnxConvParameters,
   OnnxConvTensorNames,
   OnnxExportOptions,
-  Pool2DMapping,
-} from './network.onnx.utils.types';
+} from '../network.onnx.export.types';
+import type {
+  NodeInternals,
+  OnnxConvKernelCoordinate,
+} from '../../network.onnx.utils.types';
 import {
   appendIndexedMetadata,
   appendMetadataSpec,
   emitOptionalPoolingAndFlatten,
 } from './network.onnx.export-layer-common.utils';
-import { mapActivationToOnnx } from './network.onnx.layer-analysis.utils';
+import { mapActivationToOnnx } from '../../network.onnx.layer-analysis.utils';
 
 /**
- * Try to emit a conv-mapped layer.
+ * Try to emit one layer as a Conv-shaped ONNX segment when the caller supplied
+ * an explicit Conv mapping for that export layer.
+ *
+ * This path reconstructs kernels from a fully connected layer by assuming the
+ * declared Conv geometry really matches the flattened previous and current layer
+ * widths. When that contract does not hold, the exporter logs the mismatch and
+ * returns `undefined` so the broader layer router can fall back or fail with a
+ * more appropriate message.
+ *
+ * In addition to the Conv and activation nodes, this helper also owns optional
+ * pooling, flatten-after-pooling, and the metadata hints required for import to
+ * rebuild the same semantic interpretation.
  *
  * @param params Conv emission parameters.
  * @returns New output tensor name when handled, otherwise undefined.
+ * @example
+ * ```ts
+ * const outputName = tryEmitConvLayer({
+ *   model,
+ *   options: {
+ *     conv2dMappings: [{ layerIndex: 1, inHeight: 28, inWidth: 28, inChannels: 1, outChannels: 8, kernelSize: 3 }],
+ *   },
+ *   layerIndex: 1,
+ *   previousOutputName: 'input',
+ *   previousLayerNodes,
+ *   currentLayerNodes,
+ * });
+ * ```
  */
 export function tryEmitConvLayer(
   params: OnnxConvEmissionParams,

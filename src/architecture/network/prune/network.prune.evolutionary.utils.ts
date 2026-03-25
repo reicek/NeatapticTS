@@ -1,5 +1,5 @@
 import Connection from '../../connection';
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type {
   EvolutionaryTargetContext,
   EvolutionaryTargetResult,

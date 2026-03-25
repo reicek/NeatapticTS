@@ -1,6 +1,6 @@
 # Architecture Solid Split Plan
 
-**Status:** [WIP]
+**Status:** [DONE]
 
 ## Scope
 
@@ -32,6 +32,7 @@ root. Keep exactly one boundary pass active at a time.
 - [src/architecture/layer](../src/architecture/layer/README.md)
 - [src/architecture/network](../src/architecture/network/README.md)
 - [src/architecture/network/activate](../src/architecture/network/activate/README.md)
+- [src/architecture/network/bootstrap](../src/architecture/network/bootstrap/README.md)
 - [src/architecture/network/connect](../src/architecture/network/connect/README.md)
 - [src/architecture/network/deterministic](../src/architecture/network/deterministic/README.md)
 - [src/architecture/network/evolve](../src/architecture/network/evolve/README.md)
@@ -39,8 +40,13 @@ root. Keep exactly one boundary pass active at a time.
 - [src/architecture/network/genetic](../src/architecture/network/genetic/README.md)
 - [src/architecture/network/mutate](../src/architecture/network/mutate/README.md)
 - [src/architecture/network/onnx](../src/architecture/network/onnx/README.md)
+- [src/architecture/network/onnx/export](../src/architecture/network/onnx/export/README.md)
+- [src/architecture/network/onnx/export/layers](../src/architecture/network/onnx/export/layers/README.md)
+- [src/architecture/network/onnx/import](../src/architecture/network/onnx/import/README.md)
+- [src/architecture/network/onnx/schema](../src/architecture/network/onnx/schema/README.md)
 - [src/architecture/network/prune](../src/architecture/network/prune/README.md)
 - [src/architecture/network/remove](../src/architecture/network/remove/README.md)
+- [src/architecture/network/runtime](../src/architecture/network/runtime/README.md)
 - [src/architecture/network/serialize](../src/architecture/network/serialize/README.md)
 - [src/architecture/network/slab](../src/architecture/network/slab/README.md)
 - [src/architecture/network/standalone](../src/architecture/network/standalone/README.md)
@@ -62,455 +68,608 @@ root. Keep exactly one boundary pass active at a time.
 
 ## Session Log
 
-### Architecture planning pass
+## Current State
 
-Goals:
+### [DONE] Workstream Closure
 
-- Create a durable split order for the architecture root instead of attempting
-  a one-shot rewrite.
-- Align the split order with the Phase 2 primitives roadmap while treating the
-  current work as Phase 0 structural cleanup.
+- The architecture solid-split workstream is complete enough to close for now.
+- The generated [src/architecture/README.md](../src/architecture/README.md)
+  now behaves like a root chapter map instead of a flat re-export symbol dump.
+- The architecture root compatibility facades remain in place by design for
+  public and test stability, but they no longer dominate the generated root
+  documentation surface.
+- The first docs-first follow-through on the foregrounded
+  [src/architecture/network/network.ts](../src/architecture/network/network.ts)
+  chapter is now complete: the generated
+  [src/architecture/network/README.md](../src/architecture/network/README.md)
+  now foregrounds the public `Network` API instead of leading with the class's
+  underscore-prefixed runtime state shelf.
+- The public `Network` surface now explicitly documents `standalone()`,
+  `train()`, and `evolve()` inside the generated chapter so the audit can focus
+  on real remaining ownership or docs gaps instead of missing public entrypoints.
+- The export-side ONNX implementation now lives under the new
+  [src/architecture/network/onnx/export](../src/architecture/network/onnx/export/README.md)
+  subchapter so the root ONNX surface can keep its public entry points while the
+  implementation stops accumulating in one flat folder.
+- The import-side ONNX implementation now also lives under the new
+  [src/architecture/network/onnx/import](../src/architecture/network/onnx/import/README.md)
+  subchapter so the root ONNX chapter can focus on public entry points and
+  shared schema/context instead of owning the whole reconstruction stack.
+- The export layer-emission helpers now also live under the new
+  [src/architecture/network/onnx/export/layers](../src/architecture/network/onnx/export/layers/README.md)
+  subchapter so the export root can focus on orchestration, setup, and
+  post-processing while the per-layer emitters stop crowding the same chapter.
+- The export-owned ONNX execution and payload types now also live under the
+  export chapter so the root types surface no longer needs to own the exporter
+  build/setup, heuristic, and layer-emission context cluster.
+- The first importer-owned architecture, recurrent-self-connection, and
+  pooling-attachment type family now also lives under the import chapter so the
+  root types surface no longer owns that orchestrator-only context cluster.
+- The importer-owned weight restoration and Conv reconstruction context family
+  now also lives under the import chapter so the root types surface no longer
+  owns that dense-assignment and Conv replay cluster.
+- The importer-owned runtime factory loading and perceptron scaffold context
+  family now also lives under the import chapter so the root types surface no
+  longer owns that runtime bootstrap cluster.
+- The importer-owned fused-recurrent reconstruction family now also lives under
+  the import chapter so the root types surface no longer owns that emitted
+  recurrent replay cluster.
+- The ONNX wire-format schema now also lives under the new
+  [src/architecture/network/onnx/schema](../src/architecture/network/onnx/schema/README.md)
+  subchapter so the root types surface can stop mixing persisted model shapes
+  with runtime/import/export execution contexts.
+- The flat compatibility facade at
+  [src/architecture/network.ts](../src/architecture/network.ts) still exists by
+  design for public and test stability.
 
-Progress:
+### [PLANNED] Deferred Follow-Through
 
-- Built the full README inventory under
-  [src/architecture](../src/architecture/README.md), including the nested
-  network chapter folders that already form the strongest small-chapter model in
-  this root.
-- Mapped the remaining unsplit flat files and chose
-  [src/architecture/node.ts](../src/architecture/node.ts) as the first durable
-  boundary because it is the densest remaining primitive and sits underneath
-  group, layer, architect, and network consumers.
-- Chose a node-first sequence so later connection, group, and architect passes
-  can target a stable primitive boundary instead of another flat monolith.
+- Reopen this plan only if the repo later decides to remove the flat
+  architecture compatibility facades and accept the resulting public-import
+  churn across tests, examples, and generated docs.
+- Keep any future follow-through audit-first: only reopen a network-owned seam
+  if a fresh root review exposes a concrete mismatch that the current chapter
+  map no longer explains.
+- The ONNX root shared-holdout audit found that the remaining root bridge
+  contracts are still genuinely shared across export, import, and root-analysis
+  code, so there is no smaller root-shim cleanup worth forcing right now.
+- No additional split work is currently justified.
 
-Decision:
+### [DONE] Architecture Root Chapter Map Follow-Through
 
-- Treat the existing `network/` and `layer/` folders as the style reference for
-  the rest of the root instead of reopening them first.
-- Keep each pass focused on one root boundary plus its mandatory educational
-  docs follow-up.
-
-Next step:
-
-- Complete the node boundary pass by moving
-  [src/architecture/node.ts](../src/architecture/node.ts) into its own chapter
-  folder, then regenerate docs and validate the touched surface.
-
-### Node boundary pass
-
-Goals:
-
-- Move the core node primitive out of the flat architecture root and into its
-  own chapter folder.
-- Keep existing import surfaces stable for this first pass while shifting the
-  educational center of gravity into the new folder.
-
-Progress:
-
-- Moved the implementation from
-  [src/architecture/node.ts](../src/architecture/node.ts) to
-  [src/architecture/node/node.ts](../src/architecture/node/node.ts) so the
-  node primitive now has a dedicated chapter boundary.
-- Replaced the old flat file with a thin compatibility facade at
-  [src/architecture/node.ts](../src/architecture/node.ts) because the current
-  repo still has broad internal and public exports that depend on the flat
-  path.
-- Added folder-level introductory JSDoc in
-  [src/architecture/node/node.ts](../src/architecture/node/node.ts) and ran the
-  required docs refresh plus `npx tsc --noEmit -p tsconfig.json` so the new
-  node chapter becomes the richer generated README surface without regressing
-  the architecture root.
-
-Decision:
-
-- Keep the node facade temporarily while the larger architecture split is still
-  migrating broad repo-local and public imports.
-- Use the same temporary-facade pattern for the next primitive boundaries only
-  when the import graph is comparably wide.
-
-Next step:
-
-- Move to the connection boundary next so the two lowest-level graph primitives
-  share the same folderized shape before group and architect are split.
-
-### Connection boundary pass
-
-Goals:
-
-- Move the graph edge primitive out of the flat architecture root and into its
-  own chapter folder.
-- Start direct-path migration for nearby repo-local imports while leaving a thin
-  root facade in place because the public and test import graph is still broad.
-
-Progress:
-
-- Moved the implementation from
-  [src/architecture/connection.ts](../src/architecture/connection.ts) to
-  [src/architecture/connection/connection.ts](../src/architecture/connection/connection.ts)
-  so the second low-level graph primitive now follows the same chapter shape as
-  node.
-- Replaced the old flat file with a thin compatibility facade at
-  [src/architecture/connection.ts](../src/architecture/connection.ts) while the
-  repo still has many public and test imports at the flat path.
-- Updated the closest architecture-local imports to use the direct chapter path
-  so future boundary passes depend less on the flat root shelf.
-- Added richer chapter-opening JSDoc in
-  [src/architecture/connection/connection.ts](../src/architecture/connection/connection.ts)
-  so the generated README teaches why the edge primitive uses lazy fields,
-  pooling, innovation helpers, and virtualized accessors, then refreshed docs
-  and reran `npx tsc --noEmit -p tsconfig.json` for the moved boundary.
-
-Decision:
-
-- Keep the temporary root facade for connection during this pass because the
-  current import graph still spans public exports and many tests, making a full
-  direct-path cutover noisier than the durable boundary move itself.
-- Treat group as the next boundary now that node and connection share the same
-  folderized primitive shape.
-
-Next step:
-
-- Move to the group boundary next so the first composite architecture primitive
-  can build on folderized node and connection chapters instead of the remaining
-  flat root shelf.
-
-### Group boundary pass
-
-Goals:
-
-- Move the first composite architecture primitive out of the flat root and into
-  its own chapter folder.
-- Start direct-path migration for the closest architecture-local consumers while
-  keeping a thin root facade because the public export surface and layer builder
-  graph still depend on `src/architecture/group.ts`.
-
-Progress:
-
-- Moved the implementation from
-  [src/architecture/group.ts](../src/architecture/group.ts) to
-  [src/architecture/group/group.ts](../src/architecture/group/group.ts) so the
-  first composite primitive now matches the small-chapter shape used by node
-  and connection.
-- Replaced the old flat file with a thin compatibility facade at
-  [src/architecture/group.ts](../src/architecture/group.ts) because the current
-  public export and layer-heavy import graph still reaches the flat path.
-- Updated the nearest architecture-local imports to use the direct chapter path
-  so layer helpers and architect orchestration now depend less on the flat root
-  shelf.
-- Added chapter-opening JSDoc in
-  [src/architecture/group/group.ts](../src/architecture/group/group.ts) so the
-  generated README teaches how groups bridge node-level primitives and larger
-  architecture builders, then refreshed docs and reran
-  `npx tsc --noEmit -p tsconfig.json` for the moved chapter.
-
-Decision:
-
-- Keep the temporary root facade for group during this pass because the import
-  graph still spans the public `neataptic.ts` export and several layer helper
-  modules that use `Group` as a first-class runtime type.
-- Treat architect as the next boundary now that node, connection, and group all
-  follow the same folderized primitive shape.
-
-Next step:
-
-- Move to the architect boundary next so the top-level builder entrypoint can
-  depend on folderized node, connection, and group chapters instead of the
-  remaining flat root shelf.
-
-### Architect boundary pass
-
-Goals:
-
-- Move the top-level builder entrypoint out of the flat root and into its own
-  chapter folder.
-- Keep the public and test import surface stable with a thin root facade while
-  shifting the implementation to direct chapter-path dependencies.
-
-Progress:
-
-- Moved the implementation from
-  [src/architecture/architect.ts](../src/architecture/architect.ts) to
-  [src/architecture/architect/architect.ts](../src/architecture/architect/architect.ts)
-  so the builder entrypoint now matches the chapter shape used by node,
-  connection, and group.
-- Replaced the old flat file with a thin compatibility facade at
-  [src/architecture/architect.ts](../src/architecture/architect.ts) because the
-  current import graph still includes the public
-  [src/neataptic.ts](../src/neataptic.ts) export plus broad test coverage at the
-  flat path.
-- Updated the moved implementation to depend on the folderized node,
-  connection, and group chapters directly while continuing to use the existing
-  layer and network entry surfaces that already anchor their larger folderized
-  subsystems.
-- Added chapter-opening JSDoc in
-  [src/architecture/architect/architect.ts](../src/architecture/architect/architect.ts)
-  so the generated README teaches how the builder entrypoint turns low-level
-  graph primitives into named network presets, then refreshed docs and reran
-  `npx tsc --noEmit -p tsconfig.json` for the new boundary.
-
-Decision:
-
-- Keep the temporary root facade for architect during this pass because the
-  builder entrypoint is still part of the public `neataptic.ts` export surface
-  and appears throughout the test suite.
-- Treat NodePool ownership follow-through as the next step now that the main
-  architecture root entrypoints all follow the same folderized chapter shape.
-
-Next step:
-
-- Move to the NodePool ownership follow-through so the remaining root-level
-  ownership story keeps converging on the chapter-based architecture surface.
-
-### NodePool ownership follow-through
-
-Goals:
-
-- Move the node lifecycle pool into its own chapter folder so ownership lives
-  beside the node chapter instead of on the flat root shelf.
-- Keep the flat `src/architecture/nodePool.ts` import path stable while
-  retargeting the nearest architecture-local consumers to the direct chapter
-  implementation.
-
-Progress:
-
-- Moved the implementation from
-  [src/architecture/nodePool.ts](../src/architecture/nodePool.ts) to
-  [src/architecture/nodePool/nodePool.ts](../src/architecture/nodePool/nodePool.ts)
-  so the node recycling policy now has a dedicated chapter boundary instead of
-  living as another flat root-owned helper.
-- Replaced the old flat file with a thin compatibility facade at
-  [src/architecture/nodePool.ts](../src/architecture/nodePool.ts) so repo-local
-  utilities, benchmarks, and tests can keep the old import path during this
-  follow-through step.
-- Updated the moved implementation to depend directly on
-  [src/architecture/node/node.ts](../src/architecture/node/node.ts) instead of
-  bouncing back through the root node shim.
-- Updated the nearest architecture-local consumers in
-  [src/architecture/network.ts](../src/architecture/network.ts) and
-  [src/architecture/network/remove/network.remove.finalize.utils.ts](../src/architecture/network/remove/network.remove.finalize.utils.ts)
-  to use the direct chapter path so runtime hot paths depend less on the flat
-  root shelf.
-- Added chapter-opening JSDoc in
-  [src/architecture/nodePool/nodePool.ts](../src/architecture/nodePool/nodePool.ts)
-  so the generated README teaches the difference between node identity,
-  lifecycle reuse, and pool observability, then refreshed docs and reran
-  `npx tsc --noEmit -p tsconfig.json` for the moved ownership surface.
-
-Decision:
-
-- Keep the temporary root facade for NodePool during this pass because the
-  remaining import graph still includes utilities, benchmarks, and test
-  coverage at the flat path.
-- Treat ActivationArrayPool ownership follow-through as the next step because
-  it is the remaining flat root-owned pooling surface in the same lifecycle
-  family.
-
-Next step:
-
-- Move to the ActivationArrayPool ownership follow-through so the remaining
-  memory-management helpers converge on the chapter-based architecture surface.
-
-### ActivationArrayPool ownership follow-through
-
-Goals:
-
-- Move the activation-buffer pool into its own chapter folder so ownership sits
-  with the runtime memory-policy story instead of the flat root shelf.
-- Keep the flat `src/architecture/activationArrayPool.ts` import path stable
-  while retargeting the architecture-local runtime consumers to the direct
-  chapter implementation.
-
-Progress:
-
-- Moved the implementation from
-  [src/architecture/activationArrayPool.ts](../src/architecture/activationArrayPool.ts)
-  to
-  [src/architecture/activationArrayPool/activationArrayPool.ts](../src/architecture/activationArrayPool/activationArrayPool.ts)
-  so reusable output-buffer ownership now has its own chapter boundary.
-- Replaced the old flat file with a thin compatibility facade at
-  [src/architecture/activationArrayPool.ts](../src/architecture/activationArrayPool.ts)
-  so existing tests can keep the flat import path during this follow-through
-  step.
-- Updated the nearest architecture-local consumers in
+- Added [src/architecture/docs.order.json](../src/architecture/docs.order.json)
+  so the root architecture README can choose a real intro file and stable
+  chapter ordering instead of inheriting raw filesystem order.
+- Added file-level summaries to the flat root compatibility facades at
   [src/architecture/network.ts](../src/architecture/network.ts),
-  [src/architecture/layer/layer.activation.utils.ts](../src/architecture/layer/layer.activation.utils.ts),
-  [src/architecture/network/activate/network.activate.core.utils.ts](../src/architecture/network/activate/network.activate.core.utils.ts),
-  [src/architecture/network/activate/network.activate.utils.types.ts](../src/architecture/network/activate/network.activate.utils.types.ts),
-  [src/architecture/network/activate/network.activate.notrace.utils.ts](../src/architecture/network/activate/network.activate.notrace.utils.ts),
-  and
-  [src/architecture/network/slab/network.slab.fast-path.helpers.utils.ts](../src/architecture/network/slab/network.slab.fast-path.helpers.utils.ts)
-  so hot runtime paths depend less on the flat root shelf.
-- Added chapter-opening JSDoc in
-  [src/architecture/activationArrayPool/activationArrayPool.ts](../src/architecture/activationArrayPool/activationArrayPool.ts)
-  so the generated README teaches buffer reuse, capacity control, and prewarm
-  semantics, then refreshed docs and reran `npx tsc --noEmit -p tsconfig.json`
-  for the moved ownership surface.
+  [src/architecture/architect.ts](../src/architecture/architect.ts),
+  [src/architecture/layer.ts](../src/architecture/layer.ts),
+  [src/architecture/group.ts](../src/architecture/group.ts),
+  [src/architecture/node.ts](../src/architecture/node.ts),
+  [src/architecture/connection.ts](../src/architecture/connection.ts),
+  [src/architecture/nodePool.ts](../src/architecture/nodePool.ts),
+  [src/architecture/activationArrayPool.ts](../src/architecture/activationArrayPool.ts),
+  and [src/architecture/onnx.ts](../src/architecture/onnx.ts) so the generated
+  root chapter explains its compatibility role instead of reading like a bare
+  symbol shelf.
+- This keeps the public import surface stable while making the architecture root
+  teach where readers should continue next.
+- Validation completed with `npx tsc --noEmit -p tsconfig.json` and
+  `npm run docs`.
 
-Decision:
+### [DONE] Architecture Root Audit Conclusion
 
-- Keep the temporary root facade for ActivationArrayPool during this pass
-  because the import graph still includes dedicated tests at the flat path.
-- Treat layer and network facade normalization as the next review point now
-  that the remaining flat root-owned helper chapters in this lifecycle family
-  have been moved.
+- The first root chapter-map pass still left the generated architecture README
+  dominated by the flat facade files, which exposed a docs-generator limitation
+  rather than a missing split seam.
+- [src/architecture/docs.order.json](../src/architecture/docs.order.json) now
+  hides the flat root compatibility files from the generated architecture root
+  README while still using the configured intro summary as the directory-level
+  opening.
+- [scripts/generate-docs.ts](../scripts/generate-docs.ts) now resolves a
+  configured intro file from the full sorted file list rather than only the
+  visible file list, which allows hidden compatibility facades to remain the
+  source of the root chapter introduction.
+- The resulting [src/architecture/README.md](../src/architecture/README.md)
+  now opens with the architecture chapter map and no longer floods the root
+  page with re-exported API details.
+- Validation completed with `npx tsc --noEmit -p tsconfig.json` and
+  `npm run docs`.
 
-Next step:
+### [PLANNED] Remaining Network Split Path
 
-- Review whether layer facade normalization is still needed now that the root
-  pooling helpers have converged on chapter-owned implementations.
+1. Network class seam work is complete enough for audit mode.
+2. The public-surface docs cleanup is complete; only reopen class-owned split
+  work if the refreshed README still exposes a concrete overloaded seam.
 
-### Layer facade normalization
+### [PLANNED] Deferred Questions
 
-Goals:
+- Keep or remove the flat public compatibility facade at
+  [src/architecture/network.ts](../src/architecture/network.ts).
+  > Remove
+- Decide later whether broader public-import cleanup across tests, examples,
+  and generated docs is worth the churn.
+  > Tests will be handled on a dedicated task
+- Optional ONNX root-shim review only if the public-import cleanup becomes part
+  of the same decision.
+  > Proceed
+- Decide at the end of the active network workstream whether a separate
+  architecture-wide README size and thin-doc audit should become its own plan.
+  > Elaborate? We want full documentation 
 
-- Move the public `Layer` class into the
-  [src/architecture/layer](../src/architecture/layer/README.md) chapter so the
-  folder owns both the helper implementation story and the public class that
-  readers actually use.
-- Keep the flat [src/architecture/layer.ts](../src/architecture/layer.ts)
-  import path stable while retargeting the nearest architecture-local imports
-  to the direct chapter path.
+## Coverage Backlog
 
-Progress:
+Use this section only to avoid re-exploring already-covered boundaries. Each
+entry records the minimal extent of completed work and the current stop point.
 
-- Moved the implementation from
-  [src/architecture/layer.ts](../src/architecture/layer.ts) to
-  [src/architecture/layer/layer.ts](../src/architecture/layer/layer.ts) so the
-  layer chapter now owns the public class surface instead of only the helper
-  files under the folder.
-- Replaced the old flat file with a thin compatibility facade at
-  [src/architecture/layer.ts](../src/architecture/layer.ts) so the existing
-  public export in [src/neataptic.ts](../src/neataptic.ts) and the remaining
-  flat-path tests can keep the stable import surface during this pass.
-- Updated the nearest architecture-local imports to the direct chapter path in
-  [src/architecture/network.ts](../src/architecture/network.ts),
-  [src/architecture/group/group.ts](../src/architecture/group/group.ts),
-  [src/architecture/architect/architect.ts](../src/architecture/architect/architect.ts),
-  [src/architecture/network/mutate/network.mutate.handlers.utils.ts](../src/architecture/network/mutate/network.mutate.handlers.utils.ts),
-  [src/architecture/network/onnx/network.onnx.runtime-load.utils.ts](../src/architecture/network/onnx/network.onnx.runtime-load.utils.ts),
+### [DONE] Architecture Root Coverage
+
+- `node`, `connection`, `group`, and `architect` were folderized into chapter
+  entrypoints with thin flat compatibility facades retained.
+- `nodePool` and `activationArrayPool` were moved behind chapter ownership with
+  local consumer retargets already completed.
+- `Layer` ownership moved to
+  [src/architecture/layer/layer.ts](../src/architecture/layer/layer.ts), with
+  the flat facade intentionally preserved.
+
+### [DONE] Network Ownership Coverage
+
+- `Network` implementation ownership moved into
+  [src/architecture/network/network.ts](../src/architecture/network/network.ts).
+- Repo-local source consumers were retargeted to the chapter-owned entrypoint.
+- Public exports, tests, examples, and generated-doc import examples still rely
+  on the flat compatibility path where needed.
+
+### [DONE] Network Internal Coverage
+
+- Constructor/bootstrap seam extracted to
+  [src/architecture/network/bootstrap/network.bootstrap.utils.ts](../src/architecture/network/bootstrap/network.bootstrap.utils.ts).
+- Topology contract and topology-facing builders were moved onto the topology
+  chapter.
+- Topology now also owns the hydrated architecture-descriptor fallback through
+  [src/architecture/network/topology/network.topology.architecture.utils.ts](../src/architecture/network/topology/network.topology.architecture.utils.ts).
+- Public structural node-split flow around `addNodeBetween()` now delegates to
+  [src/architecture/network/mutate/network.mutate.public.utils.ts](../src/architecture/network/mutate/network.mutate.public.utils.ts)
+  so the class keeps the same behavior while the mutation chapter owns the helper.
+- Public clone convenience now delegates to
+  [src/architecture/network/serialize/network.serialize.public.utils.ts](../src/architecture/network/serialize/network.serialize.public.utils.ts)
+  so the serialize chapter owns the JSON-round-trip cloning contract.
+- Main activation orchestration now delegates to the activate chapter instead of
+  living inline on the class.
+- Runtime configuration and runtime diagnostics were moved onto the runtime
+  chapter.
+- Training backpropagation and runtime-state clearing now delegate to the
+  training chapter.
+- Test-time evaluation delegation was moved onto the stats chapter.
+- Node removal now relies on the remove chapter's pool-release handling without
+  duplicating pool release in the class wrapper.
+
+### [DONE] Validation Baseline
+
+- Completed split passes above were already followed by docs regeneration and
+  `npx tsc --noEmit -p tsconfig.json`.
+- Re-open a covered seam only if behavior changes, a boundary proves too broad,
+  or a later pass needs a narrower follow-through inside the same chapter.
+
+### [DONE] Network Public Surface Docs Follow-Through
+
+- The generated
+  [src/architecture/network/README.md](../src/architecture/network/README.md)
+  no longer leads with the `Network` class's underscore-prefixed runtime state
+  shelf because those implementation-only members are now marked internal in
+  [src/architecture/network/network.ts](../src/architecture/network/network.ts).
+- The public `Network` chapter now also includes explicit docs for
+  `standalone()`, `train()`, and `evolve()` so the README reflects the class's
+  real orchestration surface rather than omitting those entrypoints.
+- This confirmed that the next durable network step should remain audit-driven
+  until a smaller class-owned seam proves that another split is warranted.
+- Validation completed with `npx tsc --noEmit -p tsconfig.json` and
+  `npm run docs`.
+
+### [DONE] Network Docs And Size Audit Conclusion
+
+- Re-reading the generated
+  [src/architecture/network/README.md](../src/architecture/network/README.md)
+  after the public-surface cleanup confirmed that the root chapter now teaches
+  the `Network` API as an orchestration surface rather than exposing internal
+  runtime state first.
+- Inspecting
+  [src/architecture/network/network.ts](../src/architecture/network/network.ts)
+  against the nearest owning subchapters under
+  [src/architecture/network/standalone](../src/architecture/network/standalone/README.md),
+  [src/architecture/network/slab](../src/architecture/network/slab/README.md),
+  and [src/architecture/network/training](../src/architecture/network/training/README.md)
+  showed that the remaining root methods are now thin compatibility wrappers or
+  tiny convenience helpers, not a stranded class-owned subsystem.
+- The only meaningful inline survivors are small API glue such as `set(...)`
+  and `adjustRateForAccumulation(...)`; forcing those into another chapter would
+  add indirection without improving ownership clarity.
+- This closes the network docs and size audit for now and moves the active
+  frontier to the architecture-root follow-through audit.
+- Validation completed with `npx tsc --noEmit -p tsconfig.json` and
+  `npm run docs`.
+
+### [DONE] ONNX Import Fused-Recurrent Types Split
+
+- The importer-owned fused-recurrent reconstruction contracts now live under
+  [src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.types.ts](../src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.types.ts)
+  so the root compatibility barrel no longer owns the emitted LSTM/GRU replay
+  context family.
+-
+  [src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts](../src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts)
+  now reads those importer-only contracts from the local import chapter while
+  the root file keeps only the shared `NodeInternals` and `OnnxLayerFactory`
+  bridge types.
+- Validation completed with `npx tsc --noEmit -p tsconfig.json` and
+  `npm run docs`; generated import docs now include the new fused-recurrent
+  type chapter.
+
+### [DONE] ONNX Import README Intro Follow-Through
+
+- The generated
+  [src/architecture/network/onnx/import/README.md](../src/architecture/network/onnx/import/README.md)
+  now opens with the import pipeline story instead of inheriting its chapter
+  introduction from the runtime-factory leaf types file.
+-
+  [src/architecture/network/onnx/import/docs.order.json](../src/architecture/network/onnx/import/docs.order.json)
+  now pins the import flow file as the intro source and keeps the generated
+  reading order aligned to the actual reconstruction pipeline.
+-
+  [src/architecture/network/onnx/import/network.onnx.import-flow.utils.ts](../src/architecture/network/onnx/import/network.onnx.import-flow.utils.ts)
+  now explains the staged restore questions that link the neighboring runtime,
+  weight, activation, orchestration, and fused-recurrent chapters together.
+- Validation completed with `npx tsc --noEmit -p tsconfig.json` and
+  `npm run docs`.
+
+### [DONE] ONNX Root README Chapter Map Follow-Through
+
+- The generated
+  [src/architecture/network/onnx/README.md](../src/architecture/network/onnx/README.md)
+  now opens with an explicit chapter map that tells readers when to continue
+  into the `export/`, `import/`, and `schema/` subchapters versus when to use
+  the root compatibility barrels.
+-
+  [src/architecture/network/onnx/docs.order.json](../src/architecture/network/onnx/docs.order.json)
+  now pins the root ONNX reading order so the public entrypoint stays first and
+  the thinner root utility barrel appears before the larger root types barrel.
+-
+  [src/architecture/network/onnx/network.onnx.ts](../src/architecture/network/onnx/network.onnx.ts)
+  now explains why the root chapter exists, how the folder is split, and how a
+  contributor should navigate the remaining compatibility surfaces.
+- Validation completed with `npx tsc --noEmit -p tsconfig.json` and
+  `npm run docs`.
+
+### [DONE] ONNX Root Compatibility Barrel Docs Follow-Through
+
+- The generated
+  [src/architecture/network/onnx/README.md](../src/architecture/network/onnx/README.md)
+  now explains both
+  [src/architecture/network/onnx/network.onnx.utils.ts](../src/architecture/network/onnx/network.onnx.utils.ts)
   and
   [src/architecture/network/onnx/network.onnx.utils.types.ts](../src/architecture/network/onnx/network.onnx.utils.types.ts)
-  so the runtime and import-heavy architecture chapters depend less on the flat
-  root shelf.
-- Added chapter-opening JSDoc in
-  [src/architecture/layer/layer.ts](../src/architecture/layer/layer.ts) so the
-  generated [src/architecture/layer/README.md](../src/architecture/layer/README.md)
-  now opens with the public Layer story instead of only helper-oriented file
-  summaries, then refreshed docs and reran `npx tsc --noEmit -p tsconfig.json`
-  for the normalized surface.
+  as intentional compatibility barrels instead of leaving them to read like
+  leftover mixed shelves after the export/import/schema splits.
+- The root execution barrel now explains how to read its forwarding role,
+  what still belongs there, and when a reader should continue into the split
+  `export/` and `import/` chapters.
+- The root types barrel now explains how to read the remaining shared bridge
+  layer, which type families already moved into chapter-local ownership, and
+  why a small root compatibility surface still remains.
+- Validation completed with `npx tsc --noEmit -p tsconfig.json` and
+  `npm run docs`.
 
-Decision:
+### [DONE] ONNX Root Shared-Holdout Audit
 
-- Keep the temporary root facade for Layer during this pass because the stable
-  public export in [src/neataptic.ts](../src/neataptic.ts) and the remaining
-  flat-path tests still depend on it.
-- Treat network facade normalization as the next review point now that the
-  layer chapter owns both the helper implementation and the public class
-  surface.
+- The remaining root-owned ONNX bridge contracts were rechecked against current
+  consumers and still span multiple chapters, so a final root-shim cleanup is
+  not justified yet.
+- `NodeInternals` and `ActivationFunction` still bridge root layer-analysis
+  helpers plus both export and import execution paths.
+- `OnnxConvKernelCoordinate` still bridges export-side Conv emission and
+  import-side Conv reconstruction.
+- `OnnxLayerFactory` and `OnnxRuntimeLayerFactoryMap` still bridge runtime-load
+  wiring into fused-recurrent reconstruction.
+- The root execution barrel's `buildOnnxModel()` wrapper still acts as an
+  intentional stable orchestration surface above the split export
+  implementation.
+- Validation completed with `npx tsc --noEmit -p tsconfig.json` and
+  `npm run docs`.
 
-Next step:
+### [DONE] Network README Reading Order Follow-Through
 
-- Review whether network facade normalization is still needed now that the root
-  pooling helpers and the layer class have converged on chapter-owned
-  implementations.
-
-### Network facade normalization review
-
-Goals:
-
-- Decide whether the root
-  [src/architecture/network.ts](../src/architecture/network.ts) file is still
-  the right long-term orchestration surface or whether the public `Network`
-  class should move into the
-  [src/architecture/network](../src/architecture/network/README.md) chapter.
-- Judge the question as both a documentation ownership problem and an
-  import-graph risk problem before attempting another large boundary move.
-
-Progress:
-
-- Re-read the generated network chapter at
-  [src/architecture/network/README.md](../src/architecture/network/README.md),
-  the root architecture overview at
-  [src/architecture/README.md](../src/architecture/README.md), and the current
-  root implementation in
-  [src/architecture/network.ts](../src/architecture/network.ts).
-- Confirmed that the
-  [src/architecture/network](../src/architecture/network/README.md) chapter
-  already owns a wide helper tree including `activate`, `connect`,
-  `deterministic`, `evolve`, `gating`, `genetic`, `mutate`, `onnx`, `prune`,
-  `remove`, `serialize`, `slab`, `standalone`, `stats`, `topology`, and
-  `training`, but does not yet own the public `Network` class because there is
-  still no chapter file at `src/architecture/network/network.ts`.
-- Confirmed that the root architecture README still documents the public
-  network surface from [src/architecture/network.ts](../src/architecture/network.ts),
-  which means the educational center of gravity for the network boundary is
-  still split between the root shelf and the chapter folder.
-- Confirmed that the internal import graph is much broader than the earlier
-  layer pass: a large portion of the helper tree currently imports the root
-  network path via `../../network` or `../network`, and the flat public path is
-  also used by the public exports in [src/neataptic.ts](../src/neataptic.ts),
-  the higher-level NEAT surfaces under [src/neat](../src/neat), and extensive
-  benchmark, network, ONNX, training, and NEAT tests under [test](../test).
-
-Decision:
-
-- Network facade normalization is still needed.
-- Unlike the layer pass, this is no longer a narrow compatibility-facade move:
-  the network boundary already spans a chapter-sized helper ecosystem plus a
-  very broad repo-local and test import surface, so the normalization should be
-  treated as its own dedicated multi-pass split instead of a quick follow-through.
-- Keep the temporary root facade-orchestration role for
-  [src/architecture/network.ts](../src/architecture/network.ts) for now while
-  the next pass identifies the smallest safe first move inside the network
-  chapter.
-
-Next step:
-
-- Start a dedicated network facade normalization planning pass that identifies
-  the smallest safe first sub-step for moving the public `Network` class toward
-  the chapter folder, including whether `src/architecture/network/network.ts`
-  should be introduced first and which local imports can be retargeted without
-  reopening the entire public/test surface in one edit burst.
-
-### Network chapter anchor pass
-
-Goals:
-
-- Introduce a chapter-local `Network` anchor so the network folder can start
-  owning its own import seam before the public class moves out of the root
-  shelf.
-- Retarget one shared chapter file to that local anchor and stop before
-  reopening the broader public export and test surface.
-
-Progress:
-
-- Added [src/architecture/network/network.ts](../src/architecture/network/network.ts)
-  as a narrow chapter-local passthrough to the current default export in
-  [src/architecture/network.ts](../src/architecture/network.ts), giving the
-  folder its missing `network/network.ts` seam without changing runtime
-  behavior.
-- Retargeted
-  [src/architecture/network/network.types.ts](../src/architecture/network/network.types.ts)
-  from the root `../network` import to the chapter-local `./network` anchor so
-  the shared type surface now depends on the local chapter path first.
-- Added migration-focused JSDoc to the new chapter anchor so the generated
+- The generated
   [src/architecture/network/README.md](../src/architecture/network/README.md)
-  can start teaching the ownership transition instead of implying that the
-  folder has no local `Network` entrypoint.
-- Refreshed docs and reran `npx tsc --noEmit -p tsconfig.json` for the touched
-  network surface.
+  now starts with
+  [src/architecture/network/network.ts](../src/architecture/network/network.ts)
+  instead of dropping directly into the much larger
+  [src/architecture/network/network.types.ts](../src/architecture/network/network.types.ts)
+  shelf.
+-
+  [src/architecture/network/docs.order.json](../src/architecture/network/docs.order.json)
+  now pins the chapter intro to the public `Network` class and keeps the
+  reading order aligned to public orchestration first, compatibility utilities
+  second, and the large root types shelf last.
+- This keeps the broader network docs/size audit in documentation-first mode
+  without forcing a new split before the reordered chapter has been evaluated.
+- Validation completed with `npx tsc --noEmit -p tsconfig.json` and
+  `npm run docs`.
 
-Decision:
+### [DONE] ONNX Export Subchapter Split
 
-- Keep [src/architecture/network.ts](../src/architecture/network.ts) unchanged
-  during this first sub-step.
-- Use the new chapter-local anchor as the staging seam for future internal
-  retargets before the full `Network` class relocation is attempted.
+- The export-side ONNX implementation was folderized under
+  [src/architecture/network/onnx/export](../src/architecture/network/onnx/export/README.md)
+  so the root ONNX chapter keeps the public entry points while the export
+  implementation gets its own durable chapter boundary.
+- The ONNX compatibility barrel now re-exports the export helpers from the new
+  subfolder without changing the public `exportToONNX()` entry point.
+- The broader ONNX chapter still needs a refreshed README audit after docs run
+  to determine whether import-side helpers or shared schema/types are the next
+  split candidate.
 
-Next step:
+### [DONE] ONNX Import Subchapter Split
 
-- Choose the next bounded internal retarget set that can safely move from the
-  root `../../network` path to the chapter-local `../../network/network`
-  anchor, then reassess whether the remaining root file is thin enough for a
-  later facade conversion.
+- The import-side ONNX implementation was folderized under
+  [src/architecture/network/onnx/import](../src/architecture/network/onnx/import/README.md)
+  so the root ONNX chapter keeps the public `importFromONNX()` entry point while
+  the reconstruction helpers get their own durable chapter boundary.
+- The ONNX compatibility barrel now re-exports the import helpers from the new
+  subfolder without changing the public `importFromONNX()` entry point.
+- The broader ONNX chapter still needs a refreshed README audit after docs run
+  to determine whether shared schema/types or remaining root-shim helpers are
+  the next split candidate.
+
+### [DONE] ONNX Export Layers Subchapter Split
+
+- The export layer-emission helpers were folderized under
+  [src/architecture/network/onnx/export/layers](../src/architecture/network/onnx/export/layers/README.md)
+  so the export root can keep orchestration, setup, and post-processing while
+  the Conv, dense, recurrent, and shared layer-emission helpers get a more
+  focused durable boundary.
+- The ONNX compatibility barrels now re-export the moved layer helpers from the
+  nested subfolder without changing the public export entry points.
+- The broader ONNX export chapter still needs a refreshed README audit after
+  docs run to confirm whether shared schema/types or documentation quality is
+  the next durable follow-through step.
+
+### [DONE] ONNX Export Layers Docs Follow-Through
+
+- The new
+  [src/architecture/network/onnx/export/layers](../src/architecture/network/onnx/export/layers/README.md)
+  chapter now opens with an architecture-level explanation of the dispatch
+  boundary instead of dropping straight into symbol listings.
+- The layer router plus the main Conv, dense, mixed-activation, recurrent, and
+  shared initializer helpers now explain their invariants, tradeoffs, and
+  representative usage through source JSDoc so the generated README teaches the
+  boundary instead of acting as a thin API index.
+- The docs follow-through included a Mermaid decision-flow diagram for the
+  layer-routing boundary and was validated with `npm run docs` and
+  `npx tsc --noEmit -p tsconfig.json`.
+
+### [DONE] ONNX Schema Subchapter Split
+
+- The leaf ONNX wire-format schema was folderized under
+  [src/architecture/network/onnx/schema](../src/architecture/network/onnx/schema/README.md)
+  so persisted model shapes, tensor payloads, metadata records, and Conv/Pool
+  mapping declarations no longer live inside the mixed root types file.
+- Internal ONNX import/export consumers now read schema symbols directly from
+  the new schema chapter while
+  [src/architecture/network/onnx/network.onnx.utils.types.ts](../src/architecture/network/onnx/network.onnx.utils.types.ts)
+  remains a thin compatibility barrel for the transition.
+- The next type-oriented ONNX split can now target exporter or importer
+  execution contexts without re-mixing the persisted wire schema into those
+  runtime-specific boundaries.
+
+### [DONE] ONNX Schema Docs Follow-Through
+
+- The new
+  [src/architecture/network/onnx/schema](../src/architecture/network/onnx/schema/README.md)
+  chapter now opens with a clear wire-format boundary description and example
+  instead of reading like an unstructured type dump.
+- The core schema container types now explain graph sections, initializer
+  storage, named-tensor node wiring, and the simplified attribute payload shape
+  through source JSDoc so the generated README teaches the persisted document
+  model.
+- The docs follow-through was validated with `npm run docs` and
+  `npx tsc --noEmit -p tsconfig.json`.
+
+### [DONE] ONNX Export Types Split
+
+- The exporter-owned build/setup, heuristic, recurrent, Conv, and layer-emission
+  context types were moved into
+  [src/architecture/network/onnx/export/network.onnx.export.types.ts](../src/architecture/network/onnx/export/network.onnx.export.types.ts)
+  so the root types file no longer mixes that large chapter-local cluster with
+  importer and shared runtime bridge types.
+- Export-side consumers now import those chapter-local types directly from the
+  export chapter while
+  [src/architecture/network/onnx/network.onnx.utils.types.ts](../src/architecture/network/onnx/network.onnx.utils.types.ts)
+  remains a thin compatibility barrel for public ergonomics and shared holdouts.
+- Shared bridge types such as `NodeInternals`, `NodeInternalsWithExportIndex`,
+  and `OnnxConvKernelCoordinate` intentionally remain root-owned for now to
+  avoid cross-coupling importer code back into the export chapter.
+
+### [DONE] ONNX Export Types Docs Follow-Through
+
+- The export chapter now opens with an architecture-level map of how export
+  options flow into setup/build contexts, heuristics, and layer-emission
+  payloads instead of introducing the new file as a bare type list.
+- The docs follow-through was kept local to
+  [src/architecture/network/onnx/export/network.onnx.export.types.ts](../src/architecture/network/onnx/export/network.onnx.export.types.ts)
+  so the generated export README explains the boundary shift without reopening a
+  broader docs rewrite.
+- The docs follow-through was validated with `npm run docs` and
+  `npx tsc --noEmit -p tsconfig.json`.
+
+### [DONE] ONNX Import Orchestrator Types Split
+
+- The importer-owned architecture extraction, recurrent self-connection, and
+  pooling attachment type family was moved into
+  [src/architecture/network/onnx/import/network.onnx.import-orchestrators.types.ts](../src/architecture/network/onnx/import/network.onnx.import-orchestrators.types.ts)
+  so the root types file no longer owns that import-local orchestration state.
+- The orchestrator utilities now read those chapter-local types directly from
+  the import chapter while
+  [src/architecture/network/onnx/network.onnx.utils.types.ts](../src/architecture/network/onnx/network.onnx.utils.types.ts)
+  remains the thin compatibility barrel for shared holdouts and transitional
+  public ergonomics.
+- Shared bridge types such as `NodeInternals`, `ActivationFunction`, and
+  `OnnxConvKernelCoordinate` intentionally remain root-owned for now because
+  they still bridge import, export, or root analysis helpers beyond this first
+  importer-only seam.
+- The split was validated with `npm run docs` and
+  `npx tsc --noEmit -p tsconfig.json`.
+
+### [DONE] ONNX Import Weight Types Split
+
+- The importer-owned hidden-size derivation, dense and per-neuron assignment,
+  and optional Conv reconstruction type family was moved into
+  [src/architecture/network/onnx/import/network.onnx.import-weights.types.ts](../src/architecture/network/onnx/import/network.onnx.import-weights.types.ts)
+  so the root types file no longer owns that import-local restoration state.
+- The weight reconstruction utilities now read those chapter-local types
+  directly from the import chapter while
+  [src/architecture/network/onnx/network.onnx.utils.types.ts](../src/architecture/network/onnx/network.onnx.utils.types.ts)
+  remains the thin compatibility barrel for shared holdouts and transitional
+  public ergonomics.
+- The follow-through stayed local to the new import weights types file so the
+  generated import README now explains the weight restoration boundary as its
+  own chapter instead of extending the mixed root type list.
+- Shared bridge types such as `NodeInternals` and
+  `OnnxConvKernelCoordinate` intentionally remain root-owned because they still
+  bridge import code back into the root analysis or export surfaces.
+- The split was validated with `npm run docs` and
+  `npx tsc --noEmit -p tsconfig.json`.
+
+### [DONE] ONNX Import Runtime-Load Types Split
+
+- The importer-owned runtime factory loading and perceptron scaffold type
+  family was moved into
+  [src/architecture/network/onnx/import/network.onnx.runtime-load.types.ts](../src/architecture/network/onnx/import/network.onnx.runtime-load.types.ts)
+  so the root types file no longer owns that import-local runtime bootstrap
+  state.
+- The runtime-load utilities now read those chapter-local types directly from
+  the import chapter while
+  [src/architecture/network/onnx/network.onnx.utils.types.ts](../src/architecture/network/onnx/network.onnx.utils.types.ts)
+  remains the thin compatibility barrel for shared holdouts and transitional
+  public ergonomics.
+- The follow-through stayed local to the new runtime-load types file so the
+  generated import README now teaches the runtime bootstrap contract as its own
+  import chapter surface.
+- Shared bridge types such as `OnnxLayerFactory` and
+  `OnnxRuntimeLayerFactoryMap` intentionally remain root-owned because they
+  still bridge runtime bootstrapping into the broader fused-recurrent
+  reconstruction surface.
+- The split was validated with `npm run docs` and
+  `npx tsc --noEmit -p tsconfig.json`.
+
+### [DONE] Remaining Inline Network Surface Review
+
+- `activate()`, `describeArchitecture()`, `propagate()`, and `clear()` no
+  longer carry their main ownership logic inline on the class.
+- `remove()` now matches the remove chapter's ownership and no longer repeats
+  pooled-node release at the class layer.
+- The remaining inline methods on
+  [src/architecture/network/network.ts](../src/architecture/network/network.ts)
+  are now mostly thin public delegates, static compatibility helpers, or small
+  public convenience methods whose current size does not justify another split
+  without new evidence from the docs or boundary audit.
+
+### [PLANNED] Post-Split Audit Placeholders
+
+- Oversized generated README audit candidates discovered from the refreshed docs:
+  - [src/architecture/network/onnx/README.md](../src/architecture/network/onnx/README.md)
+    now about 1761 lines after the export/import/layers/schema/export-types splits
+  - [src/architecture/network/onnx/export/README.md](../src/architecture/network/onnx/export/README.md)
+    now about 1691 lines after the export-side, layers, and export-types splits
+  - [src/architecture/network/onnx/export/layers/README.md](../src/architecture/network/onnx/export/layers/README.md)
+    now about 970 lines after the export layers split
+  - [src/architecture/network/onnx/import/README.md](../src/architecture/network/onnx/import/README.md)
+    now about 1240 lines after the import-side split
+  - [src/architecture/network/onnx/schema/README.md](../src/architecture/network/onnx/schema/README.md)
+    now about 120 lines after the schema split
+  - [src/architecture/network/README.md](../src/architecture/network/README.md)
+    at about 2351 lines
+  - [src/architecture/README.md](../src/architecture/README.md)
+    at about 1757 lines
+  - [src/architecture/network/mutate/README.md](../src/architecture/network/mutate/README.md)
+    at about 1412 lines
+  - [src/architecture/network/activate/README.md](../src/architecture/network/activate/README.md)
+    at about 1192 lines
+  - [src/architecture/network/slab/README.md](../src/architecture/network/slab/README.md)
+    at about 1093 lines
+  - [src/architecture/network/serialize/README.md](../src/architecture/network/serialize/README.md)
+    at about 1044 lines
+- Thin generated README audit candidates discovered from the refreshed docs:
+  - [src/architecture/activationArrayPool/README.md](../src/architecture/activationArrayPool/README.md)
+    at about 24 lines
+  - [src/architecture/nodePool/README.md](../src/architecture/nodePool/README.md)
+    at about 51 lines
+- Add more placeholders here if later split passes discover another overloaded
+  helper chapter or a README whose size/quality indicates additional follow-up.
+
+## [DONE] Compact Pass Log
+
+- Root primitives and builders: folderized and stabilized behind temporary flat
+  facades.
+- Pool ownership follow-through: chapter ownership complete.
+- Layer normalization: chapter ownership complete.
+- Network normalization: chapter ownership complete; flat facade intentionally
+  retained.
+- Network internal passes completed so far:
+  - bootstrap
+  - topology contract and builder delegation
+  - descriptor ownership and hydrated fallback delegation
+  - structural mutation delegation for `addNodeBetween()`
+  - clone delegation through serialize chapter helpers
+  - activation orchestration delegation
+  - runtime configuration
+  - runtime diagnostics
+  - training lifecycle delegation
+  - remove wrapper pooling follow-through
+  - test-time evaluation delegation
+- Remaining planned high-level passes:
+  - none
+
+## Handoff query
+
+```text
+Continue from the current repo state only. Do not rely on prior chat history.
+
+Workstream: architecture solid split
+Plan: plans/architecture-solid-split.plans.md
+Status: [DONE]
+Active boundary: none
+
+Already covered:
+- architecture root primitives and builders were folderized and stabilized behind intentional compatibility facades where still required
+- Network ownership moved into src/architecture/network/network.ts
+- bootstrap, topology contract, structural mutation delegation, clone delegation, runtime configuration, runtime diagnostics, and test-time evaluation have already been extracted or delegated into their chapter-owned boundaries
+- ONNX export implementation has been folderized under src/architecture/network/onnx/export while the public ONNX entry points remain stable
+- ONNX import implementation has been folderized under src/architecture/network/onnx/import while the public ONNX entry points remain stable
+- the ONNX root README now has an explicit chapter map and docs ordering so the root chapter teaches how to navigate export/import/schema versus the root compatibility barrels
+- the root ONNX compatibility utility and types barrels now explain their bridge role directly in the generated root README
+- the ONNX root shared-holdout audit found that the remaining root bridge contracts are still genuinely cross-chapter and should stay put for now
+- the broader network README now opens on the public Network class instead of the large root types shelf
+- the Network public-surface docs pass is now complete: underscore-prefixed runtime members are hidden from generated docs, and standalone/train/evolve now appear in the generated network chapter
+- the network docs and size audit is now complete: the remaining root Network methods are thin compatibility wrappers or tiny convenience helpers, so no additional class-owned split is justified right now
+- the architecture root now has an explicit docs-order and compatibility-facade chapter map, and the generated root README now keeps that intro while hiding the flat root re-export shelf
+
+High-level remaining path:
+- none
+
+Next task if this workstream is reopened:
+- decide whether the flat architecture compatibility facades should actually be removed rather than merely documented
+- scope the public-import churn across tests, examples, and generated docs before making that change
+- leave the root ONNX shared bridge contracts in place unless a future public-import cleanup proves otherwise
+
+Required workflow:
+1. Read src/architecture/README.md first.
+2. Read plans/architecture-solid-split.plans.md.
+3. Inspect src/architecture and the specific flat compatibility facade or bridge surface being reconsidered.
+4. Complete only one durable step.
+5. Update this plan using [PLANNED], [WIP], and [DONE] markers and keep older coverage compressed.
+6. Refresh docs and run: npm run docs
+7. Validate with: npx tsc --noEmit -p tsconfig.json
+
+Constraints:
+- keep the public compatibility surface stable
+- do not reopen the flat network facade decision unless the reopened task explicitly targets public-import cleanup
+- do not re-expand completed history in the plan
+```

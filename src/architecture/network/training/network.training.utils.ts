@@ -14,7 +14,7 @@
  *  - This module intentionally keeps imperative style for clarity/perf (avoids heap churn in hot loops).
  *  - Refactor changes here are documentation & naming only; numerical behavior preserved.
  */
-import type Network from '../../network';
+import type Network from '../../network/network';
 export { propagate, clearState } from './network.training.backprop.utils';
 import type {
   CostFunction,

@@ -1697,7 +1697,7 @@ function buildDirectoryReadme(
 
   const primaryDirectoryIntro = resolvePrimaryDirectoryIntro(
     directoryPath,
-    visibleSortedFiles,
+    sortedFiles,
     fileSymbolMap,
     directoryBaseName,
   );

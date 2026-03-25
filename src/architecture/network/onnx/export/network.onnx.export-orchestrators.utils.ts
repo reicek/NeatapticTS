@@ -1,7 +1,11 @@
 import type Network from '../../network';
-import type NeatapticNode from '../../node';
+import type NeatapticNode from '../../../node';
 import type {
   Conv2DMapping,
+  OnnxMetadataProperty,
+  OnnxModel,
+} from '../schema/network.onnx.schema.types';
+import type {
   ConvInferenceEvaluationContext,
   ConvInferenceKernelEvaluationContext,
   ConvInferenceResult,
@@ -10,12 +14,12 @@ import type {
   LstmCandidateContext,
   LstmLayerTraversalContext,
   LstmPatternStub,
+  OnnxExportOptions,
+} from './network.onnx.export.types';
+import type {
   NodeInternals,
   NodeInternalsWithExportIndex,
-  OnnxExportOptions,
-  OnnxMetadataProperty,
-  OnnxModel,
-} from './network.onnx.utils.types';
+} from '../network.onnx.utils.types';
 
 const LSTM_GATE_GROUP_COUNT = 5;
 const MIN_LSTM_LAYER_WIDTH = 10;

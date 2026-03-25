@@ -1,18 +1,20 @@
-import type NeatapticNode from '../../node';
+import type NeatapticNode from '../../../node';
 import type {
-  OnnxBaseModelBuildContext,
-  NodeInternals,
-  OnnxGraphDimensionBuildContext,
-  OnnxGraphDimensions,
   OnnxDimension,
   OnnxModel,
+  OnnxValueInfo,
+} from '../schema/network.onnx.schema.types';
+import type {
+  OnnxBaseModelBuildContext,
+  OnnxGraphDimensionBuildContext,
+  OnnxGraphDimensions,
   OnnxModelMetadataContext,
   OnnxRecurrentCollectionContext,
   OnnxRecurrentInputValueInfoContext,
   OnnxRecurrentLayerProcessingContext,
   OnnxRecurrentLayerTraversalContext,
-  OnnxValueInfo,
-} from './network.onnx.utils.types';
+} from './network.onnx.export.types';
+import type { NodeInternals } from '../network.onnx.utils.types';
 
 const FLOAT_TENSOR_ELEMENT_TYPE = 1;
 const ONNX_IR_VERSION = 9;

@@ -1,11 +1,18 @@
-import Connection from '../../connection';
+import Connection from '../../../connection';
 import type Network from '../../network';
-import type NeatapticNode from '../../node';
+import type NeatapticNode from '../../../node';
 import { deriveHiddenLayerSizes } from './network.onnx.import-weights.utils';
 import { reconstructFusedRecurrentLayers } from './network.onnx.import-fused-recurrent.utils';
 import type {
-  NetworkWithOnnxImportPooling,
+  OnnxMetadataProperty,
+  OnnxModel,
+  Pool2DMapping,
+} from '../schema/network.onnx.schema.types';
+import type {
   NodeInternals,
+} from '../network.onnx.utils.types';
+import type {
+  NetworkWithOnnxImportPooling,
   OnnxImportArchitectureContext,
   OnnxImportArchitectureResult,
   OnnxImportDimensionRecord,
@@ -14,10 +21,7 @@ import type {
   OnnxImportPoolingMetadata,
   OnnxImportRecurrentRestorationContext,
   OnnxImportSelfConnectionUpsertContext,
-  OnnxMetadataProperty,
-  OnnxModel,
-  Pool2DMapping,
-} from './network.onnx.utils.types';
+} from './network.onnx.import-orchestrators.types';
 
 export { reconstructFusedRecurrentLayers };
 

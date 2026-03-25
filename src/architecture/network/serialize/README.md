@@ -1,5 +1,10 @@
 # architecture/network/serialize
 
+Public serialization-facing helpers that stay above the lower-level payload builders.
+
+This file owns small convenience methods that callers expect on `Network`
+itself, while delegating the real persistence work to the serialize chapter.
+
 ## architecture/network/serialize/network.serialize.utils.types.ts
 
 ### CompactConnectionRebuildContext
@@ -949,6 +954,25 @@ Parameters:
 - `nodeType` - - Node type.
 
 Returns: New node.
+
+## architecture/network/serialize/network.serialize.public.utils.ts
+
+### cloneImpl
+
+```ts
+cloneImpl(): default
+```
+
+Create a deep copy of one network through the verbose JSON round-trip.
+
+This keeps cloning behavior aligned with the same versioned payload contract
+used by `toJSON()` and `fromJSON()`, so clone semantics stay stable as the
+serialization chapter evolves.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Deep-cloned network instance.
 
 ## architecture/network/serialize/network.serialize.compact.utils.ts
 

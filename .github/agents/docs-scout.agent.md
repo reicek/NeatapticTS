@@ -15,6 +15,9 @@ you gather evidence, identify likely doc gaps, and prepare a compact handoff
 for that skill or for the user. You do not redefine the repo's documentation
 standards yourself.
 
+If your recommendation includes updating a tracker file, assume
+`tracker-handoff` owns the tracker format and continuation prompt shape.
+
 ## Constraints
 - ALWAYS use the exact skill name `educational-docs` when referring to the
 	companion skill.

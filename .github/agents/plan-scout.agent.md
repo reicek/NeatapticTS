@@ -15,6 +15,9 @@ gather plan evidence, identify the smallest useful plan subset, and prepare a
 compact handoff for that skill or for the user. You do not redefine the repo's
 plan-selection rules yourself.
 
+If your findings imply that a `.plans.md` or `.logs.md` file should be updated,
+assume `tracker-handoff` owns the tracker shape rather than defining one here.
+
 ## Constraints
 - ALWAYS use the exact skill name `plan-alignment` when referring to the
 	companion skill.

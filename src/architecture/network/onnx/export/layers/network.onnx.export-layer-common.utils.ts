@@ -1,28 +1,43 @@
-import type NeatapticNode from '../../node';
+import type NeatapticNode from '../../../../node';
 import type {
   Conv2DMapping,
+  OnnxMetadataProperty,
+  OnnxModel,
+  Pool2DMapping,
+} from '../../schema/network.onnx.schema.types';
+import type {
   DenseWeightBuildContext,
   DenseWeightBuildResult,
   DenseWeightRow,
   DenseWeightRowCollectionContext,
   DiagonalRecurrentBuildContext,
   FlattenAfterPoolingContext,
-  NodeInternals,
-  OnnxMetadataProperty,
-  OnnxModel,
   OptionalPoolingAndFlattenParams,
   PoolingAttributes,
   PoolingEmissionContext,
-  Pool2DMapping,
   RecurrentRowCollectionContext,
-} from './network.onnx.utils.types';
+} from '../network.onnx.export.types';
+import type { NodeInternals } from '../../network.onnx.utils.types';
 
 /**
- * Build dense-layer weight matrix and bias vector.
+ * Build the shared dense initializer payload used by both compact dense export
+ * and recurrent single-step export.
+ *
+ * The returned weight matrix is flattened in row-major order by destination
+ * neuron. Missing edges are encoded as zeroes so partially connected layers can
+ * still be represented in a deterministic rectangular tensor layout.
+ * Biases are collected in the same destination-neuron order.
  *
  * @param previousLayerNodes Source layer nodes.
  * @param currentLayerNodes Destination layer nodes.
  * @returns Flattened row-major weight matrix and bias vector.
+ * @example
+ * ```ts
+ * const { weightMatrixValues, biasVector } = buildDenseWeightsAndBiases(
+ *   previousLayerNodes,
+ *   currentLayerNodes,
+ * );
+ * ```
  */
 export function buildDenseWeightsAndBiases(
   previousLayerNodes: NeatapticNode[],

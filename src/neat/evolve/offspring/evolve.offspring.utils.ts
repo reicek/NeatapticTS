@@ -1,4 +1,4 @@
-import Network from '../../../architecture/network';
+import Network from '../../../architecture/network/network';
 import {
   LINEAGE_BASE_DEPTH,
   LINEAGE_DEPTH_INCREMENT,

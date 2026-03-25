@@ -1,4 +1,4 @@
-import Network from '../../../architecture/network';
+import Network from '../../../architecture/network/network';
 import type {
   CompatComputer,
   DiversityStats,

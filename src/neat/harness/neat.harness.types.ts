@@ -76,7 +76,7 @@
  * story of the library.
  */
 import type Neat from '../../neat';
-import type Network from '../../architecture/network';
+import type Network from '../../architecture/network/network';
 import type { GenomeDetailed } from '../shared/neat.shared.types';
 
 /**

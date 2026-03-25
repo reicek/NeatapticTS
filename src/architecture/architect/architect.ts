@@ -17,7 +17,7 @@
 import Node from '../node/node';
 import Layer from '../layer/layer';
 import Group from '../group/group';
-import Network from '../network';
+import Network from '../network/network';
 import * as methods from '../../methods/methods';
 import Connection from '../connection/connection';
 

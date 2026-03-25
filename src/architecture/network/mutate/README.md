@@ -135,6 +135,32 @@ network.mutate({ name: 'MOD_WEIGHT', min: -0.1, max: 0.1 });
 
 Mutation method descriptor shape.
 
+## architecture/network/mutate/network.mutate.public.utils.ts
+
+Public structural-mutation helpers that stay outside the mutation dispatch table.
+
+This file owns small graph-editing methods that are exposed directly on
+`Network` for callers who want one specific structural operation without
+going through the broader mutation-method dispatch flow.
+
+### addNodeBetweenImpl
+
+```ts
+addNodeBetweenImpl(): void
+```
+
+Split one randomly selected connection by inserting a hidden node.
+
+This preserves the long-standing public `addNodeBetween()` behavior:
+- it does not opt into `ADD_NODE` deterministic-chain policy,
+- it preserves the original source-edge weight on the first new connection,
+- it uses `1` for the hidden-to-target edge to keep the split easy to reason about.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
 ## architecture/network/mutate/network.mutate.dispatch.utils.ts
 
 Mutation-key normalization and warning helpers used by the mutate orchestrator.

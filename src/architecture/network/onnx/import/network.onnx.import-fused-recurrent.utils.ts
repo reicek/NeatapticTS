@@ -1,8 +1,11 @@
-import Connection from '../../connection';
+import Connection from '../../../connection';
 import type Network from '../../network';
-import type NeatapticNode from '../../node';
+import type NeatapticNode from '../../../node';
 import type {
-  NodeInternals,
+  OnnxMetadataProperty,
+  OnnxModel,
+} from '../schema/network.onnx.schema.types';
+import type {
   OnnxFusedGateApplicationContext,
   OnnxFusedGateRowAssignmentContext,
   OnnxFusedLayerNeighborhood,
@@ -11,10 +14,11 @@ import type {
   OnnxFusedRecurrentSpec,
   OnnxFusedTensorPayload,
   OnnxIncomingWeightAssignmentContext,
+} from './network.onnx.import-fused-recurrent.types';
+import type {
+  NodeInternals,
   OnnxLayerFactory,
-  OnnxMetadataProperty,
-  OnnxModel,
-} from './network.onnx.utils.types';
+} from '../network.onnx.utils.types';
 
 const FUSED_KIND_LSTM = 'LSTM';
 const FUSED_KIND_GRU = 'GRU';

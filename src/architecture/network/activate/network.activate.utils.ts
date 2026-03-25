@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 export { activate, gaussianRand } from './network.activate.core.utils';
 import {
   createBatchActivationContext,

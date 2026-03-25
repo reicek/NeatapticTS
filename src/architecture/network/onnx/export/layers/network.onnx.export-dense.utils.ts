@@ -1,4 +1,5 @@
-import type NeatapticNode from '../../node';
+import type NeatapticNode from '../../../../node';
+import type { OnnxModel } from '../../schema/network.onnx.schema.types';
 import type {
   DenseActivationContext,
   DenseActivationNodePayload,
@@ -9,9 +10,7 @@ import type {
   DenseLayerParams,
   DenseOrderedNodePayload,
   DenseTensorNames,
-  NodeInternals,
   OptionalLayerOutputParams,
-  OnnxModel,
   PerNeuronConcatNodePayload,
   PerNeuronGraphNames,
   PerNeuronLayerContext,
@@ -21,18 +20,37 @@ import type {
   PerNeuronTensorNames,
   SharedActivationNodeBuildParams,
   SharedGemmNodeBuildParams,
-} from './network.onnx.utils.types';
+} from '../network.onnx.export.types';
+import type { NodeInternals } from '../../network.onnx.utils.types';
 import {
   buildDenseWeightsAndBiases,
   emitOptionalPoolingAndFlatten,
 } from './network.onnx.export-layer-common.utils';
-import { mapActivationToOnnx } from './network.onnx.layer-analysis.utils';
+import { mapActivationToOnnx } from '../../network.onnx.layer-analysis.utils';
 
 /**
- * Emit dense layer representation.
+ * Emit the compact dense export path for a layer whose neurons all share the
+ * same activation.
+ *
+ * This is the cheapest ONNX shape the exporter can produce for a standard MLP
+ * layer: one Gemm node for the affine transform and one activation node for the
+ * whole layer. The same helper also preserves the library's legacy node-ordering
+ * compatibility mode when older snapshots need deterministic graph ordering.
  *
  * @param params Dense emission parameters.
  * @returns Output tensor name.
+ * @example
+ * ```ts
+ * const outputName = emitDenseLayer({
+ *   model,
+ *   layerIndex: 2,
+ *   previousOutputName: 'Layer_1',
+ *   previousLayerNodes,
+ *   currentLayerNodes,
+ *   options: {},
+ *   legacyNodeOrdering: false,
+ * });
+ * ```
  */
 export function emitDenseLayer(params: DenseLayerParams): string {
   const denseLayerContext = createDenseLayerContext(params);
@@ -127,10 +145,27 @@ export function emitDenseLayer(params: DenseLayerParams): string {
 }
 
 /**
- * Emit per-neuron decomposition layer representation.
+ * Emit the fallback dense-family representation for a layer whose target
+ * neurons use different activations.
+ *
+ * Instead of pretending the layer is homogeneous, this path exports one tiny
+ * Gemm-plus-activation subgraph per neuron and then concatenates the results.
+ * The graph is larger, but it preserves mixed activation behavior that a single
+ * layer-wide activation node cannot express.
  *
  * @param params Per-neuron emission parameters.
  * @returns Output tensor name.
+ * @example
+ * ```ts
+ * const outputName = emitPerNeuronLayer({
+ *   model,
+ *   layerIndex: 2,
+ *   previousOutputName: 'Layer_1',
+ *   previousLayerNodes,
+ *   currentLayerNodes,
+ *   options: { allowMixedActivations: true },
+ * });
+ * ```
  */
 export function emitPerNeuronLayer(params: PerNeuronLayerParams): string {
   const perNeuronLayerContext = createPerNeuronLayerContext(params);

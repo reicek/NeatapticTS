@@ -1,0 +1,35 @@
+{
+  "introFile": "network.ts",
+  "fileOrder": [
+    "network.ts",
+    "architect.ts",
+    "layer.ts",
+    "group.ts",
+    "node.ts",
+    "connection.ts",
+    "nodePool.ts",
+    "activationArrayPool.ts",
+    "onnx.ts"
+  ],
+  "folderOrder": [
+    "network",
+    "architect",
+    "layer",
+    "group",
+    "node",
+    "connection",
+    "nodePool",
+    "activationArrayPool"
+  ],
+  "hiddenFiles": [
+    "network.ts",
+    "architect.ts",
+    "layer.ts",
+    "group.ts",
+    "node.ts",
+    "connection.ts",
+    "nodePool.ts",
+    "activationArrayPool.ts",
+    "onnx.ts"
+  ]
+}

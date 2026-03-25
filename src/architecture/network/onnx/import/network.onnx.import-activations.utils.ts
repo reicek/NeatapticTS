@@ -1,5 +1,6 @@
-import * as methods from '../../../methods/methods';
+import * as methods from '../../../../methods/methods';
 import type Network from '../../network';
+import type { OnnxModel } from '../schema/network.onnx.schema.types';
 import type {
   ActivationFunction,
   HiddenLayerActivationTraversalContext,
@@ -9,9 +10,8 @@ import type {
   OnnxActivationOperation,
   OnnxActivationOperationResolutionContext,
   OnnxActivationParseResult,
-  OnnxModel,
   OutputLayerActivationContext,
-} from './network.onnx.utils.types';
+} from '../network.onnx.utils.types';
 
 /** Empty string literal for safe node-name parsing defaults. */
 const EMPTY_NODE_NAME = '';

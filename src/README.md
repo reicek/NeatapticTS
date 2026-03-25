@@ -2301,10 +2301,6 @@ const output = network.activate([0, 1]);
 
 ### default
 
-#### _accumulationReduction
-
-Accumulation reduction mode.
-
 #### _activateCore
 
 ```ts
@@ -2320,107 +2316,6 @@ Parameters:
 - `withTrace` - Whether to update eligibility traces.
 - `input` - Optional externally supplied activation (bypasses weighted sum if provided).
 
-#### _activationPool
-
-Cached pooled activation output array.
-
-#### _activationPrecision
-
-Typed-array precision used by compiled activation paths.
-
-#### _adjDirty
-
-Adjacency dirty marker for slab structures.
-
-#### _applyGradientClipping
-
-```ts
-_applyGradientClipping(
-  cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; },
-): void
-```
-
-Apply gradient clipping configuration.
-
-Parameters:
-- `cfg` - Gradient clipping configuration.
-
-#### _canUseFastSlab
-
-```ts
-_canUseFastSlab(
-  training: boolean,
-): boolean
-```
-
-Check if fast-slab activation can be used.
-
-Parameters:
-- `training` - Whether training mode is active.
-
-Returns: True when fast-slab activation can be used.
-
-#### _computeTopoOrder
-
-```ts
-_computeTopoOrder(): void
-```
-
-Recompute and cache topological node ordering.
-
-Returns: Topological order payload from the delegate.
-
-#### _connFrom
-
-Packed connection slab source indices.
-
-#### _connTo
-
-Packed connection slab target indices.
-
-#### _connWeights
-
-Packed connection slab weights.
-
-#### _currentGradClip
-
-Gradient clip configuration for the current step.
-
-#### _dropConnectProb
-
-DropConnect probability.
-
-#### _enforceAcyclic
-
-Whether to enforce acyclic connectivity.
-
-#### _evoInitialConnCount
-
-Baseline connection count used by evolution-time pruning.
-
-#### _fastA
-
-Cached fast activation array A.
-
-#### _fastS
-
-Cached fast activation array S.
-
-#### _fastSlabActivate
-
-```ts
-_fastSlabActivate(
-  input: number[],
-): number[]
-```
-
-Execute the fast slab activation path.
-
-Parameters:
-- `input` - Input vector.
-
-Returns: Activation output.
-
 #### _flags
 
 Packed state flags (private for future-proofing hidden class):
@@ -2430,148 +2325,9 @@ bit2 => hasGater (1 = symbol field present)
 bit3 => plastic (plasticityRate > 0)
 bits4+ reserved.
 
-#### _forceNextOverflow
-
-Flag to force a mixed-precision overflow path.
-
-#### _gaussianRand
-
-```ts
-_gaussianRand(
-  rng: () => number,
-): number
-```
-
-Sample a Gaussian random value with an optional RNG.
-
-Parameters:
-- `rng` - RNG function.
-
-Returns: Gaussian random value.
-
-#### _globalEpoch
-
-Global epoch counter.
-
 #### _globalNodeIndex
 
 Global index counter for assigning unique indices to nodes.
-
-#### _gradAccumMicroBatches
-
-Accumulated micro-batch counter.
-
-#### _gradClipSeparateBias
-
-Whether to apply separate bias clipping.
-
-#### _hasPath
-
-```ts
-_hasPath(
-  from: default,
-  to: default,
-): boolean
-```
-
-Check whether a directed path exists between two nodes.
-
-Parameters:
-- `from` - Source node.
-- `to` - Target node.
-
-Returns: True when a path exists.
-
-#### _initialConnectionCount
-
-Initial connection count used for pruning baselines.
-
-#### _lastGradClipGroupCount
-
-Last gradient clipping group count.
-
-#### _lastGradNorm
-
-Last recorded gradient norm.
-
-#### _lastOverflowStep
-
-Last overflow training step index.
-
-#### _lastRawGradNorm
-
-Last recorded raw (pre-update) gradient norm.
-
-#### _lastStats
-
-Last recorded stats payload.
-
-#### _maybePrune
-
-```ts
-_maybePrune(
-  iteration: number,
-): void
-```
-
-Apply scheduled pruning if current iteration matches pruning policy.
-
-Parameters:
-- `iteration` - Current training iteration.
-
-Returns: Delegate result for pruning attempt.
-
-#### _mixedPrecision
-
-Mixed precision runtime configuration.
-
-#### _mixedPrecisionState
-
-Mixed precision state counters.
-
-#### _nodeIndexDirty
-
-Node index dirty marker.
-
-#### _optimizerStep
-
-Optimizer step counter.
-
-#### _outOrder
-
-Output-order array for slab forward pass.
-
-#### _outStart
-
-Output-start array for slab forward pass.
-
-#### _preferredChainEdge
-
-Preferred linear-chain edge for node-split mutations.
-
-#### _pruningConfig
-
-Pruning configuration for scheduled pruning.
-
-#### _rand
-
-```ts
-_rand(): number
-```
-
-Random number generator used for stochastic operations.
-
-#### _returnTypedActivations
-
-Whether pooled typed activations can be returned directly.
-
-#### _reuseActivationArrays
-
-Whether pooled activation arrays are reused across activations.
-
-#### _rngState
-
-Raw RNG state word.
 
 #### _safeUpdateWeight
 
@@ -2583,54 +2339,6 @@ _safeUpdateWeight(
 ```
 
 Internal helper to safely update a connection weight with clipping and NaN checks.
-
-#### _slabDirty
-
-Slab dirty marker.
-
-#### _stochasticDepth
-
-Stochastic depth schedule values.
-
-#### _stochasticDepthSchedule
-
-Dynamic stochastic depth schedule.
-
-#### _topoDirty
-
-Topology dirty marker.
-
-#### _topologyIntent
-
-Public topology intent used to preserve semantic API choices.
-
-#### _topoOrder
-
-Cached topological order.
-
-#### _trainingStep
-
-Training step counter.
-
-#### _useFloat32Weights
-
-Whether to store slab weights in float32.
-
-#### _weightNoisePerHidden
-
-Per-hidden-layer weight-noise standard deviations.
-
-#### _weightNoiseSchedule
-
-Dynamic weight-noise schedule function.
-
-#### _weightNoiseStd
-
-Global weight-noise standard deviation.
-
-#### _wnOrig
-
-Original weights captured for weight-noise recovery.
 
 #### acquire
 
@@ -3292,6 +3000,27 @@ Returns: The same network with hidden layers grown to the minimum size when need
 
 Stores error values calculated during backpropagation.
 
+#### evolve
+
+```ts
+evolve(
+  set: { input: number[]; output: number[]; }[],
+  options: Record<string, unknown> | undefined,
+): Promise<{ error: number; iterations: number; time: number; }>
+```
+
+Evolve the network against a dataset using the neuroevolution chapter.
+
+The implementation lives outside this class so the public surface stays
+orchestration-first while population search, mutation policy, and stopping
+criteria remain chapter-owned.
+
+Parameters:
+- `set` - Evaluation samples with `input` and `output` vectors.
+- `options` - Evolution options controlling population search and stopping criteria.
+
+Returns: Promise resolving to the final error, iteration count, and elapsed time.
+
 #### fastSlabActivate
 
 ```ts
@@ -3495,7 +3224,7 @@ Returns: Current topology intent.
 #### getTrainingStats
 
 ```ts
-getTrainingStats(): { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }
+getTrainingStats(): TrainingStatsSnapshot
 ```
 
 Consolidated training stats snapshot.
@@ -4314,6 +4043,20 @@ Parameters:
 
 Returns: The activation value or its derivative.
 
+#### standalone
+
+```ts
+standalone(): string
+```
+
+Generate a dependency-light standalone inference function for this network.
+
+Use this when you want to snapshot the current topology and weights into a
+self-contained JavaScript function for deployment, offline benchmarking,
+or browser embedding without the full training runtime.
+
+Returns: Standalone JavaScript source for inference.
+
 #### state
 
 The internal state of the node (sum of weighted inputs + bias) before the activation function is applied.
@@ -4413,6 +4156,28 @@ Accumulates changes in bias over a mini-batch during batch training. Reset after
 #### totalDeltaWeight
 
 Accumulated (batched) delta weight awaiting an apply step.
+
+#### train
+
+```ts
+train(
+  set: { input: number[]; output: number[]; }[],
+  options: unknown,
+): { error: number; iterations: number; time: number; }
+```
+
+Train the network against a supervised dataset using the gradient-based
+training chapter.
+
+This wrapper keeps the public `Network` API stable while the training
+helpers own batching, optimizer steps, regularization, and mixed-precision
+runtime behavior.
+
+Parameters:
+- `set` - Supervised samples with `input` and `output` vectors.
+- `options` - Training options such as learning rate, iteration limits, batching, and optimizer settings.
+
+Returns: Aggregate training result with final error, iteration count, and elapsed time.
 
 #### trainingStep
 

@@ -22,6 +22,9 @@ split workflow, treat the incoming changes as a focused boundary-sharpening
 pass: explain the touched module better, keep generated surfaces in sync, and
 avoid expanding into an unrelated repo-wide docs rewrite.
 
+When the task also updates in-repo tracker files, `tracker-handoff` owns the
+canonical `.plans.md` and `.logs.md` shape.
+
 This skill also delegates in the other direction when documentation work proves
 the boundary is too broad. If a generated README surface is oversized,
 monolithic, or still hard to teach after normal source-first improvement,
@@ -543,6 +546,8 @@ For diagram selection, syntax caveats, and validation guidance, use
 - Do not prepend specific calendar dates to plan logs, session headings, or
   handoff sections. Use stable titles such as `### Compatibility chapter pass`
   instead of `### YYYY-MM-DD - Compatibility chapter pass`.
+- Follow `tracker-handoff` when the work includes updating tracker files,
+  including `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and `Handoff query`.
 - When updating a running plan document after a completed pass, compress older
   completed entries to the essentials: keep `Goals`, `Progress`, optional
   `Achievements`, and `Decision`.

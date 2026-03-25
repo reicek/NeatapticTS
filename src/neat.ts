@@ -15,7 +15,7 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import Network from './architecture/network';
+import Network from './architecture/network/network';
 import type {
   ObjectiveDescriptor,
   SpeciesHistoryEntry,

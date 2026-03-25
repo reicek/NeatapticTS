@@ -16,6 +16,9 @@ in NeatapticTS. It owns the durable rules for how much of `plans/` to read,
 which terminology to preserve, and how to surface mismatches between code and
 plan direction without overloading context.
 
+When a task actually edits tracker files, `tracker-handoff` owns the plan/log
+shape, status markers, compression, and `Handoff query` structure.
+
 ## When to Use
 
 - The task touches architecture, roadmap items, major refactors, new
@@ -90,6 +93,9 @@ alignment workflow.
 - Do not prepend specific calendar dates to plan logs, alignment notes, or
   handoff sections. Use stable undated headings so plan history stays easy to
   reuse and rewrite.
+- Do not invent a custom tracker format when editing `.plans.md` or `.logs.md`;
+  defer to `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, and
+  `Handoff query` structure.
 - Do not recommend a plan file without explaining why it matches.
 - Do not read the entire `plans/` tree by default.
 - Do not default to demo-local compensation when the plan direction points to a
