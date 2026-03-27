@@ -30,7 +30,7 @@ Why the folder is split this way:
 
 Trust boundary:
 - Treat imported models as **untrusted input**. The importer validates structure, but
-  you should still apply the same care you would for any JSON payload.
+  you should still apply the same care you would for a generic JSON payload.
 
 Example (export → persist → import):
 

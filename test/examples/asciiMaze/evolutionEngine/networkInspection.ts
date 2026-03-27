@@ -25,7 +25,17 @@
 
 import type { INetwork } from '../interfaces';
 import type { EngineState } from './engineState';
+import type { NetworkConnection, NetworkNode } from './evolutionEngine.types';
 import { ensureConnFlagsCapacity } from './scratchPools';
+
+interface ClassifiedNodeBuckets {
+  nodeList: NetworkNode[];
+  inputNodes: NetworkNode[];
+  hiddenNodes: NetworkNode[];
+  outputNodes: NetworkNode[];
+}
+
+type NodeBucketPool = [NetworkNode[], NetworkNode[], NetworkNode[]];
 
 /**
  * Utility to explicitly mark swallowed errors for lint compliance.
@@ -61,9 +71,7 @@ export const swallowError = (error: unknown): void => {
  * @param network - Network-like object with an optional `nodes` array.
  * @returns Safe array reference (network.nodes or empty array).
  */
-// Type assertion: Network nodes are dynamically typed structures with variable properties
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const normalizeNodesArray = (network: INetwork): any[] => {
+const normalizeNodesArray = (network: INetwork): NetworkNode[] => {
   return Array.isArray(network?.nodes) ? network.nodes : [];
 };
 
@@ -95,29 +103,16 @@ const normalizeNodesArray = (network: INetwork): any[] => {
  */
 const classifyNodesFromArray = (
   engineState: EngineState,
-  // Type assertion: Network nodes are dynamically typed structures with variable properties
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  nodesArray: any[],
-): {
-  // Type assertion: Network nodes are dynamically typed structures with variable properties
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  nodeList: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  inputNodes: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  hiddenNodes: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  outputNodes: any[];
-} => {
+  nodesArray: NetworkNode[],
+): ClassifiedNodeBuckets => {
   // Step 1: Normalise the incoming node list to a safe, non-null array reference.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const nodeList: any[] = Array.isArray(nodesArray) ? nodesArray : [];
+  const nodeList: NetworkNode[] = Array.isArray(nodesArray) ? nodesArray : [];
 
   // Step 2: Lazily create / reuse the pooled buckets structure on the state.
   const scratchBundle = engineState.scratch;
-  let pooledBuckets = scratchBundle.nodeBuckets;
+  let pooledBuckets = scratchBundle.nodeBuckets as NodeBucketPool | undefined;
   if (!Array.isArray(pooledBuckets?.[0])) {
-    pooledBuckets = scratchBundle.nodeBuckets = [[], [], []];
+    pooledBuckets = scratchBundle.nodeBuckets = [[], [], []] as NodeBucketPool;
   }
 
   // Descriptive bucket aliases for readability.
@@ -177,17 +172,7 @@ const classifyNodesFromArray = (
 const classifyNodes = (
   engineState: EngineState,
   network: INetwork,
-): {
-  // Type assertion: Network nodes are dynamically typed structures with variable properties
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  nodeList: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  inputNodes: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  hiddenNodes: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  outputNodes: any[];
-} => {
+): ClassifiedNodeBuckets => {
   // Orchestrator: normalize inputs then delegate to the fast, allocation-light classifier.
   const normalizedNodeList = normalizeNodesArray(network);
   return classifyNodesFromArray(engineState, normalizedNodeList);
@@ -221,9 +206,7 @@ const gatherActivationNames = (
   network: INetwork,
 ): string[] => {
   // Step 1: Safe normalisation of the node list reference.
-  // Type assertion: Network nodes are dynamically typed structures with variable properties
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const nodesArray: any[] = Array.isArray(network?.nodes) ? network.nodes : [];
+  const nodesArray = normalizeNodesArray(network);
   const nodesCount = nodesArray.length;
 
   // Step 2: Lazily ensure the shared pool exists.
@@ -294,9 +277,7 @@ const gatherActivationNames = (
  */
 const detectRecurrentOrGated = (
   engineState: EngineState,
-  // Type assertion: Network connections are dynamically typed structures with variable properties
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  connectionsList: any[],
+  connectionsList: NetworkConnection[],
 ): boolean => {
   // Step 1: Validate input quickly
   if (!Array.isArray(connectionsList) || connectionsList.length === 0)

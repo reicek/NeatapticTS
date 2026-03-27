@@ -106,6 +106,25 @@ if (diversity) {
 }
 ```
 
+### buildEmptyDiversityStats
+
+```ts
+buildEmptyDiversityStats(
+  populationSize: number,
+): DiversityStats
+```
+
+Build a zeroed diversity snapshot when no sampled metrics exist yet.
+
+This helper gives controller facades and diagnostics a safe fallback object
+whose shape matches ordinary diversity output without pretending that real
+real sampling work has happened yet.
+
+Parameters:
+- `populationSize` - - Population size to echo into the empty snapshot.
+
+Returns: Diversity stats object with zeroed aggregates.
+
 ### DiversityStats
 
 Diversity statistics returned by sampled population analysis.

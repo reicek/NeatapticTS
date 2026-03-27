@@ -81,7 +81,7 @@ export interface NeatMaintenanceFacadeHost extends Omit<
  * @param host - `Neat` instance exposing mutation constraints and innovation tables.
  * @param network - Network whose hidden-node floor should be enforced.
  * @param multiplierOverride - Optional one-off multiplier overriding the configured policy.
- * @returns Promise that resolves after any required topology repair finishes.
+ * @returns Promise that resolves after required topology repair finishes.
  *
  * @example
  * ```ts

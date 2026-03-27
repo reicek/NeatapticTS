@@ -441,7 +441,7 @@ function summarizeInnovations<
    * @returns Ratio of enabled connections or fallback.
    */
   function computeEnabledRatio(accumulator: InnovationAccumulator): number {
-    // Step 1: Compute ratio when any connections were observed.
+    // Step 1: Compute ratio when connections were observed.
     const enabledTotal = accumulator.enabledCount + accumulator.disabledCount;
     if (!enabledTotal) return DEFAULT_SCORE_FALLBACK;
     return accumulator.enabledCount / enabledTotal;

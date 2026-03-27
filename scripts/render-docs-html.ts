@@ -39,6 +39,10 @@ const NN_IMAGE_FALLBACK_SOURCE_PATH = path.resolve(
   'nn.jpg',
 );
 const NN_IMAGE_OUTPUT_PATH = path.join(DOCS_DIR, 'nn.jpg');
+const GITHUB_REPOSITORY_BLOB_BASE_URL =
+  'https://github.com/reicek/NeatapticTS/blob/develop';
+const GITHUB_REPOSITORY_TREE_BASE_URL =
+  'https://github.com/reicek/NeatapticTS/tree/develop';
 
 const RETRIABLE_FILE_SYSTEM_ERROR_CODES = new Set([
   'UNKNOWN',
@@ -239,6 +243,132 @@ function buildRelativeDocsHref(currentDir: string, targetDir: string): string {
   return (relLink === '.' ? '.' : relLink) + '/index.html';
 }
 
+function isExternalOrAnchorHref(href: string): boolean {
+  return (
+    /^[a-z][a-z0-9+.-]*:/i.test(href) ||
+    href.startsWith('//') ||
+    href.startsWith('#')
+  );
+}
+
+function normalizeRepoRelativeHref(href: string): string {
+  return href
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '')
+    .replace(/^\//, '')
+    .replace(/\/{2,}/g, '/');
+}
+
+function hasCompiledDocsPage(relativeDirectoryPath: string): boolean {
+  const normalizedDirectoryPath = relativeDirectoryPath.replace(/\/$/, '');
+  if (!normalizedDirectoryPath) {
+    return false;
+  }
+
+  return fs.existsSync(path.resolve(DOCS_DIR, normalizedDirectoryPath, 'index.html'));
+}
+
+function buildGitHubRepositoryHref(repoRelativePath: string): string {
+  const normalizedPath = normalizeRepoRelativeHref(repoRelativePath).replace(
+    /\/$/,
+    '',
+  );
+  const absoluteRepositoryPath = path.resolve(normalizedPath);
+  const pathExistsInRepository = fs.existsSync(absoluteRepositoryPath);
+  const urlBase = pathExistsInRepository && fs.statSync(absoluteRepositoryPath).isFile()
+    ? GITHUB_REPOSITORY_BLOB_BASE_URL
+    : path.posix.extname(normalizedPath)
+      ? GITHUB_REPOSITORY_BLOB_BASE_URL
+      : GITHUB_REPOSITORY_TREE_BASE_URL;
+
+  return `${urlBase}/${normalizedPath}`;
+}
+
+function resolveRootLandingCompiledHref(href: string): string {
+  if (!href || isExternalOrAnchorHref(href)) {
+    return href;
+  }
+
+  const normalizedHref = normalizeRepoRelativeHref(href);
+  if (!normalizedHref) {
+    return './index.html';
+  }
+
+  if (
+    normalizedHref === 'docs' ||
+    normalizedHref === 'docs/' ||
+    normalizedHref === 'docs/index.html'
+  ) {
+    return './index.html';
+  }
+
+  if (normalizedHref.startsWith('docs/')) {
+    return `./${normalizedHref.slice('docs/'.length)}`;
+  }
+
+  if (
+    normalizedHref === 'src' ||
+    normalizedHref === 'src/' ||
+    normalizedHref === 'src/README.md'
+  ) {
+    return './src/index.html';
+  }
+
+  if (normalizedHref.startsWith('src/')) {
+    const sourceSubpath = normalizedHref.slice('src/'.length);
+    const sourceReadmeMatch = /^(.*)\/README\.md$/.exec(sourceSubpath);
+    const compiledDocsCandidate = sourceReadmeMatch
+      ? sourceReadmeMatch[1]
+      : sourceSubpath.replace(/\/$/, '');
+
+    if (hasCompiledDocsPage(compiledDocsCandidate)) {
+      return `./${compiledDocsCandidate}/index.html`;
+    }
+  }
+
+  if (normalizedHref === 'test/examples' || normalizedHref === 'test/examples/') {
+    return './examples/index.html';
+  }
+
+  const exampleReadmeMatch = /^test\/examples\/([^/]+)\/README\.md$/.exec(
+    normalizedHref,
+  );
+  if (exampleReadmeMatch) {
+    return `./examples/${exampleReadmeMatch[1]}/docs/index.html`;
+  }
+
+  const exampleDirectoryMatch = /^test\/examples\/([^/]+)\/?$/.exec(
+    normalizedHref,
+  );
+  if (exampleDirectoryMatch) {
+    return `./examples/${exampleDirectoryMatch[1]}/index.html`;
+  }
+
+  const compiledDocsDirectoryCandidate = normalizedHref.replace(/\/$/, '');
+  if (hasCompiledDocsPage(compiledDocsDirectoryCandidate)) {
+    return `./${compiledDocsDirectoryCandidate}/index.html`;
+  }
+
+  return buildGitHubRepositoryHref(normalizedHref);
+}
+
+function rewriteCompiledDocsContentLinks(
+  htmlBody: string,
+  relativeDirectory: string,
+): string {
+  if (relativeDirectory !== '') {
+    return htmlBody;
+  }
+
+  return htmlBody.replace(
+    /\bhref=(['"])([^'"]+)\1/g,
+    (_match, quote: string, href: string) => {
+      return `href=${quote}${resolveRootLandingCompiledHref(href)}${quote}`;
+    },
+  );
+}
+
 function hasPublishedDocsPage(
   relDir: string,
   generatedPageDirectories: ReadonlySet<string>,
@@ -402,7 +532,8 @@ async function main() {
       return originalCode?.(codeToken) ?? '';
     };
     marked.use({ renderer });
-    const htmlBody = marked.parse(md, { async: false });
+    const rawHtmlBody = marked.parse(md, { async: false });
+    const htmlBody = rewriteCompiledDocsContentLinks(rawHtmlBody, meta.relDir);
     const generatedPageDirectories = new Set(pages.map((page) => page.relDir));
     const rootExamplesTocHtml = buildExamplesTocLinksHtml({
       currentDir: meta.relDir,

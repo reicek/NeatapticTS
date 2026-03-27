@@ -1,15 +1,8 @@
-/*
- * ESLint configuration for intentional `any` usage in NEAT evolution population utils
- *
- * This file mirrors the evolution module's runtime metadata handling,
- * where dynamic properties are attached to genomes/species at runtime.
- */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import Network from '../../../architecture/network/network';
 import type {
   GenomeWithMetadata,
   NeatControllerForEvolution,
+  SpeciesWithMetadata,
 } from '../evolve.types';
 import {
   promoteGenomeToFeedForwardIntentWhenEligible,
@@ -372,7 +365,7 @@ export async function addSpeciatedOffspring(
   );
   // Step 2: Record allocations for telemetry.
   internal._lastOffspringAlloc = (internal._species ?? []).map(
-    (species: any, speciesIndex: number) => ({
+    (species, speciesIndex) => ({
       id: species.id,
       alloc: offspringAllocation[speciesIndex] || 0,
     }),
@@ -480,9 +473,9 @@ function computeOffspringAllocation(
   const oldThreshold = ageConfig.oldThreshold ?? config.oldThresholdDefault;
   const oldMultiplier = ageConfig.oldMultiplier ?? config.oldMultiplierDefault;
   // Step 2: Compute adjusted fitness per species.
-  const speciesAdjusted = (internal._species ?? []).map((species: any) => {
+  const speciesAdjusted = (internal._species ?? []).map((species) => {
     const base = species.members.reduce(
-      (sum: number, member: any) => sum + (member.score || 0),
+      (sum: number, member: GenomeWithMetadata) => sum + (member.score || 0),
       0,
     );
     const age = internal.generation - species.lastImproved;
@@ -494,7 +487,7 @@ function computeOffspringAllocation(
   const totalAdjusted =
     speciesAdjusted.reduce((sum: number, value: number) => sum + value, 0) || 1;
   const rawShares = (internal._species ?? []).map(
-    (_: any, speciesIndex: number) =>
+    (_species, speciesIndex) =>
       (speciesAdjusted[speciesIndex] / totalAdjusted) * remainingSlots,
   );
   // Step 4: Floor allocations.
@@ -689,17 +682,11 @@ function buildSpeciesOffspring(
   child._reenableProb = internal.options.reenableProb;
   child._id = internal._nextGenomeId++;
   if (internal._lineageEnabled) {
-    child._parents = [
-      (parentA as never as GenomeWithMetadata)._id,
-      (parentB as any)._id,
-    ];
-    const depthA = (parentA as any)._depth ?? 0;
-    const depthB = (parentB as any)._depth ?? 0;
-    (child as any)._depth = 1 + Math.max(depthA, depthB);
-    if (
-      (parentA as never as GenomeWithMetadata)._id ===
-      (parentB as never as GenomeWithMetadata)._id
-    ) {
+    child._parents = [parentA._id ?? 0, parentB._id ?? 0];
+    const depthA = parentA._depth ?? 0;
+    const depthB = parentB._depth ?? 0;
+    child._depth = 1 + Math.max(depthA, depthB);
+    if (parentA._id === parentB._id) {
       internal._lastInbreedingCount++;
     }
   }
@@ -760,7 +747,7 @@ function selectSecondParent(
     ] as never;
   }
   // Step 3: Select parent from the other species.
-  internal._sortSpeciesMembers?.(otherSpecies);
+  internal._sortSpeciesMembers?.(otherSpecies as SpeciesWithMetadata);
   const otherSurvivors = otherSpecies.members.slice(
     0,
     Math.max(

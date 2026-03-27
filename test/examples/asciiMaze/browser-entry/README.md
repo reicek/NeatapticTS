@@ -6,6 +6,11 @@ The folder now owns host bootstrap, runtime orchestration, globals
 compatibility, and resize handling behind focused helpers. This facade keeps
 the public API stable while presenting a small orchestration-first surface.
 
+Educational note:
+`index.html` is only the browser shell that loads the prebuilt bundle and
+forwards into this API through window globals. If you want the real browser
+host boundary, start here rather than with the HTML loader.
+
 ## browser-entry/browser-entry.types.ts
 
 ### AsciiMazeRunHandle
@@ -90,11 +95,21 @@ Parameters:
 
 Returns: Lifecycle handle for stop, status, completion, and telemetry access.
 
-Example:
+Examples:
 
 ```ts
 const handle = await start('ascii-maze-output');
 handle.onTelemetry((telemetry) => console.log(telemetry));
+await handle.done;
+```
+
+```ts
+const abortController = new AbortController();
+const handle = await start('ascii-maze-output', {
+  signal: abortController.signal,
+});
+
+setTimeout(() => abortController.abort(), 1_000);
 await handle.done;
 ```
 

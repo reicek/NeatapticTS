@@ -43,7 +43,7 @@ import type { ObjectiveDescriptor } from '../../shared/neat.shared.types';
  *
  * This host seam is intentionally tiny because the objectives core only answers
  * one controller question: what should the current resolved objective list be?
- * Any state unrelated to that question stays outside the contract.
+ * State unrelated to that question stays outside the contract.
  */
 export interface NeatLikeWithObjectives {
   /** Runtime configuration for multi-objective behavior. */

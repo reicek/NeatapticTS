@@ -80,7 +80,7 @@ export function mergeTelemetryCoreFields(
 }
 
 /**
- * Apply telemetry selection while swallowing any selection errors.
+ * Apply telemetry selection while swallowing selection errors.
  *
  * @param telemetryContext - Neat-like context with telemetry selection.
  * @param telemetryEntry - Entry to filter in place.

@@ -33,10 +33,7 @@ type TrainingStatsSnapshot = {
  * @param probability DropConnect probability.
  * @returns Nothing.
  */
-export function enableDropConnect(
-  this: Network,
-  probability: number,
-): void {
+export function enableDropConnect(this: Network, probability: number): void {
   const runtimeNetwork = this as unknown as NetworkRuntimeDiagnosticsInternals;
 
   if (probability < 0 || probability >= 1) {

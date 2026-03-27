@@ -43,21 +43,11 @@
  * - jump into `telemetry/` when you want to know which evidence gets recorded during the step.
  */
 /*
- * ESLint configuration for intentional `any` usage in NEAT evolution module
- *
- * This file uses `any` strategically for:
- * 1. Runtime genome metadata properties that are dynamically added during evolution
- *    (_id, _parents, _depth, _moRank, _moCrowd, _sharedFitness, etc.)
- * 2. Species members and population arrays that contain mixed metadata
- *    - Runtime behavior guarantees type safety beyond what TypeScript can infer
- * 3. Dynamic multi-objective optimization structures (paretoFronts, objective accessors)
- *    - Complex nested structures with varying runtime shapes
- * 4. Telemetry and diversity stat calculations
- *    - Generic accessor functions that work across different genome properties
- * 5. Type system bridging between GenomeWithMetadata and Network
- *    - Where runtime contracts are sound but TypeScript can't prove it statically
- *
- * All `any` usage here is intentional, documented, and necessary for the evolution architecture.
+ * The evolve root chapter now delegates most runtime-shape detail to focused
+ * helpers under `adaptive/`, `population/`, `runtime/`, `speciation/`, and
+ * `telemetry/`. Those helpers carry the narrow contracts for dynamic genome
+ * metadata, telemetry state, and controller bookkeeping so this orchestration
+ * layer can stay declarative.
  */
 
 import Network from '../../architecture/network/network';
@@ -285,7 +275,7 @@ export async function evolve(
   const internal = this as unknown as NeatControllerForEvolution;
   const startTime = resolveStartTime();
 
-  // Step 1: Ensure population has scores before any selection/sorting.
+  // Step 1: Ensure population has scores before selection and sorting.
   await ensurePopulationEvaluated(internal);
   // Step 2: Reset objective cache so dynamic schedules can rebuild.
   resetObjectivesCache(internal);

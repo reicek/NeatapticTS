@@ -2,8 +2,6 @@ import Network from '../../architecture/network/network';
 import {
   calculateDiversityStats,
   calculateStructuralEntropy,
-  MAX_COMPATIBILITY_SAMPLE,
-  MAX_LINEAGE_PAIR_SAMPLE,
 } from './core/diversity.core';
 import type {
   CompatComputer,
@@ -143,4 +141,30 @@ export function computeDiversityStats(
   compatibilityComputer: CompatComputer,
 ): DiversityStats | undefined {
   return calculateDiversityStats(population, compatibilityComputer);
+}
+
+/**
+ * Build a zeroed diversity snapshot when no sampled metrics exist yet.
+ *
+ * This helper gives controller facades and diagnostics a safe fallback object
+ * whose shape matches ordinary diversity output without pretending that real
+ * real sampling work has happened yet.
+ *
+ * @param populationSize - Population size to echo into the empty snapshot.
+ * @returns Diversity stats object with zeroed aggregates.
+ */
+export function buildEmptyDiversityStats(
+  populationSize: number,
+): DiversityStats {
+  return {
+    lineageMeanDepth: 0,
+    lineageMeanPairDist: 0,
+    meanNodes: 0,
+    meanConns: 0,
+    nodeVar: 0,
+    connVar: 0,
+    meanCompat: 0,
+    graphletEntropy: 0,
+    population: populationSize,
+  };
 }

@@ -49,7 +49,7 @@ releaseNode(
 
 Release a detached node back into the pool.
 
-Callers must ensure the node is no longer part of any live graph. The pool
+Callers must ensure the node is no longer part of a live graph. The pool
 keeps the object shell, not the prior topology membership.
 
 Parameters:

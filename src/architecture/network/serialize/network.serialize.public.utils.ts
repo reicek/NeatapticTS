@@ -22,7 +22,7 @@ type CloneableNetworkConstructor = {
  * @returns Deep-cloned network instance.
  */
 export function cloneImpl(this: Network): Network {
-  const networkConstructor =
-    this.constructor as unknown as CloneableNetworkConstructor;
+  const networkConstructor = this
+    .constructor as unknown as CloneableNetworkConstructor;
   return networkConstructor.fromJSON(this.toJSON());
 }

@@ -68,7 +68,7 @@ stats even before a full metrics pass has run.
 The helper follows a conservative fallback ladder:
 
 1. return the live cached diversity snapshot when it exists,
-2. otherwise try the shared accessor for any retained cached value,
+2. otherwise try the shared accessor for a retained cached value,
 3. otherwise synthesize an empty-but-safe snapshot sized to the current population.
 
 Parameters:

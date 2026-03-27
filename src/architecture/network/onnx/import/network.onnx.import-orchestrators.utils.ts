@@ -8,9 +8,7 @@ import type {
   OnnxModel,
   Pool2DMapping,
 } from '../schema/network.onnx.schema.types';
-import type {
-  NodeInternals,
-} from '../network.onnx.utils.types';
+import type { NodeInternals } from '../network.onnx.utils.types';
 import type {
   NetworkWithOnnxImportPooling,
   OnnxImportArchitectureContext,

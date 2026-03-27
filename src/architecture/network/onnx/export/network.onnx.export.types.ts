@@ -22,14 +22,11 @@ import type NeatapticNode from '../../../node';
 import type {
   Conv2DMapping,
   OnnxDimension,
-  OnnxMetadataProperty,
   OnnxModel,
-  OnnxValueInfo,
   Pool2DMapping,
 } from '../schema/network.onnx.schema.types';
 import type {
   NodeInternals,
-  NodeInternalsWithExportIndex,
   OnnxConvKernelCoordinate,
 } from '../network.onnx.utils.types';
 

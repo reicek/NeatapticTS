@@ -1,4 +1,8 @@
-import type { NeatControllerForEvolution } from '../evolve.types';
+import type {
+  GenomeWithMetadata,
+  NeatControllerForEvolution,
+  ObjectiveDescriptor,
+} from '../evolve.types';
 
 /**
  * Objective-scheduling and maintenance helpers for NEAT evolution.
@@ -30,14 +34,6 @@ import type { NeatControllerForEvolution } from '../evolve.types';
  *   E --> F[Capture optional importance snapshot]
  * ```
  */
-
-/*
- * ESLint configuration for intentional `any` usage in NEAT evolution objectives utils
- *
- * This file mirrors the evolution module's runtime metadata handling,
- * where dynamic properties are attached to genomes/species at runtime.
- */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
  * Clear cached objectives so dynamic schedules can rebuild them.
@@ -135,7 +131,7 @@ export function applyFitnessSuppressionForTests(
       ) {
         internal._suppressFitnessObjective = true;
         internal._fitnessSuppressedOnce = true;
-        internal._objectivesList = undefined as any;
+        internal._objectivesList = undefined;
       }
     }
   } catch {
@@ -163,12 +159,10 @@ export function captureObjectiveImportanceSnapshot(
     const objectivesList = internal._getObjectives?.() ?? [];
     if (!objectivesList.length) return;
     const importance: Record<string, { range: number; var: number }> = {};
-    const population = internal.population as any[];
-    for (const objective of objectivesList as any[]) {
-      const values = population.map((genome: any) =>
-        objective.accessor(genome),
-      );
-      const minValue = Math.min(...(values as number[]));
+    const population = internal.population;
+    for (const objective of objectivesList) {
+      const values = population.map((genome) => objective.accessor(genome));
+      const minValue = Math.min(...values);
       const maxValue = Math.max(...(values as number[]));
       const meanValue =
         values.reduce((sum: number, value: number) => sum + value, 0) /
@@ -181,7 +175,7 @@ export function captureObjectiveImportanceSnapshot(
         ) / (values.length || 1);
       importance[objective.key] = { range: maxValue - minValue, var: variance };
     }
-    internal._lastObjImportance = importance as any;
+    internal._lastObjImportance = importance;
   } catch {
     // Empty catch: objective importance calculation is optional telemetry enhancement.
   }
@@ -229,7 +223,7 @@ export function applyDynamicObjectiveSchedule(
       internal.registerObjective(
         'complexity',
         'min',
-        (genome: any) => genome.connections.length,
+        (genome) => genome.connections.length,
       );
       internal._pendingObjectiveAdds.push('complexity');
     }
@@ -237,8 +231,10 @@ export function applyDynamicObjectiveSchedule(
       internal.generation + 1 >= addEntropyAt &&
       !currentObjectiveKeys.includes('entropy')
     ) {
-      internal.registerObjective('entropy', 'max', (genome: any) =>
-        (internal as any)._structuralEntropy(genome),
+      internal.registerObjective(
+        'entropy',
+        'max',
+        createEntropyAccessor(internal),
       );
       internal._pendingObjectiveAdds.push('entropy');
     }
@@ -250,8 +246,10 @@ export function applyDynamicObjectiveSchedule(
       internal.generation >= config.autoEntropyAddAt &&
       !currentObjectiveKeys.includes('entropy')
     ) {
-      internal.registerObjective('entropy', 'max', (genome: any) =>
-        (internal as any)._structuralEntropy(genome),
+      internal.registerObjective(
+        'entropy',
+        'max',
+        createEntropyAccessor(internal),
       );
       internal._pendingObjectiveAdds.push('entropy');
     }
@@ -300,9 +298,9 @@ function handleEntropyDropAndReadd(
       if (internal.options.multiObjective?.objectives) {
         internal.options.multiObjective.objectives =
           internal.options.multiObjective.objectives.filter(
-            (objective: any) => objective.key !== 'entropy',
+            (objective) => objective.key !== 'entropy',
           );
-        internal._objectivesList = undefined as any;
+        internal._objectivesList = undefined;
         internal._pendingObjectiveRemoves.push('entropy');
         internal._entropyDropped = internal.generation;
       }
@@ -319,11 +317,30 @@ function handleEntropyDropAndReadd(
       internal.generation - internal._entropyDropped >=
       dynamicConfig.readdEntropyAfter
     ) {
-      internal.registerObjective('entropy', 'max', (genome: any) =>
-        (internal as any)._structuralEntropy(genome),
+      internal.registerObjective(
+        'entropy',
+        'max',
+        createEntropyAccessor(internal),
       );
       internal._pendingObjectiveAdds.push('entropy');
       internal._entropyDropped = undefined;
     }
   }
+}
+
+/**
+ * Build the entropy accessor used by dynamic objective scheduling.
+ *
+ * The evolve controller already advertises `_structuralEntropy` as an optional
+ * hook. This helper centralizes the non-null assertion so the scheduling logic
+ * can stay declarative while preserving the existing expectation that entropy
+ * scheduling only makes sense on hosts exposing that hook.
+ *
+ * @param internal - NEAT controller instance.
+ * @returns Accessor that reads structural entropy from one genome.
+ */
+function createEntropyAccessor(
+  internal: NeatControllerForEvolution,
+): ObjectiveDescriptor['accessor'] {
+  return (genome: GenomeWithMetadata) => internal._structuralEntropy!(genome);
 }

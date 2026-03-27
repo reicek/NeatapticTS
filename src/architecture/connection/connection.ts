@@ -24,7 +24,7 @@ const kGater = Symbol('connGater');
 // Symbol-backed optimizer moment bag (amortizes 7 rarely-used numeric fields into a single optional object).
 // Accessed via prototype accessors so assigning e.g. `conn.firstMoment = x` does NOT create an enumerable
 // own property (slimming the field audit key count back to baseline). The bag itself lives on a symbol key
-// (non-enumerable) allocated lazily on first write to any optimizer field.
+// (non-enumerable) allocated lazily on first write to an optimizer field.
 const kOpt = Symbol('connOptMoments');
 // Symbol used for optional plasticity learning rate (non-enumerable) (bit3 flag presence)
 const kPlasticRate = Symbol('connPlasticRate');

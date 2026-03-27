@@ -9,7 +9,7 @@ import {
  * Seed the internal PRNG and install a deterministic random() implementation on the Network instance.
  *
  * @param this - Bound Network instance.
- * @param seed - Any finite number; only its lower 32 bits are used.
+ * @param seed - A finite number; only its lower 32 bits are used.
  * @returns Nothing.
  */
 export function setSeed(this: Network, seed: number): void {

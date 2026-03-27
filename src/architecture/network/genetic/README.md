@@ -347,7 +347,7 @@ Parameters:
 - `equal` - - Equal-treatment mode.
 - `randomGenerator` - - Random generator.
 
-Returns: Selected parent node gene, if any.
+Returns: Selected parent node gene, when present.
 
 ### selectInputNodeGene
 

@@ -42,7 +42,7 @@ its own.
 
 ```ts
 applyEvolutionPruning(
-  host: NeatPruningFacadeHost,
+  host: NeatLikeForPruning,
 ): Promise<void>
 ```
 
@@ -76,7 +76,7 @@ await neat.applyEvolutionPruning();
 
 ```ts
 applyAdaptivePruning(
-  host: NeatPruningFacadeHost,
+  host: NeatLikeForPruning,
 ): Promise<void>
 ```
 

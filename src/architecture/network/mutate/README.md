@@ -755,7 +755,7 @@ Parameters:
 - `network` - - Target network.
 - `mutationProps` - - Runtime mutation props.
 
-Returns: Deterministic context or undefined when any prerequisite fails.
+Returns: Deterministic context or undefined when one or more prerequisites fail.
 
 ### resolveInputOutputEndpoints
 

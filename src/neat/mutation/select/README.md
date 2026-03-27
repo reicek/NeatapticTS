@@ -176,7 +176,7 @@ sampleFromPoolForSelect(
 Sample a random method from the pool.
 
 This is the uncomplicated fallback selector. It is useful both for direct
-legacy sampling paths and for any configuration that wants weighted random
+legacy sampling paths and for each configuration that wants weighted random
 choice without the stronger opinion of the operator bandit.
 
 Parameters:

@@ -1,22 +1,6 @@
-/*
- * ESLint configuration for intentional `any` usage in NEAT class
- *
- * This file uses `any` strategically for:
- * 1. Runtime metadata properties attached to genomes (_id, _parents, _depth, _reenableProb, etc.)
- *    - These are dynamically added during evolution and don't belong in the Network interface
- * 2. Dynamic options handling during initialization (opts: any)
- *    - Options are validated at runtime and come from user configuration
- * 3. Legacy compatibility for helper function delegation (this as any)
- *    - Maintains backward compatibility while refactored helpers use stricter types
- * 4. Type system limitations with cross-module interfaces
- *    - GenomeWithMetadata vs Network type bridging where runtime behavior is sound
- *
- * All `any` usage here is intentional, documented, and necessary for the architecture.
- */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import Network from './architecture/network/network';
 import type {
+  GenomeLike,
   ObjectiveDescriptor,
   SpeciesHistoryEntry,
   OperatorStatsRecord,
@@ -41,6 +25,7 @@ import {
 } from './neat/helpers/neat.helpers';
 import { _getObjectives } from './neat/objectives/objectives';
 import {
+  buildEmptyDiversityStats,
   computeDiversityStats,
   structuralEntropy,
 } from './neat/diversity/diversity';
@@ -67,12 +52,30 @@ import {
   importStateImpl,
   toJSONImpl,
   fromJSONImpl,
+  type GenomeJSON,
+  type NeatMetaJSON,
+  type NeatStateJSON,
 } from './neat/export/neat.export';
 import { getOrCreateRng, type RngHost } from './neat/rng/rng';
 import { invalidateGenomeCaches } from './neat/cache/cache';
-import { createOffspring } from './neat/evolve/offspring/evolve.offspring.utils';
+import { DEFAULT_NEAT_CONSTRUCTOR_DEFAULTS } from './neat/neat.defaults.constants';
+import type {
+  NeatExportFitnessFunction,
+  NeatFitnessFunction,
+  NeatMutationSelectionResult,
+  NeatOptions as RootNeatOptions,
+  NeatRngStateSnapshot,
+} from './neat/neat.types';
+import {
+  createOffspring,
+  type OffspringContext,
+} from './neat/evolve/offspring/evolve.offspring.utils';
 import { warnIfNoBestGenome } from './neat/evolve/warnings/evolve.warnings.utils';
-import { initializeNeatConstructor } from './neat/init/neat.init';
+import {
+  initializeNeatConstructor,
+  type InitializeNeatConstructorRequest,
+  type NeatInitializationHost,
+} from './neat/init/neat.init';
 import type { NeatMaintenanceFacadeHost } from './neat/maintenance/facade/maintenance.facade';
 import type { NeatPruningFacadeHost } from './neat/pruning/facade/pruning.facade';
 import type { NeatRngFacadeHost } from './neat/rng/facade/rng.facade';
@@ -125,14 +128,6 @@ import * as neatTelemetryFacade from './neat/telemetry/facade/telemetry.facade';
  */
 
 /**
- * Internal permissive option bag backing the public `NeatOptions` alias.
- *
- * The root controller still accepts a wide option surface while the chaptered
- * implementation modules keep migrating toward narrower local contracts.
- */
-type Options = { [k: string]: any };
-
-/**
  * Public configuration bag for `Neat` evolutionary runs.
  *
  * `NeatOptions` collects the knobs that shape how search pressure is applied.
@@ -165,129 +160,25 @@ type Options = { [k: string]: any };
  * Prefer treating it as the stable front door and the narrower helper-level types in
  * `src/neat/**` as implementation detail.
  */
-export type NeatOptions = Options;
-/**
- * Default population size when caller does not specify `popsize`.
- *
- * This opens the root defaults shelf's search-volume family. It controls how
- * many genomes compete in each generation before elitism, provenance, or
- * mutation pressure begin to reshape the population.
- */
-export const DEFAULT_POPULATION_SIZE = 50;
-/**
- * Default elitism count applied when unspecified.
- *
- * Read this beside {@link DEFAULT_POPULATION_SIZE} and
- * {@link DEFAULT_PROVENANCE}: the trio defines how much of each generation is
- * reserved for carry-over, how much is freshly injected, and how much capacity
- * remains for ordinary offspring.
- */
-export const DEFAULT_ELITISM = 0;
-/**
- * Default provenance count applied when unspecified.
- *
- * Provenance is the root controller's small "fresh seed" policy. A value of
- * `0` means the default run does not spend population budget on extra
- * generation-zero style injections unless the caller asks for them.
- */
-export const DEFAULT_PROVENANCE = 0;
-/**
- * Default mutation rate used by the root controller when no explicit rate is supplied.
- *
- * This belongs to the same search-tempo family as
- * {@link DEFAULT_MUTATION_AMOUNT}. Together they define how often mutation is
- * attempted and how many mutation steps a genome can receive once mutation is
- * active.
- */
-export const DEFAULT_MUTATION_RATE = 0.7;
-/**
- * Default number of mutation operations applied per genome.
- *
- * The default keeps the baseline search policy conservative: most runs mutate
- * often enough to keep topology moving, but each genome usually pays for only
- * one structural or parametric change per mutation pass.
- */
-export const DEFAULT_MUTATION_AMOUNT = 1;
-/**
- * Default compatibility threshold controlling speciation distance.
- *
- * This starts the speciation-pressure family of defaults. It is the neutral
- * boundary the controller uses before adaptive tuning or custom settings make
- * species splits stricter or more permissive.
- */
-export const DEFAULT_COMPATIBILITY_THRESHOLD = 3;
-/**
- * Default maximum allowed nodes where `Infinity` means unbounded growth.
- *
- * Read the three `DEFAULT_MAX_*` exports as one structural-ceiling family.
- * Leaving them unbounded by default tells the root controller to rely on
- * mutation policy, pruning, and adaptive limits instead of an immediate hard
- * cap.
- */
-export const DEFAULT_MAX_NODES = Infinity;
-/**
- * Default maximum allowed connections where `Infinity` means unbounded growth.
- *
- * This preserves the same baseline policy as {@link DEFAULT_MAX_NODES}: the
- * controller does not impose a fixed connection ceiling unless the caller wants
- * one.
- */
-export const DEFAULT_MAX_CONNS = Infinity;
-/**
- * Default maximum allowed gates where `Infinity` means unbounded growth.
- *
- * Gate limits stay in the same family as node and connection limits so the
- * whole structural-cap story remains consistent at the root surface.
- */
-export const DEFAULT_MAX_GATES = Infinity;
-/**
- * Default excess coefficient for NEAT compatibility distance.
- *
- * This begins the root compatibility-weight family. These coefficients explain
- * which kinds of genome disagreement matter most when the controller decides
- * whether two genomes still belong in the same species neighborhood.
- */
-export const DEFAULT_EXCESS_COEFF = 1;
-/**
- * Default disjoint coefficient for NEAT compatibility distance.
- *
- * Matching the excess coefficient by default gives the root controller a
- * balanced structural view: excess and disjoint innovation gaps both count as
- * first-class evidence during compatibility comparisons.
- */
-export const DEFAULT_DISJOINT_COEFF = 1;
-/**
- * Default average weight difference coefficient for compatibility distance.
- *
- * This keeps parameter drift relevant without letting weight deltas dominate
- * the whole speciation read. In the default family, topology disagreement still
- * carries more weight than modest edge-weight differences.
- */
-export const DEFAULT_WEIGHT_DIFF_COEFF = 0.5;
-/**
- * Default pair-sample size used by diversity metrics in fast mode.
- *
- * This starts the observability-sampling family. The root controller uses a
- * bounded sample instead of exhaustive pair checks so diversity reads stay
- * cheap enough for ordinary runs.
- */
-export const DEFAULT_DIVERSITY_PAIR_SAMPLE = 20;
-/**
- * Default graphlet sample size used by diversity metrics in fast mode.
- *
- * Read this beside {@link DEFAULT_DIVERSITY_PAIR_SAMPLE}: pair samples give the
- * controller quick distance evidence, while graphlet samples provide a small
- * structural texture read without forcing whole-population analysis.
- */
-export const DEFAULT_DIVERSITY_GRAPHLET_SAMPLE = 30;
-/**
- * Default neighbor count for novelty search when `k` is unspecified.
- *
- * This closes the root observability-and-exploration shelf. It controls how
- * many nearby behaviors contribute to novelty before the caller tunes novelty
- * search more explicitly.
- */
-export const DEFAULT_NOVELTY_K = 5;
+export type NeatOptions = RootNeatOptions;
+
+export {
+  DEFAULT_COMPATIBILITY_THRESHOLD,
+  DEFAULT_DISJOINT_COEFF,
+  DEFAULT_DIVERSITY_GRAPHLET_SAMPLE,
+  DEFAULT_DIVERSITY_PAIR_SAMPLE,
+  DEFAULT_ELITISM,
+  DEFAULT_EXCESS_COEFF,
+  DEFAULT_MAX_CONNS,
+  DEFAULT_MAX_GATES,
+  DEFAULT_MAX_NODES,
+  DEFAULT_MUTATION_AMOUNT,
+  DEFAULT_MUTATION_RATE,
+  DEFAULT_NOVELTY_K,
+  DEFAULT_POPULATION_SIZE,
+  DEFAULT_PROVENANCE,
+  DEFAULT_WEIGHT_DIFF_COEFF,
+} from './neat/neat.defaults.constants';
 
 /**
  * High-level NEAT controller that keeps the public workflow linear while the implementation stays chaptered.
@@ -321,8 +212,8 @@ export const DEFAULT_NOVELTY_K = 5;
 class Neat {
   input: number;
   output: number;
-  fitness: (network: Network) => number;
-  options: Options;
+  fitness: NeatFitnessFunction;
+  options: RootNeatOptions;
   population: Network[] = [];
   generation: number = 0;
   /** Internal numeric state for the deterministic xorshift RNG when no user RNG is provided. */
@@ -382,35 +273,42 @@ class Neat {
   constructor(
     input?: number,
     output?: number,
-    fitness?: any,
-    options: any = {},
+    fitness?: (network: Network) => unknown,
+    options?: RootNeatOptions,
+  );
+  constructor(
+    input?: number,
+    output?: number,
+    fitness?: (population: Network[]) => unknown,
+    options?: RootNeatOptions,
+  );
+  constructor(
+    input?: number,
+    output?: number,
+    fitness?: NeatFitnessFunction,
+    options?: RootNeatOptions,
+  );
+  constructor(
+    input?: number,
+    output?: number,
+    fitness?: NeatFitnessFunction,
+    options: RootNeatOptions = {},
   ) {
     this.input = input ?? 0;
     this.output = output ?? 0;
     this.fitness = fitness ?? (() => 0);
-    this.options = options || {};
+    this.options = options ?? {};
 
-    initializeNeatConstructor(this as any, {
-      optionBag: this.options as any,
-      rawOptions: options as any,
-      defaults: {
-        populationSize: DEFAULT_POPULATION_SIZE,
-        elitism: DEFAULT_ELITISM,
-        provenance: DEFAULT_PROVENANCE,
-        mutationRate: DEFAULT_MUTATION_RATE,
-        mutationAmount: DEFAULT_MUTATION_AMOUNT,
-        compatibilityThreshold: DEFAULT_COMPATIBILITY_THRESHOLD,
-        maxNodes: DEFAULT_MAX_NODES,
-        maxConns: DEFAULT_MAX_CONNS,
-        maxGates: DEFAULT_MAX_GATES,
-        excessCoeff: DEFAULT_EXCESS_COEFF,
-        disjointCoeff: DEFAULT_DISJOINT_COEFF,
-        weightDiffCoeff: DEFAULT_WEIGHT_DIFF_COEFF,
-        diversityPairSample: DEFAULT_DIVERSITY_PAIR_SAMPLE,
-        diversityGraphletSample: DEFAULT_DIVERSITY_GRAPHLET_SAMPLE,
-        noveltyK: DEFAULT_NOVELTY_K,
-      },
-    });
+    const initializationRequest: InitializeNeatConstructorRequest = {
+      optionBag: this.options,
+      rawOptions: options,
+      defaults: DEFAULT_NEAT_CONSTRUCTOR_DEFAULTS,
+    };
+
+    initializeNeatConstructor(
+      this as unknown as NeatInitializationHost,
+      initializationRequest,
+    );
   }
 
   // === Static factories ===
@@ -426,13 +324,14 @@ class Neat {
    * @returns A `Neat` instance ready to continue evolution from the imported state.
    */
   static async importState(
-    bundle: any,
-    fitness: (n: Network) => number,
+    bundle: NeatStateJSON,
+    fitness: NeatFitnessFunction,
   ): Promise<Neat> {
+    const fitnessDelegate = fitness as unknown as NeatExportFitnessFunction;
     return (await importStateImpl.call(
-      Neat as any,
+      Neat as unknown as ThisParameterType<typeof importStateImpl>,
       bundle,
-      fitness as never,
+      fitnessDelegate,
     )) as unknown as Neat;
   }
 
@@ -447,11 +346,12 @@ class Neat {
    * @param fitness Fitness function to attach to the reconstructed controller.
    * @returns Reconstructed `Neat` controller instance.
    */
-  static fromJSON(json: any, fitness: (n: Network) => number): Neat {
+  static fromJSON(json: NeatMetaJSON, fitness: NeatFitnessFunction): Neat {
+    const fitnessDelegate = fitness as unknown as NeatExportFitnessFunction;
     return fromJSONImpl.call(
-      Neat as any,
+      Neat as unknown as ThisParameterType<typeof fromJSONImpl>,
       json,
-      fitness as never,
+      fitnessDelegate,
     ) as unknown as Neat;
   }
 
@@ -468,7 +368,10 @@ class Neat {
   createPool(network: Network | null): void {
     try {
       if (createPool && typeof createPool === 'function')
-        createPool.call(this as any, network as never);
+        createPool.call(
+          this as unknown as ThisParameterType<typeof createPool>,
+          network as never,
+        );
     } catch {
       // Pool creation is best-effort; swallow errors to preserve initialization.
     }
@@ -491,7 +394,7 @@ class Neat {
    * @param state Opaque numeric RNG state produced by `snapshotRNGState()`.
    * @returns Nothing. The controller will resume from the restored RNG state on next use.
    */
-  restoreRNGState(state: any) {
+  restoreRNGState(state: NeatRngStateSnapshot) {
     neatRngFacade.restoreRNGState(this as unknown as NeatRngFacadeHost, state);
   }
 
@@ -500,7 +403,7 @@ class Neat {
    * @param state Numeric RNG state.
    * @returns Nothing. This is a compatibility alias for `restoreRNGState()`.
    */
-  importRNGState(state: any) {
+  importRNGState(state: NeatRngStateSnapshot) {
     neatRngFacade.importRNGState(this as unknown as NeatRngFacadeHost, state);
   }
 
@@ -544,7 +447,7 @@ class Neat {
    * @returns Best genome selected by the evolution step.
    */
   async evolve(): Promise<Network> {
-    return evolve.call(this as any);
+    return evolve.call(this as unknown as ThisParameterType<typeof evolve>);
   }
 
   /**
@@ -553,13 +456,13 @@ class Neat {
    *
    * In practice, this is the scoring half of the controller loop. It transforms a
    * population of candidate networks into evidence the rest of the algorithm can use:
-   * fitness scores, objective values, telemetry, diversity statistics, and any derived
+   * fitness scores, objective values, telemetry, diversity statistics, and derived
    * signals needed by selection or pruning.
    *
    * @returns Aggregated evaluation result (implementation specific).
    */
-  async evaluate(): Promise<any> {
-    return evaluate.call(this as any);
+  async evaluate(): Promise<void> {
+    return evaluate.call(this as unknown as ThisParameterType<typeof evaluate>);
   }
 
   /**
@@ -575,7 +478,7 @@ class Neat {
    * @returns Promise resolving once mutation has been applied to the current population.
    */
   async mutate(): Promise<void> {
-    return mutate.call(this as any);
+    return mutate.call(this as unknown as ThisParameterType<typeof mutate>);
   }
 
   /**
@@ -625,7 +528,9 @@ class Neat {
    * @throws Error if tournament size exceeds population size.
    */
   getParent(): Network {
-    return getParent.call(this as any) as unknown as Network;
+    return getParent.call(
+      this as unknown as ThisParameterType<typeof getParent>,
+    ) as unknown as Network;
   }
 
   /**
@@ -638,7 +543,10 @@ class Neat {
    * @returns New network created from selected parent genomes.
    */
   getOffspring(): Network {
-    return createOffspring(this as unknown as any, this.getParent.bind(this));
+    return createOffspring(
+      this as unknown as OffspringContext,
+      this.getParent.bind(this),
+    );
   }
 
   /**
@@ -650,7 +558,7 @@ class Neat {
    */
   spawnFromParent(parent: Network, mutateCount: number = 1): Network {
     return spawnFromParent.call(
-      this as any,
+      this as unknown as ThisParameterType<typeof spawnFromParent>,
       parent as never,
       mutateCount,
     ) as unknown as Network;
@@ -663,7 +571,11 @@ class Neat {
    * @param parents Optional lineage metadata recorded for teaching and telemetry.
    */
   addGenome(genome: Network, parents?: number[]): void {
-    return addGenome.call(this as any, genome as any, parents as any);
+    return addGenome.call(
+      this as unknown as ThisParameterType<typeof addGenome>,
+      genome as unknown as Parameters<typeof addGenome>[0],
+      parents,
+    );
   }
 
   /**
@@ -673,10 +585,13 @@ class Neat {
    * @param rawReturnForTest Whether to expose raw selection output for test visibility.
    * @returns Selected mutation method or `null` when no valid method can be chosen.
    */
-  selectMutationMethod(genome: Network, rawReturnForTest: boolean = true): any {
+  async selectMutationMethod(
+    genome: Network,
+    rawReturnForTest: boolean = true,
+  ): Promise<NeatMutationSelectionResult> {
     try {
-      return selectMutationMethod.call(
-        this as any,
+      return await selectMutationMethod.call(
+        this as unknown as ThisParameterType<typeof selectMutationMethod>,
         genome as never,
         rawReturnForTest,
       );
@@ -828,7 +743,7 @@ class Neat {
   registerObjective(
     key: string,
     direction: 'min' | 'max',
-    accessor: (g: any) => number,
+    accessor: (g: GenomeLike) => number,
   ) {
     return neatTelemetryFacade.registerTelemetryObjective(
       this as unknown as NeatTelemetryFacadeHost,
@@ -1103,8 +1018,10 @@ class Neat {
    *
    * @returns JSON-safe population snapshot.
    */
-  export(): any[] {
-    return exportPopulation.call(this as any);
+  export(): GenomeJSON[] {
+    return exportPopulation.call(
+      this as unknown as ThisParameterType<typeof exportPopulation>,
+    );
   }
 
   /**
@@ -1117,8 +1034,11 @@ class Neat {
    * @param json Serialized population to import into the current controller.
    * @returns Promise resolving after the population is loaded.
    */
-  async import(json: any[]): Promise<void> {
-    return importPopulation.call(this as any, json as any);
+  async import(json: GenomeJSON[]): Promise<void> {
+    return importPopulation.call(
+      this as unknown as ThisParameterType<typeof importPopulation>,
+      json,
+    );
   }
 
   /**
@@ -1130,8 +1050,10 @@ class Neat {
    *
    * @returns Full controller snapshot including metadata and population.
    */
-  exportState(): any {
-    return exportState.call(this as any);
+  exportState(): NeatStateJSON {
+    return exportState.call(
+      this as unknown as ThisParameterType<typeof exportState>,
+    );
   }
 
   /**
@@ -1143,8 +1065,10 @@ class Neat {
    *
    * @returns JSON-safe metadata snapshot useful for innovation-history persistence.
    */
-  toJSON(): any {
-    return toJSONImpl.call(this as any);
+  toJSON(): NeatMetaJSON {
+    return toJSONImpl.call(
+      this as unknown as ThisParameterType<typeof toJSONImpl>,
+    );
   }
 
   // === Private/internal helpers ===
@@ -1153,14 +1077,16 @@ class Neat {
    * @returns Cached or freshly built objective descriptors.
    */
   private _getObjectives(): ObjectiveDescriptor[] {
-    return _getObjectives.call(this as any) as ObjectiveDescriptor[];
+    return _getObjectives.call(
+      this as unknown as ThisParameterType<typeof _getObjectives>,
+    ) as ObjectiveDescriptor[];
   }
 
   /**
    * Invalidate per-genome caches (compatibility distance, forward pass, etc.).
    * @param genome Genome instance whose caches should be cleared.
    */
-  private _invalidateGenomeCaches(genome: any) {
+  private _invalidateGenomeCaches(genome: unknown) {
     invalidateGenomeCaches(genome);
   }
 
@@ -1177,7 +1103,7 @@ class Neat {
   }
 
   /**
-   * Compatibility wrapper retained for tests that reference (neat as any)._structuralEntropy.
+   * Compatibility wrapper retained for tests that reach `_structuralEntropy` through loose controller casts.
    * @param genome Genome whose structural entropy is calculated.
    * @returns Structural entropy score for the genome.
    */
@@ -1192,7 +1118,10 @@ class Neat {
    * @returns Mutated genome with added node.
    */
   private _mutateAddNodeReuse(genome: Network) {
-    return mutateAddNodeReuse.call(this as any, genome as never);
+    return mutateAddNodeReuse.call(
+      this as unknown as ThisParameterType<typeof mutateAddNodeReuse>,
+      genome as never,
+    );
   }
 
   /**
@@ -1201,7 +1130,10 @@ class Neat {
    * @returns Mutated genome with added connection.
    */
   private _mutateAddConnReuse(genome: Network) {
-    return mutateAddConnReuse.call(this as any, genome as never);
+    return mutateAddConnReuse.call(
+      this as unknown as ThisParameterType<typeof mutateAddConnReuse>,
+      genome as never,
+    );
   }
 
   /**
@@ -1209,8 +1141,11 @@ class Neat {
    * @param conn Connection metadata used to derive the innovation id.
    * @returns Innovation id for the connection.
    */
-  private _fallbackInnov(conn: any): number {
-    return _fallbackInnov.call(this as any, conn);
+  private _fallbackInnov(conn: Parameters<typeof _fallbackInnov>[0]): number {
+    return _fallbackInnov.call(
+      this as unknown as ThisParameterType<typeof _fallbackInnov>,
+      conn,
+    );
   }
 
   /**
@@ -1220,7 +1155,11 @@ class Neat {
    * @returns Compatibility distance scalar.
    */
   _compatibilityDistance(netA: Network, netB: Network): number {
-    return _compatibilityDistance.call(this as any, netA, netB);
+    return _compatibilityDistance.call(
+      this as unknown as ThisParameterType<typeof _compatibilityDistance>,
+      netA,
+      netB,
+    );
   }
 
   /**
@@ -1228,7 +1167,9 @@ class Neat {
    * @returns Updated species assignments.
    */
   private _speciate() {
-    return _speciate.call(this as any);
+    return _speciate.call(
+      this as unknown as ThisParameterType<typeof _speciate>,
+    );
   }
 
   /**
@@ -1236,7 +1177,9 @@ class Neat {
    * @returns Adjusted species fitness data.
    */
   private _applyFitnessSharing() {
-    return _applyFitnessSharing.call(this as any);
+    return _applyFitnessSharing.call(
+      this as unknown as ThisParameterType<typeof _applyFitnessSharing>,
+    );
   }
 
   /**
@@ -1245,7 +1188,10 @@ class Neat {
    * @returns Sorted species members.
    */
   private _sortSpeciesMembers(sp: SpeciesLike) {
-    return _sortSpeciesMembers.call(this as any, sp);
+    return _sortSpeciesMembers.call(
+      this as unknown as ThisParameterType<typeof _sortSpeciesMembers>,
+      sp,
+    );
   }
 
   /**
@@ -1253,7 +1199,9 @@ class Neat {
    * @returns Updated stagnation state.
    */
   private _updateSpeciesStagnation() {
-    return _updateSpeciesStagnation.call(this as any);
+    return _updateSpeciesStagnation.call(
+      this as unknown as ThisParameterType<typeof _updateSpeciesStagnation>,
+    );
   }
 
   // Lightweight RNG accessor used throughout migrated modules
@@ -1267,22 +1215,3 @@ class Neat {
 }
 
 export default Neat;
-
-/**
- * Build a zeroed diversity stats snapshot to use when no population metrics exist yet.
- * @param populationSize Population size used to populate the snapshot.
- * @returns DiversityStats with zeroed aggregates.
- */
-function buildEmptyDiversityStats(populationSize: number): DiversityStats {
-  return {
-    lineageMeanDepth: 0,
-    lineageMeanPairDist: 0,
-    meanNodes: 0,
-    meanConns: 0,
-    nodeVar: 0,
-    connVar: 0,
-    meanCompat: 0,
-    graphletEntropy: 0,
-    population: populationSize,
-  };
-}

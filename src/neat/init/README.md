@@ -118,6 +118,8 @@ After the call returns, the instance has concrete startup policy, prepared
 controller state, and either an attempted generation-zero pool or a safely
 preserved empty population ready for later work.
 
+### NeatConstructorDefaults
+
 ### NeatInitializationHost
 
 Minimal constructor-time host contract required by the bootstrap helper.

@@ -24,7 +24,8 @@ Different readers want different first files. Use the route that matches your qu
 | If you want to... | Start here | Then read |
 | --- | --- | --- |
 | Run training immediately | [trainFlappyBird.ts](./trainFlappyBird.ts) | [trainer/README.md](./trainer/README.md), [evaluation/README.md](./evaluation/README.md) |
-| Open the browser demo and inspect the UI boundary | [index.html](./index.html) | [browser-entry/README.md](./browser-entry/README.md), [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) |
+| Reuse the example from code | [index.ts](./index.ts) | [flappyEnvironment.ts](./flappyEnvironment.ts), [flappyEvaluation.ts](./flappyEvaluation.ts), [constants/README.md](./constants/README.md) |
+| Open the browser demo and inspect the UI boundary | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts) or [index.html](./index.html) | [browser-entry/README.md](./browser-entry/README.md), [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) |
 | Understand the control problem itself | [environment/README.md](./environment/README.md) | [simulation-shared/README.md](./simulation-shared/README.md), [evaluation/README.md](./evaluation/README.md) |
 | Tune fairness, rollout policy, or fitness shaping | [evaluation/README.md](./evaluation/README.md) | [trainer/README.md](./trainer/README.md) |
 | Change worker playback or browser transport | [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) | [browser-entry/README.md](./browser-entry/README.md) |
@@ -60,7 +61,9 @@ Then open:
 
 Important note:
 
-- the page loads example bundles from `docs/assets`, so after code or documentation changes that affect the published example surface, run `npm run docs` to refresh the browser-facing assets and generated docs.
+- `index.html` is a lightweight bundle-loading shell, not the source-of-truth browser runtime.
+- the real browser host starts in [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts).
+- the page loads example bundles from `docs/assets`, so after code or documentation changes that affect the published example surface, run `npm run docs` or `npm run build:flappy-bird` to refresh the browser-facing assets and generated docs.
 
 ## The Core Idea In One Glance
 

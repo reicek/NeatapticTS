@@ -20,6 +20,12 @@ If the main library README is the front door, this folder is the arcade: two cab
 | Live demos you can open in the browser | [flappy_bird/index.html](./flappy_bird/index.html) and [asciiMaze/index.html](./asciiMaze/index.html) | Both examples have browser surfaces, but they teach different engineering tradeoffs. |
 | Runnable source before documentation | [flappy_bird](./flappy_bird) and [asciiMaze](./asciiMaze) | Both folders are structured as readable systems, not single demo files. |
 
+Important browser note:
+
+- the `index.html` files are lightweight bundle-loading shells that pull prebuilt assets from `docs/assets`.
+- when you want the real browser implementation boundary, read the dedicated browser entry modules under each example folder.
+- when you change example browser code and want the hosted HTML pages to reflect it, run `npm run docs` or the relevant example build script first.
+
 ## Two examples, two personalities
 
 ```mermaid
@@ -149,6 +155,11 @@ If you want the strongest guided path through this folder:
 4. Open the browser hosts if you want to see the examples perform:
    - [flappy_bird/index.html](./flappy_bird/index.html)
    - [asciiMaze/index.html](./asciiMaze/index.html)
+
+If you want the browser source instead of the browser shell, jump straight to:
+
+- [flappy_bird/browser-entry/browser-entry.ts](./flappy_bird/browser-entry/browser-entry.ts)
+- [asciiMaze/browser-entry/browser-entry.ts](./asciiMaze/browser-entry/browser-entry.ts)
 
 ## Why this folder matters
 

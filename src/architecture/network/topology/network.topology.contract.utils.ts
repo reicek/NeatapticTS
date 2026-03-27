@@ -38,7 +38,8 @@ export function setTopologyIntent(
   this: Network,
   topologyIntent: NetworkTopologyIntent,
 ): void {
-  const topologyContractNetwork = this as unknown as TopologyContractNetworkProps;
+  const topologyContractNetwork =
+    this as unknown as TopologyContractNetworkProps;
 
   // Step 1: Persist the public topology contract.
   topologyContractNetwork._topologyIntent = topologyIntent;
@@ -61,7 +62,8 @@ export function setTopologyIntent(
  * @returns Nothing.
  */
 export function setEnforceAcyclic(this: Network, flag: boolean): void {
-  const topologyContractNetwork = this as unknown as TopologyContractNetworkProps;
+  const topologyContractNetwork =
+    this as unknown as TopologyContractNetworkProps;
 
   // Step 1: Preserve backward compatibility for callers using the legacy toggle.
   topologyContractNetwork._enforceAcyclic = !!flag;

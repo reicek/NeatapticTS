@@ -58,7 +58,7 @@ Parameters:
 - `network` - - Network whose hidden-node floor should be enforced.
 - `multiplierOverride` - - Optional one-off multiplier overriding the configured policy.
 
-Returns: Promise that resolves after any required topology repair finishes.
+Returns: Promise that resolves after required topology repair finishes.
 
 Example:
 

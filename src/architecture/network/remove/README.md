@@ -8,7 +8,7 @@ legacy Neataptic logic but augments it with clearer documentation and explicit i
 
 High‑level algorithm (removeNode):
  1. Guard: ensure the node exists and is not an input or output (those are structural anchors).
- 2. Ungate: detach any connections gated BY the node (we don't currently reassign gater roles).
+ 2. Ungate: detach connections gated BY the node (we don't currently reassign gater roles).
  3. Snapshot inbound / outbound connections (before mutation of adjacency lists).
  4. Disconnect all inbound, outbound, and self connections.
  5. Physically remove the node from the network's node array.

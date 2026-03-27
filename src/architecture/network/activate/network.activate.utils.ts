@@ -11,7 +11,7 @@ import {
 import { DEFAULT_MAX_ACTIVATION_DEPTH } from './network.activate.utils.types';
 
 /**
- * Perform a forward pass without creating or updating any training / gradient traces.
+ * Perform a forward pass without creating or updating training / gradient traces.
  *
  * This is the most allocation‑sensitive activation path. Internally it will attempt
  * to leverage a compact "fast slab" routine (an optimized, vectorized broadcast over
@@ -102,7 +102,7 @@ export function activateRaw(
  * @param inputs - Array of input vectors; each must have length == network.input.
  * @param training - Whether each activation should keep training traces.
  * @returns 2‑D array: outputs[i] is the activation result for inputs[i].
- * @throws {Error} If inputs is not an array, or any contained vector has an incorrect length.
+ * @throws {Error} If inputs is not an array, or one of its vectors has an incorrect length.
  * @example
  * const batchOut = net.activateBatch([[0,0,1],[1,0,0],[0,1,0]]);
  * console.log(batchOut.length); // 3 rows

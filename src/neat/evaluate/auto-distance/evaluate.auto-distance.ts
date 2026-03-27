@@ -118,7 +118,7 @@ export function runAutoDistanceCoefficientTuning(
  * Compute the arithmetic mean of a number list.
  *
  * This small reducer keeps the higher-level tuning flow declarative: collect
- * connection counts first, then summarize them before making any policy
+ * connection counts first, then summarize them before making policy
  * decision.
  *
  * @param values - Input values.
@@ -239,7 +239,7 @@ function getDistanceCoefficientBounds(
  * The first run has no historical baseline yet, so this helper seeds the last
  * observed variance and applies one deterministic coefficient nudge. That makes
  * the policy immediately visible instead of waiting one extra generation before
- * any coefficient change is possible.
+ * a coefficient change is possible.
  *
  * @param controller - NEAT controller instance for evaluation.
  * @param connectionVariance - Current connection variance.

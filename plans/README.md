@@ -38,6 +38,7 @@ Selection guide:
 - `plans/ONNX_EXPORT_PLAN.md`: ONNX export/import architecture and rollout phases.
 - `plans/Population_Save_Resume_and_Checkpointing.md`: checkpointing, persistence, save/resume workflows.
 - `plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`: prebuilt architecture constructors and sequence-oriented builders.
+- `plans/src-no-explicit-any-cleanup.plans.md`: completed `src/` strict-typing cleanup baseline for `@typescript-eslint/no-explicit-any`, kept as the reopen point if later refactors reintroduce debt.
 - `plans/Stable_Activation_Ordering_and_Explicit_IO_Roles.md`: deterministic execution ordering and explicit input/output roles.
 - `plans/Standalone_Inference_Export.md`: dependency-free exported inference runtime.
 - `plans/Turnkey_Multithread_Evaluation_API.md`: parallel evaluation API for Node and browser workers.
@@ -51,6 +52,7 @@ Task-to-plan trigger phrases:
 - construct from parts, graph assembly, deterministic builder: `plans/Construct_From_Parts_Graph_Assembly.md`
 - browser bundle, CDN, browser-first usage: `plans/Browser_Build_and_CDN_Distribution.md`
 - ONNX, import/export interoperability: `plans/ONNX_EXPORT_PLAN.md`
+- explicit any, no-explicit-any, strict typing, src lint cleanup follow-up, reopen completed cleanup lane: `plans/src-no-explicit-any-cleanup.plans.md`
 - visualization, schema, inspect network shape: `plans/Network_Visualization_Export_Schema.md`
 - checkpoint, resume, save population: `plans/Population_Save_Resume_and_Checkpointing.md`
 - workers, threads, parallel evaluation: `plans/Turnkey_Multithread_Evaluation_API.md`

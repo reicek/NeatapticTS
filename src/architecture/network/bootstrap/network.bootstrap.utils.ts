@@ -118,7 +118,7 @@ export function bootstrapNetwork(
   const { input, output, options, topologyIntent, enforceAcyclic } =
     bootstrapContext;
 
-  // Step 1: Initialize runtime fields before any helper mutates graph state.
+  // Step 1: Initialize runtime fields before later helpers mutate graph state.
   initializeRuntimeState(
     network,
     input,
@@ -197,9 +197,7 @@ function prewarmActivationPool(output: number): void {
     }
 
     const prewarmCount =
-      typeof config.poolPrewarmCount === 'number'
-        ? config.poolPrewarmCount
-        : 2;
+      typeof config.poolPrewarmCount === 'number' ? config.poolPrewarmCount : 2;
     activationArrayPool.prewarm(output, prewarmCount);
   } catch {
     // Pool warmup is best-effort and should never block construction.
@@ -289,7 +287,8 @@ function ensureMinimumHiddenNodes(
   minimumHiddenNodes: number,
 ): void {
   while (
-    network.nodes.length < network.input + network.output + minimumHiddenNodes
+    network.nodes.length <
+    network.input + network.output + minimumHiddenNodes
   ) {
     network.addNodeBetween();
   }

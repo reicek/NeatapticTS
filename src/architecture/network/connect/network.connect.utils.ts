@@ -29,7 +29,7 @@ import {
  *  3. For each created connection:
  *       a. If it's a self‑connection: either ignore (acyclic mode) or store in selfconns.
  *       b. Otherwise store in standard connections array.
- *  4. If any connection was added, mark structural caches dirty (_topoDirty & _slabDirty) so lazy
+ *  4. If at least one connection was added, mark structural caches dirty (_topoDirty & _slabDirty) so lazy
  *     rebuild can occur before the next forward pass.
  *
  * Complexity:

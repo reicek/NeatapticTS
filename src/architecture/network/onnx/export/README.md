@@ -644,7 +644,7 @@ Detect whether a hidden layer contains at least one self-recurrent node.
 Parameters:
 - `hiddenLayerNodes` - Hidden layer nodes.
 
-Returns: True when any node has a self-connection.
+Returns: True when a node has a self-connection.
 
 ### createRecurrentInputValueInfoContext
 

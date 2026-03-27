@@ -1,9 +1,16 @@
 # evolutionEngine
 
-Shared contracts for the ASCII maze evolution engine state boundary.
+Shared contracts for the ASCII Maze evolution engine subsystem.
 
-This file owns the exported type surface consumed by the engine-state facade,
-telemetry helpers, sampling utilities, and RNG/timing adapters.
+The `evolutionEngine/` folder is where the public `EvolutionEngine` facade
+fans out into the lower-level machinery that keeps long maze runs practical:
+pooled scratch state, deterministic RNG caches, telemetry workspaces,
+sampling helpers, warm-start support, and population-level recovery logic.
+
+This file is the common footing for that subsystem. It defines the shared
+state and scratch-buffer contracts that let the rest of the engine stay
+allocation-light and orchestration-first instead of passing dozens of loose
+arrays and counters through every hot-path helper.
 
 ## evolutionEngine/engineState.types.ts
 
@@ -122,9 +129,17 @@ Loose genome shape shared by engine telemetry and population-dynamics helpers.
 
 NEAT runtime shape needed by telemetry helpers that inspect the population.
 
+The telemetry helpers intentionally ask for very little here: access to the
+population plus optional telemetry export. That keeps them portable across the
+engine's internal helpers without binding them to the full driver surface.
+
 ### MutationOperationLike
 
 Mutation-operation surface read from the NEAT driver at runtime.
+
+The engine treats mutation operations as opaque descriptors because the
+concrete driver owns how those operations are interpreted. The helpers only
+need enough structure to cache, count, and hand them back into `mutate(...)`.
 
 ### SpeciesHistoryHost
 
@@ -249,6 +264,10 @@ Responsibilities:
 2. Expose history helpers that mirror the façade behaviour while keeping pooled buffers centralised.
 3. Centralise RNG parameter resolution for sampling paths to keep behaviour deterministic under shared state.
 
+These helpers look small, but they sit under several hot paths. The main job
+is not "random choice" in the abstract; it is random choice without quietly
+reintroducing per-generation array churn into long-running experiments.
+
 ### sampleArray
 
 ```ts
@@ -260,6 +279,10 @@ sampleArray(
 ```
 
 Sample `sampleCount` items (with replacement) from `source` into the pooled scratch buffer.
+
+This helper is for callers that want an ephemeral array view immediately. The
+returned array reuses shared scratch storage, so callers should copy it first
+if they need the contents to survive another helper call.
 
 Steps:
 1. Validate the input array and normalise `sampleCount` to an integer.
@@ -289,6 +312,10 @@ sampleIntoScratch(
 ```
 
 Sample up to `sampleCount` items (with replacement) into the shared `samplePool` buffer.
+
+Compared with `sampleArray`, this form is for callers that only need a count
+plus access to the pooled buffer on `state.scratch.samplePool`. That avoids
+one more logical array object on the hottest paths.
 
 Steps:
 1. Validate inputs and ensure the pooled buffer exists.
@@ -321,6 +348,9 @@ sampleSegmentIntoScratch(
 ```
 
 Sample from a suffix of `source` starting at `segmentStart` into the pooled buffer.
+
+The common use case is "sample from the non-elite tail" or some later slice
+of a population without first allocating `source.slice(segmentStart)`.
 
 Steps:
 1. Clamp indices and ensure there is a non-empty segment.
@@ -1821,7 +1851,7 @@ normalizeRunOptions(
   setReducedTelemetry: (enabled: boolean) => void,
   setMinimalTelemetry: (enabled: boolean) => void,
   setDisableBaldwin: (disabled: boolean) => void,
-): any
+): NormalizedRunOptions
 ```
 
 Normalize and validate run options with sensible defaults.
@@ -1885,9 +1915,9 @@ const opts = normalizeRunOptions(
 
 ```ts
 prepareEnvironmentForRun(
-  opts: any,
-  scratchBundle: any,
-): any
+  opts: NormalizedRunOptions,
+  scratchBundle: ScratchBundle,
+): PreparedRunEnvironment
 ```
 
 Prepare maze encoding, start/exit positions, distance map, and fitness context for the run.
@@ -1938,13 +1968,13 @@ const neat = createAndSeedNeat(normalizedOpts, env.inputSize, env.outputSize, en
 
 ```ts
 createAndSeedNeat(
-  opts: any,
+  opts: NormalizedRunOptions,
   inputSize: number,
   outputSize: number,
   fitnessContext: IFitnessEvaluationContext,
-  scratchPopClone: any[],
-  scratchSample: any[],
-): any
+  scratchPopClone: unknown[],
+  scratchSample: unknown[],
+): CreateAndSeedNeatResult
 ```
 
 Create and seed a NEAT driver with normalized configuration and optional initial population.
@@ -2576,14 +2606,21 @@ trainingWarmStart.ts
 
 Lamarckian warm-start and population pretraining subsystem.
 
-Responsibilities:
-- Build supervised training datasets for compass-guided navigation
-- Apply Lamarckian backpropagation training to populations
-- Adjust output biases after training to maintain exploration
-- Orchestrate conditional warm-start pretraining with buffer management
+This module is the part of the ASCII Maze engine that briefly steps outside
+pure neuroevolution and asks a pragmatic question: can a small amount of
+supervised guidance give the population a better starting shape before the
+main search pressure takes over again?
 
-All functions are pure/side-effect-free except where explicitly documented.
-Mutations are limited to NEAT population networks and engine scratch buffers.
+Responsibilities:
+- Build a tiny curriculum-style supervised dataset for compass-guided motion
+- Apply bounded Lamarckian backpropagation to whole populations
+- Re-center output biases after training so exploration does not collapse
+- Orchestrate optional warm-start passes without polluting the main loop
+
+The important design constraint is restraint. These helpers are not trying to
+solve the maze with backprop. They are trying to give evolution a better
+first draft while preserving the example's core identity as an evolutionary
+system.
 
 ### buildLamarckianTrainingSet
 
@@ -2630,14 +2667,16 @@ adjustOutputBiasesAfterTraining(
   state: EngineState,
   constants: { DEFAULT_STD_SMALL: number; DEFAULT_STD_ADJUST_MULT: number; },
   scratchNodeIdx: Int32Array<ArrayBufferLike>,
-  getNodeIndicesByType: (nodes: any[], nodeType: string) => number,
+  getNodeIndicesByType: NodeIndexCollector,
 ): void
 ```
 
 Adjust output node biases after training to maintain exploration diversity.
 
-This heuristic prevents trained networks from collapsing into deterministic behavior
-by centering output biases (subtracting mean) and optionally scaling when variance is low.
+This heuristic exists because short supervised bursts can make the action
+head too confident too early. By re-centering output biases and nudging very
+low-variance heads back outward, the engine keeps exploration pressure alive
+after warm-start training instead of letting one action dominate forever.
 
 Steps:
 1. Collect output node biases into scratch buffer
@@ -2668,20 +2707,24 @@ adjustOutputBiasesAfterTraining(
 ```ts
 pretrainPopulationWarmStart(
   neat: default,
-  lamarckianTrainingSet: any[],
+  lamarckianTrainingSet: LamarckianTrainingCase[],
   constants: { PRETRAIN_MAX_ITER: number; PRETRAIN_BASE_ITER: number; DEFAULT_TRAIN_ERROR: number; DEFAULT_PRETRAIN_RATE: number; DEFAULT_PRETRAIN_MOMENTUM: number; DEFAULT_TRAIN_BATCH_SMALL: number; },
-  applyCompassWarmStart: (network: any) => void,
-  centerOutputBiases: (network: any) => void,
+  applyCompassWarmStart: WarmStartNetworkCallback,
+  centerOutputBiases: WarmStartNetworkCallback,
 ): void
 ```
 
 Pretrain the population using a small supervised dataset and apply warm-start heuristics.
 
 Behaviour & contract:
-- Runs a short supervised training pass (backprop) on each network in `neat.population`
-- Applies lightweight warm-start heuristics after training: compass wiring and output bias centering
-- Errors are isolated per-network: a failing network does not abort the overall pretrain step
-- This helper is allocation-light and does not create sizable temporary buffers
+- Runs a short supervised training pass on each network in `neat.population`
+- Treats the training set as a biasing hint, not as a replacement for later evolution
+- Applies lightweight warm-start heuristics after training: compass wiring
+  and output-bias centering
+- Isolates failures per network so one bad trainer state does not abort the
+  rest of the population
+- Stays allocation-light so warm-start remains cheap enough to use as a
+  tactical assist instead of a second training regime
 
 Steps:
 1. Validate inputs and obtain `population` (fast-exit on empty populations)
@@ -2710,7 +2753,7 @@ pretrainPopulationWarmStart(
 ```ts
 applyLamarckianTraining(
   neat: default,
-  trainingSet: any[],
+  trainingSet: LamarckianTrainingCase[],
   iterations: number,
   sampleSize: number | undefined,
   safeWrite: (msg: string) => void,
@@ -2718,15 +2761,17 @@ applyLamarckianTraining(
   completedGenerations: number,
   state: EngineState,
   constants: { DEFAULT_TRAIN_ERROR: number; DEFAULT_TRAIN_RATE: number; DEFAULT_TRAIN_MOMENTUM: number; DEFAULT_TRAIN_BATCH_SMALL: number; },
-  adjustOutputBiases: (network: any) => void,
+  adjustOutputBiases: WarmStartNetworkCallback,
 ): number
 ```
 
 Apply Lamarckian backpropagation training to the entire population with optional profiling.
 
-Runs a bounded supervised training pass on each network in the population, optionally
-downsampling the training set for efficiency. Collects gradient norm statistics and
-applies bias adjustment heuristics to maintain exploration after training.
+Runs a bounded supervised training pass on each network in the population,
+optionally downsampling the training set for efficiency. The intent is to
+"tilt" the policy landscape toward obviously sensible moves before the main
+evolutionary loop takes over, while still measuring and logging enough to see
+whether the warm-start is becoming too aggressive or too weak.
 
 Steps:
 1. Validate inputs & early exits
@@ -2772,9 +2817,9 @@ const elapsed = applyLamarckianTraining(
 ```ts
 warmStartPopulationIfNeeded(
   neat: default,
-  trainingSet: any[],
+  trainingSet: LamarckianTrainingCase[],
   state: EngineState,
-  pretrainPopulation: (neat: any, trainingSet: any[]) => void,
+  pretrainPopulation: PretrainPopulationCallback,
 ): void
 ```
 
@@ -2809,23 +2854,77 @@ warmStartPopulationIfNeeded(
   pretrainPopulationWarmStart
 );
 
+### LamarckianTrainingCase
+
+Small supervised case used during Lamarckian warm-start.
+
+### TrainableNetwork
+
+The warm-start path trains ordinary runtime networks; this alias keeps intent explicit.
+
+### WarmStartNeatLike
+
+Narrow NEAT view used by the warm-start helpers.
+
+These helpers only need population access and a couple of option fields, so
+they avoid depending on the entire engine-facing driver surface.
+
+### NodeIndexCollector
+
+```ts
+NodeIndexCollector(
+  nodes: NetworkNode[],
+  nodeType: string,
+): number
+```
+
+Callback used when a helper needs to write node indices of a specific role into scratch.
+
+### WarmStartNetworkCallback
+
+```ts
+WarmStartNetworkCallback(
+  network: default,
+): void
+```
+
+Best-effort post-training hook applied to one network at a time.
+
+### PretrainPopulationCallback
+
+```ts
+PretrainPopulationCallback(
+  neat: default,
+  trainingSet: LamarckianTrainingCase[],
+): void
+```
+
+Population-wide warm-start hook used by the public orchestration helper.
+
 ## evolutionEngine/populationDynamics.ts
 
 populationDynamics.ts
 
-Population-level dynamics for NEAT evolution: generation state management,
-population expansion/compaction, mutation application, sorting, species tracking,
-and anti-collapse recovery.
+Population-level dynamics for the ASCII Maze evolution loop.
+
+This module owns the parts of the run that only make sense once the engine
+stops thinking about one genome at a time and starts thinking about the
+population as a living search process: plateau detection, simplify phases,
+parent selection, child creation, collapse recovery, and bulk connection
+cleanup.
 
 Responsibilities:
-- Plateau detection and simplify-phase orchestration
-- Population expansion with parent sampling and mutation
-- Genome sorting by fitness (iterative quicksort with pooled scratch)
-- Species history tracking and collapse detection
-- Connection compaction and anti-collapse recovery
+- Decide when search appears stuck and whether to enter a simplify phase
+- Expand the population by sampling from the current top performers
+- Sort genomes by fitness without allocating fresh arrays every generation
+- Track species diversity so collapse is visible instead of silent
+- Recover from pathological convergence by perturbing outputs and weights
+- Compact disabled connections once pruning has made them dead weight
 
-All functions accept `EngineState` to access shared scratch buffers and RNG.
-Follows ES2023 idioms: `toSorted`, `.at(-1)`, numeric separators, etc.
+The helpers here are intentionally allocation-light because they sit on the
+hot path of long runs. They lean on `EngineState` scratch buffers and accept
+slightly loose runtime surfaces so the public loop can stay orchestration-
+first while these internals adapt to the real Neat and Network instances.
 
 ### updatePlateauState
 
@@ -2893,7 +2992,7 @@ if (duration > 0) {
 ```ts
 runSimplifyCycle(
   state: EngineState,
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   simplifyRemaining: number,
   simplifyStrategy: string,
   simplifyPruneFraction: number,
@@ -2901,6 +3000,11 @@ runSimplifyCycle(
 ```
 
 Run a single simplify/pruning generation if conditions permit.
+
+Conceptually, simplify mode is the engine saying: "stop growing for a moment
+and remove weak structure so the current population has to justify what it
+keeps." That is useful after a long plateau, but only in non-browser hosts
+where the extra pruning work is acceptable.
 
 Steps:
 1. Normalize inputs and perform fast exits for zero remaining or invalid population.
@@ -2927,7 +3031,7 @@ const remaining = runSimplifyCycle(state, neat, 5, 'pruneWeak', 0.2);
 ```ts
 handleSimplifyState(
   state: EngineState,
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   plateauCounter: number,
   plateauGenerations: number,
   simplifyDuration: number,
@@ -2941,8 +3045,12 @@ handleSimplifyState(
 Handle simplify entry and per-generation advance.
 
 Behaviour:
-- Decides when to enter a simplification phase and runs one simplify cycle per generation.
-- Delegates start decision to `maybeStartSimplify` and per-generation work to `runSimplifyCycle`.
+- Decides when to enter a simplification phase and runs one simplify cycle
+  per generation.
+- Resets the plateau counter when simplify starts so the engine does not
+  immediately re-enter simplify after leaving it.
+- Delegates the "should we start?" question to `maybeStartSimplify` and the
+  actual pruning work to `runSimplifyCycle`.
 
 Parameters:
 - `state` - - Shared engine state.
@@ -2966,7 +3074,7 @@ const state = handleSimplifyState(engineState, neat, 3, 10, 5, false, 0, 'aggres
 ```ts
 expandPopulation(
   state: EngineState,
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   targetAdd: number,
   safeWrite: (msg: string) => void,
   completedGenerations: number,
@@ -2974,6 +3082,11 @@ expandPopulation(
 ```
 
 Expand the population by creating children from top-performing parents.
+
+This is the engine's controlled answer to stagnation before full collapse
+recovery becomes necessary: widen the search, but bias that widening toward
+the current best-performing slice of the population instead of sampling from
+everyone equally.
 
 Steps:
 1. Prepare working sets (population reference, sorted parent indices, parent pool size).
@@ -2997,11 +3110,16 @@ expandPopulation(state, neat, 10, msg => process.stdout.write(msg), currentGen);
 ```ts
 prepareExpansion(
   state: EngineState,
-  neat: any,
-): { populationRef: any[]; sortedIdx: number[]; parentPoolSize: number; }
+  neat: PopulationDynamicsNeatLike,
+): { populationRef: PopulationDynamicsGenome[]; sortedIdx: number[]; parentPoolSize: number; }
 ```
 
 Prepare working sets for population expansion.
+
+The key idea is to sort once, derive a parent pool from the best quarter of
+the population, and then let child creation sample uniformly from that pool.
+That gives expansion a clear bias toward current evidence without hard-coding
+elitist cloning only.
 
 Parameters:
 - `state` - - Shared engine state.
@@ -3033,8 +3151,8 @@ Returns: 1 or 2 based on random sample.
 ```ts
 applyMutationsToClone(
   state: EngineState,
-  clone: any,
-  neat: any,
+  clone: PopulationDynamicsGenome,
+  neat: PopulationDynamicsNeatLike,
   mutateCount: number,
 ): void
 ```
@@ -3060,9 +3178,9 @@ applyMutationsToClone(state, someClone, neat, 2);
 
 ```ts
 registerClone(
-  neat: any,
-  clone: any,
-  parentId: any,
+  neat: PopulationDynamicsNeatLike,
+  clone: PopulationDynamicsGenome,
+  parentId: PopulationDynamicsParentId | undefined,
 ): void
 ```
 
@@ -3082,9 +3200,9 @@ registerClone(neat, genomeClone, parentId);
 ```ts
 createChildFromParent(
   state: EngineState,
-  neat: any,
-  parent: any,
-): any
+  neat: PopulationDynamicsNeatLike,
+  parent: PopulationDynamicsGenome,
+): PopulationDynamicsGenome | undefined
 ```
 
 Create a child genome from a parent via cloning and mutation.
@@ -3109,7 +3227,7 @@ createChildFromParent(state, neat, someParentGenome);
 ```ts
 getSortedIndicesByScore(
   state: EngineState,
-  population: any[],
+  population: default[],
 ): number[]
 ```
 
@@ -3135,7 +3253,7 @@ const indices = getSortedIndicesByScore(state, population);
 
 ```ts
 ensureOutputIdentity(
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
 ): void
 ```
 
@@ -3158,7 +3276,7 @@ ensureOutputIdentity(neat);
 ```ts
 handleSpeciesHistory(
   state: EngineState,
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   speciesHistory: number[],
 ): boolean
 ```
@@ -3187,7 +3305,7 @@ const collapsed = handleSpeciesHistory(state, neat, historyArray);
 ```ts
 maybeExpandPopulation(
   state: EngineState,
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   dynamicPopEnabled: boolean,
   completedGenerations: number,
   dynamicPopMax: number,
@@ -3257,10 +3375,10 @@ pruneSaturatedHiddenOutputs(state, genome, getNodeIndicesByTypeFn, collectHidden
 ```ts
 antiCollapseRecovery(
   state: EngineState,
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   completedGenerations: number,
   safeWrite: (msg: string) => void,
-  sampleSegmentIntoScratchFn: (state: EngineState, array: any[], startIdx: number, count: number) => number,
+  sampleSegmentIntoScratchFn: (state: EngineState, array: PopulationDynamicsGenome[], startIdx: number, count: number) => number,
 ): void
 ```
 
@@ -3313,7 +3431,7 @@ const deltas = reinitializeGenomeOutputsAndWeights(state, genome);
 
 ```ts
 compactGenomeConnections(
-  genome: any,
+  genome: PopulationDynamicsGenome,
 ): number
 ```
 
@@ -3338,7 +3456,7 @@ const removed = compactGenomeConnections(genome);
 ```ts
 compactPopulation(
   state: EngineState,
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
 ): number
 ```
 
@@ -3362,6 +3480,43 @@ const totalRemoved = compactPopulation(state, neat);
 ### IndexBuffer
 
 Typed or array-based index buffer for sorting
+
+### PopulationDynamicsParentId
+
+Runtime parent identifier carried through clone lineage tracking.
+
+### PopulationDynamicsGenome
+
+Narrow genome view used by this module.
+
+The real runtime objects are `Network` instances with a few extra evolution-
+time fields such as `score`, `species`, and lineage markers. Capturing that
+shape locally keeps the rest of the helper signatures readable without
+claiming that the entire engine only ever works with plain `Network` values.
+
+### PopulationDynamicsNode
+
+Node surface used when population helpers inspect network topology.
+
+### PopulationDynamicsConnection
+
+Connection surface used when population helpers inspect network edges.
+
+### PopulationDynamicsNoveltyConfig
+
+Minimal novelty configuration surface used during anti-collapse escalation.
+
+### PopulationDynamicsOptions
+
+Minimal NEAT options surface used by population-dynamics helpers.
+
+### PopulationDynamicsNeatLike
+
+Narrow NEAT driver view used by this module.
+
+The population-dynamics helpers care about population access, a handful of
+options, and mutation operator discovery. Everything else remains owned by
+the concrete `Neat` implementation.
 
 ## evolutionEngine/engineState.constants.ts
 
@@ -3449,7 +3604,7 @@ Returns: Shared engine state singleton.
 ### getEvolutionEngineFacadeRuntimeState
 
 ```ts
-getEvolutionEngineFacadeRuntimeState(): EvolutionEngineFacadeRuntimeState
+getEvolutionEngineFacadeRuntimeState(): LogitsRingState
 ```
 
 Read the mutable facade-owned logits-ring runtime state.

@@ -136,7 +136,7 @@ export function getSortedInnovationCache(
  * This is the heart of the compatibility read. Because both lists are sorted,
  * the helper can walk them once like a merge step: matching innovations count
  * toward aligned genes, gaps inside the shared innovation range become disjoint
- * genes, and any remaining tail genes become excess. Weight differences are
+ * genes, and the remaining tail genes become excess. Weight differences are
  * only measured for matching genes because that is the only case where the two
  * genomes clearly refer to the same structural gene.
  *

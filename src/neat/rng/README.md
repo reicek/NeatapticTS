@@ -131,7 +131,7 @@ Minimum population offset added before time scrambling during default seeding.
 
 The offset keeps empty or tiny populations from collapsing the derived seed
 toward zero too easily during initialization. It exists to stabilize the
-fallback path, not to encode any meaningful NEAT population heuristic.
+fallback path, not to encode a meaningful NEAT population heuristic.
 
 ### RngHost
 

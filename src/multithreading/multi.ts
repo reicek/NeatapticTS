@@ -266,7 +266,7 @@ export default class Multi {
 
   /**
    * Gets the browser test worker.
-   * @returns {Promise<any>} The browser test worker.
+   * @returns {Promise<TestWorkerConstructor>} The browser test worker.
    */
   static async getBrowserTestWorker(): Promise<TestWorkerConstructor> {
     const { TestWorker } = await import('./workers/browser/testworker');
@@ -275,7 +275,7 @@ export default class Multi {
 
   /**
    * Gets the node test worker.
-   * @returns {Promise<any>} The node test worker.
+   * @returns {Promise<TestWorkerConstructor>} The node test worker.
    */
   static async getNodeTestWorker(): Promise<TestWorkerConstructor> {
     const { TestWorker } = await import('./workers/node/testworker');

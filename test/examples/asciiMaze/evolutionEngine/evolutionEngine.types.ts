@@ -192,9 +192,13 @@ export interface TrackedNetworkInstance extends NetworkInstance {
  * Loose genome shape shared by engine telemetry and population-dynamics helpers.
  *
  * @remarks
- * The NEAT runtime exposes additional mutable fields during evolution, so the
- * engine centralizes those optional members here rather than duplicating local
- * runtime helper interfaces across multiple files.
+ * The concrete runtime objects are still `Network` instances, but the engine
+ * occasionally needs to acknowledge a small amount of evolution-time metadata
+ * that the plain public type does not emphasize: score, species membership,
+ * clone hooks, lineage IDs, and telemetry scratch fields.
+ *
+ * This interface deliberately stays loose because it exists to document and
+ * centralize that adaptation layer, not to replace the underlying runtime class.
  */
 export interface EvolutionGenomeLike {
   nodes?: NetworkNode[];
@@ -209,14 +213,26 @@ export interface EvolutionGenomeLike {
   [key: string]: unknown;
 }
 
-/** NEAT runtime shape needed by telemetry helpers that inspect the population. */
+/**
+ * NEAT runtime shape needed by telemetry helpers that inspect the population.
+ *
+ * The telemetry helpers intentionally ask for very little here: access to the
+ * population plus optional telemetry export. That keeps them portable across the
+ * engine's internal helpers without binding them to the full driver surface.
+ */
 export interface TelemetryNeatLike {
   population?: EvolutionGenomeLike[];
   getTelemetry?: () => unknown;
   [key: string]: unknown;
 }
 
-/** Mutation-operation surface read from the NEAT driver at runtime. */
+/**
+ * Mutation-operation surface read from the NEAT driver at runtime.
+ *
+ * The engine treats mutation operations as opaque descriptors because the
+ * concrete driver owns how those operations are interpreted. The helpers only
+ * need enough structure to cache, count, and hand them back into `mutate(...)`.
+ */
 export interface MutationOperationLike {
   length?: number;
   [key: string]: unknown;
@@ -444,6 +460,7 @@ export interface NetworkNode {
 export interface NetworkConnection {
   from?: NetworkNode;
   to?: NetworkNode;
+  gater?: NetworkNode | null;
   weight?: number;
   gain?: number;
   enabled?: boolean;
@@ -487,7 +504,7 @@ export interface LogitsRingState {
  * logits-ring bookkeeping that must survive across runs while keeping the
  * class boundary orchestration-first.
  */
-export interface EvolutionEngineFacadeRuntimeState extends LogitsRingState {}
+export type EvolutionEngineFacadeRuntimeState = LogitsRingState;
 
 /** Simulation result returned by generation evaluation helpers. */
 export interface SimulationResult {

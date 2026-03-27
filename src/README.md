@@ -72,13 +72,37 @@ This alias stays intentionally permissive for compatibility with legacy callers.
 Prefer treating it as the stable front door and the narrower helper-level types in
 `src/neat/**` as implementation detail.
 
-### DEFAULT_POPULATION_SIZE
+### DEFAULT_COMPATIBILITY_THRESHOLD
 
-Default population size when caller does not specify `popsize`.
+Default compatibility threshold controlling speciation distance.
 
-This opens the root defaults shelf's search-volume family. It controls how
-many genomes compete in each generation before elitism, provenance, or
-mutation pressure begin to reshape the population.
+This starts the speciation-pressure family of defaults. It is the neutral
+boundary the controller uses before adaptive tuning or custom settings make
+species splits stricter or more permissive.
+
+### DEFAULT_DISJOINT_COEFF
+
+Default disjoint coefficient for NEAT compatibility distance.
+
+Matching the excess coefficient by default gives the root controller a
+balanced structural view: excess and disjoint innovation gaps both count as
+first-class evidence during compatibility comparisons.
+
+### DEFAULT_DIVERSITY_GRAPHLET_SAMPLE
+
+Default graphlet sample size used by diversity metrics in fast mode.
+
+Read this beside {@link DEFAULT_DIVERSITY_PAIR_SAMPLE}: pair samples give the
+controller quick distance evidence, while graphlet samples provide a small
+structural texture read without forcing whole-population analysis.
+
+### DEFAULT_DIVERSITY_PAIR_SAMPLE
+
+Default pair-sample size used by diversity metrics in fast mode.
+
+This starts the observability-sampling family. The root controller uses a
+bounded sample instead of exhaustive pair checks so diversity reads stay
+cheap enough for ordinary runs.
 
 ### DEFAULT_ELITISM
 
@@ -89,47 +113,13 @@ Read this beside {@link DEFAULT_POPULATION_SIZE} and
 reserved for carry-over, how much is freshly injected, and how much capacity
 remains for ordinary offspring.
 
-### DEFAULT_PROVENANCE
+### DEFAULT_EXCESS_COEFF
 
-Default provenance count applied when unspecified.
+Default excess coefficient for NEAT compatibility distance.
 
-Provenance is the root controller's small "fresh seed" policy. A value of
-`0` means the default run does not spend population budget on extra
-generation-zero style injections unless the caller asks for them.
-
-### DEFAULT_MUTATION_RATE
-
-Default mutation rate used by the root controller when no explicit rate is supplied.
-
-This belongs to the same search-tempo family as
-{@link DEFAULT_MUTATION_AMOUNT}. Together they define how often mutation is
-attempted and how many mutation steps a genome can receive once mutation is
-active.
-
-### DEFAULT_MUTATION_AMOUNT
-
-Default number of mutation operations applied per genome.
-
-The default keeps the baseline search policy conservative: most runs mutate
-often enough to keep topology moving, but each genome usually pays for only
-one structural or parametric change per mutation pass.
-
-### DEFAULT_COMPATIBILITY_THRESHOLD
-
-Default compatibility threshold controlling speciation distance.
-
-This starts the speciation-pressure family of defaults. It is the neutral
-boundary the controller uses before adaptive tuning or custom settings make
-species splits stricter or more permissive.
-
-### DEFAULT_MAX_NODES
-
-Default maximum allowed nodes where `Infinity` means unbounded growth.
-
-Read the three `DEFAULT_MAX_*` exports as one structural-ceiling family.
-Leaving them unbounded by default tells the root controller to rely on
-mutation policy, pruning, and adaptive limits instead of an immediate hard
-cap.
+This begins the root compatibility-weight family. These coefficients explain
+which kinds of genome disagreement matter most when the controller decides
+whether two genomes still belong in the same species neighborhood.
 
 ### DEFAULT_MAX_CONNS
 
@@ -146,45 +136,31 @@ Default maximum allowed gates where `Infinity` means unbounded growth.
 Gate limits stay in the same family as node and connection limits so the
 whole structural-cap story remains consistent at the root surface.
 
-### DEFAULT_EXCESS_COEFF
+### DEFAULT_MAX_NODES
 
-Default excess coefficient for NEAT compatibility distance.
+Default maximum allowed nodes where `Infinity` means unbounded growth.
 
-This begins the root compatibility-weight family. These coefficients explain
-which kinds of genome disagreement matter most when the controller decides
-whether two genomes still belong in the same species neighborhood.
+Read the three `DEFAULT_MAX_*` exports as one structural-ceiling family.
+Leaving them unbounded by default tells the root controller to rely on
+mutation policy, pruning, and adaptive limits instead of an immediate hard
+cap.
 
-### DEFAULT_DISJOINT_COEFF
+### DEFAULT_MUTATION_AMOUNT
 
-Default disjoint coefficient for NEAT compatibility distance.
+Default number of mutation operations applied per genome.
 
-Matching the excess coefficient by default gives the root controller a
-balanced structural view: excess and disjoint innovation gaps both count as
-first-class evidence during compatibility comparisons.
+The default keeps the baseline search policy conservative: most runs mutate
+often enough to keep topology moving, but each genome usually pays for only
+one structural or parametric change per mutation pass.
 
-### DEFAULT_WEIGHT_DIFF_COEFF
+### DEFAULT_MUTATION_RATE
 
-Default average weight difference coefficient for compatibility distance.
+Default mutation rate used by the root controller when no explicit rate is supplied.
 
-This keeps parameter drift relevant without letting weight deltas dominate
-the whole speciation read. In the default family, topology disagreement still
-carries more weight than modest edge-weight differences.
-
-### DEFAULT_DIVERSITY_PAIR_SAMPLE
-
-Default pair-sample size used by diversity metrics in fast mode.
-
-This starts the observability-sampling family. The root controller uses a
-bounded sample instead of exhaustive pair checks so diversity reads stay
-cheap enough for ordinary runs.
-
-### DEFAULT_DIVERSITY_GRAPHLET_SAMPLE
-
-Default graphlet sample size used by diversity metrics in fast mode.
-
-Read this beside {@link DEFAULT_DIVERSITY_PAIR_SAMPLE}: pair samples give the
-controller quick distance evidence, while graphlet samples provide a small
-structural texture read without forcing whole-population analysis.
+This belongs to the same search-tempo family as
+{@link DEFAULT_MUTATION_AMOUNT}. Together they define how often mutation is
+attempted and how many mutation steps a genome can receive once mutation is
+active.
 
 ### DEFAULT_NOVELTY_K
 
@@ -193,6 +169,30 @@ Default neighbor count for novelty search when `k` is unspecified.
 This closes the root observability-and-exploration shelf. It controls how
 many nearby behaviors contribute to novelty before the caller tunes novelty
 search more explicitly.
+
+### DEFAULT_POPULATION_SIZE
+
+Default population size when caller does not specify `popsize`.
+
+This opens the root defaults shelf's search-volume family. It controls how
+many genomes compete in each generation before elitism, provenance, or
+mutation pressure begin to reshape the population.
+
+### DEFAULT_PROVENANCE
+
+Default provenance count applied when unspecified.
+
+Provenance is the root controller's small "fresh seed" policy. A value of
+`0` means the default run does not spend population budget on extra
+generation-zero style injections unless the caller asks for them.
+
+### DEFAULT_WEIGHT_DIFF_COEFF
+
+Default average weight difference coefficient for compatibility distance.
+
+This keeps parameter drift relevant without letting weight deltas dominate
+the whole speciation read. In the default family, topology disagreement still
+carries more weight than modest edge-weight differences.
 
 ### Neat
 
@@ -269,7 +269,7 @@ Cached diversity metrics (computed lazily).
 
 ```ts
 _fallbackInnov(
-  conn: any,
+  conn: ConnectionLike,
 ): number
 ```
 
@@ -304,7 +304,7 @@ Returns: RNG function bound to this instance.
 
 ```ts
 _invalidateGenomeCaches(
-  genome: any,
+  genome: unknown,
 ): void
 ```
 
@@ -428,7 +428,7 @@ _structuralEntropy(
 ): number
 ```
 
-Compatibility wrapper retained for tests that reference (neat as any)._structuralEntropy.
+Compatibility wrapper retained for tests that reach `_structuralEntropy` through loose controller casts.
 
 Parameters:
 - `genome` - Genome whose structural entropy is calculated.
@@ -575,7 +575,7 @@ Repair dead-end connectivity through the focused maintenance facade.
 #### evaluate
 
 ```ts
-evaluate(): Promise<any>
+evaluate(): Promise<void>
 ```
 
 Evaluate the current population using the configured fitness function.
@@ -583,7 +583,7 @@ Delegates to the migrated evaluation helper to keep this class thin.
 
 In practice, this is the scoring half of the controller loop. It transforms a
 population of candidate networks into evidence the rest of the algorithm can use:
-fitness scores, objective values, telemetry, diversity statistics, and any derived
+fitness scores, objective values, telemetry, diversity statistics, and derived
 signals needed by selection or pruning.
 
 Returns: Aggregated evaluation result (implementation specific).
@@ -613,7 +613,7 @@ await neat.evolve();
 #### export
 
 ```ts
-export(): any[]
+export(): GenomeJSON[]
 ```
 
 Export the current population as plain JSON objects.
@@ -691,7 +691,7 @@ Returns: JSONL payload describing recent species-history entries.
 #### exportState
 
 ```ts
-exportState(): any
+exportState(): NeatStateJSON
 ```
 
 Export the full controller state, including metadata and population.
@@ -734,8 +734,8 @@ Returns: JSONL payload with one telemetry entry per line.
 
 ```ts
 fromJSON(
-  json: any,
-  fitness: (n: default) => number,
+  json: NeatMetaJSON,
+  fitness: NeatFitnessFunction,
 ): default
 ```
 
@@ -991,7 +991,7 @@ Returns: Recorded telemetry entries in chronological order.
 
 ```ts
 import(
-  json: any[],
+  json: GenomeJSON[],
 ): Promise<void>
 ```
 
@@ -1010,7 +1010,7 @@ Returns: Promise resolving after the population is loaded.
 
 ```ts
 importRNGState(
-  state: any,
+  state: string | number | undefined,
 ): void
 ```
 
@@ -1025,8 +1025,8 @@ Returns: Nothing. This is a compatibility alias for `restoreRNGState()`.
 
 ```ts
 importState(
-  bundle: any,
-  fitness: (n: default) => number,
+  bundle: NeatStateJSON,
+  fitness: NeatFitnessFunction,
 ): Promise<default>
 ```
 
@@ -1065,7 +1065,7 @@ Returns: Promise resolving once mutation has been applied to the current populat
 registerObjective(
   key: string,
   direction: "max" | "min",
-  accessor: (g: any) => number,
+  accessor: (g: GenomeLike) => number,
 ): void
 ```
 
@@ -1095,7 +1095,7 @@ without rebuilding the whole controller.
 
 ```ts
 restoreRNGState(
-  state: any,
+  state: string | number | undefined,
 ): void
 ```
 
@@ -1128,7 +1128,7 @@ Returns: Array of deterministic random samples.
 selectMutationMethod(
   genome: default,
   rawReturnForTest: boolean,
-): any
+): Promise<MutationMethod | MutationMethod[] | null>
 ```
 
 Selects a mutation method for a given genome based on constraints.
@@ -1178,7 +1178,7 @@ Returns: Child genome registered with the same bookkeeping conventions as normal
 #### toJSON
 
 ```ts
-toJSON(): any
+toJSON(): NeatMetaJSON
 ```
 
 Serialize controller metadata without the concrete population.
@@ -1188,28 +1188,6 @@ bookkeeping separately from genome payloads, or when the population will be
 reconstructed by other means.
 
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
-
-### Options
-
-Internal permissive option bag backing the public `NeatOptions` alias.
-
-The root controller still accepts a wide option surface while the chaptered
-implementation modules keep migrating toward narrower local contracts.
-
-### buildEmptyDiversityStats
-
-```ts
-buildEmptyDiversityStats(
-  populationSize: number,
-): DiversityStats
-```
-
-Build a zeroed diversity stats snapshot to use when no population metrics exist yet.
-
-Parameters:
-- `populationSize` - Population size used to populate the snapshot.
-
-Returns: DiversityStats with zeroed aggregates.
 
 ## config.ts
 
@@ -1338,7 +1316,7 @@ Cached diversity metrics (computed lazily).
 
 ```ts
 _fallbackInnov(
-  conn: any,
+  conn: ConnectionLike,
 ): number
 ```
 
@@ -1373,7 +1351,7 @@ Returns: RNG function bound to this instance.
 
 ```ts
 _invalidateGenomeCaches(
-  genome: any,
+  genome: unknown,
 ): void
 ```
 
@@ -1497,7 +1475,7 @@ _structuralEntropy(
 ): number
 ```
 
-Compatibility wrapper retained for tests that reference (neat as any)._structuralEntropy.
+Compatibility wrapper retained for tests that reach `_structuralEntropy` through loose controller casts.
 
 Parameters:
 - `genome` - Genome whose structural entropy is calculated.
@@ -1644,7 +1622,7 @@ Repair dead-end connectivity through the focused maintenance facade.
 #### evaluate
 
 ```ts
-evaluate(): Promise<any>
+evaluate(): Promise<void>
 ```
 
 Evaluate the current population using the configured fitness function.
@@ -1652,7 +1630,7 @@ Delegates to the migrated evaluation helper to keep this class thin.
 
 In practice, this is the scoring half of the controller loop. It transforms a
 population of candidate networks into evidence the rest of the algorithm can use:
-fitness scores, objective values, telemetry, diversity statistics, and any derived
+fitness scores, objective values, telemetry, diversity statistics, and derived
 signals needed by selection or pruning.
 
 Returns: Aggregated evaluation result (implementation specific).
@@ -1682,7 +1660,7 @@ await neat.evolve();
 #### export
 
 ```ts
-export(): any[]
+export(): GenomeJSON[]
 ```
 
 Export the current population as plain JSON objects.
@@ -1760,7 +1738,7 @@ Returns: JSONL payload describing recent species-history entries.
 #### exportState
 
 ```ts
-exportState(): any
+exportState(): NeatStateJSON
 ```
 
 Export the full controller state, including metadata and population.
@@ -1803,8 +1781,8 @@ Returns: JSONL payload with one telemetry entry per line.
 
 ```ts
 fromJSON(
-  json: any,
-  fitness: (n: default) => number,
+  json: NeatMetaJSON,
+  fitness: NeatFitnessFunction,
 ): default
 ```
 
@@ -2060,7 +2038,7 @@ Returns: Recorded telemetry entries in chronological order.
 
 ```ts
 import(
-  json: any[],
+  json: GenomeJSON[],
 ): Promise<void>
 ```
 
@@ -2079,7 +2057,7 @@ Returns: Promise resolving after the population is loaded.
 
 ```ts
 importRNGState(
-  state: any,
+  state: string | number | undefined,
 ): void
 ```
 
@@ -2094,8 +2072,8 @@ Returns: Nothing. This is a compatibility alias for `restoreRNGState()`.
 
 ```ts
 importState(
-  bundle: any,
-  fitness: (n: default) => number,
+  bundle: NeatStateJSON,
+  fitness: NeatFitnessFunction,
 ): Promise<default>
 ```
 
@@ -2134,7 +2112,7 @@ Returns: Promise resolving once mutation has been applied to the current populat
 registerObjective(
   key: string,
   direction: "max" | "min",
-  accessor: (g: any) => number,
+  accessor: (g: GenomeLike) => number,
 ): void
 ```
 
@@ -2164,7 +2142,7 @@ without rebuilding the whole controller.
 
 ```ts
 restoreRNGState(
-  state: any,
+  state: string | number | undefined,
 ): void
 ```
 
@@ -2197,7 +2175,7 @@ Returns: Array of deterministic random samples.
 selectMutationMethod(
   genome: default,
   rawReturnForTest: boolean,
-): any
+): Promise<MutationMethod | MutationMethod[] | null>
 ```
 
 Selects a mutation method for a given genome based on constraints.
@@ -2247,7 +2225,7 @@ Returns: Child genome registered with the same bookkeeping conventions as normal
 #### toJSON
 
 ```ts
-toJSON(): any
+toJSON(): NeatMetaJSON
 ```
 
 Serialize controller metadata without the concrete population.
@@ -2514,7 +2492,7 @@ applyBatchUpdates(
 
 Applies accumulated batch updates to incoming and self connections and this node's bias.
 Uses momentum in a Nesterov-compatible way: currentDelta = accumulated + momentum * previousDelta.
-Resets accumulators after applying. Safe to call on any node type.
+Resets accumulators after applying. Safe to call on every node type.
 
 Parameters:
 - `momentum` - Momentum factor (0 to disable)
@@ -3798,7 +3776,7 @@ remove(
 Removes a node from the network.
 This involves:
 1. Disconnecting all incoming and outgoing connections associated with the node.
-2. Removing any self-connections.
+2. Removing self-connections.
 3. Removing the node from the `nodes` array.
 4. Attempting to reconnect the node's direct predecessors to its direct successors
    to maintain network flow, if possible and configured.

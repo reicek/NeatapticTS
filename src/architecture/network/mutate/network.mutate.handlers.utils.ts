@@ -285,7 +285,7 @@ function addNodeDeterministicChain(
  *
  * @param network - Target network.
  * @param mutationProps - Runtime mutation props.
- * @returns Deterministic context or undefined when any prerequisite fails.
+ * @returns Deterministic context or undefined when one or more prerequisites fail.
  */
 function resolveDeterministicChainMutationContext(
   network: Network,

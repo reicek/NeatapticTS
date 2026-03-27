@@ -39,19 +39,8 @@
  */
 
 import Connection from '../../connection';
-import type Layer from '../../layer/layer';
-import type Network from '../../network/network';
 import type NeatapticNode from '../../node';
 import type { OnnxExportOptions } from './export/network.onnx.export.types';
-import type {
-  Conv2DMapping,
-  OnnxDimension,
-  OnnxMetadataProperty,
-  OnnxModel,
-  OnnxTensor,
-  OnnxValueInfo,
-  Pool2DMapping,
-} from './schema/network.onnx.schema.types';
 export type {
   Conv2DMapping,
   OnnxAttribute,
@@ -340,6 +329,4 @@ export type OnnxLayerFactory = Record<string, (...args: unknown[]) => unknown>;
 /** Runtime layer module shape widened for fused-recurrent reconstruction wiring. */
 export type OnnxRuntimeLayerFactoryMap =
   import('./import/network.onnx.runtime-load.types').OnnxRuntimeLayerModule &
-  OnnxLayerFactory;
-
-
+    OnnxLayerFactory;

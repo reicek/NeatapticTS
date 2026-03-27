@@ -15,7 +15,7 @@ import type {
  *
  * 1. does the caller want one delegate call for the whole population or one
  *    delegate call per genome,
- * 2. should any per-genome runtime state be cleared before scoring begins.
+ * 2. should per-genome runtime state be cleared before scoring begins.
  *
  * Those choices are intentionally isolated from novelty blending and adaptive
  * tuning. This boundary should stay focused on score production itself so later

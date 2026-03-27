@@ -49,7 +49,7 @@ import type { NeatLikeWithObjectives } from './objectives.types';
  *
  * This helper keeps the root objective story predictable: unless the host has
  * explicitly suppressed fitness, the controller still has one baseline notion
- * of progress even before any user-defined objective is registered.
+ * of progress even before user-defined objectives are registered.
  *
  * In other words, this helper keeps ordinary single-objective NEAT behavior as
  * the default case and makes suppression an explicit opt-out rather than an
@@ -237,9 +237,9 @@ export function ensureObjectivesList(
 }
 
 /**
- * Replace any existing objective with the same key and append the new descriptor.
+ * Replace the existing objective with the same key and append the new descriptor.
  *
- * Replacement is immutable on purpose. Callers get a fresh list with any prior
+ * Replacement is immutable on purpose. Callers get a fresh list with prior
  * matching key removed, which keeps the mechanics predictable and avoids hidden
  * in-place mutations of a list that another part of the controller might still
  * be holding.

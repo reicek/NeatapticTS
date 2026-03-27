@@ -119,7 +119,7 @@ export interface TopologyIntentGenome {
  * not silently reinterpret custom mutation pools as feed-forward mode.
  *
  * In practice this helper answers the policy question only. It does not inspect
- * a concrete genome, and it does not attempt any runtime promotion by itself.
+ * a concrete genome, and it does not attempt runtime promotion by itself.
  * That separation is important because a caller may request feed-forward
  * mutation semantics while still holding seed genomes whose current graphs are
  * recurrent, gated, or otherwise not yet eligible for the stricter runtime

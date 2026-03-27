@@ -346,7 +346,7 @@ export class EvolutionEngine {
    * Never throws from this debug helper.
    *
    * @param network - The network (genome) to inspect.
-   *                  Expected shape: `{ nodes: any[], connections: any[] }`
+   *                  Expected shape: `{ nodes: Array<unknown>, connections: Array<unknown> }`
    *
    * @example
    * const { bestNetwork } = await EvolutionEngine.runMazeEvolution(options);

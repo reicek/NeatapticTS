@@ -188,7 +188,7 @@ export function ensureSpeciesHistoryArray(
 /**
  * Ensure a minimal species snapshot exists for deterministic CSV headers.
  *
- * Early in a run, live species data can exist before any formal history entry
+ * Early in a run, live species data can exist before the first formal history entry
  * has been recorded. This helper bridges that gap by synthesizing one minimal
  * history snapshot so header discovery and CSV output remain deterministic
  * instead of depending on whether the first archival step has happened yet.
@@ -493,7 +493,7 @@ export function resolveSpeciesHistoryCellValue(
  * and nested values all flow through one escaping path. Undefined values remain
  * empty cells to preserve the exporter’s existing sparse-column behavior.
  *
- * @param value - Any value to stringify.
+ * @param value - Value to stringify.
  * @returns JSON string or empty string when JSON.stringify returns undefined.
  */
 export function safeStringifyCell(value: unknown): string {

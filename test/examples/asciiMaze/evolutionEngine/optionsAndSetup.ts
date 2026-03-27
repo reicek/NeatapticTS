@@ -25,8 +25,71 @@ import { Network } from '../../../../src/neataptic';
 import { MazeUtils } from '../mazeUtils';
 import { FitnessEvaluator } from '../fitness';
 import type { IFitnessEvaluationContext } from '../fitness.types';
-import type { IRunMazeEvolutionOptions } from './evolutionEngine.types';
+import type {
+  IEvolutionAlgorithmConfig,
+  IMazeConfig,
+  IReportingConfig,
+  IRunMazeEvolutionOptions,
+  ScratchBundle,
+} from './evolutionEngine.types';
 import { createNeat, seedInitialPopulation } from './neatConfiguration';
+import type { NeatConfig } from './neatConfiguration';
+
+interface NormalizedRunOptions {
+  mazeConfig?: IMazeConfig;
+  agentSimConfig: IFitnessEvaluationContext['agentSimConfig'];
+  evolutionAlgorithmConfig: IEvolutionAlgorithmConfig;
+  reportingConfig: IReportingConfig | Record<string, never>;
+  fitnessEvaluator?: IRunMazeEvolutionOptions['fitnessEvaluator'];
+  popSize: number;
+  allowRecurrent: boolean;
+  maxStagnantGenerations: number;
+  minProgressToPass: number;
+  maxGenerations: number;
+  randomSeed?: number;
+  initialPopulation?: IEvolutionAlgorithmConfig['initialPopulation'];
+  initialBestNetwork?: IEvolutionAlgorithmConfig['initialBestNetwork'];
+  lamarckianIterations: number;
+  lamarckianSampleSize?: number;
+  plateauGenerations: number;
+  plateauImprovementThreshold: number;
+  simplifyDuration: number;
+  simplifyPruneFraction: number;
+  simplifyStrategy: NonNullable<IEvolutionAlgorithmConfig['simplifyStrategy']>;
+  persistEvery: number;
+  persistDir: string;
+  persistTopK: number;
+  dynamicPopEnabled: boolean;
+  dynamicPopMax: number;
+  dynamicPopExpandInterval: number;
+  dynamicPopExpandFactor: number;
+  dynamicPopPlateauSlack: number;
+  stopOnlyOnSolve: boolean;
+  autoPauseOnSolve: boolean;
+  deterministic: boolean;
+  memoryCompactionInterval: number;
+  telemetryReduceStats: boolean;
+  telemetryMinimal: boolean;
+  disableBaldwinianRefinement: boolean;
+  neatOptions: NeatConfig;
+  maze?: string[];
+}
+
+interface PreparedRunEnvironment {
+  encodedMaze: IFitnessEvaluationContext['encodedMaze'];
+  startPosition: IFitnessEvaluationContext['startPosition'];
+  exitPosition: IFitnessEvaluationContext['exitPosition'];
+  distanceMap: NonNullable<IFitnessEvaluationContext['distanceMap']>;
+  inputSize: number;
+  outputSize: number;
+  fitnessContext: IFitnessEvaluationContext;
+}
+
+interface CreateAndSeedNeatResult {
+  neat: ReturnType<typeof createNeat> | null;
+  scratchPopClone: unknown[];
+  scratchSample: unknown[];
+}
 
 /**
  * Normalize and validate run options with sensible defaults.
@@ -89,9 +152,7 @@ export const normalizeRunOptions = (
   setReducedTelemetry: (enabled: boolean) => void,
   setMinimalTelemetry: (enabled: boolean) => void,
   setDisableBaldwin: (disabled: boolean) => void,
-  // Type assertion: Return type contains mixed configuration from user options
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any => {
+): NormalizedRunOptions => {
   // Step 1: normalise option groups using nullish coalescing for robustness.
   const mazeConfig = options?.mazeConfig;
   const agentSimConfig = options?.agentSimConfig ?? {};
@@ -147,7 +208,7 @@ export const normalizeRunOptions = (
       : Math.max(popSize, 120);
 
   // Step 5: compose the final normalised options object (shape expected by callers).
-  return {
+  const normalizedOptions: NormalizedRunOptions = {
     mazeConfig,
     agentSimConfig,
     evolutionAlgorithmConfig,
@@ -209,9 +270,9 @@ export const normalizeRunOptions = (
       },
     },
     maze: mazeConfig?.maze,
-    // Type assertion: Mixed configuration object with diverse property types
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any;
+  };
+
+  return normalizedOptions;
 };
 
 /**
@@ -257,15 +318,9 @@ export const normalizeRunOptions = (
  * const neat = createAndSeedNeat(normalizedOpts, env.inputSize, env.outputSize, env.fitnessContext);
  */
 export const prepareEnvironmentForRun = (
-  // Type assertion: Accepts normalized options with mixed types from normalizeRunOptions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  opts: any,
-  // Type assertion: Scratch bundle contains dynamic pooled structures
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  scratchBundle: any,
-  // Type assertion: Returns diverse environment properties for evolution setup
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any => {
+  opts: NormalizedRunOptions,
+  scratchBundle: ScratchBundle,
+): PreparedRunEnvironment => {
   // Step 1: Resolve the maze input in a null-safe way.
   const mazeSource = opts?.maze ?? opts?.mazeConfig?.maze;
 
@@ -295,7 +350,7 @@ export const prepareEnvironmentForRun = (
   // Best-effort: warm a couple of small engine-level pools to reduce first-use allocations.
   try {
     if (!Array.isArray(scratchBundle.samplePool)) {
-      scratchBundle.samplePool = new Array(32);
+      scratchBundle.samplePool = new Array<unknown>(32);
     }
     if (!(scratchBundle.profilingScratch instanceof Float64Array)) {
       scratchBundle.profilingScratch = new Float64Array(4);
@@ -360,21 +415,13 @@ export const prepareEnvironmentForRun = (
  * );
  */
 export const createAndSeedNeat = (
-  // Type assertion: Accepts normalized options with mixed types from normalizeRunOptions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  opts: any,
+  opts: NormalizedRunOptions,
   inputSize: number,
   outputSize: number,
   fitnessContext: IFitnessEvaluationContext,
-  // Type assertion: Pooled clone buffer for network population
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  scratchPopClone: any[],
-  // Type assertion: Pooled sample buffer for selection operations
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  scratchSample: any[],
-  // Type assertion: Returns NEAT driver and updated scratch buffers
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any => {
+  scratchPopClone: unknown[],
+  scratchSample: unknown[],
+): CreateAndSeedNeatResult => {
   try {
     // Step 1: Build a descriptive, bound fitness callback.
     const fitnessCallback = (network: Network) =>

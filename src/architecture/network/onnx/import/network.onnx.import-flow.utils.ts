@@ -11,9 +11,7 @@ import { assignWeightsAndBiases } from './network.onnx.import-weights.utils';
 import { rebuildConnectionsLocal } from '../network.onnx.layer-analysis.utils';
 import { loadRuntimeFactories } from './network.onnx.runtime-load.utils';
 import type { OnnxModel } from '../schema/network.onnx.schema.types';
-import type {
-  OnnxRuntimeLayerFactoryMap,
-} from '../network.onnx.utils.types';
+import type { OnnxRuntimeLayerFactoryMap } from '../network.onnx.utils.types';
 
 /**
  * ONNX import orchestration for rebuilding a NeatapticTS runtime network.

@@ -65,7 +65,7 @@ export const MAX_PARETO_FRONT_RANK_GUARD = 50;
  * This performs the “peeling” phase of fast non-dominated sorting:
  * - Start with the first front (all non-dominated genomes).
  * - For each front, reduce domination counts of the genomes it dominates.
- * - Any genome whose domination count becomes zero moves to the next front.
+ * - Each genome whose domination count becomes zero moves to the next front.
  *
  * The implementation is intentionally breadth-first. It never revisits pairwise
  * comparisons; instead it trusts the dominance-state handoff and repeatedly

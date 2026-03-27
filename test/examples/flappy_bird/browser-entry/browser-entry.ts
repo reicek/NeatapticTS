@@ -9,12 +9,18 @@
  * In other words, this file is intentionally tiny because it acts like a clean
  * facade over a much larger interactive system.
  *
+ * Educational note:
+ * `index.html` is only the local browser shell that loads the published bundle
+ * and then exposes this same start boundary through browser globals. Read this
+ * file when you want the real host/runtime seam instead of the static shell.
+ *
  * Minimal browser start example:
  * ```ts
  * import { start } from './browser-entry/browser-entry';
  *
- * const handle = start();
+ * const handle = await start('flappy-bird-output');
  * // Later: handle.stop();
+ * await handle.done;
  * ```
  *
  * Startup path:

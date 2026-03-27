@@ -114,14 +114,7 @@ export type { NeatLikeWithAdaptive } from './core/adaptive.core.types';
  * directly. It mutates controller policy, so its effect is feed-forward into
  * later structural decisions rather than an immediate topology rewrite.
  *
- * @this {{
- *   options: any,
- *   population: Array<{score?: number}>,
- *   input: number,
- *   output: number,
- *   generation: number,
- *   _noveltyArchive?: any[]
- * }} NeatEngine
+ * @this {NeatLikeWithAdaptiveType} NeatEngine
  *
  * @returns {void} Updates `this.options.maxNodes` and possibly
  * `this.options.maxConns` in-place; no value is returned.
@@ -162,7 +155,7 @@ export function applyComplexityBudget(this: NeatLikeWithAdaptiveType) {
  * `_phase` and `_phaseStartGeneration` so the state persists across
  * generations.
  *
- * @this {{ options: any, generation: number }} NeatEngine
+ * @this {NeatLikeWithAdaptiveType} NeatEngine
  * @returns {void} Mutates `this._phase` and `this._phaseStartGeneration` so later mutation-selection code knows whether to favor growth or simplification.
  *
  * @example
@@ -200,7 +193,7 @@ export function applyPhasedComplexity(this: NeatLikeWithAdaptiveType) {
  * - Sets `g.score = 0` for genomes that fall below the final threshold
  *   — effectively rejecting them from selection.
  *
- * @this {{ options: any, population: Array<{score?: number}>, _mcThreshold?: number }} NeatEngine
+ * @this {NeatLikeWithAdaptiveType} NeatEngine
  * @returns {void} Updates `_mcThreshold` over time and may zero out scores for currently rejected genomes.
  *
  * @example
@@ -251,7 +244,7 @@ export function applyMinimalCriterionAdaptive(this: NeatLikeWithAdaptiveType) {
  * (risking premature convergence); high uniqueness might indicate
  * excessive divergence.
  *
- * @this {{ options: any, generation: number, _telemetry?: any[], _lastAncestorUniqAdjustGen?: number }} NeatEngine
+ * @this {NeatLikeWithAdaptiveType} NeatEngine
  * @returns {void} May update lineage-related controller options and record the most recent adjustment generation.
  *
  * @example
@@ -308,7 +301,7 @@ export const applyAncestorUniqAdaptive = function (
  * genome's readiness for later mutation so the next structural-edit pass can be
  * more exploratory or more conservative depending on recent success.
  *
- * @this {{ options: any, population: Array<any>, generation: number, _getRNG: () => () => number }} NeatEngine
+ * @this {NeatLikeWithAdaptiveType} NeatEngine
  * @returns {void} Updates per-genome mutation-rate state in place when the current generation satisfies the adaptation cadence.
  *
  * @example
@@ -367,7 +360,7 @@ export const applyAdaptiveMutation = function (this: NeatLikeWithAdaptiveType) {
  * the shape `{ success: number, attempts: number }` keyed by operator
  * id/name.
  *
- * @this {{ options: any, _operatorStats: Map<any, {success:number,attempts:number}> }} NeatEngine
+ * @this {NeatLikeWithAdaptiveType} NeatEngine
  * @returns {void} Decays `_operatorStats` in place so later mutation-method selection reflects more recent operator performance.
  *
  * @example

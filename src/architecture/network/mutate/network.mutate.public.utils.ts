@@ -47,7 +47,11 @@ export function addNodeBetweenImpl(this: Network): void {
   this.nodes.push(insertedNode);
 
   // Step 3: Rebuild the path while preserving the original edge weight contract.
-  this.connect(selectedConnection.from, insertedNode, selectedConnection.weight);
+  this.connect(
+    selectedConnection.from,
+    insertedNode,
+    selectedConnection.weight,
+  );
   this.connect(insertedNode, selectedConnection.to, 1);
 
   // Step 4: Mark topology-derived caches dirty so later activation paths rebuild coherent state.

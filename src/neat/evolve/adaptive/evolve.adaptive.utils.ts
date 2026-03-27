@@ -1,11 +1,3 @@
-/*
- * ESLint configuration for intentional `any` usage in NEAT evolution adaptive utils
- *
- * This file mirrors the evolution module's runtime metadata handling,
- * where dynamic properties are attached to genomes/species at runtime.
- */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import type { NeatControllerForEvolution } from '../evolve.types';
 
 /**
@@ -54,7 +46,7 @@ import type { NeatControllerForEvolution } from '../evolve.types';
  *
  * This helper is the evolve bridge into the root adaptive complexity policies.
  * It keeps both optional calls together because they rewrite controller-level
- * structure policy rather than any single genome: budget scheduling can change
+ * structure policy rather than one single genome: budget scheduling can change
  * allowed network size, and phased complexity can flip the controller between
  * growth and simplification modes.
  *
@@ -157,7 +149,7 @@ export function applyAutoCompatibilityTuning(
 ): void {
   // Step 1: Guard for missing config.
   try {
-    const options = internal.options as any;
+    const { options } = internal;
     if (!options.autoCompatTuning?.enabled) return;
     // Step 2: Compute target species count and error.
     const target =
@@ -172,6 +164,8 @@ export function applyAutoCompatibilityTuning(
     const rate = options.autoCompatTuning.adjustRate ?? config.adjustRate;
     const minCoeff = options.autoCompatTuning.minCoeff ?? config.minCoeff;
     const maxCoeff = options.autoCompatTuning.maxCoeff ?? config.maxCoeff;
+    const excessCoeff = options.excessCoeff ?? minCoeff;
+    const disjointCoeff = options.disjointCoeff ?? minCoeff;
     // Step 3: Compute adjustment factor.
     let factor = 1 - rate * Math.sign(error);
     if (error === 0) {
@@ -180,11 +174,11 @@ export function applyAutoCompatibilityTuning(
     // Step 4: Apply coefficient updates.
     options.excessCoeff = Math.min(
       maxCoeff,
-      Math.max(minCoeff, options.excessCoeff * factor),
+      Math.max(minCoeff, excessCoeff * factor),
     );
     options.disjointCoeff = Math.min(
       maxCoeff,
-      Math.max(minCoeff, options.disjointCoeff * factor),
+      Math.max(minCoeff, disjointCoeff * factor),
     );
   } catch {
     // Empty catch: auto-compatibility tuning is optional.
@@ -241,7 +235,7 @@ export async function applyPruningAndMutation(
 /**
  * Invalidate compatibility caches after mutations.
  *
- * Structural mutation can make any cached compatibility comparison stale.
+ * Structural mutation can make cached compatibility comparisons stale.
  * Clearing those caches here ensures later speciation and distance reads are
  * recomputed from the post-mutation topology instead of reusing scores from the
  * previous generation.
@@ -253,7 +247,7 @@ export function invalidateCompatibilityCaches(
   internal: NeatControllerForEvolution,
 ): void {
   // Step 1: Remove cached compatibility on each genome.
-  internal.population.forEach((genome: any) => {
+  internal.population.forEach((genome) => {
     if (genome._compatCache) delete genome._compatCache;
   });
 }
@@ -286,10 +280,10 @@ export function adaptReenableProbability(
   let reenableSuccessTotal = 0;
   let reenableAttemptsTotal = 0;
   for (const genome of internal.population) {
-    reenableSuccessTotal += (genome as any)._reenableSuccess || 0;
-    reenableAttemptsTotal += (genome as any)._reenableAttempts || 0;
-    (genome as any)._reenableSuccess = 0;
-    (genome as any)._reenableAttempts = 0;
+    reenableSuccessTotal += genome._reenableSuccess ?? 0;
+    reenableAttemptsTotal += genome._reenableAttempts ?? 0;
+    genome._reenableSuccess = 0;
+    genome._reenableAttempts = 0;
   }
   // Step 3: Adjust only with sufficient sample size.
   if (reenableAttemptsTotal > config.minSamples) {

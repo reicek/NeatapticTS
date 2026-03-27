@@ -80,6 +80,10 @@ export interface GenomeWithMetadata {
   _depth?: number;
   /** Re-enable probability for disabled connections. */
   _reenableProb?: number;
+  /** Successful disabled-connection re-enables recorded this generation. */
+  _reenableSuccess?: number;
+  /** Disabled-connection re-enable attempts recorded this generation. */
+  _reenableAttempts?: number;
   /** Optional cleanup hook. */
   clear?: () => void;
   /** Optional mutate hook. */

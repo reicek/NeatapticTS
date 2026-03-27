@@ -231,7 +231,7 @@ export async function spawnFromParent(
     }
   }
 
-  // Step 6: Invalidate any cached compatibility / distance metrics tied to the genome.
+  // Step 6: Invalidate cached compatibility / distance metrics tied to the genome.
   internal._invalidateGenomeCaches?.(clone);
   return clone;
 }
@@ -279,7 +279,7 @@ export function addGenome(
     genome._reenableProb = internal.options.reenableProb;
     genome._id = internal._nextGenomeId++;
 
-    // Step 2: Copy lineage from provided parent IDs (if any).
+    // Step 2: Copy lineage from provided parent IDs when present.
     genome._parents = Array.isArray(parents) ? parents.slice() : [];
     genome._depth = 0;
     if (genome._parents.length) {

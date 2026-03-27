@@ -182,3 +182,23 @@ Parameters:
 - `dynamicConfig` - - Dynamic objective config.
 
 Returns: void.
+
+### createEntropyAccessor
+
+```ts
+createEntropyAccessor(
+  internal: NeatControllerForEvolution,
+): (genome: GenomeWithMetadata) => number
+```
+
+Build the entropy accessor used by dynamic objective scheduling.
+
+The evolve controller already advertises `_structuralEntropy` as an optional
+hook. This helper centralizes the non-null assertion so the scheduling logic
+can stay declarative while preserving the existing expectation that entropy
+scheduling only makes sense on hosts exposing that hook.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: Accessor that reads structural entropy from one genome.

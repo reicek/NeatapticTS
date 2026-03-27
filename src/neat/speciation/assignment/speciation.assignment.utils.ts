@@ -78,7 +78,7 @@ import {
  * flowchart LR
  *   Genome[Incoming genome]
  *   Compare[Compare against current representatives]
- *   Compatible{Any distance below\ncompatibility threshold?}
+ *   Compatible{Distance below\ncompatibility threshold?}
  *   Existing[Append to matching species]
  *   New[Create new species]
  *   Continue[Continue assignment walk]
@@ -252,7 +252,7 @@ function findCompatibleSpecies<
 /**
  * Create a new species for the provided genome.
  *
- * New species creation is the explicit fallback for genomes that do not fit any
+ * New species creation is the explicit fallback for genomes that do not fit an
  * current representative. The helper allocates a fresh species id, seeds the
  * first member and representative from the incoming genome, initializes the
  * best-score view for later stagnation logic, and records the creation

@@ -1,8 +1,15 @@
 /**
- * Shared contracts for the ASCII maze evolution engine state boundary.
+ * Shared contracts for the ASCII Maze evolution engine subsystem.
  *
- * This file owns the exported type surface consumed by the engine-state facade,
- * telemetry helpers, sampling utilities, and RNG/timing adapters.
+ * The `evolutionEngine/` folder is where the public `EvolutionEngine` facade
+ * fans out into the lower-level machinery that keeps long maze runs practical:
+ * pooled scratch state, deterministic RNG caches, telemetry workspaces,
+ * sampling helpers, warm-start support, and population-level recovery logic.
+ *
+ * This file is the common footing for that subsystem. It defines the shared
+ * state and scratch-buffer contracts that let the rest of the engine stay
+ * allocation-light and orchestration-first instead of passing dozens of loose
+ * arrays and counters through every hot-path helper.
  */
 
 /**

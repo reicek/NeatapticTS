@@ -27,7 +27,7 @@ The final helpers explain where the new node and edges land in the genome.
 
 ```mermaid
 flowchart TD
-  Seed[Genome enters add-node path] --> Bootstrap{Any connection to split?}
+  Seed[Genome enters add-node path] --> Bootstrap{Connection available to split?}
   Bootstrap -->|no| Connect[Seed one input to output edge]
   Bootstrap -->|yes| Enabled[Collect enabled connections]
   Connect --> Enabled

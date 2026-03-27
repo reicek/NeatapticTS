@@ -66,7 +66,7 @@ import type Network from '../../architecture/network/network';
 import * as methods from '../../methods/methods';
 import { selection as selectionMethods } from '../../methods/selection/selection';
 
-interface NeatConstructorDefaults {
+export interface NeatConstructorDefaults {
   populationSize: number;
   elitism: number;
   provenance: number;
@@ -148,7 +148,7 @@ interface NeatInitializationOptions {
  * Keeping the contract narrow prevents the init chapter from quietly becoming a
  * second facade.
  */
-interface NeatInitializationHost {
+export interface NeatInitializationHost {
   options: NeatInitializationOptions;
   population: Network[];
   _lineageEnabled: boolean;
@@ -177,7 +177,7 @@ interface NeatInitializationHost {
  * checks that should not be default-inflated, and `defaults` supplies the
  * public baseline constants exported by the surrounding NEAT surface.
  */
-interface InitializeNeatConstructorRequest {
+export interface InitializeNeatConstructorRequest {
   optionBag: NeatInitializationOptions;
   rawOptions: NeatInitializationOptions;
   defaults: NeatConstructorDefaults;

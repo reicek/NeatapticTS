@@ -202,7 +202,7 @@ isCandidateDominatedByObjective(
 
 Checks if the candidate is worse than the opponent for a single objective.
 
-For dominance, being worse on any objective makes the candidate unable to
+For dominance, being worse on one objective makes the candidate unable to
 dominate the opponent.
 
 Parameters:
@@ -226,7 +226,7 @@ Checks if the candidate is strictly better than the opponent for a single
 objective.
 
 Strict improvement in at least one objective is required for Pareto
-dominance when the candidate is not worse in any objective.
+dominance when the candidate is not worse on a single objective.
 
 Parameters:
 - `direction` - - Objective direction.
@@ -244,7 +244,7 @@ updateStrictImprovement(
 ): boolean
 ```
 
-Accumulates whether the candidate has any strict improvement across
+Accumulates whether the candidate has a strict improvement across
 objectives.
 
 Parameters:
@@ -417,7 +417,7 @@ Determines whether a candidate has zero domination count.
 
 A zero count means the current row survived every pairwise comparison without
 finding a dominating opponent, which is exactly the criterion for first-front
-membership before any frontier peeling begins.
+membership before frontier peeling begins.
 
 Parameters:
 - `dominanceState` - - Dominance bookkeeping.

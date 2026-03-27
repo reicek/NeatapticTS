@@ -28,6 +28,7 @@ import {
   getPerformanceStatsSnapshot,
 } from '../../accessors/telemetry.accessors';
 import type { DiversityStats } from '../../../diversity/diversity';
+import { buildEmptyDiversityStats as buildEmptyRuntimeDiversityStats } from '../../../diversity/diversity';
 
 /**
  * Narrow telemetry-facade host surface required by the runtime-metrics chapter.
@@ -77,7 +78,7 @@ export function getPerformanceStats(host: TelemetryFacadeRuntimeHost) {
  * The helper follows a conservative fallback ladder:
  *
  * 1. return the live cached diversity snapshot when it exists,
- * 2. otherwise try the shared accessor for any retained cached value,
+ * 2. otherwise try the shared accessor for a retained cached value,
  * 3. otherwise synthesize an empty-but-safe snapshot sized to the current population.
  *
  * @param host - `Neat` instance exposing cached diversity state.
@@ -98,20 +99,6 @@ export function getDiversityStats(
 
   return (
     getCachedDiversityStats(host) ??
-    buildEmptyDiversityStats(host.population.length)
+    buildEmptyRuntimeDiversityStats(host.population.length)
   );
-}
-
-function buildEmptyDiversityStats(populationSize: number): DiversityStats {
-  return {
-    lineageMeanDepth: 0,
-    lineageMeanPairDist: 0,
-    meanNodes: 0,
-    meanConns: 0,
-    nodeVar: 0,
-    connVar: 0,
-    meanCompat: 0,
-    graphletEntropy: 0,
-    population: populationSize,
-  };
 }

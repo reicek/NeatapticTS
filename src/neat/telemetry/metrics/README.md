@@ -200,7 +200,7 @@ safelyApplyTelemetrySelect(
 ): void
 ```
 
-Apply telemetry selection while swallowing any selection errors.
+Apply telemetry selection while swallowing selection errors.
 
 Parameters:
 - `telemetryContext` - - Neat-like context with telemetry selection.
@@ -1408,7 +1408,7 @@ safelyApplyTelemetrySelect(
 ): void
 ```
 
-Apply telemetry selection while swallowing any selection errors.
+Apply telemetry selection while swallowing selection errors.
 
 Parameters:
 - `telemetryContext` - - Neat-like context with telemetry selection.

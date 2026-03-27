@@ -269,7 +269,7 @@ Returns: A function that calculates the decayed learning rate for a given iterat
 ## methods/rate/rate.utils.ts
 
 Learning rate schedule signature that maps a base rate and iteration index to a rate value.
-Useful for any stateless schedule strategy.
+Useful for each stateless schedule strategy.
 
 ### createFixedRateSchedule
 
@@ -410,7 +410,7 @@ RateSchedule(
 ```
 
 Learning rate schedule signature that maps a base rate and iteration index to a rate value.
-Useful for any stateless schedule strategy.
+Useful for each stateless schedule strategy.
 
 ### ReduceOnPlateauSchedule
 

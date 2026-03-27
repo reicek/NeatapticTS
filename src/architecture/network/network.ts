@@ -20,8 +20,6 @@
 import Node from '../node/node';
 import Layer from '../layer/layer';
 import Connection from '../connection/connection';
-import * as methods from '../../methods/methods';
-import { config } from '../../config';
 import type { ActivationArray } from '../activationArrayPool/activationArrayPool';
 import {
   bootstrapNetwork,
@@ -139,7 +137,7 @@ import type {
  * const net = new Network(4, 2);           // create network
  * const out = net.activate([0.1,0.3,0.2,0.9]);
  * net.addNodeBetween();                    // structural mutation
- * const slab = (net as any).getConnectionSlab(); // inspect packed arrays
+ * const slab = net.getConnectionSlab(); // inspect packed arrays
  * const clone = net.clone();               // deep copy
  * ```
  *
@@ -341,8 +339,8 @@ export default class Network implements NetworkView {
   }
 
   /**
-    * @internal
-    * Check if fast-slab activation can be used.
+   * @internal
+   * Check if fast-slab activation can be used.
    *
    * @param training Whether training mode is active.
    * @returns True when fast-slab activation can be used.
@@ -352,8 +350,8 @@ export default class Network implements NetworkView {
   }
 
   /**
-    * @internal
-    * Execute the fast slab activation path.
+   * @internal
+   * Execute the fast slab activation path.
    *
    * @param input Input vector.
    * @returns Activation output.
@@ -363,8 +361,8 @@ export default class Network implements NetworkView {
   }
 
   /**
-    * @internal
-    * Recompute and cache topological node ordering.
+   * @internal
+   * Recompute and cache topological node ordering.
    *
    * @returns Topological order payload from the delegate.
    */
@@ -373,8 +371,8 @@ export default class Network implements NetworkView {
   }
 
   /**
-    * @internal
-    * Check whether a directed path exists between two nodes.
+   * @internal
+   * Check whether a directed path exists between two nodes.
    *
    * @param from Source node.
    * @param to Target node.
@@ -385,8 +383,8 @@ export default class Network implements NetworkView {
   }
 
   /**
-    * @internal
-    * Apply scheduled pruning if current iteration matches pruning policy.
+   * @internal
+   * Apply scheduled pruning if current iteration matches pruning policy.
    *
    * @param iteration Current training iteration.
    * @returns Delegate result for pruning attempt.
@@ -396,8 +394,8 @@ export default class Network implements NetworkView {
   }
 
   /**
-    * @internal
-    * Apply gradient clipping configuration.
+   * @internal
+   * Apply gradient clipping configuration.
    *
    * @param cfg Gradient clipping configuration.
    */
@@ -410,8 +408,8 @@ export default class Network implements NetworkView {
   }
 
   /**
-    * @internal
-    * Sample a Gaussian random value with an optional RNG.
+   * @internal
+   * Sample a Gaussian random value with an optional RNG.
    *
    * @param rng RNG function.
    * @returns Gaussian random value.
@@ -859,7 +857,7 @@ export default class Network implements NetworkView {
    * Removes a node from the network.
    * This involves:
    * 1. Disconnecting all incoming and outgoing connections associated with the node.
-   * 2. Removing any self-connections.
+   * 2. Removing self-connections.
    * 3. Removing the node from the `nodes` array.
    * 4. Attempting to reconnect the node's direct predecessors to its direct successors
    *    to maintain network flow, if possible and configured.
@@ -999,7 +997,7 @@ export default class Network implements NetworkView {
    * Creates a Network instance from serialized data produced by `serialize()`.
    * Reconstructs the network structure and state based on the provided arrays.
    *
-   * @param {any[]} data - The serialized network data array, typically obtained from `network.serialize()`.
+   * @param {unknown[]} data - The serialized network data array, typically obtained from `network.serialize()`.
    *                       Expected format: `[activations, states, squashNames, connectionData, inputSize, outputSize]`.
    * @param {number} [inputSize] - Optional input size override.
    * @param {number} [outputSize] - Optional output size override.

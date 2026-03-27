@@ -388,7 +388,7 @@ function updateStochasticDepthFromSchedule(
  * Check whether a probability vector contains values outside the (0, 1] interval.
  *
  * @param probabilities Candidate probability vector.
- * @returns True when any probability is invalid.
+ * @returns True when one or more probabilities are invalid.
  */
 function containsInvalidProbability(probabilities: number[]): boolean {
   for (const probability of probabilities) {

@@ -73,7 +73,7 @@ const DEFAULT_MUTATION_AMOUNT = 1;
  * the flow.
  *
  * Each loop iteration captures a before-snapshot, applies one operator,
- * performs any extra exploration edge, and finally records whether the genome
+ * performs an extra exploration edge when configured, and finally records whether the genome
  * actually grew. That final feedback is what later allows operator adaptation
  * and bandit-style policies to reward operators that change structure instead
  * of merely consuming attempts.
@@ -235,7 +235,7 @@ export function shouldMutateGenome(
 }
 
 /**
- * Select a concrete mutation method, resolving any legacy arrays.
+ * Select a concrete mutation method, resolving legacy arrays when present.
  *
  * The selection boundary may already return one final operator, or it may
  * return a legacy array-like pool for backward-compatible paths. This helper is

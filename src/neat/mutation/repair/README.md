@@ -161,7 +161,7 @@ hasOutgoingForDeadEnds(
 ): boolean
 ```
 
-Check whether a node has any outgoing connections.
+Check whether a node has outgoing connections.
 
 Dead-end repair uses this as the smallest possible structural predicate: if
 the outgoing list is empty, the node cannot currently send signal forward.
@@ -179,10 +179,10 @@ hasIncomingForDeadEnds(
 ): boolean
 ```
 
-Check whether a node has any incoming connections.
+Check whether a node has incoming connections.
 
 This is the inbound twin of {@link hasOutgoingForDeadEnds}. It answers the
-local question "can any upstream node currently reach this one?" before the
+local question "can an upstream node currently reach this one?" before the
 higher-level repair helpers decide whether to reconnect it.
 
 Parameters:

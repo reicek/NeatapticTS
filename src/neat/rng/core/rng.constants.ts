@@ -39,6 +39,6 @@ export const RNG_NORMALIZATION_DIVISOR = 0xffffffff;
  *
  * The offset keeps empty or tiny populations from collapsing the derived seed
  * toward zero too easily during initialization. It exists to stabilize the
- * fallback path, not to encode any meaningful NEAT population heuristic.
+ * fallback path, not to encode a meaningful NEAT population heuristic.
  */
 export const RNG_POPULATION_OFFSET = 1;

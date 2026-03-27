@@ -6,7 +6,7 @@
  * learning rate change. The `methods/` folder defines the small vocabulary of
  * choices those higher-level chapters reuse.
  *
- * That boundary matters because these exports are intentionally broader than any
+ * That boundary matters because these exports are intentionally broader than a single
  * one subsystem:
  *
  * - `Activation` shapes how nodes transform signals,

@@ -176,3 +176,13 @@ Parameters:
 - `internal` - - NEAT controller instance.
 
 Returns: A detached best-network snapshot for the current generation.
+
+### resolveHighResolutionNow
+
+```ts
+resolveHighResolutionNow(): (() => number) | undefined
+```
+
+Resolve a high-resolution timer callback when the runtime exposes one.
+
+Returns: Timer callback or `undefined` when only wall-clock time is available.

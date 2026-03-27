@@ -267,7 +267,7 @@ export default class Node {
     }
     // Store previous state for recurrent feedback
     this.old = this.state;
-    // Start with bias plus any self recurrent contribution
+    // Start with bias plus the self-recurrent contribution, when present.
     let newState = this.bias;
     if (this.connections.self.length) {
       for (const conn of this.connections.self) {
@@ -981,7 +981,7 @@ export default class Node {
   /**
    * Applies accumulated batch updates to incoming and self connections and this node's bias.
    * Uses momentum in a Nesterov-compatible way: currentDelta = accumulated + momentum * previousDelta.
-   * Resets accumulators after applying. Safe to call on any node type.
+   * Resets accumulators after applying. Safe to call on every node type.
    * @param momentum Momentum factor (0 to disable)
    */
   applyBatchUpdates(momentum: number): void {

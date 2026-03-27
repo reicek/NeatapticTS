@@ -50,7 +50,7 @@ Collect legal (from,to) node pairs not already connected.
 
 This helper defines the search space for connection growth. It respects the
 node ordering conventions used by the genome representation so mutation does
-not propose obviously invalid source-target directions before any later cycle
+not propose obviously invalid source-target directions before later cycle
 checks even run.
 
 Parameters:
@@ -71,7 +71,7 @@ Filter candidate pairs that already have innovation reuse keys.
 
 Reuse candidates are especially valuable because they let independently
 discovered structure share the same innovation identity. This helper pulls out
-those historically known pairs so the selection path can favor them when any
+those historically known pairs so the selection path can favor them when such pairs
 exist.
 
 Parameters:

@@ -111,7 +111,7 @@ applyBatchUpdates(
 
 Applies accumulated batch updates to incoming and self connections and this node's bias.
 Uses momentum in a Nesterov-compatible way: currentDelta = accumulated + momentum * previousDelta.
-Resets accumulators after applying. Safe to call on any node type.
+Resets accumulators after applying. Safe to call on every node type.
 
 Parameters:
 - `momentum` - Momentum factor (0 to disable)

@@ -1,6 +1,6 @@
 /**
  * Learning rate schedule signature that maps a base rate and iteration index to a rate value.
- * Useful for any stateless schedule strategy.
+ * Useful for each stateless schedule strategy.
  */
 export type RateSchedule = (baseRate: number, iteration: number) => number;
 
@@ -130,7 +130,7 @@ const MINIMUM_WARMUP_STEPS = 1;
 const MINIMUM_DECAY_STEPS = 1;
 
 /**
- * Sentinel for cooldown tracking before any reductions occur.
+ * Sentinel for cooldown tracking before reductions occur.
  */
 const INITIAL_COOLDOWN_SENTINEL = -1;
 

@@ -72,7 +72,7 @@ successful genomes perform multiple edits once they have been admitted into
 the flow.
 
 Each loop iteration captures a before-snapshot, applies one operator,
-performs any extra exploration edge, and finally records whether the genome
+performs an extra exploration edge when configured, and finally records whether the genome
 actually grew. That final feedback is what later allows operator adaptation
 and bandit-style policies to reward operators that change structure instead
 of merely consuming attempts.
@@ -190,7 +190,7 @@ selectConcreteMutationMethod(
 ): Promise<MutationMethod | null>
 ```
 
-Select a concrete mutation method, resolving any legacy arrays.
+Select a concrete mutation method, resolving legacy arrays when present.
 
 The selection boundary may already return one final operator, or it may
 return a legacy array-like pool for backward-compatible paths. This helper is

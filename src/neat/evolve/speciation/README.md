@@ -163,7 +163,7 @@ Parameters:
 - `helpers` - - Helper callbacks for stagnation injection.
 - `helpers` - - Genome builder for injection.
 
-Returns: A promise that resolves after any bounded replacements are complete.
+Returns: A promise that resolves after bounded replacements are complete.
 
 ### ensureSpeciesHistorySnapshot
 
@@ -200,7 +200,7 @@ ensureHiddenNodeVariance(
 Ensure a minimal hidden-node variance in injected genomes.
 
 Fresh stagnation-recovery genomes can otherwise collapse into the smallest
-legal topology and fail to contribute any structural novelty. This helper adds
+legal topology and fail to contribute structural novelty. This helper adds
 one conservative hidden-node bridge when the injected genome has no hidden
 layer at all, preserving the idea that rescue should re-open search space
 rather than only reshuffle minimal direct input-output paths.
@@ -210,3 +210,18 @@ Parameters:
 - `genome` - - Genome to adjust.
 
 Returns: A promise that resolves after best-effort variance injection.
+
+### buildSpeciesHistoryStats
+
+```ts
+buildSpeciesHistoryStats(
+  speciesList: SpeciesWithMetadata[],
+): { id: number; size: number; avgSharedFitness?: number | undefined; bestScore?: number | undefined; lastImproved?: number | undefined; }[]
+```
+
+Build the minimal species-history row shape used by evolve-side snapshots.
+
+Parameters:
+- `speciesList` - - Live species registry for the current generation.
+
+Returns: Summary rows aligned with the shared species history contract.

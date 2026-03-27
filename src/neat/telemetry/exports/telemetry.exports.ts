@@ -319,7 +319,7 @@ export function exportSpeciesHistoryCSV(
  *
  * Conceptually, this is where an irregular event stream becomes a table plan.
  * The rest of the CSV path is simpler because this helper commits to one export
- * shape before any row serialization starts.
+ * shape before row serialization starts.
  *
  * @param entries - Telemetry entries included in the export window.
  * @returns Flattened header discovery state.

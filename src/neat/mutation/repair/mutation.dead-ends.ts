@@ -91,7 +91,7 @@ export function ensureInputConnectivityForDeadEnds(
   },
   internal: NeatControllerForMutation,
 ): void {
-  // Step 1: connect any input node lacking outgoing edges.
+  // Step 1: connect each input node lacking outgoing edges.
   for (const inputNode of nodeGroupsToUse.inputNodes) {
     if (hasOutgoingForDeadEnds(inputNode)) continue;
 
@@ -130,7 +130,7 @@ export function ensureOutputConnectivityForDeadEnds(
   },
   internal: NeatControllerForMutation,
 ): void {
-  // Step 1: connect any output node lacking incoming edges.
+  // Step 1: connect each output node lacking incoming edges.
   for (const outputNode of nodeGroupsToUse.outputNodes) {
     if (hasIncomingForDeadEnds(outputNode)) continue;
 
@@ -241,7 +241,7 @@ export function connectIfCandidatesExistForDeadEnds(
 }
 
 /**
- * Check whether a node has any outgoing connections.
+ * Check whether a node has outgoing connections.
  *
  * Dead-end repair uses this as the smallest possible structural predicate: if
  * the outgoing list is empty, the node cannot currently send signal forward.
@@ -255,10 +255,10 @@ export function hasOutgoingForDeadEnds(node: NodeWithMetadata): boolean {
 }
 
 /**
- * Check whether a node has any incoming connections.
+ * Check whether a node has incoming connections.
  *
  * This is the inbound twin of {@link hasOutgoingForDeadEnds}. It answers the
- * local question "can any upstream node currently reach this one?" before the
+ * local question "can an upstream node currently reach this one?" before the
  * higher-level repair helpers decide whether to reconnect it.
  *
  * @param node - node to inspect

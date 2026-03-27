@@ -26,7 +26,7 @@ import type { NeatLike } from '../../shared/neat.shared.types';
  * field: the score that earlier evaluation work produced. That keeps this
  * boundary reusable across parent selection, ordering, and summary reads
  * without forcing the selection chapter to understand topology, telemetry,
- * lineage, or any other controller-owned metadata.
+ * lineage, or other controller-owned metadata.
  *
  * Keep the contract loose when you add new genome-side fields elsewhere in the
  * controller. If a selection helper can still do its job from score plus opaque

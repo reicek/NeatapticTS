@@ -99,7 +99,7 @@ noTraceActivate(
 ): number[]
 ```
 
-Perform a forward pass without creating or updating any training / gradient traces.
+Perform a forward pass without creating or updating training / gradient traces.
 
 This is the most allocation‑sensitive activation path. Internally it will attempt
 to leverage a compact "fast slab" routine (an optimized, vectorized broadcast over
@@ -242,7 +242,7 @@ executeRawActivation(
 Execute raw activation through the network delegate using a compact orchestration flow.
 
 This helper keeps the exported activation method focused on context creation while this
-module owns the execution path and any future branching behavior.
+module owns the execution path and future branching behavior.
 
 Parameters:
 - `activationContext` - - Shared raw activation state.
@@ -537,7 +537,7 @@ Check whether a probability vector contains values outside the (0, 1] interval.
 Parameters:
 - `probabilities` - Candidate probability vector.
 
-Returns: True when any probability is invalid.
+Returns: True when one or more probabilities are invalid.
 
 ### executeActivationPath
 
@@ -1295,7 +1295,7 @@ executeRawActivation(
 Execute raw activation through the network delegate using a compact orchestration flow.
 
 This helper keeps the exported activation method focused on context creation while this
-module owns the execution path and any future branching behavior.
+module owns the execution path and future branching behavior.
 
 Parameters:
 - `activationContext` - - Shared raw activation state.

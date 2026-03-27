@@ -97,7 +97,7 @@ computeMean(
 Compute the arithmetic mean of a number list.
 
 This small reducer keeps the higher-level tuning flow declarative: collect
-connection counts first, then summarize them before making any policy
+connection counts first, then summarize them before making policy
 decision.
 
 Parameters:
@@ -191,7 +191,7 @@ Bootstrap connection-variance tuning the first time the policy runs.
 The first run has no historical baseline yet, so this helper seeds the last
 observed variance and applies one deterministic coefficient nudge. That makes
 the policy immediately visible instead of waiting one extra generation before
-any coefficient change is possible.
+a coefficient change is possible.
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.

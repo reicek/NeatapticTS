@@ -234,7 +234,7 @@ comparison.
 
 ### DISTANCE_COEFF_DEFAULT
 
-Baseline structural-distance coefficient used before any automatic tuning occurs.
+Baseline structural-distance coefficient used before automatic tuning occurs.
 
 This is the neutral starting point for the structural-distance fold before variance-driven
 updates begin to reshape it.

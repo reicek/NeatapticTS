@@ -24,8 +24,9 @@ Different readers arrive with different questions. Use the route that matches yo
 | If you want to... | Start here | Then read |
 | --- | --- | --- |
 | Run a maze evolution programmatically | [evolutionEngine.ts](./evolutionEngine.ts) | [evolutionEngine/README.md](./evolutionEngine/README.md), [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) |
+| Reuse the example from code | [index.ts](./index.ts) | [evolutionEngine.ts](./evolutionEngine.ts), [mazeUtils.ts](./mazeUtils.ts), [interfaces.ts](./interfaces.ts) |
 | Understand how one agent episode works | [mazeMovement.ts](./mazeMovement.ts) | [mazeMovement/README.md](./mazeMovement/README.md), [fitness.ts](./fitness.ts) |
-| Understand the browser demo and telemetry surface | [browser-entry.ts](./browser-entry.ts) or [index.html](./index.html) | [browser-entry/README.md](./browser-entry/README.md), [dashboardManager/README.md](./dashboardManager/README.md) |
+| Understand the browser demo and telemetry surface | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts) or [index.html](./index.html) | [browser-entry.ts](./browser-entry.ts), [browser-entry/README.md](./browser-entry/README.md), [dashboardManager/README.md](./dashboardManager/README.md) |
 | Tune reward shaping or progress semantics | [fitness.ts](./fitness.ts) | [mazeMovement/README.md](./mazeMovement/README.md), [mazeUtils.ts](./mazeUtils.ts) |
 | Change curriculum, warm-start, or evolution policy | [evolutionEngine/README.md](./evolutionEngine/README.md) | [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) |
 | Understand the whole example as a system | this README | the module READMEs listed in [Recommended Reading Order](#recommended-reading-order) |
@@ -43,6 +44,12 @@ npm run start:local-server
 Then open:
 
 - `http://localhost:8080/test/examples/asciiMaze/index.html`
+
+Important note:
+
+- `index.html` is a lightweight browser shell that loads the prebuilt demo bundle from `docs/assets`.
+- if you want the real host orchestration source, start with [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts).
+- after browser-code changes, run `npm run docs` or `npm run build:ascii-maze` before expecting the hosted page to reflect them.
 
 ### Run the curriculum-style end-to-end example with logs
 

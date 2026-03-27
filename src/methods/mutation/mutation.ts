@@ -4,7 +4,7 @@ import Activation from '../activation/activation';
  * Configuration shape for one mutation operator.
  *
  * Each mutation method carries a small policy object describing what kind of
- * structural or parametric change it performs and any narrow knobs that shape
+ * structural or parametric change it performs and the narrow knobs that shape
  * that change. Read the fields as metadata for the evolutionary controller,
  * not as a full runtime implementation.
  */

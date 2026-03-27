@@ -109,7 +109,11 @@ export function enableWeightNoise(
     );
   }
 
-  if (configuration.perHiddenLayer.some((standardDeviation) => standardDeviation < 0)) {
+  if (
+    configuration.perHiddenLayer.some(
+      (standardDeviation) => standardDeviation < 0,
+    )
+  ) {
     throw new Error('Weight noise std devs must be >= 0');
   }
 
@@ -262,7 +266,12 @@ export function setStochasticDepth(
     throw new Error('survival must be an array');
   }
 
-  if (survivalProbabilities.some((survivalProbability) => survivalProbability <= 0 || survivalProbability > 1)) {
+  if (
+    survivalProbabilities.some(
+      (survivalProbability) =>
+        survivalProbability <= 0 || survivalProbability > 1,
+    )
+  ) {
     throw new Error('Stochastic depth survival probs must be in (0,1]');
   }
 

@@ -489,7 +489,7 @@ export interface SpeciesLike {
   members: GenomeDetailed[] | GenomeLike[];
 
   /**
-   * Best fitness achieved by any member so far.
+   * Best fitness achieved by a member so far.
    */
   bestScore?: number;
 
@@ -929,7 +929,7 @@ export interface TelemetryEntry {
  *
  * @property id Species identifier.
  * @property size Number of genomes presently in the species.
- * @property bestScore Best fitness achieved by any member so far.
+ * @property bestScore Best fitness achieved by a member so far.
  * @property lastImproved Generations since last improvement (0 = improved this gen).
  */
 export interface SpeciesHistoryStat {
@@ -937,7 +937,7 @@ export interface SpeciesHistoryStat {
   id: number;
   /** Number of genomes presently in the species. */
   size: number;
-  /** Best fitness achieved by any member so far. */
+  /** Best fitness achieved by a member so far. */
   bestScore: number;
   /** Generations since last improvement (0 = improved this generation). */
   lastImproved: number;

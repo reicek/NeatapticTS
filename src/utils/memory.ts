@@ -143,7 +143,7 @@ export interface MemoryStats {
 
 /** Minimal view of a network used for memory heuristics. Only properties
  * accessed by this module are declared. This keeps coupling light while
- * enabling typed local variables instead of `any` everywhere. */
+ * enabling typed local variables instead of loose catch-all types everywhere. */
 export interface NetworkView {
   connections?: unknown[];
   nodes?: unknown[];

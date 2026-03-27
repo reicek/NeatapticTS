@@ -312,7 +312,7 @@ function buildOffspringNodes(
  * @param parentMetrics - Parent metrics.
  * @param equal - Equal-treatment mode.
  * @param randomGenerator - Random generator.
- * @returns Selected parent node gene, if any.
+ * @returns Selected parent node gene, when present.
  */
 function selectNodeGeneAtIndex(
   nodeIndex: number,

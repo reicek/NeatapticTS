@@ -1,11 +1,3 @@
-/*
- * ESLint configuration for intentional `any` usage in NEAT evolution runtime utils
- *
- * This file mirrors the evolution module's runtime metadata handling,
- * where dynamic properties are attached to genomes/species at runtime.
- */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import Network from '../../../architecture/network/network';
 import type { NeatControllerForEvolution } from '../evolve.types';
 
@@ -59,12 +51,8 @@ import type { NeatControllerForEvolution } from '../evolve.types';
  */
 export function resolveStartTime(): number {
   // Step 1: Prefer high-resolution timer when available.
-  if (
-    typeof performance !== 'undefined' &&
-    typeof (performance as unknown as { now?: () => number }).now === 'function'
-  ) {
-    return (performance as unknown as { now: () => number }).now();
-  }
+  const highResolutionNow = resolveHighResolutionNow();
+  if (highResolutionNow) return highResolutionNow();
   // Step 2: Fall back to wall-clock time.
   return Date.now();
 }
@@ -159,10 +147,8 @@ export function trackGlobalImprovement(
  */
 export function computeElapsedTime(startTimestamp: number): number {
   // Step 1: Resolve end time.
-  const endTime =
-    typeof performance !== 'undefined' && (performance as any).now
-      ? (performance as any).now()
-      : Date.now();
+  const highResolutionNow = resolveHighResolutionNow();
+  const endTime = highResolutionNow ? highResolutionNow() : Date.now();
   // Step 2: Return delta.
   return endTime - startTimestamp;
 }
@@ -182,7 +168,9 @@ export function clearPopulationScores(
   internal: NeatControllerForEvolution,
 ): void {
   // Step 1: Reset scores across the population.
-  internal.population.forEach((genome: any) => (genome.score = undefined));
+  internal.population.forEach((genome) => {
+    genome.score = undefined;
+  });
 }
 
 /**
@@ -209,4 +197,19 @@ export function buildFittestSnapshot(
     : new Network(internal.input, internal.output);
   cloned.score = firstGenome?.score;
   return cloned;
+}
+
+/**
+ * Resolve a high-resolution timer callback when the runtime exposes one.
+ *
+ * @returns Timer callback or `undefined` when only wall-clock time is available.
+ */
+function resolveHighResolutionNow(): (() => number) | undefined {
+  // Step 1: Read the global performance object without assuming browser-only runtime.
+  const performanceApi = globalThis.performance;
+  if (typeof performanceApi?.now === 'function') {
+    return performanceApi.now.bind(performanceApi);
+  }
+  // Step 2: Fall back to wall-clock timing in the caller.
+  return undefined;
 }

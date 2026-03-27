@@ -40,7 +40,7 @@ const DEFAULT_INNOVATION_ID = 0;
  *
  * ```mermaid
  * flowchart TD
- *   Seed[Genome enters add-node path] --> Bootstrap{Any connection to split?}
+ *   Seed[Genome enters add-node path] --> Bootstrap{Connection available to split?}
  *   Bootstrap -->|no| Connect[Seed one input to output edge]
  *   Bootstrap -->|yes| Enabled[Collect enabled connections]
  *   Connect --> Enabled
@@ -73,7 +73,7 @@ export function ensureBootstrapConnection(
 ): void {
   void internal;
 
-  // Step 1: return when any connections exist.
+  // Step 1: return when connections already exist.
   if (genomeToSeed.connections.length > 0) return;
 
   // Step 2: find the first input and output nodes.

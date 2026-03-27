@@ -44,7 +44,7 @@ import {
  * and lightweight population context, but they do not need mutation, selection,
  * or telemetry internals.
  */
-export interface NeatRngFacadeHost extends RngHost {}
+export type NeatRngFacadeHost = RngHost;
 
 /**
  * Return the current opaque RNG numeric state used by the instance.

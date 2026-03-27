@@ -31,15 +31,6 @@
  * ```
  */
 
-/*
- * ESLint configuration for intentional `any` usage in the multi-objective
- * evolution-policy chapter.
- *
- * This file mirrors the evolution module's runtime metadata handling, where
- * dynamic properties are attached to genomes/species at runtime.
- */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // Keep the chapter introduction separate from the first exported symbol JSDoc.
 
 import { fastNonDominated } from '../multiobjective';
@@ -276,8 +267,8 @@ function recordParetoArchives(
   // Step 1: Exit if no fronts exist.
   if (!paretoFronts.length) return;
   const firstFront = paretoFronts[0];
-  const snapshot = firstFront.map((genome: any) => ({
-    id: (genome as any)._id ?? -1,
+  const snapshot = firstFront.map((genome) => ({
+    id: genome._id ?? -1,
     score: genome.score || 0,
     nodes: genome.nodes.length,
     connections: genome.connections.length,
@@ -291,11 +282,9 @@ function recordParetoArchives(
     internal._paretoArchive.shift();
   // Step 2: Record objective vectors if requested.
   if (objectives.length) {
-    const vectors = firstFront.map((genome: any) => ({
-      id: (genome as any)._id ?? -1,
-      values: (objectives as any[]).map((objective: any) =>
-        objective.accessor(genome),
-      ),
+    const vectors = firstFront.map((genome) => ({
+      id: genome._id ?? -1,
+      values: objectives.map((objective) => objective.accessor(genome)),
     }));
     internal._paretoObjectivesArchive.push({
       gen: internal.generation,
@@ -430,8 +419,8 @@ function pruneInactiveObjectives(
   if (toRemove.length && internal.options.multiObjective?.objectives) {
     internal.options.multiObjective.objectives =
       internal.options.multiObjective.objectives.filter(
-        (objective: any) => !toRemove.includes(objective.key),
+        (objective) => !toRemove.includes(objective.key),
       );
-    internal._objectivesList = undefined as any;
+    internal._objectivesList = undefined;
   }
 }

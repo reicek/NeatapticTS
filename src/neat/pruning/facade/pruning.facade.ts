@@ -51,7 +51,7 @@ import type { NeatLikeForPruning } from '../core/pruning.types';
  * Read this seam as the minimum public bridge: enough controller state to reach
  * pruning safely, but not enough to teach the internal pruning policies here.
  */
-export interface NeatPruningFacadeHost extends NeatLikeForPruning {}
+export type NeatPruningFacadeHost = NeatLikeForPruning;
 
 /**
  * Apply evolution-time pruning through the stable public `Neat` facade.

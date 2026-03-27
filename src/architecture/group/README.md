@@ -106,8 +106,8 @@ Returns: All connection objects created during this wiring step.
 #### connections
 
 Stores connection information related to this group.
-`in`: Connections coming into any node in this group from outside.
-`out`: Connections going out from any node in this group to outside.
+`in`: Connections coming into nodes in this group from outside.
+`out`: Connections going out from nodes in this group to outside.
 `self`: Connections between nodes within this same group.
 
 #### disconnect

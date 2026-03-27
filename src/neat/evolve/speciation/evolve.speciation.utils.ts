@@ -1,16 +1,14 @@
-/*
- * ESLint configuration for intentional `any` usage in NEAT evolution speciation utils
- *
- * This file mirrors the evolution module's runtime metadata handling,
- * where dynamic properties are attached to genomes/species at runtime.
- */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import Network from '../../../architecture/network/network';
 import type {
   GenomeWithMetadata,
   NeatControllerForEvolution,
+  SpeciesHistoryRecord,
+  SpeciesWithMetadata,
 } from '../evolve.types';
+
+type GenomeNodeWithType = {
+  type?: string;
+};
 
 /**
  * The evolve-time speciation bridge keeps the ranked generation coherent before
@@ -142,7 +140,7 @@ export async function buildFreshGenomeForStagnation(
  * Ensure a minimal hidden-node variance in injected genomes.
  *
  * Fresh stagnation-recovery genomes can otherwise collapse into the smallest
- * legal topology and fail to contribute any structural novelty. This helper adds
+ * legal topology and fail to contribute structural novelty. This helper adds
  * one conservative hidden-node bridge when the injected genome has no hidden
  * layer at all, preserving the idea that rescue should re-open search space
  * rather than only reshuffle minimal direct input-output paths.
@@ -156,18 +154,17 @@ async function ensureHiddenNodeVariance(
   genome: GenomeWithMetadata,
 ): Promise<void> {
   // Step 1: Check hidden node count.
-  const hiddenCount = genome.nodes.filter(
-    (node: any) => node.type === 'hidden',
+  const genomeNodes = genome.nodes as GenomeNodeWithType[];
+  const hiddenCount = genomeNodes.filter(
+    (node) => node.type === 'hidden',
   ).length;
   if (hiddenCount !== 0) return;
   // Step 2: Insert a hidden node and connect it.
   const { default: NodeCls } = await import('../../../architecture/node');
   const newNode = new NodeCls('hidden');
   genome.nodes.splice(genome.nodes.length - internal.output, 0, newNode);
-  const inputNodes = genome.nodes.filter((node: any) => node.type === 'input');
-  const outputNodes = genome.nodes.filter(
-    (node: any) => node.type === 'output',
-  );
+  const inputNodes = genomeNodes.filter((node) => node.type === 'input');
+  const outputNodes = genomeNodes.filter((node) => node.type === 'output');
   if (!inputNodes.length || !outputNodes.length) return;
   try {
     (genome as never as Network).connect(
@@ -218,12 +215,7 @@ export function recordSpeciesHistorySnapshot(
     ) {
       internal._speciesHistory.push({
         generation: internal.generation,
-        stats: (internal._species ?? []).map((species: any) => ({
-          id: species.id,
-          size: species.members.length,
-          best: species.bestScore,
-          lastImproved: species.lastImproved,
-        })),
+        stats: buildSpeciesHistoryStats(internal._species ?? []),
       });
       if (internal._speciesHistory.length > maxHistory)
         internal._speciesHistory.shift();
@@ -272,7 +264,7 @@ export function updateSpeciesStagnationIfEnabled(
  * @param internal - NEAT controller instance.
  * @param helpers - Helper callbacks for stagnation injection.
  * @param helpers.buildFreshGenomeForStagnation - Genome builder for injection.
- * @returns A promise that resolves after any bounded replacements are complete.
+ * @returns A promise that resolves after bounded replacements are complete.
  */
 export async function applyGlobalStagnationInjectionIfNeeded(
   internal: NeatControllerForEvolution,
@@ -337,12 +329,7 @@ export function ensureSpeciesHistorySnapshot(
     ) {
       internal._speciesHistory.push({
         generation: internal.generation,
-        stats: (internal._species ?? []).map((species: any) => ({
-          id: species.id,
-          size: species.members.length,
-          best: species.bestScore,
-          lastImproved: species.lastImproved,
-        })),
+        stats: buildSpeciesHistoryStats(internal._species ?? []),
       });
       if (internal._speciesHistory.length > maxHistory)
         internal._speciesHistory.shift();
@@ -350,4 +337,23 @@ export function ensureSpeciesHistorySnapshot(
   } catch {
     // Empty catch: species history tracking is optional telemetry.
   }
+}
+
+/**
+ * Build the minimal species-history row shape used by evolve-side snapshots.
+ *
+ * @param speciesList - Live species registry for the current generation.
+ * @returns Summary rows aligned with the shared species history contract.
+ */
+function buildSpeciesHistoryStats(
+  speciesList: SpeciesWithMetadata[],
+): SpeciesHistoryRecord['stats'] {
+  // Step 1: Project the live registry into the export-friendly summary shape.
+  return speciesList.map((species) => ({
+    id: species.id,
+    size: species.members.length,
+    avgSharedFitness: species.avgSharedFitness,
+    bestScore: species.bestScore,
+    lastImproved: species.lastImproved,
+  }));
 }

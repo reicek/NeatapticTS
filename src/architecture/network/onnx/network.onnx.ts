@@ -29,7 +29,7 @@
  *
  * Trust boundary:
  * - Treat imported models as **untrusted input**. The importer validates structure, but
- *   you should still apply the same care you would for any JSON payload.
+ *   you should still apply the same care you would for a generic JSON payload.
  *
  * Example (export → persist → import):
  *
@@ -46,9 +46,7 @@
 
 import type Network from '../../network/network';
 import { runOnnxExportFlow, runOnnxImportFlow } from './network.onnx.utils';
-import type {
-  OnnxExportOptions,
-} from './network.onnx.utils.types';
+import type { OnnxExportOptions } from './network.onnx.utils.types';
 import type {
   Conv2DMapping,
   OnnxModel,
@@ -168,7 +166,7 @@ export function importFromONNX(onnx: OnnxModel): Network {
  *
  * Trust boundary (security)
  * -------------------------
- * Treat an `OnnxModel` like any other JSON payload: do not import untrusted blobs.
+ * Treat an `OnnxModel` like a generic JSON payload: do not import untrusted blobs.
  *
  * Common pitfalls
  * ---------------

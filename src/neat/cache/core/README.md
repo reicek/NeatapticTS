@@ -45,7 +45,7 @@ Mutation, crossover, repair, and other genome-editing helpers attach or rely
 on memoized compatibility, activation, and trace data directly on genome
 objects for speed. That optimization only works when every write path also
 respects the invalidation boundary. Once the genome changes, those memoized
-values are stale and must be removed before any later read assumes they still
+values are stale and must be removed before a later read assumes they still
 describe the current structure.
 
 Centralizing the cleanup here avoids a fragile situation where each edit path

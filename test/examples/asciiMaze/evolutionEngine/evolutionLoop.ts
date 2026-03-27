@@ -107,7 +107,6 @@ import type {
   EvolutionLoopTelemetryContext,
   EvolutionStopReason,
   LoopHelpers,
-  NetworkConnection,
   NetworkInstance,
   NetworkNode,
   NeatInstance,
@@ -1439,7 +1438,7 @@ export const runEvolutionLoop = async (
     speciesHistoryRef,
     loopHelpers,
   } = supportContext;
-  const { getNodeIndicesByType, collectHiddenToOutputConns } = loopHelpers;
+  const { getNodeIndicesByType } = loopHelpers;
 
   // State: descriptive local names improve readability for future maintainers.
   let bestNetworkSoFar: NetworkInstance | null =

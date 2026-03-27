@@ -31,7 +31,7 @@ setSeed(
 Sets deterministic randomness for a network by installing a seed-backed RNG.
 
 Overview:
-- Use this before training, mutation, or any stochastic operation when you need repeatable runs.
+- Use this before training, mutation, or stochastic operations when you need repeatable runs.
 - The same seed and operation order produce the same random sequence and reproducible outcomes.
 - This method delegates to setup utilities so behavior stays centralized across deterministic APIs.
 
@@ -195,7 +195,7 @@ Seed the internal PRNG and install a deterministic random() implementation on th
 
 Parameters:
 - `this` - - Bound Network instance.
-- `seed` - - Any finite number; only its lower 32 bits are used.
+- `seed` - - A finite number; only its lower 32 bits are used.
 
 Returns: Nothing.
 
@@ -335,7 +335,7 @@ Explicitly set (override) the internal 32-bit RNG state without changing the gen
 
 Parameters:
 - `this` - - Bound Network instance.
-- `state` - - Any finite number (only low 32 bits used). Ignored if not numeric.
+- `state` - - A finite number (only low 32 bits used). Ignored when non-numeric.
 
 Returns: Nothing.
 

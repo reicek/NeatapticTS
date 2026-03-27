@@ -280,7 +280,7 @@ export default class Architect {
    * @param layerArgs Layer sizes plus an optional trailing options object.
    * @returns The constructed LSTM network.
    * @throws {Error} If fewer than three numerical layer sizes are provided.
-   * @throws {Error} If any layer size is not a positive finite number.
+   * @throws {Error} If one or more layer sizes are not positive finite numbers.
    */
   static lstm(...layerArgs: (number | { inputToOutput?: boolean })[]): Network {
     let options: { inputToOutput?: boolean } = {};

@@ -51,7 +51,7 @@ Apply adaptive complexity controllers if available.
 
 This helper is the evolve bridge into the root adaptive complexity policies.
 It keeps both optional calls together because they rewrite controller-level
-structure policy rather than any single genome: budget scheduling can change
+structure policy rather than one single genome: budget scheduling can change
 allowed network size, and phased complexity can flip the controller between
 growth and simplification modes.
 
@@ -166,7 +166,7 @@ invalidateCompatibilityCaches(
 
 Invalidate compatibility caches after mutations.
 
-Structural mutation can make any cached compatibility comparison stale.
+Structural mutation can make cached compatibility comparisons stale.
 Clearing those caches here ensures later speciation and distance reads are
 recomputed from the post-mutation topology instead of reusing scores from the
 previous generation.

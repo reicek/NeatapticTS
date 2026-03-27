@@ -30,7 +30,7 @@ The wrapper surface naturally falls into three pairs:
 
 ```ts
 snapshotRNGState(
-  host: NeatRngFacadeHost,
+  host: RngHost,
 ): number | undefined
 ```
 
@@ -52,7 +52,7 @@ Returns: Numeric RNG state or `undefined` when the RNG has not been initialized.
 
 ```ts
 restoreRNGState(
-  host: NeatRngFacadeHost,
+  host: RngHost,
   state: string | number | undefined,
 ): void
 ```
@@ -76,7 +76,7 @@ Returns: Nothing. The helper mutates the host RNG state in place.
 
 ```ts
 importRNGState(
-  host: NeatRngFacadeHost,
+  host: RngHost,
   state: string | number | undefined,
 ): void
 ```
@@ -99,7 +99,7 @@ Returns: Nothing. The helper mutates the host RNG state in place.
 
 ```ts
 exportRNGState(
-  host: NeatRngFacadeHost,
+  host: RngHost,
 ): number | undefined
 ```
 
@@ -119,7 +119,7 @@ Returns: Numeric RNG state or `undefined` when the RNG has not been initialized.
 
 ```ts
 sampleRandom(
-  host: NeatRngFacadeHost,
+  host: RngHost,
   sampleCount: number,
 ): number[]
 ```

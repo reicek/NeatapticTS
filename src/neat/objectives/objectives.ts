@@ -17,7 +17,7 @@ import type { NeatLikeWithObjectives } from './core/objectives.types';
  * Objective management is the layer that decides what "better" means during a
  * run. In the simplest case that means the default fitness score. In a richer
  * multi-objective run it can also mean novelty, diversity, complexity, energy
- * use, or any other measurable trait a caller wants to optimize or constrain.
+ * use, or another measurable trait a caller wants to optimize or constrain.
  *
  * The root chapter keeps the public API small so those responsibilities stay
  * easy to understand:
@@ -137,7 +137,7 @@ export function registerObjective(
   // Step 2: Ensure the registered objectives list exists.
   const objectivesList = ensureObjectivesList(multiObjectiveOptions);
 
-  // Step 3: Replace any existing objective with the same key.
+  // Step 3: Replace the existing objective with the same key, when present.
   multiObjectiveOptions.objectives = replaceObjectiveByKey(
     objectivesList,
     key,

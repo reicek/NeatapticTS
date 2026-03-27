@@ -554,7 +554,7 @@ remove(
 Removes a node from the network.
 This involves:
 1. Disconnecting all incoming and outgoing connections associated with the node.
-2. Removing any self-connections.
+2. Removing self-connections.
 3. Removing the node from the `nodes` array.
 4. Attempting to reconnect the node's direct predecessors to its direct successors
    to maintain network flow, if possible and configured.
@@ -865,7 +865,7 @@ noTraceActivate(
 ): number[]
 ```
 
-Perform a forward pass without creating or updating any training / gradient traces.
+Perform a forward pass without creating or updating training / gradient traces.
 
 This is the most allocation‑sensitive activation path. Internally it will attempt
 to leverage a compact "fast slab" routine (an optimized, vectorized broadcast over
@@ -985,7 +985,7 @@ Algorithm outline:
  3. For each created connection:
       a. If it's a self‑connection: either ignore (acyclic mode) or store in selfconns.
       b. Otherwise store in standard connections array.
- 4. If any connection was added, mark structural caches dirty (_topoDirty & _slabDirty) so lazy
+ 4. If at least one connection was added, mark structural caches dirty (_topoDirty & _slabDirty) so lazy
     rebuild can occur before the next forward pass.
 
 Complexity:
@@ -1060,7 +1060,7 @@ setSeed(
 Sets deterministic randomness for a network by installing a seed-backed RNG.
 
 Overview:
-- Use this before training, mutation, or any stochastic operation when you need repeatable runs.
+- Use this before training, mutation, or stochastic operations when you need repeatable runs.
 - The same seed and operation order produce the same random sequence and reproducible outcomes.
 - This method delegates to setup utilities so behavior stays centralized across deterministic APIs.
 
@@ -1628,7 +1628,7 @@ High‑performance forward pass using packed slabs + CSR adjacency.
 Fallback Conditions (auto‑detected):
  - Missing slabs / adjacency structures.
  - Topology/gating/stochastic predicates fail (see `_canUseFastSlab`).
- - Any gating present (explicit guard).
+ - Gating present, when applicable (explicit guard).
 
 Implementation Notes:
  - Reuses internal activation/state buffers to reduce per‑step allocation churn.

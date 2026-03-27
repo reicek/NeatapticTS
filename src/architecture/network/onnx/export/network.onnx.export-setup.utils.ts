@@ -287,7 +287,7 @@ function appendRecurrentGraphInput(
  * Detect whether a hidden layer contains at least one self-recurrent node.
  *
  * @param hiddenLayerNodes Hidden layer nodes.
- * @returns True when any node has a self-connection.
+ * @returns True when a node has a self-connection.
  */
 function hasLayerSelfRecurrence(hiddenLayerNodes: NeatapticNode[]): boolean {
   // Step 1: Inspect each node for one or more self-connections.

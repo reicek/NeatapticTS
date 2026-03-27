@@ -25,7 +25,7 @@ Async variant slices the population loop into microtasks to reduce long main‑t
 
 Example (inspection):
 ```ts
-const slab = (net as any).getConnectionSlab();
+const slab = net.getConnectionSlab();
 console.log('Edges', slab.used, 'Version', slab.version, 'Cap', slab.capacity);
 console.log('First weight from->to', slab.weights[0], slab.from[0], slab.to[0]);
 ```
@@ -215,7 +215,7 @@ High‑performance forward pass using packed slabs + CSR adjacency.
 Fallback Conditions (auto‑detected):
  - Missing slabs / adjacency structures.
  - Topology/gating/stochastic predicates fail (see `_canUseFastSlab`).
- - Any gating present (explicit guard).
+ - Gating present, when applicable (explicit guard).
 
 Implementation Notes:
  - Reuses internal activation/state buffers to reduce per‑step allocation churn.

@@ -10,7 +10,7 @@ Features:
      snip: |w * g| approximation (g approximated via accumulated delta stats; falls back to |w|)
  - Optional stochastic regrowth during scheduled pruning (dynamic sparse training), preserving acyclic constraints.
 
-Internal State Fields (attached to Network via `any` casting):
+Internal state fields (attached to Network through a loose internal bridge):
  - _pruningConfig: user-specified schedule & options (start, end, frequency, targetSparsity, method, regrowFraction, lastPruneIter)
  - _initialConnectionCount: baseline connection count captured outside (first training iteration)
  - _evoInitialConnCount: baseline for evolutionary pruning (first invocation of pruneToSparsity)

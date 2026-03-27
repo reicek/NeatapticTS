@@ -56,7 +56,7 @@ ensureDiversityStatsContainer(
 
 Ensure diversity statistics storage exists before tuning writes into it.
 
-Evaluation uses this as a small guardrail before any adaptive helper writes
+Evaluation uses this as a small guardrail before an adaptive helper writes
 post-score measurements. The container is created lazily so callers do not
 need to pre-seed optional diversity state during controller construction.
 
