@@ -33,6 +33,65 @@ flowchart TD
 
 ## neat/multiobjective/category/multiobjective.category.ts
 
+### adaptDominanceEpsilon
+
+```ts
+adaptDominanceEpsilon(
+  internal: NeatControllerForEvolution,
+  paretoFronts: GenomeWithMetadata[][],
+  config: { targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; },
+): void
+```
+
+Adapt dominance epsilon based on Pareto front size.
+
+This is the controller's feedback loop for keeping the leading front in a
+useful size band. If too many genomes land on the first front, epsilon grows
+so future dominance becomes stricter. If too few survive, epsilon shrinks so
+the controller relaxes back toward a broader competitive set.
+
+The cooldown gate matters because the frontier can oscillate from one
+generation to the next. Waiting a few generations between adjustments keeps
+the threshold from chattering.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `paretoFronts` - - Non-dominated fronts.
+- `config` - - Epsilon tuning constants.
+
+Returns: void.
+
+### computeCrowdingDistances
+
+```ts
+computeCrowdingDistances(
+  internal: NeatControllerForEvolution,
+  populationSnapshot: GenomeWithMetadata[],
+  paretoFronts: GenomeWithMetadata[][],
+  objectives: ObjectiveDescriptor[],
+): number[]
+```
+
+Compute crowding distances for multi-objective fronts.
+
+This helper replays the within-front spacing calculation in controller-local
+coordinates so `processMultiObjective()` can sort the live population by
+`(rank, crowding)` after fast non-dominated sorting finishes. The returned
+array is aligned with the current population order, which is why the helper
+works with front members and population indices together.
+
+Small fronts receive `Infinity` immediately because every member is an edge
+solution in that degenerate case. Larger fronts accumulate normalized
+neighbor distance objective by objective.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+- `populationSnapshot` - - Current population reference.
+- `paretoFronts` - - Non-dominated fronts.
+- `objectives` - - Active objectives.
+
+Returns: crowding distances aligned with population order.
+
 ### processMultiObjective
 
 ```ts
@@ -66,58 +125,31 @@ Parameters:
 
 Returns: Nothing. The controller is updated in place.
 
-### computeCrowdingDistances
+### pruneInactiveObjectives
 
 ```ts
-computeCrowdingDistances(
+pruneInactiveObjectives(
   internal: NeatControllerForEvolution,
-  populationSnapshot: GenomeWithMetadata[],
-  paretoFronts: GenomeWithMetadata[][],
-  objectives: ObjectiveDescriptor[],
-): number[]
-```
-
-Compute crowding distances for multi-objective fronts.
-
-This helper replays the within-front spacing calculation in controller-local
-coordinates so `processMultiObjective()` can sort the live population by
-`(rank, crowding)` after fast non-dominated sorting finishes. The returned
-array is aligned with the current population order, which is why the helper
-works with front members and population indices together.
-
-Small fronts receive `Infinity` immediately because every member is an edge
-solution in that degenerate case. Larger fronts accumulate normalized
-neighbor distance objective by objective.
-
-Parameters:
-- `internal` - - NEAT controller instance.
-- `populationSnapshot` - - Current population reference.
-- `paretoFronts` - - Non-dominated fronts.
-- `objectives` - - Active objectives.
-
-Returns: crowding distances aligned with population order.
-
-### sortPopulationByPareto
-
-```ts
-sortPopulationByPareto(
-  internal: NeatControllerForEvolution,
-  populationSnapshot: GenomeWithMetadata[],
-  crowdingDistances: number[],
+  config: { pruneWindowDefault: number; pruneRangeEpsDefault: number; },
 ): void
 ```
 
-Sort population by Pareto rank and crowding distance.
+Prune objectives that have collapsed ranges over a window.
 
-The ordering rule is lexicographic: lower `_moRank` wins first, then higher
-crowding distance wins within the same front. This keeps the live population
-aligned with NSGA-II style selection pressure while preserving one stable
-index map from the pre-sort snapshot to the later crowding write-back.
+This helper removes objectives that are no longer contributing meaningful
+discrimination across the current population. An objective is considered
+structurally inactive when its observed range stays below the configured
+epsilon for enough consecutive generations.
+
+The pruning pass is intentionally conservative:
+- protected objectives such as `fitness` and `complexity` are never removed,
+- stale counters must persist for a full window before removal,
+- objective-cache invalidation happens only after an actual removal so later
+  reads rebuild the descriptor list from the surviving objective set.
 
 Parameters:
 - `internal` - - NEAT controller instance.
-- `populationSnapshot` - - Current population reference.
-- `crowdingDistances` - - Crowding distances aligned with population order.
+- `config` - - Pruning constants.
 
 Returns: void.
 
@@ -151,58 +183,26 @@ Parameters:
 
 Returns: void.
 
-### adaptDominanceEpsilon
+### sortPopulationByPareto
 
 ```ts
-adaptDominanceEpsilon(
+sortPopulationByPareto(
   internal: NeatControllerForEvolution,
-  paretoFronts: GenomeWithMetadata[][],
-  config: { targetFrontMin: number; targetFrontUpperRatio: number; targetFrontLowerRatio: number; defaultEpsilonAdjust: number; defaultEpsilonMin: number; defaultEpsilonMax: number; defaultEpsilonCooldown: number; },
+  populationSnapshot: GenomeWithMetadata[],
+  crowdingDistances: number[],
 ): void
 ```
 
-Adapt dominance epsilon based on Pareto front size.
+Sort population by Pareto rank and crowding distance.
 
-This is the controller's feedback loop for keeping the leading front in a
-useful size band. If too many genomes land on the first front, epsilon grows
-so future dominance becomes stricter. If too few survive, epsilon shrinks so
-the controller relaxes back toward a broader competitive set.
-
-The cooldown gate matters because the frontier can oscillate from one
-generation to the next. Waiting a few generations between adjustments keeps
-the threshold from chattering.
+The ordering rule is lexicographic: lower `_moRank` wins first, then higher
+crowding distance wins within the same front. This keeps the live population
+aligned with NSGA-II style selection pressure while preserving one stable
+index map from the pre-sort snapshot to the later crowding write-back.
 
 Parameters:
 - `internal` - - NEAT controller instance.
-- `paretoFronts` - - Non-dominated fronts.
-- `config` - - Epsilon tuning constants.
-
-Returns: void.
-
-### pruneInactiveObjectives
-
-```ts
-pruneInactiveObjectives(
-  internal: NeatControllerForEvolution,
-  config: { pruneWindowDefault: number; pruneRangeEpsDefault: number; },
-): void
-```
-
-Prune objectives that have collapsed ranges over a window.
-
-This helper removes objectives that are no longer contributing meaningful
-discrimination across the current population. An objective is considered
-structurally inactive when its observed range stays below the configured
-epsilon for enough consecutive generations.
-
-The pruning pass is intentionally conservative:
-- protected objectives such as `fitness` and `complexity` are never removed,
-- stale counters must persist for a full window before removal,
-- objective-cache invalidation happens only after an actual removal so later
-  reads rebuild the descriptor list from the surviving objective set.
-
-Parameters:
-- `internal` - - NEAT controller instance.
-- `config` - - Pruning constants.
+- `populationSnapshot` - - Current population reference.
+- `crowdingDistances` - - Crowding distances aligned with population order.
 
 Returns: void.

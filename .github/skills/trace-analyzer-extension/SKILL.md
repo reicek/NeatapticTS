@@ -1,6 +1,6 @@
 ---
 name: trace-analyzer-extension
-description: 'Extend scripts/analyze-trace.ts with new rollups, comparisons, script attribution, percentiles, or deterministic report sections. Use when the existing trace analyzer cannot answer an engineering question about Chrome trace or Perfetto data.'
+description: 'Extend scripts/analyze-trace/analyze-trace.ts with new rollups, comparisons, script attribution, percentiles, or deterministic report sections. Use when the existing trace analyzer cannot answer an engineering question about Chrome trace or Perfetto data.'
 argument-hint: 'Describe the trace question, missing metric, and validation trace file.'
 user-invocable: true
 disable-model-invocation: false
@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # Trace Analyzer Extension
 
-Use this skill when an agent needs to modify `scripts/analyze-trace.ts` instead
+Use this skill when an agent needs to modify `scripts/analyze-trace/analyze-trace.ts` instead
 of only consuming its current output.
 
 ## When to Use
@@ -27,7 +27,7 @@ of only consuming its current output.
 ## Standard Workflow
 
 1. State the engineering question the current analyzer cannot answer.
-2. Read `scripts/analyze-trace.ts` before proposing a new section.
+2. Read `scripts/analyze-trace/analyze-trace.ts` before proposing a new section.
 3. Prefer extending existing helpers over adding parallel ad hoc logic.
 4. Keep output deterministic, text-first, and easy to compare across captures.
 5. Validate the new output against a real trace file from the repo.

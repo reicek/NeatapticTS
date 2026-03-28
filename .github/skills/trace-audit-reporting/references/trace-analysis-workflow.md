@@ -116,7 +116,7 @@ Use these heuristics when the trace touches evaluation or inference paths:
 
 ## When to Extend the Analyzer
 
-Modify `scripts/analyze-trace.ts` only when the existing output cannot answer a
+Modify `scripts/analyze-trace/analyze-trace.ts` only when the existing output cannot answer a
 meaningful engineering question.
 
 Good reasons to extend it:

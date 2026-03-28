@@ -25,34 +25,57 @@ Recommended reading order:
 
 Selection guide:
 
+- `plans/analyze-trace-solid-split.plans.md`: completed trace-analyzer tooling split and reopen point for future script-boundary work.
+- `plans/architecture-solid-split.plans.md`: active architecture folderization and boundary-ownership cleanup across `src/architecture`.
 - `plans/neat.plans.md`: core NEAT correctness, innovation tracking, crossover alignment, speciation invariants.
 - `plans/Roadmap.md`: dependency-aware execution order across all initiatives.
 - `plans/Architecture_Primitives_Node_Group_Layer.md`: first-class architecture-building primitives such as nodes, groups, and layers.
+- `plans/asciiMaze-typescript-repair.plans.md`: completed `asciiMaze` TypeScript repair baseline and reopen point for future diagnostics.
 - `plans/Browser_Build_and_CDN_Distribution.md`: browser packaging, CDN usage, and distribution ergonomics.
 - `plans/Construct_From_Parts_Graph_Assembly.md`: deterministic graph assembly and validated network construction from parts.
+- `plans/ES2023 migration`: repository-wide ES2023 syntax and modernization lane.
 - `plans/Evolution_Training_Interoperability_Contracts.md`: contracts between evolution workflows and gradient-based training.
+- `plans/Flappy_Bird_Folder_Documentation_Pass.md`: completed Flappy Bird folder documentation baseline and reopen point for example-docs follow-up.
+- `plans/generate-docs-solid-split.plans.md`: completed docs-generator tooling split and reopen point for future `scripts/generate-docs/` work.
 - `plans/HyperEvoDevoMorphoNEAT.md`: evo-devo and morphology-oriented research direction.
 - `plans/Interactive_Examples_and_Learning_Path.md`: runnable examples, onboarding flow, and learning-path improvements.
 - `plans/Memory_Optimization.md`: scaling, memory layout, and strategies for very large networks.
+- `plans/methods-docs.plans.md`: completed educational-docs lane for `src/methods` and reopen point for methods documentation drift.
+- `plans/methods-solid-split.plans.md`: completed structural split lane for `src/methods` and reopen point for later refactors.
+- `plans/neat-docs.plans.md`: active educational-docs lane for NEAT surfaces and generated README quality.
+- `plans/neat-test-surface-repair.plans.md`: completed NEAT public test-surface repair baseline and reopen point for future compatibility regressions.
 - `plans/Network_Visualization_Export_Schema.md`: stable export schema for visualization and inspection tooling.
 - `plans/ONNX_EXPORT_PLAN.md`: ONNX export/import architecture and rollout phases.
 - `plans/Population_Save_Resume_and_Checkpointing.md`: checkpointing, persistence, save/resume workflows.
 - `plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`: prebuilt architecture constructors and sequence-oriented builders.
+- `plans/render-docs-html-solid-split.plans.md`: completed HTML docs renderer split and reopen point for future docs-site tooling work.
 - `plans/src-no-explicit-any-cleanup.plans.md`: completed `src/` strict-typing cleanup baseline for `@typescript-eslint/no-explicit-any`, kept as the reopen point if later refactors reintroduce debt.
 - `plans/Stable_Activation_Ordering_and_Explicit_IO_Roles.md`: deterministic execution ordering and explicit input/output roles.
 - `plans/Standalone_Inference_Export.md`: dependency-free exported inference runtime.
 - `plans/Turnkey_Multithread_Evaluation_API.md`: parallel evaluation API for Node and browser workers.
+- `plans/utils-docs.plans.md`: completed educational-docs lane for `src/utils` and reopen point for later documentation drift.
 - `plans/Worker_Friendly_Network_Serialization_Fastpath.md`: fast serialization path for worker-based evaluation.
 
 Task-to-plan trigger phrases:
 
+- trace analyzer, Chrome trace, Perfetto report script, `trace:analyze`, tooling split reopen: `plans/analyze-trace-solid-split.plans.md`
+- architecture split, folderization, orchestration-first cleanup in `src/architecture`: `plans/architecture-solid-split.plans.md`
 - NEAT correctness, innovation IDs, crossover, compatibility distance, speciation: `plans/neat.plans.md`
 - roadmap, sequence, dependency order, what comes first: `plans/Roadmap.md`
 - architecture builder, layer API, node/group primitives: `plans/Architecture_Primitives_Node_Group_Layer.md`
+- asciiMaze TypeScript diagnostics, example test compile failures, reopen asciiMaze repair: `plans/asciiMaze-typescript-repair.plans.md`
 - construct from parts, graph assembly, deterministic builder: `plans/Construct_From_Parts_Graph_Assembly.md`
 - browser bundle, CDN, browser-first usage: `plans/Browser_Build_and_CDN_Distribution.md`
+- ES2023, immutable array methods, modernization pass, syntax cleanup, migration sequencing: `plans/ES2023 migration`
+- Flappy Bird docs pass, example folder documentation, generated README quality for Flappy: `plans/Flappy_Bird_Folder_Documentation_Pass.md`
+- generate-docs, folder README generation, docs.order, docs generator split: `plans/generate-docs-solid-split.plans.md`
 - ONNX, import/export interoperability: `plans/ONNX_EXPORT_PLAN.md`
+- methods docs, methods README quality, educational-docs for methods: `plans/methods-docs.plans.md`
+- methods split, `src/methods` refactor, methods folderization: `plans/methods-solid-split.plans.md`
+- NEAT docs, generated README quality, NEAT documentation lane: `plans/neat-docs.plans.md`
+- NEAT test surface, public type compatibility, root facade repair: `plans/neat-test-surface-repair.plans.md`
 - explicit any, no-explicit-any, strict typing, src lint cleanup follow-up, reopen completed cleanup lane: `plans/src-no-explicit-any-cleanup.plans.md`
+- HTML docs renderer, sidebar, Mermaid validation, docs site tooling split: `plans/render-docs-html-solid-split.plans.md`
 - visualization, schema, inspect network shape: `plans/Network_Visualization_Export_Schema.md`
 - checkpoint, resume, save population: `plans/Population_Save_Resume_and_Checkpointing.md`
 - workers, threads, parallel evaluation: `plans/Turnkey_Multithread_Evaluation_API.md`
@@ -64,6 +87,7 @@ Task-to-plan trigger phrases:
 - preconfigured models, MLP, LSTM, GRU, NARX builders: `plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
 - examples, tutorials, learning path, onboarding: `plans/Interactive_Examples_and_Learning_Path.md`
 - evo-devo, morphology, research-heavy extensions: `plans/HyperEvoDevoMorphoNEAT.md`
+- utils docs, utility README quality, educational-docs for `src/utils`: `plans/utils-docs.plans.md`
 
 Working rule:
 When a task changes code in a way that could conflict with one of these plans, mention the relevant plan in the working notes or final summary and call out any mismatch instead of silently diverging from the roadmap.

@@ -1,6 +1,6 @@
 # Analyzer Extension Workflow
 
-This reference explains how to safely extend `scripts/analyze-trace.ts` without
+This reference explains how to safely extend `scripts/analyze-trace/analyze-trace.ts` without
 turning it into a one-off debugging script.
 
 ## Start With the Question

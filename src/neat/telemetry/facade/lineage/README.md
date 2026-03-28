@@ -58,14 +58,14 @@ const lineageSnapshot = getLineageSnapshot(neat);
 console.log(lineageSnapshot.at(-1)?.parents);
 ```
 
-### TelemetryLineageSnapshotEntry
+### LINEAGE_SNAPSHOT_DEFAULT_LIMIT
 
-Compact lineage entry exposed by the telemetry facade.
+Default limit for lineage snapshots to avoid large payloads.
 
-This read model stays intentionally small so inspection helpers can show
-immediate ancestry without exporting full genealogy trees.
-It is meant to answer "who were this genome's parents?" quickly, not to
-preserve every lineage annotation the deeper lineage subsystem may track.
+The lineage view is meant for inspection, tests, and compact summaries, not
+for exporting the full ancestry of every genome in a large population. This
+default keeps snapshots small enough to log or render quickly while still
+showing inheritance patterns near the front of the population.
 
 ### TelemetryFacadeLineageHost
 
@@ -77,11 +77,11 @@ That narrowness is deliberate: the telemetry facade only needs enough data
 to build a compact current snapshot, not the broader history and policy
 state owned by the full lineage subsystem.
 
-### LINEAGE_SNAPSHOT_DEFAULT_LIMIT
+### TelemetryLineageSnapshotEntry
 
-Default limit for lineage snapshots to avoid large payloads.
+Compact lineage entry exposed by the telemetry facade.
 
-The lineage view is meant for inspection, tests, and compact summaries, not
-for exporting the full ancestry of every genome in a large population. This
-default keeps snapshots small enough to log or render quickly while still
-showing inheritance patterns near the front of the population.
+This read model stays intentionally small so inspection helpers can show
+immediate ancestry without exporting full genealogy trees.
+It is meant to answer "who were this genome's parents?" quickly, not to
+preserve every lineage annotation the deeper lineage subsystem may track.

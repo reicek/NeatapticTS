@@ -37,13 +37,13 @@ tour of the example architecture rather than a sparse export inventory.
 ## Steps
 
 - [x] Step 1: Tidy the root `test/examples/flappy_bird` surface and verify the
-  README inventory-driven workflow.
+      README inventory-driven workflow.
 - [x] Step 2: Tidy the worker and trainer-facing folders.
 - [x] Step 3: Tidy shared simulation, environment, constants, and evaluation
-  folders.
+      folders.
 - [x] Step 4: Tidy browser-entry and its nested README-owning folders one by one.
 - [x] Step 5: Regenerate docs, run focused validation, and record any durable
-  boundary notes that changed during the pass.
+      boundary notes that changed during the pass.
 
 ## Step 1 Inventory
 

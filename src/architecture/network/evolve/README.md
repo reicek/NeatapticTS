@@ -8,25 +8,21 @@ Shared dataset compatibility error message.
 
 Shared dataset compatibility error message.
 
-### STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE
+### DEFAULT_EVALUATION_AMOUNT
 
-Shared evolve stopping-condition validation error.
-
-### DEFAULT_TARGET_ERROR
-
-Default target error used when omitted.
+Default repeated evaluation amount.
 
 ### DEFAULT_GROWTH
 
 Default complexity growth penalty.
 
-### DEFAULT_EVALUATION_AMOUNT
-
-Default repeated evaluation amount.
-
 ### DEFAULT_LOG_INTERVAL
 
 Default logging frequency value.
+
+### DEFAULT_TARGET_ERROR
+
+Default target error used when omitted.
 
 ### DEFAULT_THREAD_COUNT
 
@@ -36,26 +32,6 @@ Default single-thread worker count.
 
 Sentinel target error indicating that error-based stopping is disabled.
 
-### ZERO_ITERATIONS
-
-Explicit zero-iteration value.
-
-### SMALL_POPULATION_THRESHOLD
-
-Population threshold considered "small" for mutation heuristics.
-
-### SMALL_POPULATION_MUTATION_RATE
-
-Mutation rate fallback used for very small populations.
-
-### SMALL_POPULATION_MUTATION_AMOUNT
-
-Mutation amount fallback used for very small populations.
-
-### MAX_CONSECUTIVE_INVALID_ERRORS
-
-Maximum consecutive invalid errors tolerated before loop abort.
-
 ### EvolutionSummary
 
 Shared evolution summary payload.
@@ -63,6 +39,30 @@ Shared evolution summary payload.
 ### GenomeStructureCounts
 
 Structural counts used by complexity heuristics.
+
+### MAX_CONSECUTIVE_INVALID_ERRORS
+
+Maximum consecutive invalid errors tolerated before loop abort.
+
+### SMALL_POPULATION_MUTATION_AMOUNT
+
+Mutation amount fallback used for very small populations.
+
+### SMALL_POPULATION_MUTATION_RATE
+
+Mutation rate fallback used for very small populations.
+
+### SMALL_POPULATION_THRESHOLD
+
+Population threshold considered "small" for mutation heuristics.
+
+### STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE
+
+Shared evolve stopping-condition validation error.
+
+### ZERO_ITERATIONS
+
+Explicit zero-iteration value.
 
 ## architecture/network/evolve/network.evolve.utils.ts
 
@@ -109,6 +109,54 @@ console.log(summary.error, summary.iterations, summary.time);
 
 ## architecture/network/evolve/network.evolve.loop.utils.ts
 
+### applyEvolutionStep
+
+```ts
+applyEvolutionStep(
+  state: EvolutionLoopState,
+  evolvedGenome: default,
+  growth: number,
+): void
+```
+
+Applies one evolve() result to loop state.
+
+Parameters:
+- `state` - - Mutable loop state.
+- `evolvedGenome` - - Genome returned by NEAT evolve step.
+- `growth` - - Complexity growth scalar.
+
+Returns: Nothing.
+
+### createInitialLoopState
+
+```ts
+createInitialLoopState(): EvolutionLoopState
+```
+
+Creates initial loop state snapshot.
+
+Returns: Initial loop state.
+
+### deriveErrorFromFitness
+
+```ts
+deriveErrorFromFitness(
+  fitness: number,
+  genome: default,
+  growth: number,
+): number
+```
+
+Derive error from fitness by inverting score composition.
+
+Parameters:
+- `fitness` - - Fitness value from fittest genome.
+- `genome` - - Fittest genome.
+- `growth` - - Complexity growth scalar.
+
+Returns: Derived error value.
+
 ### runEvolutionLoop
 
 ```ts
@@ -129,6 +177,42 @@ Parameters:
 - `iterations` - - Optional max iteration count.
 
 Returns: Loop result snapshot.
+
+### runScheduleCallbackSafely
+
+```ts
+runScheduleCallbackSafely(
+  scheduleConfig: { iterations: number; function: (stats: { fitness: number; error: number; iteration: number; }) => void; } | undefined,
+  generation: number,
+  bestFitness: number,
+  error: number,
+): void
+```
+
+Run schedule callback if schedule trigger is reached.
+
+Parameters:
+- `scheduleConfig` - - Optional schedule configuration.
+- `generation` - - Current generation.
+- `bestFitness` - - Current best fitness.
+- `error` - - Current error.
+
+Returns: Nothing.
+
+### shouldAbortForInvalidErrors
+
+```ts
+shouldAbortForInvalidErrors(
+  state: EvolutionLoopState,
+): boolean
+```
+
+Determines whether loop must abort due to invalid-error streak.
+
+Parameters:
+- `state` - - Mutable loop state.
+
+Returns: True when invalid-error threshold is reached.
 
 ### shouldContinueEvolution
 
@@ -152,69 +236,6 @@ Parameters:
 - `maxIterations` - - Maximum iteration limit.
 
 Returns: True when loop should continue.
-
-### createInitialLoopState
-
-```ts
-createInitialLoopState(): EvolutionLoopState
-```
-
-Creates initial loop state snapshot.
-
-Returns: Initial loop state.
-
-### applyEvolutionStep
-
-```ts
-applyEvolutionStep(
-  state: EvolutionLoopState,
-  evolvedGenome: default,
-  growth: number,
-): void
-```
-
-Applies one evolve() result to loop state.
-
-Parameters:
-- `state` - - Mutable loop state.
-- `evolvedGenome` - - Genome returned by NEAT evolve step.
-- `growth` - - Complexity growth scalar.
-
-Returns: Nothing.
-
-### shouldAbortForInvalidErrors
-
-```ts
-shouldAbortForInvalidErrors(
-  state: EvolutionLoopState,
-): boolean
-```
-
-Determines whether loop must abort due to invalid-error streak.
-
-Parameters:
-- `state` - - Mutable loop state.
-
-Returns: True when invalid-error threshold is reached.
-
-### deriveErrorFromFitness
-
-```ts
-deriveErrorFromFitness(
-  fitness: number,
-  genome: default,
-  growth: number,
-): number
-```
-
-Derive error from fitness by inverting score composition.
-
-Parameters:
-- `fitness` - - Fitness value from fittest genome.
-- `genome` - - Fittest genome.
-- `growth` - - Complexity growth scalar.
-
-Returns: Derived error value.
 
 ### updateBestGenomeIfImproved
 
@@ -254,28 +275,24 @@ Parameters:
 
 Returns: Updated guard state.
 
-### runScheduleCallbackSafely
+## architecture/network/evolve/network.evolve.setup.utils.ts
+
+### applySmallPopulationHeuristics
 
 ```ts
-runScheduleCallbackSafely(
-  scheduleConfig: { iterations: number; function: (stats: { fitness: number; error: number; iteration: number; }) => void; } | undefined,
-  generation: number,
-  bestFitness: number,
-  error: number,
+applySmallPopulationHeuristics(
+  neatInstance: NeatRuntime,
+  evolveOptions: EvolveOptions,
 ): void
 ```
 
-Run schedule callback if schedule trigger is reached.
+Increase mutation aggressiveness for tiny populations.
 
 Parameters:
-- `scheduleConfig` - - Optional schedule configuration.
-- `generation` - - Current generation.
-- `bestFitness` - - Current best fitness.
-- `error` - - Current error.
+- `neatInstance` - - Active NEAT instance.
+- `evolveOptions` - - Evolve options object.
 
 Returns: Nothing.
-
-## architecture/network/evolve/network.evolve.setup.utils.ts
 
 ### assertEvolutionDatasetCompatibility
 
@@ -294,6 +311,57 @@ Parameters:
 
 Returns: Nothing.
 
+### configureNeatOptions
+
+```ts
+configureNeatOptions(
+  network: default,
+  evolveOptions: EvolveOptions,
+): void
+```
+
+Normalize options used by NEAT constructor.
+
+Parameters:
+- `network` - - Network instance being evolved.
+- `evolveOptions` - - Evolve options object.
+
+Returns: Nothing.
+
+### createEvolutionConfig
+
+```ts
+createEvolutionConfig(
+  settingsToSummarize: EvolutionSettings,
+): EvolutionConfig | undefined
+```
+
+Build optional structured evolution config summary.
+
+Parameters:
+- `settingsToSummarize` - - Scalar evolution settings.
+
+Returns: Optional summary config.
+
+### createNeatInstance
+
+```ts
+createNeatInstance(
+  network: default,
+  fitnessFunction: EvolutionFitnessFunction,
+  evolveOptions: EvolveOptions,
+): Promise<NeatRuntime>
+```
+
+Lazy-load and create NEAT instance.
+
+Parameters:
+- `network` - - Network instance being evolved.
+- `fitnessFunction` - - Prepared fitness evaluator.
+- `evolveOptions` - - Evolve options object.
+
+Returns: Constructed NEAT instance.
+
 ### getNormalizedOptions
 
 ```ts
@@ -308,6 +376,25 @@ Parameters:
 - `evolveOptions` - - Incoming evolve options.
 
 Returns: Safe options object.
+
+### prepareFitnessFunction
+
+```ts
+prepareFitnessFunction(
+  dataSet: TrainingSample[],
+  resolvedSettings: EvolutionSettings,
+  evolveOptions: EvolveOptions,
+): Promise<FitnessSetup>
+```
+
+Build fitness function according to threading configuration.
+
+Parameters:
+- `dataSet` - - Supervised dataset.
+- `resolvedSettings` - - Scalar evolution settings.
+- `evolveOptions` - - Evolve options object.
+
+Returns: Fitness function and resolved thread count.
 
 ### resolveEvolutionSettings
 
@@ -341,76 +428,6 @@ Parameters:
 
 Returns: Final stop conditions.
 
-### createEvolutionConfig
-
-```ts
-createEvolutionConfig(
-  settingsToSummarize: EvolutionSettings,
-): EvolutionConfig | undefined
-```
-
-Build optional structured evolution config summary.
-
-Parameters:
-- `settingsToSummarize` - - Scalar evolution settings.
-
-Returns: Optional summary config.
-
-### prepareFitnessFunction
-
-```ts
-prepareFitnessFunction(
-  dataSet: TrainingSample[],
-  resolvedSettings: EvolutionSettings,
-  evolveOptions: EvolveOptions,
-): Promise<FitnessSetup>
-```
-
-Build fitness function according to threading configuration.
-
-Parameters:
-- `dataSet` - - Supervised dataset.
-- `resolvedSettings` - - Scalar evolution settings.
-- `evolveOptions` - - Evolve options object.
-
-Returns: Fitness function and resolved thread count.
-
-### configureNeatOptions
-
-```ts
-configureNeatOptions(
-  network: default,
-  evolveOptions: EvolveOptions,
-): void
-```
-
-Normalize options used by NEAT constructor.
-
-Parameters:
-- `network` - - Network instance being evolved.
-- `evolveOptions` - - Evolve options object.
-
-Returns: Nothing.
-
-### createNeatInstance
-
-```ts
-createNeatInstance(
-  network: default,
-  fitnessFunction: EvolutionFitnessFunction,
-  evolveOptions: EvolveOptions,
-): Promise<NeatRuntime>
-```
-
-Lazy-load and create NEAT instance.
-
-Parameters:
-- `network` - - Network instance being evolved.
-- `fitnessFunction` - - Prepared fitness evaluator.
-- `evolveOptions` - - Evolve options object.
-
-Returns: Constructed NEAT instance.
-
 ### warnIfNoBestGenomeMayOccur
 
 ```ts
@@ -428,62 +445,7 @@ Parameters:
 
 Returns: Nothing.
 
-### applySmallPopulationHeuristics
-
-```ts
-applySmallPopulationHeuristics(
-  neatInstance: NeatRuntime,
-  evolveOptions: EvolveOptions,
-): void
-```
-
-Increase mutation aggressiveness for tiny populations.
-
-Parameters:
-- `neatInstance` - - Active NEAT instance.
-- `evolveOptions` - - Evolve options object.
-
-Returns: Nothing.
-
 ## architecture/network/evolve/network.evolve.fitness.utils.ts
-
-### computeComplexityPenalty
-
-```ts
-computeComplexityPenalty(
-  genome: default,
-  growth: number,
-): number
-```
-
-Compute structural complexity penalty scaled by growth.
-
-Parameters:
-- `genome` - - Candidate network whose complexity to measure.
-- `growth` - - Positive scalar controlling parsimony pressure.
-
-Returns: Complexity penalty.
-
-### buildSingleThreadFitness
-
-```ts
-buildSingleThreadFitness(
-  set: TrainingSample[],
-  cost: EvolveCostFunction,
-  amount: number,
-  growth: number,
-): SingleGenomeFitnessFunction
-```
-
-Build a single-threaded genome fitness evaluator.
-
-Parameters:
-- `set` - - Dataset of training samples.
-- `cost` - - Cost function reference.
-- `amount` - - Number of repeated evaluations.
-- `growth` - - Complexity penalty scalar.
-
-Returns: Single-genome fitness function.
 
 ### buildMultiThreadFitness
 
@@ -510,41 +472,170 @@ Parameters:
 
 Returns: Population fitness setup.
 
-### evaluateGenomeWithWorker
+### buildPopulationWorkerFitnessFunction
 
 ```ts
-evaluateGenomeWithWorker(
-  worker: TestWorkerInstance,
-  genome: default,
+buildPopulationWorkerFitnessFunction(
+  workers: TestWorkerInstance[],
   growth: number,
-): Promise<void>
+): PopulationFitnessFunction
 ```
 
-Evaluate one genome with a worker and assign penalized score.
+Build population-level fitness function powered by worker queue.
 
 Parameters:
-- `worker` - - Worker instance.
-- `genome` - - Genome under evaluation.
+- `workers` - - Spawned worker instances.
 - `growth` - - Complexity penalty scalar.
 
-Returns: Promise resolving when score assignment completes.
+Returns: Population-level fitness function.
 
-### installWorkerTerminationHook
+### buildSingleThreadFitness
 
 ```ts
-installWorkerTerminationHook(
-  options: Record<string, unknown>,
-  workers: TestWorkerInstance[],
+buildSingleThreadFitness(
+  set: TrainingSample[],
+  cost: EvolveCostFunction,
+  amount: number,
+  growth: number,
+): SingleGenomeFitnessFunction
+```
+
+Build a single-threaded genome fitness evaluator.
+
+Parameters:
+- `set` - - Dataset of training samples.
+- `cost` - - Cost function reference.
+- `amount` - - Number of repeated evaluations.
+- `growth` - - Complexity penalty scalar.
+
+Returns: Single-genome fitness function.
+
+### cacheComplexityBase
+
+```ts
+cacheComplexityBase(
+  genome: default,
+  structureCounts: GenomeStructureCounts,
+  complexityBase: number,
 ): void
 ```
 
-Register worker termination hook onto options object.
+Store complexity base cache entry for future reuse.
 
 Parameters:
-- `options` - - Evolve options object.
-- `workers` - - Spawned worker instances.
+- `genome` - - Candidate network used as cache key.
+- `structureCounts` - - Current structural counts.
+- `complexityBase` - - Computed base complexity value.
 
 Returns: Nothing.
+
+### claimNextGenome
+
+```ts
+claimNextGenome(
+  context: PopulationWorkerEvaluationContext,
+): default | undefined
+```
+
+Claims the next genome index from shared queue state.
+
+Parameters:
+- `context` - - Population evaluation context.
+
+Returns: Next genome, or undefined when queue is exhausted.
+
+### computeComplexityBase
+
+```ts
+computeComplexityBase(
+  genome: default,
+  structureCounts: GenomeStructureCounts,
+): number
+```
+
+Compute non-scaled complexity base from structural counts.
+
+Parameters:
+- `genome` - - Candidate network whose complexity to compute.
+- `structureCounts` - - Current structural counts.
+
+Returns: Base complexity value before growth scaling.
+
+### computeComplexityPenalty
+
+```ts
+computeComplexityPenalty(
+  genome: default,
+  growth: number,
+): number
+```
+
+Compute structural complexity penalty scaled by growth.
+
+Parameters:
+- `genome` - - Candidate network whose complexity to measure.
+- `growth` - - Positive scalar controlling parsimony pressure.
+
+Returns: Complexity penalty.
+
+### createPopulationWorkerEvaluationContext
+
+```ts
+createPopulationWorkerEvaluationContext(
+  sourceWorkers: TestWorkerInstance[],
+  sourcePopulation: default[],
+  sourceGrowth: number,
+  sourceResolve: () => void,
+): PopulationWorkerEvaluationContext
+```
+
+Creates the shared evaluation context for one population run.
+
+Parameters:
+- `sourceWorkers` - - Worker pool.
+- `sourcePopulation` - - Population to evaluate.
+- `sourceGrowth` - - Complexity penalty scalar.
+- `sourceResolve` - - Promise resolver.
+
+Returns: Population evaluation context.
+
+### createSingleThreadFallbackFitness
+
+```ts
+createSingleThreadFallbackFitness(
+  set: TrainingSample[],
+  cost: CostFunctionOrRef,
+  amount: number,
+  growth: number,
+): FitnessSetup
+```
+
+Build single-thread fallback fitness setup.
+
+Parameters:
+- `set` - - Dataset.
+- `cost` - - Cost function.
+- `amount` - - Repetition count.
+- `growth` - - Complexity penalty scalar.
+
+Returns: Single-thread fitness setup.
+
+### createWorkerTraversalContext
+
+```ts
+createWorkerTraversalContext(
+  context: PopulationWorkerEvaluationContext,
+  worker: TestWorkerInstance,
+): WorkerTraversalContext
+```
+
+Creates traversal context for one worker.
+
+Parameters:
+- `context` - - Population evaluation context.
+- `worker` - - Worker instance.
+
+Returns: Worker traversal context.
 
 ### evaluateGenomeAmountTimes
 
@@ -586,18 +677,131 @@ Parameters:
 
 Returns: Error value, or null when evaluation fails.
 
-### warnGenomeEvaluationFailure
+### evaluateGenomeWithWorker
 
 ```ts
-warnGenomeEvaluationFailure(
-  error: unknown,
+evaluateGenomeWithWorker(
+  worker: TestWorkerInstance,
+  genome: default,
+  growth: number,
+): Promise<void>
+```
+
+Evaluate one genome with a worker and assign penalized score.
+
+Parameters:
+- `worker` - - Worker instance.
+- `genome` - - Genome under evaluation.
+- `growth` - - Complexity penalty scalar.
+
+Returns: Promise resolving when score assignment completes.
+
+### finalizeWorker
+
+```ts
+finalizeWorker(
+  context: PopulationWorkerEvaluationContext,
 ): void
 ```
 
-Emit warning when genome evaluation fails.
+Marks one worker as completed and resolves when all workers finish.
 
 Parameters:
-- `error` - - Unknown evaluation error.
+- `context` - - Population evaluation context.
+
+Returns: Nothing.
+
+### getCachedComplexityBase
+
+```ts
+getCachedComplexityBase(
+  genome: default,
+  structureCounts: GenomeStructureCounts,
+): number | null
+```
+
+Retrieve cached complexity base if cached structure counts still match.
+
+Parameters:
+- `genome` - - Candidate network whose cached complexity is queried.
+- `structureCounts` - - Current structural counts.
+
+Returns: Cached complexity base or null when cache miss occurs.
+
+### getGenomeStructureCounts
+
+```ts
+getGenomeStructureCounts(
+  genome: default,
+): GenomeStructureCounts
+```
+
+Get structural counts used by complexity heuristic.
+
+Parameters:
+- `genome` - - Candidate network whose structure is being measured.
+
+Returns: Structural counts used for complexity computation.
+
+### hasNoWorkers
+
+```ts
+hasNoWorkers(
+  context: PopulationWorkerEvaluationContext,
+): boolean
+```
+
+Checks whether there are workers available to process genomes.
+
+Parameters:
+- `context` - - Population evaluation context.
+
+Returns: True when worker pool is empty.
+
+### installWorkerTerminationHook
+
+```ts
+installWorkerTerminationHook(
+  options: Record<string, unknown>,
+  workers: TestWorkerInstance[],
+): void
+```
+
+Register worker termination hook onto options object.
+
+Parameters:
+- `options` - - Evolve options object.
+- `workers` - - Spawned worker instances.
+
+Returns: Nothing.
+
+### resolveCostName
+
+```ts
+resolveCostName(
+  cost: CostFunctionOrRef,
+): string
+```
+
+Resolve serializable cost name for worker payload.
+
+Parameters:
+- `cost` - - Cost function or cost reference.
+
+Returns: Cost name string.
+
+### resolveEvaluation
+
+```ts
+resolveEvaluation(
+  context: PopulationWorkerEvaluationContext,
+): void
+```
+
+Resolves the population evaluation promise.
+
+Parameters:
+- `context` - - Population evaluation context.
 
 Returns: Nothing.
 
@@ -611,26 +815,20 @@ Resolve worker constructor for current runtime environment.
 
 Returns: Worker constructor or null when unavailable.
 
-### createSingleThreadFallbackFitness
+### runWorkerTraversalStep
 
 ```ts
-createSingleThreadFallbackFitness(
-  set: TrainingSample[],
-  cost: CostFunctionOrRef,
-  amount: number,
-  growth: number,
-): FitnessSetup
+runWorkerTraversalStep(
+  traversalContext: WorkerTraversalContext,
+): void
 ```
 
-Build single-thread fallback fitness setup.
+Runs one asynchronous traversal step for a worker.
 
 Parameters:
-- `set` - - Dataset.
-- `cost` - - Cost function.
-- `amount` - - Repetition count.
-- `growth` - - Complexity penalty scalar.
+- `traversalContext` - - Worker traversal context.
 
-Returns: Single-thread fitness setup.
+Returns: Nothing.
 
 ### spawnTestWorkers
 
@@ -653,74 +851,6 @@ Parameters:
 
 Returns: Spawned worker instances.
 
-### resolveCostName
-
-```ts
-resolveCostName(
-  cost: CostFunctionOrRef,
-): string
-```
-
-Resolve serializable cost name for worker payload.
-
-Parameters:
-- `cost` - - Cost function or cost reference.
-
-Returns: Cost name string.
-
-### buildPopulationWorkerFitnessFunction
-
-```ts
-buildPopulationWorkerFitnessFunction(
-  workers: TestWorkerInstance[],
-  growth: number,
-): PopulationFitnessFunction
-```
-
-Build population-level fitness function powered by worker queue.
-
-Parameters:
-- `workers` - - Spawned worker instances.
-- `growth` - - Complexity penalty scalar.
-
-Returns: Population-level fitness function.
-
-### createPopulationWorkerEvaluationContext
-
-```ts
-createPopulationWorkerEvaluationContext(
-  sourceWorkers: TestWorkerInstance[],
-  sourcePopulation: default[],
-  sourceGrowth: number,
-  sourceResolve: () => void,
-): PopulationWorkerEvaluationContext
-```
-
-Creates the shared evaluation context for one population run.
-
-Parameters:
-- `sourceWorkers` - - Worker pool.
-- `sourcePopulation` - - Population to evaluate.
-- `sourceGrowth` - - Complexity penalty scalar.
-- `sourceResolve` - - Promise resolver.
-
-Returns: Population evaluation context.
-
-### hasNoWorkers
-
-```ts
-hasNoWorkers(
-  context: PopulationWorkerEvaluationContext,
-): boolean
-```
-
-Checks whether there are workers available to process genomes.
-
-Parameters:
-- `context` - - Population evaluation context.
-
-Returns: True when worker pool is empty.
-
 ### startWorkerTraversal
 
 ```ts
@@ -736,148 +866,18 @@ Parameters:
 
 Returns: Nothing.
 
-### createWorkerTraversalContext
+### warnGenomeEvaluationFailure
 
 ```ts
-createWorkerTraversalContext(
-  context: PopulationWorkerEvaluationContext,
-  worker: TestWorkerInstance,
-): WorkerTraversalContext
-```
-
-Creates traversal context for one worker.
-
-Parameters:
-- `context` - - Population evaluation context.
-- `worker` - - Worker instance.
-
-Returns: Worker traversal context.
-
-### runWorkerTraversalStep
-
-```ts
-runWorkerTraversalStep(
-  traversalContext: WorkerTraversalContext,
+warnGenomeEvaluationFailure(
+  error: unknown,
 ): void
 ```
 
-Runs one asynchronous traversal step for a worker.
+Emit warning when genome evaluation fails.
 
 Parameters:
-- `traversalContext` - - Worker traversal context.
-
-Returns: Nothing.
-
-### claimNextGenome
-
-```ts
-claimNextGenome(
-  context: PopulationWorkerEvaluationContext,
-): default | undefined
-```
-
-Claims the next genome index from shared queue state.
-
-Parameters:
-- `context` - - Population evaluation context.
-
-Returns: Next genome, or undefined when queue is exhausted.
-
-### finalizeWorker
-
-```ts
-finalizeWorker(
-  context: PopulationWorkerEvaluationContext,
-): void
-```
-
-Marks one worker as completed and resolves when all workers finish.
-
-Parameters:
-- `context` - - Population evaluation context.
-
-Returns: Nothing.
-
-### resolveEvaluation
-
-```ts
-resolveEvaluation(
-  context: PopulationWorkerEvaluationContext,
-): void
-```
-
-Resolves the population evaluation promise.
-
-Parameters:
-- `context` - - Population evaluation context.
-
-Returns: Nothing.
-
-### getGenomeStructureCounts
-
-```ts
-getGenomeStructureCounts(
-  genome: default,
-): GenomeStructureCounts
-```
-
-Get structural counts used by complexity heuristic.
-
-Parameters:
-- `genome` - - Candidate network whose structure is being measured.
-
-Returns: Structural counts used for complexity computation.
-
-### getCachedComplexityBase
-
-```ts
-getCachedComplexityBase(
-  genome: default,
-  structureCounts: GenomeStructureCounts,
-): number | null
-```
-
-Retrieve cached complexity base if cached structure counts still match.
-
-Parameters:
-- `genome` - - Candidate network whose cached complexity is queried.
-- `structureCounts` - - Current structural counts.
-
-Returns: Cached complexity base or null when cache miss occurs.
-
-### computeComplexityBase
-
-```ts
-computeComplexityBase(
-  genome: default,
-  structureCounts: GenomeStructureCounts,
-): number
-```
-
-Compute non-scaled complexity base from structural counts.
-
-Parameters:
-- `genome` - - Candidate network whose complexity to compute.
-- `structureCounts` - - Current structural counts.
-
-Returns: Base complexity value before growth scaling.
-
-### cacheComplexityBase
-
-```ts
-cacheComplexityBase(
-  genome: default,
-  structureCounts: GenomeStructureCounts,
-  complexityBase: number,
-): void
-```
-
-Store complexity base cache entry for future reuse.
-
-Parameters:
-- `genome` - - Candidate network used as cache key.
-- `structureCounts` - - Current structural counts.
-- `complexityBase` - - Computed base complexity value.
+- `error` - - Unknown evaluation error.
 
 Returns: Nothing.
 
@@ -904,21 +904,6 @@ Parameters:
 
 Returns: Nothing.
 
-### terminateWorkersSafely
-
-```ts
-terminateWorkersSafely(
-  evolveOptions: EvolveOptions,
-): void
-```
-
-Terminate worker resources registered in options.
-
-Parameters:
-- `evolveOptions` - - Evolve options object.
-
-Returns: Nothing.
-
 ### buildEvolutionSummary
 
 ```ts
@@ -937,3 +922,18 @@ Parameters:
 - `loopStartTime` - - Loop start timestamp.
 
 Returns: Evolution summary object.
+
+### terminateWorkersSafely
+
+```ts
+terminateWorkersSafely(
+  evolveOptions: EvolveOptions,
+): void
+```
+
+Terminate worker resources registered in options.
+
+Parameters:
+- `evolveOptions` - - Evolve options object.
+
+Returns: Nothing.

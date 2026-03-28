@@ -9,13 +9,16 @@ The source of truth is the generated documentation fed by [src/neat.ts](../src/n
 which renders into [src/README.md](../src/README.md) after `npm run docs`.
 
 Primary reader:
+
 - first-time NeatapticTS readers who want to understand how the top-level NEAT controller works before diving into chaptered internals.
 
 Primary surfaces:
+
 - [src/neat.ts](../src/neat.ts)
 - [src/README.md](../src/README.md)
 
 Out of scope for this pass:
+
 - hand-editing generated READMEs under `src/`
 - adding external images or citations unless a concrete teaching gap requires them
 - broad rewrites of every `src/neat/**` chapter README
@@ -29,21 +32,26 @@ Out of scope for this pass:
 ## Session Log
 
 ### Foundation
+
 - Strengthened [src/neat.ts](../src/neat.ts) so the generated root story in [src/README.md](../src/README.md) reads as a clearer controller overview.
 
 ### Generator follow-up
-- The docs generator work is complete enough for now: [scripts/generate-docs.ts](../scripts/generate-docs.ts) supports per-folder ordering controls through `docs.order.json`, and the shared-speciation pilot is already live in [src/neat/speciation/shared/docs.order.json](../src/neat/speciation/shared/docs.order.json).
+
+- The docs generator work is complete enough for now: [scripts/generate-docs/generate-docs.ts](../scripts/generate-docs/generate-docs.ts) supports per-folder ordering controls through `docs.order.json`, and the shared-speciation pilot is already live in [src/neat/speciation/shared/docs.order.json](../src/neat/speciation/shared/docs.order.json).
 
 ### Latest completed chapter work
+
 - Recent source-first passes strengthened [src/neat/shared/neat.shared.types.ts](../src/neat/shared/neat.shared.types.ts), [src/neat/neat.constants.ts](../src/neat/neat.constants.ts), [src/neat/cache/cache.ts](../src/neat/cache/cache.ts), [src/neat/compat/compat.ts](../src/neat/compat/compat.ts), [src/neat/harness/neat.harness.types.ts](../src/neat/harness/neat.harness.types.ts), [src/neat/init/neat.init.ts](../src/neat/init/neat.init.ts), [src/neat/helpers/neat.helpers.ts](../src/neat/helpers/neat.helpers.ts), and [src/neat/rng/rng.ts](../src/neat/rng/rng.ts); the RNG root now distinguishes caller-owned randomness from controller-owned replay state more explicitly, and the root [src/README.md](../src/README.md) plus [src/neat.ts](../src/neat.ts) story still holds up against the current pedagogical standard. Docs regeneration and TypeScript validation should be kept on every new pass.
 - A bounded root-surface polish split then moved the root compatibility alias shelf into [src/neat/neat.types.ts](../src/neat/neat.types.ts), moved the public defaults shelf into [src/neat/neat.defaults.constants.ts](../src/neat/neat.defaults.constants.ts), and centralized the empty diversity fallback in [src/neat/diversity/diversity.ts](../src/neat/diversity/diversity.ts); [src/README.md](../src/README.md) still presents the stable public root story while [src/neat/README.md](../src/neat/README.md) now carries the deeper root-types and root-defaults chapter docs.
 
 Remaining gaps:
+
 - Most remaining weaknesses are now small chapter-quality revisits, not untouched surfaces.
 - Generator limits still show up in some larger or re-export-heavy chapters, so only use `docs.order.json` when ordering is the real blocker.
 - Keep prioritizing compact runtime, facade, or policy boundaries that still read more like shelves than chapters.
 
 Next step:
+
 - Re-read [src/neat/lineage/README.md](../src/neat/lineage/README.md) and [src/neat/lineage/lineage.ts](../src/neat/lineage/lineage.ts) to decide whether the lineage root is now the next weakest compact controller-facing boundary after the RNG pass.
 
 ## Handoff Prompt

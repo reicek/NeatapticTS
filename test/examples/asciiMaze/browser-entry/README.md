@@ -29,9 +29,21 @@ await handle.done;
 unsubscribe();
 ```
 
-### BrowserEntryStartOptions
+### BrowserEntryCurriculumContext
 
-Options accepted by the browser-hosted ASCII Maze entrypoint.
+State and callbacks used by the curriculum runtime service.
+
+### BrowserEntryEvolutionSettings
+
+Evolution settings used for a single procedural maze phase.
+
+### BrowserEntryHostElements
+
+Resolved host elements used by logger, dashboard, and resize services.
+
+### BrowserEntryHostServices
+
+Browser host services assembled for one running demo instance.
 
 ### BrowserEntryStartFunction
 
@@ -43,6 +55,14 @@ BrowserEntryStartFunction(
 ```
 
 Stable callable shape used by globals compatibility wiring.
+
+### BrowserEntryStartOptions
+
+Options accepted by the browser-hosted ASCII Maze entrypoint.
+
+### BrowserEntryTelemetryHub
+
+Lightweight telemetry hub contract shared between host and public handle.
 
 ### RuntimeAbortSignal
 
@@ -56,27 +76,38 @@ AbortSignal constructor shape with optional static composition helpers.
 
 Global namespace exposed for direct browser-script loading compatibility.
 
-### BrowserEntryHostElements
-
-Resolved host elements used by logger, dashboard, and resize services.
-
-### BrowserEntryEvolutionSettings
-
-Evolution settings used for a single procedural maze phase.
-
-### BrowserEntryTelemetryHub
-
-Lightweight telemetry hub contract shared between host and public handle.
-
-### BrowserEntryHostServices
-
-Browser host services assembled for one running demo instance.
-
-### BrowserEntryCurriculumContext
-
-State and callbacks used by the curriculum runtime service.
-
 ## browser-entry/browser-entry.ts
+
+### AsciiMazeRunHandle
+
+Public lifecycle handle returned by the browser demo entrypoint.
+
+Example:
+
+```ts
+const handle = await start('ascii-maze-output');
+const unsubscribe = handle.onTelemetry((telemetry) => {
+  console.log('generation', telemetry.generation);
+});
+
+await handle.done;
+unsubscribe();
+```
+
+### BrowserEntryStartFunction
+
+```ts
+BrowserEntryStartFunction(
+  container: string | HTMLElement | undefined,
+  opts: BrowserEntryStartOptions | undefined,
+): Promise<AsciiMazeRunHandle>
+```
+
+Stable callable shape used by globals compatibility wiring.
+
+### BrowserEntryStartOptions
+
+Options accepted by the browser-hosted ASCII Maze entrypoint.
 
 ### start
 
@@ -113,37 +144,6 @@ setTimeout(() => abortController.abort(), 1_000);
 await handle.done;
 ```
 
-### AsciiMazeRunHandle
-
-Public lifecycle handle returned by the browser demo entrypoint.
-
-Example:
-
-```ts
-const handle = await start('ascii-maze-output');
-const unsubscribe = handle.onTelemetry((telemetry) => {
-  console.log('generation', telemetry.generation);
-});
-
-await handle.done;
-unsubscribe();
-```
-
-### BrowserEntryStartFunction
-
-```ts
-BrowserEntryStartFunction(
-  container: string | HTMLElement | undefined,
-  opts: BrowserEntryStartOptions | undefined,
-): Promise<AsciiMazeRunHandle>
-```
-
-Stable callable shape used by globals compatibility wiring.
-
-### BrowserEntryStartOptions
-
-Options accepted by the browser-hosted ASCII Maze entrypoint.
-
 ## browser-entry/browser-entry.services.ts
 
 Compatibility facade for the dedicated browser-entry service modules.
@@ -168,21 +168,6 @@ Parameters:
 
 Returns: A signal that aborts when either source aborts.
 
-### runBrowserEntryCurriculum
-
-```ts
-runBrowserEntryCurriculum(
-  context: BrowserEntryCurriculumContext,
-): void
-```
-
-Run the progressive browser curriculum across increasingly larger mazes.
-
-Parameters:
-- `context` - - Runtime dashboard, cancellation, and completion callbacks for one browser session.
-
-Returns: Nothing.
-
 ### createBrowserEntryEvolutionHostAdapter
 
 ```ts
@@ -192,6 +177,21 @@ createBrowserEntryEvolutionHostAdapter(): EvolutionHostAdapter
 Create the browser-owned engine host adapter used for pause polling and solve notifications.
 
 Returns: Host adapter that keeps browser globals and DOM events out of engine internals.
+
+### createBrowserEntryHostServices
+
+```ts
+createBrowserEntryHostServices(
+  hostElements: BrowserEntryHostElements,
+): BrowserEntryHostServices
+```
+
+Create the browser host services used by one ASCII Maze demo run.
+
+Parameters:
+- `hostElements` - - Resolved host elements for live output, archive output, and resize observation.
+
+Returns: Dashboard, telemetry hub, runtime dashboard adapter, and resize cleanup.
 
 ### installBrowserEntryGlobals
 
@@ -208,20 +208,20 @@ Parameters:
 
 Returns: Nothing.
 
-### createBrowserEntryHostServices
+### runBrowserEntryCurriculum
 
 ```ts
-createBrowserEntryHostServices(
-  hostElements: BrowserEntryHostElements,
-): BrowserEntryHostServices
+runBrowserEntryCurriculum(
+  context: BrowserEntryCurriculumContext,
+): void
 ```
 
-Create the browser host services used by one ASCII Maze demo run.
+Run the progressive browser curriculum across increasingly larger mazes.
 
 Parameters:
-- `hostElements` - - Resolved host elements for live output, archive output, and resize observation.
+- `context` - - Runtime dashboard, cancellation, and completion callbacks for one browser session.
 
-Returns: Dashboard, telemetry hub, runtime dashboard adapter, and resize cleanup.
+Returns: Nothing.
 
 ## browser-entry/browser-entry.constants.ts
 
@@ -381,21 +381,6 @@ Returns: Nothing.
 
 ## browser-entry/browser-entry.utils.ts
 
-### resolveBrowserEntryHostElements
-
-```ts
-resolveBrowserEntryHostElements(
-  container: string | HTMLElement,
-): BrowserEntryHostElements
-```
-
-Resolve the browser host elements used by the demo logger and dashboard.
-
-Parameters:
-- `container` - - Element id or host element provided by the caller.
-
-Returns: Resolved host, archive, live, and resize-observer targets.
-
 ### createBrowserEvolutionSettings
 
 ```ts
@@ -410,19 +395,6 @@ Parameters:
 - `dimension` - - Side length in cells for the procedural square maze.
 
 Returns: Per-phase evolution settings consumed by the curriculum runtime.
-
-### scheduleBrowserEntryFrame
-
-```ts
-scheduleBrowserEntryFrame(
-  callback: () => void,
-): void
-```
-
-Schedule follow-up curriculum work on the next animation tick when possible.
-
-Parameters:
-- `callback` - - Follow-up phase callback.
 
 ### didSolveBrowserMaze
 
@@ -453,3 +425,31 @@ Parameters:
 - `currentDimension` - - Current maze side length.
 
 Returns: Next side length to use.
+
+### resolveBrowserEntryHostElements
+
+```ts
+resolveBrowserEntryHostElements(
+  container: string | HTMLElement,
+): BrowserEntryHostElements
+```
+
+Resolve the browser host elements used by the demo logger and dashboard.
+
+Parameters:
+- `container` - - Element id or host element provided by the caller.
+
+Returns: Resolved host, archive, live, and resize-observer targets.
+
+### scheduleBrowserEntryFrame
+
+```ts
+scheduleBrowserEntryFrame(
+  callback: () => void,
+): void
+```
+
+Schedule follow-up curriculum work on the next animation tick when possible.
+
+Parameters:
+- `callback` - - Follow-up phase callback.

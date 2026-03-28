@@ -19,45 +19,24 @@ define the world state that policy, shaping, and finalization build on top of.
 
 ## mazeMovement/runtime/mazeMovement.runtime.ts
 
-### isMazeMovementCellOpen
+### buildMazeMovementVisionAndDistance
 
 ```ts
-isMazeMovementCellOpen(
-  encodedMaze: readonly (readonly number[])[],
-  x: number,
-  y: number,
-  coordinateScratch: Int32Array<ArrayBufferLike>,
-): boolean
-```
-
-Determine whether a maze cell is inside bounds and not a wall.
-
-Parameters:
-- `encodedMaze` - - Maze grid to inspect.
-- `x` - - Zero-based maze column.
-- `y` - - Zero-based maze row.
-- `coordinateScratch` - - Reused integer scratch buffer for coordinate coercion.
-
-Returns: True when the target cell is within bounds and open.
-
-### getMazeMovementDistance
-
-```ts
-getMazeMovementDistance(
-  encodedMaze: readonly (readonly number[])[],
-  __1: readonly [number, number],
+buildMazeMovementVisionAndDistance(
+  state: SimulationState,
+  encodedMaze: number[][],
+  exitPos: readonly [number, number],
   distanceMap: number[][] | undefined,
-): number
+): void
 ```
 
-Resolve the current distance value for a maze coordinate.
+Build the current perception vector and update distance-tracking state.
 
 Parameters:
-- `encodedMaze` - - Maze grid aligned with the optional distance map.
-- `coordinates` - - Zero-based `[x, y]` coordinate tuple.
+- `state` - - Mutable simulation state for the active run.
+- `encodedMaze` - - Maze grid used for perception and distance lookup.
+- `exitPos` - - Goal coordinate for the current run.
 - `distanceMap` - - Optional precomputed distance map.
-
-Returns: Finite distance when present, otherwise `Infinity`.
 
 ### createMazeMovementRunState
 
@@ -80,20 +59,24 @@ Parameters:
 
 Returns: Fresh simulation state backed by the shared buffer pools.
 
-### pushMazeMovementHistory
+### getMazeMovementDistance
 
 ```ts
-pushMazeMovementHistory(
-  state: SimulationState,
-  cellIndex: number,
-): void
+getMazeMovementDistance(
+  encodedMaze: readonly (readonly number[])[],
+  __1: readonly [number, number],
+  distanceMap: number[][] | undefined,
+): number
 ```
 
-Push a cell index into the circular visit-history ring.
+Resolve the current distance value for a maze coordinate.
 
 Parameters:
-- `state` - - Mutable simulation state containing the ring buffer.
-- `cellIndex` - - Linearized cell index to append.
+- `encodedMaze` - - Maze grid aligned with the optional distance map.
+- `coordinates` - - Zero-based `[x, y]` coordinate tuple.
+- `distanceMap` - - Optional precomputed distance map.
+
+Returns: Finite distance when present, otherwise `Infinity`.
 
 ### getMazeMovementHistoryFromEnd
 
@@ -112,6 +95,42 @@ Parameters:
 
 Returns: The requested cell index or `undefined` when out of range.
 
+### isMazeMovementCellOpen
+
+```ts
+isMazeMovementCellOpen(
+  encodedMaze: readonly (readonly number[])[],
+  x: number,
+  y: number,
+  coordinateScratch: Int32Array<ArrayBufferLike>,
+): boolean
+```
+
+Determine whether a maze cell is inside bounds and not a wall.
+
+Parameters:
+- `encodedMaze` - - Maze grid to inspect.
+- `x` - - Zero-based maze column.
+- `y` - - Zero-based maze row.
+- `coordinateScratch` - - Reused integer scratch buffer for coordinate coercion.
+
+Returns: True when the target cell is within bounds and open.
+
+### pushMazeMovementHistory
+
+```ts
+pushMazeMovementHistory(
+  state: SimulationState,
+  cellIndex: number,
+): void
+```
+
+Push a cell index into the circular visit-history ring.
+
+Parameters:
+- `state` - - Mutable simulation state containing the ring buffer.
+- `cellIndex` - - Linearized cell index to append.
+
 ### recordMazeMovementVisitAndPenalties
 
 ```ts
@@ -124,22 +143,3 @@ Record the current cell visit and update visit-driven penalties.
 
 Parameters:
 - `state` - - Mutable simulation state for the active run.
-
-### buildMazeMovementVisionAndDistance
-
-```ts
-buildMazeMovementVisionAndDistance(
-  state: SimulationState,
-  encodedMaze: number[][],
-  exitPos: readonly [number, number],
-  distanceMap: number[][] | undefined,
-): void
-```
-
-Build the current perception vector and update distance-tracking state.
-
-Parameters:
-- `state` - - Mutable simulation state for the active run.
-- `encodedMaze` - - Maze grid used for perception and distance lookup.
-- `exitPos` - - Goal coordinate for the current run.
-- `distanceMap` - - Optional precomputed distance map.

@@ -198,56 +198,39 @@ Targets may be soft labels and are expected to sum to 1 (will be re-normalized i
 
 ## methods/cost/cost.utils.ts
 
-### computeCrossEntropy
+### BINARY_CLASSIFICATION_THRESHOLD
+
+Threshold for binarizing probabilities into class predictions.
+
+### clampProbability
 
 ```ts
-computeCrossEntropy(
-  targets: number[],
-  outputs: number[],
+clampProbability(
+  probability: number,
 ): number
 ```
 
-Computes the Cross Entropy error over the provided targets and outputs.
+Clamps a probability into the inclusive bounds defined by PROBABILITY_LOWER_BOUND and PROBABILITY_UPPER_BOUND.
 
 Parameters:
-- `targets` - - Desired target probabilities (may be soft labels between 0 and 1).
-- `outputs` - - Model output probabilities.
+- `probability` - - Raw probability value to bound.
 
-Returns: Mean cross-entropy error across all samples.
+Returns: Probability constrained to the numeric stability range.
 
-### computeSoftmaxCrossEntropy
+### classifyBinary
 
 ```ts
-computeSoftmaxCrossEntropy(
-  targets: number[],
-  outputs: number[],
+classifyBinary(
+  probability: number,
 ): number
 ```
 
-Computes the softmax cross entropy given targets and raw score outputs.
+Converts a probability into a binary class label using the configured threshold.
 
 Parameters:
-- `targets` - - Desired target probabilities that should sum to 1 (will be normalized if not).
-- `outputs` - - Raw logits or scores for each class.
+- `probability` - - Probability to classify.
 
-Returns: Total (non-averaged) softmax cross-entropy loss.
-
-### computeMeanSquaredError
-
-```ts
-computeMeanSquaredError(
-  targets: number[],
-  outputs: number[],
-): number
-```
-
-Computes mean squared error between targets and outputs.
-
-Parameters:
-- `targets` - - Desired target values.
-- `outputs` - - Model outputs.
-
-Returns: Mean squared error.
+Returns: POSITIVE_CLASS_LABEL when above or equal to threshold; otherwise NEGATIVE_CLASS_LABEL.
 
 ### computeBinaryError
 
@@ -265,6 +248,80 @@ Parameters:
 - `outputs` - - Predicted probabilities.
 
 Returns: Proportion of misclassified samples.
+
+### computeCrossEntropy
+
+```ts
+computeCrossEntropy(
+  targets: number[],
+  outputs: number[],
+): number
+```
+
+Computes the Cross Entropy error over the provided targets and outputs.
+
+Parameters:
+- `targets` - - Desired target probabilities (may be soft labels between 0 and 1).
+- `outputs` - - Model output probabilities.
+
+Returns: Mean cross-entropy error across all samples.
+
+### computeFocalLoss
+
+```ts
+computeFocalLoss(
+  targets: number[],
+  outputs: number[],
+  gamma: number,
+  alpha: number,
+): number
+```
+
+Computes focal loss for imbalanced classification tasks.
+
+Parameters:
+- `targets` - - Target labels (0 or 1) or soft labels.
+- `outputs` - - Predicted probabilities.
+- `gamma` - - Focusing parameter controlling hard example emphasis.
+- `alpha` - - Balancing parameter for class weighting.
+
+Returns: Mean focal loss.
+
+### computeHingeLoss
+
+```ts
+computeHingeLoss(
+  targets: number[],
+  outputs: number[],
+): number
+```
+
+Computes hinge loss for margin-based classification.
+
+Parameters:
+- `targets` - - Target labels encoded as -1 or 1.
+- `outputs` - - Model outputs (raw scores).
+
+Returns: Mean hinge loss.
+
+### computeLabelSmoothingLoss
+
+```ts
+computeLabelSmoothingLoss(
+  targets: number[],
+  outputs: number[],
+  smoothing: number,
+): number
+```
+
+Computes cross entropy with label smoothing applied to targets.
+
+Parameters:
+- `targets` - - Target labels (0 or 1) or soft labels.
+- `outputs` - - Predicted probabilities.
+- `smoothing` - - Smoothing factor between 0 and 1.
+
+Returns: Mean cross-entropy loss with smoothed targets.
 
 ### computeMeanAbsoluteError
 
@@ -300,6 +357,23 @@ Parameters:
 
 Returns: Mean absolute percentage error (fractional form).
 
+### computeMeanSquaredError
+
+```ts
+computeMeanSquaredError(
+  targets: number[],
+  outputs: number[],
+): number
+```
+
+Computes mean squared error between targets and outputs.
+
+Parameters:
+- `targets` - - Desired target values.
+- `outputs` - - Model outputs.
+
+Returns: Mean squared error.
+
 ### computeMeanSquaredLogarithmicError
 
 ```ts
@@ -317,117 +391,22 @@ Parameters:
 
 Returns: Mean squared logarithmic error.
 
-### computeHingeLoss
+### computeSoftmaxCrossEntropy
 
 ```ts
-computeHingeLoss(
+computeSoftmaxCrossEntropy(
   targets: number[],
   outputs: number[],
 ): number
 ```
 
-Computes hinge loss for margin-based classification.
+Computes the softmax cross entropy given targets and raw score outputs.
 
 Parameters:
-- `targets` - - Target labels encoded as -1 or 1.
-- `outputs` - - Model outputs (raw scores).
+- `targets` - - Desired target probabilities that should sum to 1 (will be normalized if not).
+- `outputs` - - Raw logits or scores for each class.
 
-Returns: Mean hinge loss.
-
-### computeFocalLoss
-
-```ts
-computeFocalLoss(
-  targets: number[],
-  outputs: number[],
-  gamma: number,
-  alpha: number,
-): number
-```
-
-Computes focal loss for imbalanced classification tasks.
-
-Parameters:
-- `targets` - - Target labels (0 or 1) or soft labels.
-- `outputs` - - Predicted probabilities.
-- `gamma` - - Focusing parameter controlling hard example emphasis.
-- `alpha` - - Balancing parameter for class weighting.
-
-Returns: Mean focal loss.
-
-### computeLabelSmoothingLoss
-
-```ts
-computeLabelSmoothingLoss(
-  targets: number[],
-  outputs: number[],
-  smoothing: number,
-): number
-```
-
-Computes cross entropy with label smoothing applied to targets.
-
-Parameters:
-- `targets` - - Target labels (0 or 1) or soft labels.
-- `outputs` - - Predicted probabilities.
-- `smoothing` - - Smoothing factor between 0 and 1.
-
-Returns: Mean cross-entropy loss with smoothed targets.
-
-### LENGTH_MISMATCH_MESSAGE
-
-Error message thrown when target and output arrays differ in length.
-
-### POSITIVE_CLASS_LABEL
-
-Canonical positive label used by binary-oriented helpers.
-
-### NEGATIVE_CLASS_LABEL
-
-Canonical negative label used by binary-oriented helpers.
-
-### BINARY_CLASSIFICATION_THRESHOLD
-
-Threshold for binarizing probabilities into class predictions.
-
-### HINGE_MARGIN
-
-Margin enforced by hinge loss.
-
-### DEFAULT_FOCAL_GAMMA
-
-Default focusing parameter for focal loss.
-
-### DEFAULT_FOCAL_ALPHA
-
-Default class balancing parameter for focal loss.
-
-### DEFAULT_LABEL_SMOOTHING
-
-Default smoothing factor for label smoothing.
-
-### LABEL_SMOOTHING_BASELINE
-
-Baseline probability used when smoothing targets.
-
-### SOFTMAX_SUM_GUARD
-
-Lower bound for softmax denominator to avoid division by zero.
-
-### clampProbability
-
-```ts
-clampProbability(
-  probability: number,
-): number
-```
-
-Clamps a probability into the inclusive bounds defined by PROBABILITY_LOWER_BOUND and PROBABILITY_UPPER_BOUND.
-
-Parameters:
-- `probability` - - Raw probability value to bound.
-
-Returns: Probability constrained to the numeric stability range.
+Returns: Total (non-averaged) softmax cross-entropy loss.
 
 ### crossEntropyTerm
 
@@ -446,6 +425,34 @@ Parameters:
 
 Returns: Cross-entropy term for the sample.
 
+### DEFAULT_FOCAL_ALPHA
+
+Default class balancing parameter for focal loss.
+
+### DEFAULT_FOCAL_GAMMA
+
+Default focusing parameter for focal loss.
+
+### DEFAULT_LABEL_SMOOTHING
+
+Default smoothing factor for label smoothing.
+
+### HINGE_MARGIN
+
+Margin enforced by hinge loss.
+
+### LABEL_SMOOTHING_BASELINE
+
+Baseline probability used when smoothing targets.
+
+### LENGTH_MISMATCH_MESSAGE
+
+Error message thrown when target and output arrays differ in length.
+
+### NEGATIVE_CLASS_LABEL
+
+Canonical negative label used by binary-oriented helpers.
+
 ### normalizeTargets
 
 ```ts
@@ -461,35 +468,9 @@ Parameters:
 
 Returns: Normalized target probabilities; returns a shallow copy when the sum is zero.
 
-### stableSoftmax
+### POSITIVE_CLASS_LABEL
 
-```ts
-stableSoftmax(
-  outputs: number[],
-): number[]
-```
-
-Computes a numerically stable softmax from raw output scores.
-
-Parameters:
-- `outputs` - - Raw logits or scores.
-
-Returns: Softmax probabilities corresponding to the inputs.
-
-### classifyBinary
-
-```ts
-classifyBinary(
-  probability: number,
-): number
-```
-
-Converts a probability into a binary class label using the configured threshold.
-
-Parameters:
-- `probability` - - Probability to classify.
-
-Returns: POSITIVE_CLASS_LABEL when above or equal to threshold; otherwise NEGATIVE_CLASS_LABEL.
+Canonical positive label used by binary-oriented helpers.
 
 ### smoothTarget
 
@@ -507,3 +488,22 @@ Parameters:
 - `smoothing` - - Smoothing factor between 0 and 1.
 
 Returns: Smoothed target probability.
+
+### SOFTMAX_SUM_GUARD
+
+Lower bound for softmax denominator to avoid division by zero.
+
+### stableSoftmax
+
+```ts
+stableSoftmax(
+  outputs: number[],
+): number[]
+```
+
+Computes a numerically stable softmax from raw output scores.
+
+Parameters:
+- `outputs` - - Raw logits or scores.
+
+Returns: Softmax probabilities corresponding to the inputs.

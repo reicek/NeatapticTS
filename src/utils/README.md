@@ -44,38 +44,6 @@ flowchart TD
 
 ## utils/memory.ts
 
-### MemoryStats
-
-Detailed statistics describing the current estimated memory footprint of
-tracked networks plus supporting pools.
-
-Important: All byte counts here are *estimates*. JavaScript engine object
-overhead varies; once slab (Structure of Arrays) storage dominates, these
-estimates get closer to real usage. Treat values as relative metrics for
-comparing configurations (e.g. before / after enabling pooling) rather than
-exact allocations.
-
-The payload is easiest to read as four cooperating layers:
-
-- `connections`, `nodes`, and `estimatedTotalBytes` summarize the tracked
-  network footprint itself,
-- `slabs` explains how much typed-array storage exists and how much of the
-  reserved connection capacity is currently used,
-- `pools` shows whether reusable allocation infrastructure is active,
-- `env` exposes the coarser browser or Node memory readings that surround the
-  heuristic network view.
-
-### NetworkView
-
-Minimal view of a network used for memory heuristics. Only properties
-accessed by this module are declared. This keeps coupling light while
-enabling typed local variables instead of loose catch-all types everywhere.
-
-### SlabAllocStats
-
-Minimal slab allocator stats shape used here. The real shape may
-include additional fields; we only rely on fresh/pooled counts.
-
 ### memoryStats
 
 ```ts
@@ -109,20 +77,32 @@ const snapshot = memoryStats();
 console.log(snapshot.estimatedTotalBytes, snapshot.slabs.fragmentationPct);
 ```
 
-### resetMemoryTracking
+### MemoryStats
 
-```ts
-resetMemoryTracking(): void
-```
+Detailed statistics describing the current estimated memory footprint of
+tracked networks plus supporting pools.
 
-Clear the internal list of networks tracked by `memoryStats()` when no
-explicit networks are provided. This does NOT free memory; it only
-removes references held by the registry.
+Important: All byte counts here are *estimates*. JavaScript engine object
+overhead varies; once slab (Structure of Arrays) storage dominates, these
+estimates get closer to real usage. Treat values as relative metrics for
+comparing configurations (e.g. before / after enabling pooling) rather than
+exact allocations.
 
-Use this when a teaching example, benchmark, or test wants a fresh registry
-boundary before capturing the next snapshot.
+The payload is easiest to read as four cooperating layers:
 
-Returns: void
+- `connections`, `nodes`, and `estimatedTotalBytes` summarize the tracked
+  network footprint itself,
+- `slabs` explains how much typed-array storage exists and how much of the
+  reserved connection capacity is currently used,
+- `pools` shows whether reusable allocation infrastructure is active,
+- `env` exposes the coarser browser or Node memory readings that surround the
+  heuristic network view.
+
+### NetworkView
+
+Minimal view of a network used for memory heuristics. Only properties
+accessed by this module are declared. This keeps coupling light while
+enabling typed local variables instead of loose catch-all types everywhere.
 
 ### registerTrackedNetwork
 
@@ -145,6 +125,26 @@ Parameters:
 - `network` - Network instance (loose shape, validated at runtime).
 
 Returns: void
+
+### resetMemoryTracking
+
+```ts
+resetMemoryTracking(): void
+```
+
+Clear the internal list of networks tracked by `memoryStats()` when no
+explicit networks are provided. This does NOT free memory; it only
+removes references held by the registry.
+
+Use this when a teaching example, benchmark, or test wants a fresh registry
+boundary before capturing the next snapshot.
+
+Returns: void
+
+### SlabAllocStats
+
+Minimal slab allocator stats shape used here. The real shape may
+include additional fields; we only rely on fresh/pooled counts.
 
 ### unregisterTrackedNetwork
 
@@ -197,44 +197,44 @@ flowchart LR
   Build --> Payload[MemoryStats]
 ```
 
-### normalizeNetworks
+### accumulateCapacitySlices
 
 ```ts
-normalizeNetworks(
-  targets: NetworkView | NetworkView[] | undefined,
-  trackedNetworks: NetworkView[],
-): NetworkView[]
+accumulateCapacitySlices(
+  accumulators: Accumulators,
+  network: NetworkView,
+  heuristics: HeuristicBytes,
+): void
 ```
 
-Normalize provided targets to an array of networks, falling back to tracked registry.
-
-This helper keeps the public entrypoint flexible without making later
-aggregation code branch on every call path.
+Track reserved vs used bytes based on connection capacity slices.
 
 Parameters:
-- `targets` - Optional single network or array.
-- `trackedNetworks` - Internal registry of tracked networks.
+- `accumulators` - Running totals for the memory snapshot.
+- `network` - Network exposing capacity metadata.
+- `heuristics` - Fallback byte weights for connection objects.
 
-Returns: Array of networks to summarize.
-
-### safeGetSlabAllocationStats
+### accumulateSlabArrays
 
 ```ts
-safeGetSlabAllocationStats(
-  getSlabAllocationStats: () => unknown,
-): SlabAllocStats
+accumulateSlabArrays(
+  accumulators: Accumulators,
+  typedArrays: (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[],
+): void
 ```
 
-Safely read slab allocation stats, guarding against provider errors.
-
-Allocator telemetry is useful but optional. A failed probe should degrade the
-snapshot gracefully instead of turning diagnostics into a source of runtime
-failures.
+Sum slab-backed array counts and byte sizes into the accumulator.
 
 Parameters:
-- `getSlabAllocationStats` - Provider function returning allocator stats.
+- `accumulators` - Running totals for the memory snapshot.
+- `typedArrays` - Connection-parallel arrays to measure.
 
-Returns: Slab allocation stats or null on failure.
+### Accumulators
+
+Running totals used while walking networks to summarize memory consumption.
+Accumulates counts, slab byte totals, and reserved vs used capacity
+snapshots. This is the file's working ledger before the public-facing
+`MemoryStats` object is assembled.
 
 ### aggregateNetworkStats
 
@@ -258,40 +258,6 @@ Parameters:
 
 Returns: Accumulated summary of network metrics.
 
-### captureEnvironmentMetrics
-
-```ts
-captureEnvironmentMetrics(): { isBrowser: boolean; usedJSHeapSize?: number | undefined; totalJSHeapSize?: number | undefined; jsHeapSizeLimit?: number | undefined; rss?: number | undefined; heapUsed?: number | undefined; heapTotal?: number | undefined; external?: number | undefined; }
-```
-
-Capture environment memory metrics from browser or Node when available.
-
-The environment block complements the network-centric heuristics. It is not
-specific enough to explain every connection or node, but it helps readers see
-whether the broader runtime is moving in the same direction as the network
-summary.
-
-Returns: Environment metrics structure for the snapshot.
-
-### buildMemoryStatsSnapshot
-
-```ts
-buildMemoryStatsSnapshot(
-  input: BuildMemoryStatsInput,
-): MemoryStats
-```
-
-Build the full MemoryStats snapshot from precomputed components.
-
-This final fold is intentionally declarative: all measurement work has
-already happened, so the builder can stay focused on turning those pieces
-into a readable teaching payload.
-
-Parameters:
-- `input` - Structured inputs collected by the orchestrator.
-
-Returns: Complete MemoryStats snapshot.
-
 ### buildFlagSnapshot
 
 ```ts
@@ -313,27 +279,6 @@ Parameters:
 
 Returns: Flags snapshot for MemoryStats.
 
-### HeuristicBytes
-
-Heuristic byte weights used to approximate per-object overhead in the allocator.
-These numbers represent typical JS object footprints, not exact runtime
-measurements. They are teaching weights: stable enough to compare runs and
-storage strategies even when the engine's true overhead is more complicated.
-
-### Accumulators
-
-Running totals used while walking networks to summarize memory consumption.
-Accumulates counts, slab byte totals, and reserved vs used capacity
-snapshots. This is the file's working ledger before the public-facing
-`MemoryStats` object is assembled.
-
-### ConfigSnapshot
-
-Captured configuration knobs that influence memory usage and pooling behavior.
-Keeps only the flags relevant to the memory snapshot to avoid leaking full
-config. The goal is to explain the memory story, not to smuggle the entire
-runtime configuration surface into a diagnostic payload.
-
 ### BuildMemoryStatsInput
 
 Structured inputs required to assemble a MemoryStats snapshot in one pass.
@@ -341,126 +286,24 @@ Bundles precomputed accumulators, environment info, allocator stats, and
 flags. This keeps the final snapshot builder declarative: collect first,
 then fold into the public payload.
 
-### CONNECTION_OBJECT_BYTES
-
-Estimated per-connection JS object footprint in bytes (includes metadata fields).
-Used as a fallback when typed-array parallel data is unavailable.
-
-### NODE_OBJECT_BYTES
-
-Estimated per-node JS object footprint in bytes, covering activation state and IDs.
-This heuristic keeps node weight comparable to connection objects during summaries.
-
-### HEURISTIC_BYTES
-
-Default heuristics mapping human-readable weights to their byte estimates.
-Centralizes the fallback values so downstream summaries stay consistent.
-Read this as the chapter's shared baseline for "object-heavy" accounting
-when typed-array widths are unavailable or incomplete.
-
-### createEmptyAccumulators
+### buildMemoryStatsSnapshot
 
 ```ts
-createEmptyAccumulators(): Accumulators
+buildMemoryStatsSnapshot(
+  input: BuildMemoryStatsInput,
+): MemoryStats
 ```
 
-Initialize a fresh accumulator snapshot for memory summaries.
+Build the full MemoryStats snapshot from precomputed components.
 
-Returns: Zeroed accumulators ready for aggregation.
-
-### computeCounts
-
-```ts
-computeCounts(
-  network: NetworkView,
-): CountSnapshot
-```
-
-Capture simple counts for nodes and connections on a network view.
+This final fold is intentionally declarative: all measurement work has
+already happened, so the builder can stay focused on turning those pieces
+into a readable teaching payload.
 
 Parameters:
-- `network` - Network being summarized.
+- `input` - Structured inputs collected by the orchestrator.
 
-Returns: Connection and node counts.
-
-### collectConnectionTypedArrays
-
-```ts
-collectConnectionTypedArrays(
-  network: NetworkView,
-): (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]
-```
-
-Gather all typed arrays that represent connection-parallel data on a network.
-
-Parameters:
-- `network` - Network providing connection state arrays.
-
-Returns: Typed arrays aligned to connections.
-
-### accumulateSlabArrays
-
-```ts
-accumulateSlabArrays(
-  accumulators: Accumulators,
-  typedArrays: (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[],
-): void
-```
-
-Sum slab-backed array counts and byte sizes into the accumulator.
-
-Parameters:
-- `accumulators` - Running totals for the memory snapshot.
-- `typedArrays` - Connection-parallel arrays to measure.
-
-### accumulateCapacitySlices
-
-```ts
-accumulateCapacitySlices(
-  accumulators: Accumulators,
-  network: NetworkView,
-  heuristics: HeuristicBytes,
-): void
-```
-
-Track reserved vs used bytes based on connection capacity slices.
-
-Parameters:
-- `accumulators` - Running totals for the memory snapshot.
-- `network` - Network exposing capacity metadata.
-- `heuristics` - Fallback byte weights for connection objects.
-
-### describeConnectionBytes
-
-```ts
-describeConnectionBytes(
-  network: NetworkView,
-  heuristics: HeuristicBytes,
-): number
-```
-
-Determine bytes per connection using typed-array width or heuristic fallback.
-
-Parameters:
-- `network` - Network whose storage format drives the byte width.
-- `heuristics` - Heuristic sizes for non-typed-array cases.
-
-Returns: Estimated bytes per connection entry.
-
-### captureVersionMetadata
-
-```ts
-captureVersionMetadata(
-  accumulators: Accumulators,
-  network: NetworkView,
-): void
-```
-
-Capture slab metadata (version and async builds) once across all networks.
-
-Parameters:
-- `accumulators` - Running totals with metadata slots.
-- `network` - Network providing slab metadata fields.
+Returns: Complete MemoryStats snapshot.
 
 ### buildSlabStats
 
@@ -510,3 +353,160 @@ Parameters:
 - `allocationStats` - Allocator snapshot or null when unavailable.
 
 Returns: Fraction of pooled allocations or null if indeterminate.
+
+### captureEnvironmentMetrics
+
+```ts
+captureEnvironmentMetrics(): { isBrowser: boolean; usedJSHeapSize?: number | undefined; totalJSHeapSize?: number | undefined; jsHeapSizeLimit?: number | undefined; rss?: number | undefined; heapUsed?: number | undefined; heapTotal?: number | undefined; external?: number | undefined; }
+```
+
+Capture environment memory metrics from browser or Node when available.
+
+The environment block complements the network-centric heuristics. It is not
+specific enough to explain every connection or node, but it helps readers see
+whether the broader runtime is moving in the same direction as the network
+summary.
+
+Returns: Environment metrics structure for the snapshot.
+
+### captureVersionMetadata
+
+```ts
+captureVersionMetadata(
+  accumulators: Accumulators,
+  network: NetworkView,
+): void
+```
+
+Capture slab metadata (version and async builds) once across all networks.
+
+Parameters:
+- `accumulators` - Running totals with metadata slots.
+- `network` - Network providing slab metadata fields.
+
+### collectConnectionTypedArrays
+
+```ts
+collectConnectionTypedArrays(
+  network: NetworkView,
+): (Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]
+```
+
+Gather all typed arrays that represent connection-parallel data on a network.
+
+Parameters:
+- `network` - Network providing connection state arrays.
+
+Returns: Typed arrays aligned to connections.
+
+### computeCounts
+
+```ts
+computeCounts(
+  network: NetworkView,
+): CountSnapshot
+```
+
+Capture simple counts for nodes and connections on a network view.
+
+Parameters:
+- `network` - Network being summarized.
+
+Returns: Connection and node counts.
+
+### ConfigSnapshot
+
+Captured configuration knobs that influence memory usage and pooling behavior.
+Keeps only the flags relevant to the memory snapshot to avoid leaking full
+config. The goal is to explain the memory story, not to smuggle the entire
+runtime configuration surface into a diagnostic payload.
+
+### CONNECTION_OBJECT_BYTES
+
+Estimated per-connection JS object footprint in bytes (includes metadata fields).
+Used as a fallback when typed-array parallel data is unavailable.
+
+### createEmptyAccumulators
+
+```ts
+createEmptyAccumulators(): Accumulators
+```
+
+Initialize a fresh accumulator snapshot for memory summaries.
+
+Returns: Zeroed accumulators ready for aggregation.
+
+### describeConnectionBytes
+
+```ts
+describeConnectionBytes(
+  network: NetworkView,
+  heuristics: HeuristicBytes,
+): number
+```
+
+Determine bytes per connection using typed-array width or heuristic fallback.
+
+Parameters:
+- `network` - Network whose storage format drives the byte width.
+- `heuristics` - Heuristic sizes for non-typed-array cases.
+
+Returns: Estimated bytes per connection entry.
+
+### HEURISTIC_BYTES
+
+Default heuristics mapping human-readable weights to their byte estimates.
+Centralizes the fallback values so downstream summaries stay consistent.
+Read this as the chapter's shared baseline for "object-heavy" accounting
+when typed-array widths are unavailable or incomplete.
+
+### HeuristicBytes
+
+Heuristic byte weights used to approximate per-object overhead in the allocator.
+These numbers represent typical JS object footprints, not exact runtime
+measurements. They are teaching weights: stable enough to compare runs and
+storage strategies even when the engine's true overhead is more complicated.
+
+### NODE_OBJECT_BYTES
+
+Estimated per-node JS object footprint in bytes, covering activation state and IDs.
+This heuristic keeps node weight comparable to connection objects during summaries.
+
+### normalizeNetworks
+
+```ts
+normalizeNetworks(
+  targets: NetworkView | NetworkView[] | undefined,
+  trackedNetworks: NetworkView[],
+): NetworkView[]
+```
+
+Normalize provided targets to an array of networks, falling back to tracked registry.
+
+This helper keeps the public entrypoint flexible without making later
+aggregation code branch on every call path.
+
+Parameters:
+- `targets` - Optional single network or array.
+- `trackedNetworks` - Internal registry of tracked networks.
+
+Returns: Array of networks to summarize.
+
+### safeGetSlabAllocationStats
+
+```ts
+safeGetSlabAllocationStats(
+  getSlabAllocationStats: () => unknown,
+): SlabAllocStats
+```
+
+Safely read slab allocation stats, guarding against provider errors.
+
+Allocator telemetry is useful but optional. A failed probe should degrade the
+snapshot gracefully instead of turning diagnostics into a source of runtime
+failures.
+
+Parameters:
+- `getSlabAllocationStats` - Provider function returning allocator stats.
+
+Returns: Slab allocation stats or null on failure.

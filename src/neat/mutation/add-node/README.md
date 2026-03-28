@@ -42,130 +42,6 @@ flowchart TD
 
 ## neat/mutation/add-node/mutation.add-node.ts
 
-### ensureBootstrapConnection
-
-```ts
-ensureBootstrapConnection(
-  genomeToSeed: GenomeWithMetadata,
-  internal: NeatControllerForMutation,
-): void
-```
-
-Ensure the genome has at least one connection by linking input to output.
-
-A connection split only makes sense when a genome already has an edge to cut.
-This helper is the bootstrap escape hatch for extremely sparse genomes. It
-seeds the smallest possible forward connection so the add-node path can keep
-behaving like a split-based structural mutation instead of bailing out
-immediately.
-
-Parameters:
-- `genomeToSeed` - - genome that may need a bootstrap connection
-- `internal` - - neat controller context retained for compatibility with existing callers
-
-Returns: void
-
-### findFirstNodeByType
-
-```ts
-findFirstNodeByType(
-  genomeToSearch: GenomeWithMetadata,
-  nodeType: "input" | "output" | "hidden",
-): NodeWithMetadata | undefined
-```
-
-Find the first node of a given type.
-
-The add-node bootstrap path only needs a minimal node lookup strategy, so
-this helper stays intentionally simple and deterministic.
-
-Parameters:
-- `genomeToSearch` - - genome whose nodes are searched
-- `nodeType` - - node type to match
-
-Returns: the first matching node or undefined
-
-### collectEnabledConnections
-
-```ts
-collectEnabledConnections(
-  genomeToInspect: GenomeWithMetadata,
-): ConnectionWithMetadata[]
-```
-
-Collect all enabled connections from a genome.
-
-Split mutations only operate on live structural edges. Disabled connections
-remain historical artifacts and should not become split candidates because
-doing so would grow new structure from topology the runtime is not currently
-using.
-
-Parameters:
-- `genomeToInspect` - - genome to inspect
-
-Returns: enabled connections list
-
-### chooseConnectionForSplit
-
-```ts
-chooseConnectionForSplit(
-  enabledConnectionsList: ConnectionWithMetadata[],
-  internal: NeatControllerForMutation,
-): ConnectionWithMetadata | null
-```
-
-Choose a random enabled connection to split.
-
-Once the candidate shelf is built, the split path keeps selection light: one
-RNG draw chooses the connection whose history may now branch into a hidden
-node insertion.
-
-Parameters:
-- `enabledConnectionsList` - - candidate connections
-- `internal` - - neat controller context
-
-Returns: selected connection or null
-
-### buildSplitDescriptor
-
-```ts
-buildSplitDescriptor(
-  connectionToSplit: ConnectionWithMetadata,
-): { splitKey: string; originalWeight: number; }
-```
-
-Build the split descriptor used for innovation lookup and connection creation.
-
-The descriptor is the compact identity packet for a split. Its key captures
-which source and target genes were separated, while its preserved weight lets
-the outgoing replacement edge inherit the old signal strength.
-
-Parameters:
-- `connectionToSplit` - - connection being split
-
-Returns: split descriptor
-
-### disconnectOriginalConnection
-
-```ts
-disconnectOriginalConnection(
-  genomeToEdit: GenomeWithMetadata,
-  connectionToRemove: ConnectionWithMetadata,
-): void
-```
-
-Disconnect the original connection before inserting the split node.
-
-The add-node mutation is modeled as a real split, not as a parallel bypass.
-Removing the original edge first preserves the intended NEAT-style topology
-change: the signal must now pass through the new hidden node.
-
-Parameters:
-- `genomeToEdit` - - genome to edit
-- `connectionToRemove` - - original connection to remove
-
-Returns: void
-
 ### applySplitWithExistingRecord
 
 ```ts
@@ -221,26 +97,89 @@ Parameters:
 
 Returns: void
 
-### resolveInsertIndex
+### assignInnovationsForNewSplit
 
 ```ts
-resolveInsertIndex(
-  genomeToEdit: GenomeWithMetadata,
-  targetNode: NodeWithMetadata,
-): number
+assignInnovationsForNewSplit(
+  newNode: NodeWithMetadata,
+  splitConnections: { incomingConnection?: ConnectionWithMetadata | undefined; outgoingConnection?: ConnectionWithMetadata | undefined; },
+  internal: NeatControllerForMutation,
+): { newNodeGeneId: number; inInnov: number; outInnov: number; }
 ```
 
-Resolve the insertion index for a new node, keeping outputs at the end.
+Assign new innovations for a split and build the innovation record.
 
-Node order matters in this codebase because output nodes are expected to stay
-grouped at the tail of the genome node list. This helper preserves that local
-invariant while still placing the new hidden node near the split target.
+New split records are the durable memory that turns a one-off structural edit
+into reusable innovation history. This helper assigns the next global
+innovation ids to the replacement edges and packages those ids together with
+the new node gene id so later equivalent splits can be recognized quickly.
 
 Parameters:
-- `genomeToEdit` - - genome whose node list is updated
-- `targetNode` - - original target node of the split connection
+- `newNode` - - newly created hidden node
+- `splitConnections` - - incoming/outgoing connections
+- `internal` - - neat controller context
 
-Returns: insertion index
+Returns: innovation record for the split
+
+### buildSplitDescriptor
+
+```ts
+buildSplitDescriptor(
+  connectionToSplit: ConnectionWithMetadata,
+): { splitKey: string; originalWeight: number; }
+```
+
+Build the split descriptor used for innovation lookup and connection creation.
+
+The descriptor is the compact identity packet for a split. Its key captures
+which source and target genes were separated, while its preserved weight lets
+the outgoing replacement edge inherit the old signal strength.
+
+Parameters:
+- `connectionToSplit` - - connection being split
+
+Returns: split descriptor
+
+### chooseConnectionForSplit
+
+```ts
+chooseConnectionForSplit(
+  enabledConnectionsList: ConnectionWithMetadata[],
+  internal: NeatControllerForMutation,
+): ConnectionWithMetadata | null
+```
+
+Choose a random enabled connection to split.
+
+Once the candidate shelf is built, the split path keeps selection light: one
+RNG draw chooses the connection whose history may now branch into a hidden
+node insertion.
+
+Parameters:
+- `enabledConnectionsList` - - candidate connections
+- `internal` - - neat controller context
+
+Returns: selected connection or null
+
+### collectEnabledConnections
+
+```ts
+collectEnabledConnections(
+  genomeToInspect: GenomeWithMetadata,
+): ConnectionWithMetadata[]
+```
+
+Collect all enabled connections from a genome.
+
+Split mutations only operate on live structural edges. Disabled connections
+remain historical artifacts and should not become split candidates because
+doing so would grow new structure from topology the runtime is not currently
+using.
+
+Parameters:
+- `genomeToInspect` - - genome to inspect
+
+Returns: enabled connections list
 
 ### connectSplitEdges
 
@@ -268,26 +207,87 @@ Parameters:
 
 Returns: incoming/outgoing connection handles
 
-### assignInnovationsForNewSplit
+### disconnectOriginalConnection
 
 ```ts
-assignInnovationsForNewSplit(
-  newNode: NodeWithMetadata,
-  splitConnections: { incomingConnection?: ConnectionWithMetadata | undefined; outgoingConnection?: ConnectionWithMetadata | undefined; },
-  internal: NeatControllerForMutation,
-): { newNodeGeneId: number; inInnov: number; outInnov: number; }
+disconnectOriginalConnection(
+  genomeToEdit: GenomeWithMetadata,
+  connectionToRemove: ConnectionWithMetadata,
+): void
 ```
 
-Assign new innovations for a split and build the innovation record.
+Disconnect the original connection before inserting the split node.
 
-New split records are the durable memory that turns a one-off structural edit
-into reusable innovation history. This helper assigns the next global
-innovation ids to the replacement edges and packages those ids together with
-the new node gene id so later equivalent splits can be recognized quickly.
+The add-node mutation is modeled as a real split, not as a parallel bypass.
+Removing the original edge first preserves the intended NEAT-style topology
+change: the signal must now pass through the new hidden node.
 
 Parameters:
-- `newNode` - - newly created hidden node
-- `splitConnections` - - incoming/outgoing connections
-- `internal` - - neat controller context
+- `genomeToEdit` - - genome to edit
+- `connectionToRemove` - - original connection to remove
 
-Returns: innovation record for the split
+Returns: void
+
+### ensureBootstrapConnection
+
+```ts
+ensureBootstrapConnection(
+  genomeToSeed: GenomeWithMetadata,
+  internal: NeatControllerForMutation,
+): void
+```
+
+Ensure the genome has at least one connection by linking input to output.
+
+A connection split only makes sense when a genome already has an edge to cut.
+This helper is the bootstrap escape hatch for extremely sparse genomes. It
+seeds the smallest possible forward connection so the add-node path can keep
+behaving like a split-based structural mutation instead of bailing out
+immediately.
+
+Parameters:
+- `genomeToSeed` - - genome that may need a bootstrap connection
+- `internal` - - neat controller context retained for compatibility with existing callers
+
+Returns: void
+
+### findFirstNodeByType
+
+```ts
+findFirstNodeByType(
+  genomeToSearch: GenomeWithMetadata,
+  nodeType: "input" | "output" | "hidden",
+): NodeWithMetadata | undefined
+```
+
+Find the first node of a given type.
+
+The add-node bootstrap path only needs a minimal node lookup strategy, so
+this helper stays intentionally simple and deterministic.
+
+Parameters:
+- `genomeToSearch` - - genome whose nodes are searched
+- `nodeType` - - node type to match
+
+Returns: the first matching node or undefined
+
+### resolveInsertIndex
+
+```ts
+resolveInsertIndex(
+  genomeToEdit: GenomeWithMetadata,
+  targetNode: NodeWithMetadata,
+): number
+```
+
+Resolve the insertion index for a new node, keeping outputs at the end.
+
+Node order matters in this codebase because output nodes are expected to stay
+grouped at the tail of the genome node list. This helper preserves that local
+invariant while still placing the new hidden node near the split target.
+
+Parameters:
+- `genomeToEdit` - - genome whose node list is updated
+- `targetNode` - - original target node of the split connection
+
+Returns: insertion index

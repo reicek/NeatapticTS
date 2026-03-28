@@ -38,40 +38,6 @@ its own.
 
 ## neat/pruning/facade/pruning.facade.ts
 
-### applyEvolutionPruning
-
-```ts
-applyEvolutionPruning(
-  host: NeatLikeForPruning,
-): Promise<void>
-```
-
-Apply evolution-time pruning through the stable public `Neat` facade.
-
-This is the public wrapper for schedule-driven pruning. Use it when the
-caller wants the root pruning chapter to inspect generation timing and apply
-pruning only when the configured evolution schedule says it is active.
-
-The underlying pruning module is loaded lazily so pruning remains optional,
-and the facade preserves the same best-effort behavior as before the pruning
-logic was extracted out of the main `Neat` class.
-
-This wrapper is the predictable pruning entrypoint: it says "consult the
-generation schedule and prune if the current run state says it is time."
-That makes it the better fit for orchestrated evolve loops and deterministic
-experiments where pruning should follow a known calendar.
-
-Parameters:
-- `host` - - `Neat` instance exposing pruning options, generation state, and population.
-
-Returns: Promise that resolves after the best-effort pruning attempt finishes.
-
-Example:
-
-```ts
-await neat.applyEvolutionPruning();
-```
-
 ### applyAdaptivePruning
 
 ```ts
@@ -104,6 +70,40 @@ Example:
 
 ```ts
 await neat.applyAdaptivePruning();
+```
+
+### applyEvolutionPruning
+
+```ts
+applyEvolutionPruning(
+  host: NeatLikeForPruning,
+): Promise<void>
+```
+
+Apply evolution-time pruning through the stable public `Neat` facade.
+
+This is the public wrapper for schedule-driven pruning. Use it when the
+caller wants the root pruning chapter to inspect generation timing and apply
+pruning only when the configured evolution schedule says it is active.
+
+The underlying pruning module is loaded lazily so pruning remains optional,
+and the facade preserves the same best-effort behavior as before the pruning
+logic was extracted out of the main `Neat` class.
+
+This wrapper is the predictable pruning entrypoint: it says "consult the
+generation schedule and prune if the current run state says it is time."
+That makes it the better fit for orchestrated evolve loops and deterministic
+experiments where pruning should follow a known calendar.
+
+Parameters:
+- `host` - - `Neat` instance exposing pruning options, generation state, and population.
+
+Returns: Promise that resolves after the best-effort pruning attempt finishes.
+
+Example:
+
+```ts
+await neat.applyEvolutionPruning();
 ```
 
 ### NeatPruningFacadeHost

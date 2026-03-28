@@ -100,6 +100,41 @@ adjustCompatibilityThreshold(
 );
 ```
 
+### clampCompatibilityThreshold
+
+```ts
+clampCompatibilityThreshold(
+  options: SpeciationOptions,
+  minCompatibilityThreshold: number,
+  maxCompatibilityThreshold: number,
+): void
+```
+
+Clamp the compatibility threshold to configured bounds.
+
+This is the final safety rail for callers that already have a threshold value
+but need to ensure it remains inside the allowed range. Unlike the PID clamp
+above, this helper only limits the option value itself; it does not interpret
+species-count error or recalculate the integral term.
+
+Read this as the small "no surprises" helper at the end of the loop. Once
+the controller has chosen a new threshold candidate, this function makes the
+public option safe to persist into the next generation even if the caller did
+not come through the full PID path.
+
+Parameters:
+- `options` - - Speciation options.
+- `minCompatibilityThreshold` - - Lower clamp bound.
+- `maxCompatibilityThreshold` - - Upper clamp bound.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+clampCompatibilityThreshold(neat.options, 1, 10);
+```
+
 ### computePidThreshold
 
 ```ts
@@ -151,39 +186,4 @@ const nextThreshold = computePidThreshold(
   1,
   10,
 );
-```
-
-### clampCompatibilityThreshold
-
-```ts
-clampCompatibilityThreshold(
-  options: SpeciationOptions,
-  minCompatibilityThreshold: number,
-  maxCompatibilityThreshold: number,
-): void
-```
-
-Clamp the compatibility threshold to configured bounds.
-
-This is the final safety rail for callers that already have a threshold value
-but need to ensure it remains inside the allowed range. Unlike the PID clamp
-above, this helper only limits the option value itself; it does not interpret
-species-count error or recalculate the integral term.
-
-Read this as the small "no surprises" helper at the end of the loop. Once
-the controller has chosen a new threshold candidate, this function makes the
-public option safe to persist into the next generation even if the caller did
-not come through the full PID path.
-
-Parameters:
-- `options` - - Speciation options.
-- `minCompatibilityThreshold` - - Lower clamp bound.
-- `maxCompatibilityThreshold` - - Upper clamp bound.
-
-Returns: Nothing.
-
-Example:
-
-```ts
-clampCompatibilityThreshold(neat.options, 1, 10);
 ```

@@ -10,6 +10,32 @@ schedule policies callers can tune directly.
 
 ## architecture/network/runtime/network.runtime.controls.utils.ts
 
+### clearStochasticDepthSchedule
+
+```ts
+clearStochasticDepthSchedule(): void
+```
+
+Clear the stochastic-depth schedule function.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
+### clearWeightNoiseSchedule
+
+```ts
+clearWeightNoiseSchedule(): void
+```
+
+Clear the dynamic global weight-noise schedule.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
 ### configurePruning
 
 ```ts
@@ -26,6 +52,32 @@ training loop can opportunistically apply structured sparsification later.
 Parameters:
 - `this` - Target network instance.
 - `configuration` - Pruning schedule and ranking configuration.
+
+Returns: Nothing.
+
+### disableStochasticDepth
+
+```ts
+disableStochasticDepth(): void
+```
+
+Disable stochastic depth.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
+### disableWeightNoise
+
+```ts
+disableWeightNoise(): void
+```
+
+Disable all configured weight noise.
+
+Parameters:
+- `this` - Target network instance.
 
 Returns: Nothing.
 
@@ -49,47 +101,44 @@ Parameters:
 
 Returns: Nothing.
 
-### disableWeightNoise
+### getLastSkippedLayers
 
 ```ts
-disableWeightNoise(): void
+getLastSkippedLayers(): number[]
 ```
 
-Disable all configured weight noise.
+Read the last hidden-layer indices skipped by stochastic depth.
 
 Parameters:
 - `this` - Target network instance.
 
-Returns: Nothing.
+Returns: Snapshot of the last skipped hidden-layer indices.
 
-### setWeightNoiseSchedule
-
-```ts
-setWeightNoiseSchedule(
-  schedule: (step: number) => number,
-): void
-```
-
-Set a dynamic scheduler for global weight noise.
-
-Parameters:
-- `this` - Target network instance.
-- `schedule` - Function mapping the current training step to a standard deviation.
-
-Returns: Nothing.
-
-### clearWeightNoiseSchedule
+### getRuntimeRegularizationStats
 
 ```ts
-clearWeightNoiseSchedule(): void
+getRuntimeRegularizationStats(): Record<string, unknown> | null
 ```
 
-Clear the dynamic global weight-noise schedule.
+Read regularization statistics collected during training.
 
 Parameters:
 - `this` - Target network instance.
 
-Returns: Nothing.
+Returns: Last regularization stats payload or `null` when none exists yet.
+
+### getTrainingStep
+
+```ts
+getTrainingStep(): number
+```
+
+Read the current training-step counter.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Current training step.
 
 ### setRandom
 
@@ -110,90 +159,6 @@ Parameters:
 
 Returns: Nothing.
 
-### testForceOverflow
-
-```ts
-testForceOverflow(): void
-```
-
-Force the next mixed-precision overflow path.
-
-This is a test-oriented hook used to exercise loss-scale recovery logic
-without waiting for a real floating-point overflow.
-
-Parameters:
-- `this` - Target network instance.
-
-Returns: Nothing.
-
-### getTrainingStep
-
-```ts
-getTrainingStep(): number
-```
-
-Read the current training-step counter.
-
-Parameters:
-- `this` - Target network instance.
-
-Returns: Current training step.
-
-### getLastSkippedLayers
-
-```ts
-getLastSkippedLayers(): number[]
-```
-
-Read the last hidden-layer indices skipped by stochastic depth.
-
-Parameters:
-- `this` - Target network instance.
-
-Returns: Snapshot of the last skipped hidden-layer indices.
-
-### setStochasticDepthSchedule
-
-```ts
-setStochasticDepthSchedule(
-  schedule: StochasticDepthSchedule,
-): void
-```
-
-Set the stochastic-depth schedule function.
-
-Parameters:
-- `this` - Target network instance.
-- `schedule` - Function mapping the current step and schedule to a new schedule.
-
-Returns: Nothing.
-
-### clearStochasticDepthSchedule
-
-```ts
-clearStochasticDepthSchedule(): void
-```
-
-Clear the stochastic-depth schedule function.
-
-Parameters:
-- `this` - Target network instance.
-
-Returns: Nothing.
-
-### getRuntimeRegularizationStats
-
-```ts
-getRuntimeRegularizationStats(): Record<string, unknown> | null
-```
-
-Read regularization statistics collected during training.
-
-Parameters:
-- `this` - Target network instance.
-
-Returns: Last regularization stats payload or `null` when none exists yet.
-
 ### setStochasticDepth
 
 ```ts
@@ -213,13 +178,48 @@ Parameters:
 
 Returns: Nothing.
 
-### disableStochasticDepth
+### setStochasticDepthSchedule
 
 ```ts
-disableStochasticDepth(): void
+setStochasticDepthSchedule(
+  schedule: StochasticDepthSchedule,
+): void
 ```
 
-Disable stochastic depth.
+Set the stochastic-depth schedule function.
+
+Parameters:
+- `this` - Target network instance.
+- `schedule` - Function mapping the current step and schedule to a new schedule.
+
+Returns: Nothing.
+
+### setWeightNoiseSchedule
+
+```ts
+setWeightNoiseSchedule(
+  schedule: (step: number) => number,
+): void
+```
+
+Set a dynamic scheduler for global weight noise.
+
+Parameters:
+- `this` - Target network instance.
+- `schedule` - Function mapping the current training step to a standard deviation.
+
+Returns: Nothing.
+
+### testForceOverflow
+
+```ts
+testForceOverflow(): void
+```
+
+Force the next mixed-precision overflow path.
+
+This is a test-oriented hook used to exercise loss-scale recovery logic
+without waiting for a real floating-point overflow.
 
 Parameters:
 - `this` - Target network instance.
@@ -233,6 +233,19 @@ Runtime diagnostics and safety helpers for the public `Network` class.
 This chapter owns the public readers and small runtime controls that expose
 training-health state, DropConnect policy, and dropout-mask cleanup without
 changing the network topology itself.
+
+### disableDropConnect
+
+```ts
+disableDropConnect(): void
+```
+
+Disable DropConnect.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
 
 ### enableDropConnect
 
@@ -250,18 +263,57 @@ Parameters:
 
 Returns: Nothing.
 
-### disableDropConnect
+### getLastGradClipGroupCount
 
 ```ts
-disableDropConnect(): void
+getLastGradClipGroupCount(): number
 ```
 
-Disable DropConnect.
+Read the last recorded gradient-clipping group count.
 
 Parameters:
 - `this` - Target network instance.
 
-Returns: Nothing.
+Returns: Last gradient-clipping group count.
+
+### getLossScale
+
+```ts
+getLossScale(): number
+```
+
+Read the active mixed-precision loss scale.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Current loss scale.
+
+### getRawGradientNorm
+
+```ts
+getRawGradientNorm(): number
+```
+
+Read the last recorded raw gradient norm.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Last raw gradient norm.
+
+### getTrainingStats
+
+```ts
+getTrainingStats(): TrainingStatsSnapshot
+```
+
+Read a consolidated training-health snapshot.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Training statistics snapshot.
 
 ### resetDropoutMasks
 
@@ -278,55 +330,3 @@ Parameters:
 - `this` - Target network instance.
 
 Returns: Nothing.
-
-### getRawGradientNorm
-
-```ts
-getRawGradientNorm(): number
-```
-
-Read the last recorded raw gradient norm.
-
-Parameters:
-- `this` - Target network instance.
-
-Returns: Last raw gradient norm.
-
-### getLossScale
-
-```ts
-getLossScale(): number
-```
-
-Read the active mixed-precision loss scale.
-
-Parameters:
-- `this` - Target network instance.
-
-Returns: Current loss scale.
-
-### getLastGradClipGroupCount
-
-```ts
-getLastGradClipGroupCount(): number
-```
-
-Read the last recorded gradient-clipping group count.
-
-Parameters:
-- `this` - Target network instance.
-
-Returns: Last gradient-clipping group count.
-
-### getTrainingStats
-
-```ts
-getTrainingStats(): TrainingStatsSnapshot
-```
-
-Read a consolidated training-health snapshot.
-
-Parameters:
-- `this` - Target network instance.
-
-Returns: Training statistics snapshot.

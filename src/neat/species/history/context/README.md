@@ -23,6 +23,28 @@ Read this chapter in two steps:
 
 ## neat/species/history/context/species.history.context.ts
 
+### ResolvedSpeciesHistoryContext
+
+Resolved host data needed to serve a species-history read.
+
+The public `getSpeciesHistory()` facade should not need to know how the NEAT
+controller stores its history buffer or which internal fields are required to
+support optional extended-history augmentation. This context keeps that
+plumbing in one place.
+
+The three fields map to the three setup concerns behind a history read:
+
+- `speciesHistory` is the stored generation-by-generation buffer,
+- `backfillContext` carries the internal data needed only when extended
+  history enrichment is allowed,
+- `neatOptions` carries the policy switches that decide whether that
+  enrichment path should run.
+
+Read this type as the boundary between raw controller storage and the richer
+history-read logic. Once this object has been resolved, later helpers can ask
+"should we augment?" and "what data do we already have?" without knowing
+where the controller originally stored each ingredient.
+
 ### resolveSpeciesHistoryContext
 
 ```ts
@@ -62,25 +84,3 @@ if (historyContext.neatOptions?.enableSpeciesAugmentation) {
 
 console.log(historyContext.speciesHistory.length);
 ```
-
-### ResolvedSpeciesHistoryContext
-
-Resolved host data needed to serve a species-history read.
-
-The public `getSpeciesHistory()` facade should not need to know how the NEAT
-controller stores its history buffer or which internal fields are required to
-support optional extended-history augmentation. This context keeps that
-plumbing in one place.
-
-The three fields map to the three setup concerns behind a history read:
-
-- `speciesHistory` is the stored generation-by-generation buffer,
-- `backfillContext` carries the internal data needed only when extended
-  history enrichment is allowed,
-- `neatOptions` carries the policy switches that decide whether that
-  enrichment path should run.
-
-Read this type as the boundary between raw controller storage and the richer
-history-read logic. Once this object has been resolved, later helpers can ask
-"should we augment?" and "what data do we already have?" without knowing
-where the controller originally stored each ingredient.

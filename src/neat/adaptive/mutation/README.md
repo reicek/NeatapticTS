@@ -100,6 +100,30 @@ Parameters:
 
 Returns: Mutation outcome flags.
 
+### applyOperatorDecay
+
+```ts
+applyOperatorDecay(
+  stats: Map<string, { success: number; attempts: number; }>,
+  entries: [string, { success: number; attempts: number; }][],
+  decay: number,
+): void
+```
+
+Apply exponential decay to each operator statistic entry.
+
+Operator decay is the controller-level counterpart to per-genome mutation
+tuning. Rather than rewriting genomes directly, it softens stale wins and
+attempts so later operator selection can weight recent performance more
+heavily.
+
+Parameters:
+- `stats` - - Operator statistics map.
+- `entries` - - Operator stat entries to update.
+- `decay` - - Decay factor.
+
+Returns: Nothing.
+
 ### applyTwoTierFallback
 
 ```ts
@@ -144,6 +168,24 @@ Parameters:
 
 Returns: Resolved mutation settings.
 
+### resolveOperatorDecay
+
+```ts
+resolveOperatorDecay(
+  config: { enabled?: boolean | undefined; learningRate?: number | undefined; alpha?: number | undefined; decay?: number | undefined; },
+): number
+```
+
+Resolve the decay factor for operator statistics.
+
+Centralizing the default decay factor keeps the caller focused on the update
+cycle instead of repeatedly restating configuration fallback rules.
+
+Parameters:
+- `config` - - Operator adaptation configuration.
+
+Returns: Decay factor for exponential smoothing.
+
 ### shouldAdaptThisGeneration
 
 ```ts
@@ -186,48 +228,6 @@ Parameters:
 
 Returns: True if fallback should run.
 
-### applyOperatorDecay
-
-```ts
-applyOperatorDecay(
-  stats: Map<string, { success: number; attempts: number; }>,
-  entries: [string, { success: number; attempts: number; }][],
-  decay: number,
-): void
-```
-
-Apply exponential decay to each operator statistic entry.
-
-Operator decay is the controller-level counterpart to per-genome mutation
-tuning. Rather than rewriting genomes directly, it softens stale wins and
-attempts so later operator selection can weight recent performance more
-heavily.
-
-Parameters:
-- `stats` - - Operator statistics map.
-- `entries` - - Operator stat entries to update.
-- `decay` - - Decay factor.
-
-Returns: Nothing.
-
-### resolveOperatorDecay
-
-```ts
-resolveOperatorDecay(
-  config: { enabled?: boolean | undefined; learningRate?: number | undefined; alpha?: number | undefined; decay?: number | undefined; },
-): number
-```
-
-Resolve the decay factor for operator statistics.
-
-Centralizing the default decay factor keeps the caller focused on the update
-cycle instead of repeatedly restating configuration fallback rules.
-
-Parameters:
-- `config` - - Operator adaptation configuration.
-
-Returns: Decay factor for exponential smoothing.
-
 ## neat/adaptive/mutation/adaptive.mutation.utils.ts
 
 Per-genome adaptive mutation helpers.
@@ -245,26 +245,204 @@ The helper flow is intentionally compact:
 3. resolve strategy-specific deltas,
 4. clamp the updated mutation fields and apply fallback balancing if needed.
 
-### shouldAdaptThisGeneration
+### applyAnnealDelta
 
 ```ts
-shouldAdaptThisGeneration(
-  generation: number,
-  config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; },
-): boolean
+applyAnnealDelta(
+  baseDelta: number,
+  settings: MutationSettings,
+): number
 ```
 
-Check whether mutation adaptation should run this generation.
+Apply annealing adjustments to a delta.
 
-Cadence checks keep adaptive mutation from rewriting per-genome pressure on
-every generation unless the configuration explicitly asks for that. This lets
-runs choose between fast reaction and slower, more stable adjustment cycles.
+Annealing gradually shrinks the effective delta as the run ages, making early
+mutation-pressure updates more aggressive and later ones more conservative.
 
 Parameters:
-- `generation` - - Current generation index.
-- `config` - - Adaptive mutation configuration.
+- `baseDelta` - - Base random delta.
+- `settings` - - Resolved settings.
 
-Returns: True if adaptation should run.
+Returns: Adjusted delta.
+
+### applyExploreLowDelta
+
+```ts
+applyExploreLowDelta(
+  baseDelta: number,
+  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
+  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
+): number
+```
+
+Apply explore-low adjustments to a delta.
+
+Explore-low treats weaker genomes as exploration candidates. Bottom-half
+genomes receive larger positive pressure, while the rest are gently pushed
+downward so the search budget does not inflate everywhere at once.
+
+Parameters:
+- `baseDelta` - - Base random delta.
+- `genome` - - Current genome.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
+
+Returns: Adjusted delta.
+
+### applyMutationAmount
+
+```ts
+applyMutationAmount(
+  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
+  settings: MutationSettings,
+  randomSource: () => number,
+  genomeIndex: number,
+  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
+  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
+): void
+```
+
+Apply mutation-amount adjustments to a genome.
+
+Rate and amount adaptation share the same high-level strategy vocabulary, but
+amount updates remain optional because some runs only want to tune how often
+mutation fires, not how large each mutation should be.
+
+Parameters:
+- `genome` - - Current genome.
+- `settings` - - Resolved settings.
+- `randomSource` - - Random number provider.
+- `genomeIndex` - - Genome index.
+- `topHalfSet` - - Lookup for top-half genomes.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
+
+Returns: Nothing.
+
+### applyMutationsToPopulation
+
+```ts
+applyMutationsToPopulation(
+  population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
+  partitions: MutationPartitions,
+  settings: MutationSettings,
+  randomSource: () => number,
+): MutationOutcome
+```
+
+Apply mutation updates to the population.
+
+This helper is the main write phase for adaptive mutation. It walks the full
+population, computes a strategy-specific delta for each eligible genome, and
+records whether the generation ended up with both upward and downward rate
+pressure. That outcome is later used to decide whether fallback balancing is
+needed to preserve the intended exploration-versus-exploitation contrast.
+
+Parameters:
+- `population` - - Full population to mutate.
+- `partitions` - - Scored partitions.
+- `settings` - - Resolved settings.
+- `randomSource` - - Random number provider.
+
+Returns: Mutation outcome flags.
+
+### applyTwoTierAmountDelta
+
+```ts
+applyTwoTierAmountDelta(
+  baseDelta: number,
+  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
+  genomeIndex: number,
+  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
+  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
+): number
+```
+
+Apply two-tier adjustments to amount delta.
+
+Amount deltas mirror the high-level two-tier idea from rate adaptation: give
+weaker genomes more room to roam and keep stronger genomes from drifting too
+far in one step.
+
+Parameters:
+- `baseDelta` - - Base random delta.
+- `genome` - - Current genome.
+- `genomeIndex` - - Genome index.
+- `topHalfSet` - - Lookup for top-half genomes.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
+
+Returns: Adjusted delta.
+
+### applyTwoTierDelta
+
+```ts
+applyTwoTierDelta(
+  baseDelta: number,
+  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
+  genomeIndex: number,
+  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
+  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
+): number
+```
+
+Apply two-tier adjustments to a delta.
+
+Two-tier mode deliberately pushes the two halves in opposite directions so
+one side becomes more exploratory while the other becomes more conservative.
+When the score split is not available, the helper falls back to index parity
+just to preserve that contrasting pressure pattern.
+
+Parameters:
+- `baseDelta` - - Base random delta.
+- `genome` - - Current genome.
+- `genomeIndex` - - Genome index.
+- `topHalfSet` - - Lookup for top-half genomes.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
+
+Returns: Adjusted delta.
+
+### applyTwoTierFallback
+
+```ts
+applyTwoTierFallback(
+  population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
+  settings: MutationSettings,
+): void
+```
+
+Apply two-tier fallback balancing.
+
+Fallback balancing restores the intended contrast when the stochastic pass
+fails to produce both exploratory and conservative outcomes. It is narrower
+than the main update loop because it only nudges rates, leaving the richer
+strategy-specific reasoning to the first pass.
+
+Parameters:
+- `population` - - Population of genomes.
+- `settings` - - Resolved settings.
+
+Returns: Nothing.
+
+### clampValue
+
+```ts
+clampValue(
+  value: number,
+  min: number,
+  max: number,
+): number
+```
+
+Clamp a value between min and max bounds.
+
+Clamping is the final safety guard that keeps adaptive mutation inside the
+configured rate and amount envelopes even when repeated random pressure would
+otherwise drift beyond them.
+
+Parameters:
+- `value` - - Value to clamp.
+- `min` - - Minimum bound.
+- `max` - - Maximum bound.
+
+Returns: Clamped value.
 
 ### collectScoredGenomes
 
@@ -285,43 +463,54 @@ Parameters:
 
 Returns: Scored genomes.
 
-### sortScoredGenomes
+### createRandomDelta
 
 ```ts
-sortScoredGenomes(
-  scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-): { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]
+createRandomDelta(
+  sigmaBase: number,
+  randomSource: () => number,
+): number
 ```
 
-Sort scored genomes in ascending score order.
+Create a signed random delta scaled by sigma.
 
-Sorting creates the stable ordering used by the two-tier and explore-low
-strategies. Lower-scoring genomes end up at the front, which makes the later
-top-half and bottom-half split read naturally.
+This is the small stochastic core shared by rate and amount adaptation.
+Later strategy helpers decide how to reinterpret the sign and magnitude.
 
 Parameters:
-- `scoredGenomes` - - Scored genomes.
+- `sigmaBase` - - Sigma scaling factor.
+- `randomSource` - - Random number provider.
 
-Returns: Sorted genomes.
+Returns: Signed delta.
 
-### splitScoredGenomes
+### resolveAmountDelta
 
 ```ts
-splitScoredGenomes(
-  scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-): MutationPartitions
+resolveAmountDelta(
+  settings: MutationSettings,
+  randomSource: () => number,
+  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
+  genomeIndex: number,
+  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
+  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
+): number
 ```
 
-Split scored genomes into top and bottom halves.
+Resolve mutation-amount delta based on strategy.
 
-The partition step is where population performance becomes strategy-friendly
-structure. Later helpers can ask whether a genome belongs to the exploratory
-bottom half or the conservative top half without re-deriving the split.
+Amount adaptation currently reuses the two-tier split when configured and
+otherwise keeps the raw stochastic delta. That keeps the amount policy easier
+to reason about than the richer rate-tuning branch.
 
 Parameters:
-- `scoredGenomes` - - Sorted scored genomes.
+- `settings` - - Resolved settings.
+- `randomSource` - - Random number provider.
+- `genome` - - Current genome.
+- `genomeIndex` - - Genome index.
+- `topHalfSet` - - Lookup for top-half genomes.
+- `bottomHalfSet` - - Lookup for bottom-half genomes.
 
-Returns: Partitions used by strategy rules.
+Returns: Signed mutation amount delta.
 
 ### resolveMutationSettings
 
@@ -363,33 +552,6 @@ Parameters:
 
 Returns: Random number provider.
 
-### applyMutationsToPopulation
-
-```ts
-applyMutationsToPopulation(
-  population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-  partitions: MutationPartitions,
-  settings: MutationSettings,
-  randomSource: () => number,
-): MutationOutcome
-```
-
-Apply mutation updates to the population.
-
-This helper is the main write phase for adaptive mutation. It walks the full
-population, computes a strategy-specific delta for each eligible genome, and
-records whether the generation ended up with both upward and downward rate
-pressure. That outcome is later used to decide whether fallback balancing is
-needed to preserve the intended exploration-versus-exploitation contrast.
-
-Parameters:
-- `population` - - Full population to mutate.
-- `partitions` - - Scored partitions.
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-
-Returns: Mutation outcome flags.
-
 ### resolveRateDelta
 
 ```ts
@@ -420,204 +582,26 @@ Parameters:
 
 Returns: Signed mutation rate delta.
 
-### createRandomDelta
+### shouldAdaptThisGeneration
 
 ```ts
-createRandomDelta(
-  sigmaBase: number,
-  randomSource: () => number,
-): number
+shouldAdaptThisGeneration(
+  generation: number,
+  config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; },
+): boolean
 ```
 
-Create a signed random delta scaled by sigma.
+Check whether mutation adaptation should run this generation.
 
-This is the small stochastic core shared by rate and amount adaptation.
-Later strategy helpers decide how to reinterpret the sign and magnitude.
-
-Parameters:
-- `sigmaBase` - - Sigma scaling factor.
-- `randomSource` - - Random number provider.
-
-Returns: Signed delta.
-
-### applyTwoTierDelta
-
-```ts
-applyTwoTierDelta(
-  baseDelta: number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Apply two-tier adjustments to a delta.
-
-Two-tier mode deliberately pushes the two halves in opposite directions so
-one side becomes more exploratory while the other becomes more conservative.
-When the score split is not available, the helper falls back to index parity
-just to preserve that contrasting pressure pattern.
+Cadence checks keep adaptive mutation from rewriting per-genome pressure on
+every generation unless the configuration explicitly asks for that. This lets
+runs choose between fast reaction and slower, more stable adjustment cycles.
 
 Parameters:
-- `baseDelta` - - Base random delta.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
+- `generation` - - Current generation index.
+- `config` - - Adaptive mutation configuration.
 
-Returns: Adjusted delta.
-
-### applyExploreLowDelta
-
-```ts
-applyExploreLowDelta(
-  baseDelta: number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Apply explore-low adjustments to a delta.
-
-Explore-low treats weaker genomes as exploration candidates. Bottom-half
-genomes receive larger positive pressure, while the rest are gently pushed
-downward so the search budget does not inflate everywhere at once.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `genome` - - Current genome.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Adjusted delta.
-
-### applyAnnealDelta
-
-```ts
-applyAnnealDelta(
-  baseDelta: number,
-  settings: MutationSettings,
-): number
-```
-
-Apply annealing adjustments to a delta.
-
-Annealing gradually shrinks the effective delta as the run ages, making early
-mutation-pressure updates more aggressive and later ones more conservative.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `settings` - - Resolved settings.
-
-Returns: Adjusted delta.
-
-### applyMutationAmount
-
-```ts
-applyMutationAmount(
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  settings: MutationSettings,
-  randomSource: () => number,
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): void
-```
-
-Apply mutation-amount adjustments to a genome.
-
-Rate and amount adaptation share the same high-level strategy vocabulary, but
-amount updates remain optional because some runs only want to tune how often
-mutation fires, not how large each mutation should be.
-
-Parameters:
-- `genome` - - Current genome.
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Nothing.
-
-### resolveAmountDelta
-
-```ts
-resolveAmountDelta(
-  settings: MutationSettings,
-  randomSource: () => number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Resolve mutation-amount delta based on strategy.
-
-Amount adaptation currently reuses the two-tier split when configured and
-otherwise keeps the raw stochastic delta. That keeps the amount policy easier
-to reason about than the richer rate-tuning branch.
-
-Parameters:
-- `settings` - - Resolved settings.
-- `randomSource` - - Random number provider.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Signed mutation amount delta.
-
-### applyTwoTierAmountDelta
-
-```ts
-applyTwoTierAmountDelta(
-  baseDelta: number,
-  genome: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; },
-  genomeIndex: number,
-  topHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-  bottomHalfSet: Set<{ [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }>,
-): number
-```
-
-Apply two-tier adjustments to amount delta.
-
-Amount deltas mirror the high-level two-tier idea from rate adaptation: give
-weaker genomes more room to roam and keep stronger genomes from drifting too
-far in one step.
-
-Parameters:
-- `baseDelta` - - Base random delta.
-- `genome` - - Current genome.
-- `genomeIndex` - - Genome index.
-- `topHalfSet` - - Lookup for top-half genomes.
-- `bottomHalfSet` - - Lookup for bottom-half genomes.
-
-Returns: Adjusted delta.
-
-### clampValue
-
-```ts
-clampValue(
-  value: number,
-  min: number,
-  max: number,
-): number
-```
-
-Clamp a value between min and max bounds.
-
-Clamping is the final safety guard that keeps adaptive mutation inside the
-configured rate and amount envelopes even when repeated random pressure would
-otherwise drift beyond them.
-
-Parameters:
-- `value` - - Value to clamp.
-- `min` - - Minimum bound.
-- `max` - - Maximum bound.
-
-Returns: Clamped value.
+Returns: True if adaptation should run.
 
 ### shouldApplyTwoTierFallback
 
@@ -640,27 +624,43 @@ Parameters:
 
 Returns: True if fallback should run.
 
-### applyTwoTierFallback
+### sortScoredGenomes
 
 ```ts
-applyTwoTierFallback(
-  population: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
-  settings: MutationSettings,
-): void
+sortScoredGenomes(
+  scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
+): { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[]
 ```
 
-Apply two-tier fallback balancing.
+Sort scored genomes in ascending score order.
 
-Fallback balancing restores the intended contrast when the stochastic pass
-fails to produce both exploratory and conservative outcomes. It is narrower
-than the main update loop because it only nudges rates, leaving the richer
-strategy-specific reasoning to the first pass.
+Sorting creates the stable ordering used by the two-tier and explore-low
+strategies. Lower-scoring genomes end up at the front, which makes the later
+top-half and bottom-half split read naturally.
 
 Parameters:
-- `population` - - Population of genomes.
-- `settings` - - Resolved settings.
+- `scoredGenomes` - - Scored genomes.
 
-Returns: Nothing.
+Returns: Sorted genomes.
+
+### splitScoredGenomes
+
+```ts
+splitScoredGenomes(
+  scoredGenomes: { [key: string]: unknown; score?: number | undefined; _mutRate?: number | null | undefined; _mutAmount?: number | null | undefined; }[],
+): MutationPartitions
+```
+
+Split scored genomes into top and bottom halves.
+
+The partition step is where population performance becomes strategy-friendly
+structure. Later helpers can ask whether a genome belongs to the exploratory
+bottom half or the conservative top half without re-deriving the split.
+
+Parameters:
+- `scoredGenomes` - - Sorted scored genomes.
+
+Returns: Partitions used by strategy rules.
 
 ## neat/adaptive/mutation/adaptive.operator.utils.ts
 
@@ -670,43 +670,6 @@ These helpers maintain the slower-moving memory of which mutation operators
 have succeeded recently. They stay separate from per-genome mutation tuning so
 the generated chapter can distinguish genome-local pressure from controller-
 level evidence decay.
-
-### resolveOperatorDecay
-
-```ts
-resolveOperatorDecay(
-  config: { enabled?: boolean | undefined; learningRate?: number | undefined; alpha?: number | undefined; decay?: number | undefined; },
-): number
-```
-
-Resolve the decay factor for operator statistics.
-
-Centralizing the default decay factor keeps the caller focused on the update
-cycle instead of repeatedly restating configuration fallback rules.
-
-Parameters:
-- `config` - - Operator adaptation configuration.
-
-Returns: Decay factor for exponential smoothing.
-
-### collectOperatorStatsEntries
-
-```ts
-collectOperatorStatsEntries(
-  stats: Map<string, { success: number; attempts: number; }>,
-): [string, { success: number; attempts: number; }][]
-```
-
-Collect operator statistic entries for processing.
-
-Snapshotting the entries before update keeps the decay pass simple and makes
-the generated docs show that the helper operates over a stable view of the
-current operator table.
-
-Parameters:
-- `stats` - - Operator statistics map.
-
-Returns: Array of operator stat entries.
 
 ### applyOperatorDecay
 
@@ -732,6 +695,25 @@ Parameters:
 
 Returns: Nothing.
 
+### collectOperatorStatsEntries
+
+```ts
+collectOperatorStatsEntries(
+  stats: Map<string, { success: number; attempts: number; }>,
+): [string, { success: number; attempts: number; }][]
+```
+
+Collect operator statistic entries for processing.
+
+Snapshotting the entries before update keeps the decay pass simple and makes
+the generated docs show that the helper operates over a stable view of the
+current operator table.
+
+Parameters:
+- `stats` - - Operator statistics map.
+
+Returns: Array of operator stat entries.
+
 ### decayOperatorStat
 
 ```ts
@@ -752,3 +734,21 @@ Parameters:
 - `decay` - - Decay factor.
 
 Returns: Decayed operator statistic record.
+
+### resolveOperatorDecay
+
+```ts
+resolveOperatorDecay(
+  config: { enabled?: boolean | undefined; learningRate?: number | undefined; alpha?: number | undefined; decay?: number | undefined; },
+): number
+```
+
+Resolve the decay factor for operator statistics.
+
+Centralizing the default decay factor keeps the caller focused on the update
+cycle instead of repeatedly restating configuration fallback rules.
+
+Parameters:
+- `config` - - Operator adaptation configuration.
+
+Returns: Decay factor for exponential smoothing.

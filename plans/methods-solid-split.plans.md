@@ -43,31 +43,31 @@ each concept into its own folder-based boundary.
 ## Latest Pass
 
 - Folderized the methods surface into chapter folders for `activation`, `cost`,
-    `rate`, `selection`, `mutation`, `crossover`, `gating`, and `connection`.
+  `rate`, `selection`, `mutation`, `crossover`, `gating`, and `connection`.
 - Migrated repo-local imports to direct folder paths and removed the stale flat
-    `src/methods/mutation.ts` file that was still being compiled after the move.
+  `src/methods/mutation.ts` file that was still being compiled after the move.
 - Updated `src/methods/methods.ts` to remain the root public facade and updated
-    root ordering via `src/methods/docs.order.json`.
+  root ordering via `src/methods/docs.order.json`.
 - Added chapter-level ordering configs for `activation`, `cost`, and `rate` so
-    their nested READMEs open from the public facade files rather than utility
-    helpers.
+  their nested READMEs open from the public facade files rather than utility
+  helpers.
 - Updated `.github/skills/educational-docs/SKILL.md` so oversized generated
-    folder READMEs now point toward `solid-split` instead of continuing to grow
-    monolithically.
+  folder READMEs now point toward `solid-split` instead of continuing to grow
+  monolithically.
 - Regenerated docs and verified the generated openings for
-    `src/methods/README.md`, `src/methods/activation/README.md`,
-    `src/methods/cost/README.md`, and `src/methods/rate/README.md`.
+  `src/methods/README.md`, `src/methods/activation/README.md`,
+  `src/methods/cost/README.md`, and `src/methods/rate/README.md`.
 - Final validation completed with `npm run docs` and
-    `npx tsc --noEmit -p tsconfig.json`.
+  `npx tsc --noEmit -p tsconfig.json`.
 
 ## Handoff State
 
 - The split is complete and the root methods README now reads as a chapter map
-    rather than a monolithic flat file dump.
+  rather than a monolithic flat file dump.
 - Nested method READMEs are generated from source-first JSDoc and should be
-    maintained by editing the owning source files, not the generated READMEs.
+  maintained by editing the owning source files, not the generated READMEs.
 - If a future methods family starts to feel oversized again, prefer another
-    bounded folder split over expanding the root README.
+  bounded folder split over expanding the root README.
 
 ## Done Criteria
 

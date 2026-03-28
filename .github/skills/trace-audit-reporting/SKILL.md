@@ -1,6 +1,6 @@
 ---
 name: trace-audit-reporting
-description: 'Analyze Chrome trace or Perfetto trace captures, run scripts/analyze-trace.ts, map hotspots to NeatapticTS source files, and generate a detailed performance report with findings, evidence, and an action plan. Use when auditing renderer, worker, GPU, requestAnimationFrame, postMessage, or long-task regressions.'
+description: 'Analyze Chrome trace or Perfetto trace captures, run scripts/analyze-trace/analyze-trace.ts, map hotspots to NeatapticTS source files, and generate a detailed performance report with findings, evidence, and an action plan. Use when auditing renderer, worker, GPU, requestAnimationFrame, postMessage, or long-task regressions.'
 argument-hint: 'Describe the trace file, feature area, and target report file.'
 user-invocable: true
 disable-model-invocation: false
@@ -42,7 +42,7 @@ surface for the library rather than the final destination for a workaround.
 - [Trace analysis workflow](./references/trace-analysis-workflow.md)
 - [Performance report template](./assets/performance-report-template.md)
 - Companion skill: `trace-analyzer-extension` for modifying
-  `scripts/analyze-trace.ts` itself when new rollups or comparisons are needed.
+  `scripts/analyze-trace/analyze-trace.ts` itself when new rollups or comparisons are needed.
 
 ## Standard Workflow
 
@@ -97,7 +97,7 @@ surface for the library rather than the final destination for a workaround.
 
 ## Repo-Specific Notes
 
-- This repository already includes `scripts/analyze-trace.ts` for compact,
+- This repository already includes `scripts/analyze-trace/analyze-trace.ts` for compact,
   thread-aware trace audits.
 - For work in `src/` or `test/`, consult the nearest folder `README.md` before
   deep file reads.

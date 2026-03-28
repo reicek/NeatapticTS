@@ -29,11 +29,6 @@ edge.enabled = true;
 
 ## architecture/connection/connection.ts
 
-### ConnectionSymbolProps
-
-Internal interface for accessing symbol-keyed properties on Connection instances.
-Used for type-safe access to dynamic symbol properties.
-
 ### Connection
 
 Connection (Synapse / Edge)
@@ -60,6 +55,11 @@ const edge = new Connection(source, target, 0.42);
 edge.gain = 1.5;
 edge.enabled = true;
 ```
+
+### ConnectionSymbolProps
+
+Internal interface for accessing symbol-keyed properties on Connection instances.
+Used for type-safe access to dynamic symbol properties.
 
 ### default
 

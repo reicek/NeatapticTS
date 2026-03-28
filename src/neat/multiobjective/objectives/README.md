@@ -33,37 +33,6 @@ flowchart TD
 
 ## neat/multiobjective/objectives/multiobjective.objectives.ts
 
-### readObjectiveValue
-
-```ts
-readObjectiveValue(
-  genomeItem: default,
-  descriptor: ObjectiveDescriptor,
-): number
-```
-
-Safely reads a single objective value for a given genome.
-
-This wraps the descriptor `accessor` in a `try/catch` so that a buggy
-objective function cannot crash multi-objective ranking.
-
-Notes:
-- If the accessor throws, this returns `0` (a neutral-ish fallback).
-- Callers should prefer to surface accessor errors during development;
-  this helper is intentionally defensive for long-running training loops.
-
-Parameters:
-- `genomeItem` - - Genome to evaluate.
-- `descriptor` - - Objective descriptor providing an accessor.
-
-Returns: Numeric objective value; `0` if the accessor throws.
-
-Example:
-
-```ts
-const score = readObjectiveValue(genome, { accessor: (g) => g.score ?? 0 });
-```
-
 ### buildGenomeValues
 
 ```ts
@@ -111,3 +80,34 @@ Parameters:
 - `descriptors` - - Objective descriptors (column schema).
 
 Returns: Objective values matrix.
+
+### readObjectiveValue
+
+```ts
+readObjectiveValue(
+  genomeItem: default,
+  descriptor: ObjectiveDescriptor,
+): number
+```
+
+Safely reads a single objective value for a given genome.
+
+This wraps the descriptor `accessor` in a `try/catch` so that a buggy
+objective function cannot crash multi-objective ranking.
+
+Notes:
+- If the accessor throws, this returns `0` (a neutral-ish fallback).
+- Callers should prefer to surface accessor errors during development;
+  this helper is intentionally defensive for long-running training loops.
+
+Parameters:
+- `genomeItem` - - Genome to evaluate.
+- `descriptor` - - Objective descriptor providing an accessor.
+
+Returns: Numeric objective value; `0` if the accessor throws.
+
+Example:
+
+```ts
+const score = readObjectiveValue(genome, { accessor: (g) => g.score ?? 0 });
+```

@@ -53,31 +53,6 @@ const history = neat.getSpeciesHistory();
 
 ## neat/species/species.ts
 
-### getSpeciesStats
-
-```ts
-getSpeciesStats(): { id: number; size: number; bestScore: number; lastImproved: number; }[]
-```
-
-Get lightweight per-species statistics for the current population.
-
-This is the shortest read path into the species system. It is useful when a
-caller needs dashboard-friendly snapshots such as current species sizes,
-recent improvement timestamps, or the best score per species without pulling
-the heavier generation-by-generation history buffer.
-
-Parameters:
-- `this` - - NEAT host exposing the internal species registry.
-
-Returns: Compact per-species summaries suitable for reporting.
-
-Example:
-
-```ts
-const speciesSummaries = neat.getSpeciesStats();
-console.table(speciesSummaries);
-```
-
 ### getSpeciesHistory
 
 ```ts
@@ -110,4 +85,29 @@ Example:
 ```ts
 const speciesHistory = neat.getSpeciesHistory();
 console.log(speciesHistory.at(-1));
+```
+
+### getSpeciesStats
+
+```ts
+getSpeciesStats(): { id: number; size: number; bestScore: number; lastImproved: number; }[]
+```
+
+Get lightweight per-species statistics for the current population.
+
+This is the shortest read path into the species system. It is useful when a
+caller needs dashboard-friendly snapshots such as current species sizes,
+recent improvement timestamps, or the best score per species without pulling
+the heavier generation-by-generation history buffer.
+
+Parameters:
+- `this` - - NEAT host exposing the internal species registry.
+
+Returns: Compact per-species summaries suitable for reporting.
+
+Example:
+
+```ts
+const speciesSummaries = neat.getSpeciesStats();
+console.table(speciesSummaries);
 ```

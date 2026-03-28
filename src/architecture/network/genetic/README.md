@@ -4,25 +4,25 @@ Canonical threshold used for random binary parent/gene choice.
 
 ## architecture/network/genetic/network.genetic.utils.types.ts
 
-### RANDOM_BINARY_SELECTION_THRESHOLD
-
-Canonical threshold used for random binary parent/gene choice.
-
 ### DEFAULT_REENABLE_PROBABILITY
 
 Default probability for re-enabling disabled genes during crossover.
-
-### NO_GATER_INDEX
-
-Sentinel index representing that no gater node is assigned.
 
 ### FIRST_INDEX
 
 First element index used when reading newly created connections.
 
+### NO_GATER_INDEX
+
+Sentinel index representing that no gater node is assigned.
+
 ### PARENT_COMPATIBILITY_ERROR_MESSAGE
 
 Shared compatibility error message for crossover parent validation.
+
+### RANDOM_BINARY_SELECTION_THRESHOLD
+
+Canonical threshold used for random binary parent/gene choice.
 
 ### RandomGenerator
 
@@ -116,6 +116,106 @@ offspring.mutate();
 
 ## architecture/network/genetic/network.genetic.setup.utils.ts
 
+### asGeneticNetwork
+
+```ts
+asGeneticNetwork(
+  network: default,
+): GeneticNetwork
+```
+
+Coerces a network to the internal genetic runtime shape.
+
+Parameters:
+- `network` - - Source network.
+
+Returns: Network with runtime genetic properties.
+
+### assignNodeIndexes
+
+```ts
+assignNodeIndexes(
+  nodes: default[],
+): void
+```
+
+Assigns contiguous indices to a node list.
+
+Parameters:
+- `nodes` - - Nodes to reindex.
+
+Returns: Nothing.
+
+### assignOffspringNodes
+
+```ts
+assignOffspringNodes(
+  nodeContext: CrossoverNodeBuildContext,
+): void
+```
+
+Builds and reindexes offspring nodes.
+
+Parameters:
+- `nodeContext` - - Node-build context.
+
+Returns: Nothing.
+
+### buildOffspringNodes
+
+```ts
+buildOffspringNodes(
+  parent1: GeneticNetwork,
+  parent2: GeneticNetwork,
+  parentMetrics: ParentMetrics,
+  offspringNodeCount: number,
+  equal: boolean,
+  randomGenerator: RandomGenerator,
+): default[]
+```
+
+Builds the offspring node list by selecting genes per slot.
+
+Parameters:
+- `parent1` - - First parent.
+- `parent2` - - Second parent.
+- `parentMetrics` - - Parent metrics.
+- `offspringNodeCount` - - Target offspring size.
+- `equal` - - Equal-treatment mode.
+- `randomGenerator` - - Random generator.
+
+Returns: Cloned offspring node genes.
+
+### chooseOffspringConnectionGenes
+
+```ts
+chooseOffspringConnectionGenes(
+  context: CrossoverContext,
+): ConnectionGene[]
+```
+
+Chooses all offspring connection genes from both parents.
+
+Parameters:
+- `context` - - Crossover baseline context.
+
+Returns: Chosen connection genes.
+
+### cloneNodeGene
+
+```ts
+cloneNodeGene(
+  sourceNode: default,
+): default
+```
+
+Clones node structural gene attributes.
+
+Parameters:
+- `sourceNode` - - Source node gene.
+
+Returns: Cloned node.
+
 ### createCrossoverContext
 
 ```ts
@@ -150,68 +250,6 @@ Parameters:
 
 Returns: Node-build context.
 
-### assignOffspringNodes
-
-```ts
-assignOffspringNodes(
-  nodeContext: CrossoverNodeBuildContext,
-): void
-```
-
-Builds and reindexes offspring nodes.
-
-Parameters:
-- `nodeContext` - - Node-build context.
-
-Returns: Nothing.
-
-### chooseOffspringConnectionGenes
-
-```ts
-chooseOffspringConnectionGenes(
-  context: CrossoverContext,
-): ConnectionGene[]
-```
-
-Chooses all offspring connection genes from both parents.
-
-Parameters:
-- `context` - - Crossover baseline context.
-
-Returns: Chosen connection genes.
-
-### validateParentCompatibility
-
-```ts
-validateParentCompatibility(
-  parentNetwork1: default,
-  parentNetwork2: default,
-): void
-```
-
-Validates parent compatibility for crossover.
-
-Parameters:
-- `parentNetwork1` - - First parent candidate.
-- `parentNetwork2` - - Second parent candidate.
-
-Returns: Nothing.
-
-### asGeneticNetwork
-
-```ts
-asGeneticNetwork(
-  network: default,
-): GeneticNetwork
-```
-
-Coerces a network to the internal genetic runtime shape.
-
-Parameters:
-- `network` - - Source network.
-
-Returns: Network with runtime genetic properties.
-
 ### createOffspringScaffold
 
 ```ts
@@ -228,40 +266,6 @@ Parameters:
 - `outputSize` - - Output count.
 
 Returns: Initialized offspring runtime object.
-
-### resolveParentMetrics
-
-```ts
-resolveParentMetrics(
-  parent1: GeneticNetwork,
-  parent2: GeneticNetwork,
-  outputSize: number,
-): ParentMetrics
-```
-
-Computes common parent metrics reused across helper functions.
-
-Parameters:
-- `parent1` - - First parent network.
-- `parent2` - - Second parent network.
-- `outputSize` - - Shared output size.
-
-Returns: Parent metrics.
-
-### getRandomGenerator
-
-```ts
-getRandomGenerator(
-  parentNetwork: default,
-): RandomGenerator
-```
-
-Resolves the random generator used by crossover decisions.
-
-Parameters:
-- `parentNetwork` - - Parent network that may provide a deterministic `_rand` source.
-
-Returns: Random function.
 
 ### determineOffspringNodeCount
 
@@ -282,45 +286,98 @@ Parameters:
 
 Returns: Offspring node count.
 
-### assignNodeIndexes
+### getAlignedOutputNode
 
 ```ts
-assignNodeIndexes(
-  nodes: default[],
-): void
+getAlignedOutputNode(
+  parent: GeneticNetwork,
+  alignedIndex: number,
+): default | undefined
 ```
 
-Assigns contiguous indices to a node list.
+Reads an aligned output candidate node if index is in the valid non-input range.
 
 Parameters:
-- `nodes` - - Nodes to reindex.
+- `parent` - - Parent network.
+- `alignedIndex` - - Tail-aligned index.
 
-Returns: Nothing.
+Returns: Output candidate node.
 
-### buildOffspringNodes
+### getRandomGenerator
 
 ```ts
-buildOffspringNodes(
+getRandomGenerator(
+  parentNetwork: default,
+): RandomGenerator
+```
+
+Resolves the random generator used by crossover decisions.
+
+Parameters:
+- `parentNetwork` - - Parent network that may provide a deterministic `_rand` source.
+
+Returns: Random function.
+
+### resolveParentMetrics
+
+```ts
+resolveParentMetrics(
+  parent1: GeneticNetwork,
+  parent2: GeneticNetwork,
+  outputSize: number,
+): ParentMetrics
+```
+
+Computes common parent metrics reused across helper functions.
+
+Parameters:
+- `parent1` - - First parent network.
+- `parent2` - - Second parent network.
+- `outputSize` - - Shared output size.
+
+Returns: Parent metrics.
+
+### selectHiddenNodeGene
+
+```ts
+selectHiddenNodeGene(
+  nodeIndex: number,
   parent1: GeneticNetwork,
   parent2: GeneticNetwork,
   parentMetrics: ParentMetrics,
-  offspringNodeCount: number,
   equal: boolean,
   randomGenerator: RandomGenerator,
-): default[]
+): default | undefined
 ```
 
-Builds the offspring node list by selecting genes per slot.
+Selects a hidden-region node gene.
 
 Parameters:
+- `nodeIndex` - - Slot index.
 - `parent1` - - First parent.
 - `parent2` - - Second parent.
 - `parentMetrics` - - Parent metrics.
-- `offspringNodeCount` - - Target offspring size.
 - `equal` - - Equal-treatment mode.
 - `randomGenerator` - - Random generator.
 
-Returns: Cloned offspring node genes.
+Returns: Selected hidden node gene.
+
+### selectInputNodeGene
+
+```ts
+selectInputNodeGene(
+  nodeIndex: number,
+  parent1: GeneticNetwork,
+): default | undefined
+```
+
+Selects an input-region node gene.
+
+Parameters:
+- `nodeIndex` - - Slot index.
+- `parent1` - - First parent.
+
+Returns: Parent 1 input node gene.
 
 ### selectNodeGeneAtIndex
 
@@ -349,23 +406,6 @@ Parameters:
 
 Returns: Selected parent node gene, when present.
 
-### selectInputNodeGene
-
-```ts
-selectInputNodeGene(
-  nodeIndex: number,
-  parent1: GeneticNetwork,
-): default | undefined
-```
-
-Selects an input-region node gene.
-
-Parameters:
-- `nodeIndex` - - Slot index.
-- `parent1` - - First parent.
-
-Returns: Parent 1 input node gene.
-
 ### selectOutputNodeGene
 
 ```ts
@@ -391,106 +431,24 @@ Parameters:
 
 Returns: Selected output node gene.
 
-### getAlignedOutputNode
+### validateParentCompatibility
 
 ```ts
-getAlignedOutputNode(
-  parent: GeneticNetwork,
-  alignedIndex: number,
-): default | undefined
+validateParentCompatibility(
+  parentNetwork1: default,
+  parentNetwork2: default,
+): void
 ```
 
-Reads an aligned output candidate node if index is in the valid non-input range.
+Validates parent compatibility for crossover.
 
 Parameters:
-- `parent` - - Parent network.
-- `alignedIndex` - - Tail-aligned index.
+- `parentNetwork1` - - First parent candidate.
+- `parentNetwork2` - - Second parent candidate.
 
-Returns: Output candidate node.
-
-### selectHiddenNodeGene
-
-```ts
-selectHiddenNodeGene(
-  nodeIndex: number,
-  parent1: GeneticNetwork,
-  parent2: GeneticNetwork,
-  parentMetrics: ParentMetrics,
-  equal: boolean,
-  randomGenerator: RandomGenerator,
-): default | undefined
-```
-
-Selects a hidden-region node gene.
-
-Parameters:
-- `nodeIndex` - - Slot index.
-- `parent1` - - First parent.
-- `parent2` - - Second parent.
-- `parentMetrics` - - Parent metrics.
-- `equal` - - Equal-treatment mode.
-- `randomGenerator` - - Random generator.
-
-Returns: Selected hidden node gene.
-
-### cloneNodeGene
-
-```ts
-cloneNodeGene(
-  sourceNode: default,
-): default
-```
-
-Clones node structural gene attributes.
-
-Parameters:
-- `sourceNode` - - Source node gene.
-
-Returns: Cloned node.
+Returns: Nothing.
 
 ## architecture/network/genetic/network.genetic.selection.utils.ts
-
-### collectConnectionGenes
-
-```ts
-collectConnectionGenes(
-  parent: GeneticNetwork,
-): Record<string, ConnectionGene>
-```
-
-Collects all connection genes (standard + self) keyed by innovation ID.
-
-Parameters:
-- `parent` - - Parent network.
-
-Returns: Innovation-keyed connection gene map.
-
-### chooseConnectionGenes
-
-```ts
-chooseConnectionGenes(
-  parent1: GeneticNetwork,
-  parent2: GeneticNetwork,
-  parentMetrics: ParentMetrics,
-  parent1Genes: Record<string, ConnectionGene>,
-  parent2Genes: Record<string, ConnectionGene>,
-  equal: boolean,
-  randomGenerator: RandomGenerator,
-): ConnectionGene[]
-```
-
-Selects connection genes for offspring inheritance.
-
-Parameters:
-- `parent1` - - First parent.
-- `parent2` - - Second parent.
-- `parentMetrics` - - Parent metrics.
-- `parent1Genes` - - Parent 1 genes by innovation.
-- `parent2Genes` - - Parent 2 genes by innovation.
-- `equal` - - Equal-treatment mode.
-- `randomGenerator` - - Random generator.
-
-Returns: Chosen genes for offspring materialization.
 
 ### buildConnectionGene
 
@@ -506,127 +464,6 @@ Parameters:
 - `connection` - - Runtime connection.
 
 Returns: Gene descriptor, or undefined when endpoints lack valid indices.
-
-### createSelectionContext
-
-```ts
-createSelectionContext(
-  sourceParent1: GeneticNetwork,
-  sourceParent2: GeneticNetwork,
-  sourceParentMetrics: ParentMetrics,
-  sourceParent1Genes: Record<string, ConnectionGene>,
-  sourceParent2Genes: Record<string, ConnectionGene>,
-  sourceEqual: boolean,
-  sourceRandomGenerator: RandomGenerator,
-): ConnectionGeneSelectionContext
-```
-
-Creates the immutable context for this selection pass.
-
-Parameters:
-- `sourceParent1` - - First parent.
-- `sourceParent2` - - Second parent.
-- `sourceParentMetrics` - - Shared parent metrics.
-- `sourceParent1Genes` - - Parent-1 genes.
-- `sourceParent2Genes` - - Parent-2 genes.
-- `sourceEqual` - - Equal-treatment flag.
-- `sourceRandomGenerator` - - Random source.
-
-Returns: Selection context.
-
-### selectParent1TraversalGenes
-
-```ts
-selectParent1TraversalGenes(
-  context: ConnectionGeneSelectionContext,
-): Parent1TraversalSelectionResult
-```
-
-Selects genes reachable from parent-1 innovation traversal.
-
-Parameters:
-- `context` - - Selection context.
-
-Returns: Parent-1 traversal result.
-
-### createParent1TraversalContexts
-
-```ts
-createParent1TraversalContexts(
-  context: ConnectionGeneSelectionContext,
-): Parent1GeneTraversalContext[]
-```
-
-Builds parent-1 traversal contexts keyed by innovation IDs.
-
-Parameters:
-- `context` - - Selection context.
-
-Returns: Parent-1 traversal contexts.
-
-### foldParent1TraversalContexts
-
-```ts
-foldParent1TraversalContexts(
-  traversalContexts: Parent1GeneTraversalContext[],
-): Parent1TraversalSelectionResult
-```
-
-Folds parent-1 traversal contexts into selected genes and consumed IDs.
-
-Parameters:
-- `traversalContexts` - - Parent-1 traversal contexts.
-
-Returns: Parent-1 selection result.
-
-### selectGeneForParent1TraversalContext
-
-```ts
-selectGeneForParent1TraversalContext(
-  traversalContext: Parent1GeneTraversalContext,
-): ConnectionGene | undefined
-```
-
-Selects one inheritable gene for a parent-1 traversal context.
-
-Parameters:
-- `traversalContext` - - Parent-1 traversal context.
-
-Returns: Selected gene or undefined.
-
-### selectRemainingParent2Genes
-
-```ts
-selectRemainingParent2Genes(
-  context: ConnectionGeneSelectionContext,
-  consumedInnovationIds: string[],
-): Record<string, ConnectionGene>
-```
-
-Builds parent-2 gene map after removing consumed matching innovations.
-
-Parameters:
-- `context` - - Selection context.
-- `consumedInnovationIds` - - Innovation IDs already consumed via matching genes.
-
-Returns: Remaining parent-2 genes.
-
-### selectParent2OnlyGenes
-
-```ts
-selectParent2OnlyGenes(
-  context: ConnectionGeneSelectionContext,
-  remainingParent2Genes: Record<string, ConnectionGene>,
-): ConnectionGene[]
-```
-
-Selects inheritable parent-2-only disjoint/excess genes.
-
-Parameters:
-- `context` - - Selection context.
-- `remainingParent2Genes` - - Parent-2-only gene map.
-
-Returns: Selected parent-2-only genes.
 
 ### canInheritParent1DisjointGenes
 
@@ -658,22 +495,49 @@ Parameters:
 
 Returns: True when parent-2 disjoint genes can be selected.
 
-### combineChosenGenes
+### chooseConnectionGenes
 
 ```ts
-combineChosenGenes(
-  parent1TraversalGenes: ConnectionGene[],
-  parent2OnlyGenesToAppend: ConnectionGene[],
+chooseConnectionGenes(
+  parent1: GeneticNetwork,
+  parent2: GeneticNetwork,
+  parentMetrics: ParentMetrics,
+  parent1Genes: Record<string, ConnectionGene>,
+  parent2Genes: Record<string, ConnectionGene>,
+  equal: boolean,
+  randomGenerator: RandomGenerator,
 ): ConnectionGene[]
 ```
 
-Combines selected gene partitions into one ordered list.
+Selects connection genes for offspring inheritance.
 
 Parameters:
-- `parent1TraversalGenes` - - Genes selected from parent-1 traversal.
-- `parent2OnlyGenesToAppend` - - Parent-2-only genes.
+- `parent1` - - First parent.
+- `parent2` - - Second parent.
+- `parentMetrics` - - Parent metrics.
+- `parent1Genes` - - Parent 1 genes by innovation.
+- `parent2Genes` - - Parent 2 genes by innovation.
+- `equal` - - Equal-treatment mode.
+- `randomGenerator` - - Random generator.
 
-Returns: Combined chosen genes.
+Returns: Chosen genes for offspring materialization.
+
+### chooseDisjointGeneFromParent
+
+```ts
+chooseDisjointGeneFromParent(
+  parent: GeneticNetwork,
+  sourceGene: ConnectionGene,
+): ConnectionGene
+```
+
+Chooses a disjoint/excess gene from a single parent.
+
+Parameters:
+- `parent` - - Source parent.
+- `sourceGene` - - Source gene.
+
+Returns: Selected disjoint gene.
 
 ### chooseMatchingGene
 
@@ -698,23 +562,6 @@ Parameters:
 
 Returns: Selected gene.
 
-### chooseDisjointGeneFromParent
-
-```ts
-chooseDisjointGeneFromParent(
-  parent: GeneticNetwork,
-  sourceGene: ConnectionGene,
-): ConnectionGene
-```
-
-Chooses a disjoint/excess gene from a single parent.
-
-Parameters:
-- `parent` - - Source parent.
-- `sourceGene` - - Source gene.
-
-Returns: Selected disjoint gene.
-
 ### cloneConnectionGene
 
 ```ts
@@ -729,6 +576,95 @@ Parameters:
 - `sourceGene` - - Source gene.
 
 Returns: Independent clone.
+
+### collectConnectionGenes
+
+```ts
+collectConnectionGenes(
+  parent: GeneticNetwork,
+): Record<string, ConnectionGene>
+```
+
+Collects all connection genes (standard + self) keyed by innovation ID.
+
+Parameters:
+- `parent` - - Parent network.
+
+Returns: Innovation-keyed connection gene map.
+
+### combineChosenGenes
+
+```ts
+combineChosenGenes(
+  parent1TraversalGenes: ConnectionGene[],
+  parent2OnlyGenesToAppend: ConnectionGene[],
+): ConnectionGene[]
+```
+
+Combines selected gene partitions into one ordered list.
+
+Parameters:
+- `parent1TraversalGenes` - - Genes selected from parent-1 traversal.
+- `parent2OnlyGenesToAppend` - - Parent-2-only genes.
+
+Returns: Combined chosen genes.
+
+### createParent1TraversalContexts
+
+```ts
+createParent1TraversalContexts(
+  context: ConnectionGeneSelectionContext,
+): Parent1GeneTraversalContext[]
+```
+
+Builds parent-1 traversal contexts keyed by innovation IDs.
+
+Parameters:
+- `context` - - Selection context.
+
+Returns: Parent-1 traversal contexts.
+
+### createSelectionContext
+
+```ts
+createSelectionContext(
+  sourceParent1: GeneticNetwork,
+  sourceParent2: GeneticNetwork,
+  sourceParentMetrics: ParentMetrics,
+  sourceParent1Genes: Record<string, ConnectionGene>,
+  sourceParent2Genes: Record<string, ConnectionGene>,
+  sourceEqual: boolean,
+  sourceRandomGenerator: RandomGenerator,
+): ConnectionGeneSelectionContext
+```
+
+Creates the immutable context for this selection pass.
+
+Parameters:
+- `sourceParent1` - - First parent.
+- `sourceParent2` - - Second parent.
+- `sourceParentMetrics` - - Shared parent metrics.
+- `sourceParent1Genes` - - Parent-1 genes.
+- `sourceParent2Genes` - - Parent-2 genes.
+- `sourceEqual` - - Equal-treatment flag.
+- `sourceRandomGenerator` - - Random source.
+
+Returns: Selection context.
+
+### foldParent1TraversalContexts
+
+```ts
+foldParent1TraversalContexts(
+  traversalContexts: Parent1GeneTraversalContext[],
+): Parent1TraversalSelectionResult
+```
+
+Folds parent-1 traversal contexts into selected genes and consumed IDs.
+
+Parameters:
+- `traversalContexts` - - Parent-1 traversal contexts.
+
+Returns: Parent-1 selection result.
 
 ### resolveReenableProbability
 
@@ -747,227 +683,71 @@ Parameters:
 
 Returns: Probability in [0, 1].
 
+### selectGeneForParent1TraversalContext
+
+```ts
+selectGeneForParent1TraversalContext(
+  traversalContext: Parent1GeneTraversalContext,
+): ConnectionGene | undefined
+```
+
+Selects one inheritable gene for a parent-1 traversal context.
+
+Parameters:
+- `traversalContext` - - Parent-1 traversal context.
+
+Returns: Selected gene or undefined.
+
+### selectParent1TraversalGenes
+
+```ts
+selectParent1TraversalGenes(
+  context: ConnectionGeneSelectionContext,
+): Parent1TraversalSelectionResult
+```
+
+Selects genes reachable from parent-1 innovation traversal.
+
+Parameters:
+- `context` - - Selection context.
+
+Returns: Parent-1 traversal result.
+
+### selectParent2OnlyGenes
+
+```ts
+selectParent2OnlyGenes(
+  context: ConnectionGeneSelectionContext,
+  remainingParent2Genes: Record<string, ConnectionGene>,
+): ConnectionGene[]
+```
+
+Selects inheritable parent-2-only disjoint/excess genes.
+
+Parameters:
+- `context` - - Selection context.
+- `remainingParent2Genes` - - Parent-2-only gene map.
+
+Returns: Selected parent-2-only genes.
+
+### selectRemainingParent2Genes
+
+```ts
+selectRemainingParent2Genes(
+  context: ConnectionGeneSelectionContext,
+  consumedInnovationIds: string[],
+): Record<string, ConnectionGene>
+```
+
+Builds parent-2 gene map after removing consumed matching innovations.
+
+Parameters:
+- `context` - - Selection context.
+- `consumedInnovationIds` - - Innovation IDs already consumed via matching genes.
+
+Returns: Remaining parent-2 genes.
+
 ## architecture/network/genetic/network.genetic.materialize.utils.ts
-
-### materializeOffspringConnections
-
-```ts
-materializeOffspringConnections(
-  offspring: GeneticNetwork,
-  chosenGenes: ConnectionGene[],
-): void
-```
-
-Materializes selected connection genes in the offspring network.
-
-Parameters:
-- `offspring` - - Offspring network.
-- `chosenGenes` - - Chosen connection genes.
-
-Returns: Nothing.
-
-### createMaterializationContext
-
-```ts
-createMaterializationContext(
-  targetOffspring: GeneticNetwork,
-): OffspringMaterializationContext
-```
-
-Creates the immutable top-level context used during materialization.
-
-Parameters:
-- `targetOffspring` - - Offspring receiving concrete edges.
-
-Returns: Materialization context.
-
-### collectEligibleTraversalContexts
-
-```ts
-collectEligibleTraversalContexts(
-  context: OffspringMaterializationContext,
-  genes: ConnectionGene[],
-): GeneTraversalContext[]
-```
-
-Collects traversal contexts that satisfy all structural eligibility checks.
-
-Parameters:
-- `context` - - Top-level materialization context.
-- `genes` - - Candidate genes.
-
-Returns: Eligible traversal contexts.
-
-### createTraversalContexts
-
-```ts
-createTraversalContexts(
-  context: OffspringMaterializationContext,
-  genes: ConnectionGene[],
-): GeneTraversalContext[]
-```
-
-Builds traversal contexts for each candidate gene.
-
-Parameters:
-- `context` - - Top-level materialization context.
-- `genes` - - Candidate genes.
-
-Returns: Traversal contexts.
-
-### keepTraversalContextsWithinNodeBounds
-
-```ts
-keepTraversalContextsWithinNodeBounds(
-  traversalContexts: GeneTraversalContext[],
-): GeneTraversalContext[]
-```
-
-Keeps traversal contexts whose endpoints are inside offspring bounds.
-
-Parameters:
-- `traversalContexts` - - Candidate traversal contexts.
-
-Returns: Node-bounded contexts.
-
-### keepFeedForwardTraversalContexts
-
-```ts
-keepFeedForwardTraversalContexts(
-  traversalContexts: GeneTraversalContext[],
-): GeneTraversalContext[]
-```
-
-Keeps traversal contexts that preserve feed-forward edge direction.
-
-Parameters:
-- `traversalContexts` - - Node-bounded traversal contexts.
-
-Returns: Feed-forward contexts.
-
-### materializeTraversalContexts
-
-```ts
-materializeTraversalContexts(
-  traversalContexts: GeneTraversalContext[],
-): void
-```
-
-Materializes each eligible traversal context independently.
-
-Parameters:
-- `traversalContexts` - - Eligible traversal contexts.
-
-Returns: Nothing.
-
-### materializeSingleTraversalContext
-
-```ts
-materializeSingleTraversalContext(
-  traversalContext: GeneTraversalContext,
-): void
-```
-
-Materializes one eligible traversal context when no duplicate projection exists.
-
-Parameters:
-- `traversalContext` - - Traversal context.
-
-Returns: Nothing.
-
-### resolveGeneEndpointsContext
-
-```ts
-resolveGeneEndpointsContext(
-  traversalContext: GeneTraversalContext,
-): GeneEndpointsContext | undefined
-```
-
-Resolves concrete endpoint nodes for a traversal context.
-
-Parameters:
-- `traversalContext` - - Traversal context.
-
-Returns: Endpoint context or undefined.
-
-### createConnectionForEndpoints
-
-```ts
-createConnectionForEndpoints(
-  endpointsContext: GeneEndpointsContext,
-): default | undefined
-```
-
-Creates a runtime connection for endpoint nodes.
-
-Parameters:
-- `endpointsContext` - - Endpoint context.
-
-Returns: Created connection or undefined.
-
-### hasExistingProjection
-
-```ts
-hasExistingProjection(
-  endpointsContext: GeneEndpointsContext,
-): boolean
-```
-
-Checks whether the source endpoint already projects to the target endpoint.
-
-Parameters:
-- `endpointsContext` - - Endpoint context.
-
-Returns: True when projection already exists.
-
-### isTraversalContextWithinNodeBounds
-
-```ts
-isTraversalContextWithinNodeBounds(
-  traversalContext: GeneTraversalContext,
-): boolean
-```
-
-Validates that a traversal context endpoints are inside offspring bounds.
-
-Parameters:
-- `traversalContext` - - Traversal context.
-
-Returns: True when both indices are bounded.
-
-### isTraversalContextFeedForward
-
-```ts
-isTraversalContextFeedForward(
-  traversalContext: GeneTraversalContext,
-): boolean
-```
-
-Validates that a traversal context follows feed-forward ordering.
-
-Parameters:
-- `traversalContext` - - Traversal context.
-
-Returns: True when the gene is strictly forward.
-
-### createOffspringConnection
-
-```ts
-createOffspringConnection(
-  offspring: GeneticNetwork,
-  fromNode: default,
-  toNode: default,
-): default | undefined
-```
-
-Creates a single offspring connection edge.
-
-Parameters:
-- `offspring` - - Offspring network.
-- `fromNode` - - Source node.
-- `toNode` - - Destination node.
-
-Returns: Created connection or undefined.
 
 ### applyConnectionGeneToConnection
 
@@ -1004,3 +784,223 @@ Parameters:
 - `gaterIndex` - - Candidate gater node index.
 
 Returns: Nothing.
+
+### collectEligibleTraversalContexts
+
+```ts
+collectEligibleTraversalContexts(
+  context: OffspringMaterializationContext,
+  genes: ConnectionGene[],
+): GeneTraversalContext[]
+```
+
+Collects traversal contexts that satisfy all structural eligibility checks.
+
+Parameters:
+- `context` - - Top-level materialization context.
+- `genes` - - Candidate genes.
+
+Returns: Eligible traversal contexts.
+
+### createConnectionForEndpoints
+
+```ts
+createConnectionForEndpoints(
+  endpointsContext: GeneEndpointsContext,
+): default | undefined
+```
+
+Creates a runtime connection for endpoint nodes.
+
+Parameters:
+- `endpointsContext` - - Endpoint context.
+
+Returns: Created connection or undefined.
+
+### createMaterializationContext
+
+```ts
+createMaterializationContext(
+  targetOffspring: GeneticNetwork,
+): OffspringMaterializationContext
+```
+
+Creates the immutable top-level context used during materialization.
+
+Parameters:
+- `targetOffspring` - - Offspring receiving concrete edges.
+
+Returns: Materialization context.
+
+### createOffspringConnection
+
+```ts
+createOffspringConnection(
+  offspring: GeneticNetwork,
+  fromNode: default,
+  toNode: default,
+): default | undefined
+```
+
+Creates a single offspring connection edge.
+
+Parameters:
+- `offspring` - - Offspring network.
+- `fromNode` - - Source node.
+- `toNode` - - Destination node.
+
+Returns: Created connection or undefined.
+
+### createTraversalContexts
+
+```ts
+createTraversalContexts(
+  context: OffspringMaterializationContext,
+  genes: ConnectionGene[],
+): GeneTraversalContext[]
+```
+
+Builds traversal contexts for each candidate gene.
+
+Parameters:
+- `context` - - Top-level materialization context.
+- `genes` - - Candidate genes.
+
+Returns: Traversal contexts.
+
+### hasExistingProjection
+
+```ts
+hasExistingProjection(
+  endpointsContext: GeneEndpointsContext,
+): boolean
+```
+
+Checks whether the source endpoint already projects to the target endpoint.
+
+Parameters:
+- `endpointsContext` - - Endpoint context.
+
+Returns: True when projection already exists.
+
+### isTraversalContextFeedForward
+
+```ts
+isTraversalContextFeedForward(
+  traversalContext: GeneTraversalContext,
+): boolean
+```
+
+Validates that a traversal context follows feed-forward ordering.
+
+Parameters:
+- `traversalContext` - - Traversal context.
+
+Returns: True when the gene is strictly forward.
+
+### isTraversalContextWithinNodeBounds
+
+```ts
+isTraversalContextWithinNodeBounds(
+  traversalContext: GeneTraversalContext,
+): boolean
+```
+
+Validates that a traversal context endpoints are inside offspring bounds.
+
+Parameters:
+- `traversalContext` - - Traversal context.
+
+Returns: True when both indices are bounded.
+
+### keepFeedForwardTraversalContexts
+
+```ts
+keepFeedForwardTraversalContexts(
+  traversalContexts: GeneTraversalContext[],
+): GeneTraversalContext[]
+```
+
+Keeps traversal contexts that preserve feed-forward edge direction.
+
+Parameters:
+- `traversalContexts` - - Node-bounded traversal contexts.
+
+Returns: Feed-forward contexts.
+
+### keepTraversalContextsWithinNodeBounds
+
+```ts
+keepTraversalContextsWithinNodeBounds(
+  traversalContexts: GeneTraversalContext[],
+): GeneTraversalContext[]
+```
+
+Keeps traversal contexts whose endpoints are inside offspring bounds.
+
+Parameters:
+- `traversalContexts` - - Candidate traversal contexts.
+
+Returns: Node-bounded contexts.
+
+### materializeOffspringConnections
+
+```ts
+materializeOffspringConnections(
+  offspring: GeneticNetwork,
+  chosenGenes: ConnectionGene[],
+): void
+```
+
+Materializes selected connection genes in the offspring network.
+
+Parameters:
+- `offspring` - - Offspring network.
+- `chosenGenes` - - Chosen connection genes.
+
+Returns: Nothing.
+
+### materializeSingleTraversalContext
+
+```ts
+materializeSingleTraversalContext(
+  traversalContext: GeneTraversalContext,
+): void
+```
+
+Materializes one eligible traversal context when no duplicate projection exists.
+
+Parameters:
+- `traversalContext` - - Traversal context.
+
+Returns: Nothing.
+
+### materializeTraversalContexts
+
+```ts
+materializeTraversalContexts(
+  traversalContexts: GeneTraversalContext[],
+): void
+```
+
+Materializes each eligible traversal context independently.
+
+Parameters:
+- `traversalContexts` - - Eligible traversal contexts.
+
+Returns: Nothing.
+
+### resolveGeneEndpointsContext
+
+```ts
+resolveGeneEndpointsContext(
+  traversalContext: GeneTraversalContext,
+): GeneEndpointsContext | undefined
+```
+
+Resolves concrete endpoint nodes for a traversal context.
+
+Parameters:
+- `traversalContext` - - Traversal context.
+
+Returns: Endpoint context or undefined.

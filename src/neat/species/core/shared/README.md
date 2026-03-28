@@ -33,6 +33,24 @@ flowchart TD
 
 ## neat/species/core/shared/species.core.shared.ts
 
+### SpeciesConnectionSummary
+
+Aggregated innovation coverage for the genomes currently assigned to one species.
+
+The history backfill path uses this compact shape to answer two questions that
+are useful in telemetry dashboards:
+
+- how wide the inherited innovation span is across the species members,
+- how many of those structural genes are still enabled.
+
+Those two values are enough to make extended history rows much more
+explanatory without forcing the species-reporting surface to retain every
+connection-level detail from every generation.
+
+Treat it as a reporting summary, not as a lossless reconstruction format.
+The goal is to explain structural breadth and retention at a glance, not to
+preserve every innovation id for downstream mutation logic.
+
 ### summarizeSpeciesConnections
 
 ```ts
@@ -72,21 +90,3 @@ Example:
 const summary = summarizeSpeciesConnections(species.members, neat._fallbackInnov);
 console.log(summary.innovationRange, summary.enabledRatio);
 ```
-
-### SpeciesConnectionSummary
-
-Aggregated innovation coverage for the genomes currently assigned to one species.
-
-The history backfill path uses this compact shape to answer two questions that
-are useful in telemetry dashboards:
-
-- how wide the inherited innovation span is across the species members,
-- how many of those structural genes are still enabled.
-
-Those two values are enough to make extended history rows much more
-explanatory without forcing the species-reporting surface to retain every
-connection-level detail from every generation.
-
-Treat it as a reporting summary, not as a lossless reconstruction format.
-The goal is to explain structural breadth and retention at a glance, not to
-preserve every innovation id for downstream mutation logic.

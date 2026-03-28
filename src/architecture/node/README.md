@@ -18,11 +18,6 @@ Read this chapter in three passes:
 
 ## architecture/node/node.ts
 
-### NodeOptimizerProps
-
-Internal interface for accessing dynamic optimizer properties on Node instances.
-These properties are lazily allocated and not part of the main class definition.
-
 ### Node
 
 Node (Neuron)
@@ -37,6 +32,11 @@ function (squash) and emits an activation value. Supports:
 Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
 assignment works in algorithms like RTRL / policy gradients. They are updated only when
 using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
+
+### NodeOptimizerProps
+
+Internal interface for accessing dynamic optimizer properties on Node instances.
+These properties are lazily allocated and not part of the main class definition.
 
 ### default
 

@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+
 const EXPORT_COMMAND = 'export';
 const VALIDATE_COMMAND = 'validate';
 const SUPPORTED_COMMANDS = new Set([EXPORT_COMMAND, VALIDATE_COMMAND]);
@@ -38,7 +39,11 @@ function parseArguments(rawArgs) {
   const named = {};
   const passthrough = [];
 
-  for (let argumentIndex = 0; argumentIndex < rawArgs.length; argumentIndex += 1) {
+  for (
+    let argumentIndex = 0;
+    argumentIndex < rawArgs.length;
+    argumentIndex += 1
+  ) {
     const argument = rawArgs[argumentIndex];
     if (!argument.startsWith('--')) {
       passthrough.push(argument);
@@ -81,10 +86,9 @@ async function runValidateCommand(cliPath, inputPath, parsedArguments) {
     path.join(os.tmpdir(), 'neatapticts-mermaid-'),
   );
   const tempOutputPath = path.join(tempDirectoryPath, 'diagram.svg');
-
-  try {
-    await mkdir(path.dirname(tempOutputPath), { recursive: true });
-    await runMermaidCli(cliPath, [
+  const mermaidCliInvocation = await buildMermaidCliInvocation(
+    parsedArguments,
+    [
       '--input',
       inputPath,
       '--output',
@@ -92,25 +96,45 @@ async function runValidateCommand(cliPath, inputPath, parsedArguments) {
       ...buildPassthroughArguments(parsedArguments, {
         excludedNames: new Set(['input', 'i', 'output', 'o']),
       }),
-    ]);
+    ],
+  );
+
+  try {
+    await mkdir(path.dirname(tempOutputPath), { recursive: true });
+    await runMermaidCli(cliPath, mermaidCliInvocation.argumentsToPass);
     console.log(`[mermaid] Valid diagram: ${inputPath}`);
   } finally {
+    await mermaidCliInvocation.cleanup();
     await rm(tempDirectoryPath, { recursive: true, force: true });
   }
 }
 
-async function runExportCommand(cliPath, inputPath, outputPath, parsedArguments) {
+async function runExportCommand(
+  cliPath,
+  inputPath,
+  outputPath,
+  parsedArguments,
+) {
   await mkdir(path.dirname(path.resolve(outputPath)), { recursive: true });
-  await runMermaidCli(cliPath, [
-    '--input',
-    inputPath,
-    '--output',
-    outputPath,
-    ...buildPassthroughArguments(parsedArguments, {
-      excludedNames: new Set(['input', 'i', 'output', 'o']),
-    }),
-  ]);
-  console.log(`[mermaid] Exported diagram to ${outputPath}`);
+  const mermaidCliInvocation = await buildMermaidCliInvocation(
+    parsedArguments,
+    [
+      '--input',
+      inputPath,
+      '--output',
+      outputPath,
+      ...buildPassthroughArguments(parsedArguments, {
+        excludedNames: new Set(['input', 'i', 'output', 'o']),
+      }),
+    ],
+  );
+
+  try {
+    await runMermaidCli(cliPath, mermaidCliInvocation.argumentsToPass);
+    console.log(`[mermaid] Exported diagram to ${outputPath}`);
+  } finally {
+    await mermaidCliInvocation.cleanup();
+  }
 }
 
 function buildPassthroughArguments(parsedArguments, options) {
@@ -129,9 +153,13 @@ function buildPassthroughArguments(parsedArguments, options) {
 
 async function runMermaidCli(cliPath, argumentsToPass) {
   await new Promise((resolve, reject) => {
-    const childProcess = spawn(process.execPath, [cliPath, ...argumentsToPass], {
-      stdio: 'inherit',
-    });
+    const childProcess = spawn(
+      process.execPath,
+      [cliPath, ...argumentsToPass],
+      {
+        stdio: 'inherit',
+      },
+    );
 
     childProcess.once('exit', (exitCode) => {
       if (exitCode === 0) {
@@ -143,6 +171,58 @@ async function runMermaidCli(cliPath, argumentsToPass) {
     });
     childProcess.once('error', reject);
   });
+}
+
+async function buildMermaidCliInvocation(parsedArguments, baseArguments) {
+  if (!shouldInjectCiLinuxNoSandbox(parsedArguments)) {
+    return {
+      argumentsToPass: baseArguments,
+      cleanup: async () => {},
+    };
+  }
+
+  const tempDirectoryPath = await mkdtemp(
+    path.join(os.tmpdir(), 'neatapticts-mermaid-puppeteer-'),
+  );
+  const puppeteerConfigFilePath = path.join(
+    tempDirectoryPath,
+    'puppeteer-config.json',
+  );
+
+  await writeFile(
+    puppeteerConfigFilePath,
+    JSON.stringify({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    }),
+  );
+
+  return {
+    argumentsToPass: [
+      '--puppeteerConfigFile',
+      puppeteerConfigFilePath,
+      ...baseArguments,
+    ],
+    cleanup: async () => {
+      await rm(tempDirectoryPath, { recursive: true, force: true });
+    },
+  };
+}
+
+function shouldInjectCiLinuxNoSandbox(parsedArguments) {
+  return (
+    process.platform === 'linux' &&
+    (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') &&
+    !hasExplicitPuppeteerConfig(parsedArguments)
+  );
+}
+
+function hasExplicitPuppeteerConfig(parsedArguments) {
+  return (
+    parsedArguments.named.puppeteerConfigFile !== undefined ||
+    parsedArguments.named.p !== undefined ||
+    parsedArguments.passthrough.includes('--puppeteerConfigFile') ||
+    parsedArguments.passthrough.includes('-p')
+  );
 }
 
 function printUsageAndExit(message) {

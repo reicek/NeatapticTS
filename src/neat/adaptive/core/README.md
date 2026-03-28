@@ -35,6 +35,74 @@ flowchart TD
 
 ## neat/adaptive/core/adaptive.core.types.ts
 
+### AdaptiveMutationConfig
+
+Shared config view for per-genome adaptive mutation helpers.
+
+The mutation adaptation loop reads this slice to clamp rates, normalize
+perturbation scales, and decide how often genome-local parameters are
+refreshed. It is the mutation-side policy vocabulary before defaults are
+resolved into `MutationSettings`.
+
+### AncestorUniqAdaptiveConfig
+
+Shared config view for ancestor-uniqueness feedback helpers.
+
+This captures the thresholds, cooldowns, and mode switches used when the
+controller nudges diversity pressure in response to lineage concentration.
+Read it as the lineage-feedback slice of the broader adaptive options object.
+
+### ComplexityBudgetConfig
+
+Shared config view for complexity-budget helpers.
+
+Use this alias when a helper only cares about node and connection caps,
+schedule shape, and improvement-window tuning for the adaptive budget loop.
+It is the smallest view needed for the controller that grows or shrinks the
+allowed topology budget over time.
+
+### Genome
+
+Shared genome view used by the adaptive helpers.
+
+This is intentionally opaque beyond the adaptive scratch fields already
+exposed through `NeatLikeWithAdaptive['population']`. The adaptive core cares
+about per-genome scores and adaptive overrides, not full network structure.
+
+### MinimalCriterionAdaptiveConfig
+
+Shared config view for adaptive minimal-criterion helpers.
+
+Helpers use this slice when they are only adjusting the acceptance
+threshold, not inspecting the rest of the controller policy surface. This is
+the acceptance-side tuning vocabulary, not a whole-population runtime view.
+
+### MutationOutcome
+
+Outcome flags used to detect whether mutation pressure stayed balanced.
+
+Mutation adaptation uses this tiny result object to summarize whether recent
+adjustments produced both upward and downward movement rather than collapsing
+into one-sided pressure.
+
+### MutationPartitions
+
+Score-ranked population halves used by two-tier and explore-low strategies.
+
+This keeps the mutation strategies' working partitions explicit so helpers
+can talk about "top half" and "bottom half" without recomputing or loosely
+describing that split.
+
+### MutationSettings
+
+Normalized adaptive-mutation settings after config fallback resolution.
+
+This is the working form used after helpers merge user options with shared
+defaults, so downstream logic does not need to repeatedly re-interpret
+optional config fields. Read it as the mutation chapter's resolved call
+frame: one object with every clamp, sigma, strategy, and baseline already in
+concrete form.
+
 ### NeatLikeWithAdaptive
 
 Contract map for the adaptive helper boundary.
@@ -70,48 +138,6 @@ flowchart TD
   Options --> Lineage[Ancestor uniqueness and lineage pressure]
 ```
 
-### ComplexityBudgetConfig
-
-Shared config view for complexity-budget helpers.
-
-Use this alias when a helper only cares about node and connection caps,
-schedule shape, and improvement-window tuning for the adaptive budget loop.
-It is the smallest view needed for the controller that grows or shrinks the
-allowed topology budget over time.
-
-### PhasedComplexityConfig
-
-Shared config view for phased-complexity helpers.
-
-This isolates the alternating complexify/simplify schedule from the broader
-adaptive options object so phase-oriented helpers can stay narrow and think
-in terms of mode transitions instead of the entire adaptive policy surface.
-
-### MinimalCriterionAdaptiveConfig
-
-Shared config view for adaptive minimal-criterion helpers.
-
-Helpers use this slice when they are only adjusting the acceptance
-threshold, not inspecting the rest of the controller policy surface. This is
-the acceptance-side tuning vocabulary, not a whole-population runtime view.
-
-### AncestorUniqAdaptiveConfig
-
-Shared config view for ancestor-uniqueness feedback helpers.
-
-This captures the thresholds, cooldowns, and mode switches used when the
-controller nudges diversity pressure in response to lineage concentration.
-Read it as the lineage-feedback slice of the broader adaptive options object.
-
-### AdaptiveMutationConfig
-
-Shared config view for per-genome adaptive mutation helpers.
-
-The mutation adaptation loop reads this slice to clamp rates, normalize
-perturbation scales, and decide how often genome-local parameters are
-refreshed. It is the mutation-side policy vocabulary before defaults are
-resolved into `MutationSettings`.
-
 ### OperatorAdaptationConfig
 
 Shared config view for operator-stat adaptation helpers.
@@ -121,39 +147,13 @@ using historical success and attempt statistics. It stays separate from the
 broader adaptive mutation config because operator-choice decay is a different
 feedback loop from per-genome rate tuning.
 
-### MutationSettings
+### PhasedComplexityConfig
 
-Normalized adaptive-mutation settings after config fallback resolution.
+Shared config view for phased-complexity helpers.
 
-This is the working form used after helpers merge user options with shared
-defaults, so downstream logic does not need to repeatedly re-interpret
-optional config fields. Read it as the mutation chapter's resolved call
-frame: one object with every clamp, sigma, strategy, and baseline already in
-concrete form.
-
-### MutationOutcome
-
-Outcome flags used to detect whether mutation pressure stayed balanced.
-
-Mutation adaptation uses this tiny result object to summarize whether recent
-adjustments produced both upward and downward movement rather than collapsing
-into one-sided pressure.
-
-### MutationPartitions
-
-Score-ranked population halves used by two-tier and explore-low strategies.
-
-This keeps the mutation strategies' working partitions explicit so helpers
-can talk about "top half" and "bottom half" without recomputing or loosely
-describing that split.
-
-### Genome
-
-Shared genome view used by the adaptive helpers.
-
-This is intentionally opaque beyond the adaptive scratch fields already
-exposed through `NeatLikeWithAdaptive['population']`. The adaptive core cares
-about per-genome scores and adaptive overrides, not full network structure.
+This isolates the alternating complexify/simplify schedule from the broader
+adaptive options object so phase-oriented helpers can stay narrow and think
+in terms of mode transitions instead of the entire adaptive policy surface.
 
 ## neat/adaptive/core/adaptive.core.ts
 
@@ -326,145 +326,17 @@ adaptive subtree reuses one glossary for tiny math helpers, schedule timing,
 mode names, and safety clamps instead of scattering unrelated literals across
 each control loop.
 
-### ZERO
+### ACCEPTANCE_LOWER_MULTIPLIER
 
-Zero baseline reused by tiny adaptive arithmetic helpers.
-
-### ONE
-
-Unit baseline reused by clamp, ratio, and fallback calculations.
-
-### TWO
-
-Small divisor and offset used by split and normalization helpers.
-
-### THREE
-
-Small threshold used by helpers that need a minimal multi-sample floor.
-
-### FOUR
-
-Small multiplier reused by adaptive-budget growth defaults.
-
-### FIVE
-
-Small count baseline reused by archive-size and cooldown defaults.
-
-### TEN
-
-Round-number default reused by windows and phase lengths.
-
-### ONE_HUNDRED
-
-Large round-number default for long-horizon scheduling.
-
-### NEGATIVE_ONE
-
-Last-index sentinel reused when helpers need the final recorded item.
-
-### DEFAULT_IMPROVEMENT_WINDOW
-
-Default score-history window for trend-aware complexity budgeting.
-
-### HISTORY_MIN_IMPROVEMENT_COUNT
-
-Minimum history length to compute improvement.
-
-### HISTORY_MIN_SLOPE_COUNT
-
-Minimum history length to compute slope.
-
-### DEFAULT_CB_INCREASE_FACTOR
-
-Default multiplier used when adaptive complexity budgeting detects improvement.
-
-### DEFAULT_CB_STAGNATION_FACTOR
-
-Default multiplier used when adaptive complexity budgeting responds to stagnation.
-
-### SLOPE_BOOST_MULTIPLIER
-
-Slope boost multiplier for adaptive increase factor.
-
-### SLOPE_PENALTY_MULTIPLIER
-
-Slope penalty multiplier for stagnation factor.
-
-### SLOPE_NORMALIZE_CLAMP
-
-Clamp magnitude for slope normalization.
-
-### NOVELTY_ARCHIVE_MIN_SIZE
-
-Novelty archive minimum size.
-
-### NOVELTY_FACTOR_SMALL
-
-Novelty factor when archive is small.
-
-### NOVELTY_FACTOR_DEFAULT
-
-Novelty factor when archive is sufficient.
-
-### MINIMAL_TOPOLOGY_OFFSET
-
-Offset added to input/output for minimal topology.
-
-### BUDGET_GROWTH_MULTIPLIER
-
-Default budget growth multiplier.
-
-### LINEAR_HORIZON_DEFAULT
-
-Default horizon for linear schedule.
-
-### PROGRESS_RATIO_MAX
-
-Maximum progress ratio for scheduling.
-
-### PHASE_LENGTH_DEFAULT
-
-Default phase length in generations for phased complexify/simplify schedules.
-
-### TARGET_ACCEPTANCE_DEFAULT
-
-Default acceptance target for adaptive minimal-criterion control.
-
-### ADJUST_RATE_DEFAULT
-
-Default adjustment step for adaptive minimal-criterion threshold updates.
+Lower multiplier used when the controller relaxes acceptance pressure.
 
 ### ACCEPTANCE_UPPER_MULTIPLIER
 
 Upper multiplier used when the controller nudges acceptance pressure upward.
 
-### ACCEPTANCE_LOWER_MULTIPLIER
+### ADJUST_RATE_DEFAULT
 
-Lower multiplier used when the controller relaxes acceptance pressure.
-
-### DENOMINATOR_FALLBACK
-
-Fallback denominator to avoid divide-by-zero.
-
-### OPERATOR_DECAY_DEFAULT
-
-Default operator decay factor.
-
-### COMPLEXITY_MODE_ADAPTIVE
-
-Mode label for feedback-driven complexity-budget scheduling.
-
-### COMPLEXITY_MODE_LINEAR
-
-Mode label for pre-planned linear complexity-budget scheduling.
-
-### PHASE_COMPLEXIFY
-
-Phase label for the structure-growth side of phased complexity.
-
-### PHASE_SIMPLIFY
-
-Phase label for the structure-pruning side of phased complexity.
+Default adjustment step for adaptive minimal-criterion threshold updates.
 
 ### ANCESTOR_UNIQ_MODE_EPSILON
 
@@ -474,61 +346,81 @@ Mode label for epsilon-style ancestor-uniqueness feedback.
 
 Mode label for ancestor-uniqueness control via lineage-pressure tuning.
 
-### LINEAGE_PRESSURE_MODE_SPREAD
+### ANNEAL_BASELINE_GENERATIONS
 
-Lineage pressure spread mode.
+Baseline generations for annealing progress.
 
-### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
+### ANNEAL_PROGRESS_MAX
 
-Default cooldown (generations) for ancestor-uniqueness adjustments.
+Maximum progress ratio used in annealing.
 
-### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
+### BUDGET_GROWTH_MULTIPLIER
 
-Default lower bound for acceptable ancestor uniqueness.
+Default budget growth multiplier.
 
-### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
+### COMPLEXITY_MODE_ADAPTIVE
 
-Default upper bound for acceptable ancestor uniqueness.
+Mode label for feedback-driven complexity-budget scheduling.
 
-### DEFAULT_ANCESTOR_UNIQ_ADJUST
+### COMPLEXITY_MODE_LINEAR
 
-Default adjustment magnitude for uniqueness nudges.
-
-### DEFAULT_LINEAGE_PRESSURE_STRENGTH
-
-Default lineage pressure strength when initializing the option.
-
-### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
-
-Multiplier when increasing lineage pressure strength.
-
-### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
-
-Multiplier when decreasing lineage pressure strength.
+Mode label for pre-planned linear complexity-budget scheduling.
 
 ### DEFAULT_ADAPT_EVERY
 
 Default cadence for refreshing per-genome adaptive mutation settings.
 
-### DEFAULT_MUTATION_SIGMA
+### DEFAULT_ANCESTOR_UNIQ_ADJUST
 
-Default perturbation spread for adaptive mutation-rate updates.
+Default adjustment magnitude for uniqueness nudges.
 
-### MUTATION_SIGMA_SCALE
+### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
 
-Scale applied to mutation sigma for perturbations.
+Default cooldown (generations) for ancestor-uniqueness adjustments.
 
-### DEFAULT_MIN_MUTATION_RATE
+### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
 
-Default lower clamp for per-genome adaptive mutation rates.
+Default upper bound for acceptable ancestor uniqueness.
+
+### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
+
+Default lower bound for acceptable ancestor uniqueness.
+
+### DEFAULT_CB_INCREASE_FACTOR
+
+Default multiplier used when adaptive complexity budgeting detects improvement.
+
+### DEFAULT_CB_STAGNATION_FACTOR
+
+Default multiplier used when adaptive complexity budgeting responds to stagnation.
+
+### DEFAULT_IMPROVEMENT_WINDOW
+
+Default score-history window for trend-aware complexity budgeting.
+
+### DEFAULT_INITIAL_MUTATION_RATE
+
+Default initial mutation rate used before adaptive balancing specializes genomes.
+
+### DEFAULT_LINEAGE_PRESSURE_STRENGTH
+
+Default lineage pressure strength when initializing the option.
+
+### DEFAULT_MAX_MUTATION_AMOUNT
+
+Default maximum mutation amount.
 
 ### DEFAULT_MAX_MUTATION_RATE
 
 Default upper clamp for per-genome adaptive mutation rates.
 
-### DEFAULT_INITIAL_MUTATION_RATE
+### DEFAULT_MIN_MUTATION_AMOUNT
 
-Default initial mutation rate used before adaptive balancing specializes genomes.
+Default minimum mutation amount.
+
+### DEFAULT_MIN_MUTATION_RATE
+
+Default lower clamp for per-genome adaptive mutation rates.
 
 ### DEFAULT_MUTATION_AMOUNT
 
@@ -538,50 +430,158 @@ Default mutation amount when genome value is missing.
 
 Default perturbation spread for adaptive mutation-amount updates.
 
-### DEFAULT_MIN_MUTATION_AMOUNT
+### DEFAULT_MUTATION_SIGMA
 
-Default minimum mutation amount.
+Default perturbation spread for adaptive mutation-rate updates.
 
-### DEFAULT_MAX_MUTATION_AMOUNT
+### DENOMINATOR_FALLBACK
 
-Default maximum mutation amount.
-
-### RNG_SPREAD_MULTIPLIER
-
-Random range multiplier for signed deltas.
-
-### RNG_CENTER_OFFSET
-
-Random offset for signed deltas.
-
-### EXPLORE_LOW_INCREASE_MULTIPLIER
-
-Multiplicative boost for explore-low strategy (bottom half).
+Fallback denominator to avoid divide-by-zero.
 
 ### EXPLORE_LOW_DECREASE_MULTIPLIER
 
 Multiplicative decay for explore-low strategy (top half).
 
-### ANNEAL_BASELINE_GENERATIONS
+### EXPLORE_LOW_INCREASE_MULTIPLIER
 
-Baseline generations for annealing progress.
+Multiplicative boost for explore-low strategy (bottom half).
 
-### ANNEAL_PROGRESS_MAX
+### FIVE
 
-Maximum progress ratio used in annealing.
+Small count baseline reused by archive-size and cooldown defaults.
+
+### FOUR
+
+Small multiplier reused by adaptive-budget growth defaults.
 
 ### HALF_INDEX_DIVISOR
 
 Divisor used to split populations in half.
 
-### MUTATION_STRATEGY_TWO_TIER
+### HISTORY_MIN_IMPROVEMENT_COUNT
 
-Strategy label for ranking-sensitive two-tier adaptive mutation.
+Minimum history length to compute improvement.
+
+### HISTORY_MIN_SLOPE_COUNT
+
+Minimum history length to compute slope.
+
+### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
+
+Multiplier when decreasing lineage pressure strength.
+
+### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
+
+Multiplier when increasing lineage pressure strength.
+
+### LINEAGE_PRESSURE_MODE_SPREAD
+
+Lineage pressure spread mode.
+
+### LINEAR_HORIZON_DEFAULT
+
+Default horizon for linear schedule.
+
+### MINIMAL_TOPOLOGY_OFFSET
+
+Offset added to input/output for minimal topology.
+
+### MUTATION_SIGMA_SCALE
+
+Scale applied to mutation sigma for perturbations.
+
+### MUTATION_STRATEGY_ANNEAL
+
+Strategy label for annealed mutation pressure across run progress.
 
 ### MUTATION_STRATEGY_EXPLORE_LOW
 
 Strategy label for boosting structural risk on the lower-ranked half.
 
-### MUTATION_STRATEGY_ANNEAL
+### MUTATION_STRATEGY_TWO_TIER
 
-Strategy label for annealed mutation pressure across run progress.
+Strategy label for ranking-sensitive two-tier adaptive mutation.
+
+### NEGATIVE_ONE
+
+Last-index sentinel reused when helpers need the final recorded item.
+
+### NOVELTY_ARCHIVE_MIN_SIZE
+
+Novelty archive minimum size.
+
+### NOVELTY_FACTOR_DEFAULT
+
+Novelty factor when archive is sufficient.
+
+### NOVELTY_FACTOR_SMALL
+
+Novelty factor when archive is small.
+
+### ONE
+
+Unit baseline reused by clamp, ratio, and fallback calculations.
+
+### ONE_HUNDRED
+
+Large round-number default for long-horizon scheduling.
+
+### OPERATOR_DECAY_DEFAULT
+
+Default operator decay factor.
+
+### PHASE_COMPLEXIFY
+
+Phase label for the structure-growth side of phased complexity.
+
+### PHASE_LENGTH_DEFAULT
+
+Default phase length in generations for phased complexify/simplify schedules.
+
+### PHASE_SIMPLIFY
+
+Phase label for the structure-pruning side of phased complexity.
+
+### PROGRESS_RATIO_MAX
+
+Maximum progress ratio for scheduling.
+
+### RNG_CENTER_OFFSET
+
+Random offset for signed deltas.
+
+### RNG_SPREAD_MULTIPLIER
+
+Random range multiplier for signed deltas.
+
+### SLOPE_BOOST_MULTIPLIER
+
+Slope boost multiplier for adaptive increase factor.
+
+### SLOPE_NORMALIZE_CLAMP
+
+Clamp magnitude for slope normalization.
+
+### SLOPE_PENALTY_MULTIPLIER
+
+Slope penalty multiplier for stagnation factor.
+
+### TARGET_ACCEPTANCE_DEFAULT
+
+Default acceptance target for adaptive minimal-criterion control.
+
+### TEN
+
+Round-number default reused by windows and phase lengths.
+
+### THREE
+
+Small threshold used by helpers that need a minimal multi-sample floor.
+
+### TWO
+
+Small divisor and offset used by split and normalization helpers.
+
+### ZERO
+
+Zero baseline reused by tiny adaptive arithmetic helpers.

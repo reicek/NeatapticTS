@@ -36,6 +36,15 @@ Practical reading order:
 
 ## neat/compat/core/compat.types.ts
 
+### ComparisonMetrics
+
+Aggregated comparison metrics for compatibility calculations.
+
+`compareInnovationLists()` produces this structure so the final distance fold
+can stay separate from the merge walk that discovered the evidence. That
+split keeps the algorithm easier to explain: one pass classifies the gene
+relationship, a later pass applies the NEAT weighting policy.
+
 ### ConnectionLike
 
 Shape of a connection entry used during compatibility checks.
@@ -61,15 +70,6 @@ This keeps the boundary tightly focused on generation-scoped caches,
 compatibility coefficients, and the fallback innovation resolver instead of
 coupling the mechanics layer to the full `Neat` surface.
 
-### ComparisonMetrics
-
-Aggregated comparison metrics for compatibility calculations.
-
-`compareInnovationLists()` produces this structure so the final distance fold
-can stay separate from the merge walk that discovered the evidence. That
-split keeps the algorithm easier to explain: one pass classifies the gene
-relationship, a later pass applies the NEAT weighting policy.
-
 ## neat/compat/core/compat.core.ts
 
 Compatibility-distance mechanics used by NEAT speciation.
@@ -83,27 +83,6 @@ chapter answers how that distance is assembled efficiently and deterministically
 The helpers are deliberately small and ordered to match the real execution
 path: stabilize caches, normalize genomes, compare aligned innovations, then
 fold the discovered evidence into the NEAT distance formula.
-
-### ensureGenerationCache
-
-```ts
-ensureGenerationCache(
-  neatContext: NeatLikeForCompat,
-): void
-```
-
-Ensure generation-scoped compatibility caches exist.
-
-The compatibility layer keeps pairwise distance results only for the current
-generation because the population can mutate between generations. Once that
-happens, earlier distances are no longer trustworthy. This helper provides
-the safety boundary that drops stale cache state before later helpers assume
-a cache map exists.
-
-Parameters:
-- `neatContext` - - Current NEAT context holding generation and caches.
-
-Returns: Nothing. The helper resets caches when the generation changes.
 
 ### buildPairKey
 
@@ -125,6 +104,87 @@ Parameters:
 - `secondGenome` - - Second genome in the pair.
 
 Returns: Stable cache key in the form `minId|maxId`.
+
+### compareInnovationLists
+
+```ts
+compareInnovationLists(
+  firstList: [number, number][],
+  secondList: [number, number][],
+): ComparisonMetrics
+```
+
+Compare two sorted innovation lists and derive compatibility metrics.
+
+This is the heart of the compatibility read. Because both lists are sorted,
+the helper can walk them once like a merge step: matching innovations count
+toward aligned genes, gaps inside the shared innovation range become disjoint
+genes, and the remaining tail genes become excess. Weight differences are
+only measured for matching genes because that is the only case where the two
+genomes clearly refer to the same structural gene.
+
+Parameters:
+- `firstList` - - Sorted innovation list for the first genome.
+- `secondList` - - Sorted innovation list for the second genome.
+
+Returns: Aggregated comparison metrics for distance computation.
+
+### computeCompatibilityDistance
+
+```ts
+computeCompatibilityDistance(
+  neatContext: NeatLikeForCompat,
+  metrics: ComparisonMetrics,
+): number
+```
+
+Compute the compatibility distance from precomputed metrics.
+
+This fold turns the raw comparison evidence into the familiar NEAT distance:
+excess structure penalty, disjoint structure penalty, and average matching
+weight drift. Structural counts are normalized by the larger genome size so
+larger topologies do not inflate distance merely because they contain more
+possible genes.
+
+Parameters:
+- `neatContext` - - NEAT context providing compatibility coefficients.
+- `metrics` - - Aggregated comparison metrics.
+
+Returns: Final compatibility distance for the genome pair.
+
+Example:
+
+```ts
+const distance = computeCompatibilityDistance(neat, {
+  firstGenomeSize: 12,
+  secondGenomeSize: 10,
+  matchingCount: 8,
+  disjointCount: 1,
+  excessCount: 2,
+  weightDifferenceSum: 0.9,
+});
+```
+
+### ensureGenerationCache
+
+```ts
+ensureGenerationCache(
+  neatContext: NeatLikeForCompat,
+): void
+```
+
+Ensure generation-scoped compatibility caches exist.
+
+The compatibility layer keeps pairwise distance results only for the current
+generation because the population can mutate between generations. Once that
+happens, earlier distances are no longer trustworthy. This helper provides
+the safety boundary that drops stale cache state before later helpers assume
+a cache map exists.
+
+Parameters:
+- `neatContext` - - Current NEAT context holding generation and caches.
+
+Returns: Nothing. The helper resets caches when the generation changes.
 
 ### getDistanceCacheMap
 
@@ -176,30 +236,6 @@ const innovationPairs = getSortedInnovationCache(neat, genome);
 // [[3, 0.12], [8, -0.7], [11, 0.44]]
 ```
 
-### compareInnovationLists
-
-```ts
-compareInnovationLists(
-  firstList: [number, number][],
-  secondList: [number, number][],
-): ComparisonMetrics
-```
-
-Compare two sorted innovation lists and derive compatibility metrics.
-
-This is the heart of the compatibility read. Because both lists are sorted,
-the helper can walk them once like a merge step: matching innovations count
-toward aligned genes, gaps inside the shared innovation range become disjoint
-genes, and the remaining tail genes become excess. Weight differences are
-only measured for matching genes because that is the only case where the two
-genomes clearly refer to the same structural gene.
-
-Parameters:
-- `firstList` - - Sorted innovation list for the first genome.
-- `secondList` - - Sorted innovation list for the second genome.
-
-Returns: Aggregated comparison metrics for distance computation.
-
 ### resolveMaxInnovation
 
 ```ts
@@ -219,39 +255,3 @@ Parameters:
 - `list` - - Sorted innovation list for a genome.
 
 Returns: Highest innovation id or `0` when the list is empty.
-
-### computeCompatibilityDistance
-
-```ts
-computeCompatibilityDistance(
-  neatContext: NeatLikeForCompat,
-  metrics: ComparisonMetrics,
-): number
-```
-
-Compute the compatibility distance from precomputed metrics.
-
-This fold turns the raw comparison evidence into the familiar NEAT distance:
-excess structure penalty, disjoint structure penalty, and average matching
-weight drift. Structural counts are normalized by the larger genome size so
-larger topologies do not inflate distance merely because they contain more
-possible genes.
-
-Parameters:
-- `neatContext` - - NEAT context providing compatibility coefficients.
-- `metrics` - - Aggregated comparison metrics.
-
-Returns: Final compatibility distance for the genome pair.
-
-Example:
-
-```ts
-const distance = computeCompatibilityDistance(neat, {
-  firstGenomeSize: 12,
-  secondGenomeSize: 10,
-  matchingCount: 8,
-  disjointCount: 1,
-  excessCount: 2,
-  weightDifferenceSum: 0.9,
-});
-```

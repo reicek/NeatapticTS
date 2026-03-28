@@ -49,6 +49,203 @@ flowchart TD
 
 ## neat/evaluate/novelty/evaluate.novelty.ts
 
+### addGenomeToNoveltyArchive
+
+```ts
+addGenomeToNoveltyArchive(
+  controller: NeatControllerForEval,
+  descriptor: number[],
+  novelty: number,
+  noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; },
+): void
+```
+
+Add a descriptor to the novelty archive when it exceeds the threshold.
+
+The archive is intentionally bounded and selective. Threshold-based admission
+keeps it focused on descriptors that are genuinely unusual enough to be worth
+remembering, while the cap prevents novelty exploration from turning into an
+unbounded memory sink.
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `descriptor` - - Behavior descriptor for the current genome.
+- `novelty` - - Computed novelty score.
+- `noveltyOptions` - - Novelty configuration.
+
+### applyNoveltyToPopulation
+
+```ts
+applyNoveltyToPopulation(
+  controller: NeatControllerForEval,
+  descriptors: number[][],
+  distanceMatrix: number[][],
+  kNeighbors: number,
+  blendFactor: number,
+  noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; },
+): void
+```
+
+Apply novelty scores and archive writes across the population.
+
+This helper is the fold stage of the novelty pipeline. It translates the
+descriptor-distance evidence into per-genome novelty annotations, then
+optionally blends that evidence into numeric scores and records sufficiently
+novel descriptors for future exploration pressure.
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `descriptors` - - Descriptor vectors for each genome.
+- `distanceMatrix` - - Dense distance matrix.
+- `kNeighbors` - - Number of nearest neighbors to average.
+- `blendFactor` - - Novelty-vs-fitness blend factor.
+- `noveltyOptions` - - Novelty configuration.
+
+### blendNoveltyIntoScore
+
+```ts
+blendNoveltyIntoScore(
+  genome: GenomeForEvaluation,
+  novelty: number,
+  blendFactor: number,
+): void
+```
+
+Blend novelty into the genome score when the score already exists.
+
+This stage intentionally does not invent a base score when one is missing.
+Novelty acts as a companion signal to the existing evaluation path, not as a
+universal replacement for every scoring mode.
+
+Parameters:
+- `genome` - - Genome to update.
+- `novelty` - - Computed novelty value.
+- `blendFactor` - - Blend factor for novelty versus fitness.
+
+### buildDistanceMatrix
+
+```ts
+buildDistanceMatrix(
+  descriptors: number[][],
+): number[][]
+```
+
+Build the full pairwise distance matrix for the descriptor set.
+
+The matrix is dense and population-order aligned so later helpers can keep
+the scoring flow simple: each genome reads one row, drops its self-distance,
+and averages the nearest neighbors.
+
+Parameters:
+- `descriptors` - - Descriptor vectors for the current population.
+
+Returns: Dense distance matrix aligned with population order.
+
+### buildNoveltyDescriptors
+
+```ts
+buildNoveltyDescriptors(
+  controller: NeatControllerForEval,
+  noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; },
+): number[][]
+```
+
+Build behavior descriptors for the current population.
+
+Descriptor building is isolated here so the rest of the chapter can treat
+novelty as a pure data pipeline: descriptor first, distance second, scoring
+third. Descriptor failures degrade to an empty vector instead of failing the
+entire evaluation pass.
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: Descriptor vectors aligned with population order.
+
+### computeDescriptorDistance
+
+```ts
+computeDescriptorDistance(
+  leftDescriptor: number[],
+  rightDescriptor: number[],
+  isSame: boolean,
+): number
+```
+
+Compute the Euclidean distance between two descriptors.
+
+Distance is computed across the shared descriptor prefix so callers can keep
+using practical descriptor functions even when they occasionally emit vectors
+of uneven length. Self-distance is fixed at zero to keep later neighbor
+ranking deterministic.
+
+Parameters:
+- `leftDescriptor` - - Left descriptor vector.
+- `rightDescriptor` - - Right descriptor vector.
+- `isSame` - - Whether both descriptors belong to the same genome index.
+
+Returns: Euclidean distance across the shared prefix.
+
+### computeNoveltyScore
+
+```ts
+computeNoveltyScore(
+  distanceRow: number[],
+  kNeighbors: number,
+): number
+```
+
+Compute a novelty score from one row of the distance matrix.
+
+Novelty is defined here as the average distance to the nearest neighbors
+after excluding the genome's self-distance. Higher values mean the genome is
+behaving in a less crowded region of descriptor space.
+
+Parameters:
+- `distanceRow` - - Distance values for a single genome.
+- `kNeighbors` - - Number of nearest neighbors to average.
+
+Returns: Novelty score for the genome.
+
+### getNoveltyBlendFactor
+
+```ts
+getNoveltyBlendFactor(
+  noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; },
+): number
+```
+
+Resolve the novelty-vs-fitness blend factor.
+
+A factor of `0` keeps the existing fitness score unchanged. A factor of `1`
+makes novelty fully replace it when a numeric score exists. Values in between
+turn novelty into a partial exploratory bonus instead of a hard override.
+
+Parameters:
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: Blend factor used when a genome already has a numeric score.
+
+### getNoveltyNeighborCount
+
+```ts
+getNoveltyNeighborCount(
+  noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; },
+): number
+```
+
+Resolve the number of nearest neighbors used for novelty scoring.
+
+Smaller neighbor counts make novelty more sensitive to local behavioral
+differences, while larger counts smooth that signal across a wider portion of
+the current population.
+
+Parameters:
+- `noveltyOptions` - - Novelty configuration.
+
+Returns: Neighbor count clamped to at least one.
+
 ### runNoveltyBlendAndArchive
 
 ```ts
@@ -82,200 +279,3 @@ Example:
 runNoveltyBlendAndArchive(controller, controller.options);
 console.log(controller.population[0]?._novelty);
 ```
-
-### getNoveltyNeighborCount
-
-```ts
-getNoveltyNeighborCount(
-  noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; },
-): number
-```
-
-Resolve the number of nearest neighbors used for novelty scoring.
-
-Smaller neighbor counts make novelty more sensitive to local behavioral
-differences, while larger counts smooth that signal across a wider portion of
-the current population.
-
-Parameters:
-- `noveltyOptions` - - Novelty configuration.
-
-Returns: Neighbor count clamped to at least one.
-
-### getNoveltyBlendFactor
-
-```ts
-getNoveltyBlendFactor(
-  noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; },
-): number
-```
-
-Resolve the novelty-vs-fitness blend factor.
-
-A factor of `0` keeps the existing fitness score unchanged. A factor of `1`
-makes novelty fully replace it when a numeric score exists. Values in between
-turn novelty into a partial exploratory bonus instead of a hard override.
-
-Parameters:
-- `noveltyOptions` - - Novelty configuration.
-
-Returns: Blend factor used when a genome already has a numeric score.
-
-### buildNoveltyDescriptors
-
-```ts
-buildNoveltyDescriptors(
-  controller: NeatControllerForEval,
-  noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; },
-): number[][]
-```
-
-Build behavior descriptors for the current population.
-
-Descriptor building is isolated here so the rest of the chapter can treat
-novelty as a pure data pipeline: descriptor first, distance second, scoring
-third. Descriptor failures degrade to an empty vector instead of failing the
-entire evaluation pass.
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `noveltyOptions` - - Novelty configuration.
-
-Returns: Descriptor vectors aligned with population order.
-
-### buildDistanceMatrix
-
-```ts
-buildDistanceMatrix(
-  descriptors: number[][],
-): number[][]
-```
-
-Build the full pairwise distance matrix for the descriptor set.
-
-The matrix is dense and population-order aligned so later helpers can keep
-the scoring flow simple: each genome reads one row, drops its self-distance,
-and averages the nearest neighbors.
-
-Parameters:
-- `descriptors` - - Descriptor vectors for the current population.
-
-Returns: Dense distance matrix aligned with population order.
-
-### applyNoveltyToPopulation
-
-```ts
-applyNoveltyToPopulation(
-  controller: NeatControllerForEval,
-  descriptors: number[][],
-  distanceMatrix: number[][],
-  kNeighbors: number,
-  blendFactor: number,
-  noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; },
-): void
-```
-
-Apply novelty scores and archive writes across the population.
-
-This helper is the fold stage of the novelty pipeline. It translates the
-descriptor-distance evidence into per-genome novelty annotations, then
-optionally blends that evidence into numeric scores and records sufficiently
-novel descriptors for future exploration pressure.
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `descriptors` - - Descriptor vectors for each genome.
-- `distanceMatrix` - - Dense distance matrix.
-- `kNeighbors` - - Number of nearest neighbors to average.
-- `blendFactor` - - Novelty-vs-fitness blend factor.
-- `noveltyOptions` - - Novelty configuration.
-
-### computeNoveltyScore
-
-```ts
-computeNoveltyScore(
-  distanceRow: number[],
-  kNeighbors: number,
-): number
-```
-
-Compute a novelty score from one row of the distance matrix.
-
-Novelty is defined here as the average distance to the nearest neighbors
-after excluding the genome's self-distance. Higher values mean the genome is
-behaving in a less crowded region of descriptor space.
-
-Parameters:
-- `distanceRow` - - Distance values for a single genome.
-- `kNeighbors` - - Number of nearest neighbors to average.
-
-Returns: Novelty score for the genome.
-
-### blendNoveltyIntoScore
-
-```ts
-blendNoveltyIntoScore(
-  genome: GenomeForEvaluation,
-  novelty: number,
-  blendFactor: number,
-): void
-```
-
-Blend novelty into the genome score when the score already exists.
-
-This stage intentionally does not invent a base score when one is missing.
-Novelty acts as a companion signal to the existing evaluation path, not as a
-universal replacement for every scoring mode.
-
-Parameters:
-- `genome` - - Genome to update.
-- `novelty` - - Computed novelty value.
-- `blendFactor` - - Blend factor for novelty versus fitness.
-
-### addGenomeToNoveltyArchive
-
-```ts
-addGenomeToNoveltyArchive(
-  controller: NeatControllerForEval,
-  descriptor: number[],
-  novelty: number,
-  noveltyOptions: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; },
-): void
-```
-
-Add a descriptor to the novelty archive when it exceeds the threshold.
-
-The archive is intentionally bounded and selective. Threshold-based admission
-keeps it focused on descriptors that are genuinely unusual enough to be worth
-remembering, while the cap prevents novelty exploration from turning into an
-unbounded memory sink.
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `descriptor` - - Behavior descriptor for the current genome.
-- `novelty` - - Computed novelty score.
-- `noveltyOptions` - - Novelty configuration.
-
-### computeDescriptorDistance
-
-```ts
-computeDescriptorDistance(
-  leftDescriptor: number[],
-  rightDescriptor: number[],
-  isSame: boolean,
-): number
-```
-
-Compute the Euclidean distance between two descriptors.
-
-Distance is computed across the shared descriptor prefix so callers can keep
-using practical descriptor functions even when they occasionally emit vectors
-of uneven length. Self-distance is fixed at zero to keep later neighbor
-ranking deterministic.
-
-Parameters:
-- `leftDescriptor` - - Left descriptor vector.
-- `rightDescriptor` - - Right descriptor vector.
-- `isSame` - - Whether both descriptors belong to the same genome index.
-
-Returns: Euclidean distance across the shared prefix.

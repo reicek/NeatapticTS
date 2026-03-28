@@ -52,39 +52,77 @@ flowchart TD
 
 ## neat/evaluate/auto-distance/evaluate.auto-distance.ts
 
-### runAutoDistanceCoefficientTuning
+### applyAutoDistanceCoefficientTuning
 
 ```ts
-runAutoDistanceCoefficientTuning(
+applyAutoDistanceCoefficientTuning(
   controller: NeatControllerForEval,
-  evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; },
+  autoDistanceCoeffOptions: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; },
+  connectionVariance: number,
 ): void
 ```
 
-Apply variance-driven tuning to the controller's distance coefficients.
+Apply the coefficient-tuning policy using the observed connection variance.
 
-This is the controller-facing entrypoint for auto-distance tuning. It only
-runs when both speciation and auto coefficient tuning are enabled because the
-resulting coefficients are only meaningful when later compatibility reads are
-still part of the runtime policy.
+This helper compares the freshly observed variance with the controller's
+stored baseline. Lower-than-expected variance means topology sizes are
+converging, so excess and disjoint coefficients are increased to make future
+structural differences matter more. Higher-than-expected variance means the
+population is already spreading structurally, so the coefficients are eased
+downward.
 
-The helper preserves several important controller assumptions:
-- genome scores are already complete and are not recomputed here,
-- live species assignments are left intact,
-- population order is left intact,
-- only the structural-distance coefficients and their variance baseline are
-  updated for future passes.
+The comparison is deliberately relative instead of target-based. The policy
+tracks the population's recent structural spread and responds to drift,
+rather than forcing every problem domain toward one global variance number.
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
-- `evaluationOptions` - - Options object for the current evaluation pass.
+- `autoDistanceCoeffOptions` - - Tuning options that define adjustment rate
+and coefficient bounds.
+- `connectionVariance` - - Freshly observed variance of population
+connection counts.
 
-Example:
+### applyDistanceCoefficientDecrease
 
 ```ts
-runAutoDistanceCoefficientTuning(controller, controller.options);
-console.log(controller.options.excessCoeff, controller.options.disjointCoeff);
+applyDistanceCoefficientDecrease(
+  controller: NeatControllerForEval,
+  bounds: { minCoeff: number; maxCoeff: number; },
+  adjustRate: number,
+): void
 ```
+
+Decrease distance coefficients within the configured bounds.
+
+Decreasing these coefficients softens the structural-distance penalty when
+topology sizes are already spreading, which helps keep the controller from
+over-fragmenting species on the next pass.
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `bounds` - - Min and max coefficient bounds.
+- `adjustRate` - - Adjustment rate.
+
+### applyDistanceCoefficientIncrease
+
+```ts
+applyDistanceCoefficientIncrease(
+  controller: NeatControllerForEval,
+  bounds: { minCoeff: number; maxCoeff: number; },
+  adjustRate: number,
+): void
+```
+
+Increase distance coefficients within the configured bounds.
+
+Increasing these coefficients makes later compatibility reads treat excess
+and disjoint structural differences as more important, which helps push back
+when topology sizes are collapsing toward one narrow profile.
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `bounds` - - Min and max coefficient bounds.
+- `adjustRate` - - Adjustment rate.
 
 ### computeMean
 
@@ -125,36 +163,6 @@ Parameters:
 - `meanValue` - - Precomputed mean.
 
 Returns: Variance of the values.
-
-### applyAutoDistanceCoefficientTuning
-
-```ts
-applyAutoDistanceCoefficientTuning(
-  controller: NeatControllerForEval,
-  autoDistanceCoeffOptions: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; },
-  connectionVariance: number,
-): void
-```
-
-Apply the coefficient-tuning policy using the observed connection variance.
-
-This helper compares the freshly observed variance with the controller's
-stored baseline. Lower-than-expected variance means topology sizes are
-converging, so excess and disjoint coefficients are increased to make future
-structural differences matter more. Higher-than-expected variance means the
-population is already spreading structurally, so the coefficients are eased
-downward.
-
-The comparison is deliberately relative instead of target-based. The policy
-tracks the population's recent structural spread and responds to drift,
-rather than forcing every problem domain toward one global variance number.
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `autoDistanceCoeffOptions` - - Tuning options that define adjustment rate
-and coefficient bounds.
-- `connectionVariance` - - Freshly observed variance of population
-connection counts.
 
 ### getDistanceCoefficientBounds
 
@@ -199,44 +207,36 @@ Parameters:
 - `bounds` - - Min and max coefficient bounds.
 - `adjustRate` - - Adjustment rate.
 
-### applyDistanceCoefficientIncrease
+### runAutoDistanceCoefficientTuning
 
 ```ts
-applyDistanceCoefficientIncrease(
+runAutoDistanceCoefficientTuning(
   controller: NeatControllerForEval,
-  bounds: { minCoeff: number; maxCoeff: number; },
-  adjustRate: number,
+  evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; },
 ): void
 ```
 
-Increase distance coefficients within the configured bounds.
+Apply variance-driven tuning to the controller's distance coefficients.
 
-Increasing these coefficients makes later compatibility reads treat excess
-and disjoint structural differences as more important, which helps push back
-when topology sizes are collapsing toward one narrow profile.
+This is the controller-facing entrypoint for auto-distance tuning. It only
+runs when both speciation and auto coefficient tuning are enabled because the
+resulting coefficients are only meaningful when later compatibility reads are
+still part of the runtime policy.
+
+The helper preserves several important controller assumptions:
+- genome scores are already complete and are not recomputed here,
+- live species assignments are left intact,
+- population order is left intact,
+- only the structural-distance coefficients and their variance baseline are
+  updated for future passes.
 
 Parameters:
 - `controller` - - NEAT controller instance for evaluation.
-- `bounds` - - Min and max coefficient bounds.
-- `adjustRate` - - Adjustment rate.
+- `evaluationOptions` - - Options object for the current evaluation pass.
 
-### applyDistanceCoefficientDecrease
+Example:
 
 ```ts
-applyDistanceCoefficientDecrease(
-  controller: NeatControllerForEval,
-  bounds: { minCoeff: number; maxCoeff: number; },
-  adjustRate: number,
-): void
+runAutoDistanceCoefficientTuning(controller, controller.options);
+console.log(controller.options.excessCoeff, controller.options.disjointCoeff);
 ```
-
-Decrease distance coefficients within the configured bounds.
-
-Decreasing these coefficients softens the structural-distance penalty when
-topology sizes are already spreading, which helps keep the controller from
-over-fragmenting species on the next pass.
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `bounds` - - Min and max coefficient bounds.
-- `adjustRate` - - Adjustment rate.

@@ -47,38 +47,52 @@ behavior.
 
 ## neat/selection/facade/selection.facade.ts
 
-### sort
+### FittestNetwork
+
+Champion-shaped network returned by the public `getFittest()` facade.
+
+The facade intentionally returns the real network instance from the current
+population rather than a detached summary object. That keeps the stable
+`Neat` contract aligned with long-standing usage patterns where callers read
+the champion's score and then continue inspecting the network itself.
+
+The extra `score` field is called out here so the generated README can name
+the returned shape explicitly instead of falling back to a rough imported
+default-type rendering.
+
+### getAverage
 
 ```ts
-sort(
+getAverage(
   host: NeatPopulationSummaryFacadeHost,
-): void
+): number
 ```
 
-Sort the population in descending fitness order.
+Compute the average score across the current population.
 
-This preserves the historical `neat.sort()` behavior while keeping the
-top-level class free of inline ordering details.
+This is a compact inspection helper for telemetry, tests, and quick
+debugging where the caller only needs the current mean fitness.
 
-Use this wrapper when later reads should see the current population in an
-explicit best-first order, such as before manual inspection, debugging, or a
-deterministic test assertion. The wrapper deliberately stays narrow: it only
-forwards to the shared selection ordering helper and keeps the familiar class
-method available at the stable `Neat` surface.
+Read it as the companion to {@link getFittest}: the champion tells you how
+high the best genome has climbed, while the average tells you whether that
+progress is representative of the wider generation or still concentrated in
+a small leading group. Because this wrapper stays at the summary layer, it
+reports on population state without drifting into parent-choice or breeding
+policy.
 
-This is the facade's one explicit reordering primitive. Everything else in
-the chapter is read-only population inspection.
+Together, `getFittest()` and `getAverage()` are the facade's public promise:
+one read for the leader and one read for the generation as a whole.
 
 Parameters:
-- `host` - - `Neat` instance exposing population sorting state.
+- `host` - - `Neat` instance exposing population and evaluation state.
 
-Returns: Nothing. The population array is reordered in place.
+Returns: Mean score across the current population.
 
 Example:
 
 ```ts
-neat.sort();
-console.log(neat.population[0].score);
+const meanScore = neat.getAverage();
+console.log(`Average score: ${meanScore}`);
 ```
 
 ### getFittest
@@ -116,41 +130,6 @@ const champion = neat.getFittest();
 console.log(champion.score);
 ```
 
-### getAverage
-
-```ts
-getAverage(
-  host: NeatPopulationSummaryFacadeHost,
-): number
-```
-
-Compute the average score across the current population.
-
-This is a compact inspection helper for telemetry, tests, and quick
-debugging where the caller only needs the current mean fitness.
-
-Read it as the companion to {@link getFittest}: the champion tells you how
-high the best genome has climbed, while the average tells you whether that
-progress is representative of the wider generation or still concentrated in
-a small leading group. Because this wrapper stays at the summary layer, it
-reports on population state without drifting into parent-choice or breeding
-policy.
-
-Together, `getFittest()` and `getAverage()` are the facade's public promise:
-one read for the leader and one read for the generation as a whole.
-
-Parameters:
-- `host` - - `Neat` instance exposing population and evaluation state.
-
-Returns: Mean score across the current population.
-
-Example:
-
-```ts
-const meanScore = neat.getAverage();
-console.log(`Average score: ${meanScore}`);
-```
-
 ### NeatPopulationSummaryFacadeHost
 
 Narrow `Neat` host surface required by the public population-summary facade.
@@ -166,15 +145,36 @@ and lower-level selection policy stay in the root selection boundary and its
 need to preserve long-standing `neat.sort()`, `neat.getFittest()`, and
 `neat.getAverage()` behavior.
 
-### FittestNetwork
+### sort
 
-Champion-shaped network returned by the public `getFittest()` facade.
+```ts
+sort(
+  host: NeatPopulationSummaryFacadeHost,
+): void
+```
 
-The facade intentionally returns the real network instance from the current
-population rather than a detached summary object. That keeps the stable
-`Neat` contract aligned with long-standing usage patterns where callers read
-the champion's score and then continue inspecting the network itself.
+Sort the population in descending fitness order.
 
-The extra `score` field is called out here so the generated README can name
-the returned shape explicitly instead of falling back to a rough imported
-default-type rendering.
+This preserves the historical `neat.sort()` behavior while keeping the
+top-level class free of inline ordering details.
+
+Use this wrapper when later reads should see the current population in an
+explicit best-first order, such as before manual inspection, debugging, or a
+deterministic test assertion. The wrapper deliberately stays narrow: it only
+forwards to the shared selection ordering helper and keeps the familiar class
+method available at the stable `Neat` surface.
+
+This is the facade's one explicit reordering primitive. Everything else in
+the chapter is read-only population inspection.
+
+Parameters:
+- `host` - - `Neat` instance exposing population sorting state.
+
+Returns: Nothing. The population array is reordered in place.
+
+Example:
+
+```ts
+neat.sort();
+console.log(neat.population[0].score);
+```

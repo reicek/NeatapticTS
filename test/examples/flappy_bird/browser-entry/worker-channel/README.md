@@ -67,19 +67,19 @@ and the specific request/response flows used by the Flappy Bird browser UI.
 If you want background reading, the Wikipedia article on "message passing"
 gives the right mental model for this boundary.
 
-### WorkerChannelMessage
-
-Aliases the shared worker message union for worker-channel modules.
-
-Keeping the alias local makes submodules read as protocol-focused code rather
-than browser-entry plumbing.
-
 ### WorkerChannelGenerationPayload
 
 Aliases the generation payload contract returned by the worker.
 
 This payload arrives when one NEAT generation has finished evolving and the
 browser is ready to update its "best so far" view.
+
+### WorkerChannelMessage
+
+Aliases the shared worker message union for worker-channel modules.
+
+Keeping the alias local makes submodules read as protocol-focused code rather
+than browser-entry plumbing.
 
 ### WorkerChannelPlaybackStepPayload
 
@@ -177,6 +177,15 @@ Returns: Next generation payload.
 
 ## browser-entry/worker-channel/worker-channel.playback.service.ts
 
+### PendingPlaybackRequest
+
+Stateful playback request channel for one evolution worker.
+
+Playback is intentionally handled differently from generation requests. The
+browser asks for a sequence of incremental frames, and the channel keeps a
+small amount of per-worker state so each request can be matched to the
+correct reply.
+
 ### requestWorkerPlaybackStep
 
 ```ts
@@ -208,15 +217,6 @@ const playbackPayload = await requestWorkerPlaybackStep(evolutionWorker, {
   visibleWorldHeightPx: 480,
 });
 ```
-
-### PendingPlaybackRequest
-
-Stateful playback request channel for one evolution worker.
-
-Playback is intentionally handled differently from generation requests. The
-browser asks for a sequence of incremental frames, and the channel keeps a
-small amount of per-worker state so each request can be matched to the
-correct reply.
 
 ### resolvePlaybackWorkerChannelState
 

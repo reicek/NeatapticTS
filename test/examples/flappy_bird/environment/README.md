@@ -17,22 +17,22 @@ contract is what makes deterministic stepping and reward debugging practical.
 
 ## environment/environment.types.ts
 
-### FlappyPipe
-
-Pipe obstacle definition.
-
-Pipes move from right to left. The bird scores once per pipe when the pipe
-completely crosses the bird x-position.
-
-This is the environment-owned pipe state, distinct from the packed snapshot
-transport shapes used by the browser worker.
-
 ### FlappyBird
 
 Bird kinematic state for one simulation frame.
 
 The environment keeps only the minimum physics state needed to advance the
 episode: vertical position and vertical velocity.
+
+### FlappyDifficultyScale
+
+Difficulty scale used by the curriculum scheduler.
+
+- `0` means easiest profile (wide gaps, slower pipes).
+- `1` means fully adaptive profile based on passed pipes.
+
+Values between `0` and `1` interpolate between those extremes, which lets the
+trainer or environment caller dial curriculum strength continuously.
 
 ### FlappyGameState
 
@@ -50,23 +50,17 @@ Structured observation features used to build the neural-network input vector.
 Re-exported from shared simulation utilities so trainer and browser paths
 stay synchronized as the observation schema evolves.
 
-### FlappyDifficultyScale
+### FlappyPipe
 
-Difficulty scale used by the curriculum scheduler.
+Pipe obstacle definition.
 
-- `0` means easiest profile (wide gaps, slower pipes).
-- `1` means fully adaptive profile based on passed pipes.
+Pipes move from right to left. The bird scores once per pipe when the pipe
+completely crosses the bird x-position.
 
-Values between `0` and `1` interpolate between those extremes, which lets the
-trainer or environment caller dial curriculum strength continuously.
+This is the environment-owned pipe state, distinct from the packed snapshot
+transport shapes used by the browser worker.
 
 ## environment/environment.constants.ts
-
-### FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE
-
-Default curriculum difficulty scale used by environment stepping.
-
-A value of `1` means the environment uses the full adaptive difficulty ramp.
 
 ### FLAPPY_ENVIRONMENT_DEFAULT_CONTROL_SUBSTEPS_PER_FRAME
 
@@ -74,6 +68,12 @@ Default number of control/physics substeps executed per simulation frame.
 
 Reusing the shared control-substep count keeps the environment and browser
 playback aligned on the same stepping granularity.
+
+### FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE
+
+Default curriculum difficulty scale used by environment stepping.
+
+A value of `1` means the environment uses the full adaptive difficulty ramp.
 
 ### FLAPPY_ENVIRONMENT_MAX_FRAMES_PER_EPISODE
 

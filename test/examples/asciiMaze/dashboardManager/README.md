@@ -8,31 +8,7 @@ class-based API stable while delegating the heavy work to focused helpers.
 
 ## dashboardManager/dashboardManager.types.ts
 
-### NeatGenome
-
-NEAT genome/network with runtime properties used by dashboard telemetry.
-
-### NeatSpecies
-
-NEAT species collection entry surface used by dashboard telemetry.
-
-### NeatInstance
-
-NEAT instance shape needed by dashboard helpers.
-
-### OperatorStatsEntry
-
-Operator stats entry from NEAT.
-
-### NumericTelemetryMap
-
 ### AsciiMazeComplexityStats
-
-### MutationStatsMap
-
-### DashboardTelemetry
-
-Raw telemetry shape received from NEAT dashboard integrations.
 
 ### AsciiMazeDetailedStats
 
@@ -42,43 +18,9 @@ Expanded telemetry details retained by the dashboard between redraws.
 
 Public telemetry snapshot surfaced to browser consumers.
 
-### DashboardTelemetryPayload
-
-Telemetry payload emitted through events, postMessage, and runtime hooks.
-
-### SolvedMazeRecord
-
-Stored solved-maze archive entry.
-
 ### CurrentBestRecord
 
 Latest best candidate used by live rendering and telemetry.
-
-### DashboardHistoryState
-
-Bounded numeric histories used for trends and exports.
-
-### DashboardScratchState
-
-Reused scratch arrays to keep redraw allocations predictable.
-
-### DashboardManagerState
-
-Mutable runtime state owned by one dashboard instance.
-
-### DashboardClearFunction
-
-```ts
-DashboardClearFunction(): void
-```
-
-### DashboardLogFunction
-
-```ts
-DashboardLogFunction(
-  args: unknown[],
-): void
-```
 
 ### DashboardArchiveFunction
 
@@ -88,17 +30,31 @@ DashboardArchiveFunction(
 ): void
 ```
 
-### DashboardTelemetryHook
+### DashboardClearFunction
 
 ```ts
-DashboardTelemetryHook(
-  payload: DashboardTelemetryPayload,
+DashboardClearFunction(): void
+```
+
+### DashboardHistoryState
+
+Bounded numeric histories used for trends and exports.
+
+### DashboardLogFunction
+
+```ts
+DashboardLogFunction(
+  args: unknown[],
 ): void
 ```
 
 ### DashboardManagerContext
 
 Shared runtime context passed into dashboard services.
+
+### DashboardManagerState
+
+Mutable runtime state owned by one dashboard instance.
 
 ### DashboardManagerUpdateArgs
 
@@ -108,9 +64,53 @@ Input accepted by the update orchestration service.
 
 Shared presentation adapter used by browser and non-browser hosts.
 
+### DashboardScratchState
+
+Reused scratch arrays to keep redraw allocations predictable.
+
+### DashboardTelemetry
+
+Raw telemetry shape received from NEAT dashboard integrations.
+
+### DashboardTelemetryHook
+
+```ts
+DashboardTelemetryHook(
+  payload: DashboardTelemetryPayload,
+): void
+```
+
+### DashboardTelemetryPayload
+
+Telemetry payload emitted through events, postMessage, and runtime hooks.
+
+### MutationStatsMap
+
+### NeatGenome
+
+NEAT genome/network with runtime properties used by dashboard telemetry.
+
+### NeatInstance
+
+NEAT instance shape needed by dashboard helpers.
+
+### NeatSpecies
+
+NEAT species collection entry surface used by dashboard telemetry.
+
+### NumericTelemetryMap
+
+### OperatorStatsEntry
+
+Operator stats entry from NEAT.
+
 ### RuntimeDashboardManager
 
 Compatibility alias for older runtime-facing imports.
+
+### SolvedMazeRecord
+
+Stored solved-maze archive entry.
 
 ## dashboardManager/dashboardManager.ts
 
@@ -178,23 +178,6 @@ Parameters:
 
 ## dashboardManager/dashboardManager.services.ts
 
-### redrawDashboard
-
-```ts
-redrawDashboard(
-  context: DashboardManagerContext,
-  currentMaze: string[],
-  neat: unknown,
-): void
-```
-
-Repaint the live dashboard from current state and refresh the detailed snapshot.
-
-Parameters:
-- `context` - - Dashboard runtime context for state and output callbacks.
-- `currentMaze` - - Maze currently being evolved.
-- `neat` - - Optional NEAT runtime instance used for detailed stats.
-
 ### applyDashboardUpdate
 
 ```ts
@@ -225,6 +208,23 @@ Parameters:
 
 Returns: Public telemetry snapshot used by browser hosts.
 
+### redrawDashboard
+
+```ts
+redrawDashboard(
+  context: DashboardManagerContext,
+  currentMaze: string[],
+  neat: unknown,
+): void
+```
+
+Repaint the live dashboard from current state and refresh the detailed snapshot.
+
+Parameters:
+- `context` - - Dashboard runtime context for state and output callbacks.
+- `currentMaze` - - Maze currently being evolved.
+- `neat` - - Optional NEAT runtime instance used for detailed stats.
+
 ### resetDashboardState
 
 ```ts
@@ -254,29 +254,6 @@ telemetry helpers stay visually and semantically aligned.
 
 ## dashboardManager/dashboardManager.utils.ts
 
-### formatDashboardStat
-
-```ts
-formatDashboardStat(
-  label: string,
-  value: string | number,
-  colorLabel: string,
-  colorValue: string,
-  labelWidth: number,
-): string
-```
-
-Format a single framed dashboard stat line with aligned label and value columns.
-
-Parameters:
-- `label` - - Descriptive stat label.
-- `value` - - String or number value displayed after the label.
-- `colorLabel` - - Color token applied to the label segment.
-- `colorValue` - - Color token applied to the value segment.
-- `labelWidth` - - Fixed width used for the label column.
-
-Returns: Ready-to-log framed stat line.
-
 ### buildDashboardSparkline
 
 ```ts
@@ -293,21 +270,6 @@ Parameters:
 - `width` - - Maximum sample count included in the sparkline.
 
 Returns: Unicode sparkline string.
-
-### getDashboardMazeKey
-
-```ts
-getDashboardMazeKey(
-  maze: string[],
-): string
-```
-
-Build a lightweight dedupe key for a maze layout.
-
-Parameters:
-- `maze` - - Maze rows in display order.
-
-Returns: Joined maze key used by the solved archive.
 
 ### computeDashboardPathMetrics
 
@@ -340,6 +302,44 @@ Parameters:
 - `networkInstance` - - Network instance from the maze example runtime.
 
 Returns: Architecture string such as `6 - 8 - 4`, or `n/a` when unavailable.
+
+### formatDashboardStat
+
+```ts
+formatDashboardStat(
+  label: string,
+  value: string | number,
+  colorLabel: string,
+  colorValue: string,
+  labelWidth: number,
+): string
+```
+
+Format a single framed dashboard stat line with aligned label and value columns.
+
+Parameters:
+- `label` - - Descriptive stat label.
+- `value` - - String or number value displayed after the label.
+- `colorLabel` - - Color token applied to the label segment.
+- `colorValue` - - Color token applied to the value segment.
+- `labelWidth` - - Fixed width used for the label column.
+
+Returns: Ready-to-log framed stat line.
+
+### getDashboardMazeKey
+
+```ts
+getDashboardMazeKey(
+  maze: string[],
+): string
+```
+
+Build a lightweight dedupe key for a maze layout.
+
+Parameters:
+- `maze` - - Maze rows in display order.
+
+Returns: Joined maze key used by the solved archive.
 
 ### sliceDashboardHistoryForExport
 
