@@ -91,6 +91,15 @@ When a generated `src/**/README.md` appears outdated relative to the code or JSD
 - run `npm run docs` to refresh generated documentation when needed,
 - consider `educational-docs` pre-approved to run `npm run docs` after doc-affecting edits so README files stay synchronized and drift does not confuse later work.
 
+CI-sensitive docs and tooling validation
+---------------------------------------
+When a task touches `.github/workflows/**`, `package.json`, `package-lock.json`, `scripts/**` that launch docs or browser tooling, Mermaid rendering, Puppeteer/Chromium, or any dependency change that can affect those paths:
+
+- do not treat local Windows success as sufficient evidence for GitHub-hosted Linux runners,
+- run `npm ci` after manifest or lockfile edits and report pass/fail before claiming the workflow is fixed,
+- run `npm run docs` when Mermaid, Puppeteer, docs generation, or related launch scripts are affected,
+- when browser-based docs tooling runs in Linux CI, explicitly account for Chromium sandbox restrictions and prefer durable script-level launch configuration over workflow-only ad hoc flags.
+
 Folder README reconnaissance (read this before deep code search)
 ---------------------------------------------------------------
 Because JSDoc is auto-compiled into each folder's `README.md`, those README files are the fastest condensed overview of a module's purpose, exported surface, neighboring files, and intended usage.
@@ -327,8 +336,10 @@ When you modify or create files under `src/` or `test/`, run (or advise running)
    Quick checks to run (recommended)
    --------------------------------
    - TypeScript: run `npm run build` and report pass/fail.
+   - Clean install: when `package.json`, `package-lock.json`, or workflow/runtime tooling changes, run `npm ci` and report pass/fail.
    - Tests heuristic: flag test files that contain more than one `expect(` occurrence (these should be split into multiple `it()` blocks).
    - JSDoc: for new exported symbols, ensure a JSDoc block with `@param`/`@returns` exists (or flag if missing).
+   - CI browser/docs tooling: when the changed path can invoke Mermaid, Puppeteer, or Chromium in CI, validate `npm run docs` and do not assume local non-Linux success generalizes to GitHub-hosted Linux.
    - ES2023 modernization: flag legacy patterns and suggest modern equivalents (see below one-liners).
 
    PowerShell examples (local validation)
