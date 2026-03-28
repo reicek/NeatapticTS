@@ -64,7 +64,7 @@ export const createBrowserEntryHostServices = (
  * @returns A small hub optimized for browser demo listener counts.
  */
 function createTelemetryHub<
-  TTelemetry extends Record<string, unknown>,
+  TTelemetry extends object,
 >(): BrowserEntryTelemetryHub<TTelemetry> {
   const listeners = new Set<(payload: TTelemetry) => void>();
 

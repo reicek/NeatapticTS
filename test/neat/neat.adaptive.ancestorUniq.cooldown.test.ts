@@ -37,7 +37,7 @@ describe('Ancestor Uniqueness Adaptive cooldown skip', () => {
       const { applyAncestorUniqAdaptive } =
         await import('../../src/neat/adaptive/adaptive');
       applyAncestorUniqAdaptive.call(neat as unknown as NeatLikeWithAdaptive);
-      const eps = neat.options.multiObjective.dominanceEpsilon;
+      const eps = neat.options.multiObjective!.dominanceEpsilon;
       // Assert: unchanged at baseline 0.1
       expect(eps).toBe(0.1);
     });

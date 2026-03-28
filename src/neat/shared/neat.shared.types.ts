@@ -1,3 +1,5 @@
+import type Network from '../../architecture/network/network';
+
 /**
  * Shared structural contracts used across the NEAT controller chapters.
  *
@@ -319,7 +321,7 @@ export interface ObjectiveDescriptor {
    * @param g - Genome to evaluate.
    * @returns Scalar objective value.
    */
-  accessor: (g: GenomeLike) => number;
+  accessor: (g: Network) => number;
 }
 
 /**
@@ -528,6 +530,45 @@ export interface NeatOptions {
     enabled?: boolean;
     /** Complexity metric used by some built-in objectives/telemetry. */
     complexityMetric?: 'nodes' | 'connections';
+    /** Dominance epsilon used by Pareto comparisons. */
+    dominanceEpsilon?: number;
+    /** Adaptive epsilon tuning for Pareto comparisons. */
+    adaptiveEpsilon?: {
+      enabled?: boolean;
+      targetFront?: number;
+      adjust?: number;
+      min?: number;
+      max?: number;
+      cooldown?: number;
+      [k: string]: unknown;
+    };
+    /** Inactive-objective pruning configuration. */
+    pruneInactive?: {
+      enabled?: boolean;
+      window?: number;
+      rangeEps?: number;
+      protect?: string[];
+      [k: string]: unknown;
+    };
+    /** Registered or configured objective descriptors. */
+    objectives?: Array<{
+      key: string;
+      direction?: 'max' | 'min';
+      accessor?: (genome: Network) => number;
+      [k: string]: unknown;
+    }>;
+    /** Automatically add entropy as an objective when supported. */
+    autoEntropy?: boolean;
+    /** Dynamic objective scheduling configuration. */
+    dynamic?: {
+      enabled?: boolean;
+      addComplexityAt?: number;
+      addEntropyAt?: number;
+      dropEntropyOnStagnation?: number;
+      readdEntropyAfter?: number;
+      [k: string]: unknown;
+    };
+    [k: string]: unknown;
   };
 
   /** Whether to store/export RNG state for deterministic replay. */
@@ -535,12 +576,17 @@ export interface NeatOptions {
 
   /** Telemetry feature flags. */
   telemetry?: {
+    /** Enables telemetry capture and export. */
+    enabled?: boolean;
     /** Track/emit hypervolume-like metrics (multi-objective runs). */
     hypervolume?: boolean;
     /** Track/emit complexity metrics. */
     complexity?: boolean;
     /** Track/emit performance timing metrics. */
     performance?: boolean;
+    /** Capture cadence for telemetry snapshots. */
+    logEvery?: number;
+    [k: string]: unknown;
   };
 
   /** Optional hard ceiling for number of nodes. */
@@ -557,13 +603,29 @@ export interface NeatOptions {
     pairSample?: number;
     /** Sample size for graphlet-based estimates (local motif diversity). */
     graphletSample?: number;
+    [k: string]: unknown;
   };
 
   /** Enable fast-mode shortcuts (trade accuracy for speed). */
   fastMode?: boolean;
 
   /** Novelty search configuration. */
-  novelty?: { enabled?: boolean; k?: number };
+  novelty?: {
+    enabled?: boolean;
+    k?: number;
+    descriptor?: (genome: Network) => number[];
+    blendFactor?: number;
+    archiveAddThreshold?: number;
+    dynamicThreshold?: {
+      enabled?: boolean;
+      targetRate?: number;
+      adjust?: number;
+      min?: number;
+      max?: number;
+      [k: string]: unknown;
+    };
+    [k: string]: unknown;
+  };
 
   /** Speciation allocation/history settings. */
   speciesAllocation?: {
@@ -626,6 +688,66 @@ export interface NeatOptions {
 
   /** Optional target species count used by controllers. */
   targetSpecies?: number;
+
+  /** Lineage-pressure controls derived from ancestor uniqueness trends. */
+  lineagePressure?: {
+    enabled?: boolean;
+    mode?: string;
+    strength?: number;
+    [k: string]: unknown;
+  };
+
+  /** Ancestor-uniqueness adaptive controller configuration. */
+  ancestorUniqAdaptive?: {
+    enabled?: boolean;
+    cooldown?: number;
+    lowThreshold?: number;
+    highThreshold?: number;
+    adjust?: number;
+    mode?: string;
+    [k: string]: unknown;
+  };
+
+  /** Adaptive mutation configuration used by runtime mutation scheduling. */
+  adaptiveMutation?: {
+    enabled?: boolean;
+    learningRate?: number;
+    min?: number;
+    max?: number;
+    adaptEvery?: number;
+    sigma?: number;
+    minRate?: number;
+    maxRate?: number;
+    strategy?: string;
+    adaptAmount?: boolean;
+    minAmount?: number;
+    maxAmount?: number;
+    initialRate?: number;
+    amountSigma?: number;
+    [k: string]: unknown;
+  };
+
+  /** Complexity-budget scheduling controls. */
+  complexityBudget?: {
+    enabled?: boolean;
+    mode?: string;
+    improvementWindow?: number;
+    increaseFactor?: number;
+    stagnationFactor?: number;
+    maxNodesStart?: number;
+    maxNodesEnd?: number;
+    minNodes?: number;
+    maxConnsStart?: number;
+    maxConnsEnd?: number;
+    horizon?: number;
+    [k: string]: unknown;
+  };
+
+  /** Current fitness-sharing sigma used by speciation/evaluation helpers. */
+  sharingSigma?: number;
+
+  /** Current compatibility threshold used by speciation helpers. */
+  compatibilityThreshold?: number;
 
   /**
    * Additional implementation-specific options.

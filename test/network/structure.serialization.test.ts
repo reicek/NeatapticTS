@@ -346,113 +346,75 @@ describe('Structure & Serialization', () => {
 
     describe('Scenario: fromJSON with invalid connection indices', () => {
       it('should handle invalid connection indices gracefully', () => {
-        // Mock console.error to prevent cluttering test output
-        const errorSpy = jest
-          .spyOn(console, 'error')
-          .mockImplementation(() => {});
+        // Arrange
+        const network = new Network(2, 1);
+        const inputNodeIndex = network.nodes.findIndex(
+          (n) => n.type === 'input',
+        );
+        const outputNodeIndex = network.nodes.findIndex(
+          (n) => n.type === 'output',
+        );
+        const minimalJson: Record<string, unknown> = {
+          formatVersion: 1,
+          nodes: network.nodes.map((n) => ({
+            bias: n.bias,
+            type: n.type,
+            squash: 'LOGISTIC',
+          })),
+          connections: [
+            { from: inputNodeIndex, to: outputNodeIndex, weight: 0.5 },
+            { from: 999, to: outputNodeIndex, weight: 0.5 },
+          ],
+          input: network.input,
+          output: network.output,
+        };
 
-        try {
-          // Simplified approach: Just create a valid network first, then try to set up
-          // one invalid connection using indices that definitely exist
-          const network = new Network(2, 1);
+        // Act
+        const result = Network.fromJSON(
+          minimalJson as unknown as Record<string, unknown>,
+        );
 
-          // Verify the network was created successfully
-          expect(network).toBeInstanceOf(Network);
-          expect(network.nodes.length).toBeGreaterThanOrEqual(2);
-
-          // Get valid indices to work with
-          const inputNodeIndex = network.nodes.findIndex(
-            (n) => n.type === 'input',
-          );
-          const outputNodeIndex = network.nodes.findIndex(
-            (n) => n.type === 'output',
-          );
-
-          if (inputNodeIndex >= 0 && outputNodeIndex >= 0) {
-            // This is what we want to test - that the library handles the invalid case
-            // Create a minimal JSON with a valid and an invalid connection
-            const minimalJson: Record<string, unknown> = {
-              nodes: network.nodes.map((n) => ({
-                bias: n.bias,
-                type: n.type,
-                squash: 'LOGISTIC', // Use standard squash for simplicity
-              })),
-              connections: [
-                // Valid connection
-                { from: inputNodeIndex, to: outputNodeIndex, weight: 0.5 },
-                // Invalid 'from' index
-                { from: 999, to: outputNodeIndex, weight: 0.5 },
-              ],
-              input: [inputNodeIndex],
-              output: [outputNodeIndex],
-              gates: [],
-            };
-
-            // This should not throw, but may log warnings
-            const result = Network.fromJSON(
-              minimalJson as unknown as Record<string, unknown>,
-            );
-
-            // If we get here, we succeeded
-            expect(result).toBeInstanceOf(Network);
-            expect(result.connections.length).toBe(1); // Only the valid connection
-          }
-        } finally {
-          errorSpy.mockRestore();
-        }
+        // Assert
+        expect(result.connections.length).toBe(1);
       });
     });
 
     describe('Scenario: fromJSON with invalid gater index', () => {
       it('should handle invalid gater index gracefully', () => {
-        // Mock console.error to prevent cluttering test output
-        const errorSpy = jest
-          .spyOn(console, 'error')
-          .mockImplementation(() => {});
+        // Arrange
+        const network = new Network(2, 1);
+        const inputNodeIndex = network.nodes.findIndex(
+          (n) => n.type === 'input',
+        );
+        const outputNodeIndex = network.nodes.findIndex(
+          (n) => n.type === 'output',
+        );
+        const minimalJson: Record<string, unknown> = {
+          formatVersion: 1,
+          nodes: network.nodes.map((n) => ({
+            bias: n.bias,
+            type: n.type,
+            squash: 'LOGISTIC',
+          })),
+          connections: [
+            {
+              from: inputNodeIndex,
+              to: outputNodeIndex,
+              weight: 0.5,
+              gater: 999,
+            },
+          ],
+          input: network.input,
+          output: network.output,
+        };
 
-        try {
-          // Create a valid network as basis
-          const network = new Network(2, 1);
+        // Act
+        const result = Network.fromJSON(
+          minimalJson as unknown as Record<string, unknown>,
+        );
 
-          // Get valid indices
-          const inputNodeIndex = network.nodes.findIndex(
-            (n) => n.type === 'input',
-          );
-          const outputNodeIndex = network.nodes.findIndex(
-            (n) => n.type === 'output',
-          );
-
-          if (inputNodeIndex >= 0 && outputNodeIndex >= 0) {
-            // Create a minimal JSON with an invalid gater
-            const minimalJson = {
-              // index not required for JSON node representation
-              nodes: network.nodes.map((n) => ({
-                bias: n.bias,
-                type: n.type,
-                squash: 'LOGISTIC',
-              })),
-              connections: [
-                { from: inputNodeIndex, to: outputNodeIndex, weight: 0.5 },
-              ],
-              input: [inputNodeIndex],
-              output: [outputNodeIndex],
-              gates: [
-                { connection: [0, 0], gater: 999 }, // Invalid gater index
-              ],
-            };
-
-            // This should handle the invalid gater gracefully
-            const result = Network.fromJSON(
-              minimalJson as unknown as Record<string, unknown>,
-            );
-
-            // Verify it worked
-            expect(result).toBeInstanceOf(Network);
-            expect(result.gates.length).toBeLessThanOrEqual(0); // Invalid gate should be skipped
-          }
-        } finally {
-          errorSpy.mockRestore();
-        }
+        // Assert
+        expect(result.gates.length).toBe(0);
       });
     });
   });

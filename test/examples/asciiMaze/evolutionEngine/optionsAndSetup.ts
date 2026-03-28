@@ -87,7 +87,7 @@ interface PreparedRunEnvironment {
 
 interface CreateAndSeedNeatResult {
   neat: ReturnType<typeof createNeat> | null;
-  scratchPopClone: unknown[];
+  scratchPopClone: Network[];
   scratchSample: unknown[];
 }
 
@@ -323,6 +323,11 @@ export const prepareEnvironmentForRun = (
 ): PreparedRunEnvironment => {
   // Step 1: Resolve the maze input in a null-safe way.
   const mazeSource = opts?.maze ?? opts?.mazeConfig?.maze;
+  if (!Array.isArray(mazeSource)) {
+    throw new Error(
+      'ASCII Maze requires a maze layout before environment setup.',
+    );
+  }
 
   // Step 2: Encode the maze (delegated to MazeUtils). Keep the variable name explicit.
   const encodedMaze = MazeUtils.encodeMaze(mazeSource);
@@ -419,14 +424,14 @@ export const createAndSeedNeat = (
   inputSize: number,
   outputSize: number,
   fitnessContext: IFitnessEvaluationContext,
-  scratchPopClone: unknown[],
+  scratchPopClone: Network[],
   scratchSample: unknown[],
 ): CreateAndSeedNeatResult => {
   try {
     // Step 1: Build a descriptive, bound fitness callback.
-    const fitnessCallback = (network: Network) =>
+    const fitnessCallback = (network: Network): number =>
       (opts.fitnessEvaluator ?? FitnessEvaluator.defaultFitnessEvaluator)(
-        network,
+        network as unknown as import('../interfaces').INetwork,
         fitnessContext,
       );
 
@@ -441,8 +446,8 @@ export const createAndSeedNeat = (
     // Step 3: Seed the newly created driver using provided initial population / best network.
     scratchPopClone = seedInitialPopulation(
       neatDriver,
-      opts.initialPopulation ?? undefined,
-      opts.initialBestNetwork ?? undefined,
+      opts.initialPopulation as Network[] | undefined,
+      opts.initialBestNetwork as Network | undefined,
       Number.isFinite(opts.popSize) ? Math.max(0, Math.floor(opts.popSize)) : 0,
       scratchPopClone,
     );
@@ -469,10 +474,18 @@ export const createAndSeedNeat = (
       // Best-effort: swallow sample buffer warm-up errors.
     }
 
-    return { neat: neatDriver, scratchPopClone, scratchSample };
+    return {
+      neat: neatDriver,
+      scratchPopClone: scratchPopClone as Network[],
+      scratchSample,
+    };
   } catch {
     // Top-level safety net: return null driver on catastrophic failure.
     // Caller should check for null and handle gracefully.
-    return { neat: null, scratchPopClone, scratchSample };
+    return {
+      neat: null,
+      scratchPopClone: scratchPopClone as Network[],
+      scratchSample,
+    };
   }
 };

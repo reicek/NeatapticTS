@@ -43,7 +43,7 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
         await import('../../src/neat/adaptive/adaptive');
       applyAncestorUniqAdaptive.call(neat as unknown as NeatLikeWithAdaptive);
       // Act: capture epsilon
-      const eps = neat.options.multiObjective.dominanceEpsilon;
+      const eps = neat.options.multiObjective!.dominanceEpsilon;
       // Assert: epsilon moved upwards
       expect(eps).toBeGreaterThan(0.1);
     });
@@ -86,7 +86,7 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
         await import('../../src/neat/adaptive/adaptive');
       applyAncestorUniqAdaptive.call(neat as unknown as NeatLikeWithAdaptive);
       // Act: capture epsilon
-      const eps = neat.options.multiObjective.dominanceEpsilon;
+      const eps = neat.options.multiObjective!.dominanceEpsilon;
       // Assert: epsilon decreased (clamped to non-negative)
       expect(eps).toBeLessThan(0.2);
     });

@@ -29,12 +29,10 @@ import {
   clearObjectives,
   registerObjective,
 } from '../../../objectives/objectives';
+import type Network from '../../../../architecture/network/network';
 import type { NeatLikeWithObjectives } from '../../../objectives/core/objectives.types';
 import { getObjectiveEventsSnapshot } from '../../accessors/telemetry.accessors';
-import type {
-  GenomeLike,
-  ObjectiveDescriptor,
-} from '../../../shared/neat.shared.types';
+import type { ObjectiveDescriptor } from '../../../shared/neat.shared.types';
 
 /**
  * Narrow telemetry-facade host surface required by the objectives chapter.
@@ -115,9 +113,14 @@ export function registerTelemetryObjective(
   host: TelemetryFacadeObjectivesHost,
   key: string,
   direction: 'min' | 'max',
-  accessor: (genome: GenomeLike) => number,
+  accessor: (genome: Network) => number,
 ): void {
-  registerObjective.call(host as never, key, direction, accessor);
+  registerObjective.call(
+    host as never,
+    key,
+    direction,
+    accessor as unknown as Parameters<typeof registerObjective>[2],
+  );
 }
 
 /**

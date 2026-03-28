@@ -1972,7 +1972,7 @@ createAndSeedNeat(
   inputSize: number,
   outputSize: number,
   fitnessContext: IFitnessEvaluationContext,
-  scratchPopClone: unknown[],
+  scratchPopClone: default[],
   scratchSample: unknown[],
 ): CreateAndSeedNeatResult
 ```

@@ -85,6 +85,109 @@ then reattaches a scoring delegate. The root surface derives that callback
 type from the export chapter so the static restore helpers stay in lockstep
 with the real persistence contract.
 
+## neat/neat.lineage.ts
+
+### buildAnc
+
+```ts
+buildAnc(
+  genome: GenomeLike,
+): Set<number>
+```
+
+Build the shallow ancestor ID set for a genome using breadth-first traversal.
+
+"Shallow" means this helper intentionally stops after a small ancestry
+window instead of walking the entire historical tree. That keeps the result
+useful for runtime telemetry: it captures the recent family neighborhood that
+most directly explains current convergence or branching without turning every
+read into an unbounded genealogy crawl.
+
+Use this when you need the raw ancestry evidence behind later population
+summaries. The returned set is most helpful for pairwise overlap checks,
+debugging parent tracking, or validating that speciation and reproduction are
+still producing multiple recent family branches.
+
+Parameters:
+- `this` - - NEAT lineage context providing the current population.
+- `genome` - - Genome whose shallow ancestor set should be computed.
+
+Returns: Set of ancestor IDs within the configured depth window.
+
+Example:
+
+```ts
+const ancestorIds = neat.buildAnc(neat.population[0]);
+
+console.log(ancestorIds.has(42));
+```
+
+### computeAncestorUniqueness
+
+```ts
+computeAncestorUniqueness(): number
+```
+
+Compute the ancestor uniqueness metric for the current population.
+
+This is the controller-facing lineage summary. It samples genome pairs,
+builds a shallow ancestor set for each genome in the pair, then measures how
+different those ancestor sets are using Jaccard distance.
+
+Interpret the returned value as a bounded trend signal:
+
+- lower values mean many genomes still share recent ancestors,
+- higher values mean recent ancestry is spread across more distinct family
+  branches.
+
+The helper is intentionally sampled rather than exhaustive so telemetry and
+adaptive controllers can reuse it during a run without paying the full cost
+of comparing every genome pair. It complements the diversity chapter by
+focusing on ancestry overlap rather than structural size or compatibility
+distance.
+
+Parameters:
+- `this` - - NEAT lineage context exposing the population and RNG provider.
+
+Returns: Mean sampled Jaccard distance across shallow ancestor sets.
+
+Example:
+
+```ts
+const ancestorUniqueness = neat.computeAncestorUniqueness();
+
+if (ancestorUniqueness < 0.2) {
+  console.log('Recent ancestry is collapsing into a narrow family band.');
+}
+```
+
+### GenomeLike
+
+Minimal genome shape used by lineage helpers.
+
+Lineage analysis only needs two structural facts from each genome: a stable
+identifier and the identifiers of its recorded parents. Everything else is
+intentionally left open-ended so ancestry helpers can run against richer
+runtime objects without importing or depending on all of their fields.
+
+In practice this interface is the bridge between reproduction-time lineage
+bookkeeping and read-side lineage metrics. If those ids are present and
+stable, the rest of the ancestry pipeline can stay decoupled from mutation,
+evaluation, telemetry, and speciation internals.
+
+### NeatLineageContext
+
+Minimal NEAT context required by lineage helpers.
+
+The lineage boundary only needs the current population and the RNG provider
+used for sampled ancestor uniqueness. That small host contract makes the
+ownership model explicit: lineage reporting is a read-side controller
+concern, not a stateful subsystem with its own storage or mutation rules.
+
+The population supplies the ancestry graph to inspect. The RNG provider keeps
+sampled uniqueness deterministic so the same run can replay the same sampled
+comparisons during tests or exported-state debugging.
+
 ## neat/neat.constants.ts
 
 Shared numerical and heuristic constants reused across the NEAT controller.
@@ -209,6 +312,128 @@ That makes this constant the policy counterpart to the epsilon family. The
 epsilons say how carefully the controller protects its math; this value says
 how adventurous the default mutation policy is willing to be when a little
 extra connectivity might unlock better search.
+
+## neat/neat.diversity.ts
+
+### buildEmptyDiversityStats
+
+```ts
+buildEmptyDiversityStats(
+  populationSize: number,
+): DiversityStats
+```
+
+Build a zeroed diversity snapshot when no sampled metrics exist yet.
+
+This helper gives controller facades and diagnostics a safe fallback object
+whose shape matches ordinary diversity output without pretending that real
+real sampling work has happened yet.
+
+Parameters:
+- `populationSize` - - Population size to echo into the empty snapshot.
+
+Returns: Diversity stats object with zeroed aggregates.
+
+### computeDiversityStats
+
+```ts
+computeDiversityStats(
+  population: GenomeWithMetrics[],
+  compatibilityComputer: CompatComputer,
+): DiversityStats | undefined
+```
+
+Compute sampled diversity statistics for a NEAT population.
+
+This is the controller-facing population read: it blends four evidence
+families into one compact summary that is cheap enough to reuse during
+telemetry capture and post-run diagnostics.
+
+- lineage metrics estimate how far ancestry depth has spread or collapsed,
+- structural size metrics summarize topology growth and unevenness,
+- compatibility sampling estimates genetic separation across the population,
+- entropy adds a topology-shape signal that raw size counts cannot express.
+
+The helper intentionally samples pairwise lineage and compatibility work so
+large populations can still produce diversity telemetry without quadratic
+blowups. Interpret the returned object as a bounded trend report: it is best
+for comparing generations, spotting collapse, or validating that speciation
+and mutation pressure are still producing variety.
+
+Parameters:
+- `population` - - Population genomes exposing nodes, connections, and optional lineage depth.
+- `compatibilityComputer` - - Compatibility-distance provider used for pair sampling.
+
+Returns: Aggregate diversity statistics or `undefined` when the population is empty.
+
+Example:
+
+```ts
+const diversity = computeDiversityStats(neat.population, neat);
+
+if (diversity) {
+  console.log(diversity.meanCompat, diversity.graphletEntropy);
+}
+```
+
+### MAX_COMPATIBILITY_SAMPLE
+
+Maximum population sample size for compatibility comparisons.
+
+Compatibility distance is the most obviously quadratic part of the diversity
+report. Sampling lets the controller estimate genetic separation cheaply
+enough to keep diversity reporting on the hot path for telemetry.
+
+### MAX_LINEAGE_PAIR_SAMPLE
+
+Maximum lineage sample size for pairwise depth comparisons.
+
+Lineage spread is useful for telemetry, but full all-pairs ancestry distance
+becomes expensive quickly. This cap keeps the lineage side of the report
+bounded while still surfacing whether ancestry depth is bunching up or
+staying distributed.
+
+### structuralEntropy
+
+```ts
+structuralEntropy(
+  graph: default,
+): number
+```
+
+Compute the Shannon-style entropy of a network's out-degree distribution.
+
+Structural entropy here is a lightweight topology fingerprint: it measures
+how evenly outgoing connections are distributed across nodes. It does not
+inspect weights or recurrent dynamics, so it works well as a cheap structural
+diversity signal.
+
+Use this when you want to compare the shape of individual networks or add one
+more structural signal beside raw node and connection counts. Higher values
+generally mean connectivity is spread across more nodes instead of being
+concentrated into a few hubs.
+
+Parameters:
+- `graph` - - Network to summarize structurally.
+
+Returns: Shannon-style entropy of the out-degree distribution.
+
+### DiversityStats
+
+Diversity statistics returned by sampled population analysis.
+
+Treat this as a compact population-health report rather than as a single
+scalar "diversity score." The fields are grouped deliberately:
+
+- lineage fields show whether ancestry depth is spreading or collapsing,
+- node and connection fields show average structural size and unevenness,
+- compatibility sampling estimates how genetically separated sampled peers
+  remain,
+- entropy adds a shape signal that raw size counts cannot capture.
+
+In practice, telemetry consumers compare this object across generations to
+see whether mutation, speciation, and pruning are still producing meaningful
+variation without paying for exhaustive all-pairs analysis.
 
 ## neat/neat.defaults.constants.ts
 

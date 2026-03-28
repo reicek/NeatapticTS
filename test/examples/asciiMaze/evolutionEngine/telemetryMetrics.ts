@@ -84,6 +84,10 @@ type TelemetryWriter = (message: string) => void;
 interface GenerationResult {
   /** Path taken by the agent (array of [x, y] coordinate pairs). */
   path?: ReadonlyArray<[number, number]>;
+  /** Progress score accumulated during the run. */
+  progress?: number;
+  /** Fraction of the maze saturation reached during the run. */
+  saturationFraction?: number;
 }
 
 /**
@@ -706,10 +710,15 @@ const computeDiversityMetrics = (
   let weightM2 = 0;
   let enabledWeights = 0;
   for (let sampleIndex = 0; sampleIndex < sampledLength; sampleIndex++) {
-    const genome = sampleBuffer[sampleIndex] as GenomeDetailed | undefined;
-    const connections = Array.isArray(genome?.connections)
-      ? genome.connections
-      : EMPTY_VEC;
+    const genome = state.scratch.samplePool[sampleIndex] as
+      | GenomeDetailed
+      | undefined;
+    const connections = (
+      Array.isArray(genome?.connections) ? genome.connections : EMPTY_VECTOR
+    ) as Array<{
+      enabled?: boolean;
+      weight?: number;
+    }>;
     for (
       let connectionIndex = 0;
       connectionIndex < connections.length;

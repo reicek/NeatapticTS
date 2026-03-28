@@ -41,7 +41,7 @@ interface OutputBiasStats {
   std: number;
 }
 
-interface NetworkWithWarmStartSurface extends Network {
+interface NetworkWithWarmStartSurface {
   nodes?: NetworkNode[];
   connections?: NetworkConnection[];
   connect: (from: NetworkNode, to: NetworkNode, weight?: number) => unknown;
@@ -145,11 +145,10 @@ export const applyCompassWarmStart = ({
     // Step 1: defensive guards
     if (!network) return;
 
-    const runtimeNetwork = network as NetworkWithWarmStartSurface;
+    const runtimeNetwork = network as unknown as NetworkWithWarmStartSurface;
 
-    const nodesRef = runtimeNetwork.nodes ?? ([] as NetworkNode[]);
-    const connectionsRef =
-      runtimeNetwork.connections ?? ([] as NetworkConnection[]);
+    const nodesRef = runtimeNetwork.nodes ?? [];
+    const connectionsRef = runtimeNetwork.connections ?? [];
 
     // Determine counts for input/output nodes using the engine helper that populates
     // the pooled node index buffer with indices by type.
@@ -253,8 +252,8 @@ export const centerOutputBiases = ({
   network,
 }: CenterOutputBiasesParams): void => {
   try {
-    const runtimeNetwork = network as NetworkWithOutputBiasStats;
-    const nodeList = runtimeNetwork.nodes ?? ([] as NetworkNode[]);
+    const runtimeNetwork = network as unknown as NetworkWithOutputBiasStats;
+    const nodeList = runtimeNetwork.nodes ?? [];
     const totalNodeCount = nodeList.length | 0;
     if (totalNodeCount === 0) return;
 
@@ -325,7 +324,7 @@ const pruneWeakConnectionsForGenome = (
     if (rawFraction <= 0) return; // nothing requested
 
     // Step 2: Collect enabled connections.
-    const allConnections = genome.connections as NetworkConnection[];
+    const allConnections = genome.connections as unknown as NetworkConnection[];
     let candidateConnections = collectEnabledConnections(allConnections);
     const enabledConnectionCount = candidateConnections.length;
     if (enabledConnectionCount === 0) return; // no work
@@ -495,17 +494,17 @@ const insertionSortByAbsWeight = (
   for (let scanIndex = from + 1; scanIndex < to; scanIndex++) {
     // 2.1: Extract the candidate and compute its absolute weight (treat non-finite as 0).
     const candidate = connectionsBuffer[scanIndex];
+    const candidateWeight = Number(candidate?.weight);
     const candidateAbs = Math.abs(
-      candidate && Number.isFinite(candidate.weight) ? candidate.weight : 0,
+      Number.isFinite(candidateWeight) ? candidateWeight : 0,
     );
 
     // 2.2: Shift larger elements one slot to the right to make room for the candidate.
     let writePos = scanIndex - 1;
     while (writePos >= from) {
       const probe = connectionsBuffer[writePos];
-      const probeAbs = Math.abs(
-        probe && Number.isFinite(probe.weight) ? probe.weight : 0,
-      );
+      const probeWeight = Number(probe?.weight);
+      const probeAbs = Math.abs(Number.isFinite(probeWeight) ? probeWeight : 0);
       // Preserve stability: stop when probe <= candidate (no swap for equals).
       if (probeAbs <= candidateAbs) break;
       connectionsBuffer[writePos + 1] = probe;
@@ -588,16 +587,12 @@ const disableSmallestEnabledConnections = (
   while (remainingToDisable > 0 && activeSliceLength > 0) {
     // 3a. Find index of current minimum |weight| in [0, activeSliceLength).
     let minIndex = 0;
-    let minAbsWeight = Math.abs(
-      candidateConnections[0] && Number.isFinite(candidateConnections[0].weight)
-        ? candidateConnections[0].weight
-        : 0,
-    );
+    const firstWeight = Number(candidateConnections[0]?.weight);
+    let minAbsWeight = Math.abs(Number.isFinite(firstWeight) ? firstWeight : 0);
     for (let probeIndex = 1; probeIndex < activeSliceLength; probeIndex++) {
       const probe = candidateConnections[probeIndex];
-      const probeAbs = Math.abs(
-        probe && Number.isFinite(probe.weight) ? probe.weight : 0,
-      );
+      const probeWeight = Number(probe?.weight);
+      const probeAbs = Math.abs(Number.isFinite(probeWeight) ? probeWeight : 0);
       if (probeAbs < minAbsWeight) {
         minAbsWeight = probeAbs;
         minIndex = probeIndex;

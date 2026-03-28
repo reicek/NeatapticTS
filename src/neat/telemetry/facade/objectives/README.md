@@ -86,7 +86,7 @@ registerTelemetryObjective(
   host: TelemetryFacadeObjectivesHost,
   key: string,
   direction: "max" | "min",
-  accessor: (genome: GenomeLike) => number,
+  accessor: (genome: default) => number,
 ): void
 ```
 

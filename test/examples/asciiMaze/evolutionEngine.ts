@@ -50,6 +50,7 @@ import {
 } from './evolutionEngine/evolutionEngine.utils';
 import type { INetwork } from './interfaces';
 import type {
+  EvolutionOptions,
   EvolutionLoopRuntimeContext,
   EvolutionLoopSupportContext,
   EvolutionLoopTelemetryContext,
@@ -188,9 +189,12 @@ export class EvolutionEngine {
       inputSize,
       outputSize,
       fitnessContext,
-      sharedEngineState.scratch.populationCloneBuffer,
+      sharedEngineState.scratch.populationCloneBuffer as Network[],
       sharedEngineState.scratch.samplePool,
     );
+    if (!neat) {
+      throw new Error('ASCII Maze failed to create a NEAT instance.');
+    }
     sharedEngineState.scratch.populationCloneBuffer = scratchPopClone;
     sharedEngineState.scratch.samplePool = scratchSample;
 
@@ -218,14 +222,19 @@ export class EvolutionEngine {
           neatInstance,
           trainingSet,
           EVOLUTION_ENGINE_PRETRAIN_CONSTANTS,
-          applyCompassWarmStart,
-          centerOutputBiases,
+          (network) =>
+            applyCompassWarmStart({ state: sharedEngineState, network }),
+          (network) =>
+            centerOutputBiases({ state: sharedEngineState, network }),
         );
       },
     );
 
     // 6) Prepare loop helpers and run the full evolution loop inside a private helper.
-    const loopHelpers = prepareLoopHelpers(opts, sharedEngineState.scratch);
+    const loopHelpers = prepareLoopHelpers(
+      opts as unknown as EvolutionOptions,
+      sharedEngineState.scratch,
+    );
 
     // Lightweight profiling (opt-in): set env ASCII_MAZE_PROFILE=1 to enable
     const doProfile = !!(
@@ -237,7 +246,7 @@ export class EvolutionEngine {
     const runResult = await runEvolutionLoop(
       sharedEngineState,
       neat,
-      opts,
+      opts as unknown as EvolutionOptions,
       lamarckianTrainingSet,
       encodedMaze,
       startPosition,

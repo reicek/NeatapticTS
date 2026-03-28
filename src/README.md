@@ -1065,7 +1065,7 @@ Returns: Promise resolving once mutation has been applied to the current populat
 registerObjective(
   key: string,
   direction: "max" | "min",
-  accessor: (g: GenomeLike) => number,
+  accessor: (network: default) => number,
 ): void
 ```
 
@@ -2112,7 +2112,7 @@ Returns: Promise resolving once mutation has been applied to the current populat
 registerObjective(
   key: string,
   direction: "max" | "min",
-  accessor: (g: GenomeLike) => number,
+  accessor: (network: default) => number,
 ): void
 ```
 

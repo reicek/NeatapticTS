@@ -743,7 +743,7 @@ class Neat {
   registerObjective(
     key: string,
     direction: 'min' | 'max',
-    accessor: (g: GenomeLike) => number,
+    accessor: (network: Network) => number,
   ) {
     return neatTelemetryFacade.registerTelemetryObjective(
       this as unknown as NeatTelemetryFacadeHost,
