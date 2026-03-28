@@ -23,6 +23,12 @@ interface RunningTask {
   command: string;
 }
 
+interface SpawnedCommand {
+  command: string;
+  executable: string;
+  argumentsToPass: string[];
+}
+
 async function main(): Promise<void> {
   const requestedMode = process.argv[2] ?? ALL_MODE;
   ensureSupportedMode(requestedMode);
@@ -58,7 +64,10 @@ async function runFullDocsWorkflow(): Promise<void> {
   ]);
 
   // Step 3: Render the final HTML site after content generation finishes.
-  await runScriptTask({ label: 'HTML docs render', scriptName: 'docs:html:built' });
+  await runScriptTask({
+    label: 'HTML docs render',
+    scriptName: 'docs:html:built',
+  });
 }
 
 async function runFoldersWorkflow(): Promise<void> {
@@ -75,7 +84,9 @@ async function runFoldersWorkflow(): Promise<void> {
   ]);
 }
 
-function ensureSupportedMode(requestedMode: string): asserts requestedMode is 'all' | 'folders' {
+function ensureSupportedMode(
+  requestedMode: string,
+): asserts requestedMode is 'all' | 'folders' {
   if (!SUPPORTED_MODES.has(requestedMode)) {
     throw new Error(
       `Unsupported docs mode "${requestedMode}". Expected one of: ${[...SUPPORTED_MODES].join(', ')}`,
@@ -83,7 +94,9 @@ function ensureSupportedMode(requestedMode: string): asserts requestedMode is 'a
   }
 }
 
-async function runScriptTasksInParallel(scriptTasks: readonly ScriptTask[]): Promise<void> {
+async function runScriptTasksInParallel(
+  scriptTasks: readonly ScriptTask[],
+): Promise<void> {
   if (scriptTasks.length === 0) {
     return;
   }
@@ -94,12 +107,15 @@ async function runScriptTasksInParallel(scriptTasks: readonly ScriptTask[]): Pro
     let hasSettled = false;
 
     for (const scriptTask of scriptTasks) {
-      const command = `npm run ${scriptTask.scriptName}`;
-      const childProcess = spawn(command, {
-        shell: true,
-        stdio: 'inherit',
-      });
-      runningTasks.push({ childProcess, command });
+      const spawnedCommand = createNpmRunCommand(scriptTask.scriptName);
+      const childProcess = spawn(
+        spawnedCommand.executable,
+        spawnedCommand.argumentsToPass,
+        {
+          stdio: 'inherit',
+        },
+      );
+      runningTasks.push({ childProcess, command: spawnedCommand.command });
 
       childProcess.once('error', (error) => {
         if (hasSettled) {
@@ -147,6 +163,40 @@ async function runScriptTask(scriptTask: ScriptTask): Promise<void> {
   await runScriptTasksInParallel([scriptTask]);
 }
 
+function createNpmRunCommand(scriptName: string): SpawnedCommand {
+  const npmExecutablePath = process.env.npm_execpath;
+
+  if (npmExecutablePath) {
+    const argumentsToPass = [npmExecutablePath, 'run', scriptName];
+
+    return {
+      command: `${process.execPath} ${argumentsToPass.join(' ')}`,
+      executable: process.execPath,
+      argumentsToPass,
+    };
+  }
+
+  if (process.platform === 'win32') {
+    const executable = process.env.ComSpec ?? 'cmd.exe';
+    const argumentsToPass = ['/d', '/s', '/c', 'npm.cmd', 'run', scriptName];
+
+    return {
+      command: `${executable} ${argumentsToPass.join(' ')}`,
+      executable,
+      argumentsToPass,
+    };
+  }
+
+  const executable = 'npm';
+  const argumentsToPass = ['run', scriptName];
+
+  return {
+    command: `${executable} ${argumentsToPass.join(' ')}`,
+    executable,
+    argumentsToPass,
+  };
+}
+
 function stopSiblingProcesses(
   runningTasks: readonly RunningTask[],
   excludedProcess: ChildProcess,
@@ -157,11 +207,29 @@ function stopSiblingProcesses(
     }
 
     try {
-      childProcess.kill();
+      stopProcess(childProcess);
     } catch {
       // Best-effort shutdown only.
     }
   }
+}
+
+function stopProcess(childProcess: ChildProcess): void {
+  const processId = childProcess.pid;
+
+  if (processId === undefined) {
+    childProcess.kill();
+    return;
+  }
+
+  if (process.platform === 'win32') {
+    spawn('taskkill', ['/pid', String(processId), '/t', '/f'], {
+      stdio: 'ignore',
+    }).unref();
+    return;
+  }
+
+  childProcess.kill();
 }
 
 main().catch((error) => {

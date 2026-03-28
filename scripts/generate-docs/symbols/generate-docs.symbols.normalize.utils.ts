@@ -9,6 +9,7 @@
 import * as path from 'path';
 
 import { FILE_SUMMARY_SYMBOL_NAME } from '../generate-docs.constants.js';
+import { extractCallSignatureParameterList } from './generate-docs.symbols.signature.utils.js';
 import type {
   DirectorySymbolMap,
   RenderedSymbol,
@@ -141,7 +142,10 @@ function normalizeName(
     }
 
     if (renderedSymbol.signature) {
-      return `${fileBaseName}${renderedSymbol.signature.split(')')[0]})`;
+      const parameterList = extractCallSignatureParameterList(
+        renderedSymbol.signature,
+      );
+      return `${fileBaseName}${parameterList ?? renderedSymbol.signature}`;
     }
 
     return fileBaseName;

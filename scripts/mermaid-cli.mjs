@@ -39,7 +39,11 @@ function parseArguments(rawArgs) {
   const named = {};
   const passthrough = [];
 
-  for (let argumentIndex = 0; argumentIndex < rawArgs.length; argumentIndex += 1) {
+  for (
+    let argumentIndex = 0;
+    argumentIndex < rawArgs.length;
+    argumentIndex += 1
+  ) {
     const argument = rawArgs[argumentIndex];
     if (!argument.startsWith('--')) {
       passthrough.push(argument);
@@ -105,7 +109,12 @@ async function runValidateCommand(cliPath, inputPath, parsedArguments) {
   }
 }
 
-async function runExportCommand(cliPath, inputPath, outputPath, parsedArguments) {
+async function runExportCommand(
+  cliPath,
+  inputPath,
+  outputPath,
+  parsedArguments,
+) {
   await mkdir(path.dirname(path.resolve(outputPath)), { recursive: true });
   const mermaidCliInvocation = await buildMermaidCliInvocation(
     parsedArguments,
@@ -144,9 +153,13 @@ function buildPassthroughArguments(parsedArguments, options) {
 
 async function runMermaidCli(cliPath, argumentsToPass) {
   await new Promise((resolve, reject) => {
-    const childProcess = spawn(process.execPath, [cliPath, ...argumentsToPass], {
-      stdio: 'inherit',
-    });
+    const childProcess = spawn(
+      process.execPath,
+      [cliPath, ...argumentsToPass],
+      {
+        stdio: 'inherit',
+      },
+    );
 
     childProcess.once('exit', (exitCode) => {
       if (exitCode === 0) {

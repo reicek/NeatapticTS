@@ -218,9 +218,8 @@ function renderMarkdownToHtml(markdown: string): {
     return originalCodeRenderer?.(token) ?? '';
   };
 
-  marked.use({ renderer });
   return {
-    htmlBody: marked.parse(markdown, { async: false }),
+    htmlBody: marked.parse(markdown, { async: false, renderer }),
     hasMermaidDiagram,
   };
 }

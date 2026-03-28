@@ -89,14 +89,17 @@ export function resolveCallSignature(declaration: any): string | undefined {
 }
 
 /**
- * Parses a canonical stored call signature.
+ * Extracts the balanced parameter-list portion of a stored call signature.
  *
  * @param signature - Stored canonical call signature.
- * @returns Parsed parameters and return type when recognized.
+ * @returns Parameter-list text including the outer parentheses when recognized.
+ * @example
+ * extractCallSignatureParameterList('(value: number, cb: (x: number) => void) => string');
+ * // => '(value: number, cb: (x: number) => void)'
  */
-function parseCallSignature(
+export function extractCallSignatureParameterList(
   signature: string,
-): { parameters: string[]; returnType: string } | undefined {
+): string | undefined {
   if (!signature.startsWith('(')) {
     return undefined;
   }
@@ -106,10 +109,25 @@ function parseCallSignature(
     return undefined;
   }
 
-  const parameterListText = signature.slice(1, closingParenthesisIndex);
-  const returnTypePrefix = signature
-    .slice(closingParenthesisIndex + 1)
-    .trimStart();
+  return signature.slice(0, closingParenthesisIndex + 1);
+}
+
+/**
+ * Parses a canonical stored call signature.
+ *
+ * @param signature - Stored canonical call signature.
+ * @returns Parsed parameters and return type when recognized.
+ */
+function parseCallSignature(
+  signature: string,
+): { parameters: string[]; returnType: string } | undefined {
+  const parameterList = extractCallSignatureParameterList(signature);
+  if (!parameterList) {
+    return undefined;
+  }
+
+  const parameterListText = parameterList.slice(1, -1);
+  const returnTypePrefix = signature.slice(parameterList.length).trimStart();
   if (!returnTypePrefix.startsWith('=>')) {
     return undefined;
   }

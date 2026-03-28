@@ -68,22 +68,24 @@ export function percentile(
 }
 
 /**
- * Formats a compact percentile summary for one duration collection.
+ * Formats a compact percentile summary for one ascending-sorted duration collection.
  *
- * @param durationsMs - Duration samples in milliseconds.
+ * @param sortedDurationsMs - Ascending-sorted duration samples in milliseconds.
  * @returns Human-readable summary string.
  */
-export function formatDistribution(durationsMs: readonly number[]): string {
-  if (durationsMs.length === 0) {
+export function formatDistribution(
+  sortedDurationsMs: readonly number[],
+): string {
+  if (sortedDurationsMs.length === 0) {
     return 'count=0';
   }
 
   return [
-    `count=${durationsMs.length.toLocaleString()}`,
-    `p50=${formatMs(percentile(durationsMs, 0.5))}`,
-    `p90=${formatMs(percentile(durationsMs, 0.9))}`,
-    `p99=${formatMs(percentile(durationsMs, 0.99))}`,
-    `max=${formatMs(durationsMs.at(-1) ?? 0)}`,
+    `count=${sortedDurationsMs.length.toLocaleString()}`,
+    `p50=${formatMs(percentile(sortedDurationsMs, 0.5))}`,
+    `p90=${formatMs(percentile(sortedDurationsMs, 0.9))}`,
+    `p99=${formatMs(percentile(sortedDurationsMs, 0.99))}`,
+    `max=${formatMs(sortedDurationsMs.at(-1) ?? 0)}`,
   ].join(', ');
 }
 

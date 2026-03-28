@@ -203,7 +203,7 @@ function validateDirectoryDocsOrderConfig(
     validatedConfig.hiddenSymbols = hiddenSymbols;
   }
 
-  return Object.keys(validatedConfig).length > 0 ? validatedConfig : {};
+  return Object.keys(validatedConfig).length > 0 ? validatedConfig : undefined;
 }
 
 /**
