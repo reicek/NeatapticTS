@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';
 import {
@@ -90,7 +90,7 @@ export function ungate(this: Network, connection: Connection) {
  *       a. input === output (avoid trivial self loops) OR
  *       b. an existing projection already connects them.
  *  6. Reassign preserved gater nodes randomly onto newly created bridging connections.
- *  7. Ungate any connections that were gated BY this node (where node acted as gater).
+ *  7. Ungate connections that were gated BY this node (where node acted as gater).
  *  8. Remove node from network node list and flag node index cache as dirty.
  *
  * Complexity summary:

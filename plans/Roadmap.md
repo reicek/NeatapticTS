@@ -16,23 +16,35 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 **Outcome:** keep iteration speed high, reduce refactor risk, and finish the structural cleanup needed before broad mechanical modernization.
 
 - Demo refinement and learnability hardening [DONE]
-- asciiMaze SOLID split before ES2023 modernization [DONE]
-- Phase 0 remaining focus: ES2023 modernization (after the completed demo-structure pass)
-   - The `flappy_bird` reference split plan and the `asciiMaze` SOLID split plan are now both complete, so the remaining Phase 0 work is the repository-wide modernization pass and its validation gate.
-- ES2023 modernization (after the demo-structure pass; mechanical refactors + CI enforcement)
-  - Plan: [ES2023 migration](ES2023%20migration)
-  - Scope note: this phase is syntax/module modernization plus CI enforcement. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
+- `asciiMaze` SOLID split before ES2023 modernization [DONE]
+- `flappy_bird` reference demo split and documentation baseline [DONE]
+- Main app NEAT surface is already SOLID split [DONE]
+- Educational documentation and split follow-through lane [WIP]
+   - [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md) [DONE]
+   - [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [WIP]
+   - [methods-solid-split.plans.md](methods-solid-split.plans.md) [DONE]
+   - [methods-docs.plans.md](methods-docs.plans.md) [DONE]
+   - [neat-docs.plans.md](neat-docs.plans.md) [WIP]
+   - [utils-docs.plans.md](utils-docs.plans.md) [DONE]
+   - Both demos are now solid split and the Flappy Bird documentation pass is complete enough to stop being a documentation blocker.
+   - The remaining structural polish in Phase 0 is the broader educational-docs lane outside methods, the architecture folderization pass, and the repository-wide modernization pass with their validation gate.
+- Source strict-typing cleanup for `src/` explicit-`any` debt [DONE]
+   - Plan: [src-no-explicit-any-cleanup.plans.md](src-no-explicit-any-cleanup.plans.md)
+   - Scope note: this lane replaced the stale root checklist with a roadmap-tracked plan aligned to the current folderized tree and is now the closed baseline for future reopen-only follow-up.
+- ES2023 modernization (after the demo-structure pass; mechanical refactors + CI enforcement) [PLANNED]
+   - Plan: [ES2023 migration](ES2023%20migration)
+   - Scope note: this phase is syntax/module modernization plus CI enforcement. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
 
-**Gate to Phase 1:** `flappy_bird` refinement is stable, the `asciiMaze` SOLID split is complete, and `npx tsc --noEmit -p tsconfig.json` plus `npm test` are green after the refactor pass.
+**Gate to Phase 1:** both demos are solid split and documented, the main app split is stable, the remaining documentation work is no longer obscuring ownership boundaries, and `npx tsc --noEmit -p tsconfig.json` plus `npm test` are green after the modernization pass.
 
 ## Phase 1 — Core Correctness + Determinism Foundations (Critical Path)
 
 **Outcome:** deterministic semantics and “proper NEAT” correctness so everything built on top is reliable.
 
 1. Proper NEAT (historical markings, correct crossover alignment, recurrent/self-connection policy, RNG determinism)
-   - Plan: [neat.plans.md](neat.plans.md)
+   - Plan: [neat.plans.md](neat.plans.md) [PLANNED]
 2. Explicit I/O roles + stable activation ordering (acyclic + recurrent mode semantics)
-   - Plan: [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md)
+   - Plan: [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [PLANNED]
 
 **Why this ordering:**
 
@@ -46,11 +58,11 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 **Outcome:** a clear, typed, deterministic “build” story for users and for internal features.
 
 3. Architecture primitives (Node/Group/Layer)
-   - Plan: [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md)
+   - Plan: [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md) [PLANNED]
 4. Deterministic construct-from-parts (validation + scheduling integration)
-   - Plan: [Construct_From_Parts_Graph_Assembly.md](Construct_From_Parts_Graph_Assembly.md)
+   - Plan: [Construct_From_Parts_Graph_Assembly.md](Construct_From_Parts_Graph_Assembly.md) [PLANNED]
 5. Preconfigured architectures (MLP + sequence builders)
-   - Plan: [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md)
+   - Plan: [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [PLANNED]
 
 **Gate to Phase 3:** builders use explicit I/O roles, and construction is deterministic with actionable diagnostics.
 
@@ -59,11 +71,11 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 **Outcome:** reduce friction for new users and make the library “tryable” immediately.
 
 6. Browser build + CDN distribution (ESM + IIFE bundles; stable public surface)
-   - Plan: [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md)
+   - Plan: [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
 7. Interactive examples + learning path (Node + browser runnable examples, CI smoke checks)
-   - Plan: [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md)
+   - Plan: [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [PLANNED]
 8. Visualization export schema (JSON schema + optional DOT output)
-   - Plan: [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md)
+   - Plan: [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
 
 **Notes:**
 
@@ -77,15 +89,15 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 **Outcome:** production and scale workflows: export models, evaluate quickly, resume long runs.
 
 9. Standalone inference export (dependency-free runtime output)
-   - Plan: [Standalone_Inference_Export.md](Standalone_Inference_Export.md)
+   - Plan: [Standalone_Inference_Export.md](Standalone_Inference_Export.md) [PLANNED]
 10. Worker-friendly serialization fastpath (clone/transfer payloads; predictor creation)
-    - Plan: [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md)
+   - Plan: [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
 11. Turnkey multithread evaluation API (Node + browser workers)
-    - Plan: [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md)
+   - Plan: [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md) [PLANNED]
 12. Population save/resume + checkpointing (full vs light checkpoints, determinism contracts)
-    - Plan: [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md)
+   - Plan: [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md) [PLANNED]
 13. Evolution–training interoperability contracts (parameter vectors, isolation, hybrid policies)
-    - Plan: [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md)
+   - Plan: [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
 
 **Why this ordering:**
 
@@ -101,7 +113,8 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 This plan is large and can run as a **parallel lane** after Phase 1, but it should not destabilize correctness work.
 
 - Memory & performance multi-layer strategy (Track 1: Phases 0–10; Track 2 gates Hyper work)
-  - Plan: [Memory_Optimization.md](Memory_Optimization.md)
+   - Plan: [Memory_Optimization.md](Memory_Optimization.md) [WIP]
+   - Current internal state: Phases 0-3 are done, Phase 4 is next, and Track 2 Hyper work remains gated behind Track 1 stability.
 
 **Recommended sequencing guidance:**
 
@@ -116,7 +129,8 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 **Outcome:** broader ecosystem compatibility and model portability.
 
 - ONNX export/import breadth and hardening
-  - Plan: [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md)
+   - Plan: [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
+   - Current internal state: Phase 0-2 are complete, recurrent groundwork is implemented and still being hardened, and convolutional/spatial groundwork is in progress.
 
 **Recommended timing:**
 
@@ -128,15 +142,68 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 **Outcome:** evo-devo / hyper-scale capabilities that build on top of all prior infrastructure.
 
 - HyperEvoDevo MorphoNEAT
-  - Plan: [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md)
+   - Plan: [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]
 
 **Why last:** this work depends heavily on the Memory Optimization track (Track 2 in that plan) and benefits from stable NEAT correctness, deterministic activation semantics, and robust serialization/checkpointing.
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: the project is still in **Phase 0**, with the demo-structure baseline complete (`flappy_bird` refinement and `asciiMaze` SOLID split) and repository-wide ES2023 modernization now the remaining Phase 0 focus.
+Current status: the project is still in **Phase 0**, with both demos solid split and documented, the example learnability pass now materially strengthened across `test/examples`, the Flappy Bird documentation pass now closed, the main app already solid split, the architecture split pass now active, the broader educational documentation lane still in progress outside Flappy Bird, the `src/` strict-typing cleanup now closed as a completed baseline, and repository-wide ES2023 modernization still remaining in the Phase 0 lane.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
 - **Parallel lane B (interop):** [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) after Phase 2 (or earlier if scoped tightly)
 - **Final capstone:** [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md)
+
+## Plan Inventory in Roadmap Order
+
+This is the full `plans/` inventory flattened into execution order so every plan
+file has a visible place in the roadmap.
+
+### Phase 0 inventory
+
+1. [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md) [DONE]
+2. [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [WIP]
+3. [methods-solid-split.plans.md](methods-solid-split.plans.md) [DONE]
+4. [methods-docs.plans.md](methods-docs.plans.md) [DONE]
+5. [docs.plans.md](docs.plans.md) [WIP]
+6. [utils-docs.plans.md](utils-docs.plans.md) [DONE]
+7. [src-no-explicit-any-cleanup.plans.md](src-no-explicit-any-cleanup.plans.md) [DONE]
+8. [ES2023 migration](ES2023%20migration) [PLANNED]
+
+### Phase 1 inventory
+
+9. [neat.plans.md](neat.plans.md) [PLANNED]
+10. [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [PLANNED]
+
+### Phase 2 inventory
+
+11. [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md) [PLANNED]
+12. [Construct_From_Parts_Graph_Assembly.md](Construct_From_Parts_Graph_Assembly.md) [PLANNED]
+13. [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [PLANNED]
+
+### Phase 3 inventory
+
+14. [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
+15. [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [PLANNED]
+16. [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
+
+### Phase 4 inventory
+
+17. [Standalone_Inference_Export.md](Standalone_Inference_Export.md) [PLANNED]
+18. [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
+19. [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md) [PLANNED]
+20. [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md) [PLANNED]
+21. [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
+
+### Phase 5 inventory
+
+22. [Memory_Optimization.md](Memory_Optimization.md) [WIP]
+
+### Phase 6 inventory
+
+23. [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
+
+### Phase 7 inventory
+
+24. [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]

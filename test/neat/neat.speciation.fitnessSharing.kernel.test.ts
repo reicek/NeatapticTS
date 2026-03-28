@@ -1,5 +1,8 @@
-import { _applyFitnessSharing } from '../../src/neat/neat.speciation';
-import type { GenomeDetailed, SpeciesLike } from '../../src/neat/neat.types';
+import { _applyFitnessSharing } from '../../src/neat/speciation/speciation';
+import type {
+  GenomeDetailed,
+  SpeciesLike,
+} from '../../src/neat/shared/neat.shared.types';
 
 type FitnessSharingContext = {
   _species: SpeciesLike[];

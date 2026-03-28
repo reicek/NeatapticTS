@@ -1,5 +1,7 @@
 # Stable Activation Ordering + Explicit I/O Roles Plan
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Make network execution **deterministic, explainable, and architecture-independent** by standardizing:

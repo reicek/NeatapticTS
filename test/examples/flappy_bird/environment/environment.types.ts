@@ -1,3 +1,19 @@
+/**
+ * Canonical world-state contract for one Flappy Bird episode.
+ *
+ * This file is the environment chapter's conceptual starting point because it
+ * names the pieces that every other environment helper manipulates: the bird,
+ * the pipe field, the episode clock, and the termination reason.
+ *
+ * Read this boundary as the simulation's truth surface. Evaluation uses it to
+ * score policies, the trainer uses it to compare genomes fairly, and browser
+ * playback-related tooling depends on it staying compact and deterministic.
+ *
+ * The important design choice is restraint. The environment keeps only the
+ * state needed to advance one episode correctly. It does not store DOM-facing
+ * data, worker transport payloads, or trainer policy metadata. That smaller
+ * contract is what makes deterministic stepping and reward debugging practical.
+ */
 import type { SharedObservationFeatures } from '../flappy.simulation.shared.utils';
 
 /**

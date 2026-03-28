@@ -1,6 +1,6 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
-import type { NeatMetaJSON } from '../../src/neat/neat.export';
+import type { NeatMetaJSON } from '../../src/neat/export/neat.export';
 
 /** Additional tests for meta-only serialization (toJSON/fromJSON). */
 describe('NEAT Meta Serialization', () => {

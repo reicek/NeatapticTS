@@ -108,11 +108,6 @@ export const UNKNOWN_MUTATION_WARNING_PREFIX =
 export const ERROR_NO_MUTATE_METHOD = 'No (correct) mutate method given!';
 
 /**
- * Module path used to resolve Layer factory lazily.
- */
-export const LAYER_MODULE_PATH = '../../layer';
-
-/**
  * Internal node field used to enable batch normalization.
  */
 export const BATCH_NORM_FLAG_KEY = '_batchNorm';

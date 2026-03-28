@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type { NetworkInternals } from './network.deterministic.utils.types';
 
 /**
@@ -16,7 +16,7 @@ export function getRNGState(this: Network): number | undefined {
  * Explicitly set (override) the internal 32-bit RNG state without changing the generator function.
  *
  * @param this - Bound Network instance.
- * @param state - Any finite number (only low 32 bits used). Ignored if not numeric.
+ * @param state - A finite number (only low 32 bits used). Ignored when non-numeric.
  * @returns Nothing.
  */
 export function setRNGState(this: Network, state: number): void {

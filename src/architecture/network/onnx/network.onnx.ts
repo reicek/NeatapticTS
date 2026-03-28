@@ -12,9 +12,24 @@
  * - The compatibility promise is primarily **within this repo**: models produced by
  *   `exportToONNX()` should be accepted by `importFromONNX()` (same version family).
  *
+ * How to read this chapter:
+ * - Start here for the public round-trip API and the trust boundary.
+ * - Continue into `export/` to see how layered networks become JSON graph payloads.
+ * - Continue into `import/` to see how that payload becomes a runtime network again.
+ * - Continue into `schema/` for the persisted wire-format shapes.
+ * - Use `network.onnx.utils.ts` and `network.onnx.utils.types.ts` as compatibility and
+ *   bridge surfaces rather than the first place to learn the pipeline.
+ *
+ * Why the folder is split this way:
+ * - The root file keeps the stable entry points and the promise of the format.
+ * - The `export/` and `import/` chapters carry the heavier execution details.
+ * - The `schema/` chapter keeps the persisted document model separate from runtime logic.
+ * - The root utility barrels exist so public ergonomics stay stable while the implementation
+ *   can keep moving toward smaller, teachable chapters.
+ *
  * Trust boundary:
  * - Treat imported models as **untrusted input**. The importer validates structure, but
- *   you should still apply the same care you would for any JSON payload.
+ *   you should still apply the same care you would for a generic JSON payload.
  *
  * Example (export → persist → import):
  *
@@ -29,14 +44,14 @@
  * ```
  */
 
-import type Network from '../../network';
+import type Network from '../../network/network';
 import { runOnnxExportFlow, runOnnxImportFlow } from './network.onnx.utils';
+import type { OnnxExportOptions } from './network.onnx.utils.types';
 import type {
   Conv2DMapping,
-  OnnxExportOptions,
   OnnxModel,
   Pool2DMapping,
-} from './network.onnx.utils.types';
+} from './schema/network.onnx.schema.types';
 
 export type { Conv2DMapping, OnnxExportOptions, OnnxModel, Pool2DMapping };
 
@@ -151,7 +166,7 @@ export function importFromONNX(onnx: OnnxModel): Network {
  *
  * Trust boundary (security)
  * -------------------------
- * Treat an `OnnxModel` like any other JSON payload: do not import untrusted blobs.
+ * Treat an `OnnxModel` like a generic JSON payload: do not import untrusted blobs.
  *
  * Common pitfalls
  * ---------------

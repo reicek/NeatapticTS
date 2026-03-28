@@ -1,4 +1,4 @@
-import Network from '../../network';
+import Network from '../../network/network';
 import type { EvolveOptions, NeatRuntime } from '../network.types';
 import type { EvolutionSummary } from './network.evolve.utils.types';
 

@@ -1,7 +1,7 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';
-import mutation from '../../../methods/mutation';
+import mutation from '../../../methods/mutation/mutation';
 import type {
   BridgingConnectionList,
   ConnectedNodeList,

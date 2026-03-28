@@ -20,10 +20,8 @@ import {
   resolvePlaybackGroundGridUnitHash,
 } from './playback.background.ground-grid.pulse.timing.utils';
 import type {
-  PlaybackBackgroundGroundGridSceneContext,
   PlaybackGroundGridPulse,
   PlaybackGroundGridPulseInput,
-  PlaybackGroundGridPulsePath,
   PlaybackGroundGridPulseTrackThicknessInput,
 } from './playback.background.ground-grid.types';
 

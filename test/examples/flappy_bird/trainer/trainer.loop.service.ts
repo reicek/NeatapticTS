@@ -1,3 +1,21 @@
+/**
+ * Outer generation heartbeat for the Flappy trainer.
+ *
+ * This file owns the cadence of one generation after another. It deliberately
+ * avoids score math and rollout-planning detail so the top-level loop stays
+ * readable as: resolve schedule, evolve once, run a representative rollout, and
+ * emit a summary.
+ *
+ * Loop sketch:
+ * ```mermaid
+ * flowchart LR
+ *     Resolve["resolveMutationSchedule()"] --> Apply["applyMutationSchedule()"]
+ *     Apply --> Evolve["neatController.evolve()"]
+ *     Evolve --> Fallback["rolloutEpisode()\nrepresentative fallback run"]
+ *     Fallback --> Log["logGenerationSummary()"]
+ *     Log --> Resolve
+ * ```
+ */
 import { rolloutEpisode } from '../flappyEvaluation';
 import { FLAPPY_MAX_FRAMES_PER_EPISODE } from '../constants/constants';
 import {
@@ -68,7 +86,8 @@ export async function runTrainerEvolutionLoop(
  * Applies mutation schedule values to the NEAT controller options.
  *
  * The schedule is resolved outside this helper so the loop can read as a clean
- * "resolve -> apply -> evolve -> report" flow.
+ * "resolve -> apply -> evolve -> report" flow. That separation also makes it
+ * easier to inspect the active schedule in logs or tests.
  *
  * @param neatController - Trainer NEAT controller.
  * @param mutationSchedule - Mutation schedule for current generation.

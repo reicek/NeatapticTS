@@ -1,13 +1,24 @@
 # evaluation
 
+Public evaluation contracts for scoring Flappy Bird policies.
+
+This folder exists to answer a narrower question than the trainer does:
+given one network, one or more deterministic seeds, and one scoring policy,
+what evidence should evolution use when deciding whether that network is any
+good?
+
+The answer in this example is intentionally stricter than a toy demo. A
+single rollout is useful for inspection, but shared-seed batches are the real
+selection surface because they reduce luck and expose instability.
+
+Read the exports in that order:
+
+- `FlappyRolloutOptions` defines what a caller may ask evaluation to do.
+- `FlappyEpisodeResult` captures what happened in one seeded episode.
+- `FlappySeedBatchEvaluation` captures the trainer-facing evidence used to
+  rank genomes more fairly.
+
 ## evaluation/evaluation.types.ts
-
-### FlappyEpisodeResult
-
-Summary metrics for a single Flappy episode rollout.
-
-The result intentionally keeps both a single scalar `fitness` and the channel
-breakdown that produced it, which makes reward debugging much easier.
 
 ### FlappyNetworkLike
 
@@ -23,6 +34,13 @@ Runtime controls for one rollout evaluation.
 This is the public control surface for evaluation callers. The rollout layer
 later normalizes these options into execution-safe context values.
 
+### FlappyEpisodeResult
+
+Summary metrics for a single Flappy episode rollout.
+
+The result intentionally keeps both a single scalar `fitness` and the channel
+breakdown that produced it, which makes reward debugging much easier.
+
 ### FlappySeedBatchEvaluation
 
 Aggregate statistics from evaluating one network across shared seeds.
@@ -32,78 +50,156 @@ median, $p90$, stability, and average gameplay progress.
 
 ## evaluation/evaluation.constants.ts
 
-### evaluation.constants
-
 Default difficulty scale for rollouts when caller does not provide one.
 
 A value of `1` means full adaptive difficulty is enabled during evaluation.
 
 ### FLAPPY_EVALUATION_DEFAULT_DIFFICULTY_SCALE
 
-### FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_CONSECUTIVE_FRAMES
+Default difficulty scale for rollouts when caller does not provide one.
+
+A value of `1` means full adaptive difficulty is enabled during evaluation.
 
 ### FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_GRACE_FRAMES
 
+Default grace period (frames) before early termination checks begin.
+
+### FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_CONSECUTIVE_FRAMES
+
+Default consecutive unrecoverable frames required for early termination.
+
 ### FLAPPY_EVALUATION_DEFAULT_PIPE_PROGRESS_TARGET
+
+Default pipe-progress target used when normalizing rollout fitness.
+
+This target anchors the progress channel so normalization remains meaningful
+even when individual episodes vary widely in difficulty and duration.
 
 ### FLAPPY_EVALUATION_DENSE_SHAPING_FRAMES_NORMALIZER
 
-### FLAPPY_EVALUATION_NORMALIZED_DENSE_WEIGHT
-
-### FLAPPY_EVALUATION_NORMALIZED_PROGRESS_WEIGHT
+Dense shaping normalization factor per survived frame.
 
 ### FLAPPY_EVALUATION_NORMALIZED_SURVIVAL_WEIGHT
 
+Survival channel weight in normalized fitness composition.
+
+### FLAPPY_EVALUATION_NORMALIZED_PROGRESS_WEIGHT
+
+Pipe-progress channel weight in normalized fitness composition.
+
+### FLAPPY_EVALUATION_NORMALIZED_DENSE_WEIGHT
+
+Dense-shaping channel weight in normalized fitness composition.
+
 ### FLAPPY_EVALUATION_NORMALIZED_TERMINAL_WEIGHT
+
+Terminal-shaping channel weight in normalized fitness composition.
 
 ### FLAPPY_EVALUATION_ROBUST_STDDEV_PENALTY
 
-### FLAPPY_EVALUATION_SEED_MIX_MULTIPLIER_A
+Robust fitness penalty multiplier applied to standard deviation.
 
-### FLAPPY_EVALUATION_SEED_MIX_MULTIPLIER_B
-
-### FLAPPY_EVALUATION_SEED_MIX_XOR_SALT
-
-### FLAPPY_EVALUATION_UNRECOVERABLE_ABOVE_GAP_DELTA
-
-### FLAPPY_EVALUATION_UNRECOVERABLE_BELOW_GAP_DELTA
+A higher value penalizes instability more strongly when computing robust
+fitness from a shared-seed batch.
 
 ### FLAPPY_EVALUATION_UNRECOVERABLE_CLEARANCE_THRESHOLD
 
+Unrecoverable clearance threshold used by early termination heuristic.
+
+### FLAPPY_EVALUATION_UNRECOVERABLE_BELOW_GAP_DELTA
+
+Lower-gap delta threshold used by early termination heuristic.
+
 ### FLAPPY_EVALUATION_UNRECOVERABLE_FALLING_VELOCITY
+
+Falling-speed threshold used by early termination heuristic.
+
+### FLAPPY_EVALUATION_UNRECOVERABLE_ABOVE_GAP_DELTA
+
+Upper-gap delta threshold used by early termination heuristic.
 
 ### FLAPPY_EVALUATION_UNRECOVERABLE_RISING_VELOCITY
 
-## evaluation/evaluation.rollout.service.ts
+Rising-speed threshold used by early termination heuristic.
 
-### evaluation.rollout.service
+### FLAPPY_EVALUATION_SEED_MIX_XOR_SALT
 
-Public rollout compatibility facade.
+Seed-mix additive constant used to decorrelate nearby genome ids.
 
-Keeping this file at the evaluation layer preserves the established import
-path while the actual rollout orchestration lives behind the dedicated
-rollout-owned module boundary.
+Together with the multiplicative constants below, this creates a small
+avalanche-style mixing pipeline for deterministic seed derivation.
 
-This is the public evaluation-layer shelf for callers that should not need to
-know about the rollout subfolder layout.
+### FLAPPY_EVALUATION_SEED_MIX_MULTIPLIER_A
 
-### rolloutEpisode
+Seed-mix first multiplicative avalanche constant.
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyEpisodeResult`
+### FLAPPY_EVALUATION_SEED_MIX_MULTIPLIER_B
 
-Roll out an episode and return details.
+Seed-mix second multiplicative avalanche constant.
+
+## evaluation/evaluation.fitness.utils.ts
+
+### evaluateFlappyFitness
+
+```ts
+evaluateFlappyFitness(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+): number
+```
+
+Evaluate a network on a single deterministic Flappy Bird episode.
+
+This is the simplest evaluation entrypoint: one policy, one rollout, one
+scalar fitness.
 
 Parameters:
 - `network` - - Genome/network to evaluate.
 - `rolloutOptions` - - Optional rollout controls.
 
-Returns: Episode result details.
+Returns: Fitness score (higher is better).
+
+### evaluateFlappyFitnessAcrossSeeds
+
+```ts
+evaluateFlappyFitnessAcrossSeeds(
+  network: FlappyNetworkLike,
+  sharedSeeds: readonly number[],
+  rolloutOptions: FlappyRolloutOptions,
+): FlappySeedBatchEvaluation
+```
+
+Evaluate a network on a shared batch of deterministic seeds.
+
+Educational note:
+Shared-seed evaluation reduces luck. Every genome in the same comparison set
+sees the same rollout seeds, which makes the aggregate statistics much more
+useful for selection than a single lucky episode.
+
+Parameters:
+- `network` - - Genome/network to evaluate.
+- `sharedSeeds` - - Shared deterministic seeds used for all genomes.
+- `rolloutOptions` - - Optional rollout controls.
+
+Returns: Robust aggregate metrics for selection/ranking.
+
+Example:
+
+```ts
+const aggregate = evaluateFlappyFitnessAcrossSeeds(network, [11, 22, 33], {
+  normalizeFitness: true,
+});
+```
 
 ## evaluation/evaluation.seed.utils.ts
 
 ### mixGenomeEvaluationSeed
 
-`(genomeId: number) => number`
+```ts
+mixGenomeEvaluationSeed(
+  genomeId: number,
+): number
+```
 
 Mixes a genome identifier into a stable uint32 rollout seed.
 
@@ -119,37 +215,50 @@ Parameters:
 
 Returns: Mixed uint32 seed.
 
-## evaluation/evaluation.fitness.utils.ts
+## evaluation/evaluation.rollout.service.ts
 
-### evaluateFlappyFitness
+Public rollout compatibility facade.
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => number`
+Keeping this file at the evaluation layer preserves the established import
+path while the actual rollout orchestration lives behind the dedicated
+rollout-owned module boundary.
 
-Evaluate a network on a single deterministic Flappy Bird episode.
+This is the public evaluation-layer shelf for callers that should not need to
+know about the rollout subfolder layout.
 
-This is the simplest evaluation entrypoint: one policy, one rollout, one
-scalar fitness.
+Minimal usage sketch:
+```ts
+const result = rolloutEpisode(network, {
+  seed: 123,
+  normalizeFitness: true,
+});
+```
+
+### rolloutEpisode
+
+```ts
+rolloutEpisode(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+): FlappyEpisodeResult
+```
+
+Roll out an episode and return details.
 
 Parameters:
 - `network` - - Genome/network to evaluate.
 - `rolloutOptions` - - Optional rollout controls.
 
-Returns: Fitness score (higher is better).
+Returns: Episode result details.
 
-### evaluateFlappyFitnessAcrossSeeds
+Example:
 
-`(network: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyNetworkLike, sharedSeeds: readonly number[], rolloutOptions: import("test/examples/flappy_bird/evaluation/evaluation.types").FlappyRolloutOptions) => import("test/examples/flappy_bird/evaluation/evaluation.types").FlappySeedBatchEvaluation`
+```ts
+const result = rolloutEpisode(network, {
+  seed: 123,
+  normalizeFitness: true,
+  maxFrames: 2_000,
+});
 
-Evaluate a network on a shared batch of deterministic seeds.
-
-Educational note:
-Shared-seed evaluation reduces luck. Every genome in the same comparison set
-sees the same rollout seeds, which makes the aggregate statistics much more
-useful for selection than a single lucky episode.
-
-Parameters:
-- `network` - - Genome/network to evaluate.
-- `sharedSeeds` - - Shared deterministic seeds used for all genomes.
-- `rolloutOptions` - - Optional rollout controls.
-
-Returns: Robust aggregate metrics for selection/ranking.
+console.log(result.fitness, result.doneReason);
+```

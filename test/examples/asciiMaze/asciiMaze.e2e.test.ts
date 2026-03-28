@@ -2,7 +2,8 @@ import { MazeGenerator } from './mazes';
 import { colors } from './colors';
 import { DashboardManager } from './dashboardManager';
 import { TerminalUtility } from './terminalUtility';
-import { IDashboardManager } from './interfaces';
+import type { IDashboardManager, INetwork } from './interfaces';
+import type Network from '../../../src/architecture/network';
 import {
   EvolutionEngine,
   resolveMazeEvolutionPhaseOutcome,
@@ -156,10 +157,10 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
       });
       const phaseOutcome = resolveMazeEvolutionPhaseOutcome(
         result,
-        proceduralPrevBest,
+        proceduralPrevBest as unknown as INetwork | undefined,
         CURRICULUM_MIN_PROGRESS_TO_PASS,
       );
-      proceduralPrevBest = phaseOutcome.nextBestNetwork;
+      proceduralPrevBest = phaseOutcome.nextBestNetwork as Network | undefined;
 
       expect(!!result?.bestNetwork).toBe(true);
     });

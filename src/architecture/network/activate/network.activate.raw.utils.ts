@@ -4,7 +4,7 @@ import { type RawActivationContext } from './network.activate.utils.types';
  * Execute raw activation through the network delegate using a compact orchestration flow.
  *
  * This helper keeps the exported activation method focused on context creation while this
- * module owns the execution path and any future branching behavior.
+ * module owns the execution path and future branching behavior.
  *
  * @param activationContext - Shared raw activation state.
  * @returns Activation output vector from the network delegate.

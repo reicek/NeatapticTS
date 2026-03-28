@@ -102,9 +102,11 @@ import {
 import type { EngineState } from './engineState';
 import type {
   EvolutionHostAdapter,
+  EvolutionLoopRuntimeContext,
+  EvolutionLoopSupportContext,
+  EvolutionLoopTelemetryContext,
   EvolutionStopReason,
   LoopHelpers,
-  NetworkConnection,
   NetworkInstance,
   NetworkNode,
   NeatInstance,
@@ -1150,20 +1152,10 @@ export const runGeneration = async (
  * @param logEvery - Emit telemetry every `logEvery` generations (0 disables periodic telemetry)
  * @param completedGenerations - Current generation index used for conditional telemetry
  * @param neat - NEAT driver instance passed to telemetry hooks
- * @param scratchLogitsRing - Pooled logits ring buffer reference
- * @param logitsRingCap - Current ring capacity (power of two)
- * @param logitsRingCapMax - Maximum allowed ring capacity
- * @param actionDim - Number of action dimensions (typically 4 for NESW)
- * @param logitsRingShared - Whether shared SAB mode is enabled
- * @param scratchLogitsShared - Shared flat Float32Array (when shared mode enabled)
- * @param scratchLogitsSharedW - Shared atomic write index (when shared mode enabled)
- * @param scratchLogitsRingW - Local ring write cursor (when not shared)
- * @param telemetryMinimal - Whether minimal telemetry mode is active
- * @param saturationPruneThreshold - Threshold above which to prune saturated outputs
- * @param recentWindow - Size of telemetry tail window
- * @param reducedTelemetry - Whether reduced telemetry mode is active
- * @param getNodeIndicesByType - Helper to collect node indices by type
- * @param collectHiddenToOutputConns - Helper to collect hidden-to-output connections
+ * @param runtimeContext - Shared pooled ring buffers and limits for logits telemetry.
+ * @param ringState - Current mutable ring state (capacity, shared-mode flag, write cursor).
+ * @param telemetryContext - Telemetry thresholds and verbosity switches used after simulation.
+ * @param loopSupportContext - Shared scratch buffers and helper callbacks used by the loop.
  *
  * @returns An object { generationResult, simTime, updatedRingState } where simTime is ms when profiling is enabled
  *
@@ -1185,25 +1177,27 @@ export const simulateAndPostprocess = (
   logEvery: number,
   completedGenerations: number,
   neat: NeatInstance,
-  scratchLogitsRing: Float32Array[],
-  logitsRingCap: number,
-  logitsRingCapMax: number,
-  actionDim: number,
-  logitsRingShared: boolean,
-  scratchLogitsShared: Float32Array | undefined,
-  scratchLogitsSharedW: Int32Array | undefined,
-  scratchLogitsRingW: number,
-  telemetryMinimal: boolean,
-  saturationPruneThreshold: number,
-  recentWindow: number,
-  reducedTelemetry: boolean,
-  getNodeIndicesByType: (nodes: NetworkNode[], type: string) => number,
-  collectHiddenToOutputConns: (
-    hiddenNode: NetworkNode,
-    nodesRef: NetworkNode[],
-    outputCount: number,
-  ) => NetworkConnection[],
+  runtimeContext: EvolutionLoopRuntimeContext,
+  ringState: SimulationResult['updatedRingState'],
+  telemetryContext: EvolutionLoopTelemetryContext,
+  loopSupportContext: Pick<EvolutionLoopSupportContext, 'loopHelpers'>,
 ): SimulationResult => {
+  const {
+    scratchLogitsRing,
+    logitsRingCapMax,
+    actionDim,
+    scratchLogitsShared,
+    scratchLogitsSharedW,
+  } = runtimeContext;
+  const {
+    telemetryMinimal,
+    saturationPruneThreshold,
+    recentWindow,
+    reducedTelemetry,
+  } = telemetryContext;
+  const { getNodeIndicesByType, collectHiddenToOutputConns } =
+    loopSupportContext.loopHelpers;
+
   // Step 1: Run simulator and optionally capture elapsed time.
   const startTime = doProfile ? readHighResolutionTime() : 0;
   const simResult = MazeMovement.simulateAgent(
@@ -1233,9 +1227,9 @@ export const simulateAndPostprocess = (
   }
 
   // Mutable ring state (will be updated and returned)
-  let updatedLogitsRingCap = logitsRingCap;
-  let updatedLogitsRingShared = logitsRingShared;
-  let updatedScratchLogitsRingW = scratchLogitsRingW;
+  let updatedLogitsRingCap = ringState.logitsRingCap;
+  let updatedLogitsRingShared = ringState.logitsRingShared;
+  let updatedScratchLogitsRingW = ringState.scratchLogitsRingW;
 
   // Step 3: If the simulator returned per-step logits, copy them into the pooled ring buffers.
   try {
@@ -1396,20 +1390,10 @@ export const simulateAndPostprocess = (
  * @param distanceMap - Optional precomputed distance map to speed simulation
  * @param helpers - Helper utilities: { flushToFrame, fs, path, safeWrite }
  * @param doProfile - When truthy collect and return millisecond timings in the result
- * @param scratchLogitsRing - Pooled logits ring buffer
- * @param logitsRingCap - Current ring capacity
- * @param logitsRingCapMax - Maximum ring capacity
- * @param actionDim - Number of action dimensions
- * @param logitsRingShared - Whether shared mode is enabled
- * @param scratchLogitsShared - Shared flat buffer (when shared mode)
- * @param scratchLogitsSharedW - Shared atomic write index
- * @param scratchLogitsRingW - Local ring write cursor
- * @param emptyVec - Empty array fallback
- * @param scratchNodeIdx - Pooled node index buffer
- * @param scratchSnapshotObj - Reusable snapshot object
- * @param scratchSnapshotTop - Reusable top-K snapshot buffer
- * @param getNodeIndicesByType - Helper to collect node indices by type
- * @param collectHiddenToOutputConns - Helper to collect connections
+ * @param runtimeContext - Shared pooled ring buffers and limits for the hot path.
+ * @param initialRingState - Current mutable ring state for this run.
+ * @param telemetryContext - Telemetry thresholds and verbosity switches used during simulation.
+ * @param supportContext - Shared scratch buffers and helper callbacks used by the loop.
  * @param constants - Object containing all engine constants (DEFAULT_TRAIN_ERROR, etc.)
  *
  * @returns Promise resolving to an object:
@@ -1431,24 +1415,10 @@ export const runEvolutionLoop = async (
   distanceMap: number[][],
   helpers: LoopHelpers,
   doProfile: boolean,
-  scratchLogitsRing: Float32Array[],
-  logitsRingCap: number,
-  logitsRingCapMax: number,
-  actionDim: number,
-  logitsRingShared: boolean,
-  scratchLogitsShared: Float32Array | undefined,
-  scratchLogitsSharedW: Int32Array | undefined,
-  scratchLogitsRingW: number,
-  emptyVec: NetworkInstance[],
-  scratchNodeIdx: Int32Array,
-  scratchSnapshotObj: Record<string, unknown>,
-  scratchSnapshotTop: SnapshotEntry[],
-  getNodeIndicesByType: (nodes: NetworkNode[], type: string) => number,
-  collectHiddenToOutputConns: (
-    hiddenNode: NetworkNode,
-    nodesRef: NetworkNode[],
-    outputCount: number,
-  ) => NetworkConnection[],
+  runtimeContext: EvolutionLoopRuntimeContext,
+  initialRingState: SimulationResult['updatedRingState'],
+  telemetryContext: EvolutionLoopTelemetryContext,
+  supportContext: EvolutionLoopSupportContext,
   constants: TrainingConstants & {
     DEFAULT_TRAIN_BATCH_LARGE: number;
     FITTEST_TRAIN_ITERATIONS: number;
@@ -1458,9 +1428,17 @@ export const runEvolutionLoop = async (
     REDUCED_TELEMETRY: boolean;
     DISABLE_BALDWIN: boolean;
   },
-  speciesHistoryRef: number[],
 ) => {
   const { flushToFrame, fs, path, safeWrite } = helpers;
+  const {
+    emptyVec,
+    scratchNodeIdx,
+    scratchSnapshotObj,
+    scratchSnapshotTop,
+    speciesHistoryRef,
+    loopHelpers,
+  } = supportContext;
+  const { getNodeIndicesByType } = loopHelpers;
 
   // State: descriptive local names improve readability for future maintainers.
   let bestNetworkSoFar: NetworkInstance | null =
@@ -1476,9 +1454,9 @@ export const runEvolutionLoop = async (
   let lastCompactionGeneration = 0;
 
   // Mutable ring state
-  let updatedLogitsRingCap = logitsRingCap;
-  let updatedLogitsRingShared = logitsRingShared;
-  let updatedScratchLogitsRingW = scratchLogitsRingW;
+  let updatedLogitsRingCap = initialRingState.logitsRingCap;
+  let updatedLogitsRingShared = initialRingState.logitsRingShared;
+  let updatedScratchLogitsRingW = initialRingState.scratchLogitsRingW;
 
   // Profiling accumulators are stored in a pooled Float64Array to avoid
   // per-run object creation. Layout: [0]=evolveMs, [1]=lamarckMs, [2]=simMs, [3]=reserved
@@ -1614,20 +1592,14 @@ export const runEvolutionLoop = async (
       opts.reportingConfig?.logEvery ?? 10,
       completedGenerations,
       neat,
-      scratchLogitsRing,
-      updatedLogitsRingCap,
-      logitsRingCapMax,
-      actionDim,
-      updatedLogitsRingShared,
-      scratchLogitsShared,
-      scratchLogitsSharedW,
-      updatedScratchLogitsRingW,
-      constants.TELEMETRY_MINIMAL,
-      constants.SATURATION_PRUNE_THRESHOLD,
-      constants.RECENT_WINDOW,
-      constants.REDUCED_TELEMETRY,
-      getNodeIndicesByType,
-      collectHiddenToOutputConns,
+      runtimeContext,
+      {
+        logitsRingCap: updatedLogitsRingCap,
+        logitsRingShared: updatedLogitsRingShared,
+        scratchLogitsRingW: updatedScratchLogitsRingW,
+      },
+      telemetryContext,
+      { loopHelpers },
     );
     const generationResult = simulationResult.generationResult;
     if (doProfile) profileScratch[2] += Number(simulationResult.simTime ?? 0);

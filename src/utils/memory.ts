@@ -1,17 +1,45 @@
 /**
  * Memory instrumentation utilities (Phase 0).
  *
- * Educational overview:
- * These helpers expose a *heuristic* snapshot of memory usage for the
- * evolutionary population and internal pools. The goal is to help learners
- * reason about how design choices (slab storage, pooling, typed arrays)
- * influence memory footprint *without* incurring heavy introspection costs.
+ * This chapter exists for one practical learning problem: memory behavior is
+ * one of the easiest parts of an evolutionary system to feel, but one of the
+ * hardest parts to explain from raw runtime objects alone. Networks grow,
+ * slabs reserve capacity ahead of immediate need, pools trade fresh allocation
+ * pressure for reuse, and the JavaScript engine adds object overhead that is
+ * hard to see directly from the outside.
+ *
+ * Instead of pretending to be a precise profiler, this boundary offers a fast,
+ * educational snapshot. The goal is to make design choices visible enough that
+ * readers can compare runs and ask better questions:
+ *
+ * - Did moving toward slab-backed storage reduce object-heavy overhead?
+ * - Is pooling shifting pressure away from fresh allocations?
+ * - How much reserved typed-array capacity is currently going unused?
+ * - Are browser or Node heap readings moving in the same direction as the
+ *   heuristic network summary?
+ *
+ * Read the chapter in three passes:
+ *
+ * 1. {@link memoryStats} for the top-level snapshot and registry behavior.
+ * 2. {@link MemoryStats} when you want to interpret the resulting sections.
+ * 3. `memory.utils.ts` when you want the aggregation, environment probing, and
+ *    slab-accounting mechanics behind the snapshot.
  *
  * Design principles:
- * - Lightweight: Avoid deep graph walks or JSON serialization.
- * - Pay-for-use: If no networks are registered the function returns a small, fast object.
- * - Cross‑environment: Works in both Browser and Node via feature detection.
- * - Extensible: Shape deliberately includes draft sections for later precise accounting phases.
+ *
+ * - Lightweight: avoid deep graph walks or JSON serialization.
+ * - Pay-for-use: if no networks are registered the snapshot stays small.
+ * - Cross-environment: gather what the browser or Node can expose safely.
+ * - Extensible: keep room for later phases that add more exact accounting.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Networks[Tracked or explicit networks] --> Aggregation[Heuristic network aggregation]
+ *   Aggregation --> Snapshot[MemoryStats snapshot]
+ *   Config[Config and allocator flags] --> Snapshot
+ *   Environment[Browser or Node heap probes] --> Snapshot
+ *   Snapshot --> Questions[Compare storage strategy, pooling, and capacity behavior]
+ * ```
  */
 import { config } from '../config';
 import { nodePoolStats } from '../architecture/nodePool';
@@ -35,6 +63,16 @@ import {
  * estimates get closer to real usage. Treat values as relative metrics for
  * comparing configurations (e.g. before / after enabling pooling) rather than
  * exact allocations.
+ *
+ * The payload is easiest to read as four cooperating layers:
+ *
+ * - `connections`, `nodes`, and `estimatedTotalBytes` summarize the tracked
+ *   network footprint itself,
+ * - `slabs` explains how much typed-array storage exists and how much of the
+ *   reserved connection capacity is currently used,
+ * - `pools` shows whether reusable allocation infrastructure is active,
+ * - `env` exposes the coarser browser or Node memory readings that surround the
+ *   heuristic network view.
  */
 export interface MemoryStats {
   /** Epoch milliseconds when the snapshot was captured. */
@@ -105,7 +143,7 @@ export interface MemoryStats {
 
 /** Minimal view of a network used for memory heuristics. Only properties
  * accessed by this module are declared. This keeps coupling light while
- * enabling typed local variables instead of `any` everywhere. */
+ * enabling typed local variables instead of loose catch-all types everywhere. */
 export interface NetworkView {
   connections?: unknown[];
   nodes?: unknown[];
@@ -132,8 +170,25 @@ export type SlabAllocStats = { fresh: number; pooled: number } | null;
 /**
  * Capture heuristic memory statistics for one or more networks with a snapshot of active config flags.
  *
+ * This is the main educational entrypoint for the utils chapter. It resolves
+ * which networks to inspect, safely samples allocator and environment signals,
+ * then folds those pieces into one comparable snapshot.
+ *
+ * The result is intentionally good at trend questions rather than forensic
+ * accuracy. Use it to compare configurations, validate that pooling or slabs
+ * changed the memory story in the expected direction, or teach why reserved and
+ * used bytes can diverge even when the active connection count stays stable.
+ *
  * @param targetNetworks - Optional single network or array. If omitted, uses registered networks.
  * @returns MemoryStats heuristic snapshot.
+ *
+ * @example
+ * ```ts
+ * registerTrackedNetwork(network);
+ * const snapshot = memoryStats();
+ *
+ * console.log(snapshot.estimatedTotalBytes, snapshot.slabs.fragmentationPct);
+ * ```
  */
 export const memoryStats = (
   targetNetworks?: NetworkView | NetworkView[],
@@ -164,6 +219,9 @@ export const memoryStats = (
  * explicit networks are provided. This does NOT free memory; it only
  * removes references held by the registry.
  *
+ * Use this when a teaching example, benchmark, or test wants a fresh registry
+ * boundary before capturing the next snapshot.
+ *
  * @returns void
  */
 export const resetMemoryTracking = (): void => {
@@ -176,6 +234,9 @@ export const resetMemoryTracking = (): void => {
  *
  * Duplicate registrations are ignored; insertion order is preserved which is
  * useful for deterministic test snapshots.
+ * This makes the registry convenient for demos and repeated observations: code
+ * can opt into tracking once, then ask for snapshots later without threading a
+ * network list through every call site.
  *
  * @param network Network instance (loose shape, validated at runtime).
  * @returns void
@@ -191,6 +252,9 @@ export const registerTrackedNetwork = (
 /**
  * Remove a previously registered network from the tracking registry.
  * No-op if the network is not currently registered.
+ *
+ * Use this when the chapter's tracked set should follow the active lifetime of
+ * a network instead of accumulating historical references.
  *
  * @param network Network instance to remove.
  * @returns void

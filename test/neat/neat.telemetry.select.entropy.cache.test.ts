@@ -5,7 +5,7 @@
 import {
   applyTelemetrySelect,
   structuralEntropy as teleEntropy,
-} from '../../src/neat/neat.telemetry';
+} from '../../src/neat/telemetry/recorder/telemetry.recorder';
 
 type TelemetrySelectStub = Record<string, unknown> & {
   generation: number;

@@ -1,3 +1,23 @@
+/**
+ * Telemetry-export boundary for the ASCII Maze dashboard.
+ *
+ * This file is where the dashboard stops being only a terminal or browser view
+ * and becomes a source of structured data. It builds the bounded histories,
+ * rich detail snapshots, and export payloads that let other hosts inspect the
+ * same run through charts, hooks, or serialized snapshots instead of only live
+ * text output.
+ *
+ * The telemetry boundary exists so "what should be observable" stays separate
+ * from "how should the dashboard be painted." That distinction keeps browser
+ * integrations, debug tooling, and offline inspection from leaking presentation
+ * assumptions back into the redraw path.
+ *
+ * A practical reading order is:
+ *
+ * 1. `getDashboardLastTelemetry()` for the public snapshot surface,
+ * 2. `updateTelemetryHistory()` for bounded-history upkeep,
+ * 3. the detail builders below when you want the richer analytical shelf.
+ */
 import { MazeUtils } from '../../mazeUtils';
 import { DASHBOARD_MANAGER_CONSTANTS as C } from '../dashboardManager.constants';
 import type {

@@ -1,4 +1,4 @@
-import Rate from '../../src/methods/rate';
+import Rate from '../../src/methods/rate/rate';
 
 describe('Rate', () => {
   const baseRate = 0.1;

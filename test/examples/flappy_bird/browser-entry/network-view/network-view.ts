@@ -1,3 +1,18 @@
+/**
+ * Network-view orchestration for the browser-side architecture panel.
+ *
+ * This module is the browser-facing fold from a live evolved controller to a
+ * readable inspection panel. It does not own the low-level drawing primitives,
+ * and it does not invent topology semantics from scratch. Instead it composes
+ * both into one higher-level question: how should this network be laid out so a
+ * human can actually learn from it?
+ *
+ * The boundary exists because "draw the network" hides several distinct jobs:
+ * summarize topology, size the panel, place nodes, choose overlay policy, and
+ * then delegate the final painting work. Keeping those steps together here makes
+ * the generated README read like an inspection chapter instead of a pile of
+ * canvas helpers.
+ */
 import Network from '../../../../../src/architecture/network';
 import {
   FLAPPY_NETWORK_ARCHITECTURE_COLUMN_SEPARATOR,
@@ -63,15 +78,6 @@ import {
 } from './network-view.layout.utils';
 import { resolveNetworkVisualizationLayers } from './network-view.topology.utils';
 
-/**
- * Network-view orchestration for the browser-side architecture panel.
- *
- * This subsystem sits between raw network data and the lower-level visualization
- * drawing helpers. It resolves topology summaries, chooses panel size, lays out
- * nodes inside the drawable area, and coordinates overlays such as legends and
- * input-group bands.
- */
-
 type NetworkTopologySummary = {
   networkLayers: ReturnType<typeof resolveNetworkVisualizationLayers>;
   layerCount: number;
@@ -112,6 +118,11 @@ type PositionedNetworkGraphScene = {
  *
  * Conceptually, this is the main fold from network object to finished panel:
  * resolve scene state, compute layout, paint the graph, then paint overlays.
+ *
+ * @example
+ * ```ts
+ * drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
+ * ```
  *
  * @param context - Canvas 2D drawing context.
  * @param network - Network to visualize.
@@ -164,6 +175,11 @@ export function drawNetworkVisualization(
  *
  * Dense or deeper networks need more vertical room to stay readable, so panel
  * height is driven by topology rather than fixed to a single constant.
+ *
+ * @example
+ * ```ts
+ * const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
+ * ```
  *
  * @param network - Network to visualize.
  * @param inputSize - Input-layer size.
@@ -280,16 +296,17 @@ function resolveNetworkVisualizationScene(
     graphPaddingContext,
   );
 
+  // Step 3: Fold the resolved scene state for downstream drawing helpers.
   return {
     canvasWidthPx,
     canvasHeightPx,
     architectureLabel,
     colorScales,
     hideNetworkOverlays,
-    graphTopPaddingPx: graphPaddingContext.graphTopPaddingPx,
-    graphBottomPaddingPx: graphPaddingContext.graphBottomPaddingPx,
     graphLeftPaddingPx: graphPaddingContext.graphLeftPaddingPx,
+    graphTopPaddingPx: graphPaddingContext.graphTopPaddingPx,
     graphRightPaddingPx: graphPaddingContext.graphRightPaddingPx,
+    graphBottomPaddingPx: graphPaddingContext.graphBottomPaddingPx,
     adjustedGraphLeftPaddingPx: adjustedGraphPaddingContext.graphLeftPaddingPx,
     adjustedGraphRightPaddingPx:
       adjustedGraphPaddingContext.graphRightPaddingPx,
@@ -297,7 +314,7 @@ function resolveNetworkVisualizationScene(
 }
 
 /**
- * Paints the base network visualization canvas background.
+ * Paints the static background fill for the network visualization canvas.
  *
  * @param context - Canvas 2D drawing context.
  * @param networkVisualizationScene - Frame scene context.
@@ -307,15 +324,7 @@ function paintNetworkVisualizationCanvasBase(
   context: CanvasRenderingContext2D,
   networkVisualizationScene: NetworkVisualizationScene,
 ): void {
-  // Step 1: Clear the full canvas before repainting the current frame.
-  context.clearRect(
-    0,
-    0,
-    networkVisualizationScene.canvasWidthPx,
-    networkVisualizationScene.canvasHeightPx,
-  );
-
-  // Step 2: Fill the visualization panel background.
+  context.save();
   context.fillStyle = FLAPPY_UI_NETWORK_CANVAS_BACKGROUND;
   context.fillRect(
     0,
@@ -323,6 +332,7 @@ function paintNetworkVisualizationCanvasBase(
     networkVisualizationScene.canvasWidthPx,
     networkVisualizationScene.canvasHeightPx,
   );
+  context.restore();
 }
 
 /**
@@ -583,38 +593,6 @@ function resolveNetworkTopologySummary(
       ...networkLayers.map((layerNodes) => layerNodes.length),
     ),
   };
-}
-
-/**
- * Resolves node rectangle dimensions from topology density and drawable bounds.
- *
- * @param network - Network to visualize.
- * @param inputSize - Input-layer size.
- * @param outputSize - Output-layer size.
- * @param drawableWidthPx - Drawable graph width.
- * @param drawableHeightPx - Drawable graph height.
- * @returns Node dimensions.
- */
-function resolveNetworkNodeDimensions(
-  network: Network | undefined,
-  inputSize: number,
-  outputSize: number,
-  drawableWidthPx: number,
-  drawableHeightPx: number,
-): NetworkNodeDimensions {
-  // Step 1: Resolve the shared topology summary once for the sizing helpers.
-  const networkTopologySummary = resolveNetworkTopologySummary(
-    network,
-    inputSize,
-    outputSize,
-  );
-
-  // Step 2: Delegate the actual sizing rules to the topology-aware helper.
-  return resolveNetworkNodeDimensionsFromTopologySummary(
-    networkTopologySummary,
-    drawableWidthPx,
-    drawableHeightPx,
-  );
 }
 
 /**

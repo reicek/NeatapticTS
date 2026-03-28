@@ -49,6 +49,11 @@ of only consuming its current output.
   changes.
 - Do not overfit the analyzer to one trace unless the repo clearly needs that
   exact workflow.
+- When extension work also updates a durable tracker or report log, follow
+  `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and
+  `Handoff query` structure.
+- Do not add specific calendar dates to generated report sections, example log
+  headings, or companion notes. Keep report titles stable and content-focused.
 - Do not add non-deterministic timestamps, colors, or formatting noise.
 - Do not pull in a new dependency unless the existing TypeScript runtime cannot
   reasonably support the change.

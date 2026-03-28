@@ -1,8 +1,9 @@
 /**
  * Rollout shaping and result helpers.
  *
- * This file will host rollout-local fitness composition, shaping utilities,
- * and terminal result assembly helpers.
+ * This file interprets an episode after the runtime services have determined
+ * what happened. In other words: services produce the trajectory, utils assign
+ * meaning to that trajectory.
  *
  * Educational note:
  * The rollout subsystem separates simulation from scoring on purpose. The

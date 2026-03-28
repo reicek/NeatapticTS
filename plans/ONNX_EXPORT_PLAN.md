@@ -1,5 +1,7 @@
 # ONNX Export / Import Plan for NeatapticTS
 
+**Status:** [WIP]
+
 _Last updated: 2026-02-20 (Phase 4 groundwork in progress; Phase 3 deep parity tests still finalizing)_
 
 ## 0. Purpose

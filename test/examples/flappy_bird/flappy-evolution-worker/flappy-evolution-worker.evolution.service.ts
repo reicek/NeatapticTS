@@ -76,6 +76,11 @@ export async function evolveAndBuildGenerationReadyMessage(
       generation: neatRuntime.generation,
       bestFitness: Number(bestNetwork.score ?? 0),
       bestNetworkJson: bestNetwork.toJSON(),
+      populationNetworksJson: Array.isArray(runtimeNeat.population)
+        ? runtimeNeat.population.map((populationNetwork) =>
+            populationNetwork.toJSON(),
+          )
+        : [bestNetwork.toJSON()],
     },
   };
 }

@@ -24,7 +24,7 @@ export const createBrowserEntryEvolutionHostAdapter =
         return false;
       }
 
-      return (window as RuntimeWindow).asciiMazePaused === true;
+      return (window as unknown as RuntimeWindow).asciiMazePaused === true;
     },
     handleStop: ({
       reason,
@@ -37,7 +37,7 @@ export const createBrowserEntryEvolutionHostAdapter =
         return;
       }
 
-      const globalWindow = window as RuntimeWindow;
+      const globalWindow = window as unknown as RuntimeWindow;
 
       if (reason === 'solved' && requestHostPause) {
         globalWindow.asciiMazePaused = true;
@@ -72,11 +72,14 @@ export const createBrowserEntryEvolutionHostAdapter =
 export const installBrowserEntryGlobals = (
   start: BrowserEntryStartFunction,
 ): void => {
-  if (typeof window === 'undefined' || !(window as RuntimeWindow).document) {
+  if (
+    typeof window === 'undefined' ||
+    !(window as unknown as RuntimeWindow).document
+  ) {
     return;
   }
 
-  const globalWindow = window as RuntimeWindow;
+  const globalWindow = window as unknown as RuntimeWindow;
   globalWindow.asciiMaze = globalWindow.asciiMaze || {};
   globalWindow.asciiMaze.start = start;
 

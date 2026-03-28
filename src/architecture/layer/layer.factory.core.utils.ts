@@ -1,5 +1,5 @@
-import type Connection from '../connection';
-import Group from '../group';
+import type Connection from '../connection/connection';
+import Group from '../group/group';
 import * as methods from '../../methods/methods';
 import type {
   LayerFactoryContext,

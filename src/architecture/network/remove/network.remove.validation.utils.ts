@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type Node from '../../node';
 import type { NodeRemovalContext } from './network.remove.utils.types';
 import {

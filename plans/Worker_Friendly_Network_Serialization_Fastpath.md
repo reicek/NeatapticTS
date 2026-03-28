@@ -1,5 +1,7 @@
 # Worker-Friendly Network Serialization Fastpath Plan
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Make evaluating networks in worker threads (Node `worker_threads` and browser Web Workers) fast and ergonomic by providing a **serialization fastpath** that is:

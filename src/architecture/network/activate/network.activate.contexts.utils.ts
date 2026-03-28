@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type { ActivateNetworkInternals as NetworkInternals } from '../network.types';
 import type {
   BatchActivationContext,

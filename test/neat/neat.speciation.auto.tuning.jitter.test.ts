@@ -1,11 +1,11 @@
-import { _speciate } from '../../src/neat/neat.speciation';
+import { _speciate } from '../../src/neat/speciation/speciation';
 import type {
   ConnectionLike,
   GenomeDetailed,
   SpeciationOptions,
   SpeciationHarnessContext,
   SpeciesLastStats,
-} from '../../src/neat/neat.types';
+} from '../../src/neat/shared/neat.shared.types';
 
 type AutoCompatOptions = SpeciationOptions & {
   compatAdjust: Required<NonNullable<SpeciationOptions['compatAdjust']>>;

@@ -1,8 +1,76 @@
 # browser-entry
 
-## browser-entry/browser-entry.types.ts
+Browser demo public entry for the Flappy Bird example.
 
-### browser-entry.types
+This boundary is the hand-off point between library consumers and the demo's
+browser runtime. Calling `start` boots the canvas UI, worker channel, HUD,
+and playback loop without exposing all of that internal orchestration as part
+of the public API.
+
+In other words, this file is intentionally tiny because it acts like a clean
+facade over a much larger interactive system.
+
+Educational note:
+`index.html` is only the local browser shell that loads the published bundle
+and then exposes this same start boundary through browser globals. Read this
+file when you want the real host/runtime seam instead of the static shell.
+
+Minimal browser start example:
+```ts
+import { start } from './browser-entry/browser-entry';
+
+const handle = await start('flappy-bird-output');
+// Later: handle.stop();
+await handle.done;
+```
+
+Startup path:
+```mermaid
+flowchart LR
+    Start["start()"] --> Runtime["runtime/\nbootstrap orchestration"]
+    Runtime --> Host["host/\nDOM and canvas shell"]
+    Runtime --> Channel["worker-channel/\nworker protocol"]
+    Channel --> Playback["playback/\npopulation rendering"]
+    Runtime --> Network["network-view + visualization/\nnetwork inspection"]
+```
+
+## browser-entry/browser-entry.ts
+
+### start
+
+```ts
+start(
+  container: RuntimeContainerTarget,
+): Promise<FlappyBirdRunHandle>
+```
+
+Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
+
+This function is intentionally orchestration-focused:
+1) resolve runtime dependencies (DOM host, worker, host UI),
+2) initialize worker and telemetry plumbing,
+3) run the evolve -> playback -> HUD fold loop until stopped,
+4) expose a small stop/isRunning/done handle for callers.
+
+Parameters:
+- `container` - - Element id or HTMLElement to host the demo.
+
+Returns: Run handle for stop/state control.
+
+Example:
+
+```ts
+const runHandle = await start('flappy-bird-output');
+// later
+runHandle.stop();
+await runHandle.done;
+```
+
+### FlappyBirdRunHandle
+
+Handle returned by `start` for controlling demo execution lifecycle.
+
+## browser-entry/browser-entry.types.ts
 
 Aggregated public type surface for the Flappy Bird browser runtime.
 
@@ -11,106 +79,41 @@ rendering, telemetry, viewport math, and network visualization. Re-exporting
 the public contracts from one place gives readers a compact map of that
 runtime without forcing them to know the internal folder layout first.
 
-### BrowserDifficultyProfile
+A practical reading order is:
 
-Difficulty profile consumed by simulation observation helpers.
+- runtime types for lifecycle and top-level handles,
+- worker types for protocol boundaries,
+- simulation/render types for playback state,
+- visualization types for the network panel.
 
-This bundles the three variables that define how demanding a stretch of the
-course is: corridor width, pipe speed, and spawn cadence.
+Use this file when you want the browser runtime's public contract map. Use
+the neighboring runtime, playback, host, worker-channel, and visualization
+folders when you want the actual implementation story.
 
-### BrowserPopulationBirdLike
-
-Simulation-facing browser contracts shared by playback helpers.
-
-These types describe the minimum world state the browser needs while it is
-reconstructing, rendering, or summarizing worker-produced frames.
-
-### BrowserPopulationPipeLike
-
-Pipe shape used by utility observation-vector helpers.
-
-### ColorLegendRow
-
-Legend row model for network visualization color legends.
-
-Each row labels a numeric interval and the color used to render it.
-
-### ColorTier
-
-Connection or bias tier used for color mapping ramps.
-
-Visualization buckets continuous weights into legible color bands so humans
-can scan sign and magnitude at a glance.
-
-### CreateFlappyStatsTableRowsInput
-
-Input contract for declarative runtime stats table row builder.
-
-The builder needs both the target table and a small policy surface that says
-whether instrumentation rows should appear and how rows should be colored.
-
-### EvolutionGenerationPayload
-
-Worker payload describing evolved generation summary values.
-
-This is the browser-facing summary of one completed NEAT generation: what
-generation finished, how fit the best genome was, and optionally the best
-network for visualization or playback.
-
-### EvolutionGenerationReadyMessage
-
-Worker message emitted when a generation has completed evolving.
-
-### EvolutionPlaybackStepMessage
-
-Worker message carrying one playback step and aggregate markers.
-
-Besides the frame snapshot itself, this message also carries summary values
-used by the HUD so the browser can show performance and progress without
-recomputing population-wide statistics on the main thread.
-
-### EvolutionPlaybackStepSnapshot
-
-Per-frame snapshot received from the worker playback channel.
-
-A snapshot combines geometry, packed population state, and lightweight world
-metadata so the browser can render a deterministic frame without rerunning
-the simulation locally.
-
-### EvolutionWorkerErrorMessage
-
-Worker message emitted for simulation/playback errors.
-
-### EvolutionWorkerMessage
-
-Union of all supported worker messages consumed by browser entry.
-
-A closed union keeps the main-thread message handler explicit and easy to
-audit when the protocol evolves.
+Browser runtime map:
+```mermaid
+flowchart TB
+    PublicTypes["browser-entry.types"] --> Runtime["runtime types\nstart/stop lifecycle"]
+    PublicTypes --> Worker["worker types\nprotocol and payloads"]
+    PublicTypes --> Playback["simulation + render types\nframe state and HUD metrics"]
+    PublicTypes --> Viz["visualization types\nlegend and color scales"]
+```
 
 ### FlappyBirdRunHandle
 
-Public lifecycle contracts for the Flappy Bird browser runtime.
+Handle returned by `start` for controlling demo execution lifecycle.
 
-These types describe how the demo is started, stopped, and exposed on the
-browser `window` object. They are intentionally small because callers should
-control the demo at a high level without depending on private implementation
-details.
+### RuntimeWindow
 
-### FlappyStatsCategoryColors
+Runtime window contract for the Flappy Bird browser demo.
 
-Color pair used for stats category key/value styling.
-
-The HUD uses paired colors so labels and values stay visually grouped while
-still separating categories such as current run, telemetry, and best-so-far.
+The demo exposes a small debug-friendly surface on `window` so manual browser
+experiments and docs examples can start the simulation without importing the
+bundle as a module.
 
 ### FlappyStatsKey
 
-HUD and runtime stats contracts for the Flappy Bird browser demo.
-
-The browser HUD is intentionally declarative: keys describe what should be
-shown, and helper utilities map those keys to DOM rows and live values. That
-keeps the status panel readable even as telemetry grows.
+Runtime stats table key union used across browser-entry helpers.
 
 ### FlappyStatsRowDescriptor
 
@@ -126,50 +129,30 @@ Runtime lookup map of stat keys to writable value cells.
 This acts like a small DOM index so the update loop can mutate the correct
 cells directly without repeatedly querying the document.
 
-### NetworkLegendLayout
+### FlappyStatsCategoryColors
 
-Precomputed legend panel layout used by visualization renderer.
+Color pair used for stats category key/value styling.
 
-Layout is resolved up front so the draw path can stay focused on painting,
-not recomputing geometry every frame.
+The HUD uses paired colors so labels and values stay visually grouped while
+still separating categories such as current run, telemetry, and best-so-far.
 
-### NetworkNodeDimensionsLike
+### CreateFlappyStatsTableRowsInput
 
-Pixel dimensions used for network-node rectangle rendering.
+Input contract for declarative runtime stats table row builder.
 
-Keeping node box dimensions explicit makes legend and topology layout easier
-to tune without hidden drawing constants.
+The builder needs both the target table and a small policy surface that says
+whether instrumentation rows should appear and how rows should be colored.
 
-### NetworkVisualizationHandle
+### SerializedNetwork
 
-Network-visualization contracts for the Flappy Bird browser demo.
+Loose JSON-compatible network payload used by worker messages.
 
-One of the educational goals of the example is to let people watch evolved
-controllers as structures, not just as scores. These types describe the
-lightweight shapes used by the architecture panel so rendering logic can stay
-decoupled from the full internal network implementation.
+### PopulationPipe
 
-### PackedPlaybackBirdSnapshot
+Renderable pipe state snapshot emitted by the playback worker.
 
-Packed typed-array payload for playback bird snapshot transport.
-
-This mirrors the pipe packing strategy so playback can move large population
-snapshots with less allocation pressure than object-per-bird messages.
-
-### PackedPlaybackPipeSnapshot
-
-Packed typed-array payload for playback pipe snapshot transport.
-
-Typed arrays keep frame payloads compact and predictable, which matters when
-the worker is streaming many birds and pipes across animation frames.
-
-### PlaybackFrameStats
-
-Lightweight per-frame telemetry emitted to HUD update callback.
-
-These values are the browser-friendly metrics shown in the live status panel:
-how many birds remain, how far the leader has progressed, and how expensive
-the current playback cadence is.
+This is the smallest pipe shape the browser renderer needs for one frame:
+horizontal position plus the vertical corridor geometry.
 
 ### PopulationBird
 
@@ -179,12 +162,81 @@ The browser does not receive full neural state here. It only gets the fields
 needed for presentation and HUD summaries, which keeps per-frame transport
 light.
 
-### PopulationPipe
+### PackedPlaybackPipeSnapshot
 
-Renderable pipe state snapshot emitted by the playback worker.
+Packed typed-array payload for playback pipe snapshot transport.
 
-This is the smallest pipe shape the browser renderer needs for one frame:
-horizontal position plus the vertical corridor geometry.
+Typed arrays keep frame payloads compact and predictable, which matters when
+the worker is streaming many birds and pipes across animation frames.
+
+### PackedPlaybackBirdSnapshot
+
+Packed typed-array payload for playback bird snapshot transport.
+
+This mirrors the pipe packing strategy so playback can move large population
+snapshots with less allocation pressure than object-per-bird messages.
+
+### EvolutionGenerationPayload
+
+Worker payload describing evolved generation summary values.
+
+This is the browser-facing summary of one completed NEAT generation: what
+generation finished, how fit the best genome was, and optionally the best
+network for visualization or playback.
+
+### EvolutionGenerationReadyMessage
+
+Worker message emitted when a generation has completed evolving.
+
+### EvolutionWorkerErrorMessage
+
+Worker message emitted for simulation/playback errors.
+
+### EvolutionPlaybackStepSnapshot
+
+Per-frame snapshot received from the worker playback channel.
+
+A snapshot combines geometry, packed population state, and lightweight world
+metadata so the browser can render a deterministic frame without rerunning
+the simulation locally.
+
+### EvolutionPlaybackStepMessage
+
+Worker message carrying one playback step and aggregate markers.
+
+Besides the frame snapshot itself, this message also carries summary values
+used by the HUD so the browser can show performance and progress without
+recomputing population-wide statistics on the main thread.
+
+### EvolutionWorkerMessage
+
+Union of all supported worker messages consumed by browser entry.
+
+A closed union keeps the main-thread message handler explicit and easy to
+audit when the protocol evolves.
+
+### PlaybackFrameStats
+
+Lightweight per-frame telemetry emitted to HUD update callback.
+
+These values are the browser-friendly metrics shown in the live status panel:
+how many birds remain, how far the leader has progressed, and how expensive
+the current playback cadence is.
+
+### BrowserPopulationBirdLike
+
+Bird shape used by utility winner/leader resolver helpers.
+
+### BrowserPopulationPipeLike
+
+Pipe shape used by utility observation-vector helpers.
+
+### BrowserDifficultyProfile
+
+Difficulty profile consumed by simulation observation helpers.
+
+This bundles the three variables that define how demanding a stretch of the
+course is: corridor width, pipe speed, and spawn cadence.
 
 ### PopulationRenderState
 
@@ -193,62 +245,6 @@ Mutable render-state model consumed by the population frame renderer.
 The playback layer incrementally updates this state as worker snapshots
 arrive, which lets rendering stay deterministic without re-deriving world
 history from scratch each frame.
-
-### PositionedNetworkNodeLike
-
-Positioned node instance used by network visualization drawing.
-
-Layout and rendering are split: first a node is assigned screen coordinates,
-then the renderer paints it.
-
-### RenderClosedOuterBoxInput
-
-Input contract for outer frame rendering helper.
-
-The outer frame is the decorative shell that visually separates the playable
-world and telemetry panels from the rest of the page.
-
-### RenderStandaloneTitleBoxInput
-
-Canvas frame-layout contracts for the Flappy Bird browser demo.
-
-These types support the demo's deliberately stylized text-frame chrome: title
-boxes, outer borders, and viewport transforms that make the example feel more
-like an instrument panel than a plain canvas game.
-
-### RngLike
-
-Minimal random source contract used by utility random helpers.
-
-The narrow contract keeps deterministic spawn utilities portable across
-browser and test contexts.
-
-### RuntimeWindow
-
-Runtime window contract for the Flappy Bird browser demo.
-
-The demo exposes a small debug-friendly surface on `window` so manual browser
-experiments and docs examples can start the simulation without importing the
-bundle as a module.
-
-### SerializedNetwork
-
-Worker transport contracts for the Flappy Bird browser runtime.
-
-The browser UI and the evolution worker communicate through a deliberately
-explicit message protocol. The goal is educational as well as practical: it
-makes it obvious which values are computed off-thread, which snapshots are
-transferred frame-by-frame, and which events advance the demo state.
-
-If you want background reading, the Wikipedia article on "message passing"
-provides a useful conceptual frame for this boundary.
-
-### TextFrameMetrics
-
-Canvas text-grid metrics used for frame rendering layout helpers.
-
-The frame renderer measures glyph and row geometry once, then uses that grid
-to place ASCII-style UI elements consistently.
 
 ### TrailPoint
 
@@ -264,12 +260,61 @@ Mutable trail cache keyed by bird index for frame rendering.
 This cache exists purely for visualization ergonomics; it is not part of the
 worker simulation state.
 
+### RngLike
+
+Minimal random source contract used by utility random helpers.
+
+The narrow contract keeps deterministic spawn utilities portable across
+browser and test contexts.
+
+### RenderStandaloneTitleBoxInput
+
+Input contract for standalone title frame rendering helper.
+
+### RenderClosedOuterBoxInput
+
+Input contract for outer frame rendering helper.
+
+The outer frame is the decorative shell that visually separates the playable
+world and telemetry panels from the rest of the page.
+
 ### ViewportInfo
 
 Viewport transform values for world-to-canvas rendering.
 
 These numbers answer the classic graphics question: how does one unit in the
 simulated world map into the current canvas rectangle?
+
+### TextFrameMetrics
+
+Canvas text-grid metrics used for frame rendering layout helpers.
+
+The frame renderer measures glyph and row geometry once, then uses that grid
+to place ASCII-style UI elements consistently.
+
+### NetworkVisualizationHandle
+
+Draw callback contract for network architecture panel updates.
+
+### ColorTier
+
+Connection or bias tier used for color mapping ramps.
+
+Visualization buckets continuous weights into legible color bands so humans
+can scan sign and magnitude at a glance.
+
+### ColorLegendRow
+
+Legend row model for network visualization color legends.
+
+Each row labels a numeric interval and the color used to render it.
+
+### NetworkLegendLayout
+
+Precomputed legend panel layout used by visualization renderer.
+
+Layout is resolved up front so the draw path can stay focused on painting,
+not recomputing geometry every frame.
 
 ### VisualNetworkConnectionLike
 
@@ -285,37 +330,31 @@ Lightweight node shape used by network visualization drawing.
 This shape keeps the renderer independent from the concrete Network class
 while still exposing the semantic fields that matter visually.
 
-## browser-entry/browser-entry.stats.types.ts
+### PositionedNetworkNodeLike
 
-### browser-entry.stats.types
+Positioned node instance used by network visualization drawing.
+
+Layout and rendering are split: first a node is assigned screen coordinates,
+then the renderer paints it.
+
+### NetworkNodeDimensionsLike
+
+Pixel dimensions used for network-node rectangle rendering.
+
+Keeping node box dimensions explicit makes legend and topology layout easier
+to tune without hidden drawing constants.
+
+## browser-entry/browser-entry.stats.types.ts
 
 HUD and runtime stats contracts for the Flappy Bird browser demo.
 
 The browser HUD is intentionally declarative: keys describe what should be
 shown, and helper utilities map those keys to DOM rows and live values. That
 keeps the status panel readable even as telemetry grows.
-
-### CreateFlappyStatsTableRowsInput
-
-Input contract for declarative runtime stats table row builder.
-
-The builder needs both the target table and a small policy surface that says
-whether instrumentation rows should appear and how rows should be colored.
-
-### FlappyStatsCategoryColors
-
-Color pair used for stats category key/value styling.
-
-The HUD uses paired colors so labels and values stay visually grouped while
-still separating categories such as current run, telemetry, and best-so-far.
 
 ### FlappyStatsKey
 
-HUD and runtime stats contracts for the Flappy Bird browser demo.
-
-The browser HUD is intentionally declarative: keys describe what should be
-shown, and helper utilities map those keys to DOM rows and live values. That
-keeps the status panel readable even as telemetry grows.
+Runtime stats table key union used across browser-entry helpers.
 
 ### FlappyStatsRowDescriptor
 
@@ -331,15 +370,31 @@ Runtime lookup map of stat keys to writable value cells.
 This acts like a small DOM index so the update loop can mutate the correct
 cells directly without repeatedly querying the document.
 
-## browser-entry/browser-entry.render.types.ts
+### FlappyStatsCategoryColors
 
-### browser-entry.render.types
+Color pair used for stats category key/value styling.
+
+The HUD uses paired colors so labels and values stay visually grouped while
+still separating categories such as current run, telemetry, and best-so-far.
+
+### CreateFlappyStatsTableRowsInput
+
+Input contract for declarative runtime stats table row builder.
+
+The builder needs both the target table and a small policy surface that says
+whether instrumentation rows should appear and how rows should be colored.
+
+## browser-entry/browser-entry.render.types.ts
 
 Canvas frame-layout contracts for the Flappy Bird browser demo.
 
 These types support the demo's deliberately stylized text-frame chrome: title
 boxes, outer borders, and viewport transforms that make the example feel more
 like an instrument panel than a plain canvas game.
+
+### RenderStandaloneTitleBoxInput
+
+Input contract for standalone title frame rendering helper.
 
 ### RenderClosedOuterBoxInput
 
@@ -348,13 +403,12 @@ Input contract for outer frame rendering helper.
 The outer frame is the decorative shell that visually separates the playable
 world and telemetry panels from the rest of the page.
 
-### RenderStandaloneTitleBoxInput
+### ViewportInfo
 
-Canvas frame-layout contracts for the Flappy Bird browser demo.
+Viewport transform values for world-to-canvas rendering.
 
-These types support the demo's deliberately stylized text-frame chrome: title
-boxes, outer borders, and viewport transforms that make the example feel more
-like an instrument panel than a plain canvas game.
+These numbers answer the classic graphics question: how does one unit in the
+simulated world map into the current canvas rectangle?
 
 ### TextFrameMetrics
 
@@ -363,16 +417,7 @@ Canvas text-grid metrics used for frame rendering layout helpers.
 The frame renderer measures glyph and row geometry once, then uses that grid
 to place ASCII-style UI elements consistently.
 
-### ViewportInfo
-
-Viewport transform values for world-to-canvas rendering.
-
-These numbers answer the classic graphics question: how does one unit in the
-simulated world map into the current canvas rectangle?
-
 ## browser-entry/browser-entry.worker.types.ts
-
-### browser-entry.worker.types
 
 Worker transport contracts for the Flappy Bird browser runtime.
 
@@ -383,6 +428,39 @@ transferred frame-by-frame, and which events advance the demo state.
 
 If you want background reading, the Wikipedia article on "message passing"
 provides a useful conceptual frame for this boundary.
+
+### SerializedNetwork
+
+Loose JSON-compatible network payload used by worker messages.
+
+### PopulationPipe
+
+Renderable pipe state snapshot emitted by the playback worker.
+
+This is the smallest pipe shape the browser renderer needs for one frame:
+horizontal position plus the vertical corridor geometry.
+
+### PopulationBird
+
+Renderable bird state snapshot emitted by the playback worker.
+
+The browser does not receive full neural state here. It only gets the fields
+needed for presentation and HUD summaries, which keeps per-frame transport
+light.
+
+### PackedPlaybackPipeSnapshot
+
+Packed typed-array payload for playback pipe snapshot transport.
+
+Typed arrays keep frame payloads compact and predictable, which matters when
+the worker is streaming many birds and pipes across animation frames.
+
+### PackedPlaybackBirdSnapshot
+
+Packed typed-array payload for playback bird snapshot transport.
+
+This mirrors the pipe packing strategy so playback can move large population
+snapshots with less allocation pressure than object-per-bird messages.
 
 ### EvolutionGenerationPayload
 
@@ -396,13 +474,9 @@ network for visualization or playback.
 
 Worker message emitted when a generation has completed evolving.
 
-### EvolutionPlaybackStepMessage
+### EvolutionWorkerErrorMessage
 
-Worker message carrying one playback step and aggregate markers.
-
-Besides the frame snapshot itself, this message also carries summary values
-used by the HUD so the browser can show performance and progress without
-recomputing population-wide statistics on the main thread.
+Worker message emitted for simulation/playback errors.
 
 ### EvolutionPlaybackStepSnapshot
 
@@ -412,9 +486,13 @@ A snapshot combines geometry, packed population state, and lightweight world
 metadata so the browser can render a deterministic frame without rerunning
 the simulation locally.
 
-### EvolutionWorkerErrorMessage
+### EvolutionPlaybackStepMessage
 
-Worker message emitted for simulation/playback errors.
+Worker message carrying one playback step and aggregate markers.
+
+Besides the frame snapshot itself, this message also carries summary values
+used by the HUD so the browser can show performance and progress without
+recomputing population-wide statistics on the main thread.
 
 ### EvolutionWorkerMessage
 
@@ -422,20 +500,6 @@ Union of all supported worker messages consumed by browser entry.
 
 A closed union keeps the main-thread message handler explicit and easy to
 audit when the protocol evolves.
-
-### PackedPlaybackBirdSnapshot
-
-Packed typed-array payload for playback bird snapshot transport.
-
-This mirrors the pipe packing strategy so playback can move large population
-snapshots with less allocation pressure than object-per-bird messages.
-
-### PackedPlaybackPipeSnapshot
-
-Packed typed-array payload for playback pipe snapshot transport.
-
-Typed arrays keep frame payloads compact and predictable, which matters when
-the worker is streaming many birds and pipes across animation frames.
 
 ### PlaybackFrameStats
 
@@ -445,36 +509,7 @@ These values are the browser-friendly metrics shown in the live status panel:
 how many birds remain, how far the leader has progressed, and how expensive
 the current playback cadence is.
 
-### PopulationBird
-
-Renderable bird state snapshot emitted by the playback worker.
-
-The browser does not receive full neural state here. It only gets the fields
-needed for presentation and HUD summaries, which keeps per-frame transport
-light.
-
-### PopulationPipe
-
-Renderable pipe state snapshot emitted by the playback worker.
-
-This is the smallest pipe shape the browser renderer needs for one frame:
-horizontal position plus the vertical corridor geometry.
-
-### SerializedNetwork
-
-Worker transport contracts for the Flappy Bird browser runtime.
-
-The browser UI and the evolution worker communicate through a deliberately
-explicit message protocol. The goal is educational as well as practical: it
-makes it obvious which values are computed off-thread, which snapshots are
-transferred frame-by-frame, and which events advance the demo state.
-
-If you want background reading, the Wikipedia article on "message passing"
-provides a useful conceptual frame for this boundary.
-
 ## browser-entry/browser-entry.runtime.types.ts
-
-### browser-entry.runtime.types
 
 Public lifecycle contracts for the Flappy Bird browser runtime.
 
@@ -485,12 +520,7 @@ details.
 
 ### FlappyBirdRunHandle
 
-Public lifecycle contracts for the Flappy Bird browser runtime.
-
-These types describe how the demo is started, stopped, and exposed on the
-browser `window` object. They are intentionally small because callers should
-control the demo at a high level without depending on private implementation
-details.
+Handle returned by `start` for controlling demo execution lifecycle.
 
 ### RuntimeWindow
 
@@ -502,23 +532,25 @@ bundle as a module.
 
 ## browser-entry/browser-entry.simulation.types.ts
 
+Simulation-facing browser contracts shared by playback helpers.
+
+These types describe the minimum world state the browser needs while it is
+reconstructing, rendering, or summarizing worker-produced frames.
+
+### BrowserPopulationBirdLike
+
+Bird shape used by utility winner/leader resolver helpers.
+
+### BrowserPopulationPipeLike
+
+Pipe shape used by utility observation-vector helpers.
+
 ### BrowserDifficultyProfile
 
 Difficulty profile consumed by simulation observation helpers.
 
 This bundles the three variables that define how demanding a stretch of the
 course is: corridor width, pipe speed, and spawn cadence.
-
-### BrowserPopulationBirdLike
-
-Simulation-facing browser contracts shared by playback helpers.
-
-These types describe the minimum world state the browser needs while it is
-reconstructing, rendering, or summarizing worker-produced frames.
-
-### BrowserPopulationPipeLike
-
-Pipe shape used by utility observation-vector helpers.
 
 ### PopulationRenderState
 
@@ -527,13 +559,6 @@ Mutable render-state model consumed by the population frame renderer.
 The playback layer incrementally updates this state as worker snapshots
 arrive, which lets rendering stay deterministic without re-deriving world
 history from scratch each frame.
-
-### RngLike
-
-Minimal random source contract used by utility random helpers.
-
-The narrow contract keeps deterministic spawn utilities portable across
-browser and test contexts.
 
 ### TrailPoint
 
@@ -549,36 +574,14 @@ Mutable trail cache keyed by bird index for frame rendering.
 This cache exists purely for visualization ergonomics; it is not part of the
 worker simulation state.
 
+### RngLike
+
+Minimal random source contract used by utility random helpers.
+
+The narrow contract keeps deterministic spawn utilities portable across
+browser and test contexts.
+
 ## browser-entry/browser-entry.visualization.types.ts
-
-### ColorLegendRow
-
-Legend row model for network visualization color legends.
-
-Each row labels a numeric interval and the color used to render it.
-
-### ColorTier
-
-Connection or bias tier used for color mapping ramps.
-
-Visualization buckets continuous weights into legible color bands so humans
-can scan sign and magnitude at a glance.
-
-### NetworkLegendLayout
-
-Precomputed legend panel layout used by visualization renderer.
-
-Layout is resolved up front so the draw path can stay focused on painting,
-not recomputing geometry every frame.
-
-### NetworkNodeDimensionsLike
-
-Pixel dimensions used for network-node rectangle rendering.
-
-Keeping node box dimensions explicit makes legend and topology layout easier
-to tune without hidden drawing constants.
-
-### NetworkVisualizationHandle
 
 Network-visualization contracts for the Flappy Bird browser demo.
 
@@ -587,12 +590,29 @@ controllers as structures, not just as scores. These types describe the
 lightweight shapes used by the architecture panel so rendering logic can stay
 decoupled from the full internal network implementation.
 
-### PositionedNetworkNodeLike
+### NetworkVisualizationHandle
 
-Positioned node instance used by network visualization drawing.
+Draw callback contract for network architecture panel updates.
 
-Layout and rendering are split: first a node is assigned screen coordinates,
-then the renderer paints it.
+### ColorTier
+
+Connection or bias tier used for color mapping ramps.
+
+Visualization buckets continuous weights into legible color bands so humans
+can scan sign and magnitude at a glance.
+
+### ColorLegendRow
+
+Legend row model for network visualization color legends.
+
+Each row labels a numeric interval and the color used to render it.
+
+### NetworkLegendLayout
+
+Precomputed legend panel layout used by visualization renderer.
+
+Layout is resolved up front so the draw path can stay focused on painting,
+not recomputing geometry every frame.
 
 ### VisualNetworkConnectionLike
 
@@ -608,38 +628,29 @@ Lightweight node shape used by network visualization drawing.
 This shape keeps the renderer independent from the concrete Network class
 while still exposing the semantic fields that matter visually.
 
-## browser-entry/browser-entry.ts
+### PositionedNetworkNodeLike
 
-### browser-entry
+Positioned node instance used by network visualization drawing.
 
-Browser demo public entry for the Flappy Bird example.
+Layout and rendering are split: first a node is assigned screen coordinates,
+then the renderer paints it.
 
-This boundary is the hand-off point between library consumers and the demo's
-browser runtime. Calling `start` boots the canvas UI, worker channel, HUD,
-and playback loop without exposing all of that internal orchestration as part
-of the public API.
+### NetworkNodeDimensionsLike
 
-In other words, this file is intentionally tiny because it acts like a clean
-facade over a much larger interactive system.
+Pixel dimensions used for network-node rectangle rendering.
 
-### FlappyBirdRunHandle
-
-Public lifecycle contracts for the Flappy Bird browser runtime.
-
-These types describe how the demo is started, stopped, and exposed on the
-browser `window` object. They are intentionally small because callers should
-control the demo at a high level without depending on private implementation
-details.
-
-### start
-
-`(container: import("test/examples/flappy_bird/browser-entry/runtime/runtime.types").RuntimeContainerTarget) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.runtime.types").FlappyBirdRunHandle>`
+Keeping node box dimensions explicit makes legend and topology layout easier
+to tune without hidden drawing constants.
 
 ## browser-entry/browser-entry.host.utils.ts
 
 ### createCanvasHostInternal
 
-`(containerElement: HTMLElement) => import("test/examples/flappy_bird/browser-entry/host/host.types").CanvasHostResult`
+```ts
+createCanvasHostInternal(
+  containerElement: HTMLElement,
+): CanvasHostResult
+```
 
 Builds the browser demo host tree and returns rendering handles.
 
@@ -654,7 +665,12 @@ Returns: Canvas handles, stats cells and network render callback.
 
 ### updateStatsTableValues
 
-`(statsValueByKey: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>, partialValues: Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, string>>) => void`
+```ts
+updateStatsTableValues(
+  statsValueByKey: Partial<Record<FlappyStatsKey, HTMLTableCellElement>>,
+  partialValues: Partial<Record<FlappyStatsKey, string>>,
+): void
+```
 
 Applies partial stat updates to the rendered stats table.
 
@@ -669,21 +685,15 @@ Returns: Nothing.
 
 ## browser-entry/browser-entry.math.utils.ts
 
-### applyAlphaToHexColor
-
-`(hexColor: string, alphaValue: number) => string`
-
-Converts a six-digit hex color to rgba with the requested alpha.
-
-Parameters:
-- `hexColor` - - Color in `#RRGGBB` form.
-- `alphaValue` - - Alpha value to apply.
-
-Returns: rgba color string, or original value when not 6-digit hex.
-
 ### clamp
 
-`(value: number, min: number, max: number) => number`
+```ts
+clamp(
+  value: number,
+  min: number,
+  max: number,
+): number
+```
 
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
@@ -696,7 +706,11 @@ Returns: Clamped value.
 
 ### clamp01
 
-`(value: number) => number`
+```ts
+clamp01(
+  value: number,
+): number
+```
 
 Clamps a numeric value to the inclusive `[0, 1]` interval.
 
@@ -707,7 +721,13 @@ Returns: Value clamped between 0 and 1.
 
 ### interpolateValue
 
-`(startValue: number, endValue: number, progress: number) => number`
+```ts
+interpolateValue(
+  startValue: number,
+  endValue: number,
+  progress: number,
+): number
+```
 
 Linear interpolation helper.
 
@@ -718,11 +738,69 @@ Parameters:
 
 Returns: Interpolated value.
 
+### applyAlphaToHexColor
+
+```ts
+applyAlphaToHexColor(
+  hexColor: string,
+  alphaValue: number,
+): string
+```
+
+Converts a six-digit hex color to rgba with the requested alpha.
+
+Parameters:
+- `hexColor` - - Color in `#RRGGBB` form.
+- `alphaValue` - - Alpha value to apply.
+
+Returns: rgba color string, or original value when not 6-digit hex.
+
 ## browser-entry/browser-entry.spawn.utils.ts
+
+### sampleGapCenterY
+
+```ts
+sampleGapCenterY(
+  rng: RngLike,
+  worldHeightPx: number,
+): number
+```
+
+Samples a random gap center y-position.
+
+Parameters:
+- `rng` - - Deterministic RNG.
+- `worldHeightPx` - - World height used to derive valid gap-center bounds.
+
+Returns: Sampled y-position.
+
+### resolveNextSpawnGapCenterY
+
+```ts
+resolveNextSpawnGapCenterY(
+  previousGapCenterYPx: number,
+  rng: RngLike,
+  worldHeightPx: number,
+): number
+```
+
+Resolves next gap center with bounded per-pipe delta.
+
+Parameters:
+- `previousGapCenterYPx` - - Previous spawn gap center.
+- `rng` - - Deterministic RNG.
+- `worldHeightPx` - - World height used to clamp candidate gap centers.
+
+Returns: Next gap center y-position.
 
 ### createBirdColor
 
-`(birdIndex: number, totalBirds: number) => string`
+```ts
+createBirdColor(
+  birdIndex: number,
+  totalBirds: number,
+): string
+```
 
 Resolves deterministic bird color from palette index.
 
@@ -732,9 +810,49 @@ Parameters:
 
 Returns: Hex color string.
 
+### resolveNextSpawnGapSize
+
+```ts
+resolveNextSpawnGapSize(
+  previousSpawnGapPx: number | undefined,
+  difficultyProfile: BrowserDifficultyProfile,
+  rng: RngLike,
+): number
+```
+
+Resolves next spawn gap size using progressive shrink and jitter.
+
+Parameters:
+- `previousSpawnGapPx` - - Previous spawn gap size.
+- `difficultyProfile` - - Active difficulty profile.
+- `rng` - - Deterministic RNG.
+
+Returns: Next spawn gap size.
+
+### resolveNextSpawnIntervalFrames
+
+```ts
+resolveNextSpawnIntervalFrames(
+  previousSpawnIntervalFrames: number | undefined,
+  difficultyProfile: BrowserDifficultyProfile,
+): number
+```
+
+Resolves next spawn interval using progressive shrink.
+
+Parameters:
+- `previousSpawnIntervalFrames` - - Previous spawn interval.
+- `difficultyProfile` - - Active difficulty profile.
+
+Returns: Next spawn interval in frames.
+
 ### resolveGapCenterUpperBoundYPx
 
-`(worldHeightPx: number) => number`
+```ts
+resolveGapCenterUpperBoundYPx(
+  worldHeightPx: number,
+): number
+```
 
 Resolves the exclusive upper bound used for gap-center sampling.
 
@@ -748,61 +866,15 @@ Parameters:
 
 Returns: Exclusive upper bound for `nextInt(minInclusive, maxExclusive)`.
 
-### resolveNextSpawnGapCenterY
-
-`(previousGapCenterYPx: number, rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike, worldHeightPx: number) => number`
-
-Resolves next gap center with bounded per-pipe delta.
-
-Parameters:
-- `previousGapCenterYPx` - - Previous spawn gap center.
-- `rng` - - Deterministic RNG.
-- `worldHeightPx` - - World height used to clamp candidate gap centers.
-
-Returns: Next gap center y-position.
-
-### resolveNextSpawnGapSize
-
-`(previousSpawnGapPx: number | undefined, difficultyProfile: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile, rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike) => number`
-
-Resolves next spawn gap size using progressive shrink and jitter.
-
-Parameters:
-- `previousSpawnGapPx` - - Previous spawn gap size.
-- `difficultyProfile` - - Active difficulty profile.
-- `rng` - - Deterministic RNG.
-
-Returns: Next spawn gap size.
-
-### resolveNextSpawnIntervalFrames
-
-`(previousSpawnIntervalFrames: number | undefined, difficultyProfile: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile) => number`
-
-Resolves next spawn interval using progressive shrink.
-
-Parameters:
-- `previousSpawnIntervalFrames` - - Previous spawn interval.
-- `difficultyProfile` - - Active difficulty profile.
-
-Returns: Next spawn interval in frames.
-
-### sampleGapCenterY
-
-`(rng: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").RngLike, worldHeightPx: number) => number`
-
-Samples a random gap center y-position.
-
-Parameters:
-- `rng` - - Deterministic RNG.
-- `worldHeightPx` - - World height used to derive valid gap-center bounds.
-
-Returns: Sampled y-position.
-
 ## browser-entry/browser-entry.stats.utils.ts
 
 ### createFlappyStatsTableRows
 
-`(input: import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").CreateFlappyStatsTableRowsInput) => Partial<Record<import("test/examples/flappy_bird/browser-entry/browser-entry.stats.types").FlappyStatsKey, HTMLTableCellElement>>`
+```ts
+createFlappyStatsTableRows(
+  input: CreateFlappyStatsTableRowsInput,
+): Partial<Record<FlappyStatsKey, HTMLTableCellElement>>
+```
 
 Builds stats table rows and returns value-cell lookup by key.
 
@@ -813,7 +885,11 @@ Returns: Mapping from stat key to value cell.
 
 ### formatArchitectureStatsValue
 
-`(architectureValue: string) => string`
+```ts
+formatArchitectureStatsValue(
+  architectureValue: string,
+): string
+```
 
 Splits architecture suffix onto a second line for readability in the stats table.
 
@@ -824,8 +900,6 @@ Returns: Line-broken label value.
 
 ## browser-entry/browser-entry.playback.utils.ts
 
-### browser-entry.playback.utils
-
 Compatibility facade for the browser-entry playback boundary.
 
 Older imports still reach playback through this file, while the real
@@ -835,7 +909,15 @@ into a clearer module boundary.
 
 ### animatePopulationEpisodeInternal
 
-`(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, evolutionWorker: Worker, onFrameStats: (stats: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").PlaybackFrameStats) => void) => Promise<import("test/examples/flappy_bird/browser-entry/playback/playback.orchestration.types").PlaybackEpisodeSummary>`
+```ts
+animatePopulationEpisodeInternal(
+  canvas: HTMLCanvasElement,
+  context: CanvasRenderingContext2D,
+  evolutionWorker: Worker,
+  onFrameStats: (stats: PlaybackFrameStats) => void,
+  onChampionChanged: ((event: PlaybackChampionChangedEvent) => void) | undefined,
+): Promise<PlaybackEpisodeSummary>
+```
 
 Internal playback orchestration entry retained for compatibility re-exports.
 
@@ -852,35 +934,28 @@ Returns: Aggregate playback summary for the current episode.
 
 ## browser-entry/browser-entry.viewport.utils.ts
 
-### resolvePipeSpawnXPx
+### resolveWorldViewport
 
-`(visibleWorldWidthPx: number) => number`
+```ts
+resolveWorldViewport(
+  canvas: HTMLCanvasElement,
+): ViewportInfo
+```
 
-Resolves the world-space x spawn position for new pipes.
-
-Parameters:
-- `visibleWorldWidthPx` - - Current visible world width.
-
-Returns: Spawn x-position.
-
-### resolveVisibleWorldHeightPx
-
-`(canvas: HTMLCanvasElement) => number`
-
-Resolves visible world height represented by the current canvas.
-
-Educational note:
-The current viewport model uses a 1:1 mapping between canvas pixels and
-world-space pixels, so visible height is the canvas height directly.
+Resolves world viewport transformation based on canvas size.
 
 Parameters:
 - `canvas` - - Playback canvas.
 
-Returns: Visible height in world-space pixels.
+Returns: Viewport scale and offsets.
 
 ### resolveVisibleWorldWidthPx
 
-`(canvas: HTMLCanvasElement) => number`
+```ts
+resolveVisibleWorldWidthPx(
+  canvas: HTMLCanvasElement,
+): number
+```
 
 Resolves visible world width represented by the current canvas.
 
@@ -893,55 +968,51 @@ Parameters:
 
 Returns: Visible width in world-space pixels.
 
-### resolveWorldViewport
+### resolveVisibleWorldHeightPx
 
-`(canvas: HTMLCanvasElement) => import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").ViewportInfo`
+```ts
+resolveVisibleWorldHeightPx(
+  canvas: HTMLCanvasElement,
+): number
+```
 
-Resolves world viewport transformation based on canvas size.
+Resolves visible world height represented by the current canvas.
+
+Educational note:
+The current viewport model uses a 1:1 mapping between canvas pixels and
+world-space pixels, so visible height is the canvas height directly.
 
 Parameters:
 - `canvas` - - Playback canvas.
 
-Returns: Viewport scale and offsets.
+Returns: Visible height in world-space pixels.
+
+### resolvePipeSpawnXPx
+
+```ts
+resolvePipeSpawnXPx(
+  visibleWorldWidthPx: number,
+): number
+```
+
+Resolves the world-space x spawn position for new pipes.
+
+Parameters:
+- `visibleWorldWidthPx` - - Current visible world width.
+
+Returns: Spawn x-position.
 
 ## browser-entry/browser-entry.telemetry.utils.ts
 
-### createMinorGcObserver
-
-`(minorGcTimestampsMs: number[]) => PerformanceObserver | undefined`
-
-Creates a PerformanceObserver that tracks minor GC events when supported.
-
-Parameters:
-- `minorGcTimestampsMs` - - Mutable minor-GC timestamp buffer.
-
-Returns: Observer when supported; otherwise `undefined`.
-
-### resolveEventsPerMinute
-
-`(samples: number[]) => number`
-
-Resolves events per minute from the latest sample window.
-
-Parameters:
-- `samples` - - Event timestamps.
-
-Returns: Events-per-minute estimate.
-
-### resolveHudUpdatesPerSecond
-
-`(samples: number[]) => number`
-
-Resolves HUD updates per second from the latest sample window.
-
-Parameters:
-- `samples` - - HUD update timestamps.
-
-Returns: Updates-per-second estimate.
-
 ### trimSamplesToWindow
 
-`(samples: number[], windowMs: number, nowMs: number) => void`
+```ts
+trimSamplesToWindow(
+  samples: number[],
+  windowMs: number,
+  nowMs: number,
+): void
+```
 
 Trims timestamp samples to a sliding time window.
 
@@ -952,68 +1023,64 @@ Parameters:
 
 Returns: Nothing.
 
+### resolveHudUpdatesPerSecond
+
+```ts
+resolveHudUpdatesPerSecond(
+  samples: number[],
+): number
+```
+
+Resolves HUD updates per second from the latest sample window.
+
+Parameters:
+- `samples` - - HUD update timestamps.
+
+Returns: Updates-per-second estimate.
+
+### resolveEventsPerMinute
+
+```ts
+resolveEventsPerMinute(
+  samples: number[],
+): number
+```
+
+Resolves events per minute from the latest sample window.
+
+Parameters:
+- `samples` - - Event timestamps.
+
+Returns: Events-per-minute estimate.
+
+### createMinorGcObserver
+
+```ts
+createMinorGcObserver(
+  minorGcTimestampsMs: number[],
+): PerformanceObserver | undefined
+```
+
+Creates a PerformanceObserver that tracks minor GC events when supported.
+
+Parameters:
+- `minorGcTimestampsMs` - - Mutable minor-GC timestamp buffer.
+
+Returns: Observer when supported; otherwise `undefined`.
+
 ## browser-entry/browser-entry.text-frame.utils.ts
-
-### buildCenteredTitleBoxLines
-
-`(centeredColumns: number, titleText: string) => string[]`
-
-Builds an ASCII centered title box.
-
-Parameters:
-- `centeredColumns` - - Available centered column count.
-- `titleText` - - Title text.
-
-Returns: Three-row title box.
-
-### buildOuterBoxLines
-
-`(centeredColumns: number, totalRows: number) => string[]`
-
-Builds an ASCII outer frame with closed borders.
-
-Parameters:
-- `centeredColumns` - - Centered column count.
-- `totalRows` - - Total row count.
-
-Returns: Frame lines.
-
-### renderClosedOuterBox
-
-`(input: import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").RenderClosedOuterBoxInput) => void`
-
-Renders a complete closed outer glyph box.
-
-Parameters:
-- `input` - - Rendering input object.
-
-Returns: Nothing.
-
-### renderStandaloneTitleBox
-
-`(input: import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").RenderStandaloneTitleBoxInput) => void`
-
-Renders only the centered title box.
-
-Parameters:
-- `input` - - Rendering input object.
-
-Returns: Nothing.
-
-### resolveGlyphWidthPx
-
-`(context: CanvasRenderingContext2D) => number`
-
-Resolves a stable glyph width used for frame-column math.
-
-Parameters:
-- `context` - - Rendering context used to measure text.
-
-Returns: Floored glyph width clamped to a minimum pixel value.
 
 ### resolveTextFrameMetrics
 
-`(frameWidthPx: number, frameHeightPx: number, glyphWidthPx: number, rowHeightPx: number, minimumColumns: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.render.types").TextFrameMetrics`
+```ts
+resolveTextFrameMetrics(
+  frameWidthPx: number,
+  frameHeightPx: number,
+  glyphWidthPx: number,
+  rowHeightPx: number,
+  minimumColumns: number,
+): TextFrameMetrics
+```
 
 Resolves core text-frame metrics for glyph box rendering.
 
@@ -1026,80 +1093,101 @@ Parameters:
 
 Returns: Text frame metrics.
 
-## browser-entry/browser-entry.observation.utils.ts
+### buildOuterBoxLines
 
-### commitObservationMemoryStep
+```ts
+buildOuterBoxLines(
+  centeredColumns: number,
+  totalRows: number,
+): string[]
+```
 
-`(observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState, observationFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, shouldFlap: boolean) => void`
-
-Commits one browser decision step into temporal memory.
+Builds an ASCII outer frame with closed borders.
 
 Parameters:
-- `observationMemoryState` - - Mutable memory state for one bird.
-- `observationFeatures` - - Structured features used for this decision.
-- `shouldFlap` - - Action selected by the policy.
+- `centeredColumns` - - Centered column count.
+- `totalRows` - - Total row count.
+
+Returns: Frame lines.
+
+### buildCenteredTitleBoxLines
+
+```ts
+buildCenteredTitleBoxLines(
+  centeredColumns: number,
+  titleText: string,
+): string[]
+```
+
+Builds an ASCII centered title box.
+
+Parameters:
+- `centeredColumns` - - Available centered column count.
+- `titleText` - - Title text.
+
+Returns: Three-row title box.
+
+### renderStandaloneTitleBox
+
+```ts
+renderStandaloneTitleBox(
+  input: RenderStandaloneTitleBoxInput,
+): void
+```
+
+Renders only the centered title box.
+
+Parameters:
+- `input` - - Rendering input object.
 
 Returns: Nothing.
 
-### hasAliveBirds
+### renderClosedOuterBox
 
-`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => boolean`
+```ts
+renderClosedOuterBox(
+  input: RenderClosedOuterBoxInput,
+): void
+```
 
-Checks whether at least one bird remains alive.
-
-Parameters:
-- `birds` - - Population birds.
-
-Returns: True when any bird is alive.
-
-### resolveAliveBirdCount
-
-`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => number`
-
-Counts birds that are still alive.
+Renders a complete closed outer glyph box.
 
 Parameters:
-- `birds` - - Population birds.
+- `input` - - Rendering input object.
 
-Returns: Alive bird count.
+Returns: Nothing.
 
-### resolveFlapDecision
+### resolveGlyphWidthPx
 
-`(rawOutputs: unknown) => boolean`
+```ts
+resolveGlyphWidthPx(
+  context: CanvasRenderingContext2D,
+): number
+```
 
-Resolves flap/no-flap decision from network outputs.
-
-Parameters:
-- `rawOutputs` - - Activation output payload.
-
-Returns: True when flap should trigger.
-
-### resolveFramePrimaryWinnerIndex
-
-`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[], includeAliveOnly: boolean) => number`
-
-Resolves winner index for current frame.
+Resolves a stable glyph width used for frame-column math.
 
 Parameters:
-- `birds` - - Population birds.
-- `includeAliveOnly` - - When true, ignores dead birds.
+- `context` - - Rendering context used to measure text.
 
-Returns: Winner index, or `-1` when unavailable.
+Returns: Floored glyph width clamped to a minimum pixel value.
 
-### resolveLeaderPipesPassed
-
-`(birds: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationBirdLike[]) => number`
-
-Resolves leading pipes-passed score in the population.
-
-Parameters:
-- `birds` - - Population birds.
-
-Returns: Maximum pipes passed.
+## browser-entry/browser-entry.observation.utils.ts
 
 ### resolveObservationVector
 
-`(birdYPx: number, velocityYPxPerFrame: number, pipes: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike[], visibleWorldWidthPx: number, worldHeightPx: number, difficultyProfile: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserDifficultyProfile, activeSpawnIntervalFrames: number, observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => { observationVector: number[]; observationFeatures: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures; }`
+```ts
+resolveObservationVector(
+  birdYPx: number,
+  velocityYPxPerFrame: number,
+  pipes: BrowserPopulationPipeLike[],
+  visibleWorldWidthPx: number,
+  worldHeightPx: number,
+  difficultyProfile: BrowserDifficultyProfile,
+  activeSpawnIntervalFrames: number,
+  observationMemoryState: SharedObservationMemoryState,
+): { observationVector: number[]; observationFeatures: SharedObservationFeatures; }
+```
 
 Builds the normalized observation vector consumed by bird networks.
 
@@ -1115,9 +1203,32 @@ Parameters:
 
 Returns: Ordered normalized observation vector.
 
+### commitObservationMemoryStep
+
+```ts
+commitObservationMemoryStep(
+  observationMemoryState: SharedObservationMemoryState,
+  observationFeatures: SharedObservationFeatures,
+  shouldFlap: boolean,
+): void
+```
+
+Commits one browser decision step into temporal memory.
+
+Parameters:
+- `observationMemoryState` - - Mutable memory state for one bird.
+- `observationFeatures` - - Structured features used for this decision.
+- `shouldFlap` - - Action selected by the policy.
+
+Returns: Nothing.
+
 ### resolveUpcomingPipes
 
-`(pipes: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike[]) => [import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike | undefined, import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").BrowserPopulationPipeLike | undefined]`
+```ts
+resolveUpcomingPipes(
+  pipes: BrowserPopulationPipeLike[],
+): [BrowserPopulationPipeLike | undefined, BrowserPopulationPipeLike | undefined]
+```
 
 Resolves the next two upcoming pipes in front of the bird.
 
@@ -1126,9 +1237,84 @@ Parameters:
 
 Returns: Tuple of first and second upcoming pipes.
 
-## browser-entry/browser-entry.network-view.utils.ts
+### resolveFlapDecision
 
-### browser-entry.network-view.utils
+```ts
+resolveFlapDecision(
+  rawOutputs: unknown,
+): boolean
+```
+
+Resolves flap/no-flap decision from network outputs.
+
+Parameters:
+- `rawOutputs` - - Activation output payload.
+
+Returns: True when flap should trigger.
+
+### resolveAliveBirdCount
+
+```ts
+resolveAliveBirdCount(
+  birds: BrowserPopulationBirdLike[],
+): number
+```
+
+Counts birds that are still alive.
+
+Parameters:
+- `birds` - - Population birds.
+
+Returns: Alive bird count.
+
+### resolveLeaderPipesPassed
+
+```ts
+resolveLeaderPipesPassed(
+  birds: BrowserPopulationBirdLike[],
+): number
+```
+
+Resolves leading pipes-passed score in the population.
+
+Parameters:
+- `birds` - - Population birds.
+
+Returns: Maximum pipes passed.
+
+### resolveFramePrimaryWinnerIndex
+
+```ts
+resolveFramePrimaryWinnerIndex(
+  birds: BrowserPopulationBirdLike[],
+  includeAliveOnly: boolean,
+): number
+```
+
+Resolves winner index for current frame.
+
+Parameters:
+- `birds` - - Population birds.
+- `includeAliveOnly` - - When true, ignores dead birds.
+
+Returns: Winner index, or `-1` when unavailable.
+
+### hasAliveBirds
+
+```ts
+hasAliveBirds(
+  birds: BrowserPopulationBirdLike[],
+): boolean
+```
+
+Checks whether at least one bird remains alive.
+
+Parameters:
+- `birds` - - Population birds.
+
+Returns: True when any bird is alive.
+
+## browser-entry/browser-entry.network-view.utils.ts
 
 Compatibility facade for browser-entry network-view helpers.
 
@@ -1137,7 +1323,14 @@ into smaller topology, layout, label, and drawing modules.
 
 ### drawNetworkVisualization
 
-`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void`
+```ts
+drawNetworkVisualization(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): void
+```
 
 Draws a complete, layer-based visualization of the active network.
 
@@ -1152,9 +1345,21 @@ Parameters:
 
 Returns: Nothing.
 
+Example:
+
+```ts
+drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
+```
+
 ### resolveNetworkArchitectureLabel
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => string`
+```ts
+resolveNetworkArchitectureLabel(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): string
+```
 
 Resolves compact architecture label text for headers and HUD rows.
 
@@ -1170,7 +1375,13 @@ Returns: Readable architecture label.
 
 ### resolveNetworkVisualizationHeightPx
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => number`
+```ts
+resolveNetworkVisualizationHeightPx(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): number
+```
 
 Resolves responsive visualization canvas height from network shape.
 
@@ -1184,49 +1395,153 @@ Parameters:
 
 Returns: Recommended height in pixels.
 
+Example:
+
+```ts
+const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
+```
+
 ### resolveNetworkVisualizationLayers
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
+```ts
+resolveNetworkVisualizationLayers(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): VisualNetworkNodeLike[][]
+```
 
-Topology resolution helpers for the browser network view.
+Resolves layered node groups for network-view layout and rendering.
 
-These helpers answer a key visualization question: how should the current
-network be partitioned into ordered layers so layout and architecture labels
-stay meaningful even when some metadata is missing?
+Educational note:
+Layer grouping is a network-view concern because it drives sizing, node
+placement, and architecture presentation. Visualization code can still reuse
+the result, but this helper now lives with the module that owns layout.
+
+The resolver prefers explicit layer metadata when it exists, then falls back
+to a topology-derived depth estimate so even loosely structured networks can
+still be drawn in an intelligible left-to-right order.
+
+Parameters:
+- `network` - - Runtime network instance.
+- `inputSize` - - Input count fallback.
+- `outputSize` - - Output count fallback.
+
+Returns: Layered nodes for rendering.
 
 ## browser-entry/browser-entry.visualization.utils.ts
-
-### browser-entry.visualization.utils
 
 Compatibility facade for browser-entry network visualization helpers.
 
 Legacy imports still flow through this file while the visualization subsystem
 is organized into smaller, clearer modules under the dedicated folder.
 
-### createColorLegendRows
-
-`(scale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale, symbol: "w" | "b") => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]`
-
-Legend-layout helpers for network visualization.
-
-The legend explains how colors map back to numeric weights and biases. These
-helpers turn color scales into labeled rows and place the legend so it stays
-readable across different canvas sizes.
-
 ### createLogDivergingColorTiers
 
-`(input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; }) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[]`
+```ts
+createLogDivergingColorTiers(
+  input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; },
+): ColorTier[]
+```
 
-Color-scale synthesis helpers for network visualization.
+Builds logarithmic diverging color tiers with a center band and edge extension.
 
-These utilities convert raw connection weights and node biases into tiered
-neon color scales. The goal is not photorealism; it is interpretability. A
-reader should be able to glance at the network panel and see where strong
-positive, strong negative, and near-zero values live.
+Diverging scales are useful here because network parameters naturally split
+around zero. Negative and positive values should feel visually related, but
+not identical.
+
+Parameters:
+- `input` - - Tier creation options.
+
+Returns: Ordered tier list.
+
+### resolveBiasRangeColor
+
+```ts
+resolveBiasRangeColor(
+  nodeBias: number,
+): string
+```
+
+Resolves bias color for a raw node bias.
+
+Bias colors follow the same diverging logic as connection colors so the legend
+remains conceptually consistent across channels.
+
+Parameters:
+- `nodeBias` - - Node bias.
+
+Returns: Tier color.
+
+### resolveConnectionRangeColor
+
+```ts
+resolveConnectionRangeColor(
+  connectionWeight: number,
+): string
+```
+
+Resolves connection color for a raw weight.
+
+This small helper is useful when one-off drawing code wants the same color
+semantics as the full dynamic scale machinery.
+
+Parameters:
+- `connectionWeight` - - Connection weight.
+
+Returns: Tier color.
+
+### resolveNetworkVisualizationColorScales
+
+```ts
+resolveNetworkVisualizationColorScales(
+  network: default | undefined,
+): NetworkVisualizationColorScales
+```
+
+Resolves dynamic connection/bias color scales from the active network range.
+
+The active network may contain only a narrow slice of the full theoretical
+value range, so the legend adapts to what is currently present instead of
+always rendering a fixed generic scale.
+
+Parameters:
+- `network` - - Active network.
+
+Returns: Dynamic scales used by graph drawing and legend rows.
+
+### resolveTierColor
+
+```ts
+resolveTierColor(
+  value: number,
+  tiers: ColorTier[],
+  aboveTierColor: string,
+): string
+```
+
+Resolves a color from ordered tier definitions.
+
+This is the final classification step that maps one numeric weight or bias to
+the swatch color the renderer should paint.
+
+Parameters:
+- `value` - - Numeric value to classify.
+- `tiers` - - Ordered tier list.
+- `aboveTierColor` - - Fallback color for values above the last tier.
+
+Returns: Resolved color string.
 
 ### drawBiasNodesLayer
 
-`(context: CanvasRenderingContext2D, positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike, biasScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
+```ts
+drawBiasNodesLayer(
+  context: CanvasRenderingContext2D,
+  positionedNodes: PositionedNetworkNodeLike[],
+  nodeDimensions: NetworkNodeDimensionsLike,
+  biasScale: DynamicColorScale,
+): void
+```
 
 Draws all network nodes with bias labels.
 
@@ -1243,7 +1558,13 @@ Returns: Nothing.
 
 ### drawNetworkColorLegend
 
-`(context: CanvasRenderingContext2D, architectureLabel: string, colorScales: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales) => void`
+```ts
+drawNetworkColorLegend(
+  context: CanvasRenderingContext2D,
+  architectureLabel: string,
+  colorScales: NetworkVisualizationColorScales,
+): void
+```
 
 Draws the color legend for connections and node bias values.
 
@@ -1260,7 +1581,12 @@ Returns: Nothing.
 
 ### drawNetworkVisualizationHeader
 
-`(context: CanvasRenderingContext2D, architectureLabel: string) => void`
+```ts
+drawNetworkVisualizationHeader(
+  context: CanvasRenderingContext2D,
+  architectureLabel: string,
+): void
+```
 
 Draws network architecture header text.
 
@@ -1275,7 +1601,14 @@ Returns: Nothing.
 
 ### drawWeightedConnectionsLayer
 
-`(context: CanvasRenderingContext2D, runtimeConnections: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[], positionByNodeIndex: Map<number, import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>, connectionScale: import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").DynamicColorScale) => void`
+```ts
+drawWeightedConnectionsLayer(
+  context: CanvasRenderingContext2D,
+  runtimeConnections: VisualNetworkConnectionLike[],
+  positionByNodeIndex: Map<number, PositionedNetworkNodeLike>,
+  connectionScale: DynamicColorScale,
+): void
+```
 
 Draws weighted connection lines.
 
@@ -1291,51 +1624,34 @@ Parameters:
 
 Returns: Nothing.
 
-### formatNodeBiasLabel
+### createColorLegendRows
 
-`(nodeBias: number) => string`
+```ts
+createColorLegendRows(
+  scale: DynamicColorScale,
+  symbol: "w" | "b",
+): ColorLegendRow[]
+```
 
-Formats node bias labels with fixed sign and precision.
+Creates legend rows from ordered tiers.
 
-Consistent sign and precision make dense node labels easier to scan quickly in
-the rendered network panel.
-
-Parameters:
-- `nodeBias` - - Node bias value.
-
-Returns: Label text.
-
-### resolveBiasRangeColor
-
-`(nodeBias: number) => string`
-
-Resolves bias color for a raw node bias.
-
-Bias colors follow the same diverging logic as connection colors so the legend
-remains conceptually consistent across channels.
+Each row describes one closed numeric interval and the swatch used to paint
+it, making the dynamic color scale legible to a human reader.
 
 Parameters:
-- `nodeBias` - - Node bias.
+- `scale` - - Dynamic color scale containing bounds, tiers, and overflow color.
+- `symbol` - - Label symbol.
 
-Returns: Tier color.
-
-### resolveConnectionRangeColor
-
-`(connectionWeight: number) => string`
-
-Resolves connection color for a raw weight.
-
-This small helper is useful when one-off drawing code wants the same color
-semantics as the full dynamic scale machinery.
-
-Parameters:
-- `connectionWeight` - - Connection weight.
-
-Returns: Tier color.
+Returns: Legend rows.
 
 ### resolveDefaultNetworkLegendLayout
 
-`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
+```ts
+resolveDefaultNetworkLegendLayout(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+): NetworkLegendLayout
+```
 
 Resolves default legend layout from internal tier definitions.
 
@@ -1351,7 +1667,13 @@ Returns: Legend layout.
 
 ### resolveNetworkLegendLayout
 
-`(context: CanvasRenderingContext2D, connectionLegendRows: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[], biasLegendRows: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorLegendRow[]) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkLegendLayout`
+```ts
+resolveNetworkLegendLayout(
+  context: CanvasRenderingContext2D,
+  connectionLegendRows: ColorLegendRow[],
+  biasLegendRows: ColorLegendRow[],
+): NetworkLegendLayout
+```
 
 Resolves network legend layout from canvas constraints.
 
@@ -1366,52 +1688,59 @@ Parameters:
 
 Returns: Computed legend layout.
 
-### resolveNetworkVisualizationColorScales
+### formatNodeBiasLabel
 
-`(network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/visualization/visualization.types").NetworkVisualizationColorScales`
+```ts
+formatNodeBiasLabel(
+  nodeBias: number,
+): string
+```
 
-Resolves dynamic connection/bias color scales from the active network range.
+Formats node bias labels with fixed sign and precision.
 
-The active network may contain only a narrow slice of the full theoretical
-value range, so the legend adapts to what is currently present instead of
-always rendering a fixed generic scale.
+Consistent sign and precision make dense node labels easier to scan quickly in
+the rendered network panel.
 
 Parameters:
-- `network` - - Active network.
+- `nodeBias` - - Node bias value.
 
-Returns: Dynamic scales used by graph drawing and legend rows.
+Returns: Label text.
 
 ### resolveNetworkVisualizationLayers
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
+```ts
+resolveNetworkVisualizationLayers(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): VisualNetworkNodeLike[][]
+```
 
-Topology resolution helpers for the browser network view.
+Resolves layered node groups for network-view layout and rendering.
 
-These helpers answer a key visualization question: how should the current
-network be partitioned into ordered layers so layout and architecture labels
-stay meaningful even when some metadata is missing?
+Educational note:
+Layer grouping is a network-view concern because it drives sizing, node
+placement, and architecture presentation. Visualization code can still reuse
+the result, but this helper now lives with the module that owns layout.
 
-### resolveTierColor
-
-`(value: number, tiers: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").ColorTier[], aboveTierColor: string) => string`
-
-Resolves a color from ordered tier definitions.
-
-This is the final classification step that maps one numeric weight or bias to
-the swatch color the renderer should paint.
+The resolver prefers explicit layer metadata when it exists, then falls back
+to a topology-derived depth estimate so even loosely structured networks can
+still be drawn in an intelligible left-to-right order.
 
 Parameters:
-- `value` - - Numeric value to classify.
-- `tiers` - - Ordered tier list.
-- `aboveTierColor` - - Fallback color for values above the last tier.
+- `network` - - Runtime network instance.
+- `inputSize` - - Input count fallback.
+- `outputSize` - - Output count fallback.
 
-Returns: Resolved color string.
+Returns: Layered nodes for rendering.
 
 ## browser-entry/browser-entry.worker-channel.utils.ts
 
 ### createEvolutionWorker
 
-`() => Worker`
+```ts
+createEvolutionWorker(): Worker
+```
 
 Creates the evolution worker used to keep heavy NEAT compute off the UI thread.
 
@@ -1419,7 +1748,11 @@ Returns: Initialized worker instance.
 
 ### requestWorkerGeneration
 
-`(evolutionWorker: Worker) => Promise<import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionGenerationPayload>`
+```ts
+requestWorkerGeneration(
+  evolutionWorker: Worker,
+): Promise<EvolutionGenerationPayload>
+```
 
 Waits for the next generation payload emitted by the evolution worker.
 
@@ -1430,7 +1763,12 @@ Returns: Next generation payload.
 
 ### requestWorkerPlaybackStep
 
-`(evolutionWorker: Worker, playbackStepRequest: import("test/examples/flappy_bird/browser-entry/worker-channel/worker-channel.types").WorkerChannelPlaybackStepRequest) => Promise<{ requestId: number; snapshot: import("test/examples/flappy_bird/browser-entry/browser-entry.worker.types").EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>`
+```ts
+requestWorkerPlaybackStep(
+  evolutionWorker: Worker,
+  playbackStepRequest: WorkerChannelPlaybackStepRequest,
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
+```
 
 Requests one playback batch step from the worker.
 

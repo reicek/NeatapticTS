@@ -1,3 +1,11 @@
+/**
+ * Layered playback background composition for the browser demo.
+ *
+ * This boundary keeps atmosphere separate from gameplay entities. The frame
+ * renderer can ask for one deterministic scenic backdrop while this module owns
+ * the details of sky styling, ground-grid composition, and the glowing seam
+ * that ties both halves together.
+ */
 import { renderPlaybackBackgroundGroundGrid } from './ground-grid/playback.background.ground-grid';
 import {
   drawPlaybackBackgroundHorizon,
@@ -10,14 +18,18 @@ import type { PlaybackBackgroundRequest } from './playback.background.types';
 /**
  * Draws the layered playback background.
  *
- * The composition keeps the top two-thirds for the neon starfield, fills the
- * lower band with a TRON-like perspective ground grid, and separates both
- * regions with a glowing horizon divider.
+ * This boundary exists to keep atmosphere separate from gameplay entities. The
+ * frame renderer should be able to ask for a complete backdrop in one call
+ * without also absorbing starfield policy, horizon styling, and ground-grid
+ * composition details.
+ *
+ * The composition is intentionally chapter-like: sky first, ground second,
+ * horizon seam last. That ordering gives the playback scene a stable visual
+ * identity while keeping the background deterministic and cheap to re-render.
  *
  * @param context - Canvas 2D drawing context.
  * @param request - Narrow render input required for background composition.
  * @returns Nothing.
- *
  * @example
  * ```ts
  * renderPlaybackBackground(context, {

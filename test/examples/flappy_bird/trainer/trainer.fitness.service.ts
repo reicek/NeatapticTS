@@ -1,3 +1,23 @@
+/**
+ * Adapter layer that teaches a generic NEAT controller how to score an entire
+ * Flappy population fairly.
+ *
+ * A plain controller only knows that it needs a fitness callback. This service
+ * turns that loose contract into the trainer's staged policy: screen everybody
+ * cheaply, spend more budget on the survivors, then reevaluate the finalists so
+ * ranking is less sensitive to luck.
+ *
+ * Fitness orchestration map:
+ * ```mermaid
+ * flowchart LR
+ *     Population["population"] --> Plan["resolveGenerationEvaluationPlan()"]
+ *     Plan --> Quick["evaluatePopulationQuickStage()"]
+ *     Quick --> Full["evaluatePopulationFullStage()"]
+ *     Full --> Reeval["evaluatePopulationReevaluationStage()"]
+ *     Reeval --> Commit["commitPopulationScores()"]
+ *     Commit --> Report["buildGenerationReport()"]
+ * ```
+ */
 import type { FlappySeedBatchEvaluation } from '../flappyEvaluation';
 import type {
   FlappyGenerationEvaluationPlan,

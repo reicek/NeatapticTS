@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
 import Node from '../../src/architecture/node';
-import { mutation } from '../../src/methods/mutation';
+import { mutation } from '../../src/methods/mutation/mutation';
 
 /** Tests for mutateAddConnReuse cycle prevention when _enforceAcyclic set. */
 describe('Mutation add connection reuse (acyclic guard)', () => {

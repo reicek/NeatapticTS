@@ -82,7 +82,7 @@ export function buildLayerNormLayer<TLayer extends LayerFactoryLayer>(
  * `normalizeActivations(...)` to produce zero-centered, variance-scaled output.
  *
  * This is implemented as a function wrapper rather than modifying node math.
- * That makes it easy to layer normalization behavior onto any dense layer.
+ * That makes it easy to layer normalization behavior onto each dense layer.
  *
  * @param layer - Dense layer to decorate with normalization behavior.
  * @returns No return value.

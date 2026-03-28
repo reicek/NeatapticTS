@@ -5,6 +5,10 @@
  * 1. Provide allocation-light array sampling utilities that reuse the shared `EngineState` scratch pools.
  * 2. Expose history helpers that mirror the façade behaviour while keeping pooled buffers centralised.
  * 3. Centralise RNG parameter resolution for sampling paths to keep behaviour deterministic under shared state.
+ *
+ * These helpers look small, but they sit under several hot paths. The main job
+ * is not "random choice" in the abstract; it is random choice without quietly
+ * reintroducing per-generation array churn into long-running experiments.
  */
 
 import type { EngineState } from './engineState.types';
@@ -13,6 +17,10 @@ import { MazeUtils } from '../mazeUtils';
 
 /**
  * Sample `sampleCount` items (with replacement) from `source` into the pooled scratch buffer.
+ *
+ * This helper is for callers that want an ephemeral array view immediately. The
+ * returned array reuses shared scratch storage, so callers should copy it first
+ * if they need the contents to survive another helper call.
  *
  * Steps:
  * 1. Validate the input array and normalise `sampleCount` to an integer.
@@ -62,6 +70,10 @@ export const sampleArray = <T>(
 /**
  * Sample up to `sampleCount` items (with replacement) into the shared `samplePool` buffer.
  *
+ * Compared with `sampleArray`, this form is for callers that only need a count
+ * plus access to the pooled buffer on `state.scratch.samplePool`. That avoids
+ * one more logical array object on the hottest paths.
+ *
  * Steps:
  * 1. Validate inputs and ensure the pooled buffer exists.
  * 2. Grow the buffer by powers of two when more capacity is required.
@@ -91,9 +103,9 @@ export const sampleIntoScratch = <T>(
   if (sourceLength === 0 || normalisedCount <= 0) return 0;
 
   const scratch = state.scratch;
-  // Type assertion: pool holds T[] at runtime but declared as Array<unknown> for reuse flexibility
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let pooledBuffer = scratch.samplePool as any as T[];
+  // The shared pool is declared as Array<unknown> because different helpers reuse it
+  // for different element types across generations.
+  let pooledBuffer = scratch.samplePool as T[];
   if (!Array.isArray(pooledBuffer)) {
     pooledBuffer = [];
     scratch.samplePool = pooledBuffer;
@@ -140,6 +152,9 @@ export const sampleIntoScratch = <T>(
 
 /**
  * Sample from a suffix of `source` starting at `segmentStart` into the pooled buffer.
+ *
+ * The common use case is "sample from the non-elite tail" or some later slice
+ * of a population without first allocating `source.slice(segmentStart)`.
  *
  * Steps:
  * 1. Clamp indices and ensure there is a non-empty segment.

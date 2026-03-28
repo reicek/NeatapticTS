@@ -1,4 +1,4 @@
-import Network from '../../network';
+import Network from '../../network/network';
 import * as methods from '../../../methods/methods';
 import type {
   EvolutionConfig,

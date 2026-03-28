@@ -1,5 +1,7 @@
 # HyperEvoDevo MorphoNEAT (ant-brain aligned plan)
 
+**Status:** [PLANNED]
+
 HyperEvoDevo MorphoNEAT is an evo-devo extension for NEAT inspired by how small brains (e.g., ants) emerge and adapt:
 
 1. **DNA builds a small brain deterministically** (development).

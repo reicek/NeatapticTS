@@ -1,3 +1,11 @@
+/**
+ * Bootstrap helpers for the trainer's static shape and initial NEAT runtime.
+ *
+ * The trainer keeps setup separate from the main entry file so configuration and
+ * controller construction can be read, tested, and tuned without also reading
+ * the outer loop. This boundary answers a simple question: what does the demo
+ * need before the first generation can run?
+ */
 import Neat from '../../../../src/neat.ts';
 import Architect from '../../../../src/architecture/architect.ts';
 import * as methods from '../../../../src/methods/methods.ts';
@@ -101,7 +109,8 @@ export function createNeatController(
  * Trivial baseline fitness used before attaching population evaluator.
  *
  * This placeholder keeps controller construction simple. The real staged
- * evaluator is attached immediately afterward by the fitness service.
+ * evaluator is attached immediately afterward by the fitness service, so this
+ * function exists only to satisfy the generic controller's constructor contract.
  *
  * @returns Constant zero fitness.
  */

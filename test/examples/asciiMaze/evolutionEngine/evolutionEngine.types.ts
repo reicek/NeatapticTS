@@ -192,9 +192,13 @@ export interface TrackedNetworkInstance extends NetworkInstance {
  * Loose genome shape shared by engine telemetry and population-dynamics helpers.
  *
  * @remarks
- * The NEAT runtime exposes additional mutable fields during evolution, so the
- * engine centralizes those optional members here rather than duplicating local
- * runtime helper interfaces across multiple files.
+ * The concrete runtime objects are still `Network` instances, but the engine
+ * occasionally needs to acknowledge a small amount of evolution-time metadata
+ * that the plain public type does not emphasize: score, species membership,
+ * clone hooks, lineage IDs, and telemetry scratch fields.
+ *
+ * This interface deliberately stays loose because it exists to document and
+ * centralize that adaptation layer, not to replace the underlying runtime class.
  */
 export interface EvolutionGenomeLike {
   nodes?: NetworkNode[];
@@ -209,14 +213,26 @@ export interface EvolutionGenomeLike {
   [key: string]: unknown;
 }
 
-/** NEAT runtime shape needed by telemetry helpers that inspect the population. */
+/**
+ * NEAT runtime shape needed by telemetry helpers that inspect the population.
+ *
+ * The telemetry helpers intentionally ask for very little here: access to the
+ * population plus optional telemetry export. That keeps them portable across the
+ * engine's internal helpers without binding them to the full driver surface.
+ */
 export interface TelemetryNeatLike {
   population?: EvolutionGenomeLike[];
   getTelemetry?: () => unknown;
   [key: string]: unknown;
 }
 
-/** Mutation-operation surface read from the NEAT driver at runtime. */
+/**
+ * Mutation-operation surface read from the NEAT driver at runtime.
+ *
+ * The engine treats mutation operations as opaque descriptors because the
+ * concrete driver owns how those operations are interpreted. The helpers only
+ * need enough structure to cache, count, and hand them back into `mutate(...)`.
+ */
 export interface MutationOperationLike {
   length?: number;
   [key: string]: unknown;
@@ -383,6 +399,48 @@ export interface EvolutionLoopHelpers {
   ) => NetworkConnection[];
 }
 
+/**
+ * Shared runtime buffers and limits consumed by the evolution loop hot path.
+ *
+ * This context keeps the loop and simulation helpers from passing a long list
+ * of pooled ring buffers, scratch arrays, and capacity limits positionally.
+ */
+export interface EvolutionLoopRuntimeContext {
+  scratchLogitsRing: Float32Array[];
+  logitsRingCapMax: number;
+  actionDim: number;
+  scratchLogitsShared?: Float32Array;
+  scratchLogitsSharedW?: Int32Array;
+}
+
+/**
+ * Shared telemetry thresholds consumed by the evolution loop simulation pass.
+ *
+ * The loop owns these switches conceptually, but grouping them as one context
+ * keeps telemetry policy changes from widening hot-path function signatures.
+ */
+export interface EvolutionLoopTelemetryContext {
+  telemetryMinimal: boolean;
+  saturationPruneThreshold: number;
+  recentWindow: number;
+  reducedTelemetry: boolean;
+}
+
+/**
+ * Shared scratch buffers and helper callbacks used across evolution-loop stages.
+ *
+ * This context groups the scratch arrays and analysis helpers that travel
+ * together through generation, simulation, and snapshot paths.
+ */
+export interface EvolutionLoopSupportContext {
+  emptyVec: NetworkInstance[];
+  scratchNodeIdx: Int32Array;
+  scratchSnapshotObj: Record<string, unknown>;
+  scratchSnapshotTop: SnapshotEntry[];
+  speciesHistoryRef: number[];
+  loopHelpers: EvolutionLoopHelpers;
+}
+
 /** Network node representation used by engine-side runtime adaptation helpers. */
 export interface NetworkNode {
   type?: string;
@@ -402,6 +460,7 @@ export interface NetworkNode {
 export interface NetworkConnection {
   from?: NetworkNode;
   to?: NetworkNode;
+  gater?: NetworkNode | null;
   weight?: number;
   gain?: number;
   enabled?: boolean;
@@ -436,6 +495,16 @@ export interface LogitsRingState {
   logitsRingShared: boolean;
   scratchLogitsRingW: number;
 }
+
+/**
+ * Mutable runtime state owned by the public EvolutionEngine facade.
+ *
+ * The extracted engine modules already share pooled buffers through
+ * `engineState`. This narrower state exists only for the facade-specific
+ * logits-ring bookkeeping that must survive across runs while keeping the
+ * class boundary orchestration-first.
+ */
+export type EvolutionEngineFacadeRuntimeState = LogitsRingState;
 
 /** Simulation result returned by generation evaluation helpers. */
 export interface SimulationResult {

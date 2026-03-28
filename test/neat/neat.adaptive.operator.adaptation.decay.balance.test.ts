@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
-import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
+import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 import Network from '../../src/architecture/network';
-import { mutation } from '../../src/methods/mutation';
+import { mutation } from '../../src/methods/mutation/mutation';
 
 /**
  * Extended operator adaptation coverage: ensure decay reduces attempts and bandit explores.
@@ -23,7 +23,7 @@ describe('Operator Adaptation Decay & Bandit Exploration', () => {
       await neat.mutate();
       await neat.mutate();
       const { applyOperatorAdaptation } =
-        await import('../../src/neat/neat.adaptive');
+        await import('../../src/neat/adaptive/adaptive');
       applyOperatorAdaptation.call(neat as unknown as NeatLikeWithAdaptive);
       const before = neat
         .getOperatorStats()

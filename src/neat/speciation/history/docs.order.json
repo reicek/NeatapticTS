@@ -1,0 +1,12 @@
+{
+  "symbolOrder": {
+    "speciation.history.utils.ts": [
+      "applyAgeProtection",
+      "recordHistory",
+      "buildExtendedHistoryStats",
+      "summarizeInnovations",
+      "averageNumbers",
+      "trimHistory"
+    ]
+  }
+}

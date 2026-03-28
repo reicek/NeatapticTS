@@ -1,72 +1,234 @@
 # src
 
+Root orchestration surface for NeuroEvolution of Augmenting Topologies (NEAT) in NeatapticTS.
+
+Within the broader `src` surface, this file is the public chapter map for the
+library's evolutionary controller.
+The heavy algorithmic work lives in focused `src/neat/**` modules, but this
+root surface keeps the user-facing workflow readable: configure a population,
+evaluate genomes, evolve the next generation, inspect telemetry, and persist
+the state when a run becomes worth keeping.
+
+What this file covers:
+- the high-level lifecycle of a NEAT run,
+- the default knobs that shape population growth and speciation,
+- reproducibility helpers such as seeded RNG snapshots and state export,
+- educational inspection hooks for telemetry, species history, diversity, and Pareto fronts.
+
+What you can learn here:
+- how the top-level controller stays orchestration-first even after the internal SOLID split,
+- which public methods belong to setup, evolution, diagnostics, and persistence,
+- which subsystem README to open next when you want the underlying mechanics.
+
+```mermaid
+flowchart LR
+  Configure["Configure run<br/>sizes + fitness + options"] --> Seed["Seed or restore<br/>constructor / createPool / import"]
+  Seed --> Score["Score population<br/>evaluate()"]
+  Score --> Breed["Breed next generation<br/>evolve() / mutate()"]
+  Breed --> Observe["Observe search pressure<br/>telemetry / species / diversity / Pareto"]
+  Observe --> Persist["Persist or replay<br/>exportState() / toJSON() / RNG state"]
+  Breed --> Score
+```
+
+Recommended reading after this root chapter:
+- `./neat/evaluate/README.md` for scoring flow and objective handling
+- `./neat/evolve/README.md` for reproduction orchestration
+- `./neat/speciation/README.md` for compatibility distance and sharing
+- `./neat/telemetry/README.md` for diagnostics and export surfaces
+
 ## neat.ts
-
-### neat
-
-### buildEmptyDiversityStats
-
-`(populationSize: number) => import("src/neat/neat.diversity.utils").DiversityStats`
-
-Build a zeroed diversity stats snapshot to use when no population metrics exist yet.
-
-Parameters:
-- `populationSize` - Population size used to populate the snapshot.
-
-Returns: DiversityStats with zeroed aggregates.
-
-### DEFAULT_COMPATIBILITY_THRESHOLD
-
-### DEFAULT_DISJOINT_COEFF
-
-### DEFAULT_DIVERSITY_GRAPHLET_SAMPLE
-
-### DEFAULT_DIVERSITY_PAIR_SAMPLE
-
-### DEFAULT_ELITISM
-
-### DEFAULT_EXCESS_COEFF
-
-### DEFAULT_MAX_CONNS
-
-### DEFAULT_MAX_GATES
-
-### DEFAULT_MAX_NODES
-
-### DEFAULT_MUTATION_AMOUNT
-
-### DEFAULT_MUTATION_RATE
-
-### DEFAULT_NOVELTY_K
-
-### DEFAULT_POPULATION_SIZE
-
-### DEFAULT_PROVENANCE
-
-### DEFAULT_WEIGHT_DIFF_COEFF
 
 ### NeatOptions
 
-### Options
+Public configuration bag for `Neat` evolutionary runs.
 
-Configuration options for Neat evolutionary runs.
+`NeatOptions` collects the knobs that shape how search pressure is applied.
+In practice, readers can think about the options in four teaching-friendly groups:
 
-Each property is optional and the class applies sensible defaults when a
-field is not provided. Options control population size, mutation rates,
-compatibility coefficients, selection strategy and other behavioral knobs.
+- search size and tempo: `popsize`, `elitism`, `provenance`, `mutationRate`, `mutationAmount`
+- species formation: compatibility threshold plus the excess, disjoint, and weight-difference coefficients
+- observability: telemetry, lineage, diversity sampling, species history, Pareto archive controls
+- reproducibility: `seed`, imported RNG state, and exported run state
 
-Example:
-const opts: NeatOptions = { popsize: 100, mutationRate: 0.5 };
-const neat = new Neat(3, 1, fitnessFn, opts);
+That organization matters because most experiment tuning questions are really
+questions about pressure: how many candidates compete, how disruptive mutation
+should feel, how aggressively genomes split into species, and how much evidence
+you want to retain while the run is unfolding.
 
-Note: this type is intentionally permissive to support staged migration and
-legacy callers; prefer providing a typed options object where possible.
+```ts
+const options: NeatOptions = {
+  popsize: 150,
+  elitism: 5,
+  mutationRate: 0.6,
+  compatibilityThreshold: 3,
+  fastMode: true,
+  seed: 42,
+};
 
-### default
+const neat = new Neat(3, 1, fitness, options);
+```
+
+This alias stays intentionally permissive for compatibility with legacy callers.
+Prefer treating it as the stable front door and the narrower helper-level types in
+`src/neat/**` as implementation detail.
+
+### DEFAULT_COMPATIBILITY_THRESHOLD
+
+Default compatibility threshold controlling speciation distance.
+
+This starts the speciation-pressure family of defaults. It is the neutral
+boundary the controller uses before adaptive tuning or custom settings make
+species splits stricter or more permissive.
+
+### DEFAULT_DISJOINT_COEFF
+
+Default disjoint coefficient for NEAT compatibility distance.
+
+Matching the excess coefficient by default gives the root controller a
+balanced structural view: excess and disjoint innovation gaps both count as
+first-class evidence during compatibility comparisons.
+
+### DEFAULT_DIVERSITY_GRAPHLET_SAMPLE
+
+Default graphlet sample size used by diversity metrics in fast mode.
+
+Read this beside {@link DEFAULT_DIVERSITY_PAIR_SAMPLE}: pair samples give the
+controller quick distance evidence, while graphlet samples provide a small
+structural texture read without forcing whole-population analysis.
+
+### DEFAULT_DIVERSITY_PAIR_SAMPLE
+
+Default pair-sample size used by diversity metrics in fast mode.
+
+This starts the observability-sampling family. The root controller uses a
+bounded sample instead of exhaustive pair checks so diversity reads stay
+cheap enough for ordinary runs.
+
+### DEFAULT_ELITISM
+
+Default elitism count applied when unspecified.
+
+Read this beside {@link DEFAULT_POPULATION_SIZE} and
+{@link DEFAULT_PROVENANCE}: the trio defines how much of each generation is
+reserved for carry-over, how much is freshly injected, and how much capacity
+remains for ordinary offspring.
+
+### DEFAULT_EXCESS_COEFF
+
+Default excess coefficient for NEAT compatibility distance.
+
+This begins the root compatibility-weight family. These coefficients explain
+which kinds of genome disagreement matter most when the controller decides
+whether two genomes still belong in the same species neighborhood.
+
+### DEFAULT_MAX_CONNS
+
+Default maximum allowed connections where `Infinity` means unbounded growth.
+
+This preserves the same baseline policy as {@link DEFAULT_MAX_NODES}: the
+controller does not impose a fixed connection ceiling unless the caller wants
+one.
+
+### DEFAULT_MAX_GATES
+
+Default maximum allowed gates where `Infinity` means unbounded growth.
+
+Gate limits stay in the same family as node and connection limits so the
+whole structural-cap story remains consistent at the root surface.
+
+### DEFAULT_MAX_NODES
+
+Default maximum allowed nodes where `Infinity` means unbounded growth.
+
+Read the three `DEFAULT_MAX_*` exports as one structural-ceiling family.
+Leaving them unbounded by default tells the root controller to rely on
+mutation policy, pruning, and adaptive limits instead of an immediate hard
+cap.
+
+### DEFAULT_MUTATION_AMOUNT
+
+Default number of mutation operations applied per genome.
+
+The default keeps the baseline search policy conservative: most runs mutate
+often enough to keep topology moving, but each genome usually pays for only
+one structural or parametric change per mutation pass.
+
+### DEFAULT_MUTATION_RATE
+
+Default mutation rate used by the root controller when no explicit rate is supplied.
+
+This belongs to the same search-tempo family as
+{@link DEFAULT_MUTATION_AMOUNT}. Together they define how often mutation is
+attempted and how many mutation steps a genome can receive once mutation is
+active.
+
+### DEFAULT_NOVELTY_K
+
+Default neighbor count for novelty search when `k` is unspecified.
+
+This closes the root observability-and-exploration shelf. It controls how
+many nearby behaviors contribute to novelty before the caller tunes novelty
+search more explicitly.
+
+### DEFAULT_POPULATION_SIZE
+
+Default population size when caller does not specify `popsize`.
+
+This opens the root defaults shelf's search-volume family. It controls how
+many genomes compete in each generation before elitism, provenance, or
+mutation pressure begin to reshape the population.
+
+### DEFAULT_PROVENANCE
+
+Default provenance count applied when unspecified.
+
+Provenance is the root controller's small "fresh seed" policy. A value of
+`0` means the default run does not spend population budget on extra
+generation-zero style injections unless the caller asks for them.
+
+### DEFAULT_WEIGHT_DIFF_COEFF
+
+Default average weight difference coefficient for compatibility distance.
+
+This keeps parameter drift relevant without letting weight deltas dominate
+the whole speciation read. In the default family, topology disagreement still
+carries more weight than modest edge-weight differences.
+
+### Neat
+
+High-level NEAT controller that keeps the public workflow linear while the implementation stays chaptered.
+
+If you are learning the library, this is the class to read first. It owns the
+practical experiment loop and answers the first questions most users ask:
+how to seed a population, when to call `evaluate()` versus `evolve()`, how to
+inspect species and telemetry, and how to export or replay a run deterministically.
+
+Design-wise, `Neat` is intentionally orchestration-first. Mutation operators,
+speciation rules, telemetry formatting, archive management, cache invalidation,
+and pruning policies all live in dedicated modules so this top-level surface can
+stay readable even as the underlying algorithm becomes richer.
+
+Minimal workflow:
+
+```ts
+const neat = new Neat(2, 1, fitness, {
+  popsize: 50,
+  seed: 7,
+  fastMode: true,
+});
+
+await neat.evaluate();
+const bestGenome = await neat.evolve();
+
+console.log(bestGenome.score);
+console.log(neat.getTelemetry().at(-1));
+```
 
 #### _applyFitnessSharing
 
-`() => void`
+```ts
+_applyFitnessSharing(): void
+```
 
 Apply fitness sharing adjustments within each species.
 
@@ -74,7 +236,12 @@ Returns: Adjusted species fitness data.
 
 #### _compatibilityDistance
 
-`(netA: import("src/architecture/network").default, netB: import("src/architecture/network").default) => number`
+```ts
+_compatibilityDistance(
+  netA: default,
+  netB: default,
+): number
+```
 
 Compute compatibility distance between two networks (delegates to compat module).
 
@@ -86,7 +253,9 @@ Returns: Compatibility distance scalar.
 
 #### _computeDiversityStats
 
-`() => import("src/neat/neat.diversity.utils").DiversityStats`
+```ts
+_computeDiversityStats(): DiversityStats
+```
 
 Compute and cache diversity statistics used by telemetry and tests.
 
@@ -98,7 +267,11 @@ Cached diversity metrics (computed lazily).
 
 #### _fallbackInnov
 
-`(conn: any) => number`
+```ts
+_fallbackInnov(
+  conn: ConnectionLike,
+): number
+```
 
 Fallback innovation id resolver used when reuse mapping is absent.
 
@@ -109,7 +282,9 @@ Returns: Innovation id for the connection.
 
 #### _getObjectives
 
-`() => import("src/neat/neat.types").ObjectiveDescriptor[]`
+```ts
+_getObjectives(): ObjectiveDescriptor[]
+```
 
 Internal: return cached objective descriptors, building if stale.
 
@@ -117,7 +292,9 @@ Returns: Cached or freshly built objective descriptors.
 
 #### _getRNG
 
-`() => () => number`
+```ts
+_getRNG(): () => number
+```
 
 Provide a memoized RNG function, initializing from internal state if needed.
 
@@ -125,7 +302,11 @@ Returns: RNG function bound to this instance.
 
 #### _invalidateGenomeCaches
 
-`(genome: any) => void`
+```ts
+_invalidateGenomeCaches(
+  genome: unknown,
+): void
+```
 
 Invalidate per-genome caches (compatibility distance, forward pass, etc.).
 
@@ -150,7 +331,11 @@ Whether lineage metadata should be recorded on genomes.
 
 #### _mutateAddConnReuse
 
-`(genome: import("src/architecture/network").default) => void`
+```ts
+_mutateAddConnReuse(
+  genome: default,
+): void
+```
 
 Add-connection mutation that reuses global innovation ids when possible.
 
@@ -161,7 +346,11 @@ Returns: Mutated genome with added connection.
 
 #### _mutateAddNodeReuse
 
-`(genome: import("src/architecture/network").default) => Promise<void>`
+```ts
+_mutateAddNodeReuse(
+  genome: default,
+): Promise<void>
+```
 
 Add-node mutation that reuses global innovation ids when possible.
 
@@ -204,7 +393,11 @@ Internal numeric state for the deterministic xorshift RNG when no user RNG is pr
 
 #### _sortSpeciesMembers
 
-`(sp: import("src/neat/neat.types").SpeciesLike) => void`
+```ts
+_sortSpeciesMembers(
+  sp: SpeciesLike,
+): void
+```
 
 Sort members within a species according to fitness and lineage rules.
 
@@ -215,7 +408,9 @@ Returns: Sorted species members.
 
 #### _speciate
 
-`() => void`
+```ts
+_speciate(): void
+```
 
 Partition population into species using configured compatibility metrics.
 
@@ -227,9 +422,13 @@ Time-series history of species stats (for exports/telemetry).
 
 #### _structuralEntropy
 
-`(genome: import("src/architecture/network").default) => number`
+```ts
+_structuralEntropy(
+  genome: default,
+): number
+```
 
-Compatibility wrapper retained for tests that reference (neat as any)._structuralEntropy.
+Compatibility wrapper retained for tests that reach `_structuralEntropy` through loose controller casts.
 
 Parameters:
 - `genome` - Genome whose structural entropy is calculated.
@@ -242,7 +441,9 @@ Telemetry buffer storing diagnostic snapshots per generation.
 
 #### _updateSpeciesStagnation
 
-`() => void`
+```ts
+_updateSpeciesStagnation(): void
+```
 
 Update stagnation metrics per species to inform pruning and selection.
 
@@ -250,297 +451,653 @@ Returns: Updated stagnation state.
 
 #### _warnIfNoBestGenome
 
-`() => void`
+```ts
+_warnIfNoBestGenome(): void
+```
 
 Emit a standardized warning when evolution loop finds no valid best genome (test hook).
 
 #### addGenome
 
-`(genome: import("src/architecture/network").default, parents: number[] | undefined) => void`
+```ts
+addGenome(
+  genome: default,
+  parents: number[] | undefined,
+): void
+```
 
 Register an externally-created genome into the `Neat` population.
 
+Parameters:
+- `genome` - Genome to append into the population.
+- `parents` - Optional lineage metadata recorded for teaching and telemetry.
+
 #### applyAdaptivePruning
 
-`() => Promise<void>`
+```ts
+applyAdaptivePruning(): Promise<void>
+```
 
-Run the adaptive pruning controller once.
+Run the adaptive pruning controller once using the controller's latest signals.
+
+Unlike scheduled pruning, this path reacts to the current search state,
+such as stagnation or complexity pressure, instead of only looking at the
+generation index.
+
+Returns: Promise resolving after adaptive pruning has completed.
 
 #### applyEvolutionPruning
 
-`() => Promise<void>`
+```ts
+applyEvolutionPruning(): Promise<void>
+```
 
-Manually apply evolution-time pruning once using the current generation
-index and configuration in `options.evolutionPruning`.
+Manually apply the configured generation-based pruning policy once.
+
+This is mainly useful when you are experimenting with pruning behavior and
+want to trigger the controller's scheduled pruning logic outside the normal
+evolve loop.
+
+Returns: Promise resolving after the pruning policy has been evaluated.
 
 #### clearObjectives
 
-`() => void`
+```ts
+clearObjectives(): void
+```
 
-Clear all registered multi-objective objectives.
+Remove all custom objective registrations.
+
+Use this when a run is changing from one multi-objective regime to another
+and you want the controller to forget the previous objective schema.
 
 #### clearParetoArchive
 
-`() => void`
+```ts
+clearParetoArchive(): void
+```
 
-Clear the Pareto archive.
+Clear the stored Pareto archive.
+
+Use this when a new phase of a run should stop comparing itself against the
+previous archive history.
 
 #### clearTelemetry
 
-`() => void`
+```ts
+clearTelemetry(): void
+```
 
-Clear telemetry buffer and cached entries.
+Clear the recorded telemetry history.
+
+This does not reset the population or controller options. It only removes
+the accumulated diagnostic snapshots so a new experiment phase can start
+with a clean telemetry timeline.
 
 #### createPool
 
-`(network: import("src/architecture/network").default | null) => void`
+```ts
+createPool(
+  network: default | null,
+): void
+```
 
-Create initial population pool. Delegates to helpers if present.
+Create the initial population pool, optionally cloning from a seed network.
+
+This is the explicit population bootstrap surface. Call it when you want to
+start from a known architecture template instead of relying on whatever setup
+a surrounding example or harness applies for you.
+
+Parameters:
+- `network` - Optional template network copied into the initial pool.
 
 #### ensureMinHiddenNodes
 
-`(network: import("src/architecture/network").default, multiplierOverride: number | undefined) => Promise<void>`
+```ts
+ensureMinHiddenNodes(
+  network: default,
+  multiplierOverride: number | undefined,
+): Promise<void>
+```
 
 Ensure a network has the minimum number of hidden nodes according to configured policy.
 
 #### ensureNoDeadEnds
 
-`(network: import("src/architecture/network").default) => void`
+```ts
+ensureNoDeadEnds(
+  network: default,
+): void
+```
 
-Delegate ensureNoDeadEnds to mutation module (added for backward compat).
+Repair dead-end connectivity through the focused maintenance facade.
 
 #### evaluate
 
-`() => Promise<any>`
+```ts
+evaluate(): Promise<void>
+```
 
 Evaluate the current population using the configured fitness function.
 Delegates to the migrated evaluation helper to keep this class thin.
+
+In practice, this is the scoring half of the controller loop. It transforms a
+population of candidate networks into evidence the rest of the algorithm can use:
+fitness scores, objective values, telemetry, diversity statistics, and derived
+signals needed by selection or pruning.
 
 Returns: Aggregated evaluation result (implementation specific).
 
 #### evolve
 
-`() => Promise<import("src/architecture/network").default>`
+```ts
+evolve(): Promise<default>
+```
 
-Evolves the population by selecting, mutating, and breeding genomes.
-This method is delegated to `src/neat/neat.evolve.ts` during the migration.
+Advance the evolutionary loop by one generation.
+
+Conceptually, `evolve()` is the reproduction half of NEAT. It selects parents,
+preserves elites and provenance when configured, applies structural and parametric
+mutation, updates search bookkeeping, and returns the best genome observed for the step.
+The heavy mechanics live in `src/neat/evolve/evolve.ts`; this method stays as the
+readable front door to that orchestration.
+
+Returns: Best genome selected by the evolution step.
+
+Example:
+
+// Score the current population first, then breed the next generation.
+await neat.evaluate();
+await neat.evolve();
 
 #### export
 
-`() => any[]`
+```ts
+export(): GenomeJSON[]
+```
 
-Exports the current population as an array of JSON objects.
+Export the current population as plain JSON objects.
+
+Choose this lighter snapshot when you only need the genomes themselves and
+do not need generation counters, innovation maps, or other controller-level
+state.
+
+Returns: JSON-safe population snapshot.
 
 #### exportParetoFrontJSONL
 
-`(maxEntries: number) => string`
+```ts
+exportParetoFrontJSONL(
+  maxEntries: number,
+): string
+```
 
-Export Pareto front archive as JSON Lines for external analysis.
+Export recent Pareto archive entries as JSON Lines.
+
+This is the easiest way to persist frontier history for offline analysis or
+later replay in notebooks and visualization tools.
+
+Parameters:
+- `maxEntries` - Maximum number of recent archive entries to export.
+
+Returns: JSONL payload for the requested Pareto archive window.
 
 #### exportRNGState
 
-`() => number | undefined`
+```ts
+exportRNGState(): number | undefined
+```
 
 Export the current RNG state for external persistence or tests.
 
+Returns: Opaque RNG snapshot suitable for later replay.
+
 #### exportSpeciesHistoryCSV
 
-`(maxEntries: number) => string`
+```ts
+exportSpeciesHistoryCSV(
+  maxEntries: number,
+): string
+```
 
-Export species history as CSV rows for offline inspection.
+Export recent species history as CSV.
+
+This is useful when you want to chart species growth, collapse, or
+stagnation in a spreadsheet or notebook without writing a custom parser.
+
+Parameters:
+- `maxEntries` - Maximum number of recent history entries to export.
+
+Returns: CSV payload representing recent species history snapshots.
 
 #### exportSpeciesHistoryJSONL
 
-`(maxEntries: number) => string`
+```ts
+exportSpeciesHistoryJSONL(
+  maxEntries: number,
+): string
+```
 
-Export species history as JSON Lines for storage and analysis.
+Export recent species history as JSON Lines.
+
+Choose this when you want machine-friendly archival output instead of the
+flatter spreadsheet-oriented CSV export.
+
+Parameters:
+- `maxEntries` - Maximum number of recent history entries to export.
+
+Returns: JSONL payload describing recent species-history entries.
 
 #### exportState
 
-`() => any`
+```ts
+exportState(): NeatStateJSON
+```
 
-Convenience: export full evolutionary state (meta + population genomes).
+Export the full controller state, including metadata and population.
+
+This is the pause-and-resume snapshot. It is the best choice when you want
+to continue the same run later with the same innovation history, generation
+counter, and serialized genomes.
+
+Returns: Full controller snapshot including metadata and population.
 
 #### exportTelemetryCSV
 
-`(maxEntries: number) => string`
+```ts
+exportTelemetryCSV(
+  maxEntries: number,
+): string
+```
 
 Export recent telemetry entries as CSV.
 
+Parameters:
+- `maxEntries` - Maximum number of recent telemetry entries to export.
+
+Returns: CSV string for quick spreadsheet or notebook analysis.
+
 #### exportTelemetryJSONL
 
-`() => string`
+```ts
+exportTelemetryJSONL(): string
+```
 
-Export telemetry as JSON Lines (one JSON object per line).
+Export the telemetry buffer as JSON Lines.
+
+JSONL is the easiest format to append to files, stream into data tools, or
+inspect generation-by-generation without loading a giant array into memory.
+
+Returns: JSONL payload with one telemetry entry per line.
+
+#### fromJSON
+
+```ts
+fromJSON(
+  json: NeatMetaJSON,
+  fitness: NeatFitnessFunction,
+): default
+```
+
+Rebuild a `Neat` controller from serialized metadata without importing a population bundle.
+
+This is the lighter-weight sibling of `importState()`. It is useful when you
+want controller defaults, innovation bookkeeping, or archive metadata back,
+but you are handling genome population state separately.
+
+Parameters:
+- `json` - Serialized controller metadata produced by `toJSON()`.
+- `fitness` - Fitness function to attach to the reconstructed controller.
+
+Returns: Reconstructed `Neat` controller instance.
 
 #### getAverage
 
-`() => number`
+```ts
+getAverage(): number
+```
 
 Calculates the average fitness score of the population.
 
 #### getDiversityStats
 
-`() => import("src/neat/neat.diversity.utils").DiversityStats`
+```ts
+getDiversityStats(): DiversityStats
+```
 
 Return the latest cached diversity statistics.
 
+Diversity summaries answer a different question than raw fitness: whether
+the population still explores varied structures or is collapsing toward a
+narrower family of genomes.
+
+Returns: Diversity metrics for the current population snapshot.
+
 #### getFittest
 
-`() => import("src/architecture/network").default`
+```ts
+getFittest(): default
+```
 
 Retrieves the fittest genome from the population.
 
 #### getLineageSnapshot
 
-`(limit: number) => { id: number; parents: number[]; }[]`
+```ts
+getLineageSnapshot(
+  limit: number,
+): { id: number; parents: number[]; }[]
+```
 
 Return an array of {id, parents} for the first `limit` genomes in population.
 
+Parameters:
+- `limit` - Maximum number of lineage records to return.
+
+Returns: Compact lineage snapshot for debugging and teaching inheritance flow.
+
 #### getMinimumHiddenSize
 
-`(multiplierOverride: number | undefined) => number`
+```ts
+getMinimumHiddenSize(
+  multiplierOverride: number | undefined,
+): number
+```
 
 Minimum hidden size considering explicit minHidden or multiplier policy.
 
 #### getMultiObjectiveMetrics
 
-`() => { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]`
+```ts
+getMultiObjectiveMetrics(): { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]
+```
 
-Returns compact multi-objective metrics for each genome in the current population.
+Return compact multi-objective metrics for each genome in the current population.
+
+Use this when you want a flattened view of Pareto rank, crowding, raw score,
+and structural size without reconstructing the full fronts yourself.
+
+Returns: One compact metric record per genome.
 
 #### getNoveltyArchiveSize
 
-`() => number`
+```ts
+getNoveltyArchiveSize(): number
+```
 
-Returns the number of entries currently stored in the novelty archive.
+Return the current novelty-archive size.
+
+This is a small diagnostic hook that tells you whether novelty search is
+actively accumulating behavior representatives or staying mostly unused.
+
+Returns: Number of archived novelty descriptors.
 
 #### getObjectiveEvents
 
-`() => { gen: number; type: "add" | "remove"; key: string; }[]`
+```ts
+getObjectiveEvents(): { gen: number; type: "add" | "remove"; key: string; }[]
+```
 
 Get recent objective add/remove events for telemetry exports and teaching.
 
 #### getObjectiveKeys
 
-`() => string[]`
+```ts
+getObjectiveKeys(): string[]
+```
 
 Public helper returning just the objective keys (tests rely on).
 
 #### getObjectives
 
-`() => { key: string; direction: "max" | "min"; }[]`
+```ts
+getObjectives(): { key: string; direction: "max" | "min"; }[]
+```
 
 Return a lightweight list of registered objective keys and their directions.
 
+Returns: Objective descriptors currently active on the controller.
+
 #### getOffspring
 
-`() => import("src/architecture/network").default`
+```ts
+getOffspring(): default
+```
 
-Generates an offspring by crossing over two parent networks.
-Uses the crossover method described in the Instinct algorithm.
+Build a child genome from parent selection and crossover.
 
-Returns: A new network created from two parents.
+Use this when you want one reproduction event without running a full
+generation step. The method delegates the parent choice to `getParent()` so
+it still respects the controller's current breeding policy.
+
+Returns: New network created from selected parent genomes.
 
 #### getOperatorStats
 
-`() => { name: string; success: number; attempts: number; }[]`
+```ts
+getOperatorStats(): { name: string; success: number; attempts: number; }[]
+```
 
-Returns a summary of mutation/operator statistics used by operator adaptation.
+Return mutation-operator success statistics.
+
+These numbers are useful when operator adaptation is enabled and you want
+to inspect which mutation operators are being rewarded or ignored.
+
+Returns: Per-operator attempt and success counters.
 
 #### getParent
 
-`() => import("src/architecture/network").default`
+```ts
+getParent(): default
+```
 
-Selects a parent genome for breeding based on the selection method.
-Supports multiple selection strategies, including POWER, FITNESS_PROPORTIONATE, and TOURNAMENT.
+Select a parent genome using the controller's configured selection strategy.
+
+Read this as the "who gets to reproduce" hook. The exact policy depends on
+the current selection configuration, but the intent is always the same:
+convert the scored population into a plausible breeding candidate.
 
 Returns: The selected parent genome.
 
 #### getParetoArchive
 
-`(maxEntries: number) => import("src/neat/neat.types").ParetoArchiveEntry[]`
+```ts
+getParetoArchive(
+  maxEntries: number,
+): ParetoArchiveEntry[]
+```
 
-Get recent Pareto archive entries (meta information about archived fronts).
+Return recent Pareto archive entries.
+
+This is the metadata-oriented archive view. Use it when you want to inspect
+what front snapshots were retained over time without exporting the full JSONL
+payload first.
+
+Parameters:
+- `maxEntries` - Maximum number of recent archive entries to return.
+
+Returns: Recent Pareto archive metadata entries.
 
 #### getParetoFronts
 
-`(maxFronts: number) => import("src/architecture/network").default[][]`
+```ts
+getParetoFronts(
+  maxFronts: number,
+): default[][]
+```
 
 Reconstruct Pareto fronts for the current population snapshot.
 
+Parameters:
+- `maxFronts` - Maximum number of fronts to materialize.
+
+Returns: Fronts ordered from most to least dominant under the active objectives.
+
 #### getPerformanceStats
 
-`() => { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }`
+```ts
+getPerformanceStats(): { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }
+```
 
-Return recent performance statistics for the most recent evaluation and evolve operations.
+Return timing statistics for the latest evaluation and evolution steps.
+
+This is a lightweight performance probe for experiments and benchmarks that
+need to notice when scoring or breeding costs start drifting upward.
+
+Returns: Recent runtime statistics for evaluation and evolution work.
 
 #### getSpeciesHistory
 
-`() => import("src/neat/neat.types").SpeciesHistoryEntry[]`
+```ts
+getSpeciesHistory(): SpeciesHistoryEntry[]
+```
 
-Returns the historical species statistics recorded each generation.
+Return the recorded species-history timeline.
+
+Unlike `getSpeciesStats()`, which only reflects the current generation,
+this method exposes the historical view used for trend analysis.
+
+Returns: Species history entries in recorded order.
 
 #### getSpeciesStats
 
-`() => { id: number; size: number; bestScore: number; lastImproved: number; }[]`
+```ts
+getSpeciesStats(): { id: number; size: number; bestScore: number; lastImproved: number; }[]
+```
 
-Return a concise summary for each current species.
+Return a compact per-species summary for the current population snapshot.
+
+This is the quickest inspection surface when you want to know how many
+niches currently exist, how large they are, and whether they have improved
+recently.
+
+Returns: One summary record per active species.
 
 #### getTelemetry
 
-`() => import("src/neat/neat.types").TelemetryEntry[]`
+```ts
+getTelemetry(): TelemetryEntry[]
+```
 
 Return the internal telemetry buffer.
 
+Telemetry is the controller's teaching surface for understanding why a run is
+behaving a certain way. Instead of watching only the best score, you can inspect
+species counts, diversity, objective events, evaluation timing, and other search signals.
+
+Returns: Recorded telemetry entries in chronological order.
+
 #### import
 
-`(json: any[]) => Promise<void>`
+```ts
+import(
+  json: GenomeJSON[],
+): Promise<void>
+```
 
-Imports a population from an array of JSON objects.
+Replace the current population with serialized genomes.
+
+This is the population-only restore path. It keeps the current controller
+instance, options, and metadata while swapping in a different genome set.
+Use `importState()` when you want to restore controller metadata too.
+
+Parameters:
+- `json` - Serialized population to import into the current controller.
+
+Returns: Promise resolving after the population is loaded.
 
 #### importRNGState
 
-`(state: any) => void`
+```ts
+importRNGState(
+  state: string | number | undefined,
+): void
+```
 
 Import an RNG state (alias for restore; kept for compatibility).
 
 Parameters:
 - `state` - Numeric RNG state.
 
+Returns: Nothing. This is a compatibility alias for `restoreRNGState()`.
+
 #### importState
 
-`(bundle: any, fitness: (n: import("src/architecture/network").default) => number) => Promise<import("src/neat").default>`
+```ts
+importState(
+  bundle: NeatStateJSON,
+  fitness: NeatFitnessFunction,
+): Promise<default>
+```
 
-Convenience: restore full evolutionary state previously produced by exportState().
+Restore a full evolutionary snapshot produced by `exportState()`.
+
+Use this when you want a paused experiment to resume with its controller
+metadata, population, and archival context intact rather than rebuilding
+only the bare genomes.
 
 Parameters:
-- `bundle` - Object with shape { neat, population }
-- `fitness` - Fitness function to attach
+- `bundle` - Serialized object with the shape `{ neat, population }`.
+- `fitness` - Fitness function to attach to the restored controller.
+
+Returns: A `Neat` instance ready to continue evolution from the imported state.
 
 #### mutate
 
-`() => Promise<void>`
+```ts
+mutate(): Promise<void>
+```
 
-Applies mutations to the population based on the mutation rate and amount.
-Each genome is mutated using the selected mutation methods.
-Slightly increases the chance of ADD_CONN mutation for more connectivity.
+Apply mutation pressure to the current population without advancing generation bookkeeping.
+
+This is the direct "variation" lever. Use it when you want to perturb the
+current genomes in place for an experiment, a custom training loop, or a
+test harness that separates mutation from the rest of `evolve()`.
+In the normal NEAT workflow, `evolve()` is usually the better entry point
+because it coordinates parent selection, elitism, offspring creation, and
+mutation as one generation step.
+
+Returns: Promise resolving once mutation has been applied to the current population.
 
 #### registerObjective
 
-`(key: string, direction: "max" | "min", accessor: (g: any) => number) => void`
+```ts
+registerObjective(
+  key: string,
+  direction: "max" | "min",
+  accessor: (network: default) => number,
+): void
+```
 
 Register a custom objective for multi-objective optimization.
 
+Register objectives when a single scalar score is too narrow to express the
+behavior you want. The controller can then reason about tradeoffs such as raw
+score versus simplicity, novelty, or domain-specific constraints.
+
+Parameters:
+- `key` - Stable objective identifier used in exports and telemetry.
+- `direction` - Whether the objective should be minimized or maximized.
+- `accessor` - Function extracting the objective value from a genome.
+
 #### resetNoveltyArchive
 
-`() => void`
+```ts
+resetNoveltyArchive(): void
+```
 
-Reset the novelty archive (clear entries).
+Reset the novelty archive.
+
+This is useful when you want to restart novelty pressure from a clean slate
+without rebuilding the whole controller.
 
 #### restoreRNGState
 
-`(state: any) => void`
+```ts
+restoreRNGState(
+  state: string | number | undefined,
+): void
+```
 
 Restore a previously-snapshotted RNG state. This restores the internal
 seed but does not re-create the RNG function until next use.
@@ -548,9 +1105,15 @@ seed but does not re-create the RNG function until next use.
 Parameters:
 - `state` - Opaque numeric RNG state produced by `snapshotRNGState()`.
 
+Returns: Nothing. The controller will resume from the restored RNG state on next use.
+
 #### sampleRandom
 
-`(sampleCount: number) => number[]`
+```ts
+sampleRandom(
+  sampleCount: number,
+): number[]
+```
 
 Produce deterministic random samples using the instance RNG.
 
@@ -561,38 +1124,72 @@ Returns: Array of deterministic random samples.
 
 #### selectMutationMethod
 
-`(genome: import("src/architecture/network").default, rawReturnForTest: boolean) => any`
+```ts
+selectMutationMethod(
+  genome: default,
+  rawReturnForTest: boolean,
+): Promise<MutationMethod | MutationMethod[] | null>
+```
 
 Selects a mutation method for a given genome based on constraints.
 
+Parameters:
+- `genome` - Genome being considered for mutation.
+- `rawReturnForTest` - Whether to expose raw selection output for test visibility.
+
+Returns: Selected mutation method or `null` when no valid method can be chosen.
+
 #### snapshotRNGState
 
-`() => number | undefined`
+```ts
+snapshotRNGState(): number | undefined
+```
 
 Return the current opaque RNG numeric state used by the instance.
 Useful for deterministic test replay and debugging.
 
+Returns: Snapshot of the current controller RNG state.
+
 #### sort
 
-`() => void`
+```ts
+sort(): void
+```
 
 Sorts the population in descending order of fitness scores.
 
 #### spawnFromParent
 
-`(parent: import("src/architecture/network").default, mutateCount: number) => import("src/architecture/network").default`
+```ts
+spawnFromParent(
+  parent: default,
+  mutateCount: number,
+): default
+```
 
 Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
 
+Parameters:
+- `parent` - Parent genome to clone and mutate.
+- `mutateCount` - Number of mutation passes to apply to the child.
+
+Returns: Child genome registered with the same bookkeeping conventions as normal evolution.
+
 #### toJSON
 
-`() => any`
+```ts
+toJSON(): NeatMetaJSON
+```
 
-Serialize NEAT meta (without population) for persistence of innovation history.
+Serialize controller metadata without the concrete population.
+
+This is useful when you want to preserve run configuration and innovation
+bookkeeping separately from genome payloads, or when the population will be
+reconstructed by other means.
+
+Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
 
 ## config.ts
-
-### config
 
 Global NeatapticTS configuration contract & default instance.
 
@@ -644,6 +1241,1001 @@ DESIGN NOTES
 
 ## neataptic.ts
 
+### Neat
+
+High-level NEAT controller that keeps the public workflow linear while the implementation stays chaptered.
+
+If you are learning the library, this is the class to read first. It owns the
+practical experiment loop and answers the first questions most users ask:
+how to seed a population, when to call `evaluate()` versus `evolve()`, how to
+inspect species and telemetry, and how to export or replay a run deterministically.
+
+Design-wise, `Neat` is intentionally orchestration-first. Mutation operators,
+speciation rules, telemetry formatting, archive management, cache invalidation,
+and pruning policies all live in dedicated modules so this top-level surface can
+stay readable even as the underlying algorithm becomes richer.
+
+Minimal workflow:
+
+```ts
+const neat = new Neat(2, 1, fitness, {
+  popsize: 50,
+  seed: 7,
+  fastMode: true,
+});
+
+await neat.evaluate();
+const bestGenome = await neat.evolve();
+
+console.log(bestGenome.score);
+console.log(neat.getTelemetry().at(-1));
+```
+
+#### _applyFitnessSharing
+
+```ts
+_applyFitnessSharing(): void
+```
+
+Apply fitness sharing adjustments within each species.
+
+Returns: Adjusted species fitness data.
+
+#### _compatibilityDistance
+
+```ts
+_compatibilityDistance(
+  netA: default,
+  netB: default,
+): number
+```
+
+Compute compatibility distance between two networks (delegates to compat module).
+
+Parameters:
+- `netA` - First network for comparison.
+- `netB` - Second network for comparison.
+
+Returns: Compatibility distance scalar.
+
+#### _computeDiversityStats
+
+```ts
+_computeDiversityStats(): DiversityStats
+```
+
+Compute and cache diversity statistics used by telemetry and tests.
+
+Returns: Cached diversity statistics snapshot.
+
+#### _diversityStats
+
+Cached diversity metrics (computed lazily).
+
+#### _fallbackInnov
+
+```ts
+_fallbackInnov(
+  conn: ConnectionLike,
+): number
+```
+
+Fallback innovation id resolver used when reuse mapping is absent.
+
+Parameters:
+- `conn` - Connection metadata used to derive the innovation id.
+
+Returns: Innovation id for the connection.
+
+#### _getObjectives
+
+```ts
+_getObjectives(): ObjectiveDescriptor[]
+```
+
+Internal: return cached objective descriptors, building if stale.
+
+Returns: Cached or freshly built objective descriptors.
+
+#### _getRNG
+
+```ts
+_getRNG(): () => number
+```
+
+Provide a memoized RNG function, initializing from internal state if needed.
+
+Returns: RNG function bound to this instance.
+
+#### _invalidateGenomeCaches
+
+```ts
+_invalidateGenomeCaches(
+  genome: unknown,
+): void
+```
+
+Invalidate per-genome caches (compatibility distance, forward pass, etc.).
+
+Parameters:
+- `genome` - Genome instance whose caches should be cleared.
+
+#### _lastEvalDuration
+
+Duration of the last evaluation run (ms).
+
+#### _lastEvolveDuration
+
+Duration of the last evolve run (ms).
+
+#### _lastInbreedingCount
+
+Last observed count of inbreeding (used for detecting excessive cloning).
+
+#### _lineageEnabled
+
+Whether lineage metadata should be recorded on genomes.
+
+#### _mutateAddConnReuse
+
+```ts
+_mutateAddConnReuse(
+  genome: default,
+): void
+```
+
+Add-connection mutation that reuses global innovation ids when possible.
+
+Parameters:
+- `genome` - Genome receiving the mutation.
+
+Returns: Mutated genome with added connection.
+
+#### _mutateAddNodeReuse
+
+```ts
+_mutateAddNodeReuse(
+  genome: default,
+): Promise<void>
+```
+
+Add-node mutation that reuses global innovation ids when possible.
+
+Parameters:
+- `genome` - Genome receiving the mutation.
+
+Returns: Mutated genome with added node.
+
+#### _nextGenomeId
+
+Counter for assigning unique genome ids.
+
+#### _noveltyArchive
+
+Novelty archive used by novelty search (behavior representatives).
+
+#### _objectiveEvents
+
+Queue of recent objective activation/deactivation events for telemetry.
+
+#### _operatorStats
+
+Operator statistics used by adaptive operator selection.
+
+#### _paretoArchive
+
+Archive of Pareto front metadata for multi-objective tracking.
+
+#### _paretoObjectivesArchive
+
+Archive storing Pareto objectives snapshots.
+
+#### _rng
+
+Cached RNG function; created lazily and seeded from `_rngState` when used.
+
+#### _rngState
+
+Internal numeric state for the deterministic xorshift RNG when no user RNG is provided.
+
+#### _sortSpeciesMembers
+
+```ts
+_sortSpeciesMembers(
+  sp: SpeciesLike,
+): void
+```
+
+Sort members within a species according to fitness and lineage rules.
+
+Parameters:
+- `sp` - Species whose members should be sorted.
+
+Returns: Sorted species members.
+
+#### _speciate
+
+```ts
+_speciate(): void
+```
+
+Partition population into species using configured compatibility metrics.
+
+Returns: Updated species assignments.
+
+#### _speciesHistory
+
+Time-series history of species stats (for exports/telemetry).
+
+#### _structuralEntropy
+
+```ts
+_structuralEntropy(
+  genome: default,
+): number
+```
+
+Compatibility wrapper retained for tests that reach `_structuralEntropy` through loose controller casts.
+
+Parameters:
+- `genome` - Genome whose structural entropy is calculated.
+
+Returns: Structural entropy score for the genome.
+
+#### _telemetry
+
+Telemetry buffer storing diagnostic snapshots per generation.
+
+#### _updateSpeciesStagnation
+
+```ts
+_updateSpeciesStagnation(): void
+```
+
+Update stagnation metrics per species to inform pruning and selection.
+
+Returns: Updated stagnation state.
+
+#### _warnIfNoBestGenome
+
+```ts
+_warnIfNoBestGenome(): void
+```
+
+Emit a standardized warning when evolution loop finds no valid best genome (test hook).
+
+#### addGenome
+
+```ts
+addGenome(
+  genome: default,
+  parents: number[] | undefined,
+): void
+```
+
+Register an externally-created genome into the `Neat` population.
+
+Parameters:
+- `genome` - Genome to append into the population.
+- `parents` - Optional lineage metadata recorded for teaching and telemetry.
+
+#### applyAdaptivePruning
+
+```ts
+applyAdaptivePruning(): Promise<void>
+```
+
+Run the adaptive pruning controller once using the controller's latest signals.
+
+Unlike scheduled pruning, this path reacts to the current search state,
+such as stagnation or complexity pressure, instead of only looking at the
+generation index.
+
+Returns: Promise resolving after adaptive pruning has completed.
+
+#### applyEvolutionPruning
+
+```ts
+applyEvolutionPruning(): Promise<void>
+```
+
+Manually apply the configured generation-based pruning policy once.
+
+This is mainly useful when you are experimenting with pruning behavior and
+want to trigger the controller's scheduled pruning logic outside the normal
+evolve loop.
+
+Returns: Promise resolving after the pruning policy has been evaluated.
+
+#### clearObjectives
+
+```ts
+clearObjectives(): void
+```
+
+Remove all custom objective registrations.
+
+Use this when a run is changing from one multi-objective regime to another
+and you want the controller to forget the previous objective schema.
+
+#### clearParetoArchive
+
+```ts
+clearParetoArchive(): void
+```
+
+Clear the stored Pareto archive.
+
+Use this when a new phase of a run should stop comparing itself against the
+previous archive history.
+
+#### clearTelemetry
+
+```ts
+clearTelemetry(): void
+```
+
+Clear the recorded telemetry history.
+
+This does not reset the population or controller options. It only removes
+the accumulated diagnostic snapshots so a new experiment phase can start
+with a clean telemetry timeline.
+
+#### createPool
+
+```ts
+createPool(
+  network: default | null,
+): void
+```
+
+Create the initial population pool, optionally cloning from a seed network.
+
+This is the explicit population bootstrap surface. Call it when you want to
+start from a known architecture template instead of relying on whatever setup
+a surrounding example or harness applies for you.
+
+Parameters:
+- `network` - Optional template network copied into the initial pool.
+
+#### ensureMinHiddenNodes
+
+```ts
+ensureMinHiddenNodes(
+  network: default,
+  multiplierOverride: number | undefined,
+): Promise<void>
+```
+
+Ensure a network has the minimum number of hidden nodes according to configured policy.
+
+#### ensureNoDeadEnds
+
+```ts
+ensureNoDeadEnds(
+  network: default,
+): void
+```
+
+Repair dead-end connectivity through the focused maintenance facade.
+
+#### evaluate
+
+```ts
+evaluate(): Promise<void>
+```
+
+Evaluate the current population using the configured fitness function.
+Delegates to the migrated evaluation helper to keep this class thin.
+
+In practice, this is the scoring half of the controller loop. It transforms a
+population of candidate networks into evidence the rest of the algorithm can use:
+fitness scores, objective values, telemetry, diversity statistics, and derived
+signals needed by selection or pruning.
+
+Returns: Aggregated evaluation result (implementation specific).
+
+#### evolve
+
+```ts
+evolve(): Promise<default>
+```
+
+Advance the evolutionary loop by one generation.
+
+Conceptually, `evolve()` is the reproduction half of NEAT. It selects parents,
+preserves elites and provenance when configured, applies structural and parametric
+mutation, updates search bookkeeping, and returns the best genome observed for the step.
+The heavy mechanics live in `src/neat/evolve/evolve.ts`; this method stays as the
+readable front door to that orchestration.
+
+Returns: Best genome selected by the evolution step.
+
+Example:
+
+// Score the current population first, then breed the next generation.
+await neat.evaluate();
+await neat.evolve();
+
+#### export
+
+```ts
+export(): GenomeJSON[]
+```
+
+Export the current population as plain JSON objects.
+
+Choose this lighter snapshot when you only need the genomes themselves and
+do not need generation counters, innovation maps, or other controller-level
+state.
+
+Returns: JSON-safe population snapshot.
+
+#### exportParetoFrontJSONL
+
+```ts
+exportParetoFrontJSONL(
+  maxEntries: number,
+): string
+```
+
+Export recent Pareto archive entries as JSON Lines.
+
+This is the easiest way to persist frontier history for offline analysis or
+later replay in notebooks and visualization tools.
+
+Parameters:
+- `maxEntries` - Maximum number of recent archive entries to export.
+
+Returns: JSONL payload for the requested Pareto archive window.
+
+#### exportRNGState
+
+```ts
+exportRNGState(): number | undefined
+```
+
+Export the current RNG state for external persistence or tests.
+
+Returns: Opaque RNG snapshot suitable for later replay.
+
+#### exportSpeciesHistoryCSV
+
+```ts
+exportSpeciesHistoryCSV(
+  maxEntries: number,
+): string
+```
+
+Export recent species history as CSV.
+
+This is useful when you want to chart species growth, collapse, or
+stagnation in a spreadsheet or notebook without writing a custom parser.
+
+Parameters:
+- `maxEntries` - Maximum number of recent history entries to export.
+
+Returns: CSV payload representing recent species history snapshots.
+
+#### exportSpeciesHistoryJSONL
+
+```ts
+exportSpeciesHistoryJSONL(
+  maxEntries: number,
+): string
+```
+
+Export recent species history as JSON Lines.
+
+Choose this when you want machine-friendly archival output instead of the
+flatter spreadsheet-oriented CSV export.
+
+Parameters:
+- `maxEntries` - Maximum number of recent history entries to export.
+
+Returns: JSONL payload describing recent species-history entries.
+
+#### exportState
+
+```ts
+exportState(): NeatStateJSON
+```
+
+Export the full controller state, including metadata and population.
+
+This is the pause-and-resume snapshot. It is the best choice when you want
+to continue the same run later with the same innovation history, generation
+counter, and serialized genomes.
+
+Returns: Full controller snapshot including metadata and population.
+
+#### exportTelemetryCSV
+
+```ts
+exportTelemetryCSV(
+  maxEntries: number,
+): string
+```
+
+Export recent telemetry entries as CSV.
+
+Parameters:
+- `maxEntries` - Maximum number of recent telemetry entries to export.
+
+Returns: CSV string for quick spreadsheet or notebook analysis.
+
+#### exportTelemetryJSONL
+
+```ts
+exportTelemetryJSONL(): string
+```
+
+Export the telemetry buffer as JSON Lines.
+
+JSONL is the easiest format to append to files, stream into data tools, or
+inspect generation-by-generation without loading a giant array into memory.
+
+Returns: JSONL payload with one telemetry entry per line.
+
+#### fromJSON
+
+```ts
+fromJSON(
+  json: NeatMetaJSON,
+  fitness: NeatFitnessFunction,
+): default
+```
+
+Rebuild a `Neat` controller from serialized metadata without importing a population bundle.
+
+This is the lighter-weight sibling of `importState()`. It is useful when you
+want controller defaults, innovation bookkeeping, or archive metadata back,
+but you are handling genome population state separately.
+
+Parameters:
+- `json` - Serialized controller metadata produced by `toJSON()`.
+- `fitness` - Fitness function to attach to the reconstructed controller.
+
+Returns: Reconstructed `Neat` controller instance.
+
+#### getAverage
+
+```ts
+getAverage(): number
+```
+
+Calculates the average fitness score of the population.
+
+#### getDiversityStats
+
+```ts
+getDiversityStats(): DiversityStats
+```
+
+Return the latest cached diversity statistics.
+
+Diversity summaries answer a different question than raw fitness: whether
+the population still explores varied structures or is collapsing toward a
+narrower family of genomes.
+
+Returns: Diversity metrics for the current population snapshot.
+
+#### getFittest
+
+```ts
+getFittest(): default
+```
+
+Retrieves the fittest genome from the population.
+
+#### getLineageSnapshot
+
+```ts
+getLineageSnapshot(
+  limit: number,
+): { id: number; parents: number[]; }[]
+```
+
+Return an array of {id, parents} for the first `limit` genomes in population.
+
+Parameters:
+- `limit` - Maximum number of lineage records to return.
+
+Returns: Compact lineage snapshot for debugging and teaching inheritance flow.
+
+#### getMinimumHiddenSize
+
+```ts
+getMinimumHiddenSize(
+  multiplierOverride: number | undefined,
+): number
+```
+
+Minimum hidden size considering explicit minHidden or multiplier policy.
+
+#### getMultiObjectiveMetrics
+
+```ts
+getMultiObjectiveMetrics(): { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]
+```
+
+Return compact multi-objective metrics for each genome in the current population.
+
+Use this when you want a flattened view of Pareto rank, crowding, raw score,
+and structural size without reconstructing the full fronts yourself.
+
+Returns: One compact metric record per genome.
+
+#### getNoveltyArchiveSize
+
+```ts
+getNoveltyArchiveSize(): number
+```
+
+Return the current novelty-archive size.
+
+This is a small diagnostic hook that tells you whether novelty search is
+actively accumulating behavior representatives or staying mostly unused.
+
+Returns: Number of archived novelty descriptors.
+
+#### getObjectiveEvents
+
+```ts
+getObjectiveEvents(): { gen: number; type: "add" | "remove"; key: string; }[]
+```
+
+Get recent objective add/remove events for telemetry exports and teaching.
+
+#### getObjectiveKeys
+
+```ts
+getObjectiveKeys(): string[]
+```
+
+Public helper returning just the objective keys (tests rely on).
+
+#### getObjectives
+
+```ts
+getObjectives(): { key: string; direction: "max" | "min"; }[]
+```
+
+Return a lightweight list of registered objective keys and their directions.
+
+Returns: Objective descriptors currently active on the controller.
+
+#### getOffspring
+
+```ts
+getOffspring(): default
+```
+
+Build a child genome from parent selection and crossover.
+
+Use this when you want one reproduction event without running a full
+generation step. The method delegates the parent choice to `getParent()` so
+it still respects the controller's current breeding policy.
+
+Returns: New network created from selected parent genomes.
+
+#### getOperatorStats
+
+```ts
+getOperatorStats(): { name: string; success: number; attempts: number; }[]
+```
+
+Return mutation-operator success statistics.
+
+These numbers are useful when operator adaptation is enabled and you want
+to inspect which mutation operators are being rewarded or ignored.
+
+Returns: Per-operator attempt and success counters.
+
+#### getParent
+
+```ts
+getParent(): default
+```
+
+Select a parent genome using the controller's configured selection strategy.
+
+Read this as the "who gets to reproduce" hook. The exact policy depends on
+the current selection configuration, but the intent is always the same:
+convert the scored population into a plausible breeding candidate.
+
+Returns: The selected parent genome.
+
+#### getParetoArchive
+
+```ts
+getParetoArchive(
+  maxEntries: number,
+): ParetoArchiveEntry[]
+```
+
+Return recent Pareto archive entries.
+
+This is the metadata-oriented archive view. Use it when you want to inspect
+what front snapshots were retained over time without exporting the full JSONL
+payload first.
+
+Parameters:
+- `maxEntries` - Maximum number of recent archive entries to return.
+
+Returns: Recent Pareto archive metadata entries.
+
+#### getParetoFronts
+
+```ts
+getParetoFronts(
+  maxFronts: number,
+): default[][]
+```
+
+Reconstruct Pareto fronts for the current population snapshot.
+
+Parameters:
+- `maxFronts` - Maximum number of fronts to materialize.
+
+Returns: Fronts ordered from most to least dominant under the active objectives.
+
+#### getPerformanceStats
+
+```ts
+getPerformanceStats(): { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }
+```
+
+Return timing statistics for the latest evaluation and evolution steps.
+
+This is a lightweight performance probe for experiments and benchmarks that
+need to notice when scoring or breeding costs start drifting upward.
+
+Returns: Recent runtime statistics for evaluation and evolution work.
+
+#### getSpeciesHistory
+
+```ts
+getSpeciesHistory(): SpeciesHistoryEntry[]
+```
+
+Return the recorded species-history timeline.
+
+Unlike `getSpeciesStats()`, which only reflects the current generation,
+this method exposes the historical view used for trend analysis.
+
+Returns: Species history entries in recorded order.
+
+#### getSpeciesStats
+
+```ts
+getSpeciesStats(): { id: number; size: number; bestScore: number; lastImproved: number; }[]
+```
+
+Return a compact per-species summary for the current population snapshot.
+
+This is the quickest inspection surface when you want to know how many
+niches currently exist, how large they are, and whether they have improved
+recently.
+
+Returns: One summary record per active species.
+
+#### getTelemetry
+
+```ts
+getTelemetry(): TelemetryEntry[]
+```
+
+Return the internal telemetry buffer.
+
+Telemetry is the controller's teaching surface for understanding why a run is
+behaving a certain way. Instead of watching only the best score, you can inspect
+species counts, diversity, objective events, evaluation timing, and other search signals.
+
+Returns: Recorded telemetry entries in chronological order.
+
+#### import
+
+```ts
+import(
+  json: GenomeJSON[],
+): Promise<void>
+```
+
+Replace the current population with serialized genomes.
+
+This is the population-only restore path. It keeps the current controller
+instance, options, and metadata while swapping in a different genome set.
+Use `importState()` when you want to restore controller metadata too.
+
+Parameters:
+- `json` - Serialized population to import into the current controller.
+
+Returns: Promise resolving after the population is loaded.
+
+#### importRNGState
+
+```ts
+importRNGState(
+  state: string | number | undefined,
+): void
+```
+
+Import an RNG state (alias for restore; kept for compatibility).
+
+Parameters:
+- `state` - Numeric RNG state.
+
+Returns: Nothing. This is a compatibility alias for `restoreRNGState()`.
+
+#### importState
+
+```ts
+importState(
+  bundle: NeatStateJSON,
+  fitness: NeatFitnessFunction,
+): Promise<default>
+```
+
+Restore a full evolutionary snapshot produced by `exportState()`.
+
+Use this when you want a paused experiment to resume with its controller
+metadata, population, and archival context intact rather than rebuilding
+only the bare genomes.
+
+Parameters:
+- `bundle` - Serialized object with the shape `{ neat, population }`.
+- `fitness` - Fitness function to attach to the restored controller.
+
+Returns: A `Neat` instance ready to continue evolution from the imported state.
+
+#### mutate
+
+```ts
+mutate(): Promise<void>
+```
+
+Apply mutation pressure to the current population without advancing generation bookkeeping.
+
+This is the direct "variation" lever. Use it when you want to perturb the
+current genomes in place for an experiment, a custom training loop, or a
+test harness that separates mutation from the rest of `evolve()`.
+In the normal NEAT workflow, `evolve()` is usually the better entry point
+because it coordinates parent selection, elitism, offspring creation, and
+mutation as one generation step.
+
+Returns: Promise resolving once mutation has been applied to the current population.
+
+#### registerObjective
+
+```ts
+registerObjective(
+  key: string,
+  direction: "max" | "min",
+  accessor: (network: default) => number,
+): void
+```
+
+Register a custom objective for multi-objective optimization.
+
+Register objectives when a single scalar score is too narrow to express the
+behavior you want. The controller can then reason about tradeoffs such as raw
+score versus simplicity, novelty, or domain-specific constraints.
+
+Parameters:
+- `key` - Stable objective identifier used in exports and telemetry.
+- `direction` - Whether the objective should be minimized or maximized.
+- `accessor` - Function extracting the objective value from a genome.
+
+#### resetNoveltyArchive
+
+```ts
+resetNoveltyArchive(): void
+```
+
+Reset the novelty archive.
+
+This is useful when you want to restart novelty pressure from a clean slate
+without rebuilding the whole controller.
+
+#### restoreRNGState
+
+```ts
+restoreRNGState(
+  state: string | number | undefined,
+): void
+```
+
+Restore a previously-snapshotted RNG state. This restores the internal
+seed but does not re-create the RNG function until next use.
+
+Parameters:
+- `state` - Opaque numeric RNG state produced by `snapshotRNGState()`.
+
+Returns: Nothing. The controller will resume from the restored RNG state on next use.
+
+#### sampleRandom
+
+```ts
+sampleRandom(
+  sampleCount: number,
+): number[]
+```
+
+Produce deterministic random samples using the instance RNG.
+
+Parameters:
+- `sampleCount` - Number of random values to generate.
+
+Returns: Array of deterministic random samples.
+
+#### selectMutationMethod
+
+```ts
+selectMutationMethod(
+  genome: default,
+  rawReturnForTest: boolean,
+): Promise<MutationMethod | MutationMethod[] | null>
+```
+
+Selects a mutation method for a given genome based on constraints.
+
+Parameters:
+- `genome` - Genome being considered for mutation.
+- `rawReturnForTest` - Whether to expose raw selection output for test visibility.
+
+Returns: Selected mutation method or `null` when no valid method can be chosen.
+
+#### snapshotRNGState
+
+```ts
+snapshotRNGState(): number | undefined
+```
+
+Return the current opaque RNG numeric state used by the instance.
+Useful for deterministic test replay and debugging.
+
+Returns: Snapshot of the current controller RNG state.
+
+#### sort
+
+```ts
+sort(): void
+```
+
+Sorts the population in descending order of fitness scores.
+
+#### spawnFromParent
+
+```ts
+spawnFromParent(
+  parent: default,
+  mutateCount: number,
+): default
+```
+
+Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
+
+Parameters:
+- `parent` - Parent genome to clone and mutate.
+- `mutateCount` - Number of mutation passes to apply to the child.
+
+Returns: Child genome registered with the same bookkeeping conventions as normal evolution.
+
+#### toJSON
+
+```ts
+toJSON(): NeatMetaJSON
+```
+
+Serialize controller metadata without the concrete population.
+
+This is useful when you want to preserve run configuration and innovation
+bookkeeping separately from genome payloads, or when the population will be
+reconstructed by other means.
+
+Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
+
 ### neataptic
 
 Node (Neuron)
@@ -659,151 +2251,48 @@ Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent c
 assignment works in algorithms like RTRL / policy gradients. They are updated only when
 using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
+Examples:
+
+```ts
+const encoderBlock = new Group(4);
+const decoderBlock = new Group(4);
+
+encoderBlock.connect(
+  decoderBlock,
+  methods.groupConnection.ONE_TO_ONE,
+);
+```
+
+```ts
+const source = new Node('input');
+const target = new Node('output');
+const edge = new Connection(source, target, 0.42);
+
+edge.gain = 1.5;
+edge.enabled = true;
+```
+
+```ts
+const network = Architect.perceptron(2, 4, 1);
+const output = network.activate([0, 1]);
+```
+
 ### default
-
-#### _accumulationReduction
-
-Accumulation reduction mode.
 
 #### _activateCore
 
-`(withTrace: boolean, input: number | undefined) => number`
+```ts
+_activateCore(
+  withTrace: boolean,
+  input: number | undefined,
+): number
+```
 
 Internal shared implementation for activate/noTraceActivate.
 
 Parameters:
 - `withTrace` - Whether to update eligibility traces.
 - `input` - Optional externally supplied activation (bypasses weighted sum if provided).
-
-#### _activationPool
-
-Cached pooled activation output array.
-
-#### _activationPrecision
-
-Typed-array precision used by compiled activation paths.
-
-#### _adjDirty
-
-Adjacency dirty marker for slab structures.
-
-#### _applyFitnessSharing
-
-`() => void`
-
-Apply fitness sharing adjustments within each species.
-
-Returns: Adjusted species fitness data.
-
-#### _applyGradientClipping
-
-`(cfg: { mode: "norm" | "percentile" | "layerwiseNorm" | "layerwisePercentile"; maxNorm?: number | undefined; percentile?: number | undefined; }) => void`
-
-Apply gradient clipping configuration.
-
-Parameters:
-- `cfg` - Gradient clipping configuration.
-
-#### _canUseFastSlab
-
-`(training: boolean) => boolean`
-
-Check if fast-slab activation can be used.
-
-Parameters:
-- `training` - Whether training mode is active.
-
-Returns: True when fast-slab activation can be used.
-
-#### _compatibilityDistance
-
-`(netA: import("src/architecture/network").default, netB: import("src/architecture/network").default) => number`
-
-Compute compatibility distance between two networks (delegates to compat module).
-
-Parameters:
-- `netA` - First network for comparison.
-- `netB` - Second network for comparison.
-
-Returns: Compatibility distance scalar.
-
-#### _computeDiversityStats
-
-`() => import("src/neat/neat.diversity.utils").DiversityStats`
-
-Compute and cache diversity statistics used by telemetry and tests.
-
-Returns: Cached diversity statistics snapshot.
-
-#### _computeTopoOrder
-
-`() => void`
-
-Recompute and cache topological node ordering.
-
-Returns: Topological order payload from the delegate.
-
-#### _connFrom
-
-Packed connection slab source indices.
-
-#### _connTo
-
-Packed connection slab target indices.
-
-#### _connWeights
-
-Packed connection slab weights.
-
-#### _currentGradClip
-
-Gradient clip configuration for the current step.
-
-#### _diversityStats
-
-Cached diversity metrics (computed lazily).
-
-#### _dropConnectProb
-
-DropConnect probability.
-
-#### _enforceAcyclic
-
-Whether to enforce acyclic connectivity.
-
-#### _evoInitialConnCount
-
-Baseline connection count used by evolution-time pruning.
-
-#### _fallbackInnov
-
-`(conn: any) => number`
-
-Fallback innovation id resolver used when reuse mapping is absent.
-
-Parameters:
-- `conn` - Connection metadata used to derive the innovation id.
-
-Returns: Innovation id for the connection.
-
-#### _fastA
-
-Cached fast activation array A.
-
-#### _fastS
-
-Cached fast activation array S.
-
-#### _fastSlabActivate
-
-`(input: number[]) => number[]`
-
-Execute the fast slab activation path.
-
-Parameters:
-- `input` - Input vector.
-
-Returns: Activation output.
 
 #### _flags
 
@@ -814,338 +2303,33 @@ bit2 => hasGater (1 = symbol field present)
 bit3 => plastic (plasticityRate > 0)
 bits4+ reserved.
 
-#### _forceNextOverflow
-
-Flag to force a mixed-precision overflow path.
-
-#### _gaussianRand
-
-`(rng: () => number) => number`
-
-Sample a Gaussian random value with an optional RNG.
-
-Parameters:
-- `rng` - RNG function.
-
-Returns: Gaussian random value.
-
-#### _getObjectives
-
-`() => import("src/neat/neat.types").ObjectiveDescriptor[]`
-
-Internal: return cached objective descriptors, building if stale.
-
-Returns: Cached or freshly built objective descriptors.
-
-#### _getRNG
-
-`() => () => number`
-
-Provide a memoized RNG function, initializing from internal state if needed.
-
-Returns: RNG function bound to this instance.
-
-#### _globalEpoch
-
-Global epoch counter.
-
 #### _globalNodeIndex
 
 Global index counter for assigning unique indices to nodes.
 
-#### _gradAccumMicroBatches
-
-Accumulated micro-batch counter.
-
-#### _gradClipSeparateBias
-
-Whether to apply separate bias clipping.
-
-#### _hasPath
-
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => boolean`
-
-Check whether a directed path exists between two nodes.
-
-Parameters:
-- `from` - Source node.
-- `to` - Target node.
-
-Returns: True when a path exists.
-
-#### _initialConnectionCount
-
-Initial connection count used for pruning baselines.
-
-#### _invalidateGenomeCaches
-
-`(genome: any) => void`
-
-Invalidate per-genome caches (compatibility distance, forward pass, etc.).
-
-Parameters:
-- `genome` - Genome instance whose caches should be cleared.
-
-#### _lastEvalDuration
-
-Duration of the last evaluation run (ms).
-
-#### _lastEvolveDuration
-
-Duration of the last evolve run (ms).
-
-#### _lastGradClipGroupCount
-
-Last gradient clipping group count.
-
-#### _lastGradNorm
-
-Last recorded gradient norm.
-
-#### _lastInbreedingCount
-
-Last observed count of inbreeding (used for detecting excessive cloning).
-
-#### _lastOverflowStep
-
-Last overflow training step index.
-
-#### _lastRawGradNorm
-
-Last recorded raw (pre-update) gradient norm.
-
-#### _lastStats
-
-Last recorded stats payload.
-
-#### _lineageEnabled
-
-Whether lineage metadata should be recorded on genomes.
-
-#### _maybePrune
-
-`(iteration: number) => void`
-
-Apply scheduled pruning if current iteration matches pruning policy.
-
-Parameters:
-- `iteration` - Current training iteration.
-
-Returns: Delegate result for pruning attempt.
-
-#### _mixedPrecision
-
-Mixed precision runtime configuration.
-
-#### _mixedPrecisionState
-
-Mixed precision state counters.
-
-#### _mutateAddConnReuse
-
-`(genome: import("src/architecture/network").default) => void`
-
-Add-connection mutation that reuses global innovation ids when possible.
-
-Parameters:
-- `genome` - Genome receiving the mutation.
-
-Returns: Mutated genome with added connection.
-
-#### _mutateAddNodeReuse
-
-`(genome: import("src/architecture/network").default) => Promise<void>`
-
-Add-node mutation that reuses global innovation ids when possible.
-
-Parameters:
-- `genome` - Genome receiving the mutation.
-
-Returns: Mutated genome with added node.
-
-#### _nextGenomeId
-
-Counter for assigning unique genome ids.
-
-#### _nodeIndexDirty
-
-Node index dirty marker.
-
-#### _noveltyArchive
-
-Novelty archive used by novelty search (behavior representatives).
-
-#### _objectiveEvents
-
-Queue of recent objective activation/deactivation events for telemetry.
-
-#### _operatorStats
-
-Operator statistics used by adaptive operator selection.
-
-#### _optimizerStep
-
-Optimizer step counter.
-
-#### _outOrder
-
-Output-order array for slab forward pass.
-
-#### _outStart
-
-Output-start array for slab forward pass.
-
-#### _paretoArchive
-
-Archive of Pareto front metadata for multi-objective tracking.
-
-#### _paretoObjectivesArchive
-
-Archive storing Pareto objectives snapshots.
-
-#### _preferredChainEdge
-
-Preferred linear-chain edge for node-split mutations.
-
-#### _pruningConfig
-
-Pruning configuration for scheduled pruning.
-
-#### _rand
-
-`() => number`
-
-Random number generator used for stochastic operations.
-
-#### _returnTypedActivations
-
-Whether pooled typed activations can be returned directly.
-
-#### _reuseActivationArrays
-
-Whether pooled activation arrays are reused across activations.
-
-#### _rng
-
-Cached RNG function; created lazily and seeded from `_rngState` when used.
-
-#### _rngState
-
-Internal numeric state for the deterministic xorshift RNG when no user RNG is provided.
-
 #### _safeUpdateWeight
 
-`(connection: import("src/architecture/connection").default, delta: number) => void`
+```ts
+_safeUpdateWeight(
+  connection: default,
+  delta: number,
+): void
+```
 
 Internal helper to safely update a connection weight with clipping and NaN checks.
 
-#### _slabDirty
-
-Slab dirty marker.
-
-#### _sortSpeciesMembers
-
-`(sp: import("src/neat/neat.types").SpeciesLike) => void`
-
-Sort members within a species according to fitness and lineage rules.
-
-Parameters:
-- `sp` - Species whose members should be sorted.
-
-Returns: Sorted species members.
-
-#### _speciate
-
-`() => void`
-
-Partition population into species using configured compatibility metrics.
-
-Returns: Updated species assignments.
-
-#### _speciesHistory
-
-Time-series history of species stats (for exports/telemetry).
-
-#### _stochasticDepth
-
-Stochastic depth schedule values.
-
-#### _stochasticDepthSchedule
-
-Dynamic stochastic depth schedule.
-
-#### _structuralEntropy
-
-`(genome: import("src/architecture/network").default) => number`
-
-Compatibility wrapper retained for tests that reference (neat as any)._structuralEntropy.
-
-Parameters:
-- `genome` - Genome whose structural entropy is calculated.
-
-Returns: Structural entropy score for the genome.
-
-#### _telemetry
-
-Telemetry buffer storing diagnostic snapshots per generation.
-
-#### _topoDirty
-
-Topology dirty marker.
-
-#### _topologyIntent
-
-Public topology intent used to preserve semantic API choices.
-
-#### _topoOrder
-
-Cached topological order.
-
-#### _trainingStep
-
-Training step counter.
-
-#### _updateSpeciesStagnation
-
-`() => void`
-
-Update stagnation metrics per species to inform pruning and selection.
-
-Returns: Updated stagnation state.
-
-#### _useFloat32Weights
-
-Whether to store slab weights in float32.
-
-#### _warnIfNoBestGenome
-
-`() => void`
-
-Emit a standardized warning when evolution loop finds no valid best genome (test hook).
-
-#### _weightNoisePerHidden
-
-Per-hidden-layer weight-noise standard deviations.
-
-#### _weightNoiseSchedule
-
-Dynamic weight-noise schedule function.
-
-#### _weightNoiseStd
-
-Global weight-noise standard deviation.
-
-#### _wnOrig
-
-Original weights captured for weight-noise recovery.
-
 #### acquire
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default`
+```ts
+acquire(
+  from: default,
+  to: default,
+  weight: number | undefined,
+): default
+```
 
-Acquire a `Connection` from the pool (or construct new). Fields are fully reset & given
-a fresh sequential `innovation` id. Prefer this in evolutionary algorithms that mutate
-topology frequently to reduce GC pressure.
+Acquire a connection from the internal pool, or construct a fresh one when the pool is empty.
+This is the low-allocation path used by topology mutation and other edge-churn heavy flows.
 
 Parameters:
 - `from` - Source node.
@@ -1156,16 +2340,24 @@ Returns: Reinitialized connection instance.
 
 #### activate
 
-`(input: number[], training: boolean, _maxActivationDepth: number) => number[]`
+```ts
+activate(
+  input: number[],
+  training: boolean,
+  _maxActivationDepth: number,
+): number[]
+```
 
-Activates the network using the given input array.
-Performs a forward pass through the network, calculating the activation of each node.
-
-Returns: An array of numerical values representing the activations of the network's output nodes.
+Standard activation API returning a plain number[] for backward compatibility.
+Internally may use pooled typed arrays; if so they are cloned before returning.
 
 #### activate
 
-`(input: number | undefined) => number`
+```ts
+activate(
+  input: number | undefined,
+): number
+```
 
 Activates the node, calculating its output value based on inputs and state.
 This method also calculates eligibility traces (`xtrace`) used for training recurrent connections.
@@ -1188,7 +2380,12 @@ Returns: The calculated activation value of the node.
 
 #### activate
 
-`(value: number[] | undefined, training: boolean) => number[]`
+```ts
+activate(
+  value: number[] | undefined,
+  training: boolean,
+): number[]
+```
 
 Activates all nodes within the layer, computing their output values.
 
@@ -1207,17 +2404,27 @@ Returns: An array containing the activation value of each node in the layer afte
 
 #### activate
 
-`(value: number[] | undefined) => number[]`
+```ts
+activate(
+  value: number[] | undefined,
+): number[]
+```
 
-Activates all nodes in the group. If input values are provided, they are assigned
-sequentially to the nodes before activation. Otherwise, nodes activate based on their
-existing states and incoming connections.
+Activates all nodes in the group.
 
-Returns: An array containing the activation value of each node in the group, in order.
+Parameters:
+- `value` - Optional array of input values. Its length must match the number of nodes in the group.
+
+Returns: Activation value of each node in the group, in order.
 
 #### activateBatch
 
-`(inputs: number[][], training: boolean) => number[][]`
+```ts
+activateBatch(
+  inputs: number[][],
+  training: boolean,
+): number[][]
+```
 
 Activate the network over a batch of input vectors (micro-batching).
 
@@ -1233,7 +2440,13 @@ Returns: Array of output vectors, each length equals this.output
 
 #### activateRaw
 
-`(input: number[], training: boolean, maxActivationDepth: number) => import("src/architecture/activationArrayPool").ActivationArray`
+```ts
+activateRaw(
+  input: number[],
+  training: boolean,
+  maxActivationDepth: number,
+): ActivationArray
+```
 
 Raw activation that can return a typed array when pooling is enabled (zero-copy).
 If reuseActivationArrays=false falls back to standard activate().
@@ -1249,44 +2462,48 @@ Returns: Output activations (typed array when pooling is enabled).
 
 The output value of the node after applying the activation function. This is the value transmitted to connected nodes.
 
-#### addGenome
-
-`(genome: import("src/architecture/network").default, parents: number[] | undefined) => void`
-
-Register an externally-created genome into the `Neat` population.
-
 #### addNodeBetween
 
-`() => void`
+```ts
+addNodeBetween(): void
+```
 
 Split a random existing connection by inserting one hidden node.
 
 #### adjustRateForAccumulation
 
-`(rate: number, accumulationSteps: number, reduction: "average" | "sum") => number`
+```ts
+adjustRateForAccumulation(
+  rate: number,
+  accumulationSteps: number,
+  reduction: "average" | "sum",
+): number
+```
 
 Utility: adjust rate for accumulation mode (use result when switching to 'sum' to mimic 'average').
 
-#### applyAdaptivePruning
-
-`() => Promise<void>`
-
-Run the adaptive pruning controller once.
-
 #### applyBatchUpdates
 
-`(momentum: number) => void`
+```ts
+applyBatchUpdates(
+  momentum: number,
+): void
+```
 
 Applies accumulated batch updates to incoming and self connections and this node's bias.
 Uses momentum in a Nesterov-compatible way: currentDelta = accumulated + momentum * previousDelta.
-Resets accumulators after applying. Safe to call on any node type.
+Resets accumulators after applying. Safe to call on every node type.
 
 Parameters:
 - `momentum` - Momentum factor (0 to disable)
 
 #### applyBatchUpdatesWithOptimizer
 
-`(opts: { type: "sgd" | "rmsprop" | "adagrad" | "adam" | "adamw" | "amsgrad" | "adamax" | "nadam" | "radam" | "lion" | "adabelief" | "lookahead"; momentum?: number | undefined; beta1?: number | undefined; beta2?: number | undefined; eps?: number | undefined; weightDecay?: number | undefined; lrScale?: number | undefined; t?: number | undefined; baseType?: string | undefined; la_k?: number | undefined; la_alpha?: number | undefined; }) => void`
+```ts
+applyBatchUpdatesWithOptimizer(
+  opts: { type: "sgd" | "rmsprop" | "adagrad" | "adam" | "adamw" | "amsgrad" | "adamax" | "nadam" | "radam" | "lion" | "adabelief" | "lookahead"; momentum?: number | undefined; beta1?: number | undefined; beta2?: number | undefined; eps?: number | undefined; weightDecay?: number | undefined; lrScale?: number | undefined; t?: number | undefined; baseType?: string | undefined; la_k?: number | undefined; la_alpha?: number | undefined; },
+): void
+```
 
 Extended batch update supporting multiple optimizers.
 
@@ -1331,16 +2548,14 @@ Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
 Parameters:
 - `opts` - Optimizer configuration (see above).
 
-#### applyEvolutionPruning
-
-`() => Promise<void>`
-
-Manually apply evolution-time pruning once using the current generation
-index and configuration in `options.evolutionPruning`.
-
 #### attention
 
-`(size: number, heads: number) => import("src/architecture/layer").default`
+```ts
+attention(
+  size: number,
+  heads: number,
+): default
+```
 
 Creates a multi-head self-attention layer (stub implementation).
 
@@ -1352,7 +2567,11 @@ Returns: A new Layer instance representing an attention layer.
 
 #### batchNorm
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+batchNorm(
+  size: number,
+): default
+```
 
 Creates a batch normalization layer.
 Applies batch normalization to the activations of the nodes in this layer during activation.
@@ -1369,45 +2588,35 @@ Input nodes typically have a bias of 0.
 
 #### clear
 
-`() => void`
+```ts
+clear(): void
+```
 
 Clears the internal state of all nodes in the network.
 Resets node activation, state, eligibility traces, and extended traces to their initial values (usually 0).
 This is typically done before processing a new input sequence in recurrent networks or between training epochs if desired.
 
-#### clearObjectives
-
-`() => void`
-
-Clear all registered multi-objective objectives.
-
-#### clearParetoArchive
-
-`() => void`
-
-Clear the Pareto archive.
-
 #### clearStochasticDepthSchedule
 
-`() => void`
+```ts
+clearStochasticDepthSchedule(): void
+```
 
 Clear stochastic-depth schedule function.
 
-#### clearTelemetry
-
-`() => void`
-
-Clear telemetry buffer and cached entries.
-
 #### clearWeightNoiseSchedule
 
-`() => void`
+```ts
+clearWeightNoiseSchedule(): void
+```
 
 Clear the dynamic global weight-noise schedule.
 
 #### clone
 
-`() => import("src/architecture/network").default`
+```ts
+clone(): default
+```
 
 Creates a deep copy of the network.
 
@@ -1415,7 +2624,11 @@ Returns: A new Network instance that is a clone of the current network.
 
 #### configurePruning
 
-`(cfg: { start: number; end: number; targetSparsity: number; regrowFraction?: number | undefined; frequency?: number | undefined; method?: "magnitude" | "snip" | undefined; }) => void`
+```ts
+configurePruning(
+  cfg: { start: number; end: number; targetSparsity: number; regrowFraction?: number | undefined; frequency?: number | undefined; method?: "magnitude" | "snip" | undefined; },
+): void
+```
 
 Configure scheduled pruning during training.
 
@@ -1424,7 +2637,13 @@ Parameters:
 
 #### connect
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connect(
+  from: default,
+  to: default,
+  weight: number | undefined,
+): default[]
+```
 
 Creates a connection between two nodes in the network.
 Handles both regular connections and self-connections.
@@ -1434,7 +2653,12 @@ Returns: An array containing the newly created connection object(s). Typically c
 
 #### connect
 
-`(target: import("src/architecture/node").default | { nodes: import("src/architecture/node").default[]; }, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connect(
+  target: default | { nodes: default[]; },
+  weight: number | undefined,
+): default[]
+```
 
 Creates a connection from this node to a target node or all nodes in a group.
 
@@ -1446,7 +2670,13 @@ Returns: An array containing the newly created Connection object(s).
 
 #### connect
 
-`(target: import("src/architecture/node").default | import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connect(
+  target: default | default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Connects this layer's output to a target component (Layer, Group, or Node).
 
@@ -1463,12 +2693,22 @@ Returns: An array containing the newly created connection objects.
 
 #### connect
 
-`(target: import("src/architecture/node").default | import("src/architecture/layer").default | import("src/architecture/group").default, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connect(
+  target: default | default | default,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
-Establishes connections from all nodes in this group to a target Group, Layer, or Node.
-The connection pattern (e.g., all-to-all, one-to-one) can be specified.
+Establishes connections from all nodes in this group to a target group, layer, or node.
 
-Returns: An array containing all the connection objects created.
+Parameters:
+- `target` - Destination entity to connect to.
+- `method` - Connection pattern to use.
+- `weight` - Optional fixed weight for all created connections.
+
+Returns: All connection objects created during this wiring step.
 
 #### connections
 
@@ -1476,20 +2716,35 @@ Connection list.
 
 #### construct
 
-`(list: (import("src/architecture/node").default | import("src/architecture/layer").default | import("src/architecture/group").default)[]) => import("src/architecture/network").default`
+```ts
+construct(
+  list: (default | default | default)[],
+): default
+```
 
-Constructs a Network instance from an array of interconnected Layers, Groups, or Nodes.
+Constructs a network instance from an array of interconnected layers,
+groups, or nodes.
 
-This method processes the input list, extracts all unique nodes, identifies connections,
-gates, and self-connections, and determines the network's input and output sizes based
-on the `type` property ('input' or 'output') set on the nodes. It uses Sets internally
-for efficient handling of unique elements during construction.
+This method is the bridge between manual graph assembly and a runnable
+`Network`. It walks the supplied primitives, collects the unique nodes and
+connections they reference, infers input/output counts from node types, and
+folds the result into one normalized network object.
 
-Returns: A Network object representing the constructed architecture.
+Parameters:
+- `list` - Building blocks that are already interconnected.
+
+Returns: A network representing the supplied architecture.
 
 #### conv1d
 
-`(size: number, kernelSize: number, stride: number, padding: number) => import("src/architecture/layer").default`
+```ts
+conv1d(
+  size: number,
+  kernelSize: number,
+  stride: number,
+  padding: number,
+): default
+```
 
 Creates a 1D convolutional layer (stub implementation).
 
@@ -1503,37 +2758,41 @@ Returns: A new Layer instance representing a 1D convolutional layer.
 
 #### createMLP
 
-`(inputCount: number, hiddenCounts: number[], outputCount: number) => import("src/architecture/network").default`
+```ts
+createMLP(
+  inputCount: number,
+  hiddenCounts: number[],
+  outputCount: number,
+): default
+```
 
 Creates a fully connected, strictly layered MLP network.
 
 Returns: A new, fully connected, layered MLP
 
-#### createPool
-
-`(network: import("src/architecture/network").default | null) => void`
-
-Create initial population pool. Delegates to helpers if present.
-
 #### crossOver
 
-`(network1: import("src/architecture/network").default, network2: import("src/architecture/network").default, equal: boolean) => import("src/architecture/network").default`
+```ts
+crossOver(
+  network1: default,
+  network2: default,
+  equal: boolean,
+): default
+```
 
-Creates a new offspring network by performing crossover between two parent networks.
-This method implements the crossover mechanism inspired by the NEAT algorithm and described
-in the Instinct paper, combining genes (nodes and connections) from both parents.
-Fitness scores can influence the inheritance process. Matching genes are inherited randomly,
-while disjoint/excess genes are typically inherited from the fitter parent (or randomly if fitness is equal or `equal` flag is set).
-
-Returns: A new Network instance representing the offspring.
+NEAT-style crossover delegate.
 
 #### dcMask
 
-DropConnect active mask: 1 = not dropped (active), 0 = dropped for this stochastic pass.
+DropConnect active mask: `1` means active for this stochastic pass, `0` means dropped.
 
 #### dense
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+dense(
+  size: number,
+): default
+```
 
 Creates a standard fully connected (dense) layer.
 
@@ -1551,7 +2810,9 @@ The derivative of the activation function evaluated at the node's current state.
 
 #### describeArchitecture
 
-`() => import("src/architecture/network/network.types").NetworkArchitectureDescriptor`
+```ts
+describeArchitecture(): NetworkArchitectureDescriptor
+```
 
 Resolves a stable architecture descriptor for telemetry/UI consumers.
 
@@ -1562,34 +2823,48 @@ Returns: Architecture descriptor with hidden-layer widths and provenance.
 
 #### deserialize
 
-`(data: [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number] | unknown[], inputSize: number | undefined, outputSize: number | undefined) => import("src/architecture/network").default`
+```ts
+deserialize(
+  data: unknown[] | [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number],
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): default
+```
 
-Creates a Network instance from serialized data produced by `serialize()`.
-Reconstructs the network structure and state based on the provided arrays.
-
-Returns: A new Network instance reconstructed from the serialized data.
+Static lightweight tuple deserializer delegate
 
 #### disableDropConnect
 
-`() => void`
+```ts
+disableDropConnect(): void
+```
 
 Disable DropConnect.
 
 #### disableStochasticDepth
 
-`() => void`
+```ts
+disableStochasticDepth(): void
+```
 
 Disable stochastic depth.
 
 #### disableWeightNoise
 
-`() => void`
+```ts
+disableWeightNoise(): void
+```
 
 Disable all weight-noise settings.
 
 #### disconnect
 
-`(from: import("src/architecture/node").default, to: import("src/architecture/node").default) => void`
+```ts
+disconnect(
+  from: default,
+  to: default,
+): void
+```
 
 Disconnects two nodes, removing the connection between them.
 Handles both regular connections and self-connections.
@@ -1597,7 +2872,12 @@ If the connection being removed was gated, it is also ungated.
 
 #### disconnect
 
-`(target: import("src/architecture/node").default, twosided: boolean) => void`
+```ts
+disconnect(
+  target: default,
+  twosided: boolean,
+): void
+```
 
 Removes the connection from this node to the target node.
 
@@ -1607,7 +2887,12 @@ Parameters:
 
 #### disconnect
 
-`(target: import("src/architecture/node").default | import("src/architecture/group").default, twosided: boolean | undefined) => void`
+```ts
+disconnect(
+  target: default | default,
+  twosided: boolean | undefined,
+): void
+```
 
 Removes connections between this layer's nodes and a target Group or Node.
 
@@ -1617,9 +2902,20 @@ Parameters:
 
 #### disconnect
 
-`(target: import("src/architecture/node").default | import("src/architecture/group").default, twosided: boolean) => void`
+```ts
+disconnect(
+  target: default | default,
+  twosided: boolean,
+): void
+```
 
-Removes connections between nodes in this group and a target Group or Node.
+Removes connections between nodes in this group and a target group or node.
+
+Parameters:
+- `target` - Group or node to disconnect from.
+- `twosided` - Whether to also remove reciprocal connections.
+
+Returns: Nothing.
 
 #### dropConnectActiveMask
 
@@ -1635,11 +2931,15 @@ Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment).
 
 #### enabled
 
-Whether the gene (connection) is currently expressed (participates in forward pass).
+Whether the gene is currently expressed and participates in the forward pass.
 
 #### enableDropConnect
 
-`(p: number) => void`
+```ts
+enableDropConnect(
+  p: number,
+): void
+```
 
 Enable DropConnect with a probability in $[0,1)$.
 
@@ -1648,7 +2948,11 @@ Parameters:
 
 #### enableWeightNoise
 
-`(stdDev: number | { perHiddenLayer: number[]; }) => void`
+```ts
+enableWeightNoise(
+  stdDev: number | { perHiddenLayer: number[]; },
+): void
+```
 
 Enable weight noise using either a global standard deviation or per-hidden-layer values.
 
@@ -1657,98 +2961,51 @@ Parameters:
 
 #### enforceMinimumHiddenLayerSizes
 
-`(network: import("src/architecture/network").default) => import("src/architecture/network").default`
+```ts
+enforceMinimumHiddenLayerSizes(
+  network: default,
+): default
+```
 
 Enforces the minimum hidden layer size rule on a network.
 
-This ensures that all hidden layers have at least min(input, output) + 1 nodes,
-which is a common heuristic to ensure networks have adequate representation capacity.
+Parameters:
+- `network` - The network to normalize.
 
-Returns: The same network with properly sized hidden layers
-
-#### ensureMinHiddenNodes
-
-`(network: import("src/architecture/network").default, multiplierOverride: number | undefined) => Promise<void>`
-
-Ensure a network has the minimum number of hidden nodes according to configured policy.
-
-#### ensureNoDeadEnds
-
-`(network: import("src/architecture/network").default) => void`
-
-Delegate ensureNoDeadEnds to mutation module (added for backward compat).
+Returns: The same network with hidden layers grown to the minimum size when needed.
 
 #### error
 
 Stores error values calculated during backpropagation.
 
-#### evaluate
-
-`() => Promise<any>`
-
-Evaluate the current population using the configured fitness function.
-Delegates to the migrated evaluation helper to keep this class thin.
-
-Returns: Aggregated evaluation result (implementation specific).
-
 #### evolve
 
-`() => Promise<import("src/architecture/network").default>`
+```ts
+evolve(
+  set: { input: number[]; output: number[]; }[],
+  options: Record<string, unknown> | undefined,
+): Promise<{ error: number; iterations: number; time: number; }>
+```
 
-Evolves the population by selecting, mutating, and breeding genomes.
-This method is delegated to `src/neat/neat.evolve.ts` during the migration.
+Evolve the network against a dataset using the neuroevolution chapter.
 
-#### export
+The implementation lives outside this class so the public surface stays
+orchestration-first while population search, mutation policy, and stopping
+criteria remain chapter-owned.
 
-`() => any[]`
+Parameters:
+- `set` - Evaluation samples with `input` and `output` vectors.
+- `options` - Evolution options controlling population search and stopping criteria.
 
-Exports the current population as an array of JSON objects.
-
-#### exportParetoFrontJSONL
-
-`(maxEntries: number) => string`
-
-Export Pareto front archive as JSON Lines for external analysis.
-
-#### exportRNGState
-
-`() => number | undefined`
-
-Export the current RNG state for external persistence or tests.
-
-#### exportSpeciesHistoryCSV
-
-`(maxEntries: number) => string`
-
-Export species history as CSV rows for offline inspection.
-
-#### exportSpeciesHistoryJSONL
-
-`(maxEntries: number) => string`
-
-Export species history as JSON Lines for storage and analysis.
-
-#### exportState
-
-`() => any`
-
-Convenience: export full evolutionary state (meta + population genomes).
-
-#### exportTelemetryCSV
-
-`(maxEntries: number) => string`
-
-Export recent telemetry entries as CSV.
-
-#### exportTelemetryJSONL
-
-`() => string`
-
-Export telemetry as JSON Lines (one JSON object per line).
+Returns: Promise resolving to the final error, iteration count, and elapsed time.
 
 #### fastSlabActivate
 
-`(input: number[]) => number[]`
+```ts
+fastSlabActivate(
+  input: number[],
+): number[]
+```
 
 Public wrapper for fast slab forward pass.
 
@@ -1759,7 +3016,7 @@ Returns: Activation output.
 
 #### firstMoment
 
-First moment estimate (Adam / AdamW) (was opt_m).
+First moment estimate used by Adam-family optimizers.
 
 #### from
 
@@ -1767,16 +3024,21 @@ The source (pre-synaptic) node supplying activation.
 
 #### fromJSON
 
-`(json: Record<string, unknown>) => import("src/architecture/network").default`
+```ts
+fromJSON(
+  json: Record<string, unknown>,
+): default
+```
 
-Reconstructs a network from a JSON object (latest standard).
-Handles formatVersion, robust error handling, and index-based references.
-
-Returns: The reconstructed network.
+Verbose JSON static deserializer
 
 #### fromJSON
 
-`(json: { bias: number; type: string; squash: string; mask: number; }) => import("src/architecture/node").default`
+```ts
+fromJSON(
+  json: { bias: number; type: string; squash: string; mask: number; },
+): default
+```
 
 Creates a Node instance from a JSON object.
 
@@ -1787,13 +3049,16 @@ Returns: A new Node instance configured according to the JSON object.
 
 #### gain
 
-Multiplicative modulation applied *after* weight. Default is `1` (neutral). We only store an
-internal symbol-keyed property when the gain is non-neutral, reducing memory usage across
-large populations where most connections are ungated.
+Multiplicative modulation applied after weight. Neutral gain `1` is omitted from storage.
 
 #### gate
 
-`(node: import("src/architecture/node").default, connection: import("src/architecture/connection").default) => void`
+```ts
+gate(
+  node: default,
+  connection: default,
+): void
+```
 
 Gates a connection with a specified node.
 The activation of the `node` (gater) will modulate the weight of the `connection`.
@@ -1801,7 +3066,11 @@ Adds the connection to the network's `gates` list.
 
 #### gate
 
-`(connections: import("src/architecture/connection").default | import("src/architecture/connection").default[]) => void`
+```ts
+gate(
+  connections: default | default[],
+): void
+```
 
 Makes this node gate the provided connection(s).
 The connection's gain will be controlled by this node's activation value.
@@ -1811,7 +3080,12 @@ Parameters:
 
 #### gate
 
-`(connections: import("src/architecture/connection").default[], method: unknown) => void`
+```ts
+gate(
+  connections: default[],
+  method: unknown,
+): void
+```
 
 Applies gating to a set of connections originating from this layer's output group.
 
@@ -1824,14 +3098,24 @@ Parameters:
 
 #### gate
 
-`(connections: import("src/architecture/connection").default | import("src/architecture/connection").default[], method: unknown) => void`
+```ts
+gate(
+  connections: default | default[],
+  method: unknown,
+): void
+```
 
-Configures nodes within this group to act as gates for the specified connection(s).
-Gating allows the output of a node in this group to modulate the flow of signal through the gated connection.
+Configures nodes within this group to act as gates for the specified connection set.
+
+Parameters:
+- `connections` - Single connection or list of connections to gate.
+- `method` - Gating mechanism to use.
+
+Returns: Nothing.
 
 #### gater
 
-Optional gating node whose activation can modulate effective weight (symbol-backed).
+Optional gating node whose activation modulates effective weight.
 
 #### gates
 
@@ -1841,15 +3125,11 @@ Network gates collection.
 
 Stable per-node gene identifier for NEAT innovation reuse
 
-#### getAverage
-
-`() => number`
-
-Calculates the average fitness score of the population.
-
 #### getConnectionSlab
 
-`() => import("src/architecture/network/slab/network.slab.utils.types").ConnectionSlabView`
+```ts
+getConnectionSlab(): ConnectionSlabView
+```
 
 Read slab structures for fast activation.
 
@@ -1857,129 +3137,43 @@ Returns: Slab connection structures.
 
 #### getCurrentSparsity
 
-`() => number`
+```ts
+getCurrentSparsity(): number
+```
 
 Compute the current connection sparsity ratio.
 
 Returns: Current sparsity in $[0,1]$.
 
-#### getDiversityStats
-
-`() => import("src/neat/neat.diversity.utils").DiversityStats`
-
-Return the latest cached diversity statistics.
-
-#### getFittest
-
-`() => import("src/architecture/network").default`
-
-Retrieves the fittest genome from the population.
-
 #### getLastGradClipGroupCount
 
-`() => number`
+```ts
+getLastGradClipGroupCount(): number
+```
 
 Returns last gradient clipping group count (0 if no clipping yet).
 
-#### getLineageSnapshot
-
-`(limit: number) => { id: number; parents: number[]; }[]`
-
-Return an array of {id, parents} for the first `limit` genomes in population.
-
 #### getLossScale
 
-`() => number`
+```ts
+getLossScale(): number
+```
 
 Returns current mixed precision loss scale (1 if disabled).
 
-#### getMinimumHiddenSize
-
-`(multiplierOverride: number | undefined) => number`
-
-Minimum hidden size considering explicit minHidden or multiplier policy.
-
-#### getMultiObjectiveMetrics
-
-`() => { rank: number; crowding: number; score: number; nodes: number; connections: number; }[]`
-
-Returns compact multi-objective metrics for each genome in the current population.
-
-#### getNoveltyArchiveSize
-
-`() => number`
-
-Returns the number of entries currently stored in the novelty archive.
-
-#### getObjectiveEvents
-
-`() => { gen: number; type: "add" | "remove"; key: string; }[]`
-
-Get recent objective add/remove events for telemetry exports and teaching.
-
-#### getObjectiveKeys
-
-`() => string[]`
-
-Public helper returning just the objective keys (tests rely on).
-
-#### getObjectives
-
-`() => { key: string; direction: "max" | "min"; }[]`
-
-Return a lightweight list of registered objective keys and their directions.
-
-#### getOffspring
-
-`() => import("src/architecture/network").default`
-
-Generates an offspring by crossing over two parent networks.
-Uses the crossover method described in the Instinct algorithm.
-
-Returns: A new network created from two parents.
-
-#### getOperatorStats
-
-`() => { name: string; success: number; attempts: number; }[]`
-
-Returns a summary of mutation/operator statistics used by operator adaptation.
-
-#### getParent
-
-`() => import("src/architecture/network").default`
-
-Selects a parent genome for breeding based on the selection method.
-Supports multiple selection strategies, including POWER, FITNESS_PROPORTIONATE, and TOURNAMENT.
-
-Returns: The selected parent genome.
-
-#### getParetoArchive
-
-`(maxEntries: number) => import("src/neat/neat.types").ParetoArchiveEntry[]`
-
-Get recent Pareto archive entries (meta information about archived fronts).
-
-#### getParetoFronts
-
-`(maxFronts: number) => import("src/architecture/network").default[][]`
-
-Reconstruct Pareto fronts for the current population snapshot.
-
-#### getPerformanceStats
-
-`() => { lastEvalMs: number | undefined; lastEvolveMs: number | undefined; }`
-
-Return recent performance statistics for the most recent evaluation and evolve operations.
-
 #### getRawGradientNorm
 
-`() => number`
+```ts
+getRawGradientNorm(): number
+```
 
 Returns last recorded raw (pre-update) gradient L2 norm.
 
 #### getRegularizationStats
 
-`() => Record<string, unknown> | null`
+```ts
+getRegularizationStats(): Record<string, unknown> | null
+```
 
 Read regularization statistics collected during training.
 
@@ -1987,33 +3181,19 @@ Returns: Regularization stats payload.
 
 #### getRNGState
 
-`() => number | undefined`
+```ts
+getRNGState(): number | undefined
+```
 
 Read the raw deterministic RNG state word.
 
 Returns: RNG state value when present.
 
-#### getSpeciesHistory
-
-`() => import("src/neat/neat.types").SpeciesHistoryEntry[]`
-
-Returns the historical species statistics recorded each generation.
-
-#### getSpeciesStats
-
-`() => { id: number; size: number; bestScore: number; lastImproved: number; }[]`
-
-Return a concise summary for each current species.
-
-#### getTelemetry
-
-`() => import("src/neat/neat.types").TelemetryEntry[]`
-
-Return the internal telemetry buffer.
-
 #### getTopologyIntent
 
-`() => import("src/architecture/network/network.types").NetworkTopologyIntent`
+```ts
+getTopologyIntent(): NetworkTopologyIntent
+```
 
 Returns the public topology intent for this network.
 
@@ -2021,17 +3201,23 @@ Returns: Current topology intent.
 
 #### getTrainingStats
 
-`() => { gradNorm: number; gradNormRaw: number; lossScale: number; optimizerStep: number; mp: { good: number; bad: number; overflowCount: number; scaleUps: number; scaleDowns: number; lastOverflowStep: number; }; }`
+```ts
+getTrainingStats(): TrainingStatsSnapshot
+```
 
 Consolidated training stats snapshot.
 
 #### gradientAccumulator
 
-Generic gradient accumulator (RMSProp / AdaGrad) (was opt_cache).
+Generic gradient accumulator used by RMSProp and AdaGrad.
 
 #### gru
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+gru(
+  size: number,
+): default
+```
 
 Creates a Gated Recurrent Unit (GRU) layer.
 
@@ -2046,52 +3232,37 @@ Returns: A new Layer instance configured as a GRU layer.
 
 #### gru
 
-`(layers: number[]) => import("src/architecture/network").default`
+```ts
+gru(
+  layers: number[],
+): default
+```
 
-Creates a Gated Recurrent Unit (GRU) network.
-GRUs are another type of recurrent neural network, similar to LSTMs but often simpler.
-This constructor uses `Layer.gru` to create the core GRU blocks.
+Creates a Gated Recurrent Unit network.
+
+Parameters:
+- `layers` - Layer sizes starting with input and ending with output.
 
 Returns: The constructed GRU network.
 
 #### hasGater
 
-Whether a gater node is assigned (modulates gain); true if the gater symbol field is present.
+Whether a gater node is assigned to modulate this connection's effective weight.
 
 #### hopfield
 
-`(size: number) => import("src/architecture/network").default`
+```ts
+hopfield(
+  size: number,
+): default
+```
 
 Creates a Hopfield network.
-Hopfield networks are a form of recurrent neural network often used for associative memory tasks.
-This implementation creates a simple, fully connected structure.
+
+Parameters:
+- `size` - The number of nodes in the network.
 
 Returns: The constructed Hopfield network.
-
-#### import
-
-`(json: any[]) => Promise<void>`
-
-Imports a population from an array of JSON objects.
-
-#### importRNGState
-
-`(state: any) => void`
-
-Import an RNG state (alias for restore; kept for compatibility).
-
-Parameters:
-- `state` - Numeric RNG state.
-
-#### importState
-
-`(bundle: any, fitness: (n: import("src/architecture/network").default) => number) => Promise<import("src/neat").default>`
-
-Convenience: restore full evolutionary state previously produced by exportState().
-
-Parameters:
-- `bundle` - Object with shape { neat, population }
-- `fitness` - Fitness function to attach
 
 #### index
 
@@ -2099,7 +3270,7 @@ Optional index, potentially used to identify the node's position within a layer 
 
 #### infinityNorm
 
-Adamax: Exponential moving infinity norm (was opt_u).
+Adamax infinity norm accumulator.
 
 #### innovation
 
@@ -2107,19 +3278,28 @@ Unique historical marking (auto-increment) for evolutionary alignment.
 
 #### innovationID
 
-`(sourceNodeId: number, targetNodeId: number) => number`
+```ts
+innovationID(
+  sourceNodeId: number,
+  targetNodeId: number,
+): number
+```
 
-Deterministic Cantor pairing function for a (sourceNodeId, targetNodeId) pair.
-Useful when you want a stable innovation id without relying on global mutable counters
-(e.g., for hashing or reproducible experiments).
-
-NOTE: For large indices this can overflow 53-bit safe integer space; keep node indices reasonable.
+Deterministic Cantor pairing function for a `(sourceNodeId, targetNodeId)` pair.
+Use it when you need a stable edge identifier without relying on the mutable
+auto-increment counter.
 
 Parameters:
-- `sourceNodeId` - Source node integer id / index.
-- `targetNodeId` - Target node integer id / index.
+- `sourceNodeId` - Source node integer id or index.
+- `targetNodeId` - Target node integer id or index.
 
 Returns: Unique non-negative integer derived from the ordered pair.
+
+Example:
+
+```ts
+const id = Connection.innovationID(2, 5);
+```
 
 #### input
 
@@ -2127,7 +3307,13 @@ Input node count.
 
 #### input
 
-`(from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+input(
+  from: default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Handles the connection logic when this layer is the *target* of a connection.
 
@@ -2148,7 +3334,11 @@ Internal flag to detect cycles during activation
 
 #### isConnectedTo
 
-`(target: import("src/architecture/node").default) => boolean`
+```ts
+isConnectedTo(
+  target: default,
+): boolean
+```
 
 Checks if this node is connected to another node.
 
@@ -2159,7 +3349,11 @@ Returns: True if connected, otherwise false.
 
 #### isProjectedBy
 
-`(node: import("src/architecture/node").default) => boolean`
+```ts
+isProjectedBy(
+  node: default,
+): boolean
+```
 
 Checks if the given node has a direct outgoing connection to this node.
 Considers both regular incoming connections and the self-connection.
@@ -2171,7 +3365,11 @@ Returns: True if the given node projects to this node, false otherwise.
 
 #### isProjectingTo
 
-`(node: import("src/architecture/node").default) => boolean`
+```ts
+isProjectingTo(
+  node: default,
+): boolean
+```
 
 Checks if this node has a direct outgoing connection to the given node.
 Considers both regular outgoing connections and the self-connection.
@@ -2187,7 +3385,11 @@ Last skipped stochastic-depth layers from activation runtime state.
 
 #### layerNorm
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+layerNorm(
+  size: number,
+): default
+```
 
 Creates a layer normalization layer.
 Applies layer normalization to the activations of the nodes in this layer during activation.
@@ -2203,11 +3405,15 @@ Optional layered view cache.
 
 #### lookaheadShadowWeight
 
-Lookahead: shadow (slow) weight parameter (was _la_shadowWeight).
+Lookahead slow-weight snapshot.
 
 #### lstm
 
-`(size: number) => import("src/architecture/layer").default`
+```ts
+lstm(
+  size: number,
+): default
+```
 
 Creates a Long Short-Term Memory (LSTM) layer.
 
@@ -2222,11 +3428,16 @@ Returns: A new Layer instance configured as an LSTM layer.
 
 #### lstm
 
-`(layerArgs: (number | { inputToOutput?: boolean | undefined; })[]) => import("src/architecture/network").default`
+```ts
+lstm(
+  layerArgs: (number | { inputToOutput?: boolean | undefined; })[],
+): default
+```
 
-Creates a Long Short-Term Memory (LSTM) network.
-LSTMs are a type of recurrent neural network (RNN) capable of learning long-range dependencies.
-This constructor uses `Layer.lstm` to create the core LSTM blocks.
+Creates a Long Short-Term Memory network.
+
+Parameters:
+- `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed LSTM network.
 
@@ -2236,11 +3447,16 @@ A mask factor (typically 0 or 1) used for implementing dropout. If 0, the node's
 
 #### maxSecondMoment
 
-AMSGrad: Maximum of past second moment (was opt_vhat).
+AMSGrad maximum of past second-moment estimates.
 
 #### memory
 
-`(size: number, memory: number) => import("src/architecture/layer").default`
+```ts
+memory(
+  size: number,
+  memory: number,
+): default
+```
 
 Creates a Memory layer, designed to hold state over a fixed number of time steps.
 
@@ -2257,15 +3473,11 @@ Returns: A new Layer instance configured as a Memory layer.
 
 #### mutate
 
-`() => Promise<void>`
-
-Applies mutations to the population based on the mutation rate and amount.
-Each genome is mutated using the selected mutation methods.
-Slightly increases the chance of ADD_CONN mutation for more connectivity.
-
-#### mutate
-
-`(method: import("src/architecture/network/network.types").MutationMethod) => void`
+```ts
+mutate(
+  method: MutationMethod,
+): void
+```
 
 Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
@@ -2277,7 +3489,11 @@ Parameters:
 
 #### mutate
 
-`(method: unknown) => void`
+```ts
+mutate(
+  method: unknown,
+): void
+```
 
 Applies a mutation method to the node. Used in neuro-evolution.
 
@@ -2289,12 +3505,24 @@ Parameters:
 
 #### narx
 
-`(inputSize: number, hiddenLayers: number | number[], outputSize: number, previousInput: number, previousOutput: number) => import("src/architecture/network").default`
+```ts
+narx(
+  inputSize: number,
+  hiddenLayers: number | number[],
+  outputSize: number,
+  previousInput: number,
+  previousOutput: number,
+): default
+```
 
-Creates a Nonlinear AutoRegressive network with eXogenous inputs (NARX).
-NARX networks are recurrent networks often used for time series prediction.
-They predict the next value of a time series based on previous values of the series
-and previous values of external (exogenous) input series.
+Creates a Nonlinear AutoRegressive network with eXogenous inputs.
+
+Parameters:
+- `inputSize` - The exogenous input size at each time step.
+- `hiddenLayers` - Hidden layer sizes, or zero / empty for none.
+- `outputSize` - The prediction output size.
+- `previousInput` - The number of delayed input steps.
+- `previousOutput` - The number of delayed output steps.
 
 Returns: The constructed NARX network.
 
@@ -2304,7 +3532,11 @@ Network node collection.
 
 #### noTraceActivate
 
-`(input: number[]) => number[]`
+```ts
+noTraceActivate(
+  input: number[],
+): number[]
+```
 
 Activates the network without calculating eligibility traces.
 This is a performance optimization for scenarios where backpropagation is not needed,
@@ -2314,7 +3546,11 @@ Returns: An array of numerical values representing the activations of the networ
 
 #### noTraceActivate
 
-`(input: number | undefined) => number`
+```ts
+noTraceActivate(
+  input: number | undefined,
+): number
+```
 
 Activates the node without calculating eligibility traces (`xtrace`).
 This is a performance optimization used during inference (when the network
@@ -2335,25 +3571,31 @@ Output node count.
 
 #### perceptron
 
-`(layers: number[]) => import("src/architecture/network").default`
+```ts
+perceptron(
+  layers: number[],
+): default
+```
 
-Creates a standard Multi-Layer Perceptron (MLP) network.
-An MLP consists of an input layer, one or more hidden layers, and an output layer,
-fully connected layer by layer.
+Creates a standard multi-layer perceptron network.
 
 The returned network is marked with the public `feed-forward` topology
 intent so acyclic enforcement and slab fast-path eligibility stay aligned
 with the builder users already chose.
 
+Parameters:
+- `layers` - Layer sizes starting with input, followed by hidden layers,
+and ending with output.
+
 Returns: The constructed MLP network.
 
 #### plastic
 
-Whether this connection participates in plastic adaptation (rate > 0).
+Whether this connection participates in plastic adaptation.
 
 #### plasticityRate
 
-Per-connection plasticity / learning rate (0 means non-plastic). Setting >0 marks plastic flag.
+Per-connection plasticity rate. `0` means the connection is not plastic.
 
 #### previousDeltaBias
 
@@ -2365,7 +3607,16 @@ Last applied delta weight (used by classic momentum).
 
 #### propagate
 
-`(rate: number, momentum: number, update: boolean, target: number[], regularization: number, costDerivative: ((target: number, output: number) => number) | undefined) => void`
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  target: number[],
+  regularization: number,
+  costDerivative: ((target: number, output: number) => number) | undefined,
+): void
+```
 
 Propagates the error backward through the network (backpropagation).
 Calculates the error gradient for each node and connection.
@@ -2376,7 +3627,15 @@ The process starts from the output nodes and moves backward layer by layer (or t
 
 #### propagate
 
-`(rate: number, momentum: number, update: boolean, regularization: number | { type: "L1" | "L2"; lambda: number; } | ((weight: number) => number), target: number | undefined) => void`
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  regularization: number | { type: "L1" | "L2"; lambda: number; } | ((weight: number) => number),
+  target: number | undefined,
+): void
+```
 
 Back-propagates the error signal through the node and calculates weight/bias updates.
 
@@ -2402,7 +3661,13 @@ Parameters:
 
 #### propagate
 
-`(rate: number, momentum: number, target: number[] | undefined) => void`
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  target: number[] | undefined,
+): void
+```
 
 Propagates the error backward through all nodes in the layer.
 
@@ -2418,7 +3683,12 @@ Parameters:
 
 #### pruneToSparsity
 
-`(targetSparsity: number, method: "magnitude" | "snip") => void`
+```ts
+pruneToSparsity(
+  targetSparsity: number,
+  method: "magnitude" | "snip",
+): void
+```
 
 Immediately prune connections to reach (or approach) a target sparsity fraction.
 Used by evolutionary pruning (generation-based) independent of training iteration schedule.
@@ -2429,20 +3699,33 @@ Parameters:
 
 #### random
 
-`(input: number, hidden: number, output: number, options: { connections?: number | undefined; backconnections?: number | undefined; selfconnections?: number | undefined; gates?: number | undefined; }) => import("src/architecture/network").default`
+```ts
+random(
+  input: number,
+  hidden: number,
+  output: number,
+  options: { connections?: number | undefined; backconnections?: number | undefined; selfconnections?: number | undefined; gates?: number | undefined; },
+): default
+```
 
-Creates a randomly structured network based on specified node counts and connection options.
+Creates a randomly structured network based on node counts and connection
+options.
 
-This method allows for the generation of networks with a less rigid structure than MLPs.
-It initializes a network with input and output nodes and then iteratively adds hidden nodes
-and various types of connections (forward, backward, self) and gates using mutation methods.
-This approach is inspired by neuro-evolution techniques where network topology evolves.
+Parameters:
+- `input` - The number of input nodes.
+- `hidden` - The number of hidden nodes to add.
+- `output` - The number of output nodes.
+- `options` - Optional configuration for connection counts and gates.
 
-Returns: The constructed network with a randomized topology.
+Returns: The constructed randomized network.
 
 #### rebuildConnections
 
-`(net: import("src/architecture/network").default) => void`
+```ts
+rebuildConnections(
+  net: default,
+): void
+```
 
 Rebuilds the network's connections array from all per-node connections.
 This ensures that the network.connections array is consistent with the actual
@@ -2453,7 +3736,11 @@ Returns: Example usage:
 
 #### rebuildConnectionSlab
 
-`(force: boolean) => void`
+```ts
+rebuildConnectionSlab(
+  force: boolean,
+): void
+```
 
 Rebuild slab structures for fast activation.
 
@@ -2462,31 +3749,34 @@ Parameters:
 
 Returns: Slab rebuild result.
 
-#### registerObjective
-
-`(key: string, direction: "max" | "min", accessor: (g: any) => number) => void`
-
-Register a custom objective for multi-objective optimization.
-
 #### release
 
-`(conn: import("src/architecture/connection").default) => void`
+```ts
+release(
+  conn: default,
+): void
+```
 
-Return a `Connection` to the internal pool for later reuse. Do NOT use the instance again
-afterward unless re-acquired (treat as surrendered). Optimizer / trace fields are not
-scrubbed here (they're overwritten during `acquire`).
+Return a connection instance to the internal pool for later reuse.
+Treat the instance as surrendered after calling this method.
 
 Parameters:
 - `conn` - The connection instance to recycle.
 
+Returns: Nothing.
+
 #### remove
 
-`(node: import("src/architecture/node").default) => void`
+```ts
+remove(
+  node: default,
+): void
+```
 
 Removes a node from the network.
 This involves:
 1. Disconnecting all incoming and outgoing connections associated with the node.
-2. Removing any self-connections.
+2. Removing self-connections.
 3. Removing the node from the `nodes` array.
 4. Attempting to reconnect the node's direct predecessors to its direct successors
    to maintain network flow, if possible and configured.
@@ -2495,56 +3785,41 @@ This involves:
 
 #### resetDropoutMasks
 
-`() => void`
+```ts
+resetDropoutMasks(): void
+```
 
 Resets all masks in the network to 1 (no dropout). Applies to both node-level and layer-level dropout.
 Should be called after training to ensure inference is unaffected by previous dropout.
 
 #### resetInnovationCounter
 
-`(value: number) => void`
+```ts
+resetInnovationCounter(
+  value: number,
+): void
+```
 
-Reset the monotonic auto-increment innovation counter (used for newly constructed / pooled instances).
-You normally only call this at the start of an experiment or when deserializing a full population.
+Reset the monotonic innovation counter used for newly constructed or pooled connections.
+You usually call this at the start of an experiment or before rebuilding a whole population.
 
 Parameters:
-- `value` - New starting value (default 1).
+- `value` - New starting value.
 
-#### resetNoveltyArchive
-
-`() => void`
-
-Reset the novelty archive (clear entries).
+Returns: Nothing.
 
 #### restoreRNG
 
-`(fn: () => number) => void`
+```ts
+restoreRNG(
+  fn: () => number,
+): void
+```
 
 Restore deterministic RNG function from a snapshot source.
 
 Parameters:
 - `fn` - RNG function to restore.
-
-#### restoreRNGState
-
-`(state: any) => void`
-
-Restore a previously-snapshotted RNG state. This restores the internal
-seed but does not re-create the RNG function until next use.
-
-Parameters:
-- `state` - Opaque numeric RNG state produced by `snapshotRNGState()`.
-
-#### sampleRandom
-
-`(sampleCount: number) => number[]`
-
-Produce deterministic random samples using the instance RNG.
-
-Parameters:
-- `sampleCount` - Number of random values to generate.
-
-Returns: Array of deterministic random samples.
 
 #### score
 
@@ -2552,17 +3827,11 @@ Optional fitness score.
 
 #### secondMoment
 
-Second raw moment estimate (Adam family) (was opt_v).
+Second raw moment estimate used by Adam-family optimizers.
 
 #### secondMomentum
 
-Secondary momentum (Lion variant) (was opt_m2).
-
-#### selectMutationMethod
-
-`(genome: import("src/architecture/network").default, rawReturnForTest: boolean) => any`
-
-Selects a mutation method for a given genome based on constraints.
+Secondary momentum buffer used by Lion-style updates.
 
 #### selfconns
 
@@ -2570,20 +3839,30 @@ Self-connection list.
 
 #### serialize
 
-`() => [number[], number[], string[], import("src/architecture/network/network.types").SerializedConnection[], number, number]`
+```ts
+serialize(): [number[], number[], string[], SerializedConnection[], number, number]
+```
 
 Lightweight tuple serializer delegating to network.serialize.ts
 
 #### set
 
-`(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; }) => void`
+```ts
+set(
+  values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; },
+): void
+```
 
 Sets specified properties (e.g., bias, squash function) for all nodes in the network.
 Useful for initializing or resetting node properties uniformly.
 
 #### set
 
-`(values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; type?: string | undefined; }) => void`
+```ts
+set(
+  values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; type?: string | undefined; },
+): void
+```
 
 Configures properties for all nodes within the layer.
 
@@ -2597,7 +3876,11 @@ Parameters:
 
 #### setActivation
 
-`(fn: (x: number, derivate?: boolean | undefined) => number) => void`
+```ts
+setActivation(
+  fn: (x: number, derivate?: boolean | undefined) => number,
+): void
+```
 
 Sets a custom activation function for this node at runtime.
 
@@ -2606,7 +3889,11 @@ Parameters:
 
 #### setEnforceAcyclic
 
-`(flag: boolean) => void`
+```ts
+setEnforceAcyclic(
+  flag: boolean,
+): void
+```
 
 Enable or disable acyclic topology enforcement.
 
@@ -2615,7 +3902,11 @@ Parameters:
 
 #### setRandom
 
-`(fn: () => number) => void`
+```ts
+setRandom(
+  fn: () => number,
+): void
+```
 
 Replace the network random number generator.
 
@@ -2624,7 +3915,11 @@ Parameters:
 
 #### setRNGState
 
-`(state: number) => void`
+```ts
+setRNGState(
+  state: number,
+): void
+```
 
 Set the raw deterministic RNG state word.
 
@@ -2633,7 +3928,11 @@ Parameters:
 
 #### setSeed
 
-`(seed: number) => void`
+```ts
+setSeed(
+  seed: number,
+): void
+```
 
 Seed the internal deterministic RNG.
 
@@ -2642,7 +3941,11 @@ Parameters:
 
 #### setStochasticDepth
 
-`(survival: number[]) => void`
+```ts
+setStochasticDepth(
+  survival: number[],
+): void
+```
 
 Configure stochastic depth with survival probabilities per hidden layer.
 
@@ -2651,7 +3954,11 @@ Parameters:
 
 #### setStochasticDepthSchedule
 
-`(fn: (step: number, current: number[]) => number[]) => void`
+```ts
+setStochasticDepthSchedule(
+  fn: (step: number, current: number[]) => number[],
+): void
+```
 
 Set stochastic-depth schedule function.
 
@@ -2660,7 +3967,11 @@ Parameters:
 
 #### setTopologyIntent
 
-`(topologyIntent: import("src/architecture/network/network.types").NetworkTopologyIntent) => void`
+```ts
+setTopologyIntent(
+  topologyIntent: NetworkTopologyIntent,
+): void
+```
 
 Sets the public topology intent and keeps acyclic enforcement aligned.
 
@@ -2671,7 +3982,11 @@ Returns: Nothing.
 
 #### setWeightNoiseSchedule
 
-`(fn: (step: number) => number) => void`
+```ts
+setWeightNoiseSchedule(
+  fn: (step: number) => number,
+): void
+```
 
 Set a dynamic scheduler for global weight noise.
 
@@ -2680,34 +3995,22 @@ Parameters:
 
 #### snapshotRNG
 
-`() => import("src/architecture/network/network.types").RNGSnapshot`
+```ts
+snapshotRNG(): RNGSnapshot
+```
 
 Snapshot deterministic RNG runtime state.
 
 Returns: Current RNG snapshot.
 
-#### snapshotRNGState
-
-`() => number | undefined`
-
-Return the current opaque RNG numeric state used by the instance.
-Useful for deterministic test replay and debugging.
-
-#### sort
-
-`() => void`
-
-Sorts the population in descending order of fitness scores.
-
-#### spawnFromParent
-
-`(parent: import("src/architecture/network").default, mutateCount: number) => import("src/architecture/network").default`
-
-Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
-
 #### squash
 
-`(x: number, derivate: boolean | undefined) => number`
+```ts
+squash(
+  x: number,
+  derivate: boolean | undefined,
+): number
+```
 
 The activation function (squashing function) applied to the node's state.
 Maps the internal state to the node's output (activation).
@@ -2718,13 +4021,32 @@ Parameters:
 
 Returns: The activation value or its derivative.
 
+#### standalone
+
+```ts
+standalone(): string
+```
+
+Generate a dependency-light standalone inference function for this network.
+
+Use this when you want to snapshot the current topology and weights into a
+self-contained JavaScript function for deployment, offline benchmarking,
+or browser embedding without the full training runtime.
+
+Returns: Standalone JavaScript source for inference.
+
 #### state
 
 The internal state of the node (sum of weighted inputs + bias) before the activation function is applied.
 
 #### test
 
-`(set: { input: number[]; output: number[]; }[], cost: ((target: number[], output: number[]) => number) | undefined) => { error: number; time: number; }`
+```ts
+test(
+  set: { input: number[]; output: number[]; }[],
+  cost: ((target: number[], output: number[]) => number) | undefined,
+): { error: number; time: number; }
+```
 
 Tests the network's performance on a given dataset.
 Calculates the average error over the dataset using a specified cost function.
@@ -2735,7 +4057,9 @@ Returns: An object containing the calculated average error over the dataset and 
 
 #### testForceOverflow
 
-`() => void`
+```ts
+testForceOverflow(): void
+```
 
 Force the next mixed-precision overflow path (test utility).
 
@@ -2745,23 +4069,17 @@ The target (post-synaptic) node receiving activation.
 
 #### toJSON
 
-`() => any`
+```ts
+toJSON(): Record<string, unknown>
+```
 
-Serialize NEAT meta (without population) for persistence of innovation history.
-
-#### toJSON
-
-`() => Record<string, unknown>`
-
-Converts the network into a JSON object representation (latest standard).
-Includes formatVersion, and only serializes properties needed for full reconstruction.
-All references are by index. Excludes runtime-only properties (activation, state, traces).
-
-Returns: A JSON-compatible object representing the network.
+Verbose JSON serializer delegate
 
 #### toJSON
 
-`() => { index: number | undefined; bias: number; type: string; squash: string | null; mask: number; }`
+```ts
+toJSON(): { index: number | undefined; bias: number; type: string; squash: string | null; mask: number; }
+```
 
 Converts the node's essential properties to a JSON object for serialization.
 Does not include state, activation, error, or connection information, as these
@@ -2771,25 +4089,37 @@ Returns: A JSON representation of the node's configuration.
 
 #### toJSON
 
-`() => { size: number; nodeIndices: (number | undefined)[]; connections: { in: number; out: number; self: number; }; }`
+```ts
+toJSON(): { size: number; nodeIndices: (number | undefined)[]; connections: { in: number; out: number; self: number; }; }
+```
 
 Serializes the group into a JSON-compatible format, avoiding circular references.
-Only includes node indices and connection counts.
 
-Returns: A JSON-compatible representation of the group.
+Returns: JSON-friendly representation with node indices and connection counts.
 
 #### toJSON
 
-`() => { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }`
+```ts
+toJSON(): { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }
+```
 
-Serialize to a minimal JSON-friendly shape (used for saving genomes / networks).
-Undefined indices are preserved as `undefined` to allow later resolution / remapping.
+Serialize to a minimal JSON-friendly shape used by genome and network save flows.
+Undefined node indices are preserved so callers can resolve or remap them later.
 
-Returns: Object with node indices, weight, gain, gater index (if any), innovation id & enabled flag.
+Returns: Object with node indices, weight, gain, innovation id, enabled flag, and gater index when one exists.
+
+Example:
+
+```ts
+const json = connection.toJSON();
+// => { from: 0, to: 3, weight: 0.12, gain: 1, innovation: 57, enabled: true }
+```
 
 #### toONNX
 
-`() => import("src/architecture/network/onnx/network.onnx.utils.types").OnnxModel`
+```ts
+toONNX(): OnnxModel
+```
 
 Exports the network to ONNX format (JSON object, minimal MLP support).
 Only standard feedforward architectures and standard activations are supported.
@@ -2805,6 +4135,28 @@ Accumulates changes in bias over a mini-batch during batch training. Reset after
 
 Accumulated (batched) delta weight awaiting an apply step.
 
+#### train
+
+```ts
+train(
+  set: { input: number[]; output: number[]; }[],
+  options: unknown,
+): { error: number; iterations: number; time: number; }
+```
+
+Train the network against a supervised dataset using the gradient-based
+training chapter.
+
+This wrapper keeps the public `Network` API stable while the training
+helpers own batching, optimizer steps, regularization, and mixed-precision
+runtime behavior.
+
+Parameters:
+- `set` - Supervised samples with `input` and `output` vectors.
+- `options` - Training options such as learning rate, iteration limits, batching, and optimizer settings.
+
+Returns: Aggregate training result with final error, iteration count, and elapsed time.
+
 #### trainingStep
 
 Current training step counter.
@@ -2816,7 +4168,11 @@ Determines behavior (e.g., input nodes don't have biases modified typically, out
 
 #### ungate
 
-`(connection: import("src/architecture/connection").default) => void`
+```ts
+ungate(
+  connection: default,
+): void
+```
 
 Removes the gate from a specified connection.
 The connection will no longer be modulated by its gater node.
@@ -2824,7 +4180,11 @@ Removes the connection from the network's `gates` list.
 
 #### ungate
 
-`(connections: import("src/architecture/connection").default | import("src/architecture/connection").default[]) => void`
+```ts
+ungate(
+  connections: default | default[],
+): void
+```
 
 Removes this node's gating control over the specified connection(s).
 Resets the connection's gain to 1 and removes it from the `connections.gated` list.

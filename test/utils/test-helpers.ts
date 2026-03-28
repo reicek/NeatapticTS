@@ -1,5 +1,5 @@
 import { Network, Architect } from '../../src/neataptic';
-import mutationMethods from '../../src/methods/mutation';
+import mutationMethods from '../../src/methods/mutation/mutation';
 
 /**
  * Creates a network with identical structure but different weight initialization

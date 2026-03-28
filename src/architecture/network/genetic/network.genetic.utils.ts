@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import { materializeOffspringConnections } from './network.genetic.materialize.utils';
 import {
   assignOffspringNodes,

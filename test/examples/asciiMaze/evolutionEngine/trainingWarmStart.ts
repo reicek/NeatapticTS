@@ -3,14 +3,21 @@
  *
  * Lamarckian warm-start and population pretraining subsystem.
  *
- * Responsibilities:
- * - Build supervised training datasets for compass-guided navigation
- * - Apply Lamarckian backpropagation training to populations
- * - Adjust output biases after training to maintain exploration
- * - Orchestrate conditional warm-start pretraining with buffer management
+ * This module is the part of the ASCII Maze engine that briefly steps outside
+ * pure neuroevolution and asks a pragmatic question: can a small amount of
+ * supervised guidance give the population a better starting shape before the
+ * main search pressure takes over again?
  *
- * All functions are pure/side-effect-free except where explicitly documented.
- * Mutations are limited to NEAT population networks and engine scratch buffers.
+ * Responsibilities:
+ * - Build a tiny curriculum-style supervised dataset for compass-guided motion
+ * - Apply bounded Lamarckian backpropagation to whole populations
+ * - Re-center output biases after training so exploration does not collapse
+ * - Orchestrate optional warm-start passes without polluting the main loop
+ *
+ * The important design constraint is restraint. These helpers are not trying to
+ * solve the maze with backprop. They are trying to give evolution a better
+ * first draft while preserving the example's core identity as an evolutionary
+ * system.
  *
  * @module trainingWarmStart
  */
@@ -19,11 +26,43 @@ import type { Neat, Network } from '../../../../src/neataptic';
 import { methods } from '../../../../src/neataptic';
 import type { EngineState, RngCacheParameters } from './engineState.types';
 import { initialiseTelemetryScratch } from './engineState';
+import type { NetworkNode } from './evolutionEngine.types';
 import { drawFastRandom, readHighResolutionTime } from './rngAndTiming';
 import { sampleArray } from './sampling';
 
 /** Empty array constant for defensive fallbacks. */
 const EMPTY_VEC: readonly never[] = [];
+
+/** Small supervised case used during Lamarckian warm-start. */
+interface LamarckianTrainingCase {
+  input: number[];
+  output: number[];
+}
+
+/** The warm-start path trains ordinary runtime networks; this alias keeps intent explicit. */
+type TrainableNetwork = Network;
+
+/**
+ * Narrow NEAT view used by the warm-start helpers.
+ *
+ * These helpers only need population access and a couple of option fields, so
+ * they avoid depending on the entire engine-facing driver surface.
+ */
+type WarmStartNeatLike = Neat & {
+  population: TrainableNetwork[];
+};
+
+/** Callback used when a helper needs to write node indices of a specific role into scratch. */
+type NodeIndexCollector = (nodes: NetworkNode[], nodeType: string) => number;
+
+/** Best-effort post-training hook applied to one network at a time. */
+type WarmStartNetworkCallback = (network: TrainableNetwork) => void;
+
+/** Population-wide warm-start hook used by the public orchestration helper. */
+type PretrainPopulationCallback = (
+  neat: Neat,
+  trainingSet: LamarckianTrainingCase[],
+) => void;
 
 /**
  * Build the supervised training set used for Lamarckian warm-start training.
@@ -190,8 +229,10 @@ export const buildLamarckianTrainingSet = (
 /**
  * Adjust output node biases after training to maintain exploration diversity.
  *
- * This heuristic prevents trained networks from collapsing into deterministic behavior
- * by centering output biases (subtracting mean) and optionally scaling when variance is low.
+ * This heuristic exists because short supervised bursts can make the action
+ * head too confident too early. By re-centering output biases and nudging very
+ * low-variance heads back outward, the engine keeps exploration pressure alive
+ * after warm-start training instead of letting one action dominate forever.
  *
  * Steps:
  * 1. Collect output node biases into scratch buffer
@@ -223,15 +264,15 @@ export const adjustOutputBiasesAfterTraining = (
     DEFAULT_STD_ADJUST_MULT: number;
   },
   scratchNodeIdx: Int32Array,
-  // Type assertion: helper function working with dynamic node arrays
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getNodeIndicesByType: (nodes: any[], nodeType: string) => number,
+  getNodeIndicesByType: NodeIndexCollector,
 ): void => {
   try {
     // Step 1: Early exit when no network or no nodes exist.
     if (!network) return;
 
-    const nodesRef = network.nodes ?? EMPTY_VEC;
+    const nodesRef: NetworkNode[] = Array.isArray(network.nodes)
+      ? (network.nodes as unknown as NetworkNode[])
+      : [];
     const outputNodeCount = getNodeIndicesByType(nodesRef, 'output');
     if (outputNodeCount <= 0) return;
 
@@ -280,10 +321,14 @@ export const adjustOutputBiasesAfterTraining = (
  * Pretrain the population using a small supervised dataset and apply warm-start heuristics.
  *
  * Behaviour & contract:
- * - Runs a short supervised training pass (backprop) on each network in `neat.population`
- * - Applies lightweight warm-start heuristics after training: compass wiring and output bias centering
- * - Errors are isolated per-network: a failing network does not abort the overall pretrain step
- * - This helper is allocation-light and does not create sizable temporary buffers
+ * - Runs a short supervised training pass on each network in `neat.population`
+ * - Treats the training set as a biasing hint, not as a replacement for later evolution
+ * - Applies lightweight warm-start heuristics after training: compass wiring
+ *   and output-bias centering
+ * - Isolates failures per network so one bad trainer state does not abort the
+ *   rest of the population
+ * - Stays allocation-light so warm-start remains cheap enough to use as a
+ *   tactical assist instead of a second training regime
  *
  * Steps:
  * 1. Validate inputs and obtain `population` (fast-exit on empty populations)
@@ -307,9 +352,7 @@ export const adjustOutputBiasesAfterTraining = (
  */
 export const pretrainPopulationWarmStart = (
   neat: Neat,
-  // Type assertion: training dataset structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  lamarckianTrainingSet: any[],
+  lamarckianTrainingSet: LamarckianTrainingCase[],
   constants: {
     PRETRAIN_MAX_ITER: number;
     PRETRAIN_BASE_ITER: number;
@@ -318,22 +361,17 @@ export const pretrainPopulationWarmStart = (
     DEFAULT_PRETRAIN_MOMENTUM: number;
     DEFAULT_TRAIN_BATCH_SMALL: number;
   },
-  // Type assertion: helper functions working with networks
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  applyCompassWarmStart: (network: any) => void,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  centerOutputBiases: (network: any) => void,
+  applyCompassWarmStart: WarmStartNetworkCallback,
+  centerOutputBiases: WarmStartNetworkCallback,
 ): void => {
   // Step 1: Defensive validation & fast exit.
   if (!neat) return;
-  const population = neat.population ?? EMPTY_VEC;
+  const population = (neat as WarmStartNeatLike).population ?? EMPTY_VEC;
   if (!Array.isArray(population) || population.length === 0) return;
 
   // Step 2: Iterate population and apply supervised training per network (best-effort).
   for (let networkIndex = 0; networkIndex < population.length; networkIndex++) {
-    // Type assertion: network from population array
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const network: any = population[networkIndex];
+    const network = population[networkIndex];
     try {
       if (!network || typeof network.train !== 'function') continue; // skip non-trainable entries
 
@@ -376,9 +414,11 @@ export const pretrainPopulationWarmStart = (
 /**
  * Apply Lamarckian backpropagation training to the entire population with optional profiling.
  *
- * Runs a bounded supervised training pass on each network in the population, optionally
- * downsampling the training set for efficiency. Collects gradient norm statistics and
- * applies bias adjustment heuristics to maintain exploration after training.
+ * Runs a bounded supervised training pass on each network in the population,
+ * optionally downsampling the training set for efficiency. The intent is to
+ * "tilt" the policy landscape toward obviously sensible moves before the main
+ * evolutionary loop takes over, while still measuring and logging enough to see
+ * whether the warm-start is becoming too aggressive or too weak.
  *
  * Steps:
  * 1. Validate inputs & early exits
@@ -418,9 +458,7 @@ export const pretrainPopulationWarmStart = (
  */
 export const applyLamarckianTraining = (
   neat: Neat,
-  // Type assertion: training dataset structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  trainingSet: any[],
+  trainingSet: LamarckianTrainingCase[],
   iterations: number,
   sampleSize: number | undefined,
   safeWrite: (msg: string) => void,
@@ -433,9 +471,7 @@ export const applyLamarckianTraining = (
     DEFAULT_TRAIN_MOMENTUM: number;
     DEFAULT_TRAIN_BATCH_SMALL: number;
   },
-  // Type assertion: helper function working with networks
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  adjustOutputBiases: (network: any) => void,
+  adjustOutputBiases: WarmStartNetworkCallback,
 ): number => {
   // Step 1: Validate inputs & early exits.
   if (
@@ -460,9 +496,7 @@ export const applyLamarckianTraining = (
   // Step 4: Iterate networks performing a bounded training pass.
   let gradientNormSum = 0;
   let gradientNormSamples = 0;
-  // Type assertion: population is Network array from Neat
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const populationRef = neat.population as any[];
+  const populationRef = (neat as WarmStartNeatLike).population;
 
   for (const network of populationRef) {
     if (!network) continue; // defensive guard for sparse arrays
@@ -483,9 +517,7 @@ export const applyLamarckianTraining = (
 
       // 4.3: Collect optional training stats (use optional chaining to avoid errors).
       try {
-        // Type assertion: accessing optional training stats method
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const stats = (network as any).getTrainingStats?.();
+        const stats = network.getTrainingStats?.();
         const gradNorm = stats?.gradNorm;
         if (Number.isFinite(gradNorm)) {
           gradientNormSum += gradNorm;
@@ -545,13 +577,9 @@ export const applyLamarckianTraining = (
  */
 export const warmStartPopulationIfNeeded = (
   neat: Neat,
-  // Type assertion: training dataset structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  trainingSet: any[],
+  trainingSet: LamarckianTrainingCase[],
   state: EngineState,
-  // Type assertion: helper function for population pretraining
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pretrainPopulation: (neat: any, trainingSet: any[]) => void,
+  pretrainPopulation: PretrainPopulationCallback,
 ): void => {
   try {
     // Step 1: Fast-guard invalid inputs – nothing to do when no data or driver.
@@ -561,9 +589,12 @@ export const warmStartPopulationIfNeeded = (
 
     // Step 2: Best-effort ensure pooled buffers exist and have capacity.
     // Determine a sensible sizing target (prefer driver configured popSize when available).
-    const configuredPopulationSize = Number.isFinite(neat?.options?.popSize)
-      ? Math.max(0, Math.floor(neat.options.popSize))
-      : Math.max(8, trainingSet.length);
+    const neatRef = neat as WarmStartNeatLike;
+    const rawPopSize = neatRef.options?.popSize;
+    const configuredPopulationSize =
+      typeof rawPopSize === 'number' && Number.isFinite(rawPopSize)
+        ? Math.max(0, Math.floor(rawPopSize))
+        : Math.max(8, trainingSet.length);
 
     // Helper: next power-of-two >= n
     const nextPowerOfTwo = (n: number) =>

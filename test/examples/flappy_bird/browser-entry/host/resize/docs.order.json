@@ -1,0 +1,10 @@
+{
+  "introFile": "host.resize.service.ts",
+  "fileOrder": [
+    "host.resize.service.ts",
+    "host.resize.service.types.ts",
+    "host.resize.service.constants.ts",
+    "host.resize.service.services.ts",
+    "host.resize.service.utils.ts"
+  ]
+}

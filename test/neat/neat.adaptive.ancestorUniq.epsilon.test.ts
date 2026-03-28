@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
-import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
-import { createTelemetryEntryBase } from '../../src/neat/neat.telemetry';
-import type { TelemetryEntry } from '../../src/neat/neat.types';
+import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
+import { createTelemetryEntryBase } from '../../src/neat/telemetry/recorder/telemetry.recorder';
+import type { TelemetryEntry } from '../../src/neat/shared/neat.shared.types';
 
 /** Tests ancestor uniqueness adaptive epsilon adjustments (both directions). */
 describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
@@ -40,10 +40,10 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
         },
       });
       const { applyAncestorUniqAdaptive } =
-        await import('../../src/neat/neat.adaptive');
+        await import('../../src/neat/adaptive/adaptive');
       applyAncestorUniqAdaptive.call(neat as unknown as NeatLikeWithAdaptive);
       // Act: capture epsilon
-      const eps = neat.options.multiObjective.dominanceEpsilon;
+      const eps = neat.options.multiObjective!.dominanceEpsilon;
       // Assert: epsilon moved upwards
       expect(eps).toBeGreaterThan(0.1);
     });
@@ -83,10 +83,10 @@ describe('Ancestor Uniqueness Adaptive (epsilon mode)', () => {
         },
       });
       const { applyAncestorUniqAdaptive } =
-        await import('../../src/neat/neat.adaptive');
+        await import('../../src/neat/adaptive/adaptive');
       applyAncestorUniqAdaptive.call(neat as unknown as NeatLikeWithAdaptive);
       // Act: capture epsilon
-      const eps = neat.options.multiObjective.dominanceEpsilon;
+      const eps = neat.options.multiObjective!.dominanceEpsilon;
       // Assert: epsilon decreased (clamped to non-negative)
       expect(eps).toBeLessThan(0.2);
     });

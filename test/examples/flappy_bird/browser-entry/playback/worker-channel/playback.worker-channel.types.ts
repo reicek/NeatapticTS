@@ -5,6 +5,14 @@ import type { EvolutionPlaybackStepMessage } from '../../browser-entry.types';
  *
  * These types sit above the lower-level browser worker protocol and describe the
  * request budgeting plus summary data flow used by the playback loop.
+ *
+ * The key idea is cadence smoothing: the browser renders on animation frames,
+ * while the worker advances simulation in step batches. These contracts describe
+ * how a fractional render-time budget becomes a concrete worker request.
+ *
+ * Tiny example:
+ * a budget of `2.4` frames this render usually becomes `2` simulation steps now
+ * plus `0.4` carried forward to the next render tick.
  */
 
 /**

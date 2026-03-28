@@ -1,9 +1,9 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
-import type { NeatStateJSON } from '../../src/neat/neat.export';
+import type { NeatStateJSON } from '../../src/neat/export/neat.export';
 
 /**
- * Tests covering serialization & rehydration helpers in `src/neat/neat.export.ts`.
+ * Tests covering serialization & rehydration helpers in `src/neat/export/neat.export.ts`.
  * Each test follows AAA (Arrange, Act, Assert) and has a single expectation.
  */
 describe('NEAT Export / Import State', () => {
@@ -12,7 +12,8 @@ describe('NEAT Export / Import State', () => {
     const fitness = (n: Network) => n.nodes.length;
     test('throws on invalid state bundle', async () => {
       // Arrange: capture callable that will invoke static import with bad input
-      const act = async () => await Neat.importState(undefined as any, fitness);
+      const act = async () =>
+        await Neat.importState(undefined as unknown as NeatStateJSON, fitness);
       // Act & Assert: expect error thrown (single expectation)
       await expect(act()).rejects.toThrow();
     });

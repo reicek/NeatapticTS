@@ -1,0 +1,18 @@
+{
+  "introFile": "flappy-evolution-worker.ts",
+  "fileOrder": [
+    "flappy-evolution-worker.ts",
+    "flappy-evolution-worker.types.ts",
+    "flappy-evolution-worker.runtime.service.ts",
+    "flappy-evolution-worker.protocol.service.ts",
+    "flappy-evolution-worker.evolution.service.ts",
+    "flappy-evolution-worker.playback.service.ts",
+    "flappy-evolution-worker.snapshot.utils.ts",
+    "flappy-evolution-worker.simulation.types.ts",
+    "flappy-evolution-worker.simulation.utils.ts",
+    "flappy-evolution-worker.simulation.frame.service.ts",
+    "flappy-evolution-worker.warm-start.service.ts",
+    "flappy-evolution-worker.errors.ts",
+    "flappy-evolution-worker.constants.ts"
+  ]
+}

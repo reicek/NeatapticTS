@@ -1,0 +1,18 @@
+{
+  "introFile": "simulation-shared.types.ts",
+  "fileOrder": [
+    "simulation-shared.types.ts",
+    "simulation-shared.constants.ts",
+    "simulation-shared.math.utils.ts",
+    "simulation-shared.difficulty.utils.ts",
+    "simulation-shared.spawn.utils.ts",
+    "simulation-shared.observation.utils.ts",
+    "simulation-shared.control.utils.ts",
+    "simulation-shared.memory.utils.ts",
+    "simulation-shared.statistics.utils.ts",
+    "simulation-shared.errors.ts"
+  ],
+  "folderOrder": [
+    "observation"
+  ]
+}

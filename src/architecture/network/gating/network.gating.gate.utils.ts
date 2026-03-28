@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';
 import { config } from '../../../config';

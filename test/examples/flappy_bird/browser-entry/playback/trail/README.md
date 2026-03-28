@@ -1,28 +1,29 @@
 # browser-entry/playback/trail
 
+Trail-history helpers for the playback renderer.
+
+This module owns the small rolling histories that create the flock's neon
+afterimage. The policy is intentionally simple: keep only a short recent
+window, and keep the champion trail even shorter and denser.
+
+Minimal usage sketch:
+```ts
+const trailPoints = [{ frameIndex: 10, yPx: 140 }];
+pushTrailPoint(trailPoints, 11, 136, 2);
+```
+
 ## browser-entry/playback/trail/playback.trail.history.services.ts
-
-### pushChampionTrailPoint
-
-`(trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], frameIndex: number, yPosition: number) => void`
-
-Appends one point to the champion-only short trail history.
-
-The browser highlights the current leader with a shorter, denser trail than
-the rest of the flock. Using a dedicated helper keeps that policy explicit in
-the call site instead of scattering champion-specific retention numbers
-through the playback renderer.
-
-Parameters:
-- `trailPoints` - - Mutable champion trail collection.
-- `frameIndex` - - Source frame index.
-- `yPosition` - - Bird y position.
-
-Returns: Nothing.
 
 ### pushTrailPoint
 
-`(trailPoints: import("test/examples/flappy_bird/browser-entry/browser-entry.simulation.types").TrailPoint[], frameIndex: number, yPosition: number, maxRetainedPoints: number) => void`
+```ts
+pushTrailPoint(
+  trailPoints: TrailPoint[],
+  frameIndex: number,
+  yPosition: number,
+  maxRetainedPoints: number,
+): void
+```
 
 Appends one trail point while enforcing the maximum retained history length.
 
@@ -39,26 +40,61 @@ Parameters:
 
 Returns: Nothing.
 
-## browser-entry/playback/trail/playback.trail.opacity.utils.ts
+Example:
 
-### clamp01
+```ts
+const trailPoints = [{ frameIndex: 10, yPx: 140 }];
+pushTrailPoint(trailPoints, 11, 136, 2);
+```
 
-`(value: number) => number`
+### pushChampionTrailPoint
 
-Clamps a number to the inclusive [0, 1] range.
+```ts
+pushChampionTrailPoint(
+  trailPoints: TrailPoint[],
+  frameIndex: number,
+  yPosition: number,
+): void
+```
 
-The trail renderer combines several normalized fade factors, so keeping this
-utility local to the module makes the intent obvious: every opacity channel
-must remain safe for direct canvas alpha use.
+Appends one point to the champion-only short trail history.
+
+The browser highlights the current leader with a shorter, denser trail than
+the rest of the flock. Using a dedicated helper keeps that policy explicit in
+the call site instead of scattering champion-specific retention numbers
+through the playback renderer.
 
 Parameters:
-- `value` - - Candidate value.
+- `trailPoints` - - Mutable champion trail collection.
+- `frameIndex` - - Source frame index.
+- `yPosition` - - Bird y position.
 
-Returns: Clamped value.
+Returns: Nothing.
+
+## browser-entry/playback/trail/playback.trail.opacity.utils.ts
+
+Opacity helpers for playback trail fading.
+
+The trail renderer blends two independent fade stories: lifetime and
+distance-to-edge. These helpers keep that math isolated so the draw path can
+stay focused on painting rather than re-deriving normalization rules.
+
+Minimal usage sketch:
+```ts
+const edgeOpacity = resolveEdgeOpacityFactor(120, 140, edgeBounds);
+const ageOpacity = resolveTrailLifetimeOpacityFactor(3, 12);
+const alpha = edgeOpacity * ageOpacity;
+```
 
 ### resolveEdgeOpacityFactor
 
-`(pointXPx: number, pointYPx: number, edgeBounds: import("test/examples/flappy_bird/browser-entry/playback/playback.types").PlaybackEdgeBounds) => number`
+```ts
+resolveEdgeOpacityFactor(
+  pointXPx: number,
+  pointYPx: number,
+  edgeBounds: PlaybackEdgeBounds,
+): number
+```
 
 Converts distance-to-edge into a normalized opacity factor.
 
@@ -76,9 +112,22 @@ Parameters:
 
 Returns: Opacity multiplier in [0, 1].
 
+Example:
+
+```ts
+const edgeOpacity = resolveEdgeOpacityFactor(120, 140, edgeBounds);
+const ageOpacity = resolveTrailLifetimeOpacityFactor(3, 12);
+const alpha = edgeOpacity * ageOpacity;
+```
+
 ### resolveTrailLifetimeOpacityFactor
 
-`(frameOffset: number, maxTrailFrameOffset: number) => number`
+```ts
+resolveTrailLifetimeOpacityFactor(
+  frameOffset: number,
+  maxTrailFrameOffset: number,
+): number
+```
 
 Converts trail age into a normalized opacity factor.
 
@@ -93,3 +142,22 @@ Parameters:
 - `maxTrailFrameOffset` - - Oldest age offset currently retained by trail.
 
 Returns: Opacity multiplier in [0, 1].
+
+### clamp01
+
+```ts
+clamp01(
+  value: number,
+): number
+```
+
+Clamps a number to the inclusive [0, 1] range.
+
+The trail renderer combines several normalized fade factors, so keeping this
+utility local to the module makes the intent obvious: every opacity channel
+must remain safe for direct canvas alpha use.
+
+Parameters:
+- `value` - - Candidate value.
+
+Returns: Clamped value.

@@ -8,6 +8,23 @@
  * A rollout is one deterministic episode for one policy under one seed. This
  * module keeps that lifecycle readable: normalize inputs, create runtime state,
  * simulate until termination, then fold the result into a public episode report.
+ *
+ * That lifecycle matters because the trainer depends on rollouts being both
+ * repeatable and interpretable. A rollout is not only "did the bird crash?"
+ * It is the bridge between one seeded control problem and one scored episode
+ * that can be compared fairly with other genomes.
+ *
+ * Rollout pipeline:
+ * ```mermaid
+ * flowchart LR
+ *     Options["network + rollout options"] --> Context["normalize context"]
+ *     Context --> Runtime["create runtime state"]
+ *     Runtime --> Loop["observe -> act -> step -> shape"]
+ *     Loop --> EarlyStop{"done or\nbudget exhausted?"}
+ *     EarlyStop -->|No| Loop
+ *     EarlyStop -->|Yes| Finalize["finalize timeout state"]
+ *     Finalize --> Result["compose FlappyEpisodeResult"]
+ * ```
  */
 import {
   createRolloutEpisodeRuntimeState,
@@ -25,17 +42,19 @@ import type {
 /**
  * Roll out an episode and return details.
  *
+ * @param network - Genome/network to evaluate.
+ * @param rolloutOptions - Optional rollout controls.
+ * @returns Episode result details.
  * @example
  * ```ts
  * const result = rolloutEpisode(network, {
  *   seed: 123,
  *   normalizeFitness: true,
+ *   maxFrames: 2_000,
  * });
- * ```
  *
- * @param network - Genome/network to evaluate.
- * @param rolloutOptions - Optional rollout controls.
- * @returns Episode result details.
+ * console.log(result.fitness, result.doneReason);
+ * ```
  */
 export function rolloutEpisode(
   network: FlappyNetworkLike,

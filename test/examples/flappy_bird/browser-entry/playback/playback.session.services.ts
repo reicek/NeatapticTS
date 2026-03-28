@@ -97,6 +97,7 @@ export function createInitialPlaybackLoopState(): PlaybackLoopState {
   return {
     simulationFrameBudget: 0,
     finished: false,
+    currentChampionBirdIndex: -1,
     summary: {
       averagePipesPassed: 0,
       p90FramesSurvived: 0,

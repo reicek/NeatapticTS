@@ -1,3 +1,10 @@
+/**
+ * Process-signal bridge for cooperative trainer shutdown.
+ *
+ * The trainer should stop between generations, not by tearing the process down
+ * in the middle of evaluation. This file converts OS-level stop signals into one
+ * shared runtime intent flag that the main loop can observe safely.
+ */
 import type { FlappyTrainerRuntimeState } from './trainer.types';
 
 /**
@@ -26,9 +33,11 @@ export function registerTrainerStopSignals(
 /**
  * Handles one stop signal update.
  *
- * @returns Nothing.
+ * The handler does the minimum possible work because signal paths should stay
+ * predictable and side-effect light.
  *
  * @param trainerRuntimeState - Mutable trainer runtime state.
+ * @returns Nothing.
  */
 function handleTrainerStopSignal(
   trainerRuntimeState: FlappyTrainerRuntimeState,

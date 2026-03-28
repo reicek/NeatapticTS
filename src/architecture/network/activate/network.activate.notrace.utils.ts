@@ -1,4 +1,4 @@
-import { activationArrayPool } from '../../activationArrayPool';
+import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import {
   NO_TRACE_FAST_SLAB_TRAINING_FLAG,
   UNDEFINED_INPUT_LENGTH_TEXT,

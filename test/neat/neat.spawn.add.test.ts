@@ -7,7 +7,7 @@ import Network from '../../src/architecture/network';
 import type {
   LineageTrackedNetwork,
   NeatLineageHarness,
-} from '../../src/neat/neat.harness.types';
+} from '../../src/neat/harness/neat.harness.types';
 
 const withNeatLineage = (neat: Neat): NeatLineageHarness =>
   neat as NeatLineageHarness;

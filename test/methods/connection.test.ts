@@ -1,6 +1,6 @@
 import groupConnectionDefault, {
   groupConnection,
-} from '../../src/methods/connection';
+} from '../../src/methods/connection/connection';
 
 describe('Group Connection Methods', () => {
   describe('ALL_TO_ALL', () => {

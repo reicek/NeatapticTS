@@ -1,4 +1,4 @@
-import Cost from '../../src/methods/cost';
+import Cost from '../../src/methods/cost/cost';
 
 describe('Cost', () => {
   const epsilon = 1e-9; // Tolerance for floating point comparisons

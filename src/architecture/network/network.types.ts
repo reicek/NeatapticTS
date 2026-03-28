@@ -1,11 +1,7 @@
-import type Network from '../network';
+import type Network from './network';
 import type Node from '../node';
-import type Connection from '../connection';
-import type { ActivationFunction } from '../../methods/activation.utils';
-import type {
-  TestWorkerConstructor,
-  TestWorkerInstance,
-} from '../../multithreading/types';
+import type Connection from '../connection/connection';
+import type { TestWorkerInstance } from '../../multithreading/types';
 
 export * from './onnx/network.onnx.utils.types';
 export * from './slab/network.slab.utils.types';
@@ -81,6 +77,42 @@ export interface NetworkConstructorOptions {
   returnTypedActivations?: boolean;
 }
 
+/** Internal constructor-time surface used by bootstrap helpers. */
+export interface NetworkBootstrapInternals {
+  /** Input node count. */
+  input: number;
+  /** Output node count. */
+  output: number;
+  /** Network node collection. */
+  nodes: Node[];
+  /** Connection list. */
+  connections: Connection[];
+  /** Network gates collection. */
+  gates: Connection[];
+  /** Self-connection list. */
+  selfconns: Connection[];
+  /** Dropout probability. */
+  dropout: number;
+  /** Public topology intent used to preserve semantic API choices. */
+  _topologyIntent: NetworkTopologyIntent;
+  /** Whether to enforce acyclic connectivity. */
+  _enforceAcyclic: boolean;
+  /** Active random number generator. */
+  _rand: () => number;
+  /** Typed-array precision used by compiled activation paths. */
+  _activationPrecision: 'f64' | 'f32';
+  /** Whether pooled activation arrays are reused across activations. */
+  _reuseActivationArrays: boolean;
+  /** Whether pooled typed activations can be returned directly. */
+  _returnTypedActivations: boolean;
+  /** Seed the internal deterministic RNG. */
+  setSeed: (seed: number) => void;
+  /** Connect two nodes inside the runtime graph. */
+  connect: (from: Node, to: Node, weight?: number) => Connection[];
+  /** Insert a hidden node by splitting an existing connection. */
+  addNodeBetween: () => void;
+}
+
 /** Internal runtime properties attached to Connection instances. */
 export interface ConnectionWeightNoiseProps {
   /** Original weight before noise application. */
@@ -141,6 +173,68 @@ export interface RNGSnapshot {
   step: number | undefined;
   /** Captured RNG state word. */
   state: number | undefined;
+}
+
+/** Internal network properties accessed by runtime-control helpers. */
+export interface NetworkRuntimeControlInternals {
+  /** Connection list. */
+  connections: Connection[];
+  /** Optional layered network view. */
+  layers?: { nodes: Node[] }[];
+  /** Active random generator. */
+  _rand: () => number;
+  /** Current training step. */
+  _trainingStep: number;
+  /** Optional forced-overflow test hook. */
+  _forceNextOverflow?: boolean;
+  /** Scheduled pruning configuration. */
+  _pruningConfig?: NetworkPruningProps['_pruningConfig'];
+  /** Scheduled-pruning baseline connection count. */
+  _initialConnectionCount?: number;
+  /** Global weight-noise standard deviation. */
+  _weightNoiseStd: number;
+  /** Per-hidden-layer weight-noise standard deviations. */
+  _weightNoisePerHidden: number[];
+  /** Optional dynamic weight-noise schedule. */
+  _weightNoiseSchedule?: (step: number) => number;
+  /** Active stochastic-depth survival probabilities. */
+  _stochasticDepth: number[];
+  /** Optional dynamic stochastic-depth schedule. */
+  _stochasticDepthSchedule?: (step: number, current: number[]) => number[];
+  /** Last skipped hidden-layer indices. */
+  _lastSkippedLayers?: number[];
+}
+
+/** Internal network properties accessed by runtime diagnostics helpers. */
+export interface NetworkRuntimeDiagnosticsInternals {
+  /** Optional layered network view. */
+  layers?: { nodes: Node[] }[];
+  /** Flat network node collection. */
+  nodes: Node[];
+  /** Active DropConnect probability. */
+  _dropConnectProb: number;
+  /** Last recorded gradient norm. */
+  _lastGradNorm?: number;
+  /** Optimizer step counter. */
+  _optimizerStep: number;
+  /** Mixed-precision runtime configuration. */
+  _mixedPrecision: { enabled: boolean; lossScale: number };
+  /** Mixed-precision state counters. */
+  _mixedPrecisionState: {
+    goodSteps: number;
+    badSteps: number;
+    minLossScale: number;
+    maxLossScale: number;
+    overflowCount?: number;
+    scaleUpEvents?: number;
+    scaleDownEvents?: number;
+  };
+  /** Last recorded raw gradient norm. */
+  _lastRawGradNorm: number;
+  /** Last gradient-clipping group count. */
+  _lastGradClipGroupCount: number;
+  /** Last overflow training step index. */
+  _lastOverflowStep: number;
 }
 
 /** Internal network properties accessed during gating operations. */
@@ -795,7 +889,7 @@ export interface OptimizerConfigBase {
  * This is intentionally loose: serialization formats evolve and may include nested
  * structures. Treat this as an opaque snapshot blob.
  */
-export type SerializedNetwork = Record<string, any>;
+export type SerializedNetwork = Record<string, unknown>;
 
 /**
  * Checkpoint callback configuration.

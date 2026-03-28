@@ -1,21 +1,30 @@
 /**
  * populationDynamics.ts
  *
- * Population-level dynamics for NEAT evolution: generation state management,
- * population expansion/compaction, mutation application, sorting, species tracking,
- * and anti-collapse recovery.
+ * Population-level dynamics for the ASCII Maze evolution loop.
+ *
+ * This module owns the parts of the run that only make sense once the engine
+ * stops thinking about one genome at a time and starts thinking about the
+ * population as a living search process: plateau detection, simplify phases,
+ * parent selection, child creation, collapse recovery, and bulk connection
+ * cleanup.
  *
  * Responsibilities:
- * - Plateau detection and simplify-phase orchestration
- * - Population expansion with parent sampling and mutation
- * - Genome sorting by fitness (iterative quicksort with pooled scratch)
- * - Species history tracking and collapse detection
- * - Connection compaction and anti-collapse recovery
+ * - Decide when search appears stuck and whether to enter a simplify phase
+ * - Expand the population by sampling from the current top performers
+ * - Sort genomes by fitness without allocating fresh arrays every generation
+ * - Track species diversity so collapse is visible instead of silent
+ * - Recover from pathological convergence by perturbing outputs and weights
+ * - Compact disabled connections once pruning has made them dead weight
  *
- * All functions accept `EngineState` to access shared scratch buffers and RNG.
- * Follows ES2023 idioms: `toSorted`, `.at(-1)`, numeric separators, etc.
+ * The helpers here are intentionally allocation-light because they sit on the
+ * hot path of long runs. They lean on `EngineState` scratch buffers and accept
+ * slightly loose runtime surfaces so the public loop can stay orchestration-
+ * first while these internals adapt to the real Neat and Network instances.
  */
 
+import type Network from '../../../../src/architecture/network';
+import type Neat from '../../../../src/neat';
 import { methods } from '../../../../src/neataptic';
 import type { EngineState } from './engineState';
 import { drawFastRandom, resolveRngParameters } from './rngAndTiming';
@@ -27,16 +36,13 @@ import {
   profilingStartTimestamp,
 } from './rngAndTiming';
 import type {
-  EvolutionGenomeLike,
   MutationOperationLike,
   NetworkConnection,
   NetworkNode,
 } from './evolutionEngine.types';
 
 /** Shared empty array to avoid repeated allocations for missing/invalid arrays. */
-// Type assertion: Empty array for generic fallback when arrays are invalid
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const EMPTY_VEC: any[] = [];
+const EMPTY_VEC: never[] = [];
 
 /** Small numeric epsilon for variance checks (collapse detection). */
 const NUMERIC_EPSILON_SMALL = 0.01;
@@ -58,6 +64,61 @@ const CONN_WEIGHT_RESET_HALF_RANGE = 0.2;
 
 /** Typed or array-based index buffer for sorting */
 type IndexBuffer = Uint32Array | Int32Array | number[];
+
+/** Runtime parent identifier carried through clone lineage tracking. */
+type PopulationDynamicsParentId = number | string;
+
+/**
+ * Narrow genome view used by this module.
+ *
+ * The real runtime objects are `Network` instances with a few extra evolution-
+ * time fields such as `score`, `species`, and lineage markers. Capturing that
+ * shape locally keeps the rest of the helper signatures readable without
+ * claiming that the entire engine only ever works with plain `Network` values.
+ */
+type PopulationDynamicsGenome = Network & {
+  score?: number;
+  species?: number | null;
+  clone?: (parentId?: PopulationDynamicsParentId) => PopulationDynamicsGenome;
+  mutate?: (method: MutationOperationLike) => void;
+  _id?: PopulationDynamicsParentId;
+  _parentId?: PopulationDynamicsParentId;
+};
+
+/** Node surface used when population helpers inspect network topology. */
+type PopulationDynamicsNode = NetworkNode;
+
+/** Connection surface used when population helpers inspect network edges. */
+type PopulationDynamicsConnection = NetworkConnection;
+
+/** Minimal novelty configuration surface used during anti-collapse escalation. */
+interface PopulationDynamicsNoveltyConfig {
+  blendFactor?: number;
+}
+
+/** Minimal NEAT options surface used by population-dynamics helpers. */
+interface PopulationDynamicsOptions {
+  mutation?: MutationOperationLike[] | Record<string, MutationOperationLike>;
+  mutationRate?: number;
+  mutationAmount?: number;
+  elitism?: number;
+  popsize?: number;
+  config?: {
+    novelty?: PopulationDynamicsNoveltyConfig;
+  };
+}
+
+/**
+ * Narrow NEAT driver view used by this module.
+ *
+ * The population-dynamics helpers care about population access, a handful of
+ * options, and mutation operator discovery. Everything else remains owned by
+ * the concrete `Neat` implementation.
+ */
+type PopulationDynamicsNeatLike = Neat & {
+  population?: Network[];
+  options?: PopulationDynamicsOptions & Neat['options'];
+};
 
 /** Cached reference to mutation ops array (invalidated if driver replaces the reference). */
 let cachedMutationOps: MutationOperationLike[] | null = null;
@@ -169,6 +230,11 @@ export const maybeStartSimplify = (
 /**
  * Run a single simplify/pruning generation if conditions permit.
  *
+ * Conceptually, simplify mode is the engine saying: "stop growing for a moment
+ * and remove weak structure so the current population has to justify what it
+ * keeps." That is useful after a long plateau, but only in non-browser hosts
+ * where the extra pruning work is acceptable.
+ *
  * Steps:
  * 1. Normalize inputs and perform fast exits for zero remaining or invalid population.
  * 2. Environment gate: skip pruning in browser-like hosts.
@@ -188,9 +254,7 @@ export const maybeStartSimplify = (
  */
 export const runSimplifyCycle = (
   state: EngineState,
-  // Type assertion: NEAT driver with dynamically typed population
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   simplifyRemaining: number,
   simplifyStrategy: string,
   simplifyPruneFraction: number,
@@ -234,8 +298,12 @@ export const runSimplifyCycle = (
  * Handle simplify entry and per-generation advance.
  *
  * Behaviour:
- * - Decides when to enter a simplification phase and runs one simplify cycle per generation.
- * - Delegates start decision to `maybeStartSimplify` and per-generation work to `runSimplifyCycle`.
+ * - Decides when to enter a simplification phase and runs one simplify cycle
+ *   per generation.
+ * - Resets the plateau counter when simplify starts so the engine does not
+ *   immediately re-enter simplify after leaving it.
+ * - Delegates the "should we start?" question to `maybeStartSimplify` and the
+ *   actual pruning work to `runSimplifyCycle`.
  *
  * @param state - Shared engine state.
  * @param neat - NEAT driver instance.
@@ -253,9 +321,7 @@ export const runSimplifyCycle = (
  */
 export const handleSimplifyState = (
   state: EngineState,
-  // Type assertion: NEAT driver with dynamically typed population
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   plateauCounter: number,
   plateauGenerations: number,
   simplifyDuration: number,
@@ -336,6 +402,11 @@ export const handleSimplifyState = (
 /**
  * Expand the population by creating children from top-performing parents.
  *
+ * This is the engine's controlled answer to stagnation before full collapse
+ * recovery becomes necessary: widen the search, but bias that widening toward
+ * the current best-performing slice of the population instead of sampling from
+ * everyone equally.
+ *
  * Steps:
  * 1. Prepare working sets (population reference, sorted parent indices, parent pool size).
  * 2. Sample parents uniformly from the top parent pool.
@@ -353,9 +424,7 @@ export const handleSimplifyState = (
  */
 export const expandPopulation = (
   state: EngineState,
-  // Type assertion: NEAT driver with dynamically typed population
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   targetAdd: number,
   safeWrite: (msg: string) => void,
   completedGenerations: number,
@@ -410,6 +479,11 @@ export const expandPopulation = (
 /**
  * Prepare working sets for population expansion.
  *
+ * The key idea is to sort once, derive a parent pool from the best quarter of
+ * the population, and then let child creation sample uniformly from that pool.
+ * That gives expansion a clear bias toward current evidence without hard-coding
+ * elitist cloning only.
+ *
  * @param state - Shared engine state.
  * @param neat - NEAT driver with `population`.
  * @returns Object with `populationRef`, `sortedIdx`, `parentPoolSize`.
@@ -419,20 +493,16 @@ export const expandPopulation = (
  */
 export const prepareExpansion = (
   state: EngineState,
-  // Type assertion: NEAT driver with dynamically typed population
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
 ): {
-  // Type assertion: Population array contains network genomes
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  populationRef: any[];
+  populationRef: PopulationDynamicsGenome[];
   sortedIdx: number[];
   parentPoolSize: number;
 } => {
-  // Type assertion: Population array contains network genomes
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const populationRef: any[] = Array.isArray(neat?.population)
-    ? neat.population
+  const populationRef: PopulationDynamicsGenome[] = Array.isArray(
+    neat?.population,
+  )
+    ? (neat.population as PopulationDynamicsGenome[])
     : [];
 
   // Fast path: empty population.
@@ -483,12 +553,8 @@ export const determineMutateCount = (state: EngineState): number => {
  */
 export const applyMutationsToClone = (
   state: EngineState,
-  // Type assertion: Genome/network with dynamic structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  clone: any,
-  // Type assertion: NEAT driver with dynamic mutation methods
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
+  clone: PopulationDynamicsGenome,
+  neat: PopulationDynamicsNeatLike,
   mutateCount: number,
 ) => {
   // Step 1: Resolve mutation operations.
@@ -564,15 +630,9 @@ export const applyMutationsToClone = (
  * registerClone(neat, genomeClone, parentId);
  */
 export const registerClone = (
-  // Type assertion: NEAT driver with dynamic population methods
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
-  // Type assertion: Genome/network with dynamic structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  clone: any,
-  // Type assertion: Parent ID can be number, string, or undefined
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parentId?: any,
+  neat: PopulationDynamicsNeatLike,
+  clone: PopulationDynamicsGenome,
+  parentId?: PopulationDynamicsParentId,
 ) => {
   try {
     if (!neat || !clone) return;
@@ -585,7 +645,7 @@ export const registerClone = (
 
     // Optionally track parent ID.
     if (parentId != null) {
-      const runtimeClone = clone as EvolutionGenomeLike;
+      const runtimeClone = clone as PopulationDynamicsGenome;
       runtimeClone._parentId = parentId;
     }
   } catch {
@@ -611,25 +671,15 @@ export const registerClone = (
  */
 export const createChildFromParent = (
   state: EngineState,
-  // Type assertion: NEAT driver with dynamic mutation/population methods
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
-  // Type assertion: Parent genome with dynamic structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parent: any,
-  // Type assertion: Returns child genome with dynamic structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any => {
+  neat: PopulationDynamicsNeatLike,
+  parent: PopulationDynamicsGenome,
+): PopulationDynamicsGenome | undefined => {
   try {
     if (!parent) return;
 
     // Step 1: Clone parent.
-    // Type assertion: Clone can be any genome/network type
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let clone: any = null;
-    // Type assertion: Parent ID can be any type
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parentId = (parent as any)?._id;
+    let clone: PopulationDynamicsGenome | null = null;
+    const parentId = parent._id;
 
     // Attempt clone with ID first (preferred path).
     if (typeof parent.clone === 'function' && parentId != null) {
@@ -648,8 +698,7 @@ export const createChildFromParent = (
     if (!clone && typeof parent.clone === 'function') {
       clone = parent.clone();
       if (clone) {
-        const runtimeParent = parent as EvolutionGenomeLike;
-        registerClone(neat, clone, runtimeParent?._id);
+        registerClone(neat, clone, parent._id);
       }
     }
 
@@ -660,8 +709,10 @@ export const createChildFromParent = (
 
     // Step 3: Apply mutations.
     applyMutationsToClone(state, clone, neat, mutateCount);
+    return clone;
   } catch {
     // Best-effort: swallow errors.
+    return undefined;
   }
 };
 
@@ -683,9 +734,7 @@ export const createChildFromParent = (
  */
 export const getSortedIndicesByScore = (
   state: EngineState,
-  // Type assertion: Population array contains network genomes with dynamic structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  population: any[],
+  population: Network[],
 ): number[] => {
   // Step 1: Validate inputs.
   const populationLength = population.length | 0;
@@ -821,14 +870,10 @@ export const getSortedIndicesByScore = (
  * insertionSortIndices(idxBuf, 0, n - 1, population);
  */
 const insertionSortIndices = (
-  // Type assertion: Index buffer can be Int32Array or number[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  indexBuf: any,
+  indexBuf: IndexBuffer,
   lo: number,
   hi: number,
-  // Type assertion: Population array contains dynamic network genomes
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  population: any,
+  population: Network[],
 ) => {
   if (!indexBuf || lo >= hi) return;
 
@@ -863,14 +908,10 @@ const insertionSortIndices = (
  * const pivot = medianOfThreePivot(idxBuf, 0, n - 1, population);
  */
 const medianOfThreePivot = (
-  // Type assertion: Index buffer can be Int32Array or number[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  indexBuf: any,
+  indexBuf: IndexBuffer,
   lo: number,
   hi: number,
-  // Type assertion: Population array contains dynamic network genomes
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  population: any,
+  population: Network[],
 ): number => {
   const mid = (lo + hi) >> 1;
   const leftIndex = indexBuf[lo];
@@ -878,31 +919,13 @@ const medianOfThreePivot = (
   const rightIndex = indexBuf[hi];
 
   const popRef = population ?? EMPTY_VEC;
+  const orderedScores = [
+    popRef[leftIndex]?.score ?? Number.NEGATIVE_INFINITY,
+    popRef[middleIndex]?.score ?? Number.NEGATIVE_INFINITY,
+    popRef[rightIndex]?.score ?? Number.NEGATIVE_INFINITY,
+  ].toSorted((leftScore, rightScore) => leftScore - rightScore);
 
-  let leftScore = popRef[leftIndex]?.score ?? Number.NEGATIVE_INFINITY;
-  let middleScore = popRef[middleIndex]?.score ?? Number.NEGATIVE_INFINITY;
-  let rightScore = popRef[rightIndex]?.score ?? Number.NEGATIVE_INFINITY;
-
-  // Sort three scores to find median.
-  if (leftScore > middleScore) {
-    const tmp = leftScore;
-    leftScore = middleScore;
-    middleScore = tmp;
-  }
-
-  if (middleScore > rightScore) {
-    const tmp = middleScore;
-    middleScore = rightScore;
-    rightScore = tmp;
-
-    if (leftScore > middleScore) {
-      const tmp2 = leftScore;
-      leftScore = middleScore;
-      middleScore = tmp2;
-    }
-  }
-
-  return middleScore as number;
+  return orderedScores[1] ?? Number.NEGATIVE_INFINITY;
 };
 
 /**
@@ -955,12 +978,8 @@ const qsPushRange = (
  * const ops = getMutationOps(neat);
  */
 const getMutationOps = (
-  // Type assertion: NEAT driver with dynamic mutation options
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
-  // Type assertion: Returns array of dynamic mutation operation objects
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any[] => {
+  neat: PopulationDynamicsNeatLike,
+): MutationOperationLike[] => {
   try {
     if (!neat) return EMPTY_VEC;
 
@@ -973,7 +992,9 @@ const getMutationOps = (
         const maybeMutation = candidate as MutationOperationLike;
         const maybeLen = maybeMutation.length;
         if (maybeLen != null && Number.isFinite(maybeLen) && maybeLen >= 0) {
-          cachedMutationOps = candidate as MutationOperationLike[];
+          cachedMutationOps = Array.from(
+            candidate as unknown as ArrayLike<MutationOperationLike>,
+          );
         } else {
           cachedMutationOps = Object.values(
             candidate as Record<string, MutationOperationLike>,
@@ -1003,18 +1024,14 @@ const getMutationOps = (
  * @example
  * ensureOutputIdentity(neat);
  */
-export const ensureOutputIdentity = (
-  // Type assertion: NEAT driver with dynamically typed population
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
-) => {
+export const ensureOutputIdentity = (neat: PopulationDynamicsNeatLike) => {
   try {
     if (!neat) return;
 
-    // Type assertion: Population array contains network genomes
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const populationRef: any[] = Array.isArray(neat.population)
-      ? neat.population
+    const populationRef: PopulationDynamicsGenome[] = Array.isArray(
+      neat.population,
+    )
+      ? (neat.population as PopulationDynamicsGenome[])
       : EMPTY_VEC;
 
     for (
@@ -1022,12 +1039,12 @@ export const ensureOutputIdentity = (
       genomeIndex < populationRef.length;
       genomeIndex++
     ) {
-      const genome = populationRef[genomeIndex] as EvolutionGenomeLike;
+      const genome = populationRef[genomeIndex] as PopulationDynamicsGenome;
       if (!genome) continue;
 
-      const nodesRef: NetworkNode[] = Array.isArray(genome.nodes)
-        ? genome.nodes
-        : EMPTY_VEC;
+      const nodesRef: PopulationDynamicsNode[] = Array.isArray(genome.nodes)
+        ? (genome.nodes as unknown as PopulationDynamicsNode[])
+        : [];
 
       for (let nodeIndex = 0; nodeIndex < nodesRef.length; nodeIndex++) {
         const node = nodesRef[nodeIndex];
@@ -1060,16 +1077,14 @@ export const ensureOutputIdentity = (
  */
 export const handleSpeciesHistory = (
   state: EngineState,
-  // Type assertion: NEAT driver with dynamically typed population
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   speciesHistory: number[],
 ): boolean => {
   try {
-    // Type assertion: Population array contains network genomes
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const populationRef: any[] = Array.isArray(neat?.population)
-      ? neat.population
+    const populationRef: PopulationDynamicsGenome[] = Array.isArray(
+      neat?.population,
+    )
+      ? (neat.population as PopulationDynamicsGenome[])
       : EMPTY_VEC;
 
     // Ensure pooled scratch buffers.
@@ -1183,9 +1198,7 @@ export const handleSpeciesHistory = (
  */
 export const maybeExpandPopulation = (
   state: EngineState,
-  // Type assertion: NEAT driver with dynamically typed population
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   dynamicPopEnabled: boolean,
   completedGenerations: number,
   dynamicPopMax: number,
@@ -1199,10 +1212,10 @@ export const maybeExpandPopulation = (
   try {
     if (!dynamicPopEnabled || completedGenerations <= 0) return;
 
-    // Type assertion: Population array contains network genomes
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const populationRef: any[] = Array.isArray(neat?.population)
-      ? neat.population
+    const populationRef: PopulationDynamicsGenome[] = Array.isArray(
+      neat?.population,
+    )
+      ? (neat.population as PopulationDynamicsGenome[])
       : EMPTY_VEC;
 
     const maxAllowed = Number.isFinite(dynamicPopMax)
@@ -1284,8 +1297,10 @@ export const pruneSaturatedHiddenOutputs = (
   try {
     const pruneProfilingEnabled = isProfilingDetailsEnabled(state);
     const startProfile = pruneProfilingEnabled ? profilingStartTimestamp() : 0;
-    const runtimeGenome = genome as EvolutionGenomeLike;
-    const nodesRef = runtimeGenome?.nodes ?? EMPTY_VEC;
+    const runtimeGenome = genome as PopulationDynamicsGenome;
+    const nodesRef = Array.isArray(runtimeGenome?.nodes)
+      ? (runtimeGenome.nodes as unknown as PopulationDynamicsNode[])
+      : EMPTY_VEC;
 
     const outputCount = getNodeIndicesByType(nodesRef, 'output');
     const hiddenCount = getNodeIndicesByType(nodesRef, 'hidden');
@@ -1317,7 +1332,7 @@ export const pruneSaturatedHiddenOutputs = (
       // Fill absolute weights.
       const fillLimit = Math.min(outConnsLen, absWeightsTA.length);
       for (let wi = 0; wi < fillLimit; wi++) {
-        const conn = outConns[wi] as NetworkConnection;
+        const conn = outConns[wi] as PopulationDynamicsConnection;
         absWeightsTA[wi] = Math.abs(conn?.weight ?? 0) || 0;
       }
 
@@ -1344,7 +1359,7 @@ export const pruneSaturatedHiddenOutputs = (
           let minAbs = Infinity;
           for (let j = 0; j < outConnsLen; j++) {
             if (indexFlags[j]) continue;
-            const candidate = outConns[j] as NetworkConnection;
+            const candidate = outConns[j] as PopulationDynamicsConnection;
             if (!candidate || candidate.enabled === false) {
               indexFlags[j] = 1;
               continue;
@@ -1356,7 +1371,9 @@ export const pruneSaturatedHiddenOutputs = (
             }
           }
           if (minPos >= 0) {
-            const connToDisable = outConns[minPos] as NetworkConnection;
+            const connToDisable = outConns[
+              minPos
+            ] as PopulationDynamicsConnection;
             connToDisable.enabled = false;
             indexFlags[minPos] = 1;
           } else {
@@ -1400,15 +1417,12 @@ export const pruneSaturatedHiddenOutputs = (
  */
 export const antiCollapseRecovery = (
   state: EngineState,
-  // Type assertion: NEAT driver with dynamically typed population
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
   completedGenerations: number,
   safeWrite: (msg: string) => void,
   sampleSegmentIntoScratchFn: (
     state: EngineState,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    array: any[],
+    array: PopulationDynamicsGenome[],
     startIdx: number,
     count: number,
   ) => number,
@@ -1416,9 +1430,11 @@ export const antiCollapseRecovery = (
   try {
     if (!neat) return;
 
-    const elitismCount = Number.isFinite(neat?.options?.elitism)
-      ? Math.max(0, Math.floor(neat.options.elitism))
-      : 0;
+    const rawElitism = neat?.options?.elitism;
+    const elitismCount =
+      typeof rawElitism === 'number' && Number.isFinite(rawElitism)
+        ? Math.max(0, Math.floor(rawElitism))
+        : 0;
 
     const population = Array.isArray(neat.population)
       ? neat.population
@@ -1449,7 +1465,9 @@ export const antiCollapseRecovery = (
     let totalBiasResets = 0;
 
     for (let sampleIndex = 0; sampleIndex < sampledCount; sampleIndex++) {
-      const genome = pooledSampleBuffer[sampleIndex] as EvolutionGenomeLike;
+      const genome = pooledSampleBuffer[
+        sampleIndex
+      ] as PopulationDynamicsGenome;
       if (!genome) continue;
 
       try {
@@ -1499,9 +1517,11 @@ export const reinitializeGenomeOutputsAndWeights = (
   genome: unknown,
 ): { connReset: number; biasReset: number } => {
   try {
-    const runtimeGenome = genome as EvolutionGenomeLike;
-    const nodesList: NetworkNode[] = Array.isArray(runtimeGenome?.nodes)
-      ? runtimeGenome.nodes
+    const runtimeGenome = genome as PopulationDynamicsGenome;
+    const nodesList: PopulationDynamicsNode[] = Array.isArray(
+      runtimeGenome?.nodes,
+    )
+      ? (runtimeGenome.nodes as unknown as PopulationDynamicsNode[])
       : [];
 
     let sampleBuf = state.scratch.samplePool;
@@ -1527,9 +1547,7 @@ export const reinitializeGenomeOutputsAndWeights = (
     const biasHalfRange = BIAS_RESET_HALF_RANGE;
     const randomParameters = resolveRngParameters();
     for (let idx = 0; idx < outputCount; idx++) {
-      // Type assertion: pool holds Node objects at runtime
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const outNode = sampleBuf[idx] as any;
+      const outNode = sampleBuf[idx] as PopulationDynamicsNode | undefined;
       if (!outNode) continue;
       outNode.bias =
         drawFastRandom(state, randomParameters) * (2 * biasHalfRange) -
@@ -1539,15 +1557,15 @@ export const reinitializeGenomeOutputsAndWeights = (
 
     // Reset weights targeting outputs.
     let connReset = 0;
-    const connections: NetworkConnection[] = Array.isArray(
+    const connections: PopulationDynamicsConnection[] = Array.isArray(
       runtimeGenome?.connections,
     )
-      ? runtimeGenome.connections
+      ? (runtimeGenome.connections as unknown as PopulationDynamicsConnection[])
       : [];
     if (connections.length > 0 && outputCount > 0) {
-      const outputsSet = new Set<NetworkNode>();
+      const outputsSet = new Set<PopulationDynamicsNode>();
       for (let idx = 0; idx < outputCount; idx++) {
-        const outNode = sampleBuf[idx] as NetworkNode;
+        const outNode = sampleBuf[idx] as PopulationDynamicsNode;
         if (outNode) outputsSet.add(outNode);
       }
 
@@ -1589,15 +1607,13 @@ export const reinitializeGenomeOutputsAndWeights = (
  * const removed = compactGenomeConnections(genome);
  */
 export const compactGenomeConnections = (
-  // Type assertion: Genome with dynamic structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  genome: any,
+  genome: PopulationDynamicsGenome,
 ): number => {
   try {
-    // Type assertion: Connections array with dynamic structure
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const connectionsList: any[] = Array.isArray(genome?.connections)
-      ? genome.connections
+    const connectionsList: PopulationDynamicsConnection[] = Array.isArray(
+      genome?.connections,
+    )
+      ? (genome.connections as unknown as PopulationDynamicsConnection[])
       : [];
 
     const totalConnections = connectionsList.length;
@@ -1637,15 +1653,13 @@ export const compactGenomeConnections = (
  */
 export const compactPopulation = (
   state: EngineState,
-  // Type assertion: NEAT driver with dynamically typed population
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  neat: any,
+  neat: PopulationDynamicsNeatLike,
 ): number => {
   try {
-    // Type assertion: Population array contains network genomes
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const populationList: any[] = Array.isArray(neat?.population)
-      ? neat.population
+    const populationList: PopulationDynamicsGenome[] = Array.isArray(
+      neat?.population,
+    )
+      ? (neat.population as PopulationDynamicsGenome[])
       : [];
 
     const populationSize = populationList.length;

@@ -1,6 +1,6 @@
-import type Network from '../../network';
-import { activationArrayPool } from '../../activationArrayPool';
-import type { ActivationArray } from '../../activationArrayPool';
+import type Network from '../../network/network';
+import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
+import type { ActivationArray } from '../../activationArrayPool/activationArrayPool';
 import { config } from '../../../config';
 import {
   INITIAL_OUTPUT_WRITE_INDEX,
@@ -388,7 +388,7 @@ function updateStochasticDepthFromSchedule(
  * Check whether a probability vector contains values outside the (0, 1] interval.
  *
  * @param probabilities Candidate probability vector.
- * @returns True when any probability is invalid.
+ * @returns True when one or more probabilities are invalid.
  */
 function containsInvalidProbability(probabilities: number[]): boolean {
   for (const probability of probabilities) {

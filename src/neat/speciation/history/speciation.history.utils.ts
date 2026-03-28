@@ -1,0 +1,449 @@
+import type {
+  ConnectionLike,
+  GenomeDetailed,
+  SpeciesLike,
+  SpeciationOptions,
+  SpeciationHarnessContext,
+} from '../../shared/neat.shared.types';
+import {
+  DEFAULT_SCORE_FALLBACK,
+  DEFAULT_SPECIES_AGE_GRACE,
+  DEFAULT_SPECIES_OLD_PENALTY,
+  HISTORY_BUFFER_MAX_ENTRIES,
+  NEGATIVE_INFINITY,
+  PENALTY_NO_EFFECT_THRESHOLD,
+  SPECIES_AGE_GRACE_MULTIPLIER,
+} from '../shared/speciation.shared';
+import type { InnovationAccumulator } from '../shared/speciation.shared';
+
+/**
+ * History and telemetry mechanics for speciation.
+ *
+ * This chapter is the memory surface for speciation. Assignment rebuilds the
+ * live registry, threshold tuning adjusts the future grouping boundary, and
+ * sharing or stagnation decide short-term pressure. This file captures what the
+ * controller should remember after those steps have settled.
+ *
+ * In classic NEAT, speciation is not bookkeeping for its own sake. It is one of
+ * the mechanisms that protects fragile new structures long enough to prove
+ * whether they deserve to survive. This history boundary carries that idea
+ * forward in two ways: it protects young species from being discounted too
+ * early, and it preserves enough evidence that later readers can see how each
+ * lineage changed over time.
+ *
+ * It owns three related jobs:
+ *
+ * 1. apply age-aware protection so newly formed species are not punished too
+ *    aggressively before they have time to improve,
+ * 2. record compact or extended per-generation history rows that later species,
+ *    telemetry, and documentation surfaces can inspect,
+ * 3. summarize structural and innovation signals so history entries teach more
+ *    than simple species counts.
+ *
+ * Keeping those responsibilities together makes the speciation pipeline easier
+ * to follow: this chapter does not decide who belongs to a species, but it does
+ * decide what evidence about species evolution is preserved once assignment is
+ * finished.
+ *
+ * Read the chapter like a lab notebook for evolving niches:
+ *
+ * 1. first protect young structural experiments from premature pressure,
+ * 2. then record a compact or detailed snapshot of the current species state,
+ * 3. finally keep only the recent window of memory that still teaches something
+ *    useful about the run.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   Registry[Live species registry]
+ *   Protection[Apply age-aware score protection]
+ *   Snapshot[Build compact or extended history snapshot]
+ *   Innovations[Summarize structural and innovation signals]
+ *   Buffer[Trim history buffer]
+ *   Readers[Species, telemetry, and diagnostics readers]
+ *
+ *   Registry --> Protection
+ *   Protection --> Snapshot
+ *   Snapshot --> Innovations
+ *   Innovations --> Buffer
+ *   Buffer --> Readers
+ * ```
+ *
+ * If assignment answers "where does this genome belong right now?", history
+ * answers two more educational questions: "what should this run remember about
+ * that lineage?" and "how can later readers tell whether a species was merely
+ * surviving or genuinely evolving?"
+ */
+
+/**
+ * Apply age protection penalties to old species.
+ *
+ * This protects newly created species from being penalized too early while also
+ * allowing older species to lose some score advantage when the configured age
+ * policy says they have been around long enough. Read it as a small historical
+ * fairness rule layered on top of the current registry rather than as a new
+ * assignment decision.
+ *
+ * Pedagogically, this is the chapter's reminder that NEAT-style speciation is
+ * trying to protect innovation, not just sort genomes. New structural ideas are
+ * often weak before they are refined, so this helper delays harsh pressure long
+ * enough for those ideas to either improve or clearly fail.
+ *
+ * @param speciationContext - Speciation harness context.
+ * @param options - Speciation options.
+ * @returns Nothing.
+ *
+ * @example
+ * ```ts
+ * applyAgeProtection(neat, neat.options);
+ * ```
+ */
+export function applyAgeProtection<
+  TOptions extends SpeciationOptions = SpeciationOptions,
+>(
+  speciationContext: SpeciationHarnessContext<TOptions>,
+  options: TOptions,
+): void {
+  // Step 1: Resolve configured protection policy.
+  const ageProtection = options.speciesAgeProtection ?? {
+    grace: DEFAULT_SPECIES_AGE_GRACE,
+    oldPenalty: DEFAULT_SPECIES_OLD_PENALTY,
+  };
+  // Step 2: Apply penalties to old species when configured.
+  for (const species of speciationContext._species) {
+    const createdGeneration =
+      speciationContext._speciesCreated.get(species.id) ??
+      speciationContext.generation;
+    const speciesAge = speciationContext.generation - createdGeneration;
+    const graceMultiplier =
+      (ageProtection.grace ?? DEFAULT_SPECIES_AGE_GRACE) *
+      SPECIES_AGE_GRACE_MULTIPLIER;
+    if (speciesAge < graceMultiplier) continue;
+    const penalty = ageProtection.oldPenalty ?? DEFAULT_SPECIES_OLD_PENALTY;
+    if (penalty >= PENALTY_NO_EFFECT_THRESHOLD) continue;
+    (species.members as GenomeDetailed[]).forEach((member) => {
+      if (typeof member.score === 'number') member.score *= penalty;
+    });
+  }
+}
+
+/**
+ * Record the current species history snapshot.
+ *
+ * This writes the per-generation memory row that later chapters inspect. The
+ * helper deliberately supports two levels of detail:
+ * - a compact format for lightweight species history,
+ * - an extended format that adds structural and innovation summaries when the
+ *   caller has opted into a richer teaching or telemetry surface.
+ *
+ * Read those two modes as two notebook styles for the same experiment:
+ *
+ * 1. compact history answers the fast operational question, "how many species
+ *    existed and how strong were they?",
+ * 2. extended history answers the richer explanatory question, "what kind of
+ *    structures and innovation patterns were forming inside each lineage?"
+ *
+ * That distinction keeps the chapter useful for both lightweight runs and more
+ * forensic debugging passes. The runtime can stay cheap by default, then opt
+ * into a more story-rich snapshot only when the reader needs deeper evidence.
+ *
+ * The chart below condenses that fork in one glance: compact mode keeps the
+ * memory row small and operational, while extended mode pays for a richer set
+ * of structural clues that make later charts and diagnostics more teachable.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   Record[recordHistory]
+ *   Compact[compact row\nsize + best]
+ *   Extended[extended row\nsize + best + structure + innovation]
+ *   Fast[fast operational read]
+ *   Rich[deeper telemetry and debugging read]
+ *
+ *   Record --> Compact
+ *   Record --> Extended
+ *   Compact --> Fast
+ *   Extended --> Rich
+ * ```
+ *
+ * @param speciationContext - Speciation harness context.
+ * @param options - Speciation options.
+ * @returns Nothing.
+ *
+ * @example
+ * ```ts
+ * recordHistory(neat, neat.options);
+ * ```
+ */
+export function recordHistory<
+  TOptions extends SpeciationOptions = SpeciationOptions,
+>(
+  speciationContext: SpeciationHarnessContext<TOptions>,
+  options: TOptions,
+): void {
+  // Step 1: Select history format based on configuration.
+  if (options.speciesAllocation?.extendedHistory) {
+    const speciesStats = speciationContext._species.map(
+      (species: SpeciesLike) =>
+        buildExtendedHistoryStats(speciationContext, species),
+    );
+    speciationContext._speciesHistory.push({
+      generation: speciationContext.generation,
+      stats: speciesStats,
+    });
+    return;
+  }
+  speciationContext._speciesHistory.push({
+    generation: speciationContext.generation,
+    stats: speciationContext._species.map((species: SpeciesLike) => ({
+      id: species.id,
+      size: species.members.length,
+      best: species.bestScore,
+    })),
+  });
+}
+
+/**
+ * Trim species history to the maximum buffer size.
+ *
+ * History is useful only while it stays bounded. This helper enforces the fixed
+ * retention cap so speciation can keep a rolling story of recent generations
+ * without turning a long run into unbounded in-memory accumulation.
+ *
+ * This is the closing editorial step for the chapter: keep enough recent memory
+ * to teach the trend, but not so much that yesterday's data overwhelms today's
+ * run.
+ *
+ * @param speciationContext - Speciation harness context.
+ * @returns Nothing.
+ */
+export function trimHistory<
+  TOptions extends SpeciationOptions = SpeciationOptions,
+>(speciationContext: SpeciationHarnessContext<TOptions>): void {
+  // Step 1: Drop the oldest history entry when the buffer is too large.
+  if (speciationContext._speciesHistory.length > HISTORY_BUFFER_MAX_ENTRIES)
+    speciationContext._speciesHistory.shift();
+}
+
+/**
+ * Build extended history stats for a species.
+ *
+ * Extended history mode is the bridge from "species existed" to "species was
+ * evolving in a particular way." The helper folds one species into a richer row
+ * that preserves structural size, best score, and innovation-distribution
+ * signals so downstream charts and diagnostics can explain how that lineage was
+ * changing rather than merely counting it.
+ *
+ * This is the real hinge point of the chapter. Above this helper, the runtime is
+ * still holding a live species registry. After this helper, the same lineage has
+ * been translated into something closer to a reader-facing field note: size,
+ * strength, and the structural clues that explain why the species looks the way
+ * it does.
+ *
+ * @param speciationContext - Speciation harness context.
+ * @param species - Species to snapshot.
+ * @returns Extended history entry.
+ */
+function buildExtendedHistoryStats<
+  TOptions extends SpeciationOptions = SpeciationOptions,
+>(
+  speciationContext: SpeciationHarnessContext<TOptions>,
+  species: SpeciesLike,
+): Record<string, unknown> {
+  // Step 1: Snapshot members for structural and innovation summaries.
+  const members = species.members as GenomeDetailed[];
+  // Step 2: Compute structural sizes and their averages.
+  const structuralSizes = computeMemberStructuralSizes(
+    speciationContext,
+    members,
+  );
+  const meanNodes = averageNumbers(structuralSizes.map((entry) => entry.nodes));
+  const meanConnections = averageNumbers(
+    structuralSizes.map((entry) => entry.connections),
+  );
+  // Step 3: Aggregate innovation statistics.
+  const innovationStats = summarizeInnovations(speciationContext, members);
+  // Step 4: Fold into the history stats payload.
+  return {
+    id: species.id,
+    size: species.members.length,
+    best: species.bestScore,
+    meanNodes,
+    meanConns: meanConnections,
+    meanInnovation: innovationStats.meanInnovation,
+    innovationRange: innovationStats.innovationRange,
+    enabledRatio: innovationStats.enabledRatio,
+  } as Record<string, unknown>;
+
+  /**
+   * @param context - Speciation harness context.
+   * @param memberList - Members to summarize.
+   * @returns Structural size stats per member.
+   */
+  function computeMemberStructuralSizes(
+    context: SpeciationHarnessContext<TOptions>,
+    memberList: GenomeDetailed[],
+  ): Array<{
+    nodes: number;
+    connections: number;
+    score: number;
+    entropy: number;
+  }> {
+    // Step 1: Map members into structural summary rows.
+    return memberList.map((member) => ({
+      nodes: member.nodes.length,
+      connections: member.connections.length,
+      score: member.score ?? DEFAULT_SCORE_FALLBACK,
+      entropy: context._structuralEntropy(member),
+    }));
+  }
+}
+
+/**
+ * Average a list of numbers, returning zero when empty.
+ *
+ * This small helper keeps history summaries predictable when a derived metric
+ * has no observations. Using the shared score fallback means empty aggregates do
+ * not introduce `NaN` noise into the recorded history surface.
+ *
+ * Even tiny helpers matter in educational telemetry code: one unstable average
+ * can turn a readable chapter into a confusing table full of exceptional cases.
+ *
+ * @param values - Numeric values to average.
+ * @returns Mean of the values or zero.
+ */
+function averageNumbers(values: number[]): number {
+  // Step 1: Compute mean with a safe empty fallback.
+  if (!values.length) return DEFAULT_SCORE_FALLBACK;
+  const sum = values.reduce((total, value) => total + value, 0);
+  return sum / values.length;
+}
+
+/**
+ * Summarize innovation statistics for a set of members.
+ *
+ * Innovation summaries turn raw connection-level ids into a compact species
+ * signature: where the mean innovation id sits, how wide the innovation spread
+ * is, and how many connections remain enabled. Those signals help the history
+ * layer describe whether a species is converging, staying structurally broad,
+ * or accumulating dormant structure over time.
+ *
+ * This is also where the chapter gets a little historical texture. Innovation
+ * ids are the runtime's rough fossil record for structural change: not a full
+ * genealogy, but enough to estimate whether a species is clustered around older
+ * structure, still spreading into newer innovations, or carrying a large amount
+ * of disabled architectural baggage.
+ *
+ * @param speciationContext - Speciation harness context.
+ * @param members - Members to summarize.
+ * @returns Innovation summary statistics.
+ */
+function summarizeInnovations<
+  TOptions extends SpeciationOptions = SpeciationOptions,
+>(
+  speciationContext: SpeciationHarnessContext<TOptions>,
+  members: GenomeDetailed[],
+): {
+  meanInnovation: number;
+  innovationRange: number;
+  enabledRatio: number;
+} {
+  // Step 1: Accumulate innovation data across all member connections.
+  const innovationAccumulation = accumulateInnovationStats(
+    speciationContext,
+    members,
+  );
+  // Step 2: Compute mean, range, and enabled ratio from the accumulation.
+  const meanInnovation = computeInnovationMean(innovationAccumulation);
+  const innovationRange = computeInnovationRange(innovationAccumulation);
+  const enabledRatio = computeEnabledRatio(innovationAccumulation);
+  return { meanInnovation, innovationRange, enabledRatio };
+
+  /**
+   * @param context - Speciation harness context.
+   * @param memberList - Members to summarize.
+   * @returns Accumulated innovation stats.
+   */
+  function accumulateInnovationStats(
+    context: SpeciationHarnessContext<TOptions>,
+    memberList: GenomeDetailed[],
+  ): InnovationAccumulator {
+    // Step 1: Seed accumulator defaults.
+    const accumulator: InnovationAccumulator = {
+      innovationSum: 0,
+      innovationCount: 0,
+      maxInnovation: NEGATIVE_INFINITY,
+      minInnovation: Infinity,
+      enabledCount: 0,
+      disabledCount: 0,
+    };
+    // Step 2: Walk every connection and update the counters.
+    for (const member of memberList) {
+      for (const connection of member.connections as ConnectionLike[]) {
+        applyConnectionInnovation(context, accumulator, connection);
+      }
+    }
+    return accumulator;
+  }
+
+  /**
+   * @param context - Speciation harness context.
+   * @param accumulator - Mutable innovation accumulator.
+   * @param connection - Connection to process.
+   * @returns Nothing.
+   */
+  function applyConnectionInnovation(
+    context: SpeciationHarnessContext<TOptions>,
+    accumulator: InnovationAccumulator,
+    connection: ConnectionLike,
+  ): void {
+    // Step 1: Resolve the innovation id for this connection.
+    const innovation =
+      connection.innovation ?? context._fallbackInnov(connection);
+    // Step 2: Update numeric aggregates.
+    accumulator.innovationSum += innovation;
+    accumulator.innovationCount += 1;
+    if (innovation > accumulator.maxInnovation)
+      accumulator.maxInnovation = innovation;
+    if (innovation < accumulator.minInnovation)
+      accumulator.minInnovation = innovation;
+    // Step 3: Track enabled and disabled totals.
+    if (connection.enabled === false) accumulator.disabledCount += 1;
+    else accumulator.enabledCount += 1;
+  }
+
+  /**
+   * @param accumulator - Innovation accumulator.
+   * @returns Mean innovation or fallback.
+   */
+  function computeInnovationMean(accumulator: InnovationAccumulator): number {
+    // Step 1: Return the mean when there are observations.
+    if (!accumulator.innovationCount) return DEFAULT_SCORE_FALLBACK;
+    return accumulator.innovationSum / accumulator.innovationCount;
+  }
+
+  /**
+   * @param accumulator - Innovation accumulator.
+   * @returns Range of innovation ids or fallback.
+   */
+  function computeInnovationRange(accumulator: InnovationAccumulator): number {
+    // Step 1: Validate min and max and compute the range.
+    if (
+      !Number.isFinite(accumulator.maxInnovation) ||
+      !Number.isFinite(accumulator.minInnovation) ||
+      accumulator.maxInnovation <= accumulator.minInnovation
+    ) {
+      return DEFAULT_SCORE_FALLBACK;
+    }
+    return accumulator.maxInnovation - accumulator.minInnovation;
+  }
+
+  /**
+   * @param accumulator - Innovation accumulator.
+   * @returns Ratio of enabled connections or fallback.
+   */
+  function computeEnabledRatio(accumulator: InnovationAccumulator): number {
+    // Step 1: Compute ratio when connections were observed.
+    const enabledTotal = accumulator.enabledCount + accumulator.disabledCount;
+    if (!enabledTotal) return DEFAULT_SCORE_FALLBACK;
+    return accumulator.enabledCount / enabledTotal;
+  }
+}

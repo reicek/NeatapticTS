@@ -1,4 +1,4 @@
-import { gating } from '../../src/methods/gating';
+import { gating } from '../../src/methods/gating/gating';
 
 describe('gating object', () => {
   describe('Scenario: Shape', () => {

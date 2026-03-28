@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type {
   NetworkArchitectureDescriptor,
   NetworkArchitectureSource,
@@ -83,6 +83,60 @@ export function describeArchitecture(
     'inferred',
     runtimeNodes.length,
     runtimeConnections.length,
+  );
+}
+
+type HydratedDescriptorNetwork = Network & {
+  _serializedArchitectureDescriptor?: NetworkArchitectureDescriptor;
+};
+
+/**
+ * Resolve the public architecture descriptor, preferring live graph facts and
+ * falling back to hydrated serialization metadata only when the live result is
+ * still purely inferred.
+ *
+ * This helper keeps the descriptor ownership story in one chapter: topology
+ * owns the live analysis while serialization can optionally hydrate a cached
+ * descriptor that remains safe to reuse when the runtime graph shape matches.
+ *
+ * @param network Runtime network instance.
+ * @returns Public architecture descriptor for telemetry and UI consumers.
+ */
+export function resolveArchitectureDescriptor(
+  network: Network,
+): NetworkArchitectureDescriptor {
+  const liveDescriptor = describeArchitecture(network);
+  const hydratedNetwork = network as unknown as HydratedDescriptorNetwork;
+  const hydratedDescriptor = hydratedNetwork._serializedArchitectureDescriptor;
+
+  if (liveDescriptor.source !== 'inferred') {
+    hydratedNetwork._serializedArchitectureDescriptor = liveDescriptor;
+    return liveDescriptor;
+  }
+
+  if (isHydratedDescriptorCompatible(network, hydratedDescriptor)) {
+    return hydratedDescriptor;
+  }
+
+  return liveDescriptor;
+}
+
+/**
+ * Check whether hydrated descriptor metadata still matches the current graph shape.
+ *
+ * @param network Runtime network instance.
+ * @param hydratedDescriptor Optional hydrated descriptor candidate.
+ * @returns True when hydrated descriptor can safely stand in for the inferred result.
+ */
+function isHydratedDescriptorCompatible(
+  network: Network,
+  hydratedDescriptor: NetworkArchitectureDescriptor | undefined,
+): hydratedDescriptor is NetworkArchitectureDescriptor {
+  return (
+    hydratedDescriptor != null &&
+    hydratedDescriptor.hiddenLayerSizes.length > 0 &&
+    hydratedDescriptor.totalNodes === network.nodes.length &&
+    hydratedDescriptor.totalConnections === network.connections.length
   );
 }
 

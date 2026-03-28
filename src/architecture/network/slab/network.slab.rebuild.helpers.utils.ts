@@ -1,7 +1,7 @@
 /**
  * Internal slab rebuild helper functions extracted from network.slab.utils.ts.
  */
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type Connection from '../../connection';
 import { config } from '../../../config';
 import { _acquireTA, _releaseTA } from './network.slab.pool.utils';
@@ -724,7 +724,7 @@ function _updatePlasticPresence(
   populateResult: SlabPopulateResult,
   connection: ConnectionInternals,
 ): void {
-  // Step 1: Track whether any connection in the pass is plastic.
+  // Step 1: Track whether a connection in the pass is plastic.
   if (connection._flags & PLASTIC_CONNECTION_FLAG) {
     populateResult.anyPlastic = true;
   }

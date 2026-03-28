@@ -1,4 +1,4 @@
-import Network from '../../network';
+import Network from '../../network/network';
 import type { EvolveOptions, TrainingSample } from '../network.types';
 import {
   applySmallPopulationHeuristics,

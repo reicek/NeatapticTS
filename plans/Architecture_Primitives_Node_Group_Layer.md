@@ -1,5 +1,7 @@
 # Architecture Primitives (Node / Group / Layer) Plan
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Introduce a **first-class architecture-building API** that lets users construct networks from composable primitives (nodes, groups, layers), while staying compatible with:

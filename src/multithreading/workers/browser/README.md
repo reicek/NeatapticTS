@@ -2,14 +2,6 @@
 
 ## multithreading/workers/browser/testworker.ts
 
-### CostFunction
-
-Interface for cost function used in worker evaluation.
-
-### SerializableNetwork
-
-Interface for serializable network used in worker evaluation.
-
 ### TestWorker
 
 TestWorker class for handling network evaluations in a browser environment using Web Workers.
@@ -20,7 +12,11 @@ computationally expensive tasks, such as network evaluation, to separate threads
 
 #### _createBlobString
 
-`(cost: CostFunction) => string`
+```ts
+_createBlobString(
+  cost: CostFunction,
+): string
+```
 
 Creates a string representation of the worker's blob.
 
@@ -28,7 +24,11 @@ Returns: The blob string.
 
 #### evaluate
 
-`(network: SerializableNetwork) => Promise<number>`
+```ts
+evaluate(
+  network: SerializableNetwork,
+): Promise<number>
+```
 
 Evaluates a network using the worker process.
 
@@ -36,6 +36,16 @@ Returns: A promise that resolves to the evaluation result.
 
 #### terminate
 
-`() => void`
+```ts
+terminate(): void
+```
 
 Terminates the worker process and revokes the object URL.
+
+### SerializableNetwork
+
+Interface for serializable network used in worker evaluation.
+
+### CostFunction
+
+Interface for cost function used in worker evaluation.

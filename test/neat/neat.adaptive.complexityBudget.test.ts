@@ -31,6 +31,6 @@ describe('Adaptive Complexity Budget', () => {
     const minNodes = cfg.minNodes ?? neat.input + neat.output + 2; // mirrors implementation default
     // Budget should remain within configured min/max bounds
     expect(after).toBeGreaterThanOrEqual(minNodes);
-    expect(after).toBeLessThanOrEqual(cfg.maxNodesEnd);
+    expect(after).toBeLessThanOrEqual(cfg.maxNodesEnd!);
   });
 });

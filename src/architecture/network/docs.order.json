@@ -1,0 +1,8 @@
+{
+  "introFile": "network.ts",
+  "fileOrder": [
+    "network.ts",
+    "network.utils.ts",
+    "network.types.ts"
+  ]
+}

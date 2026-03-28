@@ -1,4 +1,4 @@
-import { activationArrayPool } from '../activationArrayPool';
+import { activationArrayPool } from '../activationArrayPool/activationArrayPool';
 import type { LayerActivationContext } from './layer.utils.types';
 
 const SIZE_MISMATCH_ERROR_MESSAGE =

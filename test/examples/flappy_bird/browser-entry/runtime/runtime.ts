@@ -14,6 +14,20 @@ import type { RuntimeContainerTarget, RuntimeRunHandle } from './runtime.types';
 export type { RuntimeRunHandle as FlappyBirdRunHandle } from './runtime.types';
 
 /**
+ * Top-level browser runtime facade for the Flappy Bird example.
+ *
+ * This is the narrowest public browser entry with real behavior behind it.
+ * Calling `start` resolves the DOM host, installs the worker-backed runtime,
+ * initializes the HUD, and launches the evolve-to-playback loop that powers the
+ * demo. The surrounding services keep those responsibilities split, but this
+ * file is the place where they are folded back into one lifecycle.
+ *
+ * The boundary matters because the browser demo is more than a canvas render:
+ * it is host setup, worker orchestration, telemetry, HUD updates, and shutdown
+ * control presented as one small API.
+ */
+
+/**
  * Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
  *
  * This function is intentionally orchestration-focused:
@@ -22,6 +36,8 @@ export type { RuntimeRunHandle as FlappyBirdRunHandle } from './runtime.types';
  * 3) run the evolve -> playback -> HUD fold loop until stopped,
  * 4) expose a small stop/isRunning/done handle for callers.
  *
+ * @param container - Element id or HTMLElement to host the demo.
+ * @returns Run handle for stop/state control.
  * @example
  * ```ts
  * const runHandle = await start('flappy-bird-output');
@@ -29,13 +45,10 @@ export type { RuntimeRunHandle as FlappyBirdRunHandle } from './runtime.types';
  * runHandle.stop();
  * await runHandle.done;
  * ```
- *
- * @param container - Element id or HTMLElement to host the demo.
- * @returns Run handle for stop/state control.
  */
-export const start = async (
+export async function start(
   container: RuntimeContainerTarget = DEFAULT_CONTAINER_ID,
-): Promise<RuntimeRunHandle> => {
+): Promise<RuntimeRunHandle> {
   // Step 1: Resolve the runtime view, worker, telemetry, and static config.
   const runtimeStartContext = createRuntimeStartContext(container);
 
@@ -58,6 +71,6 @@ export const start = async (
 
   // Step 5: Return the public lifecycle controls to the caller.
   return runtimeRunHandle;
-};
+}
 
 installRuntimeBrowserGlobals(start);

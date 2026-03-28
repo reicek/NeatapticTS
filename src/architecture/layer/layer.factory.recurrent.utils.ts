@@ -1,5 +1,5 @@
-import type Connection from '../connection';
-import Group from '../group';
+import type Connection from '../connection/connection';
+import Group from '../group/group';
 import * as methods from '../../methods/methods';
 import Node from '../node';
 import { isGroup as isGroupUtils } from './layer.guard.utils';
@@ -702,11 +702,7 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
     method?: unknown,
     weight?: number,
   ) => Connection[] {
-    return (
-      from: LayerLike | Group,
-      _method?: unknown,
-      _weight?: number,
-    ): Connection[] => {
+    return (from: LayerLike | Group): Connection[] => {
       const sourceGroup = resolveSourceGroup(factoryContext, from);
       const inputBlock = resolveMemoryInputBlock(layerNodes);
       assertMemoryInputSize(sourceGroup, inputBlock);

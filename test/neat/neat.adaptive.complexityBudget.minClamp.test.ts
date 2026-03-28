@@ -1,6 +1,6 @@
 import Neat from '../../src/neat';
-import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
-import { applyComplexityBudget } from '../../src/neat/neat.adaptive';
+import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
+import { applyComplexityBudget } from '../../src/neat/adaptive/adaptive';
 
 /** Covers explicit minNodes clamp path in adaptive complexity budget when shrink exceeds min. */
 describe('Adaptive Complexity Budget minNodes clamp', () => {

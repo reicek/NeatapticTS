@@ -2,12 +2,12 @@
  * Tests covering objective events & lineage block in buildTelemetryEntry.
  * Single expectation per test.
  */
-import { buildTelemetryEntry } from '../../src/neat/neat.telemetry';
+import { buildTelemetryEntry } from '../../src/neat/telemetry/recorder/telemetry.recorder';
 import type {
   DiversityStats,
   GenomeDetailed,
   TelemetryEntry,
-} from '../../src/neat/neat.types';
+} from '../../src/neat/shared/neat.shared.types';
 
 type TelemetryContextStub = Record<string, unknown> & {
   generation: number;

@@ -1,0 +1,332 @@
+# architecture/network/runtime
+
+Runtime control helpers for the public `Network` class.
+
+This chapter owns the public knobs that change how a network behaves at
+training or activation time without changing its long-lived topology
+contract. Keeping these controls here makes the main `network.ts` file read
+more like orchestration while this file documents the regularization and
+schedule policies callers can tune directly.
+
+## architecture/network/runtime/network.runtime.controls.utils.ts
+
+### configurePruning
+
+```ts
+configurePruning(
+  configuration: PruningConfiguration,
+): void
+```
+
+Configure scheduled pruning during training.
+
+This stores the pruning window and target policy on the network so the
+training loop can opportunistically apply structured sparsification later.
+
+Parameters:
+- `this` - Target network instance.
+- `configuration` - Pruning schedule and ranking configuration.
+
+Returns: Nothing.
+
+### enableWeightNoise
+
+```ts
+enableWeightNoise(
+  configuration: WeightNoiseConfiguration,
+): void
+```
+
+Enable weight noise using either one global standard deviation or per-hidden-layer values.
+
+A single global value is useful for quick experiments, while the per-hidden
+schedule keeps layered models explicit about which hidden stage receives how
+much perturbation.
+
+Parameters:
+- `this` - Target network instance.
+- `configuration` - Global standard deviation or one value per hidden layer.
+
+Returns: Nothing.
+
+### disableWeightNoise
+
+```ts
+disableWeightNoise(): void
+```
+
+Disable all configured weight noise.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
+### setWeightNoiseSchedule
+
+```ts
+setWeightNoiseSchedule(
+  schedule: (step: number) => number,
+): void
+```
+
+Set a dynamic scheduler for global weight noise.
+
+Parameters:
+- `this` - Target network instance.
+- `schedule` - Function mapping the current training step to a standard deviation.
+
+Returns: Nothing.
+
+### clearWeightNoiseSchedule
+
+```ts
+clearWeightNoiseSchedule(): void
+```
+
+Clear the dynamic global weight-noise schedule.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
+### setRandom
+
+```ts
+setRandom(
+  randomFunction: () => number,
+): void
+```
+
+Replace the network random number generator.
+
+This lets advanced callers share one deterministic source across mutation,
+stochastic depth, DropConnect, and other runtime randomness.
+
+Parameters:
+- `this` - Target network instance.
+- `randomFunction` - RNG function returning values in $[0,1)$.
+
+Returns: Nothing.
+
+### testForceOverflow
+
+```ts
+testForceOverflow(): void
+```
+
+Force the next mixed-precision overflow path.
+
+This is a test-oriented hook used to exercise loss-scale recovery logic
+without waiting for a real floating-point overflow.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
+### getTrainingStep
+
+```ts
+getTrainingStep(): number
+```
+
+Read the current training-step counter.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Current training step.
+
+### getLastSkippedLayers
+
+```ts
+getLastSkippedLayers(): number[]
+```
+
+Read the last hidden-layer indices skipped by stochastic depth.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Snapshot of the last skipped hidden-layer indices.
+
+### setStochasticDepthSchedule
+
+```ts
+setStochasticDepthSchedule(
+  schedule: StochasticDepthSchedule,
+): void
+```
+
+Set the stochastic-depth schedule function.
+
+Parameters:
+- `this` - Target network instance.
+- `schedule` - Function mapping the current step and schedule to a new schedule.
+
+Returns: Nothing.
+
+### clearStochasticDepthSchedule
+
+```ts
+clearStochasticDepthSchedule(): void
+```
+
+Clear the stochastic-depth schedule function.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
+### getRuntimeRegularizationStats
+
+```ts
+getRuntimeRegularizationStats(): Record<string, unknown> | null
+```
+
+Read regularization statistics collected during training.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Last regularization stats payload or `null` when none exists yet.
+
+### setStochasticDepth
+
+```ts
+setStochasticDepth(
+  survivalProbabilities: number[],
+): void
+```
+
+Configure stochastic depth with one survival probability per hidden layer.
+
+Matching survival values to hidden layers keeps the runtime contract explicit
+and avoids silently applying one layer's policy to another.
+
+Parameters:
+- `this` - Target network instance.
+- `survivalProbabilities` - Survival probabilities for each hidden layer.
+
+Returns: Nothing.
+
+### disableStochasticDepth
+
+```ts
+disableStochasticDepth(): void
+```
+
+Disable stochastic depth.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
+## architecture/network/runtime/network.runtime.diagnostics.utils.ts
+
+Runtime diagnostics and safety helpers for the public `Network` class.
+
+This chapter owns the public readers and small runtime controls that expose
+training-health state, DropConnect policy, and dropout-mask cleanup without
+changing the network topology itself.
+
+### enableDropConnect
+
+```ts
+enableDropConnect(
+  probability: number,
+): void
+```
+
+Enable DropConnect with a probability in $[0,1)$.
+
+Parameters:
+- `this` - Target network instance.
+- `probability` - DropConnect probability.
+
+Returns: Nothing.
+
+### disableDropConnect
+
+```ts
+disableDropConnect(): void
+```
+
+Disable DropConnect.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
+### resetDropoutMasks
+
+```ts
+resetDropoutMasks(): void
+```
+
+Reset every dropout mask to `1`.
+
+This is useful after training so later inference does not inherit transient
+node-level dropout state from a previous activation pass.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Nothing.
+
+### getRawGradientNorm
+
+```ts
+getRawGradientNorm(): number
+```
+
+Read the last recorded raw gradient norm.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Last raw gradient norm.
+
+### getLossScale
+
+```ts
+getLossScale(): number
+```
+
+Read the active mixed-precision loss scale.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Current loss scale.
+
+### getLastGradClipGroupCount
+
+```ts
+getLastGradClipGroupCount(): number
+```
+
+Read the last recorded gradient-clipping group count.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Last gradient-clipping group count.
+
+### getTrainingStats
+
+```ts
+getTrainingStats(): TrainingStatsSnapshot
+```
+
+Read a consolidated training-health snapshot.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Training statistics snapshot.

@@ -1,8 +1,9 @@
 /**
  * Rollout-local constants.
  *
- * This file will host rollout-only constants and sentinels that belong to the
- * rollout subsystem rather than the wider evaluation surface.
+ * These constants are the small semantic anchors that keep the rollout code
+ * readable: default ids, minimum clamps, zero baselines, and explicit done
+ * reasons.
  *
  * Naming these sentinels explicitly keeps rollout code easier to read than a
  * sea of raw `0`, `1`, and string literals.

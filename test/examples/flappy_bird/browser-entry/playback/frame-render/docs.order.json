@@ -1,0 +1,14 @@
+{
+  "introFile": "playback.frame-render.service.ts",
+  "fileOrder": [
+    "playback.frame-render.service.ts",
+    "playback.frame-render.types.ts",
+    "playback.frame-render.services.ts",
+    "playback.frame-render.scene.services.ts",
+    "playback.frame-render.canvas.services.ts",
+    "playback.frame-render.entity.services.ts",
+    "playback.frame-render.utils.ts",
+    "playback.frame-render.bird.utils.ts",
+    "playback.frame-render.trail.utils.ts"
+  ]
+}

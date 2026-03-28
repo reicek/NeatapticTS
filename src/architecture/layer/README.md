@@ -1,5 +1,359 @@
 # architecture/layer
 
+Core layer chapter for the architecture surface.
+
+This folder owns the public `Layer` class that turns node-level primitives
+into reusable feed-forward and recurrent building blocks. The helper files in
+this chapter keep activation, connection, propagation, and factory policies
+focused, while this file preserves the orchestration story that readers and
+callers actually meet first.
+
+Read this chapter in three passes:
+
+1. start with the `Layer` class overview to understand why the boundary
+   exists above raw nodes and groups,
+2. continue to `activate()`, `propagate()`, `connect()`, and `input()` when
+   you need the runtime wiring surface,
+3. finish with the static factory methods when you want named layer shapes
+   such as dense, recurrent, normalization, or experimental blocks.
+
+## architecture/layer/layer.ts
+
+### Layer
+
+Represents a functional layer within a neural network architecture.
+
+Layers act as organizational units for nodes, facilitating the creation of
+complex network structures like Dense, LSTM, GRU, or Memory layers.
+They manage the collective behavior of their nodes, including activation,
+propagation, and connection to other network components.
+
+### default
+
+#### activate
+
+```ts
+activate(
+  value: number[] | undefined,
+  training: boolean,
+): number[]
+```
+
+Activates all nodes within the layer, computing their output values.
+
+If an input `value` array is provided, it's used as the initial activation
+for the corresponding nodes in the layer. Otherwise, nodes compute their
+activation based on their incoming connections.
+
+During training, layer-level dropout is applied, masking all nodes in the layer together.
+During inference, all masks are set to 1.
+
+Parameters:
+- `value` - - An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
+- `training` - - A boolean indicating whether the layer is in training mode. Defaults to false.
+
+Returns: An array containing the activation value of each node in the layer after activation.
+
+#### attention
+
+```ts
+attention(
+  size: number,
+  heads: number,
+): default
+```
+
+Creates a multi-head self-attention layer (stub implementation).
+
+Parameters:
+- `size` - - Number of output nodes.
+- `heads` - - Number of attention heads (default 1).
+
+Returns: A new Layer instance representing an attention layer.
+
+#### batchNorm
+
+```ts
+batchNorm(
+  size: number,
+): default
+```
+
+Creates a batch normalization layer.
+Applies batch normalization to the activations of the nodes in this layer during activation.
+
+Parameters:
+- `size` - - The number of nodes in this layer.
+
+Returns: A new Layer instance configured as a batch normalization layer.
+
+#### clear
+
+```ts
+clear(): void
+```
+
+Resets the activation state of all nodes within the layer.
+This is typically done before processing a new input sequence or sample.
+
+#### connect
+
+```ts
+connect(
+  target: default | default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
+
+Connects this layer's output to a target component (Layer, Group, or Node).
+
+This method delegates the connection logic primarily to the layer's `output` group
+or the target layer's `input` method. It establishes the forward connections
+necessary for signal propagation.
+
+Parameters:
+- `target` - - The destination Layer, Group, or Node to connect to.
+- `method` - - The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
+- `weight` - - An optional fixed weight to assign to all created connections.
+
+Returns: An array containing the newly created connection objects.
+
+#### connections
+
+Stores connection information related to this layer. This is often managed
+by the network or higher-level structures rather than directly by the layer itself.
+`in`: Incoming connections to the layer's nodes.
+`out`: Outgoing connections from the layer's nodes.
+`self`: Self-connections within the layer's nodes.
+
+#### conv1d
+
+```ts
+conv1d(
+  size: number,
+  kernelSize: number,
+  stride: number,
+  padding: number,
+): default
+```
+
+Creates a 1D convolutional layer (stub implementation).
+
+Parameters:
+- `size` - - Number of output nodes (filters).
+- `kernelSize` - - Size of the convolution kernel.
+- `stride` - - Stride of the convolution (default 1).
+- `padding` - - Padding (default 0).
+
+Returns: A new Layer instance representing a 1D convolutional layer.
+
+#### dense
+
+```ts
+dense(
+  size: number,
+): default
+```
+
+Creates a standard fully connected (dense) layer.
+
+All nodes in the source layer/group will connect to all nodes in this layer
+when using the default `ALL_TO_ALL` connection method via `layer.input()`.
+
+Parameters:
+- `size` - - The number of nodes (neurons) in this layer.
+
+Returns: A new Layer instance configured as a dense layer.
+
+#### disconnect
+
+```ts
+disconnect(
+  target: default | default,
+  twosided: boolean | undefined,
+): void
+```
+
+Removes connections between this layer's nodes and a target Group or Node.
+
+Parameters:
+- `target` - - The Group or Node to disconnect from.
+- `twosided` - - If true, removes connections in both directions (from this layer to target, and from target to this layer). Defaults to false.
+
+#### dropout
+
+Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
+Layer-level dropout takes precedence over node-level dropout for nodes in this layer.
+
+#### gate
+
+```ts
+gate(
+  connections: default[],
+  method: unknown,
+): void
+```
+
+Applies gating to a set of connections originating from this layer's output group.
+
+Gating allows the activity of nodes in this layer (specifically, the output group)
+to modulate the flow of information through the specified `connections`.
+
+Parameters:
+- `connections` - - An array of connection objects to be gated.
+- `method` - - The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
+
+#### gru
+
+```ts
+gru(
+  size: number,
+): default
+```
+
+Creates a Gated Recurrent Unit (GRU) layer.
+
+GRUs are another type of recurrent neural network cell, often considered
+simpler than LSTMs but achieving similar performance on many tasks.
+They use an update gate and a reset gate to manage information flow.
+
+Parameters:
+- `size` - - The number of GRU units (and nodes in each gate/cell group).
+
+Returns: A new Layer instance configured as a GRU layer.
+
+#### input
+
+```ts
+input(
+  from: default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
+
+Handles the connection logic when this layer is the *target* of a connection.
+
+It connects the output of the `from` layer or group to this layer's primary
+input mechanism (which is often the `output` group itself, but depends on the layer type).
+This method is usually called by the `connect` method of the source layer/group.
+
+Parameters:
+- `from` - - The source Layer or Group connecting *to* this layer.
+- `method` - - The connection method (e.g., `ALL_TO_ALL`). Defaults to `ALL_TO_ALL`.
+- `weight` - - An optional fixed weight for the connections.
+
+Returns: An array containing the newly created connection objects.
+
+#### layerNorm
+
+```ts
+layerNorm(
+  size: number,
+): default
+```
+
+Creates a layer normalization layer.
+Applies layer normalization to the activations of the nodes in this layer during activation.
+
+Parameters:
+- `size` - - The number of nodes in this layer.
+
+Returns: A new Layer instance configured as a layer normalization layer.
+
+#### lstm
+
+```ts
+lstm(
+  size: number,
+): default
+```
+
+Creates a Long Short-Term Memory (LSTM) layer.
+
+LSTMs are a type of recurrent neural network (RNN) cell capable of learning
+long-range dependencies. This implementation uses standard LSTM architecture
+with input, forget, and output gates, and a memory cell.
+
+Parameters:
+- `size` - - The number of LSTM units (and nodes in each gate/cell group).
+
+Returns: A new Layer instance configured as an LSTM layer.
+
+#### memory
+
+```ts
+memory(
+  size: number,
+  memory: number,
+): default
+```
+
+Creates a Memory layer, designed to hold state over a fixed number of time steps.
+
+This layer consists of multiple groups (memory blocks), each holding the state
+from a previous time step. The input connects to the most recent block, and
+information propagates backward through the blocks. The layer's output
+concatenates the states of all memory blocks.
+
+Parameters:
+- `size` - - The number of nodes in each memory block (must match the input size).
+- `memory` - - The number of time steps to remember (number of memory blocks).
+
+Returns: A new Layer instance configured as a Memory layer.
+
+#### nodes
+
+An array containing all the nodes (neurons or groups) that constitute this layer.
+The order of nodes might be relevant depending on the layer type and its connections.
+
+#### output
+
+Represents the primary output group of nodes for this layer.
+This group is typically used when connecting this layer *to* another layer or group.
+It might be null if the layer is not yet fully constructed or is an input layer.
+
+#### propagate
+
+```ts
+propagate(
+  rate: number,
+  momentum: number,
+  target: number[] | undefined,
+): void
+```
+
+Propagates the error backward through all nodes in the layer.
+
+This is a core step in the backpropagation algorithm used for training.
+If a `target` array is provided (typically for the output layer), it's used
+to calculate the initial error for each node. Otherwise, nodes calculate
+their error based on the error propagated from subsequent layers.
+
+Parameters:
+- `rate` - - The learning rate, controlling the step size of weight adjustments.
+- `momentum` - - The momentum factor, used to smooth weight updates and escape local minima.
+- `target` - - An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
+
+#### set
+
+```ts
+set(
+  values: { bias?: number | undefined; squash?: ((x: number, derivate?: boolean | undefined) => number) | undefined; type?: string | undefined; },
+): void
+```
+
+Configures properties for all nodes within the layer.
+
+Allows batch setting of common node properties like bias, activation function (`squash`),
+or node type. If a node within the `nodes` array is actually a `Group` (e.g., in memory layers),
+the configuration is applied recursively to the nodes within that group.
+
+Parameters:
+- `values` - - An object containing the properties and their values to set.
+  Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
+
 ## architecture/layer/layer.utils.types.ts
 
 ### LayerActivationContext
@@ -18,6 +372,38 @@ const activationContext: LayerActivationContext = {
 };
 
 // activateLayer(activationContext, values, true)
+```
+
+### LayerPropagationContext
+
+Minimal state required to run backpropagation helpers.
+
+Helpers only need access to the node sequence to propagate in reverse order.
+
+Example:
+
+```ts
+const propagationContext: LayerPropagationContext = { nodes: layer.nodes };
+
+// propagateLayer(propagationContext, 0.3, 0.1, targets)
+```
+
+### LayerLike
+
+Structural contract for "layer-like" objects used in utility wiring.
+
+This type avoids direct class coupling while preserving the behaviors needed
+by connection helpers (`input`, `nodes`, and `output`).
+
+Example:
+
+```ts
+// A real layer class typically satisfies this shape.
+const layerLike: LayerLike = {
+  input: (from) => [],
+  nodes: [],
+  output: null,
+};
 ```
 
 ### LayerConnectionContext
@@ -40,6 +426,19 @@ const connectionContext: LayerConnectionContext = {
 };
 ```
 
+### LayerFactoryLayer
+
+Public layer surface required by factory construction helpers.
+
+Factories only depend on activation/input wiring and output/node containers.
+
+Example:
+
+```ts
+// Factory builders create an object that has these members.
+// (Concrete layer classes typically provide many more helpers.)
+```
+
 ### LayerFactoryContext
 
 Generic factory context used to create layers without circular imports.
@@ -57,56 +456,17 @@ const factoryContext: LayerFactoryContext<MyLayer> = {
 };
 ```
 
-### LayerFactoryLayer
-
-Public layer surface required by factory construction helpers.
-
-Factories only depend on activation/input wiring and output/node containers.
-
-Example:
-
-```ts
-// Factory builders create an object that has these members.
-// (Concrete layer classes typically provide many more helpers.)
-```
-
-### LayerLike
-
-Structural contract for "layer-like" objects used in utility wiring.
-
-This type avoids direct class coupling while preserving the behaviors needed
-by connection helpers (`input`, `nodes`, and `output`).
-
-Example:
-
-```ts
-// A real layer class typically satisfies this shape.
-const layerLike: LayerLike = {
-  input: (from) => [],
-  nodes: [],
-  output: null,
-};
-```
-
-### LayerPropagationContext
-
-Minimal state required to run backpropagation helpers.
-
-Helpers only need access to the node sequence to propagate in reverse order.
-
-Example:
-
-```ts
-const propagationContext: LayerPropagationContext = { nodes: layer.nodes };
-
-// propagateLayer(propagationContext, 0.3, 0.1, targets)
-```
-
 ## architecture/layer/layer.utils.ts
 
 ### activateLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerActivationContext, values: number[] | undefined, training: boolean) => number[]`
+```ts
+activateLayer(
+  context: LayerActivationContext,
+  values: number[] | undefined,
+  training: boolean,
+): number[]
+```
 
 Orchestrates layer activation behavior with a high-level flow.
 
@@ -138,241 +498,16 @@ Parameters:
 
 Returns: A cloned array of activation values.
 
-### clearLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext) => void`
-
-Orchestrates clearing node activation state with a high-level flow.
-
-Parameters:
-- `context` - - The layer state needed to reset nodes.
-Example:
-
-```ts
-clearLayer(layerConnectionContext);
-```
-
-### connectLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
-
-Orchestrates layer connection behavior with a high-level flow.
-
-This is a small wrapper around the focused helper in
-`layer.connection.utils.ts`, kept here so the public layer API stays compact.
-
-Example:
-
-```ts
-connectLayer(layerConnectionContext, nextLayerLike);
-```
-
-Parameters:
-- `context` - - The layer state needed for connections.
-- `target` - - The layer, group, or node to connect to.
-- `method` - - Optional connection method override.
-- `weight` - - Optional fixed weight to apply.
-
-Returns: The created connection list.
-
-### createAttentionLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, heads: number) => TLayer`
-
-Orchestrates attention layer creation with a high-level flow.
-
-Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of output nodes.
-- `heads` - - Number of attention heads.
-
-Returns: The configured layer instance.
-Example:
-
-```ts
-const attention = createAttentionLayer(factoryContext, 8, 4);
-```
-
-### createBatchNormLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
-
-Orchestrates batch normalization layer creation with a high-level flow.
-
-Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in the normalization layer.
-
-Returns: The configured layer instance.
-Example:
-
-```ts
-const batchNorm = createBatchNormLayer(factoryContext, 16);
-```
-
-### createConv1dLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, kernelSize: number, stride: number, padding: number) => TLayer`
-
-Orchestrates 1D convolution layer creation with a high-level flow.
-
-Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of output nodes.
-- `kernelSize` - - Size of the convolution kernel.
-- `stride` - - Stride of the convolution.
-- `padding` - - Padding size for the convolution.
-
-Returns: The configured layer instance.
-Example:
-
-```ts
-const conv1d = createConv1dLayer(factoryContext, 8, 3);
-```
-
-### createDenseLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
-
-Orchestrates dense layer creation with a high-level flow.
-
-Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in the dense layer.
-
-Returns: The configured layer instance.
-Example:
-
-```ts
-const dense = createDenseLayer(factoryContext, 8);
-```
-
-### createGruLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
-
-Orchestrates GRU layer creation with a high-level flow.
-
-Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of units in the GRU layer.
-
-Returns: The configured layer instance.
-Example:
-
-```ts
-const gru = createGruLayer(factoryContext, 8);
-```
-
-### createLayerNormLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
-
-Orchestrates layer normalization layer creation with a high-level flow.
-
-Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in the normalization layer.
-
-Returns: The configured layer instance.
-Example:
-
-```ts
-const layerNorm = createLayerNormLayer(factoryContext, 16);
-```
-
-### createLstmLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
-
-Orchestrates LSTM layer creation with a high-level flow.
-
-Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of units in the LSTM layer.
-
-Returns: The configured layer instance.
-Example:
-
-```ts
-const lstm = createLstmLayer(factoryContext, 8);
-```
-
-### createMemoryLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, memory: number) => TLayer`
-
-Orchestrates Memory layer creation with a high-level flow.
-
-Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in each memory block.
-- `memory` - - Number of time steps to remember.
-
-Returns: The configured layer instance.
-Example:
-
-```ts
-const memoryLayer = createMemoryLayer(factoryContext, 4, 3);
-```
-
-### disconnectLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default, twoSided: boolean) => void`
-
-Orchestrates disconnection behavior with a high-level flow.
-
-Example:
-
-```ts
-disconnectLayer(layerConnectionContext, someGroup, true);
-```
-
-Parameters:
-- `context` - - The layer state needed for disconnecting.
-- `target` - - The group or node to disconnect.
-- `twoSided` - - Whether to remove reciprocal connections as well.
-
-### gateLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, connections: import("src/architecture/connection").default[], method: unknown) => void`
-
-Orchestrates layer gating behavior with a high-level flow.
-
-Example:
-
-```ts
-gateLayer(layerConnectionContext, someConnections, method);
-```
-
-Parameters:
-- `context` - - The layer state needed for gating.
-- `connections` - - The connections to gate.
-- `method` - - The gating method.
-
-### inputLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
-
-Orchestrates layer input wiring with a high-level flow.
-
-Example:
-
-```ts
-inputLayer(layerConnectionContext, previousLayerLike);
-```
-
-Parameters:
-- `context` - - The layer state needed for input wiring.
-- `from` - - The source layer or group.
-- `method` - - Optional connection method override.
-- `weight` - - Optional fixed weight to apply.
-
-Returns: The created connection list.
-
 ### propagateLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerPropagationContext, rate: number, momentum: number, targets: number[] | undefined) => void`
+```ts
+propagateLayer(
+  context: LayerPropagationContext,
+  rate: number,
+  momentum: number,
+  targets: number[] | undefined,
+): void
+```
 
 Orchestrates layer backpropagation behavior with a high-level flow.
 
@@ -395,11 +530,322 @@ Parameters:
 - `momentum` - - The momentum factor for smoothing updates.
 - `targets` - - Optional target values for output layers.
 
+### connectLayer
+
+```ts
+connectLayer(
+  context: LayerConnectionContext,
+  target: default | default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
+
+Orchestrates layer connection behavior with a high-level flow.
+
+This is a small wrapper around the focused helper in
+`layer.connection.utils.ts`, kept here so the public layer API stays compact.
+
+Example:
+
+```ts
+connectLayer(layerConnectionContext, nextLayerLike);
+```
+
+Parameters:
+- `context` - - The layer state needed for connections.
+- `target` - - The layer, group, or node to connect to.
+- `method` - - Optional connection method override.
+- `weight` - - Optional fixed weight to apply.
+
+Returns: The created connection list.
+
+### gateLayer
+
+```ts
+gateLayer(
+  context: LayerConnectionContext,
+  connections: default[],
+  method: unknown,
+): void
+```
+
+Orchestrates layer gating behavior with a high-level flow.
+
+Example:
+
+```ts
+gateLayer(layerConnectionContext, someConnections, method);
+```
+
+Parameters:
+- `context` - - The layer state needed for gating.
+- `connections` - - The connections to gate.
+- `method` - - The gating method.
+
+### inputLayer
+
+```ts
+inputLayer(
+  context: LayerConnectionContext,
+  from: default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
+
+Orchestrates layer input wiring with a high-level flow.
+
+Example:
+
+```ts
+inputLayer(layerConnectionContext, previousLayerLike);
+```
+
+Parameters:
+- `context` - - The layer state needed for input wiring.
+- `from` - - The source layer or group.
+- `method` - - Optional connection method override.
+- `weight` - - Optional fixed weight to apply.
+
+Returns: The created connection list.
+
+### disconnectLayer
+
+```ts
+disconnectLayer(
+  context: LayerConnectionContext,
+  target: default | default,
+  twoSided: boolean,
+): void
+```
+
+Orchestrates disconnection behavior with a high-level flow.
+
+Example:
+
+```ts
+disconnectLayer(layerConnectionContext, someGroup, true);
+```
+
+Parameters:
+- `context` - - The layer state needed for disconnecting.
+- `target` - - The group or node to disconnect.
+- `twoSided` - - Whether to remove reciprocal connections as well.
+
+### clearLayer
+
+```ts
+clearLayer(
+  context: LayerConnectionContext,
+): void
+```
+
+Orchestrates clearing node activation state with a high-level flow.
+
+Parameters:
+- `context` - - The layer state needed to reset nodes.
+Example:
+
+```ts
+clearLayer(layerConnectionContext);
+```
+
+### createDenseLayer
+
+```ts
+createDenseLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
+
+Orchestrates dense layer creation with a high-level flow.
+
+Parameters:
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of nodes in the dense layer.
+
+Returns: The configured layer instance.
+Example:
+
+```ts
+const dense = createDenseLayer(factoryContext, 8);
+```
+
+### createLstmLayer
+
+```ts
+createLstmLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
+
+Orchestrates LSTM layer creation with a high-level flow.
+
+Parameters:
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of units in the LSTM layer.
+
+Returns: The configured layer instance.
+Example:
+
+```ts
+const lstm = createLstmLayer(factoryContext, 8);
+```
+
+### createGruLayer
+
+```ts
+createGruLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
+
+Orchestrates GRU layer creation with a high-level flow.
+
+Parameters:
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of units in the GRU layer.
+
+Returns: The configured layer instance.
+Example:
+
+```ts
+const gru = createGruLayer(factoryContext, 8);
+```
+
+### createMemoryLayer
+
+```ts
+createMemoryLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  memory: number,
+): TLayer
+```
+
+Orchestrates Memory layer creation with a high-level flow.
+
+Parameters:
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of nodes in each memory block.
+- `memory` - - Number of time steps to remember.
+
+Returns: The configured layer instance.
+Example:
+
+```ts
+const memoryLayer = createMemoryLayer(factoryContext, 4, 3);
+```
+
+### createBatchNormLayer
+
+```ts
+createBatchNormLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
+
+Orchestrates batch normalization layer creation with a high-level flow.
+
+Parameters:
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of nodes in the normalization layer.
+
+Returns: The configured layer instance.
+Example:
+
+```ts
+const batchNorm = createBatchNormLayer(factoryContext, 16);
+```
+
+### createLayerNormLayer
+
+```ts
+createLayerNormLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
+
+Orchestrates layer normalization layer creation with a high-level flow.
+
+Parameters:
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of nodes in the normalization layer.
+
+Returns: The configured layer instance.
+Example:
+
+```ts
+const layerNorm = createLayerNormLayer(factoryContext, 16);
+```
+
+### createConv1dLayer
+
+```ts
+createConv1dLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  kernelSize: number,
+  stride: number,
+  padding: number,
+): TLayer
+```
+
+Orchestrates 1D convolution layer creation with a high-level flow.
+
+Parameters:
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of output nodes.
+- `kernelSize` - - Size of the convolution kernel.
+- `stride` - - Stride of the convolution.
+- `padding` - - Padding size for the convolution.
+
+Returns: The configured layer instance.
+Example:
+
+```ts
+const conv1d = createConv1dLayer(factoryContext, 8, 3);
+```
+
+### createAttentionLayer
+
+```ts
+createAttentionLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  heads: number,
+): TLayer
+```
+
+Orchestrates attention layer creation with a high-level flow.
+
+Parameters:
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of output nodes.
+- `heads` - - Number of attention heads.
+
+Returns: The configured layer instance.
+Example:
+
+```ts
+const attention = createAttentionLayer(factoryContext, 8, 4);
+```
+
 ## architecture/layer/layer.guard.utils.ts
 
 ### isGroup
 
-`(candidate: unknown) => boolean`
+```ts
+isGroup(
+  candidate: unknown,
+): boolean
+```
 
 Checks whether an unknown value is group-like.
 
@@ -421,55 +867,14 @@ value.set({ bias: 0 });
 
 ## architecture/layer/layer.activation.utils.ts
 
-### acquireActivationOutput
-
-`(nodeCount: number) => number[]`
-
-Acquires a pooled output buffer sized for the current activation call.
-
-Pooling avoids frequent temporary allocations in hot activation paths.
-
-The returned array is owned by the pool. Treat it as **temporary**:
-- Fill it.
-- Clone it (if you need a stable output).
-- Release it back to the pool.
-
-Example (typical pattern):
-
-```ts
-const pooled = acquireActivationOutput(nodes.length);
-fillActivationOutput(nodes, values, pooled);
-const output = cloneActivationOutput(pooled);
-releaseActivationOutput(pooled);
-```
-
-Parameters:
-- `nodeCount` - - Number of nodes in the layer.
-
-Returns: A pooled output array.
-
-### applyLayerMask
-
-`(nodeList: import("src/architecture/node").default[], mask: number) => void`
-
-Applies one mask value to every node in the layer.
-
-In this library, a node-level `mask` is used as a lightweight dropout control.
-A mask of `0` effectively disables the node for the current activation step.
-
-Example:
-
-```ts
-applyLayerMask(layer.nodes, 1);
-```
-
-Parameters:
-- `nodeList` - - The layer nodes to update.
-- `mask` - - The mask value to apply.
-
 ### assertActivationInputSize
 
-`(nodeCount: number, inputValues: number[] | undefined) => void`
+```ts
+assertActivationInputSize(
+  nodeCount: number,
+  inputValues: number[] | undefined,
+): void
+```
 
 Ensures optional activation inputs align 1:1 with layer nodes.
 
@@ -498,66 +903,14 @@ Parameters:
 - `nodeCount` - - Number of nodes in the layer.
 - `inputValues` - - Optional activation values provided by the caller.
 
-### cloneActivationOutput
-
-`(output: number[]) => number[]`
-
-Clones pooled output into a stable caller-owned array.
-
-This is the "escape hatch" that turns a pooled scratch buffer into a normal
-array you can safely return from APIs.
-
-Example:
-
-```ts
-const stable = cloneActivationOutput(pooled);
-```
-
-Parameters:
-- `output` - - The pooled output array to clone.
-
-Returns: A cloned output array.
-
-### fillActivationOutput
-
-`(nodeList: import("src/architecture/node").default[], inputValues: number[] | undefined, output: number[]) => void`
-
-Activates each node and writes outputs into the provided buffer.
-
-When `inputValues` is provided, each node receives the corresponding input
-value. Otherwise each node self-activates from incoming state.
-
-This function is deliberately low-level: it does not allocate and it does not
-return anything. That makes it ideal for hot paths where you want to reuse a
-buffer (typically a pooled one).
-
-Example:
-
-```ts
-fillActivationOutput(layer.nodes, [0.2, 0.4], pooled);
-```
-
-Parameters:
-- `nodeList` - - Nodes to activate.
-- `inputValues` - - Optional activation values for each node.
-- `output` - - Output buffer to populate.
-
-### releaseActivationOutput
-
-`(output: number[]) => void`
-
-Releases a pooled activation output buffer back to the pool.
-
-Call this after cloning/consuming the buffer to keep memory reuse effective.
-
-Important: do not keep using `output` after releasing it.
-
-Parameters:
-- `output` - - The pooled output array to release.
-
 ### resolveLayerMask
 
-`(layerDropout: number, isTraining: boolean) => number`
+```ts
+resolveLayerMask(
+  layerDropout: number,
+  isTraining: boolean,
+): number
+```
 
 Resolves a shared dropout mask for the full layer.
 
@@ -584,29 +937,144 @@ Parameters:
 
 Returns: A mask value of 1 or 0 for all nodes in the layer.
 
-## architecture/layer/layer.connection.utils.ts
+### applyLayerMask
 
-### clearLayer
+```ts
+applyLayerMask(
+  nodeList: default[],
+  mask: number,
+): void
+```
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext) => void`
+Applies one mask value to every node in the layer.
 
-Clears activation state for all nodes in a layer.
-
-Use this when you want to reset per-node transient state between runs
-(especially helpful in recurrent networks that keep state across timesteps).
+In this library, a node-level `mask` is used as a lightweight dropout control.
+A mask of `0` effectively disables the node for the current activation step.
 
 Example:
 
 ```ts
-clearLayer(layerContext);
+applyLayerMask(layer.nodes, 1);
 ```
 
 Parameters:
-- `context` - - The layer state needed to reset nodes.
+- `nodeList` - - The layer nodes to update.
+- `mask` - - The mask value to apply.
+
+### acquireActivationOutput
+
+```ts
+acquireActivationOutput(
+  nodeCount: number,
+): number[]
+```
+
+Acquires a pooled output buffer sized for the current activation call.
+
+Pooling avoids frequent temporary allocations in hot activation paths.
+
+The returned array is owned by the pool. Treat it as **temporary**:
+- Fill it.
+- Clone it (if you need a stable output).
+- Release it back to the pool.
+
+Example (typical pattern):
+
+```ts
+const pooled = acquireActivationOutput(nodes.length);
+fillActivationOutput(nodes, values, pooled);
+const output = cloneActivationOutput(pooled);
+releaseActivationOutput(pooled);
+```
+
+Parameters:
+- `nodeCount` - - Number of nodes in the layer.
+
+Returns: A pooled output array.
+
+### releaseActivationOutput
+
+```ts
+releaseActivationOutput(
+  output: number[],
+): void
+```
+
+Releases a pooled activation output buffer back to the pool.
+
+Call this after cloning/consuming the buffer to keep memory reuse effective.
+
+Important: do not keep using `output` after releasing it.
+
+Parameters:
+- `output` - - The pooled output array to release.
+
+### cloneActivationOutput
+
+```ts
+cloneActivationOutput(
+  output: number[],
+): number[]
+```
+
+Clones pooled output into a stable caller-owned array.
+
+This is the "escape hatch" that turns a pooled scratch buffer into a normal
+array you can safely return from APIs.
+
+Example:
+
+```ts
+const stable = cloneActivationOutput(pooled);
+```
+
+Parameters:
+- `output` - - The pooled output array to clone.
+
+Returns: A cloned output array.
+
+### fillActivationOutput
+
+```ts
+fillActivationOutput(
+  nodeList: default[],
+  inputValues: number[] | undefined,
+  output: number[],
+): void
+```
+
+Activates each node and writes outputs into the provided buffer.
+
+When `inputValues` is provided, each node receives the corresponding input
+value. Otherwise each node self-activates from incoming state.
+
+This function is deliberately low-level: it does not allocate and it does not
+return anything. That makes it ideal for hot paths where you want to reuse a
+buffer (typically a pooled one).
+
+Example:
+
+```ts
+fillActivationOutput(layer.nodes, [0.2, 0.4], pooled);
+```
+
+Parameters:
+- `nodeList` - - Nodes to activate.
+- `inputValues` - - Optional activation values for each node.
+- `output` - - Output buffer to populate.
+
+## architecture/layer/layer.connection.utils.ts
 
 ### connectLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+connectLayer(
+  context: LayerConnectionContext,
+  target: default | default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Connects a layer's output group to a target.
 
@@ -636,57 +1104,15 @@ Parameters:
 
 Returns: The created connection list.
 
-### disconnectFromGroup
-
-`(layerNodes: import("src/architecture/node").default[], targetGroup: import("src/architecture/group").default, layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, removeTwoSided: boolean) => void`
-
-Disconnects all layer nodes from a target group.
-
-This is a "cartesian disconnect": every node in this layer is disconnected
-from every node in the target group.
-
-Parameters:
-- `layerNodes` - - Nodes in the layer.
-- `targetGroup` - - Group to disconnect from.
-- `layerConnections` - - Connection tracking for the layer.
-- `removeTwoSided` - - Whether to remove reciprocal connections as well.
-
-### disconnectFromNode
-
-`(layerNodes: import("src/architecture/node").default[], targetNode: import("src/architecture/node").default, layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, removeTwoSided: boolean) => void`
-
-Disconnects all layer nodes from a target node.
-
-Parameters:
-- `layerNodes` - - Nodes in the layer.
-- `targetNode` - - Node to disconnect from.
-- `layerConnections` - - Connection tracking for the layer.
-- `removeTwoSided` - - Whether to remove reciprocal connections as well.
-
-### disconnectLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, target: import("src/architecture/node").default | import("src/architecture/group").default, twoSided: boolean) => void`
-
-Disconnects nodes in this layer from a target group or node.
-
-This iterates through this layer's nodes and calls `node.disconnect(...)`.
-It also updates the layer's tracked `connections.in/out` arrays so they
-remain consistent with the underlying node graph.
-
-Example:
-
-```ts
-disconnectLayer(layerContext, someNode, false);
-```
-
-Parameters:
-- `context` - - The layer state needed for disconnecting.
-- `target` - - The group or node to disconnect.
-- `twoSided` - - Whether to remove reciprocal connections as well.
-
 ### gateLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, connections: import("src/architecture/connection").default[], method: unknown) => void`
+```ts
+gateLayer(
+  context: LayerConnectionContext,
+  connections: default[],
+  method: unknown,
+): void
+```
 
 Applies gating to the provided connections using the layer output group.
 
@@ -709,7 +1135,14 @@ Parameters:
 
 ### inputLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerConnectionContext, from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike, method: unknown, weight: number | undefined) => import("src/architecture/connection").default[]`
+```ts
+inputLayer(
+  context: LayerConnectionContext,
+  from: default | LayerLike,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
 
 Connects a source group or layer to this layer's input target.
 
@@ -738,22 +1171,83 @@ Parameters:
 
 Returns: The created connection list.
 
-### removeIncomingConnection
+### disconnectLayer
 
-`(layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => void`
+```ts
+disconnectLayer(
+  context: LayerConnectionContext,
+  target: default | default,
+  twoSided: boolean,
+): void
+```
 
-Removes an incoming connection from layer tracking.
+Disconnects nodes in this layer from a target group or node.
 
-This scans in reverse so we can `splice(...)` safely while iterating.
+This iterates through this layer's nodes and calls `node.disconnect(...)`.
+It also updates the layer's tracked `connections.in/out` arrays so they
+remain consistent with the underlying node graph.
+
+Example:
+
+```ts
+disconnectLayer(layerContext, someNode, false);
+```
 
 Parameters:
+- `context` - - The layer state needed for disconnecting.
+- `target` - - The group or node to disconnect.
+- `twoSided` - - Whether to remove reciprocal connections as well.
+
+### disconnectFromGroup
+
+```ts
+disconnectFromGroup(
+  layerNodes: default[],
+  targetGroup: default,
+  layerConnections: { in: default[]; out: default[]; self: default[]; },
+  removeTwoSided: boolean,
+): void
+```
+
+Disconnects all layer nodes from a target group.
+
+This is a "cartesian disconnect": every node in this layer is disconnected
+from every node in the target group.
+
+Parameters:
+- `layerNodes` - - Nodes in the layer.
+- `targetGroup` - - Group to disconnect from.
 - `layerConnections` - - Connection tracking for the layer.
-- `sourceNode` - - Source node for the connection.
-- `targetNode` - - Target node for the connection.
+- `removeTwoSided` - - Whether to remove reciprocal connections as well.
+
+### disconnectFromNode
+
+```ts
+disconnectFromNode(
+  layerNodes: default[],
+  targetNode: default,
+  layerConnections: { in: default[]; out: default[]; self: default[]; },
+  removeTwoSided: boolean,
+): void
+```
+
+Disconnects all layer nodes from a target node.
+
+Parameters:
+- `layerNodes` - - Nodes in the layer.
+- `targetNode` - - Node to disconnect from.
+- `layerConnections` - - Connection tracking for the layer.
+- `removeTwoSided` - - Whether to remove reciprocal connections as well.
 
 ### removeOutgoingConnection
 
-`(layerConnections: { in: import("src/architecture/connection").default[]; out: import("src/architecture/connection").default[]; self: import("src/architecture/connection").default[]; }, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => void`
+```ts
+removeOutgoingConnection(
+  layerConnections: { in: default[]; out: default[]; self: default[]; },
+  sourceNode: default,
+  targetNode: default,
+): void
+```
 
 Removes an outgoing connection from layer tracking.
 
@@ -764,11 +1258,57 @@ Parameters:
 - `sourceNode` - - Source node for the connection.
 - `targetNode` - - Target node for the connection.
 
+### removeIncomingConnection
+
+```ts
+removeIncomingConnection(
+  layerConnections: { in: default[]; out: default[]; self: default[]; },
+  sourceNode: default,
+  targetNode: default,
+): void
+```
+
+Removes an incoming connection from layer tracking.
+
+This scans in reverse so we can `splice(...)` safely while iterating.
+
+Parameters:
+- `layerConnections` - - Connection tracking for the layer.
+- `sourceNode` - - Source node for the connection.
+- `targetNode` - - Target node for the connection.
+
+### clearLayer
+
+```ts
+clearLayer(
+  context: LayerConnectionContext,
+): void
+```
+
+Clears activation state for all nodes in a layer.
+
+Use this when you want to reset per-node transient state between runs
+(especially helpful in recurrent networks that keep state across timesteps).
+
+Example:
+
+```ts
+clearLayer(layerContext);
+```
+
+Parameters:
+- `context` - - The layer state needed to reset nodes.
+
 ## architecture/layer/layer.propagation.utils.ts
 
 ### assertTargetInputSize
 
-`(nodeCount: number, inputTargets: number[] | undefined) => void`
+```ts
+assertTargetInputSize(
+  nodeCount: number,
+  inputTargets: number[] | undefined,
+): void
+```
 
 Ensures target values align with the node count.
 
@@ -788,7 +1328,14 @@ Parameters:
 
 ### propagateNodesInReverse
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerPropagationContext, rate: number, momentum: number, targets: number[] | undefined) => void`
+```ts
+propagateNodesInReverse(
+  context: LayerPropagationContext,
+  rate: number,
+  momentum: number,
+  targets: number[] | undefined,
+): void
+```
 
 Propagates errors through all nodes in reverse order.
 
@@ -822,7 +1369,12 @@ Parameters:
 
 ### buildDenseLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+buildDenseLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Builds a standard dense (fully connected) layer.
 
@@ -852,33 +1404,14 @@ dense.input(previousLayerLike);
 
 ## architecture/layer/layer.factory.recurrent.utils.ts
 
-### buildGruLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
-
-Builds a GRU layer using the provided factory context.
-
-Educational overview:
-- GRU is a gated recurrent unit with fewer gates than LSTM.
-- This implementation wires update/reset gates and a memory cell, then
-exposes a standard `layer.output` group.
-
-Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of units in each GRU gate and cell.
-
-Returns: The configured layer instance.
-
-Example:
-
-```ts
-const gru = buildGruLayer(factoryContext, 8);
-gru.input(previousLayerLike);
-```
-
 ### buildLstmLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+buildLstmLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Builds an LSTM layer using the provided factory context.
 
@@ -906,9 +1439,44 @@ const lstm = buildLstmLayer(factoryContext, 8);
 lstm.input(previousLayerLike);
 ```
 
+### buildGruLayer
+
+```ts
+buildGruLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
+
+Builds a GRU layer using the provided factory context.
+
+Educational overview:
+- GRU is a gated recurrent unit with fewer gates than LSTM.
+- This implementation wires update/reset gates and a memory cell, then
+exposes a standard `layer.output` group.
+
+Parameters:
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of units in each GRU gate and cell.
+
+Returns: The configured layer instance.
+
+Example:
+
+```ts
+const gru = buildGruLayer(factoryContext, 8);
+gru.input(previousLayerLike);
+```
+
 ### buildMemoryLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, memory: number) => TLayer`
+```ts
+buildMemoryLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  memory: number,
+): TLayer
+```
 
 Builds a Memory layer using the provided factory context.
 
@@ -934,49 +1502,14 @@ const memoryLayer = buildMemoryLayer(factoryContext, 4, 3);
 memoryLayer.input(previousLayerLike);
 ```
 
-### flattenConnections
-
-`(connectionLists: import("src/architecture/connection").default[][]) => import("src/architecture/connection").default[]`
-
-Flattens grouped connection arrays into a single list.
-
-This keeps builder code declarative: build connections per gate/block,
-then flatten once at the end.
-
-Parameters:
-- `connectionLists` - - Connection groups to flatten.
-
-Returns: Flattened connection list.
-
-Example:
-
-```ts
-const connections = flattenConnections([gateConnections, cellConnections]);
-```
-
-### resolveConnectionMethod
-
-`(method: unknown) => unknown`
-
-Resolves an optional connection method to a concrete method.
-
-When users don't specify a method, we default to a dense-style
-`ALL_TO_ALL` group connection.
-
-Parameters:
-- `method` - - Optional user-supplied connection method.
-
-Returns: Connection method to apply.
-
-Example:
-
-```ts
-const method = resolveConnectionMethod(undefined);
-```
-
 ### resolveSourceGroup
 
-`(factoryContext: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, from: import("src/architecture/group").default | import("src/architecture/layer/layer.utils.types").LayerLike) => import("src/architecture/group").default`
+```ts
+resolveSourceGroup(
+  factoryContext: LayerFactoryContext<TLayer>,
+  from: default | LayerLike,
+): default
+```
 
 Resolves a source group from a layer-like or group input.
 
@@ -995,60 +1528,67 @@ Example:
 const sourceGroup = resolveSourceGroup(factoryContext, previousLayerLike);
 ```
 
+### resolveConnectionMethod
+
+```ts
+resolveConnectionMethod(
+  method: unknown,
+): unknown
+```
+
+Resolves an optional connection method to a concrete method.
+
+When users don't specify a method, we default to a dense-style
+`ALL_TO_ALL` group connection.
+
+Parameters:
+- `method` - - Optional user-supplied connection method.
+
+Returns: Connection method to apply.
+
+Example:
+
+```ts
+const method = resolveConnectionMethod(undefined);
+```
+
+### flattenConnections
+
+```ts
+flattenConnections(
+  connectionLists: default[][],
+): default[]
+```
+
+Flattens grouped connection arrays into a single list.
+
+This keeps builder code declarative: build connections per gate/block,
+then flatten once at the end.
+
+Parameters:
+- `connectionLists` - - Connection groups to flatten.
+
+Returns: Flattened connection list.
+
+Example:
+
+```ts
+const connections = flattenConnections([gateConnections, cellConnections]);
+```
+
 ## architecture/layer/layer.factory.experimental.utils.ts
-
-### activateStubNodes
-
-`(layer: TLayer) => number[]`
-
-Activates all nodes in a stub layer and returns their outputs.
-
-This helper keeps fallback activation behavior identical across experimental
-layer variants.
-
-Parameters:
-- `layer` - - Layer containing nodes to activate.
-
-Returns: Activated node outputs.
-
-Example:
-
-```ts
-const outputs = activateStubNodes(layer);
-```
-
-### buildAttentionLayer
-
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, heads: number) => TLayer`
-
-Builds a lightweight attention-style stub layer.
-
-This placeholder stores head count metadata and uses a simple averaging
-behavior for provided values. It is useful as an integration seam while
-full attention internals are still under development.
-
-Educational note: because this is a stub, "heads" are metadata only. The
-activation behavior is intentionally simple: it collapses provided values to
-their average.
-
-Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of output nodes.
-- `heads` - - Number of attention heads.
-
-Returns: The configured layer instance.
-
-Example:
-
-```ts
-const attention = buildAttentionLayer(factoryContext, 8, 4);
-const out = attention.activate([1, 2, 3, 4]);
-// out is length 8, every entry is the average (2.5)
-```
 
 ### buildConv1dLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number, kernelSize: number, stride: number, padding: number) => TLayer`
+```ts
+buildConv1dLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  kernelSize: number,
+  stride: number,
+  padding: number,
+): TLayer
+```
 
 Builds a lightweight Conv1D-style stub layer.
 
@@ -1078,34 +1618,74 @@ const conv = buildConv1dLayer(factoryContext, 8, 3, 1, 1);
 const out = conv.activate([10, 11, 12, 13]);
 ```
 
-### createAttentionActivator
+### buildAttentionLayer
 
-`(layer: TLayer, size: number) => (values?: number[] | undefined) => number[]`
+```ts
+buildAttentionLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+  heads: number,
+): TLayer
+```
 
-Builds the activation function used by the attention stub.
+Builds a lightweight attention-style stub layer.
 
-When values are provided, all outputs are filled with their average.
-When values are omitted, it delegates to node activation.
+This placeholder stores head count metadata and uses a simple averaging
+behavior for provided values. It is useful as an integration seam while
+full attention internals are still under development.
 
-This behavior is *not* meant to represent real attention math; it simply
-produces a stable, shape-correct output while attention internals evolve.
+Educational note: because this is a stub, "heads" are metadata only. The
+activation behavior is intentionally simple: it collapses provided values to
+their average.
 
 Parameters:
-- `layer` - - Layer whose nodes can self-activate.
-- `size` - - Number of output values to return.
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of output nodes.
+- `heads` - - Number of attention heads.
 
-Returns: Activation callback for attention behavior.
+Returns: The configured layer instance.
 
 Example:
 
 ```ts
-const activate = createAttentionActivator(layer, 4);
-activate([1, 3]); // -> [2, 2, 2, 2]
+const attention = buildAttentionLayer(factoryContext, 8, 4);
+const out = attention.activate([1, 2, 3, 4]);
+// out is length 8, every entry is the average (2.5)
 ```
+
+### createStubLayer
+
+```ts
+createStubLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
+
+Creates shared node/output scaffolding for experimental layers.
+
+Centralizing this setup keeps the experimental builders focused on their
+metadata and activation behavior.
+
+Implementation detail: the returned layer contains a `nodes` list (for basic
+activation) and an `output` group (for API compatibility with the rest of the
+architecture). In these stubs, the output group is not intended to be a fully
+wired projection of `nodes`.
+
+Parameters:
+- `context` - - Factory helpers for constructing the layer instance.
+- `size` - - Number of output nodes to allocate.
+
+Returns: Initialized experimental layer.
 
 ### createConv1dActivator
 
-`(layer: TLayer, size: number) => (values?: number[] | undefined) => number[]`
+```ts
+createConv1dActivator(
+  layer: TLayer,
+  size: number,
+): (values?: number[] | undefined) => number[]
+```
 
 Builds the activation function used by the Conv1D stub.
 
@@ -1128,55 +1708,70 @@ const activate = createConv1dActivator(layer, 3);
 activate([9, 8, 7, 6]); // -> [9, 8, 7]
 ```
 
-### createStubLayer
+### createAttentionActivator
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+createAttentionActivator(
+  layer: TLayer,
+  size: number,
+): (values?: number[] | undefined) => number[]
+```
 
-Creates shared node/output scaffolding for experimental layers.
+Builds the activation function used by the attention stub.
 
-Centralizing this setup keeps the experimental builders focused on their
-metadata and activation behavior.
+When values are provided, all outputs are filled with their average.
+When values are omitted, it delegates to node activation.
 
-Implementation detail: the returned layer contains a `nodes` list (for basic
-activation) and an `output` group (for API compatibility with the rest of the
-architecture). In these stubs, the output group is not intended to be a fully
-wired projection of `nodes`.
+This behavior is *not* meant to represent real attention math; it simply
+produces a stable, shape-correct output while attention internals evolve.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of output nodes to allocate.
+- `layer` - - Layer whose nodes can self-activate.
+- `size` - - Number of output values to return.
 
-Returns: Initialized experimental layer.
+Returns: Activation callback for attention behavior.
+
+Example:
+
+```ts
+const activate = createAttentionActivator(layer, 4);
+activate([1, 3]); // -> [2, 2, 2, 2]
+```
+
+### activateStubNodes
+
+```ts
+activateStubNodes(
+  layer: TLayer,
+): number[]
+```
+
+Activates all nodes in a stub layer and returns their outputs.
+
+This helper keeps fallback activation behavior identical across experimental
+layer variants.
+
+Parameters:
+- `layer` - - Layer containing nodes to activate.
+
+Returns: Activated node outputs.
+
+Example:
+
+```ts
+const outputs = activateStubNodes(layer);
+```
 
 ## architecture/layer/layer.factory.normalization.utils.ts
 
-### applyNormalizationActivation
-
-`(layer: TLayer) => void`
-
-Wraps a layer activation function with normalization post-processing.
-
-The wrapper preserves existing activation semantics, then applies
-`normalizeActivations(...)` to produce zero-centered, variance-scaled output.
-
-This is implemented as a function wrapper rather than modifying node math.
-That makes it easy to layer normalization behavior onto any dense layer.
-
-Parameters:
-- `layer` - - Dense layer to decorate with normalization behavior.
-
-Returns: No return value.
-
-Example (conceptual flow):
-
-```ts
-// 1) baseActivate(...) computes raw activations
-// 2) wrapper normalizes the vector before returning
-```
-
 ### buildBatchNormLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+buildBatchNormLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Builds a dense layer decorated with batch-style normalization.
 
@@ -1204,7 +1799,12 @@ const normalized = buildBatchNormLayer(factoryContext, 16);
 
 ### buildLayerNormLayer
 
-`(context: import("src/architecture/layer/layer.utils.types").LayerFactoryContext<TLayer>, size: number) => TLayer`
+```ts
+buildLayerNormLayer(
+  context: LayerFactoryContext<TLayer>,
+  size: number,
+): TLayer
+```
 
 Builds a dense layer decorated with layer-style normalization.
 
@@ -1227,9 +1827,41 @@ Example:
 const normalized = buildLayerNormLayer(factoryContext, 16);
 ```
 
+### applyNormalizationActivation
+
+```ts
+applyNormalizationActivation(
+  layer: TLayer,
+): void
+```
+
+Wraps a layer activation function with normalization post-processing.
+
+The wrapper preserves existing activation semantics, then applies
+`normalizeActivations(...)` to produce zero-centered, variance-scaled output.
+
+This is implemented as a function wrapper rather than modifying node math.
+That makes it easy to layer normalization behavior onto each dense layer.
+
+Parameters:
+- `layer` - - Dense layer to decorate with normalization behavior.
+
+Returns: No return value.
+
+Example (conceptual flow):
+
+```ts
+// 1) baseActivate(...) computes raw activations
+// 2) wrapper normalizes the vector before returning
+```
+
 ### computeMean
 
-`(activations: number[]) => number`
+```ts
+computeMean(
+  activations: number[],
+): number
+```
 
 Computes the arithmetic mean for a vector of activations.
 
@@ -1246,7 +1878,12 @@ computeMean([1, 2, 3]); // -> 2
 
 ### computeVariance
 
-`(activations: number[], mean: number) => number`
+```ts
+computeVariance(
+  activations: number[],
+  mean: number,
+): number
+```
 
 Computes activation variance relative to a known mean.
 
@@ -1269,7 +1906,13 @@ computeVariance([1, 2, 3], mean); // -> 2/3
 
 ### normalizeActivations
 
-`(activations: number[], mean: number, variance: number) => number[]`
+```ts
+normalizeActivations(
+  activations: number[],
+  mean: number,
+  variance: number,
+): number[]
+```
 
 Normalizes activation values using mean and variance.
 

@@ -8,7 +8,6 @@ import {
   FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
   FLAPPY_PIPE_GAP_PX,
   FLAPPY_PIPE_WIDTH_PX,
-  FLAPPY_WORLD_HEIGHT_PX,
 } from '../constants/constants';
 import {
   commitSharedObservationMemoryStep,

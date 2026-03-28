@@ -1,5 +1,5 @@
 import type Node from '../../node';
-import { releaseNode as _releaseNode } from '../../nodePool';
+import { releaseNode as _releaseNode } from '../../nodePool/nodePool';
 import { config } from '../../../config';
 import type {
   NetworkRemoveProps,

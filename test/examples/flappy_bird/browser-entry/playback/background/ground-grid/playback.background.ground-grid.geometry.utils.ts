@@ -1,6 +1,5 @@
 import {
   FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT,
-  FLAPPY_GROUND_GRID_TARGET_VERTICAL_LINE_SPACING_PX,
   FLAPPY_GROUND_GRID_TARGET_VERTICAL_SEGMENT_HEIGHT_PX,
   FLAPPY_GROUND_GRID_VERTICAL_OVERFLOW_COUNT,
 } from './playback.background.ground-grid.constants';
@@ -31,10 +30,8 @@ import {
 import type {
   PlaybackBackgroundGroundGridSceneContext,
   PlaybackGroundGridHorizontalGeometry,
-  PlaybackGroundGridHorizontalGeometryFactory,
   PlaybackGroundGridLineSegment,
   PlaybackGroundGridPulsePath,
-  PlaybackGroundGridSegmentBatch,
   PlaybackGroundGridVerticalGeometry,
   PlaybackGroundGridVerticalRayInput,
   PlaybackGroundGridVerticalSceneMetrics,

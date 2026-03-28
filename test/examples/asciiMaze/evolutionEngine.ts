@@ -1,7 +1,6 @@
 // Handles the main NEAT evolution loop for maze solving
 // Exports: EvolutionEngine class with static methods
 
-import { createEngineState, EngineState } from './evolutionEngine/engineState';
 import {
   clearDeterministicMode,
   getProfilingAccumulators,
@@ -29,15 +28,35 @@ import {
   prepareLoopHelpers,
   emitProfileSummary,
 } from './evolutionEngine/evolutionLoop';
+import {
+  EVOLUTION_ENGINE_ACTION_DIMENSION,
+  EVOLUTION_ENGINE_EMPTY_VECTOR,
+  EVOLUTION_ENGINE_LOOP_CONSTANTS,
+  EVOLUTION_ENGINE_PRETRAIN_CONSTANTS,
+  EVOLUTION_ENGINE_WARM_START_CONSTANTS,
+} from './evolutionEngine/evolutionEngine.constants';
+import {
+  applyEvolutionEngineRingState,
+  configureEvolutionEngineToggles,
+  getEvolutionEngineFacadeRuntimeState,
+  getEvolutionEngineMaxLogitsRingCapacity,
+  getEvolutionEngineSharedState,
+} from './evolutionEngine/evolutionEngine.services';
 import { resolveMazeEvolutionPhaseOutcome as resolveMazeEvolutionPhaseOutcomeImpl } from './evolutionEngine/curriculumPhase';
 import { printNetworkStructure } from './evolutionEngine/networkInspection';
+import {
+  collectEvolutionEngineHiddenToOutputConnections,
+  collectEvolutionEngineNodeIndicesByType,
+} from './evolutionEngine/evolutionEngine.utils';
 import type { INetwork } from './interfaces';
 import type {
+  EvolutionOptions,
+  EvolutionLoopRuntimeContext,
+  EvolutionLoopSupportContext,
+  EvolutionLoopTelemetryContext,
   IRunMazeEvolutionOptions,
   MazeEvolutionCurriculumPhaseOutcome,
   MazeEvolutionRunResult,
-  NetworkConnection,
-  NetworkNode,
   SpeciesHistoryHost,
 } from './evolutionEngine/evolutionEngine.types';
 import type Network from '../../../src/architecture/network';
@@ -67,22 +86,11 @@ import type Network from '../../../src/architecture/network';
  * and passed explicitly to module functions for transparent, testable orchestration.
  */
 export class EvolutionEngine {
-  /** Shared engine state instance backing all façade helpers. */
-  static #STATE: EngineState = createEngineState();
-
   /** Reusable empty vector constant to avoid ephemeral allocations from `|| []` fallbacks. */
-  static #EMPTY_VEC: unknown[] = [];
+  static #EMPTY_VEC: unknown[] = EVOLUTION_ENGINE_EMPTY_VECTOR;
 
   /** Number of action outputs (N,E,S,W) */
-  static #ACTION_DIM = 4;
-  /** Adaptive logits ring capacity (power-of-two). */
-  static #LOGITS_RING_CAP = 512;
-  /** Max allowed ring capacity (safety bound). */
-  static #LOGITS_RING_CAP_MAX = 8192;
-  /** Indicates SharedArrayBuffer-backed ring is active. */
-  static #LOGITS_RING_SHARED = false;
-  /** Write cursor for non-shared ring. */
-  static #SCRATCH_LOGITS_RING_W = 0;
+  static #ACTION_DIM = EVOLUTION_ENGINE_ACTION_DIMENSION;
 
   /**
    * Enable deterministic mode and optionally reseed the internal RNG via the shared state helpers.
@@ -90,144 +98,14 @@ export class EvolutionEngine {
    * @param seed Optional numeric seed used to reseed the deterministic RNG sequence.
    */
   static setDeterministic(seed?: number): void {
-    setDeterministicMode(EvolutionEngine.#STATE, seed);
+    setDeterministicMode(getEvolutionEngineSharedState(), seed);
   }
 
   /**
    * Disable deterministic mode and return to non-deterministic random number generation.
    */
   static clearDeterministic(): void {
-    clearDeterministicMode(EvolutionEngine.#STATE);
-  }
-  /** Default tail history size used by telemetry */
-  static #RECENT_WINDOW = 40;
-  /** Default supervised training error threshold for local training */
-  static #DEFAULT_TRAIN_ERROR = 0.01;
-  /** Default supervised training learning rate for local training */
-  static #DEFAULT_TRAIN_RATE = 0.001;
-  /** Default supervised training momentum */
-  static #DEFAULT_TRAIN_MOMENTUM = 0.2;
-  /** Default small batch size used during Lamarckian training */
-  static #DEFAULT_TRAIN_BATCH_SMALL = 2;
-  /** Default batch size used when training the fittest network for evaluation */
-  static #DEFAULT_TRAIN_BATCH_LARGE = 20;
-  /** Iterations used when training the fittest network for evaluation */
-  static #FITTEST_TRAIN_ITERATIONS = 1000;
-  /** Saturation fraction threshold triggering hidden-output pruning */
-  static #SATURATION_PRUNE_THRESHOLD = 0.5;
-  /** Default probability used for small randomized jitter (25%) */
-  static #DEFAULT_JITTER_PROB = 0.25;
-  /** Small std threshold to consider 'small' std */
-  static #DEFAULT_STD_SMALL = 0.25;
-  /** Multiplier applied when std is small */
-  static #DEFAULT_STD_ADJUST_MULT = 0.7;
-  /** High target probability for the chosen action during supervised warm start */
-  static #TRAIN_OUT_PROB_HIGH = 0.92;
-  /** Low target probability for non-chosen actions during supervised warm start */
-  static #TRAIN_OUT_PROB_LOW = 0.02;
-  /** Progress intensity: medium (single open path typical) */
-  static #PROGRESS_MEDIUM = 0.7;
-  /** Progress intensity: strong forward signal */
-  static #PROGRESS_STRONG = 0.9;
-  /** Progress intensity: typical junction neutrality */
-  static #PROGRESS_JUNCTION = 0.6;
-  /** Progress intensity: four-way moderate signal */
-  static #PROGRESS_FOURWAY = 0.55;
-  /** Progress intensity: regressing / weak progress */
-  static #PROGRESS_REGRESS = 0.4;
-  /** Progress intensity: mild regression / noise */
-  static #PROGRESS_MILD_REGRESS = 0.45;
-  /** Minimal progress positive blip used in a corner-case sample */
-  static #PROGRESS_MIN_SIGNAL = 0.001;
-  /** Augmentation: base openness jitter value */
-  static #AUGMENT_JITTER_BASE = 0.95;
-  /** Augmentation: openness jitter range added to base */
-  static #AUGMENT_JITTER_RANGE = 0.05;
-  /** Augmentation: probability to jitter progress channel */
-  static #AUGMENT_PROGRESS_JITTER_PROB = 0.35;
-  /** Augmentation: progress delta full range */
-  static #AUGMENT_PROGRESS_DELTA_RANGE = 0.1;
-  /** Augmentation: progress delta half range (range/2) */
-  static #AUGMENT_PROGRESS_DELTA_HALF = 0.05;
-  /** Max iterations used during population pretrain */
-  static #PRETRAIN_MAX_ITER = 60;
-  /** Base iterations added in pretrain (8 + floor(setLen/2)) */
-  static #PRETRAIN_BASE_ITER = 8;
-  /** Default learning rate used during pretraining population warm-start */
-  static #DEFAULT_PRETRAIN_RATE = 0.002;
-  /** Default momentum used during pretraining population warm-start */
-  static #DEFAULT_PRETRAIN_MOMENTUM = 0.1;
-
-  /**
-   * Populate the engine's pooled node-index scratch buffer with indices of nodes matching `type`.
-   * @internal - Small helper used by various engine methods; retained for internal use.
-   */
-  static #getNodeIndicesByType(
-    nodes: NetworkNode[] | undefined,
-    type: string,
-  ): number {
-    if (!Array.isArray(nodes) || nodes.length === 0) return 0;
-    let writeCount = 0;
-    let scratch = EvolutionEngine.#STATE.scratch.nodeIndexBuffer;
-    for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
-      const nodeRef = nodes[nodeIndex];
-      if (!nodeRef || nodeRef.type !== type) continue;
-      if (writeCount >= scratch.length) {
-        const nextCapacity = 1 << Math.ceil(Math.log2(writeCount + 1));
-        const grown = new Int32Array(nextCapacity);
-        grown.set(scratch);
-        EvolutionEngine.#STATE.scratch.nodeIndexBuffer = grown;
-        scratch = grown;
-      }
-      scratch[writeCount++] = nodeIndex;
-    }
-    return writeCount;
-  }
-
-  /**
-   * Collect enabled outgoing connections from a hidden node terminating at output nodes.
-   * @internal - Small helper used by network analysis methods; retained for internal use.
-   */
-  static #collectHiddenToOutputConns(
-    hiddenNode: NetworkNode,
-    nodesRef: NetworkNode[],
-    outputCount: number,
-  ): NetworkConnection[] {
-    if (
-      !hiddenNode?.connections ||
-      !Array.isArray(nodesRef) ||
-      outputCount <= 0
-    )
-      return [];
-    const maxScratch = EvolutionEngine.#STATE.scratch.nodeIndexBuffer.length;
-    const effectiveOutputCount = Math.min(
-      outputCount | 0,
-      maxScratch,
-      nodesRef.length,
-    );
-    if (effectiveOutputCount <= 0) return [];
-    const hiddenOutBuffer =
-      EvolutionEngine.#STATE.scratch.hiddenToOutputConnections;
-    hiddenOutBuffer.length = 0;
-    const outgoing = hiddenNode.connections.out ?? EvolutionEngine.#EMPTY_VEC;
-    for (let outIndex = 0; outIndex < outgoing.length; outIndex++) {
-      const candidate = outgoing[outIndex] as unknown as NetworkConnection;
-      if (!candidate || candidate.enabled === false) continue;
-      for (
-        let outputIndex = 0;
-        outputIndex < effectiveOutputCount;
-        outputIndex++
-      ) {
-        const nodeIdx =
-          EvolutionEngine.#STATE.scratch.nodeIndexBuffer[outputIndex];
-        const targetNode = nodesRef[nodeIdx];
-        if (candidate.to === targetNode) {
-          hiddenOutBuffer.push(candidate);
-          break;
-        }
-      }
-    }
-    return hiddenOutBuffer;
+    clearDeterministicMode(getEvolutionEngineSharedState());
   }
 
   /**
@@ -264,18 +142,33 @@ export class EvolutionEngine {
   static async runMazeEvolution(
     options: IRunMazeEvolutionOptions,
   ): Promise<MazeEvolutionRunResult> {
+    const sharedEngineState = getEvolutionEngineSharedState();
+    const facadeRuntimeState = getEvolutionEngineFacadeRuntimeState();
+
     // 1) Normalise and validate options (descriptive names, defaulting).
     const opts = normalizeRunOptions(
       options,
       (seed: number) => EvolutionEngine.setDeterministic(seed),
       (enabled: boolean) => {
-        EvolutionEngine.#STATE.toggles.reducedTelemetry = enabled;
+        configureEvolutionEngineToggles(
+          enabled,
+          sharedEngineState.toggles.telemetryMinimal,
+          sharedEngineState.toggles.disableBaldwinPhase,
+        );
       },
       (enabled: boolean) => {
-        EvolutionEngine.#STATE.toggles.telemetryMinimal = enabled;
+        configureEvolutionEngineToggles(
+          sharedEngineState.toggles.reducedTelemetry,
+          enabled,
+          sharedEngineState.toggles.disableBaldwinPhase,
+        );
       },
       (disabled: boolean) => {
-        EvolutionEngine.#STATE.toggles.disableBaldwinPhase = disabled;
+        configureEvolutionEngineToggles(
+          sharedEngineState.toggles.reducedTelemetry,
+          sharedEngineState.toggles.telemetryMinimal,
+          disabled,
+        );
       },
     );
 
@@ -288,7 +181,7 @@ export class EvolutionEngine {
       inputSize,
       outputSize,
       fitnessContext,
-    } = prepareEnvironmentForRun(opts, EvolutionEngine.#STATE.scratch);
+    } = prepareEnvironmentForRun(opts, sharedEngineState.scratch);
 
     // 3) Create and seed NEAT instance via a descriptive helper.
     const { neat, scratchPopClone, scratchSample } = createAndSeedNeat(
@@ -296,14 +189,17 @@ export class EvolutionEngine {
       inputSize,
       outputSize,
       fitnessContext,
-      EvolutionEngine.#STATE.scratch.populationCloneBuffer,
-      EvolutionEngine.#STATE.scratch.samplePool,
+      sharedEngineState.scratch.populationCloneBuffer as Network[],
+      sharedEngineState.scratch.samplePool,
     );
-    EvolutionEngine.#STATE.scratch.populationCloneBuffer = scratchPopClone;
-    EvolutionEngine.#STATE.scratch.samplePool = scratchSample;
+    if (!neat) {
+      throw new Error('ASCII Maze failed to create a NEAT instance.');
+    }
+    sharedEngineState.scratch.populationCloneBuffer = scratchPopClone;
+    sharedEngineState.scratch.samplePool = scratchSample;
 
     // 4) Ensure internal scratch/pooling capacity is sufficient for the configured population & network sizes.
-    ensureScratchCapacity(EvolutionEngine.#STATE, {
+    ensureScratchCapacity(sharedEngineState, {
       populationSize: opts.popSize,
       inputSize,
       outputSize,
@@ -311,57 +207,33 @@ export class EvolutionEngine {
 
     // 5) Lamarckian warm-start (pretrain generation 0) when training cases exist.
     const lamarckianTrainingSet = buildLamarckianTrainingSet(
-      EvolutionEngine.#STATE,
+      sharedEngineState,
       {
-        TRAIN_OUT_PROB_HIGH: EvolutionEngine.#TRAIN_OUT_PROB_HIGH,
-        TRAIN_OUT_PROB_LOW: EvolutionEngine.#TRAIN_OUT_PROB_LOW,
-        PROGRESS_MEDIUM: EvolutionEngine.#PROGRESS_MEDIUM,
-        PROGRESS_STRONG: EvolutionEngine.#PROGRESS_STRONG,
-        PROGRESS_JUNCTION: EvolutionEngine.#PROGRESS_JUNCTION,
-        PROGRESS_FOURWAY: EvolutionEngine.#PROGRESS_FOURWAY,
-        PROGRESS_REGRESS: EvolutionEngine.#PROGRESS_REGRESS,
-        PROGRESS_MIN_SIGNAL: EvolutionEngine.#PROGRESS_MIN_SIGNAL,
-        PROGRESS_MILD_REGRESS: EvolutionEngine.#PROGRESS_MILD_REGRESS,
-        DEFAULT_JITTER_PROB: EvolutionEngine.#DEFAULT_JITTER_PROB,
-        AUGMENT_JITTER_BASE: EvolutionEngine.#AUGMENT_JITTER_BASE,
-        AUGMENT_JITTER_RANGE: EvolutionEngine.#AUGMENT_JITTER_RANGE,
-        AUGMENT_PROGRESS_JITTER_PROB:
-          EvolutionEngine.#AUGMENT_PROGRESS_JITTER_PROB,
-        AUGMENT_PROGRESS_DELTA_RANGE:
-          EvolutionEngine.#AUGMENT_PROGRESS_DELTA_RANGE,
-        AUGMENT_PROGRESS_DELTA_HALF:
-          EvolutionEngine.#AUGMENT_PROGRESS_DELTA_HALF,
+        ...EVOLUTION_ENGINE_WARM_START_CONSTANTS,
         RNG_PARAMETERS: resolveRngParameters(),
       },
     );
     warmStartPopulationIfNeeded(
       neat,
       lamarckianTrainingSet,
-      EvolutionEngine.#STATE,
+      sharedEngineState,
       (neatInstance, trainingSet) => {
         pretrainPopulationWarmStart(
           neatInstance,
           trainingSet,
-          {
-            PRETRAIN_MAX_ITER: EvolutionEngine.#PRETRAIN_MAX_ITER,
-            PRETRAIN_BASE_ITER: EvolutionEngine.#PRETRAIN_BASE_ITER,
-            DEFAULT_TRAIN_ERROR: EvolutionEngine.#DEFAULT_TRAIN_ERROR,
-            DEFAULT_PRETRAIN_RATE: EvolutionEngine.#DEFAULT_PRETRAIN_RATE,
-            DEFAULT_PRETRAIN_MOMENTUM:
-              EvolutionEngine.#DEFAULT_PRETRAIN_MOMENTUM,
-            DEFAULT_TRAIN_BATCH_SMALL:
-              EvolutionEngine.#DEFAULT_TRAIN_BATCH_SMALL,
-          },
-          applyCompassWarmStart,
-          centerOutputBiases,
+          EVOLUTION_ENGINE_PRETRAIN_CONSTANTS,
+          (network) =>
+            applyCompassWarmStart({ state: sharedEngineState, network }),
+          (network) =>
+            centerOutputBiases({ state: sharedEngineState, network }),
         );
       },
     );
 
     // 6) Prepare loop helpers and run the full evolution loop inside a private helper.
     const loopHelpers = prepareLoopHelpers(
-      opts,
-      EvolutionEngine.#STATE.scratch,
+      opts as unknown as EvolutionOptions,
+      sharedEngineState.scratch,
     );
 
     // Lightweight profiling (opt-in): set env ASCII_MAZE_PROFILE=1 to enable
@@ -372,9 +244,9 @@ export class EvolutionEngine {
     );
 
     const runResult = await runEvolutionLoop(
-      EvolutionEngine.#STATE,
+      sharedEngineState,
       neat,
-      opts,
+      opts as unknown as EvolutionOptions,
       lamarckianTrainingSet,
       encodedMaze,
       startPosition,
@@ -382,46 +254,62 @@ export class EvolutionEngine {
       distanceMap,
       loopHelpers,
       doProfile,
-      EvolutionEngine.#STATE.scratch.logitsRing,
-      EvolutionEngine.#LOGITS_RING_CAP,
-      EvolutionEngine.#LOGITS_RING_CAP_MAX,
-      EvolutionEngine.#ACTION_DIM,
-      EvolutionEngine.#LOGITS_RING_SHARED,
-      EvolutionEngine.#STATE.scratch.sharedLogits,
-      EvolutionEngine.#STATE.scratch.sharedLogitsWriteIndex,
-      EvolutionEngine.#SCRATCH_LOGITS_RING_W,
-      EvolutionEngine.#EMPTY_VEC as unknown as Network[],
-      EvolutionEngine.#STATE.scratch.nodeIndexBuffer,
-      EvolutionEngine.#STATE.scratch.snapshotReusableObject,
-      EvolutionEngine.#STATE.scratch.snapshotTopEntries,
-      EvolutionEngine.#getNodeIndicesByType,
-      EvolutionEngine.#collectHiddenToOutputConns,
       {
-        DEFAULT_TRAIN_ERROR: EvolutionEngine.#DEFAULT_TRAIN_ERROR,
-        DEFAULT_TRAIN_RATE: EvolutionEngine.#DEFAULT_TRAIN_RATE,
-        DEFAULT_TRAIN_MOMENTUM: EvolutionEngine.#DEFAULT_TRAIN_MOMENTUM,
-        DEFAULT_TRAIN_BATCH_SMALL: EvolutionEngine.#DEFAULT_TRAIN_BATCH_SMALL,
-        DEFAULT_TRAIN_BATCH_LARGE: EvolutionEngine.#DEFAULT_TRAIN_BATCH_LARGE,
-        DEFAULT_STD_SMALL: EvolutionEngine.#DEFAULT_STD_SMALL,
-        DEFAULT_STD_ADJUST_MULT: EvolutionEngine.#DEFAULT_STD_ADJUST_MULT,
-        FITTEST_TRAIN_ITERATIONS: EvolutionEngine.#FITTEST_TRAIN_ITERATIONS,
-        TELEMETRY_MINIMAL: EvolutionEngine.#STATE.toggles.telemetryMinimal,
-        SATURATION_PRUNE_THRESHOLD: EvolutionEngine.#SATURATION_PRUNE_THRESHOLD,
-        RECENT_WINDOW: EvolutionEngine.#RECENT_WINDOW,
-        REDUCED_TELEMETRY: EvolutionEngine.#STATE.toggles.reducedTelemetry,
-        DISABLE_BALDWIN: EvolutionEngine.#STATE.toggles.disableBaldwinPhase,
+        scratchLogitsRing: sharedEngineState.scratch.logitsRing,
+        logitsRingCapMax: getEvolutionEngineMaxLogitsRingCapacity(),
+        actionDim: EvolutionEngine.#ACTION_DIM,
+        scratchLogitsShared: sharedEngineState.scratch.sharedLogits,
+        scratchLogitsSharedW: sharedEngineState.scratch.sharedLogitsWriteIndex,
+      } satisfies EvolutionLoopRuntimeContext,
+      {
+        logitsRingCap: facadeRuntimeState.logitsRingCap,
+        logitsRingShared: facadeRuntimeState.logitsRingShared,
+        scratchLogitsRingW: facadeRuntimeState.scratchLogitsRingW,
       },
-      ((EvolutionEngine as unknown as SpeciesHistoryHost)
-        ._speciesHistory as unknown as number[]) ??
-        (EvolutionEngine.#EMPTY_VEC as unknown as number[]),
+      {
+        telemetryMinimal: sharedEngineState.toggles.telemetryMinimal,
+        saturationPruneThreshold:
+          EVOLUTION_ENGINE_LOOP_CONSTANTS.SATURATION_PRUNE_THRESHOLD,
+        recentWindow: EVOLUTION_ENGINE_LOOP_CONSTANTS.RECENT_WINDOW,
+        reducedTelemetry: sharedEngineState.toggles.reducedTelemetry,
+      } satisfies EvolutionLoopTelemetryContext,
+      {
+        emptyVec: EvolutionEngine.#EMPTY_VEC as unknown as Network[],
+        scratchNodeIdx: sharedEngineState.scratch.nodeIndexBuffer,
+        scratchSnapshotObj: sharedEngineState.scratch.snapshotReusableObject,
+        scratchSnapshotTop: sharedEngineState.scratch.snapshotTopEntries,
+        speciesHistoryRef:
+          ((EvolutionEngine as unknown as SpeciesHistoryHost)
+            ._speciesHistory as unknown as number[]) ??
+          (EvolutionEngine.#EMPTY_VEC as unknown as number[]),
+        loopHelpers: {
+          getNodeIndicesByType: (nodes, type) => {
+            return collectEvolutionEngineNodeIndicesByType(
+              sharedEngineState,
+              nodes,
+              type,
+            );
+          },
+          collectHiddenToOutputConns: (hiddenNode, nodes, outputCount) => {
+            return collectEvolutionEngineHiddenToOutputConnections(
+              sharedEngineState,
+              hiddenNode,
+              nodes,
+              outputCount,
+            );
+          },
+        },
+      } satisfies EvolutionLoopSupportContext,
+      {
+        ...EVOLUTION_ENGINE_LOOP_CONSTANTS,
+        TELEMETRY_MINIMAL: sharedEngineState.toggles.telemetryMinimal,
+        REDUCED_TELEMETRY: sharedEngineState.toggles.reducedTelemetry,
+        DISABLE_BALDWIN: sharedEngineState.toggles.disableBaldwinPhase,
+      },
     );
 
     // Update ring state from loop result
-    EvolutionEngine.#LOGITS_RING_CAP = runResult.updatedRingState.logitsRingCap;
-    EvolutionEngine.#LOGITS_RING_SHARED =
-      runResult.updatedRingState.logitsRingShared;
-    EvolutionEngine.#SCRATCH_LOGITS_RING_W =
-      runResult.updatedRingState.scratchLogitsRingW;
+    applyEvolutionEngineRingState(runResult.updatedRingState);
 
     // Unpack results from the loop helper
     const {
@@ -436,7 +324,7 @@ export class EvolutionEngine {
     // Emit profiling summary when enabled (use loopHelpers.safeWrite to avoid duplicating writer resolution)
     if (doProfile && completedGenerations > 0) {
       emitProfileSummary(
-        EvolutionEngine.#STATE,
+        sharedEngineState,
         loopHelpers.safeWrite,
         completedGenerations,
         totalEvolveMs,
@@ -467,7 +355,7 @@ export class EvolutionEngine {
    * Never throws from this debug helper.
    *
    * @param network - The network (genome) to inspect.
-   *                  Expected shape: `{ nodes: any[], connections: any[] }`
+   *                  Expected shape: `{ nodes: Array<unknown>, connections: Array<unknown> }`
    *
    * @example
    * const { bestNetwork } = await EvolutionEngine.runMazeEvolution(options);
@@ -483,7 +371,7 @@ export class EvolutionEngine {
    * // Has recurrent/gated connections: false
    */
   static printNetworkStructure(network: INetwork): void {
-    printNetworkStructure(EvolutionEngine.#STATE, network);
+    printNetworkStructure(getEvolutionEngineSharedState(), network);
   }
 }
 

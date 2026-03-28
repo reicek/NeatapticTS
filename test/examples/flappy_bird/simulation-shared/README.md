@@ -1,13 +1,34 @@
 # simulation-shared
 
+Shared simulation vocabulary reused across environment, evaluation, worker,
+and browser-adjacent helpers.
+
+This boundary exists so the example can share observation semantics and
+deterministic spawn logic without letting every runtime invent its own near-
+duplicate types. The payoff is consistency: when a policy sees a gap, or when
+a helper estimates urgency, those meanings stay aligned across the whole
+example.
+
+Read this file as the common language layer beneath the larger subsystems.
+It is intentionally small, geometry-heavy, and runtime-neutral so the same
+concepts can move cleanly between Node training, worker playback, and browser
+inspection tools.
+
 ## simulation-shared/simulation-shared.types.ts
 
-### simulation-shared.types
+### SharedRngLike
 
 Minimal deterministic random contract used by shared spawn helpers.
 
 The shared layer keeps its RNG contract intentionally small so the same spawn
 helpers can work with both Node-side and browser-side deterministic sources.
+
+### SharedPipeLike
+
+Common pipe shape consumed by observation helpers.
+
+This is the narrowest useful pipe contract for feature synthesis: horizontal
+position plus the vertical gap geometry seen by the bird.
 
 ### SharedDifficultyProfile
 
@@ -26,14 +47,6 @@ These features make the policy input interpretable. The example does not feed
 raw pixels into NEAT; it feeds geometric signals such as distance to the next
 pipe, corridor clearance, and urgency of recovering to the gap center.
 
-### SharedObservationInput
-
-Input shape for observation-feature synthesis.
-
-This object is the raw world snapshot from which normalized features are
-derived. It intentionally separates world geometry from the later feature
-projection step.
-
 ### SharedObservationMemoryState
 
 Mutable temporal memory attached to one policy-controlled bird.
@@ -46,49 +59,15 @@ If you want background reading, the Wikipedia article on "frame stacking"
 captures the basic idea of giving a feed-forward policy a short motion trail
 instead of full recurrent state.
 
-### SharedPipeLike
+### SharedObservationInput
 
-Common pipe shape consumed by observation helpers.
+Input shape for observation-feature synthesis.
 
-This is the narrowest useful pipe contract for feature synthesis: horizontal
-position plus the vertical gap geometry seen by the bird.
-
-### SharedRngLike
-
-Minimal deterministic random contract used by shared spawn helpers.
-
-The shared layer keeps its RNG contract intentionally small so the same spawn
-helpers can work with both Node-side and browser-side deterministic sources.
-
-## simulation-shared/simulation-shared.errors.ts
-
-### simulation-shared.errors
-
-Prefix used when formatting unexpected shared-simulation errors.
-
-A stable prefix makes logs easier to scan when multiple Flappy subsystems are
-emitting diagnostics.
-
-### FLAPPY_SHARED_SIMULATION_ERROR_PREFIX
-
-### formatSharedSimulationErrorMessage
-
-`(error: unknown) => string`
-
-Formats unknown shared-simulation errors for stable logs.
-
-Shared utilities are used from several runtime contexts, so this helper keeps
-the error surface human-readable even when the thrown value is not an
-`Error` instance.
-
-Parameters:
-- `error` - - Unknown error value.
-
-Returns: Readable error message.
+This object is the raw world snapshot from which normalized features are
+derived. It intentionally separates world geometry from the later feature
+projection step.
 
 ## simulation-shared/simulation-shared.constants.ts
-
-### simulation-shared.constants
 
 Default curriculum scale used when callers do not provide one.
 
@@ -96,24 +75,32 @@ A value of `1` means full adaptive difficulty behavior is enabled.
 
 ### FLAPPY_SHARED_DEFAULT_DIFFICULTY_SCALE
 
+Default curriculum scale used when callers do not provide one.
+
+A value of `1` means full adaptive difficulty behavior is enabled.
+
 ### FLAPPY_SHARED_DEFAULT_NORMALIZATION_EPSILON
+
+Small positive epsilon used to guard divisions in normalized timing features.
+
+The epsilon avoids unstable divide-by-zero behavior when distances or speeds
+collapse toward zero during normalization.
 
 ## simulation-shared/simulation-shared.math.utils.ts
 
-### simulation-shared.math.utils
-
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
-@param value - Candidate value.
-@param min - Inclusive lower bound.
-@param max - Inclusive upper bound.
-@returns Clamped value.
+### clampValue
 
-### clamp
+```ts
+clampValue(
+  value: number,
+  min: number,
+  max: number,
+): number
+```
 
-`(value: number, min: number, max: number) => number`
-
-Internal clamp primitive.
+Clamps a numeric value to the inclusive `[min, max]` interval.
 
 Parameters:
 - `value` - - Candidate value.
@@ -124,7 +111,11 @@ Returns: Clamped value.
 
 ### clamp01
 
-`(value: number) => number`
+```ts
+clamp01(
+  value: number,
+): number
+```
 
 Clamps a numeric value to the inclusive `[0, 1]` interval.
 
@@ -133,22 +124,15 @@ Parameters:
 
 Returns: Value clamped between 0 and 1.
 
-### clampValue
-
-`(value: number, min: number, max: number) => number`
-
-Clamps a numeric value to the inclusive `[min, max]` interval.
-
-Parameters:
-- `value` - - Candidate value.
-- `min` - - Inclusive lower bound.
-- `max` - - Inclusive upper bound.
-
-Returns: Clamped value.
-
 ### interpolateValue
 
-`(startValue: number, endValue: number, progress: number) => number`
+```ts
+interpolateValue(
+  startValue: number,
+  endValue: number,
+  progress: number,
+): number
+```
 
 Linear interpolation helper.
 
@@ -159,186 +143,35 @@ Parameters:
 
 Returns: Interpolated value.
 
-## simulation-shared/simulation-shared.spawn.utils.ts
+### clamp
 
-### resolveNextSpawnGapCenterY
+```ts
+clamp(
+  value: number,
+  min: number,
+  max: number,
+): number
+```
 
-`(previousGapCenterYPx: number, rng: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike, maximumGapCenterYPx: number) => number`
-
-Resolves next gap center with bounded per-pipe delta.
-
-Educational note:
-Consecutive gaps are deliberately constrained to avoid unfair zig-zag jumps.
-The environment should still be challenging, but it should not demand an
-impossible vertical correction from one pipe to the next.
-
-Parameters:
-- `previousGapCenterYPx` - - Previous spawn gap center.
-- `rng` - - Deterministic RNG.
-- `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
-
-Returns: Next gap center y-position.
-
-### resolveNextSpawnGapSize
-
-`(previousSpawnGapPx: number | undefined, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile, rng: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike) => number`
-
-Resolves next spawn gap size using progressive shrink and jitter.
-
-The gap starts wider than the current hardest target, then shrinks toward the
-active difficulty profile with a small amount of deterministic jitter so runs
-do not feel mechanically repetitive.
+Internal clamp primitive.
 
 Parameters:
-- `previousSpawnGapPx` - - Previous spawn gap size.
-- `difficultyProfile` - - Active difficulty profile.
-- `rng` - - Deterministic RNG.
+- `value` - - Candidate value.
+- `min` - - Inclusive lower bound.
+- `max` - - Inclusive upper bound.
 
-Returns: Next spawn gap size.
-
-### resolveNextSpawnIntervalFrames
-
-`(previousSpawnIntervalFrames: number | undefined, difficultyProfile: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile) => number`
-
-Resolves next spawn interval using progressive shrink.
-
-This mirrors the gap-size logic: early pipes are spaced more generously, then
-spacing contracts toward the current difficulty target as the episode settles
-into its harder rhythm.
-
-Parameters:
-- `previousSpawnIntervalFrames` - - Previous spawn interval.
-- `difficultyProfile` - - Active difficulty profile.
-
-Returns: Next spawn interval in frames.
-
-### sampleGapCenterY
-
-`(rng: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedRngLike, maximumGapCenterYPx: number) => number`
-
-Samples a random gap center y-position.
-
-The sampled center is bounded so the resulting pipe gap always remains inside
-the visible play area.
-
-Parameters:
-- `rng` - - Deterministic RNG.
-- `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
-
-Returns: Sampled y-position.
-
-## simulation-shared/simulation-shared.memory.utils.ts
-
-### commitSharedObservationMemoryStep
-
-`(observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState, features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, didFlap: boolean) => void`
-
-Commits one observation-action step into temporal memory.
-
-The memory update happens after the decision is made so the next step can see
-both the recent observation context and the action history that produced the
-current trajectory.
-
-Parameters:
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-- `features` - - Structured observation features used for the decision.
-- `didFlap` - - Decision taken at this step.
-
-Returns: Nothing.
-
-### createSharedObservationMemoryState
-
-`() => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState`
-
-Creates an empty temporal observation memory state.
-
-Returns: Fresh mutable memory buffers for one bird/controller.
-
-### resolvePreviousCoreFramesWithPadding
-
-`(observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => number[][]`
-
-Resolves previous core frames (newest-first) with deterministic zero padding.
-
-Zero padding keeps the policy input width stable during the first few frames
-of an episode before enough history has accumulated.
-
-Parameters:
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-
-Returns: Previous core frame list with fixed target length.
-
-### resolveTemporalObservationVector
-
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures, observationMemoryState: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationMemoryState) => number[]`
-
-Builds the temporal policy input vector (stacked observation + action memory).
-
-Educational note:
-This helper turns an interpretable feature object into the exact flat vector a
-feed-forward network consumes. That is why the output layout is documented so
-explicitly: changing the order would change the meaning of every trained
-weight in the policy.
-
-Output layout:
-1) current core observation frame
-2) previous core frames (newest to oldest) with zero padding
-3) last-action channel
-4) recent flap-rate channel over a fixed window
-
-Parameters:
-- `features` - - Structured observation features for the current decision step.
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-
-Returns: Ordered temporal input vector for policy activation.
-
-### resolveZeroCoreObservationFrame
-
-`() => number[]`
-
-Builds a zero-valued core frame with canonical length.
-
-Returns: Zero core frame.
-
-## simulation-shared/simulation-shared.control.utils.ts
-
-### simulation-shared.control.utils
-
-Resolves flap/no-flap decision from network outputs.
-
-Educational note:
-The shared control layer accepts both two-output competitive policies
-(`no flap` vs `flap`) and simpler single-output thresholded policies. That
-flexibility makes the helper reusable across experiments without forcing every
-caller to reshape its outputs first.
-
-@param rawOutputs - Activation output payload.
-@param flapThreshold - Scalar threshold for single-output policies.
-@returns True when flap should trigger.
-
-### resolveFlapDecision
-
-`(rawOutputs: unknown, flapThreshold: number) => boolean`
-
-Resolves flap/no-flap decision from network outputs.
-
-Educational note:
-The shared control layer accepts both two-output competitive policies
-(`no flap` vs `flap`) and simpler single-output thresholded policies. That
-flexibility makes the helper reusable across experiments without forcing every
-caller to reshape its outputs first.
-
-Parameters:
-- `rawOutputs` - - Activation output payload.
-- `flapThreshold` - - Scalar threshold for single-output policies.
-
-Returns: True when flap should trigger.
+Returns: Clamped value.
 
 ## simulation-shared/simulation-shared.difficulty.utils.ts
 
 ### resolveAdaptiveDifficultyProfile
 
-`(pipesPassed: number, difficultyScale: number) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedDifficultyProfile`
+```ts
+resolveAdaptiveDifficultyProfile(
+  pipesPassed: number,
+  difficultyScale: number,
+): SharedDifficultyProfile
+```
 
 Resolves adaptive difficulty profile from passed-pipe progress.
 
@@ -357,65 +190,97 @@ Parameters:
 
 Returns: Active difficulty profile.
 
-## simulation-shared/simulation-shared.statistics.utils.ts
+## simulation-shared/simulation-shared.spawn.utils.ts
 
-### compareNumbersAscending
+### sampleGapCenterY
 
-`(leftValue: number, rightValue: number) => number`
+```ts
+sampleGapCenterY(
+  rng: SharedRngLike,
+  maximumGapCenterYPx: number,
+): number
+```
 
-Compares two numeric values in ascending order.
+Samples a random gap center y-position.
 
-Parameters:
-- `leftValue` - - Left numeric value.
-- `rightValue` - - Right numeric value.
-
-Returns: Comparator delta for `Array.prototype.toSorted`.
-
-### computeMean
-
-`(values: readonly number[]) => number`
-
-Computes arithmetic mean for numeric samples.
+The sampled center is bounded so the resulting pipe gap always remains inside
+the visible play area.
 
 Parameters:
-- `values` - - Numeric samples.
+- `rng` - - Deterministic RNG.
+- `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
 
-Returns: Arithmetic mean.
+Returns: Sampled y-position.
 
-### computePercentile
+### resolveNextSpawnGapCenterY
 
-`(values: readonly number[], percentile: number) => number`
+```ts
+resolveNextSpawnGapCenterY(
+  previousGapCenterYPx: number,
+  rng: SharedRngLike,
+  maximumGapCenterYPx: number,
+): number
+```
 
-Computes percentile value via linear interpolation between nearest ranks.
+Resolves next gap center with bounded per-pipe delta.
 
-Percentiles are useful in the trainer because they reveal whether strong
-performance is broad across the population or concentrated in a single outlier.
-
-Parameters:
-- `values` - - Numeric samples.
-- `percentile` - - Percentile in [0, 1].
-
-Returns: Percentile value, or `Number.NaN` when `values` is empty.
-
-### computePopulationStandardDeviation
-
-`(values: readonly number[], meanValue: number) => number`
-
-Computes population standard deviation.
-
-This uses population variance rather than sample variance because the trainer
-is summarizing the whole evolved population for that generation, not estimating
-a larger hidden distribution from a subsample.
+Educational note:
+Consecutive gaps are deliberately constrained to avoid unfair zig-zag jumps.
+The environment should still be challenging, but it should not demand an
+impossible vertical correction from one pipe to the next.
 
 Parameters:
-- `values` - - Numeric samples.
-- `meanValue` - - Precomputed mean.
+- `previousGapCenterYPx` - - Previous spawn gap center.
+- `rng` - - Deterministic RNG.
+- `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
 
-Returns: Population standard deviation.
+Returns: Next gap center y-position.
+
+### resolveNextSpawnGapSize
+
+```ts
+resolveNextSpawnGapSize(
+  previousSpawnGapPx: number | undefined,
+  difficultyProfile: SharedDifficultyProfile,
+  rng: SharedRngLike,
+): number
+```
+
+Resolves next spawn gap size using progressive shrink and jitter.
+
+The gap starts wider than the current hardest target, then shrinks toward the
+active difficulty profile with a small amount of deterministic jitter so runs
+do not feel mechanically repetitive.
+
+Parameters:
+- `previousSpawnGapPx` - - Previous spawn gap size.
+- `difficultyProfile` - - Active difficulty profile.
+- `rng` - - Deterministic RNG.
+
+Returns: Next spawn gap size.
+
+### resolveNextSpawnIntervalFrames
+
+```ts
+resolveNextSpawnIntervalFrames(
+  previousSpawnIntervalFrames: number | undefined,
+  difficultyProfile: SharedDifficultyProfile,
+): number
+```
+
+Resolves next spawn interval using progressive shrink.
+
+This mirrors the gap-size logic: early pipes are spaced more generously, then
+spacing contracts toward the current difficulty target as the episode settles
+into its harder rhythm.
+
+Parameters:
+- `previousSpawnIntervalFrames` - - Previous spawn interval.
+- `difficultyProfile` - - Active difficulty profile.
+
+Returns: Next spawn interval in frames.
 
 ## simulation-shared/simulation-shared.observation.utils.ts
-
-### simulation-shared.observation.utils
 
 Shared observation compatibility façade.
 
@@ -426,31 +291,45 @@ boundary. This file stays as the stable import path for existing callers.
 That split keeps the high-level import path simple while allowing the
 observation subsystem to grow into its own documented folder.
 
-### resolveCoreObservationVectorFromFeatures
+### resolveUpcomingPipes
 
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+```ts
+resolveUpcomingPipes(
+  pipes: SharedPipeLike[],
+  birdCenterXPx: number,
+  birdRadiusPx: number,
+  pipeWidthPx: number,
+): [SharedPipeLike | undefined, SharedPipeLike | undefined]
+```
 
-Resolves the compact core vector used for temporal stacking.
+Resolves the next two upcoming pipes in front of the bird.
 
-The core intentionally keeps directly observed kinematic and geometric
-channels while dropping derived one-step predictors that become redundant
-once short-term temporal memory is available.
-
-This is the representation used when the example wants a short history of raw
-observation slices. The idea is similar to frame stacking in reinforcement
-learning: a feed-forward policy can recover some sense of motion by looking
-at several recent compact frames at once.
-
-The Wikipedia article on "frame stacking" is a useful conceptual reference.
+The observation pipeline only cares about the immediate near future, because
+Flappy Bird decisions are dominated by the next gap and the transition after
+it. Looking further ahead adds noise faster than it adds useful control
+signal.
 
 Parameters:
-- `features` - - Structured observation features.
+- `pipes` - - Current pipe list.
+- `birdCenterXPx` - - Bird center x-position.
+- `birdRadiusPx` - - Bird radius.
+- `pipeWidthPx` - - Pipe width.
 
-Returns: Core per-frame vector.
+Returns: Tuple of first and second upcoming pipes.
+
+Example:
+
+```ts
+const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
+```
 
 ### resolveObservationFeatures
 
-`(input: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationInput) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
+```ts
+resolveObservationFeatures(
+  input: SharedObservationInput,
+): SharedObservationFeatures
+```
 
 Builds the shared normalized observation feature set consumed by policies.
 
@@ -478,9 +357,30 @@ Parameters:
 
 Returns: Structured observation features.
 
+Example:
+
+```ts
+const features = resolveObservationFeatures({
+  birdYPx: 120,
+  velocityYPxPerFrame: 2,
+  pipes,
+  visibleWorldWidthPx: 640,
+  difficultyProfile,
+  activeSpawnIntervalFrames: 90,
+});
+
+if (features.normalizedEntryUrgency > 0.8) {
+  // The bird is misaligned and running out of time to recover.
+}
+```
+
 ### resolveObservationVectorFromFeatures
 
-`(features: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures) => number[]`
+```ts
+resolveObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
 
 Converts observation features to the canonical 12-value network input vector.
 
@@ -498,21 +398,281 @@ Parameters:
 
 Returns: Ordered feature vector.
 
-### resolveUpcomingPipes
+Example:
 
-`(pipes: import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike[], birdCenterXPx: number, birdRadiusPx: number, pipeWidthPx: number) => [import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined, import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedPipeLike | undefined]`
+```ts
+const features = resolveObservationFeatures(input);
+const networkInput = resolveObservationVectorFromFeatures(features);
+```
 
-Resolves the next two upcoming pipes in front of the bird.
+### resolveCoreObservationVectorFromFeatures
 
-The observation pipeline only cares about the immediate near future, because
-Flappy Bird decisions are dominated by the next gap and the transition after
-it. Looking further ahead adds noise faster than it adds useful control
-signal.
+```ts
+resolveCoreObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
+
+Resolves the compact core vector used for temporal stacking.
+
+The core intentionally keeps directly observed kinematic and geometric
+channels while dropping derived one-step predictors that become redundant
+once short-term temporal memory is available.
+
+This is the representation used when the example wants a short history of raw
+observation slices. The idea is similar to frame stacking in reinforcement
+learning: a feed-forward policy can recover some sense of motion by looking
+at several recent compact frames at once.
+
+The Wikipedia article on "frame stacking" is a useful conceptual reference.
 
 Parameters:
-- `pipes` - - Current pipe list.
-- `birdCenterXPx` - - Bird center x-position.
-- `birdRadiusPx` - - Bird radius.
-- `pipeWidthPx` - - Pipe width.
+- `features` - - Structured observation features.
 
-Returns: Tuple of first and second upcoming pipes.
+Returns: Core per-frame vector.
+
+Example:
+
+```ts
+const coreFrame = resolveCoreObservationVectorFromFeatures(features);
+observationMemoryState.previousCoreFrames.push(coreFrame);
+```
+
+## simulation-shared/simulation-shared.control.utils.ts
+
+Resolves flap/no-flap decision from network outputs.
+
+Educational note:
+The shared control layer accepts both two-output competitive policies
+(`no flap` vs `flap`) and simpler single-output thresholded policies. That
+flexibility makes the helper reusable across experiments without forcing every
+caller to reshape its outputs first.
+
+### resolveFlapDecision
+
+```ts
+resolveFlapDecision(
+  rawOutputs: unknown,
+  flapThreshold: number,
+): boolean
+```
+
+Resolves flap/no-flap decision from network outputs.
+
+Educational note:
+The shared control layer accepts both two-output competitive policies
+(`no flap` vs `flap`) and simpler single-output thresholded policies. That
+flexibility makes the helper reusable across experiments without forcing every
+caller to reshape its outputs first.
+
+Parameters:
+- `rawOutputs` - - Activation output payload.
+- `flapThreshold` - - Scalar threshold for single-output policies.
+
+Returns: True when flap should trigger.
+
+## simulation-shared/simulation-shared.memory.utils.ts
+
+### createSharedObservationMemoryState
+
+```ts
+createSharedObservationMemoryState(): SharedObservationMemoryState
+```
+
+Creates an empty temporal observation memory state.
+
+Returns: Fresh mutable memory buffers for one bird/controller.
+
+Example:
+
+```ts
+const memoryState = createSharedObservationMemoryState();
+```
+
+### resolveTemporalObservationVector
+
+```ts
+resolveTemporalObservationVector(
+  features: SharedObservationFeatures,
+  observationMemoryState: SharedObservationMemoryState,
+): number[]
+```
+
+Builds the temporal policy input vector (stacked observation + action memory).
+
+Educational note:
+This helper turns an interpretable feature object into the exact flat vector a
+feed-forward network consumes. That is why the output layout is documented so
+explicitly: changing the order would change the meaning of every trained
+weight in the policy.
+
+Output layout:
+1) current core observation frame
+2) previous core frames (newest to oldest) with zero padding
+3) last-action channel
+4) recent flap-rate channel over a fixed window
+
+Parameters:
+- `features` - - Structured observation features for the current decision step.
+- `observationMemoryState` - - Mutable temporal memory for the active bird.
+
+Returns: Ordered temporal input vector for policy activation.
+
+### commitSharedObservationMemoryStep
+
+```ts
+commitSharedObservationMemoryStep(
+  observationMemoryState: SharedObservationMemoryState,
+  features: SharedObservationFeatures,
+  didFlap: boolean,
+): void
+```
+
+Commits one observation-action step into temporal memory.
+
+The memory update happens after the decision is made so the next step can see
+both the recent observation context and the action history that produced the
+current trajectory.
+
+Parameters:
+- `observationMemoryState` - - Mutable temporal memory for the active bird.
+- `features` - - Structured observation features used for the decision.
+- `didFlap` - - Decision taken at this step.
+
+Returns: Nothing.
+
+### resolvePreviousCoreFramesWithPadding
+
+```ts
+resolvePreviousCoreFramesWithPadding(
+  observationMemoryState: SharedObservationMemoryState,
+): number[][]
+```
+
+Resolves previous core frames (newest-first) with deterministic zero padding.
+
+Zero padding keeps the policy input width stable during the first few frames
+of an episode before enough history has accumulated.
+
+Parameters:
+- `observationMemoryState` - - Mutable temporal memory for the active bird.
+
+Returns: Previous core frame list with fixed target length.
+
+### resolveZeroCoreObservationFrame
+
+```ts
+resolveZeroCoreObservationFrame(): number[]
+```
+
+Builds a zero-valued core frame with canonical length.
+
+Returns: Zero core frame.
+
+## simulation-shared/simulation-shared.statistics.utils.ts
+
+### computeMean
+
+```ts
+computeMean(
+  values: readonly number[],
+): number
+```
+
+Computes arithmetic mean for numeric samples.
+
+Parameters:
+- `values` - - Numeric samples.
+
+Returns: Arithmetic mean.
+
+### computePopulationStandardDeviation
+
+```ts
+computePopulationStandardDeviation(
+  values: readonly number[],
+  meanValue: number,
+): number
+```
+
+Computes population standard deviation.
+
+This uses population variance rather than sample variance because the trainer
+is summarizing the whole evolved population for that generation, not estimating
+a larger hidden distribution from a subsample.
+
+Parameters:
+- `values` - - Numeric samples.
+- `meanValue` - - Precomputed mean.
+
+Returns: Population standard deviation.
+
+### computePercentile
+
+```ts
+computePercentile(
+  values: readonly number[],
+  percentile: number,
+): number
+```
+
+Computes percentile value via linear interpolation between nearest ranks.
+
+Percentiles are useful in the trainer because they reveal whether strong
+performance is broad across the population or concentrated in a single outlier.
+
+Parameters:
+- `values` - - Numeric samples.
+- `percentile` - - Percentile in [0, 1].
+
+Returns: Percentile value, or `Number.NaN` when `values` is empty.
+
+### compareNumbersAscending
+
+```ts
+compareNumbersAscending(
+  leftValue: number,
+  rightValue: number,
+): number
+```
+
+Compares two numeric values in ascending order.
+
+Parameters:
+- `leftValue` - - Left numeric value.
+- `rightValue` - - Right numeric value.
+
+Returns: Comparator delta for `Array.prototype.toSorted`.
+
+## simulation-shared/simulation-shared.errors.ts
+
+Prefix used when formatting unexpected shared-simulation errors.
+
+A stable prefix makes logs easier to scan when multiple Flappy subsystems are
+emitting diagnostics.
+
+### formatSharedSimulationErrorMessage
+
+```ts
+formatSharedSimulationErrorMessage(
+  error: unknown,
+): string
+```
+
+Formats unknown shared-simulation errors for stable logs.
+
+Shared utilities are used from several runtime contexts, so this helper keeps
+the error surface human-readable even when the thrown value is not an
+`Error` instance.
+
+Parameters:
+- `error` - - Unknown error value.
+
+Returns: Readable error message.
+
+### FLAPPY_SHARED_SIMULATION_ERROR_PREFIX
+
+Prefix used when formatting unexpected shared-simulation errors.
+
+A stable prefix makes logs easier to scan when multiple Flappy subsystems are
+emitting diagnostics.

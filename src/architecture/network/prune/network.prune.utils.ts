@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type { PruningMethod } from '../network.types';
 import {
   buildEvolutionaryPruneSelection,
@@ -37,7 +37,7 @@ import { PRUNING_METHOD_MAGNITUDE } from './network.prune.utils.types';
  *      snip: |w * g| approximation (g approximated via accumulated delta stats; falls back to |w|)
  *  - Optional stochastic regrowth during scheduled pruning (dynamic sparse training), preserving acyclic constraints.
  *
- * Internal State Fields (attached to Network via `any` casting):
+ * Internal state fields (attached to Network through a loose internal bridge):
  *  - _pruningConfig: user-specified schedule & options (start, end, frequency, targetSparsity, method, regrowFraction, lastPruneIter)
  *  - _initialConnectionCount: baseline connection count captured outside (first training iteration)
  *  - _evoInitialConnCount: baseline for evolutionary pruning (first invocation of pruneToSparsity)
@@ -71,14 +71,13 @@ import { PRUNING_METHOD_MAGNITUDE } from './network.prune.utils.types';
  */
 export function maybePrune(this: Network, iteration: number): void {
   // Step 1: Collect required schedule and baseline context.
-  const network = this;
-  const pruningConfig = getPruningConfig(network);
+  const pruningConfig = getPruningConfig(this);
   if (!pruningConfig) return;
 
   // Step 2: Exit early when this iteration is not eligible for pruning.
   if (!shouldRunScheduledPrune(iteration, pruningConfig)) return;
 
-  const initialConnectionBaseline = getInitialConnectionBaseline(network);
+  const initialConnectionBaseline = getInitialConnectionBaseline(this);
   if (!initialConnectionBaseline) return;
 
   // Step 3: Compute current target density and required removals.
@@ -90,7 +89,7 @@ export function maybePrune(this: Network, iteration: number): void {
       targetSparsity: pruningConfig.targetSparsity,
       baselineConnectionCount: initialConnectionBaseline,
     },
-    network.connections.length,
+    this.connections.length,
   );
 
   if (scheduledTarget.excessConnectionCount <= 0) {
@@ -100,15 +99,15 @@ export function maybePrune(this: Network, iteration: number): void {
 
   // Step 4: Select and remove the least important connections.
   const pruneSelection = buildPruneSelection({
-    connections: network.connections,
+    connections: this.connections,
     removalCount: scheduledTarget.excessConnectionCount,
     method: resolvePruningMethod(pruningConfig.method),
   });
 
-  disconnectConnections(network, pruneSelection.connectionsToPrune);
+  disconnectConnections(this, pruneSelection.connectionsToPrune);
 
   // Step 5: Optionally regrow random valid edges.
-  maybeRunRegrowth(network, {
+  maybeRunRegrowth(this, {
     prunedConnectionCount: pruneSelection.connectionsToPrune.length,
     regrowFraction: pruningConfig.regrowFraction,
     desiredRemainingConnections: scheduledTarget.desiredRemainingConnections,
@@ -116,7 +115,7 @@ export function maybePrune(this: Network, iteration: number): void {
 
   // Step 6: Persist bookkeeping for topology and schedule state.
   markPruneIteration(pruningConfig, iteration);
-  markTopologyDirty(network);
+  markTopologyDirty(this);
 }
 
 /**
@@ -134,33 +133,32 @@ export function pruneToSparsity(
   method: PruningMethod = PRUNING_METHOD_MAGNITUDE,
 ): void {
   // Step 1: Normalize user target and short-circuit no-op requests.
-  const network = this;
   const normalizedTargetSparsity =
     normalizeEvolutionaryTargetSparsity(targetSparsity);
   if (normalizedTargetSparsity <= 0) return;
 
   // Step 2: Resolve baseline and compute required removals.
-  const evolutionaryBaseline = getOrCaptureEvolutionaryBaseline(network);
+  const evolutionaryBaseline = getOrCaptureEvolutionaryBaseline(this);
   const evolutionaryTarget = buildEvolutionaryTarget(
     {
       targetSparsity: normalizedTargetSparsity,
       baselineConnectionCount: evolutionaryBaseline,
     },
-    network.connections.length,
+    this.connections.length,
   );
   if (evolutionaryTarget.excessConnectionCount <= 0) return;
 
   // Step 3: Select and remove least important connections.
   const pruneSelection = buildEvolutionaryPruneSelection({
-    connections: network.connections,
+    connections: this.connections,
     removalCount: evolutionaryTarget.excessConnectionCount,
     method,
   });
 
-  disconnectEvolutionaryConnections(network, pruneSelection.connectionsToPrune);
+  disconnectEvolutionaryConnections(this, pruneSelection.connectionsToPrune);
 
   // Step 4: Mark topology cache invalid after structural change.
-  markEvolutionaryTopologyDirty(network);
+  markEvolutionaryTopologyDirty(this);
 }
 
 /**
@@ -170,13 +168,12 @@ export function pruneToSparsity(
  */
 export function getCurrentSparsity(this: Network): number {
   // Step 1: Resolve baseline and return dense default when unavailable.
-  const network = this;
-  const initialBaseline = readInitialSparsityBaseline(network);
+  const initialBaseline = readInitialSparsityBaseline(this);
   if (!initialBaseline) return 0;
 
   // Step 2: Compute current sparsity from baseline.
   return calculateSparsityFromBaseline(
-    network.connections.length,
+    this.connections.length,
     initialBaseline,
   );
 }

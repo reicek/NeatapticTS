@@ -1,7 +1,8 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type Connection from '../../connection';
+import Layer from '../../layer/layer';
 import Node from '../../node';
-import mutation from '../../../methods/mutation';
+import mutation from '../../../methods/mutation/mutation';
 import { config } from '../../../config';
 import type {
   BackwardCandidateTraversalContext,
@@ -12,9 +13,7 @@ import type {
   DistinctNodePair,
   ForwardCandidateTraversalContext,
   InputOutputEndpoints,
-  MutationHandler,
   MutationMethod,
-  MutationMethodObject,
   NetworkMutationProps,
   NodePair,
   RecurrentLayerShape,
@@ -27,7 +26,6 @@ import {
   DEFAULT_MUTATION_MAX,
   DEFAULT_MUTATION_MIN,
   GATE_REASSIGN_THRESHOLD,
-  LAYER_MODULE_PATH,
   MIN_REDUNDANT_CONNECTION_COUNT,
   MIN_SWAPPABLE_NODE_COUNT,
   NODE_TYPE_HIDDEN,
@@ -287,7 +285,7 @@ function addNodeDeterministicChain(
  *
  * @param network - Target network.
  * @param mutationProps - Runtime mutation props.
- * @returns Deterministic context or undefined when any prerequisite fails.
+ * @returns Deterministic context or undefined when one or more prerequisites fail.
  */
 function resolveDeterministicChainMutationContext(
   network: Network,
@@ -767,22 +765,6 @@ function createForwardCandidateTraversalContext(
     sourceNode,
     targetStartIndex,
   };
-}
-
-/**
- * Appends forward candidates for a single source-node traversal context.
- *
- * @param traversalContext - Source traversal context.
- * @param forwardConnectionCandidates - Collector array.
- * @returns Nothing.
- */
-function appendForwardCandidatesForSource(
-  traversalContext: ForwardCandidateTraversalContext,
-  forwardConnectionCandidates: NodePair[],
-): void {
-  forwardConnectionCandidates.push(
-    ...collectForwardCandidatesForSource(traversalContext),
-  );
 }
 
 /**
@@ -1575,22 +1557,6 @@ function createBackwardCandidateTraversalContext(
 }
 
 /**
- * Appends backward candidates for one later-node traversal context.
- *
- * @param traversalContext - Later-node traversal context.
- * @param backwardConnectionCandidates - Collector array.
- * @returns Nothing.
- */
-function appendBackwardCandidatesForLaterNode(
-  traversalContext: BackwardCandidateTraversalContext,
-  backwardConnectionCandidates: NodePair[],
-): void {
-  backwardConnectionCandidates.push(
-    ...collectBackwardCandidatesForLaterNode(traversalContext),
-  );
-}
-
-/**
  * Collects all backward candidates for one later-node traversal context.
  *
  * @param traversalContext - Later-node traversal context.
@@ -1999,12 +1965,19 @@ function tryGateLatestConnection(
 function createRecurrentLayer(
   blockType: typeof RECURRENT_BLOCK_LSTM | typeof RECURRENT_BLOCK_GRU,
 ): RecurrentLayerShape {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Layer = require(LAYER_MODULE_PATH).default;
-  if (blockType === RECURRENT_BLOCK_LSTM) {
-    return Layer.lstm(SINGLE_UNIT_RECURRENT_BLOCK_WIDTH);
+  const recurrentLayer =
+    blockType === RECURRENT_BLOCK_LSTM
+      ? Layer.lstm(SINGLE_UNIT_RECURRENT_BLOCK_WIDTH)
+      : Layer.gru(SINGLE_UNIT_RECURRENT_BLOCK_WIDTH);
+
+  if (!recurrentLayer.output || !Array.isArray(recurrentLayer.output.nodes)) {
+    throw new Error('Recurrent layer output was not initialized.');
   }
-  return Layer.gru(SINGLE_UNIT_RECURRENT_BLOCK_WIDTH);
+
+  if (blockType === RECURRENT_BLOCK_LSTM) {
+    return recurrentLayer as RecurrentLayerShape;
+  }
+  return recurrentLayer as RecurrentLayerShape;
 }
 
 /**

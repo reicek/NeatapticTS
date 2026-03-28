@@ -1,4 +1,4 @@
-import mutation from '../../../methods/mutation';
+import mutation from '../../../methods/mutation/mutation';
 import { config } from '../../../config';
 import type { MutationMethod, MutationMethodObject } from '../network.types';
 import { UNKNOWN_MUTATION_WARNING_PREFIX } from './network.mutate.utils.types';

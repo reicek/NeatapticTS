@@ -1,5 +1,15 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type Node from '../../node';
+import {
+  getTopologyIntent,
+  setEnforceAcyclic,
+  setTopologyIntent,
+} from './network.topology.contract.utils';
+export {
+  getTopologyIntent,
+  setEnforceAcyclic,
+  setTopologyIntent,
+} from './network.topology.contract.utils';
 export {
   createMLP,
   rebuildConnections,
@@ -29,6 +39,7 @@ import {
  * Provides:
  *  - computeTopoOrder: Kahn-style topological sorting with graceful fallback when cycles detected.
  *  - hasPath: depth-first reachability query (used to prevent cycle introduction when acyclicity enforced).
+ *  - topology contract helpers: public intent accessors that keep semantic API state aligned with low-level runtime flags.
  *
  * Design Notes:
  *  - We deliberately tolerate cycles by falling back to raw node ordering instead of throwing; this
@@ -67,7 +78,6 @@ export function computeTopoOrder(this: Network): void {
 }
 
 /** Depth-first reachability test (avoids infinite loops via visited set). */
-// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function hasPath(this: Network, from: Node, to: Node): boolean {
   // Step 1: Handle trivial reachability.
   if (isSameNode(from, to)) {
@@ -79,4 +89,10 @@ export function hasPath(this: Network, from: Node, to: Node): boolean {
   return traversePathSearch(searchContext);
 }
 
-export default { computeTopoOrder, hasPath };
+export default {
+  computeTopoOrder,
+  getTopologyIntent,
+  hasPath,
+  setEnforceAcyclic,
+  setTopologyIntent,
+};

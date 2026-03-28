@@ -1,5 +1,7 @@
 # Browser Build + CDN Distribution Plan
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Make NeatapticTS effortless to use in the browser:

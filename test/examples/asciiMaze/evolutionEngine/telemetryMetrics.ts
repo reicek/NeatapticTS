@@ -6,7 +6,7 @@
  * internal error is swallowed so that logging never impacts the evolution loop.
  */
 import type { Neat, Network } from '../../../../src/neataptic';
-import type { GenomeDetailed } from '../../../../src/neat/neat.types';
+import type { GenomeDetailed } from '../../../../src/neat/shared/neat.shared.types';
 import type { EngineState } from './engineState.types';
 import type {
   EvolutionGenomeLike,
@@ -84,6 +84,10 @@ type TelemetryWriter = (message: string) => void;
 interface GenerationResult {
   /** Path taken by the agent (array of [x, y] coordinate pairs). */
   path?: ReadonlyArray<[number, number]>;
+  /** Progress score accumulated during the run. */
+  progress?: number;
+  /** Fraction of the maze saturation reached during the run. */
+  saturationFraction?: number;
 }
 
 /**
@@ -524,12 +528,10 @@ const computeExplorationStats = (
   }
 
   // Step 2: Choose the most efficient distinct-coordinate counter based on path length.
-  let unique = 0;
-  if (pathLength < 32) {
-    unique = countDistinctCoordinatesTiny(state, path!, pathLength);
-  } else {
-    unique = countDistinctCoordinatesHashed(state, path!, pathLength);
-  }
+  const unique =
+    pathLength < 32
+      ? countDistinctCoordinatesTiny(state, path!, pathLength)
+      : countDistinctCoordinatesHashed(state, path!, pathLength);
 
   // Step 3: Aggregate the summary metrics while keeping floating-point ratios guarded.
   return {
@@ -707,12 +709,16 @@ const computeDiversityMetrics = (
   let weightMean = 0;
   let weightM2 = 0;
   let enabledWeights = 0;
-  const sampleBuffer = state.scratch.samplePool ?? EMPTY_VECTOR;
   for (let sampleIndex = 0; sampleIndex < sampledLength; sampleIndex++) {
-    const genome = sampleBuffer[sampleIndex] as GenomeDetailed | undefined;
-    const connections = Array.isArray(genome?.connections)
-      ? genome.connections
-      : EMPTY_VECTOR;
+    const genome = state.scratch.samplePool[sampleIndex] as
+      | GenomeDetailed
+      | undefined;
+    const connections = (
+      Array.isArray(genome?.connections) ? genome.connections : EMPTY_VECTOR
+    ) as Array<{
+      enabled?: boolean;
+      weight?: number;
+    }>;
     for (
       let connectionIndex = 0;
       connectionIndex < connections.length;
@@ -859,15 +865,16 @@ const computeLogitStats = ({
 
   resetLogitScratch(state, actionDimension, reducedTelemetry);
 
-  let entropySum = 0;
+  const entropySum = reducedTelemetry
+    ? accumulateLogitStatsReduced(state, recent, actionDimension)
+    : actionDimension === 4
+      ? accumulateLogitStatsUnrolled4(state, recent, recent.length)
+      : accumulateLogitStatsGeneric(state, recent, actionDimension);
   if (reducedTelemetry) {
-    entropySum = accumulateLogitStatsReduced(state, recent, actionDimension);
     finalizeLogitStatsReduced(state, actionDimension, recent.length);
   } else if (actionDimension === 4) {
-    entropySum = accumulateLogitStatsUnrolled4(state, recent, recent.length);
     finalizeLogitStatsFull(state, actionDimension, recent.length);
   } else {
-    entropySum = accumulateLogitStatsGeneric(state, recent, actionDimension);
     finalizeLogitStatsFull(state, actionDimension, recent.length);
   }
 
@@ -1356,7 +1363,7 @@ const computeDecisionStability = (
   for (let rowIndex = 0; rowIndex < sequenceLength; rowIndex++) {
     const row = recent[rowIndex];
     if (!row || row.length === 0) continue;
-    let argmax = 0;
+    let argmax: number;
     if (unrolled && row.length >= 4) {
       let bestValue = row[0] ?? 0;
       argmax = 0;

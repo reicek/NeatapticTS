@@ -76,6 +76,7 @@ export interface EvolutionGenerationPayload {
   generation: number;
   bestFitness: number;
   bestNetworkJson?: SerializedNetwork;
+  populationNetworksJson?: SerializedNetwork[];
 }
 
 /** Worker message emitted when a generation has completed evolving. */

@@ -13,7 +13,9 @@ import {
   applyPlaybackSnapshot,
   resolveLeaderFramesSurvived,
 } from './playback.snapshot.utils';
+import { resolveChampionBirdIndex } from './playback.render.utils';
 import type {
+  PlaybackChampionChangedEvent,
   PlaybackIterationContext,
   PlaybackLoopState,
   PlaybackSessionContext,
@@ -62,6 +64,9 @@ export async function runPlaybackIteration(
     iterationContext.sessionContext,
     playbackStepPayload.snapshot,
   );
+
+  // Step 2.1: Notify runtime consumers when the red-bird champion changes.
+  emitChampionChangedEvent(iterationContext);
 
   // Step 3: Resolve telemetry metrics and emit the frame stats callback.
   emitPlaybackFrameStats(iterationContext, playbackStepPayload);
@@ -126,6 +131,65 @@ export function applyPlaybackStepSnapshot(
 
   // Step 2: Refresh the bird trail cache from the updated render state.
   updateTrailState(sessionContext.trailState, sessionContext.renderState);
+}
+
+/**
+ * Emits a champion-changed event when the red-bird champion changes.
+ *
+ * The detector compares the newly resolved champion bird index against the
+ * previously displayed champion index. This keeps the side panel aligned with
+ * the red bird even when leadership changes because the old champion dies.
+ *
+ * @param iterationContext - Shared loop dependencies and mutable playback state.
+ * @returns Nothing.
+ */
+export function emitChampionChangedEvent(
+  iterationContext: PlaybackIterationContext,
+): void {
+  // Step 1: Resolve the current frame champion from the latest snapshot.
+  const { renderState, loopState } = iterationContext.sessionContext;
+  const championBirdIndex = resolveChampionBirdIndex(renderState);
+
+  // Step 2: Skip notification when no active champion is available.
+  if (championBirdIndex < 0) {
+    loopState.currentChampionBirdIndex = championBirdIndex;
+    return;
+  }
+
+  // Step 3: Emit only when the champion index changes from the last snapshot.
+  if (championBirdIndex !== loopState.currentChampionBirdIndex) {
+    emitPlaybackChampionChanged(
+      iterationContext.onChampionChanged,
+      championBirdIndex,
+    );
+  }
+
+  // Step 4: Persist the current champion index for the next comparison.
+  loopState.currentChampionBirdIndex = championBirdIndex;
+}
+
+/**
+ * Calls the optional playback champion-changed callback with a structured payload.
+ *
+ * @param onChampionChanged - Optional runtime callback.
+ * @param championBirdIndex - Current champion bird index.
+ * @returns Nothing.
+ */
+function emitPlaybackChampionChanged(
+  onChampionChanged:
+    | ((event: PlaybackChampionChangedEvent) => void)
+    | undefined,
+  championBirdIndex: number,
+): void {
+  // Step 1: Skip work when no runtime callback was provided.
+  if (!onChampionChanged) {
+    return;
+  }
+
+  // Step 2: Publish the structured champion-changed event.
+  onChampionChanged({
+    championBirdIndex,
+  });
 }
 
 /**

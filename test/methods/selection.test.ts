@@ -1,4 +1,4 @@
-import { selection } from '../../src/methods/selection';
+import { selection } from '../../src/methods/selection/selection';
 
 describe('Selection Methods', () => {
   describe('FITNESS_PROPORTIONATE', () => {

@@ -1,70 +1,119 @@
 # architecture/network/standalone
 
-## architecture/network/standalone/network.standalone.utils.types.ts
-
-### network.standalone.utils.types
-
 Output node discriminator used for standalone precondition checks.
 
-### ACTIVATION_PRECISION_F32
-
-### ARROW_TOKEN
-
-### BUILTIN_ACTIVATION_SNIPPETS
-
-### COVERAGE_CALL_REGEX
-
-### COVERAGE_COUNTER_REGEX
-
-### COVERAGE_REPLACEMENT
-
-### EMPTY_TOKEN_REGEX
-
-### FALLBACK_IDENTITY_BODY
-
-### FLOAT32_ARRAY_TYPE
-
-### FLOAT64_ARRAY_TYPE
-
-### FUNCTION_PREFIX
-
-### INPUT_LOOP_LINE
-
-### INVALID_INPUT_SIZE_ERROR_MIDDLE
-
-### INVALID_INPUT_SIZE_ERROR_PREFIX
-
-### ISTANBUL_IGNORE_BLOCK_REGEX
-
-### MASK_MULTIPLIER_IDENTITY
-
-### NO_OUTPUT_NODES_ERROR
+## architecture/network/standalone/network.standalone.utils.types.ts
 
 ### OUTPUT_NODE_TYPE
 
-### REPEATED_SEMICOLON_REGEX
+Output node discriminator used for standalone precondition checks.
 
 ### SINGLE_TERM_FALLBACK
 
-### SOLITARY_SEMICOLON_REGEX
+Fallback literal used when a node has no incoming terms.
+
+### MASK_MULTIPLIER_IDENTITY
+
+Multiplicative identity used to omit redundant mask expressions.
+
+### INPUT_LOOP_LINE
+
+Generated source line for copying external inputs into activation buffer.
+
+### ACTIVATION_PRECISION_F32
+
+Precision token selecting Float32 activation/state buffers.
+
+### FLOAT32_ARRAY_TYPE
+
+Typed-array constructor names used in generated source.
+
+### FLOAT64_ARRAY_TYPE
+
+Typed-array constructor names used in generated source.
+
+### FUNCTION_PREFIX
+
+Prefix token used when normalizing function sources.
+
+### ARROW_TOKEN
+
+Arrow token used during function-source normalization.
+
+### FALLBACK_IDENTITY_BODY
+
+Identity-function fallback body for invalid custom squash sources.
+
+### COVERAGE_REPLACEMENT
+
+Empty replacement used while stripping coverage artifacts.
+
+### NO_OUTPUT_NODES_ERROR
+
+Error message when attempting standalone generation without outputs.
+
+### INVALID_INPUT_SIZE_ERROR_PREFIX
+
+Input-size validation message fragments for generated activate guards.
+
+### INVALID_INPUT_SIZE_ERROR_MIDDLE
+
+Input-size validation message fragments for generated activate guards.
+
+### ISTANBUL_IGNORE_BLOCK_REGEX
+
+Regex stripping Istanbul ignore blocks from stringified functions.
+
+### COVERAGE_COUNTER_REGEX
+
+Regex stripping Istanbul counters from stringified functions.
+
+### COVERAGE_CALL_REGEX
+
+Regex stripping Istanbul function invocations from source snippets.
 
 ### SOURCE_MAP_REGEX
 
-### StandaloneSquashFunction
-
-`(inputValue: number, derivate: boolean | undefined) => number`
-
-Activation function shape used by standalone source generation helpers.
-
-### STRAY_COMMA_CLOSE_REGEX
+Regex stripping sourceMappingURL comments from generated snippets.
 
 ### STRAY_COMMA_OPEN_REGEX
 
+Regex normalizing stray commas near opening parentheses.
+
+### STRAY_COMMA_CLOSE_REGEX
+
+Regex normalizing stray commas near closing parentheses.
+
+### SOLITARY_SEMICOLON_REGEX
+
+Regex removing solitary semicolon lines created by instrumentation.
+
+### REPEATED_SEMICOLON_REGEX
+
+Regex collapsing repeated semicolons.
+
+### EMPTY_TOKEN_REGEX
+
+Regex removing empty punctuation-only token lines.
+
+### BUILTIN_ACTIVATION_SNIPPETS
+
+Built-in activation snippets emitted as named JavaScript function declarations.
+
+Values are intentionally compact so emitted standalone source remains deterministic and small.
+
+### StandaloneSquashFunction
+
+```ts
+StandaloneSquashFunction(
+  inputValue: number,
+  derivate: boolean | undefined,
+): number
+```
+
+Activation function shape used by standalone source generation helpers.
+
 ## architecture/network/standalone/network.standalone.utils.ts
-
-### generateStandalone
-
-`(net: import("src/architecture/network").default) => string`
 
 Standalone forward pass code generator.
 
@@ -92,36 +141,41 @@ Not Supported / Simplifications:
  - Assumes all node indices are stable and sequential (enforced prior to generation).
  - Gradient / backprop logic intentionally omitted (forward inference only).
 
+### generateStandalone
+
+```ts
+generateStandalone(
+  net: default,
+): string
+```
+
+Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.
+
+Implementation Steps:
+ 1. Validate presence of output nodes (must produce something observable).
+ 2. Assign stable sequential indices to nodes (used as array offsets in generated code).
+ 3. Collect initial activation/state values into typed array initializers for warm starting.
+ 4. For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
+    (post-activation output). Gating multiplies activation by gate activations; self-connection adds
+    recurrent term S[i] * weight before activation.
+ 5. De-duplicate activation functions: each unique squash name is emitted once; references become
+    indices into array F of function references for compactness.
+ 6. Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).
+
+Parameters:
+- `net` - Network instance to snapshot.
+
+Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.
+
 ## architecture/network/standalone/network.standalone.utils.loop.ts
-
-### appendActivationLine
-
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number, activationFunctionIndex: number, maskValue: number) => void`
-
-Append generated activation assignment line for one node.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-- `nodeTraversalIndex` - Node index.
-- `activationFunctionIndex` - Function table index.
-- `maskValue` - Multiplicative mask.
-
-Returns: Void.
-
-### appendAllNodeComputationLines
-
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => void`
-
-Append compute lines for all non-input nodes.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-
-Returns: Void.
 
 ### appendInputSeedLine
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => void`
+```ts
+appendInputSeedLine(
+  generationContext: StandaloneGenerationContext,
+): void
+```
 
 Append the generated input-copy loop to the standalone body.
 
@@ -130,9 +184,29 @@ Parameters:
 
 Returns: Void.
 
+### appendAllNodeComputationLines
+
+```ts
+appendAllNodeComputationLines(
+  generationContext: StandaloneGenerationContext,
+): void
+```
+
+Append compute lines for all non-input nodes.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+
+Returns: Void.
+
 ### appendOutputReturnLine
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, outputIndexes: number[]) => void`
+```ts
+appendOutputReturnLine(
+  generationContext: StandaloneGenerationContext,
+  outputIndexes: number[],
+): void
+```
 
 Append generated return line for output activations.
 
@@ -144,7 +218,12 @@ Returns: Void.
 
 ### appendSingleNodeComputationLines
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number) => void`
+```ts
+appendSingleNodeComputationLines(
+  generationContext: StandaloneGenerationContext,
+  nodeTraversalIndex: number,
+): void
+```
 
 Append state and activation lines for one node.
 
@@ -156,7 +235,14 @@ Returns: Void.
 
 ### appendStateLine
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, nodeTraversalIndex: number, sumExpression: string, biasValue: number) => void`
+```ts
+appendStateLine(
+  generationContext: StandaloneGenerationContext,
+  nodeTraversalIndex: number,
+  sumExpression: string,
+  biasValue: number,
+): void
+```
 
 Append generated state assignment line for one node.
 
@@ -168,9 +254,34 @@ Parameters:
 
 Returns: Void.
 
+### appendActivationLine
+
+```ts
+appendActivationLine(
+  generationContext: StandaloneGenerationContext,
+  nodeTraversalIndex: number,
+  activationFunctionIndex: number,
+  maskValue: number,
+): void
+```
+
+Append generated activation assignment line for one node.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+- `nodeTraversalIndex` - Node index.
+- `activationFunctionIndex` - Function table index.
+- `maskValue` - Multiplicative mask.
+
+Returns: Void.
+
 ### buildMaskSuffix
 
-`(maskValue: number) => string`
+```ts
+buildMaskSuffix(
+  maskValue: number,
+): string
+```
 
 Build optional activation mask suffix for generated assignment line.
 
@@ -181,21 +292,14 @@ Returns: Empty suffix for identity, otherwise multiplicative fragment.
 
 ## architecture/network/standalone/network.standalone.utils.graph.ts
 
-### appendGateMultiplier
-
-`(connectionTerm: string, gateNode: import("src/architecture/node").default | null) => string`
-
-Append a gate activation multiplier to a connection term when a gate exists.
-
-Parameters:
-- `connectionTerm` - Base connection term.
-- `gateNode` - Optional gate node.
-
-Returns: Term with optional gate multiplier.
-
 ### buildNodeSumExpression
 
-`(currentNode: import("src/architecture/node").default, nodeTraversalIndex: number) => string`
+```ts
+buildNodeSumExpression(
+  currentNode: default,
+  nodeTraversalIndex: number,
+): string
+```
 
 Build the pre-activation sum expression for one node.
 
@@ -205,20 +309,13 @@ Parameters:
 
 Returns: String expression used for generated `S[index]` assignment.
 
-### collectIncomingTerms
-
-`(currentNode: import("src/architecture/node").default) => string[]`
-
-Collect feed-forward inbound connection terms for a node.
-
-Parameters:
-- `currentNode` - Current node.
-
-Returns: Weighted term expressions.
-
 ### collectOutputIndexes
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => number[]`
+```ts
+collectOutputIndexes(
+  generationContext: StandaloneGenerationContext,
+): number[]
+```
 
 Collect output node indexes from the output tail segment.
 
@@ -227,9 +324,44 @@ Parameters:
 
 Returns: Output indexes used for result array emission.
 
+### formatOutputArrayValues
+
+```ts
+formatOutputArrayValues(
+  outputIndexes: number[],
+): string
+```
+
+Format output activation selectors for generated return expression.
+
+Parameters:
+- `outputIndexes` - Output node indexes.
+
+Returns: Comma-separated `A[index]` selector list.
+
+### collectIncomingTerms
+
+```ts
+collectIncomingTerms(
+  currentNode: default,
+): string[]
+```
+
+Collect feed-forward inbound connection terms for a node.
+
+Parameters:
+- `currentNode` - Current node.
+
+Returns: Weighted term expressions.
+
 ### collectSelfConnectionTerms
 
-`(currentNode: import("src/architecture/node").default, nodeTraversalIndex: number) => string[]`
+```ts
+collectSelfConnectionTerms(
+  currentNode: default,
+  nodeTraversalIndex: number,
+): string[]
+```
 
 Collect recurrent self-connection term for a node when present.
 
@@ -239,31 +371,30 @@ Parameters:
 
 Returns: Zero or one recurrent term expressions.
 
-### foldTermsIntoExpression
+### appendGateMultiplier
 
-`(allTerms: string[]) => string`
+```ts
+appendGateMultiplier(
+  connectionTerm: string,
+  gateNode: default | null,
+): string
+```
 
-Fold a term collection into a summation expression.
-
-Parameters:
-- `allTerms` - Term collection.
-
-Returns: Summation expression or fallback zero literal.
-
-### formatOutputArrayValues
-
-`(outputIndexes: number[]) => string`
-
-Format output activation selectors for generated return expression.
+Append a gate activation multiplier to a connection term when a gate exists.
 
 Parameters:
-- `outputIndexes` - Output node indexes.
+- `connectionTerm` - Base connection term.
+- `gateNode` - Optional gate node.
 
-Returns: Comma-separated `A[index]` selector list.
+Returns: Term with optional gate multiplier.
 
 ### getOptionalNodeIndex
 
-`(nodeReference: import("src/architecture/node").default | null) => number | undefined`
+```ts
+getOptionalNodeIndex(
+  nodeReference: default | null,
+): number | undefined
+```
 
 Resolve optional generated node index from a node reference.
 
@@ -274,7 +405,12 @@ Returns: Node index when available.
 
 ### mergeTermCollections
 
-`(firstTerms: string[], secondTerms: string[]) => string[]`
+```ts
+mergeTermCollections(
+  firstTerms: string[],
+  secondTerms: string[],
+): string[]
+```
 
 Merge two term lists into a single ordered list.
 
@@ -284,11 +420,30 @@ Parameters:
 
 Returns: Combined term collection.
 
+### foldTermsIntoExpression
+
+```ts
+foldTermsIntoExpression(
+  allTerms: string[],
+): string
+```
+
+Fold a term collection into a summation expression.
+
+Parameters:
+- `allTerms` - Term collection.
+
+Returns: Summation expression or fallback zero literal.
+
 ## architecture/network/standalone/network.standalone.utils.setup.ts
 
 ### asStandaloneProps
 
-`(net: import("src/architecture/network").default) => import("src/architecture/network/network.types").NetworkStandaloneProps`
+```ts
+asStandaloneProps(
+  net: default,
+): NetworkStandaloneProps
+```
 
 Cast a network instance to the internal standalone generation view.
 
@@ -297,20 +452,13 @@ Parameters:
 
 Returns: Internal network properties used by the standalone generator.
 
-### createGenerationContext
-
-`(standaloneProps: import("src/architecture/network/network.types").NetworkStandaloneProps) => import("src/architecture/network/network.types").StandaloneGenerationContext`
-
-Create a fresh generation context used across orchestration steps.
-
-Parameters:
-- `standaloneProps` - Internal standalone network view.
-
-Returns: Initialized generation context.
-
 ### ensureOutputNodesExist
 
-`(standaloneProps: import("src/architecture/network/network.types").NetworkStandaloneProps) => void`
+```ts
+ensureOutputNodesExist(
+  standaloneProps: NetworkStandaloneProps,
+): void
+```
 
 Validate that the network has at least one output node.
 
@@ -319,9 +467,28 @@ Parameters:
 
 Returns: Void.
 
+### createGenerationContext
+
+```ts
+createGenerationContext(
+  standaloneProps: NetworkStandaloneProps,
+): StandaloneGenerationContext
+```
+
+Create a fresh generation context used across orchestration steps.
+
+Parameters:
+- `standaloneProps` - Internal standalone network view.
+
+Returns: Initialized generation context.
+
 ### seedNodeIndexesAndState
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => void`
+```ts
+seedNodeIndexesAndState(
+  generationContext: StandaloneGenerationContext,
+): void
+```
 
 Seed index, activation, and state arrays from network nodes.
 
@@ -334,7 +501,11 @@ Returns: Void.
 
 ### stripCoverage
 
-`(code: string) => string`
+```ts
+stripCoverage(
+  code: string,
+): string
+```
 
 Remove instrumentation artifacts and formatting detritus from function sources.
 
@@ -347,7 +518,11 @@ Returns: Cleaned source text suitable for deterministic standalone emission.
 
 ### assembleStandaloneSource
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => string`
+```ts
+assembleStandaloneSource(
+  generationContext: StandaloneGenerationContext,
+): string
+```
 
 Assemble the final standalone IIFE source string.
 
@@ -358,7 +533,11 @@ Returns: Final generated source string.
 
 ### buildActivationArrayLiteral
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => string`
+```ts
+buildActivationArrayLiteral(
+  generationContext: StandaloneGenerationContext,
+): string
+```
 
 Build deterministic activation function array literal by function index ordering.
 
@@ -367,20 +546,13 @@ Parameters:
 
 Returns: Comma-separated activation function names.
 
-### buildInputGuardLine
-
-`(expectedInputSize: number) => string`
-
-Build generated input length guard line.
-
-Parameters:
-- `expectedInputSize` - Required input vector size.
-
-Returns: Guard statement line including trailing newline.
-
 ### resolveActivationArrayType
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext) => string`
+```ts
+resolveActivationArrayType(
+  generationContext: StandaloneGenerationContext,
+): string
+```
 
 Resolve typed-array constructor name based on configured activation precision.
 
@@ -389,23 +561,50 @@ Parameters:
 
 Returns: Constructor name used in generated source.
 
-## architecture/network/standalone/network.standalone.utils.activation.ts
+### buildInputGuardLine
 
-### convertArrowToNamedFunction
+```ts
+buildInputGuardLine(
+  expectedInputSize: number,
+): string
+```
 
-`(sourceCode: string, squashName: string) => string`
-
-Convert an arrow-function source string into a named function declaration source.
+Build generated input length guard line.
 
 Parameters:
-- `sourceCode` - Arrow-function source.
-- `squashName` - Required function name.
+- `expectedInputSize` - Required input vector size.
 
-Returns: Named function source.
+Returns: Guard statement line including trailing newline.
+
+## architecture/network/standalone/network.standalone.utils.activation.ts
+
+### resolveSquashName
+
+```ts
+resolveSquashName(
+  currentNode: default,
+  nodeTraversalIndex: number,
+): string
+```
+
+Resolve a stable activation function name for emission.
+
+Parameters:
+- `currentNode` - Current node.
+- `nodeTraversalIndex` - Node index for anonymous-name fallback.
+
+Returns: Activation function identifier.
 
 ### ensureActivationFunctionIndex
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, squashName: string, squashFunction: import("src/architecture/network/standalone/network.standalone.utils.types").StandaloneSquashFunction, nodeTraversalIndex: number) => number`
+```ts
+ensureActivationFunctionIndex(
+  generationContext: StandaloneGenerationContext,
+  squashName: string,
+  squashFunction: StandaloneSquashFunction,
+  nodeTraversalIndex: number,
+): number
+```
 
 Ensure an activation function is registered and return its table index.
 
@@ -417,43 +616,33 @@ Parameters:
 
 Returns: Activation function index within generated `F` array.
 
-### ensureNamedFunctionSource
+### resolveActivationFunctionSource
 
-`(sourceCode: string, squashName: string) => string`
+```ts
+resolveActivationFunctionSource(
+  squashName: string,
+  squashFunction: StandaloneSquashFunction,
+  nodeTraversalIndex: number,
+): string
+```
 
-Ensure generated function source starts with the required named signature.
-
-Parameters:
-- `sourceCode` - Function source.
-- `squashName` - Required function name.
-
-Returns: Named function source.
-
-### normalizeArrowBody
-
-`(bodySegment: string) => string`
-
-Normalize arrow body into a function-body block.
+Resolve emitted source for built-in or custom activation functions.
 
 Parameters:
-- `bodySegment` - Raw arrow body segment.
+- `squashName` - Activation function name.
+- `squashFunction` - Activation function implementation.
+- `nodeTraversalIndex` - Current node index for fallback flow.
 
-Returns: Function body block string.
-
-### normalizeArrowParameters
-
-`(parameterSegment: string) => string`
-
-Normalize arrow parameter segment into comma-separated parameter list content.
-
-Parameters:
-- `parameterSegment` - Raw arrow parameter segment.
-
-Returns: Parameter list body (without surrounding parentheses).
+Returns: Named function source string.
 
 ### normalizeBuiltinSource
 
-`(sourceCode: string, squashName: string) => string`
+```ts
+normalizeBuiltinSource(
+  sourceCode: string,
+  squashName: string,
+): string
+```
 
 Normalize built-in activation source to a named function and strip coverage artifacts.
 
@@ -465,7 +654,13 @@ Returns: Cleaned named function source.
 
 ### normalizeCustomSource
 
-`(sourceCode: string, squashName: string, nodeTraversalIndex: number) => string`
+```ts
+normalizeCustomSource(
+  sourceCode: string,
+  squashName: string,
+  nodeTraversalIndex: number,
+): string
+```
 
 Normalize custom activation source with function/arrow/fallback handling.
 
@@ -476,9 +671,79 @@ Parameters:
 
 Returns: Cleaned named function source.
 
+### ensureNamedFunctionSource
+
+```ts
+ensureNamedFunctionSource(
+  sourceCode: string,
+  squashName: string,
+): string
+```
+
+Ensure generated function source starts with the required named signature.
+
+Parameters:
+- `sourceCode` - Function source.
+- `squashName` - Required function name.
+
+Returns: Named function source.
+
+### convertArrowToNamedFunction
+
+```ts
+convertArrowToNamedFunction(
+  sourceCode: string,
+  squashName: string,
+): string
+```
+
+Convert an arrow-function source string into a named function declaration source.
+
+Parameters:
+- `sourceCode` - Arrow-function source.
+- `squashName` - Required function name.
+
+Returns: Named function source.
+
+### normalizeArrowParameters
+
+```ts
+normalizeArrowParameters(
+  parameterSegment: string,
+): string
+```
+
+Normalize arrow parameter segment into comma-separated parameter list content.
+
+Parameters:
+- `parameterSegment` - Raw arrow parameter segment.
+
+Returns: Parameter list body (without surrounding parentheses).
+
+### normalizeArrowBody
+
+```ts
+normalizeArrowBody(
+  bodySegment: string,
+): string
+```
+
+Normalize arrow body into a function-body block.
+
+Parameters:
+- `bodySegment` - Raw arrow body segment.
+
+Returns: Function body block string.
+
 ### registerActivationFunction
 
-`(generationContext: import("src/architecture/network/network.types").StandaloneGenerationContext, squashName: string, functionSource: string) => void`
+```ts
+registerActivationFunction(
+  generationContext: StandaloneGenerationContext,
+  squashName: string,
+  functionSource: string,
+): void
+```
 
 Register a function source and allocate its numeric index.
 
@@ -488,28 +753,3 @@ Parameters:
 - `functionSource` - Named function source to store.
 
 Returns: Void.
-
-### resolveActivationFunctionSource
-
-`(squashName: string, squashFunction: import("src/architecture/network/standalone/network.standalone.utils.types").StandaloneSquashFunction, nodeTraversalIndex: number) => string`
-
-Resolve emitted source for built-in or custom activation functions.
-
-Parameters:
-- `squashName` - Activation function name.
-- `squashFunction` - Activation function implementation.
-- `nodeTraversalIndex` - Current node index for fallback flow.
-
-Returns: Named function source string.
-
-### resolveSquashName
-
-`(currentNode: import("src/architecture/node").default, nodeTraversalIndex: number) => string`
-
-Resolve a stable activation function name for emission.
-
-Parameters:
-- `currentNode` - Current node.
-- `nodeTraversalIndex` - Node index for anonymous-name fallback.
-
-Returns: Activation function identifier.

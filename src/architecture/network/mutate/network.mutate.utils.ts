@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type { MutationHandler, MutationMethod } from '../network.types';
 import {
   resolveMutationKey,

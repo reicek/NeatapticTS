@@ -14,9 +14,24 @@ import type {
 /**
  * Top-level responsive sizing orchestration for the browser host.
  *
- * This module wires the host resize lifecycle together: gather the relevant DOM
- * elements, run the initial layout pass, and keep canvas sizing synchronized with
- * viewport changes over time.
+ * The resize boundary keeps one educational promise intact: the browser demo
+ * should still read like one coherent instrument panel even as the viewport
+ * shifts from desktop to narrow mobile layouts. That means sizing is not just a
+ * cosmetic concern. It decides whether the simulation canvas, HUD table, and
+ * network panel remain readable together.
+ *
+ * This module owns that policy at the top level: measure the current host,
+ * choose the appropriate layout mode, resize canvases, and schedule any network
+ * redraws needed after the geometry changes.
+ *
+ * Layout decision flow:
+ * ```mermaid
+ * flowchart LR
+ *     Measure["measure container"] --> Decide{"minimal mobile\nlayout?"}
+ *     Decide -->|Yes| Mobile["apply minimal mobile layout"]
+ *     Decide -->|No| Standard["apply standard split layout"]
+ *     Standard --> Resize["resize simulation + network canvases"]
+ * ```
  */
 
 /**

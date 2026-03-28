@@ -1,6 +1,31 @@
 # environment
 
+Canonical world-state contract for one Flappy Bird episode.
+
+This file is the environment chapter's conceptual starting point because it
+names the pieces that every other environment helper manipulates: the bird,
+the pipe field, the episode clock, and the termination reason.
+
+Read this boundary as the simulation's truth surface. Evaluation uses it to
+score policies, the trainer uses it to compare genomes fairly, and browser
+playback-related tooling depends on it staying compact and deterministic.
+
+The important design choice is restraint. The environment keeps only the
+state needed to advance one episode correctly. It does not store DOM-facing
+data, worker transport payloads, or trainer policy metadata. That smaller
+contract is what makes deterministic stepping and reward debugging practical.
+
 ## environment/environment.types.ts
+
+### FlappyPipe
+
+Pipe obstacle definition.
+
+Pipes move from right to left. The bird scores once per pipe when the pipe
+completely crosses the bird x-position.
+
+This is the environment-owned pipe state, distinct from the packed snapshot
+transport shapes used by the browser worker.
 
 ### FlappyBird
 
@@ -8,16 +33,6 @@ Bird kinematic state for one simulation frame.
 
 The environment keeps only the minimum physics state needed to advance the
 episode: vertical position and vertical velocity.
-
-### FlappyDifficultyScale
-
-Difficulty scale used by the curriculum scheduler.
-
-- `0` means easiest profile (wide gaps, slower pipes).
-- `1` means fully adaptive profile based on passed pipes.
-
-Values between `0` and `1` interpolate between those extremes, which lets the
-trainer or environment caller dial curriculum strength continuously.
 
 ### FlappyGameState
 
@@ -35,29 +50,77 @@ Structured observation features used to build the neural-network input vector.
 Re-exported from shared simulation utilities so trainer and browser paths
 stay synchronized as the observation schema evolves.
 
-### FlappyPipe
+### FlappyDifficultyScale
 
-Pipe obstacle definition.
+Difficulty scale used by the curriculum scheduler.
 
-Pipes move from right to left. The bird scores once per pipe when the pipe
-completely crosses the bird x-position.
+- `0` means easiest profile (wide gaps, slower pipes).
+- `1` means fully adaptive profile based on passed pipes.
 
-This is the environment-owned pipe state, distinct from the packed snapshot
-transport shapes used by the browser worker.
+Values between `0` and `1` interpolate between those extremes, which lets the
+trainer or environment caller dial curriculum strength continuously.
 
 ## environment/environment.constants.ts
 
-### FLAPPY_ENVIRONMENT_DEFAULT_CONTROL_SUBSTEPS_PER_FRAME
-
 ### FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE
 
+Default curriculum difficulty scale used by environment stepping.
+
+A value of `1` means the environment uses the full adaptive difficulty ramp.
+
+### FLAPPY_ENVIRONMENT_DEFAULT_CONTROL_SUBSTEPS_PER_FRAME
+
+Default number of control/physics substeps executed per simulation frame.
+
+Reusing the shared control-substep count keeps the environment and browser
+playback aligned on the same stepping granularity.
+
 ### FLAPPY_ENVIRONMENT_MAX_FRAMES_PER_EPISODE
+
+Maximum frame budget before the environment forces timeout termination.
+
+Timeouts stop extremely long survival loops from dominating evaluation cost.
+
+## environment/environment.state.service.ts
+
+### createInitialFlappyState
+
+```ts
+createInitialFlappyState(
+  rng: FlappyRng,
+): FlappyGameState
+```
+
+Create a fresh Flappy Bird episode state.
+
+Educational note:
+A new episode starts with one initial pipe already materialized so the first
+observation is meaningful immediately. That avoids a cold-start phase where a
+policy would receive mostly empty-space inputs.
+
+Parameters:
+- `rng` - - Random source used to generate initial pipe configuration.
+
+Returns: Initial state for one deterministic rollout.
+
+Example:
+
+```ts
+const state = createInitialFlappyState(rng);
+```
 
 ## environment/environment.step.service.ts
 
 ### stepFlappyState
 
-`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, rng: import("test/examples/flappy_bird/rng").FlappyRng, flap: boolean, difficultyScale: number) => void`
+```ts
+stepFlappyState(
+  state: FlappyGameState,
+  rng: FlappyRng,
+  flap: boolean,
+  difficultyScale: number,
+): void
+```
 
 Advance the simulation by one frame.
 
@@ -74,7 +137,15 @@ Returns: Nothing.
 
 ### stepFlappyStateWithControlSubsteps
 
-`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, rng: import("test/examples/flappy_bird/rng").FlappyRng, shouldFlapForSubstep: () => boolean, difficultyScale: number, controlSubstepsPerFrame: number) => void`
+```ts
+stepFlappyStateWithControlSubsteps(
+  state: FlappyGameState,
+  rng: FlappyRng,
+  shouldFlapForSubstep: () => boolean,
+  difficultyScale: number,
+  controlSubstepsPerFrame: number,
+): void
+```
 
 Advance one logical frame using multiple control/physics substeps.
 
@@ -98,29 +169,15 @@ Parameters:
 
 Returns: Nothing.
 
-## environment/environment.state.service.ts
-
-### createInitialFlappyState
-
-`(rng: import("test/examples/flappy_bird/rng").FlappyRng) => import("test/examples/flappy_bird/environment/environment.types").FlappyGameState`
-
-Create a fresh Flappy Bird episode state.
-
-Educational note:
-A new episode starts with one initial pipe already materialized so the first
-observation is meaningful immediately. That avoids a cold-start phase where a
-policy would receive mostly empty-space inputs.
-
-Parameters:
-- `rng` - - Random source used to generate initial pipe configuration.
-
-Returns: Initial state for one deterministic rollout.
-
 ## environment/environment.collision.utils.ts
 
 ### updateCollisionAndProgressState
 
-`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState) => void`
+```ts
+updateCollisionAndProgressState(
+  state: FlappyGameState,
+): void
+```
 
 Apply out-of-bounds, pipe-collision, and pass-credit rules for one substep.
 
@@ -139,7 +196,12 @@ Returns: Nothing.
 
 ### getFlappyObservation
 
-`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, difficultyScale: number) => number[]`
+```ts
+getFlappyObservation(
+  state: FlappyGameState,
+  difficultyScale: number,
+): number[]
+```
 
 Generate the network observation vector for the current state.
 
@@ -171,7 +233,12 @@ Returns: Input vector for the neural network.
 
 ### getFlappyObservationFeatures
 
-`(state: import("test/examples/flappy_bird/environment/environment.types").FlappyGameState, difficultyScale: number) => import("test/examples/flappy_bird/simulation-shared/simulation-shared.types").SharedObservationFeatures`
+```ts
+getFlappyObservationFeatures(
+  state: FlappyGameState,
+  difficultyScale: number,
+): SharedObservationFeatures
+```
 
 Resolve structured observation features for policy input and reward shaping.
 
@@ -180,3 +247,9 @@ Parameters:
 - `difficultyScale` - - Curriculum difficulty scale in [0, 1].
 
 Returns: Named feature object.
+
+Example:
+
+```ts
+const features = getFlappyObservationFeatures(state, 1);
+```

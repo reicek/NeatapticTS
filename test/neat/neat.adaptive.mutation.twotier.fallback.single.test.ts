@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
-import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
+import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 import Network from '../../src/architecture/network';
-import { mutation } from '../../src/methods/mutation';
+import { mutation } from '../../src/methods/mutation/mutation';
 
 /** Covers twoTier fallback balancing path when only one genome present (only anyUp set). */
 describe('Adaptive Mutation twoTier fallback (single genome)', () => {
@@ -24,7 +24,7 @@ describe('Adaptive Mutation twoTier fallback (single genome)', () => {
       await neat.evaluate();
       neat.mutate();
       const { applyAdaptiveMutation } =
-        await import('../../src/neat/neat.adaptive');
+        await import('../../src/neat/adaptive/adaptive');
       applyAdaptiveMutation.call(neat as unknown as NeatLikeWithAdaptive);
       type GenomeLike = { _mutRate: number };
       const rate = (neat.population as unknown as GenomeLike[])[0]._mutRate;

@@ -1,41 +1,5 @@
 # architecture/network/prune
 
-## architecture/network/prune/network.prune.utils.types.ts
-
-### ActivePruningConfig
-
-Non-nullable pruning schedule configuration shape used by helpers.
-
-### DEFAULT_PRUNE_FREQUENCY
-
-### MAX_EVOLUTIONARY_TARGET_SPARSITY
-
-### MAX_PROGRESS_FRACTION
-
-### MIN_PROGRESS_FRACTION
-
-### MIN_REMAINING_CONNECTION_COUNT
-
-### PRUNING_METHOD_MAGNITUDE
-
-### PRUNING_METHOD_SNIP
-
-### REGROW_ATTEMPT_MULTIPLIER
-
-## architecture/network/prune/network.prune.utils.ts
-
-### getCurrentSparsity
-
-`() => number`
-
-Current sparsity fraction relative to the training-time pruning baseline.
-
-Returns: Current sparsity in the [0,1] range when baseline is available.
-
-### maybePrune
-
-`(iteration: number) => void`
-
 Structured and dynamic pruning utilities for networks.
 
 Features:
@@ -46,7 +10,7 @@ Features:
      snip: |w * g| approximation (g approximated via accumulated delta stats; falls back to |w|)
  - Optional stochastic regrowth during scheduled pruning (dynamic sparse training), preserving acyclic constraints.
 
-Internal State Fields (attached to Network via `any` casting):
+Internal state fields (attached to Network through a loose internal bridge):
  - _pruningConfig: user-specified schedule & options (start, end, frequency, targetSparsity, method, regrowFraction, lastPruneIter)
  - _initialConnectionCount: baseline connection count captured outside (first training iteration)
  - _evoInitialConnCount: baseline for evolutionary pruning (first invocation of pruneToSparsity)
@@ -54,9 +18,84 @@ Internal State Fields (attached to Network via `any` casting):
  - _enforceAcyclic: boolean flag enforcing forward-only connectivity ordering
  - _topoDirty: topology order invalidation flag consumed by activation fast path / topological sorting
 
+Opportunistically perform scheduled pruning during gradient-based training.
+
+Scheduling model:
+ - start / end define an iteration window (inclusive) during which pruning may occur
+ - frequency defines cadence (every N iterations inside the window)
+ - targetSparsity is linearly annealed from 0 to its final value across the window
+ - method chooses ranking heuristic (magnitude | snip)
+ - optional regrowFraction allows dynamic sparse training: after removing edges we probabilistically regrow
+   a fraction of them at random unused positions (respecting acyclic constraint if enforced)
+
+SNIP heuristic:
+ - Uses |w * grad| style saliency approximation (here reusing stored delta stats as gradient proxy)
+ - Falls back to pure magnitude if gradient stats absent.
+
+## architecture/network/prune/network.prune.utils.types.ts
+
+### PRUNING_METHOD_MAGNITUDE
+
+Pruning method identifier for absolute-weight ranking.
+
+### PRUNING_METHOD_SNIP
+
+Pruning method identifier for SNIP-like saliency ranking.
+
+### MIN_REMAINING_CONNECTION_COUNT
+
+Lower bound to ensure at least one connection remains after pruning.
+
+### DEFAULT_PRUNE_FREQUENCY
+
+Fallback prune cadence when schedule frequency is omitted or invalid.
+
+### MIN_PROGRESS_FRACTION
+
+Minimum normalized schedule progress value.
+
+### MAX_PROGRESS_FRACTION
+
+Maximum normalized schedule progress value.
+
+### MAX_EVOLUTIONARY_TARGET_SPARSITY
+
+Safety cap below full sparsity to avoid degenerate zero-connection networks.
+
+### REGROW_ATTEMPT_MULTIPLIER
+
+Retry multiplier to convert intended regrowth count into max attempts.
+
+### ActivePruningConfig
+
+Non-nullable pruning schedule configuration shape used by helpers.
+
+## architecture/network/prune/network.prune.utils.ts
+
+### maybePrune
+
+```ts
+maybePrune(
+  iteration: number,
+): void
+```
+
+Perform scheduled pruning at a given training iteration if conditions are met.
+
+Scheduling fields (cfg): start, end, frequency, targetSparsity, method ('magnitude' | 'snip'), regrowFraction.
+The target sparsity ramps linearly from 0 at start to cfg.targetSparsity at end.
+
+Parameters:
+- `iteration` - Current (0-based or 1-based) training iteration counter used for scheduling.
+
 ### pruneToSparsity
 
-`(targetSparsity: number, method: import("src/architecture/network/network.types").PruningMethod) => void`
+```ts
+pruneToSparsity(
+  targetSparsity: number,
+  method: PruningMethod,
+): void
+```
 
 Evolutionary (generation-based) pruning toward a target sparsity baseline.
 Unlike maybePrune this operates immediately relative to the first invocation's connection count
@@ -68,70 +107,26 @@ Parameters:
 
 Returns: Nothing.
 
+### getCurrentSparsity
+
+```ts
+getCurrentSparsity(): number
+```
+
+Current sparsity fraction relative to the training-time pruning baseline.
+
+Returns: Current sparsity in the [0,1] range when baseline is available.
+
 ## architecture/network/prune/network.prune.regrowth.utils.ts
-
-### buildRegrowthCandidatePair
-
-`(currentNetwork: import("src/architecture/network").default) => { sourceNode: import("src/architecture/node").default; targetNode: import("src/architecture/node").default; } | null`
-
-Build one random regrowth candidate pair if valid.
-
-Parameters:
-- `currentNetwork` - - Network being regrown.
-
-Returns: Candidate node pair or null when invalid.
-
-### buildRegrowthPlan
-
-`(context: import("src/architecture/network/network.types").RegrowthPlanContext) => import("src/architecture/network/network.types").RegrowthPlan | null`
-
-Convert regrowth intent into a bounded execution plan.
-
-Parameters:
-- `context` - - Regrowth planning inputs.
-
-Returns: A plan when regrowth is meaningful; otherwise null.
-
-### connectionAlreadyExists
-
-`(currentNetwork: import("src/architecture/network").default, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => boolean`
-
-Check whether a connection already exists.
-
-Parameters:
-- `currentNetwork` - - Network being regrown.
-- `sourceNode` - - Proposed source node.
-- `targetNode` - - Proposed target node.
-
-Returns: True when the edge already exists.
-
-### executeRegrowthAttempts
-
-`(context: import("src/architecture/network/network.types").RegrowthExecutionContext) => void`
-
-Execute bounded stochastic regrowth attempts.
-
-Parameters:
-- `context` - - Regrowth execution settings.
-
-Returns: Nothing.
-
-### isInvalidRegrowthPair
-
-`(currentNetwork: import("src/architecture/network").default, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => boolean`
-
-Validate whether a candidate regrowth pair is acceptable.
-
-Parameters:
-- `currentNetwork` - - Network being regrown.
-- `sourceNode` - - Proposed source node.
-- `targetNode` - - Proposed target node.
-
-Returns: True when the pair must be rejected.
 
 ### maybeRunRegrowth
 
-`(currentNetwork: import("src/architecture/network").default, context: import("src/architecture/network/network.types").RegrowthPlanContext) => void`
+```ts
+maybeRunRegrowth(
+  currentNetwork: default,
+  context: RegrowthPlanContext,
+): void
+```
 
 Build and execute a regrowth plan when enabled.
 
@@ -141,20 +136,46 @@ Parameters:
 
 Returns: Nothing.
 
-### pickRandomNode
+### buildRegrowthPlan
 
-`(currentNetwork: import("src/architecture/network").default) => import("src/architecture/node").default | undefined`
+```ts
+buildRegrowthPlan(
+  context: RegrowthPlanContext,
+): RegrowthPlan | null
+```
 
-Pick a random node using the network RNG.
+Convert regrowth intent into a bounded execution plan.
 
 Parameters:
-- `currentNetwork` - - Network providing node set and RNG.
+- `context` - - Regrowth planning inputs.
 
-Returns: Random node or undefined when the node list is empty.
+Returns: A plan when regrowth is meaningful; otherwise null.
+
+### executeRegrowthAttempts
+
+```ts
+executeRegrowthAttempts(
+  context: RegrowthExecutionContext,
+): void
+```
+
+Execute bounded stochastic regrowth attempts.
+
+Parameters:
+- `context` - - Regrowth execution settings.
+
+Returns: Nothing.
 
 ### shouldContinueRegrowth
 
-`(currentNetwork: import("src/architecture/network").default, desiredRemainingConnections: number, attemptedRegrowthCount: number, maxAttempts: number) => boolean`
+```ts
+shouldContinueRegrowth(
+  currentNetwork: default,
+  desiredRemainingConnections: number,
+  attemptedRegrowthCount: number,
+  maxAttempts: number,
+): boolean
+```
 
 Decide whether another regrowth attempt is allowed.
 
@@ -168,7 +189,11 @@ Returns: True when another attempt should run.
 
 ### tryRegrowConnection
 
-`(currentNetwork: import("src/architecture/network").default) => void`
+```ts
+tryRegrowConnection(
+  currentNetwork: default,
+): void
+```
 
 Attempt one random valid connection addition.
 
@@ -177,9 +202,83 @@ Parameters:
 
 Returns: Nothing.
 
+### buildRegrowthCandidatePair
+
+```ts
+buildRegrowthCandidatePair(
+  currentNetwork: default,
+): { sourceNode: default; targetNode: default; } | null
+```
+
+Build one random regrowth candidate pair if valid.
+
+Parameters:
+- `currentNetwork` - - Network being regrown.
+
+Returns: Candidate node pair or null when invalid.
+
+### pickRandomNode
+
+```ts
+pickRandomNode(
+  currentNetwork: default,
+): default | undefined
+```
+
+Pick a random node using the network RNG.
+
+Parameters:
+- `currentNetwork` - - Network providing node set and RNG.
+
+Returns: Random node or undefined when the node list is empty.
+
+### isInvalidRegrowthPair
+
+```ts
+isInvalidRegrowthPair(
+  currentNetwork: default,
+  sourceNode: default,
+  targetNode: default,
+): boolean
+```
+
+Validate whether a candidate regrowth pair is acceptable.
+
+Parameters:
+- `currentNetwork` - - Network being regrown.
+- `sourceNode` - - Proposed source node.
+- `targetNode` - - Proposed target node.
+
+Returns: True when the pair must be rejected.
+
+### connectionAlreadyExists
+
+```ts
+connectionAlreadyExists(
+  currentNetwork: default,
+  sourceNode: default,
+  targetNode: default,
+): boolean
+```
+
+Check whether a connection already exists.
+
+Parameters:
+- `currentNetwork` - - Network being regrown.
+- `sourceNode` - - Proposed source node.
+- `targetNode` - - Proposed target node.
+
+Returns: True when the edge already exists.
+
 ### violatesAcyclicConstraint
 
-`(currentNetwork: import("src/architecture/network").default, sourceNode: import("src/architecture/node").default, targetNode: import("src/architecture/node").default) => boolean`
+```ts
+violatesAcyclicConstraint(
+  currentNetwork: default,
+  sourceNode: default,
+  targetNode: default,
+): boolean
+```
 
 Check whether a pair violates forward-only acyclic ordering.
 
@@ -192,32 +291,61 @@ Returns: True when acyclic ordering would be violated.
 
 ## architecture/network/prune/network.prune.schedule.utils.ts
 
-### alreadyPrunedThisIteration
+### getPruningConfig
 
-`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
+```ts
+getPruningConfig(
+  currentNetwork: default,
+): { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; } | undefined
+```
 
-Check whether this iteration was already pruned.
+Read the active pruning schedule from network internals.
 
 Parameters:
-- `currentIteration` - - Iteration to evaluate.
+- `currentNetwork` - - Network instance to inspect.
+
+Returns: Pruning configuration when enabled; otherwise undefined.
+
+### shouldRunScheduledPrune
+
+```ts
+shouldRunScheduledPrune(
+  currentIteration: number,
+  currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; },
+): boolean
+```
+
+Determine whether scheduled pruning should run at this iteration.
+
+Parameters:
+- `currentIteration` - - Training iteration being processed.
 - `currentPruningConfig` - - Active pruning schedule.
 
-Returns: True when pruning already happened for this iteration.
+Returns: True when pruning should execute now.
 
-### buildPruneSelection
+### getInitialConnectionBaseline
 
-`(context: import("src/architecture/network/network.types").PruneSelectionContext) => import("src/architecture/network/network.types").PruneSelectionResult`
+```ts
+getInitialConnectionBaseline(
+  currentNetwork: default,
+): number | undefined
+```
 
-Build a connection removal selection from current ranking context.
+Read the scheduled-pruning baseline connection count.
 
 Parameters:
-- `context` - - Inputs for ranking and slicing removable connections.
+- `currentNetwork` - - Network instance to inspect.
 
-Returns: Connections selected for pruning.
+Returns: Baseline count when captured; otherwise undefined.
 
 ### buildScheduledTarget
 
-`(context: import("src/architecture/network/network.types").ScheduledTargetContext, currentConnectionCount: number) => import("src/architecture/network/network.types").ScheduledTargetResult`
+```ts
+buildScheduledTarget(
+  context: ScheduledTargetContext,
+  currentConnectionCount: number,
+): ScheduledTargetResult
+```
 
 Build current scheduled pruning targets from schedule context.
 
@@ -227,46 +355,29 @@ Parameters:
 
 Returns: Desired remaining connections and current excess.
 
-### calculateProgressFraction
+### buildPruneSelection
 
-`(currentIteration: number, scheduleStart: number, scheduleEnd: number) => number`
+```ts
+buildPruneSelection(
+  context: PruneSelectionContext,
+): PruneSelectionResult
+```
 
-Compute clamped schedule progress in the [0,1] range.
-
-Parameters:
-- `currentIteration` - - Iteration to evaluate.
-- `scheduleStart` - - Start iteration of schedule window.
-- `scheduleEnd` - - End iteration of schedule window.
-
-Returns: Clamped normalized progress.
-
-### calculateSnipSaliency
-
-`(connection: import("src/architecture/connection").default) => number`
-
-Compute saliency for SNIP-like ranking.
+Build a connection removal selection from current ranking context.
 
 Parameters:
-- `connection` - - Connection to score.
+- `context` - - Inputs for ranking and slicing removable connections.
 
-Returns: Saliency value used for sorting.
-
-### clamp
-
-`(value: number, minimum: number, maximum: number) => number`
-
-Clamp a number into an inclusive range.
-
-Parameters:
-- `value` - - Raw value to clamp.
-- `minimum` - - Inclusive lower bound.
-- `maximum` - - Inclusive upper bound.
-
-Returns: Clamped value.
+Returns: Connections selected for pruning.
 
 ### disconnectConnections
 
-`(currentNetwork: import("src/architecture/network").default, connectionsToDisconnect: import("src/architecture/connection").default[]) => void`
+```ts
+disconnectConnections(
+  currentNetwork: default,
+  connectionsToDisconnect: default[],
+): void
+```
 
 Disconnect all selected connections from the network.
 
@@ -276,55 +387,29 @@ Parameters:
 
 Returns: Nothing.
 
-### getInitialConnectionBaseline
+### resolvePruningMethod
 
-`(currentNetwork: import("src/architecture/network").default) => number | undefined`
+```ts
+resolvePruningMethod(
+  method: PruningMethod | undefined,
+): PruningMethod
+```
 
-Read the scheduled-pruning baseline connection count.
-
-Parameters:
-- `currentNetwork` - - Network instance to inspect.
-
-Returns: Baseline count when captured; otherwise undefined.
-
-### getPruningConfig
-
-`(currentNetwork: import("src/architecture/network").default) => { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; } | undefined`
-
-Read the active pruning schedule from network internals.
+Normalize optional pruning method to a concrete value.
 
 Parameters:
-- `currentNetwork` - - Network instance to inspect.
+- `method` - - Optional configured pruning method.
 
-Returns: Pruning configuration when enabled; otherwise undefined.
-
-### isOutsidePruningWindow
-
-`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
-
-Check whether an iteration is outside the pruning window.
-
-Parameters:
-- `currentIteration` - - Iteration to evaluate.
-- `currentPruningConfig` - - Active pruning schedule.
-
-Returns: True when the iteration is out of range.
-
-### isScheduledPruningIteration
-
-`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
-
-Check frequency cadence for scheduled pruning.
-
-Parameters:
-- `currentIteration` - - Iteration to evaluate.
-- `currentPruningConfig` - - Active pruning schedule.
-
-Returns: True when this iteration matches the schedule cadence.
+Returns: Concrete pruning method.
 
 ### markPruneIteration
 
-`(currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }, currentIteration: number) => void`
+```ts
+markPruneIteration(
+  currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; },
+  currentIteration: number,
+): void
+```
 
 Persist the iteration that last performed pruning.
 
@@ -336,7 +421,11 @@ Returns: Nothing.
 
 ### markTopologyDirty
 
-`(currentNetwork: import("src/architecture/network").default) => void`
+```ts
+markTopologyDirty(
+  currentNetwork: default,
+): void
+```
 
 Mark topology cache as dirty after structural updates.
 
@@ -345,20 +434,103 @@ Parameters:
 
 Returns: Nothing.
 
-### rankConnectionsByMagnitude
+### isOutsidePruningWindow
 
-`(connections: import("src/architecture/connection").default[]) => import("src/architecture/connection").default[]`
+```ts
+isOutsidePruningWindow(
+  currentIteration: number,
+  currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; },
+): boolean
+```
 
-Rank connections by absolute weight magnitude.
+Check whether an iteration is outside the pruning window.
 
 Parameters:
-- `connections` - - Candidate connections to rank.
+- `currentIteration` - - Iteration to evaluate.
+- `currentPruningConfig` - - Active pruning schedule.
 
-Returns: Connections sorted by ascending absolute weight.
+Returns: True when the iteration is out of range.
+
+### alreadyPrunedThisIteration
+
+```ts
+alreadyPrunedThisIteration(
+  currentIteration: number,
+  currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; },
+): boolean
+```
+
+Check whether this iteration was already pruned.
+
+Parameters:
+- `currentIteration` - - Iteration to evaluate.
+- `currentPruningConfig` - - Active pruning schedule.
+
+Returns: True when pruning already happened for this iteration.
+
+### isScheduledPruningIteration
+
+```ts
+isScheduledPruningIteration(
+  currentIteration: number,
+  currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; },
+): boolean
+```
+
+Check frequency cadence for scheduled pruning.
+
+Parameters:
+- `currentIteration` - - Iteration to evaluate.
+- `currentPruningConfig` - - Active pruning schedule.
+
+Returns: True when this iteration matches the schedule cadence.
+
+### calculateProgressFraction
+
+```ts
+calculateProgressFraction(
+  currentIteration: number,
+  scheduleStart: number,
+  scheduleEnd: number,
+): number
+```
+
+Compute clamped schedule progress in the [0,1] range.
+
+Parameters:
+- `currentIteration` - - Iteration to evaluate.
+- `scheduleStart` - - Start iteration of schedule window.
+- `scheduleEnd` - - End iteration of schedule window.
+
+Returns: Clamped normalized progress.
+
+### clamp
+
+```ts
+clamp(
+  value: number,
+  minimum: number,
+  maximum: number,
+): number
+```
+
+Clamp a number into an inclusive range.
+
+Parameters:
+- `value` - - Raw value to clamp.
+- `minimum` - - Inclusive lower bound.
+- `maximum` - - Inclusive upper bound.
+
+Returns: Clamped value.
 
 ### rankConnectionsByRemovalPriority
 
-`(connections: import("src/architecture/connection").default[], method: import("src/architecture/network/network.types").PruningMethod) => import("src/architecture/connection").default[]`
+```ts
+rankConnectionsByRemovalPriority(
+  connections: default[],
+  method: PruningMethod,
+): default[]
+```
 
 Route ranking to the configured pruning heuristic.
 
@@ -368,9 +540,28 @@ Parameters:
 
 Returns: Connections sorted by ascending removal priority.
 
+### rankConnectionsByMagnitude
+
+```ts
+rankConnectionsByMagnitude(
+  connections: default[],
+): default[]
+```
+
+Rank connections by absolute weight magnitude.
+
+Parameters:
+- `connections` - - Candidate connections to rank.
+
+Returns: Connections sorted by ascending absolute weight.
+
 ### rankConnectionsBySnipSaliency
 
-`(connections: import("src/architecture/connection").default[]) => import("src/architecture/connection").default[]`
+```ts
+rankConnectionsBySnipSaliency(
+  connections: default[],
+): default[]
+```
 
 Rank connections by SNIP-like saliency approximation.
 
@@ -379,9 +570,28 @@ Parameters:
 
 Returns: Connections sorted by ascending saliency.
 
+### calculateSnipSaliency
+
+```ts
+calculateSnipSaliency(
+  connection: default,
+): number
+```
+
+Compute saliency for SNIP-like ranking.
+
+Parameters:
+- `connection` - - Connection to score.
+
+Returns: Saliency value used for sorting.
+
 ### resolveGradientMagnitude
 
-`(connection: import("src/architecture/connection").default) => number`
+```ts
+resolveGradientMagnitude(
+  connection: default,
+): number
+```
 
 Resolve a stable gradient-magnitude proxy from connection delta statistics.
 
@@ -390,34 +600,31 @@ Parameters:
 
 Returns: Absolute gradient magnitude proxy.
 
-### resolvePruningMethod
-
-`(method: import("src/architecture/network/network.types").PruningMethod | undefined) => import("src/architecture/network/network.types").PruningMethod`
-
-Normalize optional pruning method to a concrete value.
-
-Parameters:
-- `method` - - Optional configured pruning method.
-
-Returns: Concrete pruning method.
-
-### shouldRunScheduledPrune
-
-`(currentIteration: number, currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: import("src/architecture/network/network.types").PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; }) => boolean`
-
-Determine whether scheduled pruning should run at this iteration.
-
-Parameters:
-- `currentIteration` - - Training iteration being processed.
-- `currentPruningConfig` - - Active pruning schedule.
-
-Returns: True when pruning should execute now.
-
 ## architecture/network/prune/network.prune.sparsity.utils.ts
+
+### readInitialSparsityBaseline
+
+```ts
+readInitialSparsityBaseline(
+  currentNetwork: default,
+): number | undefined
+```
+
+Read baseline used for sparsity reporting.
+
+Parameters:
+- `currentNetwork` - - Network to inspect.
+
+Returns: Baseline connection count when available.
 
 ### calculateSparsityFromBaseline
 
-`(currentConnectionCount: number, baselineConnectionCount: number) => number`
+```ts
+calculateSparsityFromBaseline(
+  currentConnectionCount: number,
+  baselineConnectionCount: number,
+): number
+```
 
 Convert current density into sparsity ratio.
 
@@ -427,33 +634,46 @@ Parameters:
 
 Returns: Sparsity ratio in [0,1] for valid baselines.
 
-### readInitialSparsityBaseline
-
-`(currentNetwork: import("src/architecture/network").default) => number | undefined`
-
-Read baseline used for sparsity reporting.
-
-Parameters:
-- `currentNetwork` - - Network to inspect.
-
-Returns: Baseline connection count when available.
-
 ## architecture/network/prune/network.prune.evolutionary.utils.ts
 
-### buildEvolutionaryPruneSelection
+### normalizeEvolutionaryTargetSparsity
 
-`(context: import("src/architecture/network/network.types").PruneSelectionContext) => import("src/architecture/network/network.types").PruneSelectionResult`
+```ts
+normalizeEvolutionaryTargetSparsity(
+  rawTargetSparsity: number,
+): number
+```
 
-Build evolutionary pruning connection selection.
+Clamp evolutionary target sparsity to safe operational bounds.
 
 Parameters:
-- `context` - - Inputs for ranking and slicing.
+- `rawTargetSparsity` - - Requested target sparsity.
 
-Returns: Connections selected for removal.
+Returns: Normalized target sparsity.
+
+### getOrCaptureEvolutionaryBaseline
+
+```ts
+getOrCaptureEvolutionaryBaseline(
+  currentNetwork: default,
+): number
+```
+
+Capture evolutionary baseline once and reuse it for subsequent pruning calls.
+
+Parameters:
+- `currentNetwork` - - Network to inspect and possibly initialize.
+
+Returns: Evolutionary baseline connection count.
 
 ### buildEvolutionaryTarget
 
-`(context: import("src/architecture/network/network.types").EvolutionaryTargetContext, currentConnectionCount: number) => import("src/architecture/network/network.types").EvolutionaryTargetResult`
+```ts
+buildEvolutionaryTarget(
+  context: EvolutionaryTargetContext,
+  currentConnectionCount: number,
+): EvolutionaryTargetResult
+```
 
 Compute evolutionary pruning target counts.
 
@@ -463,20 +683,29 @@ Parameters:
 
 Returns: Desired remaining and excess connection counts.
 
-### calculateEvolutionarySnipSaliency
+### buildEvolutionaryPruneSelection
 
-`(connection: import("src/architecture/connection").default) => number`
+```ts
+buildEvolutionaryPruneSelection(
+  context: PruneSelectionContext,
+): PruneSelectionResult
+```
 
-Compute evolutionary SNIP-like saliency for one connection.
+Build evolutionary pruning connection selection.
 
 Parameters:
-- `connection` - - Connection to score.
+- `context` - - Inputs for ranking and slicing.
 
-Returns: Saliency score.
+Returns: Connections selected for removal.
 
 ### disconnectEvolutionaryConnections
 
-`(currentNetwork: import("src/architecture/network").default, connectionsToDisconnect: import("src/architecture/connection").default[]) => void`
+```ts
+disconnectEvolutionaryConnections(
+  currentNetwork: default,
+  connectionsToDisconnect: default[],
+): void
+```
 
 Disconnect selected evolutionary pruning edges.
 
@@ -486,20 +715,13 @@ Parameters:
 
 Returns: Nothing.
 
-### getOrCaptureEvolutionaryBaseline
-
-`(currentNetwork: import("src/architecture/network").default) => number`
-
-Capture evolutionary baseline once and reuse it for subsequent pruning calls.
-
-Parameters:
-- `currentNetwork` - - Network to inspect and possibly initialize.
-
-Returns: Evolutionary baseline connection count.
-
 ### markEvolutionaryTopologyDirty
 
-`(currentNetwork: import("src/architecture/network").default) => void`
+```ts
+markEvolutionaryTopologyDirty(
+  currentNetwork: default,
+): void
+```
 
 Mark topology cache as dirty after evolutionary pruning.
 
@@ -508,20 +730,14 @@ Parameters:
 
 Returns: Nothing.
 
-### normalizeEvolutionaryTargetSparsity
-
-`(rawTargetSparsity: number) => number`
-
-Clamp evolutionary target sparsity to safe operational bounds.
-
-Parameters:
-- `rawTargetSparsity` - - Requested target sparsity.
-
-Returns: Normalized target sparsity.
-
 ### rankEvolutionaryConnections
 
-`(connections: import("src/architecture/connection").default[], pruningMethod: import("src/architecture/network/network.types").PruningMethod) => import("src/architecture/connection").default[]`
+```ts
+rankEvolutionaryConnections(
+  connections: default[],
+  pruningMethod: PruningMethod,
+): default[]
+```
 
 Route evolutionary ranking to selected heuristic.
 
@@ -533,7 +749,11 @@ Returns: Connections sorted by ascending removal priority.
 
 ### rankEvolutionaryConnectionsByMagnitude
 
-`(connections: import("src/architecture/connection").default[]) => import("src/architecture/connection").default[]`
+```ts
+rankEvolutionaryConnectionsByMagnitude(
+  connections: default[],
+): default[]
+```
 
 Rank connections by magnitude for evolutionary pruning.
 
@@ -544,7 +764,11 @@ Returns: Connections sorted by ascending absolute weight.
 
 ### rankEvolutionaryConnectionsBySnip
 
-`(connections: import("src/architecture/connection").default[]) => import("src/architecture/connection").default[]`
+```ts
+rankEvolutionaryConnectionsBySnip(
+  connections: default[],
+): default[]
+```
 
 Rank connections by SNIP-like saliency for evolutionary pruning.
 
@@ -553,9 +777,28 @@ Parameters:
 
 Returns: Connections sorted by ascending saliency.
 
+### calculateEvolutionarySnipSaliency
+
+```ts
+calculateEvolutionarySnipSaliency(
+  connection: default,
+): number
+```
+
+Compute evolutionary SNIP-like saliency for one connection.
+
+Parameters:
+- `connection` - - Connection to score.
+
+Returns: Saliency score.
+
 ### resolveEvolutionaryGradientMagnitude
 
-`(connection: import("src/architecture/connection").default) => number`
+```ts
+resolveEvolutionaryGradientMagnitude(
+  connection: default,
+): number
+```
 
 Resolve gradient proxy for evolutionary SNIP ranking.
 

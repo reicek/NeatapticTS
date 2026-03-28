@@ -1,4 +1,4 @@
-import Rate from '../../src/methods/rate';
+import Rate from '../../src/methods/rate/rate';
 
 describe('Rate.reduceOnPlateau', () => {
   const base = 0.05;

@@ -1,0 +1,13 @@
+{
+  "introFile": "network.onnx.ts",
+  "fileOrder": [
+    "network.onnx.ts",
+    "network.onnx.utils.ts",
+    "network.onnx.utils.types.ts"
+  ],
+  "folderOrder": [
+    "export",
+    "import",
+    "schema"
+  ]
+}

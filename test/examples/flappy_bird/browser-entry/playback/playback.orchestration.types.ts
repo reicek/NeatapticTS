@@ -26,6 +26,16 @@ export type PlaybackEpisodeSummary = {
 };
 
 /**
+ * Event emitted when the current playback champion changes.
+ *
+ * The event identifies which playback bird is currently highlighted as the red
+ * bird so the side-panel network view can stay synchronized with the renderer.
+ */
+export type PlaybackChampionChangedEvent = {
+  championBirdIndex: number;
+};
+
+/**
  * Mutable playback summary extended with latest leader telemetry fallbacks.
  *
  * During playback the browser may need temporary "latest known" values before
@@ -47,6 +57,7 @@ export type PlaybackMutableSummary = PlaybackEpisodeSummary & {
 export type PlaybackLoopState = {
   simulationFrameBudget: number;
   finished: boolean;
+  currentChampionBirdIndex: number;
   summary: PlaybackMutableSummary;
 };
 
@@ -74,5 +85,6 @@ export type PlaybackIterationContext = {
   context: CanvasRenderingContext2D;
   evolutionWorker: Worker;
   onFrameStats: (stats: PlaybackFrameStats) => void;
+  onChampionChanged?: (event: PlaybackChampionChangedEvent) => void;
   sessionContext: PlaybackSessionContext;
 };

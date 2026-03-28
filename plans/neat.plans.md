@@ -1,5 +1,7 @@
 # Proper NEAT (No-Compromise) — Gap Analysis + Implementation Plan
 
+**Status:** [PLANNED]
+
 This document is the engineering plan to upgrade NeatapticTS from “NEAT‑inspired” topology evolution to **canonical NEAT with historical markings**, i.e. **proper innovation tracking, correct crossover alignment, and speciation that remains meaningful across the entire run**.
 
 It also includes an “ultimate” tier: improvements that go beyond the 2002 NEAT paper while keeping NEAT’s core guarantees.
@@ -97,7 +99,7 @@ Net effect:
 
 #### B2) Initial pool genomes aren’t identity-aligned
 
-The pool creation path in [src/neat/neat.helpers.ts](../../../neat/neat.helpers.ts) constructs each genome with `new Network(...)` (when no seed is supplied).
+The pool creation path in [src/neat/helpers/neat.helpers.ts](../../../neat/helpers/neat.helpers.ts) constructs each genome with `new Network(...)` (when no seed is supplied).
 
 That means:
 
@@ -197,7 +199,7 @@ This is the big lift. It’s mostly surgical but touches foundational code.
 
 #### 1.1 Fix pool bootstrapping (must-do)
 
-Target: [src/neat/neat.helpers.ts](../../../neat/neat.helpers.ts)
+Target: [src/neat/helpers/neat.helpers.ts](../../../neat/helpers/neat.helpers.ts)
 
 - [ ] When `seedNetwork` is null, create exactly **one** template genome (e.g., `new Network(input, output, ...)`) and then clone it `popsize` times using `toJSON()` / `Network.fromJSON()`.
 - [ ] Ensure template cloning preserves:

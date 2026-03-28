@@ -1,5 +1,5 @@
 import * as methods from '../../../methods/methods';
-import type Network from '../../network';
+import type Network from '../../network/network';
 
 type TestSample = { input: number[]; output: number[] };
 type CostFunction = (target: number[], output: number[]) => number;

@@ -244,6 +244,7 @@ export interface WorkerGenerationReadyMessage {
     generation: number;
     bestFitness: number;
     bestNetworkJson?: SerializedNetwork;
+    populationNetworksJson?: SerializedNetwork[];
   };
 }
 

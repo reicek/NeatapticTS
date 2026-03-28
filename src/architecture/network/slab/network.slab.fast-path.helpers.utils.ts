@@ -1,9 +1,9 @@
 /**
  * Internal fast slab activation helpers extracted from network.slab.utils.ts.
  */
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type Node from '../../node';
-import { activationArrayPool } from '../../activationArrayPool';
+import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import type {
   FastSlabNodeRuntime,
   NetworkActivationRuntime,

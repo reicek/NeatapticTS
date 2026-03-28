@@ -1,5 +1,7 @@
 # Network Visualization Export Schema Plan
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Make networks easy to inspect and visualize by exporting a **stable, versioned graph schema** that external tools can render.

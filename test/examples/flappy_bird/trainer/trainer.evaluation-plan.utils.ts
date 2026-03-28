@@ -1,3 +1,32 @@
+/**
+ * Generation-planning helpers for staged evaluation, curriculum difficulty, and
+ * mutation cooling.
+ *
+ * The trainer does not decide stage budgets ad hoc inside the evolution loop.
+ * Instead, each generation resolves one explicit plan that says which shared
+ * seeds to use, how hard the environment should currently be, and how much
+ * mutation pressure should remain.
+ *
+ * Generation planning map:
+ * ```mermaid
+ * flowchart TB
+ *     Generation["generationIndex"] --> Mutation["resolveMutationSchedule()\nrate + amount"]
+ *     Generation --> Difficulty["resolveCurriculumDifficultyScale()\ncourse difficulty"]
+ *     Generation --> QuickSeeds["quick shared seeds"]
+ *     Generation --> FullSeeds["full-stage shared seeds"]
+ *     Generation --> ReevalSeeds["reevaluation shared seeds"]
+ *     Difficulty --> QuickOptions["createQuickRolloutOptions()"]
+ *     Difficulty --> FullOptions["createFullRolloutOptions()"]
+ *     Difficulty --> ReevalOptions["createReevaluationRolloutOptions()"]
+ *     Mutation --> Plan["FlappyGenerationEvaluationPlan"]
+ *     QuickSeeds --> Plan
+ *     FullSeeds --> Plan
+ *     ReevalSeeds --> Plan
+ *     QuickOptions --> Plan
+ *     FullOptions --> Plan
+ *     ReevalOptions --> Plan
+ * ```
+ */
 import type { FlappyRolloutOptions } from '../flappyEvaluation';
 import { FLAPPY_MAX_FRAMES_PER_EPISODE } from '../constants/constants';
 import {
@@ -23,6 +52,9 @@ import type { FlappyGenerationEvaluationPlan } from './trainer.types';
 
 /**
  * Mutation schedule used by generation planning and outer loop logging.
+ *
+ * These two numbers are treated as a single policy decision because the trainer
+ * cools both the frequency and the size of mutations together.
  */
 export interface FlappyMutationSchedule {
   mutationRate: number;
@@ -31,6 +63,10 @@ export interface FlappyMutationSchedule {
 
 /**
  * Resolves all per-generation evaluation controls.
+ *
+ * Think of this as the trainer's "generation contract": the rest of the system
+ * can ask for one object and receive a fully prepared set of seeds, rollout
+ * options, and annealed mutation values.
  *
  * @param generationIndex - Zero-based generation index.
  * @returns Full staged evaluation plan for the generation.
@@ -58,6 +94,10 @@ export function resolveGenerationEvaluationPlan(
 
 /**
  * Resolve a smooth mutation annealing schedule.
+ *
+ * Early generations mutate more aggressively so the population can search the
+ * space broadly. Later generations cool down so the trainer can refine useful
+ * structures rather than constantly replacing them.
  *
  * @param generationIndex - Zero-based generation index.
  * @returns Mutation rate and mutation amount for this generation.
@@ -87,6 +127,10 @@ export function resolveMutationSchedule(
 /**
  * Builds quick-screen rollout options.
  *
+ * The quick stage is a cheap gate. It favors speed and comparability over fully
+ * trusted estimates because weak genomes only need enough evidence to be ruled
+ * out early.
+ *
  * @param difficultyScale - Difficulty scale for this generation.
  * @returns Quick stage rollout options.
  */
@@ -108,6 +152,9 @@ function createQuickRolloutOptions(
 
 /**
  * Builds full-stage rollout options.
+ *
+ * This stage gives stronger candidates a longer, stricter test so the trainer
+ * can refine the leaderboard before committing to expensive reevaluation.
  *
  * @param difficultyScale - Difficulty scale for this generation.
  * @returns Full stage rollout options.
@@ -131,6 +178,9 @@ function createFullRolloutOptions(
 /**
  * Builds high-confidence reevaluation rollout options.
  *
+ * Reevaluation deliberately disables early termination so the strongest
+ * candidates are judged on a more faithful, less shortcut-heavy comparison.
+ *
  * @param difficultyScale - Difficulty scale for this generation.
  * @returns Reevaluation stage rollout options.
  */
@@ -149,6 +199,9 @@ function createReevaluationRolloutOptions(
 /**
  * Resolve curriculum difficulty scale for the current generation.
  *
+ * The course starts gentle, ramps through the middle generations, and then caps
+ * at full difficulty once the population has had time to discover viable flight.
+ *
  * @param generationIndex - Zero-based generation index.
  * @returns Difficulty scale in [0, 1].
  */
@@ -160,6 +213,10 @@ function resolveCurriculumDifficultyScale(generationIndex: number): number {
 
 /**
  * Build deterministic shared seeds for one generation stage.
+ *
+ * Shared seeds are what make same-generation comparisons fair: genomes face the
+ * same sampled worlds instead of winning because they happened to get a kinder
+ * random rollout.
  *
  * @param generationIndex - Zero-based generation index.
  * @param stageSalt - Constant stage-specific salt.
@@ -181,6 +238,9 @@ function buildSharedSeedBatch(
 
 /**
  * Mixes generation and stage salts into a deterministic uint32 RNG seed.
+ *
+ * The small mixing pipeline spreads nearby generation numbers apart so adjacent
+ * stages and generations do not accidentally reuse overly correlated seed sets.
  *
  * @param generationIndex - Current generation index.
  * @param stageSalt - Stage-specific salt.

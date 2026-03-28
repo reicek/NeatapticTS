@@ -1,5 +1,7 @@
 # Memory Optimization Plan (Multi-Layer Strategy for Very Large Networks)
 
+**Status:** [WIP]
+
 Goal: Enable construction, evolution, and training of networks scaling toward **10^6+ (stretch 10^7)** connections on commodity JS/TS runtimes across **Node** and **Browser**.
 
 ## Guiding Principles

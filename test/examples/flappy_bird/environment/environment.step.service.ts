@@ -12,7 +12,6 @@ import {
   resolveNextSpawnGapCenterY,
   resolveNextSpawnGapSize,
   resolveNextSpawnIntervalFrames,
-  type SharedDifficultyProfile,
 } from '../flappy.simulation.shared.utils';
 import {
   FLAPPY_ENVIRONMENT_DEFAULT_CONTROL_SUBSTEPS_PER_FRAME,

@@ -1,11 +1,32 @@
 /**
  * Rollout runtime services.
  *
- * This file will host context resolution, runtime initialization, frame loop,
- * and early-termination behavior for rollout execution.
+ * This file owns the mechanics of running an episode once a caller has decided
+ * to do a rollout: normalize the options, create the seeded runtime, loop over
+ * frames, and stop early when continued simulation is no longer informative.
  *
  * The companion utils file owns reward shaping and result composition. This file
- * owns the mechanics of actually running the episode.
+ * owns the episode heartbeat itself.
+ *
+ * Minimal usage sketch:
+ * ```ts
+ * const rolloutEpisodeContext = resolveRolloutEpisodeContext(network, {
+ *   seed: 123,
+ *   enableEarlyTermination: true,
+ * });
+ * const rolloutEpisodeRuntimeState = createRolloutEpisodeRuntimeState(
+ *   rolloutEpisodeContext,
+ * );
+ * runRolloutEpisodeLoop(
+ *   network,
+ *   rolloutEpisodeContext,
+ *   rolloutEpisodeRuntimeState,
+ * );
+ * finalizeRolloutEpisodeState(
+ *   rolloutEpisodeContext,
+ *   rolloutEpisodeRuntimeState,
+ * );
+ * ```
  */
 import {
   FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,

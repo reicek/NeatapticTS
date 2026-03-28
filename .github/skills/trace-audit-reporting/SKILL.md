@@ -12,6 +12,9 @@ Use this skill when an agent needs to inspect a Chrome or Perfetto trace,
 summarize hotspots, connect them back to workspace code, and produce a durable
 performance report.
 
+When the report lives in a continuing tracker file, `tracker-handoff` owns the
+canonical plan/log structure and copy-paste continuation format.
+
 ## When to Use
 
 - Analyze a Chrome trace export or Perfetto JSON capture.
@@ -82,6 +85,12 @@ surface for the library rather than the final destination for a workaround.
   summaries together.
 - Do not assume the worker is the bottleneck if renderer main-thread
   `FunctionCall` or `FireAnimationFrame` dominates.
+- Do not prepend specific calendar dates to report headings, action-plan logs,
+  or follow-up sections. Use stable undated titles that remain readable after
+  later revisions.
+- Do not invent a custom tracker format for continuing reports; use
+  `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and
+  `Handoff query` structure.
 - Do not edit generated `src/**/README.md` files. Improve source JSDoc instead.
 - If you modify trace tooling, keep the script deterministic and documented with
   JSDoc.

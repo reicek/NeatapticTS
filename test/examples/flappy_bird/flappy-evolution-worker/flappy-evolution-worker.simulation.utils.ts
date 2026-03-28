@@ -57,7 +57,7 @@ export function createWorkerPopulationRenderState(
     initialDifficultyProfile,
   );
 
-  const birds = networks.map((network, networkIndex) => ({
+  const birds = networks.map((network) => ({
     network,
     observationMemoryState: createSharedObservationMemoryState(),
     yPx: initialVisibleWorldHeightPx * 0.5,

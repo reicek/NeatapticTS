@@ -1,5 +1,7 @@
 # Interactive Examples + Learning Path Plan
 
+**Status:** [PLANNED]
+
 ## Purpose
 
 Reduce time-to-first-success by shipping a small set of **runnable examples** that demonstrate:

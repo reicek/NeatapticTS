@@ -1,4 +1,4 @@
-import Network from '../../network';
+import Network from '../../network/network';
 import { config } from '../../../config';
 import Multi from '../../../multithreading/multi';
 import type {

@@ -1,3 +1,22 @@
+/**
+ * Public evaluation contracts for scoring Flappy Bird policies.
+ *
+ * This folder exists to answer a narrower question than the trainer does:
+ * given one network, one or more deterministic seeds, and one scoring policy,
+ * what evidence should evolution use when deciding whether that network is any
+ * good?
+ *
+ * The answer in this example is intentionally stricter than a toy demo. A
+ * single rollout is useful for inspection, but shared-seed batches are the real
+ * selection surface because they reduce luck and expose instability.
+ *
+ * Read the exports in that order:
+ *
+ * - `FlappyRolloutOptions` defines what a caller may ask evaluation to do.
+ * - `FlappyEpisodeResult` captures what happened in one seeded episode.
+ * - `FlappySeedBatchEvaluation` captures the trainer-facing evidence used to
+ *   rank genomes more fairly.
+ */
 import type { FlappyGameState } from '../flappyEnvironment.ts';
 
 /**

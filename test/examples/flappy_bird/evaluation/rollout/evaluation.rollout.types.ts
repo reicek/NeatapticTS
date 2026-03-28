@@ -1,11 +1,15 @@
 /**
  * Rollout-internal type contracts.
  *
- * This file will host runtime-only rollout types that should not widen the
- * public evaluation-level API surface.
+ * These runtime-only types are the private vocabulary of one rollout episode.
+ * They keep the public evaluation API compact while still giving the rollout
+ * loop explicit names for the data it carries between phases.
  *
- * That separation keeps the public evaluation API compact even as rollout
- * internals become more detailed.
+ * Read them as three layers:
+ *
+ * - `RolloutEpisodeContext`: immutable, normalized configuration.
+ * - `RolloutEpisodeRuntimeState`: mutable execution state.
+ * - fitness and shaping types: named reward channels used during folding.
  */
 import { createSharedObservationMemoryState } from '../../flappy.simulation.shared.utils';
 import { createXorshift32 } from '../../rng';

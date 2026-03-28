@@ -264,4 +264,4 @@ export interface DashboardPresentationAdapter extends IDashboardManager {
  * Step 7 promotes `DashboardPresentationAdapter` as the primary owner of this
  * presentation seam while preserving the existing export name.
  */
-export interface RuntimeDashboardManager extends DashboardPresentationAdapter {}
+export type RuntimeDashboardManager = DashboardPresentationAdapter;

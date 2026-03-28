@@ -1,228 +1,69 @@
-# ASCII Maze (Educational Neuroevolution Example)
+# ASCII Maze (NeatapticTS)
 
-This folder contains a full **NEAT-driven maze-solving system** built as an educational example for NeatapticTS.
+This folder is the repository's clearest answer to a different practical question from Flappy Bird: what should neuroevolution look like when the hard part is not reflex timing, but deliberate navigation under sparse rewards?
 
-It demonstrates how to combine:
+The example uses an ASCII maze, but the maze is not the whole point. The real point is to show how NeatapticTS handles compact perception, reward shaping, curriculum transfer, telemetry-rich evolution, and browser or terminal presentation without turning the whole exercise into a single opaque training loop.
 
-- **Perception** (`MazeVision`) — convert maze state into compact neural inputs.
-- **Policy execution** (`MazeMovement`) — run an agent episode from network outputs.
-- **Reward shaping** (`FitnessEvaluator`) — score behavior beyond simple win/lose.
-- **Evolution orchestration** (`EvolutionEngine`) — evolve populations with telemetry, persistence, and curriculum transfer.
-- **Optional supervised fine-tuning** (`NetworkRefinement` / `refineWinner`) — improve winners with backprop.
+If Flappy Bird is the repo's lesson in fast control systems, ASCII Maze is its lesson in disciplined decision-making.
 
----
+## What This Folder Is Trying To Teach
 
-## Why this example is valuable
+This example is organized around four reader questions:
 
-Unlike toy XOR-style demos, this example includes real-world concerns that appear in production ML systems:
+1. How small can the observation space stay before the policy stops being learnable?
+2. How do you shape reward for a sparse-goal navigation problem without making the score meaningless?
+3. How do you evolve through a curriculum of increasingly harder mazes without throwing away useful structure each phase discovered?
+4. How do you make long-running search legible through dashboards, telemetry, and browser integration instead of waiting blindly for a lucky winner?
 
-- non-trivial environment state
-- shaped rewards and anti-collapse heuristics
-- adaptive evolution controls (plateau handling, simplification)
-- curriculum transfer (solve small mazes first, then scale)
-- browser + terminal visualization
-- test integration and deterministic modes
+The folder matters because it treats those questions as one system. Perception, movement, scoring, curriculum evolution, and presentation are separate boundaries on purpose. That separation is what makes the example useful as a reference architecture rather than just a clever test.
 
-Use this as a reference architecture when building your own task-specific neuroevolution pipelines.
+## Choose Your Route
 
----
+Different readers arrive with different questions. Use the route that matches yours.
 
-## Folder map (what lives where)
+| If you want to... | Start here | Then read |
+| --- | --- | --- |
+| Run a maze evolution programmatically | [evolutionEngine.ts](./evolutionEngine.ts) | [evolutionEngine/README.md](./evolutionEngine/README.md), [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) |
+| Reuse the example from code | [index.ts](./index.ts) | [evolutionEngine.ts](./evolutionEngine.ts), [mazeUtils.ts](./mazeUtils.ts), [interfaces.ts](./interfaces.ts) |
+| Understand how one agent episode works | [mazeMovement.ts](./mazeMovement.ts) | [mazeMovement/README.md](./mazeMovement/README.md), [fitness.ts](./fitness.ts) |
+| Understand the browser demo and telemetry surface | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts) or [index.html](./index.html) | [browser-entry.ts](./browser-entry.ts), [browser-entry/README.md](./browser-entry/README.md), [dashboardManager/README.md](./dashboardManager/README.md) |
+| Tune reward shaping or progress semantics | [fitness.ts](./fitness.ts) | [mazeMovement/README.md](./mazeMovement/README.md), [mazeUtils.ts](./mazeUtils.ts) |
+| Change curriculum, warm-start, or evolution policy | [evolutionEngine/README.md](./evolutionEngine/README.md) | [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) |
+| Understand the whole example as a system | this README | the module READMEs listed in [Recommended Reading Order](#recommended-reading-order) |
 
-### Core runtime
+## Run The Example
 
-- `evolutionEngine.ts`
-  - Public façade entry point: `EvolutionEngine.runMazeEvolution(options)`.
-  - Delegates to modular files under `evolutionEngine/`.
-- `evolutionEngine/`
-  - `optionsAndSetup.ts`: normalize options, prepare maze/distance map, create NEAT instance.
-  - `evolutionLoop.ts`: generation loop, cancellation, stop conditions, telemetry flow.
-  - `populationDynamics.ts`: pruning, simplify phase, anti-collapse, dynamic population.
-  - `trainingWarmStart.ts`: warm-start + Lamarckian/Baldwinian helpers.
-  - `telemetryMetrics.ts`: generation metrics collection/log formatting.
-  - `rngAndTiming.ts`, `scratchPools.ts`, `sampling.ts`, etc.: performance + deterministic helpers.
+From the repo root:
 
-### Maze simulation pipeline
-
-- `mazeVision.ts`
-  - Builds 6D inputs for the policy network.
-- `mazeMovement.ts`
-  - Simulates one episode with action selection, movement, penalties/rewards, and final run result.
-- `fitness.ts`
-  - Converts simulation outcomes into scalar fitness.
-- `mazeUtils.ts`
-  - Encoding, BFS distance, progress calculations, coordinate utilities.
-
-### Visualization and UX
-
-- `dashboardManager.ts`
-  - Rich per-generation dashboard with telemetry history, archive of solved mazes, and trend snapshots.
-- `mazeVisualization.ts`
-  - Colorized maze rendering and summary stats.
-- `networkVisualization.ts`
-  - Network topology formatting/inspection.
-- `terminalUtility.ts` / `browserTerminalUtility.ts`
-  - Rendering primitives for Node terminal and browser DOM.
-- `browserLogger.ts`
-  - Browser-target logging utility.
-
-### Scenario definitions and adapters
-
-- `mazes.ts`
-  - Static mazes (`tiny`, `small`, `medium`, `large`, `minotaur`) plus procedural `MazeGenerator`.
-- `interfaces.ts`
-  - Canonical contracts: run options, telemetry contracts, network/visualization types.
-- `index.ts` and `asciiMaze.ts`
-  - Re-exports for easier imports.
-
-### Demo and test entry points
-
-- `browser-entry.ts`
-  - Public `start(...)` API for browser demo lifecycle.
-- `index.html`
-  - Simple host page loading `docs/assets/ascii-maze.bundle.js`.
-- `asciiMaze.e2e.test.ts`
-  - Curriculum-style end-to-end evolution in test form.
-- `networkRefinement.ts` and `refineWinner.ts`
-  - Two refinement helpers (class-based and functional style).
-
----
-
-## Conceptual architecture
-
-```text
-ASCII Maze + Agent State
-				|
-				v
-MazeVision.buildInputs6
-				|
-				v
-Network.activate (4 outputs)
-				|
-				v
-MazeMovement.simulateAgent
-				|
-				v
-FitnessEvaluator.evaluateNetworkFitness
-				|
-				v
-EvolutionEngine generation loop
-				|
-				+--> Dashboard/Telemetry
-				+--> Persistence (optional)
-				+--> Curriculum seed for next maze
-```
-
----
-
-## Input and output encoding (important)
-
-### Policy input vector (6 values)
-
-`MazeVision` produces:
-
-1. `compassScalar` — compressed compass direction to exit (`0, 0.25, 0.5, 0.75` for N/E/S/W)
-2. `openN`
-3. `openE`
-4. `openS`
-5. `openW`
-6. `progressDelta` — clipped/scaled progress signal between steps
-
-This keeps the network small and learnable while preserving directional context.
-
-### Policy outputs (4 values)
-
-The network outputs action logits/probabilities for:
-
-1. North
-2. East
-3. South
-4. West
-
-`MazeMovement` applies softmax-style action interpretation and tracks entropy/saturation diagnostics.
-
----
-
-## Episode scoring (fitness intuition)
-
-`FitnessEvaluator` composes several signals:
-
-- base movement/progress score from simulation
-- exploration bonus for uniquely visited cells
-- proximity weighting (exploring near promising regions helps more)
-- success bonus for reaching the exit
-- efficiency bonus for short successful paths vs optimal BFS baseline
-
-Why this is educationally useful:
-
-- It shows how **reward shaping** can guide sparse-goal tasks.
-- It highlights tradeoffs between exploration and path efficiency.
-
----
-
-## Evolution flow and stopping behavior
-
-At a high level, `EvolutionEngine.runMazeEvolution` performs:
-
-1. Option normalization and defaults (`optionsAndSetup.ts`)
-2. Maze preparation (encoding, start/exit detection, distance map)
-3. NEAT creation and optional warm-start seeding
-4. Generation loop:
-   - evaluate population
-   - apply adaptive/population dynamics
-   - apply optional refinement phases
-   - log/update dashboard/telemetry
-5. Stop when one of these occurs:
-   - solved threshold reached
-   - stagnation cap hit
-   - max generations reached
-   - cancellation/abort requested
-
-The engine supports deterministic mode, telemetry toggles, persistence intervals, and dynamic population controls.
-
----
-
-## Browser demo API
-
-`browser-entry.ts` exports:
-
-- `start(container?, opts?) => Promise<AsciiMazeRunHandle>`
-
-The handle provides:
-
-- `stop()`
-- `isRunning()`
-- `done` promise
-- telemetry subscribe/unsubscribe
-- `getTelemetry()` snapshot access
-
-The browser demo runs a curriculum that scales procedural mazes from small to larger dimensions while optionally carrying forward best networks.
-
----
-
-## Run the example
-
-From repository root:
-
-### 1) Type-check (quick sanity)
+### Run the browser demo
 
 ```bash
-npx tsc --noEmit -p tsconfig.json
+npm run start:local-server
 ```
 
-### 2) Run e2e curriculum test with logs
+Then open:
+
+- `http://localhost:8080/test/examples/asciiMaze/index.html`
+
+Important note:
+
+- `index.html` is a lightweight browser shell that loads the prebuilt demo bundle from `docs/assets`.
+- if you want the real host orchestration source, start with [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts).
+- after browser-code changes, run `npm run docs` or `npm run build:ascii-maze` before expecting the hosted page to reflect them.
+
+### Run the curriculum-style end-to-end example with logs
 
 ```bash
 npm run test:e2e:logs
 ```
 
-### 3) Build browser bundle for docs/assets
+### Build the browser bundle directly
 
 ```bash
 npm run build:ascii-maze
 ```
 
-### 4) Build docs (includes example asset copy + docs rendering)
+### Refresh docs and copied example assets
 
 ```bash
 npm run docs
@@ -230,9 +71,196 @@ npm run docs
 
 Node engine requirement in this repo is `>=22`.
 
----
+## The Core Idea In One Glance
 
-## Minimal integration example (programmatic)
+The architectural rule is simple: keep the policy input small, keep the simulation honest, keep the reward story inspectable, and keep long-running search observable.
+
+```mermaid
+flowchart LR
+    subgraph EpisodePath[Single-episode path]
+        Maze["maze state\nencoded layout + positions"] --> Vision["mazeVision.ts\n6-value observation"]
+        Vision --> Network["Network.activate\n4 direction scores"]
+        Network --> Movement["mazeMovement/\nmovement + shaping + stop rules"]
+        Movement --> Fitness["fitness.ts\nscalar run fitness"]
+    end
+
+    subgraph EvolutionPath[Population path]
+        Fitness --> Engine["evolutionEngine/\ncurriculum, warm-start, adaptive loop"]
+        Engine --> Dashboard["dashboardManager/\nlive telemetry + archive"]
+        Engine --> Browser["browser-entry/\nbrowser host and telemetry"]
+        Engine --> NextMaze["curriculum phase outcome\nseed next maze with current best"]
+    end
+
+    Interfaces["interfaces.ts\nshared contracts"] -.-> Vision
+    Interfaces -.-> Movement
+    Interfaces -.-> Engine
+    Mazes["mazes.ts\nstatic and procedural mazes"] -.-> Maze
+
+    classDef boundary fill:#001522,stroke:#0fb5ff,color:#9fdcff,stroke-width:2px;
+    classDef runtime fill:#03111f,stroke:#00e5ff,color:#d8f6ff,stroke-width:2px;
+    classDef highlight fill:#2a1029,stroke:#ff4a8d,color:#ffd7e8,stroke-width:3px;
+
+    class Maze,Vision,Movement,Fitness,Engine,Dashboard,Browser,Interfaces,Mazes boundary;
+    class Network,NextMaze runtime;
+    class Engine highlight;
+```
+
+Read the diagram as two connected stories:
+
+- one network experiences one maze episode through perception, action, movement, and scoring,
+- the evolution engine turns many such episodes into curriculum progress, telemetry, and next-phase seeding.
+
+That split is the key to understanding why this folder teaches more than a single reward function ever could.
+
+## What Each Boundary Protects
+
+### `mazeVision.ts`: the policy's tiny sensor window
+
+`MazeVision` compresses the maze into a six-value observation. That choice is deliberate. The example is not trying to win by giving the policy the whole map. It is trying to show how far a compact, carefully designed signal can go.
+
+This boundary exists so observation design can evolve independently from movement rules, reward shaping, and UI code.
+
+### `mazeMovement/`: one episode of decision-making
+
+The movement boundary owns direction selection, movement legality, visit bookkeeping, shaping-sensitive runtime state, and episode finalization.
+
+This is where a raw policy stops being abstract and starts paying for bad local decisions.
+
+### `fitness.ts`: the reward story
+
+The fitness layer turns one episode into a scalar score that the evolutionary loop can rank. In sparse-goal tasks, this layer matters enormously because a pure success/fail score often gives evolution too little gradient to learn from.
+
+This boundary exists so reward design stays inspectable instead of getting buried in movement code.
+
+### `evolutionEngine/`: curriculum and population policy
+
+The evolution engine is the outer orchestration layer. It normalizes run options, prepares the maze environment, seeds or warms the population, runs the generation loop, applies adaptive dynamics, and interprets when a phase has succeeded well enough to move forward.
+
+This boundary exists so curriculum logic, deterministic mode, scratch-buffer management, telemetry, and stopping behavior can stay coherent at the population level.
+
+### `dashboardManager/`: make search visible
+
+The dashboard boundary keeps long-running search understandable. It owns live summaries, archive views, telemetry snapshots, and redraw logic for browser and non-browser hosts.
+
+This boundary exists because evolutionary search is much easier to trust when you can see trend lines, progress plateaus, and solved artifacts instead of only waiting for a final boolean.
+
+### `browser-entry/`: the browser host
+
+The browser entry boundary assembles host elements, telemetry fan-out, resize behavior, and curriculum execution for the browser demo. It does not own the evolution algorithm itself. It owns the host experience around it.
+
+That separation keeps the browser integration useful without making the engine depend on DOM concerns.
+
+### `interfaces.ts`, `mazes.ts`, and the facade files: shared footing
+
+The supporting files matter too.
+
+- `interfaces.ts` keeps cross-cutting contracts stable while implementation ownership shifts across dedicated subfolders.
+- `mazes.ts` provides both static scenarios and procedural generation.
+- `asciiMaze.ts` and `index.ts` keep the example easier to import from the outside.
+
+## Two Execution Stories
+
+The same example tells two different runtime stories depending on where you enter.
+
+### Evolution story
+
+1. [evolutionEngine.ts](./evolutionEngine.ts) receives run options.
+2. [evolutionEngine/README.md](./evolutionEngine/README.md) normalizes configuration, prepares the maze, creates or seeds NEAT state, and runs the generation loop.
+3. [mazeMovement.ts](./mazeMovement.ts) simulates candidate episodes.
+4. [fitness.ts](./fitness.ts) converts those episodes into comparable scores.
+5. The engine updates telemetry, decides whether the current phase is solved, and either stops or advances the curriculum with the best network so far.
+
+### Host story
+
+1. [index.html](./index.html) or a programmatic caller starts the browser host.
+2. [browser-entry.ts](./browser-entry.ts) exposes the stable `start(...)` surface.
+3. [browser-entry/README.md](./browser-entry/README.md) wires host elements, telemetry hubs, and curriculum control.
+4. [dashboardManager/README.md](./dashboardManager/README.md) keeps the run legible through live and archived summaries.
+5. The host exposes a lifecycle handle for stop, status, completion, and telemetry consumption.
+
+The important teaching point is that browser and test hosts are consumers of the engine, not hidden owners of the search loop.
+
+## The Most Important Design Bets
+
+Several design choices explain why this folder is shaped the way it is.
+
+### A tiny observation space can still support interesting behavior
+
+The policy sees only six values. That makes the network easier to evolve, but it also forces the designer to decide what information genuinely matters. The example is teaching observation design, not just maze solving.
+
+### Reward shaping is necessary, but must stay interpretable
+
+The example does not rely on success alone. It layers progress-sensitive shaping, exploration incentives, proximity-aware signals, and success or efficiency rewards. That helps learning, but the structure stays explicit enough to inspect and tune.
+
+### Curriculum transfer is treated as a first-class workflow
+
+The engine is designed to carry forward useful policy structure as mazes grow harder. That is why the example reads less like one isolated run and more like a sequence of related phases.
+
+### Determinism and telemetry are educational tools, not just debugging extras
+
+Deterministic mode, trend snapshots, and structured dashboard output make the system teachable. They let you compare runs, spot regressions, and understand plateaus with less guesswork.
+
+### The engine stays orchestration-first
+
+The public `EvolutionEngine` facade stays thin while the heavy work lives in dedicated helpers under `evolutionEngine/`. That is an architectural choice: the top-level reader sees the policy flow first and the hot-path machinery second.
+
+## Observation And Reward Cheat Sheet
+
+The policy is intentionally small enough to fit in your head.
+
+### Inputs
+
+`MazeVision` builds a six-value observation:
+
+| Input | Meaning | Why it exists |
+| --- | --- | --- |
+| `compassScalar` | coarse direction toward the exit | Gives the policy a global hint without revealing the whole maze. |
+| `openN` | whether North is traversable | Encodes immediate local affordance. |
+| `openE` | whether East is traversable | Encodes immediate local affordance. |
+| `openS` | whether South is traversable | Encodes immediate local affordance. |
+| `openW` | whether West is traversable | Encodes immediate local affordance. |
+| `progressDelta` | recent progress change toward the goal | Helps the policy distinguish movement that is productive from movement that merely changes position. |
+
+### Outputs
+
+The network emits four directional scores:
+
+- North
+- East
+- South
+- West
+
+`MazeMovement` interprets those outputs into a chosen move and also records diagnostics such as entropy and saturation so the run is easier to inspect.
+
+### Fitness ingredients
+
+The score composes several ideas rather than one blunt scalar:
+
+- base movement or progress score,
+- exploration reward for newly visited cells,
+- proximity-sensitive weighting near promising areas,
+- success reward for reaching the exit,
+- efficiency reward when the successful path is short relative to the maze's baseline geometry.
+
+The goal is not to produce the prettiest formula. The goal is to make sparse-goal search learnable without hiding the tradeoffs.
+
+## If You Want To Change Something, Read This First
+
+This is the shortest route to the right boundary when you are modifying the example.
+
+| Change goal | Read first | Why |
+| --- | --- | --- |
+| Change what the network sees | [mazeVision.ts](./mazeVision.ts) | Observation design lives here. |
+| Change movement legality, action selection, or per-step shaping behavior | [mazeMovement/README.md](./mazeMovement/README.md) | The full episode runtime boundary lives here. |
+| Change score composition | [fitness.ts](./fitness.ts) | Reward logic should stay explicit and separate from movement. |
+| Change curriculum, warm-start, deterministic mode, or generation policy | [evolutionEngine/README.md](./evolutionEngine/README.md) | This is the population-policy layer. |
+| Change dashboards or telemetry presentation | [dashboardManager/README.md](./dashboardManager/README.md) | Search visibility lives here. |
+| Change browser lifecycle or embed API behavior | [browser-entry/README.md](./browser-entry/README.md) | The browser host surface lives here. |
+| Change test-driven curriculum expectations | [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) | This file shows the current end-to-end usage pattern. |
+
+## Programmatic Starting Point
+
+If you want to run the example from code instead of through the browser host, this is the smallest useful shape:
 
 ```ts
 import { EvolutionEngine } from './evolutionEngine';
@@ -265,83 +293,65 @@ const result = await EvolutionEngine.runMazeEvolution({
 console.log(result.exitReason, result.bestResult?.progress);
 ```
 
----
+## Safe Tuning Knobs
 
-## Customization guide (safe starting points)
+If you are teaching, benchmarking, or experimenting, these are usually the highest-value first changes:
 
-If you’re teaching or experimenting, these knobs are typically most impactful first:
+1. `agentSimConfig.maxSteps` controls how much trajectory a policy gets before termination.
+2. `evolutionAlgorithmConfig.popSize` trades compute cost for search breadth.
+3. `evolutionAlgorithmConfig.maxGenerations` changes how patient the run is.
+4. `evolutionAlgorithmConfig.minProgressToPass` changes how strict each curriculum phase is.
+5. `lamarckianIterations` and `lamarckianSampleSize` adjust local supervised-style refinement pressure.
+6. deterministic mode and seed settings make comparisons reproducible.
 
-1. `agentSimConfig.maxSteps`
-   - increase for larger/harder mazes
-2. `evolutionAlgorithmConfig.popSize`
-   - larger population improves search breadth but costs compute
-3. `evolutionAlgorithmConfig.maxGenerations`
-   - higher cap for difficult layouts
-4. `evolutionAlgorithmConfig.minProgressToPass`
-   - solved threshold sensitivity
-5. `lamarckianIterations` and `lamarckianSampleSize`
-   - adjust local supervised-style refinement pressure
-6. `deterministic` + `randomSeed`
-   - reproducibility for educational comparisons
+For deeper experiments:
 
-Then, for advanced learners:
+- swap or tune the fitness evaluator,
+- inspect movement penalties and rewards in the maze movement boundary,
+- study dashboard telemetry trends rather than only final success states.
 
-- experiment with `fitnessEvaluator` override
-- study `mazeMovement.ts` penalty/reward constants
-- enable/inspect telemetry trends in `DashboardManager`
+## Common Failure Modes
 
----
+The most common ways to make this example confusing or brittle are practical, not exotic:
 
-## Educational exercises
+- a maze without `S` or `E` breaks setup because start or exit lookup cannot resolve,
+- inconsistent row widths undermine encoding and path assumptions,
+- overly harsh penalties can suppress exploration before the policy learns useful structure,
+- very small `maxSteps` values on large mazes prevent meaningful trajectories,
+- expecting fast convergence from a sparse-goal task leads to bad tuning decisions.
 
-Try these in order:
+## Recommended Reading Order
 
-1. **Perception ablation**
-   - Remove one input channel from `MazeVision` and observe learning degradation.
-2. **Reward shaping experiment**
-   - Reduce exploration bonus and track effects on dead-end behavior.
-3. **Curriculum comparison**
-   - Train directly on big mazes vs phased growth with transfer.
-4. **Determinism study**
-   - Fix seed and compare run-to-run variance when toggling certain heuristics.
-5. **Refinement impact**
-   - Compare before/after `NetworkRefinement.refineWinnerWithBackprop` on transfer tasks.
+If you want the cleanest ramp into the example, this order usually pays off:
 
----
+1. this README for the system-level mental model,
+2. [evolutionEngine/README.md](./evolutionEngine/README.md) for the outer training loop and curriculum policy,
+3. [mazeMovement/README.md](./mazeMovement/README.md) for single-episode runtime behavior,
+4. [fitness.ts](./fitness.ts) and [mazeVision.ts](./mazeVision.ts) for the observation and reward story,
+5. [dashboardManager/README.md](./dashboardManager/README.md) for telemetry and live visibility,
+6. [browser-entry/README.md](./browser-entry/README.md) for browser hosting and embed behavior,
+7. [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) for the current end-to-end usage pattern.
 
-## Common pitfalls
+If you only care about one slice:
 
-- **No `S` or `E` in maze**: position lookup throws during setup.
-- **Inconsistent row lengths**: can break assumptions in encoding/path code.
-- **Overly harsh penalties**: can collapse exploration early.
-- **Tiny `maxSteps` on large mazes**: policy never gets enough trajectory to improve.
-- **Expecting instant convergence**: evolution is stochastic even with strong shaping.
+- compact policy design: start with `mazeVision.ts`, `mazeMovement.ts`, and `fitness.ts`,
+- curriculum evolution: start with `evolutionEngine/`,
+- browser or telemetry work: start with `browser-entry/` and `dashboardManager/`.
 
----
+## Exercises For Curious Readers
 
-## Where to start reading the code
+If you want to use this folder as a lab rather than only as a demo, these experiments pay off quickly:
 
-Recommended order:
+1. Remove one input from `MazeVision` and measure how much learning quality drops.
+2. Reduce exploration reward and inspect whether the agent becomes more myopic or more stable.
+3. Compare direct training on a harder procedural maze against phased curriculum transfer.
+4. Fix a deterministic seed and compare outcomes while toggling one heuristic at a time.
+5. Compare a winner before and after refinement to see what local supervised pressure actually improves.
 
-1. `interfaces.ts` (contracts)
-2. `mazeVision.ts` (inputs)
-3. `mazeMovement.ts` (episode simulation)
-4. `fitness.ts` (score)
-5. `evolutionEngine.ts` + `evolutionEngine/` modules (training loop)
-6. `asciiMaze.e2e.test.ts` (real usage pattern)
-7. `browser-entry.ts` (embedding API + telemetry consumption)
+## Why Start Here
 
-This progression mirrors the actual runtime path and makes the design easier to internalize.
+Sparse-goal problems are where many neuroevolution demos become unconvincing. They either hide the scoring story, overfeed the policy with information, or offer too little telemetry to understand why a run worked.
 
----
+This example matters because it does the opposite. It keeps the policy small, the reward story explicit, the evolutionary loop observable, and the host surfaces useful.
 
-## Notes on design philosophy
-
-This example intentionally favors:
-
-- explicit interfaces and documentation-heavy types
-- modular orchestration over monolithic loops
-- optimization where it helps educational performance (scratch buffers, typed arrays)
-- practical instrumentation (telemetry, trend summaries, archive views)
-
-It is both a **teaching artifact** and a **stress test** for integrating evolution, simulation, and visualization in one cohesive workflow.
+If you want one folder that shows how NeatapticTS approaches compact perception, curriculum transfer, and telemetry-rich search in a deliberate navigation task, this is the one.

@@ -1,4 +1,4 @@
-import Group from '../group';
+import Group from '../group/group';
 import Node from '../node';
 import type {
   LayerFactoryContext,

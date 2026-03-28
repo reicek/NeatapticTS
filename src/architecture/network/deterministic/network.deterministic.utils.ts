@@ -1,4 +1,4 @@
-import type Network from '../../network';
+import type Network from '../../network/network';
 import type { RNGSnapshot } from './network.deterministic.utils.types';
 import { setSeed as setupSeed } from './network.deterministic.setup.utils';
 import {
@@ -17,7 +17,7 @@ export type { RNGSnapshot } from './network.deterministic.utils.types';
  * Sets deterministic randomness for a network by installing a seed-backed RNG.
  *
  * Overview:
- * - Use this before training, mutation, or any stochastic operation when you need repeatable runs.
+ * - Use this before training, mutation, or stochastic operations when you need repeatable runs.
  * - The same seed and operation order produce the same random sequence and reproducible outcomes.
  * - This method delegates to setup utilities so behavior stays centralized across deterministic APIs.
  *

@@ -1,4 +1,4 @@
-import { crossover } from '../../src/methods/crossover';
+import { crossover } from '../../src/methods/crossover/crossover';
 
 describe('Crossover Methods', () => {
   describe('SINGLE_POINT', () => {

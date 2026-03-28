@@ -45,6 +45,48 @@ export const FLAPPY_WORKER_GEN0_PRETRAIN_BATCH_SIZE = 32;
 export const FLAPPY_WORKER_GEN0_PRETRAIN_RATE = 0.02;
 
 /**
+ * Shared-seed batch size used by rollout-guided generation-0 template refinement.
+ *
+ * After the heuristic teacher fit, the worker evaluates the fixed topology on a
+ * few real Flappy rollouts so the warm-start prior is pushed toward trajectories
+ * that actually survive the environment instead of only matching the synthetic
+ * teacher labels.
+ */
+export const FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_SEED_COUNT = 5;
+
+/**
+ * Hill-climb step budget used by rollout-guided generation-0 template refinement.
+ *
+ * Each step perturbs the current best template, evaluates it on the shared
+ * rollout seed batch, and keeps the candidate only when it improves robust
+ * fitness. The budget stays intentionally small so worker startup remains fast.
+ */
+export const FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS = 12;
+
+/**
+ * Initial connection-weight noise scale for rollout-guided template refinement.
+ *
+ * Early optimization steps search broadly, then later steps cool toward the
+ * smaller end scale below for finer local refinement.
+ */
+export const FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_START = 0.12;
+
+/**
+ * Final connection-weight noise scale for rollout-guided template refinement.
+ */
+export const FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_WEIGHT_STDDEV_END = 0.015;
+
+/**
+ * Initial node-bias noise scale for rollout-guided template refinement.
+ */
+export const FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_START = 0.05;
+
+/**
+ * Final node-bias noise scale for rollout-guided template refinement.
+ */
+export const FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_BIAS_STDDEV_END = 0.008;
+
+/**
  * Gaussian standard deviation used for post-pretrain connection-weight diversification.
  *
  * After the template network is trained once, each genome receives a noisy copy

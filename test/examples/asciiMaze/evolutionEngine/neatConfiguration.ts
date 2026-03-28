@@ -98,6 +98,13 @@ export const createNeat = (
   fitnessCallback: (net: Network) => number,
   cfg?: NeatConfig,
 ): Neat => {
+  const NeatNetworkConstructor = Neat as unknown as new (
+    input: number,
+    output: number,
+    fitness: (network: Network) => unknown,
+    options: NeatConfig,
+  ) => Neat;
+
   // Default constants (extracted from EvolutionEngine static fields)
   const DEFAULT_POPSIZE = 150;
   const DEFAULT_ELITISM_FRACTION = 0.05;
@@ -162,23 +169,28 @@ export const createNeat = (
   };
 
   // Step 4: Instantiate the Neat driver with the assembled options.
-  const neatInstance = new Neat(inputCount, outputCount, fitnessCallback, {
-    popsize: popSize,
-    mutation: mutationOps,
-    mutationRate: DEFAULT_MUTATION_RATE,
-    mutationAmount: DEFAULT_MUTATION_AMOUNT,
-    elitism,
-    provenance,
-    allowRecurrent,
-    minHidden: DEFAULT_MIN_HIDDEN,
-    adaptiveMutation,
-    multiObjective,
-    telemetry,
-    lineageTracking,
-    novelty,
-    targetSpecies,
-    adaptiveTargetSpecies,
-  });
+  const neatInstance = new NeatNetworkConstructor(
+    inputCount,
+    outputCount,
+    fitnessCallback,
+    {
+      popsize: popSize,
+      mutation: mutationOps,
+      mutationRate: DEFAULT_MUTATION_RATE,
+      mutationAmount: DEFAULT_MUTATION_AMOUNT,
+      elitism,
+      provenance,
+      allowRecurrent,
+      minHidden: DEFAULT_MIN_HIDDEN,
+      adaptiveMutation,
+      multiObjective,
+      telemetry,
+      lineageTracking,
+      novelty,
+      targetSpecies,
+      adaptiveTargetSpecies,
+    },
+  );
 
   return neatInstance;
 };

@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
-import type { NeatLikeWithAdaptive } from '../../src/neat/neat.adaptive';
+import type { NeatLikeWithAdaptive } from '../../src/neat/adaptive/adaptive';
 import type Network from '../../src/architecture/network';
-import { applyComplexityBudget } from '../../src/neat/neat.adaptive';
+import { applyComplexityBudget } from '../../src/neat/adaptive/adaptive';
 
 /**
  * Tests adaptive complexity budget growth path with positive improvement & noveltyFactor=1.

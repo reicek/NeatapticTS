@@ -1,50 +1,31 @@
 # browser-entry/network-view
 
-## browser-entry/network-view/network-view.types.ts
+Network-view orchestration for the browser-side architecture panel.
 
-### network-view.types
+This module is the browser-facing fold from a live evolved controller to a
+readable inspection panel. It does not own the low-level drawing primitives,
+and it does not invent topology semantics from scratch. Instead it composes
+both into one higher-level question: how should this network be laid out so a
+human can actually learn from it?
 
-Shared type contracts for network-view overlays.
-
-The most notable overlay is the input-group label band system, which annotates
-stacked temporal observation channels so the input layer reads as grouped
-semantics instead of a flat strip of anonymous nodes.
-
-### InputGroupLabelBand
-
-Shared type contracts for network-view overlays.
-
-The most notable overlay is the input-group label band system, which annotates
-stacked temporal observation channels so the input layer reads as grouped
-semantics instead of a flat strip of anonymous nodes.
+The boundary exists because "draw the network" hides several distinct jobs:
+summarize topology, size the panel, place nodes, choose overlay policy, and
+then delegate the final painting work. Keeping those steps together here makes
+the generated README read like an inspection chapter instead of a pile of
+canvas helpers.
 
 ## browser-entry/network-view/network-view.ts
 
-### clampRecommendedNetworkHeightPx
-
-`(recommendedHeightPx: number) => number`
-
-Clamps a recommended network height into the configured panel range.
-
-Parameters:
-- `recommendedHeightPx` - - Recommended panel height.
-
-Returns: Clamped panel height.
-
-### createPositionByNodeIndex
-
-`(centeredPositionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]) => Map<number, import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike>`
-
-Builds a node-index lookup map for resolved positioned nodes.
-
-Parameters:
-- `centeredPositionedNodes` - - Positioned nodes after centering.
-
-Returns: Map keyed by node index.
-
 ### drawNetworkVisualization
 
-`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => void`
+```ts
+drawNetworkVisualization(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): void
+```
 
 Draws a complete, layer-based visualization of the active network.
 
@@ -59,161 +40,21 @@ Parameters:
 
 Returns: Nothing.
 
-### drawPositionedNetworkGraph
+Example:
 
-`(context: CanvasRenderingContext2D, networkVisualizationScene: NetworkVisualizationScene, positionedNetworkGraphScene: PositionedNetworkGraphScene) => void`
-
-Draws the positioned graph layers and optional guide overlays.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `networkVisualizationScene` - - Frame scene context.
-- `positionedNetworkGraphScene` - - Positioned graph scene.
-
-Returns: Nothing.
-
-### formatArchitectureLabel
-
-`(architectureInputSize: number, hiddenLayersLabel: string, architectureOutputSize: number, totalNodeCount: number, totalConnectionCount: number) => string`
-
-Formats the two-line architecture label used by the header and legend.
-
-Parameters:
-- `architectureInputSize` - - Input layer size.
-- `hiddenLayersLabel` - - Hidden-layer description.
-- `architectureOutputSize` - - Output layer size.
-- `totalNodeCount` - - Total node count.
-- `totalConnectionCount` - - Total connection count.
-
-Returns: Formatted architecture label.
-
-### NetworkTopologySummary
-
-Network-view orchestration for the browser-side architecture panel.
-
-This subsystem sits between raw network data and the lower-level visualization
-drawing helpers. It resolves topology summaries, chooses panel size, lays out
-nodes inside the drawable area, and coordinates overlays such as legends and
-input-group bands.
-
-### paintNetworkVisualizationCanvasBase
-
-`(context: CanvasRenderingContext2D, networkVisualizationScene: NetworkVisualizationScene) => void`
-
-Paints the base network visualization canvas background.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `networkVisualizationScene` - - Frame scene context.
-
-Returns: Nothing.
-
-### resolveAdjustedGraphPaddingContext
-
-`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, canvasWidthPx: number, hideNetworkOverlays: boolean, graphPaddingContext: NetworkGraphPaddingContext) => Pick<NetworkGraphPaddingContext, "graphLeftPaddingPx" | "graphRightPaddingPx">`
-
-Adjusts graph-side padding to keep the floating legend from overlapping nodes.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `network` - - Network to visualize.
-- `canvasWidthPx` - - Canvas width.
-- `hideNetworkOverlays` - - Whether overlays are hidden.
-- `graphPaddingContext` - - Base graph padding context.
-
-Returns: Adjusted graph padding context.
-
-### resolveBaseGraphPaddingContext
-
-`() => NetworkGraphPaddingContext`
-
-Resolves the base graph padding before legend-aware adjustments are applied.
-
-Returns: Base graph padding context.
-
-### resolveHiddenLayersLabel
-
-`(hiddenLayerSizes: number[], architectureSource: "layer-metadata" | "graph-topology" | "inferred") => string`
-
-Resolves the hidden-layer portion of the compact architecture label.
-
-Parameters:
-- `hiddenLayerSizes` - - Hidden-layer sizes.
-- `architectureSource` - - Architecture source metadata.
-
-Returns: Hidden-layer label.
-
-### resolveNetworkArchitectureLabel
-
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => string`
-
-Resolves compact architecture label text for headers and HUD rows.
-
-The label compresses the active network into a short human-readable summary:
-input size, hidden-layer structure, output size, and graph size metadata.
-
-Parameters:
-- `network` - - Network to describe.
-- `inputSize` - - Configured input size.
-- `outputSize` - - Configured output size.
-
-Returns: Readable architecture label.
-
-### resolveNetworkDrawableArea
-
-`(networkVisualizationScene: NetworkVisualizationScene) => NetworkDrawableArea`
-
-Resolves the drawable graph area after scene padding is applied.
-
-Parameters:
-- `networkVisualizationScene` - - Frame scene context.
-
-Returns: Drawable area dimensions.
-
-### resolveNetworkNodeDimensions
-
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number, drawableWidthPx: number, drawableHeightPx: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike`
-
-Resolves node rectangle dimensions from topology density and drawable bounds.
-
-Parameters:
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
-- `drawableWidthPx` - - Drawable graph width.
-- `drawableHeightPx` - - Drawable graph height.
-
-Returns: Node dimensions.
-
-### resolveNetworkNodeDimensionsFromTopologySummary
-
-`(networkTopologySummary: NetworkTopologySummary, drawableWidthPx: number, drawableHeightPx: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike`
-
-Resolves node rectangle dimensions from topology density and drawable bounds.
-
-Parameters:
-- `networkTopologySummary` - - Topology summary.
-- `drawableWidthPx` - - Drawable graph width.
-- `drawableHeightPx` - - Drawable graph height.
-
-Returns: Node dimensions.
-
-### resolveNetworkTopologySummary
-
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => NetworkTopologySummary`
-
-Resolves a reusable topology summary for layout and sizing helpers.
-
-Parameters:
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
-
-Returns: Topology summary.
+```ts
+drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
+```
 
 ### resolveNetworkVisualizationHeightPx
 
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => number`
+```ts
+resolveNetworkVisualizationHeightPx(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): number
+```
 
 Resolves responsive visualization canvas height from network shape.
 
@@ -227,9 +68,44 @@ Parameters:
 
 Returns: Recommended height in pixels.
 
+Example:
+
+```ts
+const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
+```
+
+### resolveNetworkArchitectureLabel
+
+```ts
+resolveNetworkArchitectureLabel(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): string
+```
+
+Resolves compact architecture label text for headers and HUD rows.
+
+The label compresses the active network into a short human-readable summary:
+input size, hidden-layer structure, output size, and graph size metadata.
+
+Parameters:
+- `network` - - Network to describe.
+- `inputSize` - - Configured input size.
+- `outputSize` - - Configured output size.
+
+Returns: Readable architecture label.
+
 ### resolveNetworkVisualizationScene
 
-`(context: CanvasRenderingContext2D, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => NetworkVisualizationScene`
+```ts
+resolveNetworkVisualizationScene(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): NetworkVisualizationScene
+```
 
 Resolves all non-topology canvas state needed to draw the network view.
 
@@ -244,9 +120,33 @@ Parameters:
 
 Returns: Scene context for the current frame.
 
+### paintNetworkVisualizationCanvasBase
+
+```ts
+paintNetworkVisualizationCanvasBase(
+  context: CanvasRenderingContext2D,
+  networkVisualizationScene: NetworkVisualizationScene,
+): void
+```
+
+Paints the static background fill for the network visualization canvas.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `networkVisualizationScene` - - Frame scene context.
+
+Returns: Nothing.
+
 ### resolvePositionedNetworkGraphScene
 
-`(networkVisualizationScene: NetworkVisualizationScene, network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => PositionedNetworkGraphScene`
+```ts
+resolvePositionedNetworkGraphScene(
+  networkVisualizationScene: NetworkVisualizationScene,
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): PositionedNetworkGraphScene
+```
 
 Resolves positioned nodes, connection lookup state, and shared node dimensions.
 
@@ -258,43 +158,43 @@ Parameters:
 
 Returns: Positioned graph scene.
 
-### resolveRecommendedNetworkHeightPx
+### drawPositionedNetworkGraph
 
-`(networkTopologySummary: NetworkTopologySummary, topologyDrivenHeightPx: number) => number`
+```ts
+drawPositionedNetworkGraph(
+  context: CanvasRenderingContext2D,
+  networkVisualizationScene: NetworkVisualizationScene,
+  positionedNetworkGraphScene: PositionedNetworkGraphScene,
+): void
+```
 
-Resolves the recommended panel height from topology and density adjustments.
-
-Parameters:
-- `networkTopologySummary` - - Topology summary.
-- `topologyDrivenHeightPx` - - Minimum readable topology height.
-
-Returns: Recommended panel height.
-
-### resolveRuntimeConnections
-
-`(network: import("src/architecture/network").default | undefined) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkConnectionLike[]`
-
-Resolves the runtime connection array from the active network.
+Draws the positioned graph layers and optional guide overlays.
 
 Parameters:
-- `network` - - Network to visualize.
+- `context` - - Canvas 2D drawing context.
+- `networkVisualizationScene` - - Frame scene context.
+- `positionedNetworkGraphScene` - - Positioned graph scene.
 
-Returns: Runtime connection list.
+Returns: Nothing.
 
-### resolveTopologyDrivenHeightPx
+### resolveBaseGraphPaddingContext
 
-`(networkTopologySummary: NetworkTopologySummary) => number`
+```ts
+resolveBaseGraphPaddingContext(): NetworkGraphPaddingContext
+```
 
-Resolves the topology-driven minimum readable height.
+Resolves the base graph padding before legend-aware adjustments are applied.
 
-Parameters:
-- `networkTopologySummary` - - Topology summary.
-
-Returns: Minimum readable height in pixels.
+Returns: Base graph padding context.
 
 ### shouldHideNetworkOverlays
 
-`(context: CanvasRenderingContext2D, fallbackViewportWidthPx: number) => boolean`
+```ts
+shouldHideNetworkOverlays(
+  context: CanvasRenderingContext2D,
+  fallbackViewportWidthPx: number,
+): boolean
+```
 
 Determines whether responsive rules hide auxiliary network overlays.
 
@@ -304,51 +204,273 @@ Parameters:
 
 Returns: True when overlays should be hidden.
 
-## browser-entry/network-view/network-view.constants.ts
+### resolveAdjustedGraphPaddingContext
 
-### network-view.constants
+```ts
+resolveAdjustedGraphPaddingContext(
+  context: CanvasRenderingContext2D,
+  network: default | undefined,
+  canvasWidthPx: number,
+  hideNetworkOverlays: boolean,
+  graphPaddingContext: NetworkGraphPaddingContext,
+): Pick<NetworkGraphPaddingContext, "graphLeftPaddingPx" | "graphRightPaddingPx">
+```
+
+Adjusts graph-side padding to keep the floating legend from overlapping nodes.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `network` - - Network to visualize.
+- `canvasWidthPx` - - Canvas width.
+- `hideNetworkOverlays` - - Whether overlays are hidden.
+- `graphPaddingContext` - - Base graph padding context.
+
+Returns: Adjusted graph padding context.
+
+### resolveNetworkDrawableArea
+
+```ts
+resolveNetworkDrawableArea(
+  networkVisualizationScene: NetworkVisualizationScene,
+): NetworkDrawableArea
+```
+
+Resolves the drawable graph area after scene padding is applied.
+
+Parameters:
+- `networkVisualizationScene` - - Frame scene context.
+
+Returns: Drawable area dimensions.
+
+### resolveNetworkTopologySummary
+
+```ts
+resolveNetworkTopologySummary(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): NetworkTopologySummary
+```
+
+Resolves a reusable topology summary for layout and sizing helpers.
+
+Parameters:
+- `network` - - Network to visualize.
+- `inputSize` - - Input-layer size.
+- `outputSize` - - Output-layer size.
+
+Returns: Topology summary.
+
+### resolveNetworkNodeDimensionsFromTopologySummary
+
+```ts
+resolveNetworkNodeDimensionsFromTopologySummary(
+  networkTopologySummary: NetworkTopologySummary,
+  drawableWidthPx: number,
+  drawableHeightPx: number,
+): NetworkNodeDimensionsLike
+```
+
+Resolves node rectangle dimensions from topology density and drawable bounds.
+
+Parameters:
+- `networkTopologySummary` - - Topology summary.
+- `drawableWidthPx` - - Drawable graph width.
+- `drawableHeightPx` - - Drawable graph height.
+
+Returns: Node dimensions.
+
+### resolveTopologyDrivenHeightPx
+
+```ts
+resolveTopologyDrivenHeightPx(
+  networkTopologySummary: NetworkTopologySummary,
+): number
+```
+
+Resolves the topology-driven minimum readable height.
+
+Parameters:
+- `networkTopologySummary` - - Topology summary.
+
+Returns: Minimum readable height in pixels.
+
+### resolveRecommendedNetworkHeightPx
+
+```ts
+resolveRecommendedNetworkHeightPx(
+  networkTopologySummary: NetworkTopologySummary,
+  topologyDrivenHeightPx: number,
+): number
+```
+
+Resolves the recommended panel height from topology and density adjustments.
+
+Parameters:
+- `networkTopologySummary` - - Topology summary.
+- `topologyDrivenHeightPx` - - Minimum readable topology height.
+
+Returns: Recommended panel height.
+
+### clampRecommendedNetworkHeightPx
+
+```ts
+clampRecommendedNetworkHeightPx(
+  recommendedHeightPx: number,
+): number
+```
+
+Clamps a recommended network height into the configured panel range.
+
+Parameters:
+- `recommendedHeightPx` - - Recommended panel height.
+
+Returns: Clamped panel height.
+
+### createPositionByNodeIndex
+
+```ts
+createPositionByNodeIndex(
+  centeredPositionedNodes: PositionedNetworkNodeLike[],
+): Map<number, PositionedNetworkNodeLike>
+```
+
+Builds a node-index lookup map for resolved positioned nodes.
+
+Parameters:
+- `centeredPositionedNodes` - - Positioned nodes after centering.
+
+Returns: Map keyed by node index.
+
+### resolveRuntimeConnections
+
+```ts
+resolveRuntimeConnections(
+  network: default | undefined,
+): VisualNetworkConnectionLike[]
+```
+
+Resolves the runtime connection array from the active network.
+
+Parameters:
+- `network` - - Network to visualize.
+
+Returns: Runtime connection list.
+
+### formatArchitectureLabel
+
+```ts
+formatArchitectureLabel(
+  architectureInputSize: number,
+  hiddenLayersLabel: string,
+  architectureOutputSize: number,
+  totalNodeCount: number,
+  totalConnectionCount: number,
+): string
+```
+
+Formats the two-line architecture label used by the header and legend.
+
+Parameters:
+- `architectureInputSize` - - Input layer size.
+- `hiddenLayersLabel` - - Hidden-layer description.
+- `architectureOutputSize` - - Output layer size.
+- `totalNodeCount` - - Total node count.
+- `totalConnectionCount` - - Total connection count.
+
+Returns: Formatted architecture label.
+
+### resolveHiddenLayersLabel
+
+```ts
+resolveHiddenLayersLabel(
+  hiddenLayerSizes: number[],
+  architectureSource: "layer-metadata" | "graph-topology" | "inferred",
+): string
+```
+
+Resolves the hidden-layer portion of the compact architecture label.
+
+Parameters:
+- `hiddenLayerSizes` - - Hidden-layer sizes.
+- `architectureSource` - - Architecture source metadata.
+
+Returns: Hidden-layer label.
+
+## browser-entry/network-view/network-view.types.ts
+
+Shared type contracts for network-view overlays.
+
+The most notable overlay is the input-group label band system, which annotates
+stacked temporal observation channels so the input layer reads as grouped
+semantics instead of a flat strip of anonymous nodes.
+
+### InputGroupLabelBand
+
+Input-group label band geometry and style contract.
+
+Each band identifies a contiguous span of input nodes and the visual style
+used to render that group marker.
+
+## browser-entry/network-view/network-view.constants.ts
 
 Ordered labels for grouped Flappy network input bands.
 
 ### FLAPPY_INPUT_GROUP_LABELS
 
-## browser-entry/network-view/network-view.draw.service.ts
-
-### drawInputGroupLabelBands
-
-`(context: CanvasRenderingContext2D, positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => void`
-
-Overlay drawing helpers specific to the network-view panel.
-
-These helpers render semantic guides that sit on top of the raw graph, most
-notably the colored input-group bands that explain how temporal observation
-channels are organized.
-
-### drawRoundedRect
-
-`(context: CanvasRenderingContext2D, leftXPx: number, topYPx: number, widthPx: number, heightPx: number, radiusPx: number, fillColor: string) => void`
-
-Draws a filled rounded rectangle path.
-
-This is the small geometry primitive used by the input-group band renderer.
-
-## browser-entry/network-view/network-view.labels.utils.ts
-
-### resolveInputGroupLabelBands
-
-`(inputNodeCount: number) => import("test/examples/flappy_bird/browser-entry/network-view/network-view.types").InputGroupLabelBand[]`
-
-Semantic input-label helpers for the network-view panel.
-
-The Flappy controller input layer is not just a list of anonymous scalars; it
-is organized into stacked observation frames plus action-history channels.
-These helpers recover that grouping for visual annotation.
+Ordered labels for grouped Flappy network input bands.
 
 ## browser-entry/network-view/network-view.layout.utils.ts
 
+Node-positioning helpers for the browser network view.
+
+Once topology has been resolved into layers, these helpers place nodes inside
+the drawable panel and then center the final graph so it feels balanced inside
+the available canvas space.
+
+### positionNetworkNodes
+
+```ts
+positionNetworkNodes(
+  networkLayers: VisualNetworkNodeLike[][],
+  leftPaddingPx: number,
+  topPaddingPx: number,
+  drawableWidthPx: number,
+  drawableHeightPx: number,
+  nodeLayoutPaddingPx: number,
+  nodeDimensions: NetworkNodeDimensionsLike,
+): PositionedNetworkNodeLike[]
+```
+
+Positions network nodes into drawable canvas coordinates.
+
+The layout keeps layer ordering stable while adapting inter-node spacing to
+the amount of available vertical space.
+
+Parameters:
+- `networkLayers` - - Resolved network layers.
+- `leftPaddingPx` - - Left graph padding.
+- `topPaddingPx` - - Top graph padding.
+- `drawableWidthPx` - - Drawable graph width.
+- `drawableHeightPx` - - Drawable graph height.
+- `nodeLayoutPaddingPx` - - Inner graph padding.
+- `nodeDimensions` - - Node dimensions.
+
+Returns: Positioned nodes.
+
 ### centerPositionedNodesInDrawableArea
 
-`(positionedNodes: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[], leftPaddingPx: number, topPaddingPx: number, drawableWidthPx: number, drawableHeightPx: number, nodeLayoutPaddingPx: number, nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]`
+```ts
+centerPositionedNodesInDrawableArea(
+  positionedNodes: PositionedNetworkNodeLike[],
+  leftPaddingPx: number,
+  topPaddingPx: number,
+  drawableWidthPx: number,
+  drawableHeightPx: number,
+  nodeLayoutPaddingPx: number,
+  nodeDimensions: NetworkNodeDimensionsLike,
+): PositionedNetworkNodeLike[]
+```
 
 Centers positioned nodes within the drawable graph area.
 
@@ -366,24 +488,113 @@ Parameters:
 
 Returns: Center-aligned positioned nodes.
 
-### positionNetworkNodes
-
-`(networkLayers: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][], leftPaddingPx: number, topPaddingPx: number, drawableWidthPx: number, drawableHeightPx: number, nodeLayoutPaddingPx: number, nodeDimensions: import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").NetworkNodeDimensionsLike) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").PositionedNetworkNodeLike[]`
-
-Node-positioning helpers for the browser network view.
-
-Once topology has been resolved into layers, these helpers place nodes inside
-the drawable panel and then center the final graph so it feels balanced inside
-the available canvas space.
-
 ## browser-entry/network-view/network-view.topology.utils.ts
-
-### resolveNetworkVisualizationLayers
-
-`(network: import("src/architecture/network").default | undefined, inputSize: number, outputSize: number) => import("test/examples/flappy_bird/browser-entry/browser-entry.visualization.types").VisualNetworkNodeLike[][]`
 
 Topology resolution helpers for the browser network view.
 
 These helpers answer a key visualization question: how should the current
 network be partitioned into ordered layers so layout and architecture labels
 stay meaningful even when some metadata is missing?
+
+### resolveNetworkVisualizationLayers
+
+```ts
+resolveNetworkVisualizationLayers(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): VisualNetworkNodeLike[][]
+```
+
+Resolves layered node groups for network-view layout and rendering.
+
+Educational note:
+Layer grouping is a network-view concern because it drives sizing, node
+placement, and architecture presentation. Visualization code can still reuse
+the result, but this helper now lives with the module that owns layout.
+
+The resolver prefers explicit layer metadata when it exists, then falls back
+to a topology-derived depth estimate so even loosely structured networks can
+still be drawn in an intelligible left-to-right order.
+
+Parameters:
+- `network` - - Runtime network instance.
+- `inputSize` - - Input count fallback.
+- `outputSize` - - Output count fallback.
+
+Returns: Layered nodes for rendering.
+
+## browser-entry/network-view/network-view.draw.service.ts
+
+Overlay drawing helpers specific to the network-view panel.
+
+These helpers render semantic guides that sit on top of the raw graph, most
+notably the colored input-group bands that explain how temporal observation
+channels are organized.
+
+### drawInputGroupLabelBands
+
+```ts
+drawInputGroupLabelBands(
+  context: CanvasRenderingContext2D,
+  positionedNodes: PositionedNetworkNodeLike[],
+  nodeDimensions: NetworkNodeDimensionsLike,
+): void
+```
+
+Draws vertical neon bands that label semantic groups in the input layer.
+
+The bands make the input layer readable as domain features rather than just a
+numbered stack of nodes.
+
+Parameters:
+- `context` - - Canvas 2D rendering context.
+- `positionedNodes` - - Positioned nodes in graph coordinates.
+- `nodeDimensions` - - Resolved node dimensions.
+
+Returns: Nothing.
+
+### drawRoundedRect
+
+```ts
+drawRoundedRect(
+  context: CanvasRenderingContext2D,
+  leftXPx: number,
+  topYPx: number,
+  widthPx: number,
+  heightPx: number,
+  radiusPx: number,
+  fillColor: string,
+): void
+```
+
+Draws a filled rounded rectangle path.
+
+This is the small geometry primitive used by the input-group band renderer.
+
+## browser-entry/network-view/network-view.labels.utils.ts
+
+Semantic input-label helpers for the network-view panel.
+
+The Flappy controller input layer is not just a list of anonymous scalars; it
+is organized into stacked observation frames plus action-history channels.
+These helpers recover that grouping for visual annotation.
+
+### resolveInputGroupLabelBands
+
+```ts
+resolveInputGroupLabelBands(
+  inputNodeCount: number,
+): InputGroupLabelBand[]
+```
+
+Resolves input-layer semantic label bands for Flappy temporal observation channels.
+
+When the input size matches the expected temporal-memory layout, the view can
+annotate groups such as stacked frames and action channels directly beside the
+input layer.
+
+Parameters:
+- `inputNodeCount` - - Input-layer node count.
+
+Returns: Group label ranges with band colors.

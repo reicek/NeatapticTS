@@ -1,7 +1,7 @@
 import Neat from '../../src/neat';
 import Network from '../../src/architecture/network';
 import Connection from '../../src/architecture/connection';
-import { selection as selectionMethods } from '../../src/methods/selection';
+import { selection as selectionMethods } from '../../src/methods/selection/selection';
 
 type TournamentSelectionOptions = {
   name: 'TOURNAMENT';
