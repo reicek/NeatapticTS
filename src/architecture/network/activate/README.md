@@ -2,57 +2,24 @@
 
 ## architecture/network/activate/network.activate.utils.types.ts
 
-### INPUT_NODE_TYPE
+### ActivateRuntimeNetworkProps
 
-Node role label used by activation traversal for input neurons.
+Runtime network view used by the object-graph activation pipeline.
 
-### OUTPUT_NODE_TYPE
-
-Node role label used by activation traversal for output neurons.
-
-### NO_TRACE_FAST_SLAB_TRAINING_FLAG
-
-Training flag value used by no-trace fast slab eligibility checks.
-
-### INITIAL_OUTPUT_WRITE_INDEX
-
-Initial write index used when collecting output activations.
-
-### OUTPUT_WRITE_INDEX_INCREMENT
-
-Increment applied after writing one output activation value.
-
-### UNDEFINED_INPUT_LENGTH_TEXT
-
-Fallback text for undefined input lengths when formatting validation errors.
-
-### DEFAULT_MAX_ACTIVATION_DEPTH
-
-Default hard limit for recursive activation depth in raw activation mode.
-
-### BATCH_INPUTS_COLLECTION_ERROR_MESSAGE
-
-Error message used when batch activation receives a non-array container.
+This intentionally describes the internal fields activation reads/writes
+(training step, RNG, regularization knobs, and slab fast-path hooks).
 
 ### ActivationOutputBuffer
 
 Pooled activation output array type acquired from the shared activation array pool.
 
-### NoTraceActivationContext
+### ActivationStats
 
-Shared state used by no-trace activation orchestration and helpers.
+Activation telemetry collected during a single activation pass.
 
-### NoTraceNodeTraversalContext
+### BATCH_INPUTS_COLLECTION_ERROR_MESSAGE
 
-Shared state used for node traversal during no-trace activation.
-
-### SingleNodeNoTraceActivationContext
-
-Shared state used while activating one node during no-trace traversal.
-
-### RawActivationContext
-
-Shared state used by raw activation orchestration.
+Error message used when batch activation receives a non-array container.
 
 ### BatchActivationContext
 
@@ -62,12 +29,17 @@ Shared state used by batch activation orchestration.
 
 Shared state used while validating and activating one row in a batch.
 
-### ActivateRuntimeNetworkProps
+### DEFAULT_MAX_ACTIVATION_DEPTH
 
-Runtime network view used by the object-graph activation pipeline.
+Default hard limit for recursive activation depth in raw activation mode.
 
-This intentionally describes the internal fields activation reads/writes
-(training step, RNG, regularization knobs, and slab fast-path hooks).
+### INITIAL_OUTPUT_WRITE_INDEX
+
+Initial write index used when collecting output activations.
+
+### INPUT_NODE_TYPE
+
+Node role label used by activation traversal for input neurons.
 
 ### NetworkLayer
 
@@ -77,19 +49,139 @@ Layer container type used by the layered activation paths.
 
 Node collection type attached to a single network layer.
 
-### WeightNoiseStats
+### NO_TRACE_FAST_SLAB_TRAINING_FLAG
 
-Weight-noise telemetry collected during a single activation pass.
+Training flag value used by no-trace fast slab eligibility checks.
 
-### ActivationStats
+### NoTraceActivationContext
 
-Activation telemetry collected during a single activation pass.
+Shared state used by no-trace activation orchestration and helpers.
+
+### NoTraceNodeTraversalContext
+
+Shared state used for node traversal during no-trace activation.
+
+### OUTPUT_NODE_TYPE
+
+Node role label used by activation traversal for output neurons.
+
+### OUTPUT_WRITE_INDEX_INCREMENT
+
+Increment applied after writing one output activation value.
+
+### RawActivationContext
+
+Shared state used by raw activation orchestration.
+
+### SingleNodeNoTraceActivationContext
+
+Shared state used while activating one node during no-trace traversal.
+
+### UNDEFINED_INPUT_LENGTH_TEXT
+
+Fallback text for undefined input lengths when formatting validation errors.
 
 ### WeightNoiseApplyResult
 
 Marker returned by weight-noise application to drive safe restore logic.
 
+### WeightNoiseStats
+
+Weight-noise telemetry collected during a single activation pass.
+
 ## architecture/network/activate/network.activate.utils.ts
+
+### activate
+
+```ts
+activate(
+  input: number[],
+  training: boolean,
+): number[]
+```
+
+Execute the main activation routine and return plain numeric outputs.
+
+Parameters:
+- `this` - Bound network instance.
+- `input` - Input values with length matching network input count.
+- `training` - Whether training-time stochastic behavior is enabled.
+
+Returns: Output activation values.
+
+### activateBatch
+
+```ts
+activateBatch(
+  inputs: number[][],
+  training: boolean,
+): number[][]
+```
+
+Activate the network over a mini‑batch (array) of input vectors, returning a 2‑D array of outputs.
+
+This helper simply loops, invoking {@link Network.activate} (or its bound variant) for each
+sample. It is intentionally naive: no attempt is made to fuse operations across the batch.
+For very large batch sizes or performance‑critical paths consider implementing a custom
+vectorized backend that exploits SIMD, GPU kernels, or parallel workers.
+
+Input validation occurs per row to surface the earliest mismatch with a descriptive index.
+
+Parameters:
+- `this` - - Bound Network instance.
+- `inputs` - - Array of input vectors; each must have length == network.input.
+- `training` - - Whether each activation should keep training traces.
+
+Returns: 2‑D array: outputs[i] is the activation result for inputs[i].
+
+Example:
+
+const batchOut = net.activateBatch([[0,0,1],[1,0,0],[0,1,0]]);
+console.log(batchOut.length); // 3 rows
+
+### activateRaw
+
+```ts
+activateRaw(
+  input: number[],
+  training: boolean,
+  maxActivationDepth: number,
+): number[]
+```
+
+Thin semantic alias to the network's main activation path.
+
+At present this simply forwards to {@link Network.activate}. The indirection is useful for:
+ - Future differentiation between raw (immediate) activation and a mode that performs reuse /
+   staged batching logic.
+ - Providing a stable exported symbol for external tooling / instrumentation.
+
+Parameters:
+- `this` - - Bound Network instance.
+- `input` - - Input vector (length == network.input).
+- `training` - - Whether to retain training traces / gradients (delegated downstream).
+- `maxActivationDepth` - - Guard against runaway recursion / cyclic activation attempts.
+
+Returns: Implementation-defined result of Network.activate (typically an output vector).
+
+Example:
+
+const y = net.activateRaw([0,1,0]);
+
+### gaussianRand
+
+```ts
+gaussianRand(
+  rng: () => number,
+): number
+```
+
+Produce a normally distributed random sample using the Box-Muller transform.
+
+Parameters:
+- `rng` - Pseudo-random source in the interval [0, 1).
+
+Returns: Standard normal sample with mean 0 and variance 1.
 
 ### noTraceActivate
 
@@ -137,99 +229,37 @@ Example:
 const out = net.noTraceActivate([0.1, 0.2, 0.3]);
 console.log(out); // => e.g. [0.5123, 0.0441]
 
-### activateRaw
-
-```ts
-activateRaw(
-  input: number[],
-  training: boolean,
-  maxActivationDepth: number,
-): number[]
-```
-
-Thin semantic alias to the network's main activation path.
-
-At present this simply forwards to {@link Network.activate}. The indirection is useful for:
- - Future differentiation between raw (immediate) activation and a mode that performs reuse /
-   staged batching logic.
- - Providing a stable exported symbol for external tooling / instrumentation.
-
-Parameters:
-- `this` - - Bound Network instance.
-- `input` - - Input vector (length == network.input).
-- `training` - - Whether to retain training traces / gradients (delegated downstream).
-- `maxActivationDepth` - - Guard against runaway recursion / cyclic activation attempts.
-
-Returns: Implementation-defined result of Network.activate (typically an output vector).
-
-Example:
-
-const y = net.activateRaw([0,1,0]);
-
-### activateBatch
-
-```ts
-activateBatch(
-  inputs: number[][],
-  training: boolean,
-): number[][]
-```
-
-Activate the network over a mini‑batch (array) of input vectors, returning a 2‑D array of outputs.
-
-This helper simply loops, invoking {@link Network.activate} (or its bound variant) for each
-sample. It is intentionally naive: no attempt is made to fuse operations across the batch.
-For very large batch sizes or performance‑critical paths consider implementing a custom
-vectorized backend that exploits SIMD, GPU kernels, or parallel workers.
-
-Input validation occurs per row to surface the earliest mismatch with a descriptive index.
-
-Parameters:
-- `this` - - Bound Network instance.
-- `inputs` - - Array of input vectors; each must have length == network.input.
-- `training` - - Whether each activation should keep training traces.
-
-Returns: 2‑D array: outputs[i] is the activation result for inputs[i].
-
-Example:
-
-const batchOut = net.activateBatch([[0,0,1],[1,0,0],[0,1,0]]);
-console.log(batchOut.length); // 3 rows
-
-### activate
-
-```ts
-activate(
-  input: number[],
-  training: boolean,
-): number[]
-```
-
-Execute the main activation routine and return plain numeric outputs.
-
-Parameters:
-- `this` - Bound network instance.
-- `input` - Input values with length matching network input count.
-- `training` - Whether training-time stochastic behavior is enabled.
-
-Returns: Output activation values.
-
-### gaussianRand
-
-```ts
-gaussianRand(
-  rng: () => number,
-): number
-```
-
-Produce a normally distributed random sample using the Box-Muller transform.
-
-Parameters:
-- `rng` - Pseudo-random source in the interval [0, 1).
-
-Returns: Standard normal sample with mean 0 and variance 1.
-
 ## architecture/network/activate/network.activate.raw.utils.ts
+
+### activateViaNetworkDelegate
+
+```ts
+activateViaNetworkDelegate(
+  activationContext: RawActivationContext,
+): number[]
+```
+
+Delegate raw activation to the core network activation implementation.
+
+Parameters:
+- `activationContext` - - Shared raw activation state.
+
+Returns: Activation output vector.
+
+### activateWithSelectedReusePath
+
+```ts
+activateWithSelectedReusePath(
+  activationContext: RawActivationContext,
+): number[]
+```
+
+Select the raw activation execution path based on runtime reuse configuration.
+
+Parameters:
+- `activationContext` - - Shared raw activation state.
+
+Returns: Activation output vector.
 
 ### executeRawActivation
 
@@ -249,52 +279,22 @@ Parameters:
 
 Returns: Activation output vector from the network delegate.
 
-### activateWithSelectedReusePath
-
-```ts
-activateWithSelectedReusePath(
-  activationContext: RawActivationContext,
-): number[]
-```
-
-Select the raw activation execution path based on runtime reuse configuration.
-
-Parameters:
-- `activationContext` - - Shared raw activation state.
-
-Returns: Activation output vector.
-
-### activateViaNetworkDelegate
-
-```ts
-activateViaNetworkDelegate(
-  activationContext: RawActivationContext,
-): number[]
-```
-
-Delegate raw activation to the core network activation implementation.
-
-Parameters:
-- `activationContext` - - Shared raw activation state.
-
-Returns: Activation output vector.
-
 ## architecture/network/activate/network.activate.core.utils.ts
 
-### gaussianRand
+### acquireOutputBuffer
 
 ```ts
-gaussianRand(
-  rng: () => number,
-): number
+acquireOutputBuffer(
+  outputSize: number,
+): ActivationArray
 ```
 
-Produce a normally distributed random sample using the Box-Muller transform.
+Acquire a pooled activation output buffer for the current output width.
 
 Parameters:
-- `rng` - Pseudo-random source in the interval [0, 1).
+- `outputSize` - Number of output slots.
 
-Returns: Standard normal sample with mean 0 and variance 1.
+Returns: Mutable pooled output buffer.
 
 ### activate
 
@@ -313,372 +313,6 @@ Parameters:
 - `training` - Whether training-time stochastic behavior is enabled.
 
 Returns: Output activation values.
-
-### prepareTopologyForActivation
-
-```ts
-prepareTopologyForActivation(
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-): void
-```
-
-Ensure topological order is refreshed before activation when acyclic mode requires it.
-
-Parameters:
-- `runtimeNetwork` - Runtime activation internals.
-
-Returns: Nothing.
-
-### validateInputVector
-
-```ts
-validateInputVector(
-  network: default,
-  inputVector: number[],
-): void
-```
-
-Validate that the incoming input vector exists and matches expected input size.
-
-Parameters:
-- `network` - Network being activated.
-- `inputVector` - Input vector to validate.
-
-Returns: Nothing.
-
-### tryFastSlabActivation
-
-```ts
-tryFastSlabActivation(
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-  inputVector: number[],
-  isTraining: boolean,
-): number[] | undefined
-```
-
-Attempt fast slab activation and safely fall back to regular activation on failure.
-
-Parameters:
-- `runtimeNetwork` - Runtime activation internals.
-- `inputVector` - Input vector.
-- `isTraining` - Training-time flag.
-
-Returns: Fast slab output when available, otherwise undefined.
-
-### acquireOutputBuffer
-
-```ts
-acquireOutputBuffer(
-  outputSize: number,
-): ActivationArray
-```
-
-Acquire a pooled activation output buffer for the current output width.
-
-Parameters:
-- `outputSize` - Number of output slots.
-
-Returns: Mutable pooled output buffer.
-
-### validateNetworkNodes
-
-```ts
-validateNetworkNodes(
-  network: default,
-): void
-```
-
-Assert that the network contains nodes before executing activation routines.
-
-Parameters:
-- `network` - Network being activated.
-
-Returns: Nothing.
-
-### resetSkippedLayers
-
-```ts
-resetSkippedLayers(
-  network: default,
-): void
-```
-
-Clear the runtime list of skipped layers before current activation pass.
-
-Parameters:
-- `network` - Network runtime owner.
-
-Returns: Nothing.
-
-### createActivationStats
-
-```ts
-createActivationStats(
-  totalConnections: number,
-): ActivationStats
-```
-
-Create activation statistics container for the current pass.
-
-Parameters:
-- `totalConnections` - Number of network connections.
-
-Returns: Initialized activation stats object.
-
-### createWeightNoiseStats
-
-```ts
-createWeightNoiseStats(): WeightNoiseStats
-```
-
-Create the weight-noise statistics record with zeroed aggregates.
-
-Returns: Zero-initialized weight-noise stats.
-
-### applyTrainingWeightNoise
-
-```ts
-applyTrainingWeightNoise(
-  network: default,
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-  isTraining: boolean,
-): WeightNoiseApplyResult
-```
-
-Apply per-connection training noise for the main activation flow.
-
-Parameters:
-- `network` - Network being activated.
-- `runtimeNetwork` - Runtime activation internals.
-- `isTraining` - Training-time flag.
-
-Returns: Applied-state information for downstream restore logic.
-
-### resolveDynamicWeightNoiseStd
-
-```ts
-resolveDynamicWeightNoiseStd(
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-): number
-```
-
-Resolve the training-step adjusted global weight-noise standard deviation.
-
-Parameters:
-- `runtimeNetwork` - Runtime activation internals.
-
-Returns: Effective weight-noise standard deviation for current training step.
-
-### resolveConnectionNoiseStd
-
-```ts
-resolveConnectionNoiseStd(
-  network: default,
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-  connection: default,
-  fallbackStandardDeviation: number,
-): number
-```
-
-Resolve connection-specific weight-noise standard deviation, including per-hidden overrides.
-
-Parameters:
-- `network` - Network being activated.
-- `runtimeNetwork` - Runtime activation internals.
-- `connection` - Current connection.
-- `fallbackStandardDeviation` - Global fallback deviation.
-
-Returns: Effective standard deviation for this connection.
-
-### findSourceLayerIndex
-
-```ts
-findSourceLayerIndex(
-  network: default,
-  connection: default,
-): number
-```
-
-Find the layer index containing a connection source node.
-
-Parameters:
-- `network` - Network being activated.
-- `connection` - Connection to inspect.
-
-Returns: Layer index for source node, or -1 when not found.
-
-### updateStochasticDepthFromSchedule
-
-```ts
-updateStochasticDepthFromSchedule(
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-  isTraining: boolean,
-): void
-```
-
-Update stochastic depth probabilities using a training schedule when valid.
-
-Parameters:
-- `runtimeNetwork` - Runtime activation internals.
-- `isTraining` - Training-time flag.
-
-Returns: Nothing.
-
-### containsInvalidProbability
-
-```ts
-containsInvalidProbability(
-  probabilities: number[],
-): boolean
-```
-
-Check whether a probability vector contains values outside the (0, 1] interval.
-
-Parameters:
-- `probabilities` - Candidate probability vector.
-
-Returns: True when one or more probabilities are invalid.
-
-### executeActivationPath
-
-```ts
-executeActivationPath(
-  network: default,
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-  inputVector: number[],
-  isTraining: boolean,
-  outputBuffer: ActivationArray,
-  stats: ActivationStats,
-): void
-```
-
-Execute one of the three activation branches: stochastic layers, standard layers, or raw nodes.
-
-Parameters:
-- `network` - Network being activated.
-- `runtimeNetwork` - Runtime activation internals.
-- `inputVector` - Input vector.
-- `isTraining` - Training-time flag.
-- `outputBuffer` - Mutable output buffer.
-- `stats` - Activation stats accumulator.
-
-Returns: Nothing.
-
-### hasLayeredNetworkWithStochasticDepth
-
-```ts
-hasLayeredNetworkWithStochasticDepth(
-  network: default,
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-): boolean
-```
-
-Check whether the network has layers and stochastic-depth configuration for layer skipping path.
-
-Parameters:
-- `network` - Network being activated.
-- `runtimeNetwork` - Runtime activation internals.
-
-Returns: True when stochastic-depth layer path should run.
-
-### hasLayeredNetwork
-
-```ts
-hasLayeredNetwork(
-  network: default,
-): boolean
-```
-
-Check whether the network has at least one explicit layer.
-
-Parameters:
-- `network` - Network being activated.
-
-Returns: True when layered activation path should run.
-
-### activateLayeredNetworkWithStochasticDepth
-
-```ts
-activateLayeredNetworkWithStochasticDepth(
-  network: default,
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-  inputVector: number[],
-  isTraining: boolean,
-  outputBuffer: ActivationArray,
-  stats: ActivationStats,
-): void
-```
-
-Run layered activation with stochastic-depth skipping and inverse-survival scaling.
-
-Parameters:
-- `network` - Network being activated.
-- `runtimeNetwork` - Runtime activation internals.
-- `inputVector` - Input vector.
-- `isTraining` - Training-time flag.
-- `outputBuffer` - Mutable output buffer.
-- `stats` - Activation stats accumulator.
-
-Returns: Nothing.
-
-### decideLayerSkip
-
-```ts
-decideLayerSkip(
-  network: default,
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-  currentLayerNodeCount: number,
-  layerIndex: number,
-  isTraining: boolean,
-  previousLayerActivations: number[] | undefined,
-): { shouldSkipLayer: boolean; surviveProbability: number; }
-```
-
-Decide whether a hidden layer should be skipped in stochastic-depth mode.
-
-Parameters:
-- `network` - Network being activated.
-- `runtimeNetwork` - Runtime activation internals.
-- `currentLayerNodeCount` - Number of nodes in current layer.
-- `layerIndex` - Current layer index.
-- `isTraining` - Training-time flag.
-- `previousLayerActivations` - Last computed layer activations.
-
-Returns: Skip decision and survival probability for the layer.
-
-### isHiddenLayer
-
-```ts
-isHiddenLayer(
-  layerIndex: number,
-  totalLayerCount: number,
-): boolean
-```
-
-Check whether a layer index refers to a hidden layer in a layered network.
-
-Parameters:
-- `layerIndex` - Current layer index.
-- `totalLayerCount` - Number of layers in the network.
-
-Returns: True when the layer is hidden.
-
-### hasCompatibleSkipState
-
-```ts
-hasCompatibleSkipState(
-  previousLayerActivations: number[] | undefined,
-  currentLayerNodeCount: number,
-): boolean
-```
-
-Validate whether previous activations can be reused as skip pass-through output.
-
-Parameters:
-- `previousLayerActivations` - Last computed layer activations.
-- `currentLayerNodeCount` - Current layer node count.
-
-Returns: True when pass-through activations are compatible.
 
 ### activateLayer
 
@@ -700,61 +334,6 @@ Parameters:
 - `isTraining` - Training-time flag.
 
 Returns: Layer activations.
-
-### recordSkippedLayer
-
-```ts
-recordSkippedLayer(
-  network: default,
-  stats: ActivationStats,
-  layerIndex: number,
-): void
-```
-
-Record a skipped layer in runtime and stats trackers.
-
-Parameters:
-- `network` - Network being activated.
-- `stats` - Activation stats accumulator.
-- `layerIndex` - Skipped layer index.
-
-Returns: Nothing.
-
-### scaleActivations
-
-```ts
-scaleActivations(
-  activations: number[],
-  scaleFactor: number,
-): number[]
-```
-
-Create a new activation vector by multiplying each activation by a scale factor.
-
-Parameters:
-- `activations` - Source activation vector.
-- `scaleFactor` - Multiplicative scale factor.
-
-Returns: Scaled activation vector.
-
-### writeLayerActivationsToOutput
-
-```ts
-writeLayerActivationsToOutput(
-  layerActivations: number[] | undefined,
-  outputBuffer: ActivationArray,
-  outputSize: number,
-): void
-```
-
-Copy final layer activations into the pooled network output buffer.
-
-Parameters:
-- `layerActivations` - Final layer activations.
-- `outputBuffer` - Mutable output buffer.
-- `outputSize` - Maximum output width.
-
-Returns: Nothing.
 
 ### activateLayeredNetworkWithDropout
 
@@ -781,43 +360,28 @@ Parameters:
 
 Returns: Nothing.
 
-### applyHiddenLayerDropout
+### activateLayeredNetworkWithStochasticDepth
 
 ```ts
-applyHiddenLayerDropout(
-  layer: default,
-  rawActivations: number[],
+activateLayeredNetworkWithStochasticDepth(
+  network: default,
   runtimeNetwork: ActivateRuntimeNetworkProps,
-  dropoutProbability: number,
+  inputVector: number[],
   isTraining: boolean,
+  outputBuffer: ActivationArray,
   stats: ActivationStats,
 ): void
 ```
 
-Apply dropout masks to hidden layer nodes and enforce at least one active node.
+Run layered activation with stochastic-depth skipping and inverse-survival scaling.
 
 Parameters:
-- `layer` - Hidden layer instance.
-- `rawActivations` - Raw layer activations.
+- `network` - Network being activated.
 - `runtimeNetwork` - Runtime activation internals.
-- `dropoutProbability` - Layer dropout probability.
+- `inputVector` - Input vector.
 - `isTraining` - Training-time flag.
+- `outputBuffer` - Mutable output buffer.
 - `stats` - Activation stats accumulator.
-
-Returns: Nothing.
-
-### setAllMasksToOne
-
-```ts
-setAllMasksToOne(
-  nodes: default[],
-): void
-```
-
-Set mask value to one for every node in a layer.
-
-Parameters:
-- `nodes` - Layer nodes to normalize.
 
 Returns: Nothing.
 
@@ -843,63 +407,6 @@ Parameters:
 - `isTraining` - Training-time flag.
 - `outputBuffer` - Mutable output buffer.
 - `stats` - Activation stats accumulator.
-
-Returns: Nothing.
-
-### collectHiddenNodes
-
-```ts
-collectHiddenNodes(
-  nodes: default[],
-): default[]
-```
-
-Collect hidden nodes from a raw node list.
-
-Parameters:
-- `nodes` - Network node collection.
-
-Returns: Hidden-only node list.
-
-### applyFallbackHiddenDropout
-
-```ts
-applyFallbackHiddenDropout(
-  hiddenNodes: default[],
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-  dropoutProbability: number,
-  isTraining: boolean,
-  stats: ActivationStats,
-): void
-```
-
-Apply fallback dropout for hidden nodes in raw node traversal mode.
-
-Parameters:
-- `hiddenNodes` - Hidden nodes.
-- `runtimeNetwork` - Runtime activation internals.
-- `dropoutProbability` - Dropout probability.
-- `isTraining` - Training-time flag.
-- `stats` - Activation stats accumulator.
-
-Returns: Nothing.
-
-### applyFallbackWeightNoise
-
-```ts
-applyFallbackWeightNoise(
-  network: default,
-  runtimeNetwork: ActivateRuntimeNetworkProps,
-  isTraining: boolean,
-): void
-```
-
-Apply raw fallback weight noise to all connections using global standard deviation.
-
-Parameters:
-- `network` - Network being activated.
-- `runtimeNetwork` - Runtime activation internals.
-- `isTraining` - Training-time flag.
 
 Returns: Nothing.
 
@@ -943,6 +450,73 @@ Parameters:
 
 Returns: Nothing.
 
+### applyFallbackHiddenDropout
+
+```ts
+applyFallbackHiddenDropout(
+  hiddenNodes: default[],
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  dropoutProbability: number,
+  isTraining: boolean,
+  stats: ActivationStats,
+): void
+```
+
+Apply fallback dropout for hidden nodes in raw node traversal mode.
+
+Parameters:
+- `hiddenNodes` - Hidden nodes.
+- `runtimeNetwork` - Runtime activation internals.
+- `dropoutProbability` - Dropout probability.
+- `isTraining` - Training-time flag.
+- `stats` - Activation stats accumulator.
+
+Returns: Nothing.
+
+### applyFallbackWeightNoise
+
+```ts
+applyFallbackWeightNoise(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
+): void
+```
+
+Apply raw fallback weight noise to all connections using global standard deviation.
+
+Parameters:
+- `network` - Network being activated.
+- `runtimeNetwork` - Runtime activation internals.
+- `isTraining` - Training-time flag.
+
+Returns: Nothing.
+
+### applyHiddenLayerDropout
+
+```ts
+applyHiddenLayerDropout(
+  layer: default,
+  rawActivations: number[],
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  dropoutProbability: number,
+  isTraining: boolean,
+  stats: ActivationStats,
+): void
+```
+
+Apply dropout masks to hidden layer nodes and enforce at least one active node.
+
+Parameters:
+- `layer` - Hidden layer instance.
+- `rawActivations` - Raw layer activations.
+- `runtimeNetwork` - Runtime activation internals.
+- `dropoutProbability` - Layer dropout probability.
+- `isTraining` - Training-time flag.
+- `stats` - Activation stats accumulator.
+
+Returns: Nothing.
+
 ### applyTrainingDropConnect
 
 ```ts
@@ -962,18 +536,127 @@ Parameters:
 
 Returns: Nothing.
 
-### restoreDropConnectWeights
+### applyTrainingWeightNoise
 
 ```ts
-restoreDropConnectWeights(
+applyTrainingWeightNoise(
   network: default,
-): void
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
+): WeightNoiseApplyResult
 ```
 
-Restore drop-connect modified weights and normalize all masks back to one.
+Apply per-connection training noise for the main activation flow.
 
 Parameters:
 - `network` - Network being activated.
+- `runtimeNetwork` - Runtime activation internals.
+- `isTraining` - Training-time flag.
+
+Returns: Applied-state information for downstream restore logic.
+
+### collectHiddenNodes
+
+```ts
+collectHiddenNodes(
+  nodes: default[],
+): default[]
+```
+
+Collect hidden nodes from a raw node list.
+
+Parameters:
+- `nodes` - Network node collection.
+
+Returns: Hidden-only node list.
+
+### containsInvalidProbability
+
+```ts
+containsInvalidProbability(
+  probabilities: number[],
+): boolean
+```
+
+Check whether a probability vector contains values outside the (0, 1] interval.
+
+Parameters:
+- `probabilities` - Candidate probability vector.
+
+Returns: True when one or more probabilities are invalid.
+
+### createActivationStats
+
+```ts
+createActivationStats(
+  totalConnections: number,
+): ActivationStats
+```
+
+Create activation statistics container for the current pass.
+
+Parameters:
+- `totalConnections` - Number of network connections.
+
+Returns: Initialized activation stats object.
+
+### createWeightNoiseStats
+
+```ts
+createWeightNoiseStats(): WeightNoiseStats
+```
+
+Create the weight-noise statistics record with zeroed aggregates.
+
+Returns: Zero-initialized weight-noise stats.
+
+### decideLayerSkip
+
+```ts
+decideLayerSkip(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  currentLayerNodeCount: number,
+  layerIndex: number,
+  isTraining: boolean,
+  previousLayerActivations: number[] | undefined,
+): { shouldSkipLayer: boolean; surviveProbability: number; }
+```
+
+Decide whether a hidden layer should be skipped in stochastic-depth mode.
+
+Parameters:
+- `network` - Network being activated.
+- `runtimeNetwork` - Runtime activation internals.
+- `currentLayerNodeCount` - Number of nodes in current layer.
+- `layerIndex` - Current layer index.
+- `isTraining` - Training-time flag.
+- `previousLayerActivations` - Last computed layer activations.
+
+Returns: Skip decision and survival probability for the layer.
+
+### executeActivationPath
+
+```ts
+executeActivationPath(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+  outputBuffer: ActivationArray,
+  stats: ActivationStats,
+): void
+```
+
+Execute one of the three activation branches: stochastic layers, standard layers, or raw nodes.
+
+Parameters:
+- `network` - Network being activated.
+- `runtimeNetwork` - Runtime activation internals.
+- `inputVector` - Input vector.
+- `isTraining` - Training-time flag.
+- `outputBuffer` - Mutable output buffer.
+- `stats` - Activation stats accumulator.
 
 Returns: Nothing.
 
@@ -1015,20 +698,86 @@ Parameters:
 
 Returns: Nothing.
 
-### releaseBufferAndCreateResult
+### findSourceLayerIndex
 
 ```ts
-releaseBufferAndCreateResult(
-  outputBuffer: ActivationArray,
-): number[]
+findSourceLayerIndex(
+  network: default,
+  connection: default,
+): number
 ```
 
-Release pooled output buffer and return a detached plain array copy.
+Find the layer index containing a connection source node.
 
 Parameters:
-- `outputBuffer` - Mutable pooled output buffer.
+- `network` - Network being activated.
+- `connection` - Connection to inspect.
 
-Returns: Plain array of output values.
+Returns: Layer index for source node, or -1 when not found.
+
+### gaussianRand
+
+```ts
+gaussianRand(
+  rng: () => number,
+): number
+```
+
+Produce a normally distributed random sample using the Box-Muller transform.
+
+Parameters:
+- `rng` - Pseudo-random source in the interval [0, 1).
+
+Returns: Standard normal sample with mean 0 and variance 1.
+
+### hasCompatibleSkipState
+
+```ts
+hasCompatibleSkipState(
+  previousLayerActivations: number[] | undefined,
+  currentLayerNodeCount: number,
+): boolean
+```
+
+Validate whether previous activations can be reused as skip pass-through output.
+
+Parameters:
+- `previousLayerActivations` - Last computed layer activations.
+- `currentLayerNodeCount` - Current layer node count.
+
+Returns: True when pass-through activations are compatible.
+
+### hasLayeredNetwork
+
+```ts
+hasLayeredNetwork(
+  network: default,
+): boolean
+```
+
+Check whether the network has at least one explicit layer.
+
+Parameters:
+- `network` - Network being activated.
+
+Returns: True when layered activation path should run.
+
+### hasLayeredNetworkWithStochasticDepth
+
+```ts
+hasLayeredNetworkWithStochasticDepth(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): boolean
+```
+
+Check whether the network has layers and stochastic-depth configuration for layer skipping path.
+
+Parameters:
+- `network` - Network being activated.
+- `runtimeNetwork` - Runtime activation internals.
+
+Returns: True when stochastic-depth layer path should run.
 
 ### hasOriginalWeightNoise
 
@@ -1045,6 +794,23 @@ Parameters:
 
 Returns: True when snapshot exists.
 
+### isHiddenLayer
+
+```ts
+isHiddenLayer(
+  layerIndex: number,
+  totalLayerCount: number,
+): boolean
+```
+
+Check whether a layer index refers to a hidden layer in a layered network.
+
+Parameters:
+- `layerIndex` - Current layer index.
+- `totalLayerCount` - Number of layers in the network.
+
+Returns: True when the layer is hidden.
+
 ### persistOriginalWeightNoise
 
 ```ts
@@ -1057,6 +823,136 @@ Store current connection weight before applying temporary weight-noise modificat
 
 Parameters:
 - `connection` - Connection to persist.
+
+Returns: Nothing.
+
+### prepareTopologyForActivation
+
+```ts
+prepareTopologyForActivation(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): void
+```
+
+Ensure topological order is refreshed before activation when acyclic mode requires it.
+
+Parameters:
+- `runtimeNetwork` - Runtime activation internals.
+
+Returns: Nothing.
+
+### recordSkippedLayer
+
+```ts
+recordSkippedLayer(
+  network: default,
+  stats: ActivationStats,
+  layerIndex: number,
+): void
+```
+
+Record a skipped layer in runtime and stats trackers.
+
+Parameters:
+- `network` - Network being activated.
+- `stats` - Activation stats accumulator.
+- `layerIndex` - Skipped layer index.
+
+Returns: Nothing.
+
+### releaseBufferAndCreateResult
+
+```ts
+releaseBufferAndCreateResult(
+  outputBuffer: ActivationArray,
+): number[]
+```
+
+Release pooled output buffer and return a detached plain array copy.
+
+Parameters:
+- `outputBuffer` - Mutable pooled output buffer.
+
+Returns: Plain array of output values.
+
+### resetSkippedLayers
+
+```ts
+resetSkippedLayers(
+  network: default,
+): void
+```
+
+Clear the runtime list of skipped layers before current activation pass.
+
+Parameters:
+- `network` - Network runtime owner.
+
+Returns: Nothing.
+
+### resolveConnectionNoiseStd
+
+```ts
+resolveConnectionNoiseStd(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  connection: default,
+  fallbackStandardDeviation: number,
+): number
+```
+
+Resolve connection-specific weight-noise standard deviation, including per-hidden overrides.
+
+Parameters:
+- `network` - Network being activated.
+- `runtimeNetwork` - Runtime activation internals.
+- `connection` - Current connection.
+- `fallbackStandardDeviation` - Global fallback deviation.
+
+Returns: Effective standard deviation for this connection.
+
+### resolveDynamicWeightNoiseStd
+
+```ts
+resolveDynamicWeightNoiseStd(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number
+```
+
+Resolve the training-step adjusted global weight-noise standard deviation.
+
+Parameters:
+- `runtimeNetwork` - Runtime activation internals.
+
+Returns: Effective weight-noise standard deviation for current training step.
+
+### restoreDropConnectWeights
+
+```ts
+restoreDropConnectWeights(
+  network: default,
+): void
+```
+
+Restore drop-connect modified weights and normalize all masks back to one.
+
+Parameters:
+- `network` - Network being activated.
+
+Returns: Nothing.
+
+### restoreOriginalDropConnectWeight
+
+```ts
+restoreOriginalDropConnectWeight(
+  connection: default,
+): void
+```
+
+Restore and clear original connection weight after drop-connect.
+
+Parameters:
+- `connection` - Connection to restore.
 
 Returns: Nothing.
 
@@ -1075,20 +971,35 @@ Parameters:
 
 Returns: Nothing.
 
-### setLastSampledNoise
+### scaleActivations
 
 ```ts
-setLastSampledNoise(
-  connection: default,
-  sampledNoise: number,
+scaleActivations(
+  activations: number[],
+  scaleFactor: number,
+): number[]
+```
+
+Create a new activation vector by multiplying each activation by a scale factor.
+
+Parameters:
+- `activations` - Source activation vector.
+- `scaleFactor` - Multiplicative scale factor.
+
+Returns: Scaled activation vector.
+
+### setAllMasksToOne
+
+```ts
+setAllMasksToOne(
+  nodes: default[],
 ): void
 ```
 
-Persist last sampled weight-noise value for a connection.
+Set mask value to one for every node in a layer.
 
 Parameters:
-- `connection` - Connection to annotate.
-- `sampledNoise` - Last sampled noise.
+- `nodes` - Layer nodes to normalize.
 
 Returns: Nothing.
 
@@ -1109,6 +1020,23 @@ Parameters:
 
 Returns: Nothing.
 
+### setLastSampledNoise
+
+```ts
+setLastSampledNoise(
+  connection: default,
+  sampledNoise: number,
+): void
+```
+
+Persist last sampled weight-noise value for a connection.
+
+Parameters:
+- `connection` - Connection to annotate.
+- `sampledNoise` - Last sampled noise.
+
+Returns: Nothing.
+
 ### stashOriginalDropConnectWeight
 
 ```ts
@@ -1124,35 +1052,119 @@ Parameters:
 
 Returns: Nothing.
 
-### restoreOriginalDropConnectWeight
+### tryFastSlabActivation
 
 ```ts
-restoreOriginalDropConnectWeight(
-  connection: default,
+tryFastSlabActivation(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+): number[] | undefined
+```
+
+Attempt fast slab activation and safely fall back to regular activation on failure.
+
+Parameters:
+- `runtimeNetwork` - Runtime activation internals.
+- `inputVector` - Input vector.
+- `isTraining` - Training-time flag.
+
+Returns: Fast slab output when available, otherwise undefined.
+
+### updateStochasticDepthFromSchedule
+
+```ts
+updateStochasticDepthFromSchedule(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
 ): void
 ```
 
-Restore and clear original connection weight after drop-connect.
+Update stochastic depth probabilities using a training schedule when valid.
 
 Parameters:
-- `connection` - Connection to restore.
+- `runtimeNetwork` - Runtime activation internals.
+- `isTraining` - Training-time flag.
+
+Returns: Nothing.
+
+### validateInputVector
+
+```ts
+validateInputVector(
+  network: default,
+  inputVector: number[],
+): void
+```
+
+Validate that the incoming input vector exists and matches expected input size.
+
+Parameters:
+- `network` - Network being activated.
+- `inputVector` - Input vector to validate.
+
+Returns: Nothing.
+
+### validateNetworkNodes
+
+```ts
+validateNetworkNodes(
+  network: default,
+): void
+```
+
+Assert that the network contains nodes before executing activation routines.
+
+Parameters:
+- `network` - Network being activated.
+
+Returns: Nothing.
+
+### writeLayerActivationsToOutput
+
+```ts
+writeLayerActivationsToOutput(
+  layerActivations: number[] | undefined,
+  outputBuffer: ActivationArray,
+  outputSize: number,
+): void
+```
+
+Copy final layer activations into the pooled network output buffer.
+
+Parameters:
+- `layerActivations` - Final layer activations.
+- `outputBuffer` - Mutable output buffer.
+- `outputSize` - Maximum output width.
 
 Returns: Nothing.
 
 ## architecture/network/activate/network.activate.batch.utils.ts
 
-### executeBatchActivation
+### activateSingleBatchRow
 
 ```ts
-executeBatchActivation(
+activateSingleBatchRow(
+  rowActivationContext: BatchRowActivationContext,
+): number[]
+```
+
+Validate and activate one batch row.
+
+Parameters:
+- `rowActivationContext` - - Shared state for one batch-row activation.
+
+Returns: Activation output vector for the row.
+
+### activateValidatedBatchRows
+
+```ts
+activateValidatedBatchRows(
   activationContext: BatchActivationContext,
 ): number[][]
 ```
 
-Execute mini-batch activation with top-level shape validation and per-row checks.
-
-The orchestration keeps behavior deterministic by validating the container first,
-then validating each row before delegating to the core network activation function.
+Activate each row in a validated batch matrix.
 
 Parameters:
 - `activationContext` - - Shared batch activation state.
@@ -1174,36 +1186,6 @@ Parameters:
 
 Returns: Nothing.
 
-### activateValidatedBatchRows
-
-```ts
-activateValidatedBatchRows(
-  activationContext: BatchActivationContext,
-): number[][]
-```
-
-Activate each row in a validated batch matrix.
-
-Parameters:
-- `activationContext` - - Shared batch activation state.
-
-Returns: Matrix of activation outputs.
-
-### activateSingleBatchRow
-
-```ts
-activateSingleBatchRow(
-  rowActivationContext: BatchRowActivationContext,
-): number[]
-```
-
-Validate and activate one batch row.
-
-Parameters:
-- `rowActivationContext` - - Shared state for one batch-row activation.
-
-Returns: Activation output vector for the row.
-
 ### assertBatchRowInputSize
 
 ```ts
@@ -1218,21 +1200,6 @@ Parameters:
 - `rowActivationContext` - - Shared state for one batch-row activation.
 
 Returns: Nothing.
-
-### isBatchRowInputSizeValid
-
-```ts
-isBatchRowInputSizeValid(
-  rowActivationContext: BatchRowActivationContext,
-): boolean
-```
-
-Determine whether one batch row matches the expected input dimensionality.
-
-Parameters:
-- `rowActivationContext` - - Shared state for one batch-row activation.
-
-Returns: True when row size is valid.
 
 ### buildBatchRowInputSizeMismatchMessage
 
@@ -1249,6 +1216,24 @@ Parameters:
 
 Returns: Formatted error message for invalid row dimensionality.
 
+### executeBatchActivation
+
+```ts
+executeBatchActivation(
+  activationContext: BatchActivationContext,
+): number[][]
+```
+
+Execute mini-batch activation with top-level shape validation and per-row checks.
+
+The orchestration keeps behavior deterministic by validating the container first,
+then validating each row before delegating to the core network activation function.
+
+Parameters:
+- `activationContext` - - Shared batch activation state.
+
+Returns: Matrix of activation outputs.
+
 ### formatInputLengthForMessage
 
 ```ts
@@ -1264,7 +1249,97 @@ Parameters:
 
 Returns: Numeric length as string or predefined undefined text.
 
+### isBatchRowInputSizeValid
+
+```ts
+isBatchRowInputSizeValid(
+  rowActivationContext: BatchRowActivationContext,
+): boolean
+```
+
+Determine whether one batch row matches the expected input dimensionality.
+
+Parameters:
+- `rowActivationContext` - - Shared state for one batch-row activation.
+
+Returns: True when row size is valid.
+
 ## architecture/network/activate/network.activate.helpers.utils.ts
+
+### createBatchActivationContext
+
+```ts
+createBatchActivationContext(
+  network: default,
+  batchInputs: number[][],
+  isTraining: boolean,
+): BatchActivationContext
+```
+
+Build shared batch activation context for helper orchestration.
+
+Parameters:
+- `network` - - Network instance bound to the activation call.
+- `batchInputs` - - Input matrix supplied by the caller.
+- `isTraining` - - Whether activation should retain training traces.
+
+Returns: Fully populated batch activation context.
+
+### createNoTraceActivationContext
+
+```ts
+createNoTraceActivationContext(
+  network: default,
+  inputVector: number[],
+): NoTraceActivationContext
+```
+
+Build shared no-trace activation context for helper orchestration.
+
+Parameters:
+- `network` - - Network instance bound to the activation call.
+- `inputVector` - - Input activation vector supplied by the caller.
+
+Returns: Fully populated no-trace activation context.
+
+### createRawActivationContext
+
+```ts
+createRawActivationContext(
+  network: default,
+  inputVector: number[],
+  isTraining: boolean,
+  maximumActivationDepth: number,
+): RawActivationContext
+```
+
+Build shared raw activation context for helper orchestration.
+
+Parameters:
+- `network` - - Network instance bound to the activation call.
+- `inputVector` - - Input activation vector supplied by the caller.
+- `isTraining` - - Whether activation should retain training traces.
+- `maximumActivationDepth` - - Guard against runaway activation depth.
+
+Returns: Fully populated raw activation context.
+
+### executeBatchActivation
+
+```ts
+executeBatchActivation(
+  activationContext: BatchActivationContext,
+): number[][]
+```
+
+Execute mini-batch activation with top-level shape validation and per-row checks.
+
+The orchestration keeps behavior deterministic by validating the container first,
+then validating each row before delegating to the core network activation function.
+
+Parameters:
+- `activationContext` - - Shared batch activation state.
+
+Returns: Matrix of activation outputs.
 
 ### executeNoTraceActivation
 
@@ -1302,82 +1377,82 @@ Parameters:
 
 Returns: Activation output vector from the network delegate.
 
-### executeBatchActivation
-
-```ts
-executeBatchActivation(
-  activationContext: BatchActivationContext,
-): number[][]
-```
-
-Execute mini-batch activation with top-level shape validation and per-row checks.
-
-The orchestration keeps behavior deterministic by validating the container first,
-then validating each row before delegating to the core network activation function.
-
-Parameters:
-- `activationContext` - - Shared batch activation state.
-
-Returns: Matrix of activation outputs.
-
-### createNoTraceActivationContext
-
-```ts
-createNoTraceActivationContext(
-  network: default,
-  inputVector: number[],
-): NoTraceActivationContext
-```
-
-Build shared no-trace activation context for helper orchestration.
-
-Parameters:
-- `network` - - Network instance bound to the activation call.
-- `inputVector` - - Input activation vector supplied by the caller.
-
-Returns: Fully populated no-trace activation context.
-
-### createRawActivationContext
-
-```ts
-createRawActivationContext(
-  network: default,
-  inputVector: number[],
-  isTraining: boolean,
-  maximumActivationDepth: number,
-): RawActivationContext
-```
-
-Build shared raw activation context for helper orchestration.
-
-Parameters:
-- `network` - - Network instance bound to the activation call.
-- `inputVector` - - Input activation vector supplied by the caller.
-- `isTraining` - - Whether activation should retain training traces.
-- `maximumActivationDepth` - - Guard against runaway activation depth.
-
-Returns: Fully populated raw activation context.
-
-### createBatchActivationContext
-
-```ts
-createBatchActivationContext(
-  network: default,
-  batchInputs: number[][],
-  isTraining: boolean,
-): BatchActivationContext
-```
-
-Build shared batch activation context for helper orchestration.
-
-Parameters:
-- `network` - - Network instance bound to the activation call.
-- `batchInputs` - - Input matrix supplied by the caller.
-- `isTraining` - - Whether activation should retain training traces.
-
-Returns: Fully populated batch activation context.
-
 ## architecture/network/activate/network.activate.notrace.utils.ts
+
+### activateWithoutTraceUsingNodeIteration
+
+```ts
+activateWithoutTraceUsingNodeIteration(
+  activationContext: NoTraceActivationContext,
+): number[]
+```
+
+Execute no-trace activation through node traversal and pooled output collection.
+
+Parameters:
+- `activationContext` - - Shared no-trace activation state.
+
+Returns: Detached output activation vector.
+
+### assertInputMatchesNetworkInputSize
+
+```ts
+assertInputMatchesNetworkInputSize(
+  activationContext: NoTraceActivationContext,
+): void
+```
+
+Validate that the input vector length matches expected network input dimensionality.
+
+Parameters:
+- `activationContext` - - Shared no-trace activation state.
+
+Returns: Nothing.
+
+### buildInputSizeMismatchMessage
+
+```ts
+buildInputSizeMismatchMessage(
+  activationContext: NoTraceActivationContext,
+): string
+```
+
+Build a descriptive input mismatch message for activation validation errors.
+
+Parameters:
+- `activationContext` - - Shared no-trace activation state.
+
+Returns: Formatted mismatch error message.
+
+### canUseNoTraceFastSlab
+
+```ts
+canUseNoTraceFastSlab(
+  activationContext: NoTraceActivationContext,
+): boolean
+```
+
+Determine whether fast slab activation is available for no-trace execution mode.
+
+Parameters:
+- `activationContext` - - Shared no-trace activation state.
+
+Returns: True when slab execution is available for inference mode.
+
+### detachPooledOutputBuffer
+
+```ts
+detachPooledOutputBuffer(
+  pooledOutputBuffer: ActivationArray,
+): number[]
+```
+
+Clone pooled output storage into a detached plain array.
+
+Parameters:
+- `pooledOutputBuffer` - - Pooled activation output storage.
+
+Returns: Detached output activation vector.
 
 ### executeNoTraceActivation
 
@@ -1397,35 +1472,20 @@ Parameters:
 
 Returns: Output activation vector detached from pooled storage.
 
-### refreshTopologicalOrderWhenRequired
+### formatInputLengthForMessage
 
 ```ts
-refreshTopologicalOrderWhenRequired(
-  activationContext: NoTraceActivationContext,
-): void
+formatInputLengthForMessage(
+  inputVector: number[],
+): string
 ```
 
-Refresh cached topological order when acyclic mode is active and marked dirty.
+Convert input length into a display-safe string for error messaging.
 
 Parameters:
-- `activationContext` - - Shared no-trace activation state.
+- `inputVector` - - Candidate activation input vector.
 
-Returns: Nothing.
-
-### assertInputMatchesNetworkInputSize
-
-```ts
-assertInputMatchesNetworkInputSize(
-  activationContext: NoTraceActivationContext,
-): void
-```
-
-Validate that the input vector length matches expected network input dimensionality.
-
-Parameters:
-- `activationContext` - - Shared no-trace activation state.
-
-Returns: Nothing.
+Returns: Numeric length as string or predefined undefined text.
 
 ### isInputVectorLengthValid
 
@@ -1442,35 +1502,20 @@ Parameters:
 
 Returns: True when the input vector is an array with expected length.
 
-### buildInputSizeMismatchMessage
+### refreshTopologicalOrderWhenRequired
 
 ```ts
-buildInputSizeMismatchMessage(
+refreshTopologicalOrderWhenRequired(
   activationContext: NoTraceActivationContext,
-): string
+): void
 ```
 
-Build a descriptive input mismatch message for activation validation errors.
+Refresh cached topological order when acyclic mode is active and marked dirty.
 
 Parameters:
 - `activationContext` - - Shared no-trace activation state.
 
-Returns: Formatted mismatch error message.
-
-### formatInputLengthForMessage
-
-```ts
-formatInputLengthForMessage(
-  inputVector: number[],
-): string
-```
-
-Convert input length into a display-safe string for error messaging.
-
-Parameters:
-- `inputVector` - - Candidate activation input vector.
-
-Returns: Numeric length as string or predefined undefined text.
+Returns: Nothing.
 
 ### tryActivateWithFastSlab
 
@@ -1487,52 +1532,26 @@ Parameters:
 
 Returns: Fast slab output when successful, otherwise null.
 
-### canUseNoTraceFastSlab
-
-```ts
-canUseNoTraceFastSlab(
-  activationContext: NoTraceActivationContext,
-): boolean
-```
-
-Determine whether fast slab activation is available for no-trace execution mode.
-
-Parameters:
-- `activationContext` - - Shared no-trace activation state.
-
-Returns: True when slab execution is available for inference mode.
-
-### activateWithoutTraceUsingNodeIteration
-
-```ts
-activateWithoutTraceUsingNodeIteration(
-  activationContext: NoTraceActivationContext,
-): number[]
-```
-
-Execute no-trace activation through node traversal and pooled output collection.
-
-Parameters:
-- `activationContext` - - Shared no-trace activation state.
-
-Returns: Detached output activation vector.
-
-### detachPooledOutputBuffer
-
-```ts
-detachPooledOutputBuffer(
-  pooledOutputBuffer: ActivationArray,
-): number[]
-```
-
-Clone pooled output storage into a detached plain array.
-
-Parameters:
-- `pooledOutputBuffer` - - Pooled activation output storage.
-
-Returns: Detached output activation vector.
-
 ## architecture/network/activate/network.activate.contexts.utils.ts
+
+### createBatchActivationContext
+
+```ts
+createBatchActivationContext(
+  network: default,
+  batchInputs: number[][],
+  isTraining: boolean,
+): BatchActivationContext
+```
+
+Build shared batch activation context for helper orchestration.
+
+Parameters:
+- `network` - - Network instance bound to the activation call.
+- `batchInputs` - - Input matrix supplied by the caller.
+- `isTraining` - - Whether activation should retain training traces.
+
+Returns: Fully populated batch activation context.
 
 ### createNoTraceActivationContext
 
@@ -1572,25 +1591,6 @@ Parameters:
 
 Returns: Fully populated raw activation context.
 
-### createBatchActivationContext
-
-```ts
-createBatchActivationContext(
-  network: default,
-  batchInputs: number[][],
-  isTraining: boolean,
-): BatchActivationContext
-```
-
-Build shared batch activation context for helper orchestration.
-
-Parameters:
-- `network` - - Network instance bound to the activation call.
-- `batchInputs` - - Input matrix supplied by the caller.
-- `isTraining` - - Whether activation should retain training traces.
-
-Returns: Fully populated batch activation context.
-
 ### toNetworkInternals
 
 ```ts
@@ -1608,23 +1608,50 @@ Returns: Network internals view used by activation helper modules.
 
 ## architecture/network/activate/network.activate.notrace.traversal.utils.ts
 
-### populatePooledOutputBufferFromNodes
+### activateHiddenNode
 
 ```ts
-populatePooledOutputBufferFromNodes(
-  traversalContext: NoTraceNodeTraversalContext,
+activateHiddenNode(
+  networkNode: default,
 ): void
 ```
 
-Traverse nodes in activation order and write output activations into pooled storage.
-
-This helper isolates traversal concerns from no-trace orchestration so the main flow
-can remain focused on high-level activation phases.
+Activate a hidden node without trace bookkeeping.
 
 Parameters:
-- `traversalContext` - - Inputs required to process each node and collect outputs.
+- `networkNode` - - Hidden-role node to activate.
 
 Returns: Nothing.
+
+### activateInputNode
+
+```ts
+activateInputNode(
+  activationContext: SingleNodeNoTraceActivationContext,
+): void
+```
+
+Activate an input node using the matching input vector value.
+
+Parameters:
+- `activationContext` - - Node-specific activation state.
+
+Returns: Nothing.
+
+### activateOutputNodeAndAdvanceIndex
+
+```ts
+activateOutputNodeAndAdvanceIndex(
+  activationContext: SingleNodeNoTraceActivationContext,
+): number
+```
+
+Activate an output node, write the activation value, and advance the output index.
+
+Parameters:
+- `activationContext` - - Node-specific activation state.
+
+Returns: Next output write index.
 
 ### activateSingleNodeWithoutTrace
 
@@ -1671,47 +1698,20 @@ Parameters:
 
 Returns: True when node role is output.
 
-### activateInputNode
+### populatePooledOutputBufferFromNodes
 
 ```ts
-activateInputNode(
-  activationContext: SingleNodeNoTraceActivationContext,
+populatePooledOutputBufferFromNodes(
+  traversalContext: NoTraceNodeTraversalContext,
 ): void
 ```
 
-Activate an input node using the matching input vector value.
+Traverse nodes in activation order and write output activations into pooled storage.
+
+This helper isolates traversal concerns from no-trace orchestration so the main flow
+can remain focused on high-level activation phases.
 
 Parameters:
-- `activationContext` - - Node-specific activation state.
-
-Returns: Nothing.
-
-### activateOutputNodeAndAdvanceIndex
-
-```ts
-activateOutputNodeAndAdvanceIndex(
-  activationContext: SingleNodeNoTraceActivationContext,
-): number
-```
-
-Activate an output node, write the activation value, and advance the output index.
-
-Parameters:
-- `activationContext` - - Node-specific activation state.
-
-Returns: Next output write index.
-
-### activateHiddenNode
-
-```ts
-activateHiddenNode(
-  networkNode: default,
-): void
-```
-
-Activate a hidden node without trace bookkeeping.
-
-Parameters:
-- `networkNode` - - Hidden-role node to activate.
+- `traversalContext` - - Inputs required to process each node and collect outputs.
 
 Returns: Nothing.

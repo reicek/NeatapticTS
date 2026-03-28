@@ -166,7 +166,7 @@ root. Keep exactly one boundary pass active at a time.
   hides the flat root compatibility files from the generated architecture root
   README while still using the configured intro summary as the directory-level
   opening.
-- [scripts/generate-docs.ts](../scripts/generate-docs.ts) now resolves a
+- [scripts/generate-docs/generate-docs.ts](../scripts/generate-docs/generate-docs.ts) now resolves a
   configured intro file from the full sorted file list rather than only the
   visible file list, which allows hidden compatibility facades to remain the
   source of the root chapter introduction.
@@ -180,7 +180,7 @@ root. Keep exactly one boundary pass active at a time.
 
 1. Network class seam work is complete enough for audit mode.
 2. The public-surface docs cleanup is complete; only reopen class-owned split
-  work if the refreshed README still exposes a concrete overloaded seam.
+   work if the refreshed README still exposes a concrete overloaded seam.
 
 ### [PLANNED] Deferred Questions
 
@@ -195,7 +195,7 @@ root. Keep exactly one boundary pass active at a time.
   > Proceed
 - Decide at the end of the active network workstream whether a separate
   architecture-wide README size and thin-doc audit should become its own plan.
-  > Elaborate? We want full documentation 
+  > Elaborate? We want full documentation
 
 ## Coverage Backlog
 
@@ -295,8 +295,7 @@ entry records the minimal extent of completed work and the current stop point.
   [src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.types.ts](../src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.types.ts)
   so the root compatibility barrel no longer owns the emitted LSTM/GRU replay
   context family.
--
-  [src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts](../src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts)
+- [src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts](../src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts)
   now reads those importer-only contracts from the local import chapter while
   the root file keeps only the shared `NodeInternals` and `OnnxLayerFactory`
   bridge types.
@@ -310,12 +309,10 @@ entry records the minimal extent of completed work and the current stop point.
   [src/architecture/network/onnx/import/README.md](../src/architecture/network/onnx/import/README.md)
   now opens with the import pipeline story instead of inheriting its chapter
   introduction from the runtime-factory leaf types file.
--
-  [src/architecture/network/onnx/import/docs.order.json](../src/architecture/network/onnx/import/docs.order.json)
+- [src/architecture/network/onnx/import/docs.order.json](../src/architecture/network/onnx/import/docs.order.json)
   now pins the import flow file as the intro source and keeps the generated
   reading order aligned to the actual reconstruction pipeline.
--
-  [src/architecture/network/onnx/import/network.onnx.import-flow.utils.ts](../src/architecture/network/onnx/import/network.onnx.import-flow.utils.ts)
+- [src/architecture/network/onnx/import/network.onnx.import-flow.utils.ts](../src/architecture/network/onnx/import/network.onnx.import-flow.utils.ts)
   now explains the staged restore questions that link the neighboring runtime,
   weight, activation, orchestration, and fused-recurrent chapters together.
 - Validation completed with `npx tsc --noEmit -p tsconfig.json` and
@@ -328,12 +325,10 @@ entry records the minimal extent of completed work and the current stop point.
   now opens with an explicit chapter map that tells readers when to continue
   into the `export/`, `import/`, and `schema/` subchapters versus when to use
   the root compatibility barrels.
--
-  [src/architecture/network/onnx/docs.order.json](../src/architecture/network/onnx/docs.order.json)
+- [src/architecture/network/onnx/docs.order.json](../src/architecture/network/onnx/docs.order.json)
   now pins the root ONNX reading order so the public entrypoint stays first and
   the thinner root utility barrel appears before the larger root types barrel.
--
-  [src/architecture/network/onnx/network.onnx.ts](../src/architecture/network/onnx/network.onnx.ts)
+- [src/architecture/network/onnx/network.onnx.ts](../src/architecture/network/onnx/network.onnx.ts)
   now explains why the root chapter exists, how the folder is split, and how a
   contributor should navigate the remaining compatibility surfaces.
 - Validation completed with `npx tsc --noEmit -p tsconfig.json` and
@@ -384,8 +379,7 @@ entry records the minimal extent of completed work and the current stop point.
   instead of dropping directly into the much larger
   [src/architecture/network/network.types.ts](../src/architecture/network/network.types.ts)
   shelf.
--
-  [src/architecture/network/docs.order.json](../src/architecture/network/docs.order.json)
+- [src/architecture/network/docs.order.json](../src/architecture/network/docs.order.json)
   now pins the chapter intro to the public `Network` class and keeps the
   reading order aligned to public orchestration first, compatibility utilities
   second, and the large root types shelf last.

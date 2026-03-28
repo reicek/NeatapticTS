@@ -13,61 +13,22 @@ constructor policy and the ongoing activation or training lifecycle.
 
 ## architecture/network/bootstrap/network.bootstrap.utils.ts
 
-### resolveTopologyIntent
+### applySeedOption
 
 ```ts
-resolveTopologyIntent(
-  options: NetworkConstructorOptions | undefined,
-): NetworkTopologyIntent
-```
-
-Resolves the public topology intent for one constructor call.
-
-Prefer this semantic contract over the legacy low-level acyclic flag when
-both are available.
-
-Parameters:
-- `options` - Optional constructor options.
-
-Returns: Resolved topology intent.
-
-### validateTopologyIntentConfiguration
-
-```ts
-validateTopologyIntentConfiguration(
+applySeedOption(
+  network: NetworkBootstrapInternals,
   options: NetworkConstructorOptions | undefined,
 ): void
 ```
 
-Validates that legacy acyclic flags do not contradict public topology intent.
-
-This protects callers from creating a constructor packet that says
-"feed-forward" in one field and "cyclic is allowed" in another.
+Applies the optional deterministic seed from constructor options.
 
 Parameters:
+- `network` - Network instance being constructed.
 - `options` - Optional constructor options.
 
 Returns: Nothing.
-
-### resolveAcyclicEnforcement
-
-```ts
-resolveAcyclicEnforcement(
-  options: NetworkConstructorOptions | undefined,
-  topologyIntent: NetworkTopologyIntent,
-): boolean
-```
-
-Resolves whether acyclic enforcement should be enabled for one constructor call.
-
-The semantic topology intent remains the source of truth unless the caller
-explicitly opted into the legacy boolean toggle.
-
-Parameters:
-- `options` - Optional constructor options.
-- `topologyIntent` - Resolved public topology intent.
-
-Returns: True when acyclic enforcement should be enabled.
 
 ### bootstrapNetwork
 
@@ -87,6 +48,62 @@ warmup, and synthesis of the initial fully connected IO graph.
 Parameters:
 - `network` - Network instance being constructed.
 - `bootstrapContext` - Constructor inputs and resolved topology policy.
+
+Returns: Nothing.
+
+### connectInitialInputToOutputGraph
+
+```ts
+connectInitialInputToOutputGraph(
+  network: NetworkBootstrapInternals,
+): void
+```
+
+Connects every input node to every output node to form the starter graph.
+
+The initial weight scaling mirrors the existing Network constructor behavior
+so this split remains a pure structural refactor.
+
+Parameters:
+- `network` - Network instance being constructed.
+
+Returns: Nothing.
+
+### ensureMinimumHiddenNodes
+
+```ts
+ensureMinimumHiddenNodes(
+  network: NetworkBootstrapInternals,
+  minimumHiddenNodes: number,
+): void
+```
+
+Ensures the network reaches the caller's requested minimum hidden width.
+
+This relies on the public node-split mutation flow so the constructor and the
+evolutionary runtime keep growing hidden structure the same way.
+
+Parameters:
+- `network` - Network instance being constructed.
+- `minimumHiddenNodes` - Requested minimum hidden-node count.
+
+Returns: Nothing.
+
+### initializeIONodes
+
+```ts
+initializeIONodes(
+  network: NetworkBootstrapInternals,
+): void
+```
+
+Creates the initial input and output nodes for a new network.
+
+When node pooling is enabled, each acquired node is reset before use so the
+freshly constructed graph still starts from deterministic runtime state.
+
+Parameters:
+- `network` - Network instance being constructed.
 
 Returns: Nothing.
 
@@ -133,75 +150,58 @@ Parameters:
 
 Returns: Nothing.
 
-### applySeedOption
+### resolveAcyclicEnforcement
 
 ```ts
-applySeedOption(
-  network: NetworkBootstrapInternals,
+resolveAcyclicEnforcement(
+  options: NetworkConstructorOptions | undefined,
+  topologyIntent: NetworkTopologyIntent,
+): boolean
+```
+
+Resolves whether acyclic enforcement should be enabled for one constructor call.
+
+The semantic topology intent remains the source of truth unless the caller
+explicitly opted into the legacy boolean toggle.
+
+Parameters:
+- `options` - Optional constructor options.
+- `topologyIntent` - Resolved public topology intent.
+
+Returns: True when acyclic enforcement should be enabled.
+
+### resolveTopologyIntent
+
+```ts
+resolveTopologyIntent(
+  options: NetworkConstructorOptions | undefined,
+): NetworkTopologyIntent
+```
+
+Resolves the public topology intent for one constructor call.
+
+Prefer this semantic contract over the legacy low-level acyclic flag when
+both are available.
+
+Parameters:
+- `options` - Optional constructor options.
+
+Returns: Resolved topology intent.
+
+### validateTopologyIntentConfiguration
+
+```ts
+validateTopologyIntentConfiguration(
   options: NetworkConstructorOptions | undefined,
 ): void
 ```
 
-Applies the optional deterministic seed from constructor options.
+Validates that legacy acyclic flags do not contradict public topology intent.
+
+This protects callers from creating a constructor packet that says
+"feed-forward" in one field and "cyclic is allowed" in another.
 
 Parameters:
-- `network` - Network instance being constructed.
 - `options` - Optional constructor options.
-
-Returns: Nothing.
-
-### initializeIONodes
-
-```ts
-initializeIONodes(
-  network: NetworkBootstrapInternals,
-): void
-```
-
-Creates the initial input and output nodes for a new network.
-
-When node pooling is enabled, each acquired node is reset before use so the
-freshly constructed graph still starts from deterministic runtime state.
-
-Parameters:
-- `network` - Network instance being constructed.
-
-Returns: Nothing.
-
-### connectInitialInputToOutputGraph
-
-```ts
-connectInitialInputToOutputGraph(
-  network: NetworkBootstrapInternals,
-): void
-```
-
-Connects every input node to every output node to form the starter graph.
-
-The initial weight scaling mirrors the existing Network constructor behavior
-so this split remains a pure structural refactor.
-
-Parameters:
-- `network` - Network instance being constructed.
-
-Returns: Nothing.
-
-### ensureMinimumHiddenNodes
-
-```ts
-ensureMinimumHiddenNodes(
-  network: NetworkBootstrapInternals,
-  minimumHiddenNodes: number,
-): void
-```
-
-Ensures the network reaches the caller's requested minimum hidden width.
-
-This relies on the public node-split mutation flow so the constructor and the
-evolutionary runtime keep growing hidden structure the same way.
-
-Parameters:
-- `network` - Network instance being constructed.
-- `minimumHiddenNodes` - Requested minimum hidden-node count.
 
 Returns: Nothing.

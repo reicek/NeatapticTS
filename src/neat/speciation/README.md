@@ -57,37 +57,6 @@ neat._updateSpeciesStagnation();
 
 ## neat/speciation/speciation.ts
 
-### _speciate
-
-```ts
-_speciate(): void
-```
-
-Assign genomes into species based on compatibility distance.
-
-This is the main controller-facing speciation pass. It preserves the previous
-species snapshot for telemetry and history, rebuilds memberships against the
-current representatives, adjusts the compatibility threshold, refreshes the
-live representatives, applies optional age-based protection, records a new
-history row, and trims the history buffer.
-
-In other words, this helper does not merely "cluster genomes." It keeps the
-long-lived species registry coherent across generations so later phases such
-as selection, pruning, telemetry, and archive inspection can reason about a
-stable notion of species identity.
-
-Parameters:
-- `this` - - Speciation harness context.
-
-Returns: Nothing.
-
-Example:
-
-```ts
-neat._speciate();
-console.log(neat._species.length);
-```
-
 ### _applyFitnessSharing
 
 ```ts
@@ -140,6 +109,37 @@ Example:
 
 ```ts
 neat._sortSpeciesMembers(neat._species[0]);
+```
+
+### _speciate
+
+```ts
+_speciate(): void
+```
+
+Assign genomes into species based on compatibility distance.
+
+This is the main controller-facing speciation pass. It preserves the previous
+species snapshot for telemetry and history, rebuilds memberships against the
+current representatives, adjusts the compatibility threshold, refreshes the
+live representatives, applies optional age-based protection, records a new
+history row, and trims the history buffer.
+
+In other words, this helper does not merely "cluster genomes." It keeps the
+long-lived species registry coherent across generations so later phases such
+as selection, pruning, telemetry, and archive inspection can reason about a
+stable notion of species identity.
+
+Parameters:
+- `this` - - Speciation harness context.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+neat._speciate();
+console.log(neat._species.length);
 ```
 
 ### _updateSpeciesStagnation

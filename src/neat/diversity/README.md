@@ -39,30 +39,24 @@ public read flow and the meaning of the resulting summary.
 
 ## neat/diversity/diversity.ts
 
-### structuralEntropy
+### buildEmptyDiversityStats
 
 ```ts
-structuralEntropy(
-  graph: default,
-): number
+buildEmptyDiversityStats(
+  populationSize: number,
+): DiversityStats
 ```
 
-Compute the Shannon-style entropy of a network's out-degree distribution.
+Build a zeroed diversity snapshot when no sampled metrics exist yet.
 
-Structural entropy here is a lightweight topology fingerprint: it measures
-how evenly outgoing connections are distributed across nodes. It does not
-inspect weights or recurrent dynamics, so it works well as a cheap structural
-diversity signal.
-
-Use this when you want to compare the shape of individual networks or add one
-more structural signal beside raw node and connection counts. Higher values
-generally mean connectivity is spread across more nodes instead of being
-concentrated into a few hubs.
+This helper gives controller facades and diagnostics a safe fallback object
+whose shape matches ordinary diversity output without pretending that real
+real sampling work has happened yet.
 
 Parameters:
-- `graph` - - Network to summarize structurally.
+- `populationSize` - - Population size to echo into the empty snapshot.
 
-Returns: Shannon-style entropy of the out-degree distribution.
+Returns: Diversity stats object with zeroed aggregates.
 
 ### computeDiversityStats
 
@@ -106,25 +100,6 @@ if (diversity) {
 }
 ```
 
-### buildEmptyDiversityStats
-
-```ts
-buildEmptyDiversityStats(
-  populationSize: number,
-): DiversityStats
-```
-
-Build a zeroed diversity snapshot when no sampled metrics exist yet.
-
-This helper gives controller facades and diagnostics a safe fallback object
-whose shape matches ordinary diversity output without pretending that real
-real sampling work has happened yet.
-
-Parameters:
-- `populationSize` - - Population size to echo into the empty snapshot.
-
-Returns: Diversity stats object with zeroed aggregates.
-
 ### DiversityStats
 
 Diversity statistics returned by sampled population analysis.
@@ -158,3 +133,28 @@ Lineage spread is useful for telemetry, but full all-pairs ancestry distance
 becomes expensive quickly. This cap keeps the lineage side of the report
 bounded while still surfacing whether ancestry depth is bunching up or
 staying distributed.
+
+### structuralEntropy
+
+```ts
+structuralEntropy(
+  graph: default,
+): number
+```
+
+Compute the Shannon-style entropy of a network's out-degree distribution.
+
+Structural entropy here is a lightweight topology fingerprint: it measures
+how evenly outgoing connections are distributed across nodes. It does not
+inspect weights or recurrent dynamics, so it works well as a cheap structural
+diversity signal.
+
+Use this when you want to compare the shape of individual networks or add one
+more structural signal beside raw node and connection counts. Higher values
+generally mean connectivity is spread across more nodes instead of being
+concentrated into a few hubs.
+
+Parameters:
+- `graph` - - Network to summarize structurally.
+
+Returns: Shannon-style entropy of the out-degree distribution.

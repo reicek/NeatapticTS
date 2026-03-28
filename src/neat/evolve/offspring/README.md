@@ -18,13 +18,12 @@ Read this chapter when you want to understand:
 
 ## neat/evolve/offspring/evolve.offspring.constants.ts
 
-### OFFSPRING_FALLBACK_INDEX
+### LINEAGE_BASE_DEPTH
 
-Index used when falling back to the first genome in the population.
+Baseline lineage depth when parent depth metadata is missing.
 
-The fallback stays explicit so parent selection failure still produces a
-deterministic recovery path before the helper tries more permissive random
-rescue.
+This keeps lineage annotation tolerant of older or narrower runtime surfaces
+that do not carry full parent-depth metadata.
 
 ### LINEAGE_DEPTH_INCREMENT
 
@@ -33,14 +32,40 @@ Depth increment applied when deriving a child from its parents.
 Offspring depth is always one generation deeper than the deepest available
 parent depth so shallow lineage summaries remain monotonic.
 
-### LINEAGE_BASE_DEPTH
+### OFFSPRING_FALLBACK_INDEX
 
-Baseline lineage depth when parent depth metadata is missing.
+Index used when falling back to the first genome in the population.
 
-This keeps lineage annotation tolerant of older or narrower runtime surfaces
-that do not carry full parent-depth metadata.
+The fallback stays explicit so parent selection failure still produces a
+deterministic recovery path before the helper tries more permissive random
+rescue.
 
 ## neat/evolve/offspring/evolve.offspring.utils.ts
+
+### annotateOffspringMetadata
+
+```ts
+annotateOffspringMetadata(
+  context: OffspringContext,
+  offspring: default,
+  parentOne: default,
+  parentTwo: default,
+): void
+```
+
+Attach runtime metadata to a newly crossed child.
+
+The metadata step keeps offspring creation compatible with later lineage,
+telemetry, and inbreeding reads without forcing the crossover call itself to
+know about controller-level bookkeeping.
+
+Parameters:
+- `context` - - NEAT-like host containing population and options.
+- `offspring` - - Newly crossed child genome.
+- `parentOne` - - First selected parent.
+- `parentTwo` - - Second selected parent.
+
+Returns: Nothing.
 
 ### createOffspring
 
@@ -64,6 +89,28 @@ Parameters:
 - `selectParent` - - Callback to select a parent genome.
 
 Returns: A newly created offspring genome ready for later mutation and scoring.
+
+### enforceOffspringInvariants
+
+```ts
+enforceOffspringInvariants(
+  context: OffspringContext,
+  offspring: default,
+): void
+```
+
+Reapply minimum structural invariants after crossover.
+
+Crossover can produce a child that is technically valid for heredity but still
+missing the controller's minimum hidden-node or dead-end guarantees. This
+helper keeps that cleanup local to offspring creation so later population code
+can treat returned children as already normalized.
+
+Parameters:
+- `context` - - NEAT-like host containing population and options.
+- `offspring` - - Newly crossed child genome.
+
+Returns: Nothing.
 
 ### OffspringContext
 
@@ -96,50 +143,3 @@ Parameters:
 - `populationFallback` - - Optional alternate population to read from.
 
 Returns: A parent genome chosen from the preferred or fallback path.
-
-### annotateOffspringMetadata
-
-```ts
-annotateOffspringMetadata(
-  context: OffspringContext,
-  offspring: default,
-  parentOne: default,
-  parentTwo: default,
-): void
-```
-
-Attach runtime metadata to a newly crossed child.
-
-The metadata step keeps offspring creation compatible with later lineage,
-telemetry, and inbreeding reads without forcing the crossover call itself to
-know about controller-level bookkeeping.
-
-Parameters:
-- `context` - - NEAT-like host containing population and options.
-- `offspring` - - Newly crossed child genome.
-- `parentOne` - - First selected parent.
-- `parentTwo` - - Second selected parent.
-
-Returns: Nothing.
-
-### enforceOffspringInvariants
-
-```ts
-enforceOffspringInvariants(
-  context: OffspringContext,
-  offspring: default,
-): void
-```
-
-Reapply minimum structural invariants after crossover.
-
-Crossover can produce a child that is technically valid for heredity but still
-missing the controller's minimum hidden-node or dead-end guarantees. This
-helper keeps that cleanup local to offspring creation so later population code
-can treat returned children as already normalized.
-
-Parameters:
-- `context` - - NEAT-like host containing population and options.
-- `offspring` - - Newly crossed child genome.
-
-Returns: Nothing.

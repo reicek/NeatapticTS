@@ -36,20 +36,66 @@ flowchart TD
 
 ## neat/evolve/runtime/evolve.runtime.utils.ts
 
-### resolveStartTime
+### buildFittestSnapshot
 
 ```ts
-resolveStartTime(): number
+buildFittestSnapshot(
+  internal: NeatControllerForEvolution,
+): default
 ```
 
-Resolve the start time for an evolution step.
+Build a cloned Network from the current best genome.
 
-Evolve needs one timing origin that works in both browser-like and Node-like
-environments. This helper centralizes that choice so later elapsed-time reads
-can stay simple and the main evolve loop does not have to repeat environment
-detection inline.
+The returned value from `evolve()` is meant to describe the generation that
+was just analyzed, not the mutable genome object that will continue through
+later controller operations. This helper therefore clones the current leader
+into a standalone {@link Network} snapshot and preserves its score so callers
+can inspect, serialize, or replay the champion without depending on mutable
+controller-owned references.
 
-Returns: A timestamp in milliseconds or high-resolution timer units.
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: A detached best-network snapshot for the current generation.
+
+### clearPopulationScores
+
+```ts
+clearPopulationScores(
+  internal: NeatControllerForEvolution,
+): void
+```
+
+Clear genome scores to force re-evaluation.
+
+Once evolve has finished rebuilding and mutating the next population, the old
+scores are no longer trustworthy. This helper makes that contract explicit by
+clearing per-genome scores so the next call into the evolve or evaluate path
+cannot accidentally treat structurally changed genomes as already evaluated.
+
+Parameters:
+- `internal` - - NEAT controller instance.
+
+Returns: Nothing.
+
+### computeElapsedTime
+
+```ts
+computeElapsedTime(
+  startTimestamp: number,
+): number
+```
+
+Compute elapsed time since the start of evolve().
+
+Runtime reporting belongs here because evolve uses the result as generation
+bookkeeping rather than as a telemetry export concern. The helper mirrors the
+start-time environment fallback so timing stays comparable across runtimes.
+
+Parameters:
+- `startTimestamp` - - Start time resolved earlier.
+
+Returns: The elapsed runtime for the generation step.
 
 ### ensurePopulationEvaluated
 
@@ -72,26 +118,30 @@ Parameters:
 
 Returns: A promise that resolves once evaluation is guaranteed.
 
-### updateGlobalBestTracking
+### resolveHighResolutionNow
 
 ```ts
-updateGlobalBestTracking(
-  internal: NeatControllerForEvolution,
-): void
+resolveHighResolutionNow(): (() => number) | undefined
 ```
 
-Update generation-level best score tracking.
+Resolve a high-resolution timer callback when the runtime exposes one.
 
-This helper maintains the controller's lightweight "best score seen in the
-current generation window" markers. Those markers are intentionally separate
-from the cloned best-network snapshot so the evolve loop can cheaply decide
-whether a fresh improvement occurred without conflating score bookkeeping with
-network serialization.
+Returns: Timer callback or `undefined` when only wall-clock time is available.
 
-Parameters:
-- `internal` - - NEAT controller instance.
+### resolveStartTime
 
-Returns: Nothing.
+```ts
+resolveStartTime(): number
+```
+
+Resolve the start time for an evolution step.
+
+Evolve needs one timing origin that works in both browser-like and Node-like
+environments. This helper centralizes that choice so later elapsed-time reads
+can stay simple and the main evolve loop does not have to repeat environment
+detection inline.
+
+Returns: A timestamp in milliseconds or high-resolution timer units.
 
 ### trackGlobalImprovement
 
@@ -116,73 +166,23 @@ Parameters:
 
 Returns: Nothing.
 
-### computeElapsedTime
+### updateGlobalBestTracking
 
 ```ts
-computeElapsedTime(
-  startTimestamp: number,
-): number
-```
-
-Compute elapsed time since the start of evolve().
-
-Runtime reporting belongs here because evolve uses the result as generation
-bookkeeping rather than as a telemetry export concern. The helper mirrors the
-start-time environment fallback so timing stays comparable across runtimes.
-
-Parameters:
-- `startTimestamp` - - Start time resolved earlier.
-
-Returns: The elapsed runtime for the generation step.
-
-### clearPopulationScores
-
-```ts
-clearPopulationScores(
+updateGlobalBestTracking(
   internal: NeatControllerForEvolution,
 ): void
 ```
 
-Clear genome scores to force re-evaluation.
+Update generation-level best score tracking.
 
-Once evolve has finished rebuilding and mutating the next population, the old
-scores are no longer trustworthy. This helper makes that contract explicit by
-clearing per-genome scores so the next call into the evolve or evaluate path
-cannot accidentally treat structurally changed genomes as already evaluated.
+This helper maintains the controller's lightweight "best score seen in the
+current generation window" markers. Those markers are intentionally separate
+from the cloned best-network snapshot so the evolve loop can cheaply decide
+whether a fresh improvement occurred without conflating score bookkeeping with
+network serialization.
 
 Parameters:
 - `internal` - - NEAT controller instance.
 
 Returns: Nothing.
-
-### buildFittestSnapshot
-
-```ts
-buildFittestSnapshot(
-  internal: NeatControllerForEvolution,
-): default
-```
-
-Build a cloned Network from the current best genome.
-
-The returned value from `evolve()` is meant to describe the generation that
-was just analyzed, not the mutable genome object that will continue through
-later controller operations. This helper therefore clones the current leader
-into a standalone {@link Network} snapshot and preserves its score so callers
-can inspect, serialize, or replay the champion without depending on mutable
-controller-owned references.
-
-Parameters:
-- `internal` - - NEAT controller instance.
-
-Returns: A detached best-network snapshot for the current generation.
-
-### resolveHighResolutionNow
-
-```ts
-resolveHighResolutionNow(): (() => number) | undefined
-```
-
-Resolve a high-resolution timer callback when the runtime exposes one.
-
-Returns: Timer callback or `undefined` when only wall-clock time is available.

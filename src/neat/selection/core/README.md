@@ -33,19 +33,6 @@ Keep the contract loose when you add new genome-side fields elsewhere in the
 controller. If a selection helper can still do its job from score plus opaque
 metadata, the extra fields belong outside this boundary.
 
-### SelectionOptions
-
-Selection strategy settings used by the NEAT controller.
-
-These options are intentionally small because the public selection story is
-already taught at the root selection chapter and exposed through the stable
-`Neat` wrappers. The core layer only needs the knobs that alter actual parent
-choice mechanics: which strategy runs, how strongly POWER biases toward the
-front, and how TOURNAMENT sizes and probabilistic winner walks behave.
-
-Keeping this contract narrow prevents the core chapter from turning into a
-second facade for broader controller policy.
-
 ### NeatLikeWithSelection
 
 NEAT-like instance extended with selection-specific state and helpers.
@@ -75,6 +62,19 @@ data off the host.
 
 Read this as the per-selection call frame: one host, one population view,
 one resolved selection-options object, and one RNG source.
+
+### SelectionOptions
+
+Selection strategy settings used by the NEAT controller.
+
+These options are intentionally small because the public selection story is
+already taught at the root selection chapter and exposed through the stable
+`Neat` wrappers. The core layer only needs the knobs that alter actual parent
+choice mechanics: which strategy runs, how strongly POWER biases toward the
+front, and how TOURNAMENT sizes and probabilistic winner walks behave.
+
+Keeping this contract narrow prevents the core chapter from turning into a
+second facade for broader controller policy.
 
 ## neat/selection/core/selection.core.ts
 
@@ -128,36 +128,89 @@ flowchart TD
   Tournament --> Parent
 ```
 
-### selectParentByStrategy
+### calculateFitnessTotals
 
 ```ts
-selectParentByStrategy(
-  internal: NeatLikeWithSelection,
-): GenomeWithScore
+calculateFitnessTotals(
+  population: GenomeWithScore[],
+): { totalFitness: number; minFitnessShift: number; }
 ```
 
-Select a parent genome according to the configured selection strategy.
+Compute the total fitness and minimal shift used by roulette selection.
 
-This is the single dispatch point shared by the controller-facing selection
-helpers. It resolves the active strategy once, builds a compact
-{@link SelectionContext}, and then hands off to the concrete algorithm.
-
-The fallback to the first population entry is deliberate. When callers have
-configured an unknown strategy name, selection still returns a deterministic
-candidate instead of failing unexpectedly deep inside crossover or mutation
-flow.
+Fitness-proportionate selection must work even when a population contains
+negative scores. This helper records the most-negative value, converts that
+into a uniform upward shift, and returns the adjusted total that the later
+threshold scan uses.
+In other words, it prepares the roulette space so every genome still gets a
+measurable slice even when raw scores dip below zero.
 
 Parameters:
-- `internal` - - NEAT host containing population, options, and RNG access.
+- `population` - - Genomes in the current population.
 
-Returns: A genome chosen according to the active selection strategy.
+Returns: Aggregate fitness totals with the negative-score shift.
 
-Example:
+### calculateTotalScore
 
 ```ts
-const parent = selectParentByStrategy(neat);
-const strategyName = neat.options.selection?.name;
+calculateTotalScore(
+  population: GenomeWithScore[],
+): number
 ```
+
+Calculate the total fitness across the population.
+
+This is the simplest "treat the generation as one pool" fold used by summary
+reads. Missing scores are interpreted with the shared selection fallback so
+total-score calculations stay aligned with the rest of the chapter.
+This helper is not itself a parent-selection strategy, but it lives in the
+same mechanics layer because the controller's summary reads should speak the
+same score semantics as the parent-selection pipeline.
+
+Parameters:
+- `population` - - Genomes in the current population.
+
+Returns: Sum of all scores with missing scores treated as zero.
+
+### DEFAULT_POWER
+
+Default power exponent for POWER selection when none is configured.
+
+A value of `1` keeps POWER selection as a direct index-bias curve without
+adding extra front-loading beyond the strategy's normal rank preference.
+That makes this the mildest built-in pressure setting: strong enough to
+prefer the front of the sorted population, but not so aggressive that the
+champion becomes nearly inevitable on every draw.
+
+### DEFAULT_SCORE
+
+Default score when a genome has no explicit score.
+
+Selection uses one shared fallback so summaries, sorting, and threshold scans
+all interpret unevaluated or missing scores consistently. That matters for
+chapter coherence as much as runtime behavior: every inspection helper and
+parent-selection guard speaks the same "missing score" language instead of
+inventing its own local default.
+
+### DEFAULT_TOURNAMENT_PROBABILITY
+
+Default tournament win probability when none is configured.
+
+This keeps the top sampled participant favored while still allowing weaker
+entrants to remain reachable later in the tournament walk. Read it as the
+tournament counterpart to selection pressure: a balanced default that keeps
+the bracket competitive instead of turning every mini-tournament into a
+guaranteed top-seed march.
+
+### DEFAULT_TOURNAMENT_SIZE
+
+Default tournament size when none is configured.
+
+The built-in bracket stays intentionally small so tournament selection keeps
+some competitive pressure without collapsing into near-deterministic champion
+picks. In practice this means the default strategy samples just enough local
+competition to reward strong genomes while still letting non-champion genomes
+remain reachable.
 
 ### ensurePopulationEvaluated
 
@@ -200,196 +253,6 @@ Parameters:
 
 Returns: Nothing. Sorting only runs when the first two scores are out of order.
 
-### calculateTotalScore
-
-```ts
-calculateTotalScore(
-  population: GenomeWithScore[],
-): number
-```
-
-Calculate the total fitness across the population.
-
-This is the simplest "treat the generation as one pool" fold used by summary
-reads. Missing scores are interpreted with the shared selection fallback so
-total-score calculations stay aligned with the rest of the chapter.
-This helper is not itself a parent-selection strategy, but it lives in the
-same mechanics layer because the controller's summary reads should speak the
-same score semantics as the parent-selection pipeline.
-
-Parameters:
-- `population` - - Genomes in the current population.
-
-Returns: Sum of all scores with missing scores treated as zero.
-
-### DEFAULT_POWER
-
-Default power exponent for POWER selection when none is configured.
-
-A value of `1` keeps POWER selection as a direct index-bias curve without
-adding extra front-loading beyond the strategy's normal rank preference.
-That makes this the mildest built-in pressure setting: strong enough to
-prefer the front of the sorted population, but not so aggressive that the
-champion becomes nearly inevitable on every draw.
-
-### DEFAULT_TOURNAMENT_SIZE
-
-Default tournament size when none is configured.
-
-The built-in bracket stays intentionally small so tournament selection keeps
-some competitive pressure without collapsing into near-deterministic champion
-picks. In practice this means the default strategy samples just enough local
-competition to reward strong genomes while still letting non-champion genomes
-remain reachable.
-
-### DEFAULT_TOURNAMENT_PROBABILITY
-
-Default tournament win probability when none is configured.
-
-This keeps the top sampled participant favored while still allowing weaker
-entrants to remain reachable later in the tournament walk. Read it as the
-tournament counterpart to selection pressure: a balanced default that keeps
-the bracket competitive instead of turning every mini-tournament into a
-guaranteed top-seed march.
-
-### DEFAULT_SCORE
-
-Default score when a genome has no explicit score.
-
-Selection uses one shared fallback so summaries, sorting, and threshold scans
-all interpret unevaluated or missing scores consistently. That matters for
-chapter coherence as much as runtime behavior: every inspection helper and
-parent-selection guard speaks the same "missing score" language instead of
-inventing its own local default.
-
-### FIRST_INDEX
-
-First element index used by guards, fallbacks, and best-first reads.
-
-Selection logic names this index explicitly because the front of the
-population has semantic meaning: it is where champion reads and sorted-bias
-strategies begin.
-
-### SECOND_INDEX
-
-Second element index used by the cheap leading-edge ordering guard.
-
-Comparing the first two genomes is enough for the root helpers' fast
-"probably already sorted" check, so this constant marks the smallest useful
-comparison boundary.
-
-### LAST_INDEX_OFFSET
-
-Offset for retrieving the last element via length arithmetic.
-
-This keeps tail access readable in places where explicit length math is more
-portable than `at()` for the surrounding helper shape.
-
-### LOOP_INDEX_INCREMENT
-
-Loop step used by explicit tournament and threshold walks.
-
-Naming the increment makes the small index-based scans read like deliberate
-traversal code instead of scattered magic numbers.
-
-### LAST_ELEMENT_INDEX
-
-Index used with `at()` when checking the tail of the population.
-
-The evaluation guard only needs the final genome to answer one practical
-question: has this generation already been scored all the way through?
-
-### INITIAL_TOTAL_FITNESS
-
-Initial accumulator value for generation-wide score folds.
-
-Summary helpers begin from this neutral total so whole-population averages
-and other folds remain explicit about their starting score semantics.
-
-### INITIAL_MOST_NEGATIVE_SCORE
-
-Initial most-negative score sentinel for shifted-fitness scans.
-
-FITNESS_PROPORTIONATE selection may need to lift negative scores into a
-usable roulette space, and this sentinel marks the baseline from which that
-most-negative search starts.
-
-### INITIAL_CUMULATIVE_FITNESS
-
-Initial cumulative fitness value for roulette threshold scans.
-
-Roulette-style selection accumulates shifted fitness as it walks the
-population. This zero point keeps that running threshold explicit and aligned
-with the rest of the selection fallback semantics.
-
-### selectParentByPower
-
-```ts
-selectParentByPower(
-  selectionContext: SelectionContext,
-): GenomeWithScore
-```
-
-Select a parent by power-law distribution on the sorted population.
-
-POWER selection assumes best-first ordering and then biases random choice
-toward the front of that ranking. Lower random samples stay near the leading
-genomes, while the configured exponent controls how quickly the chance falls
-away from the champion.
-Read this as the lightest built-in strategy: it does not inspect absolute
-score gaps, only the current descending order.
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-
-Returns: The chosen parent genome.
-
-### selectParentByFitnessProportionate
-
-```ts
-selectParentByFitnessProportionate(
-  selectionContext: SelectionContext,
-): GenomeWithScore
-```
-
-Select a parent using roulette-wheel fitness proportionate selection.
-
-This path turns the current population into a weighted threshold scan. When
-some genomes have negative scores, the helper first shifts the whole fitness
-space upward so every participant still occupies a non-negative span on the
-roulette wheel.
-That makes this strategy the most score-sensitive branch in the chapter: it
-reacts to relative score magnitude rather than only rank or sampled bracket
-ordering.
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-
-Returns: The chosen parent genome.
-
-### selectParentByTournament
-
-```ts
-selectParentByTournament(
-  selectionContext: SelectionContext,
-): GenomeWithScore
-```
-
-Select a parent by tournament selection.
-
-Tournament selection samples a temporary bracket, orders it by descending
-score, then walks from strongest to weakest using the configured win
-probability. This gives the controller a middle ground between pure
-best-first bias and fully score-proportional roulette.
-The sampled bracket is intentionally local: the strategy asks "who wins this
-small contest?" rather than "how does the whole population distribute
-weight?"
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-
-Returns: The chosen parent genome.
-
 ### ensurePopulationSortedDescendingForPower
 
 ```ts
@@ -410,27 +273,78 @@ Parameters:
 
 Returns: Nothing. Sorting only runs when the first two entries are out of order.
 
-### calculateFitnessTotals
+### FIRST_INDEX
+
+First element index used by guards, fallbacks, and best-first reads.
+
+Selection logic names this index explicitly because the front of the
+population has semantic meaning: it is where champion reads and sorted-bias
+strategies begin.
+
+### getRandomPopulationMember
 
 ```ts
-calculateFitnessTotals(
-  population: GenomeWithScore[],
-): { totalFitness: number; minFitnessShift: number; }
+getRandomPopulationMember(
+  selectionContext: SelectionContext,
+): GenomeWithScore
 ```
 
-Compute the total fitness and minimal shift used by roulette selection.
+Select a random population member using the configured RNG.
 
-Fitness-proportionate selection must work even when a population contains
-negative scores. This helper records the most-negative value, converts that
-into a uniform upward shift, and returns the adjusted total that the later
-threshold scan uses.
-In other words, it prepares the roulette space so every genome still gets a
-measurable slice even when raw scores dip below zero.
+This is the small shared fallback used by roulette misses and suppressed
+tournament overflow. Centralizing it here keeps every selection path tied to
+the same controller RNG stream.
+It also makes the fallback semantics explicit instead of hiding ad hoc random
+picks inside individual strategies.
 
 Parameters:
-- `population` - - Genomes in the current population.
+- `selectionContext` - - Shared selection state.
 
-Returns: Aggregate fitness totals with the negative-score shift.
+Returns: Randomly chosen genome from the current population.
+
+### INITIAL_CUMULATIVE_FITNESS
+
+Initial cumulative fitness value for roulette threshold scans.
+
+Roulette-style selection accumulates shifted fitness as it walks the
+population. This zero point keeps that running threshold explicit and aligned
+with the rest of the selection fallback semantics.
+
+### INITIAL_MOST_NEGATIVE_SCORE
+
+Initial most-negative score sentinel for shifted-fitness scans.
+
+FITNESS_PROPORTIONATE selection may need to lift negative scores into a
+usable roulette space, and this sentinel marks the baseline from which that
+most-negative search starts.
+
+### INITIAL_TOTAL_FITNESS
+
+Initial accumulator value for generation-wide score folds.
+
+Summary helpers begin from this neutral total so whole-population averages
+and other folds remain explicit about their starting score semantics.
+
+### LAST_ELEMENT_INDEX
+
+Index used with `at()` when checking the tail of the population.
+
+The evaluation guard only needs the final genome to answer one practical
+question: has this generation already been scored all the way through?
+
+### LAST_INDEX_OFFSET
+
+Offset for retrieving the last element via length arithmetic.
+
+This keeps tail access readable in places where explicit length math is more
+portable than `at()` for the surrounding helper shape.
+
+### LOOP_INDEX_INCREMENT
+
+Loop step used by explicit tournament and threshold walks.
+
+Naming the increment makes the small index-based scans read like deliberate
+traversal code instead of scattered magic numbers.
 
 ### pickByShiftedThreshold
 
@@ -455,6 +369,29 @@ Parameters:
 - `minFitnessShift` - - Amount added to each score to shift negatives.
 
 Returns: The chosen genome when a threshold crossing occurs.
+
+### pickTournamentWinner
+
+```ts
+pickTournamentWinner(
+  selectionContext: SelectionContext,
+  sortedParticipants: GenomeWithScore[],
+): GenomeWithScore
+```
+
+Select a winner from sorted tournament participants.
+
+After participants are sorted best-first, this helper walks the list from the
+front and gives each participant a chance to win immediately. The configured
+probability therefore controls how often the top entrant wins outright versus
+how often weaker entrants remain reachable later in the walk.
+This is what makes tournament selection tunable instead of purely greedy.
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+- `sortedParticipants` - - Participants sorted by descending score.
+
+Returns: The chosen tournament winner.
 
 ### resolveTournamentOverflow
 
@@ -501,46 +438,109 @@ Parameters:
 
 Returns: Sampled participants.
 
-### pickTournamentWinner
+### SECOND_INDEX
+
+Second element index used by the cheap leading-edge ordering guard.
+
+Comparing the first two genomes is enough for the root helpers' fast
+"probably already sorted" check, so this constant marks the smallest useful
+comparison boundary.
+
+### selectParentByFitnessProportionate
 
 ```ts
-pickTournamentWinner(
-  selectionContext: SelectionContext,
-  sortedParticipants: GenomeWithScore[],
-): GenomeWithScore
-```
-
-Select a winner from sorted tournament participants.
-
-After participants are sorted best-first, this helper walks the list from the
-front and gives each participant a chance to win immediately. The configured
-probability therefore controls how often the top entrant wins outright versus
-how often weaker entrants remain reachable later in the walk.
-This is what makes tournament selection tunable instead of purely greedy.
-
-Parameters:
-- `selectionContext` - - Shared selection state.
-- `sortedParticipants` - - Participants sorted by descending score.
-
-Returns: The chosen tournament winner.
-
-### getRandomPopulationMember
-
-```ts
-getRandomPopulationMember(
+selectParentByFitnessProportionate(
   selectionContext: SelectionContext,
 ): GenomeWithScore
 ```
 
-Select a random population member using the configured RNG.
+Select a parent using roulette-wheel fitness proportionate selection.
 
-This is the small shared fallback used by roulette misses and suppressed
-tournament overflow. Centralizing it here keeps every selection path tied to
-the same controller RNG stream.
-It also makes the fallback semantics explicit instead of hiding ad hoc random
-picks inside individual strategies.
+This path turns the current population into a weighted threshold scan. When
+some genomes have negative scores, the helper first shifts the whole fitness
+space upward so every participant still occupies a non-negative span on the
+roulette wheel.
+That makes this strategy the most score-sensitive branch in the chapter: it
+reacts to relative score magnitude rather than only rank or sampled bracket
+ordering.
 
 Parameters:
 - `selectionContext` - - Shared selection state.
 
-Returns: Randomly chosen genome from the current population.
+Returns: The chosen parent genome.
+
+### selectParentByPower
+
+```ts
+selectParentByPower(
+  selectionContext: SelectionContext,
+): GenomeWithScore
+```
+
+Select a parent by power-law distribution on the sorted population.
+
+POWER selection assumes best-first ordering and then biases random choice
+toward the front of that ranking. Lower random samples stay near the leading
+genomes, while the configured exponent controls how quickly the chance falls
+away from the champion.
+Read this as the lightest built-in strategy: it does not inspect absolute
+score gaps, only the current descending order.
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+
+Returns: The chosen parent genome.
+
+### selectParentByStrategy
+
+```ts
+selectParentByStrategy(
+  internal: NeatLikeWithSelection,
+): GenomeWithScore
+```
+
+Select a parent genome according to the configured selection strategy.
+
+This is the single dispatch point shared by the controller-facing selection
+helpers. It resolves the active strategy once, builds a compact
+{@link SelectionContext}, and then hands off to the concrete algorithm.
+
+The fallback to the first population entry is deliberate. When callers have
+configured an unknown strategy name, selection still returns a deterministic
+candidate instead of failing unexpectedly deep inside crossover or mutation
+flow.
+
+Parameters:
+- `internal` - - NEAT host containing population, options, and RNG access.
+
+Returns: A genome chosen according to the active selection strategy.
+
+Example:
+
+```ts
+const parent = selectParentByStrategy(neat);
+const strategyName = neat.options.selection?.name;
+```
+
+### selectParentByTournament
+
+```ts
+selectParentByTournament(
+  selectionContext: SelectionContext,
+): GenomeWithScore
+```
+
+Select a parent by tournament selection.
+
+Tournament selection samples a temporary bracket, orders it by descending
+score, then walks from strongest to weakest using the configured win
+probability. This gives the controller a middle ground between pure
+best-first bias and fully score-proportional roulette.
+The sampled bracket is intentionally local: the strategy asks "who wins this
+small contest?" rather than "how does the whole population distribute
+weight?"
+
+Parameters:
+- `selectionContext` - - Shared selection state.
+
+Returns: The chosen parent genome.

@@ -30,6 +30,52 @@ flowchart TD
 
 ## neat/telemetry/facade/archive/telemetry.facade.archive.ts
 
+### clearParetoArchive
+
+```ts
+clearParetoArchive(
+  host: TelemetryFacadeArchiveHost,
+): void
+```
+
+Clear the Pareto archive metadata stored on the host.
+
+Reach for this when a caller wants a fresh archive observation window
+without resetting the rest of the telemetry system.
+
+Parameters:
+- `host` - - `Neat` instance whose Pareto archive should be emptied.
+
+Returns: Nothing. The archive buffer is reset in place.
+
+### exportParetoFrontJSONL
+
+```ts
+exportParetoFrontJSONL(
+  host: TelemetryFacadeArchiveHost,
+  maxEntries: number,
+): string
+```
+
+Export recent Pareto archive entries as JSON Lines.
+
+Prefer this when archive inspection is leaving the process boundary. JSONL is
+easy to append to files, load into notebooks, or post-process with simple
+scripts while preserving one archived snapshot per line.
+
+Parameters:
+- `host` - - `Neat` instance storing Pareto objective snapshots.
+- `maxEntries` - - Maximum number of entries to serialize.
+
+Returns: JSONL payload for recent Pareto archive entries.
+
+Example:
+
+```ts
+const archiveJsonl = exportParetoFrontJSONL(neat, 100);
+console.log(archiveJsonl.split('\n').at(0));
+```
+
 ### getMultiObjectiveMetrics
 
 ```ts
@@ -54,6 +100,34 @@ Example:
 ```ts
 const metrics = getMultiObjectiveMetrics(neat);
 console.table(metrics.slice(0, 5));
+```
+
+### getParetoArchive
+
+```ts
+getParetoArchive(
+  host: TelemetryFacadeArchiveHost,
+  maxEntries: number,
+): ParetoArchiveEntry[]
+```
+
+Return the most recent Pareto archive entries.
+
+This is the historical companion to {@link getParetoFronts}. Instead of
+reconstructing the current live fronts, it slices the archive the controller
+has already decided to retain for later inspection or export.
+
+Parameters:
+- `host` - - `Neat` instance storing archived Pareto metadata.
+- `maxEntries` - - Maximum number of archive entries to return.
+
+Returns: Slice of the recent Pareto archive.
+
+Example:
+
+```ts
+const recentArchive = getParetoArchive(neat, 25);
+console.log(recentArchive.length);
 ```
 
 ### getParetoFronts
@@ -85,80 +159,6 @@ Example:
 const fronts = getParetoFronts(neat, 3);
 console.log(fronts.map((front) => front.length));
 ```
-
-### getParetoArchive
-
-```ts
-getParetoArchive(
-  host: TelemetryFacadeArchiveHost,
-  maxEntries: number,
-): ParetoArchiveEntry[]
-```
-
-Return the most recent Pareto archive entries.
-
-This is the historical companion to {@link getParetoFronts}. Instead of
-reconstructing the current live fronts, it slices the archive the controller
-has already decided to retain for later inspection or export.
-
-Parameters:
-- `host` - - `Neat` instance storing archived Pareto metadata.
-- `maxEntries` - - Maximum number of archive entries to return.
-
-Returns: Slice of the recent Pareto archive.
-
-Example:
-
-```ts
-const recentArchive = getParetoArchive(neat, 25);
-console.log(recentArchive.length);
-```
-
-### exportParetoFrontJSONL
-
-```ts
-exportParetoFrontJSONL(
-  host: TelemetryFacadeArchiveHost,
-  maxEntries: number,
-): string
-```
-
-Export recent Pareto archive entries as JSON Lines.
-
-Prefer this when archive inspection is leaving the process boundary. JSONL is
-easy to append to files, load into notebooks, or post-process with simple
-scripts while preserving one archived snapshot per line.
-
-Parameters:
-- `host` - - `Neat` instance storing Pareto objective snapshots.
-- `maxEntries` - - Maximum number of entries to serialize.
-
-Returns: JSONL payload for recent Pareto archive entries.
-
-Example:
-
-```ts
-const archiveJsonl = exportParetoFrontJSONL(neat, 100);
-console.log(archiveJsonl.split('\n').at(0));
-```
-
-### clearParetoArchive
-
-```ts
-clearParetoArchive(
-  host: TelemetryFacadeArchiveHost,
-): void
-```
-
-Clear the Pareto archive metadata stored on the host.
-
-Reach for this when a caller wants a fresh archive observation window
-without resetting the rest of the telemetry system.
-
-Parameters:
-- `host` - - `Neat` instance whose Pareto archive should be emptied.
-
-Returns: Nothing. The archive buffer is reset in place.
 
 ### TelemetryFacadeArchiveHost
 

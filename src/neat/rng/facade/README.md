@@ -26,51 +26,25 @@ The wrapper surface naturally falls into three pairs:
 
 ## neat/rng/facade/rng.facade.ts
 
-### snapshotRNGState
+### exportRNGState
 
 ```ts
-snapshotRNGState(
+exportRNGState(
   host: RngHost,
 ): number | undefined
 ```
 
-Return the current opaque RNG numeric state used by the instance.
+Export the current RNG state for persistence or debugging.
 
-This is mainly useful for deterministic replay, test fixtures, and bug
-reports that need to resume the same random subsequence.
-
-Prefer this wrapper when the state is staying inside the current debugging or
-test session. It captures the current numeric position without implying that
-the token is about to cross a persistence boundary.
+Use this wrapper when the replay token is likely to leave the immediate call
+site, such as checkpoint serialization, fixture capture, or bug-report
+handoff. Compared with `snapshotRNGState()`, the emphasis here is portability
+rather than momentary inspection.
 
 Parameters:
 - `host` - - `Neat` instance exposing RNG state.
 
 Returns: Numeric RNG state or `undefined` when the RNG has not been initialized.
-
-### restoreRNGState
-
-```ts
-restoreRNGState(
-  host: RngHost,
-  state: string | number | undefined,
-): void
-```
-
-Restore a previously captured RNG state.
-
-The next RNG access will continue from the restored subsequence, which makes
-it useful for replaying evolution bugs or comparing deterministic traces.
-
-Pair this with `snapshotRNGState()` or `exportRNGState()` when you want to
-prove that two runs consume the same future subsequence. The wrapper does not
-draw a random number itself; it only repositions the next draw.
-
-Parameters:
-- `host` - - `Neat` instance exposing RNG state.
-- `state` - - Numeric or string seed snapshot to restore.
-
-Returns: Nothing. The helper mutates the host RNG state in place.
 
 ### importRNGState
 
@@ -95,25 +69,41 @@ Parameters:
 
 Returns: Nothing. The helper mutates the host RNG state in place.
 
-### exportRNGState
+### NeatRngFacadeHost
+
+Narrow `Neat` host surface required by the public RNG facade.
+
+This stays intentionally small because the facade only forwards state
+snapshot, restore, export, and sampling calls into the existing RNG helpers.
+
+Keeping the host contract tiny protects the public wrapper boundary from the
+rest of the controller. Replay helpers need RNG state, optional configuration,
+and lightweight population context, but they do not need mutation, selection,
+or telemetry internals.
+
+### restoreRNGState
 
 ```ts
-exportRNGState(
+restoreRNGState(
   host: RngHost,
-): number | undefined
+  state: string | number | undefined,
+): void
 ```
 
-Export the current RNG state for persistence or debugging.
+Restore a previously captured RNG state.
 
-Use this wrapper when the replay token is likely to leave the immediate call
-site, such as checkpoint serialization, fixture capture, or bug-report
-handoff. Compared with `snapshotRNGState()`, the emphasis here is portability
-rather than momentary inspection.
+The next RNG access will continue from the restored subsequence, which makes
+it useful for replaying evolution bugs or comparing deterministic traces.
+
+Pair this with `snapshotRNGState()` or `exportRNGState()` when you want to
+prove that two runs consume the same future subsequence. The wrapper does not
+draw a random number itself; it only repositions the next draw.
 
 Parameters:
 - `host` - - `Neat` instance exposing RNG state.
+- `state` - - Numeric or string seed snapshot to restore.
 
-Returns: Numeric RNG state or `undefined` when the RNG has not been initialized.
+Returns: Nothing. The helper mutates the host RNG state in place.
 
 ### sampleRandom
 
@@ -149,14 +139,24 @@ const repeatedSequence = neat.sampleRandom(3);
 console.log(firstSequence, repeatedSequence);
 ```
 
-### NeatRngFacadeHost
+### snapshotRNGState
 
-Narrow `Neat` host surface required by the public RNG facade.
+```ts
+snapshotRNGState(
+  host: RngHost,
+): number | undefined
+```
 
-This stays intentionally small because the facade only forwards state
-snapshot, restore, export, and sampling calls into the existing RNG helpers.
+Return the current opaque RNG numeric state used by the instance.
 
-Keeping the host contract tiny protects the public wrapper boundary from the
-rest of the controller. Replay helpers need RNG state, optional configuration,
-and lightweight population context, but they do not need mutation, selection,
-or telemetry internals.
+This is mainly useful for deterministic replay, test fixtures, and bug
+reports that need to resume the same random subsequence.
+
+Prefer this wrapper when the state is staying inside the current debugging or
+test session. It captures the current numeric position without implying that
+the token is about to cross a persistence boundary.
+
+Parameters:
+- `host` - - `Neat` instance exposing RNG state.
+
+Returns: Numeric RNG state or `undefined` when the RNG has not been initialized.

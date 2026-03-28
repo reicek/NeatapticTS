@@ -87,73 +87,28 @@ const replayedSample = getOrCreateRng(neat)();
 
 ## neat/rng/rng.ts
 
-### RNG_TIME_SCRAMBLE_CONSTANT
-
-Odd scramble factor used while deriving a default seed from time and host
-context.
-
-This constant helps mix the fallback seed path before the xorshift stream is
-ever created. It matters only when callers did not already provide an RNG,
-explicit seed, or restored numeric state.
-
-### RNG_DEFAULT_SEED_FALLBACK
-
-Fallback seed used when the derived or restored seed would otherwise be zero.
-
-Xorshift32 cannot advance from a zero state, so this constant is the guarded
-non-zero escape hatch that keeps initialization and restore flows valid.
-It is the last-resort seed, not the normal source of entropy.
-
-### RNG_SHIFT_LEFT_PRIMARY
-
-Left-shift used by the first xorshift32 mixing step.
-
-### RNG_SHIFT_RIGHT_PRIMARY
-
-Right-shift used by the middle xorshift32 mixing step.
-
-### RNG_SHIFT_LEFT_SECONDARY
-
-Left-shift used by the final xorshift32 mixing step.
-
-### RNG_NORMALIZATION_DIVISOR
-
-Divisor used to normalize the 32-bit integer state into the `[0, 1)` range.
-
-This is the final step that turns a deterministic integer state transition
-into the floating-point random samples consumed by the controller. Keeping it
-named makes the integer-state phase and the outward-facing sample phase read
-like two explicit steps instead of one opaque formula.
-
-### RNG_POPULATION_OFFSET
-
-Minimum population offset added before time scrambling during default seeding.
-
-The offset keeps empty or tiny populations from collapsing the derived seed
-toward zero too easily during initialization. It exists to stabilize the
-fallback path, not to encode a meaningful NEAT population heuristic.
-
-### RngHost
-
-Minimal host surface required by the RNG replay utilities.
-
-This contract is deliberately smaller than the full controller. The replay
-helpers only need four kinds of state: the live RNG closure, the numeric
-checkpoint behind that closure, a little population context for fallback
-seeding, and the optional hooks that let callers override the default path.
-
-That small seam is what makes deterministic replay portable. Tests,
-diagnostics, import-export helpers, and the controller itself can all reuse
-the same RNG utilities without pretending they share one large runtime type.
-
-Example:
+### exportRngState
 
 ```ts
-const host: RngHost = {
-  population: new Array(10),
-  options: { seed: 42 },
-};
+exportRngState(
+  host: RngHost,
+): number | undefined
 ```
+
+Export the current RNG state for persistence.
+
+Use this when deterministic replay must cross a broader boundary such as
+JSON export, checkpointing, or test snapshots. The returned number is the
+compact controller-facing representation of the current random stream.
+
+Unlike `snapshotRngState()`, this helper is named for the portability use
+case: the returned token is meant to leave the immediate call site and later
+come back through `restoreRngState()` or `importRngState()`.
+
+Parameters:
+- `host` - - Object holding RNG state.
+
+Returns: The numeric RNG state or undefined when not set.
 
 ### getOrCreateRng
 
@@ -195,29 +150,23 @@ const firstDraw = rng();
 const checkpoint = snapshotRngState(neat);
 ```
 
-### snapshotRngState
+### importRngState
 
 ```ts
-snapshotRngState(
+importRngState(
   host: RngHost,
-): number | undefined
+  state: string | number | undefined,
+): void
 ```
 
-Snapshot the current RNG state for deterministic replay.
+Alias for restoring RNG state kept for compatibility with prior surface.
 
-Use this when you want an in-memory checkpoint before a risky controller
-action such as a mutation batch, debugging session, or deterministic test.
-Unlike exporting a whole controller state, this is the smallest replay token:
-it captures only the numeric RNG position.
-
-Prefer this helper when the state is staying in memory inside the current
-process. Use `exportRngState()` when the same token is about to cross a wider
-boundary such as JSON serialization, checkpoint files, or fixture snapshots.
+This exists so older callers can keep using the import-style name while the
+underlying behavior remains the same replay boundary as `restoreRngState()`.
 
 Parameters:
 - `host` - - Object holding RNG state.
-
-Returns: The numeric RNG state or undefined when uninitialized.
+- `state` - - Numeric RNG state to restore.
 
 ### restoreRngState
 
@@ -247,46 +196,73 @@ const savedState = exportRngState(neat);
 restoreRngState(neat, savedState);
 ```
 
-### importRngState
+### RNG_DEFAULT_SEED_FALLBACK
+
+Fallback seed used when the derived or restored seed would otherwise be zero.
+
+Xorshift32 cannot advance from a zero state, so this constant is the guarded
+non-zero escape hatch that keeps initialization and restore flows valid.
+It is the last-resort seed, not the normal source of entropy.
+
+### RNG_NORMALIZATION_DIVISOR
+
+Divisor used to normalize the 32-bit integer state into the `[0, 1)` range.
+
+This is the final step that turns a deterministic integer state transition
+into the floating-point random samples consumed by the controller. Keeping it
+named makes the integer-state phase and the outward-facing sample phase read
+like two explicit steps instead of one opaque formula.
+
+### RNG_POPULATION_OFFSET
+
+Minimum population offset added before time scrambling during default seeding.
+
+The offset keeps empty or tiny populations from collapsing the derived seed
+toward zero too easily during initialization. It exists to stabilize the
+fallback path, not to encode a meaningful NEAT population heuristic.
+
+### RNG_SHIFT_LEFT_PRIMARY
+
+Left-shift used by the first xorshift32 mixing step.
+
+### RNG_SHIFT_LEFT_SECONDARY
+
+Left-shift used by the final xorshift32 mixing step.
+
+### RNG_SHIFT_RIGHT_PRIMARY
+
+Right-shift used by the middle xorshift32 mixing step.
+
+### RNG_TIME_SCRAMBLE_CONSTANT
+
+Odd scramble factor used while deriving a default seed from time and host
+context.
+
+This constant helps mix the fallback seed path before the xorshift stream is
+ever created. It matters only when callers did not already provide an RNG,
+explicit seed, or restored numeric state.
+
+### RngHost
+
+Minimal host surface required by the RNG replay utilities.
+
+This contract is deliberately smaller than the full controller. The replay
+helpers only need four kinds of state: the live RNG closure, the numeric
+checkpoint behind that closure, a little population context for fallback
+seeding, and the optional hooks that let callers override the default path.
+
+That small seam is what makes deterministic replay portable. Tests,
+diagnostics, import-export helpers, and the controller itself can all reuse
+the same RNG utilities without pretending they share one large runtime type.
+
+Example:
 
 ```ts
-importRngState(
-  host: RngHost,
-  state: string | number | undefined,
-): void
+const host: RngHost = {
+  population: new Array(10),
+  options: { seed: 42 },
+};
 ```
-
-Alias for restoring RNG state kept for compatibility with prior surface.
-
-This exists so older callers can keep using the import-style name while the
-underlying behavior remains the same replay boundary as `restoreRngState()`.
-
-Parameters:
-- `host` - - Object holding RNG state.
-- `state` - - Numeric RNG state to restore.
-
-### exportRngState
-
-```ts
-exportRngState(
-  host: RngHost,
-): number | undefined
-```
-
-Export the current RNG state for persistence.
-
-Use this when deterministic replay must cross a broader boundary such as
-JSON export, checkpointing, or test snapshots. The returned number is the
-compact controller-facing representation of the current random stream.
-
-Unlike `snapshotRngState()`, this helper is named for the portability use
-case: the returned token is meant to leave the immediate call site and later
-come back through `restoreRngState()` or `importRngState()`.
-
-Parameters:
-- `host` - - Object holding RNG state.
-
-Returns: The numeric RNG state or undefined when not set.
 
 ### sampleRandomSequence
 
@@ -321,3 +297,27 @@ const before = snapshotRngState(neat);
 const samples = sampleRandomSequence(neat, 3);
 restoreRngState(neat, before);
 ```
+
+### snapshotRngState
+
+```ts
+snapshotRngState(
+  host: RngHost,
+): number | undefined
+```
+
+Snapshot the current RNG state for deterministic replay.
+
+Use this when you want an in-memory checkpoint before a risky controller
+action such as a mutation batch, debugging session, or deterministic test.
+Unlike exporting a whole controller state, this is the smallest replay token:
+it captures only the numeric RNG position.
+
+Prefer this helper when the state is staying in memory inside the current
+process. Use `exportRngState()` when the same token is about to cross a wider
+boundary such as JSON serialization, checkpoint files, or fixture snapshots.
+
+Parameters:
+- `host` - - Object holding RNG state.
+
+Returns: The numeric RNG state or undefined when uninitialized.

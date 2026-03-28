@@ -89,132 +89,6 @@ finalizeRolloutEpisodeState(
 );
 ```
 
-### resolveRolloutEpisodeContext
-
-```ts
-resolveRolloutEpisodeContext(
-  network: FlappyNetworkLike,
-  rolloutOptions: FlappyRolloutOptions,
-): RolloutEpisodeContext
-```
-
-Resolves normalized rollout configuration from user options.
-
-This is the rollout safety boundary: caller-provided values are clamped into
-deterministic, execution-safe ranges before the main loop touches them.
-
-Parameters:
-- `network` - - Genome/network to evaluate.
-- `rolloutOptions` - - Optional rollout controls.
-
-Returns: Normalized rollout configuration.
-
-### createRolloutEpisodeRuntimeState
-
-```ts
-createRolloutEpisodeRuntimeState(
-  rolloutEpisodeContext: RolloutEpisodeContext,
-): RolloutEpisodeRuntimeState
-```
-
-Creates mutable runtime state for one rollout episode.
-
-The runtime state carries the seeded RNG, the mutable environment, the
-temporal observation memory, and the shaping counters accumulated during the
-episode.
-
-Parameters:
-- `rolloutEpisodeContext` - - Normalized rollout configuration.
-
-Returns: Mutable runtime state.
-
-### runRolloutEpisodeLoop
-
-```ts
-runRolloutEpisodeLoop(
-  network: FlappyNetworkLike,
-  rolloutEpisodeContext: RolloutEpisodeContext,
-  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
-): void
-```
-
-Runs the main rollout loop until termination or frame-budget exhaustion.
-
-This is the episode heartbeat: keep stepping while the bird is alive and the
-rollout still has budget left.
-
-Parameters:
-- `network` - - Genome/network to evaluate.
-- `rolloutEpisodeContext` - - Normalized rollout configuration.
-- `rolloutEpisodeRuntimeState` - - Mutable runtime state.
-
-Returns: Nothing.
-
-### finalizeRolloutEpisodeState
-
-```ts
-finalizeRolloutEpisodeState(
-  rolloutEpisodeContext: RolloutEpisodeContext,
-  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
-): void
-```
-
-Finalizes episode state after the main rollout loop exits.
-
-Timeouts are applied here instead of inside the loop body so natural episode
-endings stay distinct from budget exhaustion.
-
-Parameters:
-- `rolloutEpisodeContext` - - Normalized rollout configuration.
-- `rolloutEpisodeRuntimeState` - - Mutable runtime state.
-
-Returns: Nothing.
-
-### runRolloutEpisodeFrame
-
-```ts
-runRolloutEpisodeFrame(
-  network: FlappyNetworkLike,
-  rolloutEpisodeContext: RolloutEpisodeContext,
-  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
-): void
-```
-
-Runs one rollout frame including control, shaping, and early termination.
-
-Educational note:
-Each frame follows a compact pipeline: observe, act, step the environment,
-accumulate shaping reward, then optionally prune the trajectory.
-
-Parameters:
-- `network` - - Genome/network to evaluate.
-- `rolloutEpisodeContext` - - Normalized rollout configuration.
-- `rolloutEpisodeRuntimeState` - - Mutable runtime state.
-
-Returns: Nothing.
-
-### resolveRolloutFrameFlapDecision
-
-```ts
-resolveRolloutFrameFlapDecision(
-  network: FlappyNetworkLike,
-  rolloutEpisodeContext: RolloutEpisodeContext,
-  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
-): boolean
-```
-
-Resolves the flap decision for one control substep and commits memory state.
-
-The temporal memory is updated immediately after the decision so subsequent
-substeps can see short-term action history without needing recurrent state.
-
-Parameters:
-- `network` - - Genome/network to evaluate.
-- `rolloutEpisodeContext` - - Normalized rollout configuration.
-- `rolloutEpisodeRuntimeState` - - Mutable runtime state.
-
-Returns: Whether the bird should flap.
-
 ### applyRolloutEarlyTerminationIfNeeded
 
 ```ts
@@ -239,6 +113,132 @@ Parameters:
 
 Returns: Nothing.
 
+### createRolloutEpisodeRuntimeState
+
+```ts
+createRolloutEpisodeRuntimeState(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+): RolloutEpisodeRuntimeState
+```
+
+Creates mutable runtime state for one rollout episode.
+
+The runtime state carries the seeded RNG, the mutable environment, the
+temporal observation memory, and the shaping counters accumulated during the
+episode.
+
+Parameters:
+- `rolloutEpisodeContext` - - Normalized rollout configuration.
+
+Returns: Mutable runtime state.
+
+### finalizeRolloutEpisodeState
+
+```ts
+finalizeRolloutEpisodeState(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): void
+```
+
+Finalizes episode state after the main rollout loop exits.
+
+Timeouts are applied here instead of inside the loop body so natural episode
+endings stay distinct from budget exhaustion.
+
+Parameters:
+- `rolloutEpisodeContext` - - Normalized rollout configuration.
+- `rolloutEpisodeRuntimeState` - - Mutable runtime state.
+
+Returns: Nothing.
+
+### resolveRolloutEpisodeContext
+
+```ts
+resolveRolloutEpisodeContext(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+): RolloutEpisodeContext
+```
+
+Resolves normalized rollout configuration from user options.
+
+This is the rollout safety boundary: caller-provided values are clamped into
+deterministic, execution-safe ranges before the main loop touches them.
+
+Parameters:
+- `network` - - Genome/network to evaluate.
+- `rolloutOptions` - - Optional rollout controls.
+
+Returns: Normalized rollout configuration.
+
+### resolveRolloutFrameFlapDecision
+
+```ts
+resolveRolloutFrameFlapDecision(
+  network: FlappyNetworkLike,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): boolean
+```
+
+Resolves the flap decision for one control substep and commits memory state.
+
+The temporal memory is updated immediately after the decision so subsequent
+substeps can see short-term action history without needing recurrent state.
+
+Parameters:
+- `network` - - Genome/network to evaluate.
+- `rolloutEpisodeContext` - - Normalized rollout configuration.
+- `rolloutEpisodeRuntimeState` - - Mutable runtime state.
+
+Returns: Whether the bird should flap.
+
+### runRolloutEpisodeFrame
+
+```ts
+runRolloutEpisodeFrame(
+  network: FlappyNetworkLike,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): void
+```
+
+Runs one rollout frame including control, shaping, and early termination.
+
+Educational note:
+Each frame follows a compact pipeline: observe, act, step the environment,
+accumulate shaping reward, then optionally prune the trajectory.
+
+Parameters:
+- `network` - - Genome/network to evaluate.
+- `rolloutEpisodeContext` - - Normalized rollout configuration.
+- `rolloutEpisodeRuntimeState` - - Mutable runtime state.
+
+Returns: Nothing.
+
+### runRolloutEpisodeLoop
+
+```ts
+runRolloutEpisodeLoop(
+  network: FlappyNetworkLike,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): void
+```
+
+Runs the main rollout loop until termination or frame-budget exhaustion.
+
+This is the episode heartbeat: keep stepping while the bird is alive and the
+rollout still has budget left.
+
+Parameters:
+- `network` - - Genome/network to evaluate.
+- `rolloutEpisodeContext` - - Normalized rollout configuration.
+- `rolloutEpisodeRuntimeState` - - Mutable runtime state.
+
+Returns: Nothing.
+
 ## evaluation/rollout/evaluation.rollout.utils.ts
 
 Rollout shaping and result helpers.
@@ -251,6 +251,35 @@ Educational note:
 The rollout subsystem separates simulation from scoring on purpose. The
 services file determines what happened; this file determines how that episode
 should be interpreted as fitness.
+
+### composeNormalizedFitness
+
+```ts
+composeNormalizedFitness(
+  framesValue: number,
+  pipesPassedValue: number,
+  denseShapingValue: number,
+  terminalShapingValue: number,
+  maxFramesValue: number,
+  pipeProgressTarget: number | undefined,
+): number
+```
+
+Normalize and cap fitness channels so no single reward term dominates.
+
+Educational note:
+Channel normalization is a pragmatic way to keep the objective balanced across
+episodes of different lengths and levels of progress.
+
+Parameters:
+- `framesValue` - - Frames survived for the episode.
+- `pipesPassedValue` - - Pipes passed during the episode.
+- `denseShapingValue` - - Accumulated dense shaping reward.
+- `terminalShapingValue` - - Terminal shaping reward.
+- `maxFramesValue` - - Frame budget used for the episode.
+- `pipeProgressTarget` - - Optional target used to normalize pipe progress.
+
+Returns: Normalized composite fitness.
 
 ### composeRolloutEpisodeResult
 
@@ -293,6 +322,26 @@ Parameters:
 
 Returns: Per-step shaped reward.
 
+### computeTerminalShapingFitness
+
+```ts
+computeTerminalShapingFitness(
+  episodeState: FlappyGameState,
+  difficultyScale: number,
+): number
+```
+
+Adds small terminal bonuses from final progress/alignment signals.
+
+Terminal bonuses refine the final ranking, but they are intentionally smaller
+than the main survival and pipe-progress channels.
+
+Parameters:
+- `episodeState` - - Final rollout state.
+- `difficultyScale` - - Active rollout difficulty scale.
+
+Returns: Terminal shaping reward.
+
 ### isBirdLikelyUnrecoverable
 
 ```ts
@@ -310,6 +359,26 @@ Parameters:
 - `observationFeatures` - - Post-step observation features.
 
 Returns: Whether the current trajectory appears unrecoverable.
+
+### resolveDenseShapingRewardComponents
+
+```ts
+resolveDenseShapingRewardComponents(
+  previousFeatures: SharedObservationFeatures,
+  currentFeatures: SharedObservationFeatures,
+): DenseShapingRewardComponents
+```
+
+Resolves every dense-shaping reward component from consecutive observations.
+
+If you want background reading, the Wikipedia article on "reward shaping" is
+a good high-level companion concept for why these components exist.
+
+Parameters:
+- `previousFeatures` - - Observation before stepping the environment.
+- `currentFeatures` - - Observation after stepping the environment.
+
+Returns: Dense-shaping reward components.
 
 ### resolveRolloutFitnessBreakdown
 
@@ -353,75 +422,6 @@ Parameters:
 
 Returns: Raw unnormalized fitness.
 
-### resolveDenseShapingRewardComponents
-
-```ts
-resolveDenseShapingRewardComponents(
-  previousFeatures: SharedObservationFeatures,
-  currentFeatures: SharedObservationFeatures,
-): DenseShapingRewardComponents
-```
-
-Resolves every dense-shaping reward component from consecutive observations.
-
-If you want background reading, the Wikipedia article on "reward shaping" is
-a good high-level companion concept for why these components exist.
-
-Parameters:
-- `previousFeatures` - - Observation before stepping the environment.
-- `currentFeatures` - - Observation after stepping the environment.
-
-Returns: Dense-shaping reward components.
-
-### computeTerminalShapingFitness
-
-```ts
-computeTerminalShapingFitness(
-  episodeState: FlappyGameState,
-  difficultyScale: number,
-): number
-```
-
-Adds small terminal bonuses from final progress/alignment signals.
-
-Terminal bonuses refine the final ranking, but they are intentionally smaller
-than the main survival and pipe-progress channels.
-
-Parameters:
-- `episodeState` - - Final rollout state.
-- `difficultyScale` - - Active rollout difficulty scale.
-
-Returns: Terminal shaping reward.
-
-### composeNormalizedFitness
-
-```ts
-composeNormalizedFitness(
-  framesValue: number,
-  pipesPassedValue: number,
-  denseShapingValue: number,
-  terminalShapingValue: number,
-  maxFramesValue: number,
-  pipeProgressTarget: number | undefined,
-): number
-```
-
-Normalize and cap fitness channels so no single reward term dominates.
-
-Educational note:
-Channel normalization is a pragmatic way to keep the objective balanced across
-episodes of different lengths and levels of progress.
-
-Parameters:
-- `framesValue` - - Frames survived for the episode.
-- `pipesPassedValue` - - Pipes passed during the episode.
-- `denseShapingValue` - - Accumulated dense shaping reward.
-- `terminalShapingValue` - - Terminal shaping reward.
-- `maxFramesValue` - - Frame budget used for the episode.
-- `pipeProgressTarget` - - Optional target used to normalize pipe progress.
-
-Returns: Normalized composite fitness.
-
 ## evaluation/rollout/evaluation.rollout.types.ts
 
 Rollout-internal type contracts.
@@ -435,6 +435,13 @@ Read them as three layers:
 - `RolloutEpisodeContext`: immutable, normalized configuration.
 - `RolloutEpisodeRuntimeState`: mutable execution state.
 - fitness and shaping types: named reward channels used during folding.
+
+### DenseShapingRewardComponents
+
+Per-frame dense shaping channels resolved from consecutive observations.
+
+The shaping system rewards more than survival: it also tracks approach,
+centering, clearance, and stable motion.
 
 ### RolloutEpisodeContext
 
@@ -455,13 +462,6 @@ Fitness-channel breakdown used to compose the public episode result.
 
 Named channels make reward design easier to audit than a single opaque number.
 
-### DenseShapingRewardComponents
-
-Per-frame dense shaping channels resolved from consecutive observations.
-
-The shaping system rewards more than survival: it also tracks approach,
-centering, clearance, and stable motion.
-
 ## evaluation/rollout/evaluation.rollout.constants.ts
 
 Rollout-local constants.
@@ -477,25 +477,6 @@ sea of raw `0`, `1`, and string literals.
 
 Default genome id used when a network does not expose one.
 
-### FLAPPY_ROLLOUT_MIN_MAX_FRAMES
-
-Minimum positive frame-like scalar used by rollout normalization.
-
-### FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_GRACE_FRAMES
-
-Minimum grace period allowed before early termination can activate.
-
-### FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_CONSECUTIVE_FRAMES
-
-Minimum unrecoverable-frame streak required for early termination.
-
-### FLAPPY_ROLLOUT_ZERO_FITNESS
-
-Shared zero baseline used across rollout fitness and counters.
-
-This acts as the semantic baseline for both shaping accumulation and several
-rollout guard conditions.
-
 ### FLAPPY_ROLLOUT_DONE_REASON_COLLISION
 
 Rollout done reason used by heuristic early termination.
@@ -503,3 +484,22 @@ Rollout done reason used by heuristic early termination.
 ### FLAPPY_ROLLOUT_DONE_REASON_TIMEOUT
 
 Rollout done reason used when the episode exhausts its frame budget.
+
+### FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_CONSECUTIVE_FRAMES
+
+Minimum unrecoverable-frame streak required for early termination.
+
+### FLAPPY_ROLLOUT_MIN_EARLY_TERMINATION_GRACE_FRAMES
+
+Minimum grace period allowed before early termination can activate.
+
+### FLAPPY_ROLLOUT_MIN_MAX_FRAMES
+
+Minimum positive frame-like scalar used by rollout normalization.
+
+### FLAPPY_ROLLOUT_ZERO_FITNESS
+
+Shared zero baseline used across rollout fitness and counters.
+
+This acts as the semantic baseline for both shaping accumulation and several
+rollout guard conditions.

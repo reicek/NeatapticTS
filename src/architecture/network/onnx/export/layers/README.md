@@ -64,6 +64,210 @@ const outputName = tryEmitConvLayer({
 
 ## architecture/network/onnx/export/layers/network.onnx.export-dense.utils.ts
 
+### appendDenseBiasInitializer
+
+```ts
+appendDenseBiasInitializer(
+  layerContext: DenseLayerContext,
+  biasTensorName: string,
+  biasVector: number[],
+): void
+```
+
+Append dense bias initializer.
+
+Parameters:
+- `layerContext` - Dense layer context.
+- `biasTensorName` - Bias tensor name.
+- `biasVector` - Bias vector values.
+
+Returns: Nothing.
+
+### appendDenseNodes
+
+```ts
+appendDenseNodes(
+  model: OnnxModel,
+  orderedNodes: DenseOrderedNodePayload[],
+): void
+```
+
+Append ordered dense nodes to the model graph.
+
+Parameters:
+- `model` - Target model.
+- `orderedNodes` - Ordered dense nodes.
+
+Returns: Nothing.
+
+### appendDenseWeightInitializer
+
+```ts
+appendDenseWeightInitializer(
+  layerContext: DenseLayerContext,
+  weightTensorName: string,
+  weightMatrixValues: number[],
+): void
+```
+
+Append dense weight initializer.
+
+Parameters:
+- `layerContext` - Dense layer context.
+- `weightTensorName` - Weight tensor name.
+- `weightMatrixValues` - Weight values.
+
+Returns: Nothing.
+
+### buildSingleNeuronWeightRow
+
+```ts
+buildSingleNeuronWeightRow(
+  targetNodeInternal: NodeInternals,
+  previousLayerNodes: default[],
+): number[]
+```
+
+Build one neuron's incoming weight row against previous layer.
+
+Parameters:
+- `targetNodeInternal` - Target node internals.
+- `previousLayerNodes` - Previous layer nodes.
+
+Returns: Weight row values.
+
+### collectDenseInitializerValues
+
+```ts
+collectDenseInitializerValues(
+  layerContext: DenseLayerContext,
+): DenseInitializerValues
+```
+
+Collect dense weight matrix and bias vector values.
+
+Parameters:
+- `layerContext` - Dense layer context.
+
+Returns: Dense initializer values.
+
+### createActivationNode
+
+```ts
+createActivationNode(
+  denseActivationContext: DenseActivationContext,
+): DenseActivationNodePayload
+```
+
+Create dense activation node definition.
+
+Parameters:
+- `denseActivationContext` - Dense activation context.
+
+Returns: ONNX activation node payload.
+
+### createDefaultGemmAttributes
+
+```ts
+createDefaultGemmAttributes(): { name: string; type: string; f?: number | undefined; i?: number | undefined; }[]
+```
+
+Build default Gemm attributes for ONNX export.
+
+Returns: Default Gemm attribute list.
+
+### createDenseTensorNames
+
+```ts
+createDenseTensorNames(
+  layerIndex: number,
+): DenseTensorNames
+```
+
+Build dense tensor names for initializer emission.
+
+Parameters:
+- `layerIndex` - Layer index.
+
+Returns: Dense tensor names.
+
+### createGemmNode
+
+```ts
+createGemmNode(
+  denseActivationContext: DenseActivationContext,
+): DenseGemmNodePayload
+```
+
+Create dense Gemm node definition.
+
+Parameters:
+- `denseActivationContext` - Dense activation context.
+
+Returns: ONNX Gemm node payload.
+
+### createSharedActivationNodePayload
+
+```ts
+createSharedActivationNodePayload(
+  params: SharedActivationNodeBuildParams,
+): DenseActivationNodePayload
+```
+
+Build a shared activation node payload.
+
+Parameters:
+- `params` - Shared activation build parameters.
+
+Returns: Activation node payload.
+
+### createSharedGemmNodePayload
+
+```ts
+createSharedGemmNodePayload(
+  params: SharedGemmNodeBuildParams,
+): DenseGemmNodePayload
+```
+
+Build a shared Gemm node payload.
+
+Parameters:
+- `params` - Shared Gemm build parameters.
+
+Returns: Gemm node payload.
+
+### emitDenseActivationSubgraph
+
+```ts
+emitDenseActivationSubgraph(
+  model: OnnxModel,
+  denseActivationContext: DenseActivationContext,
+): void
+```
+
+Emit Gemm and activation nodes using requested ordering.
+
+Parameters:
+- `model` - Target ONNX model.
+- `denseActivationContext` - Dense activation context.
+
+Returns: Nothing.
+
+### emitDenseInitializers
+
+```ts
+emitDenseInitializers(
+  layerContext: DenseLayerContext,
+): DenseTensorNames
+```
+
+Emit dense initializers and return tensor names.
+
+Parameters:
+- `layerContext` - Dense layer context.
+
+Returns: Tensor names.
+
 ### emitDenseLayer
 
 ```ts
@@ -99,6 +303,21 @@ const outputName = emitDenseLayer({
 });
 ```
 
+### emitOptionalLayerOutput
+
+```ts
+emitOptionalLayerOutput(
+  params: OptionalLayerOutputParams,
+): string
+```
+
+Emit optional pooling and flatten output fold.
+
+Parameters:
+- `params` - Optional output parameters.
+
+Returns: Output tensor name.
+
 ### emitPerNeuronLayer
 
 ```ts
@@ -133,105 +352,20 @@ const outputName = emitPerNeuronLayer({
 });
 ```
 
-### emitDenseInitializers
+### emitPerNeuronSubgraph
 
 ```ts
-emitDenseInitializers(
-  layerContext: DenseLayerContext,
-): DenseTensorNames
+emitPerNeuronSubgraph(
+  perNeuronSubgraphContext: PerNeuronSubgraphContext,
+): string
 ```
 
-Emit dense initializers and return tensor names.
+Emit per-neuron Gemm + activation subgraph.
 
 Parameters:
-- `layerContext` - Dense layer context.
+- `perNeuronSubgraphContext` - Per-neuron subgraph context.
 
-Returns: Tensor names.
-
-### collectDenseInitializerValues
-
-```ts
-collectDenseInitializerValues(
-  layerContext: DenseLayerContext,
-): DenseInitializerValues
-```
-
-Collect dense weight matrix and bias vector values.
-
-Parameters:
-- `layerContext` - Dense layer context.
-
-Returns: Dense initializer values.
-
-### createDenseTensorNames
-
-```ts
-createDenseTensorNames(
-  layerIndex: number,
-): DenseTensorNames
-```
-
-Build dense tensor names for initializer emission.
-
-Parameters:
-- `layerIndex` - Layer index.
-
-Returns: Dense tensor names.
-
-### appendDenseWeightInitializer
-
-```ts
-appendDenseWeightInitializer(
-  layerContext: DenseLayerContext,
-  weightTensorName: string,
-  weightMatrixValues: number[],
-): void
-```
-
-Append dense weight initializer.
-
-Parameters:
-- `layerContext` - Dense layer context.
-- `weightTensorName` - Weight tensor name.
-- `weightMatrixValues` - Weight values.
-
-Returns: Nothing.
-
-### appendDenseBiasInitializer
-
-```ts
-appendDenseBiasInitializer(
-  layerContext: DenseLayerContext,
-  biasTensorName: string,
-  biasVector: number[],
-): void
-```
-
-Append dense bias initializer.
-
-Parameters:
-- `layerContext` - Dense layer context.
-- `biasTensorName` - Bias tensor name.
-- `biasVector` - Bias vector values.
-
-Returns: Nothing.
-
-### emitDenseActivationSubgraph
-
-```ts
-emitDenseActivationSubgraph(
-  model: OnnxModel,
-  denseActivationContext: DenseActivationContext,
-): void
-```
-
-Emit Gemm and activation nodes using requested ordering.
-
-Parameters:
-- `model` - Target ONNX model.
-- `denseActivationContext` - Dense activation context.
-
-Returns: Nothing.
+Returns: Per-neuron activation output name.
 
 ### resolveDenseNodeOrder
 
@@ -252,85 +386,6 @@ Parameters:
 
 Returns: Ordered node list.
 
-### appendDenseNodes
-
-```ts
-appendDenseNodes(
-  model: OnnxModel,
-  orderedNodes: DenseOrderedNodePayload[],
-): void
-```
-
-Append ordered dense nodes to the model graph.
-
-Parameters:
-- `model` - Target model.
-- `orderedNodes` - Ordered dense nodes.
-
-Returns: Nothing.
-
-### createGemmNode
-
-```ts
-createGemmNode(
-  denseActivationContext: DenseActivationContext,
-): DenseGemmNodePayload
-```
-
-Create dense Gemm node definition.
-
-Parameters:
-- `denseActivationContext` - Dense activation context.
-
-Returns: ONNX Gemm node payload.
-
-### createActivationNode
-
-```ts
-createActivationNode(
-  denseActivationContext: DenseActivationContext,
-): DenseActivationNodePayload
-```
-
-Create dense activation node definition.
-
-Parameters:
-- `denseActivationContext` - Dense activation context.
-
-Returns: ONNX activation node payload.
-
-### emitPerNeuronSubgraph
-
-```ts
-emitPerNeuronSubgraph(
-  perNeuronSubgraphContext: PerNeuronSubgraphContext,
-): string
-```
-
-Emit per-neuron Gemm + activation subgraph.
-
-Parameters:
-- `perNeuronSubgraphContext` - Per-neuron subgraph context.
-
-Returns: Per-neuron activation output name.
-
-### buildSingleNeuronWeightRow
-
-```ts
-buildSingleNeuronWeightRow(
-  targetNodeInternal: NodeInternals,
-  previousLayerNodes: default[],
-): number[]
-```
-
-Build one neuron's incoming weight row against previous layer.
-
-Parameters:
-- `targetNodeInternal` - Target node internals.
-- `previousLayerNodes` - Previous layer nodes.
-
-Returns: Weight row values.
-
 ### resolveSingleNeuronInboundWeight
 
 ```ts
@@ -348,175 +403,17 @@ Parameters:
 
 Returns: Inbound weight or zero when missing.
 
-### createSharedGemmNodePayload
-
-```ts
-createSharedGemmNodePayload(
-  params: SharedGemmNodeBuildParams,
-): DenseGemmNodePayload
-```
-
-Build a shared Gemm node payload.
-
-Parameters:
-- `params` - Shared Gemm build parameters.
-
-Returns: Gemm node payload.
-
-### createSharedActivationNodePayload
-
-```ts
-createSharedActivationNodePayload(
-  params: SharedActivationNodeBuildParams,
-): DenseActivationNodePayload
-```
-
-Build a shared activation node payload.
-
-Parameters:
-- `params` - Shared activation build parameters.
-
-Returns: Activation node payload.
-
-### createDefaultGemmAttributes
-
-```ts
-createDefaultGemmAttributes(): { name: string; type: string; f?: number | undefined; i?: number | undefined; }[]
-```
-
-Build default Gemm attributes for ONNX export.
-
-Returns: Default Gemm attribute list.
-
-### emitOptionalLayerOutput
-
-```ts
-emitOptionalLayerOutput(
-  params: OptionalLayerOutputParams,
-): string
-```
-
-Emit optional pooling and flatten output fold.
-
-Parameters:
-- `params` - Optional output parameters.
-
-Returns: Output tensor name.
-
 ## architecture/network/onnx/export/layers/network.onnx.export-recurrent.utils.ts
 
-### emitRecurrentLayer
+### buildDefaultGemmAttributes
 
 ```ts
-emitRecurrentLayer(
-  params: RecurrentLayerEmissionParams,
-): string
+buildDefaultGemmAttributes(): { name: string; type: string; f?: number | undefined; i?: number | undefined; }[]
 ```
 
-Emit the constrained recurrent single-step export path for one hidden layer.
+Build the shared attribute list for ONNX Gemm node payloads.
 
-This boundary models recurrence with two parallel Gemm branches:
-one for the feed-forward input and one for the previous hidden state. The
-recurrent branch uses a diagonal matrix derived from self-connections only,
-which keeps the exported shape simple and matches the importer's current
-reconstruction contract.
-
-Hidden-state inputs are named `hidden_prev` for the first recurrent layer and
-`hidden_prev_l{n}` for later recurrent layers. Mixed activations are not
-supported on this path because the single activation node is applied after
-the input and recurrent branches are summed.
-
-Parameters:
-- `params` - Recurrent emission parameters.
-
-Returns: Output tensor name.
-
-Example:
-
-```ts
-const outputName = emitRecurrentLayer({
-  model,
-  layerIndex: 1,
-  previousOutputName: 'input',
-  previousLayerNodes,
-  currentLayerNodes,
-});
-```
-
-### buildRecurrentLayerEmissionContext
-
-```ts
-buildRecurrentLayerEmissionContext(
-  params: RecurrentLayerEmissionParams,
-): RecurrentLayerEmissionContext
-```
-
-Build derived recurrent-layer context from input params.
-
-Parameters:
-- `params` - User-provided recurrent layer params.
-
-Returns: Derived context with cached dimensions and layer slot.
-
-### buildRecurrentInitializerNames
-
-```ts
-buildRecurrentInitializerNames(
-  context: RecurrentLayerEmissionContext,
-): RecurrentInitializerNames
-```
-
-Build deterministic tensor names for recurrent initializer emission.
-
-Parameters:
-- `context` - Recurrent layer execution context.
-
-Returns: Tensor-name group for initializer emission.
-
-### buildRecurrentGraphNames
-
-```ts
-buildRecurrentGraphNames(
-  context: RecurrentLayerEmissionContext,
-): RecurrentGraphNames
-```
-
-Build deterministic graph names for recurrent-node emission.
-
-Parameters:
-- `context` - Recurrent layer execution context.
-
-Returns: Graph-name group for branch and activation nodes.
-
-### collectRecurrentInitializerValues
-
-```ts
-collectRecurrentInitializerValues(
-  context: RecurrentLayerEmissionContext,
-): RecurrentInitializerValues
-```
-
-Collect recurrent initializer vectors for one layer.
-
-Parameters:
-- `context` - Recurrent layer execution context.
-
-Returns: Dense and recurrent initializer vectors.
-
-### emitRecurrentInitializers
-
-```ts
-emitRecurrentInitializers(
-  context: RecurrentInitializerEmissionContext,
-): void
-```
-
-Emit dense and recurrent initializer tensors.
-
-Parameters:
-- `context` - Initializer emission context.
-
-Returns: Nothing.
+Returns: Gemm attribute payload list.
 
 ### buildInputBranchGemmEmissionContext
 
@@ -556,33 +453,78 @@ Parameters:
 
 Returns: Gemm emission context.
 
-### resolvePreviousHiddenInputName
+### buildRecurrentGraphNames
 
 ```ts
-resolvePreviousHiddenInputName(
-  layerIndex: number,
-): string
+buildRecurrentGraphNames(
+  context: RecurrentLayerEmissionContext,
+): RecurrentGraphNames
 ```
 
-Resolve recurrent branch hidden-state input for one layer.
+Build deterministic graph names for recurrent-node emission.
 
 Parameters:
-- `layerIndex` - Current recurrent layer index.
+- `context` - Recurrent layer execution context.
 
-Returns: Hidden-state tensor input name.
+Returns: Graph-name group for branch and activation nodes.
 
-### emitRecurrentGemmNode
+### buildRecurrentInitializerNames
 
 ```ts
-emitRecurrentGemmNode(
-  context: RecurrentGemmEmissionContext,
+buildRecurrentInitializerNames(
+  context: RecurrentLayerEmissionContext,
+): RecurrentInitializerNames
+```
+
+Build deterministic tensor names for recurrent initializer emission.
+
+Parameters:
+- `context` - Recurrent layer execution context.
+
+Returns: Tensor-name group for initializer emission.
+
+### buildRecurrentLayerEmissionContext
+
+```ts
+buildRecurrentLayerEmissionContext(
+  params: RecurrentLayerEmissionParams,
+): RecurrentLayerEmissionContext
+```
+
+Build derived recurrent-layer context from input params.
+
+Parameters:
+- `params` - User-provided recurrent layer params.
+
+Returns: Derived context with cached dimensions and layer slot.
+
+### collectRecurrentInitializerValues
+
+```ts
+collectRecurrentInitializerValues(
+  context: RecurrentLayerEmissionContext,
+): RecurrentInitializerValues
+```
+
+Collect recurrent initializer vectors for one layer.
+
+Parameters:
+- `context` - Recurrent layer execution context.
+
+Returns: Dense and recurrent initializer vectors.
+
+### emitRecurrentActivationNode
+
+```ts
+emitRecurrentActivationNode(
+  context: RecurrentActivationEmissionContext,
 ): void
 ```
 
-Emit one recurrent Gemm node with shared ONNX attributes.
+Emit activation node for recurrent branch sum output.
 
 Parameters:
-- `context` - Gemm emission context.
+- `context` - Activation emission context.
 
 Returns: Nothing.
 
@@ -603,35 +545,73 @@ Parameters:
 
 Returns: Nothing.
 
-### emitRecurrentActivationNode
+### emitRecurrentGemmNode
 
 ```ts
-emitRecurrentActivationNode(
-  context: RecurrentActivationEmissionContext,
+emitRecurrentGemmNode(
+  context: RecurrentGemmEmissionContext,
 ): void
 ```
 
-Emit activation node for recurrent branch sum output.
+Emit one recurrent Gemm node with shared ONNX attributes.
 
 Parameters:
-- `context` - Activation emission context.
+- `context` - Gemm emission context.
 
 Returns: Nothing.
 
-### resolveRecurrentActivationType
+### emitRecurrentInitializers
 
 ```ts
-resolveRecurrentActivationType(
-  currentLayerNodes: default[],
+emitRecurrentInitializers(
+  context: RecurrentInitializerEmissionContext,
+): void
+```
+
+Emit dense and recurrent initializer tensors.
+
+Parameters:
+- `context` - Initializer emission context.
+
+Returns: Nothing.
+
+### emitRecurrentLayer
+
+```ts
+emitRecurrentLayer(
+  params: RecurrentLayerEmissionParams,
 ): string
 ```
 
-Resolve ONNX activation type from first node in recurrent layer.
+Emit the constrained recurrent single-step export path for one hidden layer.
+
+This boundary models recurrence with two parallel Gemm branches:
+one for the feed-forward input and one for the previous hidden state. The
+recurrent branch uses a diagonal matrix derived from self-connections only,
+which keeps the exported shape simple and matches the importer's current
+reconstruction contract.
+
+Hidden-state inputs are named `hidden_prev` for the first recurrent layer and
+`hidden_prev_l{n}` for later recurrent layers. Mixed activations are not
+supported on this path because the single activation node is applied after
+the input and recurrent branches are summed.
 
 Parameters:
-- `currentLayerNodes` - Current recurrent layer nodes.
+- `params` - Recurrent emission parameters.
 
-Returns: ONNX activation op type.
+Returns: Output tensor name.
+
+Example:
+
+```ts
+const outputName = emitRecurrentLayer({
+  model,
+  layerIndex: 1,
+  previousOutputName: 'input',
+  previousLayerNodes,
+  currentLayerNodes,
+});
+```
 
 ### readNodeInternals
 
@@ -648,15 +628,35 @@ Parameters:
 
 Returns: Node internals used by ONNX emission helpers.
 
-### buildDefaultGemmAttributes
+### resolvePreviousHiddenInputName
 
 ```ts
-buildDefaultGemmAttributes(): { name: string; type: string; f?: number | undefined; i?: number | undefined; }[]
+resolvePreviousHiddenInputName(
+  layerIndex: number,
+): string
 ```
 
-Build the shared attribute list for ONNX Gemm node payloads.
+Resolve recurrent branch hidden-state input for one layer.
 
-Returns: Gemm attribute payload list.
+Parameters:
+- `layerIndex` - Current recurrent layer index.
+
+Returns: Hidden-state tensor input name.
+
+### resolveRecurrentActivationType
+
+```ts
+resolveRecurrentActivationType(
+  currentLayerNodes: default[],
+): string
+```
+
+Resolve ONNX activation type from first node in recurrent layer.
+
+Parameters:
+- `currentLayerNodes` - Current recurrent layer nodes.
+
+Returns: ONNX activation op type.
 
 ## architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.ts
 
@@ -706,6 +706,74 @@ const outputName = emitLayerGraph({
 
 ## architecture/network/onnx/export/layers/network.onnx.export-layer-common.utils.ts
 
+### appendIndexedMetadata
+
+```ts
+appendIndexedMetadata(
+  model: OnnxModel,
+  key: string,
+  layerIndex: number,
+): void
+```
+
+Append an integer index to JSON-array metadata key.
+
+Parameters:
+- `model` - Target model.
+- `key` - Metadata key.
+- `layerIndex` - Layer index to append.
+
+Returns: Nothing.
+
+### appendMetadataSpec
+
+```ts
+appendMetadataSpec(
+  model: OnnxModel,
+  key: string,
+  spec: Conv2DMapping | Pool2DMapping,
+): void
+```
+
+Append a JSON object to JSON-array metadata key.
+
+Parameters:
+- `model` - Target model.
+- `key` - Metadata key.
+- `spec` - Metadata object.
+
+Returns: Nothing.
+
+### appendPoolingMetadata
+
+```ts
+appendPoolingMetadata(
+  context: PoolingEmissionContext,
+): void
+```
+
+Append pooling metadata for one emitted pooling layer.
+
+Parameters:
+- `context` - Pooling emission context.
+
+Returns: Nothing.
+
+### asNodeInternals
+
+```ts
+asNodeInternals(
+  node: default,
+): NodeInternals
+```
+
+Normalize a public node instance into ONNX export internals.
+
+Parameters:
+- `node` - Source node.
+
+Returns: Internal runtime-facing node representation.
+
 ### buildDenseWeightsAndBiases
 
 ```ts
@@ -753,290 +821,6 @@ Parameters:
 
 Returns: Flattened row-major recurrent matrix.
 
-### emitOptionalPoolingAndFlatten
-
-```ts
-emitOptionalPoolingAndFlatten(
-  params: OptionalPoolingAndFlattenParams,
-): string
-```
-
-Emit optional pooling and flatten nodes after a layer output.
-
-Parameters:
-- `params` - Pooling parameters.
-
-Returns: Final output tensor name after optional pooling/flatten.
-
-### appendIndexedMetadata
-
-```ts
-appendIndexedMetadata(
-  model: OnnxModel,
-  key: string,
-  layerIndex: number,
-): void
-```
-
-Append an integer index to JSON-array metadata key.
-
-Parameters:
-- `model` - Target model.
-- `key` - Metadata key.
-- `layerIndex` - Layer index to append.
-
-Returns: Nothing.
-
-### appendMetadataSpec
-
-```ts
-appendMetadataSpec(
-  model: OnnxModel,
-  key: string,
-  spec: Conv2DMapping | Pool2DMapping,
-): void
-```
-
-Append a JSON object to JSON-array metadata key.
-
-Parameters:
-- `model` - Target model.
-- `key` - Metadata key.
-- `spec` - Metadata object.
-
-Returns: Nothing.
-
-### collectDenseRows
-
-```ts
-collectDenseRows(
-  context: DenseWeightBuildContext,
-): DenseWeightRow[]
-```
-
-Collect dense rows for each target node in current layer.
-
-Parameters:
-- `context` - Dense row collection context.
-
-Returns: Dense rows containing per-target weights and bias.
-
-### foldDenseRowsToInitializers
-
-```ts
-foldDenseRowsToInitializers(
-  denseRows: DenseWeightRow[],
-): DenseWeightBuildResult
-```
-
-Fold dense rows into flattened ONNX initializer arrays.
-
-Parameters:
-- `denseRows` - Dense rows.
-
-Returns: Flattened dense initializer result.
-
-### collectDenseRowWeights
-
-```ts
-collectDenseRowWeights(
-  context: DenseWeightRowCollectionContext,
-): number[]
-```
-
-Collect source-to-target weights for one dense row.
-
-Parameters:
-- `context` - Dense row collection context.
-
-Returns: Row weights in source-node order.
-
-### resolveInboundWeight
-
-```ts
-resolveInboundWeight(
-  targetNodeInternal: NodeInternals,
-  sourceNode: default,
-): number
-```
-
-Resolve source-to-target inbound connection weight.
-
-Parameters:
-- `targetNodeInternal` - Target node internals.
-- `sourceNode` - Source node.
-
-Returns: Inbound weight or zero for disconnected edges.
-
-### asNodeInternals
-
-```ts
-asNodeInternals(
-  node: default,
-): NodeInternals
-```
-
-Normalize a public node instance into ONNX export internals.
-
-Parameters:
-- `node` - Source node.
-
-Returns: Internal runtime-facing node representation.
-
-### collectRecurrentRows
-
-```ts
-collectRecurrentRows(
-  context: DiagonalRecurrentBuildContext,
-): number[][]
-```
-
-Collect recurrent matrix rows for one layer.
-
-Parameters:
-- `context` - Recurrent matrix build context.
-
-Returns: Recurrent row collection.
-
-### collectRecurrentRow
-
-```ts
-collectRecurrentRow(
-  context: RecurrentRowCollectionContext,
-): number[]
-```
-
-Collect one recurrent matrix row.
-
-Parameters:
-- `context` - Row collection context.
-
-Returns: Recurrent row values.
-
-### resolveDiagonalRecurrentWeight
-
-```ts
-resolveDiagonalRecurrentWeight(
-  context: RecurrentRowCollectionContext,
-  columnIndex: number,
-): number
-```
-
-Resolve recurrent weight value for one matrix coordinate.
-
-Parameters:
-- `context` - Row collection context.
-- `columnIndex` - Column index in row.
-
-Returns: Recurrent weight for diagonal entries, otherwise zero.
-
-### toPoolingEmissionContext
-
-```ts
-toPoolingEmissionContext(
-  params: OptionalPoolingAndFlattenParams,
-): PoolingEmissionContext
-```
-
-Resolve pooling emission context from optional pooling parameters.
-
-Parameters:
-- `params` - Optional pooling and flatten parameters.
-
-Returns: Pooling emission context.
-
-### emitPoolingNode
-
-```ts
-emitPoolingNode(
-  context: PoolingEmissionContext,
-): string
-```
-
-Emit one pooling node and return its output tensor name.
-
-Parameters:
-- `context` - Pooling emission context.
-
-Returns: Pooling output tensor name.
-
-### collectPoolingAttributes
-
-```ts
-collectPoolingAttributes(
-  poolSpec: Pool2DMapping,
-): PoolingAttributes
-```
-
-Collect ONNX pooling attributes from one pooling spec.
-
-Parameters:
-- `poolSpec` - Pooling spec.
-
-Returns: Pooling attributes for ONNX node payload.
-
-### emitOptionalFlattenAfterPooling
-
-```ts
-emitOptionalFlattenAfterPooling(
-  context: FlattenAfterPoolingContext,
-): string
-```
-
-Conditionally emit flatten node after pooling.
-
-Parameters:
-- `context` - Flatten emission context.
-
-Returns: Output tensor name after optional flatten.
-
-### appendPoolingMetadata
-
-```ts
-appendPoolingMetadata(
-  context: PoolingEmissionContext,
-): void
-```
-
-Append pooling metadata for one emitted pooling layer.
-
-Parameters:
-- `context` - Pooling emission context.
-
-Returns: Nothing.
-
-### ensureMetadataRegistry
-
-```ts
-ensureMetadataRegistry(
-  model: OnnxModel,
-): OnnxMetadataProperty[]
-```
-
-Ensure model metadata registry exists.
-
-Parameters:
-- `model` - Target model.
-
-Returns: Mutable metadata registry.
-
-### findMetadataProperty
-
-```ts
-findMetadataProperty(
-  metadataRegistry: OnnxMetadataProperty[],
-  key: string,
-): OnnxMetadataProperty | undefined
-```
-
-Find a metadata property by key.
-
-Parameters:
-- `metadataRegistry` - Metadata registry.
-- `key` - Metadata key.
-
-Returns: Matching metadata property if present.
-
 ### buildIndexedMetadataProperty
 
 ```ts
@@ -1070,6 +854,222 @@ Parameters:
 - `spec` - Mapping spec.
 
 Returns: Metadata property.
+
+### collectDenseRows
+
+```ts
+collectDenseRows(
+  context: DenseWeightBuildContext,
+): DenseWeightRow[]
+```
+
+Collect dense rows for each target node in current layer.
+
+Parameters:
+- `context` - Dense row collection context.
+
+Returns: Dense rows containing per-target weights and bias.
+
+### collectDenseRowWeights
+
+```ts
+collectDenseRowWeights(
+  context: DenseWeightRowCollectionContext,
+): number[]
+```
+
+Collect source-to-target weights for one dense row.
+
+Parameters:
+- `context` - Dense row collection context.
+
+Returns: Row weights in source-node order.
+
+### collectPoolingAttributes
+
+```ts
+collectPoolingAttributes(
+  poolSpec: Pool2DMapping,
+): PoolingAttributes
+```
+
+Collect ONNX pooling attributes from one pooling spec.
+
+Parameters:
+- `poolSpec` - Pooling spec.
+
+Returns: Pooling attributes for ONNX node payload.
+
+### collectRecurrentRow
+
+```ts
+collectRecurrentRow(
+  context: RecurrentRowCollectionContext,
+): number[]
+```
+
+Collect one recurrent matrix row.
+
+Parameters:
+- `context` - Row collection context.
+
+Returns: Recurrent row values.
+
+### collectRecurrentRows
+
+```ts
+collectRecurrentRows(
+  context: DiagonalRecurrentBuildContext,
+): number[][]
+```
+
+Collect recurrent matrix rows for one layer.
+
+Parameters:
+- `context` - Recurrent matrix build context.
+
+Returns: Recurrent row collection.
+
+### emitOptionalFlattenAfterPooling
+
+```ts
+emitOptionalFlattenAfterPooling(
+  context: FlattenAfterPoolingContext,
+): string
+```
+
+Conditionally emit flatten node after pooling.
+
+Parameters:
+- `context` - Flatten emission context.
+
+Returns: Output tensor name after optional flatten.
+
+### emitOptionalPoolingAndFlatten
+
+```ts
+emitOptionalPoolingAndFlatten(
+  params: OptionalPoolingAndFlattenParams,
+): string
+```
+
+Emit optional pooling and flatten nodes after a layer output.
+
+Parameters:
+- `params` - Pooling parameters.
+
+Returns: Final output tensor name after optional pooling/flatten.
+
+### emitPoolingNode
+
+```ts
+emitPoolingNode(
+  context: PoolingEmissionContext,
+): string
+```
+
+Emit one pooling node and return its output tensor name.
+
+Parameters:
+- `context` - Pooling emission context.
+
+Returns: Pooling output tensor name.
+
+### ensureMetadataRegistry
+
+```ts
+ensureMetadataRegistry(
+  model: OnnxModel,
+): OnnxMetadataProperty[]
+```
+
+Ensure model metadata registry exists.
+
+Parameters:
+- `model` - Target model.
+
+Returns: Mutable metadata registry.
+
+### findMetadataProperty
+
+```ts
+findMetadataProperty(
+  metadataRegistry: OnnxMetadataProperty[],
+  key: string,
+): OnnxMetadataProperty | undefined
+```
+
+Find a metadata property by key.
+
+Parameters:
+- `metadataRegistry` - Metadata registry.
+- `key` - Metadata key.
+
+Returns: Matching metadata property if present.
+
+### foldDenseRowsToInitializers
+
+```ts
+foldDenseRowsToInitializers(
+  denseRows: DenseWeightRow[],
+): DenseWeightBuildResult
+```
+
+Fold dense rows into flattened ONNX initializer arrays.
+
+Parameters:
+- `denseRows` - Dense rows.
+
+Returns: Flattened dense initializer result.
+
+### parseMetadataArray
+
+```ts
+parseMetadataArray(
+  metadataValue: string,
+): ItemType[] | undefined
+```
+
+Parse a metadata JSON array value safely.
+
+Parameters:
+- `metadataValue` - Metadata JSON string.
+
+Returns: Parsed array when valid, otherwise undefined.
+
+### resolveDiagonalRecurrentWeight
+
+```ts
+resolveDiagonalRecurrentWeight(
+  context: RecurrentRowCollectionContext,
+  columnIndex: number,
+): number
+```
+
+Resolve recurrent weight value for one matrix coordinate.
+
+Parameters:
+- `context` - Row collection context.
+- `columnIndex` - Column index in row.
+
+Returns: Recurrent weight for diagonal entries, otherwise zero.
+
+### resolveInboundWeight
+
+```ts
+resolveInboundWeight(
+  targetNodeInternal: NodeInternals,
+  sourceNode: default,
+): number
+```
+
+Resolve source-to-target inbound connection weight.
+
+Parameters:
+- `targetNodeInternal` - Target node internals.
+- `sourceNode` - Source node.
+
+Returns: Inbound weight or zero for disconnected edges.
 
 ### serializeIndexedMetadataValue
 
@@ -1105,17 +1105,17 @@ Parameters:
 
 Returns: Serialized JSON value.
 
-### parseMetadataArray
+### toPoolingEmissionContext
 
 ```ts
-parseMetadataArray(
-  metadataValue: string,
-): ItemType[] | undefined
+toPoolingEmissionContext(
+  params: OptionalPoolingAndFlattenParams,
+): PoolingEmissionContext
 ```
 
-Parse a metadata JSON array value safely.
+Resolve pooling emission context from optional pooling parameters.
 
 Parameters:
-- `metadataValue` - Metadata JSON string.
+- `params` - Optional pooling and flatten parameters.
 
-Returns: Parsed array when valid, otherwise undefined.
+Returns: Pooling emission context.

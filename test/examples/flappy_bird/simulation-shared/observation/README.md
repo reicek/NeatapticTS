@@ -18,36 +18,37 @@ this boundary exists at all.
 
 ## simulation-shared/observation/observation.ts
 
-### resolveUpcomingPipes
+### resolveCoreObservationVectorFromFeatures
 
 ```ts
-resolveUpcomingPipes(
-  pipes: SharedPipeLike[],
-  birdCenterXPx: number,
-  birdRadiusPx: number,
-  pipeWidthPx: number,
-): [SharedPipeLike | undefined, SharedPipeLike | undefined]
+resolveCoreObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
 ```
 
-Resolves the next two upcoming pipes in front of the bird.
+Resolves the compact core vector used for temporal stacking.
 
-The observation pipeline only cares about the immediate near future, because
-Flappy Bird decisions are dominated by the next gap and the transition after
-it. Looking further ahead adds noise faster than it adds useful control
-signal.
+The core intentionally keeps directly observed kinematic and geometric
+channels while dropping derived one-step predictors that become redundant
+once short-term temporal memory is available.
+
+This is the representation used when the example wants a short history of raw
+observation slices. The idea is similar to frame stacking in reinforcement
+learning: a feed-forward policy can recover some sense of motion by looking
+at several recent compact frames at once.
+
+The Wikipedia article on "frame stacking" is a useful conceptual reference.
 
 Parameters:
-- `pipes` - - Current pipe list.
-- `birdCenterXPx` - - Bird center x-position.
-- `birdRadiusPx` - - Bird radius.
-- `pipeWidthPx` - - Pipe width.
+- `features` - - Structured observation features.
 
-Returns: Tuple of first and second upcoming pipes.
+Returns: Core per-frame vector.
 
 Example:
 
 ```ts
-const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
+const coreFrame = resolveCoreObservationVectorFromFeatures(features);
+observationMemoryState.previousCoreFrames.push(coreFrame);
 ```
 
 ### resolveObservationFeatures
@@ -132,41 +133,6 @@ const features = resolveObservationFeatures(input);
 const networkInput = resolveObservationVectorFromFeatures(features);
 ```
 
-### resolveCoreObservationVectorFromFeatures
-
-```ts
-resolveCoreObservationVectorFromFeatures(
-  features: SharedObservationFeatures,
-): number[]
-```
-
-Resolves the compact core vector used for temporal stacking.
-
-The core intentionally keeps directly observed kinematic and geometric
-channels while dropping derived one-step predictors that become redundant
-once short-term temporal memory is available.
-
-This is the representation used when the example wants a short history of raw
-observation slices. The idea is similar to frame stacking in reinforcement
-learning: a feed-forward policy can recover some sense of motion by looking
-at several recent compact frames at once.
-
-The Wikipedia article on "frame stacking" is a useful conceptual reference.
-
-Parameters:
-- `features` - - Structured observation features.
-
-Returns: Core per-frame vector.
-
-Example:
-
-```ts
-const coreFrame = resolveCoreObservationVectorFromFeatures(features);
-observationMemoryState.previousCoreFrames.push(coreFrame);
-```
-
-## simulation-shared/observation/observation.features.utils.ts
-
 ### resolveUpcomingPipes
 
 ```ts
@@ -198,6 +164,48 @@ Example:
 ```ts
 const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
 ```
+
+## simulation-shared/observation/observation.features.utils.ts
+
+### clamp
+
+```ts
+clamp(
+  value: number,
+  min: number,
+  max: number,
+): number
+```
+
+Clamps a numeric value to the inclusive [min, max] interval.
+
+Observation synthesis normalizes many raw measurements, so this helper keeps
+derived channels inside their documented ranges.
+
+Parameters:
+- `value` - - Candidate value.
+- `min` - - Inclusive lower bound.
+- `max` - - Inclusive upper bound.
+
+Returns: Clamped value.
+
+### clamp01
+
+```ts
+clamp01(
+  value: number,
+): number
+```
+
+Clamps a numeric value to the inclusive [0, 1] interval.
+
+This is used for channels that are naturally interpreted as normalized
+proportions or bounded progress values.
+
+Parameters:
+- `value` - - Candidate value.
+
+Returns: Value clamped between 0 and 1.
 
 ### resolveObservationFeatures
 
@@ -274,78 +282,39 @@ Parameters:
 
 Returns: Predicted y-position.
 
-### clamp
+### resolveUpcomingPipes
 
 ```ts
-clamp(
-  value: number,
-  min: number,
-  max: number,
-): number
+resolveUpcomingPipes(
+  pipes: SharedPipeLike[],
+  birdCenterXPx: number,
+  birdRadiusPx: number,
+  pipeWidthPx: number,
+): [SharedPipeLike | undefined, SharedPipeLike | undefined]
 ```
 
-Clamps a numeric value to the inclusive [min, max] interval.
+Resolves the next two upcoming pipes in front of the bird.
 
-Observation synthesis normalizes many raw measurements, so this helper keeps
-derived channels inside their documented ranges.
-
-Parameters:
-- `value` - - Candidate value.
-- `min` - - Inclusive lower bound.
-- `max` - - Inclusive upper bound.
-
-Returns: Clamped value.
-
-### clamp01
-
-```ts
-clamp01(
-  value: number,
-): number
-```
-
-Clamps a numeric value to the inclusive [0, 1] interval.
-
-This is used for channels that are naturally interpreted as normalized
-proportions or bounded progress values.
+The observation pipeline only cares about the immediate near future, because
+Flappy Bird decisions are dominated by the next gap and the transition after
+it. Looking further ahead adds noise faster than it adds useful control
+signal.
 
 Parameters:
-- `value` - - Candidate value.
+- `pipes` - - Current pipe list.
+- `birdCenterXPx` - - Bird center x-position.
+- `birdRadiusPx` - - Bird radius.
+- `pipeWidthPx` - - Pipe width.
 
-Returns: Value clamped between 0 and 1.
-
-## simulation-shared/observation/observation.vector.utils.ts
-
-### resolveObservationVectorFromFeatures
-
-```ts
-resolveObservationVectorFromFeatures(
-  features: SharedObservationFeatures,
-): number[]
-```
-
-Converts observation features to the canonical 12-value network input vector.
-
-Educational note:
-This module owns the network-shape projection so feature semantics can change
-independently from how the policy input is ordered.
-
-The 12-value vector is the compact feed-forward policy input used by the main
-evaluation and training flow. Its ordering is stable on purpose: once a
-network topology has evolved against one input layout, silent channel
-reshuffles would invalidate learned behavior.
-
-Parameters:
-- `features` - - Structured feature object.
-
-Returns: Ordered feature vector.
+Returns: Tuple of first and second upcoming pipes.
 
 Example:
 
 ```ts
-const features = resolveObservationFeatures(input);
-const networkInput = resolveObservationVectorFromFeatures(features);
+const [nextPipe, secondPipe] = resolveUpcomingPipes(pipes);
 ```
+
+## simulation-shared/observation/observation.vector.utils.ts
 
 ### resolveCoreObservationVectorFromFeatures
 
@@ -378,4 +347,35 @@ Example:
 ```ts
 const coreFrame = resolveCoreObservationVectorFromFeatures(features);
 observationMemoryState.previousCoreFrames.push(coreFrame);
+```
+
+### resolveObservationVectorFromFeatures
+
+```ts
+resolveObservationVectorFromFeatures(
+  features: SharedObservationFeatures,
+): number[]
+```
+
+Converts observation features to the canonical 12-value network input vector.
+
+Educational note:
+This module owns the network-shape projection so feature semantics can change
+independently from how the policy input is ordered.
+
+The 12-value vector is the compact feed-forward policy input used by the main
+evaluation and training flow. Its ordering is stable on purpose: once a
+network topology has evolved against one input layout, silent channel
+reshuffles would invalidate learned behavior.
+
+Parameters:
+- `features` - - Structured feature object.
+
+Returns: Ordered feature vector.
+
+Example:
+
+```ts
+const features = resolveObservationFeatures(input);
+const networkInput = resolveObservationVectorFromFeatures(features);
 ```

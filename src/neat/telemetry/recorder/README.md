@@ -42,28 +42,6 @@ A useful reading order is:
 
 ## neat/telemetry/recorder/telemetry.recorder.ts
 
-### createTelemetryEntryBase
-
-```ts
-createTelemetryEntryBase(
-  generationIndex: number,
-  bestScore: number,
-  speciesCount: number,
-): TelemetryEntry
-```
-
-Create a strict baseline telemetry entry with required fields populated.
-
-This helper centralizes defaults so downstream telemetry producers can
-extend the entry while keeping the strict `TelemetryEntry` contract.
-
-Parameters:
-- `generationIndex` - Generation index for the telemetry snapshot.
-- `bestScore` - Best fitness value observed in the generation.
-- `speciesCount` - Number of extant species.
-
-Returns: A strict telemetry entry with required fields populated.
-
 ### applyTelemetrySelect
 
 ```ts
@@ -90,92 +68,6 @@ Example:
 // keep only 'gen', 'best', 'species' and 'diversity' fields
 neat._telemetrySelect = new Set(['diversity']);
 applyTelemetrySelect.call(neat, entry);
-```
-
-### structuralEntropy
-
-```ts
-structuralEntropy(
-  graph: { [key: string]: unknown; nodes: { geneId: number; }[]; connections: { from: { geneId: number; }; to: { geneId: number; }; enabled: boolean; }[]; },
-): number
-```
-
-Lightweight proxy for structural entropy based on degree-distribution.
-
-This function computes an approximate entropy of a graph topology by
-counting node degrees and computing the entropy of the degree histogram.
-The result is cached on the graph object for the current generation in
-`_entropyVal` to avoid repeated expensive recomputation.
-
-Parameters:
-- `graph` - - A genome-like object with `nodes` and `connections` arrays.
-
-Returns: A non-negative number approximating structural entropy.
-
-Example:
-
-```ts
-const H = structuralEntropy.call(neat, genome);
-console.log(`Structure entropy: ${H.toFixed(3)}`);
-```
-
-### computeDiversityStats
-
-```ts
-computeDiversityStats(): void
-```
-
-Compute several diversity statistics used by telemetry reporting.
-
-This helper is where the recorder prepares one of its most important cached
-evidence blocks: structural variety. Instead of treating diversity as a
-single opaque score, it combines several approximations so later telemetry
-can report compatibility spread, entropy, graphlet variety, and lineage depth.
-
-This helper is intentionally conservative at runtime. When `fastMode` is
-enabled it tunes sampling defaults downward so telemetry stays informative
-without turning every generation into a quadratic metrics pass.
-
-Example:
-
-```ts
-// compute and store diversity stats onto the neat instance
-neat.options.diversityMetrics = { enabled: true };
-neat.computeDiversityStats();
-console.log(neat._diversityStats.meanCompat);
-```
-
-### recordTelemetryEntry
-
-```ts
-recordTelemetryEntry(
-  entry: TelemetryEntry,
-): void
-```
-
-Record a telemetry entry into the instance buffer and optionally stream it.
-
-This is the recorder's "commit" step. By the time this function runs, the
-entry has already been assembled. The job here is to make recording safe and
-predictable: honor field selection, keep the history buffer initialized,
-optionally notify observers, and cap memory growth.
-
-Write order:
-1. apply telemetry selection without breaking the evolution loop
-2. append the entry to the in-memory history buffer
-3. stream the entry when the host opts into runtime callbacks
-4. trim history to a bounded window
-
-Parameters:
-- `entry` - - Telemetry entry to record.
-
-Returns: Nothing. The entry is persisted by side effect on the host.
-
-Example:
-
-```ts
-// record a simple telemetry entry from inside the evolve loop
-neat.recordTelemetryEntry({ gen: neat.generation, best: neat.population[0].score });
 ```
 
 ### buildTelemetryEntry
@@ -213,6 +105,114 @@ neat.recordTelemetryEntry(snapshot);
 The function has two internal paths:
 - multi-objective mode adds Pareto-front and hypervolume-oriented signals
 - mono-objective mode keeps the payload smaller while preserving the same core fields
+
+### computeDiversityStats
+
+```ts
+computeDiversityStats(): void
+```
+
+Compute several diversity statistics used by telemetry reporting.
+
+This helper is where the recorder prepares one of its most important cached
+evidence blocks: structural variety. Instead of treating diversity as a
+single opaque score, it combines several approximations so later telemetry
+can report compatibility spread, entropy, graphlet variety, and lineage depth.
+
+This helper is intentionally conservative at runtime. When `fastMode` is
+enabled it tunes sampling defaults downward so telemetry stays informative
+without turning every generation into a quadratic metrics pass.
+
+Example:
+
+```ts
+// compute and store diversity stats onto the neat instance
+neat.options.diversityMetrics = { enabled: true };
+neat.computeDiversityStats();
+console.log(neat._diversityStats.meanCompat);
+```
+
+### createTelemetryEntryBase
+
+```ts
+createTelemetryEntryBase(
+  generationIndex: number,
+  bestScore: number,
+  speciesCount: number,
+): TelemetryEntry
+```
+
+Create a strict baseline telemetry entry with required fields populated.
+
+This helper centralizes defaults so downstream telemetry producers can
+extend the entry while keeping the strict `TelemetryEntry` contract.
+
+Parameters:
+- `generationIndex` - Generation index for the telemetry snapshot.
+- `bestScore` - Best fitness value observed in the generation.
+- `speciesCount` - Number of extant species.
+
+Returns: A strict telemetry entry with required fields populated.
+
+### recordTelemetryEntry
+
+```ts
+recordTelemetryEntry(
+  entry: TelemetryEntry,
+): void
+```
+
+Record a telemetry entry into the instance buffer and optionally stream it.
+
+This is the recorder's "commit" step. By the time this function runs, the
+entry has already been assembled. The job here is to make recording safe and
+predictable: honor field selection, keep the history buffer initialized,
+optionally notify observers, and cap memory growth.
+
+Write order:
+1. apply telemetry selection without breaking the evolution loop
+2. append the entry to the in-memory history buffer
+3. stream the entry when the host opts into runtime callbacks
+4. trim history to a bounded window
+
+Parameters:
+- `entry` - - Telemetry entry to record.
+
+Returns: Nothing. The entry is persisted by side effect on the host.
+
+Example:
+
+```ts
+// record a simple telemetry entry from inside the evolve loop
+neat.recordTelemetryEntry({ gen: neat.generation, best: neat.population[0].score });
+```
+
+### structuralEntropy
+
+```ts
+structuralEntropy(
+  graph: { [key: string]: unknown; nodes: { geneId: number; }[]; connections: { from: { geneId: number; }; to: { geneId: number; }; enabled: boolean; }[]; },
+): number
+```
+
+Lightweight proxy for structural entropy based on degree-distribution.
+
+This function computes an approximate entropy of a graph topology by
+counting node degrees and computing the entropy of the degree histogram.
+The result is cached on the graph object for the current generation in
+`_entropyVal` to avoid repeated expensive recomputation.
+
+Parameters:
+- `graph` - - A genome-like object with `nodes` and `connections` arrays.
+
+Returns: A non-negative number approximating structural entropy.
+
+Example:
+
+```ts
+const H = structuralEntropy.call(neat, genome);
+console.log(`Structure entropy: ${H.toFixed(3)}`);
+```
 
 ### TelemetryContext
 

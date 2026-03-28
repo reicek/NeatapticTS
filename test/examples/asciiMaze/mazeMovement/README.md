@@ -13,6 +13,14 @@ Shared type surface for the dedicated mazeMovement module.
 Step 2 moves internal simulation contracts here first so later helper files
 can depend on one narrow typed surface.
 
+### DirectionSelectionStats
+
+Diagnostic telemetry produced when selecting a direction from network logits.
+
+Encapsulates the chosen direction along with entropy and probability data so
+downstream helpers can apply shaping rewards and penalties without
+rederiving softmax statistics on hot paths.
+
 ### MazeMovementBufferPools
 
 Initialized pooled buffers shared across maze movement simulations.
@@ -28,13 +36,13 @@ The dedicated services module owns these counters so later runtime, policy,
 and shaping helpers can depend on one explicit mutable surface instead of
 directly reaching into class-private state.
 
-### DirectionSelectionStats
+### MazeMovementSimulationResult
 
-Diagnostic telemetry produced when selecting a direction from network logits.
+Result shape returned by `MazeMovement.simulateAgent`.
 
-Encapsulates the chosen direction along with entropy and probability data so
-downstream helpers can apply shaping rewards and penalties without
-rederiving softmax statistics on hot paths.
+This contract matches the legacy inline return annotation so callers can
+keep depending on the current fields while the dedicated module boundary is
+being extracted.
 
 ### SimulationState
 
@@ -48,14 +56,6 @@ Purpose:
 Notes:
 - This interface remains internal to the mazeMovement module boundary.
 - Property descriptions are explicit to surface helpful tooltips in editors.
-
-### MazeMovementSimulationResult
-
-Result shape returned by `MazeMovement.simulateAgent`.
-
-This contract matches the legacy inline return annotation so callers can
-keep depending on the current fields while the dedicated module boundary is
-being extracted.
 
 ## mazeMovement/mazeMovement.ts
 
@@ -202,6 +202,16 @@ This module owns the pooled buffers, PRNG state, output-history plumbing,
 and shared run-scoped counters used by the legacy MazeMovement facade while
 Step 2 incrementally moves helper categories into the dedicated boundary.
 
+### getMazeMovementBufferMetadata
+
+```ts
+getMazeMovementBufferMetadata(): { cachedWidth: number; cachedHeight: number; }
+```
+
+Read the currently cached maze dimensions for bounds and index helpers.
+
+Returns: Cached width and height for the active pooled buffers.
+
 ### getMazeMovementRunServiceState
 
 ```ts
@@ -212,15 +222,22 @@ Expose the shared mutable run-scoped state used across helper categories.
 
 Returns: The singleton mutable run-state object for the current process.
 
-### resetMazeMovementRunServiceState
+### indexMazeMovementCell
 
 ```ts
-resetMazeMovementRunServiceState(): MazeMovementRunServiceState
+indexMazeMovementCell(
+  x: number,
+  y: number,
+): number
 ```
 
-Reset the shared mutable run-scoped state before a new simulation begins.
+Convert a cell coordinate into the pooled linear grid index.
 
-Returns: The reused singleton state after reset.
+Parameters:
+- `x` - - Zero-based maze column.
+- `y` - - Zero-based maze row.
+
+Returns: Linearized index used by pooled grid buffers.
 
 ### initializeMazeMovementBufferPools
 
@@ -241,42 +258,20 @@ Parameters:
 
 Returns: The initialized pooled buffer surface.
 
-### requireMazeMovementBufferPools
+### materializeMazeMovementPath
 
 ```ts
-requireMazeMovementBufferPools(): MazeMovementBufferPools
+materializeMazeMovementPath(
+  length: number,
+): [number, number][]
 ```
 
-Return the initialized pooled buffer surface for the current run.
-
-Returns: The shared buffer pools.
-
-### getMazeMovementBufferMetadata
-
-```ts
-getMazeMovementBufferMetadata(): { cachedWidth: number; cachedHeight: number; }
-```
-
-Read the currently cached maze dimensions for bounds and index helpers.
-
-Returns: Cached width and height for the active pooled buffers.
-
-### indexMazeMovementCell
-
-```ts
-indexMazeMovementCell(
-  x: number,
-  y: number,
-): number
-```
-
-Convert a cell coordinate into the pooled linear grid index.
+Materialize the active pooled path buffers into a fresh tuple array.
 
 Parameters:
-- `x` - - Zero-based maze column.
-- `y` - - Zero-based maze row.
+- `length` - - Number of active path entries to copy.
 
-Returns: Linearized index used by pooled grid buffers.
+Returns: A newly allocated materialized path snapshot.
 
 ### randomMazeMovementUnit
 
@@ -303,6 +298,26 @@ Parameters:
 
 Returns: Sanitized output history or `undefined` when absent or invalid.
 
+### requireMazeMovementBufferPools
+
+```ts
+requireMazeMovementBufferPools(): MazeMovementBufferPools
+```
+
+Return the initialized pooled buffer surface for the current run.
+
+Returns: The shared buffer pools.
+
+### resetMazeMovementRunServiceState
+
+```ts
+resetMazeMovementRunServiceState(): MazeMovementRunServiceState
+```
+
+Reset the shared mutable run-scoped state before a new simulation begins.
+
+Returns: The reused singleton state after reset.
+
 ### writeMazeMovementOutputHistory
 
 ```ts
@@ -317,21 +332,6 @@ Persist the reflected `_lastStepOutputs` network history.
 Parameters:
 - `network` - - Network receiving the reflected output history.
 - `history` - - Bounded output-history payload to persist.
-
-### materializeMazeMovementPath
-
-```ts
-materializeMazeMovementPath(
-  length: number,
-): [number, number][]
-```
-
-Materialize the active pooled path buffers into a fresh tuple array.
-
-Parameters:
-- `length` - - Number of active path entries to copy.
-
-Returns: A newly allocated materialized path snapshot.
 
 ## mazeMovement/mazeMovement.constants.ts
 
@@ -349,20 +349,24 @@ tables in one place so the public facade can stay focused on orchestration.
 
 ## mazeMovement/mazeMovement.utils.ts
 
-### nextPowerOfTwo
+### computeActionEntropyFromCounts
 
 ```ts
-nextPowerOfTwo(
-  n: number,
+computeActionEntropyFromCounts(
+  directionCounts: number[],
+  logActions: number,
+  scratch: Float64Array<ArrayBufferLike>,
 ): number
 ```
 
-Return the smallest power-of-two integer greater than or equal to `n`.
+Compute normalized action entropy from direction counts.
 
 Parameters:
-- `n` - - Target minimum integer capacity.
+- `directionCounts` - - Number of moves taken in each direction.
+- `logActions` - - Precomputed normalization factor for the action space.
+- `scratch` - - Single-value floating-point scratch buffer reused by the caller.
 
-Returns: The smallest power of two greater than or equal to `n`.
+Returns: Normalized entropy in the range `[0, 1]`.
 
 ### isFiniteNumberArray
 
@@ -378,36 +382,6 @@ Parameters:
 - `candidate` - - Value to inspect.
 
 Returns: True when the input is an array of finite numbers.
-
-### readOutputHistory
-
-```ts
-readOutputHistory(
-  network: INetwork,
-): number[][] | undefined
-```
-
-Read the optional `_lastStepOutputs` history stored on a network.
-
-Parameters:
-- `network` - - Network instance that may expose a reflected outputs history.
-
-Returns: Sanitized history buffer or `undefined` when absent or invalid.
-
-### writeOutputHistory
-
-```ts
-writeOutputHistory(
-  network: INetwork,
-  history: number[][],
-): void
-```
-
-Persist a bounded outputs history on the network via reflection.
-
-Parameters:
-- `network` - - Target network to mutate.
-- `history` - - Updated history buffer.
 
 ### materializePath
 
@@ -427,6 +401,36 @@ Parameters:
 - `pathY` - - Pooled Y-coordinate buffer.
 
 Returns: A newly allocated array of path tuples.
+
+### nextPowerOfTwo
+
+```ts
+nextPowerOfTwo(
+  n: number,
+): number
+```
+
+Return the smallest power-of-two integer greater than or equal to `n`.
+
+Parameters:
+- `n` - - Target minimum integer capacity.
+
+Returns: The smallest power of two greater than or equal to `n`.
+
+### readOutputHistory
+
+```ts
+readOutputHistory(
+  network: INetwork,
+): number[][] | undefined
+```
+
+Read the optional `_lastStepOutputs` history stored on a network.
+
+Parameters:
+- `network` - - Network instance that may expose a reflected outputs history.
+
+Returns: Sanitized history buffer or `undefined` when absent or invalid.
 
 ### sumVisionGroup
 
@@ -449,21 +453,17 @@ Parameters:
 
 Returns: Numeric sum of the selected group.
 
-### computeActionEntropyFromCounts
+### writeOutputHistory
 
 ```ts
-computeActionEntropyFromCounts(
-  directionCounts: number[],
-  logActions: number,
-  scratch: Float64Array<ArrayBufferLike>,
-): number
+writeOutputHistory(
+  network: INetwork,
+  history: number[][],
+): void
 ```
 
-Compute normalized action entropy from direction counts.
+Persist a bounded outputs history on the network via reflection.
 
 Parameters:
-- `directionCounts` - - Number of moves taken in each direction.
-- `logActions` - - Precomputed normalization factor for the action space.
-- `scratch` - - Single-value floating-point scratch buffer reused by the caller.
-
-Returns: Normalized entropy in the range `[0, 1]`.
+- `network` - - Target network to mutate.
+- `history` - - Updated history buffer.

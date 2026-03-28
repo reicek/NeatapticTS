@@ -97,27 +97,6 @@ net.disconnect(nodeA, nodeB);
 
 ## architecture/network/connect/network.connect.create.utils.ts
 
-### shouldRejectConnectionForAcyclicMode
-
-```ts
-shouldRejectConnectionForAcyclicMode(
-  network: default,
-  internalState: ConnectNetworkInternals,
-  sourceNode: default,
-  targetNode: default,
-): boolean
-```
-
-Determine whether an edge must be rejected to preserve acyclic ordering.
-
-Parameters:
-- `network` - - Network instance owning node ordering.
-- `internalState` - - Runtime network internals used by connection pipeline.
-- `sourceNode` - - Candidate source node.
-- `targetNode` - - Candidate target node.
-
-Returns: True when edge should be rejected.
-
 ### createConnectionsFromSourceNode
 
 ```ts
@@ -136,6 +115,23 @@ Parameters:
 - `initialWeight` - - Optional explicit initial weight.
 
 Returns: Created low-level connection objects.
+
+### markConnectionCachesDirtyWhenNeeded
+
+```ts
+markConnectionCachesDirtyWhenNeeded(
+  internalState: ConnectNetworkInternals,
+  createdConnectionCount: number,
+): void
+```
+
+Mark topology and slab caches dirty when connection creation occurred.
+
+Parameters:
+- `internalState` - - Runtime network internals used by connection pipeline.
+- `createdConnectionCount` - - Number of created low-level connections.
+
+Returns: Nothing.
 
 ### registerCreatedConnections
 
@@ -160,23 +156,6 @@ Parameters:
 
 Returns: Nothing.
 
-### markConnectionCachesDirtyWhenNeeded
-
-```ts
-markConnectionCachesDirtyWhenNeeded(
-  internalState: ConnectNetworkInternals,
-  createdConnectionCount: number,
-): void
-```
-
-Mark topology and slab caches dirty when connection creation occurred.
-
-Parameters:
-- `internalState` - - Runtime network internals used by connection pipeline.
-- `createdConnectionCount` - - Number of created low-level connections.
-
-Returns: Nothing.
-
 ### registerSingleCreatedConnection
 
 ```ts
@@ -198,47 +177,28 @@ Parameters:
 
 Returns: Nothing.
 
+### shouldRejectConnectionForAcyclicMode
+
+```ts
+shouldRejectConnectionForAcyclicMode(
+  network: default,
+  internalState: ConnectNetworkInternals,
+  sourceNode: default,
+  targetNode: default,
+): boolean
+```
+
+Determine whether an edge must be rejected to preserve acyclic ordering.
+
+Parameters:
+- `network` - - Network instance owning node ordering.
+- `internalState` - - Runtime network internals used by connection pipeline.
+- `sourceNode` - - Candidate source node.
+- `targetNode` - - Candidate target node.
+
+Returns: True when edge should be rejected.
+
 ## architecture/network/connect/network.connect.remove.utils.ts
-
-### selectConnectionCollection
-
-```ts
-selectConnectionCollection(
-  network: default,
-  sourceNode: default,
-  targetNode: default,
-): default[]
-```
-
-Select the relevant collection to search for the edge.
-
-Parameters:
-- `network` - - Network instance owning connection collections.
-- `sourceNode` - - Source node.
-- `targetNode` - - Target node.
-
-Returns: Candidate connection collection.
-
-### removeFirstMatchingConnection
-
-```ts
-removeFirstMatchingConnection(
-  network: default,
-  candidateConnections: default[],
-  sourceNode: default,
-  targetNode: default,
-): void
-```
-
-Remove first connection that matches source and target nodes.
-
-Parameters:
-- `network` - - Network instance used for ungating.
-- `candidateConnections` - - Candidate collection to search.
-- `sourceNode` - - Source node.
-- `targetNode` - - Target node.
-
-Returns: Nothing.
 
 ### disconnectNodes
 
@@ -254,21 +214,6 @@ Delegate per-node disconnect cleanup.
 Parameters:
 - `sourceNode` - - Source node.
 - `targetNode` - - Target node.
-
-Returns: Nothing.
-
-### markStructureCachesDirty
-
-```ts
-markStructureCachesDirty(
-  internalState: ConnectNetworkInternals,
-): void
-```
-
-Mark topology/slab caches dirty after structural mutation.
-
-Parameters:
-- `internalState` - - Runtime network internals used by connection pipeline.
 
 Returns: Nothing.
 
@@ -291,6 +236,21 @@ Parameters:
 
 Returns: Matching index or -1 when no edge is found.
 
+### markStructureCachesDirty
+
+```ts
+markStructureCachesDirty(
+  internalState: ConnectNetworkInternals,
+): void
+```
+
+Mark topology/slab caches dirty after structural mutation.
+
+Parameters:
+- `internalState` - - Runtime network internals used by connection pipeline.
+
+Returns: Nothing.
+
 ### removeConnectionAtIndex
 
 ```ts
@@ -309,3 +269,43 @@ Parameters:
 - `targetConnectionIndex` - - Index to remove.
 
 Returns: Nothing.
+
+### removeFirstMatchingConnection
+
+```ts
+removeFirstMatchingConnection(
+  network: default,
+  candidateConnections: default[],
+  sourceNode: default,
+  targetNode: default,
+): void
+```
+
+Remove first connection that matches source and target nodes.
+
+Parameters:
+- `network` - - Network instance used for ungating.
+- `candidateConnections` - - Candidate collection to search.
+- `sourceNode` - - Source node.
+- `targetNode` - - Target node.
+
+Returns: Nothing.
+
+### selectConnectionCollection
+
+```ts
+selectConnectionCollection(
+  network: default,
+  sourceNode: default,
+  targetNode: default,
+): default[]
+```
+
+Select the relevant collection to search for the edge.
+
+Parameters:
+- `network` - - Network instance owning connection collections.
+- `sourceNode` - - Source node.
+- `targetNode` - - Target node.
+
+Returns: Candidate connection collection.

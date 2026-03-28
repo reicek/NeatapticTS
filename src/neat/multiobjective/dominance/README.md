@@ -43,49 +43,35 @@ from or why descriptor order must stay fixed.
 
 ## neat/multiobjective/dominance/multiobjective.dominance.ts
 
-### vectorDominates
+### applyPairwiseDominance
 
 ```ts
-vectorDominates(
-  valuesA: number[],
-  valuesB: number[],
+applyPairwiseDominance(
+  dominanceState: DominanceState,
+  valuesMatrixInput: number[][],
   descriptors: ObjectiveDescriptor[],
-): boolean
+  candidateIndex: number,
+  opponentIndex: number,
+): void
 ```
 
-Determines whether vector A Pareto-dominates vector B.
+Applies a single pairwise dominance update between candidate and opponent.
 
-A dominates B iff:
-- A is **no worse** than B in every objective (respecting each objective’s
-  direction: maximize/minimize), and
-- A is **strictly better** in at least one objective.
+If the candidate dominates the opponent, the opponent index is appended to
+`dominatedIndicesByIndex[candidateIndex]`. If the candidate is dominated by
+the opponent, `dominationCounts[candidateIndex]` is incremented.
 
-This helper is deliberately pair-local. It does not mutate bookkeeping or
-know anything about fronts; it only answers the comparison question that the
-wider bookkeeping pass repeats across every pair of matrix rows.
-
-Assumptions:
-- `valuesA` and `valuesB` are aligned and have the same length.
-- `descriptors` provides a descriptor for each objective index.
-- If a descriptor has no `direction`, it defaults to `'max'`.
+That asymmetry is the key bookkeeping contract for the later frontier peel:
+- the count answers whether the candidate can join the current front yet,
+- the dominated-neighbor list tells later passes which counts to relax once
+  the candidate is removed as a blocker.
 
 Parameters:
-- `valuesA` - - Objective values for candidate A.
-- `valuesB` - - Objective values for candidate B.
-- `descriptors` - - Objective descriptors defining direction semantics.
-
-Returns: `true` if A dominates B; otherwise `false`.
-
-Example:
-
-```ts
-// Maximize accuracy, minimize latency:
-vectorDominates([0.9, 120], [0.9, 150], [
-  { accessor: () => 0, direction: 'max' },
-  { accessor: () => 0, direction: 'min' },
-]);
-// => true (equal accuracy, lower latency)
-```
+- `dominanceState` - - Dominance bookkeeping.
+- `valuesMatrixInput` - - Matrix of objective values.
+- `descriptors` - - Objective descriptors.
+- `candidateIndex` - - Candidate genome index.
+- `opponentIndex` - - Opponent genome index.
 
 ### buildDominanceState
 
@@ -128,41 +114,25 @@ Parameters:
 
 Returns: Dominance bookkeeping structures for ranking.
 
-### DominanceState
-
-Dominance bookkeeping structures for fast non-dominated sorting.
-
-These structures are typically produced once per generation (from the values
-matrix) and then consumed to build Pareto fronts.
-
-They form the compact handoff between pairwise comparison mechanics and the
-later frontier-construction pass:
-- `dominationCounts` records how many opponents currently sit above each row
-- `dominatedIndicesByIndex` records which rows should be relaxed when a
-  front is peeled away
-- `firstFrontIndices` captures the initial non-dominated frontier without
-  re-running the full comparison loop
-
-### resolveObjectiveDirection
+### buildIndexRange
 
 ```ts
-resolveObjectiveDirection(
-  descriptors: ObjectiveDescriptor[],
-  objectiveIndex: number,
-): "max" | "min"
+buildIndexRange(
+  populationSize: number,
+): number[]
 ```
 
-Resolves the objective direction for a given objective index.
+Builds a stable index range for iterating the population.
 
-If a descriptor omits `direction`, it is treated as maximization.
-Keeping that default here ensures every comparison helper downstream reads
-one normalized direction rule instead of repeating fallback logic.
+The returned range becomes the shared iteration order for candidate and
+opponent loops. Using explicit indices instead of genome references keeps the
+dominance state compact and guarantees later frontier code can look up rows
+and genomes with the same integer keys.
 
 Parameters:
-- `descriptors` - - Objective descriptors.
-- `objectiveIndex` - - Objective index.
+- `populationSize` - - Number of genomes.
 
-Returns: Normalized objective direction.
+Returns: Array of indices `0..populationSize-1`.
 
 ### compareObjectiveValues
 
@@ -189,6 +159,40 @@ Parameters:
 - `opponentValue` - - Opponent objective value.
 
 Returns: Comparison flags for this objective.
+
+### createEmptyDominanceState
+
+```ts
+createEmptyDominanceState(
+  populationSize: number,
+): DominanceState
+```
+
+Creates an empty dominance state container sized to the population.
+
+Every array slot maps directly to one matrix row and therefore one genome in
+the ranking pass. Initializing the structure once keeps later comparison
+helpers focused on bookkeeping updates rather than allocation details.
+
+Parameters:
+- `populationSize` - - Number of genomes.
+
+Returns: An initialized dominance state with zeroed counts.
+
+### DominanceState
+
+Dominance bookkeeping structures for fast non-dominated sorting.
+
+These structures are typically produced once per generation (from the values
+matrix) and then consumed to build Pareto fronts.
+
+They form the compact handoff between pairwise comparison mechanics and the
+later frontier-construction pass:
+- `dominationCounts` records how many opponents currently sit above each row
+- `dominatedIndicesByIndex` records which rows should be relaxed when a
+  front is peeled away
+- `firstFrontIndices` captures the initial non-dominated frontier without
+  re-running the full comparison loop
 
 ### isCandidateDominatedByObjective
 
@@ -235,145 +239,26 @@ Parameters:
 
 Returns: `true` if the candidate is strictly better for this objective.
 
-### updateStrictImprovement
+### isNonDominatedCandidate
 
 ```ts
-updateStrictImprovement(
-  hasStrictImprovement: boolean,
-  isStrictlyBetter: boolean,
+isNonDominatedCandidate(
+  dominanceState: DominanceState,
+  candidateIndex: number,
 ): boolean
 ```
 
-Accumulates whether the candidate has a strict improvement across
-objectives.
+Determines whether a candidate has zero domination count.
 
-Parameters:
-- `hasStrictImprovement` - - Current strict-improvement flag.
-- `isStrictlyBetter` - - Whether the candidate strictly improves on the
-current objective.
-
-Returns: Updated strict-improvement flag.
-
-### createEmptyDominanceState
-
-```ts
-createEmptyDominanceState(
-  populationSize: number,
-): DominanceState
-```
-
-Creates an empty dominance state container sized to the population.
-
-Every array slot maps directly to one matrix row and therefore one genome in
-the ranking pass. Initializing the structure once keeps later comparison
-helpers focused on bookkeeping updates rather than allocation details.
-
-Parameters:
-- `populationSize` - - Number of genomes.
-
-Returns: An initialized dominance state with zeroed counts.
-
-### buildIndexRange
-
-```ts
-buildIndexRange(
-  populationSize: number,
-): number[]
-```
-
-Builds a stable index range for iterating the population.
-
-The returned range becomes the shared iteration order for candidate and
-opponent loops. Using explicit indices instead of genome references keeps the
-dominance state compact and guarantees later frontier code can look up rows
-and genomes with the same integer keys.
-
-Parameters:
-- `populationSize` - - Number of genomes.
-
-Returns: Array of indices `0..populationSize-1`.
-
-### updateDominanceForCandidate
-
-```ts
-updateDominanceForCandidate(
-  dominanceState: DominanceState,
-  valuesMatrixInput: number[][],
-  descriptors: ObjectiveDescriptor[],
-  candidateIndex: number,
-  candidateIndices: number[],
-): void
-```
-
-Updates dominance bookkeeping for a candidate against all opponents.
-
-This iterates every opponent index and applies a pairwise dominance update.
-Self-comparisons are ignored.
-
-The helper stays candidate-centric on purpose. Each pass answers "what does
-the rest of the matrix imply about this row?" and leaves first-front
-discovery to the outer orchestration once all opponent evidence has been
-accumulated.
+A zero count means the current row survived every pairwise comparison without
+finding a dominating opponent, which is exactly the criterion for first-front
+membership before frontier peeling begins.
 
 Parameters:
 - `dominanceState` - - Dominance bookkeeping.
-- `valuesMatrixInput` - - Matrix of objective values.
-- `descriptors` - - Objective descriptors.
 - `candidateIndex` - - Candidate genome index.
-- `candidateIndices` - - Indices to compare against.
 
-### applyPairwiseDominance
-
-```ts
-applyPairwiseDominance(
-  dominanceState: DominanceState,
-  valuesMatrixInput: number[][],
-  descriptors: ObjectiveDescriptor[],
-  candidateIndex: number,
-  opponentIndex: number,
-): void
-```
-
-Applies a single pairwise dominance update between candidate and opponent.
-
-If the candidate dominates the opponent, the opponent index is appended to
-`dominatedIndicesByIndex[candidateIndex]`. If the candidate is dominated by
-the opponent, `dominationCounts[candidateIndex]` is incremented.
-
-That asymmetry is the key bookkeeping contract for the later frontier peel:
-- the count answers whether the candidate can join the current front yet,
-- the dominated-neighbor list tells later passes which counts to relax once
-  the candidate is removed as a blocker.
-
-Parameters:
-- `dominanceState` - - Dominance bookkeeping.
-- `valuesMatrixInput` - - Matrix of objective values.
-- `descriptors` - - Objective descriptors.
-- `candidateIndex` - - Candidate genome index.
-- `opponentIndex` - - Opponent genome index.
-
-### shouldSkipSelfComparison
-
-```ts
-shouldSkipSelfComparison(
-  candidateIndex: number,
-  opponentIndex: number,
-): boolean
-```
-
-Determines whether a pairwise comparison should be skipped.
-
-Currently this skips only self-comparisons.
-
-Keeping the skip rule isolated makes it easier to audit the pairwise loop and
-preserves the invariant that every stored relationship refers to two distinct
-matrix rows.
-
-Parameters:
-- `candidateIndex` - - Candidate genome index.
-- `opponentIndex` - - Opponent genome index.
-
-Returns: `true` if the pair should be skipped.
+Returns: `true` if the candidate is currently non-dominated.
 
 ### resolveDominanceOutcome
 
@@ -404,23 +289,138 @@ Parameters:
 
 Returns: Dominance outcome between candidate and opponent.
 
-### isNonDominatedCandidate
+### resolveObjectiveDirection
 
 ```ts
-isNonDominatedCandidate(
-  dominanceState: DominanceState,
+resolveObjectiveDirection(
+  descriptors: ObjectiveDescriptor[],
+  objectiveIndex: number,
+): "max" | "min"
+```
+
+Resolves the objective direction for a given objective index.
+
+If a descriptor omits `direction`, it is treated as maximization.
+Keeping that default here ensures every comparison helper downstream reads
+one normalized direction rule instead of repeating fallback logic.
+
+Parameters:
+- `descriptors` - - Objective descriptors.
+- `objectiveIndex` - - Objective index.
+
+Returns: Normalized objective direction.
+
+### shouldSkipSelfComparison
+
+```ts
+shouldSkipSelfComparison(
   candidateIndex: number,
+  opponentIndex: number,
 ): boolean
 ```
 
-Determines whether a candidate has zero domination count.
+Determines whether a pairwise comparison should be skipped.
 
-A zero count means the current row survived every pairwise comparison without
-finding a dominating opponent, which is exactly the criterion for first-front
-membership before frontier peeling begins.
+Currently this skips only self-comparisons.
+
+Keeping the skip rule isolated makes it easier to audit the pairwise loop and
+preserves the invariant that every stored relationship refers to two distinct
+matrix rows.
+
+Parameters:
+- `candidateIndex` - - Candidate genome index.
+- `opponentIndex` - - Opponent genome index.
+
+Returns: `true` if the pair should be skipped.
+
+### updateDominanceForCandidate
+
+```ts
+updateDominanceForCandidate(
+  dominanceState: DominanceState,
+  valuesMatrixInput: number[][],
+  descriptors: ObjectiveDescriptor[],
+  candidateIndex: number,
+  candidateIndices: number[],
+): void
+```
+
+Updates dominance bookkeeping for a candidate against all opponents.
+
+This iterates every opponent index and applies a pairwise dominance update.
+Self-comparisons are ignored.
+
+The helper stays candidate-centric on purpose. Each pass answers "what does
+the rest of the matrix imply about this row?" and leaves first-front
+discovery to the outer orchestration once all opponent evidence has been
+accumulated.
 
 Parameters:
 - `dominanceState` - - Dominance bookkeeping.
+- `valuesMatrixInput` - - Matrix of objective values.
+- `descriptors` - - Objective descriptors.
 - `candidateIndex` - - Candidate genome index.
+- `candidateIndices` - - Indices to compare against.
 
-Returns: `true` if the candidate is currently non-dominated.
+### updateStrictImprovement
+
+```ts
+updateStrictImprovement(
+  hasStrictImprovement: boolean,
+  isStrictlyBetter: boolean,
+): boolean
+```
+
+Accumulates whether the candidate has a strict improvement across
+objectives.
+
+Parameters:
+- `hasStrictImprovement` - - Current strict-improvement flag.
+- `isStrictlyBetter` - - Whether the candidate strictly improves on the
+current objective.
+
+Returns: Updated strict-improvement flag.
+
+### vectorDominates
+
+```ts
+vectorDominates(
+  valuesA: number[],
+  valuesB: number[],
+  descriptors: ObjectiveDescriptor[],
+): boolean
+```
+
+Determines whether vector A Pareto-dominates vector B.
+
+A dominates B iff:
+- A is **no worse** than B in every objective (respecting each objective’s
+  direction: maximize/minimize), and
+- A is **strictly better** in at least one objective.
+
+This helper is deliberately pair-local. It does not mutate bookkeeping or
+know anything about fronts; it only answers the comparison question that the
+wider bookkeeping pass repeats across every pair of matrix rows.
+
+Assumptions:
+- `valuesA` and `valuesB` are aligned and have the same length.
+- `descriptors` provides a descriptor for each objective index.
+- If a descriptor has no `direction`, it defaults to `'max'`.
+
+Parameters:
+- `valuesA` - - Objective values for candidate A.
+- `valuesB` - - Objective values for candidate B.
+- `descriptors` - - Objective descriptors defining direction semantics.
+
+Returns: `true` if A dominates B; otherwise `false`.
+
+Example:
+
+```ts
+// Maximize accuracy, minimize latency:
+vectorDominates([0.9, 120], [0.9, 150], [
+  { accessor: () => 0, direction: 'max' },
+  { accessor: () => 0, direction: 'min' },
+]);
+// => true (equal accuracy, lower latency)
+```

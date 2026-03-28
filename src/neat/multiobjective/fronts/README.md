@@ -44,6 +44,75 @@ computed in the first place.
 
 ## neat/multiobjective/fronts/multiobjective.fronts.ts
 
+### annotateGenomeRank
+
+```ts
+annotateGenomeRank(
+  population: default[],
+  genomeIndex: number,
+  frontRank: number,
+): void
+```
+
+Annotates a genome with its Pareto front rank.
+
+Ranking is stored directly on the genome so later selection, telemetry, and
+archive helpers can read one stable annotation instead of carrying a parallel
+rank table beside the population.
+
+Parameters:
+- `population` - - Genome population.
+- `genomeIndex` - - Index of the genome to annotate.
+- `frontRank` - - Pareto front rank (0 = best front).
+
+### appendFront
+
+```ts
+appendFront(
+  paretoFronts: default[][],
+  population: default[],
+  currentFrontIndices: number[],
+): void
+```
+
+Appends the current front (index list) as genome references to the
+`paretoFronts` accumulator.
+
+The accumulator stores genomes, not indices, because the returned fronts are
+meant to be consumed by later crowding and archive code. The conversion from
+stable indices to genome references happens only after the current layer has
+been fully identified.
+
+Parameters:
+- `paretoFronts` - - Accumulator for Pareto fronts.
+- `population` - - Genome population.
+- `currentFrontIndices` - - Indices for the current front.
+
+### buildNextFrontIndices
+
+```ts
+buildNextFrontIndices(
+  population: default[],
+  dominanceState: DominanceState,
+  currentFrontIndices: number[],
+  currentFrontRank: number,
+): number[]
+```
+
+Builds the next front by applying rank annotations and dominance updates.
+
+This helper is the inner loop of frontier peeling: mark every genome in the
+current front with the same rank, then remove each genome's blocking
+influence so newly non-dominated neighbors can surface as the next front.
+
+Parameters:
+- `population` - - Genome population.
+- `dominanceState` - - Dominance bookkeeping.
+- `currentFrontIndices` - - Indices for the current front.
+- `currentFrontRank` - - Rank to assign to the current front.
+
+Returns: Indices for the next front.
+
 ### buildParetoFronts
 
 ```ts
@@ -81,61 +150,6 @@ bookkeeping).
 
 Returns: Ordered Pareto fronts (rank order).
 
-### MAX_PARETO_FRONT_RANK_GUARD
-
-Maximum number of Pareto fronts to allow during ranking before aborting.
-
-This is a defensive guard against pathological conditions (e.g., corrupted
-dominance bookkeeping) that could otherwise cause long/infinite loops.
-A healthy ranking pass should terminate well before this threshold, so the
-constant exists as a safety rail rather than a normal control knob.
-
-### buildNextFrontIndices
-
-```ts
-buildNextFrontIndices(
-  population: default[],
-  dominanceState: DominanceState,
-  currentFrontIndices: number[],
-  currentFrontRank: number,
-): number[]
-```
-
-Builds the next front by applying rank annotations and dominance updates.
-
-This helper is the inner loop of frontier peeling: mark every genome in the
-current front with the same rank, then remove each genome's blocking
-influence so newly non-dominated neighbors can surface as the next front.
-
-Parameters:
-- `population` - - Genome population.
-- `dominanceState` - - Dominance bookkeeping.
-- `currentFrontIndices` - - Indices for the current front.
-- `currentFrontRank` - - Rank to assign to the current front.
-
-Returns: Indices for the next front.
-
-### annotateGenomeRank
-
-```ts
-annotateGenomeRank(
-  population: default[],
-  genomeIndex: number,
-  frontRank: number,
-): void
-```
-
-Annotates a genome with its Pareto front rank.
-
-Ranking is stored directly on the genome so later selection, telemetry, and
-archive helpers can read one stable annotation instead of carrying a parallel
-rank table beside the population.
-
-Parameters:
-- `population` - - Genome population.
-- `genomeIndex` - - Index of the genome to annotate.
-- `frontRank` - - Pareto front rank (0 = best front).
-
 ### collectNextFrontIndices
 
 ```ts
@@ -159,29 +173,6 @@ Parameters:
 - `genomeIndex` - - Index of the current genome.
 - `nextFrontIndices` - - Accumulator for the next front.
 
-### appendFront
-
-```ts
-appendFront(
-  paretoFronts: default[][],
-  population: default[],
-  currentFrontIndices: number[],
-): void
-```
-
-Appends the current front (index list) as genome references to the
-`paretoFronts` accumulator.
-
-The accumulator stores genomes, not indices, because the returned fronts are
-meant to be consumed by later crowding and archive code. The conversion from
-stable indices to genome references happens only after the current layer has
-been fully identified.
-
-Parameters:
-- `paretoFronts` - - Accumulator for Pareto fronts.
-- `population` - - Genome population.
-- `currentFrontIndices` - - Indices for the current front.
-
 ### incrementFrontRank
 
 ```ts
@@ -199,6 +190,15 @@ Parameters:
 - `currentFrontRank` - - Current front rank.
 
 Returns: Incremented front rank.
+
+### MAX_PARETO_FRONT_RANK_GUARD
+
+Maximum number of Pareto fronts to allow during ranking before aborting.
+
+This is a defensive guard against pathological conditions (e.g., corrupted
+dominance bookkeeping) that could otherwise cause long/infinite loops.
+A healthy ranking pass should terminate well before this threshold, so the
+constant exists as a safety rail rather than a normal control knob.
 
 ### shouldStopFrontRanking
 

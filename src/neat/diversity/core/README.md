@@ -17,30 +17,6 @@ Read the chapter in this order:
 
 ## neat/diversity/core/diversity.types.ts
 
-### NodeWithConnections
-
-Minimal node interface used by diversity computations.
-
-Diversity helpers only need each node's outgoing connection count to build a
-structural-entropy fingerprint, so this type keeps the reporting boundary
-narrower than the full runtime node model.
-
-### GenomeWithMetrics
-
-Minimal genome shape used by diversity computations.
-
-This projection is the per-genome input to the diversity report. It exposes
-exactly the data needed to answer four cheap read-side questions:
-
-- how large genomes are right now,
-- how uneven that structural size has become,
-- how far sampled ancestry depth has spread,
-- and how compatible each genome remains with sampled peers.
-
-Keeping the contract this small lets diagnostics and telemetry reuse the
-diversity helpers against genome-like snapshots rather than the full NEAT
-controller state.
-
 ### CompatComputer
 
 Minimal interface for computing compatibility distance between genomes.
@@ -67,6 +43,30 @@ In practice, telemetry consumers compare this object across generations to
 see whether mutation, speciation, and pruning are still producing meaningful
 variation without paying for exhaustive all-pairs analysis.
 
+### GenomeWithMetrics
+
+Minimal genome shape used by diversity computations.
+
+This projection is the per-genome input to the diversity report. It exposes
+exactly the data needed to answer four cheap read-side questions:
+
+- how large genomes are right now,
+- how uneven that structural size has become,
+- how far sampled ancestry depth has spread,
+- and how compatible each genome remains with sampled peers.
+
+Keeping the contract this small lets diagnostics and telemetry reuse the
+diversity helpers against genome-like snapshots rather than the full NEAT
+controller state.
+
+### NodeWithConnections
+
+Minimal node interface used by diversity computations.
+
+Diversity helpers only need each node's outgoing connection count to build a
+structural-entropy fingerprint, so this type keeps the reporting boundary
+narrower than the full runtime node model.
+
 ## neat/diversity/core/diversity.core.ts
 
 Diversity-statistics mechanics used by telemetry and diagnostics.
@@ -83,26 +83,6 @@ The helpers stay deliberately cheap. Instead of running exhaustive all-pairs
 analysis, they sample the expensive comparisons and fold the results into a
 report that is accurate enough for telemetry trends, diagnostics, and
 generation-over-generation comparisons.
-
-### calculateStructuralEntropy
-
-```ts
-calculateStructuralEntropy(
-  graph: default,
-): number
-```
-
-Compute the Shannon-style entropy of a network's out-degree distribution.
-
-This is the chapter's shape metric. Two genomes can share similar node and
-connection counts while still distributing edges very differently, so the
-entropy read adds a lightweight topology fingerprint beside the raw size
-aggregates.
-
-Parameters:
-- `graph` - - Network instance to evaluate.
-
-Returns: Shannon-style entropy value.
 
 ### calculateDiversityStats
 
@@ -141,59 +121,25 @@ if (diversity) {
 }
 ```
 
-### MAX_LINEAGE_PAIR_SAMPLE
-
-Maximum lineage sample size for pairwise depth comparisons.
-
-Lineage spread is useful for telemetry, but full all-pairs ancestry distance
-becomes expensive quickly. This cap keeps the lineage side of the report
-bounded while still surfacing whether ancestry depth is bunching up or
-staying distributed.
-
-### MAX_COMPATIBILITY_SAMPLE
-
-Maximum population sample size for compatibility comparisons.
-
-Compatibility distance is the most obviously quadratic part of the diversity
-report. Sampling lets the controller estimate genetic separation cheaply
-enough to keep diversity reporting on the hot path for telemetry.
-
-### mean
+### calculateStructuralEntropy
 
 ```ts
-mean(
-  values: number[],
+calculateStructuralEntropy(
+  graph: default,
 ): number
 ```
 
-Compute the arithmetic mean of a numeric array.
+Compute the Shannon-style entropy of a network's out-degree distribution.
 
-The diversity report uses this helper for the direct summary columns such as
-average lineage depth, average node count, average connection count, and the
-mean entropy across genomes.
-
-Parameters:
-- `values` - - Values to average.
-
-Returns: Arithmetic mean, or `0` when the array is empty.
-
-### variance
-
-```ts
-variance(
-  values: number[],
-): number
-```
-
-Compute the population variance of a numeric array.
-
-Variance complements the raw averages by showing whether the population is
-staying structurally tight or spreading into a wider range of topology sizes.
+This is the chapter's shape metric. Two genomes can share similar node and
+connection counts while still distributing edges very differently, so the
+entropy read adds a lightweight topology fingerprint beside the raw size
+aggregates.
 
 Parameters:
-- `values` - - Values to evaluate.
+- `graph` - - Network instance to evaluate.
 
-Returns: Population variance, or `0` when the array is empty.
+Returns: Shannon-style entropy value.
 
 ### computeMeanAbsolutePairDistance
 
@@ -240,3 +186,57 @@ Parameters:
 - `sampleLimit` - - Maximum number of genomes to include.
 
 Returns: Mean compatibility distance across the sampled pairs.
+
+### MAX_COMPATIBILITY_SAMPLE
+
+Maximum population sample size for compatibility comparisons.
+
+Compatibility distance is the most obviously quadratic part of the diversity
+report. Sampling lets the controller estimate genetic separation cheaply
+enough to keep diversity reporting on the hot path for telemetry.
+
+### MAX_LINEAGE_PAIR_SAMPLE
+
+Maximum lineage sample size for pairwise depth comparisons.
+
+Lineage spread is useful for telemetry, but full all-pairs ancestry distance
+becomes expensive quickly. This cap keeps the lineage side of the report
+bounded while still surfacing whether ancestry depth is bunching up or
+staying distributed.
+
+### mean
+
+```ts
+mean(
+  values: number[],
+): number
+```
+
+Compute the arithmetic mean of a numeric array.
+
+The diversity report uses this helper for the direct summary columns such as
+average lineage depth, average node count, average connection count, and the
+mean entropy across genomes.
+
+Parameters:
+- `values` - - Values to average.
+
+Returns: Arithmetic mean, or `0` when the array is empty.
+
+### variance
+
+```ts
+variance(
+  values: number[],
+): number
+```
+
+Compute the population variance of a numeric array.
+
+Variance complements the raw averages by showing whether the population is
+staying structurally tight or spreading into a wider range of topology sizes.
+
+Parameters:
+- `values` - - Values to evaluate.
+
+Returns: Population variance, or `0` when the array is empty.

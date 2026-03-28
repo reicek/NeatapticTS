@@ -47,26 +47,6 @@ Parameters:
 
 Returns: Nothing.
 
-### syncPlaybackSnapshotPipes
-
-```ts
-syncPlaybackSnapshotPipes(
-  renderState: PopulationRenderState,
-  snapshot: EvolutionPlaybackStepSnapshot,
-): void
-```
-
-Synchronizes packed pipe snapshot fields into the reusable render-state pipe array.
-
-Instead of recreating pipe objects every frame, the browser grows the array as
-needed and then mutates the existing records in place.
-
-Parameters:
-- `renderState` - - Mutable render state mirror used by the browser.
-- `snapshot` - - Packed worker playback snapshot for the current render tick.
-
-Returns: Nothing.
-
 ### syncPlaybackSnapshotBirds
 
 ```ts
@@ -80,6 +60,26 @@ Synchronizes packed bird snapshot fields into the reusable render-state bird arr
 
 This mirrors the pipe strategy: keep a stable array shape when possible and
 update fields in place from the packed worker buffers.
+
+Parameters:
+- `renderState` - - Mutable render state mirror used by the browser.
+- `snapshot` - - Packed worker playback snapshot for the current render tick.
+
+Returns: Nothing.
+
+### syncPlaybackSnapshotPipes
+
+```ts
+syncPlaybackSnapshotPipes(
+  renderState: PopulationRenderState,
+  snapshot: EvolutionPlaybackStepSnapshot,
+): void
+```
+
+Synchronizes packed pipe snapshot fields into the reusable render-state pipe array.
+
+Instead of recreating pipe objects every frame, the browser grows the array as
+needed and then mutates the existing records in place.
 
 Parameters:
 - `renderState` - - Mutable render state mirror used by the browser.

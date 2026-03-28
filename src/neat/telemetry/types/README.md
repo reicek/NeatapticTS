@@ -18,40 +18,6 @@ are narrow enough to stay telemetry-local.
 
 ## neat/telemetry/types/telemetry.types.ts
 
-### TelemetryGenome
-
-Minimal genome shape used by telemetry helpers.
-
-Telemetry code rarely needs the entire `Network` surface. Most helpers only
-care about structural size and a few optional lineage hints, so this type
-captures the smallest genome contract needed for diversity, complexity, and
-lineage-oriented telemetry work.
-
-### TelemetryDiversityOptions
-
-Diversity telemetry options for sampling and novelty defaults.
-
-This local option bag narrows the much broader controller configuration down
-to the fields that matter for diversity-oriented telemetry decisions: whether
-diversity metrics are enabled, how aggressively to sample in fast mode, and
-which novelty-search defaults should influence telemetry output.
-
-### TelemetryStreamOptions
-
-Minimal telemetry stream options for streaming helpers.
-
-The runtime layer only needs to know whether streaming is enabled and which
-callback should receive each entry. This keeps the callback contract explicit
-without forcing runtime helpers to depend on the entire controller option bag.
-
-### TelemetryEntryRecord
-
-Telemetry entry shape used for constructing snapshots.
-
-Builders often need the strongly typed `TelemetryEntry` model plus temporary
-access to additional dynamic fields while a snapshot is being assembled or
-filtered. This alias keeps that construction-phase flexibility localized.
-
 ### OperatorStatsMap
 
 Operator stats map shape for telemetry extraction.
@@ -68,6 +34,40 @@ Runtime helpers only need a host that can expose or receive the in-memory
 telemetry buffer. This tiny shape keeps those helpers reusable and easy to
 test.
 
+### TelemetryCoreFields
+
+Core telemetry field keys used by selection helpers.
+
+Some telemetry fields remain mandatory even when callers request a narrower
+export or inspection surface. This alias documents that those core keys are
+treated as a fixed protected set rather than arbitrary strings.
+
+### TelemetryDiversityOptions
+
+Diversity telemetry options for sampling and novelty defaults.
+
+This local option bag narrows the much broader controller configuration down
+to the fields that matter for diversity-oriented telemetry decisions: whether
+diversity metrics are enabled, how aggressively to sample in fast mode, and
+which novelty-search defaults should influence telemetry output.
+
+### TelemetryEntryRecord
+
+Telemetry entry shape used for constructing snapshots.
+
+Builders often need the strongly typed `TelemetryEntry` model plus temporary
+access to additional dynamic fields while a snapshot is being assembled or
+filtered. This alias keeps that construction-phase flexibility localized.
+
+### TelemetryGenome
+
+Minimal genome shape used by telemetry helpers.
+
+Telemetry code rarely needs the entire `Network` surface. Most helpers only
+care about structural size and a few optional lineage hints, so this type
+captures the smallest genome contract needed for diversity, complexity, and
+lineage-oriented telemetry work.
+
 ### TelemetrySelectContext
 
 Minimal telemetry selection context shape.
@@ -76,10 +76,10 @@ Selection helpers narrow telemetry entries to a configured subset of fields.
 This context type names the single host capability they need: an optional set
 of selected telemetry keys.
 
-### TelemetryCoreFields
+### TelemetryStreamOptions
 
-Core telemetry field keys used by selection helpers.
+Minimal telemetry stream options for streaming helpers.
 
-Some telemetry fields remain mandatory even when callers request a narrower
-export or inspection surface. This alias documents that those core keys are
-treated as a fixed protected set rather than arbitrary strings.
+The runtime layer only needs to know whether streaming is enabled and which
+callback should receive each entry. This keeps the callback contract explicit
+without forcing runtime helpers to depend on the entire controller option bag.

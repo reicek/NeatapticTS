@@ -35,6 +35,22 @@ flowchart TD
 
 ## neat/lineage/core/lineage.types.ts
 
+### AncestorQueueEntry
+
+Queue entry used during breadth-first ancestor traversal.
+
+Each entry records which ancestor id is being explored, how deep that
+ancestor sits relative to the original genome, and an optional cached genome
+reference so later traversal steps can enqueue that ancestor's parents.
+
+### GenomeIndexPair
+
+Index pair representing one sampled genome comparison.
+
+The lineage uniqueness metric does not compare every possible pair in large
+populations. Instead it samples a bounded set of pairs, then asks how much
+recent ancestry overlaps inside each comparison.
+
 ### GenomeLike
 
 Minimal genome shape used by lineage helpers.
@@ -61,22 +77,6 @@ concern, not a stateful subsystem with its own storage or mutation rules.
 The population supplies the ancestry graph to inspect. The RNG provider keeps
 sampled uniqueness deterministic so the same run can replay the same sampled
 comparisons during tests or exported-state debugging.
-
-### GenomeIndexPair
-
-Index pair representing one sampled genome comparison.
-
-The lineage uniqueness metric does not compare every possible pair in large
-populations. Instead it samples a bounded set of pairs, then asks how much
-recent ancestry overlaps inside each comparison.
-
-### AncestorQueueEntry
-
-Queue entry used during breadth-first ancestor traversal.
-
-Each entry records which ancestor id is being explored, how deep that
-ancestor sits relative to the original genome, and an optional cached genome
-reference so later traversal steps can enqueue that ancestor's parents.
 
 ## neat/lineage/core/lineage.core.ts
 
@@ -119,46 +119,24 @@ flowchart TD
   compare --> mean[Mean ancestor uniqueness]:::accent
 ```
 
-### normalizeParentIds
+### calculateMaxSamplePairs
 
 ```ts
-normalizeParentIds(
-  value: GenomeLike,
-): number[]
+calculateMaxSamplePairs(
+  size: number,
+): number
 ```
 
-Normalize the parent ID list for a genome.
+Compute the upper bound on sampled genome pairs.
 
-This helper is the first seam in the pipeline: it turns "maybe has lineage
-metadata" into a guaranteed array shape so the traversal code never needs to
-branch on missing parent storage.
-
-Parameters:
-- `value` - - Genome to read parents from.
-
-Returns: Parent ID list, or an empty array when absent.
-
-### createInitialQueue
-
-```ts
-createInitialQueue(
-  parentIds: number[],
-  population: GenomeLike[],
-): AncestorQueueEntry[]
-```
-
-Create the initial breadth-first queue from direct parent IDs.
-
-This queue is the bridge between stored lineage metadata and the traversal
-loop. Depth starts at the direct-parent layer because lineage uniqueness is a
-recent-family metric first; later queue expansion can then walk outward while
-still respecting the bounded depth window.
+The uniqueness metric is intentionally sampled rather than exhaustive. This
+helper keeps that budget honest by capping the requested sample count to both
+the true combinatorial maximum and the chapter's global runtime limit.
 
 Parameters:
-- `parentIds` - - Direct parent IDs to seed the queue.
-- `population` - - Current population for ID lookups.
+- `size` - - Population size.
 
-Returns: Queue entries at depth 1.
+Returns: Sample cap respecting both the combinatorial count and the global limit.
 
 ### collectAncestorIds
 
@@ -186,67 +164,24 @@ Parameters:
 
 Returns: Unique ancestor IDs encountered within the depth window.
 
-### hasMinimumPopulation
+### computeAverageDistance
 
 ```ts
-hasMinimumPopulation(
-  size: number,
-): boolean
-```
-
-Check whether the population is large enough to form a sampled pair.
-
-This guard exists because ancestor uniqueness is defined over genome
-comparisons, not individual genomes. A population smaller than two can still
-have ancestry data, but it cannot produce a meaningful pairwise distance.
-
-Parameters:
-- `size` - - Population size.
-
-Returns: `true` when at least two genomes exist.
-
-### calculateMaxSamplePairs
-
-```ts
-calculateMaxSamplePairs(
-  size: number,
+computeAverageDistance(
+  distances: number[],
 ): number
 ```
 
-Compute the upper bound on sampled genome pairs.
+Compute the mean ancestor distance across sampled pairs.
 
-The uniqueness metric is intentionally sampled rather than exhaustive. This
-helper keeps that budget honest by capping the requested sample count to both
-the true combinatorial maximum and the chapter's global runtime limit.
-
-Parameters:
-- `size` - - Population size.
-
-Returns: Sample cap respecting both the combinatorial count and the global limit.
-
-### sampleGenomePairs
-
-```ts
-sampleGenomePairs(
-  sampleCount: number,
-  size: number,
-  rngFactory: () => () => number,
-): GenomeIndexPair[]
-```
-
-Sample genome index pairs for ancestor uniqueness.
-
-The sampling policy chooses a bounded set of pair comparisons while keeping
-replay deterministic through the caller-supplied RNG factory. The result is
-not a canonical population ordering; it is a reproducible comparison budget
-for the current generation.
+This is the final fold from many local comparisons into one controller-facing
+scalar. Rounding is intentional: the value is meant to be a stable telemetry
+and adaptive-policy signal rather than a high-precision scientific output.
 
 Parameters:
-- `sampleCount` - - Number of pairs to sample.
-- `size` - - Population size for index bounds.
-- `rngFactory` - - RNG provider used to obtain a random function.
+- `distances` - - Pairwise Jaccard distances.
 
-Returns: Array of sampled index pairs.
+Returns: Mean distance rounded to the configured decimal precision.
 
 ### computePairDistances
 
@@ -272,21 +207,86 @@ Parameters:
 
 Returns: Jaccard distances for valid pairs.
 
-### computeAverageDistance
+### createInitialQueue
 
 ```ts
-computeAverageDistance(
-  distances: number[],
-): number
+createInitialQueue(
+  parentIds: number[],
+  population: GenomeLike[],
+): AncestorQueueEntry[]
 ```
 
-Compute the mean ancestor distance across sampled pairs.
+Create the initial breadth-first queue from direct parent IDs.
 
-This is the final fold from many local comparisons into one controller-facing
-scalar. Rounding is intentional: the value is meant to be a stable telemetry
-and adaptive-policy signal rather than a high-precision scientific output.
+This queue is the bridge between stored lineage metadata and the traversal
+loop. Depth starts at the direct-parent layer because lineage uniqueness is a
+recent-family metric first; later queue expansion can then walk outward while
+still respecting the bounded depth window.
 
 Parameters:
-- `distances` - - Pairwise Jaccard distances.
+- `parentIds` - - Direct parent IDs to seed the queue.
+- `population` - - Current population for ID lookups.
 
-Returns: Mean distance rounded to the configured decimal precision.
+Returns: Queue entries at depth 1.
+
+### hasMinimumPopulation
+
+```ts
+hasMinimumPopulation(
+  size: number,
+): boolean
+```
+
+Check whether the population is large enough to form a sampled pair.
+
+This guard exists because ancestor uniqueness is defined over genome
+comparisons, not individual genomes. A population smaller than two can still
+have ancestry data, but it cannot produce a meaningful pairwise distance.
+
+Parameters:
+- `size` - - Population size.
+
+Returns: `true` when at least two genomes exist.
+
+### normalizeParentIds
+
+```ts
+normalizeParentIds(
+  value: GenomeLike,
+): number[]
+```
+
+Normalize the parent ID list for a genome.
+
+This helper is the first seam in the pipeline: it turns "maybe has lineage
+metadata" into a guaranteed array shape so the traversal code never needs to
+branch on missing parent storage.
+
+Parameters:
+- `value` - - Genome to read parents from.
+
+Returns: Parent ID list, or an empty array when absent.
+
+### sampleGenomePairs
+
+```ts
+sampleGenomePairs(
+  sampleCount: number,
+  size: number,
+  rngFactory: () => () => number,
+): GenomeIndexPair[]
+```
+
+Sample genome index pairs for ancestor uniqueness.
+
+The sampling policy chooses a bounded set of pair comparisons while keeping
+replay deterministic through the caller-supplied RNG factory. The result is
+not a canonical population ordering; it is a reproducible comparison budget
+for the current generation.
+
+Parameters:
+- `sampleCount` - - Number of pairs to sample.
+- `size` - - Population size for index bounds.
+- `rngFactory` - - RNG provider used to obtain a random function.
+
+Returns: Array of sampled index pairs.

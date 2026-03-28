@@ -1,6 +1,6 @@
 # Trace Analyzer Extension Checklist
 
-Use this checklist before finalizing changes to `scripts/analyze-trace.ts`.
+Use this checklist before finalizing changes to `scripts/analyze-trace/analyze-trace.ts`.
 
 ## Before Editing
 

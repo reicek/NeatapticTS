@@ -95,24 +95,14 @@ The important boundary is that this interface is richer than the minimal
 shared genome contracts used by read-side chapters, because evolve helpers are
 the place where new runtime metadata is actually attached.
 
-### SpeciesWithMetadata
+### MultiObjectiveOptions
 
-Runtime interface for species metadata used in allocation and stats.
+Multi-objective configuration block.
 
-This is the live species record shape used during one evolve step. Helpers in
-`speciation/`, `population/`, and telemetry-oriented paths rely on it to ask
-practical generation-level questions: which genomes belong together now, how
-much shared fitness does the species have, and how many offspring should it
-receive next?
-
-### SpeciesHistoryRecord
-
-Species history snapshot record used for telemetry/exports.
-
-Unlike `SpeciesWithMetadata`, which describes the current live registry, this
-contract is archival. It captures the summarized species view that can be
-retained across generations for telemetry, historical diagnostics, and later
-export.
+This is the policy bundle evolve helpers consult when deciding how dynamic
+objective scheduling, epsilon tuning, and inactive-objective pruning should
+behave during a run. It is broader than one descriptor but narrower than the
+full controller options object.
 
 ### MutationMethod
 
@@ -122,24 +112,6 @@ The evolve chapter only needs the stable operator identity, not the richer
 mutation policy metadata defined in the mutation subtree. That is why this
 local descriptor stays intentionally tiny: evolve orchestration mainly uses it
 as a token when handing work off to mutation-oriented hooks.
-
-### ObjectiveDescriptor
-
-Objective descriptor for multi-objective evaluation.
-
-This is the shared scoring token used when evolve orchestration hands the
-current population to objective-aware ranking logic. Each descriptor couples a
-stable key with the accessor that extracts that objective's numeric evidence
-from one genome.
-
-### MultiObjectiveOptions
-
-Multi-objective configuration block.
-
-This is the policy bundle evolve helpers consult when deciding how dynamic
-objective scheduling, epsilon tuning, and inactive-objective pruning should
-behave during a run. It is broader than one descriptor but narrower than the
-full controller options object.
 
 ### NeatControllerForEvolution
 
@@ -164,6 +136,34 @@ The interface is intentionally large because evolve orchestration really is
 the point where many chapter boundaries meet. Even so, it is still narrower
 than the full public controller API: only the state and callbacks needed for
 one generation step are surfaced here.
+
+### ObjectiveDescriptor
+
+Objective descriptor for multi-objective evaluation.
+
+This is the shared scoring token used when evolve orchestration hands the
+current population to objective-aware ranking logic. Each descriptor couples a
+stable key with the accessor that extracts that objective's numeric evidence
+from one genome.
+
+### SpeciesHistoryRecord
+
+Species history snapshot record used for telemetry/exports.
+
+Unlike `SpeciesWithMetadata`, which describes the current live registry, this
+contract is archival. It captures the summarized species view that can be
+retained across generations for telemetry, historical diagnostics, and later
+export.
+
+### SpeciesWithMetadata
+
+Runtime interface for species metadata used in allocation and stats.
+
+This is the live species record shape used during one evolve step. Helpers in
+`speciation/`, `population/`, and telemetry-oriented paths rely on it to ask
+practical generation-level questions: which genomes belong together now, how
+much shared fitness does the species have, and how many offspring should it
+receive next?
 
 ## neat/evolve/evolve.ts
 
@@ -224,12 +224,120 @@ console.log('output nodes:', bestNetwork.output);
 Returns: a deep-cloned network snapshot representing the best genome from the
 previous generation, ready for inspection or external evaluation
 
+### EVOLVE_AUTO_COMPAT_ADJUST_RATE
+
+Default rate used when nudging compatibility coefficients toward the desired species count.
+
+### EVOLVE_AUTO_COMPAT_MAX_COEFF
+
+Maximum compatibility coefficient allowed during automatic tuning.
+
+### EVOLVE_AUTO_COMPAT_MIN_COEFF
+
+Minimum compatibility coefficient allowed during automatic tuning.
+
+### EVOLVE_AUTO_COMPAT_RANDOM_SCALE
+
+Random perturbation scale used when compatibility tuning has no directional error to follow.
+
+### EVOLVE_AUTO_COMPAT_TARGET_MIN
+
+Minimum target species count used by automatic compatibility tuning.
+
+The controller never tries to collapse diversity below this floor when adjusting coefficients.
+
+### EVOLVE_AUTO_ENTROPY_ADD_AT
+
+Default generation at which automatic entropy objective scheduling becomes eligible.
+
+### EVOLVE_CROSS_SPECIES_GUARD_LIMIT
+
+Retry limit for cross-species parent sampling before the controller falls back to a safer path.
+
+### EVOLVE_DEFAULT_EPSILON_ADJUST
+
+Default adjustment step for dominance epsilon.
+
+The value is intentionally small because epsilon changes should steer ranking gradually rather than jerk it.
+
+### EVOLVE_DEFAULT_EPSILON_COOLDOWN
+
+Default cooldown in generations between epsilon adjustments.
+
+This prevents the controller from reacting to every short-lived fluctuation in front width.
+
+### EVOLVE_DEFAULT_EPSILON_MAX
+
+Maximum dominance epsilon ceiling used by adaptive Pareto tuning.
+
+### EVOLVE_DEFAULT_EPSILON_MIN
+
+Minimum dominance epsilon floor used by adaptive Pareto tuning.
+
+### EVOLVE_GLOBAL_STAGNATION_REPLACE_FRACTION
+
+Fraction of the population replaced with fresh genomes when global stagnation rescue triggers.
+
+### EVOLVE_MIN_OFFSPRING_DEFAULT
+
+Minimum offspring allocation reserved for a surviving species during speciated reproduction.
+
+### EVOLVE_OLD_MULTIPLIER_DEFAULT
+
+Fitness-sharing multiplier applied to older species so stale lineages lose selection privilege.
+
+### EVOLVE_OLD_THRESHOLD_DEFAULT
+
+Generation threshold after which a species is treated as old for age-based fitness shaping.
+
 ### EVOLVE_PARETO_ARCHIVE_MAX
 
 Maximum number of Pareto archive snapshots to retain.
 
 This keeps multi-objective history useful for inspection without letting archive state
 grow unbounded during long runs.
+
+### EVOLVE_PRUNE_RANGE_EPS_DEFAULT
+
+Default numerical range epsilon for deciding whether an objective has effectively gone flat.
+
+### EVOLVE_PRUNE_WINDOW_DEFAULT
+
+Default inactivity window used before adaptive objective pruning considers removal.
+
+### EVOLVE_REENABLE_DELTA_SCALE
+
+Scale factor that converts re-enable success error into a probability update.
+
+### EVOLVE_REENABLE_MAX
+
+Upper bound for adaptive connection re-enable probability.
+
+### EVOLVE_REENABLE_MIN
+
+Lower bound for adaptive connection re-enable probability.
+
+### EVOLVE_REENABLE_MIN_SAMPLES
+
+Minimum re-enable observations required before the controller trusts its adaptation signal.
+
+### EVOLVE_REENABLE_TARGET
+
+Desired success ratio for connection re-enable attempts during adaptive mutation control.
+
+### EVOLVE_SPECIES_HISTORY_MAX
+
+Maximum number of species-history snapshots to retain for telemetry and later export.
+
+### EVOLVE_SURVIVAL_THRESHOLD_DEFAULT
+
+Survivor fraction used when choosing the parent pool inside each species.
+
+### EVOLVE_TARGET_FRONT_LOWER_RATIO
+
+Lower ratio threshold for Pareto front size vs target.
+
+When the first front shrinks below this band, the controller can relax epsilon to avoid over-pruning.
 
 ### EVOLVE_TARGET_FRONT_MIN
 
@@ -243,118 +351,10 @@ Upper ratio threshold for Pareto front size vs target.
 
 When the first front grows beyond this band, the controller can tighten epsilon to recover pressure.
 
-### EVOLVE_TARGET_FRONT_LOWER_RATIO
-
-Lower ratio threshold for Pareto front size vs target.
-
-When the first front shrinks below this band, the controller can relax epsilon to avoid over-pruning.
-
-### EVOLVE_DEFAULT_EPSILON_ADJUST
-
-Default adjustment step for dominance epsilon.
-
-The value is intentionally small because epsilon changes should steer ranking gradually rather than jerk it.
-
-### EVOLVE_DEFAULT_EPSILON_MIN
-
-Minimum dominance epsilon floor used by adaptive Pareto tuning.
-
-### EVOLVE_DEFAULT_EPSILON_MAX
-
-Maximum dominance epsilon ceiling used by adaptive Pareto tuning.
-
-### EVOLVE_DEFAULT_EPSILON_COOLDOWN
-
-Default cooldown in generations between epsilon adjustments.
-
-This prevents the controller from reacting to every short-lived fluctuation in front width.
-
-### EVOLVE_PRUNE_WINDOW_DEFAULT
-
-Default inactivity window used before adaptive objective pruning considers removal.
-
-### EVOLVE_PRUNE_RANGE_EPS_DEFAULT
-
-Default numerical range epsilon for deciding whether an objective has effectively gone flat.
-
-### EVOLVE_YOUNG_THRESHOLD_DEFAULT
-
-Generation threshold below which a species is still treated as young.
-
 ### EVOLVE_YOUNG_MULTIPLIER_DEFAULT
 
 Fitness-sharing multiplier applied to species that are still in their early growth window.
 
-### EVOLVE_OLD_THRESHOLD_DEFAULT
+### EVOLVE_YOUNG_THRESHOLD_DEFAULT
 
-Generation threshold after which a species is treated as old for age-based fitness shaping.
-
-### EVOLVE_OLD_MULTIPLIER_DEFAULT
-
-Fitness-sharing multiplier applied to older species so stale lineages lose selection privilege.
-
-### EVOLVE_MIN_OFFSPRING_DEFAULT
-
-Minimum offspring allocation reserved for a surviving species during speciated reproduction.
-
-### EVOLVE_SURVIVAL_THRESHOLD_DEFAULT
-
-Survivor fraction used when choosing the parent pool inside each species.
-
-### EVOLVE_CROSS_SPECIES_GUARD_LIMIT
-
-Retry limit for cross-species parent sampling before the controller falls back to a safer path.
-
-### EVOLVE_AUTO_ENTROPY_ADD_AT
-
-Default generation at which automatic entropy objective scheduling becomes eligible.
-
-### EVOLVE_GLOBAL_STAGNATION_REPLACE_FRACTION
-
-Fraction of the population replaced with fresh genomes when global stagnation rescue triggers.
-
-### EVOLVE_REENABLE_MIN_SAMPLES
-
-Minimum re-enable observations required before the controller trusts its adaptation signal.
-
-### EVOLVE_REENABLE_TARGET
-
-Desired success ratio for connection re-enable attempts during adaptive mutation control.
-
-### EVOLVE_REENABLE_DELTA_SCALE
-
-Scale factor that converts re-enable success error into a probability update.
-
-### EVOLVE_REENABLE_MIN
-
-Lower bound for adaptive connection re-enable probability.
-
-### EVOLVE_REENABLE_MAX
-
-Upper bound for adaptive connection re-enable probability.
-
-### EVOLVE_AUTO_COMPAT_TARGET_MIN
-
-Minimum target species count used by automatic compatibility tuning.
-
-The controller never tries to collapse diversity below this floor when adjusting coefficients.
-
-### EVOLVE_AUTO_COMPAT_ADJUST_RATE
-
-Default rate used when nudging compatibility coefficients toward the desired species count.
-
-### EVOLVE_AUTO_COMPAT_MIN_COEFF
-
-Minimum compatibility coefficient allowed during automatic tuning.
-
-### EVOLVE_AUTO_COMPAT_MAX_COEFF
-
-Maximum compatibility coefficient allowed during automatic tuning.
-
-### EVOLVE_AUTO_COMPAT_RANDOM_SCALE
-
-Random perturbation scale used when compatibility tuning has no directional error to follow.
-
-### EVOLVE_SPECIES_HISTORY_MAX
-
-Maximum number of species-history snapshots to retain for telemetry and later export.
+Generation threshold below which a species is still treated as young.

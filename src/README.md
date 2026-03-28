@@ -38,40 +38,6 @@ Recommended reading after this root chapter:
 
 ## neat.ts
 
-### NeatOptions
-
-Public configuration bag for `Neat` evolutionary runs.
-
-`NeatOptions` collects the knobs that shape how search pressure is applied.
-In practice, readers can think about the options in four teaching-friendly groups:
-
-- search size and tempo: `popsize`, `elitism`, `provenance`, `mutationRate`, `mutationAmount`
-- species formation: compatibility threshold plus the excess, disjoint, and weight-difference coefficients
-- observability: telemetry, lineage, diversity sampling, species history, Pareto archive controls
-- reproducibility: `seed`, imported RNG state, and exported run state
-
-That organization matters because most experiment tuning questions are really
-questions about pressure: how many candidates compete, how disruptive mutation
-should feel, how aggressively genomes split into species, and how much evidence
-you want to retain while the run is unfolding.
-
-```ts
-const options: NeatOptions = {
-  popsize: 150,
-  elitism: 5,
-  mutationRate: 0.6,
-  compatibilityThreshold: 3,
-  fastMode: true,
-  seed: 42,
-};
-
-const neat = new Neat(3, 1, fitness, options);
-```
-
-This alias stays intentionally permissive for compatibility with legacy callers.
-Prefer treating it as the stable front door and the narrower helper-level types in
-`src/neat/**` as implementation detail.
-
 ### DEFAULT_COMPATIBILITY_THRESHOLD
 
 Default compatibility threshold controlling speciation distance.
@@ -1189,6 +1155,40 @@ reconstructed by other means.
 
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
 
+### NeatOptions
+
+Public configuration bag for `Neat` evolutionary runs.
+
+`NeatOptions` collects the knobs that shape how search pressure is applied.
+In practice, readers can think about the options in four teaching-friendly groups:
+
+- search size and tempo: `popsize`, `elitism`, `provenance`, `mutationRate`, `mutationAmount`
+- species formation: compatibility threshold plus the excess, disjoint, and weight-difference coefficients
+- observability: telemetry, lineage, diversity sampling, species history, Pareto archive controls
+- reproducibility: `seed`, imported RNG state, and exported run state
+
+That organization matters because most experiment tuning questions are really
+questions about pressure: how many candidates compete, how disruptive mutation
+should feel, how aggressively genomes split into species, and how much evidence
+you want to retain while the run is unfolding.
+
+```ts
+const options: NeatOptions = {
+  popsize: 150,
+  elitism: 5,
+  mutationRate: 0.6,
+  compatibilityThreshold: 3,
+  fastMode: true,
+  seed: 42,
+};
+
+const neat = new Neat(3, 1, fitness, options);
+```
+
+This alias stays intentionally permissive for compatibility with legacy callers.
+Prefer treating it as the stable front door and the narrower helper-level types in
+`src/neat/**` as implementation detail.
+
 ## config.ts
 
 Global NeatapticTS configuration contract & default instance.
@@ -1240,6 +1240,47 @@ DESIGN NOTES
   behaviour unless a test or user explicitly opts in.
 
 ## neataptic.ts
+
+### neataptic
+
+Node (Neuron)
+=============
+Fundamental computational unit: aggregates weighted inputs, applies an activation
+function (squash) and emits an activation value. Supports:
+ - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
+ - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
+ - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
+   a variety of learning rules beyond simple backprop).
+
+Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
+assignment works in algorithms like RTRL / policy gradients. They are updated only when
+using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
+
+Examples:
+
+```ts
+const encoderBlock = new Group(4);
+const decoderBlock = new Group(4);
+
+encoderBlock.connect(
+  decoderBlock,
+  methods.groupConnection.ONE_TO_ONE,
+);
+```
+
+```ts
+const source = new Node('input');
+const target = new Node('output');
+const edge = new Connection(source, target, 0.42);
+
+edge.gain = 1.5;
+edge.enabled = true;
+```
+
+```ts
+const network = Architect.perceptron(2, 4, 1);
+const output = network.activate([0, 1]);
+```
 
 ### Neat
 
@@ -2235,47 +2276,6 @@ bookkeeping separately from genome payloads, or when the population will be
 reconstructed by other means.
 
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
-
-### neataptic
-
-Node (Neuron)
-=============
-Fundamental computational unit: aggregates weighted inputs, applies an activation
-function (squash) and emits an activation value. Supports:
- - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
- - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
- - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
-   a variety of learning rules beyond simple backprop).
-
-Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
-assignment works in algorithms like RTRL / policy gradients. They are updated only when
-using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
-
-Examples:
-
-```ts
-const encoderBlock = new Group(4);
-const decoderBlock = new Group(4);
-
-encoderBlock.connect(
-  decoderBlock,
-  methods.groupConnection.ONE_TO_ONE,
-);
-```
-
-```ts
-const source = new Node('input');
-const target = new Node('output');
-const edge = new Connection(source, target, 0.42);
-
-edge.gain = 1.5;
-edge.enabled = true;
-```
-
-```ts
-const network = Architect.perceptron(2, 4, 1);
-const output = network.activate([0, 1]);
-```
 
 ### default
 

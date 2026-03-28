@@ -80,13 +80,6 @@ boundary.
 Together they describe the inputs and intermediate state needed to paint one
 world-space frame on the browser canvas.
 
-### PlaybackFrameSceneContext
-
-Shared scene contract used by one playback frame render pass.
-
-This collects the camera, viewport, and champion metadata that multiple frame
-render helpers need during the same paint pass.
-
 ### PlaybackBirdGeometry
 
 Pixel-aligned square geometry used by bird paint helpers.
@@ -94,12 +87,12 @@ Pixel-aligned square geometry used by bird paint helpers.
 Bird geometry is resolved once so the detailed bird renderer can reuse a
 stable square body box across glow and fill passes.
 
-### PlaybackTrailRenderStyle
+### PlaybackBirdPaintInput
 
-Resolved opacity and color for one bird trail render pass.
+Bird-paint input shared by the bird render helper module.
 
-Trails use a lighter-weight style record than birds because they only need a
-base opacity plus stroke color.
+This combines geometry and style into one small input object for lower-level
+drawing helpers.
 
 ### PlaybackBirdRenderer
 
@@ -117,19 +110,12 @@ Bird body renderer contract used by frame-render orchestration helpers.
 Keeping the renderer as an injected function makes the high-level frame pass
 independent from the detailed bird-paint implementation.
 
-### PlaybackTrailStyleResolver
+### PlaybackFrameSceneContext
 
-```ts
-PlaybackTrailStyleResolver(
-  birdIndex: number,
-  championBirdIndex: number,
-): PlaybackTrailRenderStyle
-```
+Shared scene contract used by one playback frame render pass.
 
-Trail style resolver used by frame-render orchestration helpers.
-
-This lets orchestration ask for champion-vs-non-champion trail styling
-without embedding color policy directly in the frame pass.
+This collects the camera, viewport, and champion metadata that multiple frame
+render helpers need during the same paint pass.
 
 ### PlaybackTrailRenderer
 
@@ -149,12 +135,26 @@ Trail segment renderer used by frame-render orchestration helpers.
 The detailed trail painter owns edge fading and stepped segments; the frame
 orchestration only decides when to call it.
 
-### PlaybackBirdPaintInput
+### PlaybackTrailRenderStyle
 
-Bird-paint input shared by the bird render helper module.
+Resolved opacity and color for one bird trail render pass.
 
-This combines geometry and style into one small input object for lower-level
-drawing helpers.
+Trails use a lighter-weight style record than birds because they only need a
+base opacity plus stroke color.
+
+### PlaybackTrailStyleResolver
+
+```ts
+PlaybackTrailStyleResolver(
+  birdIndex: number,
+  championBirdIndex: number,
+): PlaybackTrailRenderStyle
+```
+
+Trail style resolver used by frame-render orchestration helpers.
+
+This lets orchestration ask for champion-vs-non-champion trail styling
+without embedding color policy directly in the frame pass.
 
 ## browser-entry/playback/frame-render/playback.frame-render.services.ts
 
@@ -366,24 +366,6 @@ Canvas-state helpers for playback frame rendering.
 These functions isolate the mutable canvas setup and teardown needed for one
 frame so the orchestration layer can read as declarative world rendering.
 
-### preparePlaybackFrameCanvas
-
-```ts
-preparePlaybackFrameCanvas(
-  context: CanvasRenderingContext2D,
-): void
-```
-
-Resets the target canvas and base paint state before frame drawing begins.
-
-This establishes a predictable baseline before world-space transforms and glow
-effects are applied.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-
-Returns: Nothing.
-
 ### beginPlaybackFrameViewportTransform
 
 ```ts
@@ -422,6 +404,24 @@ Parameters:
 
 Returns: Nothing.
 
+### preparePlaybackFrameCanvas
+
+```ts
+preparePlaybackFrameCanvas(
+  context: CanvasRenderingContext2D,
+): void
+```
+
+Resets the target canvas and base paint state before frame drawing begins.
+
+This establishes a predictable baseline before world-space transforms and glow
+effects are applied.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+
+Returns: Nothing.
+
 ## browser-entry/playback/frame-render/playback.frame-render.entity.services.ts
 
 Entity-layer rendering helpers for playback frames.
@@ -451,28 +451,6 @@ Parameters:
 
 Returns: Nothing.
 
-### renderPlaybackFramePipes
-
-```ts
-renderPlaybackFramePipes(
-  context: CanvasRenderingContext2D,
-  renderState: PopulationRenderState,
-  sceneContext: PlaybackFrameSceneContext,
-): void
-```
-
-Draws all visible pipe segments and their neon outlines for the frame.
-
-Pipes are rendered as upper and lower segments connected to the projected
-floor profile used by the background grid.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `sceneContext` - - Shared scene geometry for the frame.
-
-Returns: Nothing.
-
 ### renderPlaybackFrameBirds
 
 ```ts
@@ -494,6 +472,28 @@ Parameters:
 - `renderState` - - Mutable simulation state snapshot.
 - `sceneContext` - - Shared scene geometry for the frame.
 - `renderBird` - - Bird body renderer owned by the detailed utility layer.
+
+Returns: Nothing.
+
+### renderPlaybackFramePipes
+
+```ts
+renderPlaybackFramePipes(
+  context: CanvasRenderingContext2D,
+  renderState: PopulationRenderState,
+  sceneContext: PlaybackFrameSceneContext,
+): void
+```
+
+Draws all visible pipe segments and their neon outlines for the frame.
+
+Pipes are rendered as upper and lower segments connected to the projected
+floor profile used by the background grid.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `renderState` - - Mutable simulation state snapshot.
+- `sceneContext` - - Shared scene geometry for the frame.
 
 Returns: Nothing.
 
@@ -571,6 +571,34 @@ Parameters:
 
 Returns: Nothing.
 
+### drawTrail
+
+```ts
+drawTrail(
+  context: CanvasRenderingContext2D,
+  trailPoints: TrailPoint[],
+  color: string,
+  anchorX: number,
+  baseOpacity: number,
+  edgeBounds: PlaybackEdgeBounds,
+): void
+```
+
+Draws the stepped trail history for one active bird.
+
+The stepped shape makes the trajectory feel more schematic and readable than a
+perfectly smooth spline, which fits the overall instrument-panel aesthetic.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `trailPoints` - - Cached per-frame trail points for one bird.
+- `color` - - Stroke color for the trail.
+- `anchorX` - - Bird anchor x-position in world space.
+- `baseOpacity` - - Base opacity before edge and lifetime fading.
+- `edgeBounds` - - Visible world bounds used for edge fading.
+
+Returns: Nothing.
+
 ### renderPlaybackBird
 
 ```ts
@@ -630,34 +658,6 @@ Parameters:
 - `birdYPx` - - Bird vertical position in world pixels.
 
 Returns: Pixel-aligned square geometry for the bird body.
-
-### drawTrail
-
-```ts
-drawTrail(
-  context: CanvasRenderingContext2D,
-  trailPoints: TrailPoint[],
-  color: string,
-  anchorX: number,
-  baseOpacity: number,
-  edgeBounds: PlaybackEdgeBounds,
-): void
-```
-
-Draws the stepped trail history for one active bird.
-
-The stepped shape makes the trajectory feel more schematic and readable than a
-perfectly smooth spline, which fits the overall instrument-panel aesthetic.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `trailPoints` - - Cached per-frame trail points for one bird.
-- `color` - - Stroke color for the trail.
-- `anchorX` - - Bird anchor x-position in world space.
-- `baseOpacity` - - Base opacity before edge and lifetime fading.
-- `edgeBounds` - - Visible world bounds used for edge fading.
-
-Returns: Nothing.
 
 ### resolvePlaybackTrailStyle
 
@@ -687,6 +687,49 @@ The bird renderer keeps the body intentionally simple and geometric: a neon
 square with optional champion glow passes. That makes the population readable
 at a glance even when many birds overlap.
 
+### drawChampionPlaybackBirdGlow
+
+```ts
+drawChampionPlaybackBirdGlow(
+  context: CanvasRenderingContext2D,
+  birdGeometry: PlaybackBirdGeometry,
+  birdRenderStyle: PlaybackBirdRenderStyle,
+): void
+```
+
+Draws the champion bird using the same two-pass additive outline glow method as pipes.
+
+Reusing the pipe-style glow language helps the whole playback scene feel like
+one visual system instead of unrelated rendering effects.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `birdGeometry` - - Pixel-aligned bird geometry.
+- `birdRenderStyle` - - Resolved bird style payload.
+
+Returns: Nothing.
+
+### drawPlaybackBirdBody
+
+```ts
+drawPlaybackBirdBody(
+  context: CanvasRenderingContext2D,
+  birdGeometry: PlaybackBirdGeometry,
+  birdRenderStyle: PlaybackBirdRenderStyle,
+): void
+```
+
+Draws the square bird body with its base neon glow.
+
+This is the standard body pass shared by champion and non-champion birds.
+
+Parameters:
+- `context` - - Canvas 2D drawing context.
+- `birdGeometry` - - Pixel-aligned bird geometry.
+- `birdRenderStyle` - - Resolved bird style payload.
+
+Returns: Nothing.
+
 ### renderPlaybackBird
 
 ```ts
@@ -711,67 +754,6 @@ Parameters:
 
 Returns: Nothing.
 
-### resolvePlaybackBirdGeometry
-
-```ts
-resolvePlaybackBirdGeometry(
-  birdYPx: number,
-): PlaybackBirdGeometry
-```
-
-Resolves the fixed bird geometry used by all body rendering passes.
-
-Geometry is snapped to integer pixels so the square body stays crisp instead
-of blurring across subpixel boundaries.
-
-Parameters:
-- `birdYPx` - - Bird vertical position in world pixels.
-
-Returns: Pixel-aligned square geometry for the bird body.
-
-### drawPlaybackBirdBody
-
-```ts
-drawPlaybackBirdBody(
-  context: CanvasRenderingContext2D,
-  birdGeometry: PlaybackBirdGeometry,
-  birdRenderStyle: PlaybackBirdRenderStyle,
-): void
-```
-
-Draws the square bird body with its base neon glow.
-
-This is the standard body pass shared by champion and non-champion birds.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdGeometry` - - Pixel-aligned bird geometry.
-- `birdRenderStyle` - - Resolved bird style payload.
-
-Returns: Nothing.
-
-### drawChampionPlaybackBirdGlow
-
-```ts
-drawChampionPlaybackBirdGlow(
-  context: CanvasRenderingContext2D,
-  birdGeometry: PlaybackBirdGeometry,
-  birdRenderStyle: PlaybackBirdRenderStyle,
-): void
-```
-
-Draws the champion bird using the same two-pass additive outline glow method as pipes.
-
-Reusing the pipe-style glow language helps the whole playback scene feel like
-one visual system instead of unrelated rendering effects.
-
-Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdGeometry` - - Pixel-aligned bird geometry.
-- `birdRenderStyle` - - Resolved bird style payload.
-
-Returns: Nothing.
-
 ### resolvePlaybackBirdBodyGlowBlur
 
 ```ts
@@ -790,32 +772,30 @@ Parameters:
 
 Returns: Blur radius used behind the square bird body.
 
+### resolvePlaybackBirdGeometry
+
+```ts
+resolvePlaybackBirdGeometry(
+  birdYPx: number,
+): PlaybackBirdGeometry
+```
+
+Resolves the fixed bird geometry used by all body rendering passes.
+
+Geometry is snapped to integer pixels so the square body stays crisp instead
+of blurring across subpixel boundaries.
+
+Parameters:
+- `birdYPx` - - Bird vertical position in world pixels.
+
+Returns: Pixel-aligned square geometry for the bird body.
+
 ## browser-entry/playback/frame-render/playback.frame-render.trail.utils.ts
 
 Detailed trail-painting helpers for playback frames.
 
 Trails are rendered as stepped segments with both lifetime fading and edge
 fading so motion remains legible without overwhelming the scene.
-
-### resolvePlaybackTrailStyle
-
-```ts
-resolvePlaybackTrailStyle(
-  birdIndex: number,
-  championBirdIndex: number,
-): PlaybackTrailRenderStyle
-```
-
-Resolves the trail style used for one bird's stepped trail.
-
-Champion trails are emphasized while non-champion trails, when present, are
-intentionally subdued.
-
-Parameters:
-- `birdIndex` - - Index of the bird being rendered.
-- `championBirdIndex` - - Champion index for the current frame.
-
-Returns: Base opacity and color for the bird trail.
 
 ### drawTrail
 
@@ -880,3 +860,23 @@ Parameters:
 - `maximumTrailFrameOffset` - - Oldest visible trail age.
 
 Returns: Nothing.
+
+### resolvePlaybackTrailStyle
+
+```ts
+resolvePlaybackTrailStyle(
+  birdIndex: number,
+  championBirdIndex: number,
+): PlaybackTrailRenderStyle
+```
+
+Resolves the trail style used for one bird's stepped trail.
+
+Champion trails are emphasized while non-champion trails, when present, are
+intentionally subdued.
+
+Parameters:
+- `birdIndex` - - Index of the bird being rendered.
+- `championBirdIndex` - - Champion index for the current frame.
+
+Returns: Base opacity and color for the bird trail.

@@ -117,6 +117,57 @@ A practical chooser for first experiments:
 - use `registerCustomActivation()` when the built-ins are close but not quite
   the transfer curve your experiment needs.
 
+### crossover
+
+Crossover methods for genetic algorithms.
+
+These methods implement the crossover strategies described in the Instinct algorithm,
+enabling the creation of offspring with unique combinations of parent traits.
+
+Read this file as an inheritance-policy shelf: each method answers a
+different question about how aggressively two parents should be mixed.
+
+- `SINGLE_POINT` preserves one contiguous prefix from one parent and the
+  remaining suffix from the other,
+- `TWO_POINT` preserves a middle segment boundary instead of only one split,
+- `UNIFORM` treats each gene as an independent coin flip,
+- `AVERAGE` blends compatible numeric genes instead of copying segments.
+
+A practical chooser for first experiments:
+
+- start with `UNIFORM` when you want broad mixing and do not need contiguous
+  blocks of structure to stay together,
+- use `SINGLE_POINT` or `TWO_POINT` when adjacency matters and you want to
+  preserve larger parent segments,
+- choose `AVERAGE` when the genome is meaningfully numeric and interpolation
+  is more useful than hard parent switching.
+
+Minimal workflow:
+
+```ts
+const broadMixing = crossover.UNIFORM;
+
+const oneCut = crossover.SINGLE_POINT;
+
+const twoCut = {
+  ...crossover.TWO_POINT,
+  config: [0.25, 0.75],
+};
+
+const blendedOffspring = crossover.AVERAGE;
+```
+
+```mermaid
+flowchart LR
+  Parents[Two parent genomes] --> Segment[Segment-preserving crossover]
+  Parents --> GeneWise[Gene-wise crossover]
+  Parents --> Blend[Numeric blending]
+  Segment --> Single[SINGLE_POINT]
+  Segment --> Double[TWO_POINT]
+  GeneWise --> Uniform[UNIFORM]
+  Blend --> Average[AVERAGE]
+```
+
 ### gating
 
 Defines the small routing shelf that decides where a gater applies control.
@@ -165,6 +216,54 @@ const routingShelf = {
   incomingGate: gating.INPUT,
   outgoingGate: gating.OUTPUT,
   adaptiveWeightGate: gating.SELF,
+};
+```
+
+### groupConnection
+
+Defines the small wiring-policy shelf for connecting one node group to another.
+
+Read this file as a topology chooser rather than a bag of connection names.
+These policies do not decide weights, learning, or mutation pressure; they
+answer a narrower structural question first: what edge pattern should exist
+between the source group and the target group before later optimization
+details matter?
+
+The three built-ins answer three different wiring intents:
+
+- `ALL_TO_ALL` asks for the densest possible bridge between the groups,
+- `ALL_TO_ELSE` keeps that dense bridge but avoids trivial self-links when
+  the source and target are the same group,
+- `ONE_TO_ONE` preserves positional pairing instead of creating a dense mesh.
+
+Those choices matter because they create very different starting biases. A
+dense bridge maximizes routing freedom, a dense-without-self-links bridge is
+often the cleanest way to describe intra-group recurrence, and one-to-one
+wiring preserves explicit alignment instead of encouraging cross-talk.
+
+A practical chooser for first experiments:
+
+- start with `ALL_TO_ALL` when every source feature should be allowed to
+  influence every target unit,
+- use `ALL_TO_ELSE` when you want dense recurrent-style reuse inside one
+  group without creating direct self-connections,
+- choose `ONE_TO_ONE` when index alignment matters and each source unit
+  should feed exactly one partner.
+
+```mermaid
+flowchart LR
+  Dense[Dense mesh] --> AllToAll[ALL_TO_ALL]
+  Dense --> AllToElse[ALL_TO_ELSE]
+  Paired[Positional pairing] --> OneToOne[ONE_TO_ONE]
+```
+
+Minimal workflow:
+
+```ts
+const wiringShelf = {
+  denseBridge: groupConnection.ALL_TO_ALL,
+  denseWithoutSelfLoops: groupConnection.ALL_TO_ELSE,
+  alignedBridge: groupConnection.ONE_TO_ONE,
 };
 ```
 
@@ -336,105 +435,6 @@ flowchart LR
   Population[Scored population] --> Proportionate[FITNESS_PROPORTIONATE<br/>probability tracks score share]
   Population --> Power[POWER<br/>front of ranking gets extra pressure]
   Population --> Tournament[TOURNAMENT<br/>small local bracket decides]
-```
-
-### crossover
-
-Crossover methods for genetic algorithms.
-
-These methods implement the crossover strategies described in the Instinct algorithm,
-enabling the creation of offspring with unique combinations of parent traits.
-
-Read this file as an inheritance-policy shelf: each method answers a
-different question about how aggressively two parents should be mixed.
-
-- `SINGLE_POINT` preserves one contiguous prefix from one parent and the
-  remaining suffix from the other,
-- `TWO_POINT` preserves a middle segment boundary instead of only one split,
-- `UNIFORM` treats each gene as an independent coin flip,
-- `AVERAGE` blends compatible numeric genes instead of copying segments.
-
-A practical chooser for first experiments:
-
-- start with `UNIFORM` when you want broad mixing and do not need contiguous
-  blocks of structure to stay together,
-- use `SINGLE_POINT` or `TWO_POINT` when adjacency matters and you want to
-  preserve larger parent segments,
-- choose `AVERAGE` when the genome is meaningfully numeric and interpolation
-  is more useful than hard parent switching.
-
-Minimal workflow:
-
-```ts
-const broadMixing = crossover.UNIFORM;
-
-const oneCut = crossover.SINGLE_POINT;
-
-const twoCut = {
-  ...crossover.TWO_POINT,
-  config: [0.25, 0.75],
-};
-
-const blendedOffspring = crossover.AVERAGE;
-```
-
-```mermaid
-flowchart LR
-  Parents[Two parent genomes] --> Segment[Segment-preserving crossover]
-  Parents --> GeneWise[Gene-wise crossover]
-  Parents --> Blend[Numeric blending]
-  Segment --> Single[SINGLE_POINT]
-  Segment --> Double[TWO_POINT]
-  GeneWise --> Uniform[UNIFORM]
-  Blend --> Average[AVERAGE]
-```
-
-### groupConnection
-
-Defines the small wiring-policy shelf for connecting one node group to another.
-
-Read this file as a topology chooser rather than a bag of connection names.
-These policies do not decide weights, learning, or mutation pressure; they
-answer a narrower structural question first: what edge pattern should exist
-between the source group and the target group before later optimization
-details matter?
-
-The three built-ins answer three different wiring intents:
-
-- `ALL_TO_ALL` asks for the densest possible bridge between the groups,
-- `ALL_TO_ELSE` keeps that dense bridge but avoids trivial self-links when
-  the source and target are the same group,
-- `ONE_TO_ONE` preserves positional pairing instead of creating a dense mesh.
-
-Those choices matter because they create very different starting biases. A
-dense bridge maximizes routing freedom, a dense-without-self-links bridge is
-often the cleanest way to describe intra-group recurrence, and one-to-one
-wiring preserves explicit alignment instead of encouraging cross-talk.
-
-A practical chooser for first experiments:
-
-- start with `ALL_TO_ALL` when every source feature should be allowed to
-  influence every target unit,
-- use `ALL_TO_ELSE` when you want dense recurrent-style reuse inside one
-  group without creating direct self-connections,
-- choose `ONE_TO_ONE` when index alignment matters and each source unit
-  should feed exactly one partner.
-
-```mermaid
-flowchart LR
-  Dense[Dense mesh] --> AllToAll[ALL_TO_ALL]
-  Dense --> AllToElse[ALL_TO_ELSE]
-  Paired[Positional pairing] --> OneToOne[ONE_TO_ONE]
-```
-
-Minimal workflow:
-
-```ts
-const wiringShelf = {
-  denseBridge: groupConnection.ALL_TO_ALL,
-  denseWithoutSelfLoops: groupConnection.ALL_TO_ELSE,
-  alignedBridge: groupConnection.ONE_TO_ONE,
-};
 ```
 
 ### default

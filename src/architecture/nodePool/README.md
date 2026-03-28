@@ -16,10 +16,6 @@ Read this chapter in three passes:
 
 ## architecture/nodePool/nodePool.ts
 
-### AcquireNodeOptions
-
-Options bag for acquiring a node.
-
 ### acquireNode
 
 ```ts
@@ -39,6 +35,20 @@ Parameters:
 
 Returns: A ready-to-use node instance.
 
+### AcquireNodeOptions
+
+Options bag for acquiring a node.
+
+### nodePoolStats
+
+```ts
+nodePoolStats(): { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }
+```
+
+Get current pool statistics for diagnostics and memory reporting.
+
+Returns: Pool size, reuse counters, and the long-run recycled ratio.
+
 ### releaseNode
 
 ```ts
@@ -56,16 +66,6 @@ Parameters:
 - `node` - Detached node instance to recycle.
 
 Returns: Nothing.
-
-### nodePoolStats
-
-```ts
-nodePoolStats(): { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }
-```
-
-Get current pool statistics for diagnostics and memory reporting.
-
-Returns: Pool size, reuse counters, and the long-run recycled ratio.
 
 ### resetNodePool
 

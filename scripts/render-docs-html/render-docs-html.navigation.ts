@@ -1,12 +1,16 @@
 /*
  * Owns the generated docs sidebar contract.
  *
- * The main HTML renderer only needs to decide which page is being emitted and
- * which docs directories were published. This helper turns that data into the
- * left-nav learning path: examples first for onboarding, grouped docs pages for
- * reference reading, and a depth-aware rail that stays visually continuous as
- * readers move between overview pages and nested deep dives.
+ * This chapter turns the published docs page set into the left-nav learning
+ * path: examples first for onboarding, grouped docs pages for reference
+ * reading, and a depth-aware rail that remains visually continuous.
  */
+
+import type {
+  DocsSidebarRenderContext,
+  PageMeta,
+  SidebarRenderContext,
+} from './render-docs-html.types.js';
 
 interface ExampleNavLink {
   dir: string;
@@ -28,34 +32,6 @@ interface PipeNavEntry {
   depth: number;
   isCurrent: boolean;
   cssClass?: string;
-}
-
-interface SidebarRenderHelpers {
-  generatedPageDirectories: ReadonlySet<string>;
-  hasPublishedDocsPage: (
-    relDir: string,
-    generatedPageDirectories: ReadonlySet<string>,
-  ) => boolean;
-  buildRelativeDocsHref: (currentDir: string, targetDir: string) => string;
-  escapeHtml: (value: string) => string;
-}
-
-/** Minimal page shape needed to assemble the docs sidebar groups. */
-export interface SidebarPageMeta {
-  relDir: string;
-}
-
-/**
- * Shared render context for sidebar fragments that need publication checks and
- * stable relative links.
- */
-export interface SidebarRenderContext extends SidebarRenderHelpers {
-  currentDir: string;
-}
-
-/** Render context for the full docs sidebar, including the grouped page set. */
-export interface DocsSidebarRenderContext extends SidebarRenderContext {
-  pages: readonly SidebarPageMeta[];
 }
 
 const EXAMPLES_OVERVIEW_DIR = 'examples';
@@ -216,16 +192,7 @@ const EXAMPLE_DEMOS: readonly ExampleNavDemo[] = [
   },
 ];
 
-/**
- * Render the compact examples list used on the root-page table of contents.
- *
- * This keeps the landing page aligned with the learning-path plan: readers see
- * the examples overview first, then the strongest demo entrypoints, without
- * needing the full sidebar card treatment.
- *
- * @param context - Link and publication helpers for the page being rendered.
- * @returns A compact pipe-nav list for published example docs, or an empty list.
- */
+/** Renders the compact examples list used on the root-page table of contents. */
 export function buildExamplesTocLinksHtml(
   context: SidebarRenderContext,
 ): string {
@@ -262,25 +229,18 @@ export function buildExamplesTocLinksHtml(
   return buildPipeNavListHtml(context, entries, 'pipe-nav-list-compact');
 }
 
-/**
- * Render the full left docs sidebar with the examples-first learning path.
- *
- * The sidebar owns the teaching order for generated docs pages. Runnable
- * examples stay at the top because they are the fastest route to first success,
- * while the remaining pages are grouped into reference sections that make sense
- * once a reader is already oriented.
- *
- * @param context - The published page set, current page, and link helpers.
- * @returns The full sidebar section list for the current docs page.
- */
+/** Renders the full left docs sidebar with the examples-first learning path. */
 export function buildDocsSidebarHtml(
   context: DocsSidebarRenderContext,
 ): string {
-  const groupsMap = new Map<string, { name: string; items: SidebarPageMeta[] }>();
+  const groupsMap = new Map<string, { name: string; items: PageMeta[] }>();
 
   for (const page of context.pages) {
     const segment = page.relDir.split('/')[0] || 'root';
-    if (segment === 'examples') continue;
+    if (segment === 'examples') {
+      continue;
+    }
+
     if (!groupsMap.has(segment)) {
       groupsMap.set(segment, { name: segment, items: [] });
     }
@@ -298,8 +258,11 @@ export function buildDocsSidebarHtml(
         rightGroup.name as (typeof SIDEBAR_GROUP_ORDER)[number],
       );
       const leftRank = leftOrder === -1 ? Number.MAX_SAFE_INTEGER : leftOrder;
-      const rightRank = rightOrder === -1 ? Number.MAX_SAFE_INTEGER : rightOrder;
-      return leftRank - rightRank || leftGroup.name.localeCompare(rightGroup.name);
+      const rightRank =
+        rightOrder === -1 ? Number.MAX_SAFE_INTEGER : rightOrder;
+      return (
+        leftRank - rightRank || leftGroup.name.localeCompare(rightGroup.name)
+      );
     })
     .map((group) => {
       const items = group.items.toSorted((leftPage, rightPage) =>
@@ -317,7 +280,7 @@ export function buildDocsSidebarHtml(
       }
 
       return `<li class="group"><div class="g-head">${context.escapeHtml(
-        group.name,
+        formatSidebarGroupName(group.name),
       )}</div>${buildPipeNavListHtml(
         context,
         buildGroupPipeEntries(items, context.currentDir),
@@ -328,16 +291,7 @@ export function buildDocsSidebarHtml(
   return `<ul class="sidebar-sections">${examplesSidebarHtml}${groupsHtml}</ul>`;
 }
 
-/**
- * Render the example showcase cards that anchor the sidebar learning path.
- *
- * Each demo keeps a recommended reading order and a separate deep-dive list so
- * the sidebar can teach progression without flattening every page into one long
- * undifferentiated navigation block.
- *
- * @param context - Link and publication helpers for the page being rendered.
- * @returns The examples-first sidebar section, or an empty string when hidden.
- */
+/** Renders the example showcase cards that anchor the sidebar learning path. */
 function buildExamplesSidebarHtml(context: SidebarRenderContext): string {
   const examplesOverviewLink = buildPipeNavListHtml(
     context,
@@ -358,64 +312,98 @@ function buildExamplesSidebarHtml(context: SidebarRenderContext): string {
     'pipe-nav-list-priority',
   );
 
-  const demoCardsHtml = EXAMPLE_DEMOS.map((demo) => {
-    const readingOrderLinksHtml = buildPipeNavListHtml(
-      context,
-      demo.readingOrder
-        .filter((entry) =>
-          context.hasPublishedDocsPage(entry.dir, context.generatedPageDirectories),
-        )
-        .map((entry) => ({
-          label: entry.label,
-          targetDir: entry.dir,
+  const showExpandedExampleShowcase =
+    context.currentDir === '' ||
+    context.currentDir === EXAMPLES_OVERVIEW_DIR ||
+    context.currentDir.startsWith('examples/');
+  const compactExamplesLinksHtml = showExpandedExampleShowcase
+    ? ''
+    : buildPipeNavListHtml(
+        context,
+        EXAMPLE_DEMOS.filter((demo) =>
+          context.hasPublishedDocsPage(
+            `${demo.dir}/docs`,
+            context.generatedPageDirectories,
+          ),
+        ).map((demo) => ({
+          label: demo.label,
+          targetDir: `${demo.dir}/docs`,
           depth: 0,
-          isCurrent: context.currentDir === entry.dir,
+          isCurrent: context.currentDir === `${demo.dir}/docs`,
         })),
-    );
-    const deepDiveLinksHtml = buildPipeNavListHtml(
-      context,
-      demo.deepDives
-        .filter((entry) =>
-          context.hasPublishedDocsPage(entry.dir, context.generatedPageDirectories),
-        )
-        .map((entry) => ({
-          label: entry.label,
-          targetDir: entry.dir,
-          depth: 1,
-          isCurrent: context.currentDir === entry.dir,
-        })),
-    );
-    const isCurrentDemo =
-      context.currentDir === demo.dir ||
-      context.currentDir.startsWith(`${demo.dir}/`) ||
-      context.currentDir.startsWith(`${demo.dir}/docs`);
+        'pipe-nav-list-compact',
+      );
 
-    if (!readingOrderLinksHtml && !deepDiveLinksHtml) {
-      return '';
-    }
+  const demoCardsHtml = showExpandedExampleShowcase
+    ? EXAMPLE_DEMOS.map((demo) => {
+        const readingOrderLinksHtml = buildPipeNavListHtml(
+          context,
+          demo.readingOrder
+            .filter((entry) =>
+              context.hasPublishedDocsPage(
+                entry.dir,
+                context.generatedPageDirectories,
+              ),
+            )
+            .map((entry) => ({
+              label: entry.label,
+              targetDir: entry.dir,
+              depth: 0,
+              isCurrent: context.currentDir === entry.dir,
+            })),
+        );
+        const deepDiveLinksHtml = buildPipeNavListHtml(
+          context,
+          demo.deepDives
+            .filter((entry) =>
+              context.hasPublishedDocsPage(
+                entry.dir,
+                context.generatedPageDirectories,
+              ),
+            )
+            .map((entry) => ({
+              label: entry.label,
+              targetDir: entry.dir,
+              depth: 1,
+              isCurrent: context.currentDir === entry.dir,
+            })),
+        );
+        const isCurrentDemo =
+          context.currentDir === demo.dir ||
+          context.currentDir.startsWith(`${demo.dir}/`) ||
+          context.currentDir.startsWith(`${demo.dir}/docs`);
 
-    return `<li class="nav-demo-card${isCurrentDemo ? ' is-current-demo' : ''}"><div class="nav-demo-meta"><div class="nav-demo-eyebrow">${context.escapeHtml(
-      demo.eyebrow,
-    )}</div><div class="nav-demo-title">${context.escapeHtml(
-      demo.label,
-    )}</div><p class="nav-demo-description">${context.escapeHtml(
-      demo.description,
-    )}</p></div><div class="nav-demo-cluster"><div class="nav-cluster-title">Recommended path</div>${readingOrderLinksHtml}</div>${
-      deepDiveLinksHtml
-        ? `<div class="nav-demo-cluster nav-demo-cluster-secondary"><div class="nav-cluster-title">Deep dives</div>${deepDiveLinksHtml}</div>`
-        : ''
-    }</li>`;
-  })
-    .filter(Boolean)
-    .join('');
+        if (!readingOrderLinksHtml && !deepDiveLinksHtml) {
+          return '';
+        }
 
-  if (!examplesOverviewLink && !demoCardsHtml) return '';
+        return `<li class="nav-demo-card${isCurrentDemo ? ' is-current-demo' : ''}"><div class="nav-demo-meta"><div class="nav-demo-eyebrow">${context.escapeHtml(
+          demo.eyebrow,
+        )}</div><div class="nav-demo-title">${context.escapeHtml(
+          demo.label,
+        )}</div><p class="nav-demo-description">${context.escapeHtml(
+          demo.description,
+        )}</p></div><div class="nav-demo-cluster"><div class="nav-cluster-title">Recommended path</div>${readingOrderLinksHtml}</div>${
+          deepDiveLinksHtml
+            ? `<div class="nav-demo-cluster nav-demo-cluster-secondary"><div class="nav-cluster-title">Deep dives</div>${deepDiveLinksHtml}</div>`
+            : ''
+        }</li>`;
+      })
+        .filter(Boolean)
+        .join('')
+    : '';
 
-  return `<li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links">${examplesOverviewLink}</div><ul class="nav-demo-showcase">${demoCardsHtml}</ul></li>`;
+  if (!examplesOverviewLink && !compactExamplesLinksHtml && !demoCardsHtml) {
+    return '';
+  }
+
+  return `<li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links">${examplesOverviewLink}${compactExamplesLinksHtml}</div>${
+    demoCardsHtml ? `<ul class="nav-demo-showcase">${demoCardsHtml}</ul>` : ''
+  }</li>`;
 }
 
 function buildGroupPipeEntries(
-  items: readonly SidebarPageMeta[],
+  items: readonly PageMeta[],
   currentDir: string,
 ): PipeNavEntry[] {
   return items
@@ -425,7 +413,7 @@ function buildGroupPipeEntries(
     .map((page) => {
       const relativeSegments = page.relDir.split('/').slice(1);
       return {
-        label: relativeSegments.at(-1) ?? 'Overview',
+        label: formatGroupEntryLabel(relativeSegments),
         targetDir: page.relDir,
         depth: Math.max(0, relativeSegments.length - 1),
         isCurrent: page.relDir === currentDir,
@@ -434,17 +422,35 @@ function buildGroupPipeEntries(
 }
 
 /**
- * Render the fixed-width rail cells that anchor one sidebar row.
- *
- * Depth is represented by layout boxes rather than text glyph stacks. That
- * gives CSS a stable column contract for the vertical rail and connector line,
- * which prevents the left path from breaking when fonts, line-height, or
- * example cluster boundaries change.
- *
- * @param depth - Logical nesting depth for the entry being rendered.
- * @param isFooter - Whether the cells belong to the footer row that closes the list.
- * @returns The rail-cell markup for one sidebar row.
+ * Formats sidebar labels so overview pages read clearly and deep pages are not
+ * reduced to ambiguous repeated leaf names.
  */
+function formatGroupEntryLabel(relativeSegments: readonly string[]): string {
+  if (relativeSegments.length === 0) {
+    return 'Overview';
+  }
+
+  const leafLabel = formatSidebarGroupName(
+    relativeSegments.at(-1) ?? 'Overview',
+  );
+  if (relativeSegments.length === 1) {
+    return leafLabel;
+  }
+
+  const parentLabel = formatSidebarGroupName(relativeSegments.at(-2) ?? '');
+  return `${parentLabel} / ${leafLabel}`;
+}
+
+/** Formats a sidebar group or segment name into a human-readable label. */
+function formatSidebarGroupName(segment: string): string {
+  return segment
+    .split(/[-_]/g)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/** Renders the fixed-width rail cells that anchor one sidebar row. */
 function buildPipeRailCellsHtml(depth: number, isFooter = false): string {
   const railDepth = Math.max(0, depth);
 
@@ -462,24 +468,15 @@ function buildPipeRailCellsHtml(depth: number, isFooter = false): string {
   }).join('');
 }
 
-/**
- * Render one pipe-nav list using box-based rail columns for visual continuity.
- *
- * Entries provide a logical depth value rather than nested list markup. That
- * keeps the DOM shallow while still giving the theme enough structure to draw a
- * continuous rail through overview links, recommended paths, and deep dives.
- *
- * @param context - Link and publication helpers for the page being rendered.
- * @param entries - Sidebar links with the depth contract already resolved.
- * @param listClass - Optional modifier class for compact or priority variants.
- * @returns One pipe-nav list plus a footer rail that finishes the visual track.
- */
+/** Renders one rail-based pipe navigation list. */
 function buildPipeNavListHtml(
   context: SidebarRenderContext,
   entries: readonly PipeNavEntry[],
   listClass = '',
 ): string {
-  if (entries.length === 0) return '';
+  if (entries.length === 0) {
+    return '';
+  }
 
   const itemsHtml = entries
     .map((entry) => {

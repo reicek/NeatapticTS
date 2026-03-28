@@ -47,43 +47,6 @@ flowchart TD
 
 ## neat/evaluate/entropy-compat/evaluate.entropy-compat.ts
 
-### runEntropyCompatibilityTuning
-
-```ts
-runEntropyCompatibilityTuning(
-  controller: NeatControllerForEval,
-  evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; },
-): void
-```
-
-Adjust the compatibility threshold when entropy-compatibility tuning is enabled.
-
-This is the controller-facing entrypoint for the entropy-compatibility
-chapter. It behaves like best-effort maintenance after fresh diversity
-evidence has been written, not like a required scoring or speciation phase.
-
-The helper preserves several important controller assumptions:
-- genome scores are already complete and are not recomputed here,
-- current species assignments are left intact,
-- population order is left intact,
-- only `compatibilityThreshold` is prepared for later passes.
-
-That narrow scope lets the evaluation chapter adjust future speciation
-pressure without widening into a full species-rebuild workflow.
-
-Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `evaluationOptions` - - Options object for the current evaluation pass.
-
-Example:
-
-```ts
-controller._diversityStats = { meanEntropy: 0.42 };
-
-runEntropyCompatibilityTuning(controller, controller.options);
-console.log(controller.options.compatibilityThreshold);
-```
-
 ### computeNextCompatibilityThreshold
 
 ```ts
@@ -125,4 +88,41 @@ const nextThreshold = computeNextCompatibilityThreshold(
 );
 
 console.log(nextThreshold);
+```
+
+### runEntropyCompatibilityTuning
+
+```ts
+runEntropyCompatibilityTuning(
+  controller: NeatControllerForEval,
+  evaluationOptions: { [key: string]: unknown; fitnessPopulation?: boolean | undefined; clear?: boolean | undefined; novelty?: { enabled?: boolean | undefined; descriptor?: ((genome: GenomeForEvaluation) => number[]) | undefined; k?: number | undefined; blendFactor?: number | undefined; archiveAddThreshold?: number | undefined; } | undefined; entropySharingTuning?: { enabled?: boolean | undefined; targetEntropyVar?: number | undefined; adjustRate?: number | undefined; minSigma?: number | undefined; maxSigma?: number | undefined; } | undefined; entropyCompatTuning?: { enabled?: boolean | undefined; targetEntropy?: number | undefined; deadband?: number | undefined; adjustRate?: number | undefined; minThreshold?: number | undefined; maxThreshold?: number | undefined; } | undefined; autoDistanceCoeffTuning?: { enabled?: boolean | undefined; adjustRate?: number | undefined; minCoeff?: number | undefined; maxCoeff?: number | undefined; } | undefined; multiObjective?: { enabled?: boolean | undefined; autoEntropy?: boolean | undefined; dynamic?: { enabled?: boolean | undefined; } | undefined; } | undefined; speciation?: boolean | undefined; targetSpecies?: number | undefined; compatAdjust?: boolean | undefined; speciesAllocation?: { extendedHistory?: boolean | undefined; } | undefined; sharingSigma?: number | undefined; compatibilityThreshold?: number | undefined; excessCoeff?: number | undefined; disjointCoeff?: number | undefined; },
+): void
+```
+
+Adjust the compatibility threshold when entropy-compatibility tuning is enabled.
+
+This is the controller-facing entrypoint for the entropy-compatibility
+chapter. It behaves like best-effort maintenance after fresh diversity
+evidence has been written, not like a required scoring or speciation phase.
+
+The helper preserves several important controller assumptions:
+- genome scores are already complete and are not recomputed here,
+- current species assignments are left intact,
+- population order is left intact,
+- only `compatibilityThreshold` is prepared for later passes.
+
+That narrow scope lets the evaluation chapter adjust future speciation
+pressure without widening into a full species-rebuild workflow.
+
+Parameters:
+- `controller` - - NEAT controller instance for evaluation.
+- `evaluationOptions` - - Options object for the current evaluation pass.
+
+Example:
+
+```ts
+controller._diversityStats = { meanEntropy: 0.42 };
+
+runEntropyCompatibilityTuning(controller, controller.options);
+console.log(controller.options.compatibilityThreshold);
 ```
