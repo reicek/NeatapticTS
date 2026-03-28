@@ -15,7 +15,7 @@ import { FLAPPY_NORMALIZATION_EPSILON as SHARED_FLAPPY_NORMALIZATION_EPSILON } f
 export const DEFAULT_CONTAINER_ID = 'flappy-bird-output';
 
 /** Emulation speed multiplier for browser playback (1.5 => 50% faster). */
-export const FLAPPY_EMULATION_SPEED_MULTIPLIER = 1.5;
+export const FLAPPY_EMULATION_SPEED_MULTIPLIER = 1;
 
 /**
  * Update HUD counters every N simulation frames to reduce DOM churn.
