@@ -1,5 +1,23 @@
 # architecture/network/stats
 
+Raised when network test helpers receive a missing or empty evaluation set.
+
+## architecture/network/stats/network.stats.errors.ts
+
+### NetworkStatsTestSampleInputSizeMismatchError
+
+Raised when a test sample input vector does not match network input width.
+
+### NetworkStatsTestSampleOutputSizeMismatchError
+
+Raised when a test sample output vector does not match network output width.
+
+### NetworkStatsTestSetValidationError
+
+Raised when network test helpers receive a missing or empty evaluation set.
+
+## architecture/network/stats/network.stats.utils.ts
+
 Network statistics accessors.
 
 Currently exposes a single helper for retrieving the most recent regularization / stochasticity
@@ -16,8 +34,6 @@ values such as:
 Design decision: We return a deep copy to prevent external mutation of internal accounting state.
 If the object is large and copying becomes a bottleneck, future versions could offer a freeze
 option or incremental diff interface.
-
-## architecture/network/stats/network.stats.utils.ts
 
 ### getRegularizationStats
 

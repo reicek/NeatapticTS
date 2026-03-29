@@ -12,6 +12,11 @@ import type {
   LayerOrderingResolutionContext,
   LayerValidationTraversalContext,
 } from './network.onnx.utils.types';
+import {
+  NetworkOnnxLayerOrderingUnresolvableError,
+  NetworkOnnxMixedActivationsUnsupportedError,
+  NetworkOnnxPartialConnectivityUnsupportedError,
+} from './network.onnx.errors';
 
 const NODE_TYPE_INPUT = 'input';
 const NODE_TYPE_HIDDEN = 'hidden';
@@ -381,7 +386,9 @@ function ensureLayerWasResolved(currentLayerNodes: NeatapticNode[]): void {
     return;
   }
 
-  throw new Error(ERROR_LAYER_ORDERING_UNRESOLVABLE);
+  throw new NetworkOnnxLayerOrderingUnresolvableError(
+    ERROR_LAYER_ORDERING_UNRESOLVABLE,
+  );
 }
 
 /**
@@ -510,7 +517,7 @@ function validateLayerActivationHomogeneity(
   }
 
   if (!activationValidationContext.allowMixedActivations) {
-    throw new Error(
+    throw new NetworkOnnxMixedActivationsUnsupportedError(
       `${ERROR_MIXED_ACTIVATIONS_PREFIX} ${activationValidationContext.layerIndex}. ${ERROR_MIXED_ACTIVATIONS_SUFFIX}`,
     );
   }
@@ -587,7 +594,7 @@ function validateSourceToTargetConnectivity(
     return;
   }
 
-  throw new Error(
+  throw new NetworkOnnxPartialConnectivityUnsupportedError(
     `${ERROR_PARTIAL_CONNECTIVITY_PREFIX} ${connectivityValidationContext.sourceNode.index} to node ${connectivityValidationContext.targetNode.index} in layer ${connectivityValidationContext.layerIndex}. ${ERROR_PARTIAL_CONNECTIVITY_SUFFIX}`,
   );
 }

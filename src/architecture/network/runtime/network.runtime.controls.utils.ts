@@ -4,6 +4,19 @@ import type {
   NetworkRuntimeControlInternals,
   PruningMethod,
 } from '../network.types';
+import {
+  NetworkRuntimeLayeredWeightNoiseRequiredError,
+  NetworkRuntimePruningScheduleWindowError,
+  NetworkRuntimeStochasticDepthEntryCountError,
+  NetworkRuntimeStochasticDepthLayeredNetworkRequiredError,
+  NetworkRuntimeStochasticDepthSurvivalArrayError,
+  NetworkRuntimeStochasticDepthSurvivalRangeError,
+  NetworkRuntimeTargetSparsityRangeError,
+  NetworkRuntimeWeightNoiseConfigurationError,
+  NetworkRuntimeWeightNoiseEntryCountError,
+  NetworkRuntimeWeightNoisePerLayerRangeError,
+  NetworkRuntimeWeightNoiseStdDevRangeError,
+} from './network.runtime.errors';
 
 type PruningConfiguration = {
   start: number;
@@ -46,11 +59,15 @@ export function configurePruning(
   const { start, end, targetSparsity } = configuration;
 
   if (start < 0 || end < start) {
-    throw new Error('Invalid pruning schedule window');
+    throw new NetworkRuntimePruningScheduleWindowError(
+      'Invalid pruning schedule window',
+    );
   }
 
   if (targetSparsity <= 0 || targetSparsity >= 1) {
-    throw new Error('targetSparsity must be in (0,1)');
+    throw new NetworkRuntimeTargetSparsityRangeError(
+      'targetSparsity must be in (0,1)',
+    );
   }
 
   runtimeNetwork._pruningConfig = {
@@ -84,7 +101,9 @@ export function enableWeightNoise(
 
   if (typeof configuration === 'number') {
     if (configuration < 0) {
-      throw new Error('Weight noise stdDev must be >= 0');
+      throw new NetworkRuntimeWeightNoiseStdDevRangeError(
+        'Weight noise stdDev must be >= 0',
+      );
     }
 
     runtimeNetwork._weightNoiseStd = configuration;
@@ -93,18 +112,20 @@ export function enableWeightNoise(
   }
 
   if (!configuration || !Array.isArray(configuration.perHiddenLayer)) {
-    throw new Error('Invalid weight noise configuration');
+    throw new NetworkRuntimeWeightNoiseConfigurationError(
+      'Invalid weight noise configuration',
+    );
   }
 
   if (!runtimeNetwork.layers || runtimeNetwork.layers.length < 3) {
-    throw new Error(
+    throw new NetworkRuntimeLayeredWeightNoiseRequiredError(
       'Per-hidden-layer weight noise requires a layered network with at least one hidden layer',
     );
   }
 
   const hiddenLayerCount = runtimeNetwork.layers.length - 2;
   if (configuration.perHiddenLayer.length !== hiddenLayerCount) {
-    throw new Error(
+    throw new NetworkRuntimeWeightNoiseEntryCountError(
       `Expected ${hiddenLayerCount} std dev entries (one per hidden layer), got ${configuration.perHiddenLayer.length}`,
     );
   }
@@ -114,7 +135,9 @@ export function enableWeightNoise(
       (standardDeviation) => standardDeviation < 0,
     )
   ) {
-    throw new Error('Weight noise std devs must be >= 0');
+    throw new NetworkRuntimeWeightNoisePerLayerRangeError(
+      'Weight noise std devs must be >= 0',
+    );
   }
 
   runtimeNetwork._weightNoiseStd = 0;
@@ -263,7 +286,9 @@ export function setStochasticDepth(
   const runtimeNetwork = this as unknown as NetworkRuntimeControlInternals;
 
   if (!Array.isArray(survivalProbabilities)) {
-    throw new Error('survival must be an array');
+    throw new NetworkRuntimeStochasticDepthSurvivalArrayError(
+      'survival must be an array',
+    );
   }
 
   if (
@@ -272,16 +297,20 @@ export function setStochasticDepth(
         survivalProbability <= 0 || survivalProbability > 1,
     )
   ) {
-    throw new Error('Stochastic depth survival probs must be in (0,1]');
+    throw new NetworkRuntimeStochasticDepthSurvivalRangeError(
+      'Stochastic depth survival probs must be in (0,1]',
+    );
   }
 
   if (!runtimeNetwork.layers || runtimeNetwork.layers.length === 0) {
-    throw new Error('Stochastic depth requires layer-based network');
+    throw new NetworkRuntimeStochasticDepthLayeredNetworkRequiredError(
+      'Stochastic depth requires layer-based network',
+    );
   }
 
   const hiddenLayerCount = Math.max(0, runtimeNetwork.layers.length - 2);
   if (survivalProbabilities.length !== hiddenLayerCount) {
-    throw new Error(
+    throw new NetworkRuntimeStochasticDepthEntryCountError(
       `Expected ${hiddenLayerCount} survival probabilities for hidden layers, got ${survivalProbabilities.length}`,
     );
   }

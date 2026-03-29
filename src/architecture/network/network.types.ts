@@ -255,12 +255,6 @@ export interface StatsNetworkProps {
   _lastStats?: Record<string, unknown>;
 }
 
-/** GlobalThis extension exposing optional structuredClone. */
-export interface GlobalThisWithStructuredClone {
-  /** Optional native deep-clone API. */
-  structuredClone?: <T>(value: T) => T;
-}
-
 /** Internal topology state carrier. */
 export interface TopologyNetworkProps {
   /** Acyclic mode enforcement flag. */

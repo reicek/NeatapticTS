@@ -473,9 +473,6 @@ RateSchedule(
 ): number
 ```
 
-Learning rate schedule signature that maps a base rate and iteration index to a rate value.
-Useful for each stateless schedule strategy.
-
 ### ReduceOnPlateauSchedule
 
 ```ts
@@ -488,3 +485,11 @@ ReduceOnPlateauSchedule(
 
 Stateful ReduceLROnPlateau schedule signature that can react to a loss signal.
 The third argument is optional and only needed when monitoring validation error.
+
+## methods/rate/rate.errors.ts
+
+Raised when a linear warmup-decay schedule receives a non-positive step count.
+
+### RateLinearWarmupTotalStepsError
+
+Raised when a linear warmup-decay schedule receives a non-positive step count.

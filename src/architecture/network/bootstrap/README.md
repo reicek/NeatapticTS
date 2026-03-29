@@ -1,5 +1,15 @@
 # architecture/network/bootstrap
 
+Raised when constructor topology intent conflicts with legacy acyclic flags.
+
+## architecture/network/bootstrap/network.bootstrap.errors.ts
+
+### NetworkBootstrapTopologyIntentConflictError
+
+Raised when constructor topology intent conflicts with legacy acyclic flags.
+
+## architecture/network/bootstrap/network.bootstrap.utils.ts
+
 Bootstrap helpers for the public `Network` class.
 
 This chapter owns the work that happens exactly once during construction:
@@ -10,8 +20,6 @@ materialize the first input-to-output graph.
 Keeping that one-time setup here lets `network.ts` stay focused on the
 long-lived runtime surface while this file teaches the difference between
 constructor policy and the ongoing activation or training lifecycle.
-
-## architecture/network/bootstrap/network.bootstrap.utils.ts
 
 ### applySeedOption
 

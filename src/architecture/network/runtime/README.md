@@ -1,5 +1,59 @@
 # architecture/network/runtime
 
+Raised when a pruning schedule window is invalid.
+
+## architecture/network/runtime/network.runtime.errors.ts
+
+### NetworkRuntimeDropConnectProbabilityRangeError
+
+Raised when DropConnect probability is outside [0, 1).
+
+### NetworkRuntimeLayeredWeightNoiseRequiredError
+
+Raised when per-hidden-layer weight noise is requested on a non-layered network.
+
+### NetworkRuntimePruningScheduleWindowError
+
+Raised when a pruning schedule window is invalid.
+
+### NetworkRuntimeStochasticDepthEntryCountError
+
+Raised when stochastic-depth survival entries do not match hidden-layer count.
+
+### NetworkRuntimeStochasticDepthLayeredNetworkRequiredError
+
+Raised when stochastic depth is requested on a non-layered network.
+
+### NetworkRuntimeStochasticDepthSurvivalArrayError
+
+Raised when stochastic-depth survival input is not an array.
+
+### NetworkRuntimeStochasticDepthSurvivalRangeError
+
+Raised when a stochastic-depth survival probability falls outside (0, 1].
+
+### NetworkRuntimeTargetSparsityRangeError
+
+Raised when pruning target sparsity is outside the open interval (0, 1).
+
+### NetworkRuntimeWeightNoiseConfigurationError
+
+Raised when weight-noise configuration shape is invalid.
+
+### NetworkRuntimeWeightNoiseEntryCountError
+
+Raised when hidden-layer weight-noise entries do not match hidden-layer count.
+
+### NetworkRuntimeWeightNoisePerLayerRangeError
+
+Raised when a per-hidden-layer weight-noise value is negative.
+
+### NetworkRuntimeWeightNoiseStdDevRangeError
+
+Raised when weight-noise standard deviation is negative.
+
+## architecture/network/runtime/network.runtime.controls.utils.ts
+
 Runtime control helpers for the public `Network` class.
 
 This chapter owns the public knobs that change how a network behaves at
@@ -7,8 +61,6 @@ training or activation time without changing its long-lived topology
 contract. Keeping these controls here makes the main `network.ts` file read
 more like orchestration while this file documents the regularization and
 schedule policies callers can tune directly.
-
-## architecture/network/runtime/network.runtime.controls.utils.ts
 
 ### clearStochasticDepthSchedule
 

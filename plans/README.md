@@ -27,6 +27,8 @@ Recommended reading order:
 
 Selection guide:
 
+- Current roadmap state: Phase 0 is closed; use [plans/Roadmap.md](Roadmap.md) to start Phase 1 work and treat completed Phase 0 plans as reopen-only baselines unless a new task explicitly reopens them.
+
 - `plans/analyze-trace-solid-split.plans.md`: completed trace-analyzer tooling split and reopen point for future script-boundary work.
 - `plans/architecture-solid-split.plans.md`: completed architecture folderization and docs follow-through baseline, kept as the reopen point for future facade-removal or ownership audits in `src/architecture`.
 - `plans/neat.plans.md`: core NEAT correctness, innovation tracking, crossover alignment, speciation invariants.
@@ -35,7 +37,7 @@ Selection guide:
 - `plans/asciiMaze-typescript-repair.plans.md`: completed `asciiMaze` TypeScript repair baseline and reopen point for future diagnostics.
 - `plans/Browser_Build_and_CDN_Distribution.md`: browser packaging, CDN usage, and distribution ergonomics.
 - `plans/Construct_From_Parts_Graph_Assembly.md`: deterministic graph assembly and validated network construction from parts.
-- `plans/ES2023 migration`: repository-wide ES2023 syntax and modernization lane.
+- `plans/ES2023 migration`: completed Phase 0 ES2023 modernization lane covering project-wide named errors with `Error.cause`, targeted syntax cleanup, shared clone-helper normalization, narrow module-edge cleanup, and lint/CI enforcement.
 - `plans/Evolution_Training_Interoperability_Contracts.md`: contracts between evolution workflows and gradient-based training.
 - `plans/Flappy_Bird_Folder_Documentation_Pass.md`: completed Flappy Bird folder documentation baseline and reopen point for example-docs follow-up.
 - `plans/generate-docs-solid-split.plans.md`: completed docs-generator tooling split and reopen point for future `scripts/generate-docs/` work.
@@ -70,7 +72,7 @@ Task-to-plan trigger phrases:
 - asciiMaze TypeScript diagnostics, example test compile failures, reopen asciiMaze repair: `plans/asciiMaze-typescript-repair.plans.md`
 - construct from parts, graph assembly, deterministic builder: `plans/Construct_From_Parts_Graph_Assembly.md`
 - browser bundle, CDN, browser-first usage: `plans/Browser_Build_and_CDN_Distribution.md`
-- ES2023, immutable array methods, modernization pass, syntax cleanup, migration sequencing: `plans/ES2023 migration`
+- ES2023, immutable array methods, named errors, error.cause, syntax cleanup, lint enforcement, require cleanup, CI enforcement, reopen completed modernization lane: `plans/ES2023 migration`
 - Flappy Bird docs pass, example folder documentation, generated README quality for Flappy: `plans/Flappy_Bird_Folder_Documentation_Pass.md`
 - generate-docs, folder README generation, docs.order, docs generator split: `plans/generate-docs-solid-split.plans.md`
 - ONNX, import/export interoperability: `plans/ONNX_EXPORT_PLAN.md`

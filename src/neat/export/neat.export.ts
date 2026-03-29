@@ -1,4 +1,8 @@
 import type { NeatLike } from '../shared/neat.shared.types';
+import {
+  NeatExportStateBundleValidationError,
+  NeatExportStateControllerRestoreError,
+} from './neat.export.errors';
 
 /**
  * Persistence helpers for the NEAT controller's evolutionary state.
@@ -290,7 +294,7 @@ export async function importStateImpl(
   ) => number | Promise<number>,
 ): Promise<NeatControllerForExport> {
   if (!stateBundle || typeof stateBundle !== 'object')
-    throw new Error('Invalid state bundle');
+    throw new NeatExportStateBundleValidationError('Invalid state bundle');
 
   const neatInstance = (
     this as NeatConstructor & {
@@ -299,7 +303,9 @@ export async function importStateImpl(
   ).fromJSON?.(stateBundle.neat, fitnessFunction);
 
   if (!neatInstance)
-    throw new Error('Failed to create NEAT instance from JSON');
+    throw new NeatExportStateControllerRestoreError(
+      'Failed to create NEAT instance from JSON',
+    );
 
   if (Array.isArray(stateBundle.population))
     await importPopulation.call(

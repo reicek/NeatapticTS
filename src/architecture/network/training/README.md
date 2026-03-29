@@ -1,19 +1,52 @@
 # architecture/network/training
 
-Training pipeline utilities (migrated from legacy architecture/network.train.ts).
+Raised when the training dataset is missing or does not match network IO dimensions.
 
-Provides:
- - Gradient clipping (global / layerwise; norm / percentile variants).
- - Mini & micro-batch gradient accumulation.
- - Optimizer step dispatch (SGD + adaptive optimizers + lookahead wrapper).
- - Simple mixed precision dynamic loss scaling (overflow detection heuristic).
- - Multiple moving-average smoothing strategies for error monitoring (SMA, EMA, adaptive EMA,
-   median, gaussian, trimmed mean, WMA) plus separate plateau averaging.
- - Early stopping, schedule hooks, pruning hooks, and checkpoint callbacks.
+## architecture/network/training/network.training.errors.ts
 
-Notes:
- - This module intentionally keeps imperative style for clarity/perf (avoids heap churn in hot loops).
- - Refactor changes here are documentation & naming only; numerical behavior preserved.
+### NetworkTrainingAccumulationStepsError
+
+Raised when accumulation steps is invalid.
+
+### NetworkTrainingBatchSizeError
+
+Raised when configured batch size exceeds dataset size.
+
+### NetworkTrainingDatasetCompatibilityError
+
+Raised when the training dataset is missing or does not match network IO dimensions.
+
+### NetworkTrainingDropoutRangeError
+
+Raised when dropout is outside the expected range [0, 1).
+
+### NetworkTrainingInvalidCostFunctionError
+
+Raised when the provided cost function is not callable or recognized.
+
+### NetworkTrainingInvalidOptimizerOptionError
+
+Raised when optimizer option type is not supported.
+
+### NetworkTrainingNestedLookaheadError
+
+Raised when lookahead is configured with a nested lookahead base type.
+
+### NetworkTrainingOutputTargetLengthError
+
+Raised when output target length does not match the network output width.
+
+### NetworkTrainingStoppingConditionRequiredError
+
+Raised when no stopping condition is provided to training.
+
+### NetworkTrainingUnknownLookaheadBaseTypeError
+
+Raised when lookahead base optimizer type is unknown.
+
+### NetworkTrainingUnknownOptimizerTypeError
+
+Raised when optimizer type is unknown.
 
 ## architecture/network/training/network.training.utils.types.ts
 
@@ -95,6 +128,21 @@ Returns: A valid EMA alpha in the range (0, 1].
 Training sample consumed by training set loops.
 
 ## architecture/network/training/network.training.utils.ts
+
+Training pipeline utilities (migrated from legacy architecture/network.train.ts).
+
+Provides:
+ - Gradient clipping (global / layerwise; norm / percentile variants).
+ - Mini & micro-batch gradient accumulation.
+ - Optimizer step dispatch (SGD + adaptive optimizers + lookahead wrapper).
+ - Simple mixed precision dynamic loss scaling (overflow detection heuristic).
+ - Multiple moving-average smoothing strategies for error monitoring (SMA, EMA, adaptive EMA,
+   median, gaussian, trimmed mean, WMA) plus separate plateau averaging.
+ - Early stopping, schedule hooks, pruning hooks, and checkpoint callbacks.
+
+Notes:
+ - This module intentionally keeps imperative style for clarity/perf (avoids heap churn in hot loops).
+ - Refactor changes here are documentation & naming only; numerical behavior preserved.
 
 ### __trainingInternals
 

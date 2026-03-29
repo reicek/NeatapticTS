@@ -1,71 +1,599 @@
 ES2023 Migration Plan
 ====================================
 
-**Status:** [PLANNED]
+**Status:** [DONE]
 
-Objective
----------
-Aggressively modernize the codebase to idiomatic ES2023, leveraging the latest TypeScript and JavaScript features to improve code clarity, expressiveness, and maintainability. As an educational library, it should serve as an example of modern coding practices.
+## Scope
 
-Roadmap status
---------------
-This plan is part of `plans/Roadmap.md` Phase 0, but it starts after the current demo-structure work is complete.
+Finish the remaining Phase 0 modernization lane without changing public behavior or broadening into architecture work.
 
-Current prerequisite work before broad mechanical modernization:
-- refine the active demo surfaces, especially `test/examples/flappy_bird`,
-- finish the SOLID split of `test/examples/asciiMaze`,
-- keep touched orchestration in `src/` strict about responsibility boundaries, substitutability, and DRY reuse.
+In scope:
+- safe, behavior-preserving ES2023 syntax upgrades,
+- project-wide explicit named errors with ES2023 `Error.cause`,
+- shared helper normalization where the repo still duplicates legacy clone patterns,
+- narrow workflow and test edge cleanup where legacy `require()` or pre-ES2023 patterns remain,
+- lint and CI enforcement for modern patterns,
+- contributor and documentation sync when enforcement or expectations change.
 
-Guiding Principles
-------------------
-1.  **Modern First**: Always prefer the most modern and expressive ES2023+ features where they improve clarity.
-2.  **Test-Driven Refactoring**: All changes will be validated against the existing comprehensive test suite (909+ tests). No new features will be added, but refactoring will be done with confidence that the public API and behavior remain unchanged.
-3.  **API Stability**: Maintain the existing public API contract. Syntactic changes must be behavior-preserving, as confirmed by passing tests.
-4.  **Scope Discipline**: Keep this plan focused on syntax, modules, and enforcement. Memory-management features and performance architecture belong in `plans/Memory_Optimization.md`.
+Out of scope:
+- NEAT correctness, speciation, crossover, or activation-order work,
+- builder architecture or graph-construction work,
+- memory or performance architecture beyond syntax-level cleanups,
+- ONNX breadth, worker APIs, checkpointing, or example redesign.
 
-Phase Roadmap
--------------
-*   **Phase 0: Baseline & Tooling**
-    *   **Status**: Queued behind current demo refactor work
-    *   **Description**: Set up and configure linting and code style validation tools to enforce modern syntax.
+## Current state
 
-*   **Phase 1: Mechanical Syntax Upgrades**
-    *   **Status**: Not Started
-    *   **Description**: Apply safe, mechanical syntax upgrades like `toSorted()`, object spread (`{...}`), optional chaining (`?.`), and `safeStructuredClone`.
+Baseline already landed:
+- Demo-split and documentation prerequisites from Phase 0 are complete.
+- Package and runtime baseline is already modern: ESM package metadata, Node `>=22`, and TypeScript `target/lib` pinned to `ES2023`.
+- A flat ESLint config and `npm run lint` script already exist.
+- ES2023 idioms are already present across the codebase, including `toSorted()`, `.at(-1)`, `toSpliced()`, and `toReversed()` fallback patterns.
 
-*   **Phase 2: Advanced Feature Adoption**
-    *   **Status**: Not Started
-    *   **Description**: Selectively adopt modern array methods (`.at(-1)`, `findLast`, `with`) and other features (`Error.cause`) where they offer clear benefits.
+Current verified status from this planning refresh:
+- `npm ci`: passing after CI-sensitive workflow updates.
+- `npm run build`: passing.
+- `npm run lint`: passing.
+- targeted packet regressions: passing for the Packet 2 named-error rollout, Packet 3 immutable-array cleanup, Packet 4 tail-access and nullish cleanup, Packet 5 clone normalization, and Packet 6 module-edge cleanup.
+- `npm test`: passing end-to-end (`176` suites, `915` tests).
+- Initial audit snapshot before execution found 82 bare `new Error(...)` throws in `src/`, one existing `*.errors.ts` file, and effectively no `Error.cause` adoption.
+- Authored source no longer contains anonymous `throw new Error(...)` sites under `src/`.
+- Detailed ES2023 feature discovery is now complete enough to let future work start from execution packets instead of another broad reconnaissance pass.
 
-*   **Phase 3: Import Modernization**
-    *   **Status**: Not Started
-    *   **Description**: Convert CommonJS `require()` statements to ES modules (`import`/`export`) and audit for import cycles.
+What was stale in the earlier version of this plan:
+- It still treated the demo refactor lane as a prerequisite even though that work is already done.
+- Its file-by-file task list pointed at pre-split filenames instead of the current folderized tree.
+- It treated import modernization as a repo-wide problem even though the remaining legacy edges are narrow workflow or benchmark cases.
+- It treated lint scaffolding as future work even though the scaffold already exists.
+- It hard-coded a test-count claim instead of using validation gates.
 
-*   **Phase 4: Automation & CI**
-    *   **Status**: Not Started
-    *   **Description**: Implement CI checks to enforce ES2023 style and prevent regressions.
+## Guiding principles
 
-*   **Phase 5: Documentation**
-    *   **Status**: Not Started
-    *   **Description**: Update all project documentation, including `README.md` and contributor guidelines, to reflect the modernized codebase.
+1. Modern-first, but only when clarity or safety improves.
+2. Mechanical, behavior-preserving refactors only.
+3. Pattern-first targeting: work by current boundary and pattern, not by stale legacy filenames.
+4. Enforcement follows cleanup: do not harden lint or CI until the current baseline is green.
+5. Runtime honesty: prefer ES2023-only APIs where the repo baseline supports them, but keep intentional fallbacks when they are still required by real browser, workflow, or optional-dependency constraints.
+6. Scope discipline: performance architecture stays in `plans/Memory_Optimization.md`, and correctness architecture stays in `plans/neat.plans.md`.
+7. Folder-local SRP: when multiple files in one folder share error contracts, prefer a folder-local plural `*.errors.ts` module over a root-level mega registry.
 
-Success Metrics
----------------
--   **Stability**: 100% of existing tests must pass after each phase.
--   **Readability**: Codebase is cleaner and easier to understand, with legacy patterns removed.
--   **Modernization**: Widespread, idiomatic use of ES2023 features.
+## Locked execution defaults
 
-Initial Refactor Task List (Actionable Now)
-------------------------------------------
-1.  toSorted in `neat.evaluate.ts`.
-2.  Spread instead of Object.assign in `network.slab.ts`.
-3.  Optional chaining rewrites (mutation/species/telemetry hotspots).
-4.  Introduce `safeStructuredClone` and refactor `network.stats.ts`.
-5.  Numeric separators (compat / loss scale / RNG).
-6.  Prepare lint config scaffold.
+These defaults were chosen during this refresh and should be treated as pre-approved for future execution unless the user changes direction.
 
-Completion Criteria
--------------------
-All phases executed, all tests passing, documentation updated, and no open regression issues tagged `ES2023-migration`.
+- Scope boundary: execute this as a project-wide lane, not a single-folder-only cleanup.
+- Error module naming: use plural `*.errors.ts` to match repo naming conventions.
+- Error ownership: prefer folder-local modules for shared contracts inside a folder; reserve parent-level error modules for genuinely cross-folder shared failures.
+- Error construction: every new named error should accept `ErrorOptions` and preserve causal chains with `super(message, { cause: options?.cause })`.
+- Wrapping policy: any catch-and-rethrow site should preserve the original failure as `cause`.
+- Goal state: authored source should not rely on anonymous `new Error(...)` throws once this lane is complete; code-generation templates should follow the same rule where practical.
+- Execution bias: future runs should execute by the packet order below instead of re-discovering scope, naming, or sequencing from scratch.
+
+## Canonical named-error template
+
+Use this template unless a boundary has a clear reason to share a small local base class.
+
+```ts
+/**
+ * Raised when the evolve dataset is missing or does not match network IO.
+ */
+export class NetworkEvolveDatasetCompatibilityError extends Error {
+   constructor(message: string, options?: ErrorOptions) {
+      super(message, { cause: options?.cause });
+      this.name = 'NetworkEvolveDatasetCompatibilityError';
+   }
+}
+```
+
+Wrapper pattern:
+
+```ts
+try {
+   return await buildWorkerFitness(...);
+} catch (error: unknown) {
+   throw new NetworkEvolveWorkerSetupError(
+      'Failed to initialize evolve worker fitness setup.',
+      { cause: error },
+   );
+}
+```
+
+Execution rules:
+- Prefer one exported class per failure contract, not one generic folder catch-all.
+- Keep the class in the nearest shared `*.errors.ts` file for that folder.
+- Preserve the original message text where behavior compatibility matters.
+- Use wrapper classes only when the new boundary adds real context; otherwise rethrow the original named error.
+- Do not add deep inheritance trees unless multiple classes in the same folder clearly share behavior beyond `name` and `cause`.
+
+## Detailed discovery inventory
+
+### [DONE] Category 1 - named errors and `Error.cause`
+
+- Broadest remaining modernization gap in `src/`.
+- Current audit found 82 anonymous `new Error(...)` throws.
+- Only one `*.errors.ts` file currently exists under `src/`, and it is empty.
+- `Error.cause` adoption is effectively absent.
+- Highest-signal starting template remains `src/architecture/network/evolve/**`, followed by `runtime`, `training`, `activate`, `standalone`, `onnx`, and adjacent architecture-core folders.
+
+### [DONE] Category 2 - immutable array and collection helpers
+
+- Remaining high-signal copy-before-sort opportunities are concentrated rather than repo-wide.
+- Concrete current hotspots include:
+   - `src/architecture/network/training/network.training.smoothing.utils.ts`
+   - `src/architecture/network/training/network.training.gradient-clip.utils.ts`
+   - `src/architecture/network/standalone/network.standalone.utils.finalize.ts`
+- The repo already uses `toSorted()` heavily in `src/neat/**`, `src/architecture/network/topology/**`, and pruning utilities.
+- Guardrail from discovery: many `sort()` and `splice()` sites are intentionally mutating and should not be "modernized" just for style.
+
+### [DONE] Category 3 - tail access and index readability
+
+- Small but concrete remaining `.at(-1)` opportunities exist.
+- The clearest cluster is in `src/architecture/architect/architect.ts`.
+- Reverse loops and splice-safe index walks in mutation, remove, group, and layer utilities are not tail-read problems and should stay imperative where they are clearer.
+
+### [DONE] Category 4 - nullish and defaulting semantics
+
+- This is a broad but selective pass, not a mechanical search-and-replace.
+- Many `||` defaults still exist in `src/architecture/network/training/**`, `src/architecture/node/node.ts`, `src/neat/**`, telemetry, and population helpers.
+- A meaningful subset likely wants `??` because `0` is a valid user value; another subset intentionally wants falsy fallback semantics.
+- This category needs targeted semantic review per boundary rather than blind conversion.
+
+### [DONE] Category 5 - clone normalization and `structuredClone`
+
+- The deepest remaining clone hotspot is narrow and clear.
+- `src/architecture/network/stats/network.stats.utils.ts` still owns a local `structuredClone` plus JSON fallback path.
+- No shared `safeStructuredClone` helper currently exists in `src/`.
+
+### [DONE] Category 6 - module-edge modernization
+
+- Remaining `require()` usage is very limited.
+- High-signal edges are:
+   - `.github/workflows/publish.yml`
+   - `test/benchmarks/benchmark.browser.headless.test.ts`
+- This category is narrow enough to leave until later packets once the authored-source modernization work is stable.
+
+### [DONE] Category 7 - low-signal or mostly-complete ES2023 features
+
+- `Object.assign(...)`: no remaining `src/` cluster found during this pass.
+- `toSpliced()` and `toReversed()`: already partially adopted, with a few compatibility-minded fallback sites still present.
+- `findLast`, `findLastIndex`, and `Array.prototype.with(...)`: no broad remaining cluster found.
+- Numeric separators: there are candidate constants, but they are scattered and better handled opportunistically while touching nearby code.
+- These features do not currently justify their own early broad execution packet.
+
+## Coverage backlog
+
+### [DONE] Baseline and tooling already landed
+
+- ESM package baseline in `package.json`.
+- ES2023 compiler target and libs in `tsconfig.json`.
+- Existing ESLint flat config plus `npm run lint`.
+- Existing ES2023 usage in `src/` and `test/`.
+
+### [DONE] Workstream A - mechanical syntax cleanup
+
+Completed focus:
+
+- Replace immutable `[...array].sort(...)` and similar patterns with `toSorted()` where the caller expects a new array.
+- Replace tail reads like `array[array.length - 1]` with `.at(-1)` where it improves readability.
+- Replace shallow `Object.assign({}, value)` or `Object.assign([], value)` patterns with spread where behavior stays identical.
+- Prefer `??` or `?.` over longer guard chains where the result is clearer.
+- Introduce numeric separators only for long literals that materially improve readability.
+
+Completed boundaries:
+- `src/architecture/network/training/**`
+- `src/architecture/network/standalone/**`
+- remaining `src/neat/**` utility hotspots
+- any post-split `src/architecture/network/slab/**` clone or merge helpers
+
+Guardrails:
+- Do not rewrite intentional in-place operations in hot paths solely for style.
+- Do not remove optional ES2023 fallbacks unless the runtime surface is confirmed safe.
+
+### [DONE] Workstream B - explicit named errors and `Error.cause` adoption
+
+Completed outcome:
+
+Concrete target:
+- Introduce folder-local plural `*.errors.ts` modules wherever a folder owns shared error contracts.
+- Replace bare `throw new Error(...)` sites with explicit named errors.
+- Ensure wrapper failures use ES2023 `Error.cause`.
+- Keep error messages stable unless an improved message materially clarifies the contract.
+- Update generated-code templates that emit runtime throws so they also use named errors when practical.
+
+Named-error conventions:
+- Prefer a small number of focused classes per folder such as validation, configuration, state, runtime, or interoperability errors.
+- Keep classes narrow and descriptive instead of centralizing unrelated failures into one catch-all type.
+- Add JSDoc to exported error classes because they become part of the educational surface.
+- Keep constructors simple: message plus optional `ErrorOptions`, with no deep inheritance tree unless a shared base clearly reduces duplication.
+
+Completed boundaries:
+- `src/architecture/network/evolve/**` as the canonical first template
+- `src/architecture/network/runtime/**`
+- `src/architecture/network/training/**`
+- `src/architecture/network/activate/**`
+- `src/architecture/network/standalone/**`
+- `src/architecture/network/onnx/**`
+- `src/architecture/{architect,layer,group,node}/**`
+- `src/neat/**` hotspots with explicit contract failures
+- `src/methods/**` and other utility boundaries that still throw generic errors
+
+Guardrails:
+- Do not build a project-wide mega error registry.
+- Do not change public behavior beyond giving errors explicit names and preserved causes.
+- Do not swallow original failures when wrapping; preserve them via `cause`.
+
+### [DONE] Workstream C - shared clone and helper normalization
+
+Completed outcome:
+
+Completed boundary:
+- Introduce a repo-consistent `safeStructuredClone` helper, or promote an existing equivalent if one already exists during execution.
+- Refactor `src/architecture/network/stats/**` and any duplicate clone helpers to use the shared path.
+- Keep typed-array, plain-object, and error-path semantics explicit in JSDoc.
+
+Guardrail:
+- This is a behavior-preserving helper extraction, not a serialization redesign.
+
+### [DONE] Workstream D - tail access and nullish default semantics
+
+Completed focus:
+
+Concrete target:
+- Replace clear tail reads like `array[array.length - 1]` with `.at(-1)` where it improves readability.
+- Replace `||` with `??` only where `0`, `false`, or empty strings are valid values and should not trigger fallback behavior.
+- Keep imperative index arithmetic where the logic is about reverse traversal or splice-safe mutation rather than tail access.
+
+Completed boundaries:
+- `src/architecture/architect/architect.ts`
+- `src/architecture/network/training/**`
+- `src/architecture/node/node.ts`
+- selected `src/neat/**` telemetry and population helpers
+
+Guardrails:
+- Do not mass-convert every `||` site.
+- Treat this as a semantics pass, not a style-only pass.
+
+### [DONE] Workstream E - narrow module-edge modernization
+
+Completed outcome:
+
+Completed scope:
+- Workflow shell snippets that still read `package.json` via `require()` in `.github/workflows/**`.
+- Benchmark or test edges that use `require()` for optional dependency probing or graceful fallback.
+
+Decision rule:
+- Convert a remaining edge only when the ESM replacement is equally simple and keeps the same failure mode.
+- Keep a narrow edge as-is when it is intentionally defensive and not worth destabilizing the Phase 0 lane.
+
+### [DONE] Workstream F - low-signal ES2023 follow-through
+
+Completed outcome:
+
+Completed result:
+- Confirm no meaningful `Object.assign(...)` debt reappears in `src/` during execution.
+- Clean up any remaining `toReversed()` or `toSpliced()` compatibility sites when adjacent code is already being touched.
+- Adopt numeric separators for long literals only where readability clearly improves.
+- Use `findLast`, `findLastIndex`, or `with(...)` only when a touched boundary gains clarity from them; do not force their use to satisfy a checklist.
+
+Guardrails:
+- This workstream is intentionally later and opportunistic.
+- Do not churn stable code just to use every ES2023 feature once.
+
+### [DONE] Workstream G - lint and CI enforcement
+
+Completed outcome:
+
+Concrete steps:
+- Make `npm run lint` green.
+- Add or tighten CI coverage so ES2023 regressions do not silently return.
+- Consider targeted enforcement for the highest-signal legacy patterns only after the repo passes cleanly.
+- Treat workflow or package changes as CI-sensitive: if manifests or workflows change, run `npm ci` before claiming the gate is fixed.
+
+Resolved blocker:
+- The former lint failure in `src/neat.ts` was removed during Packet 1 and lint is now part of CI and publish workflows.
+
+### [DONE] Workstream H - contributor and documentation sync
+
+Completed outcome:
+
+- Refresh any contributor-facing guidance that still describes the ES2023 migration as future work.
+- Keep generated `src/**/README.md` handling unchanged: update source docs and run docs generation only when doc-affecting edits actually require it.
+- Update this plan, `plans/Roadmap.md`, and `plans/README.md` so the Phase 0 story remains accurate.
+
+## Execution packet map
+
+Use these packets to reduce rediscovery and keep future execution direct.
+
+1. [DONE] Packet 0 - discovery and scope lock
+   - Repo-wide ES2023 feature discovery completed.
+   - Naming, scope, and execution defaults locked.
+2. [DONE] Packet 1 - lint baseline and named-error template
+   - Fix the existing lint blocker in `src/neat.ts`.
+   - Lock the canonical named-error constructor shape.
+   - Convert `src/architecture/network/evolve/**` into the first reusable template.
+   - Completed coverage:
+      - Removed unused `GenomeLike` type import in `src/neat.ts`.
+      - Added folder-local named errors in `src/architecture/network/evolve/network.evolve.errors.ts`.
+      - Replaced anonymous throws in `src/architecture/network/evolve/network.evolve.setup.utils.ts` with named errors.
+   - Validation snapshot:
+      - `npm run build`: pass
+      - `npm run lint`: pass
+      - targeted tests: `test/network/network.evolve.test.ts`, `test/network/network.evolve.branches.test.ts`, `test/network/network.evolve.multithread.branches.test.ts` (all pass)
+3. [DONE] Packet 2 - project-wide named-error rollout
+   - Convert the remaining folders that still throw anonymous `new Error(...)` failures.
+   - Preserve wrapper chains with `Error.cause`.
+   - Completed coverage (current pass):
+      - Converted runtime boundary anonymous throws to folder-local named errors.
+      - Added `src/architecture/network/runtime/network.runtime.errors.ts`.
+      - Replaced throws in:
+         - `src/architecture/network/runtime/network.runtime.controls.utils.ts`
+         - `src/architecture/network/runtime/network.runtime.diagnostics.utils.ts`
+      - Converted training boundary anonymous throws to folder-local named errors.
+      - Added `src/architecture/network/training/network.training.errors.ts`.
+      - Replaced throws in:
+         - `src/architecture/network/training/network.training.finalize.utils.ts`
+         - `src/architecture/network/training/network.training.backprop.utils.ts`
+      - Converted activate boundary anonymous throws to folder-local named errors.
+      - Added `src/architecture/network/activate/network.activate.errors.ts`.
+      - Replaced throws in:
+         - `src/architecture/network/activate/network.activate.core.utils.ts`
+         - `src/architecture/network/activate/network.activate.batch.utils.ts`
+         - `src/architecture/network/activate/network.activate.notrace.utils.ts`
+      - Converted standalone boundary anonymous throws and generated-source error templates to named errors.
+      - Added `src/architecture/network/standalone/network.standalone.errors.ts`.
+      - Replaced throws in:
+         - `src/architecture/network/standalone/network.standalone.utils.setup.ts`
+         - `src/architecture/network/standalone/network.standalone.utils.finalize.ts`
+      - Converted ONNX boundary anonymous throws to folder-local named errors.
+      - Added `src/architecture/network/onnx/network.onnx.errors.ts`.
+      - Replaced throws in:
+         - `src/architecture/network/onnx/network.onnx.layer-analysis.utils.ts`
+         - `src/architecture/network/onnx/import/network.onnx.runtime-load.utils.ts`
+         - `src/architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.ts`
+      - Converted architect boundary anonymous throws to folder-local named errors.
+      - Added `src/architecture/architect/architect.errors.ts`.
+      - Replaced throws in:
+         - `src/architecture/architect/architect.ts`
+      - Converted layer boundary anonymous throws to folder-local named errors.
+      - Added `src/architecture/layer/layer.errors.ts`.
+      - Replaced throws in:
+         - `src/architecture/layer/layer.activation.utils.ts`
+         - `src/architecture/layer/layer.connection.utils.ts`
+         - `src/architecture/layer/layer.factory.recurrent.utils.ts`
+         - `src/architecture/layer/layer.propagation.utils.ts`
+      - Converted group boundary anonymous throws to folder-local named errors.
+      - Added `src/architecture/group/group.errors.ts`.
+      - Replaced throws in:
+         - `src/architecture/group/group.ts`
+      - Converted node boundary anonymous throws to folder-local named errors.
+      - Added `src/architecture/node/node.errors.ts`.
+      - Replaced throws in:
+         - `src/architecture/node/node.ts`
+      - Converted remaining authored-source named-error hotspots to folder-local errors.
+      - Added:
+         - `src/neat/export/neat.export.errors.ts`
+         - `src/neat/multiobjective/crowding/multiobjective.crowding.errors.ts`
+         - `src/neat/selection/core/selection.core.errors.ts`
+         - `src/methods/rate/rate.errors.ts`
+         - `src/methods/cost/cost.errors.ts`
+         - `src/architecture/network/bootstrap/network.bootstrap.errors.ts`
+         - `src/architecture/network/network.errors.ts`
+         - `src/architecture/network/gating/network.gating.errors.ts`
+         - `src/architecture/network/mutate/network.mutate.errors.ts`
+         - `src/architecture/network/serialize/network.serialize.errors.ts`
+         - `src/architecture/network/genetic/network.genetic.errors.ts`
+         - `src/architecture/network/stats/network.stats.errors.ts`
+         - `src/architecture/network/remove/network.remove.errors.ts`
+      - Replaced throws in:
+         - `src/neat/export/neat.export.ts`
+         - `src/neat/multiobjective/crowding/multiobjective.crowding.ts`
+         - `src/neat/selection/core/selection.core.ts`
+         - `src/methods/rate/rate.utils.ts`
+         - `src/methods/cost/cost.utils.ts`
+         - `src/architecture/network/bootstrap/network.bootstrap.utils.ts`
+         - `src/architecture/network/network.ts`
+         - `src/architecture/network/gating/network.gating.gate.utils.ts`
+         - `src/architecture/network/gating/network.gating.remove.utils.ts`
+         - `src/architecture/network/mutate/network.mutate.utils.ts`
+         - `src/architecture/network/mutate/network.mutate.handlers.utils.ts`
+         - `src/architecture/network/serialize/network.serialize.json.utils.ts`
+         - `src/architecture/network/genetic/network.genetic.setup.utils.ts`
+         - `src/architecture/network/stats/network.stats.test.utils.ts`
+         - `src/architecture/network/remove/network.remove.validation.utils.ts`
+   - Validation snapshot (current pass):
+      - `npm run build`: pass
+      - `npm run lint`: pass
+      - targeted tests: `test/network/network.pruning.test.ts`, `test/network/regularization.dropconnect.validation.test.ts`, `test/network/regularization.dropconnect.test.ts`, `test/network/regularization.weightnoise.test.ts`, `test/network/regularization.stochasticdepth.test.ts`, `test/training/training.extensions.test.ts` (all pass)
+      - targeted tests: `test/network/network.training.basic.test.ts`, `test/network/network.training.advanced.test.ts`, `test/network/network.training.helpers.test.ts`, `test/training/training.train.options.coverage.test.ts`, `test/training/training.optimizer.test.ts`, `test/training/training.edge-cases.test.ts` (all pass)
+      - targeted tests: `test/network/network.activate.test.ts`, `test/network/network.activateBatch.test.ts` (all pass)
+      - standalone boundary: `npm run build` and `npm run lint` pass; dedicated `test/network/standalone.test.ts` is currently not included by the active Jest project inventory, so standalone-specific runtime assertions remain a known validation gap for later closure.
+      - targeted tests: `test/network/onnx.export.test.ts`, `test/onnx/onnx.import.test.ts`, `test/onnx/onnx.roundtrip.test.ts` (all pass)
+      - targeted tests: `test/network/architecture.descriptor.test.ts`, `test/network/structure.serialization.test.ts` (all pass)
+      - layer boundary: `npm run build` and `npm run lint` pass; dedicated `test/architecture/layer.test.ts` is currently not included by the active Jest project inventory, so layer-specific runtime assertions remain a known validation gap for later closure.
+      - group boundary: `npm run build` and `npm run lint` pass; dedicated `test/architecture/group.test.ts` is currently not included by the active Jest project inventory, so group-specific runtime assertions remain a known validation gap for later closure.
+      - targeted tests: `test/network/mutation.effects.test.ts`, `test/network/network.mutate.test.ts`, `test/network/network.mutate.edgecases.test.ts`, `test/network/error.handling.test.ts` (all pass)
+      - targeted tests: `test/neat/neat.export.state.rehydrate.test.ts`, `test/neat/neat.export.meta.fromjson.test.ts`, `test/neat/neat.selection.strategies.test.ts`, `test/methods/cost.test.ts`, `test/methods/rate.linearWarmupDecay.test.ts`, `test/network/network.topology-intent.test.ts`, `test/network/network.gating.removal.test.ts`, `test/network/network.remove.errors.test.ts`, `test/network/network.stats.test.ts`, `test/network/structure.serialization.test.ts` (all pass)
+4. [DONE] Packet 3 - immutable array and collection helper cleanup
+   - Convert copy-before-sort patterns to `toSorted()` where semantics are immutable.
+   - Review `toReversed()` and `toSpliced()` opportunities only when they improve clarity.
+   - Completed coverage:
+      - Replaced immutable copy-before-sort patterns with `toSorted()` in:
+         - `src/architecture/network/training/network.training.smoothing.utils.ts`
+         - `src/architecture/network/training/network.training.gradient-clip.utils.ts`
+   - Validation snapshot:
+      - `npm run build`: pass
+      - `npm run lint`: pass
+      - targeted tests: `test/network/network.training.helpers.test.ts`, `test/network/network.training.basic.test.ts`, `test/network/network.training.advanced.test.ts`, `test/training/training.smoothing.types.test.ts`, `test/training/training.gradient.features.test.ts`, `test/training/training.gradient.refinements.test.ts`, `test/training/training.edge-cases.test.ts`, `test/training/training.train.options.coverage.test.ts` (all pass)
+5. [DONE] Packet 4 - tail access and nullish semantics cleanup
+   - Convert clear `.at(-1)` opportunities.
+   - Review `||` sites for true nullish semantics and convert only where behavior is preserved.
+   - Completed coverage:
+      - Replaced safe tail reads with `.at(-1)` in `src/architecture/architect/architect.ts`.
+      - Replaced safe falsy-default sites with `??` in:
+         - `src/architecture/node/node.ts`
+         - `src/architecture/network/training/network.training.finalize.utils.ts`
+         - `src/neat/init/neat.init.ts`
+         - `src/neat/telemetry/metrics/telemetry.metrics.objectives.ts`
+         - `src/neat/telemetry/recorder/telemetry.recorder.ts`
+   - Validation snapshot:
+      - `npm run build`: pass
+      - `npm run lint`: pass
+      - targeted tests: `test/architecture/node.test.ts`, `test/training/training.train.options.coverage.test.ts`, `test/neat/neat.advanced.test.ts`, `test/neat/neat.objective.events.test.ts`, `test/neat/neat.telemetry.objective.events.test.ts`, `test/neat/neat.telemetry.test.ts`, `test/network/structure.serialization.test.ts` (all pass)
+6. [DONE] Packet 5 - clone normalization
+   - Land a shared `safeStructuredClone` path.
+   - Retire duplicate local clone helpers where safe.
+   - Completed coverage:
+      - Added shared helper `src/utils/safeStructuredClone.ts`.
+      - Replaced the local deep-clone helper in `src/architecture/network/stats/network.stats.utils.ts`.
+      - Removed the now-unused `GlobalThisWithStructuredClone` type from `src/architecture/network/network.types.ts`.
+   - Validation snapshot:
+      - `npm run build`: pass
+      - `npm run lint`: pass
+      - targeted tests: `test/network/network.stats.test.ts`, `test/training/training.gradient.refinements.test.ts`, `test/neat/neat.telemetry.test.ts` (all pass)
+7. [DONE] Packet 6 - module-edge and low-signal ES2023 cleanup
+   - Audit remaining workflow and benchmark `require()` edges.
+   - Finish opportunistic numeric separators and low-signal ES2023 helpers.
+   - Completed coverage:
+      - Replaced workflow `require('./package.json')` reads with `node --input-type=module` package parsing in `.github/workflows/publish.yml`.
+      - Replaced dynamic `require()` usage in `test/benchmarks/benchmark.browser.headless.test.ts` with `await import(...)`.
+      - Fixed the benchmark harness Puppeteer launch typing by using `headless: true`.
+   - Validation snapshot:
+      - `npm ci`: pass
+      - `npm run build`: pass
+      - `npm run lint`: pass
+      - targeted tests: `test/benchmarks/benchmark.browser.headless.test.ts` with `SKIP_BROWSER_BENCH=1` (pass)
+8. [DONE] Packet 7 - enforcement, docs, and closure
+   - Make lint and CI the durable gate.
+   - Sync tracker, roadmap, and docs state.
+   - Completed coverage:
+      - Added `npm run lint` to `.github/workflows/ci.yml`.
+      - Added `npm run lint` to `.github/workflows/publish.yml`.
+      - Synced completion state into `plans/ES2023 migration`, `plans/Roadmap.md`, and `plans/README.md`.
+   - Validation snapshot:
+      - `npm ci`: pass
+      - `npm run build`: pass
+      - `npm run lint`: pass
+      - `npm test`: pass (`176` suites, `915` tests)
+
+## Linear logging rules
+
+Historical note: these rules were used while the lane was active and are preserved here as the completion log contract that was followed.
+
+During execution, this file was updated in-order instead of keeping progress in chat only.
+
+1. Start one packet at a time.
+   - Do not mark a later packet `[WIP]` while an earlier packet is still unresolved unless the plan explicitly records a defer decision.
+2. After each packet finishes, update this plan immediately.
+   - Record touched boundaries, key validations, remaining exceptions, and the next packet.
+3. Keep completed packet notes compressed.
+   - Preserve what was covered and any durable reopen conditions, but do not turn the plan into a transcript.
+4. When an execution pass discovers a new sub-cluster, add it to the relevant packet instead of creating an untracked side lane.
+5. Closure is linear.
+   - The plan should only move to terminal done-state after Packet 7 closes and the remaining exceptions are explicitly documented.
+
+## Implementation plan
+
+### Phase 0 - planning refresh and backlog lock [DONE]
+
+- Replace stale prerequisite language with current roadmap reality.
+- Convert the old file-by-file list into current boundary-based work buckets.
+- Record the verified build and lint baseline.
+- Lock the named-error and execution defaults so future runs can start executing instead of re-discovering scope.
+- Complete detailed ES2023 feature discovery so the remaining work can run packet-by-packet.
+
+### Phase 1 - named-error conventions and template slice [DONE]
+
+Deliverables:
+- Establish the error-class constructor pattern and folder-local `*.errors.ts` ownership rule.
+- Convert `src/architecture/network/evolve/**` into the canonical template slice.
+- Fix the current lint baseline blocker in `src/neat.ts` so the lane can use lint as a trustworthy gate.
+
+Exit criteria:
+- The repo has one documented, repeatable named-error pattern with `Error.cause`, and the first template boundary validates cleanly.
+
+### Phase 2 - project-wide named-error rollout [DONE]
+
+Deliverables:
+- Packetized conversion across the remaining project folders that still throw anonymous errors.
+- Folder-local `*.errors.ts` files added where shared contracts justify them.
+- Wrapper sites updated to preserve causal chains.
+
+Validation:
+- `npm run build`
+- `npm run lint`
+- targeted tests for each touched packet
+- `npm test` at least after each major packet or when the boundary is broad
+
+### Phase 3 - immutable array and collection helper cleanup [DONE]
+
+Deliverables:
+- Convert the remaining high-signal copy-before-sort sites to `toSorted()`.
+- Modernize standalone or helper-level immutable collection handling where the semantics stay immutable.
+- Leave intentionally mutating `sort()`, `splice()`, and reverse-traversal logic alone.
+
+Validation:
+- `npm run build`
+- `npm run lint`
+- targeted tests for training, standalone, and any touched helper boundaries
+
+### Phase 4 - tail access and nullish semantics cleanup [DONE]
+
+Deliverables:
+- Land the remaining clear `.at(-1)` conversions.
+- Convert only the `||` defaults that discovery or execution confirms should be nullish-only.
+
+Validation:
+- `npm run build`
+- `npm run lint`
+- targeted tests for touched training, architecture, or telemetry boundaries
+
+### Phase 5 - shared clone helper normalization [DONE]
+
+Deliverables:
+- Shared safe-clone helper landed.
+- `network.stats` and any duplicate local clone helpers updated.
+
+Validation:
+- `npm run build`
+- `npm run lint`
+- targeted tests around training and stat serialization surfaces
+- `npm test` if the helper touches broad shared behavior
+
+### Phase 6 - module-edge and low-signal ES2023 cleanup [DONE]
+
+Deliverables:
+- Remaining workflow and benchmark `require()` usage either modernized or explicitly documented as intentional exceptions.
+- Opportunistic low-signal ES2023 cleanups landed where they improve touched code.
+
+Validation:
+- `npm run build`
+- `npm run lint`
+- `npm ci` if workflow or manifest files change
+- relevant workflow or benchmark smoke verification where practical
+
+### Phase 7 - enforcement and closeout [DONE]
+
+Deliverables:
+- `npm run lint` green
+- CI updated if needed
+- plan, roadmap, and index status synchronized
+
+Exit criteria:
+- `npm run build`, `npm run lint`, and `npm test` all green
+- no high-signal ES2023 regression pockets left in the tracked boundaries
+- no authored-source anonymous `new Error(...)` throws left in the targeted project scope unless explicitly documented as an intentional exception
+- remaining exceptions documented explicitly instead of being accidental drift
+
+## Success metrics
+
+- The plan remains Phase-0-bounded and does not absorb correctness or memory-architecture work.
+- The project reaches explicit named errors as the default failure-contract style, with ES2023 `Error.cause` preserved on wrapper paths.
+- Modern syntax use becomes deliberate and consistent across the live folderized tree.
+- The repo has a clean lint baseline and a durable CI guard for the patterns this lane owns.
+- The remaining exceptions, if any, are small, intentional, and documented.
+
+## Closeout
+
+- Phase 0 ES2023 modernization is closed.
+- Reopen only for newly introduced legacy patterns or a future follow-up that intentionally broadens scope beyond this completed lane.
 
 

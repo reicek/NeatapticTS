@@ -2,6 +2,7 @@ import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';
 import { config } from '../../../config';
+import { NetworkGatingNodeMembershipError } from './network.gating.errors';
 
 /**
  * Validate that a candidate gater node belongs to the target network.
@@ -16,7 +17,7 @@ export function assertGaterNodeBelongsToNetwork(
   node: Node,
 ): void {
   if (!network.nodes.includes(node)) {
-    throw new Error(
+    throw new NetworkGatingNodeMembershipError(
       'Gating node must be part of the network to gate a connection!',
     );
   }

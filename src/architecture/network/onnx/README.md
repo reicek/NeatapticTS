@@ -1387,6 +1387,30 @@ Append-a-spec metadata context for JSON-array metadata keys.
 
 Context for comparing two scalar weights with numeric tolerance.
 
+## architecture/network/onnx/network.onnx.errors.ts
+
+Raised when ONNX export cannot resolve a valid layered ordering.
+
+### NetworkOnnxLayerOrderingUnresolvableError
+
+Raised when ONNX export cannot resolve a valid layered ordering.
+
+### NetworkOnnxMixedActivationsUnsupportedError
+
+Raised when ONNX export encounters mixed activations without mixed-activation support enabled.
+
+### NetworkOnnxPartialConnectivityUnsupportedError
+
+Raised when ONNX export requires a connection that is missing.
+
+### NetworkOnnxPerceptronSizeValidationError
+
+Raised when ONNX import perceptron metadata omits required input/output sizes.
+
+### NetworkOnnxRecurrentMixedActivationsUnsupportedError
+
+Raised when recurrent ONNX export encounters unsupported mixed activations.
+
 ## architecture/network/onnx/network.onnx.layer-analysis.utils.ts
 
 ### appendLastResolvedLayer

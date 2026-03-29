@@ -479,3 +479,19 @@ Normalized SUB_NODE mutation configuration used during node-removal rewiring.
 ### PreservedGaters
 
 Mutable gater collection retained while removing a hidden node.
+
+## architecture/network/gating/network.gating.errors.ts
+
+Raised when a gating node does not belong to the target network.
+
+### NetworkGatingNodeMembershipError
+
+Raised when a gating node does not belong to the target network.
+
+### NetworkGatingRemovalNodeNotFoundError
+
+Raised when a gating removal request targets a node that is not in the network.
+
+### NetworkGatingStructuralAnchorRemovalError
+
+Raised when a gating removal request targets a structural anchor node.

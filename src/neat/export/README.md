@@ -287,3 +287,15 @@ fs.writeFileSync('neat-meta.json', JSON.stringify(meta));
 const metaLoaded = JSON.parse(fs.readFileSync('neat-meta.json', 'utf8')) as NeatMetaJSON;
 const neat2 = Neat.fromJSONImpl(metaLoaded, fitnessFn); // empty population
 ```
+
+## neat/export/neat.export.errors.ts
+
+Raised when a persisted NEAT state bundle is missing or malformed.
+
+### NeatExportStateBundleValidationError
+
+Raised when a persisted NEAT state bundle is missing or malformed.
+
+### NeatExportStateControllerRestoreError
+
+Raised when a NEAT controller cannot be rehydrated from serialized state.

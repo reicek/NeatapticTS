@@ -21,6 +21,10 @@ import type {
   ConnectionWeightNoiseProps,
   NetworkRuntimeProps,
 } from '../network.types';
+import {
+  NetworkActivateCorruptedStructureError,
+  NetworkActivateInputSizeMismatchError,
+} from './network.activate.errors';
 
 /**
  * Produce a normally distributed random sample using the Box-Muller transform.
@@ -111,7 +115,7 @@ function prepareTopologyForActivation(
  */
 function validateInputVector(network: Network, inputVector: number[]): void {
   if (!Array.isArray(inputVector) || inputVector.length !== network.input) {
-    throw new Error(
+    throw new NetworkActivateInputSizeMismatchError(
       `Input size mismatch: expected ${network.input}, got ${
         inputVector ? inputVector.length : UNDEFINED_INPUT_LENGTH_TEXT
       }`,
@@ -161,7 +165,9 @@ function acquireOutputBuffer(outputSize: number): ActivationArray {
  */
 function validateNetworkNodes(network: Network): void {
   if (!network.nodes || network.nodes.length === 0) {
-    throw new Error('Network structure is corrupted or empty. No nodes found.');
+    throw new NetworkActivateCorruptedStructureError(
+      'Network structure is corrupted or empty. No nodes found.',
+    );
   }
 }
 

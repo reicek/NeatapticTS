@@ -3,6 +3,12 @@ import Group from '../group/group';
 import * as methods from '../../methods/methods';
 import Node from '../node';
 import type { LayerConnectionContext, LayerLike } from './layer.utils.types';
+import {
+  LayerInputSourceUnavailableError,
+  LayerInputTargetUnavailableError,
+  LayerOutputConnectUnavailableError,
+  LayerOutputGateUnavailableError,
+} from './layer.errors';
 
 const LAYER_OUTPUT_CONNECT_ERROR =
   'Layer output is not defined. Cannot connect from this layer.';
@@ -54,7 +60,7 @@ export function connectLayer(
 
   // Step 1: Ensure the output group exists before connecting.
   if (!output) {
-    throw new Error(LAYER_OUTPUT_CONNECT_ERROR);
+    throw new LayerOutputConnectUnavailableError(LAYER_OUTPUT_CONNECT_ERROR);
   }
 
   // Step 2: Delegate connection creation based on the target type.
@@ -97,7 +103,7 @@ export function gateLayer(
 
   // Step 1: Ensure the output group exists before gating.
   if (!output) {
-    throw new Error(LAYER_OUTPUT_GATE_ERROR);
+    throw new LayerOutputGateUnavailableError(LAYER_OUTPUT_GATE_ERROR);
   }
 
   // Step 2: Delegate gating to the output group.
@@ -149,11 +155,11 @@ export function inputLayer(
 
   // Step 3: Ensure the output group exists before connecting.
   if (!output) {
-    throw new Error(LAYER_OUTPUT_INPUT_TARGET_ERROR);
+    throw new LayerInputTargetUnavailableError(LAYER_OUTPUT_INPUT_TARGET_ERROR);
   }
 
   if (!sourceGroup) {
-    throw new Error(LAYER_OUTPUT_INPUT_SOURCE_ERROR);
+    throw new LayerInputSourceUnavailableError(LAYER_OUTPUT_INPUT_SOURCE_ERROR);
   }
 
   // Step 4: Connect the source group to the output group.

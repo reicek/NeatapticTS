@@ -1,9 +1,12 @@
 # architecture/network/serialize
 
-Public serialization-facing helpers that stay above the lower-level payload builders.
+Raised when network JSON serialization helpers receive an invalid root payload.
 
-This file owns small convenience methods that callers expect on `Network`
-itself, while delegating the real persistence work to the serialize chapter.
+## architecture/network/serialize/network.serialize.errors.ts
+
+### NetworkSerializeInvalidJsonError
+
+Raised when network JSON serialization helpers receive an invalid root payload.
 
 ## architecture/network/serialize/network.serialize.utils.types.ts
 
@@ -956,6 +959,11 @@ Parameters:
 Returns: Nothing.
 
 ## architecture/network/serialize/network.serialize.public.utils.ts
+
+Public serialization-facing helpers that stay above the lower-level payload builders.
+
+This file owns small convenience methods that callers expect on `Network`
+itself, while delegating the real persistence work to the serialize chapter.
 
 ### cloneImpl
 

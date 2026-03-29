@@ -75,6 +75,10 @@ jobs:
         if: ${{ env.LOOP_SKIP == 'false' }}
         run: npm ci
 
+      - name: Lint
+        if: ${{ env.LOOP_SKIP == 'false' }}
+        run: npm run lint
+
       - name: Test
         if: ${{ env.LOOP_SKIP == 'false' }}
         run: npm test
@@ -85,8 +89,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          PKG_NAME=$(node -p "require('./package.json').name")
-          CURR_VER=$(node -p "require('./package.json').version")
+          PKG_NAME=$(node --input-type=module -e "import fs from 'node:fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.name);")
+          CURR_VER=$(node --input-type=module -e "import fs from 'node:fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version);")
           echo "Current version: $CURR_VER"
           if npm view "$PKG_NAME@$CURR_VER" version >/dev/null 2>&1; then
             echo "Version exists on registry; bumping patch.";
@@ -119,7 +123,7 @@ jobs:
         run: |
           echo "npm registry: $(npm config get registry)"
           echo "npm whoami:"; npm whoami || echo "not authenticated"
-          echo "package:" $(node -p "require('./package.json').name + '@' + require('./package.json').version")
+          echo "package:" $(node --input-type=module -e "import fs from 'node:fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.name + '@' + pkg.version);")
           echo "masked ~/.npmrc:";
           if [ -f ~/.npmrc ]; then sed -E 's/(:_authToken=).*/\1***REDACTED***/' ~/.npmrc || true; else echo "no ~/.npmrc"; fi
 
@@ -157,7 +161,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          VER=$(node -p "require('./package.json').version")
+          VER=$(node --input-type=module -e "import fs from 'node:fs'; const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); console.log(pkg.version);")
           echo "version=$VER" >> "$GITHUB_OUTPUT"
 
       - name: Ensure git user (for tagging)

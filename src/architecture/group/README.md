@@ -191,3 +191,19 @@ toJSON(): { size: number; nodeIndices: (number | undefined)[]; connections: { in
 Serializes the group into a JSON-compatible format, avoiding circular references.
 
 Returns: JSON-friendly representation with node indices and connection counts.
+
+## architecture/group/group.errors.ts
+
+Raised when caller-provided group values do not match the number of nodes.
+
+### GroupGatingMethodRequiredError
+
+Raised when gating is requested without specifying a gating method.
+
+### GroupOneToOneSizeMismatchError
+
+Raised when ONE_TO_ONE group connections are requested for groups of different sizes.
+
+### GroupSizeMismatchError
+
+Raised when caller-provided group values do not match the number of nodes.

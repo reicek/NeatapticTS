@@ -443,6 +443,38 @@ Parameters:
 - `values` - - An object containing the properties and their values to set.
   Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
 
+## architecture/layer/layer.errors.ts
+
+Raised when caller-provided layer values do not match the number of nodes.
+
+### LayerInputSourceUnavailableError
+
+Raised when a layer source output group is missing during input wiring.
+
+### LayerInputTargetUnavailableError
+
+Raised when a layer target output group is missing during input wiring.
+
+### LayerMemoryInputBlockTypeError
+
+Raised when a recurrent memory layer cannot resolve a group-like input block.
+
+### LayerMemoryInputSizeMismatchError
+
+Raised when recurrent memory source and target block sizes do not match.
+
+### LayerOutputConnectUnavailableError
+
+Raised when a layer output group is missing during connect operations.
+
+### LayerOutputGateUnavailableError
+
+Raised when a layer output group is missing during gate operations.
+
+### LayerSizeMismatchError
+
+Raised when caller-provided layer values do not match the number of nodes.
+
 ## architecture/layer/layer.utils.types.ts
 
 ### LayerActivationContext

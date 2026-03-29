@@ -6,6 +6,7 @@ import type {
   PropagationContext,
   RegularizationArgument,
 } from './network.training.utils.types';
+import { NetworkTrainingOutputTargetLengthError } from './network.training.errors';
 
 /**
  * Propagate output and hidden errors backward through the network.
@@ -66,7 +67,9 @@ export function clearState(this: Network): void {
  */
 function validateTargetLength(network: Network, target: number[]): void {
   if (!target || target.length !== network.output) {
-    throw new Error('Output target length should match network output length');
+    throw new NetworkTrainingOutputTargetLengthError(
+      'Output target length should match network output length',
+    );
   }
 }
 

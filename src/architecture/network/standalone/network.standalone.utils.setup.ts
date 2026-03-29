@@ -9,6 +9,7 @@ import {
   NO_OUTPUT_NODES_ERROR,
   OUTPUT_NODE_TYPE,
 } from './network.standalone.utils.types';
+import { NetworkStandaloneNoOutputNodesError } from './network.standalone.errors';
 
 /**
  * Cast a network instance to the internal standalone generation view.
@@ -37,7 +38,7 @@ export function ensureOutputNodesExist(
   });
 
   if (!hasOutputNode) {
-    throw new Error(NO_OUTPUT_NODES_ERROR);
+    throw new NetworkStandaloneNoOutputNodesError(NO_OUTPUT_NODES_ERROR);
   }
 }
 

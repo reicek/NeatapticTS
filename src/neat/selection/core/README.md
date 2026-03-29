@@ -544,3 +544,11 @@ Parameters:
 - `selectionContext` - - Shared selection state.
 
 Returns: The chosen parent genome.
+
+## neat/selection/core/selection.core.errors.ts
+
+Raised when tournament selection is asked to sample more entries than exist.
+
+### SelectionTournamentOverflowError
+
+Raised when tournament selection is asked to sample more entries than exist.

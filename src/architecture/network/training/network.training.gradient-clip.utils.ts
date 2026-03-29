@@ -100,7 +100,7 @@ export const applyGradientClippingCore = (
     percentile: number,
   ): number => {
     if (!values.length) return 0;
-    const sortedByAbs = [...values].sort((a, b) => Math.abs(a) - Math.abs(b));
+    const sortedByAbs = values.toSorted((a, b) => Math.abs(a) - Math.abs(b));
     const rank = Math.min(
       sortedByAbs.length - 1,
       Math.max(0, Math.floor((percentile / 100) * sortedByAbs.length - 1)),

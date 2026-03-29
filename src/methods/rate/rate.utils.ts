@@ -2,6 +2,8 @@
  * Learning rate schedule signature that maps a base rate and iteration index to a rate value.
  * Useful for each stateless schedule strategy.
  */
+import { RateLinearWarmupTotalStepsError } from './rate.errors';
+
 export type RateSchedule = (baseRate: number, iteration: number) => number;
 
 /**
@@ -282,7 +284,7 @@ export function createLinearWarmupDecaySchedule(
   endRate: number = DEFAULT_LINEAR_END_RATE,
 ): RateSchedule {
   if (totalStepCount <= ZERO_RATE_FLOOR)
-    throw new Error(TOTAL_STEPS_ERROR_MESSAGE);
+    throw new RateLinearWarmupTotalStepsError(TOTAL_STEPS_ERROR_MESSAGE);
 
   const maximumWarmupSteps = totalStepCount - MINIMUM_DECAY_STEPS;
   const resolvedWarmupSteps = Math.min(

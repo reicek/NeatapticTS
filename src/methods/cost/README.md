@@ -507,3 +507,11 @@ Parameters:
 - `outputs` - - Raw logits or scores.
 
 Returns: Softmax probabilities corresponding to the inputs.
+
+## methods/cost/cost.errors.ts
+
+Raised when cost helpers receive target and output arrays of different lengths.
+
+### CostTargetOutputLengthMismatchError
+
+Raised when cost helpers receive target and output arrays of different lengths.

@@ -777,3 +777,25 @@ Regex normalizing stray commas near closing parentheses.
 ### STRAY_COMMA_OPEN_REGEX
 
 Regex normalizing stray commas near opening parentheses.
+
+## architecture/network/standalone/network.standalone.errors.ts
+
+Raised when standalone generation is requested for a network without output nodes.
+
+### buildStandaloneInputSizeMismatchErrorFactorySource
+
+```ts
+buildStandaloneInputSizeMismatchErrorFactorySource(): string
+```
+
+Build the named-error factory source emitted into generated standalone functions.
+
+Returns: Deterministic JavaScript source for a named input-size mismatch error factory.
+
+### NETWORK_STANDALONE_INPUT_SIZE_MISMATCH_ERROR_NAME
+
+Stable error name emitted into generated standalone input guards.
+
+### NetworkStandaloneNoOutputNodesError
+
+Raised when standalone generation is requested for a network without output nodes.

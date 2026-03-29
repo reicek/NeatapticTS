@@ -2,6 +2,7 @@ import type Network from '../network';
 import type Node from '../../node';
 
 import type { NetworkRuntimeDiagnosticsInternals } from '../network.types';
+import { NetworkRuntimeDropConnectProbabilityRangeError } from './network.runtime.errors';
 
 type TrainingStatsSnapshot = {
   gradNorm: number;
@@ -37,7 +38,9 @@ export function enableDropConnect(this: Network, probability: number): void {
   const runtimeNetwork = this as unknown as NetworkRuntimeDiagnosticsInternals;
 
   if (probability < 0 || probability >= 1) {
-    throw new Error('DropConnect probability must be in [0,1)');
+    throw new NetworkRuntimeDropConnectProbabilityRangeError(
+      'DropConnect probability must be in [0,1)',
+    );
   }
 
   runtimeNetwork._dropConnectProb = probability;

@@ -23,6 +23,18 @@ import {
   computeMonitoredError,
   computePlateauMetric,
 } from './network.training.smoothing.utils';
+import {
+  NetworkTrainingAccumulationStepsError,
+  NetworkTrainingBatchSizeError,
+  NetworkTrainingDatasetCompatibilityError,
+  NetworkTrainingDropoutRangeError,
+  NetworkTrainingInvalidCostFunctionError,
+  NetworkTrainingInvalidOptimizerOptionError,
+  NetworkTrainingNestedLookaheadError,
+  NetworkTrainingStoppingConditionRequiredError,
+  NetworkTrainingUnknownLookaheadBaseTypeError,
+  NetworkTrainingUnknownOptimizerTypeError,
+} from './network.training.errors';
 
 /**
  * Run the full training orchestration loop with smoothing, callbacks, and early stopping.
@@ -44,19 +56,19 @@ export const trainFinalizeCore = (
     set[0].input.length !== net.input ||
     set[0].output.length !== net.output
   ) {
-    throw new Error(
+    throw new NetworkTrainingDatasetCompatibilityError(
       'Dataset is invalid or dimensions do not match network input/output size!',
     );
   }
 
-  options = options || {};
+  options = options ?? {};
   if (
     typeof options.iterations === 'undefined' &&
     typeof options.error === 'undefined'
   ) {
     if (config.warnings)
       console.warn('Missing `iterations` or `error` option.');
-    throw new Error(
+    throw new NetworkTrainingStoppingConditionRequiredError(
       'Missing `iterations` or `error` option. Training requires a stopping condition.',
     );
   }
@@ -72,7 +84,7 @@ export const trainFinalizeCore = (
   }
 
   const targetError = options.error ?? -Infinity;
-  const cost = options.cost || methods.Cost.mse;
+  const cost = options.cost ?? methods.Cost.mse;
   if (
     typeof cost !== 'function' &&
     !(
@@ -82,24 +94,32 @@ export const trainFinalizeCore = (
         typeof (cost as CostFunctionOrObject).calculate === 'function')
     )
   ) {
-    throw new Error('Invalid cost function provided to Network.train.');
+    throw new NetworkTrainingInvalidCostFunctionError(
+      'Invalid cost function provided to Network.train.',
+    );
   }
 
   const baseRate = options.rate ?? 0.3;
-  const dropout = options.dropout || 0;
-  if (dropout < 0 || dropout >= 1) throw new Error('dropout must be in [0,1)');
+  const dropout = options.dropout ?? 0;
+  if (dropout < 0 || dropout >= 1) {
+    throw new NetworkTrainingDropoutRangeError('dropout must be in [0,1)');
+  }
 
   const momentum = options.momentum || 0;
   const batchSize = options.batchSize || 1;
   if (batchSize > set.length) {
-    throw new Error('Batch size cannot be larger than the dataset length.');
+    throw new NetworkTrainingBatchSizeError(
+      'Batch size cannot be larger than the dataset length.',
+    );
   }
 
   const accumulationSteps = options.accumulationSteps || 1;
   internalNet._accumulationReduction =
     options.accumulationReduction === 'sum' ? 'sum' : 'average';
   if (accumulationSteps < 1 || !Number.isFinite(accumulationSteps)) {
-    throw new Error('accumulationSteps must be >=1');
+    throw new NetworkTrainingAccumulationStepsError(
+      'accumulationSteps must be >=1',
+    );
   }
 
   if (options.gradientClip) {
@@ -172,21 +192,25 @@ export const trainFinalizeCore = (
         optimizerConfig.type = optimizerConfig.type.toLowerCase();
       }
     } else {
-      throw new Error('Invalid optimizer option; must be string or object');
+      throw new NetworkTrainingInvalidOptimizerOptionError(
+        'Invalid optimizer option; must be string or object',
+      );
     }
 
     if (!ALLOWED_OPTIMIZERS.has(optimizerConfig.type)) {
-      throw new Error(`Unknown optimizer type: ${optimizerConfig.type}`);
+      throw new NetworkTrainingUnknownOptimizerTypeError(
+        `Unknown optimizer type: ${optimizerConfig.type}`,
+      );
     }
     if (optimizerConfig.type === 'lookahead') {
       if (!optimizerConfig.baseType) optimizerConfig.baseType = 'adam';
       if (optimizerConfig.baseType === 'lookahead') {
-        throw new Error(
+        throw new NetworkTrainingNestedLookaheadError(
           'Nested lookahead (baseType lookahead) is not supported',
         );
       }
       if (!ALLOWED_OPTIMIZERS.has(optimizerConfig.baseType)) {
-        throw new Error(
+        throw new NetworkTrainingUnknownLookaheadBaseTypeError(
           `Unknown baseType for lookahead: ${optimizerConfig.baseType}`,
         );
       }

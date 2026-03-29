@@ -1043,3 +1043,11 @@ RandomGenerator(): number
 ```
 
 Shared random generator signature for genetic operators.
+
+## architecture/network/genetic/network.genetic.errors.ts
+
+Raised when crossover is requested for parents with incompatible IO dimensions.
+
+### NetworkGeneticParentCompatibilityError
+
+Raised when crossover is requested for parents with incompatible IO dimensions.

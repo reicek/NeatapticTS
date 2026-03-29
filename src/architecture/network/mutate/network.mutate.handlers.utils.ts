@@ -42,6 +42,7 @@ import {
   WARNING_NO_SELF_CONNECTIONS_TO_REMOVE,
   WARNING_SELF_CONNECTIONS_ALREADY_PRESENT,
 } from './network.mutate.utils.types';
+import { NetworkMutateRecurrentLayerOutputInitializationError } from './network.mutate.errors';
 
 /**
  * Concrete mutation handler implementations used by the network mutate orchestrator.
@@ -1971,7 +1972,9 @@ function createRecurrentLayer(
       : Layer.gru(SINGLE_UNIT_RECURRENT_BLOCK_WIDTH);
 
   if (!recurrentLayer.output || !Array.isArray(recurrentLayer.output.nodes)) {
-    throw new Error('Recurrent layer output was not initialized.');
+    throw new NetworkMutateRecurrentLayerOutputInitializationError(
+      'Recurrent layer output was not initialized.',
+    );
   }
 
   if (blockType === RECURRENT_BLOCK_LSTM) {
