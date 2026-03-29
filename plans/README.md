@@ -40,6 +40,7 @@ Selection guide:
 - `plans/Flappy_Bird_Folder_Documentation_Pass.md`: completed Flappy Bird folder documentation baseline and reopen point for example-docs follow-up.
 - `plans/generate-docs-solid-split.plans.md`: completed docs-generator tooling split and reopen point for future `scripts/generate-docs/` work.
 - `plans/HyperEvoDevoMorphoNEAT.md`: evo-devo and morphology-oriented research direction.
+- `plans/HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md`: Hyper follow-on racing benchmark plan with a rich sensorium, early optimal-line guidance, behavioral drives, and competitive self-play racecraft.
 - `plans/Interactive_Examples_and_Learning_Path.md`: runnable examples, onboarding flow, and learning-path improvements.
 - `plans/Memory_Optimization.md`: scaling, memory layout, and strategies for very large networks.
 - `plans/methods-docs.plans.md`: completed educational-docs lane for `src/methods` and reopen point for methods documentation drift.
@@ -91,6 +92,7 @@ Task-to-plan trigger phrases:
 - preconfigured models, MLP, LSTM, GRU, NARX builders: `plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
 - examples, tutorials, learning path, onboarding: `plans/Interactive_Examples_and_Learning_Path.md`
 - evo-devo, morphology, research-heavy extensions: `plans/HyperEvoDevoMorphoNEAT.md`
+- racing benchmark, optimal line, behavioral drives, overtaking, self-play racecraft, Hyper follow-on: `plans/HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md`
 - utils docs, utility README quality, educational-docs for `src/utils`: `plans/utils-docs.plans.md`
 
 Working rule:
