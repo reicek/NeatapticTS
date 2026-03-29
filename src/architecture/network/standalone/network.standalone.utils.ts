@@ -1,3 +1,54 @@
+/**
+ * Standalone code-generation boundary for turning a live `Network` into a
+ * self-contained inference function.
+ *
+ * This chapter exists for the moment when the graph has finished evolving or
+ * training and the next question is no longer "how do I mutate it?" but "how
+ * do I ship or inspect its forward pass without the whole runtime?" The
+ * standalone generator answers by snapshotting node state, connection order,
+ * gating terms, and activation functions into a plain JavaScript source string
+ * that can be persisted, reviewed, or evaluated elsewhere.
+ *
+ * The folder is intentionally split like a miniature compiler pipeline.
+ * `setup` validates the network and seeds stable indexes, `graph` and `loop`
+ * collect the execution lines, `activation` and `coverage` normalize emitted
+ * function bodies, and `finalize` folds everything into the finished source
+ * string. That keeps the README focused on the transformation stages instead
+ * of a flat shelf of string helpers.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   Runtime[Runtime Network] --> Snapshot[Seed stable indexes and state]
+ *   Snapshot --> Emit[Emit computation lines]
+ *   Emit --> Assemble[Assemble source string]
+ *   Assemble --> ActivateFn[Standalone activator]
+ * ```
+ *
+ * The important constraint is scope. The generated artifact is for forward
+ * inference only. It keeps fixed weights, gating, and simple recurrent
+ * self-connections, but it intentionally omits training-time randomness,
+ * backpropagation, and any runtime machinery that requires the full library
+ * around it.
+ *
+ * Example: emit a portable source string and persist it with the rest of a
+ * model package.
+ *
+ * ```ts
+ * const source = network.standalone();
+ * console.log(source.slice(0, 120));
+ * ```
+ *
+ * Example: evaluate the emitted source in a sandbox and compare inference
+ * results against the original runtime.
+ *
+ * ```ts
+ * const source = network.standalone();
+ * const activate = new Function(`return ${source}`)() as (
+ *   input: number[],
+ * ) => number[];
+ * const outputValues = activate([0.2, 0.8]);
+ * ```
+ */
 import type Network from '../../network/network';
 import { assembleStandaloneSource } from './network.standalone.utils.finalize';
 import { collectOutputIndexes } from './network.standalone.utils.graph';
@@ -12,34 +63,6 @@ import {
   ensureOutputNodesExist,
   seedNodeIndexesAndState,
 } from './network.standalone.utils.setup';
-
-/**
- * Standalone forward pass code generator.
- *
- * Purpose:
- *  Transforms a dynamic Network instance (object graph with Nodes / Connections / gating metadata)
- *  into a self-contained JavaScript function string that, when evaluated, returns an `activate(input)`
- *  function capable of performing forward propagation without the original library runtime.
- *
- * Why generate code?
- *  - Deployment: Embed a compact, dependency‑free inference function in environments where bundling
- *    the full evolutionary framework is unnecessary (e.g. model cards, edge scripts, CI sanity checks).
- *  - Performance: Remove dynamic indirection (property lookups, virtual dispatch) by specializing
- *    the computation graph into straight‑line code and simple loops; JS engines can optimize this.
- *  - Readability: Emitted source is human-readable so users can inspect weighted sums and activations.
- *
- * Features Supported:
- *  - Standard feed‑forward connections with optional gating (multiplicative modulation).
- *  - Single self-connection per node (handled as recurrent term S[i] * weight before activation).
- *  - Arbitrary activation functions: built‑in ones are emitted via canonical snippets; custom user
- *    functions are stringified and sanitized via stripCoverage(). Arrow or anonymous functions are
- *    normalized into named `function <name>(...)` forms for clarity and stable ordering.
- *
- * Not Supported / Simplifications:
- *  - No dynamic dropout, noise injection, or stochastic depth—those would require runtime randomness.
- *  - Assumes all node indices are stable and sequential (enforced prior to generation).
- *  - Gradient / backprop logic intentionally omitted (forward inference only).
- */
 
 /**
  * Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.

@@ -1,0 +1,9 @@
+{
+  "introFile": "neat.defaults.constants.ts",
+  "fileOrder": [
+    "neat.defaults.constants.ts",
+    "neat.types.ts",
+    "neat.lineage.ts",
+    "neat.constants.ts"
+  ]
+}

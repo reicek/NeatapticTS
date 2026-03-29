@@ -1,145 +1,56 @@
 # architecture/network/standalone
 
-Output node discriminator used for standalone precondition checks.
+Standalone code-generation boundary for turning a live `Network` into a
+self-contained inference function.
 
-## architecture/network/standalone/network.standalone.utils.types.ts
+This chapter exists for the moment when the graph has finished evolving or
+training and the next question is no longer "how do I mutate it?" but "how
+do I ship or inspect its forward pass without the whole runtime?" The
+standalone generator answers by snapshotting node state, connection order,
+gating terms, and activation functions into a plain JavaScript source string
+that can be persisted, reviewed, or evaluated elsewhere.
 
-### ACTIVATION_PRECISION_F32
+The folder is intentionally split like a miniature compiler pipeline.
+`setup` validates the network and seeds stable indexes, `graph` and `loop`
+collect the execution lines, `activation` and `coverage` normalize emitted
+function bodies, and `finalize` folds everything into the finished source
+string. That keeps the README focused on the transformation stages instead
+of a flat shelf of string helpers.
 
-Precision token selecting Float32 activation/state buffers.
-
-### ARROW_TOKEN
-
-Arrow token used during function-source normalization.
-
-### BUILTIN_ACTIVATION_SNIPPETS
-
-Built-in activation snippets emitted as named JavaScript function declarations.
-
-Values are intentionally compact so emitted standalone source remains deterministic and small.
-
-### COVERAGE_CALL_REGEX
-
-Regex stripping Istanbul function invocations from source snippets.
-
-### COVERAGE_COUNTER_REGEX
-
-Regex stripping Istanbul counters from stringified functions.
-
-### COVERAGE_REPLACEMENT
-
-Empty replacement used while stripping coverage artifacts.
-
-### EMPTY_TOKEN_REGEX
-
-Regex removing empty punctuation-only token lines.
-
-### FALLBACK_IDENTITY_BODY
-
-Identity-function fallback body for invalid custom squash sources.
-
-### FLOAT32_ARRAY_TYPE
-
-Typed-array constructor names used in generated source.
-
-### FLOAT64_ARRAY_TYPE
-
-Typed-array constructor names used in generated source.
-
-### FUNCTION_PREFIX
-
-Prefix token used when normalizing function sources.
-
-### INPUT_LOOP_LINE
-
-Generated source line for copying external inputs into activation buffer.
-
-### INVALID_INPUT_SIZE_ERROR_MIDDLE
-
-Input-size validation message fragments for generated activate guards.
-
-### INVALID_INPUT_SIZE_ERROR_PREFIX
-
-Input-size validation message fragments for generated activate guards.
-
-### ISTANBUL_IGNORE_BLOCK_REGEX
-
-Regex stripping Istanbul ignore blocks from stringified functions.
-
-### MASK_MULTIPLIER_IDENTITY
-
-Multiplicative identity used to omit redundant mask expressions.
-
-### NO_OUTPUT_NODES_ERROR
-
-Error message when attempting standalone generation without outputs.
-
-### OUTPUT_NODE_TYPE
-
-Output node discriminator used for standalone precondition checks.
-
-### REPEATED_SEMICOLON_REGEX
-
-Regex collapsing repeated semicolons.
-
-### SINGLE_TERM_FALLBACK
-
-Fallback literal used when a node has no incoming terms.
-
-### SOLITARY_SEMICOLON_REGEX
-
-Regex removing solitary semicolon lines created by instrumentation.
-
-### SOURCE_MAP_REGEX
-
-Regex stripping sourceMappingURL comments from generated snippets.
-
-### StandaloneSquashFunction
-
-```ts
-StandaloneSquashFunction(
-  inputValue: number,
-  derivate: boolean | undefined,
-): number
+```mermaid
+flowchart LR
+  Runtime[Runtime Network] --> Snapshot[Seed stable indexes and state]
+  Snapshot --> Emit[Emit computation lines]
+  Emit --> Assemble[Assemble source string]
+  Assemble --> ActivateFn[Standalone activator]
 ```
 
-Activation function shape used by standalone source generation helpers.
+The important constraint is scope. The generated artifact is for forward
+inference only. It keeps fixed weights, gating, and simple recurrent
+self-connections, but it intentionally omits training-time randomness,
+backpropagation, and any runtime machinery that requires the full library
+around it.
 
-### STRAY_COMMA_CLOSE_REGEX
+Example: emit a portable source string and persist it with the rest of a
+model package.
 
-Regex normalizing stray commas near closing parentheses.
+```ts
+const source = network.standalone();
+console.log(source.slice(0, 120));
+```
 
-### STRAY_COMMA_OPEN_REGEX
+Example: evaluate the emitted source in a sandbox and compare inference
+results against the original runtime.
 
-Regex normalizing stray commas near opening parentheses.
+```ts
+const source = network.standalone();
+const activate = new Function(`return ${source}`)() as (
+  input: number[],
+) => number[];
+const outputValues = activate([0.2, 0.8]);
+```
 
 ## architecture/network/standalone/network.standalone.utils.ts
-
-Standalone forward pass code generator.
-
-Purpose:
- Transforms a dynamic Network instance (object graph with Nodes / Connections / gating metadata)
- into a self-contained JavaScript function string that, when evaluated, returns an `activate(input)`
- function capable of performing forward propagation without the original library runtime.
-
-Why generate code?
- - Deployment: Embed a compact, dependency‑free inference function in environments where bundling
-   the full evolutionary framework is unnecessary (e.g. model cards, edge scripts, CI sanity checks).
- - Performance: Remove dynamic indirection (property lookups, virtual dispatch) by specializing
-   the computation graph into straight‑line code and simple loops; JS engines can optimize this.
- - Readability: Emitted source is human-readable so users can inspect weighted sums and activations.
-
-Features Supported:
- - Standard feed‑forward connections with optional gating (multiplicative modulation).
- - Single self-connection per node (handled as recurrent term S[i] * weight before activation).
- - Arbitrary activation functions: built‑in ones are emitted via canonical snippets; custom user
-   functions are stringified and sanitized via stripCoverage(). Arrow or anonymous functions are
-   normalized into named `function <name>(...)` forms for clarity and stable ordering.
-
-Not Supported / Simplifications:
- - No dynamic dropout, noise injection, or stochastic depth—those would require runtime randomness.
- - Assumes all node indices are stable and sequential (enforced prior to generation).
- - Gradient / backprop logic intentionally omitted (forward inference only).
 
 ### generateStandalone
 
@@ -167,128 +78,67 @@ Parameters:
 
 Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.
 
-## architecture/network/standalone/network.standalone.utils.loop.ts
+## architecture/network/standalone/network.standalone.utils.setup.ts
 
-### appendActivationLine
+### asStandaloneProps
 
 ```ts
-appendActivationLine(
-  generationContext: StandaloneGenerationContext,
-  nodeTraversalIndex: number,
-  activationFunctionIndex: number,
-  maskValue: number,
+asStandaloneProps(
+  net: default,
+): NetworkStandaloneProps
+```
+
+Cast a network instance to the internal standalone generation view.
+
+Parameters:
+- `net` - Network instance to cast.
+
+Returns: Internal network properties used by the standalone generator.
+
+### createGenerationContext
+
+```ts
+createGenerationContext(
+  standaloneProps: NetworkStandaloneProps,
+): StandaloneGenerationContext
+```
+
+Create a fresh generation context used across orchestration steps.
+
+Parameters:
+- `standaloneProps` - Internal standalone network view.
+
+Returns: Initialized generation context.
+
+### ensureOutputNodesExist
+
+```ts
+ensureOutputNodesExist(
+  standaloneProps: NetworkStandaloneProps,
 ): void
 ```
 
-Append generated activation assignment line for one node.
+Validate that the network has at least one output node.
 
 Parameters:
-- `generationContext` - Mutable generation context.
-- `nodeTraversalIndex` - Node index.
-- `activationFunctionIndex` - Function table index.
-- `maskValue` - Multiplicative mask.
+- `standaloneProps` - Internal standalone network view.
 
 Returns: Void.
 
-### appendAllNodeComputationLines
+### seedNodeIndexesAndState
 
 ```ts
-appendAllNodeComputationLines(
+seedNodeIndexesAndState(
   generationContext: StandaloneGenerationContext,
 ): void
 ```
 
-Append compute lines for all non-input nodes.
+Seed index, activation, and state arrays from network nodes.
 
 Parameters:
 - `generationContext` - Mutable generation context.
 
 Returns: Void.
-
-### appendInputSeedLine
-
-```ts
-appendInputSeedLine(
-  generationContext: StandaloneGenerationContext,
-): void
-```
-
-Append the generated input-copy loop to the standalone body.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-
-Returns: Void.
-
-### appendOutputReturnLine
-
-```ts
-appendOutputReturnLine(
-  generationContext: StandaloneGenerationContext,
-  outputIndexes: number[],
-): void
-```
-
-Append generated return line for output activations.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-- `outputIndexes` - Output node indexes.
-
-Returns: Void.
-
-### appendSingleNodeComputationLines
-
-```ts
-appendSingleNodeComputationLines(
-  generationContext: StandaloneGenerationContext,
-  nodeTraversalIndex: number,
-): void
-```
-
-Append state and activation lines for one node.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-- `nodeTraversalIndex` - Node index currently being emitted.
-
-Returns: Void.
-
-### appendStateLine
-
-```ts
-appendStateLine(
-  generationContext: StandaloneGenerationContext,
-  nodeTraversalIndex: number,
-  sumExpression: string,
-  biasValue: number,
-): void
-```
-
-Append generated state assignment line for one node.
-
-Parameters:
-- `generationContext` - Mutable generation context.
-- `nodeTraversalIndex` - Node index.
-- `sumExpression` - Generated sum expression.
-- `biasValue` - Node bias.
-
-Returns: Void.
-
-### buildMaskSuffix
-
-```ts
-buildMaskSuffix(
-  maskValue: number,
-): string
-```
-
-Build optional activation mask suffix for generated assignment line.
-
-Parameters:
-- `maskValue` - Multiplicative mask value.
-
-Returns: Empty suffix for identity, otherwise multiplicative fragment.
 
 ## architecture/network/standalone/network.standalone.utils.graph.ts
 
@@ -435,146 +285,128 @@ Parameters:
 
 Returns: Combined term collection.
 
-## architecture/network/standalone/network.standalone.utils.setup.ts
+## architecture/network/standalone/network.standalone.utils.loop.ts
 
-### asStandaloneProps
-
-```ts
-asStandaloneProps(
-  net: default,
-): NetworkStandaloneProps
-```
-
-Cast a network instance to the internal standalone generation view.
-
-Parameters:
-- `net` - Network instance to cast.
-
-Returns: Internal network properties used by the standalone generator.
-
-### createGenerationContext
+### appendActivationLine
 
 ```ts
-createGenerationContext(
-  standaloneProps: NetworkStandaloneProps,
-): StandaloneGenerationContext
-```
-
-Create a fresh generation context used across orchestration steps.
-
-Parameters:
-- `standaloneProps` - Internal standalone network view.
-
-Returns: Initialized generation context.
-
-### ensureOutputNodesExist
-
-```ts
-ensureOutputNodesExist(
-  standaloneProps: NetworkStandaloneProps,
+appendActivationLine(
+  generationContext: StandaloneGenerationContext,
+  nodeTraversalIndex: number,
+  activationFunctionIndex: number,
+  maskValue: number,
 ): void
 ```
 
-Validate that the network has at least one output node.
+Append generated activation assignment line for one node.
 
 Parameters:
-- `standaloneProps` - Internal standalone network view.
+- `generationContext` - Mutable generation context.
+- `nodeTraversalIndex` - Node index.
+- `activationFunctionIndex` - Function table index.
+- `maskValue` - Multiplicative mask.
 
 Returns: Void.
 
-### seedNodeIndexesAndState
+### appendAllNodeComputationLines
 
 ```ts
-seedNodeIndexesAndState(
+appendAllNodeComputationLines(
   generationContext: StandaloneGenerationContext,
 ): void
 ```
 
-Seed index, activation, and state arrays from network nodes.
+Append compute lines for all non-input nodes.
 
 Parameters:
 - `generationContext` - Mutable generation context.
 
 Returns: Void.
 
-## architecture/network/standalone/network.standalone.utils.coverage.ts
-
-### stripCoverage
+### appendInputSeedLine
 
 ```ts
-stripCoverage(
-  code: string,
-): string
-```
-
-Remove instrumentation artifacts and formatting detritus from function sources.
-
-Parameters:
-- `code` - Source text potentially containing coverage wrappers.
-
-Returns: Cleaned source text suitable for deterministic standalone emission.
-
-## architecture/network/standalone/network.standalone.utils.finalize.ts
-
-### assembleStandaloneSource
-
-```ts
-assembleStandaloneSource(
+appendInputSeedLine(
   generationContext: StandaloneGenerationContext,
-): string
+): void
 ```
 
-Assemble the final standalone IIFE source string.
+Append the generated input-copy loop to the standalone body.
 
 Parameters:
 - `generationContext` - Mutable generation context.
 
-Returns: Final generated source string.
+Returns: Void.
 
-### buildActivationArrayLiteral
+### appendOutputReturnLine
 
 ```ts
-buildActivationArrayLiteral(
+appendOutputReturnLine(
   generationContext: StandaloneGenerationContext,
-): string
+  outputIndexes: number[],
+): void
 ```
 
-Build deterministic activation function array literal by function index ordering.
+Append generated return line for output activations.
 
 Parameters:
 - `generationContext` - Mutable generation context.
+- `outputIndexes` - Output node indexes.
 
-Returns: Comma-separated activation function names.
+Returns: Void.
 
-### buildInputGuardLine
-
-```ts
-buildInputGuardLine(
-  expectedInputSize: number,
-): string
-```
-
-Build generated input length guard line.
-
-Parameters:
-- `expectedInputSize` - Required input vector size.
-
-Returns: Guard statement line including trailing newline.
-
-### resolveActivationArrayType
+### appendSingleNodeComputationLines
 
 ```ts
-resolveActivationArrayType(
+appendSingleNodeComputationLines(
   generationContext: StandaloneGenerationContext,
-): string
+  nodeTraversalIndex: number,
+): void
 ```
 
-Resolve typed-array constructor name based on configured activation precision.
+Append state and activation lines for one node.
 
 Parameters:
 - `generationContext` - Mutable generation context.
+- `nodeTraversalIndex` - Node index currently being emitted.
 
-Returns: Constructor name used in generated source.
+Returns: Void.
+
+### appendStateLine
+
+```ts
+appendStateLine(
+  generationContext: StandaloneGenerationContext,
+  nodeTraversalIndex: number,
+  sumExpression: string,
+  biasValue: number,
+): void
+```
+
+Append generated state assignment line for one node.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+- `nodeTraversalIndex` - Node index.
+- `sumExpression` - Generated sum expression.
+- `biasValue` - Node bias.
+
+Returns: Void.
+
+### buildMaskSuffix
+
+```ts
+buildMaskSuffix(
+  maskValue: number,
+): string
+```
+
+Build optional activation mask suffix for generated assignment line.
+
+Parameters:
+- `maskValue` - Multiplicative mask value.
+
+Returns: Empty suffix for identity, otherwise multiplicative fragment.
 
 ## architecture/network/standalone/network.standalone.utils.activation.ts
 
@@ -753,3 +585,195 @@ Parameters:
 - `nodeTraversalIndex` - Node index for anonymous-name fallback.
 
 Returns: Activation function identifier.
+
+## architecture/network/standalone/network.standalone.utils.coverage.ts
+
+### stripCoverage
+
+```ts
+stripCoverage(
+  code: string,
+): string
+```
+
+Remove instrumentation artifacts and formatting detritus from function sources.
+
+Parameters:
+- `code` - Source text potentially containing coverage wrappers.
+
+Returns: Cleaned source text suitable for deterministic standalone emission.
+
+## architecture/network/standalone/network.standalone.utils.finalize.ts
+
+### assembleStandaloneSource
+
+```ts
+assembleStandaloneSource(
+  generationContext: StandaloneGenerationContext,
+): string
+```
+
+Assemble the final standalone IIFE source string.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+
+Returns: Final generated source string.
+
+### buildActivationArrayLiteral
+
+```ts
+buildActivationArrayLiteral(
+  generationContext: StandaloneGenerationContext,
+): string
+```
+
+Build deterministic activation function array literal by function index ordering.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+
+Returns: Comma-separated activation function names.
+
+### buildInputGuardLine
+
+```ts
+buildInputGuardLine(
+  expectedInputSize: number,
+): string
+```
+
+Build generated input length guard line.
+
+Parameters:
+- `expectedInputSize` - Required input vector size.
+
+Returns: Guard statement line including trailing newline.
+
+### resolveActivationArrayType
+
+```ts
+resolveActivationArrayType(
+  generationContext: StandaloneGenerationContext,
+): string
+```
+
+Resolve typed-array constructor name based on configured activation precision.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+
+Returns: Constructor name used in generated source.
+
+## architecture/network/standalone/network.standalone.utils.types.ts
+
+Output node discriminator used for standalone precondition checks.
+
+### ACTIVATION_PRECISION_F32
+
+Precision token selecting Float32 activation/state buffers.
+
+### ARROW_TOKEN
+
+Arrow token used during function-source normalization.
+
+### BUILTIN_ACTIVATION_SNIPPETS
+
+Built-in activation snippets emitted as named JavaScript function declarations.
+
+Values are intentionally compact so emitted standalone source remains deterministic and small.
+
+### COVERAGE_CALL_REGEX
+
+Regex stripping Istanbul function invocations from source snippets.
+
+### COVERAGE_COUNTER_REGEX
+
+Regex stripping Istanbul counters from stringified functions.
+
+### COVERAGE_REPLACEMENT
+
+Empty replacement used while stripping coverage artifacts.
+
+### EMPTY_TOKEN_REGEX
+
+Regex removing empty punctuation-only token lines.
+
+### FALLBACK_IDENTITY_BODY
+
+Identity-function fallback body for invalid custom squash sources.
+
+### FLOAT32_ARRAY_TYPE
+
+Typed-array constructor names used in generated source.
+
+### FLOAT64_ARRAY_TYPE
+
+Typed-array constructor names used in generated source.
+
+### FUNCTION_PREFIX
+
+Prefix token used when normalizing function sources.
+
+### INPUT_LOOP_LINE
+
+Generated source line for copying external inputs into activation buffer.
+
+### INVALID_INPUT_SIZE_ERROR_MIDDLE
+
+Input-size validation message fragments for generated activate guards.
+
+### INVALID_INPUT_SIZE_ERROR_PREFIX
+
+Input-size validation message fragments for generated activate guards.
+
+### ISTANBUL_IGNORE_BLOCK_REGEX
+
+Regex stripping Istanbul ignore blocks from stringified functions.
+
+### MASK_MULTIPLIER_IDENTITY
+
+Multiplicative identity used to omit redundant mask expressions.
+
+### NO_OUTPUT_NODES_ERROR
+
+Error message when attempting standalone generation without outputs.
+
+### OUTPUT_NODE_TYPE
+
+Output node discriminator used for standalone precondition checks.
+
+### REPEATED_SEMICOLON_REGEX
+
+Regex collapsing repeated semicolons.
+
+### SINGLE_TERM_FALLBACK
+
+Fallback literal used when a node has no incoming terms.
+
+### SOLITARY_SEMICOLON_REGEX
+
+Regex removing solitary semicolon lines created by instrumentation.
+
+### SOURCE_MAP_REGEX
+
+Regex stripping sourceMappingURL comments from generated snippets.
+
+### StandaloneSquashFunction
+
+```ts
+StandaloneSquashFunction(
+  inputValue: number,
+  derivate: boolean | undefined,
+): number
+```
+
+Activation function shape used by standalone source generation helpers.
+
+### STRAY_COMMA_CLOSE_REGEX
+
+Regex normalizing stray commas near closing parentheses.
+
+### STRAY_COMMA_OPEN_REGEX
+
+Regex normalizing stray commas near opening parentheses.

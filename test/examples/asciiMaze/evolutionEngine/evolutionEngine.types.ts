@@ -1,3 +1,90 @@
+/**
+ * Population-level runtime contracts for the ASCII Maze evolution engine.
+ *
+ * This folder is where one maze, one fitness story, and one NEAT controller
+ * turn into a repeatable training program. The public `EvolutionEngine` facade
+ * uses these contracts to normalize options, coordinate host callbacks, keep
+ * deterministic state reproducible, and decide when a curriculum phase has
+ * produced a winner worth carrying forward.
+ *
+ * The important distinction is scale. `mazeMovement/` explains one agent run.
+ * `fitness.ts` explains how that run is scored. `dashboardManager/` explains
+ * how progress is shown to a human. `evolutionEngine/` explains how many runs
+ * across many generations become one population-level search loop with stop
+ * reasons, telemetry, warm starts, and phase outcomes that the next maze can
+ * reuse.
+ *
+ * This file is the right chapter opening because it names the public nouns of
+ * that loop before the reader hits pooled scratch buffers or hot-path helpers.
+ * It answers four questions quickly: what a caller can configure, what a host
+ * may observe or interrupt, what result the engine returns, and which shared
+ * runtime contexts keep the hot path allocation-light.
+ *
+ * A useful mental model is to treat the engine as a control tower rather than
+ * the aircraft itself. The engine does not move the agent through one maze cell
+ * at a time. It schedules phases, batches generations, preserves deterministic
+ * state, and hands structured outcomes back to browser or terminal hosts.
+ *
+ * Read the chapter in three passes. Start here for the public contracts and the
+ * meaning of a run result. Continue to `engineState.types.ts` when you want the
+ * shared scratch and toggle state that keeps the loop cheap. Finish with
+ * `evolutionLoop.ts`, `evolutionEngine.services.ts`, and `sampling.ts` when you
+ * want the actual orchestration and telemetry mechanics.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Caller["Caller or host"]:::base --> Options["IRunMazeEvolutionOptions\nrun inputs"]:::base
+ *   Options --> Engine["EvolutionEngine facade\npopulation-level control"]:::accent
+ *   Engine --> Loop["generation loop\nevaluate mutate telemetry"]:::base
+ *   Loop --> Result["MazeEvolutionRunResult\nbest network + exit reason"]:::base
+ *   Result --> Phase["MazeEvolutionCurriculumPhaseOutcome\ncarry winner forward"]:::base
+ *   Engine --> Host["EvolutionHostAdapter\npause and stop hooks"]:::base
+ * ```
+ *
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   EngineFolder["evolutionEngine/"]:::accent --> Contracts["evolutionEngine.types.ts\npublic run contracts"]:::base
+ *   EngineFolder --> Scratch["engineState.types.ts\nshared scratch and toggles"]:::base
+ *   EngineFolder --> Loop["evolutionLoop.ts\nmain generation orchestration"]:::base
+ *   EngineFolder --> Services["evolutionEngine.services.ts\nand helpers"]:::base
+ *   EngineFolder --> Sampling["sampling.ts\nand telemetry support"]:::base
+ * ```
+ *
+ * For background reading on the staged difficulty idea behind the browser and
+ * curriculum-style runs, see Wikipedia contributors,
+ * [Curriculum learning](https://en.wikipedia.org/wiki/Curriculum_learning),
+ * which captures the broader teaching idea of solving easier tasks before
+ * harder ones.
+ *
+ * Example: describe the host adapter and reporting hooks the engine may call.
+ *
+ * ```ts
+ * const hostAdapter: EvolutionHostAdapter = {
+ *   isPauseRequested: () => window.asciiMazePaused === true,
+ *   handleStop: ({ reason, completedGenerations }) => {
+ *     console.log(reason, completedGenerations);
+ *   },
+ * };
+ * ```
+ *
+ * Example: sketch one engine run configuration before execution begins.
+ *
+ * ```ts
+ * const runOptions: IRunMazeEvolutionOptions = {
+ *   mazeConfig: { maze },
+ *   agentSimConfig: { maxSteps: 160 },
+ *   evolutionAlgorithmConfig: { popSize: 120, deterministic: true },
+ *   reportingConfig: { dashboardManager, logEvery: 5 },
+ * };
+ * ```
+ */
+
 import type Network from '../../../../src/architecture/network';
 import type { FitnessEvaluatorFn } from '../fitness.types';
 import type {

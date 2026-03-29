@@ -13,6 +13,8 @@ Status convention:
 - Every roadmap-tracked plan file should expose a top-level status line immediately under the title.
 - Use the exact format `**Status:** [DONE]`, `**Status:** [WIP]`, or `**Status:** [PLANNED]`.
 - Keep that top-level status aligned with [plans/Roadmap.md](Roadmap.md), which is the authoritative source for cross-plan sequencing and active priority.
+- Completed plans should prefer a short closed tracker plus a same-boundary
+  `.logs.md` companion file for audit history and durable milestone evidence.
 - Detailed phase-local status notes can still appear deeper in a plan when they add useful implementation detail.
 
 Recommended reading order:
@@ -26,7 +28,7 @@ Recommended reading order:
 Selection guide:
 
 - `plans/analyze-trace-solid-split.plans.md`: completed trace-analyzer tooling split and reopen point for future script-boundary work.
-- `plans/architecture-solid-split.plans.md`: active architecture folderization and boundary-ownership cleanup across `src/architecture`.
+- `plans/architecture-solid-split.plans.md`: completed architecture folderization and docs follow-through baseline, kept as the reopen point for future facade-removal or ownership audits in `src/architecture`.
 - `plans/neat.plans.md`: core NEAT correctness, innovation tracking, crossover alignment, speciation invariants.
 - `plans/Roadmap.md`: dependency-aware execution order across all initiatives.
 - `plans/Architecture_Primitives_Node_Group_Layer.md`: first-class architecture-building primitives such as nodes, groups, and layers.
@@ -42,7 +44,8 @@ Selection guide:
 - `plans/Memory_Optimization.md`: scaling, memory layout, and strategies for very large networks.
 - `plans/methods-docs.plans.md`: completed educational-docs lane for `src/methods` and reopen point for methods documentation drift.
 - `plans/methods-solid-split.plans.md`: completed structural split lane for `src/methods` and reopen point for later refactors.
-- `plans/neat-docs.plans.md`: active educational-docs lane for NEAT surfaces and generated README quality.
+- `plans/neat-docs.plans.md`: completed educational-docs baseline for root-facing NEAT surfaces, kept as the reopen point for future README-opening drift or generator-ordering regressions.
+- `plans/readme-first-section-pass.plans.md`: completed repo-wide README-opening baseline across `src/` and `test/examples/`; use the matching `.logs.md` file for audit history and reopen the plan only if a changed boundary or new README surface reopens the lane.
 - `plans/neat-test-surface-repair.plans.md`: completed NEAT public test-surface repair baseline and reopen point for future compatibility regressions.
 - `plans/Network_Visualization_Export_Schema.md`: stable export schema for visualization and inspection tooling.
 - `plans/ONNX_EXPORT_PLAN.md`: ONNX export/import architecture and rollout phases.
@@ -73,6 +76,7 @@ Task-to-plan trigger phrases:
 - methods docs, methods README quality, educational-docs for methods: `plans/methods-docs.plans.md`
 - methods split, `src/methods` refactor, methods folderization: `plans/methods-solid-split.plans.md`
 - NEAT docs, generated README quality, NEAT documentation lane: `plans/neat-docs.plans.md`
+- README opening, first section, chapter intro quality, repo-wide README openings, `src` plus `test/examples` docs pass: `plans/readme-first-section-pass.plans.md`
 - NEAT test surface, public type compatibility, root facade repair: `plans/neat-test-surface-repair.plans.md`
 - explicit any, no-explicit-any, strict typing, src lint cleanup follow-up, reopen completed cleanup lane: `plans/src-no-explicit-any-cleanup.plans.md`
 - HTML docs renderer, sidebar, Mermaid validation, docs site tooling split: `plans/render-docs-html-solid-split.plans.md`

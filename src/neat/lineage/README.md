@@ -9,33 +9,135 @@ telemetry, diagnostics, or adaptive policy need to detect whether a run is
 still exploring multiple lineages or quietly collapsing onto descendants of a
 small ancestor set.
 
-The root chapter keeps two public read models together:
+In evolutionary systems, structural variety can be misleading on its own.
+Two genomes can look different because they drifted locally through weight
+updates or a few recent mutations while still descending from the same narrow
+branch. Lineage reads add the missing genealogical context. They let the
+controller ask whether today's population still contains multiple recent
+family stories or whether most of the search budget is now being spent on one
+ancestor neighborhood wearing several slightly different topologies.
 
-- `buildAnc()` builds one genome's shallow ancestor set.
-- `computeAncestorUniqueness()` turns many shallow ancestor sets into one
-  sampled population signal.
+That distinction is useful because NEAT already has several other lenses on
+search health. Compatibility distance explains structural disagreement.
+Novelty explains behavioral difference. Score trends explain whether the
+current search path is paying off. Lineage contributes a separate clue: how
+much of the population's recent history is shared. If compatibility says
+genomes are spread out but lineage says they still share recent parents, the
+run may be exploring one branch in detail rather than keeping multiple
+evolutionary bets alive.
 
-Read the chapter in this order:
+The core algorithmic idea is intentionally simple. `buildAnc()` performs a
+bounded breadth-first walk over parent ids so it can recover a shallow family
+neighborhood for one genome. `computeAncestorUniqueness()` then samples genome
+pairs and compares those shallow ancestor sets with a Jaccard-style distance.
+The result is not a full phylogenetic tree or a museum-grade genealogy. It is
+a lightweight controller signal designed to stay cheap enough for runtime
+telemetry while still capturing whether the population's recent ancestry is
+broad or collapsing.
 
-- `buildAnc()` when you want the raw ancestry evidence for one genome.
-- `computeAncestorUniqueness()` when you want the controller-facing summary
-  used by telemetry, diagnostics, or adaptive lineage pressure.
-- `core/` when you need the breadth-first traversal, pair sampling, or
-  Jaccard-distance mechanics behind the public helpers.
+Read this chapter with two silent reader questions in mind. First: what kind
+of historical evidence is lineage actually measuring? Second: why stop at a
+shallow ancestry window instead of walking every parent back to the origin?
+The answer to the first is recent overlap in parentage, not lifetime
+similarity. The answer to the second is that controller telemetry needs the
+ancestry evidence that is most actionable now. Shallow ancestry is usually a
+better indicator of current branch collapse, takeover, or recent divergence
+than an unbounded tree that keeps every distant common ancestor equally loud.
+
+One useful mental model is to treat lineage as the population's memory of
+"who recently came from whom." It does not replace structural or behavioral
+metrics. It complements them. A run with strong scores and low lineage
+uniqueness may be exploiting aggressively around one family. A run with high
+lineage uniqueness and weak scores may still be exploring many recent
+branches without yet consolidating progress. Seeing those regimes explicitly
+helps the rest of the telemetry and adaptation stack read less like a pile of
+unrelated numbers.
 
 ```mermaid
 flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
   Genome[Genome with parent ids] --> Ancestors[Shallow ancestor set]
   Population[Population genomes] --> Pairs[Sample genome pairs]
   Ancestors --> Distance[Compare ancestor overlap]
   Pairs --> Distance
   Distance --> Uniqueness[Ancestor uniqueness summary]
   Uniqueness --> Consumers[Telemetry diagnostics and adaptive lineage policy]
+
+  class Genome,Ancestors,Population,Pairs,Distance,Consumers base;
+  class Uniqueness accent;
 ```
 
-The root chapter stays compact on purpose. `core/` owns the queue mechanics,
-sampled pair generation, and distance aggregation so this file can stay
-focused on what the ancestry reads mean at the controller surface.
+A second view places lineage beside the other common NEAT health signals so
+a first-time reader can see what question each metric family is really
+answering.
+
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Population[Current population]:::base --> Compat[Compatibility distance<br/>How structurally different?]:::base
+  Population --> Novelty[Behavioral novelty<br/>How behaviorally different?]:::base
+  Population --> Fitness[Fitness trend<br/>How well is the run scoring?]:::base
+  Population --> Lineage[Lineage uniqueness<br/>How many recent families remain?]:::accent
+```
+
+A third view explains why the implementation stops after a bounded ancestry
+window instead of treating lineage as a full archive query.
+
+```mermaid
+flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  FullTree[Walk every ancestor forever]:::base --> Expensive[Expensive and historically noisy]:::base
+  Window[Walk only a shallow recent window]:::accent --> Actionable[Cheaper and better aligned to current takeover risk]:::base
+  Expensive --> Telemetry[Harder to reuse inside runtime telemetry]:::base
+  Actionable --> Telemetry
+```
+
+The root chapter therefore stays small in API surface but rich in meaning.
+`core/` owns the queue mechanics, sampled pair generation, and distance
+aggregation so this file can stay focused on what the ancestry reads mean at
+the controller surface. That separation is deliberate: the public question is
+not "how does the queue advance?" but "what kind of evidence does lineage add
+that the rest of the controller does not already have?"
+
+For background reading, the most relevant mathematical and traversal ideas
+are the breadth-first search used for the shallow family walk and the Jaccard
+index used to compare ancestor-set overlap. See Wikipedia contributors,
+[Breadth-first search](https://en.wikipedia.org/wiki/Breadth-first_search),
+and Wikipedia contributors,
+[Jaccard index](https://en.wikipedia.org/wiki/Jaccard_index), for compact
+background on the two ideas this chapter adapts into a runtime NEAT signal.
+
+Example: inspect the recent family neighborhood behind one genome.
+
+```ts
+const ancestorIds = neat.buildAnc(neat.population[0]);
+
+console.log([...ancestorIds].toSorted((leftId, rightId) => leftId - rightId));
+```
+
+Example: watch whether the run is collapsing onto a narrow recent lineage.
+
+```ts
+const ancestorUniqueness = neat.computeAncestorUniqueness();
+
+if (ancestorUniqueness < 0.2) {
+  console.log('Recent ancestry is collapsing into a narrow family band.');
+}
+```
+
+Practical reading order:
+
+1. Start with `buildAnc()` if you want direct evidence for one genome.
+2. Continue to `computeAncestorUniqueness()` if you want the controller-level
+   summary that can feed telemetry or adaptive policy.
+3. Finish in `core/` if you want the exact traversal, pair sampling, and set
+   distance mechanics.
 
 ## neat/lineage/lineage.ts
 

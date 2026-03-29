@@ -1,0 +1,10 @@
+{
+  "introFile": "network.deterministic.utils.ts",
+  "fileOrder": [
+    "network.deterministic.utils.ts",
+    "network.deterministic.utils.types.ts",
+    "network.deterministic.setup.utils.ts",
+    "network.deterministic.state.utils.ts",
+    "network.deterministic.lifecycle.utils.ts"
+  ]
+}

@@ -6,12 +6,65 @@
  * neuron type; it is the lifecycle policy that decides when detached nodes can
  * be scrubbed, retained, and reused.
  *
+ * Think of this boundary as the object-lifecycle companion to topology
+ * mutation. Evolutionary search, pruning, and graph repair can create and
+ * discard many nodes across a run. Rebuilding a brand-new `Node` object for
+ * every edit turns those experiments into avoidable allocation churn. This
+ * chapter keeps detached node shells around so the next structural change can
+ * reuse them after a full reset.
+ *
+ * The important invariant is that reused nodes must feel fresh. `acquireNode()`
+ * does not hand back a half-detached neuron with old traces or dangling
+ * connections. It scrubs connection lists, resets runtime and error state,
+ * reinitializes bias and masks, and assigns a fresh gene id for the next
+ * lifecycle. `releaseNode()` is therefore only safe after the caller has fully
+ * removed the node from any live graph.
+ *
+ * That makes this pool stricter than the activation-array pool. Buffer pooling
+ * only needs zeroed scratch memory. Node pooling must also protect structural
+ * correctness, training state, and evolutionary identity boundaries. The value
+ * of this folder is not just fewer allocations; it is cheaper topology churn
+ * without ghost state leaking across experiments.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Live[Live graph node]:::base --> Detach[Detach from graph]:::accent
+ *   Detach --> Release[releaseNode]:::accent
+ *   Release --> Pool[Recycled node pool]:::base
+ *   Pool --> Acquire[acquireNode]:::accent
+ *   Acquire --> Reset[Reset state bias traces connections gene id]:::base
+ *   Reset --> Reused[Reusable fresh-feeling node]:::base
+ * ```
+ *
+ * For background on the wider reuse pattern, see Wikipedia contributors,
+ * [Object pool pattern](https://en.wikipedia.org/wiki/Object_pool_pattern).
+ * This chapter applies that pattern to mutable neuron objects rather than to
+ * simple buffers.
+ *
  * Read this chapter in three passes:
  *
  * 1. start with `acquireNode()` to see how callers obtain a fully reset node,
  * 2. continue to `releaseNode()` when you need the detach-and-recycle rules,
  * 3. finish with `nodePoolStats()` and `resetNodePool()` for observability and
  *    deterministic test harness cleanup.
+ *
+ * Example: recycle a detached hidden node between topology edits.
+ *
+ * ```ts
+ * const hiddenNode = acquireNode({ type: 'hidden' });
+ * // wire the node into a graph, then detach it later
+ * releaseNode(hiddenNode);
+ * ```
+ *
+ * Example: reset the pool before a deterministic harness or memory probe.
+ *
+ * ```ts
+ * resetNodePool();
+ * const stats = nodePoolStats();
+ * ```
  */
 import Node from '../node/node';
 

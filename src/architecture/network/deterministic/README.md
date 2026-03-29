@@ -1,28 +1,94 @@
 # architecture/network/deterministic
 
-## architecture/network/deterministic/network.deterministic.utils.types.ts
+Deterministic RNG chapter for replayable `Network` behavior.
 
-### NetworkInternals
+This folder keeps random state explicit so stochastic network behavior can be
+repeated instead of merely hoped for. The same graph may use randomness for
+dropout, stochastic depth, weight noise, training-time perturbations, or
+mutation-adjacent helpers. Deterministic utilities give those flows a common
+seed, checkpoint, and restore surface.
 
-Internal deterministic network state shape used across deterministic utility modules.
+The important design split is between setup, state access, and lifecycle
+capture. `setSeed()` installs a reproducible random stream. `getRNGState()`
+and `setRNGState()` expose lightweight numeric checkpoints for pause-resume
+workflows. `snapshotRNG()` and `restoreRNG()` support the slightly richer
+lifecycle case where external tooling wants to branch or reconstruct the
+active random function more deliberately.
 
-### RNG_WEYL_INCREMENT
+This chapter matters because deterministic behavior is only useful when it is
+applied consistently. A seed is not enough if callers cannot checkpoint the
+current stream, resume it later, or understand which helper owns the active
+random function. By keeping those responsibilities together, the network
+surface stays reproducible across tests, debugging sessions, and long-running
+experiments.
 
-Fixed Weyl increment used to advance deterministic PRNG state.
+Another useful lens is to think in terms of branching timelines. Training or
+evolution often needs to ask, "what happens if I continue from exactly this
+stochastic point but change one later decision?" The deterministic helpers in
+this folder are the bridge that makes that question answerable instead of
+approximate.
 
-### RNGSnapshot
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
 
-Snapshot payload for RNG state restore flows.
+  Seed[setSeed]:::accent --> RandomOps[stochastic network operations]:::base
+  RandomOps --> State[getRNGState checkpoint]:::base
+  RandomOps --> Snapshot[snapshotRNG lifecycle snapshot]:::base
+  State --> Resume[setRNGState resume]:::accent
+  Snapshot --> Restore[restoreRNG external restore]:::accent
+```
 
-### UINT32_NORMALIZER
+```mermaid
+flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
 
-Divisor used to normalize uint32 PRNG output into [0, 1).
+  DeterministicChapter[deterministic/]:::accent --> Setup[setup utils<br/>install seed-backed RNG]:::base
+  DeterministicChapter --> State[state utils<br/>read and write numeric state]:::base
+  DeterministicChapter --> Lifecycle[lifecycle utils<br/>snapshot and restore]:::base
+```
+
+For background on why this chapter can stay reproducible with a small state
+surface, see Wikipedia contributors,
+[Pseudorandom number generator](https://en.wikipedia.org/wiki/Pseudorandom_number_generator).
+The exported helpers here are about managing one deterministic stream, not
+about generating cryptographic randomness.
+
+Example: initialize one reproducible random stream and checkpoint its numeric
+state for later reuse.
+
+```ts
+network.setSeed(42);
+const checkpoint = network.getRNGState();
+
+if (checkpoint !== undefined) {
+  network.setRNGState(checkpoint);
+}
+```
+
+Example: capture a portable snapshot before branching into a debugging or
+replay workflow.
+
+```ts
+network.setSeed(7);
+const snapshot = network.snapshotRNG();
+
+console.log(snapshot.state, snapshot.step);
+```
+
+Practical reading order:
+
+1. Start here for the public deterministic helpers and their intended use.
+2. Continue into `network.deterministic.setup.utils.ts` for seed-backed RNG
+   installation.
+3. Continue into `network.deterministic.state.utils.ts` for numeric
+   checkpoint accessors.
+4. Finish in `network.deterministic.lifecycle.utils.ts` when you want the
+   richer snapshot and restore plumbing.
 
 ## architecture/network/deterministic/network.deterministic.utils.ts
-
-### network.deterministic.utils
-
-Default export bundle for convenient named imports.
 
 ### getRandomFn
 
@@ -180,6 +246,24 @@ Example:
 ```ts
 const snapshot = network.snapshotRNG();
 ```
+
+## architecture/network/deterministic/network.deterministic.utils.types.ts
+
+### NetworkInternals
+
+Internal deterministic network state shape used across deterministic utility modules.
+
+### RNG_WEYL_INCREMENT
+
+Fixed Weyl increment used to advance deterministic PRNG state.
+
+### RNGSnapshot
+
+Snapshot payload for RNG state restore flows.
+
+### UINT32_NORMALIZER
+
+Divisor used to normalize uint32 PRNG output into [0, 1).
 
 ## architecture/network/deterministic/network.deterministic.setup.utils.ts
 

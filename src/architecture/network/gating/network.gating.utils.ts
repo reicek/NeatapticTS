@@ -1,3 +1,46 @@
+/**
+ * Connection-gating utilities and gate-aware repair helpers for network edits.
+ *
+ * Gating is the lightweight way to let one node decide how strongly another
+ * connection should matter right now. That makes this chapter about more than
+ * a simple `gate()` setter. It also owns the awkward structural case where a
+ * hidden node is removed and the network tries to preserve useful gated
+ * behavior by reconnecting predecessor and successor nodes, then reassigning
+ * preserved gaters onto the new bridge connections.
+ *
+ * The split inside this folder follows those two jobs. `gate.utils` keeps
+ * ordinary gate and ungate bookkeeping small and predictable. `remove.utils`
+ * handles the more invasive bridge-repair flow used during gate-aware hidden
+ * node removal. The shared types file only carries temporary collections used
+ * during that repair work; it is not the right chapter intro.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   Gater[Gater node activation] --> Modulate[Modulate connection gain]
+ *   Modulate --> Target[Target node input sum]
+ *   Remove[Remove hidden node] --> Bridge[Create bridge connections]
+ *   Bridge --> Preserve[Reassign preserved gaters]
+ * ```
+ *
+ * A useful mental model is that gating changes when a connection is
+ * influential, while bridge repair tries to preserve where information can
+ * still travel after topology surgery. Keeping both concerns together makes
+ * the public surface easier to learn because callers usually encounter them in
+ * the same network-editing workflows.
+ *
+ * Example: attach a hidden node as a gater for one connection.
+ *
+ * ```ts
+ * network.gate(hiddenNode, connection);
+ * ```
+ *
+ * Example: later remove that modulation and return the connection to static
+ * weighting.
+ *
+ * ```ts
+ * network.ungate(connection);
+ * ```
+ */
 import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';

@@ -4,39 +4,33 @@
 
 ## Scope
 
-Repair the remaining `test/examples/asciiMaze/**` TypeScript diagnostics in
-`tsconfig.test.json` without disturbing the completed NEAT public-surface fix.
+- Repair the remaining `test/examples/asciiMaze/**` TypeScript diagnostics from
+  the current repo state.
+- Keep the repair constrained to example compatibility rather than reopening
+  unrelated runtime work.
 
-## Current state
+## Final state
 
-- [DONE] Confirmed `npm test` passes from the current repo state.
-- [DONE] Confirmed `npx tsc --noEmit -p tsconfig.test.json` still fails only in `test/examples/asciiMaze/**`.
-- [DONE] Grouped the remaining diagnostics into local compatibility buckets before editing.
+- The `asciiMaze` example lane no longer carries the TypeScript diagnostics that
+  remained after the NEAT public-surface repair work.
+- Browser-entry, evolution-engine, maze setup/network surface, and telemetry
+  compatibility issues were brought back into a stable typed state.
+- No active backlog remains; this file is now a reopen point for future
+  `asciiMaze` diagnostics.
 
-## Coverage backlog
+## Audit summary
 
-- [DONE] Browser-entry type compatibility fixes.
-  Files: `browser-entry/browser-entry.globals.services.ts`, `browser-entry/browser-entry.host.services.ts`.
-  Failure shape: window casting overlap and generic `Record<string, unknown>` constraints.
-- [DONE] Evolution-engine nullability and callback-contract fixes.
-  Files: `evolutionEngine.ts`, `evolutionEngine/neatConfiguration.ts`.
-  Failure shape: `Neat | null` flow, warm-start callback signature mismatch, and constructor overload typing.
-- [DONE] Maze setup and network surface compatibility fixes.
-  Files: `evolutionEngine/optionsAndSetup.ts`, `evolutionEngine/populationPruning.ts`, `asciiMaze.e2e.test.ts`.
-  Failure shape: missing imports, `undefined` maze source handling, and `Network` vs `INetwork` adaptation seams.
-- [DONE] Telemetry metrics cleanup.
-  Files: `evolutionEngine/telemetryMetrics.ts`.
-  Failure shape: stale property names and missing local symbol references.
-- [DONE] Final validation with `npx tsc --noEmit -p tsconfig.test.json` and `npm test`.
+- Validation used `npx tsc --noEmit -p tsconfig.test.json` and `npm test` from
+  the current repo state.
+- The lane closed only after the remaining example diagnostics reached zero.
 
-## Validation
+## Reopen conditions
 
-- `npx tsc --noEmit -p tsconfig.test.json` completed with no diagnostics.
-- `npm test` completed successfully from the current repo state.
+- New `asciiMaze` example diagnostics appear in `tsconfig.test.json`.
+- Example-surface nullability or contract drift reappears after later changes.
+- Test-lane API changes require another example compatibility pass.
 
-## Handoff query
+## Audit log
 
-```text
-Continue from the current repo state only. Do not rely on prior chat history.
-Work from plans/asciiMaze-typescript-repair.plans.md. The ASCII Maze TypeScript repair pass is complete: browser-entry, evolution-engine, setup/pruning, and telemetry compatibility seams were aligned, `npx tsc --noEmit -p tsconfig.test.json` is green, and `npm test` passes. Preserve unrelated user changes and only reopen this area if new diagnostics appear.
-```
+- Durable completion notes now live in
+  [asciiMaze-typescript-repair.logs.md](asciiMaze-typescript-repair.logs.md).

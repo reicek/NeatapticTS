@@ -1,6 +1,8 @@
 # <Workstream Name> SOLID Split
 
-## Purpose
+**Status:** [WIP]
+
+## Scope
 
 Describe the coordination sink being reduced, the stable surface that must keep
 working, and the target architectural shape after the split.
@@ -14,11 +16,13 @@ working, and the target architectural shape after the split.
 
 ## Durable Rules
 
-- Keep exactly one active step at a time.
+- Keep exactly one active `[WIP]` step at a time.
 - Update this plan immediately after each completed step.
 - Preserve stable imports unless a breaking change is explicitly approved.
 - Do not hand-edit generated README files; improve source JSDoc and run docs.
 - Keep the true public facade orchestration-first.
+- When this workstream reaches terminal `[DONE]`, compress this file into a
+  short closed tracker and add or update the matching `.logs.md` file.
 
 ## Target Shape
 
@@ -28,16 +32,38 @@ working, and the target architectural shape after the split.
 - Implementation detail moves behind focused `*.services.ts`, `*.utils.ts`,
   `*.types.ts`, `*.errors.ts`, or `*.constants.ts` files.
 
-## Steps
+## Current state
 
-- [] Step 1: Map the current boundary, stable imports, and likely helper seams.
-- [] Step 2: Extract the first focused responsibility cluster behind the stable
-  facade.
-- [] Step 3: Extract the next responsibility cluster and reduce the facade to
-  orchestration-only behavior.
-- [] Step 4: Improve JSDoc so the generated README reads naturally for the new
-  boundary.
-- [] Step 5: Validate the touched surface and record the durable boundary note.
+- Active boundary: `<path or seam>`
+- Current pressure: `<why this boundary still needs work>`
+- Worktree cautions: `<generated docs drift, unrelated edits, or n/a>`
+
+## Coverage backlog
+
+- [WIP] Step 1: Map the current boundary, stable imports, and likely helper
+  seams.
+- [PLANNED] Step 2: Extract the first focused responsibility cluster behind the
+  stable facade.
+- [PLANNED] Step 3: Extract the next responsibility cluster and reduce the
+  facade to orchestration-only behavior.
+- [PLANNED] Step 4: Improve JSDoc so the generated README reads naturally for
+  the new boundary.
+- [PLANNED] Step 5: Validate the touched surface and record the durable
+  boundary note.
+
+## Immediate next steps
+
+- Execute only the single active `[WIP]` step.
+- Refresh `## Handoff query` whenever the workstream remains active.
+- If the whole workstream closes, replace active-session scaffolding with a
+  short closed tracker and add or update the matching `.logs.md` file.
+
+## Handoff query
+
+```text
+Continue from the current repo state only. Do not rely on prior chat history.
+<Describe the next narrow split step, the files to read first, and the required validations.>
+```
 
 ## Done Criteria
 
@@ -45,4 +71,7 @@ working, and the target architectural shape after the split.
 - The public facade remains stable and orchestration-first.
 - Extracted helper files own the detailed responsibilities.
 - Generated README output reflects the new shape after docs regeneration.
-- The boundary can be resumed safely in a later session from this plan alone.
+- If more work remains, the boundary can be resumed safely in a later session
+  from this plan alone.
+- If no work remains, this plan is compressed into a short closed tracker and a
+  matching `.logs.md` file records the durable audit history.

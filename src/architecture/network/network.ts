@@ -1,20 +1,91 @@
 ﻿/**
  * Core network chapter for the architecture surface.
  *
- * This folder now owns the public `Network` class that readers and callers use
- * to build, activate, evolve, serialize, and export graph-shaped neural
- * systems. The surrounding helper chapters keep activation, training,
- * topology, pruning, ONNX, and slab execution policy focused, while this file
- * preserves the orchestration story that ties those responsibilities into one
- * runtime boundary.
+ * This folder owns the public `Network` class: the boundary where a graph stops
+ * being only nodes and connections and starts behaving like one runnable,
+ * mutable, trainable system. Higher-level NEAT code can mutate or score a
+ * network, but this chapter is where the graph itself learns how to activate,
+ * accept structural edits, preserve deterministic state, serialize, and cross
+ * the ONNX boundary.
  *
- * Read this chapter in three passes:
+ * That boundary matters because the same instance has to serve several jobs
+ * without changing shape. A caller may want ordinary inference, training-aware
+ * forward passes, topology edits, reproducible stochastic behavior, sparse
+ * pruning, or a portable checkpoint. Keeping those responsibilities under one
+ * facade makes the public API readable while the helper chapters keep each
+ * policy cluster narrow enough to teach.
  *
- * 1. start here to understand the public `Network` contract and why it sits
- *    above nodes, layers, and connections,
- * 2. continue into the helper chapters when you want one subsystem in detail,
- * 3. return here when you need to see how the public API composes those
- *    subsystem policies back into one runtime object.
+ * A useful mental model is to read `network/` as four cooperating shelves.
+ * `bootstrap/` explains one-time construction policy. `activate/`, `runtime/`,
+ * and `training/` explain how a graph is stepped and regularized once it is
+ * alive. `connect/`, `mutate/`, `remove/`, `prune/`, and `topology/` explain
+ * graph surgery. `serialize/`, `standalone/`, `onnx/`, and `stats/` explain
+ * portability, inspection, and reporting.
+ *
+ * The performance story is equally important. This chapter deliberately hides
+ * storage details until they matter. Callers should be able to ask for
+ * `activate()` or `train()` without first understanding slab packing, pooled
+ * activation arrays, or cache invalidation. The helper folders then expose how
+ * the same graph can switch between object traversal and denser typed-array
+ * paths without changing the surface contract.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Build[bootstrap and topology intent]:::base --> NetworkClass[Network facade]:::accent
+ *   NetworkClass --> Execute[activate runtime and training]:::base
+ *   Execute --> Edit[connect mutate prune remove]:::base
+ *   Edit --> Persist[serialize standalone and ONNX]:::base
+ * ```
+ *
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   NetworkChapter[network chapter]:::accent --> Bootstrap[bootstrap/ one-time setup]:::base
+ *   NetworkChapter --> Activate[activate/ forward-pass policy]:::base
+ *   NetworkChapter --> Runtime[runtime/ training-time controls]:::base
+ *   NetworkChapter --> Structure[connect mutate topology prune]:::base
+ *   NetworkChapter --> Interop[serialize standalone onnx stats]:::base
+ * ```
+ *
+ * For background on the execution-order side of this chapter, see Wikipedia
+ * contributors, [Topological sorting](https://en.wikipedia.org/wiki/Topological_sorting).
+ * Feed-forward network execution, acyclic guards, and some of the helper
+ * policies in this folder all depend on the same scheduling idea even when the
+ * public API keeps that detail out of the caller's way.
+ *
+ * Example: create a compact layered network and use the ordinary activation
+ * surface.
+ *
+ * ```ts
+ * const network = Network.createMLP(2, [4], 1);
+ * const outputValues = network.activate([0, 1]);
+ * ```
+ *
+ * Example: checkpoint one network, then restore it for another run.
+ *
+ * ```ts
+ * const network = new Network(2, 1, { seed: 7 });
+ * const saved = network.toJSON();
+ * const restored = Network.fromJSON(saved);
+ * const replayed = restored.activate([1, 0]);
+ * ```
+ *
+ * Practical reading order:
+ *
+ * 1. Start here for the public `Network` facade and the cross-chapter map.
+ * 2. Continue into `bootstrap/` when the constructor contract is the next
+ *    question.
+ * 3. Continue into `activate/`, `runtime/`, and `training/` for execution and
+ *    learning policy.
+ * 4. Continue into `connect/`, `mutate/`, `remove/`, `prune/`, and `topology/`
+ *    for structural editing.
+ * 5. Finish in `serialize/`, `standalone/`, `onnx/`, and `stats/` for
+ *    portability, derived reports, and export flows.
  */
 
 import Node from '../node/node';
@@ -114,42 +185,16 @@ import type {
 } from './network.types';
 
 /**
- * Network (Evolvable / Trainable Graph)
- * =====================================
- * Represents a directed neural computation graph used both as a NEAT genome
- * phenotype and (optionally) as a gradientΓÇætrainable model. The class binds
- * together specialized modules (topology, pruning, serialization, slab packing)
- * to keep the core surface approachable for learners.
+ * Public graph runtime that combines execution, editing, and portability.
  *
- * Educational Highlights:
- *  - Structural Mutation: functions like `addNodeBetween()` and evolutionary
- *    helpers (in higher-level `Neat`) mutate topology to explore architectures.
- *  - Fast Execution Paths: a StructureΓÇæofΓÇæArrays (SoA) slab (`rebuildConnectionSlab`)
- *    packs connection data into typed arrays to improve cache locality.
- *  - Memory Optimization: node pooling & typed array pooling demonstrate how
- *    allocation patterns affect performance and GC pressure.
- *  - Determinism: RNG snapshot/restore methods allow reproducible experiments.
- *  - Hybrid Workflows: dropout, stochastic depth, weight noise and mixed precision
- *    illustrate gradientΓÇæera regularization applied to evolved topologies.
+ * `Network` is the instance callers reach for when one directed graph should be
+ * activated immediately, mutated structurally, regularized during training, or
+ * shipped across a checkpoint or export boundary without changing types.
  *
- * Typical Usage:
- * ```ts
- * const net = new Network(4, 2);           // create network
- * const out = net.activate([0.1,0.3,0.2,0.9]);
- * net.addNodeBetween();                    // structural mutation
- * const slab = net.getConnectionSlab(); // inspect packed arrays
- * const clone = net.clone();               // deep copy
- * ```
- *
- * Performance Guidance:
- *  - Invoke `activate()` normally; the class autoΓÇæselects slab vs object path.
- *  - Batch structural mutations then call `rebuildConnectionSlab(true)` if you
- *    need an immediate fastΓÇæpath (it is invoked lazily otherwise).
- *  - Keep input array length exactly equal to `input`; mismatches throw early.
- *
- * Serialization:
- *  - `toJSON()` / `fromJSON()` support experiment checkpointing.
- *  - ONNX export (`exportToONNX`) enables interoperability with other tools.
+ * Read the class as an orchestration facade over the helper chapters in this
+ * folder. The public methods stay on the instance so older imports and examples
+ * remain stable, while the heavier activation, topology, deterministic, and
+ * interoperability policies live in narrower modules below this surface.
  */
 import type { NetworkView } from '../../utils/memory';
 

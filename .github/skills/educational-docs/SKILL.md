@@ -38,6 +38,33 @@ rules, Mermaid policy, and citation/media guardrails. Companion agents such as
 gaps, and hand those specifics back into this skill rather than re-defining the
 documentation bar themselves.
 
+## Repo Preference Override
+
+When a generated README chapter is the target surface, treat the opening under
+the top `#` heading as the highest-leverage teaching surface in the repo.
+
+Hard requirements for that opening unless the user explicitly narrows scope:
+
+- optimize first for the first section because most readers will only read that
+  introduction before deciding whether to continue,
+- write the opening as an educational chapter introduction rather than as API
+  scaffolding or a symbol index,
+- keep the opening focused on the technical know-how behind the boundary named
+  by the title, for example `# neat/cache` should teach cache invalidation,
+  stale derived state, and why the boundary exists before it lists exports,
+- prefer roughly 5 to 10 short paragraphs in the opening when the boundary is a
+  meaningful educational surface,
+- prefer 2 to 3 Mermaid diagrams when they materially improve retention,
+- include at least 1 compact external reference when it helps teach the core
+  idea faster, with Wikipedia allowed as a background bridge,
+- include at least 2 small examples in the chapter when the public surface is
+  easier to understand through usage than through prose alone.
+
+Use these expectations as defaults for `src/**` educational chapter work. If a
+boundary is too small to sustain that much introduction without padding, keep
+the prose tight and explain in the final summary why a smaller opening was the
+better teaching choice.
+
 ## When to Use
 
 - A generated README feels technically correct but emotionally flat or hard to
@@ -257,9 +284,11 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
 3. Read before rewriting.
    - Read the nearest folder README, then the nearest useful parent README.
    - Read the smallest set of source files that own the public story.
-  - Judge the README's flow like a chapter outline: opening promise, reading
-    order, conceptual bridges, and whether the symbol sequence helps or hurts
-    learning.
+
+- Judge the README's flow like a chapter outline: opening promise, reading
+  order, conceptual bridges, and whether the symbol sequence helps or hurts
+  learning.
+
 4. Define the reader questions.
    - What is this for?
    - Why is it shaped this way?
@@ -282,40 +311,47 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
      prose with a properly attributed source.
    - Prefer one high-value reference over a noisy list.
 8. Evaluate Mermaid-first visuals deliberately.
-  - Prefer Mermaid Markdown for architecture overviews, data flows, decision
-    flows, state transitions, timelines, simple charts, and structural maps.
-  - When a chapter contains multiple policy modes, stages, or grouped option
-    families, assume at least one chart should probably exist unless the prose
-    is already unusually compact and obvious.
-  - Prefer adding a second chart when it answers a different reader question
-    than the first one, for example: one chart for execution flow and one chart
-    for mode comparison, taxonomy, or metric condensation.
-  - Treat GitHub README rendering as the primary Mermaid compatibility target
-    unless the task explicitly says the diagram only needs to work in the
-    generated HTML docs.
-  - Style diagrams with the Astro Bird palette so structure remains blue-led
-    and emphasis stays scarce.
-  - Add diagrams when they reduce confusion, not merely because Mermaid is
-    available.
-  - Choose the diagram family that matches the teaching goal.
-  - Validate non-trivial Mermaid syntax before finalizing when tooling is
-    available.
-  - Prefer conservative Mermaid syntax when the README itself is a primary
-    surface on GitHub.
+
+- Prefer Mermaid Markdown for architecture overviews, data flows, decision
+  flows, state transitions, timelines, simple charts, and structural maps.
+- When a chapter contains multiple policy modes, stages, or grouped option
+  families, assume at least one chart should probably exist unless the prose
+  is already unusually compact and obvious.
+- Prefer adding a second chart when it answers a different reader question
+  than the first one, for example: one chart for execution flow and one chart
+  for mode comparison, taxonomy, or metric condensation.
+- Treat GitHub README rendering as the primary Mermaid compatibility target
+  unless the task explicitly says the diagram only needs to work in the
+  generated HTML docs.
+- Style diagrams with the Astro Bird palette so structure remains blue-led
+  and emphasis stays scarce.
+- Add diagrams when they reduce confusion, not merely because Mermaid is
+  available.
+- Choose the diagram family that matches the teaching goal.
+- Validate non-trivial Mermaid syntax before finalizing when tooling is
+  available.
+- Prefer conservative Mermaid syntax when the README itself is a primary
+  surface on GitHub.
+
 9. Evaluate external visuals deliberately.
-  - Add images only when they improve understanding, not for decoration.
-  - Prefer Wikimedia Commons files with clear free-license metadata.
-  - Record author, source URL, license, and modification status.
+
+- Add images only when they improve understanding, not for decoration.
+- Prefer Wikimedia Commons files with clear free-license metadata.
+- Record author, source URL, license, and modification status.
+
 10. Regenerate and inspect.
-   - Run `npm run docs` after doc-affecting edits to generated surfaces.
-   - Re-read the generated output as if you were new to the module.
+
+- Run `npm run docs` after doc-affecting edits to generated surfaces.
+- Re-read the generated output as if you were new to the module.
+
 11. Tighten the experience.
-   - Remove repetition.
-   - Replace dry restatements with explanation.
-   - Make the reading order obvious.
-   - Keep README surfaces within a readable size whenever the boundary allows;
-    if the chapter still feels monolithic after normal source-first improvement,
-     escalate to `solid-split` instead of accepting an oversized folder README.
+
+- Remove repetition.
+- Replace dry restatements with explanation.
+- Make the reading order obvious.
+- Keep README surfaces within a readable size whenever the boundary allows;
+  if the chapter still feels monolithic after normal source-first improvement,
+  escalate to `solid-split` instead of accepting an oversized folder README.
 
 ## Post-Split Follow-Up Mode
 
@@ -326,10 +362,10 @@ mode:
 2. Preserve the split's new ownership story and make it easier to read.
 3. Prefer source-JSDoc improvements first when the README surface is generated.
 4. Add diagrams only when the new boundary is still hard to understand without
-  one.
+   one.
 5. Regenerate docs when the touched surface feeds generated README output.
 6. Report the doc pass as the follow-up to the completed split step so the
-  workflow remains legible.
+   workflow remains legible.
 
 This mode exists to keep the follow-up deterministic: every completed split
 gets a documentation polish pass, but that pass stays proportional to the code
@@ -345,6 +381,11 @@ signature details.
 For any document with a top-level `#` heading, the opening should read like the
 first pages of a chapter: define the problem space, explain why this boundary
 exists, and give the reader a clear path into the sections that follow.
+
+For this repo's chapter-style generated READMEs, the opening should usually be
+long enough to stand alone as the main learning surface. Assume that the opening
+is doing most of the educational work and that later symbol sections exist to
+support, not replace, that introduction.
 
 When the surface belongs to a neural-network subsystem, also answer the silent
 reader question behind most educational passes: "What does this let the network
@@ -551,6 +592,11 @@ For diagram selection, syntax caveats, and validation guidance, use
 - When updating a running plan document after a completed pass, compress older
   completed entries to the essentials: keep `Goals`, `Progress`, optional
   `Achievements`, and `Decision`.
+- When a documentation workstream becomes fully complete, finish with
+  `tracker-handoff` terminal closure: compress the `.plans.md` file into a
+  short closed tracker and add or update the same-boundary `.logs.md` file.
+- Do not keep a `Handoff query` on a terminally closed plan unless the user
+  explicitly wants reopen guidance.
 - Remove `Validation` from completed passes after the result has been folded
   into `Progress` or `Decision`.
 - Keep `Remaining gaps` and `Next step` only on the active latest pass unless
@@ -588,17 +634,21 @@ When the task includes updating an in-repo plan log, the updated log should
 also leave only the active pass with forward-looking `Remaining gaps` and
 `Next step`; prior completed passes should stay compressed.
 
+When that in-repo plan reaches terminal closure, the final tracker action
+should be the compressed closed plan plus the matching `.logs.md` record rather
+than a next-session handoff prompt.
+
 ## Companion Agent Contract
 
 If a companion agent uses this skill, it should:
 
 1. Name this skill explicitly as `educational-docs`.
 2. Pass concrete reconnaissance findings into the skill instead of paraphrasing
-  them away.
+   them away.
 3. Keep the agent prompt focused on read-only discovery and gap reporting when
-  the agent is a scout.
+   the agent is a scout.
 4. Avoid restating the full workflow, tone model, or guardrails that already
-  live here.
+   live here.
 5. Recommend `solid-split` explicitly when reconnaissance shows the README is
-  too monolithic for a healthy docs-only pass.
+   too monolithic for a healthy docs-only pass.
 6. Update the agent when this skill changes materially so both remain aligned.

@@ -8,6 +8,59 @@ this chapter keep activation, connection, propagation, and factory policies
 focused, while this file preserves the orchestration story that readers and
 callers actually meet first.
 
+If `Node` is the single-neuron chapter and `Network` is the whole-graph
+chapter, `Layer` is the middle shelf that lets builders talk in model-sized
+blocks. Dense stages, recurrent cells, normalization passes, and memory-
+shaped motifs all need more intent than a raw list of nodes, but far less
+ceremony than constructing an entire network by hand.
+
+That middle shelf matters for two audiences at once. Callers want one place
+to say "make a dense block" or "connect this stage to that stage" without
+manually pushing node arrays around. Maintainers want activation, wiring,
+propagation, and factory mechanics separated so the public API can stay easy
+to read while the underlying policies continue to evolve. This folderized
+chapter is how the repo serves both goals at the same time.
+
+One useful mental model is to place `Layer` between `Group` and `Network`.
+`Group` exposes a reusable cluster of nodes plus wiring vocabulary. `Layer`
+adds the stronger promise that the cluster represents a recognizable model
+stage with standard entrypoints such as `activate()`, `propagate()`,
+`connect()`, and factory constructors. `Network` then chains many of those
+stages into a runnable, mutable graph.
+
+A second mental model is to treat `layer.ts` as a public facade over several
+helper shelves. Readers should start here because this file owns the stable
+orchestration story. The helper files exist to keep concerns narrow: one set
+handles activation and propagation, another handles wiring and guards, and
+the factory helpers explain how dense, recurrent, normalization, and
+experimental layer families are assembled.
+
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Node[Node primitives]:::base --> Group[Group blocks]:::base
+  Group --> Layer[Layer model stage]:::accent
+  Layer --> Network[Network orchestration]:::base
+  Layer --> Architect[Architect presets]:::base
+```
+
+```mermaid
+flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  LayerFacade[Layer facade]:::accent --> Runtime[activate propagate clear gate input]:::base
+  LayerFacade --> Wiring[connection and guard helpers]:::base
+  LayerFacade --> Factories[dense recurrent normalization experimental factories]:::base
+```
+
+For background on the broader modeling idea, see Wikipedia contributors,
+[Artificial neural network](https://en.wikipedia.org/wiki/Artificial_neural_network).
+This chapter is narrower: it documents the library boundary that packages
+those ideas into reusable blocks and helper-owned policies.
+
 Read this chapter in three passes:
 
 1. start with the `Layer` class overview to understand why the boundary
@@ -17,16 +70,52 @@ Read this chapter in three passes:
 3. finish with the static factory methods when you want named layer shapes
    such as dense, recurrent, normalization, or experimental blocks.
 
+Example: wire a small dense stack using the same block-level API that higher
+level builders depend on.
+
+```ts
+const input = Layer.dense(2);
+input.set({ type: 'input' });
+const hidden = Layer.dense(4);
+const output = Layer.dense(1);
+output.set({ type: 'output' });
+
+input.connect(hidden);
+hidden.connect(output);
+
+input.activate([0, 1]);
+hidden.activate();
+const values = output.activate();
+```
+
+Example: swap in a richer factory-built block without changing the top-level
+layer-to-layer wiring vocabulary.
+
+```ts
+const recurrent = Layer.lstm(8);
+const readout = Layer.dense(2);
+
+recurrent.connect(readout);
+```
+
 ## architecture/layer/layer.ts
 
 ### Layer
 
-Represents a functional layer within a neural network architecture.
+Public block-level facade for layer-oriented architecture building.
 
-Layers act as organizational units for nodes, facilitating the creation of
-complex network structures like Dense, LSTM, GRU, or Memory layers.
-They manage the collective behavior of their nodes, including activation,
-propagation, and connection to other network components.
+`Layer` is the boundary readers reach for when a graph region should behave
+like one model stage rather than a loose collection of neurons. It
+normalizes common operations across dense, recurrent, normalization, and
+experimental factories so higher-level chapters can compose readable graphs
+without depending on each helper shelf's private implementation details.
+
+This makes the class useful when you want to:
+
+- assemble a network from named blocks instead of raw nodes,
+- reuse the same activation, wiring, and propagation vocabulary across layer
+  families,
+- keep factory-specific mechanics below the public API.
 
 ### default
 

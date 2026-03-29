@@ -1,15 +1,88 @@
 # browser-entry
 
-Public browser entry facade for the ASCII Maze demo module boundary.
+Browser-hosted curriculum boundary for the ASCII Maze example.
 
-The folder now owns host bootstrap, runtime orchestration, globals
-compatibility, and resize handling behind focused helpers. This facade keeps
-the public API stable while presenting a small orchestration-first surface.
+This folder is where a long-running maze experiment becomes a browser
+experience a human can actually steer and inspect. The evolution engine still
+owns search, scoring, and curriculum advancement. The browser-entry boundary
+owns host elements, resize behavior, telemetry fan-out, globals
+compatibility, and the lifecycle handle that embedding code talks to.
 
-Educational note:
-`index.html` is only the browser shell that loads the prebuilt bundle and
-forwards into this API through window globals. If you want the real browser
-host boundary, start here rather than with the HTML loader.
+Read it as a boundary between two clocks. One clock belongs to the maze
+curriculum that carries refined winners into larger procedural mazes. The
+other clock belongs to the browser host that has to paint dashboards, react
+to cancellation, and stay polite to resize or unload events. `browser-entry/`
+exists so those clocks can cooperate without collapsing into one monolithic
+demo script.
+
+That separation matters because `index.html` is intentionally thin. The page
+only loads the published bundle from `docs/assets`, exposes a globals bridge,
+and then hands off to this start surface. If you want the real host/runtime
+seam, start here instead of with the HTML shell.
+
+A second useful mental model is ownership. This folder does not own maze
+fitness, winner refinement, or solve thresholds. Those stay in
+`evolutionEngine/`. The host boundary owns container resolution, dashboard
+plumbing, cooperative abort wiring, and the stable run handle that browser
+callers can stop, await, or subscribe to.
+
+Read the chapter in three passes. Start with `browser-entry.ts` for the
+public `start(...)` surface. Continue to `browser-entry.services.ts` for host
+assembly, globals wiring, and curriculum hand-off. Finish with the constants,
+curriculum, and host helper files when you want the browser-specific
+mechanics rather than the public lifecycle contract.
+
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  HtmlShell["index.html\nbundle loader"]:::base --> Globals["window globals\ncompatibility bridge"]:::base
+  Globals --> Start["start(...)\npublic browser entry"]:::accent
+  Start --> Host["host services\ndashboard + resize + container"]:::base
+  Start --> Curriculum["runBrowserEntryCurriculum\nphase orchestration"]:::base
+  Curriculum --> Engine["Evolution engine\nsearch and solve logic"]:::base
+  Host --> Handle["AsciiMazeRunHandle\nstop done telemetry"]:::base
+  Curriculum --> Handle
+```
+
+```mermaid
+flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  BrowserEntry["browser-entry/"]:::accent --> PublicApi["browser-entry.ts\npublic start surface"]:::base
+  BrowserEntry --> Services["browser-entry.services.ts\nhost and globals assembly"]:::base
+  BrowserEntry --> Curriculum["browser-entry.curriculum.services.ts\nphase hand-off"]:::base
+  BrowserEntry --> HostUtils["browser-entry.host.services.ts\nand utils"]:::base
+  BrowserEntry --> Types["browser-entry.types.ts\nrun-handle contracts"]:::base
+```
+
+For background reading on the cooperative stop side of the boundary, see
+MDN, [AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController),
+which is the browser primitive this entry layer uses to compose internal and
+caller-provided cancellation without moving DOM concerns into the engine.
+
+Example: boot the browser demo from embedding code and stop it later.
+
+```ts
+const handle = await start('ascii-maze-output');
+
+setTimeout(() => handle.stop(), 5_000);
+await handle.done;
+```
+
+Example: subscribe to telemetry while the curriculum advances.
+
+```ts
+const handle = await start('ascii-maze-output');
+const unsubscribe = handle.onTelemetry((telemetry) => {
+  console.log(telemetry.generation, telemetry.bestFitness);
+});
+
+await handle.done;
+unsubscribe();
+```
 
 ## browser-entry/browser-entry.types.ts
 

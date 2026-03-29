@@ -1,62 +1,89 @@
 # evolutionEngine
 
-Shared contracts for the ASCII Maze evolution engine subsystem.
+Population-level runtime contracts for the ASCII Maze evolution engine.
 
-The `evolutionEngine/` folder is where the public `EvolutionEngine` facade
-fans out into the lower-level machinery that keeps long maze runs practical:
-pooled scratch state, deterministic RNG caches, telemetry workspaces,
-sampling helpers, warm-start support, and population-level recovery logic.
+This folder is where one maze, one fitness story, and one NEAT controller
+turn into a repeatable training program. The public `EvolutionEngine` facade
+uses these contracts to normalize options, coordinate host callbacks, keep
+deterministic state reproducible, and decide when a curriculum phase has
+produced a winner worth carrying forward.
 
-This file is the common footing for that subsystem. It defines the shared
-state and scratch-buffer contracts that let the rest of the engine stay
-allocation-light and orchestration-first instead of passing dozens of loose
-arrays and counters through every hot-path helper.
+The important distinction is scale. `mazeMovement/` explains one agent run.
+`fitness.ts` explains how that run is scored. `dashboardManager/` explains
+how progress is shown to a human. `evolutionEngine/` explains how many runs
+across many generations become one population-level search loop with stop
+reasons, telemetry, warm starts, and phase outcomes that the next maze can
+reuse.
 
-## evolutionEngine/engineState.types.ts
+This file is the right chapter opening because it names the public nouns of
+that loop before the reader hits pooled scratch buffers or hot-path helpers.
+It answers four questions quickly: what a caller can configure, what a host
+may observe or interrupt, what result the engine returns, and which shared
+runtime contexts keep the hot path allocation-light.
 
-### EngineProfilingState
+A useful mental model is to treat the engine as a control tower rather than
+the aircraft itself. The engine does not move the agent through one maze cell
+at a time. It schedules phases, batches generations, preserves deterministic
+state, and hands structured outcomes back to browser or terminal hosts.
 
-Aggregated profiling configuration and accumulators shared across the evolution run.
+Read the chapter in three passes. Start here for the public contracts and the
+meaning of a run result. Continue to `engineState.types.ts` when you want the
+shared scratch and toggle state that keeps the loop cheap. Finish with
+`evolutionLoop.ts`, `evolutionEngine.services.ts`, and `sampling.ts` when you
+want the actual orchestration and telemetry mechanics.
 
-### EngineScratchState
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
 
-Centralised shared state for the ASCII maze evolution façade.
+  Caller["Caller or host"]:::base --> Options["IRunMazeEvolutionOptions\nrun inputs"]:::base
+  Options --> Engine["EvolutionEngine facade\npopulation-level control"]:::accent
+  Engine --> Loop["generation loop\nevaluate mutate telemetry"]:::base
+  Loop --> Result["MazeEvolutionRunResult\nbest network + exit reason"]:::base
+  Result --> Phase["MazeEvolutionCurriculumPhaseOutcome\ncarry winner forward"]:::base
+  Engine --> Host["EvolutionHostAdapter\npause and stop hooks"]:::base
+```
 
-Responsibilities:
-1. Define the scratch-buffer schema consumed by telemetry, population, and inspection helpers.
-2. Expose runtime toggle state (`EngineToggleState`) that drives optional phases and telemetry density.
-3. Provide factory and maintenance helpers (`createEngineState`, `initialiseTelemetryScratch`, `ensureVisitedHashCapacity`, `ensureRngCacheBatch`, `reseedRngState`) that size buffers and keep deterministic RNG state in sync.
-4. Export the project-wide singleton `engineState` so extracted modules can share the façade’s pooled resources while still accepting injected state for testing.
+```mermaid
+flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
 
-Callers mutate the returned scratch instances in place to avoid per-generation allocations; higher-level modules should treat the helpers as the sole entry point for sizing or resetting shared buffers.
+  EngineFolder["evolutionEngine/"]:::accent --> Contracts["evolutionEngine.types.ts\npublic run contracts"]:::base
+  EngineFolder --> Scratch["engineState.types.ts\nshared scratch and toggles"]:::base
+  EngineFolder --> Loop["evolutionLoop.ts\nmain generation orchestration"]:::base
+  EngineFolder --> Services["evolutionEngine.services.ts\nand helpers"]:::base
+  EngineFolder --> Sampling["sampling.ts\nand telemetry support"]:::base
+```
 
-### EngineState
+For background reading on the staged difficulty idea behind the browser and
+curriculum-style runs, see Wikipedia contributors,
+[Curriculum learning](https://en.wikipedia.org/wiki/Curriculum_learning),
+which captures the broader teaching idea of solving easier tasks before
+harder ones.
 
-Shared engine state instance combining pooled scratch buffers with toggle flags.
+Example: describe the host adapter and reporting hooks the engine may call.
 
-### EngineToggleState
+```ts
+const hostAdapter: EvolutionHostAdapter = {
+  isPauseRequested: () => window.asciiMazePaused === true,
+  handleStop: ({ reason, completedGenerations }) => {
+    console.log(reason, completedGenerations);
+  },
+};
+```
 
-Runtime switches that adjust telemetry verbosity and optional training phases.
+Example: sketch one engine run configuration before execution begins.
 
-### RngCacheHandles
-
-Handles returned after ensuring the RNG cache is ready for consumption.
-
-### RngCacheParameters
-
-Parameters controlling the RNG cache refill process.
-
-### TelemetryScratchHandles
-
-Collection of scratch buffers handed back after initialisation for convenience.
-
-### TelemetryScratchRequest
-
-Configuration describing which telemetry scratch buffers require capacity guarantees.
-
-### VisitedHashScratchHandles
-
-Handles exposed after ensuring the visited-coordinate hash table capacity.
+```ts
+const runOptions: IRunMazeEvolutionOptions = {
+  mazeConfig: { maze },
+  agentSimConfig: { maxSteps: 160 },
+  evolutionAlgorithmConfig: { popSize: 120, deterministic: true },
+  reportingConfig: { dashboardManager, logEvery: 5 },
+};
+```
 
 ## evolutionEngine/evolutionEngine.types.ts
 
@@ -254,6 +281,821 @@ Network instance annotated with telemetry fields during a generation.
 ### TrainingConstants
 
 Training constants used by Lamarckian warm-start and refinement helpers.
+
+## evolutionEngine/engineState.types.ts
+
+Shared contracts for the ASCII Maze evolution engine subsystem.
+
+The `evolutionEngine/` folder is where the public `EvolutionEngine` facade
+fans out into the lower-level machinery that keeps long maze runs practical:
+pooled scratch state, deterministic RNG caches, telemetry workspaces,
+sampling helpers, warm-start support, and population-level recovery logic.
+
+This file is the common footing for that subsystem. It defines the shared
+state and scratch-buffer contracts that let the rest of the engine stay
+allocation-light and orchestration-first instead of passing dozens of loose
+arrays and counters through every hot-path helper.
+
+### EngineProfilingState
+
+Aggregated profiling configuration and accumulators shared across the evolution run.
+
+### EngineScratchState
+
+Centralised shared state for the ASCII maze evolution façade.
+
+Responsibilities:
+1. Define the scratch-buffer schema consumed by telemetry, population, and inspection helpers.
+2. Expose runtime toggle state (`EngineToggleState`) that drives optional phases and telemetry density.
+3. Provide factory and maintenance helpers (`createEngineState`, `initialiseTelemetryScratch`, `ensureVisitedHashCapacity`, `ensureRngCacheBatch`, `reseedRngState`) that size buffers and keep deterministic RNG state in sync.
+4. Export the project-wide singleton `engineState` so extracted modules can share the façade’s pooled resources while still accepting injected state for testing.
+
+Callers mutate the returned scratch instances in place to avoid per-generation allocations; higher-level modules should treat the helpers as the sole entry point for sizing or resetting shared buffers.
+
+### EngineState
+
+Shared engine state instance combining pooled scratch buffers with toggle flags.
+
+### EngineToggleState
+
+Runtime switches that adjust telemetry verbosity and optional training phases.
+
+### RngCacheHandles
+
+Handles returned after ensuring the RNG cache is ready for consumption.
+
+### RngCacheParameters
+
+Parameters controlling the RNG cache refill process.
+
+### TelemetryScratchHandles
+
+Collection of scratch buffers handed back after initialisation for convenience.
+
+### TelemetryScratchRequest
+
+Configuration describing which telemetry scratch buffers require capacity guarantees.
+
+### VisitedHashScratchHandles
+
+Handles exposed after ensuring the visited-coordinate hash table capacity.
+
+## evolutionEngine/evolutionLoop.ts
+
+Evolution Loop Module
+
+Purpose:
+-------
+Provides utilities for running the main NEAT evolution loop, including
+generation orchestration, cancellation checking, and loop helper preparation.
+
+This module encapsulates:
+ - Cancellation detection (AbortSignal and legacy cancellation API)
+ - Loop helper preparation (frame flushing, persistence, logging)
+ - Generation execution and orchestration
+ - Stop condition evaluation
+
+ES2023 Policy:
+-------------
+- Uses nullish coalescing `??` and optional chaining `?.`
+- Descriptive variable names (no short identifiers)
+- Async/await for generation loops
+- Best-effort error handling (swallow non-fatal errors)
+
+### checkCancellation
+
+```ts
+checkCancellation(
+  options: EvolutionOptions,
+  bestResult: IMazeRunResult | undefined,
+): string | undefined
+```
+
+Inspect cooperative cancellation sources and annotate the provided result when cancelled.
+
+This function checks for cancellation from two sources in priority order:
+ 1) Legacy cancellation object with `isCancelled()` method
+ 2) Standard AbortSignal with `aborted` property
+
+Design Rationale:
+ - Allocation-free (uses only short-lived local references)
+ - Best-effort error handling (swallow exceptions to avoid disrupting loop)
+ - Sets `exitReason` on result object for caller inspection
+ - Safe to call on hot paths (no scratch buffers or pooling needed)
+
+Cancellation Priority:
+ 1. Check `options.cancellation.isCancelled()` (legacy API)
+ 2. Check `options.signal.aborted` (standard AbortSignal)
+ 3. Return undefined if no cancellation detected
+
+Parameters:
+
+Parameters:
+- `options` - - Optional run configuration which may contain `cancellation` and/or `signal`
+- `bestResult` - - Optional mutable result object that will be annotated with `exitReason`
+
+Returns: A reason string ('cancelled' | 'aborted') when cancellation is detected, otherwise `undefined`
+
+Examples:
+
+// Check cancellation before starting next generation
+const cancelReason = checkCancellation(opts, runResult);
+if (cancelReason) return cancelReason;
+
+// Check cancellation without result annotation
+if (checkCancellation(opts)) {
+  console.log('User requested cancellation');
+  break;
+}
+
+### checkStopConditions
+
+```ts
+checkStopConditions(
+  bestResult: IMazeRunResult | undefined,
+  bestNetwork: default | null,
+  maze: string[],
+  completedGenerations: number,
+  neat: default,
+  dashboardManager: IDashboardManager | undefined,
+  flushToFrame: () => Promise<void>,
+  hostAdapter: EvolutionHostAdapter | undefined,
+  minProgressToPass: number,
+  autoPauseOnSolve: boolean,
+  stopOnlyOnSolve: boolean,
+  stagnantGenerations: number,
+  maxStagnantGenerations: number,
+  maxGenerations: number,
+): Promise<string | undefined>
+```
+
+Inspect common termination conditions and perform minimal, best-effort side-effects.
+
+This function checks three canonical stop reasons in priority order:
+ 1) **Solved**: Best result achieves minimum progress threshold
+ 2) **Stagnation**: No improvement for maxStagnantGenerations
+ 3) **MaxGenerations**: Absolute generation cap reached
+
+Design Rationale:
+ - Allocation-light (uses only local references)
+ - Best-effort error handling (all side effects swallowed)
+ - Safe to call frequently on hot paths
+ - Updates dashboard and yields to host when stopping
+ - Emits optional 'asciiMazeSolved' event on solve (browser only)
+
+Side Effects (Best-Effort):
+ - Updates dashboard manager when stopping
+ - Awaits flushToFrame to yield to host
+ - Reports stop events through the optional host adapter
+ - Annotates `bestResult.exitReason` with canonical reason string
+
+Parameters:
+
+Parameters:
+- `bestResult` - - Mutable run summary object (may be mutated with `exitReason`)
+- `bestNetwork` - - Network object associated with the best result (for dashboard)
+- `maze` - - Maze descriptor passed to dashboard updates/events
+- `completedGenerations` - - Current generation index (integer)
+- `neat` - - NEAT driver instance (passed to dashboard update)
+- `dashboardManager` - - Optional manager exposing `update(maze, result, network, gen, neat)`
+- `flushToFrame` - - Async function to yield to host renderer (e.g. requestAnimationFrame)
+- `hostAdapter` - - Optional host adapter that owns host-side stop behavior
+- `minProgressToPass` - - Numeric threshold to consider a run 'solved'
+- `autoPauseOnSolve` - - When truthy request host-side pause handling on solve
+- `stopOnlyOnSolve` - - When true ignore stagnation/maxGenerations as stop reasons
+- `stagnantGenerations` - - Current count of stagnant generations observed
+- `maxStagnantGenerations` - - Max allowed stagnant generations before stopping
+- `maxGenerations` - - Absolute generation cap after which the run stops
+
+Returns: A canonical reason string ('solved'|'stagnation'|'maxGenerations') when stopping, otherwise `undefined`
+
+Example:
+
+// Check stop conditions after each generation
+const reason = await checkStopConditions(
+  bestResult, bestNet, maze, gen, neat, dashboard, flush,
+  95, true, false, stagnant, 500, 10000
+);
+if (reason) {
+  console.log('Stopping due to', reason);
+  break;
+}
+
+### emitProfileSummary
+
+```ts
+emitProfileSummary(
+  engineState: EngineState,
+  safeWrite: (msg: string) => void,
+  completedGenerations: number,
+  totalEvolveMs: number,
+  totalLamarckMs: number,
+  totalSimMs: number,
+  isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
+  getProfilingAccumulatorsFn: (state: EngineState) => ProfilingAccumulators,
+): void
+```
+
+Emit a formatted profiling summary showing average per-generation timings.
+
+This function prints a compact profiling summary with average millisecond timings
+for the main evolution phases (evolve, Lamarckian training, simulation). If detailed
+profiling is enabled, it also prints averages for telemetry, simplify, snapshot, and
+prune operations.
+
+Design Rationale:
+ - Allocation-free (reuses pooled Float64Array for intermediate calculations)
+ - Best-effort error handling (swallow all exceptions)
+ - Defensive numeric validation with divide-by-zero guards
+ - Conditional detailed profiling output
+
+Calculation Steps:
+ 1. Validate and normalize generation count (guard divide-by-zero)
+ 2. Store totals in pooled scratch buffer (4-slot Float64Array)
+ 3. Compute per-generation averages by dividing totals by generation count
+ 4. Format numbers with 2 decimal places and print compact summary
+ 5. If detailed profiling enabled, print averaged detail line
+
+Parameters:
+
+Parameters:
+- `engineState` - - Shared engine state with scratch buffers and profiling accumulators
+- `safeWrite` - - Safe logging function (best-effort, never throws)
+- `completedGenerations` - - Number of completed generations (must be > 0)
+- `totalEvolveMs` - - Total milliseconds spent in NEAT evolve() calls
+- `totalLamarckMs` - - Total milliseconds spent in Lamarckian training
+- `totalSimMs` - - Total milliseconds spent in simulation
+- `isProfilingDetailsEnabledFn` - - Function to check if detailed profiling is enabled
+- `getProfilingAccumulatorsFn` - - Function to get detailed profiling accumulators
+
+Example:
+
+// Print averages after a run that completed 100 generations
+emitProfileSummary(
+  state, console.log, 100, 12000, 3000, 4500,
+  isProfilingDetailsEnabled, getProfilingAccumulators
+);
+
+### EvolutionLoopResult
+
+Evolution loop result
+
+### GenerationOutcome
+
+Generation outcome with profiling timings
+
+### MutableMazeResult
+
+Mutable result object with exitReason field
+
+### persistSnapshotIfNeeded
+
+```ts
+persistSnapshotIfNeeded(
+  engineState: EngineState,
+  fs: { writeFileSync?: ((path: string, data: string) => void) | undefined; } | null,
+  pathModule: { join?: ((...paths: string[]) => string) | undefined; } | null,
+  persistDir: string | undefined,
+  persistTopK: number,
+  completedGenerations: number,
+  persistEvery: number,
+  neat: default,
+  bestFitness: number,
+  simplifyMode: boolean,
+  plateauCounter: number,
+  scratchSnapshotObj: Record<string, unknown>,
+  scratchSnapshotTop: SnapshotEntry[],
+  collectTelemetryTailFn: (state: EngineState, neat: default, count: number) => unknown,
+  getSortedIndicesByScoreFn: (state: EngineState, population: default[]) => number[],
+  isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
+  profilingStartTimestampFn: (state: EngineState) => number,
+  accumulateProfilingDurationFn: (state: EngineState, label: string, duration: number) => void,
+): void
+```
+
+Persist a population snapshot to disk at the configured interval.
+
+This function writes a JSON snapshot of the current generation state when the
+generation cadence aligns with the configured persistence interval. It captures
+top-K genomes, telemetry tail, and metadata for later analysis or resume.
+
+Design Rationale:
+ - Best-effort semantics: swallows all errors to avoid disrupting evolution loop
+ - Reuses pooled scratch objects (SCRATCH_SNAPSHOT_OBJ, SCRATCH_SNAPSHOT_TOP) to minimize allocations
+ - Optional profiling when enabled (measures snapshot serialization time)
+ - Defensive validation to ensure FS/path modules are available
+
+Scheduling Logic:
+ - Only persists when `completedGenerations % persistEvery === 0`
+ - Requires valid fs.writeFileSync and pathModule.join functions
+ - Requires non-empty population
+
+Snapshot Structure:
+ - generation: completed generation index
+ - bestFitness: best fitness score this generation
+ - simplifyMode: whether simplification was active
+ - plateauCounter: current plateau detection counter
+ - timestamp: Date.now() when snapshot was created
+ - telemetryTail: last N telemetry entries
+ - top: top-K genomes with minimal metadata (idx, score, nodes, connections, json)
+
+Parameters:
+
+Parameters:
+- `engineState` - - Shared engine state with scratch buffers and profiling
+- `fs` - - Node.js fs module or compatible FS API
+- `pathModule` - - Node.js path module or compatible path API
+- `persistDir` - - Directory path where snapshots should be written
+- `persistTopK` - - Number of top genomes to include in snapshot
+- `completedGenerations` - - Current generation index
+- `persistEvery` - - Generation interval for persistence (e.g., 25 = every 25th generation)
+- `neat` - - NEAT instance with population
+- `bestFitness` - - Best fitness score this generation
+- `simplifyMode` - - Whether simplification mode is active
+- `plateauCounter` - - Current plateau counter value
+- `scratchSnapshotObj` - - Pooled snapshot object (reused across calls)
+- `scratchSnapshotTop` - - Pooled top-K buffer (reused across calls)
+- `collectTelemetryTailFn` - - Function to collect telemetry tail from state
+- `getSortedIndicesByScoreFn` - - Function to get sorted genome indices
+- `isProfilingDetailsEnabledFn` - - Function to check profiling state
+- `profilingStartTimestampFn` - - Function to get profiling start time
+- `accumulateProfilingDurationFn` - - Function to accumulate profiling duration
+
+Example:
+
+// Persist snapshot every 25 generations
+persistSnapshotIfNeeded(
+  state, fs, path, './snapshots', 10, 50, 25, neat, 0.95, false, 3,
+  scratchObj, scratchTop, collectTail, getSorted, isProfilingEnabled, profileStart, profileAccum
+);
+
+### prepareLoopHelpers
+
+```ts
+prepareLoopHelpers(
+  opts: EvolutionOptions,
+  scratchBundle: ScratchBundle,
+): LoopHelpers
+```
+
+Build lightweight helpers used inside the evolution loop.
+
+This function assembles the helper utilities needed by the main evolution loop:
+ - Frame flushing for cooperative yielding
+ - Persistence handles for snapshot saving (Node.js only)
+ - Safe logging writer with fallback chain
+ - Scratch buffer warm-up (best-effort)
+
+Design Rationale:
+ - All initialization is best-effort (failures swallowed)
+ - Warms up common scratch buffers to reduce first-use allocation spikes
+ - Returns simple POJO with utilities (no class coupling)
+ - Side effects isolated to scratch bundle parameter
+
+Scratch Buffer Warm-Up:
+ - samplePool: Array for population sampling
+ - profilingScratch: Float64Array(4) for timing accumulation
+ - exps: Float64Array(64) for exponential computations
+
+Parameters:
+
+Parameters:
+- `opts` - - Normalized run options (contains persistDir and dashboardManager)
+- `scratchBundle` - - Engine scratch state for optional buffer warm-up
+
+Returns: Object containing:
+- flushToFrame: Async function for cooperative yielding
+- fs: Node.js fs module (null in browsers)
+- path: Node.js path module (null in browsers)
+- safeWrite: Resilient logging function with fallback chain
+
+Example:
+
+// Prepare loop helpers with scratch buffer warm-up
+const { flushToFrame, fs, path, safeWrite } = prepareLoopHelpers(opts, engineState.scratch);
+safeWrite('Starting evolution...\n');
+await flushToFrame(); // Yield to host
+
+### runEvolutionLoop
+
+```ts
+runEvolutionLoop(
+  engineState: EngineState,
+  neat: default,
+  opts: EvolutionOptions,
+  lamarckianTrainingSet: { input: number[]; output: number[]; }[],
+  encodedMaze: number[][],
+  startPosition: readonly [number, number],
+  exitPosition: readonly [number, number],
+  distanceMap: number[][],
+  helpers: LoopHelpers,
+  doProfile: boolean,
+  runtimeContext: EvolutionLoopRuntimeContext,
+  initialRingState: LogitsRingState,
+  telemetryContext: EvolutionLoopTelemetryContext,
+  supportContext: EvolutionLoopSupportContext,
+  constants: TrainingConstants & { DEFAULT_TRAIN_BATCH_LARGE: number; FITTEST_TRAIN_ITERATIONS: number; TELEMETRY_MINIMAL: boolean; SATURATION_PRUNE_THRESHOLD: number; RECENT_WINDOW: number; REDUCED_TELEMETRY: boolean; DISABLE_BALDWIN: boolean; },
+): Promise<EvolutionLoopResult>
+```
+
+Internal evolution loop that executes generations until a stop condition or cancellation.
+
+Behaviour & contract:
+ - Runs generations in a resilient, best-effort manner; internal errors are swallowed
+   so a single failure cannot abort the whole run.
+ - When `doProfile` is truthy the loop accumulates timing into a pooled Float64Array
+   to avoid per-iteration allocations. The pooled buffer is reused across calls.
+ - The helper performs side-effects (dashboard updates, persistence) in a non-fatal
+   fashion and yields to the host when requested via `helpers.flushToFrame`.
+
+Parameters:
+- `engineState` - - Shared engine state with scratch buffers and configuration
+- `neat` - - NEAT driver instance used to perform evolution and mutation operations
+- `opts` - - Normalised run options (produced by normalizeRunOptions)
+- `lamarckianTrainingSet` - - Optional supervised training cases used for Lamarckian warm-start
+- `encodedMaze` - - Encoded maze representation consumed by simulators
+- `startPosition` - - Start coordinates for the simulated agent
+- `exitPosition` - - Exit coordinates for the simulated agent
+- `distanceMap` - - Optional precomputed distance map to speed simulation
+- `helpers` - - Helper utilities: { flushToFrame, fs, path, safeWrite }
+- `doProfile` - - When truthy collect and return millisecond timings in the result
+- `runtimeContext` - - Shared pooled ring buffers and limits for the hot path.
+- `initialRingState` - - Current mutable ring state for this run.
+- `telemetryContext` - - Telemetry thresholds and verbosity switches used during simulation.
+- `supportContext` - - Shared scratch buffers and helper callbacks used by the loop.
+- `constants` - - Object containing all engine constants (DEFAULT_TRAIN_ERROR, etc.)
+
+Returns: Promise resolving to an object:
+{ bestNetwork, bestResult, neat, completedGenerations, totalEvolveMs, totalLamarckMs, totalSimMs, updatedRingState }
+
+Example:
+
+const runSummary = await runEvolutionLoop(
+  state, neat, opts, trainingSet, maze, start, exit, distMap, helpers, true, ...
+);
+
+### runGeneration
+
+```ts
+runGeneration(
+  engineState: EngineState,
+  neat: default,
+  doProfile: boolean,
+  lamarckianIterations: number,
+  lamarckianTrainingSet: { input: number[]; output: number[]; }[],
+  lamarckianSampleSize: number | undefined,
+  safeWrite: (msg: string) => void,
+  completedGenerations: number,
+  dynamicPopEnabled: boolean,
+  dynamicPopMax: number,
+  plateauGenerations: number,
+  plateauCounter: number,
+  dynamicPopExpandInterval: number,
+  dynamicPopExpandFactor: number,
+  dynamicPopPlateauSlack: number,
+  speciesHistoryRef: number[],
+  emptyVec: default[],
+  scratchNodeIdx: Int32Array<ArrayBufferLike>,
+  getNodeIndicesByType: (nodes: NetworkNode[], type: string) => number,
+  constants: TrainingConstants,
+): Promise<GenerationOutcome>
+```
+
+Run one generation: evolve, ensure output identity, update species history, maybe expand population,
+and run Lamarckian training if configured.
+
+Behaviour & contract:
+ - Performs a single NEAT generation step in a best-effort, non-throwing manner.
+ - Measures profiling durations when `doProfile` is truthy. Profiling is optional and
+   kept allocation-free (uses local numeric temporaries only).
+ - Invokes the following steps in order (each step is wrapped in a try/catch so
+   the evolution loop remains resilient to per-stage failures):
+     1) `neat.evolve()` to produce the fittest network for this generation.
+     2) `ensureOutputIdentity` to normalise output activations for consumers.
+     3) `handleSpeciesHistory` to update species statistics and history.
+     4) `maybeExpandPopulation` to grow the population when configured and warranted.
+     5) Optional Lamarckian warm-start training via `applyLamarckianTraining`.
+ - The method is allocation-light and reuses engine helpers / pooled buffers where
+   appropriate. It never throws; internal errors are swallowed and optionally logged
+   via the provided `safeWrite` function.
+
+Parameters:
+- `engineState` - - Shared engine state with scratch buffers and RNG
+- `neat` - - NEAT driver instance used for evolving the generation
+- `doProfile` - - When truthy measure timing for the evolve step (ms) using engine clock
+- `lamarckianIterations` - - Number of supervised training iterations to run per genome (0 to skip)
+- `lamarckianTrainingSet` - - Array of supervised training cases used for warm-start (may be empty)
+- `lamarckianSampleSize` - - Optional per-network sample size used by the warm-start routine
+- `safeWrite` - - Safe logging function; used only for best-effort diagnostic messages
+- `completedGenerations` - - Current generation index (used by expansion heuristics)
+- `dynamicPopEnabled` - - Whether dynamic population expansion is enabled
+- `dynamicPopMax` - - Upper bound on population size for expansion
+- `plateauGenerations` - - Window size used by plateau detection
+- `plateauCounter` - - Current plateau counter used by expansion heuristics
+- `dynamicPopExpandInterval` - - Generation interval to attempt expansion
+- `dynamicPopExpandFactor` - - Fractional growth factor used to compute new members
+- `dynamicPopPlateauSlack` - - Minimum plateau ratio required to trigger expansion
+- `speciesHistoryRef` - - Mutable array holding species history (maintained externally)
+- `emptyVec` - - Empty array fallback to avoid ephemeral allocations
+- `scratchNodeIdx` - - Pooled node index buffer (passed through to helpers)
+- `getNodeIndicesByType` - - Helper function to collect node indices by type
+- `constants` - - Object containing DEFAULT_TRAIN_ERROR, DEFAULT_TRAIN_RATE, DEFAULT_TRAIN_MOMENTUM, DEFAULT_TRAIN_BATCH_SMALL, DEFAULT_STD_SMALL, DEFAULT_STD_ADJUST_MULT
+
+Returns: An object shaped { fittest, tEvolve, tLamarck } where:
+- `fittest` is the network returned by `neat.evolve()` (may be null on error),
+- `tEvolve` is the measured evolve duration in milliseconds when `doProfile` is true (0 otherwise),
+- `tLamarck` is the total time spent in Lamarckian training (0 when skipped)
+
+Example:
+
+// Run a single generation with profiling and optional Lamarckian warm-start
+const { fittest, tEvolve, tLamarck } = await runGeneration(
+  engineState,
+  neatInstance,
+  true,   // doProfile
+  5,      // lamarckianIterations
+  trainingSet,
+  16,     // lamarckianSampleSize
+  console.log,
+  genIndex,
+  true,
+  500,
+  10,
+  plateauCounter,
+  5,
+  0.1,
+  0.75,
+  speciesHistory,
+  [],
+  nodeIndexBuffer,
+  getNodeIndicesByTypeFn,
+  { DEFAULT_TRAIN_ERROR: 0.01, ... }
+);
+
+### SimResultWithOutputs
+
+Simulation result with step outputs
+
+### simulateAndPostprocess
+
+```ts
+simulateAndPostprocess(
+  engineState: EngineState,
+  fittest: default,
+  encodedMaze: number[][],
+  startPosition: readonly [number, number],
+  exitPosition: readonly [number, number],
+  distanceMap: number[][],
+  maxSteps: number | undefined,
+  doProfile: boolean,
+  safeWrite: (msg: string) => void,
+  logEvery: number,
+  completedGenerations: number,
+  neat: default,
+  runtimeContext: EvolutionLoopRuntimeContext,
+  ringState: LogitsRingState,
+  telemetryContext: EvolutionLoopTelemetryContext,
+  loopSupportContext: Pick<EvolutionLoopSupportContext, "loopHelpers">,
+): SimulationResult
+```
+
+Simulate the supplied `fittest` genome/network and perform allocation-light postprocessing.
+
+Behaviour & contract:
+ - Runs the simulation via `MazeMovement.simulateAgent` and attaches compact telemetry
+   (saturation fraction, action entropy) directly onto the `fittest` object (in-place).
+ - When per-step logits are returned the helper attempts to copy them into the engine's pooled
+   ring buffers to avoid per-run allocations. Two copy modes are supported:
+     1) Shared SAB-backed flat Float32Array with an atomic Int32 write index (cross-worker safe).
+     2) Local in-process per-row Float32Array ring (`scratchLogitsRing`).
+ - Best-effort: all mutation and buffer-copy steps are guarded; failures are swallowed so the
+   evolution loop is not interrupted. Use `safeWrite` for optional diagnostic messages.
+
+Steps (high level):
+ 1) Run the simulator and capture wall-time when `doProfile` is truthy.
+ 2) Attach compact telemetry fields to `fittest` and ensure legacy `_lastStepOutputs` exists.
+ 3) If per-step logits are available, ensure ring capacity and copy them into the selected ring.
+ 4) Optionally prune saturated hidden->output connections and emit telemetry via logGenerationTelemetry.
+ 5) Return the raw simulation result and elapsed simulation time (ms when profiling enabled).
+
+Notes on pooling / reentrancy:
+ - The local ring is not re-entrant; callers must avoid concurrent writes.
+ - When shared mode is true we prefer the SAB-backed path which uses Atomics and is safe
+   for cross-thread producers.
+
+Parameters:
+- `engineState` - - Shared engine state with scratch buffers and ring configuration
+- `fittest` - - Genome/network considered the generation's best; may be mutated with metadata
+- `encodedMaze` - - Maze descriptor used by the simulator
+- `startPosition` - - Start co-ordinates passed as-is to the simulator
+- `exitPosition` - - Exit co-ordinates passed as-is to the simulator
+- `distanceMap` - - Optional precomputed distance map consumed by the simulator
+- `maxSteps` - - Optional maximum simulation steps; may be undefined to allow default
+- `doProfile` - - When truthy measure and return the simulation time in milliseconds
+- `safeWrite` - - Optional logger used for non-fatal diagnostic messages
+- `logEvery` - - Emit telemetry every `logEvery` generations (0 disables periodic telemetry)
+- `completedGenerations` - - Current generation index used for conditional telemetry
+- `neat` - - NEAT driver instance passed to telemetry hooks
+- `runtimeContext` - - Shared pooled ring buffers and limits for logits telemetry.
+- `ringState` - - Current mutable ring state (capacity, shared-mode flag, write cursor).
+- `telemetryContext` - - Telemetry thresholds and verbosity switches used after simulation.
+- `loopSupportContext` - - Shared scratch buffers and helper callbacks used by the loop.
+
+Returns: An object { generationResult, simTime, updatedRingState } where simTime is ms when profiling is enabled
+
+Example:
+
+const { generationResult, simTime, updatedRingState } = simulateAndPostprocess(
+  state, bestGenome, maze, start, exit, distMap, 1000, true, console.log, 10, genIdx, neat, ...
+);
+
+### SimulationOutcome
+
+Simulation result with profiling and ring state
+
+### updateDashboardAndMaybeFlush
+
+```ts
+updateDashboardAndMaybeFlush(
+  maze: string[],
+  result: IMazeRunResult | undefined,
+  network: default | null,
+  completedGenerations: number,
+  neat: default,
+  dashboardManager: IDashboardManager | undefined,
+  flushToFrame: (() => Promise<void>) | undefined,
+): Promise<void>
+```
+
+Safely update a UI dashboard with the latest run state and optionally yield to the
+host/frame via an awaited flush function.
+
+Behaviour (best-effort):
+ 1) If `dashboardManager.update` exists and is callable, call it with the stable
+    argument order (maze, result, network, completedGenerations, neat). Any exception
+    raised by the dashboard is swallowed to avoid interrupting the evolution loop.
+ 2) If `flushToFrame` is supplied as an async function, await it to yield control to
+    the event loop or renderer (for example `() => new Promise(r => requestAnimationFrame(r))`).
+ 3) The helper avoids heap allocations and relies on existing pooled scratch buffers in
+    the engine for heavy telemetry elsewhere; this method intentionally performs only
+    short-lived control flow and minimal work.
+
+Design Rationale:
+ - Allocation-free (no ephemeral objects or arrays created)
+ - Best-effort error handling (swallow all dashboard/flush errors)
+ - Stable argument order for dashboard implementations
+ - Async support for cooperative yielding to host scheduler
+
+Parameters:
+
+Parameters:
+- `maze` - - Maze instance or descriptor used by dashboard rendering.
+- `result` - - Per-run result object (path, progress, telemetry, etc.).
+- `network` - - Network or genome object that should be visualised.
+- `completedGenerations` - - Integer index of the completed generation.
+- `neat` - - NEAT manager instance (context passed to the dashboard update).
+- `dashboardManager` - - Optional manager exposing `update(maze, result, network, gen, neat)`.
+- `flushToFrame` - - Optional async function used to yield to the host/frame scheduler; may be omitted.
+
+Example:
+
+// Yield to the browser's next repaint after dashboard update:
+await updateDashboardAndMaybeFlush(
+  maze, genResult, fittestNetwork, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
+);
+
+### updateDashboardPeriodic
+
+```ts
+updateDashboardPeriodic(
+  maze: string[],
+  bestResult: IMazeRunResult | undefined,
+  bestNetwork: default | null,
+  completedGenerations: number,
+  neat: default,
+  dashboardManager: IDashboardManager | undefined,
+  flushToFrame: (() => Promise<void>) | undefined,
+): Promise<void>
+```
+
+Periodic dashboard update used when the engine wants to refresh a non-primary
+dashboard view (for example background or periodic reporting). This helper is
+intentionally small, allocation-light and best-effort: dashboard errors are
+swallowed so the evolution loop cannot be interrupted by UI issues.
+
+Behavioural contract:
+ 1) If `dashboardManager.update` is present and callable the method invokes it with
+    the stable argument order: (maze, bestResult, bestNetwork, completedGenerations, neat).
+ 2) If `flushToFrame` is supplied the helper awaits it after the update to yield to
+    the host renderer (eg. requestAnimationFrame). Any exceptions raised by the
+    flush are swallowed.
+ 3) The helper avoids creating ephemeral arrays/objects and therefore does not use
+    typed-array scratch buffers here — there is no hot numerical work to pool. Other
+    engine helpers already reuse class-level scratch buffers where appropriate.
+
+Design Rationale:
+ - Fast-guard early when update cannot be performed
+ - Best-effort error handling (swallow all exceptions)
+ - Preserves dashboard `this` binding with `.call()`
+ - Minimal allocations (no scratch buffers needed)
+
+Steps / inline intent:
+ 1. Fast-guard when an update cannot be performed (missing manager, update method,
+    or missing content to visualise).
+ 2. Call the dashboard update in a try/catch to preserve best-effort semantics.
+ 3. Optionally await the provided `flushToFrame` function to yield to the host.
+
+Parameters:
+
+Parameters:
+- `maze` - - Maze descriptor passed to the dashboard renderer.
+- `bestResult` - - Best-run result object used for display (may be falsy when not present).
+- `bestNetwork` - - Network or genome object to visualise (may be falsy when not present).
+- `completedGenerations` - - Completed generation index (number).
+- `neat` - - NEAT manager instance (passed through to dashboard update).
+- `dashboardManager` - - Optional manager exposing `update(maze, result, network, gen, neat)`.
+- `flushToFrame` - - Optional async function used to yield to the host/frame scheduler
+ (for example: `() => new Promise(r => requestAnimationFrame(r))`).
+
+Example:
+
+// Safe periodic update and yield to next frame
+await updateDashboardPeriodic(
+  maze, result, network, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
+);
+
+## evolutionEngine/evolutionEngine.services.ts
+
+### applyEvolutionEngineRingState
+
+```ts
+applyEvolutionEngineRingState(
+  updatedRingState: LogitsRingState,
+): void
+```
+
+Apply the latest logits-ring runtime values returned by the evolution loop.
+
+Parameters:
+- `updatedRingState` - - New ring-capacity, shared-mode, and write-cursor values.
+
+### configureEvolutionEngineToggles
+
+```ts
+configureEvolutionEngineToggles(
+  reducedTelemetry: boolean,
+  telemetryMinimal: boolean,
+  disableBaldwinPhase: boolean,
+): void
+```
+
+Apply telemetry and Baldwin-phase toggles derived from one normalized run request.
+
+Parameters:
+- `reducedTelemetry` - - When true, keep only the essential telemetry metrics.
+- `telemetryMinimal` - - When true, disable verbose telemetry capture.
+- `disableBaldwinPhase` - - When true, skip the Baldwin refinement stage.
+
+### getEvolutionEngineFacadeRuntimeState
+
+```ts
+getEvolutionEngineFacadeRuntimeState(): LogitsRingState
+```
+
+Read the mutable facade-owned logits-ring runtime state.
+
+Returns: Current ring-capacity, shared-mode, and write-cursor state.
+
+### getEvolutionEngineMaxLogitsRingCapacity
+
+```ts
+getEvolutionEngineMaxLogitsRingCapacity(): number
+```
+
+Read the hard maximum ring capacity used by the public facade.
+
+Returns: Maximum ring capacity allowed for logits telemetry.
+
+### getEvolutionEngineSharedState
+
+```ts
+getEvolutionEngineSharedState(): EngineState
+```
+
+Return the shared engine singleton used by extracted engine modules.
+
+The public facade now depends on the same owner as the rest of the engine
+boundary instead of creating a private duplicate singleton.
+
+Returns: Shared engine state singleton.
+
+### resetEvolutionEngineRingState
+
+```ts
+resetEvolutionEngineRingState(): void
+```
+
+Reset the facade-owned logits-ring runtime state to its baseline defaults.
 
 ## evolutionEngine/sampling.ts
 
@@ -1072,690 +1914,6 @@ safeWrite('[INFO] Generation 42 complete\n');
 ### PathModule
 
 Minimal path module shape for type safety (Node.js path module subset).
-
-## evolutionEngine/evolutionLoop.ts
-
-Evolution Loop Module
-
-Purpose:
--------
-Provides utilities for running the main NEAT evolution loop, including
-generation orchestration, cancellation checking, and loop helper preparation.
-
-This module encapsulates:
- - Cancellation detection (AbortSignal and legacy cancellation API)
- - Loop helper preparation (frame flushing, persistence, logging)
- - Generation execution and orchestration
- - Stop condition evaluation
-
-ES2023 Policy:
--------------
-- Uses nullish coalescing `??` and optional chaining `?.`
-- Descriptive variable names (no short identifiers)
-- Async/await for generation loops
-- Best-effort error handling (swallow non-fatal errors)
-
-### checkCancellation
-
-```ts
-checkCancellation(
-  options: EvolutionOptions,
-  bestResult: IMazeRunResult | undefined,
-): string | undefined
-```
-
-Inspect cooperative cancellation sources and annotate the provided result when cancelled.
-
-This function checks for cancellation from two sources in priority order:
- 1) Legacy cancellation object with `isCancelled()` method
- 2) Standard AbortSignal with `aborted` property
-
-Design Rationale:
- - Allocation-free (uses only short-lived local references)
- - Best-effort error handling (swallow exceptions to avoid disrupting loop)
- - Sets `exitReason` on result object for caller inspection
- - Safe to call on hot paths (no scratch buffers or pooling needed)
-
-Cancellation Priority:
- 1. Check `options.cancellation.isCancelled()` (legacy API)
- 2. Check `options.signal.aborted` (standard AbortSignal)
- 3. Return undefined if no cancellation detected
-
-Parameters:
-
-Parameters:
-- `options` - - Optional run configuration which may contain `cancellation` and/or `signal`
-- `bestResult` - - Optional mutable result object that will be annotated with `exitReason`
-
-Returns: A reason string ('cancelled' | 'aborted') when cancellation is detected, otherwise `undefined`
-
-Examples:
-
-// Check cancellation before starting next generation
-const cancelReason = checkCancellation(opts, runResult);
-if (cancelReason) return cancelReason;
-
-// Check cancellation without result annotation
-if (checkCancellation(opts)) {
-  console.log('User requested cancellation');
-  break;
-}
-
-### checkStopConditions
-
-```ts
-checkStopConditions(
-  bestResult: IMazeRunResult | undefined,
-  bestNetwork: default | null,
-  maze: string[],
-  completedGenerations: number,
-  neat: default,
-  dashboardManager: IDashboardManager | undefined,
-  flushToFrame: () => Promise<void>,
-  hostAdapter: EvolutionHostAdapter | undefined,
-  minProgressToPass: number,
-  autoPauseOnSolve: boolean,
-  stopOnlyOnSolve: boolean,
-  stagnantGenerations: number,
-  maxStagnantGenerations: number,
-  maxGenerations: number,
-): Promise<string | undefined>
-```
-
-Inspect common termination conditions and perform minimal, best-effort side-effects.
-
-This function checks three canonical stop reasons in priority order:
- 1) **Solved**: Best result achieves minimum progress threshold
- 2) **Stagnation**: No improvement for maxStagnantGenerations
- 3) **MaxGenerations**: Absolute generation cap reached
-
-Design Rationale:
- - Allocation-light (uses only local references)
- - Best-effort error handling (all side effects swallowed)
- - Safe to call frequently on hot paths
- - Updates dashboard and yields to host when stopping
- - Emits optional 'asciiMazeSolved' event on solve (browser only)
-
-Side Effects (Best-Effort):
- - Updates dashboard manager when stopping
- - Awaits flushToFrame to yield to host
- - Reports stop events through the optional host adapter
- - Annotates `bestResult.exitReason` with canonical reason string
-
-Parameters:
-
-Parameters:
-- `bestResult` - - Mutable run summary object (may be mutated with `exitReason`)
-- `bestNetwork` - - Network object associated with the best result (for dashboard)
-- `maze` - - Maze descriptor passed to dashboard updates/events
-- `completedGenerations` - - Current generation index (integer)
-- `neat` - - NEAT driver instance (passed to dashboard update)
-- `dashboardManager` - - Optional manager exposing `update(maze, result, network, gen, neat)`
-- `flushToFrame` - - Async function to yield to host renderer (e.g. requestAnimationFrame)
-- `hostAdapter` - - Optional host adapter that owns host-side stop behavior
-- `minProgressToPass` - - Numeric threshold to consider a run 'solved'
-- `autoPauseOnSolve` - - When truthy request host-side pause handling on solve
-- `stopOnlyOnSolve` - - When true ignore stagnation/maxGenerations as stop reasons
-- `stagnantGenerations` - - Current count of stagnant generations observed
-- `maxStagnantGenerations` - - Max allowed stagnant generations before stopping
-- `maxGenerations` - - Absolute generation cap after which the run stops
-
-Returns: A canonical reason string ('solved'|'stagnation'|'maxGenerations') when stopping, otherwise `undefined`
-
-Example:
-
-// Check stop conditions after each generation
-const reason = await checkStopConditions(
-  bestResult, bestNet, maze, gen, neat, dashboard, flush,
-  95, true, false, stagnant, 500, 10000
-);
-if (reason) {
-  console.log('Stopping due to', reason);
-  break;
-}
-
-### emitProfileSummary
-
-```ts
-emitProfileSummary(
-  engineState: EngineState,
-  safeWrite: (msg: string) => void,
-  completedGenerations: number,
-  totalEvolveMs: number,
-  totalLamarckMs: number,
-  totalSimMs: number,
-  isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
-  getProfilingAccumulatorsFn: (state: EngineState) => ProfilingAccumulators,
-): void
-```
-
-Emit a formatted profiling summary showing average per-generation timings.
-
-This function prints a compact profiling summary with average millisecond timings
-for the main evolution phases (evolve, Lamarckian training, simulation). If detailed
-profiling is enabled, it also prints averages for telemetry, simplify, snapshot, and
-prune operations.
-
-Design Rationale:
- - Allocation-free (reuses pooled Float64Array for intermediate calculations)
- - Best-effort error handling (swallow all exceptions)
- - Defensive numeric validation with divide-by-zero guards
- - Conditional detailed profiling output
-
-Calculation Steps:
- 1. Validate and normalize generation count (guard divide-by-zero)
- 2. Store totals in pooled scratch buffer (4-slot Float64Array)
- 3. Compute per-generation averages by dividing totals by generation count
- 4. Format numbers with 2 decimal places and print compact summary
- 5. If detailed profiling enabled, print averaged detail line
-
-Parameters:
-
-Parameters:
-- `engineState` - - Shared engine state with scratch buffers and profiling accumulators
-- `safeWrite` - - Safe logging function (best-effort, never throws)
-- `completedGenerations` - - Number of completed generations (must be > 0)
-- `totalEvolveMs` - - Total milliseconds spent in NEAT evolve() calls
-- `totalLamarckMs` - - Total milliseconds spent in Lamarckian training
-- `totalSimMs` - - Total milliseconds spent in simulation
-- `isProfilingDetailsEnabledFn` - - Function to check if detailed profiling is enabled
-- `getProfilingAccumulatorsFn` - - Function to get detailed profiling accumulators
-
-Example:
-
-// Print averages after a run that completed 100 generations
-emitProfileSummary(
-  state, console.log, 100, 12000, 3000, 4500,
-  isProfilingDetailsEnabled, getProfilingAccumulators
-);
-
-### EvolutionLoopResult
-
-Evolution loop result
-
-### GenerationOutcome
-
-Generation outcome with profiling timings
-
-### MutableMazeResult
-
-Mutable result object with exitReason field
-
-### persistSnapshotIfNeeded
-
-```ts
-persistSnapshotIfNeeded(
-  engineState: EngineState,
-  fs: { writeFileSync?: ((path: string, data: string) => void) | undefined; } | null,
-  pathModule: { join?: ((...paths: string[]) => string) | undefined; } | null,
-  persistDir: string | undefined,
-  persistTopK: number,
-  completedGenerations: number,
-  persistEvery: number,
-  neat: default,
-  bestFitness: number,
-  simplifyMode: boolean,
-  plateauCounter: number,
-  scratchSnapshotObj: Record<string, unknown>,
-  scratchSnapshotTop: SnapshotEntry[],
-  collectTelemetryTailFn: (state: EngineState, neat: default, count: number) => unknown,
-  getSortedIndicesByScoreFn: (state: EngineState, population: default[]) => number[],
-  isProfilingDetailsEnabledFn: (state: EngineState) => boolean,
-  profilingStartTimestampFn: (state: EngineState) => number,
-  accumulateProfilingDurationFn: (state: EngineState, label: string, duration: number) => void,
-): void
-```
-
-Persist a population snapshot to disk at the configured interval.
-
-This function writes a JSON snapshot of the current generation state when the
-generation cadence aligns with the configured persistence interval. It captures
-top-K genomes, telemetry tail, and metadata for later analysis or resume.
-
-Design Rationale:
- - Best-effort semantics: swallows all errors to avoid disrupting evolution loop
- - Reuses pooled scratch objects (SCRATCH_SNAPSHOT_OBJ, SCRATCH_SNAPSHOT_TOP) to minimize allocations
- - Optional profiling when enabled (measures snapshot serialization time)
- - Defensive validation to ensure FS/path modules are available
-
-Scheduling Logic:
- - Only persists when `completedGenerations % persistEvery === 0`
- - Requires valid fs.writeFileSync and pathModule.join functions
- - Requires non-empty population
-
-Snapshot Structure:
- - generation: completed generation index
- - bestFitness: best fitness score this generation
- - simplifyMode: whether simplification was active
- - plateauCounter: current plateau detection counter
- - timestamp: Date.now() when snapshot was created
- - telemetryTail: last N telemetry entries
- - top: top-K genomes with minimal metadata (idx, score, nodes, connections, json)
-
-Parameters:
-
-Parameters:
-- `engineState` - - Shared engine state with scratch buffers and profiling
-- `fs` - - Node.js fs module or compatible FS API
-- `pathModule` - - Node.js path module or compatible path API
-- `persistDir` - - Directory path where snapshots should be written
-- `persistTopK` - - Number of top genomes to include in snapshot
-- `completedGenerations` - - Current generation index
-- `persistEvery` - - Generation interval for persistence (e.g., 25 = every 25th generation)
-- `neat` - - NEAT instance with population
-- `bestFitness` - - Best fitness score this generation
-- `simplifyMode` - - Whether simplification mode is active
-- `plateauCounter` - - Current plateau counter value
-- `scratchSnapshotObj` - - Pooled snapshot object (reused across calls)
-- `scratchSnapshotTop` - - Pooled top-K buffer (reused across calls)
-- `collectTelemetryTailFn` - - Function to collect telemetry tail from state
-- `getSortedIndicesByScoreFn` - - Function to get sorted genome indices
-- `isProfilingDetailsEnabledFn` - - Function to check profiling state
-- `profilingStartTimestampFn` - - Function to get profiling start time
-- `accumulateProfilingDurationFn` - - Function to accumulate profiling duration
-
-Example:
-
-// Persist snapshot every 25 generations
-persistSnapshotIfNeeded(
-  state, fs, path, './snapshots', 10, 50, 25, neat, 0.95, false, 3,
-  scratchObj, scratchTop, collectTail, getSorted, isProfilingEnabled, profileStart, profileAccum
-);
-
-### prepareLoopHelpers
-
-```ts
-prepareLoopHelpers(
-  opts: EvolutionOptions,
-  scratchBundle: ScratchBundle,
-): LoopHelpers
-```
-
-Build lightweight helpers used inside the evolution loop.
-
-This function assembles the helper utilities needed by the main evolution loop:
- - Frame flushing for cooperative yielding
- - Persistence handles for snapshot saving (Node.js only)
- - Safe logging writer with fallback chain
- - Scratch buffer warm-up (best-effort)
-
-Design Rationale:
- - All initialization is best-effort (failures swallowed)
- - Warms up common scratch buffers to reduce first-use allocation spikes
- - Returns simple POJO with utilities (no class coupling)
- - Side effects isolated to scratch bundle parameter
-
-Scratch Buffer Warm-Up:
- - samplePool: Array for population sampling
- - profilingScratch: Float64Array(4) for timing accumulation
- - exps: Float64Array(64) for exponential computations
-
-Parameters:
-
-Parameters:
-- `opts` - - Normalized run options (contains persistDir and dashboardManager)
-- `scratchBundle` - - Engine scratch state for optional buffer warm-up
-
-Returns: Object containing:
-- flushToFrame: Async function for cooperative yielding
-- fs: Node.js fs module (null in browsers)
-- path: Node.js path module (null in browsers)
-- safeWrite: Resilient logging function with fallback chain
-
-Example:
-
-// Prepare loop helpers with scratch buffer warm-up
-const { flushToFrame, fs, path, safeWrite } = prepareLoopHelpers(opts, engineState.scratch);
-safeWrite('Starting evolution...\n');
-await flushToFrame(); // Yield to host
-
-### runEvolutionLoop
-
-```ts
-runEvolutionLoop(
-  engineState: EngineState,
-  neat: default,
-  opts: EvolutionOptions,
-  lamarckianTrainingSet: { input: number[]; output: number[]; }[],
-  encodedMaze: number[][],
-  startPosition: readonly [number, number],
-  exitPosition: readonly [number, number],
-  distanceMap: number[][],
-  helpers: LoopHelpers,
-  doProfile: boolean,
-  runtimeContext: EvolutionLoopRuntimeContext,
-  initialRingState: LogitsRingState,
-  telemetryContext: EvolutionLoopTelemetryContext,
-  supportContext: EvolutionLoopSupportContext,
-  constants: TrainingConstants & { DEFAULT_TRAIN_BATCH_LARGE: number; FITTEST_TRAIN_ITERATIONS: number; TELEMETRY_MINIMAL: boolean; SATURATION_PRUNE_THRESHOLD: number; RECENT_WINDOW: number; REDUCED_TELEMETRY: boolean; DISABLE_BALDWIN: boolean; },
-): Promise<EvolutionLoopResult>
-```
-
-Internal evolution loop that executes generations until a stop condition or cancellation.
-
-Behaviour & contract:
- - Runs generations in a resilient, best-effort manner; internal errors are swallowed
-   so a single failure cannot abort the whole run.
- - When `doProfile` is truthy the loop accumulates timing into a pooled Float64Array
-   to avoid per-iteration allocations. The pooled buffer is reused across calls.
- - The helper performs side-effects (dashboard updates, persistence) in a non-fatal
-   fashion and yields to the host when requested via `helpers.flushToFrame`.
-
-Parameters:
-- `engineState` - - Shared engine state with scratch buffers and configuration
-- `neat` - - NEAT driver instance used to perform evolution and mutation operations
-- `opts` - - Normalised run options (produced by normalizeRunOptions)
-- `lamarckianTrainingSet` - - Optional supervised training cases used for Lamarckian warm-start
-- `encodedMaze` - - Encoded maze representation consumed by simulators
-- `startPosition` - - Start coordinates for the simulated agent
-- `exitPosition` - - Exit coordinates for the simulated agent
-- `distanceMap` - - Optional precomputed distance map to speed simulation
-- `helpers` - - Helper utilities: { flushToFrame, fs, path, safeWrite }
-- `doProfile` - - When truthy collect and return millisecond timings in the result
-- `runtimeContext` - - Shared pooled ring buffers and limits for the hot path.
-- `initialRingState` - - Current mutable ring state for this run.
-- `telemetryContext` - - Telemetry thresholds and verbosity switches used during simulation.
-- `supportContext` - - Shared scratch buffers and helper callbacks used by the loop.
-- `constants` - - Object containing all engine constants (DEFAULT_TRAIN_ERROR, etc.)
-
-Returns: Promise resolving to an object:
-{ bestNetwork, bestResult, neat, completedGenerations, totalEvolveMs, totalLamarckMs, totalSimMs, updatedRingState }
-
-Example:
-
-const runSummary = await runEvolutionLoop(
-  state, neat, opts, trainingSet, maze, start, exit, distMap, helpers, true, ...
-);
-
-### runGeneration
-
-```ts
-runGeneration(
-  engineState: EngineState,
-  neat: default,
-  doProfile: boolean,
-  lamarckianIterations: number,
-  lamarckianTrainingSet: { input: number[]; output: number[]; }[],
-  lamarckianSampleSize: number | undefined,
-  safeWrite: (msg: string) => void,
-  completedGenerations: number,
-  dynamicPopEnabled: boolean,
-  dynamicPopMax: number,
-  plateauGenerations: number,
-  plateauCounter: number,
-  dynamicPopExpandInterval: number,
-  dynamicPopExpandFactor: number,
-  dynamicPopPlateauSlack: number,
-  speciesHistoryRef: number[],
-  emptyVec: default[],
-  scratchNodeIdx: Int32Array<ArrayBufferLike>,
-  getNodeIndicesByType: (nodes: NetworkNode[], type: string) => number,
-  constants: TrainingConstants,
-): Promise<GenerationOutcome>
-```
-
-Run one generation: evolve, ensure output identity, update species history, maybe expand population,
-and run Lamarckian training if configured.
-
-Behaviour & contract:
- - Performs a single NEAT generation step in a best-effort, non-throwing manner.
- - Measures profiling durations when `doProfile` is truthy. Profiling is optional and
-   kept allocation-free (uses local numeric temporaries only).
- - Invokes the following steps in order (each step is wrapped in a try/catch so
-   the evolution loop remains resilient to per-stage failures):
-     1) `neat.evolve()` to produce the fittest network for this generation.
-     2) `ensureOutputIdentity` to normalise output activations for consumers.
-     3) `handleSpeciesHistory` to update species statistics and history.
-     4) `maybeExpandPopulation` to grow the population when configured and warranted.
-     5) Optional Lamarckian warm-start training via `applyLamarckianTraining`.
- - The method is allocation-light and reuses engine helpers / pooled buffers where
-   appropriate. It never throws; internal errors are swallowed and optionally logged
-   via the provided `safeWrite` function.
-
-Parameters:
-- `engineState` - - Shared engine state with scratch buffers and RNG
-- `neat` - - NEAT driver instance used for evolving the generation
-- `doProfile` - - When truthy measure timing for the evolve step (ms) using engine clock
-- `lamarckianIterations` - - Number of supervised training iterations to run per genome (0 to skip)
-- `lamarckianTrainingSet` - - Array of supervised training cases used for warm-start (may be empty)
-- `lamarckianSampleSize` - - Optional per-network sample size used by the warm-start routine
-- `safeWrite` - - Safe logging function; used only for best-effort diagnostic messages
-- `completedGenerations` - - Current generation index (used by expansion heuristics)
-- `dynamicPopEnabled` - - Whether dynamic population expansion is enabled
-- `dynamicPopMax` - - Upper bound on population size for expansion
-- `plateauGenerations` - - Window size used by plateau detection
-- `plateauCounter` - - Current plateau counter used by expansion heuristics
-- `dynamicPopExpandInterval` - - Generation interval to attempt expansion
-- `dynamicPopExpandFactor` - - Fractional growth factor used to compute new members
-- `dynamicPopPlateauSlack` - - Minimum plateau ratio required to trigger expansion
-- `speciesHistoryRef` - - Mutable array holding species history (maintained externally)
-- `emptyVec` - - Empty array fallback to avoid ephemeral allocations
-- `scratchNodeIdx` - - Pooled node index buffer (passed through to helpers)
-- `getNodeIndicesByType` - - Helper function to collect node indices by type
-- `constants` - - Object containing DEFAULT_TRAIN_ERROR, DEFAULT_TRAIN_RATE, DEFAULT_TRAIN_MOMENTUM, DEFAULT_TRAIN_BATCH_SMALL, DEFAULT_STD_SMALL, DEFAULT_STD_ADJUST_MULT
-
-Returns: An object shaped { fittest, tEvolve, tLamarck } where:
-- `fittest` is the network returned by `neat.evolve()` (may be null on error),
-- `tEvolve` is the measured evolve duration in milliseconds when `doProfile` is true (0 otherwise),
-- `tLamarck` is the total time spent in Lamarckian training (0 when skipped)
-
-Example:
-
-// Run a single generation with profiling and optional Lamarckian warm-start
-const { fittest, tEvolve, tLamarck } = await runGeneration(
-  engineState,
-  neatInstance,
-  true,   // doProfile
-  5,      // lamarckianIterations
-  trainingSet,
-  16,     // lamarckianSampleSize
-  console.log,
-  genIndex,
-  true,
-  500,
-  10,
-  plateauCounter,
-  5,
-  0.1,
-  0.75,
-  speciesHistory,
-  [],
-  nodeIndexBuffer,
-  getNodeIndicesByTypeFn,
-  { DEFAULT_TRAIN_ERROR: 0.01, ... }
-);
-
-### SimResultWithOutputs
-
-Simulation result with step outputs
-
-### simulateAndPostprocess
-
-```ts
-simulateAndPostprocess(
-  engineState: EngineState,
-  fittest: default,
-  encodedMaze: number[][],
-  startPosition: readonly [number, number],
-  exitPosition: readonly [number, number],
-  distanceMap: number[][],
-  maxSteps: number | undefined,
-  doProfile: boolean,
-  safeWrite: (msg: string) => void,
-  logEvery: number,
-  completedGenerations: number,
-  neat: default,
-  runtimeContext: EvolutionLoopRuntimeContext,
-  ringState: LogitsRingState,
-  telemetryContext: EvolutionLoopTelemetryContext,
-  loopSupportContext: Pick<EvolutionLoopSupportContext, "loopHelpers">,
-): SimulationResult
-```
-
-Simulate the supplied `fittest` genome/network and perform allocation-light postprocessing.
-
-Behaviour & contract:
- - Runs the simulation via `MazeMovement.simulateAgent` and attaches compact telemetry
-   (saturation fraction, action entropy) directly onto the `fittest` object (in-place).
- - When per-step logits are returned the helper attempts to copy them into the engine's pooled
-   ring buffers to avoid per-run allocations. Two copy modes are supported:
-     1) Shared SAB-backed flat Float32Array with an atomic Int32 write index (cross-worker safe).
-     2) Local in-process per-row Float32Array ring (`scratchLogitsRing`).
- - Best-effort: all mutation and buffer-copy steps are guarded; failures are swallowed so the
-   evolution loop is not interrupted. Use `safeWrite` for optional diagnostic messages.
-
-Steps (high level):
- 1) Run the simulator and capture wall-time when `doProfile` is truthy.
- 2) Attach compact telemetry fields to `fittest` and ensure legacy `_lastStepOutputs` exists.
- 3) If per-step logits are available, ensure ring capacity and copy them into the selected ring.
- 4) Optionally prune saturated hidden->output connections and emit telemetry via logGenerationTelemetry.
- 5) Return the raw simulation result and elapsed simulation time (ms when profiling enabled).
-
-Notes on pooling / reentrancy:
- - The local ring is not re-entrant; callers must avoid concurrent writes.
- - When shared mode is true we prefer the SAB-backed path which uses Atomics and is safe
-   for cross-thread producers.
-
-Parameters:
-- `engineState` - - Shared engine state with scratch buffers and ring configuration
-- `fittest` - - Genome/network considered the generation's best; may be mutated with metadata
-- `encodedMaze` - - Maze descriptor used by the simulator
-- `startPosition` - - Start co-ordinates passed as-is to the simulator
-- `exitPosition` - - Exit co-ordinates passed as-is to the simulator
-- `distanceMap` - - Optional precomputed distance map consumed by the simulator
-- `maxSteps` - - Optional maximum simulation steps; may be undefined to allow default
-- `doProfile` - - When truthy measure and return the simulation time in milliseconds
-- `safeWrite` - - Optional logger used for non-fatal diagnostic messages
-- `logEvery` - - Emit telemetry every `logEvery` generations (0 disables periodic telemetry)
-- `completedGenerations` - - Current generation index used for conditional telemetry
-- `neat` - - NEAT driver instance passed to telemetry hooks
-- `runtimeContext` - - Shared pooled ring buffers and limits for logits telemetry.
-- `ringState` - - Current mutable ring state (capacity, shared-mode flag, write cursor).
-- `telemetryContext` - - Telemetry thresholds and verbosity switches used after simulation.
-- `loopSupportContext` - - Shared scratch buffers and helper callbacks used by the loop.
-
-Returns: An object { generationResult, simTime, updatedRingState } where simTime is ms when profiling is enabled
-
-Example:
-
-const { generationResult, simTime, updatedRingState } = simulateAndPostprocess(
-  state, bestGenome, maze, start, exit, distMap, 1000, true, console.log, 10, genIdx, neat, ...
-);
-
-### SimulationOutcome
-
-Simulation result with profiling and ring state
-
-### updateDashboardAndMaybeFlush
-
-```ts
-updateDashboardAndMaybeFlush(
-  maze: string[],
-  result: IMazeRunResult | undefined,
-  network: default | null,
-  completedGenerations: number,
-  neat: default,
-  dashboardManager: IDashboardManager | undefined,
-  flushToFrame: (() => Promise<void>) | undefined,
-): Promise<void>
-```
-
-Safely update a UI dashboard with the latest run state and optionally yield to the
-host/frame via an awaited flush function.
-
-Behaviour (best-effort):
- 1) If `dashboardManager.update` exists and is callable, call it with the stable
-    argument order (maze, result, network, completedGenerations, neat). Any exception
-    raised by the dashboard is swallowed to avoid interrupting the evolution loop.
- 2) If `flushToFrame` is supplied as an async function, await it to yield control to
-    the event loop or renderer (for example `() => new Promise(r => requestAnimationFrame(r))`).
- 3) The helper avoids heap allocations and relies on existing pooled scratch buffers in
-    the engine for heavy telemetry elsewhere; this method intentionally performs only
-    short-lived control flow and minimal work.
-
-Design Rationale:
- - Allocation-free (no ephemeral objects or arrays created)
- - Best-effort error handling (swallow all dashboard/flush errors)
- - Stable argument order for dashboard implementations
- - Async support for cooperative yielding to host scheduler
-
-Parameters:
-
-Parameters:
-- `maze` - - Maze instance or descriptor used by dashboard rendering.
-- `result` - - Per-run result object (path, progress, telemetry, etc.).
-- `network` - - Network or genome object that should be visualised.
-- `completedGenerations` - - Integer index of the completed generation.
-- `neat` - - NEAT manager instance (context passed to the dashboard update).
-- `dashboardManager` - - Optional manager exposing `update(maze, result, network, gen, neat)`.
-- `flushToFrame` - - Optional async function used to yield to the host/frame scheduler; may be omitted.
-
-Example:
-
-// Yield to the browser's next repaint after dashboard update:
-await updateDashboardAndMaybeFlush(
-  maze, genResult, fittestNetwork, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
-);
-
-### updateDashboardPeriodic
-
-```ts
-updateDashboardPeriodic(
-  maze: string[],
-  bestResult: IMazeRunResult | undefined,
-  bestNetwork: default | null,
-  completedGenerations: number,
-  neat: default,
-  dashboardManager: IDashboardManager | undefined,
-  flushToFrame: (() => Promise<void>) | undefined,
-): Promise<void>
-```
-
-Periodic dashboard update used when the engine wants to refresh a non-primary
-dashboard view (for example background or periodic reporting). This helper is
-intentionally small, allocation-light and best-effort: dashboard errors are
-swallowed so the evolution loop cannot be interrupted by UI issues.
-
-Behavioural contract:
- 1) If `dashboardManager.update` is present and callable the method invokes it with
-    the stable argument order: (maze, bestResult, bestNetwork, completedGenerations, neat).
- 2) If `flushToFrame` is supplied the helper awaits it after the update to yield to
-    the host renderer (eg. requestAnimationFrame). Any exceptions raised by the
-    flush are swallowed.
- 3) The helper avoids creating ephemeral arrays/objects and therefore does not use
-    typed-array scratch buffers here — there is no hot numerical work to pool. Other
-    engine helpers already reuse class-level scratch buffers where appropriate.
-
-Design Rationale:
- - Fast-guard early when update cannot be performed
- - Best-effort error handling (swallow all exceptions)
- - Preserves dashboard `this` binding with `.call()`
- - Minimal allocations (no scratch buffers needed)
-
-Steps / inline intent:
- 1. Fast-guard when an update cannot be performed (missing manager, update method,
-    or missing content to visualise).
- 2. Call the dashboard update in a try/catch to preserve best-effort semantics.
- 3. Optionally await the provided `flushToFrame` function to yield to the host.
-
-Parameters:
-
-Parameters:
-- `maze` - - Maze descriptor passed to the dashboard renderer.
-- `bestResult` - - Best-run result object used for display (may be falsy when not present).
-- `bestNetwork` - - Network or genome object to visualise (may be falsy when not present).
-- `completedGenerations` - - Completed generation index (number).
-- `neat` - - NEAT manager instance (passed through to dashboard update).
-- `dashboardManager` - - Optional manager exposing `update(maze, result, network, gen, neat)`.
-- `flushToFrame` - - Optional async function used to yield to the host/frame scheduler
- (for example: `() => new Promise(r => requestAnimationFrame(r))`).
-
-Example:
-
-// Safe periodic update and yield to next frame
-await updateDashboardPeriodic(
-  maze, result, network, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
-);
 
 ## evolutionEngine/curriculumPhase.ts
 
@@ -3585,79 +3743,6 @@ Minimum safe load factor applied when normalising visited-hash configuration.
 ### RNG_GOLDEN_RATIO_SEED
 
 Knuth-derived 32-bit constant used when seeding the RNG state.
-
-## evolutionEngine/evolutionEngine.services.ts
-
-### applyEvolutionEngineRingState
-
-```ts
-applyEvolutionEngineRingState(
-  updatedRingState: LogitsRingState,
-): void
-```
-
-Apply the latest logits-ring runtime values returned by the evolution loop.
-
-Parameters:
-- `updatedRingState` - - New ring-capacity, shared-mode, and write-cursor values.
-
-### configureEvolutionEngineToggles
-
-```ts
-configureEvolutionEngineToggles(
-  reducedTelemetry: boolean,
-  telemetryMinimal: boolean,
-  disableBaldwinPhase: boolean,
-): void
-```
-
-Apply telemetry and Baldwin-phase toggles derived from one normalized run request.
-
-Parameters:
-- `reducedTelemetry` - - When true, keep only the essential telemetry metrics.
-- `telemetryMinimal` - - When true, disable verbose telemetry capture.
-- `disableBaldwinPhase` - - When true, skip the Baldwin refinement stage.
-
-### getEvolutionEngineFacadeRuntimeState
-
-```ts
-getEvolutionEngineFacadeRuntimeState(): LogitsRingState
-```
-
-Read the mutable facade-owned logits-ring runtime state.
-
-Returns: Current ring-capacity, shared-mode, and write-cursor state.
-
-### getEvolutionEngineMaxLogitsRingCapacity
-
-```ts
-getEvolutionEngineMaxLogitsRingCapacity(): number
-```
-
-Read the hard maximum ring capacity used by the public facade.
-
-Returns: Maximum ring capacity allowed for logits telemetry.
-
-### getEvolutionEngineSharedState
-
-```ts
-getEvolutionEngineSharedState(): EngineState
-```
-
-Return the shared engine singleton used by extracted engine modules.
-
-The public facade now depends on the same owner as the rest of the engine
-boundary instead of creating a private duplicate singleton.
-
-Returns: Shared engine state singleton.
-
-### resetEvolutionEngineRingState
-
-```ts
-resetEvolutionEngineRingState(): void
-```
-
-Reset the facade-owned logits-ring runtime state to its baseline defaults.
 
 ## evolutionEngine/evolutionEngine.constants.ts
 

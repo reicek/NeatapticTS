@@ -1,93 +1,92 @@
 # architecture/network/activate
 
-## architecture/network/activate/network.activate.utils.types.ts
+Activation chapter for `Network` execution policy.
 
-### ActivateRuntimeNetworkProps
+This folder answers the moment when a graph already exists and the next
+question becomes: how should signal move through it right now? The same
+network may be stepped for ordinary inference, training-aware forward passes,
+zero-copy raw output reuse, or a sequence of batch rows. Keeping those paths
+together makes the execution tradeoffs visible without mixing them into
+topology or serialization code.
 
-Runtime network view used by the object-graph activation pipeline.
+The important split is between graph meaning and graph execution. Node and
+connection chapters explain what the structure is. `activate/` explains how
+that structure is stepped: validate inputs, decide whether the slab fast path
+is still legal, preserve or skip training traces, and return outputs in the
+shape the caller requested.
 
-This intentionally describes the internal fields activation reads/writes
-(training step, RNG, regularization knobs, and slab fast-path hooks).
+A second useful lens is to read the public exports as four modes.
+`activate()` is the ordinary compatibility path. `noTraceActivate()` is the
+hot inference path when trace bookkeeping would be wasteful. `activateRaw()`
+keeps typed-array reuse available when pooling matters more than boxed
+outputs. `activateBatch()` is the clear orchestration layer for repeated
+forward passes over many rows.
 
-### ActivationOutputBuffer
+The performance lesson here is not "always choose the fastest path." It is
+"choose the narrowest path that still matches the caller's semantics." If a
+network is slab-ready, this chapter can exploit contiguous typed arrays. If a
+structural edit made that layout stale, the same boundary falls back to node
+traversal instead of forcing callers to understand storage internals first.
 
-Pooled activation output array type acquired from the shared activation array pool.
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
 
-### ActivationStats
+  Input[caller input]:::base --> Modes[activate chapter]:::accent
+  Modes --> Trace[activate<br/>keep traces]:::base
+  Modes --> NoTrace[noTraceActivate<br/>inference hot path]:::base
+  Modes --> Raw[activateRaw<br/>typed output reuse]:::base
+  Modes --> Batch[activateBatch<br/>repeat over rows]:::base
+```
 
-Activation telemetry collected during a single activation pass.
+```mermaid
+flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
 
-### BATCH_INPUTS_COLLECTION_ERROR_MESSAGE
+  ActivateChapter[activate/]:::accent --> Validation[input validation and contexts]:::base
+  ActivateChapter --> FastPath[slab fast path when layout is ready]:::base
+  ActivateChapter --> Traversal[node traversal fallback]:::base
+  ActivateChapter --> Buffers[pooled activation buffers]:::base
+```
 
-Error message used when batch activation receives a non-array container.
+For background on why some activation paths preserve training traces while
+others skip them, see Wikipedia contributors,
+[Backpropagation](https://en.wikipedia.org/wiki/Backpropagation). This
+chapter sits at the forward-pass side of that story and decides how much
+training bookkeeping each call should carry along.
 
-### BatchActivationContext
+Example: use the no-trace path when you only need inference outputs.
 
-Shared state used by batch activation orchestration.
+```ts
+const network = Network.createMLP(2, [3], 1);
+const outputValues = network.noTraceActivate([0.2, 0.8]);
+```
 
-### BatchRowActivationContext
+Example: run the same network over several input rows with one orchestration
+call.
 
-Shared state used while validating and activating one row in a batch.
+```ts
+const network = Network.createMLP(2, [3], 1);
+const batchOutputs = network.activateBatch(
+  [
+    [0, 1],
+    [1, 0],
+  ],
+  true,
+);
+```
 
-### DEFAULT_MAX_ACTIVATION_DEPTH
+Practical reading order:
 
-Default hard limit for recursive activation depth in raw activation mode.
-
-### INITIAL_OUTPUT_WRITE_INDEX
-
-Initial write index used when collecting output activations.
-
-### INPUT_NODE_TYPE
-
-Node role label used by activation traversal for input neurons.
-
-### NetworkLayer
-
-Layer container type used by the layered activation paths.
-
-### NetworkLayerNodes
-
-Node collection type attached to a single network layer.
-
-### NO_TRACE_FAST_SLAB_TRAINING_FLAG
-
-Training flag value used by no-trace fast slab eligibility checks.
-
-### NoTraceActivationContext
-
-Shared state used by no-trace activation orchestration and helpers.
-
-### NoTraceNodeTraversalContext
-
-Shared state used for node traversal during no-trace activation.
-
-### OUTPUT_NODE_TYPE
-
-Node role label used by activation traversal for output neurons.
-
-### OUTPUT_WRITE_INDEX_INCREMENT
-
-Increment applied after writing one output activation value.
-
-### RawActivationContext
-
-Shared state used by raw activation orchestration.
-
-### SingleNodeNoTraceActivationContext
-
-Shared state used while activating one node during no-trace traversal.
-
-### UNDEFINED_INPUT_LENGTH_TEXT
-
-Fallback text for undefined input lengths when formatting validation errors.
-
-### WeightNoiseApplyResult
-
-Marker returned by weight-noise application to drive safe restore logic.
-
-### WeightNoiseStats
-
-Weight-noise telemetry collected during a single activation pass.
+1. Start here for the public activation modes and their semantic differences.
+2. Continue into `network.activate.core.utils.ts` when you want the ordinary
+   forward-pass pipeline.
+3. Continue into `network.activate.raw.utils.ts` and the no-trace helpers
+   when typed-array reuse or inference hot paths are the next question.
+4. Finish with the context and helper files when you want the orchestration
+   details behind validation, batching, and fallback behavior.
 
 ## architecture/network/activate/network.activate.utils.ts
 
@@ -229,55 +228,94 @@ Example:
 const out = net.noTraceActivate([0.1, 0.2, 0.3]);
 console.log(out); // => e.g. [0.5123, 0.0441]
 
-## architecture/network/activate/network.activate.raw.utils.ts
+## architecture/network/activate/network.activate.utils.types.ts
 
-### activateViaNetworkDelegate
+### ActivateRuntimeNetworkProps
 
-```ts
-activateViaNetworkDelegate(
-  activationContext: RawActivationContext,
-): number[]
-```
+Runtime network view used by the object-graph activation pipeline.
 
-Delegate raw activation to the core network activation implementation.
+This intentionally describes the internal fields activation reads/writes
+(training step, RNG, regularization knobs, and slab fast-path hooks).
 
-Parameters:
-- `activationContext` - - Shared raw activation state.
+### ActivationOutputBuffer
 
-Returns: Activation output vector.
+Pooled activation output array type acquired from the shared activation array pool.
 
-### activateWithSelectedReusePath
+### ActivationStats
 
-```ts
-activateWithSelectedReusePath(
-  activationContext: RawActivationContext,
-): number[]
-```
+Activation telemetry collected during a single activation pass.
 
-Select the raw activation execution path based on runtime reuse configuration.
+### BATCH_INPUTS_COLLECTION_ERROR_MESSAGE
 
-Parameters:
-- `activationContext` - - Shared raw activation state.
+Error message used when batch activation receives a non-array container.
 
-Returns: Activation output vector.
+### BatchActivationContext
 
-### executeRawActivation
+Shared state used by batch activation orchestration.
 
-```ts
-executeRawActivation(
-  activationContext: RawActivationContext,
-): number[]
-```
+### BatchRowActivationContext
 
-Execute raw activation through the network delegate using a compact orchestration flow.
+Shared state used while validating and activating one row in a batch.
 
-This helper keeps the exported activation method focused on context creation while this
-module owns the execution path and future branching behavior.
+### DEFAULT_MAX_ACTIVATION_DEPTH
 
-Parameters:
-- `activationContext` - - Shared raw activation state.
+Default hard limit for recursive activation depth in raw activation mode.
 
-Returns: Activation output vector from the network delegate.
+### INITIAL_OUTPUT_WRITE_INDEX
+
+Initial write index used when collecting output activations.
+
+### INPUT_NODE_TYPE
+
+Node role label used by activation traversal for input neurons.
+
+### NetworkLayer
+
+Layer container type used by the layered activation paths.
+
+### NetworkLayerNodes
+
+Node collection type attached to a single network layer.
+
+### NO_TRACE_FAST_SLAB_TRAINING_FLAG
+
+Training flag value used by no-trace fast slab eligibility checks.
+
+### NoTraceActivationContext
+
+Shared state used by no-trace activation orchestration and helpers.
+
+### NoTraceNodeTraversalContext
+
+Shared state used for node traversal during no-trace activation.
+
+### OUTPUT_NODE_TYPE
+
+Node role label used by activation traversal for output neurons.
+
+### OUTPUT_WRITE_INDEX_INCREMENT
+
+Increment applied after writing one output activation value.
+
+### RawActivationContext
+
+Shared state used by raw activation orchestration.
+
+### SingleNodeNoTraceActivationContext
+
+Shared state used while activating one node during no-trace traversal.
+
+### UNDEFINED_INPUT_LENGTH_TEXT
+
+Fallback text for undefined input lengths when formatting validation errors.
+
+### WeightNoiseApplyResult
+
+Marker returned by weight-noise application to drive safe restore logic.
+
+### WeightNoiseStats
+
+Weight-noise telemetry collected during a single activation pass.
 
 ## architecture/network/activate/network.activate.core.utils.ts
 
@@ -1139,6 +1177,169 @@ Parameters:
 
 Returns: Nothing.
 
+## architecture/network/activate/network.activate.helpers.utils.ts
+
+### createBatchActivationContext
+
+```ts
+createBatchActivationContext(
+  network: default,
+  batchInputs: number[][],
+  isTraining: boolean,
+): BatchActivationContext
+```
+
+Build shared batch activation context for helper orchestration.
+
+Parameters:
+- `network` - - Network instance bound to the activation call.
+- `batchInputs` - - Input matrix supplied by the caller.
+- `isTraining` - - Whether activation should retain training traces.
+
+Returns: Fully populated batch activation context.
+
+### createNoTraceActivationContext
+
+```ts
+createNoTraceActivationContext(
+  network: default,
+  inputVector: number[],
+): NoTraceActivationContext
+```
+
+Build shared no-trace activation context for helper orchestration.
+
+Parameters:
+- `network` - - Network instance bound to the activation call.
+- `inputVector` - - Input activation vector supplied by the caller.
+
+Returns: Fully populated no-trace activation context.
+
+### createRawActivationContext
+
+```ts
+createRawActivationContext(
+  network: default,
+  inputVector: number[],
+  isTraining: boolean,
+  maximumActivationDepth: number,
+): RawActivationContext
+```
+
+Build shared raw activation context for helper orchestration.
+
+Parameters:
+- `network` - - Network instance bound to the activation call.
+- `inputVector` - - Input activation vector supplied by the caller.
+- `isTraining` - - Whether activation should retain training traces.
+- `maximumActivationDepth` - - Guard against runaway activation depth.
+
+Returns: Fully populated raw activation context.
+
+### executeBatchActivation
+
+```ts
+executeBatchActivation(
+  activationContext: BatchActivationContext,
+): number[][]
+```
+
+Execute mini-batch activation with top-level shape validation and per-row checks.
+
+The orchestration keeps behavior deterministic by validating the container first,
+then validating each row before delegating to the core network activation function.
+
+Parameters:
+- `activationContext` - - Shared batch activation state.
+
+Returns: Matrix of activation outputs.
+
+### executeNoTraceActivation
+
+```ts
+executeNoTraceActivation(
+  activationContext: NoTraceActivationContext,
+): number[]
+```
+
+Execute no-trace activation with a fast-path attempt and deterministic fallback traversal.
+
+The orchestration follows a strict sequence: refresh order guarantees, validate input shape,
+try fast slab inference, then compute outputs through node traversal when needed.
+
+Parameters:
+- `activationContext` - - Shared no-trace activation state.
+
+Returns: Output activation vector detached from pooled storage.
+
+### executeRawActivation
+
+```ts
+executeRawActivation(
+  activationContext: RawActivationContext,
+): number[]
+```
+
+Execute raw activation through the network delegate using a compact orchestration flow.
+
+This helper keeps the exported activation method focused on context creation while this
+module owns the execution path and future branching behavior.
+
+Parameters:
+- `activationContext` - - Shared raw activation state.
+
+Returns: Activation output vector from the network delegate.
+
+## architecture/network/activate/network.activate.raw.utils.ts
+
+### activateViaNetworkDelegate
+
+```ts
+activateViaNetworkDelegate(
+  activationContext: RawActivationContext,
+): number[]
+```
+
+Delegate raw activation to the core network activation implementation.
+
+Parameters:
+- `activationContext` - - Shared raw activation state.
+
+Returns: Activation output vector.
+
+### activateWithSelectedReusePath
+
+```ts
+activateWithSelectedReusePath(
+  activationContext: RawActivationContext,
+): number[]
+```
+
+Select the raw activation execution path based on runtime reuse configuration.
+
+Parameters:
+- `activationContext` - - Shared raw activation state.
+
+Returns: Activation output vector.
+
+### executeRawActivation
+
+```ts
+executeRawActivation(
+  activationContext: RawActivationContext,
+): number[]
+```
+
+Execute raw activation through the network delegate using a compact orchestration flow.
+
+This helper keeps the exported activation method focused on context creation while this
+module owns the execution path and future branching behavior.
+
+Parameters:
+- `activationContext` - - Shared raw activation state.
+
+Returns: Activation output vector from the network delegate.
+
 ## architecture/network/activate/network.activate.batch.utils.ts
 
 ### activateSingleBatchRow
@@ -1263,119 +1464,6 @@ Parameters:
 - `rowActivationContext` - - Shared state for one batch-row activation.
 
 Returns: True when row size is valid.
-
-## architecture/network/activate/network.activate.helpers.utils.ts
-
-### createBatchActivationContext
-
-```ts
-createBatchActivationContext(
-  network: default,
-  batchInputs: number[][],
-  isTraining: boolean,
-): BatchActivationContext
-```
-
-Build shared batch activation context for helper orchestration.
-
-Parameters:
-- `network` - - Network instance bound to the activation call.
-- `batchInputs` - - Input matrix supplied by the caller.
-- `isTraining` - - Whether activation should retain training traces.
-
-Returns: Fully populated batch activation context.
-
-### createNoTraceActivationContext
-
-```ts
-createNoTraceActivationContext(
-  network: default,
-  inputVector: number[],
-): NoTraceActivationContext
-```
-
-Build shared no-trace activation context for helper orchestration.
-
-Parameters:
-- `network` - - Network instance bound to the activation call.
-- `inputVector` - - Input activation vector supplied by the caller.
-
-Returns: Fully populated no-trace activation context.
-
-### createRawActivationContext
-
-```ts
-createRawActivationContext(
-  network: default,
-  inputVector: number[],
-  isTraining: boolean,
-  maximumActivationDepth: number,
-): RawActivationContext
-```
-
-Build shared raw activation context for helper orchestration.
-
-Parameters:
-- `network` - - Network instance bound to the activation call.
-- `inputVector` - - Input activation vector supplied by the caller.
-- `isTraining` - - Whether activation should retain training traces.
-- `maximumActivationDepth` - - Guard against runaway activation depth.
-
-Returns: Fully populated raw activation context.
-
-### executeBatchActivation
-
-```ts
-executeBatchActivation(
-  activationContext: BatchActivationContext,
-): number[][]
-```
-
-Execute mini-batch activation with top-level shape validation and per-row checks.
-
-The orchestration keeps behavior deterministic by validating the container first,
-then validating each row before delegating to the core network activation function.
-
-Parameters:
-- `activationContext` - - Shared batch activation state.
-
-Returns: Matrix of activation outputs.
-
-### executeNoTraceActivation
-
-```ts
-executeNoTraceActivation(
-  activationContext: NoTraceActivationContext,
-): number[]
-```
-
-Execute no-trace activation with a fast-path attempt and deterministic fallback traversal.
-
-The orchestration follows a strict sequence: refresh order guarantees, validate input shape,
-try fast slab inference, then compute outputs through node traversal when needed.
-
-Parameters:
-- `activationContext` - - Shared no-trace activation state.
-
-Returns: Output activation vector detached from pooled storage.
-
-### executeRawActivation
-
-```ts
-executeRawActivation(
-  activationContext: RawActivationContext,
-): number[]
-```
-
-Execute raw activation through the network delegate using a compact orchestration flow.
-
-This helper keeps the exported activation method focused on context creation while this
-module owns the execution path and future branching behavior.
-
-Parameters:
-- `activationContext` - - Shared raw activation state.
-
-Returns: Activation output vector from the network delegate.
 
 ## architecture/network/activate/network.activate.notrace.utils.ts
 

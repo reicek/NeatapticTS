@@ -1,26 +1,46 @@
 # architecture/network/gating
 
-## architecture/network/gating/network.gating.utils.types.ts
+Connection-gating utilities and gate-aware repair helpers for network edits.
 
-### BridgingConnectionList
+Gating is the lightweight way to let one node decide how strongly another
+connection should matter right now. That makes this chapter about more than
+a simple `gate()` setter. It also owns the awkward structural case where a
+hidden node is removed and the network tries to preserve useful gated
+behavior by reconnecting predecessor and successor nodes, then reassigning
+preserved gaters onto the new bridge connections.
 
-Newly created connections that can be assigned preserved gaters.
+The split inside this folder follows those two jobs. `gate.utils` keeps
+ordinary gate and ungate bookkeeping small and predictable. `remove.utils`
+handles the more invasive bridge-repair flow used during gate-aware hidden
+node removal. The shared types file only carries temporary collections used
+during that repair work; it is not the right chapter intro.
 
-### ConnectedNodeList
+```mermaid
+flowchart LR
+  Gater[Gater node activation] --> Modulate[Modulate connection gain]
+  Modulate --> Target[Target node input sum]
+  Remove[Remove hidden node] --> Bridge[Create bridge connections]
+  Bridge --> Preserve[Reassign preserved gaters]
+```
 
-Predecessor or successor node collection used during bridge construction.
+A useful mental model is that gating changes when a connection is
+influential, while bridge repair tries to preserve where information can
+still travel after topology surgery. Keeping both concerns together makes
+the public surface easier to learn because callers usually encounter them in
+the same network-editing workflows.
 
-### MutableNetworkGatingProps
+Example: attach a hidden node as a gater for one connection.
 
-Network shape extension used to flag node index cache invalidation.
+```ts
+network.gate(hiddenNode, connection);
+```
 
-### NodeRemovalMutationConfig
+Example: later remove that modulation and return the connection to static
+weighting.
 
-Normalized SUB_NODE mutation configuration used during node-removal rewiring.
-
-### PreservedGaters
-
-Mutable gater collection retained while removing a hidden node.
+```ts
+network.ungate(connection);
+```
 
 ## architecture/network/gating/network.gating.utils.ts
 
@@ -437,3 +457,25 @@ Parameters:
 - `node` - - Node whose gated connections should be released.
 
 Returns: Nothing.
+
+## architecture/network/gating/network.gating.utils.types.ts
+
+### BridgingConnectionList
+
+Newly created connections that can be assigned preserved gaters.
+
+### ConnectedNodeList
+
+Predecessor or successor node collection used during bridge construction.
+
+### MutableNetworkGatingProps
+
+Network shape extension used to flag node index cache invalidation.
+
+### NodeRemovalMutationConfig
+
+Normalized SUB_NODE mutation configuration used during node-removal rewiring.
+
+### PreservedGaters
+
+Mutable gater collection retained while removing a hidden node.

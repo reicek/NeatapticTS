@@ -1,68 +1,62 @@
 # architecture/network/evolve
 
-Shared dataset compatibility error message.
+Network-level neuroevolution loop for improving one runnable graph in place.
 
-## architecture/network/evolve/network.evolve.utils.types.ts
+This chapter sits between the lightweight `Network` facade and the broader
+`neat/` subsystem. Call `network.evolve()` when the question is "improve
+this graph against a supervised dataset" without first wiring a separate
+experiment harness. The method treats the current network as a seed genome,
+configures a short-lived NEAT runtime around it, evaluates descendants, then
+copies the best discovered structure back into the original instance.
 
-### DATASET_COMPATIBILITY_ERROR_MESSAGE
+The folder is split by the same stages the public call executes. `setup`
+validates dataset shape and resolves defaults. `fitness` turns prediction
+error into a comparable score. `loop` owns generation-to-generation stopping
+logic. `finalize` adopts the winning genome and tears down worker resources.
+Keeping those shelves separate makes the README read like an evolution run
+rather than an alphabetical pile of helpers.
 
-Shared dataset compatibility error message.
+```mermaid
+flowchart LR
+  Seed[Seed Network] --> Normalize[Normalize options and dataset]
+  Normalize --> Fitness[Build fitness evaluator]
+  Fitness --> Neat[Create temporary NEAT runtime]
+  Neat --> Loop[Run evolve loop]
+  Loop --> Adopt[Adopt best genome into original network]
+```
 
-### DEFAULT_EVALUATION_AMOUNT
+Use this boundary when you want a bounded local search over network
+structure, not a long-lived population controller. `error` answers "stop
+when good enough", `iterations` answers "stop after this many generations",
+and `growth` answers "how much should extra structure cost while searching".
 
-Default repeated evaluation amount.
+For compact background reading on the wider search family behind this folder,
+see Wikipedia contributors,
+[Evolutionary algorithm](https://en.wikipedia.org/wiki/Evolutionary_algorithm).
+The implementation here is intentionally narrower: it keeps the public call
+site small while reusing the repo's NEAT runtime under the hood.
 
-### DEFAULT_GROWTH
+Example: stop when the network gets below an error target or hits a
+generation cap.
 
-Default complexity growth penalty.
+```ts
+const summary = await network.evolve(trainingSet, {
+  error: 0.02,
+  iterations: 500,
+  growth: 0.0005,
+});
+```
 
-### DEFAULT_LOG_INTERVAL
+Example: cap the search more tightly and fan evaluation across workers when
+dataset scoring dominates.
 
-Default logging frequency value.
-
-### DEFAULT_TARGET_ERROR
-
-Default target error used when omitted.
-
-### DEFAULT_THREAD_COUNT
-
-Default single-thread worker count.
-
-### DISABLED_TARGET_ERROR
-
-Sentinel target error indicating that error-based stopping is disabled.
-
-### EvolutionSummary
-
-Shared evolution summary payload.
-
-### GenomeStructureCounts
-
-Structural counts used by complexity heuristics.
-
-### MAX_CONSECUTIVE_INVALID_ERRORS
-
-Maximum consecutive invalid errors tolerated before loop abort.
-
-### SMALL_POPULATION_MUTATION_AMOUNT
-
-Mutation amount fallback used for very small populations.
-
-### SMALL_POPULATION_MUTATION_RATE
-
-Mutation rate fallback used for very small populations.
-
-### SMALL_POPULATION_THRESHOLD
-
-Population threshold considered "small" for mutation heuristics.
-
-### STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE
-
-Shared evolve stopping-condition validation error.
-
-### ZERO_ITERATIONS
-
-Explicit zero-iteration value.
+```ts
+const summary = await network.evolve(trainingSet, {
+  iterations: 120,
+  threads: 2,
+  log: 20,
+});
+```
 
 ## architecture/network/evolve/network.evolve.utils.ts
 
@@ -106,174 +100,6 @@ const summary = await network.evolve(trainingSet, {
 });
 console.log(summary.error, summary.iterations, summary.time);
 ```
-
-## architecture/network/evolve/network.evolve.loop.utils.ts
-
-### applyEvolutionStep
-
-```ts
-applyEvolutionStep(
-  state: EvolutionLoopState,
-  evolvedGenome: default,
-  growth: number,
-): void
-```
-
-Applies one evolve() result to loop state.
-
-Parameters:
-- `state` - - Mutable loop state.
-- `evolvedGenome` - - Genome returned by NEAT evolve step.
-- `growth` - - Complexity growth scalar.
-
-Returns: Nothing.
-
-### createInitialLoopState
-
-```ts
-createInitialLoopState(): EvolutionLoopState
-```
-
-Creates initial loop state snapshot.
-
-Returns: Initial loop state.
-
-### deriveErrorFromFitness
-
-```ts
-deriveErrorFromFitness(
-  fitness: number,
-  genome: default,
-  growth: number,
-): number
-```
-
-Derive error from fitness by inverting score composition.
-
-Parameters:
-- `fitness` - - Fitness value from fittest genome.
-- `genome` - - Fittest genome.
-- `growth` - - Complexity growth scalar.
-
-Returns: Derived error value.
-
-### runEvolutionLoop
-
-```ts
-runEvolutionLoop(
-  neatInstance: NeatRuntime,
-  resolvedSettings: EvolutionSettings,
-  targetError: number,
-  iterations: number | undefined,
-): Promise<{ error: number; bestGenome: default | undefined; }>
-```
-
-Run core evolution loop until stop condition is met.
-
-Parameters:
-- `neatInstance` - - Active NEAT instance.
-- `resolvedSettings` - - Scalar evolution settings.
-- `targetError` - - Effective target error (-1 means disabled).
-- `iterations` - - Optional max iteration count.
-
-Returns: Loop result snapshot.
-
-### runScheduleCallbackSafely
-
-```ts
-runScheduleCallbackSafely(
-  scheduleConfig: { iterations: number; function: (stats: { fitness: number; error: number; iteration: number; }) => void; } | undefined,
-  generation: number,
-  bestFitness: number,
-  error: number,
-): void
-```
-
-Run schedule callback if schedule trigger is reached.
-
-Parameters:
-- `scheduleConfig` - - Optional schedule configuration.
-- `generation` - - Current generation.
-- `bestFitness` - - Current best fitness.
-- `error` - - Current error.
-
-Returns: Nothing.
-
-### shouldAbortForInvalidErrors
-
-```ts
-shouldAbortForInvalidErrors(
-  state: EvolutionLoopState,
-): boolean
-```
-
-Determines whether loop must abort due to invalid-error streak.
-
-Parameters:
-- `state` - - Mutable loop state.
-
-Returns: True when invalid-error threshold is reached.
-
-### shouldContinueEvolution
-
-```ts
-shouldContinueEvolution(
-  currentError: number,
-  targetError: number,
-  iterationsSpecified: boolean,
-  currentGeneration: number,
-  maxIterations: number | undefined,
-): boolean
-```
-
-Determine whether evolution loop should continue.
-
-Parameters:
-- `currentError` - - Current derived error value.
-- `targetError` - - Effective target error (-1 means disabled).
-- `iterationsSpecified` - - Whether iterations limit is active.
-- `currentGeneration` - - Current NEAT generation index.
-- `maxIterations` - - Maximum iteration limit.
-
-Returns: True when loop should continue.
-
-### updateBestGenomeIfImproved
-
-```ts
-updateBestGenomeIfImproved(
-  currentBestFitness: number,
-  currentBestGenome: default | undefined,
-  candidateFitness: number,
-  candidateGenome: default,
-): { bestFitness: number; bestGenome: default | undefined; }
-```
-
-Update best fitness/genome snapshot when improved.
-
-Parameters:
-- `currentBestFitness` - - Current best fitness.
-- `currentBestGenome` - - Current best genome.
-- `candidateFitness` - - Candidate fitness.
-- `candidateGenome` - - Candidate genome.
-
-Returns: Updated best snapshot.
-
-### updateInvalidErrorCounter
-
-```ts
-updateInvalidErrorCounter(
-  currentCount: number,
-  currentError: number,
-): number
-```
-
-Update invalid-error counter.
-
-Parameters:
-- `currentCount` - - Current consecutive invalid-error count.
-- `currentError` - - Current derived error value.
-
-Returns: Updated guard state.
 
 ## architecture/network/evolve/network.evolve.setup.utils.ts
 
@@ -881,6 +707,174 @@ Parameters:
 
 Returns: Nothing.
 
+## architecture/network/evolve/network.evolve.loop.utils.ts
+
+### applyEvolutionStep
+
+```ts
+applyEvolutionStep(
+  state: EvolutionLoopState,
+  evolvedGenome: default,
+  growth: number,
+): void
+```
+
+Applies one evolve() result to loop state.
+
+Parameters:
+- `state` - - Mutable loop state.
+- `evolvedGenome` - - Genome returned by NEAT evolve step.
+- `growth` - - Complexity growth scalar.
+
+Returns: Nothing.
+
+### createInitialLoopState
+
+```ts
+createInitialLoopState(): EvolutionLoopState
+```
+
+Creates initial loop state snapshot.
+
+Returns: Initial loop state.
+
+### deriveErrorFromFitness
+
+```ts
+deriveErrorFromFitness(
+  fitness: number,
+  genome: default,
+  growth: number,
+): number
+```
+
+Derive error from fitness by inverting score composition.
+
+Parameters:
+- `fitness` - - Fitness value from fittest genome.
+- `genome` - - Fittest genome.
+- `growth` - - Complexity growth scalar.
+
+Returns: Derived error value.
+
+### runEvolutionLoop
+
+```ts
+runEvolutionLoop(
+  neatInstance: NeatRuntime,
+  resolvedSettings: EvolutionSettings,
+  targetError: number,
+  iterations: number | undefined,
+): Promise<{ error: number; bestGenome: default | undefined; }>
+```
+
+Run core evolution loop until stop condition is met.
+
+Parameters:
+- `neatInstance` - - Active NEAT instance.
+- `resolvedSettings` - - Scalar evolution settings.
+- `targetError` - - Effective target error (-1 means disabled).
+- `iterations` - - Optional max iteration count.
+
+Returns: Loop result snapshot.
+
+### runScheduleCallbackSafely
+
+```ts
+runScheduleCallbackSafely(
+  scheduleConfig: { iterations: number; function: (stats: { fitness: number; error: number; iteration: number; }) => void; } | undefined,
+  generation: number,
+  bestFitness: number,
+  error: number,
+): void
+```
+
+Run schedule callback if schedule trigger is reached.
+
+Parameters:
+- `scheduleConfig` - - Optional schedule configuration.
+- `generation` - - Current generation.
+- `bestFitness` - - Current best fitness.
+- `error` - - Current error.
+
+Returns: Nothing.
+
+### shouldAbortForInvalidErrors
+
+```ts
+shouldAbortForInvalidErrors(
+  state: EvolutionLoopState,
+): boolean
+```
+
+Determines whether loop must abort due to invalid-error streak.
+
+Parameters:
+- `state` - - Mutable loop state.
+
+Returns: True when invalid-error threshold is reached.
+
+### shouldContinueEvolution
+
+```ts
+shouldContinueEvolution(
+  currentError: number,
+  targetError: number,
+  iterationsSpecified: boolean,
+  currentGeneration: number,
+  maxIterations: number | undefined,
+): boolean
+```
+
+Determine whether evolution loop should continue.
+
+Parameters:
+- `currentError` - - Current derived error value.
+- `targetError` - - Effective target error (-1 means disabled).
+- `iterationsSpecified` - - Whether iterations limit is active.
+- `currentGeneration` - - Current NEAT generation index.
+- `maxIterations` - - Maximum iteration limit.
+
+Returns: True when loop should continue.
+
+### updateBestGenomeIfImproved
+
+```ts
+updateBestGenomeIfImproved(
+  currentBestFitness: number,
+  currentBestGenome: default | undefined,
+  candidateFitness: number,
+  candidateGenome: default,
+): { bestFitness: number; bestGenome: default | undefined; }
+```
+
+Update best fitness/genome snapshot when improved.
+
+Parameters:
+- `currentBestFitness` - - Current best fitness.
+- `currentBestGenome` - - Current best genome.
+- `candidateFitness` - - Candidate fitness.
+- `candidateGenome` - - Candidate genome.
+
+Returns: Updated best snapshot.
+
+### updateInvalidErrorCounter
+
+```ts
+updateInvalidErrorCounter(
+  currentCount: number,
+  currentError: number,
+): number
+```
+
+Update invalid-error counter.
+
+Parameters:
+- `currentCount` - - Current consecutive invalid-error count.
+- `currentError` - - Current derived error value.
+
+Returns: Updated guard state.
+
 ## architecture/network/evolve/network.evolve.finalize.utils.ts
 
 ### adoptBestGenomeOrWarn
@@ -937,3 +931,67 @@ Parameters:
 - `evolveOptions` - - Evolve options object.
 
 Returns: Nothing.
+
+## architecture/network/evolve/network.evolve.utils.types.ts
+
+Shared dataset compatibility error message.
+
+### DATASET_COMPATIBILITY_ERROR_MESSAGE
+
+Shared dataset compatibility error message.
+
+### DEFAULT_EVALUATION_AMOUNT
+
+Default repeated evaluation amount.
+
+### DEFAULT_GROWTH
+
+Default complexity growth penalty.
+
+### DEFAULT_LOG_INTERVAL
+
+Default logging frequency value.
+
+### DEFAULT_TARGET_ERROR
+
+Default target error used when omitted.
+
+### DEFAULT_THREAD_COUNT
+
+Default single-thread worker count.
+
+### DISABLED_TARGET_ERROR
+
+Sentinel target error indicating that error-based stopping is disabled.
+
+### EvolutionSummary
+
+Shared evolution summary payload.
+
+### GenomeStructureCounts
+
+Structural counts used by complexity heuristics.
+
+### MAX_CONSECUTIVE_INVALID_ERRORS
+
+Maximum consecutive invalid errors tolerated before loop abort.
+
+### SMALL_POPULATION_MUTATION_AMOUNT
+
+Mutation amount fallback used for very small populations.
+
+### SMALL_POPULATION_MUTATION_RATE
+
+Mutation rate fallback used for very small populations.
+
+### SMALL_POPULATION_THRESHOLD
+
+Population threshold considered "small" for mutation heuristics.
+
+### STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE
+
+Shared evolve stopping-condition validation error.
+
+### ZERO_ITERATIONS
+
+Explicit zero-iteration value.

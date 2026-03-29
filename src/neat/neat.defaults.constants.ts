@@ -1,23 +1,101 @@
 import type { NeatConstructorDefaults } from './init/neat.init';
 
 /**
- * Public default knobs for the root `Neat` controller.
+ * Root chapter map and public default knobs for the internal `src/neat` controller surface.
  *
- * These constants describe the controller personality a caller gets before a
- * custom option bag starts bending the run toward a different search style.
- * Keeping them in their own root chapter lets `src/neat.ts` stay focused on
- * orchestration while the `init/` chapter consumes one shared defaults packet.
+ * `src/neat.ts` is the public control desk. `src/neat/` is the machine room
+ * behind it. This folder owns the controller chapters that make a run real:
+ * initialization, evaluation, evolution, mutation, speciation, telemetry,
+ * persistence, and the shared bookkeeping that keeps experiments deterministic
+ * instead of magical. Promoting the defaults file to the chapter opening is
+ * intentional because default knobs are the quickest way to make the
+ * controller's personality legible before a reader dives into implementation
+ * detail.
  *
- * The constants fall into four small families:
+ * The most helpful reading move is to split the folder into four working
+ * lanes. `init/`, `evaluate/`, and `evolve/` explain how a population is
+ * created, scored, and replaced. `mutation/`, `selection/`, and `speciation/`
+ * explain how search pressure and diversity are managed. `telemetry/`,
+ * `lineage/`, `diversity/`, and `multiobjective/` explain how the run becomes
+ * inspectable. `export/`, `rng/`, `cache/`, `maintenance/`, and `pruning/`
+ * explain how the controller stays reproducible and tractable as experiments
+ * get larger.
  *
- * - search volume and tempo,
- * - speciation pressure,
- * - structural ceilings,
- * - observability sampling.
+ * The flat root files are small bridges rather than the whole story.
+ * `neat.defaults.constants.ts` and `neat.types.ts` keep the public constructor
+ * and option bag readable. `neat.lineage.ts` and `neat.constants.ts` keep
+ * small shared logic close to the root when multiple chapters need it. The
+ * deeper folders own the heavier policy and runtime details.
  *
- * Read them as the public defaults shelf, not as hidden implementation trivia.
- * These values are the baseline promises the root controller makes when a user
- * says, "give me an ordinary NEAT run," without specifying every knob.
+ * These defaults matter because they are the baseline promises the controller
+ * makes when a caller says "give me an ordinary NEAT run." Population size,
+ * mutation tempo, compatibility pressure, structural ceilings, and
+ * observability sampling are not random numbers. They are the quiet assumptions
+ * that decide whether the controller behaves like a conservative search, an
+ * exploratory search, or an unstable one.
+ *
+ * That design follows the original NEAT intuition: protect structural
+ * innovation long enough for it to compete, rather than forcing every new
+ * topology to beat established species immediately. See Stanley and
+ * Miikkulainen,
+ * [Evolving Neural Networks through Augmenting Topologies](https://nn.cs.utexas.edu/?stanley:ec02),
+ * for the background behind the compatibility and growth vocabulary that keeps
+ * surfacing across this folder.
+ *
+ * Read this root chapter in three passes. Start with this defaults file and
+ * `neat.types.ts` for the public knobs and broad contracts. Continue into
+ * `evaluate/`, `evolve/`, and `speciation/` for the live search loop. Finish
+ * with `telemetry/`, `lineage/`, `multiobjective/`, `export/`, and `rng/` when
+ * you want to inspect, replay, or compare runs rather than only advance them.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Root["src/neat root"]:::accent --> Loop["init / evaluate / evolve"]:::base
+ *   Root --> Pressure["mutation / selection / speciation"]:::base
+ *   Root --> Observe["telemetry / lineage / diversity / multiobjective"]:::base
+ *   Root --> Replay["export / rng / cache / maintenance / pruning"]:::base
+ *   Root --> Bridges["root bridges<br/>defaults / types / constants"]:::base
+ * ```
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Defaults[Root defaults]:::accent --> Population[popsize elitism provenance]:::base
+ *   Defaults --> Variation[mutationRate mutationAmount]:::base
+ *   Defaults --> Species[compatibility and weight coefficients]:::base
+ *   Defaults --> Observation[diversity and novelty samples]:::base
+ *   Population --> Run[Controller behavior]:::base
+ *   Variation --> Run
+ *   Species --> Run
+ *   Observation --> Run
+ * ```
+ *
+ * Example: build one explicit baseline options bag from the documented root
+ * defaults.
+ *
+ * ```ts
+ * const baselineOptions = {
+ *   popsize: DEFAULT_POPULATION_SIZE,
+ *   mutationRate: DEFAULT_MUTATION_RATE,
+ *   compatibilityThreshold: DEFAULT_COMPATIBILITY_THRESHOLD,
+ * };
+ * ```
+ *
+ * Example: keep the observability defaults visible when teaching or
+ * benchmarking runs.
+ *
+ * ```ts
+ * const observabilityDefaults = {
+ *   diversityPairSample: DEFAULT_DIVERSITY_PAIR_SAMPLE,
+ *   diversityGraphletSample: DEFAULT_DIVERSITY_GRAPHLET_SAMPLE,
+ *   noveltyK: DEFAULT_NOVELTY_K,
+ * };
+ * ```
  */
 
 /**

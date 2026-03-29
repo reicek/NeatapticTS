@@ -1,0 +1,10 @@
+{
+  "introFile": "evolutionEngine.types.ts",
+  "fileOrder": [
+    "evolutionEngine.types.ts",
+    "engineState.types.ts",
+    "evolutionLoop.ts",
+    "evolutionEngine.services.ts",
+    "sampling.ts"
+  ]
+}

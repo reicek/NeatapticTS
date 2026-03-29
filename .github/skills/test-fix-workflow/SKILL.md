@@ -52,9 +52,9 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
 ## Required Workflow
 
 1. Create or update a durable fix plan before changing code.
-    - If the tracker format itself is being created or rewritten, follow
-       `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and
-       `Handoff query` structure.
+   - If the tracker format itself is being created or rewritten, follow
+     `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and
+     `Handoff query` structure.
 2. Group failures by class.
    - Typical buckets: TypeScript compilation blockers, runtime logic, async or
      sequencing issues, assertion drift, and investigation-required failures.
@@ -73,10 +73,15 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
 ## Guardrails
 
 - Do not prepend specific calendar dates to durable fix-plan headings, status
-   logs, or handoff sections. Use stable undated labels so the plan can be
-   revised cleanly across sessions.
+  logs, or handoff sections. Use stable undated labels so the plan can be
+  revised cleanly across sessions.
 - Do not use ad hoc plan markers when a fix tracker is updated; use
-   `tracker-handoff` conventions instead.
+  `tracker-handoff` conventions instead.
+- When the fix workstream becomes fully complete, finish by using
+  `tracker-handoff` to compress the `.plans.md` file into a short closed
+  tracker and add or update the same-boundary `.logs.md` file.
+- Do not preserve a `Handoff query` on a terminally closed fix plan unless the
+  user explicitly wants reopen guidance.
 - Do not bounce between test execution and partial fixes when the workflow is
   still in the main repair phase.
 - Do not treat partial reruns as a substitute for a durable plan.

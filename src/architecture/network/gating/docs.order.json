@@ -1,0 +1,9 @@
+{
+  "introFile": "network.gating.utils.ts",
+  "fileOrder": [
+    "network.gating.utils.ts",
+    "network.gating.gate.utils.ts",
+    "network.gating.remove.utils.ts",
+    "network.gating.utils.types.ts"
+  ]
+}

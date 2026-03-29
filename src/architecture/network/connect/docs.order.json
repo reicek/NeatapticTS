@@ -1,0 +1,9 @@
+{
+  "introFile": "network.connect.utils.ts",
+  "fileOrder": [
+    "network.connect.utils.ts",
+    "network.connect.utils.types.ts",
+    "network.connect.create.utils.ts",
+    "network.connect.remove.utils.ts"
+  ]
+}

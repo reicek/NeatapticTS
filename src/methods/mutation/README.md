@@ -1,117 +1,63 @@
 # methods/mutation
 
-## methods/mutation/mutation.ts
+Mutation policy shelf for neuroevolution runs.
 
-### mutation
+This chapter belongs in `methods/` rather than `architecture/network/mutate/`
+because it does not execute one mutation against one concrete graph. It
+defines the reusable operator vocabulary that higher-level controllers pick
+from before any specific network is touched. The network chapter later uses
+that vocabulary to dispatch real edits.
 
-Defines various mutation methods used in neuroevolution algorithms.
+Read the shelf in five families. Growth operators add structure. Pruning
+operators remove it. Parameter operators retune weights and biases without
+rewriting topology. Behavior operators change activation or gating policy.
+Memory operators add recurrent building blocks when the search should be
+allowed to invent stateful behavior.
 
-Mutation introduces genetic diversity into the population by randomly
-altering parts of an individual's genome (the neural network structure or parameters).
-This is crucial for exploring the search space and escaping local optima.
+Those families matter because mutation is where an evolutionary run decides
+whether it is mostly refining a plausible graph or still exploring new
+architectures. A shelf dominated by `MOD_WEIGHT` and `MOD_BIAS` behaves like
+local numeric search. A shelf that also allows `ADD_NODE`, `ADD_CONN`, and
+gating or recurrent operators gives the run permission to change what the
+network can represent at all.
 
-Common mutation strategies include adding or removing nodes and connections,
-modifying connection weights and node biases, and changing node activation functions.
-These operations allow the network topology and parameters to adapt over generations.
-
-The methods listed here are inspired by techniques used in algorithms like NEAT
-and particularly the Instinct algorithm, providing a comprehensive set of tools
-for evolving network architectures.
-
-Read this file as a mutation toolbox organized by what kind of change you
-want evolution to make:
-
-- topology-growth operators such as `ADD_NODE`, `ADD_CONN`,
-  `ADD_SELF_CONN`, and `ADD_BACK_CONN` make the graph more expressive,
-- topology-pruning operators such as `SUB_NODE`, `SUB_CONN`,
-  `SUB_SELF_CONN`, and `SUB_BACK_CONN` remove structure and can simplify an
-  overgrown search,
-- parameter-tuning operators such as `MOD_WEIGHT`, `MOD_BIAS`, and
-  `REINIT_WEIGHT` change numeric behavior without rewriting the graph,
-- behavior-shaping operators such as `MOD_ACTIVATION`, `ADD_GATE`,
-  `SUB_GATE`, and `SWAP_NODES` change how existing structure computes,
-- architecture-expansion operators such as `ADD_LSTM_NODE` and
-  `ADD_GRU_NODE` introduce memory-oriented building blocks.
-
-A practical reading order is:
-
-1. start with `MOD_WEIGHT` and `MOD_BIAS` to understand the gentlest search
-   moves,
-2. then compare `ADD_CONN` and `ADD_NODE` to see how structure starts to
-   grow,
-3. then read the recurrent and gating operators when you want temporal
-   behavior or context-sensitive routing,
-4. finish with `ALL` and `FFW`, which summarize which operators belong in a
-   broad search versus a strictly feedforward one.
-
-A practical chooser for first experiments:
-
-- begin with weight and bias mutations when the topology is already plausible
-  and you mainly want numeric refinement,
-- allow `ADD_CONN` and `ADD_NODE` when the current architecture feels too
-  rigid or too shallow,
-- enable gating or back-connections only when temporal memory or dynamic
-  routing is actually part of the task,
-- prefer `FFW` as the safe shelf when a run must remain strictly
-  feedforward.
+`ALL` and `FFW` are the two convenience summaries at the bottom of the
+chapter. `ALL` keeps the widest search surface, including recurrence and
+memory additions. `FFW` keeps the feedforward-safe subset for runs that must
+remain acyclic.
 
 ```mermaid
 flowchart TD
-  Mutation[Mutation toolbox] --> Grow[Grow structure]
+  Mutation[Mutation shelf] --> Grow[Grow structure]
   Mutation --> Prune[Prune structure]
   Mutation --> Tune[Tune parameters]
   Mutation --> Shape[Reshape behavior]
   Mutation --> Memory[Add memory blocks]
-  Grow --> GrowItems[ADD_NODE ADD_CONN ADD_SELF_CONN ADD_BACK_CONN]
-  Prune --> PruneItems[SUB_NODE SUB_CONN SUB_SELF_CONN SUB_BACK_CONN]
-  Tune --> TuneItems[MOD_WEIGHT MOD_BIAS REINIT_WEIGHT]
-  Shape --> ShapeItems[MOD_ACTIVATION ADD_GATE SUB_GATE SWAP_NODES]
-  Memory --> MemoryItems[ADD_LSTM_NODE ADD_GRU_NODE]
 ```
 
-Minimal workflow:
+For compact background on why mutation pressure matters in evolutionary
+search, see Wikipedia contributors,
+[Mutation (genetic algorithm)](https://en.wikipedia.org/wiki/Mutation_(genetic_algorithm)).
+
+Example: keep a feedforward-safe shelf for searches that must remain simple
+and acyclic.
 
 ```ts
-const safeFeedforwardShelf = mutation.FFW;
+const feedforwardOnly = mutation.FFW;
+```
 
-const structuralSearchShelf = [
+Example: widen the shelf when structural exploration is part of the goal.
+
+```ts
+const structuralExploration = [
   mutation.ADD_CONN,
   mutation.ADD_NODE,
   mutation.MOD_WEIGHT,
-  mutation.MOD_BIAS,
-];
-
-const recurrentSearchShelf = [
-  ...structuralSearchShelf,
   mutation.ADD_GATE,
-  mutation.ADD_BACK_CONN,
 ];
 ```
 
-Supported mutation families:
-
-- `ADD_NODE`: Adds a new node by splitting an existing connection.
-- `SUB_NODE`: Removes a hidden node and its connections.
-- `ADD_CONN`: Adds a new connection between two unconnected nodes.
-- `SUB_CONN`: Removes an existing connection.
-- `MOD_WEIGHT`: Modifies the weight of an existing connection.
-- `MOD_BIAS`: Modifies the bias of a node.
-- `MOD_ACTIVATION`: Changes the activation function of a node.
-- `ADD_SELF_CONN`: Adds a self-connection (recurrent loop) to a node.
-- `SUB_SELF_CONN`: Removes a self-connection from a node.
-- `ADD_GATE`: Adds a gating mechanism to a connection.
-- `SUB_GATE`: Removes a gating mechanism from a connection.
-- `ADD_BACK_CONN`: Adds a recurrent (backward) connection between nodes.
-- `SUB_BACK_CONN`: Removes a recurrent (backward) connection.
-- `SWAP_NODES`: Swaps the roles (bias and activation) of two nodes.
-- `REINIT_WEIGHT`: Reinitializes all weights for a node.
-- `BATCH_NORM`: Marks a node for batch normalization (stub).
-- `ADD_LSTM_NODE`: Adds a new LSTM node (memory cell with gates).
-- `ADD_GRU_NODE`: Adds a new GRU node (gated recurrent unit).
-
-Summary shelves:
-- `ALL`: all mutation methods, including recurrent and memory-oriented ones.
-- `FFW`: the feedforward-safe subset that avoids recurrence and gating.
+## methods/mutation/mutation.ts
 
 ### MutationConfig
 

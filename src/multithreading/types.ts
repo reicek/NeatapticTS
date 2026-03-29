@@ -1,5 +1,10 @@
 /**
- * Shared types for multithreading helpers and test workers.
+ * Shared contracts for the multithreading boundary.
+ *
+ * These types keep the worker-facing evaluation surface small: ordered
+ * activation functions, serialized input/output samples, a serializable network
+ * shape, and the worker constructor protocol used by the browser and Node test
+ * worker wrappers.
  */
 export type ActivationFn = (x: number) => number;
 

@@ -1,0 +1,5 @@
+{
+  "introFile": "multi.ts",
+  "fileOrder": ["multi.ts", "types.ts", "multi.utils.ts"],
+  "folderOrder": ["workers"]
+}

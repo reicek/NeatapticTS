@@ -1,9 +1,86 @@
 /**
- * Public MazeMovement facade for the dedicated mazeMovement module boundary.
+ * Episode-simulation boundary for one maze-controlled agent.
  *
- * The folder now owns runtime helpers, policy helpers, shaping helpers, and
- * finalization logic. This file keeps the user-facing API in one place while
- * the implementation stays split into focused helpers.
+ * This folder is where a policy stops being abstract logits and starts paying
+ * for local decisions. One run moves through perception, direction selection,
+ * collision-aware movement, shaping, and finalization until the agent reaches
+ * the exit or exhausts its step budget.
+ *
+ * The boundary exists because single-episode logic needs both honesty and
+ * inspectability. If movement rules, reward shaping, and stop conditions were
+ * scattered across fitness or evolution helpers, it would be much harder to
+ * tell whether poor results came from weak policy, thin observations, harsh
+ * shaping, or simple runtime edge cases.
+ *
+ * Read the folder as four cooperating shelves. `runtime/` builds perception,
+ * visit bookkeeping, and low-level state transitions. `policy/` converts raw
+ * outputs into concrete directional choices and exploration nudges. `shaping/`
+ * applies the score semantics that make sparse-goal navigation learnable.
+ * `finalization/` folds the finished path into one result the engine and
+ * fitness layers can compare.
+ *
+ * The public class stays class-based on purpose. Existing imports remain
+ * stable, but the real teaching value is now inside the split helpers. The
+ * facade tells the reader what the episode boundary promises; the subfolders
+ * explain how that promise is kept.
+ *
+ * Read this chapter in three passes. Start with `simulateAgent(...)` when you
+ * want the whole episode loop. Continue to `selectDirection(...)` and
+ * `moveAgent(...)` when you want the policy-to-action seam. Finish in the
+ * runtime, policy, shaping, and finalization folders when you need the exact
+ * bookkeeping or reward logic behind one run.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Vision["vision and visit state"]:::base --> Policy["direction selection\nand exploration nudges"]:::accent
+ *   Policy --> Move["collision-aware movement"]:::base
+ *   Move --> Shaping["progress and penalty shaping"]:::base
+ *   Shaping --> Finalize["episode result\nfitness path progress"]:::base
+ * ```
+ *
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   MazeMovement["mazeMovement/"]:::accent --> Facade["mazeMovement.ts\npublic episode facade"]:::base
+ *   MazeMovement --> Runtime["runtime/\nvision and state"]:::base
+ *   MazeMovement --> Policy["policy/\naction choice"]:::base
+ *   MazeMovement --> Shaping["shaping/\nreward and penalties"]:::base
+ *   MazeMovement --> Finalization["finalization/\nresult folding"]:::base
+ * ```
+ *
+ * For background on why direction selection talks about probabilities and
+ * entropy instead of only the raw logits, see Wikipedia contributors,
+ * [Softmax function](https://en.wikipedia.org/wiki/Softmax_function), which is
+ * the probability transform used by the action-diagnostics helper layer.
+ *
+ * Example: inspect the direction choice implied by one network output vector.
+ *
+ * ```ts
+ * const directionStats = MazeMovement.selectDirection([0.4, 1.2, -0.3, 0.1]);
+ *
+ * console.log(directionStats.selectedDirection);
+ * console.log(directionStats.entropy);
+ * ```
+ *
+ * Example: simulate one complete maze episode for a candidate network.
+ *
+ * ```ts
+ * const result = MazeMovement.simulateAgent(
+ *   network,
+ *   encodedMaze,
+ *   startPos,
+ *   exitPos,
+ *   distanceMap,
+ *   160,
+ * );
+ *
+ * console.log(result.fitness, result.reachedExit);
+ * ```
  */
 
 import type { INetwork } from '../interfaces';
