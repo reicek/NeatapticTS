@@ -1,0 +1,4 @@
+{
+  "introFile": "testworker.ts",
+  "fileOrder": ["testworker.ts", "worker.ts"]
+}

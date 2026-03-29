@@ -1,3 +1,93 @@
+/**
+ * Activation chapter for `Network` execution policy.
+ *
+ * This folder answers the moment when a graph already exists and the next
+ * question becomes: how should signal move through it right now? The same
+ * network may be stepped for ordinary inference, training-aware forward passes,
+ * zero-copy raw output reuse, or a sequence of batch rows. Keeping those paths
+ * together makes the execution tradeoffs visible without mixing them into
+ * topology or serialization code.
+ *
+ * The important split is between graph meaning and graph execution. Node and
+ * connection chapters explain what the structure is. `activate/` explains how
+ * that structure is stepped: validate inputs, decide whether the slab fast path
+ * is still legal, preserve or skip training traces, and return outputs in the
+ * shape the caller requested.
+ *
+ * A second useful lens is to read the public exports as four modes.
+ * `activate()` is the ordinary compatibility path. `noTraceActivate()` is the
+ * hot inference path when trace bookkeeping would be wasteful. `activateRaw()`
+ * keeps typed-array reuse available when pooling matters more than boxed
+ * outputs. `activateBatch()` is the clear orchestration layer for repeated
+ * forward passes over many rows.
+ *
+ * The performance lesson here is not "always choose the fastest path." It is
+ * "choose the narrowest path that still matches the caller's semantics." If a
+ * network is slab-ready, this chapter can exploit contiguous typed arrays. If a
+ * structural edit made that layout stale, the same boundary falls back to node
+ * traversal instead of forcing callers to understand storage internals first.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Input[caller input]:::base --> Modes[activate chapter]:::accent
+ *   Modes --> Trace[activate<br/>keep traces]:::base
+ *   Modes --> NoTrace[noTraceActivate<br/>inference hot path]:::base
+ *   Modes --> Raw[activateRaw<br/>typed output reuse]:::base
+ *   Modes --> Batch[activateBatch<br/>repeat over rows]:::base
+ * ```
+ *
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   ActivateChapter[activate/]:::accent --> Validation[input validation and contexts]:::base
+ *   ActivateChapter --> FastPath[slab fast path when layout is ready]:::base
+ *   ActivateChapter --> Traversal[node traversal fallback]:::base
+ *   ActivateChapter --> Buffers[pooled activation buffers]:::base
+ * ```
+ *
+ * For background on why some activation paths preserve training traces while
+ * others skip them, see Wikipedia contributors,
+ * [Backpropagation](https://en.wikipedia.org/wiki/Backpropagation). This
+ * chapter sits at the forward-pass side of that story and decides how much
+ * training bookkeeping each call should carry along.
+ *
+ * Example: use the no-trace path when you only need inference outputs.
+ *
+ * ```ts
+ * const network = Network.createMLP(2, [3], 1);
+ * const outputValues = network.noTraceActivate([0.2, 0.8]);
+ * ```
+ *
+ * Example: run the same network over several input rows with one orchestration
+ * call.
+ *
+ * ```ts
+ * const network = Network.createMLP(2, [3], 1);
+ * const batchOutputs = network.activateBatch(
+ *   [
+ *     [0, 1],
+ *     [1, 0],
+ *   ],
+ *   true,
+ * );
+ * ```
+ *
+ * Practical reading order:
+ *
+ * 1. Start here for the public activation modes and their semantic differences.
+ * 2. Continue into `network.activate.core.utils.ts` when you want the ordinary
+ *    forward-pass pipeline.
+ * 3. Continue into `network.activate.raw.utils.ts` and the no-trace helpers
+ *    when typed-array reuse or inference hot paths are the next question.
+ * 4. Finish with the context and helper files when you want the orchestration
+ *    details behind validation, batching, and fallback behavior.
+ */
+
 import type Network from '../../network/network';
 export { activate, gaussianRand } from './network.activate.core.utils';
 import {

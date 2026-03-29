@@ -1,10 +1,81 @@
 # architecture/network/connect
 
-## architecture/network/connect/network.connect.utils.types.ts
+Connection-editing chapter for single-edge graph surgery.
 
-### NetworkInternals
+This folder owns the smallest structural change a `Network` can make: add or
+remove one directed edge while keeping graph invariants, gating state, and
+execution caches honest. Higher-level builders may connect layers or groups
+in bulk, but they still depend on the legality and bookkeeping rules taught
+here.
 
-Internal network state shape shared by connect utility helper modules.
+The important distinction is between edge creation and edge registration.
+`Node.connect()` can manufacture one or more low-level connection objects,
+but the network still has to decide whether those edges are legal in the
+current topology policy, whether they belong in normal or self-connection
+storage, and whether cached topological or slab views must be invalidated.
+
+Acyclic mode makes that policy visible. In feed-forward configurations this
+chapter refuses back-edges and self-edges that would violate the intended
+execution order. In unconstrained mode the same surface accepts those edits
+and simply keeps the runtime collections synchronized. That lets callers ask
+for structural edits without duplicating the topology rules everywhere else.
+
+The matching remove path is equally educational. Disconnecting one edge is
+not just a splice from an array. If the edge is gated, the gating linkage has
+to be released first. After that, structural caches are marked dirty so the
+next activation or slab rebuild sees the new graph instead of a stale one.
+
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Request[connect request]:::base --> Guard[acyclic legality check]:::accent
+  Guard --> Create[Node.connect creates low-level edges]:::base
+  Create --> Register[classify self-edge or standard edge]:::base
+  Register --> Dirty[mark topology and slab caches dirty]:::base
+```
+
+```mermaid
+flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Mode[topology mode]:::accent --> FeedForward[feed-forward<br/>reject back-edges]:::base
+  Mode --> Unconstrained[unconstrained<br/>allow recurrent edits]:::base
+  FeedForward --> Collections[network collections stay valid]:::base
+  Unconstrained --> Collections
+```
+
+For background on the scheduling constraint behind acyclic mode, see
+Wikipedia contributors,
+[Topological sorting](https://en.wikipedia.org/wiki/Topological_sorting).
+The legality checks in this folder protect the execution order assumptions
+that feed-forward activation relies on.
+
+Example: add one explicit edge between two nodes.
+
+```ts
+const [edge] = network.connect(sourceNode, targetNode, 0.5);
+console.log(edge.weight);
+```
+
+Example: remove one existing edge and let the network invalidate its cached
+structure for the next run.
+
+```ts
+network.disconnect(sourceNode, targetNode);
+```
+
+Practical reading order:
+
+1. Start here for the public `connect()` and `disconnect()` semantics.
+2. Continue into `network.connect.create.utils.ts` for edge creation,
+   registration, and acyclic guards.
+3. Continue into `network.connect.remove.utils.ts` for disconnect cleanup and
+   gated-edge removal behavior.
+4. Finish with `network.connect.utils.types.ts` when you need the internal
+   state shape shared across both flows.
 
 ## architecture/network/connect/network.connect.utils.ts
 
@@ -94,6 +165,12 @@ Parameters:
 Example:
 
 net.disconnect(nodeA, nodeB);
+
+## architecture/network/connect/network.connect.utils.types.ts
+
+### NetworkInternals
+
+Internal network state shape shared by connect utility helper modules.
 
 ## architecture/network/connect/network.connect.create.utils.ts
 

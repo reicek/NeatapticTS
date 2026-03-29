@@ -91,23 +91,23 @@ Decision rule:
 Use this matrix when you know the question you want the diagram to answer but
 have not picked the family yet.
 
-| Question to answer | First choice | Strong fallback | Why |
-| --- | --- | --- | --- |
-| What are the main parts and boundaries? | `flowchart` | `architecture-beta` or `block` | Flowcharts are the most portable structural default. |
-| Who talks to whom, and in what order? | `sequenceDiagram` | `flowchart` | Ordering is the point, not topology. |
-| What types own what responsibilities? | `classDiagram` | `erDiagram` | Class diagrams fit API and service structure better than runtime views. |
-| What states or modes can this runtime enter? | `stateDiagram-v2` | `flowchart` | State machines deserve state syntax. |
-| What entities exist and how many relate? | `erDiagram` | `classDiagram` | Multiplicity is explicit in ER diagrams. |
-| What does a reader or operator experience over time? | `journey` | `timeline` | Journey diagrams capture narrative steps and friction. |
-| When did phases or milestones happen? | `timeline` | `gantt` | Timelines tell history; gantt charts tell scheduled work. |
-| What work overlaps and what depends on what? | `gantt` | `timeline` | Gantt is better for active plans and sequencing. |
-| How do options compare across two axes? | `quadrantChart` | Markdown table | Quadrants are ideal for prioritization and tradeoff framing. |
-| How does quantity change across time or categories? | `xychart-beta` | `pie` | XY charts are better for trends than prose tables. |
-| How is a whole split across a few categories? | `pie` | Markdown table | Pie is only useful for very small categorical splits. |
-| How do flows split or converge between stages? | `sankey` | `flowchart` | Sankey emphasizes weighted movement, not just routes. |
-| How did branches, releases, or migrations evolve? | `gitGraph` | `timeline` | GitGraph is ideal when branch semantics matter. |
-| How should ideas be clustered for learning? | `mindmap` | `flowchart` | Mindmaps are good for concept scaffolding and taxonomy. |
-| How should fixed lanes or layout be preserved? | `block` | `flowchart` | Block diagrams trade auto-layout for positional control. |
+| Question to answer                                   | First choice      | Strong fallback                | Why                                                                     |
+| ---------------------------------------------------- | ----------------- | ------------------------------ | ----------------------------------------------------------------------- |
+| What are the main parts and boundaries?              | `flowchart`       | `architecture-beta` or `block` | Flowcharts are the most portable structural default.                    |
+| Who talks to whom, and in what order?                | `sequenceDiagram` | `flowchart`                    | Ordering is the point, not topology.                                    |
+| What types own what responsibilities?                | `classDiagram`    | `erDiagram`                    | Class diagrams fit API and service structure better than runtime views. |
+| What states or modes can this runtime enter?         | `stateDiagram-v2` | `flowchart`                    | State machines deserve state syntax.                                    |
+| What entities exist and how many relate?             | `erDiagram`       | `classDiagram`                 | Multiplicity is explicit in ER diagrams.                                |
+| What does a reader or operator experience over time? | `journey`         | `timeline`                     | Journey diagrams capture narrative steps and friction.                  |
+| When did phases or milestones happen?                | `timeline`        | `gantt`                        | Timelines tell history; gantt charts tell scheduled work.               |
+| What work overlaps and what depends on what?         | `gantt`           | `timeline`                     | Gantt is better for active plans and sequencing.                        |
+| How do options compare across two axes?              | `quadrantChart`   | Markdown table                 | Quadrants are ideal for prioritization and tradeoff framing.            |
+| How does quantity change across time or categories?  | `xychart-beta`    | `pie`                          | XY charts are better for trends than prose tables.                      |
+| How is a whole split across a few categories?        | `pie`             | Markdown table                 | Pie is only useful for very small categorical splits.                   |
+| How do flows split or converge between stages?       | `sankey`          | `flowchart`                    | Sankey emphasizes weighted movement, not just routes.                   |
+| How did branches, releases, or migrations evolve?    | `gitGraph`        | `timeline`                     | GitGraph is ideal when branch semantics matter.                         |
+| How should ideas be clustered for learning?          | `mindmap`         | `flowchart`                    | Mindmaps are good for concept scaffolding and taxonomy.                 |
+| How should fixed lanes or layout be preserved?       | `block`           | `flowchart`                    | Block diagrams trade auto-layout for positional control.                |
 
 ## Diagram Selection Matrix
 
@@ -441,129 +441,129 @@ erDiagram
     ROLLOUT ||--o{ SNAPSHOT : emits
 ```
 
-  ### Class diagrams
+### Class diagrams
 
-  Use class diagrams when the teaching goal is ownership or API structure rather
-  than runtime sequencing.
+Use class diagrams when the teaching goal is ownership or API structure rather
+than runtime sequencing.
 
-  Example:
+Example:
 
-  ```mermaid
-  classDiagram
-    direction LR
-    class BrowserEntry {
-      +boot()
-      +renderHud()
-    }
-    class PlaybackStore {
-      +snapshots
-      +append(snapshot)
-      +reset()
-    }
-    class WorkerClient {
-      +requestEvaluation()
-    }
-    class SnapshotPacker {
-      +pack(generation) Packet
-    }
+```mermaid
+classDiagram
+  direction LR
+  class BrowserEntry {
+    +boot()
+    +renderHud()
+  }
+  class PlaybackStore {
+    +snapshots
+    +append(snapshot)
+    +reset()
+  }
+  class WorkerClient {
+    +requestEvaluation()
+  }
+  class SnapshotPacker {
+    +pack(generation) Packet
+  }
 
-    BrowserEntry --> WorkerClient : delegates to
-    BrowserEntry --> PlaybackStore : reads from
-    WorkerClient --> SnapshotPacker : requests
-    SnapshotPacker --> PlaybackStore : fills
-  ```
+  BrowserEntry --> WorkerClient : delegates to
+  BrowserEntry --> PlaybackStore : reads from
+  WorkerClient --> SnapshotPacker : requests
+  SnapshotPacker --> PlaybackStore : fills
+```
 
-  ### Journey diagrams
+### Journey diagrams
 
-  Use `journey` when the central question is what a reader, operator, or
-  contributor experiences across a staged path.
+Use `journey` when the central question is what a reader, operator, or
+contributor experiences across a staged path.
 
-  Example:
+Example:
 
-  ```mermaid
-  journey
-    title First-time reader path through a module README
-    section Orientation
-      Learn the module purpose: 5: Reader
-      Find the owning boundary: 4: Reader
-    section Validation
-      Inspect the public API: 4: Reader
-      Run the example or docs build: 3: Reader, Maintainer
-    section Confidence
-      Trace the next file to read: 5: Reader
-  ```
+```mermaid
+journey
+  title First-time reader path through a module README
+  section Orientation
+    Learn the module purpose: 5: Reader
+    Find the owning boundary: 4: Reader
+  section Validation
+    Inspect the public API: 4: Reader
+    Run the example or docs build: 3: Reader, Maintainer
+  section Confidence
+    Trace the next file to read: 5: Reader
+```
 
-  ### Timeline diagrams
+### Timeline diagrams
 
-  Use timelines for history, milestone sequencing, or concept evolution.
+Use timelines for history, milestone sequencing, or concept evolution.
 
-  Example:
+Example:
 
-  ```mermaid
-  timeline
-    title Docs surface evolution
-    section Discovery
-      README-first policy : Read folder README before source
-      Source mapping : Trace JSDoc to generated output
-    section Visuals
-      Mermaid guidance : Add the lightest useful diagram
-      Validation : Run Mermaid CLI before finalizing
-  ```
+```mermaid
+timeline
+  title Docs surface evolution
+  section Discovery
+    README-first policy : Read folder README before source
+    Source mapping : Trace JSDoc to generated output
+  section Visuals
+    Mermaid guidance : Add the lightest useful diagram
+    Validation : Run Mermaid CLI before finalizing
+```
 
-  ### Gantt charts
+### Gantt charts
 
-  Use `gantt` when the reader needs schedule overlap, dependencies, or active plan
-  state.
+Use `gantt` when the reader needs schedule overlap, dependencies, or active plan
+state.
 
-  Example:
+Example:
 
-  ```mermaid
-  gantt
-    title Documentation pass plan
-    dateFormat YYYY-MM-DD
-    axisFormat %m/%d
-    section Docs
-    Expand playbook :done, playbook, 2026-03-14, 1d
-    Validate recipes :active, validate, after playbook, 1d
-    Refresh generated docs :refresh, after validate, 1d
-  ```
+```mermaid
+gantt
+  title Documentation pass plan
+  dateFormat YYYY-MM-DD
+  axisFormat %m/%d
+  section Docs
+  Expand playbook :done, playbook, 2026-03-14, 1d
+  Validate recipes :active, validate, after playbook, 1d
+  Refresh generated docs :refresh, after validate, 1d
+```
 
-  ### Quadrant charts
+### Quadrant charts
 
-  Use `quadrantChart` for prioritization or two-axis tradeoff communication.
+Use `quadrantChart` for prioritization or two-axis tradeoff communication.
 
-  Example:
+Example:
 
-  ```mermaid
-  quadrantChart
-    title Mermaid choice tradeoffs
-    x-axis Narrow reuse --> Broad reuse
-    y-axis Low teaching value --> High teaching value
-    quadrant-1 Strong default
-    quadrant-2 Specialist win
-    quadrant-3 Skip it
-    quadrant-4 Nice when needed
-    Flowchart: [0.92, 0.88]
-    Sequence: [0.78, 0.82]
-    Sankey: [0.45, 0.76]
-    Pie: [0.40, 0.38]
-  ```
+```mermaid
+quadrantChart
+  title Mermaid choice tradeoffs
+  x-axis Narrow reuse --> Broad reuse
+  y-axis Low teaching value --> High teaching value
+  quadrant-1 Strong default
+  quadrant-2 Specialist win
+  quadrant-3 Skip it
+  quadrant-4 Nice when needed
+  Flowchart: [0.92, 0.88]
+  Sequence: [0.78, 0.82]
+  Sankey: [0.45, 0.76]
+  Pie: [0.40, 0.38]
+```
 
-  ### Pie charts
+### Pie charts
 
-  Use pie charts only for small categorical splits with very few slices.
+Use pie charts only for small categorical splits with very few slices.
 
-  Example:
+Example:
 
-  ```mermaid
-  pie showData
-    title Diagram family share in a docs set
-    "Flowchart" : 42
-    "Sequence" : 18
-    "State" : 12
-    "Charting" : 10
-    "Other" : 18
-  ```
+```mermaid
+pie showData
+  title Diagram family share in a docs set
+  "Flowchart" : 42
+  "Sequence" : 18
+  "State" : 12
+  "Charting" : 10
+  "Other" : 18
+```
 
 ### XY charts
 
@@ -697,7 +697,7 @@ Before finalizing a Mermaid diagram:
 1. Ask whether the diagram teaches something prose cannot teach as quickly.
 2. Check that labels are short and consistent with repo terminology.
 3. Ask whether the primary reading surface is GitHub Markdown, generated HTML
-  docs, or both.
+   docs, or both.
 4. Verify the syntax in a Mermaid-capable renderer when the diagram is complex.
 5. Prefer the `renderMermaidDiagram` tool for fast validation when available.
 6. Re-read the surrounding prose and make sure the diagram is introduced and

@@ -90,32 +90,98 @@ import * as neatTelemetryFacade from './neat/telemetry/facade/telemetry.facade';
 /**
  * Root orchestration surface for NeuroEvolution of Augmenting Topologies (NEAT) in NeatapticTS.
  *
- * Within the broader `src` surface, this file is the public chapter map for the
- * library's evolutionary controller.
- * The heavy algorithmic work lives in focused `src/neat/**` modules, but this
- * root surface keeps the user-facing workflow readable: configure a population,
- * evaluate genomes, evolve the next generation, inspect telemetry, and persist
- * the state when a run becomes worth keeping.
+ * This root chapter is the public control desk for the library. The
+ * architecture surfaces explain what a network graph is. The `src/neat/**`
+ * chapters explain how evaluation, reproduction, speciation, telemetry, and
+ * persistence work in detail. This file sits between those two layers and
+ * answers the first practical reader question: how do I run one evolutionary
+ * experiment without learning every subsystem in the same breath?
  *
- * What this file covers:
- * - the high-level lifecycle of a NEAT run,
- * - the default knobs that shape population growth and speciation,
- * - reproducibility helpers such as seeded RNG snapshots and state export,
- * - educational inspection hooks for telemetry, species history, diversity, and Pareto fronts.
+ * That boundary matters because a useful NEAT run is more than "mutate a
+ * network." A controller has to keep a population alive, protect enough
+ * diversity to avoid early collapse, score genomes fairly, record what
+ * happened, and give the caller a deterministic way to pause or resume the
+ * search. The root surface is where those responsibilities become one readable
+ * workflow instead of a pile of helper calls.
  *
- * What you can learn here:
- * - how the top-level controller stays orchestration-first even after the internal SOLID split,
- * - which public methods belong to setup, evolution, diagnostics, and persistence,
- * - which subsystem README to open next when you want the underlying mechanics.
+ * One helpful mental model is to read the controller as four shelves. The setup
+ * shelf decides population size, defaults, and reproducibility. The search
+ * shelf drives `evaluate()`, `evolve()`, and the public mutation hooks. The
+ * observability shelf exposes telemetry, lineage, diversity, species, and
+ * Pareto views. The persistence shelf turns a live run into replayable state
+ * through `toJSON()`, `exportState()`, and RNG snapshots.
+ *
+ * The chapter also exists to keep the public class orchestration-first after
+ * the internal split. `src/neat/**` now owns the heavier policy chapters:
+ * `evaluate/` scores genomes, `evolve/` creates the next generation,
+ * `speciation/` manages compatibility pressure, `telemetry/` records what the
+ * run did, and `export/` plus `rng/` keep experiments reproducible. If you can
+ * read the root workflow first, the subchapters become "why does this step
+ * work?" reads instead of "where do I even start?" reads.
+ *
+ * The guiding historical idea comes from Stanley and Miikkulainen's NEAT
+ * paper: evolve both weights and topology while protecting innovation long
+ * enough for new structures to prove useful. See Stanley and Miikkulainen,
+ * [Evolving Neural Networks through Augmenting Topologies](https://nn.cs.utexas.edu/?stanley:ec02),
+ * for the compact background behind the controller vocabulary that appears all
+ * through this surface.
+ *
+ * Read this root when you want to answer one of three questions quickly: how to
+ * start a run, how to move it forward generation by generation, or how to
+ * inspect and persist it without diving into every implementation chapter. Read
+ * the narrower `src/neat/**` READMEs when the next question becomes about one
+ * specific policy family rather than the whole experiment loop.
  *
  * ```mermaid
  * flowchart LR
- *   Configure["Configure run<br/>sizes + fitness + options"] --> Seed["Seed or restore<br/>constructor / createPool / import"]
- *   Seed --> Score["Score population<br/>evaluate()"]
- *   Score --> Breed["Breed next generation<br/>evolve() / mutate()"]
- *   Breed --> Observe["Observe search pressure<br/>telemetry / species / diversity / Pareto"]
- *   Observe --> Persist["Persist or replay<br/>exportState() / toJSON() / RNG state"]
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Configure["Configure run<br/>sizes + fitness + options"]:::accent --> Seed["Seed or restore<br/>constructor / createPool / import"]:::base
+ *   Seed --> Score["Score population<br/>evaluate()"]:::base
+ *   Score --> Breed["Breed next generation<br/>evolve() / mutate()"]:::accent
+ *   Breed --> Observe["Observe pressure<br/>telemetry / species / diversity / Pareto"]:::base
+ *   Observe --> Persist["Persist or replay<br/>exportState() / toJSON() / RNG state"]:::base
  *   Breed --> Score
+ * ```
+ *
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Root["src root controller"]:::accent --> Setup["Defaults and initialization<br/>constructor / createPool / import"]:::base
+ *   Root --> Search["Search loop<br/>evaluate / evolve / mutate"]:::base
+ *   Root --> Observe["Diagnostics<br/>telemetry / species / lineage / Pareto"]:::base
+ *   Root --> Replay["Persistence<br/>toJSON / exportState / RNG"]:::base
+ *   Search --> Chapters["Detailed policy chapters<br/>src/neat/**"]:::base
+ * ```
+ *
+ * Example: start a small deterministic run and inspect the best score after one
+ * generation.
+ *
+ * ```ts
+ * const neat = new Neat(2, 1, fitness, {
+ *   popsize: 50,
+ *   seed: 7,
+ *   fastMode: true,
+ * });
+ *
+ * await neat.evaluate();
+ * const bestGenome = await neat.evolve();
+ *
+ * console.log(bestGenome.score);
+ * ```
+ *
+ * Example: capture telemetry and a replayable snapshot after the current run
+ * step.
+ *
+ * ```ts
+ * const latestTelemetry = neat.getTelemetry().at(-1);
+ * const exportedState = neat.exportState();
+ *
+ * console.log(latestTelemetry?.generation);
+ * console.log(exportedState.neat.generation);
  * ```
  *
  * Recommended reading after this root chapter:

@@ -1,0 +1,11 @@
+{
+  "introFile": "network.evolve.utils.ts",
+  "fileOrder": [
+    "network.evolve.utils.ts",
+    "network.evolve.setup.utils.ts",
+    "network.evolve.fitness.utils.ts",
+    "network.evolve.loop.utils.ts",
+    "network.evolve.finalize.utils.ts",
+    "network.evolve.utils.types.ts"
+  ]
+}

@@ -1,23 +1,38 @@
 /**
- * Shared method families for learning, mutation, and structural policy.
+ * Shared method families for signal shaping, search pressure, and structural policy.
  *
- * This folder is the library's reusable policy shelf. The heavier controller
- * chapters in `neat/` decide when to evaluate, mutate, select, or schedule a
- * learning rate change. The `methods/` folder defines the small vocabulary of
- * choices those higher-level chapters reuse.
+ * This folder is the library's reusable vocabulary shelf. The heavier
+ * controller chapters in `neat/` decide when a policy should be applied. The
+ * `methods/` folder defines what those policy choices actually are. That split
+ * keeps the rest of the repo readable: examples, architecture helpers, and
+ * evolutionary controllers can reuse the same small method objects without each
+ * subsystem inventing its own private dialect.
  *
- * That boundary matters because these exports are intentionally broader than a single
- * one subsystem:
+ * The quickest way to understand the chapter is to split it into three reader
+ * questions. How should a unit transform signal? That is `Activation`. How
+ * should error or learning tempo be interpreted? That is `Cost` and `Rate`.
+ * How should evolutionary pressure and wiring structure be adjusted? That is
+ * `selection`, `mutation`, `crossover`, `gating`, and `groupConnection`.
  *
- * - `Activation` shapes how nodes transform signals,
- * - `Cost` defines what prediction error means,
- * - `Rate` defines how aggressively learning rates should change over time,
- * - `selection`, `mutation`, and `crossover` define how evolutionary search
- *   applies pressure and creates variation,
- * - `gating` and `groupConnection` define the smaller structural vocabulary:
- *   `gating` decides where control is applied on an existing connection,
- *   while `groupConnection` decides what wiring pattern should exist between
- *   groups before weight values even matter.
+ * That boundary matters because it lets you change policy without changing
+ * orchestration. A `Neat` controller can switch from gentle to aggressive
+ * selection, or an architecture builder can swap activation families, without
+ * rewriting evaluation loops or graph code. The method objects stay small on
+ * purpose so experiments can compose them instead of hiding them in conditionals.
+ *
+ * The structural pair deserves special attention because the names sound close
+ * while the responsibilities are different. `groupConnection` answers how two
+ * groups should be wired before any runtime signal exists. `gating` answers how
+ * an already-existing connection should be modulated once the network is
+ * running. One is about topology layout. The other is about runtime control.
+ *
+ * Two compact background bridges help here. See Wikipedia contributors,
+ * [Activation function](https://en.wikipedia.org/wiki/Activation_function), for
+ * the signal-shaping side of the shelf, and Wikipedia contributors,
+ * [Selection (genetic algorithm)](https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)),
+ * for the search-pressure side. Together they frame the two big forces this
+ * folder keeps in play: how nodes respond to signal and how search decides
+ * which traits survive.
  *
  * Read the chapter in three passes:
  *
@@ -28,24 +43,55 @@
  * 3. finish with `gating` and `groupConnection` when you need lower-level
  *    structural vocabulary and want to distinguish routing control from raw
  *    wiring layout.
-
- * The structural pair is intentionally small but conceptually different:
- * `groupConnection` answers how groups should be wired, while `gating` answers
- * how an already-existing connection should be modulated at runtime.
  *
  * ```mermaid
  * flowchart TD
- *   Methods[methods chapter] --> Training[Training and optimization vocabulary]
- *   Methods --> Evolution[Evolutionary search vocabulary]
- *   Methods --> Structure[Structural control vocabulary]
- *   Training --> Activation[Activation]
- *   Training --> Cost[Cost]
- *   Training --> Rate[Rate]
- *   Evolution --> Selection[selection]
- *   Evolution --> Mutation[mutation]
- *   Evolution --> Crossover[crossover]
- *   Structure --> Gating[gating]
- *   Structure --> Connection[groupConnection]
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Methods[methods chapter]:::accent --> Training[Training and optimization vocabulary]:::base
+ *   Methods --> Evolution[Evolutionary search vocabulary]:::base
+ *   Methods --> Structure[Structural control vocabulary]:::base
+ *   Training --> Activation[Activation]:::base
+ *   Training --> Cost[Cost]:::base
+ *   Training --> Rate[Rate]:::base
+ *   Evolution --> Selection[selection]:::base
+ *   Evolution --> Mutation[mutation]:::base
+ *   Evolution --> Crossover[crossover]:::base
+ *   Structure --> Gating[gating]:::base
+ *   Structure --> Connection[groupConnection]:::base
+ * ```
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Signals["How should signal behave?"]:::accent --> SignalShelf["Activation + Cost + Rate"]:::base
+ *   Search["How should search behave?"]:::accent --> SearchShelf["selection + mutation + crossover"]:::base
+ *   Structure["How should wiring be controlled?"]:::accent --> StructureShelf["gating + groupConnection"]:::base
+ * ```
+ *
+ * Example: assemble one compact training vocabulary for signal shape, loss, and
+ * tempo.
+ *
+ * ```ts
+ * const trainingPolicy = {
+ *   activation: Activation.relu,
+ *   loss: Cost.mse,
+ *   schedule: Rate.step(0.9, 100),
+ * };
+ * ```
+ *
+ * Example: assemble a stronger search-pressure and routing vocabulary without
+ * changing the surrounding controller code.
+ *
+ * ```ts
+ * const evolutionaryPolicy = {
+ *   parentSelection: { ...selection.POWER, power: 6 },
+ *   gatePlacement: gating.SELF,
+ *   denseBridge: groupConnection.ALL_TO_ALL,
+ * };
  * ```
  */
 export { default as Cost } from './cost/cost';

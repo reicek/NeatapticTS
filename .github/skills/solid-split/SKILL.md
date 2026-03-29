@@ -41,7 +41,7 @@ user has explicitly deferred that follow-up.
 - Generated folder README output looks stale, thin, or not educational enough
   after a refactor.
 - A multi-session split needs a durable plan, strict step sequencing, and a
-  high-quality handoff prompt for the next session.
+  high-quality active-session handoff prompt unless the workstream closes.
 
 ## Invocation Pattern
 
@@ -120,17 +120,17 @@ Worktree caution: generated README files may already be dirty from npm run docs.
 For any non-trivial split, follow this order before editing:
 
 1. Build a full README inventory for the requested root, including nested
-  subfolder `README.md` files that shape the documentation surface.
+   subfolder `README.md` files that shape the documentation surface.
 2. Convert that README inventory into an explicit todo list so the session can
-  proceed folder by folder with visible scope.
+   proceed folder by folder with visible scope.
 3. Read the nearest folder `README.md` for the target root.
 4. Read the nearest useful parent `README.md` if the split spans sibling
-  surfaces.
+   surfaces.
 5. Read `plans/README.md`.
 6. Read only the single most relevant detailed plan, plus at most one adjacent
-  plan if the split clearly spans two initiatives.
+   plan if the split clearly spans two initiatives.
 7. Then inspect the smallest set of source files needed to confirm the actual
-  seams.
+   seams.
 
 Generated folder README files are reconnaissance artifacts. Do not hand-edit
 them. Use them to infer responsibility boundaries, missing docs, stale public
@@ -181,42 +181,54 @@ API, default, or runtime contract.
 2. Build a full inventory of every `README.md` under that root.
 3. Convert the inventory into a todo list that names each README-owning folder.
 4. Read the README files in that inventory before deep code search, starting at
-  the root and then proceeding folder by folder.
+   the root and then proceeding folder by folder.
 5. Read `plans/README.md`, then the single most relevant plan file when the work
    is architectural or part of an ongoing roadmap stream.
 6. If the split spans an unfamiliar area, use the existing `Boundary Mapper`,
    `Plan Scout`, or `Docs Scout` agents as needed.
 7. If no durable plan exists, create one using the bundled template.
 8. Keep the README todo explicit and folder-focused, with exactly one active
-  README or folder documentation item at a time.
+   README or folder documentation item at a time.
 9. Execute only one durable step unless the user explicitly asks for more.
 10. Improve JSDoc on touched exported and public surfaces so generated README
-  output remains educational, example-driven, and conceptually clear.
+    output remains educational, example-driven, and conceptually clear.
 11. After moving a boundary into a real folder, update repo-local imports and
-  tests to use the new folder path directly unless the task packet explicitly
-  requires compatibility files.
+    tests to use the new folder path directly unless the task packet explicitly
+    requires compatibility files.
 12. Delete obsolete flat or mirror files from the old location once direct
-  imports are in place and validations pass.
+    imports are in place and validations pass.
 13. Update the plan immediately after the step completes.
-  - Follow `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, compression,
-    and `Handoff query` structure.
-  - Use stable undated section titles in plan logs and handoff material.
-  - Prefer `### Playback boundary pass` over
-    `### YYYY-MM-DD - Playback boundary pass`.
+
+- Follow `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, compression,
+  and `Handoff query` structure.
+- Use stable undated section titles in plan logs and handoff material.
+- Prefer `### Playback boundary pass` over
+  `### YYYY-MM-DD - Playback boundary pass`.
+
 14. Immediately run `educational-docs` as the next step on the touched
-  surface.
-  - This is mandatory even when the user invokes `solid-split` directly.
-  - Pass the changed boundary, the intended reader, whether the surface is
-    generated from source JSDoc, and any relevant doc needs such as tone
-    shaping, source mapping, Mermaid, citations, or media constraints.
-  - Treat this as a focused follow-up pass on the exact split changes, not as
-    permission to start a broad unrelated docs rewrite.
-  - Do not report the split step as complete until that follow-up has run or
-    the user has explicitly said to defer it.
+    surface.
+
+- This is mandatory even when the user invokes `solid-split` directly.
+- Pass the changed boundary, the intended reader, whether the surface is
+  generated from source JSDoc, and any relevant doc needs such as tone
+  shaping, source mapping, Mermaid, citations, or media constraints.
+- Treat this as a focused follow-up pass on the exact split changes, not as
+  permission to start a broad unrelated docs rewrite.
+- Do not report the split step as complete until that follow-up has run or
+  the user has explicitly said to defer it.
+
 15. Run the minimum validation needed for touched files, documentation output,
-  and the step's done criteria.
-16. End with a next-session handoff prompt that can continue from the next step
-  without depending on prior chat history.
+    and the step's done criteria.
+16. End with the correct tracker-closing action for the current state.
+
+- If the workstream is still active, end with a next-session handoff prompt
+  that can continue from the next step without depending on prior chat
+  history.
+- If the workstream becomes fully complete, use `tracker-handoff` to
+  compress the plan into a short closed tracker and add or update the
+  same-boundary `.logs.md` file.
+- Do not preserve a next-session handoff prompt on a terminally closed plan
+  unless the user explicitly wants reopen guidance.
 
 ## Small-Chapter Standard
 
@@ -252,13 +264,18 @@ This standard overrides older habits of leaving broad root READMEs or keeping
 flat compatibility wrappers after folderization, regardless of which part of
 the repo is being split.
 
-## Handoff Prompt Standard
+## Active-Plan Handoff Standard
 
-Every completed split step must end with a handoff prompt that is ready to use
-in a fresh chat with this skill attached.
+Every completed split step that leaves the workstream active must end with a
+handoff prompt that is ready to use in a fresh chat with this skill attached.
 
 Use `tracker-handoff` as the canonical policy for how that prompt is stored in
 the plan file and how active versus completed tracker sections are marked.
+
+When the split workstream is fully complete, the terminal closure rule takes
+precedence instead: compress the `.plans.md` file, add or update the matching
+`.logs.md` file, and omit the handoff prompt unless the user explicitly wants a
+reopen prompt.
 
 The handoff prompt must:
 
@@ -287,9 +304,9 @@ If a companion agent uses this skill, it should:
 1. Name this skill explicitly as `solid-split`.
 2. Pass the current task packet into the skill instead of paraphrasing it away.
 3. Reuse this skill's discovery order and guardrails instead of copying them
-  into the agent prompt at full length.
+   into the agent prompt at full length.
 4. Keep the agent prompt focused on execution-only concerns: one-step scope,
-  output shape, blocker handling, and handoff quality.
+   output shape, blocker handling, and handoff quality.
 5. Update the agent when this skill changes materially so both remain aligned.
 
 ## Documentation Delegation
@@ -423,4 +440,6 @@ The final response for a split step should include:
   deferred,
 - validation results,
 - the durable plan update,
-- a fenced `text` handoff prompt for the next step.
+- either a fenced `text` handoff prompt for the next step when the plan remains
+  active, or the closed tracker plus matching `.logs.md` paths when the plan
+  was terminally closed.

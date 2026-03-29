@@ -1,0 +1,8 @@
+{
+  "introFile": "adaptive.core.ts",
+  "fileOrder": [
+    "adaptive.core.ts",
+    "adaptive.core.types.ts",
+    "adaptive.core.constants.ts"
+  ]
+}

@@ -1,51 +1,58 @@
 # architecture/network/genetic
 
-Canonical threshold used for random binary parent/gene choice.
+Network-level crossover boundary for recombining two compatible parent
+graphs into one offspring.
 
-## architecture/network/genetic/network.genetic.utils.types.ts
+This chapter is the genetic shelf of `architecture/network/`: the place
+where structure is inherited rather than mutated from scratch. It answers a
+practical question that shows up during neuroevolution and testing alike: if
+two networks already expose the same input and output contract, how should a
+child network mix their node and connection genes without losing a runnable
+topology?
 
-### DEFAULT_REENABLE_PROBABILITY
+The helpers below split that answer into setup, selection, and
+materialization. Setup decides how large the offspring can be and which
+parent has inheritance priority. Selection chooses overlapping and disjoint
+genes. Materialization turns the chosen genes back into a concrete `Network`
+instance and restores gating when the chosen gater still exists. That keeps
+the public `crossOver()` surface compact while the README can still teach the
+full inheritance flow.
 
-Default probability for re-enabling disabled genes during crossover.
-
-### FIRST_INDEX
-
-First element index used when reading newly created connections.
-
-### NO_GATER_INDEX
-
-Sentinel index representing that no gater node is assigned.
-
-### PARENT_COMPATIBILITY_ERROR_MESSAGE
-
-Shared compatibility error message for crossover parent validation.
-
-### RANDOM_BINARY_SELECTION_THRESHOLD
-
-Canonical threshold used for random binary parent/gene choice.
-
-### RandomGenerator
-
-```ts
-RandomGenerator(): number
+```mermaid
+flowchart LR
+  ParentA[Parent A] --> Context[Build crossover context]
+  ParentB[Parent B] --> Context
+  Context --> Nodes[Assign offspring nodes]
+  Nodes --> Genes[Choose connection genes]
+  Genes --> Offspring[Materialize offspring network]
 ```
 
-Shared random generator signature for genetic operators.
+This is inspired by NEAT-style crossover, but it stays intentionally
+pragmatic. Innovation identity is derived from endpoint indices, node
+alignment depends on current ordering, and the goal is a predictable,
+inspectable operator for this repo's runtime rather than a full historical
+innovation tracker.
+
+For compact background reading on the wider idea, see Wikipedia
+contributors,
+[Crossover (genetic algorithm)](https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)).
+The implementation here specializes that idea to graph-shaped neural
+networks with gating and disabled genes.
+
+Example: create one offspring using ordinary fitness-biased inheritance.
+
+```ts
+const child = crossOver(parentA, parentB);
+```
+
+Example: force symmetric inheritance when you want experimentation rather
+than fitter-parent bias.
+
+```ts
+const exploratoryChild = crossOver(parentA, parentB, true);
+```
 
 ## architecture/network/genetic/network.genetic.utils.ts
-
-Genetic operator: NEAT‑style crossover (legacy merge operator removed).
-
-This module now focuses solely on producing recombinant offspring via {@link crossOver}.
-The previous experimental `Network.merge` flow has been removed to reduce maintenance
-surface area and avoid implying a misleading sequential-composition guarantee.
-
-Design notes:
-- The implementation favors deterministic, inspectable orchestration at the top level.
-- Gene-selection details are delegated to setup/materialization helpers so the public
-  crossover API stays compact and predictable.
-- The resulting offspring preserves the same input/output interface as both parents,
-  which keeps downstream evaluation and training pipelines compatible.
 
 ### crossOver
 
@@ -1004,3 +1011,35 @@ Parameters:
 - `traversalContext` - - Traversal context.
 
 Returns: Endpoint context or undefined.
+
+## architecture/network/genetic/network.genetic.utils.types.ts
+
+Canonical threshold used for random binary parent/gene choice.
+
+### DEFAULT_REENABLE_PROBABILITY
+
+Default probability for re-enabling disabled genes during crossover.
+
+### FIRST_INDEX
+
+First element index used when reading newly created connections.
+
+### NO_GATER_INDEX
+
+Sentinel index representing that no gater node is assigned.
+
+### PARENT_COMPATIBILITY_ERROR_MESSAGE
+
+Shared compatibility error message for crossover parent validation.
+
+### RANDOM_BINARY_SELECTION_THRESHOLD
+
+Canonical threshold used for random binary parent/gene choice.
+
+### RandomGenerator
+
+```ts
+RandomGenerator(): number
+```
+
+Shared random generator signature for genetic operators.

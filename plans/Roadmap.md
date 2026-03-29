@@ -19,15 +19,18 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 - `asciiMaze` SOLID split before ES2023 modernization [DONE]
 - `flappy_bird` reference demo split and documentation baseline [DONE]
 - Main app NEAT surface is already SOLID split [DONE]
-- Educational documentation and split follow-through lane [WIP]
+- Educational documentation and split follow-through lane [DONE]
   - [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md) [DONE]
-  - [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [WIP]
+  - [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [DONE]
   - [methods-solid-split.plans.md](methods-solid-split.plans.md) [DONE]
   - [methods-docs.plans.md](methods-docs.plans.md) [DONE]
-  - [neat-docs.plans.md](neat-docs.plans.md) [WIP]
+  - [neat-docs.plans.md](neat-docs.plans.md) [DONE]
+  - [readme-first-section-pass.plans.md](readme-first-section-pass.plans.md) [DONE]
   - [utils-docs.plans.md](utils-docs.plans.md) [DONE]
   - Both demos are now solid split and the Flappy Bird documentation pass is complete enough to stop being a documentation blocker.
-  - The remaining structural polish in Phase 0 is the broader educational-docs lane outside methods, the architecture folderization pass, and the repository-wide modernization pass with their validation gate.
+  - The architecture split follow-through and the NEAT educational-docs lane are now also complete enough to stop being Phase 0 blockers.
+  - The repo-wide README first-section pass is now closed across the tracked README surfaces under `src/` and `test/examples/`.
+  - The remaining structural polish in Phase 0 is the repository-wide modernization pass plus its validation gate.
 - Supporting repair and docs-tooling stabilization lane [DONE]
   - [neat-test-surface-repair.plans.md](neat-test-surface-repair.plans.md) [DONE]
   - [asciiMaze-typescript-repair.plans.md](asciiMaze-typescript-repair.plans.md) [DONE]
@@ -162,7 +165,7 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: the project is still in **Phase 0**, with both demos solid split and documented, the example learnability pass now materially strengthened across `test/examples`, the Flappy Bird documentation pass now closed, the main app already solid split, the architecture split pass now active, the broader educational documentation lane still in progress outside Flappy Bird, the `src/` strict-typing cleanup now closed as a completed baseline, and repository-wide ES2023 modernization still remaining in the Phase 0 lane.
+Current status: the project is still in **Phase 0**, with both demos solid split and documented, the example learnability pass materially strengthened across `test/examples`, the Flappy Bird documentation pass now closed, the main app already solid split, the architecture split follow-through now closed, the broader educational documentation lane now closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup now closed as a completed baseline, and repository-wide ES2023 modernization still remaining in the Phase 0 lane.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
@@ -180,52 +183,53 @@ than a roadmap-tracked plan file.
 ### Phase 0 inventory
 
 1. [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md) [DONE]
-2. [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [WIP]
+2. [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [DONE]
 3. [methods-solid-split.plans.md](methods-solid-split.plans.md) [DONE]
 4. [methods-docs.plans.md](methods-docs.plans.md) [DONE]
-5. [neat-docs.plans.md](neat-docs.plans.md) [WIP]
-6. [utils-docs.plans.md](utils-docs.plans.md) [DONE]
-7. [neat-test-surface-repair.plans.md](neat-test-surface-repair.plans.md) [DONE]
-8. [asciiMaze-typescript-repair.plans.md](asciiMaze-typescript-repair.plans.md) [DONE]
-9. [generate-docs-solid-split.plans.md](generate-docs-solid-split.plans.md) [DONE]
-10. [render-docs-html-solid-split.plans.md](render-docs-html-solid-split.plans.md) [DONE]
-11. [analyze-trace-solid-split.plans.md](analyze-trace-solid-split.plans.md) [DONE]
-12. [src-no-explicit-any-cleanup.plans.md](src-no-explicit-any-cleanup.plans.md) [DONE]
-13. [ES2023 migration](ES2023%20migration) [PLANNED]
+5. [neat-docs.plans.md](neat-docs.plans.md) [DONE]
+6. [readme-first-section-pass.plans.md](readme-first-section-pass.plans.md) [DONE]
+7. [utils-docs.plans.md](utils-docs.plans.md) [DONE]
+8. [neat-test-surface-repair.plans.md](neat-test-surface-repair.plans.md) [DONE]
+9. [asciiMaze-typescript-repair.plans.md](asciiMaze-typescript-repair.plans.md) [DONE]
+10. [generate-docs-solid-split.plans.md](generate-docs-solid-split.plans.md) [DONE]
+11. [render-docs-html-solid-split.plans.md](render-docs-html-solid-split.plans.md) [DONE]
+12. [analyze-trace-solid-split.plans.md](analyze-trace-solid-split.plans.md) [DONE]
+13. [src-no-explicit-any-cleanup.plans.md](src-no-explicit-any-cleanup.plans.md) [DONE]
+14. [ES2023 migration](ES2023%20migration) [PLANNED]
 
 ### Phase 1 inventory
 
-14. [neat.plans.md](neat.plans.md) [PLANNED]
-15. [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [PLANNED]
+15. [neat.plans.md](neat.plans.md) [PLANNED]
+16. [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [PLANNED]
 
 ### Phase 2 inventory
 
-16. [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md) [PLANNED]
-17. [Construct_From_Parts_Graph_Assembly.md](Construct_From_Parts_Graph_Assembly.md) [PLANNED]
-18. [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [PLANNED]
+17. [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md) [PLANNED]
+18. [Construct_From_Parts_Graph_Assembly.md](Construct_From_Parts_Graph_Assembly.md) [PLANNED]
+19. [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [PLANNED]
 
 ### Phase 3 inventory
 
-19. [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
-20. [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [PLANNED]
-21. [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
+20. [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
+21. [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [PLANNED]
+22. [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
 
 ### Phase 4 inventory
 
-22. [Standalone_Inference_Export.md](Standalone_Inference_Export.md) [PLANNED]
-23. [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
-24. [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md) [PLANNED]
-25. [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md) [PLANNED]
-26. [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
+23. [Standalone_Inference_Export.md](Standalone_Inference_Export.md) [PLANNED]
+24. [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
+25. [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md) [PLANNED]
+26. [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md) [PLANNED]
+27. [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
 
 ### Phase 5 inventory
 
-27. [Memory_Optimization.md](Memory_Optimization.md) [WIP]
+28. [Memory_Optimization.md](Memory_Optimization.md) [WIP]
 
 ### Phase 6 inventory
 
-28. [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
+29. [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
 
 ### Phase 7 inventory
 
-29. [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]
+30. [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]

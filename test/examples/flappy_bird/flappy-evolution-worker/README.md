@@ -7,16 +7,104 @@ explanation, HUD rendering, and network inspection, while the worker owns the
 hot path: evolving generations, materializing playback state, advancing the
 simulation, and packaging compact snapshots back to the host.
 
-Read this file as the worker chapter's public spine. It is not the place for
-low-level simulation math or message-shape detail. Instead it shows how the
-worker turns a small typed protocol into one long-lived deterministic runtime.
+That separation is doing two jobs at once. It protects the browser from
+heavy simulation work, and it turns responsibility into something a reader
+can see directly because every cross-thread handoff must become an explicit
+typed message.
 
-Protocol flow at a glance:
-1. `init` seeds deterministic worker state and creates the NEAT runtime.
-2. `request-generation` evolves one generation and posts a summary message.
-3. `start-playback` materializes worker-local simulation state.
-4. `request-playback-step` advances playback and streams packed snapshots.
-5. `stop` marks the worker as cooperatively stopped.
+Read this folder as the protocol chapter between the browser host and the
+deterministic runtime that actually evolves and replays the flock. The
+important design question is not merely "how do Web Workers run code?" It is
+"which side should own each piece of truth when evolution, playback, and
+inspection all need the same population?"
+
+In this example, the answer is deliberate:
+
+- the host owns controls, HUD state, and network visualization,
+- the worker owns generation requests, playback stepping, and winner
+  selection,
+- packed snapshots are the narrow bridge between those two worlds.
+
+## What This Folder Is Trying To Teach
+
+The worker chapter is organized around four reader questions:
+
+1. How does the browser request evolution work without becoming the
+   simulation authority?
+2. How does one evolved population become a replayable playback session?
+3. Why are snapshots packed into typed arrays instead of posted as nested
+   render objects?
+4. Where should you read next when the protocol is clear but one runtime step
+   still feels opaque?
+
+## Core Worker Map
+
+```mermaid
+flowchart LR
+    Host["browser-entry/\nhost UI and controls"] --> Protocol["protocol service\nlegal message transitions"]
+    Protocol --> Runtime["runtime service\nworker-local NEAT controller"]
+    Runtime --> Evolution["evolution service\nadvance one generation"]
+    Runtime --> Playback["playback service\nmaterialize and step population"]
+    Playback --> Snapshot["snapshot utils\npacked typed-array transport"]
+    Snapshot --> Host
+
+    WarmStart["warm-start service\ngeneration zero bootstrap"] -.-> Evolution
+    Types["worker types\nmessage and DTO contracts"] -.-> Protocol
+
+    classDef boundary fill:#001522,stroke:#0fb5ff,color:#9fdcff,stroke-width:2px;
+    classDef runtime fill:#03111f,stroke:#00e5ff,color:#d8f6ff,stroke-width:2px;
+    classDef highlight fill:#2a1029,stroke:#ff4a8d,color:#ffd7e8,stroke-width:3px;
+
+    class Host,Protocol,Types boundary;
+    class Runtime,Evolution,Playback,Snapshot runtime;
+    class Snapshot highlight;
+```
+
+Read the diagram left to right. The host is allowed to request work, but it
+never takes ownership of the worker's mutable simulation state. The worker
+can then optimize for determinism and throughput while the browser optimizes
+for explanation.
+
+## Choose Your Route
+
+- Start with `flappy-evolution-worker.ts` if you want the high-level message
+  lifecycle.
+- Read `flappy-evolution-worker.protocol.service.ts` next if you want the
+  legal sequencing rules.
+- Read `flappy-evolution-worker.runtime.service.ts` if you want the worker's
+  NEAT runtime setup.
+- Read `flappy-evolution-worker.playback.service.ts` and
+  `flappy-evolution-worker.simulation.frame.service.ts` if you want the hot
+  playback path.
+- Read `flappy-evolution-worker.snapshot.utils.ts` if you want the typed-array
+  transport story.
+
+Minimal host-side sketch:
+
+```ts
+worker.postMessage({
+  type: 'init',
+  payload: { populationSize: 50, elitismCount: 10, rngSeed: 12345 },
+});
+worker.postMessage({ type: 'request-generation' });
+worker.postMessage({
+  type: 'start-playback',
+  payload: { visibleWorldWidthPx: 1280, visibleWorldHeightPx: 720 },
+});
+worker.postMessage({
+  type: 'request-playback-step',
+  payload: {
+    requestId: 1,
+    simulationSteps: 2,
+    visibleWorldWidthPx: 1280,
+    visibleWorldHeightPx: 720,
+  },
+});
+```
+
+If you want background reading before the symbol shelf, the MDN Web Workers
+guide is the fastest practical reference for why this example pushes both
+evolution and playback off the main thread.
 
 ## flappy-evolution-worker/flappy-evolution-worker.ts
 

@@ -1,0 +1,10 @@
+{
+  "introFile": "network.genetic.utils.ts",
+  "fileOrder": [
+    "network.genetic.utils.ts",
+    "network.genetic.setup.utils.ts",
+    "network.genetic.selection.utils.ts",
+    "network.genetic.materialize.utils.ts",
+    "network.genetic.utils.types.ts"
+  ]
+}

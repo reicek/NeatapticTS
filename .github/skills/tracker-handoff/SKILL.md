@@ -12,8 +12,9 @@ Use this skill when work needs durable continuity in markdown tracker files.
 
 This skill is the canonical workflow for `.plans.md` and `.logs.md` structure in
 NeatapticTS. It owns the tracker status markers, compression rules for old work,
-and the required `Handoff query` section that makes WIP sessions safe to resume
-with a simple copy-paste prompt.
+the required `Handoff query` section that makes WIP sessions safe to resume
+with a simple copy-paste prompt, and the terminal closure rule for finished
+plans.
 
 Other skills may decide when a tracker should be updated, but they should defer
 the tracker shape itself to this skill instead of redefining status markers,
@@ -37,6 +38,22 @@ handoff layout, or history-compression rules ad hoc.
   `Handoff query`.
 - Use `.logs.md` for compressed done-state records and completed work that no
   longer needs active session guidance.
+
+### Completion Closure Rule
+
+When a workstream becomes fully complete, the final tracker step is always to
+close it deliberately.
+
+- Compress the completed `.plans.md` file into a short closed tracker that
+  preserves only the durable reopen-point context.
+- Add or update a same-boundary `.logs.md` file with the durable done-state
+  record.
+- Remove active-session scaffolding that no longer applies, especially stale
+  `Remaining gaps`, `Next step`, or `Handoff query` sections.
+- Do not preserve or emit a next-session handoff prompt on a fully closed plan
+  unless the user explicitly asks for reopen guidance.
+- If there is still a real next step from the plan's own context, the plan is
+  not closed yet and should stay active with a `Handoff query`.
 
 ### Status Markers
 
@@ -71,14 +88,19 @@ The section should:
 
 Preferred shape:
 
-```md
+````md
 ## Handoff query
 
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
 <workstream-specific continuation prompt>
 ```
+````
+
 ```
+
+Closed `.plans.md` files should normally omit `Handoff query` because the plan
+has no in-context follow-up step left to hand off.
 
 ### Compression Rules
 
@@ -89,6 +111,13 @@ When a tracker grows too long:
 - keep only the information needed to avoid re-exploring covered work,
 - remove repetitive validation transcripts once the result is captured,
 - prefer concise extent statements over narrative replay.
+
+When a plan reaches terminal `[DONE]` state:
+
+- compress the plan before considering the workstream finished,
+- add or refresh the same-boundary `.logs.md` audit record,
+- keep a short closed tracker focused on scope, final state, audit summary,
+  reopen conditions, and the audit-log pointer.
 
 Good completed note:
 
@@ -120,6 +149,18 @@ For most `.plans.md` files, prefer this shape:
 Not every plan needs every section, but active plans should remain compact,
 forward-looking, and resumable.
 
+## Recommended Closed Plan Shape
+
+For terminally closed `.plans.md` files, prefer this shape:
+
+1. `# <Workstream name>`
+2. `**Status:** [DONE]`
+3. `## Scope`
+4. `## Final state`
+5. `## Audit summary`
+6. `## Reopen conditions`
+7. `## Audit log`
+
 ## Recommended Log Shape
 
 For `.logs.md` files, prefer:
@@ -128,6 +169,8 @@ For `.logs.md` files, prefer:
 2. `**Status:** [DONE]` or `[WIP]` when still accumulating done-state records
 3. short done-state entries grouped by durable milestone
 4. no active TODO list unless the file is intentionally dual-purpose
+5. the same boundary as the closed `.plans.md` file whenever the workstream is
+  complete
 
 ## Guardrails
 
@@ -138,6 +181,10 @@ For `.logs.md` files, prefer:
 - Do not bury the next-session continuation prompt in prose.
 - Do not leave a `.plans.md` file without a `Handoff query` section when the
   workstream is still active.
+- Do not mark a workstream `[DONE]` and stop before compressing the plan and
+  adding or updating the same-boundary `.logs.md` file.
+- Do not leave a stale `Handoff query` on a fully closed plan unless the user
+  explicitly wants reopen guidance.
 - Do not preserve detailed historical narration when compact coverage notes are
   enough to prevent re-exploration.
 - Do not rewrite generated README files just to record progress; use trackers.
@@ -150,4 +197,7 @@ A strong tracker update should report:
 - whether it is now `[PLANNED]`, `[WIP]`, or `[DONE]`,
 - what historical content was compressed,
 - what the new active frontier is,
-- whether a `Handoff query` section was added or refreshed.
+- whether a `Handoff query` section was added, refreshed, or intentionally
+  removed because the plan was terminally closed,
+- whether a same-boundary `.logs.md` file was added or refreshed.
+```

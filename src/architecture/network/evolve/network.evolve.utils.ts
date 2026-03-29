@@ -1,3 +1,62 @@
+/**
+ * Network-level neuroevolution loop for improving one runnable graph in place.
+ *
+ * This chapter sits between the lightweight `Network` facade and the broader
+ * `neat/` subsystem. Call `network.evolve()` when the question is "improve
+ * this graph against a supervised dataset" without first wiring a separate
+ * experiment harness. The method treats the current network as a seed genome,
+ * configures a short-lived NEAT runtime around it, evaluates descendants, then
+ * copies the best discovered structure back into the original instance.
+ *
+ * The folder is split by the same stages the public call executes. `setup`
+ * validates dataset shape and resolves defaults. `fitness` turns prediction
+ * error into a comparable score. `loop` owns generation-to-generation stopping
+ * logic. `finalize` adopts the winning genome and tears down worker resources.
+ * Keeping those shelves separate makes the README read like an evolution run
+ * rather than an alphabetical pile of helpers.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   Seed[Seed Network] --> Normalize[Normalize options and dataset]
+ *   Normalize --> Fitness[Build fitness evaluator]
+ *   Fitness --> Neat[Create temporary NEAT runtime]
+ *   Neat --> Loop[Run evolve loop]
+ *   Loop --> Adopt[Adopt best genome into original network]
+ * ```
+ *
+ * Use this boundary when you want a bounded local search over network
+ * structure, not a long-lived population controller. `error` answers "stop
+ * when good enough", `iterations` answers "stop after this many generations",
+ * and `growth` answers "how much should extra structure cost while searching".
+ *
+ * For compact background reading on the wider search family behind this folder,
+ * see Wikipedia contributors,
+ * [Evolutionary algorithm](https://en.wikipedia.org/wiki/Evolutionary_algorithm).
+ * The implementation here is intentionally narrower: it keeps the public call
+ * site small while reusing the repo's NEAT runtime under the hood.
+ *
+ * Example: stop when the network gets below an error target or hits a
+ * generation cap.
+ *
+ * ```ts
+ * const summary = await network.evolve(trainingSet, {
+ *   error: 0.02,
+ *   iterations: 500,
+ *   growth: 0.0005,
+ * });
+ * ```
+ *
+ * Example: cap the search more tightly and fan evaluation across workers when
+ * dataset scoring dominates.
+ *
+ * ```ts
+ * const summary = await network.evolve(trainingSet, {
+ *   iterations: 120,
+ *   threads: 2,
+ *   log: 20,
+ * });
+ * ```
+ */
 import Network from '../../network/network';
 import type { EvolveOptions, TrainingSample } from '../network.types';
 import {

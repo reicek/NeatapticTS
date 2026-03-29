@@ -1,0 +1,9 @@
+{
+  "introFile": "network.activate.utils.ts",
+  "fileOrder": [
+    "network.activate.utils.ts",
+    "network.activate.utils.types.ts",
+    "network.activate.core.utils.ts",
+    "network.activate.helpers.utils.ts"
+  ]
+}

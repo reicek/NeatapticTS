@@ -8,10 +8,94 @@
  * a helper estimates urgency, those meanings stay aligned across the whole
  * example.
  *
- * Read this file as the common language layer beneath the larger subsystems.
- * It is intentionally small, geometry-heavy, and runtime-neutral so the same
- * concepts can move cleanly between Node training, worker playback, and browser
- * inspection tools.
+ * This is the common language layer for the control problem. It does not own
+ * full simulation stepping, scoring, or rendering. It owns the smaller
+ * contracts those larger boundaries must agree on: difficulty profiles, pipe
+ * geometry, observation features, temporal memory, and action decoding.
+ *
+ * That shared vocabulary is what keeps the demo honest across runtimes. The
+ * environment can advance the world, the evaluation layer can score policies,
+ * the worker can stream playback, and browser helpers can inspect decisions
+ * without silently redefining what "next gap" or "urgent correction" means.
+ *
+ * ## What This Folder Is Trying To Teach
+ *
+ * Read this chapter if you want to answer three practical questions:
+ *
+ * 1. Which geometric signals does the policy actually see?
+ * 2. How does the example add short-horizon memory without requiring recurrent
+ *    networks?
+ * 3. How do difficulty, spawn, observation, and control helpers stay reusable
+ *    across Node training and browser playback?
+ *
+ * ## Shared Vocabulary Map
+ *
+ * ```mermaid
+ * flowchart LR
+ *     Difficulty["difficulty utils\ncurriculum profile"] --> Spawn["spawn utils\nnext pipe cadence and gap"]
+ *     Spawn --> World["environment + worker playback\nconcrete world state"]
+ *     World --> Features["observation/\nfeature synthesis"]
+ *     Features --> Memory["memory utils\nstack recent frames and actions"]
+ *     Features --> Vector["observation/\ncanonical policy vectors"]
+ *     Vector --> Control["control utils\nresolve flap decision"]
+ *     Memory --> Control
+ *
+ *     Browser["browser inspection helpers"] -.-> Features
+ *     Evaluation["evaluation/"] -.-> Features
+ *     Worker["flappy-evolution-worker/"] -.-> Memory
+ *
+ *     classDef boundary fill:#001522,stroke:#0fb5ff,color:#9fdcff,stroke-width:2px;
+ *     classDef runtime fill:#03111f,stroke:#00e5ff,color:#d8f6ff,stroke-width:2px;
+ *     classDef highlight fill:#2a1029,stroke:#ff4a8d,color:#ffd7e8,stroke-width:3px;
+ *
+ *     class Difficulty,Spawn,Features,Memory,Vector,Control boundary;
+ *     class World,Browser,Evaluation,Worker runtime;
+ *     class Features highlight;
+ * ```
+ *
+ * The key teaching point is that the policy does not read pixels. It reads a
+ * curated state representation: gap geometry, velocity, urgency, and a short
+ * action-conditioned memory trail. That makes the control problem easier to
+ * inspect and keeps training, evaluation, and playback aligned around the same
+ * semantics.
+ *
+ * ## Choose Your Route
+ *
+ * - Start with `simulation-shared.types.ts` if you want the stable nouns of the
+ *   subsystem.
+ * - Read `simulation-shared.difficulty.utils.ts` and
+ *   `simulation-shared.spawn.utils.ts` if you want the curriculum and course
+ *   generation rules.
+ * - Read [simulation-shared/observation/README.md](./observation/README.md) if
+ *   you want the feature-engineering story in more detail.
+ * - Read `simulation-shared.memory.utils.ts` if you want the frame-stacking and
+ *   recent-action channels.
+ * - Read `simulation-shared.control.utils.ts` if you want the final step from
+ *   network outputs to `flap` versus `no flap`.
+ *
+ * Example sketch:
+ *
+ * ```ts
+ * const difficultyProfile = resolveAdaptiveDifficultyProfile(pipesPassed, 1);
+ * const features = resolveObservationFeatures({
+ *   birdYPx,
+ *   velocityYPxPerFrame,
+ *   pipes,
+ *   visibleWorldWidthPx,
+ *   difficultyProfile,
+ *   activeSpawnIntervalFrames: difficultyProfile.pipeSpawnIntervalFrames,
+ * });
+ * const networkInput = resolveTemporalObservationVector(
+ *   features,
+ *   observationMemoryState,
+ * );
+ * const didFlap = resolveFlapDecision(network.activate(networkInput));
+ * ```
+ *
+ * If you want background reading, Wikipedia contributors on feature
+ * engineering, curriculum learning, and frame stacking are useful bridges, but
+ * this folder is where those ideas become concrete contracts for the Flappy
+ * Bird example.
  */
 /**
  * Minimal deterministic random contract used by shared spawn helpers.

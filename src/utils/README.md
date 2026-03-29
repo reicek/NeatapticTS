@@ -1,23 +1,44 @@
 # utils
 
-Memory instrumentation utilities (Phase 0).
+Memory instrumentation chapter for slab, pool, and heap comparisons.
 
 This chapter exists for one practical learning problem: memory behavior is
 one of the easiest parts of an evolutionary system to feel, but one of the
 hardest parts to explain from raw runtime objects alone. Networks grow,
 slabs reserve capacity ahead of immediate need, pools trade fresh allocation
 pressure for reuse, and the JavaScript engine adds object overhead that is
-hard to see directly from the outside.
+difficult to see directly from the outside.
 
 Instead of pretending to be a precise profiler, this boundary offers a fast,
 educational snapshot. The goal is to make design choices visible enough that
-readers can compare runs and ask better questions:
+readers can compare runs and ask better questions: did slab-backed storage
+reduce object-heavy overhead, is pooling shifting pressure away from fresh
+allocations, how much reserved typed-array capacity is currently unused, and
+are browser or Node heap readings moving in the same direction as the
+library-specific heuristics?
 
-- Did moving toward slab-backed storage reduce object-heavy overhead?
-- Is pooling shifting pressure away from fresh allocations?
-- How much reserved typed-array capacity is currently going unused?
-- Are browser or Node heap readings moving in the same direction as the
-  heuristic network summary?
+The most important design choice is scope. `memoryStats()` is not trying to
+replace a full heap profiler. It is trying to put library-shaped numbers next
+to runtime-shaped numbers so a reader can compare architecture decisions with
+less guesswork. The result is intentionally strongest at trend questions such
+as "did the slab version get leaner?" or "did pooling reduce fresh pressure?"
+rather than forensic questions about one exact byte count.
+
+A useful mental model is to treat the snapshot as four cooperating layers.
+The network layer counts connections, nodes, and estimated totals. The slab
+layer explains reserved versus used typed-array capacity. The pool layer
+exposes reuse infrastructure. The environment layer shows the coarser browser
+or Node counters surrounding the library's own heuristics.
+
+The environment metrics are intentionally coarser than the network heuristics.
+See MDN,
+[Performance.memory](https://developer.mozilla.org/en-US/docs/Web/API/Performance/memory),
+and the Node.js docs,
+[process.memoryUsage()](https://nodejs.org/api/process.html#processmemoryusage),
+for the runtime-level counters this chapter folds alongside its own snapshot.
+They are useful context, but they do not know the difference between live
+network structure, reserved slab capacity, and reusable pools the way this
+module does.
 
 Read the chapter in three passes:
 
@@ -26,20 +47,49 @@ Read the chapter in three passes:
 3. `memory.utils.ts` when you want the aggregation, environment probing, and
    slab-accounting mechanics behind the snapshot.
 
-Design principles:
-
-- Lightweight: avoid deep graph walks or JSON serialization.
-- Pay-for-use: if no networks are registered the snapshot stays small.
-- Cross-environment: gather what the browser or Node can expose safely.
-- Extensible: keep room for later phases that add more exact accounting.
-
 ```mermaid
 flowchart TD
-  Networks[Tracked or explicit networks] --> Aggregation[Heuristic network aggregation]
-  Aggregation --> Snapshot[MemoryStats snapshot]
-  Config[Config and allocator flags] --> Snapshot
-  Environment[Browser or Node heap probes] --> Snapshot
-  Snapshot --> Questions[Compare storage strategy, pooling, and capacity behavior]
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Networks[Tracked or explicit networks]:::base --> Aggregation[Heuristic network aggregation]:::accent
+  Aggregation --> Snapshot[MemoryStats snapshot]:::base
+  Config[Config and allocator flags]:::base --> Snapshot
+  Environment[Browser or Node heap probes]:::base --> Snapshot
+  Snapshot --> Questions[Compare storage strategy, pooling, and capacity behavior]:::base
+```
+
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Stats[MemoryStats]:::accent --> NetworkLayer[connections nodes estimatedTotalBytes]:::base
+  Stats --> SlabLayer[slabBytes reservedBytes usedBytes fragmentationPct]:::base
+  Stats --> PoolLayer[nodePool reuse snapshot]:::base
+  Stats --> EnvironmentLayer[browser heap or Node RSS counters]:::base
+```
+
+Example: register one network once, then capture snapshots later without
+threading the target through every call.
+
+```ts
+registerTrackedNetwork(network);
+const snapshot = memoryStats();
+
+console.log(snapshot.estimatedTotalBytes);
+console.log(snapshot.slabs.fragmentationPct);
+```
+
+Example: compare two explicit network sets when you want the memory story to
+stay local to one experiment.
+
+```ts
+const baselineSnapshot = memoryStats([baselineNetwork]);
+const pooledSnapshot = memoryStats([pooledNetwork]);
+
+console.log(baselineSnapshot.estimatedTotalBytes);
+console.log(pooledSnapshot.slabs.pooledFraction);
 ```
 
 ## utils/memory.ts

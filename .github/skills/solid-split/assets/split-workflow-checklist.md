@@ -48,4 +48,7 @@ Use this checklist during each SOLID split session.
 2. Run focused tests if the extracted logic has meaningful behavior to lock in.
 3. Run `npm run docs` when JSDoc or folder shape changed.
 4. Update the plan immediately after the step is complete.
-5. Stop and produce the next-session handoff prompt.
+5. If the workstream remains active, stop and produce the next-session handoff
+   prompt.
+6. If the workstream is fully complete, finish by compressing the plan into a
+   short closed tracker and adding or updating the matching `.logs.md` file.
