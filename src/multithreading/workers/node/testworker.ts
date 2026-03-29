@@ -60,7 +60,7 @@ interface CostFunction {
  *
  * This implementation aligns with the Instinct algorithm's emphasis on efficient evaluation of
  * neural networks in parallel environments. The use of a forked process allows for offloading
- * computationally expensive tasks, such as network evaluation, to separate threads.
+ * computationally expensive tasks, such as network evaluation, to a separate process.
  *
  * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#4-constraints Instinct Algorithm - Section 4 Constraints}
  *

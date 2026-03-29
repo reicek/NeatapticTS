@@ -55,7 +55,7 @@ through a forked helper process.
 
 This implementation aligns with the Instinct algorithm's emphasis on efficient evaluation of
 neural networks in parallel environments. The use of a forked process allows for offloading
-computationally expensive tasks, such as network evaluation, to separate threads.
+computationally expensive tasks, such as network evaluation, to a separate process.
 
 Example:
 

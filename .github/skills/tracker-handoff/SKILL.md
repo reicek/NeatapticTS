@@ -97,8 +97,6 @@ Continue from the current repo state only. Do not rely on prior chat history.
 ```
 ````
 
-```
-
 Closed `.plans.md` files should normally omit `Handoff query` because the plan
 has no in-context follow-up step left to hand off.
 
