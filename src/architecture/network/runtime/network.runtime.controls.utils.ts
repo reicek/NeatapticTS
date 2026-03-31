@@ -1,3 +1,12 @@
+/**
+ * Runtime control utilities for advanced network inference features.
+ *
+ * Provides:
+ *  - Weight noise injection (global and per-layer).
+ *  - DropConnect regularization during inference.
+ *  - Stochastic depth (layer skipping) for layered networks.
+ *  - Iterative magnitude-based weight pruning with configurable schedules.
+ */
 import type Network from '../network';
 import { getRegularizationStats } from '../stats/network.stats.utils';
 import type {

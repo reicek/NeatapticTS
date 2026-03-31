@@ -1,134 +1,5 @@
 # architecture/network/training
 
-Raised when the training dataset is missing or does not match network IO dimensions.
-
-## architecture/network/training/network.training.errors.ts
-
-### NetworkTrainingAccumulationStepsError
-
-Raised when accumulation steps is invalid.
-
-### NetworkTrainingBatchSizeError
-
-Raised when configured batch size exceeds dataset size.
-
-### NetworkTrainingDatasetCompatibilityError
-
-Raised when the training dataset is missing or does not match network IO dimensions.
-
-### NetworkTrainingDropoutRangeError
-
-Raised when dropout is outside the expected range [0, 1).
-
-### NetworkTrainingInvalidCostFunctionError
-
-Raised when the provided cost function is not callable or recognized.
-
-### NetworkTrainingInvalidOptimizerOptionError
-
-Raised when optimizer option type is not supported.
-
-### NetworkTrainingNestedLookaheadError
-
-Raised when lookahead is configured with a nested lookahead base type.
-
-### NetworkTrainingOutputTargetLengthError
-
-Raised when output target length does not match the network output width.
-
-### NetworkTrainingStoppingConditionRequiredError
-
-Raised when no stopping condition is provided to training.
-
-### NetworkTrainingUnknownLookaheadBaseTypeError
-
-Raised when lookahead base optimizer type is unknown.
-
-### NetworkTrainingUnknownOptimizerTypeError
-
-Raised when optimizer type is unknown.
-
-## architecture/network/training/network.training.utils.types.ts
-
-### ALLOWED_OPTIMIZERS
-
-Set of supported optimizer identifiers accepted by training options.
-
-### buildMonitoredSmoothingConfig
-
-```ts
-buildMonitoredSmoothingConfig(
-  type: MovingAverageType,
-  window: number,
-  emaAlpha: number | undefined,
-  trimmedRatio: number | undefined,
-): MonitoredSmoothingConfig
-```
-
-Build monitored smoothing configuration from options and defaults.
-
-Parameters:
-- `type` - - Selected monitored smoothing mode.
-- `window` - - Monitored smoothing window length.
-- `emaAlpha` - - Optional monitored EMA alpha.
-- `trimmedRatio` - - Optional trimmed-mean ratio.
-
-Returns: Normalized monitored smoothing configuration.
-
-### CostDerivative
-
-```ts
-CostDerivative(
-  target: number,
-  output: number,
-): number
-```
-
-Cost-derivative callback shape for output-node backpropagation.
-
-### GradientClipRuntimeConfig
-
-Runtime gradient clipping configuration normalized from training options.
-
-### NetworkNode
-
-Local node shape alias used by training utility modules.
-
-### OutputNodeWithCostDerivative
-
-Extended output-node contract that supports custom cost derivatives.
-
-### PropagationContext
-
-Shared immutable context for network propagation helpers.
-
-### RegularizationArgument
-
-Regularization argument accepted by node-level propagation.
-
-### resolveEmaAlpha
-
-```ts
-resolveEmaAlpha(
-  smoothingWindow: number,
-  explicitAlpha: number | undefined,
-): number
-```
-
-Resolve default EMA alpha using a window length.
-
-Parameters:
-- `smoothingWindow` - - Window length for moving average operations.
-- `explicitAlpha` - - Optional user-provided alpha override.
-
-Returns: A valid EMA alpha in the range (0, 1].
-
-### TrainingSample
-
-Training sample consumed by training set loops.
-
-## architecture/network/training/network.training.utils.ts
-
 Training pipeline utilities (migrated from legacy architecture/network.train.ts).
 
 Provides:
@@ -143,6 +14,8 @@ Provides:
 Notes:
  - This module intentionally keeps imperative style for clarity/perf (avoids heap churn in hot loops).
  - Refactor changes here are documentation & naming only; numerical behavior preserved.
+
+## architecture/network/training/network.training.utils.ts
 
 ### __trainingInternals
 
@@ -412,38 +285,105 @@ Parameters:
 
 Returns: Mean cost across the processed samples.
 
-## architecture/network/training/network.training.loop.utils.ts
+## architecture/network/training/network.training.utils.types.ts
 
-### trainSetCore
+### ALLOWED_OPTIMIZERS
+
+Set of supported optimizer identifiers accepted by training options.
+
+### buildMonitoredSmoothingConfig
 
 ```ts
-trainSetCore(
-  net: default,
-  set: TrainingSample[],
-  batchSize: number,
-  accumulationSteps: number,
-  currentRate: number,
-  momentum: number,
-  regularization: RegularizationConfig,
-  costFunction: CostFunction | CostFunctionOrObject,
-  optimizer: OptimizerConfigBase | undefined,
+buildMonitoredSmoothingConfig(
+  type: MovingAverageType,
+  window: number,
+  emaAlpha: number | undefined,
+  trimmedRatio: number | undefined,
+): MonitoredSmoothingConfig
+```
+
+Build monitored smoothing configuration from options and defaults.
+
+Parameters:
+- `type` - - Selected monitored smoothing mode.
+- `window` - - Monitored smoothing window length.
+- `emaAlpha` - - Optional monitored EMA alpha.
+- `trimmedRatio` - - Optional trimmed-mean ratio.
+
+Returns: Normalized monitored smoothing configuration.
+
+### CostDerivative
+
+```ts
+CostDerivative(
+  target: number,
+  output: number,
 ): number
 ```
 
-Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
+Cost-derivative callback shape for output-node backpropagation.
+
+### GradientClipRuntimeConfig
+
+Runtime gradient clipping configuration normalized from training options.
+
+### NetworkNode
+
+Local node shape alias used by training utility modules.
+
+### OutputNodeWithCostDerivative
+
+Extended output-node contract that supports custom cost derivatives.
+
+### PropagationContext
+
+Shared immutable context for network propagation helpers.
+
+### RegularizationArgument
+
+Regularization argument accepted by node-level propagation.
+
+### resolveEmaAlpha
+
+```ts
+resolveEmaAlpha(
+  smoothingWindow: number,
+  explicitAlpha: number | undefined,
+): number
+```
+
+Resolve default EMA alpha using a window length.
 
 Parameters:
-- `net` - - Network instance being trained.
-- `set` - - Training sample set.
-- `batchSize` - - Mini-batch size.
-- `accumulationSteps` - - Micro-batches per optimizer step.
-- `currentRate` - - Learning rate for this pass.
-- `momentum` - - Momentum value used by propagation paths.
-- `regularization` - - Regularization settings passed into propagation calls.
-- `costFunction` - - Cost function or cost-function object.
-- `optimizer` - - Optional optimizer configuration.
+- `smoothingWindow` - - Window length for moving average operations.
+- `explicitAlpha` - - Optional user-provided alpha override.
 
-Returns: Mean cost over processed samples.
+Returns: A valid EMA alpha in the range (0, 1].
+
+### TrainingSample
+
+Training sample consumed by training set loops.
+
+## architecture/network/training/network.training.finalize.utils.ts
+
+### trainFinalizeCore
+
+```ts
+trainFinalizeCore(
+  net: default,
+  set: { input: number[]; output: number[]; }[],
+  options: TrainingOptions,
+): { error: number; iterations: number; time: number; }
+```
+
+Run the full training orchestration loop with smoothing, callbacks, and early stopping.
+
+Parameters:
+- `net` - - Network instance to train.
+- `set` - - Training dataset.
+- `options` - - Training options.
+
+Returns: Final training summary including error, iteration count, and elapsed time.
 
 ## architecture/network/training/network.training.backprop.utils.ts
 
@@ -644,26 +584,38 @@ Parameters:
 - `network` - Network instance receiving backpropagation.
 - `target` - Output target vector.
 
-## architecture/network/training/network.training.finalize.utils.ts
+## architecture/network/training/network.training.loop.utils.ts
 
-### trainFinalizeCore
+### trainSetCore
 
 ```ts
-trainFinalizeCore(
+trainSetCore(
   net: default,
-  set: { input: number[]; output: number[]; }[],
-  options: TrainingOptions,
-): { error: number; iterations: number; time: number; }
+  set: TrainingSample[],
+  batchSize: number,
+  accumulationSteps: number,
+  currentRate: number,
+  momentum: number,
+  regularization: RegularizationConfig,
+  costFunction: CostFunction | CostFunctionOrObject,
+  optimizer: OptimizerConfigBase | undefined,
+): number
 ```
 
-Run the full training orchestration loop with smoothing, callbacks, and early stopping.
+Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
 
 Parameters:
-- `net` - - Network instance to train.
-- `set` - - Training dataset.
-- `options` - - Training options.
+- `net` - - Network instance being trained.
+- `set` - - Training sample set.
+- `batchSize` - - Mini-batch size.
+- `accumulationSteps` - - Micro-batches per optimizer step.
+- `currentRate` - - Learning rate for this pass.
+- `momentum` - - Momentum value used by propagation paths.
+- `regularization` - - Regularization settings passed into propagation calls.
+- `costFunction` - - Cost function or cost-function object.
+- `optimizer` - - Optional optimizer configuration.
 
-Returns: Final training summary including error, iteration count, and elapsed time.
+Returns: Mean cost over processed samples.
 
 ## architecture/network/training/network.training.smoothing.utils.ts
 
@@ -727,3 +679,51 @@ Parameters:
 - `cfg` - - Runtime clipping configuration.
 
 Returns: Nothing.
+
+## architecture/network/training/network.training.errors.ts
+
+Raised when the training dataset is missing or does not match network IO dimensions.
+
+### NetworkTrainingAccumulationStepsError
+
+Raised when accumulation steps is invalid.
+
+### NetworkTrainingBatchSizeError
+
+Raised when configured batch size exceeds dataset size.
+
+### NetworkTrainingDatasetCompatibilityError
+
+Raised when the training dataset is missing or does not match network IO dimensions.
+
+### NetworkTrainingDropoutRangeError
+
+Raised when dropout is outside the expected range [0, 1).
+
+### NetworkTrainingInvalidCostFunctionError
+
+Raised when the provided cost function is not callable or recognized.
+
+### NetworkTrainingInvalidOptimizerOptionError
+
+Raised when optimizer option type is not supported.
+
+### NetworkTrainingNestedLookaheadError
+
+Raised when lookahead is configured with a nested lookahead base type.
+
+### NetworkTrainingOutputTargetLengthError
+
+Raised when output target length does not match the network output width.
+
+### NetworkTrainingStoppingConditionRequiredError
+
+Raised when no stopping condition is provided to training.
+
+### NetworkTrainingUnknownLookaheadBaseTypeError
+
+Raised when lookahead base optimizer type is unknown.
+
+### NetworkTrainingUnknownOptimizerTypeError
+
+Raised when optimizer type is unknown.

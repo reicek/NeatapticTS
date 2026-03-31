@@ -1,9 +1,9 @@
+import { RateLinearWarmupTotalStepsError } from './rate.errors';
+
 /**
  * Learning rate schedule signature that maps a base rate and iteration index to a rate value.
  * Useful for each stateless schedule strategy.
  */
-import { RateLinearWarmupTotalStepsError } from './rate.errors';
-
 export type RateSchedule = (baseRate: number, iteration: number) => number;
 
 /**

@@ -101,7 +101,7 @@ export const trainFinalizeCore = (
 
   const baseRate = options.rate ?? 0.3;
   const dropout = options.dropout ?? 0;
-  if (dropout < 0 || dropout >= 1) {
+  if (!Number.isFinite(dropout) || dropout < 0 || dropout >= 1) {
     throw new NetworkTrainingDropoutRangeError('dropout must be in [0,1)');
   }
 
