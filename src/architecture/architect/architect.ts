@@ -20,6 +20,14 @@ import Group from '../group/group';
 import Network from '../network/network';
 import * as methods from '../../methods/methods';
 import Connection from '../connection/connection';
+import {
+  ArchitectInputOutputTypeResolutionError,
+  ArchitectInvalidGruConfigurationError,
+  ArchitectInvalidLstmConfigurationError,
+  ArchitectInvalidLstmLayerArgumentsError,
+  ArchitectInvalidPerceptronConfigurationError,
+  ArchitectZeroInputOutputNodesError,
+} from './architect.errors';
 
 /**
  * Provides static methods for constructing predefined neural network
@@ -134,7 +142,7 @@ export default class Architect {
       network.input = inputSize;
       network.output = outputSize;
     } else if (!foundTypes || inputSize === 0 || outputSize === 0) {
-      throw new Error(
+      throw new ArchitectInputOutputTypeResolutionError(
         'Could not determine input/output nodes. Ensure nodes have their `type` property set to "input" or "output".',
       );
     }
@@ -145,7 +153,9 @@ export default class Architect {
     network.selfconns = Array.from(selfconns);
 
     if (network.input === 0 || network.output === 0) {
-      throw new Error('Constructed network has zero input or output nodes.');
+      throw new ArchitectZeroInputOutputNodesError(
+        'Constructed network has zero input or output nodes.',
+      );
     }
 
     return network;
@@ -165,13 +175,13 @@ export default class Architect {
    */
   static perceptron(...layers: number[]): Network {
     if (layers.length < 3) {
-      throw new Error(
+      throw new ArchitectInvalidPerceptronConfigurationError(
         'Invalid MLP configuration: You must specify at least 3 layer sizes (input, hidden, output).',
       );
     }
 
     const inputSize = layers[0];
-    const outputSize = layers[layers.length - 1];
+    const outputSize = layers.at(-1)!;
     const minHidden = Math.min(inputSize, outputSize) + 1;
 
     const inputLayer = Layer.dense(inputSize);
@@ -284,12 +294,13 @@ export default class Architect {
    */
   static lstm(...layerArgs: (number | { inputToOutput?: boolean })[]): Network {
     let options: { inputToOutput?: boolean } = {};
+    const trailingArgument = layerArgs.at(-1);
 
     if (
       layerArgs.length > 0 &&
-      typeof layerArgs[layerArgs.length - 1] === 'object' &&
-      layerArgs[layerArgs.length - 1] !== null &&
-      !Array.isArray(layerArgs[layerArgs.length - 1])
+      typeof trailingArgument === 'object' &&
+      trailingArgument !== null &&
+      !Array.isArray(trailingArgument)
     ) {
       options = layerArgs.pop() as { inputToOutput?: boolean };
     }
@@ -302,7 +313,7 @@ export default class Architect {
           argument > 0,
       )
     ) {
-      throw new Error(
+      throw new ArchitectInvalidLstmLayerArgumentsError(
         'Invalid LSTM layer arguments: All layer sizes must be positive finite numbers.',
       );
     }
@@ -310,7 +321,7 @@ export default class Architect {
     const layers = layerArgs as number[];
 
     if (layers.length < 3) {
-      throw new Error(
+      throw new ArchitectInvalidLstmConfigurationError(
         'Invalid LSTM configuration: You must specify at least 3 layer sizes (input, hidden..., output).',
       );
     }
@@ -358,7 +369,7 @@ export default class Architect {
    */
   static gru(...layers: number[]): Network {
     if (layers.length < 3) {
-      throw new Error(
+      throw new ArchitectInvalidGruConfigurationError(
         'Invalid GRU configuration: You must specify at least 3 layer sizes (input, hidden..., output).',
       );
     }

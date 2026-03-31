@@ -25,7 +25,7 @@ export const computeMonitoredError = (
   }
   const type = cfg.type;
   if (type === 'median') {
-    const sorted = [...recentErrors].sort((a, b) => a - b);
+    const sorted = recentErrors.toSorted((a, b) => a - b);
     const midIndex = Math.floor(sorted.length / 2);
     return sorted.length % 2
       ? sorted[midIndex]
@@ -79,7 +79,7 @@ export const computeMonitoredError = (
   }
   if (type === 'trimmed') {
     const ratio = Math.min(0.49, Math.max(0, cfg.trimmedRatio || 0.1));
-    const sorted = [...recentErrors].sort((a, b) => a - b);
+    const sorted = recentErrors.toSorted((a, b) => a - b);
     const drop = Math.floor(sorted.length * ratio);
     const trimmed = sorted.slice(drop, sorted.length - drop);
     return trimmed.reduce((a, b) => a + b, 0) / (trimmed.length || 1);
@@ -118,7 +118,7 @@ export const computePlateauMetric = (
 ): number => {
   if (cfg.window <= 1 && cfg.type !== 'ema') return trainError;
   if (cfg.type === 'median') {
-    const sorted = [...plateauErrors].sort((a, b) => a - b);
+    const sorted = plateauErrors.toSorted((a, b) => a - b);
     const middleIndex = Math.floor(sorted.length / 2);
     return sorted.length % 2
       ? sorted[middleIndex]

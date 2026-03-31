@@ -67,8 +67,7 @@ const buildBundles = async (): Promise<{
   devPath: string;
   prodPath: string;
 }> => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const esbuild = require('esbuild');
+  const esbuild = await import('esbuild');
   const benchDir = path.resolve(__dirname, '../..', 'bench-browser');
   const entry = path.join(benchDir, 'bench-entry.ts');
   if (!fs.existsSync(entry)) throw new Error('bench-entry.ts missing');
@@ -120,13 +119,13 @@ const runHeadless = async (paths: {
   devPath: string;
   prodPath: string;
 }): Promise<BrowserRunRecord[]> => {
-  let puppeteer;
+  let puppeteerModule;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    puppeteer = require('puppeteer');
+    puppeteerModule = await import('puppeteer');
   } catch {
     return [];
   }
+  const puppeteer = puppeteerModule.default ?? puppeteerModule;
   const benchDir = path.resolve(__dirname, '../..', 'bench-browser');
   const templatePath = path.join(benchDir, 'index.html');
   if (!fs.existsSync(templatePath)) return [];
@@ -137,7 +136,7 @@ const runHeadless = async (paths: {
   ];
   // Launch headless browser; tolerate launch failures (return empty results).
   const browser = await puppeteer
-    .launch({ headless: 'new', args: ['--no-sandbox'] })
+    .launch({ headless: true, args: ['--no-sandbox'] })
     .catch(() => null);
   if (!browser) return [];
   const runs: BrowserRunRecord[] = [];

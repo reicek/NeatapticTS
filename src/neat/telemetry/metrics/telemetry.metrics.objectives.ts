@@ -140,10 +140,10 @@ export function applyObjectiveEvents(
 
   // Step 2: Build event list from pending changes.
   entry.objEvents = [];
-  for (const objectiveKey of telemetryContext._pendingObjectiveAdds || []) {
+  for (const objectiveKey of telemetryContext._pendingObjectiveAdds ?? []) {
     entry.objEvents.push({ gen: generation, type: 'add', key: objectiveKey });
   }
-  for (const objectiveKey of telemetryContext._pendingObjectiveRemoves || []) {
+  for (const objectiveKey of telemetryContext._pendingObjectiveRemoves ?? []) {
     entry.objEvents.push({
       gen: generation,
       type: 'remove',
@@ -152,7 +152,7 @@ export function applyObjectiveEvents(
   }
 
   // Step 3: Persist events and clear pending arrays.
-  telemetryContext._objectiveEvents = telemetryContext._objectiveEvents || [];
+  telemetryContext._objectiveEvents = telemetryContext._objectiveEvents ?? [];
   telemetryContext._objectiveEvents.push(...entry.objEvents);
   telemetryContext._pendingObjectiveAdds = [];
   telemetryContext._pendingObjectiveRemoves = [];

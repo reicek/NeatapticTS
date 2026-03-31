@@ -3,6 +3,7 @@ import type {
   NetworkWithMOAnnotations,
   ObjectiveDescriptor,
 } from '../shared/multiobjective.types';
+import { MultiobjectiveCrowdingGenomeIndexResolutionError } from './multiobjective.crowding.errors';
 
 /**
  * Crowding-distance assignment for NEAT multi-objective ranking.
@@ -93,7 +94,9 @@ export function resolveGenomeIndex(
   // Step 1: return the stored index or throw if missing.
   const resolvedIndex = genomeIndexByReference.get(genomeItem);
   if (resolvedIndex === undefined) {
-    throw new Error('Genome index lookup failed in crowding distance.');
+    throw new MultiobjectiveCrowdingGenomeIndexResolutionError(
+      'Genome index lookup failed in crowding distance.',
+    );
   }
 
   return resolvedIndex;

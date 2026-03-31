@@ -1,5 +1,9 @@
 import type Network from '../../network/network';
 import type Node from '../../node';
+import {
+  NetworkRemoveNodeNotFoundError,
+  NetworkRemoveStructuralAnchorError,
+} from './network.remove.errors';
 import type { NodeRemovalContext } from './network.remove.utils.types';
 import {
   ERROR_CANNOT_REMOVE_ANCHOR_NODE,
@@ -42,7 +46,7 @@ export function createValidatedNodeRemovalContext(
 function resolveNodeIndexOrThrow(network: Network, targetNode: Node): number {
   const targetNodeIndex = network.nodes.indexOf(targetNode);
   if (targetNodeIndex === NODE_NOT_FOUND_INDEX) {
-    throw new Error(ERROR_NODE_NOT_IN_NETWORK);
+    throw new NetworkRemoveNodeNotFoundError(ERROR_NODE_NOT_IN_NETWORK);
   }
   return targetNodeIndex;
 }
@@ -55,7 +59,9 @@ function resolveNodeIndexOrThrow(network: Network, targetNode: Node): number {
  */
 function ensureNodeIsNotStructuralAnchor(targetNode: Node): void {
   if (isStructuralAnchorNode(targetNode)) {
-    throw new Error(ERROR_CANNOT_REMOVE_ANCHOR_NODE);
+    throw new NetworkRemoveStructuralAnchorError(
+      ERROR_CANNOT_REMOVE_ANCHOR_NODE,
+    );
   }
 }
 

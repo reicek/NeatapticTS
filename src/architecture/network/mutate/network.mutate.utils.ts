@@ -4,6 +4,7 @@ import {
   resolveMutationKey,
   warnUnknownMutation,
 } from './network.mutate.dispatch.utils';
+import { NetworkMutateMethodRequiredError } from './network.mutate.errors';
 import {
   addBackConn,
   addConn,
@@ -96,7 +97,7 @@ const MUTATION_DISPATCH: Record<string, MutationHandler> = {
 export function mutateImpl(this: Network, method?: MutationMethod): void {
   // Step 1: Validate mutation input and resolve mutation key.
   if (method == null) {
-    throw new Error(ERROR_NO_MUTATE_METHOD);
+    throw new NetworkMutateMethodRequiredError(ERROR_NO_MUTATE_METHOD);
   }
 
   const mutationKey = resolveMutationKey(method);

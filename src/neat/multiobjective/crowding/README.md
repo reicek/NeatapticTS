@@ -514,3 +514,11 @@ Parameters:
 - `front` - - Pareto front.
 
 Returns: `true` if the front should be skipped.
+
+## neat/multiobjective/crowding/multiobjective.crowding.errors.ts
+
+Raised when crowding helpers cannot resolve a genome back to its source index.
+
+### MultiobjectiveCrowdingGenomeIndexResolutionError
+
+Raised when crowding helpers cannot resolve a genome back to its source index.

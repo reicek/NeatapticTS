@@ -12,6 +12,7 @@ import {
   RANDOM_BINARY_SELECTION_THRESHOLD,
   type RandomGenerator,
 } from './network.genetic.utils.types';
+import { NetworkGeneticParentCompatibilityError } from './network.genetic.errors';
 import {
   chooseConnectionGenes,
   collectConnectionGenes,
@@ -146,7 +147,9 @@ function validateParentCompatibility(
     parentNetwork1.input !== parentNetwork2.input ||
     parentNetwork1.output !== parentNetwork2.output
   ) {
-    throw new Error(PARENT_COMPATIBILITY_ERROR_MESSAGE);
+    throw new NetworkGeneticParentCompatibilityError(
+      PARENT_COMPATIBILITY_ERROR_MESSAGE,
+    );
   }
 }
 

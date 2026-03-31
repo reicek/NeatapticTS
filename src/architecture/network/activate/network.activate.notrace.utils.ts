@@ -5,6 +5,7 @@ import {
   type NoTraceActivationContext,
 } from './network.activate.utils.types';
 import { populatePooledOutputBufferFromNodes } from './network.activate.notrace.traversal.utils';
+import { NetworkActivateInputSizeMismatchError } from './network.activate.errors';
 
 /**
  * Execute no-trace activation with a fast-path attempt and deterministic fallback traversal.
@@ -59,7 +60,9 @@ function assertInputMatchesNetworkInputSize(
   activationContext: NoTraceActivationContext,
 ): void {
   if (!isInputVectorLengthValid(activationContext)) {
-    throw new Error(buildInputSizeMismatchMessage(activationContext));
+    throw new NetworkActivateInputSizeMismatchError(
+      buildInputSizeMismatchMessage(activationContext),
+    );
   }
 }
 

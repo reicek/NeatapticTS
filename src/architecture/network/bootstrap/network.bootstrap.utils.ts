@@ -15,6 +15,7 @@ import { config } from '../../../config';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import Node from '../../node/node';
 import { acquireNode } from '../../nodePool/nodePool';
+import { NetworkBootstrapTopologyIntentConflictError } from './network.bootstrap.errors';
 import type {
   NetworkBootstrapInternals,
   NetworkConstructorOptions,
@@ -64,7 +65,7 @@ export function validateTopologyIntentConfiguration(
     options?.topologyIntent === 'feed-forward' &&
     options.enforceAcyclic === false
   ) {
-    throw new Error(
+    throw new NetworkBootstrapTopologyIntentConflictError(
       'Conflicting topology options: feed-forward intent cannot disable acyclic enforcement.',
     );
   }
@@ -73,7 +74,7 @@ export function validateTopologyIntentConfiguration(
     options?.topologyIntent === 'unconstrained' &&
     options.enforceAcyclic === true
   ) {
-    throw new Error(
+    throw new NetworkBootstrapTopologyIntentConflictError(
       'Conflicting topology options: unconstrained intent cannot enable acyclic enforcement.',
     );
   }

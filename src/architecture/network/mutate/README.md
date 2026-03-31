@@ -1,14 +1,16 @@
 # architecture/network/mutate
 
-Mutation orchestration entrypoint for network-level structural and parametric edits.
+Raised when mutation is requested without a concrete mutation method.
 
-This module intentionally stays lightweight:
-- It resolves the incoming mutation request into a dispatch key.
-- It selects a concrete handler from the dispatch table.
-- It delegates execution and marks topology caches dirty after successful handling.
+## architecture/network/mutate/network.mutate.errors.ts
 
-Handler-specific logic lives in dedicated helper files so this module remains a stable,
-high-level control surface for mutation flow.
+### NetworkMutateMethodRequiredError
+
+Raised when mutation is requested without a concrete mutation method.
+
+### NetworkMutateRecurrentLayerOutputInitializationError
+
+Raised when recurrent mutation helpers cannot access the created layer output nodes.
 
 ## architecture/network/mutate/network.mutate.utils.types.ts
 
@@ -97,6 +99,16 @@ Message emitted when no self-connections are available to remove.
 Message emitted when all self-connection candidates are already occupied.
 
 ## architecture/network/mutate/network.mutate.utils.ts
+
+Mutation orchestration entrypoint for network-level structural and parametric edits.
+
+This module intentionally stays lightweight:
+- It resolves the incoming mutation request into a dispatch key.
+- It selects a concrete handler from the dispatch table.
+- It delegates execution and marks topology caches dirty after successful handling.
+
+Handler-specific logic lives in dedicated helper files so this module remains a stable,
+high-level control surface for mutation flow.
 
 ### mutateImpl
 

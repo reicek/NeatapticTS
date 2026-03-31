@@ -19,6 +19,11 @@ import Connection from '../connection/connection';
 import Layer from '../layer/layer';
 import { config } from '../../config';
 import * as methods from '../../methods/methods';
+import {
+  GroupGatingMethodRequiredError,
+  GroupOneToOneSizeMismatchError,
+  GroupSizeMismatchError,
+} from './group.errors';
 
 /**
  * Composite node block for architecture construction.
@@ -91,7 +96,7 @@ export default class Group {
     const values: number[] = [];
 
     if (value !== undefined && value.length !== this.nodes.length) {
-      throw new Error(
+      throw new GroupSizeMismatchError(
         'Array with values should be same as the amount of nodes!',
       );
     }
@@ -118,7 +123,7 @@ export default class Group {
    */
   propagate(rate: number, momentum: number, target?: number[]): void {
     if (target !== undefined && target.length !== this.nodes.length) {
-      throw new Error(
+      throw new GroupSizeMismatchError(
         'Array with values should be same as the amount of nodes!',
       );
     }
@@ -205,7 +210,7 @@ export default class Group {
         }
       } else if (method === methods.groupConnection.ONE_TO_ONE) {
         if (this.nodes.length !== target.nodes.length) {
-          throw new Error(
+          throw new GroupOneToOneSizeMismatchError(
             'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.',
           );
         }
@@ -247,7 +252,7 @@ export default class Group {
    */
   gate(connections: Connection | Connection[], method: unknown): void {
     if (method === undefined) {
-      throw new Error(
+      throw new GroupGatingMethodRequiredError(
         'Please specify a gating method: Gating.INPUT, Gating.OUTPUT, or Gating.SELF',
       );
     }

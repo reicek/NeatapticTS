@@ -23,6 +23,7 @@ This is a **concept and architecture plan**, not an implementation-complete spec
 
 - **In scope:** lifecycle model, deterministic contracts, DNA composition, budget policy, cache boundaries, and acceptance criteria.
 - **Out of scope (for now):** full operator-level API details, final data schemas, and low-level benchmark harness implementation.
+- **Follow-on benchmark plan:** [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md) captures the downstream three-car racing curriculum, early-only optimal-line guidance, and behavioral-drive benchmark framing without redefining the core Hyper contracts in this document.
 - **Authority rule:** if this plan conflicts with `plans/Memory_Optimization.md`, the memory plan remains authoritative.
 
 ## Execution alignment (numbered tracks)

@@ -2436,10 +2436,6 @@ Runtime network shape used by crossover internals.
 
 Traversal context for one connection gene.
 
-### GlobalThisWithStructuredClone
-
-GlobalThis extension exposing optional structuredClone.
-
 ### GradientClipConfig
 
 Gradient clipping configuration.
@@ -3545,3 +3541,11 @@ Context for comparing two scalar weights with numeric tolerance.
 ### WorkerTraversalContext
 
 Worker-local traversal context.
+
+## architecture/network/network.errors.ts
+
+Raised when a network is constructed without the required input or output sizes.
+
+### NetworkConstructorDimensionRequiredError
+
+Raised when a network is constructed without the required input or output sizes.

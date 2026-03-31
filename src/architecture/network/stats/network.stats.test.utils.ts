@@ -1,5 +1,10 @@
 import * as methods from '../../../methods/methods';
 import type Network from '../../network/network';
+import {
+  NetworkStatsTestSampleInputSizeMismatchError,
+  NetworkStatsTestSampleOutputSizeMismatchError,
+  NetworkStatsTestSetValidationError,
+} from './network.stats.errors';
 
 type TestSample = { input: number[]; output: number[] };
 type CostFunction = (target: number[], output: number[]) => number;
@@ -56,7 +61,9 @@ function validateTestSet(network: Network, testSet: TestSample[]): void {
  */
 function validateTestSetPresence(testSet: TestSample[]): void {
   if (!Array.isArray(testSet) || testSet.length === 0) {
-    throw new Error('Test set is empty or not an array.');
+    throw new NetworkStatsTestSetValidationError(
+      'Test set is empty or not an array.',
+    );
   }
 }
 
@@ -87,7 +94,7 @@ function validateSampleInputDimensions(
   sample: TestSample,
 ): void {
   if (!Array.isArray(sample.input) || sample.input.length !== network.input) {
-    throw new Error(
+    throw new NetworkStatsTestSampleInputSizeMismatchError(
       `Test sample input size mismatch: expected ${network.input}, got ${
         sample.input ? sample.input.length : 'undefined'
       }`,
@@ -109,7 +116,7 @@ function validateSampleOutputDimensions(
     !Array.isArray(sample.output) ||
     sample.output.length !== network.output
   ) {
-    throw new Error(
+    throw new NetworkStatsTestSampleOutputSizeMismatchError(
       `Test sample output size mismatch: expected ${network.output}, got ${
         sample.output ? sample.output.length : 'undefined'
       }`,

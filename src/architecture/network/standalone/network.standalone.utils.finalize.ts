@@ -6,6 +6,10 @@ import {
   INVALID_INPUT_SIZE_ERROR_MIDDLE,
   INVALID_INPUT_SIZE_ERROR_PREFIX,
 } from './network.standalone.utils.types';
+import {
+  buildStandaloneInputSizeMismatchErrorFactorySource,
+  NETWORK_STANDALONE_INPUT_SIZE_MISMATCH_ERROR_NAME,
+} from './network.standalone.errors';
 
 /**
  * Assemble the final standalone IIFE source string.
@@ -23,6 +27,7 @@ export function assembleStandaloneSource(
   let generatedSource = '';
   generatedSource += `(function(){\n`;
   generatedSource += `${generationContext.activationFunctionSources.join('\n')}\n`;
+  generatedSource += `${buildStandaloneInputSizeMismatchErrorFactorySource()}\n`;
   generatedSource += `var F = [${activationArrayLiteral}];\n`;
   generatedSource += `var A = new ${activationArrayType}([${generationContext.initialActivations.join(
     ',',
@@ -85,5 +90,5 @@ function resolveActivationArrayType(
  * @returns Guard statement line including trailing newline.
  */
 function buildInputGuardLine(expectedInputSize: number): string {
-  return `if (!input || input.length !== ${expectedInputSize}) { throw new Error('${INVALID_INPUT_SIZE_ERROR_PREFIX}${expectedInputSize}${INVALID_INPUT_SIZE_ERROR_MIDDLE}' + (input ? input.length : 'undefined')); }\n`;
+  return `if (!input || input.length !== ${expectedInputSize}) { throw ${NETWORK_STANDALONE_INPUT_SIZE_MISMATCH_ERROR_NAME}('${INVALID_INPUT_SIZE_ERROR_PREFIX}${expectedInputSize}${INVALID_INPUT_SIZE_ERROR_MIDDLE}' + (input ? input.length : 'undefined')); }\n`;
 }

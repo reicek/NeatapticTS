@@ -196,3 +196,31 @@ Parameters:
 - `options` - Optional configuration for connection counts and gates.
 
 Returns: The constructed randomized network.
+
+## architecture/architect/architect.errors.ts
+
+Raised when architect construction cannot infer input/output nodes from supplied primitives.
+
+### ArchitectInputOutputTypeResolutionError
+
+Raised when architect construction cannot infer input/output nodes from supplied primitives.
+
+### ArchitectInvalidGruConfigurationError
+
+Raised when a GRU builder receives too few layer sizes.
+
+### ArchitectInvalidLstmConfigurationError
+
+Raised when an LSTM builder receives too few layer sizes.
+
+### ArchitectInvalidLstmLayerArgumentsError
+
+Raised when LSTM builder arguments contain invalid layer-size values.
+
+### ArchitectInvalidPerceptronConfigurationError
+
+Raised when an MLP builder receives too few layer sizes.
+
+### ArchitectZeroInputOutputNodesError
+
+Raised when architect construction produces a network with zero inputs or outputs.

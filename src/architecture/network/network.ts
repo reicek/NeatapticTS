@@ -98,6 +98,7 @@ import {
   resolveTopologyIntent,
   validateTopologyIntentConfiguration,
 } from './bootstrap/network.bootstrap.utils';
+import { NetworkConstructorDimensionRequiredError } from './network.errors';
 import {
   createMLP as _createMLP,
   rebuildConnections as _rebuildConnections,
@@ -363,7 +364,9 @@ export default class Network implements NetworkView {
   ) {
     // Step 1: Validate the required graph dimensions.
     if (typeof input === 'undefined' || typeof output === 'undefined') {
-      throw new Error('No input or output size given');
+      throw new NetworkConstructorDimensionRequiredError(
+        'No input or output size given',
+      );
     }
 
     // Step 2: Validate the constructor topology contract before mutating runtime state.

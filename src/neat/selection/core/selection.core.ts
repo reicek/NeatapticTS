@@ -3,6 +3,7 @@ import type {
   NeatLikeWithSelection,
   SelectionContext,
 } from './selection.types';
+import { SelectionTournamentOverflowError } from './selection.core.errors';
 
 /**
  * Default power exponent for POWER selection when none is configured.
@@ -492,7 +493,9 @@ function resolveTournamentOverflow(
   selectionContext: SelectionContext,
 ): GenomeWithScore {
   if (!selectionContext.internal._suppressTournamentError) {
-    throw new Error('Tournament size must be less than population size.');
+    throw new SelectionTournamentOverflowError(
+      'Tournament size must be less than population size.',
+    );
   }
 
   return getRandomPopulationMember(selectionContext);

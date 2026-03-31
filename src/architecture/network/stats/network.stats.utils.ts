@@ -1,9 +1,7 @@
 import type Network from '../../network/network';
 export { testNetwork } from './network.stats.test.utils';
-import type {
-  GlobalThisWithStructuredClone,
-  StatsNetworkProps as NetworkStatsProps,
-} from '../network.types';
+import { safeStructuredClone } from '../../../utils/safeStructuredClone';
+import type { StatsNetworkProps as NetworkStatsProps } from '../network.types';
 
 /**
  * Network statistics accessors.
@@ -25,30 +23,6 @@ import type {
  */
 
 /**
- * Deep clone utility with a resilient fallback strategy.
- *
- * Priority order:
- *  1. Use native structuredClone when available (handles typed arrays, dates, etc.).
- *  2. Fallback to JSON serialize/deserialize (sufficient for plain data objects).
- *  3. If serialization fails (rare circular or unsupported types), a second JSON attempt is made
- *     inside the catch to avoid throwing and to preserve backwards compatibility (will still throw
- *     if fundamentally non-serializable).
- *
- * NOTE: This is intentionally minimal; for richer cloning semantics consider a dedicated utility.
- */
-const deepCloneValue = <T>(value: T): T => {
-  try {
-    const global = globalThis as GlobalThisWithStructuredClone;
-    return global.structuredClone
-      ? global.structuredClone(value)
-      : JSON.parse(JSON.stringify(value));
-  } catch {
-    // Fallback: attempt JSON path again; if it fails this will throw—acceptable for edge cases.
-    return JSON.parse(JSON.stringify(value));
-  }
-};
-
-/**
  * Obtain the last recorded regularization / stochastic statistics snapshot.
  *
  * Returns a defensive deep copy so callers can inspect metrics without risking mutation of the
@@ -60,7 +34,7 @@ const deepCloneValue = <T>(value: T): T => {
 export function getRegularizationStats(this: Network) {
   /** Raw internal stats reference (may be undefined if never set). */
   const lastStatsSnapshot = (this as unknown as NetworkStatsProps)._lastStats;
-  return lastStatsSnapshot ? deepCloneValue(lastStatsSnapshot) : null;
+  return lastStatsSnapshot ? safeStructuredClone(lastStatsSnapshot) : null;
 }
 
 export default { getRegularizationStats };

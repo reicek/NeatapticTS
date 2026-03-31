@@ -236,7 +236,7 @@ export function initializeNeatConstructor(
   applyOptionDefaults(host, optionBag, defaults);
 
   // Step 2: Ensure the runtime bookkeeping containers exist before pool creation.
-  host.population = host.population || [];
+  host.population = host.population ?? [];
   ensureInternalState(host);
 
   // Step 3: Preserve legacy best-effort pool bootstrapping semantics.

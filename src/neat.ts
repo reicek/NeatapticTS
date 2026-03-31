@@ -1,6 +1,5 @@
 import Network from './architecture/network/network';
 import type {
-  GenomeLike,
   ObjectiveDescriptor,
   SpeciesHistoryEntry,
   OperatorStatsRecord,

@@ -462,3 +462,27 @@ Resets the connection's gain to 1 and removes it from the `connections.gated` li
 
 Parameters:
 - `connections` - A single Connection object or an array of Connection objects to ungate.
+
+## architecture/node/node.errors.ts
+
+Raised when a node mutation call receives a null or undefined method.
+
+### NodeInvalidConnectionTargetTypeError
+
+Raised when a node connection target is neither a node nor a group-like object.
+
+### NodeMutationMethodRequiredError
+
+Raised when a node mutation call receives a null or undefined method.
+
+### NodeUndefinedConnectionTargetError
+
+Raised when a node connection target is missing.
+
+### NodeUnknownMutationMethodError
+
+Raised when a node mutation method name is unknown.
+
+### NodeUnsupportedMutationMethodError
+
+Raised when a known mutation call reaches an unsupported mutation branch.

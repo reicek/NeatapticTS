@@ -4,6 +4,10 @@ import {
   type BatchActivationContext,
   type BatchRowActivationContext,
 } from './network.activate.utils.types';
+import {
+  NetworkActivateBatchInputsCollectionError,
+  NetworkActivateInputSizeMismatchError,
+} from './network.activate.errors';
 
 /**
  * Execute mini-batch activation with top-level shape validation and per-row checks.
@@ -32,7 +36,9 @@ export function executeBatchActivation(
  */
 function assertBatchInputCollection(batchInputs: number[][]): void {
   if (!Array.isArray(batchInputs)) {
-    throw new Error(BATCH_INPUTS_COLLECTION_ERROR_MESSAGE);
+    throw new NetworkActivateBatchInputsCollectionError(
+      BATCH_INPUTS_COLLECTION_ERROR_MESSAGE,
+    );
   }
 }
 
@@ -85,7 +91,9 @@ function assertBatchRowInputSize(
 ): void {
   if (isBatchRowInputSizeValid(rowActivationContext)) return;
 
-  throw new Error(buildBatchRowInputSizeMismatchMessage(rowActivationContext));
+  throw new NetworkActivateInputSizeMismatchError(
+    buildBatchRowInputSizeMismatchMessage(rowActivationContext),
+  );
 }
 
 /**

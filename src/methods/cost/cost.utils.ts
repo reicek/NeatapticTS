@@ -1,4 +1,5 @@
 import { PROB_EPSILON } from '../../neat/neat.constants';
+import { CostTargetOutputLengthMismatchError } from './cost.errors';
 
 /** Error message thrown when target and output arrays differ in length. */
 export const LENGTH_MISMATCH_MESSAGE =
@@ -323,7 +324,7 @@ export function computeLabelSmoothingLoss(
 
 function validateMatchingLength(targets: number[], outputs: number[]): void {
   if (targets.length !== outputs.length) {
-    throw new Error(LENGTH_MISMATCH_MESSAGE);
+    throw new CostTargetOutputLengthMismatchError(LENGTH_MISMATCH_MESSAGE);
   }
 }
 

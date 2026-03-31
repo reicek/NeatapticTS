@@ -27,6 +27,7 @@ import type {
   OnnxExportOptions,
 } from '../network.onnx.export.types';
 import type { NodeInternals } from '../../network.onnx.utils.types';
+import { NetworkOnnxRecurrentMixedActivationsUnsupportedError } from '../../network.onnx.errors';
 import {
   emitDenseLayer,
   emitPerNeuronLayer,
@@ -289,7 +290,7 @@ export function emitLayerGraph(context: LayerBuildContext): string {
     if (!activationContext.hasMixedActivations) {
       return;
     }
-    throw new Error(
+    throw new NetworkOnnxRecurrentMixedActivationsUnsupportedError(
       `Recurrent export does not yet support mixed activations in hidden layer ${layerIndex}.`,
     );
   }

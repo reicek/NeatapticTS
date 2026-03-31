@@ -1,5 +1,6 @@
 import { activationArrayPool } from '../activationArrayPool/activationArrayPool';
 import type { LayerActivationContext } from './layer.utils.types';
+import { LayerSizeMismatchError } from './layer.errors';
 
 const SIZE_MISMATCH_ERROR_MESSAGE =
   'Array with values should be same as the amount of nodes!';
@@ -41,7 +42,7 @@ export function assertActivationInputSize(
   inputValues?: number[],
 ): void {
   if (inputValues !== undefined && inputValues.length !== nodeCount) {
-    throw new Error(SIZE_MISMATCH_ERROR_MESSAGE);
+    throw new LayerSizeMismatchError(SIZE_MISMATCH_ERROR_MESSAGE);
   }
 }
 

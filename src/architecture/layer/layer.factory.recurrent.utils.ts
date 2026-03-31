@@ -3,6 +3,10 @@ import Group from '../group/group';
 import * as methods from '../../methods/methods';
 import Node from '../node';
 import { isGroup as isGroupUtils } from './layer.guard.utils';
+import {
+  LayerMemoryInputBlockTypeError,
+  LayerMemoryInputSizeMismatchError,
+} from './layer.errors';
 import type {
   LayerFactoryContext,
   LayerFactoryLayer,
@@ -727,7 +731,7 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
       return inputCandidate;
     }
 
-    throw new Error(MEMORY_INPUT_BLOCK_TYPE_ERROR);
+    throw new LayerMemoryInputBlockTypeError(MEMORY_INPUT_BLOCK_TYPE_ERROR);
   }
 
   /**
@@ -742,7 +746,7 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
       return;
     }
 
-    throw new Error(
+    throw new LayerMemoryInputSizeMismatchError(
       `${MEMORY_LAYER_SIZE_ERROR_PREFIX}${sourceGroup.nodes.length}${MEMORY_LAYER_SIZE_ERROR_MIDDLE}${inputBlock.nodes.length}${MEMORY_LAYER_SIZE_ERROR_SUFFIX}`,
     );
   }

@@ -29,6 +29,10 @@ import {
   DISABLED_TARGET_ERROR,
   ZERO_ITERATIONS,
 } from './network.evolve.utils.types';
+import {
+  NetworkEvolveDatasetCompatibilityError,
+  NetworkEvolveStoppingConditionRequiredError,
+} from './network.evolve.errors';
 
 /**
  * Validate dataset existence and dimensional compatibility with network I/O.
@@ -42,14 +46,18 @@ export function assertEvolutionDatasetCompatibility(
   dataSet: TrainingSample[],
 ): void {
   if (!dataSet || dataSet.length === 0) {
-    throw new Error(DATASET_COMPATIBILITY_ERROR_MESSAGE);
+    throw new NetworkEvolveDatasetCompatibilityError(
+      DATASET_COMPATIBILITY_ERROR_MESSAGE,
+    );
   }
 
   const firstSample = dataSet[0];
   const inputMatches = firstSample.input.length === network.input;
   const outputMatches = firstSample.output.length === network.output;
   if (!inputMatches || !outputMatches) {
-    throw new Error(DATASET_COMPATIBILITY_ERROR_MESSAGE);
+    throw new NetworkEvolveDatasetCompatibilityError(
+      DATASET_COMPATIBILITY_ERROR_MESSAGE,
+    );
   }
 }
 
@@ -105,7 +113,9 @@ export function resolveStopConditions(
   const iterationsMissing = typeof evolveOptions.iterations === 'undefined';
   const errorMissing = typeof evolveOptions.error === 'undefined';
   if (iterationsMissing && errorMissing) {
-    throw new Error(STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE);
+    throw new NetworkEvolveStoppingConditionRequiredError(
+      STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE,
+    );
   }
 
   if (errorMissing) {

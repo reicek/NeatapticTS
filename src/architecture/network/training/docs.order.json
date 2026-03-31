@@ -1,0 +1,13 @@
+{
+  "introFile": "network.training.utils.ts",
+  "fileOrder": [
+    "network.training.utils.ts",
+    "network.training.utils.types.ts",
+    "network.training.finalize.utils.ts",
+    "network.training.backprop.utils.ts",
+    "network.training.loop.utils.ts",
+    "network.training.smoothing.utils.ts",
+    "network.training.gradient-clip.utils.ts",
+    "network.training.errors.ts"
+  ]
+}

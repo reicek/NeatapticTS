@@ -1,29 +1,16 @@
 # architecture/network/remove
 
-Node removal utilities.
+Raised when node removal targets a node that is not in the network.
 
-This module provides a focused implementation for removing a single hidden node from a network
-while attempting to preserve overall functional connectivity. The removal procedure mirrors the
-legacy Neataptic logic but augments it with clearer documentation and explicit invariants.
+## architecture/network/remove/network.remove.errors.ts
 
-High‑level algorithm (removeNode):
- 1. Guard: ensure the node exists and is not an input or output (those are structural anchors).
- 2. Ungate: detach connections gated BY the node (we don't currently reassign gater roles).
- 3. Snapshot inbound / outbound connections (before mutation of adjacency lists).
- 4. Disconnect all inbound, outbound, and self connections.
- 5. Physically remove the node from the network's node array.
- 6. Simple path repair heuristic: for every former inbound source and outbound target, add a
-    direct connection if (a) both endpoints still exist, (b) they are distinct, and (c) no
-    direct connection already exists. This keeps forward information flow possibilities.
- 7. Mark topology / caches dirty so that subsequent activation / ordering passes rebuild state.
+### NetworkRemoveNodeNotFoundError
 
-Notes / Limitations:
- - We do NOT attempt to clone weights or distribute the removed node's function across new
-   connections (more sophisticated strategies could average or compose weights).
- - Gating effects involving the removed node as a gater are dropped; downstream behavior may
-   change—callers relying heavily on gating may want a custom remap strategy.
- - Self connections are simply removed; no attempt is made to emulate recursion via alternative
-   structures.
+Raised when node removal targets a node that is not in the network.
+
+### NetworkRemoveStructuralAnchorError
+
+Raised when node removal targets an input or output anchor node.
 
 ## architecture/network/remove/network.remove.utils.types.ts
 
@@ -68,6 +55,31 @@ Immutable context for validated node-removal request.
 Endpoint pair for reconnecting bridged paths.
 
 ## architecture/network/remove/network.remove.utils.ts
+
+Node removal utilities.
+
+This module provides a focused implementation for removing a single hidden node from a network
+while attempting to preserve overall functional connectivity. The removal procedure mirrors the
+legacy Neataptic logic but augments it with clearer documentation and explicit invariants.
+
+High‑level algorithm (removeNode):
+ 1. Guard: ensure the node exists and is not an input or output (those are structural anchors).
+ 2. Ungate: detach connections gated BY the node (we don't currently reassign gater roles).
+ 3. Snapshot inbound / outbound connections (before mutation of adjacency lists).
+ 4. Disconnect all inbound, outbound, and self connections.
+ 5. Physically remove the node from the network's node array.
+ 6. Simple path repair heuristic: for every former inbound source and outbound target, add a
+    direct connection if (a) both endpoints still exist, (b) they are distinct, and (c) no
+    direct connection already exists. This keeps forward information flow possibilities.
+ 7. Mark topology / caches dirty so that subsequent activation / ordering passes rebuild state.
+
+Notes / Limitations:
+ - We do NOT attempt to clone weights or distribute the removed node's function across new
+   connections (more sophisticated strategies could average or compose weights).
+ - Gating effects involving the removed node as a gater are dropped; downstream behavior may
+   change—callers relying heavily on gating may want a custom remap strategy.
+ - Self connections are simply removed; no attempt is made to emulate recursion via alternative
+   structures.
 
 ### removeNode
 

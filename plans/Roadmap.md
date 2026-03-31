@@ -11,7 +11,7 @@ This roadmap orders every plan in `/plans` into a dependency-aware sequence opti
 
 Where it helps, this roadmap uses **lanes** (things that can proceed in parallel) and **gates** (things that should be true before moving on).
 
-## Phase 0 — Hygiene + Refactor Baseline
+## Phase 0 — Hygiene + Refactor Baseline [DONE]
 
 **Outcome:** keep iteration speed high, reduce refactor risk, and finish the structural cleanup needed before broad mechanical modernization.
 
@@ -41,11 +41,11 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 - Source strict-typing cleanup for `src/` explicit-`any` debt [DONE]
   - Plan: [src-no-explicit-any-cleanup.plans.md](src-no-explicit-any-cleanup.plans.md)
   - Scope note: this lane replaced the stale root checklist with a roadmap-tracked plan aligned to the current folderized tree and is now the closed baseline for future reopen-only follow-up.
-- ES2023 modernization (after the demo-structure pass; mechanical refactors + CI enforcement) [PLANNED]
+- ES2023 modernization (completed Phase 0 lane: project-wide named errors with `Error.cause`, targeted syntax cleanup, helper normalization, narrow module-edge cleanup, and lint/CI enforcement) [DONE]
   - Plan: [ES2023 migration](ES2023%20migration)
-  - Scope note: this phase is syntax/module modernization plus CI enforcement. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
+   - Scope note: ESM package wiring, the ES2023 TypeScript baseline, the lint scaffold, named-error rollout, targeted syntax cleanup, shared clone-helper normalization, narrow workflow or benchmark edge cleanup, and CI enforcement are now complete. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
 
-**Gate to Phase 1:** both demos are solid split and documented, the main app split is stable, the remaining documentation work is no longer obscuring ownership boundaries, and `npx tsc --noEmit -p tsconfig.json` plus `npm test` are green after the modernization pass.
+**Gate to Phase 1:** satisfied. Both demos are solid split and documented, the main app split is stable, the remaining documentation work is no longer obscuring ownership boundaries, the ES2023 cleanup lane is complete, and `npm run build`, `npm run lint`, and `npm test` are green after the modernization pass.
 
 ## Phase 1 — Core Correctness + Determinism Foundations (Critical Path)
 
@@ -156,21 +156,23 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Phase 7 — Advanced Research Features (Last)
 
-**Outcome:** evo-devo / hyper-scale capabilities that build on top of all prior infrastructure.
+**Outcome:** evo-devo / hyper-scale capabilities and benchmark-driven validation that build on top of all prior infrastructure.
 
 - HyperEvoDevo MorphoNEAT
   - Plan: [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]
+- HyperEvoDevo racing curriculum and behavioral drives follow-on
+   - Plan: [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md) [PLANNED]
 
-**Why last:** this work depends heavily on the Memory Optimization track (Track 2 in that plan) and benefits from stable NEAT correctness, deterministic activation semantics, and robust serialization/checkpointing.
+**Why last:** this work depends heavily on the Memory Optimization track (Track 2 in that plan) and benefits from stable NEAT correctness, deterministic activation semantics, robust serialization/checkpointing, and a mature enough Hyper core that benchmark results reflect the algorithm rather than unstable infrastructure.
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: the project is still in **Phase 0**, with both demos solid split and documented, the example learnability pass materially strengthened across `test/examples`, the Flappy Bird documentation pass now closed, the main app already solid split, the architecture split follow-through now closed, the broader educational documentation lane now closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup now closed as a completed baseline, and repository-wide ES2023 modernization still remaining in the Phase 0 lane.
+Current status: **Phase 0 is complete** and the project is ready to begin **Phase 1**. Both demos are solid split and documented, the example learnability pass materially strengthened across `test/examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, and the ES2023 modernization lane is closed as a completed Phase 0 baseline.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
 - **Parallel lane B (interop):** [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) after Phase 2 (or earlier if scoped tightly)
-- **Final capstone:** [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md)
+- **Final capstone:** [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) and [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md)
 
 ## Plan Inventory in Roadmap Order
 
@@ -195,7 +197,7 @@ than a roadmap-tracked plan file.
 11. [render-docs-html-solid-split.plans.md](render-docs-html-solid-split.plans.md) [DONE]
 12. [analyze-trace-solid-split.plans.md](analyze-trace-solid-split.plans.md) [DONE]
 13. [src-no-explicit-any-cleanup.plans.md](src-no-explicit-any-cleanup.plans.md) [DONE]
-14. [ES2023 migration](ES2023%20migration) [PLANNED]
+14. [ES2023 migration](ES2023%20migration) [DONE]
 
 ### Phase 1 inventory
 
@@ -233,3 +235,4 @@ than a roadmap-tracked plan file.
 ### Phase 7 inventory
 
 30. [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]
+31. [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md) [PLANNED]

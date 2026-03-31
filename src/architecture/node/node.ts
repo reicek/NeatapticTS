@@ -18,6 +18,13 @@
 import Connection from '../connection';
 import { config } from '../../config';
 import * as methods from '../../methods/methods';
+import {
+  NodeInvalidConnectionTargetTypeError,
+  NodeMutationMethodRequiredError,
+  NodeUndefinedConnectionTargetError,
+  NodeUnknownMutationMethodError,
+  NodeUnsupportedMutationMethodError,
+} from './node.errors';
 
 /**
  * Internal interface for accessing dynamic optimizer properties on Node instances.
@@ -153,7 +160,7 @@ export default class Node {
     // Initialize bias: 0 for input nodes, small random value for others (deterministic if rng seeded)
     this.bias = type === 'input' ? 0 : rng() * 0.2 - 0.1;
     // Set activation function. Default to logistic or identity if logistic is not available.
-    this.squash = customActivation || methods.Activation.logistic || ((x) => x);
+    this.squash = customActivation ?? methods.Activation.logistic ?? ((x) => x);
     this.type = type;
 
     // Initialize state and activation values.
@@ -677,7 +684,9 @@ export default class Node {
   mutate(method: unknown): void {
     // Validate the provided mutation method.
     if (!method) {
-      throw new Error('Mutation method cannot be null or undefined.');
+      throw new NodeMutationMethodRequiredError(
+        'Mutation method cannot be null or undefined.',
+      );
     }
 
     // Cast to a mutation method shape for internal usage
@@ -692,7 +701,7 @@ export default class Node {
     // Note: This check assumes `method` itself is the function, comparing its name.
     // If `method` is an object describing the mutation, the check might need adjustment.
     if (!(mutationMethod.name && mutationMethod.name in methods.mutation)) {
-      throw new Error(
+      throw new NodeUnknownMutationMethodError(
         `Unknown mutation method: ${mutationMethod.name ?? 'undefined'}`,
       );
     }
@@ -753,7 +762,7 @@ export default class Node {
       // Add cases for other mutation types if needed.
       default:
         // This case might be redundant if the initial check catches unknown methods.
-        throw new Error(
+        throw new NodeUnsupportedMutationMethodError(
           `Unsupported mutation method: ${mutationMethod.name ?? 'undefined'}`,
         );
     }
@@ -771,7 +780,9 @@ export default class Node {
   connect(target: Node | { nodes: Node[] }, weight?: number): Connection[] {
     const connections: Connection[] = [];
     if (!target) {
-      throw new Error('Cannot connect to an undefined target.');
+      throw new NodeUndefinedConnectionTargetError(
+        'Cannot connect to an undefined target.',
+      );
     }
 
     // Check if the target is a single Node.
@@ -805,7 +816,7 @@ export default class Node {
       }
     } else {
       // Handle invalid target type.
-      throw new Error(
+      throw new NodeInvalidConnectionTargetTypeError(
         'Invalid target type for connection. Must be a Node or a group { nodes: Node[] }.',
       );
     }

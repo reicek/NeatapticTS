@@ -1290,6 +1290,22 @@ Parameters:
 
 Returns: Activation output vector from the network delegate.
 
+## architecture/network/activate/network.activate.errors.ts
+
+Raised when activation input dimensionality does not match network expectations.
+
+### NetworkActivateBatchInputsCollectionError
+
+Raised when batch activation receives a non-array collection.
+
+### NetworkActivateCorruptedStructureError
+
+Raised when activation is attempted on a network with invalid node structure.
+
+### NetworkActivateInputSizeMismatchError
+
+Raised when activation input dimensionality does not match network expectations.
+
 ## architecture/network/activate/network.activate.raw.utils.ts
 
 ### activateViaNetworkDelegate

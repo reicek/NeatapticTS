@@ -29,6 +29,7 @@ import {
   WARNING_INVALID_GATER_DURING_FROM_JSON,
   WARNING_UNKNOWN_FORMAT_VERSION,
 } from './network.serialize.utils.types';
+import { NetworkSerializeInvalidJsonError } from './network.serialize.errors';
 
 /**
  * Creates an empty verbose JSON shell from runtime internals.
@@ -144,7 +145,7 @@ export function appendJsonForwardConnections(
  */
 export function validateNetworkJsonOrThrow(json: NetworkJSON): void {
   if (!json || typeof json !== 'object') {
-    throw new Error(ERROR_INVALID_NETWORK_JSON);
+    throw new NetworkSerializeInvalidJsonError(ERROR_INVALID_NETWORK_JSON);
   }
 }
 

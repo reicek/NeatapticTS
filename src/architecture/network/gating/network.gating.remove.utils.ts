@@ -2,6 +2,10 @@ import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';
 import mutation from '../../../methods/mutation/mutation';
+import {
+  NetworkGatingRemovalNodeNotFoundError,
+  NetworkGatingStructuralAnchorRemovalError,
+} from './network.gating.errors';
 import type {
   BridgingConnectionList,
   ConnectedNodeList,
@@ -23,12 +27,16 @@ export function assertNodeRemovableAndGetIndex(
   node: Node,
 ): number {
   if (node.type === 'input' || node.type === 'output') {
-    throw new Error('Cannot remove input or output node from the network.');
+    throw new NetworkGatingStructuralAnchorRemovalError(
+      'Cannot remove input or output node from the network.',
+    );
   }
 
   const nodeIndex = network.nodes.indexOf(node);
   if (nodeIndex === -1) {
-    throw new Error('Node not found in the network for removal.');
+    throw new NetworkGatingRemovalNodeNotFoundError(
+      'Node not found in the network for removal.',
+    );
   }
 
   return nodeIndex;

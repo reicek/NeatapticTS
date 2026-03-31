@@ -438,7 +438,7 @@ export function buildTelemetryEntry(
     fittestGenome: Record<string, unknown>,
   ): TelemetryEntry {
     // Step 1: Resolve population snapshot.
-    const population = (telemetryContext.population as GenomeDetailed[]) || [];
+    const population = (telemetryContext.population as GenomeDetailed[]) ?? [];
 
     // Step 2: Compute MO proxy metrics (hypervolume proxy + pareto fronts).
     const hyperVolumeProxy = computeHyperVolumeProxy(
@@ -506,7 +506,7 @@ export function buildTelemetryEntry(
   ): TelemetryEntry {
     // Step 1: Resolve population snapshot.
     const populationSnapshot =
-      (telemetryContext.population as GenomeDetailed[]) || [];
+      (telemetryContext.population as GenomeDetailed[]) ?? [];
 
     // Step 2: Snapshot operator statistics.
     const operatorStatsSnapshot = computeOperatorStatsSnapshot(

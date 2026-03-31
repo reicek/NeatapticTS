@@ -995,3 +995,39 @@ Shared evolve stopping-condition validation error.
 ### ZERO_ITERATIONS
 
 Explicit zero-iteration value.
+
+## architecture/network/evolve/network.evolve.errors.ts
+
+Raised when the evolve dataset is missing or does not match network IO.
+
+Example:
+
+```ts
+throw new NetworkEvolveDatasetCompatibilityError(
+  'Dataset should have at least one sample and matching input/output sizes.',
+);
+```
+
+### NetworkEvolveDatasetCompatibilityError
+
+Raised when the evolve dataset is missing or does not match network IO.
+
+Example:
+
+```ts
+throw new NetworkEvolveDatasetCompatibilityError(
+  'Dataset should have at least one sample and matching input/output sizes.',
+);
+```
+
+### NetworkEvolveStoppingConditionRequiredError
+
+Raised when evolve options do not declare any stopping condition.
+
+Example:
+
+```ts
+throw new NetworkEvolveStoppingConditionRequiredError(
+  'Evolution requires either iterations or error to be set.',
+);
+```

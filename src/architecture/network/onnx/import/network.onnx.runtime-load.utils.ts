@@ -8,6 +8,7 @@ import type {
   OnnxRuntimeLayerModule,
   OnnxRuntimePerceptronFactory,
 } from './network.onnx.runtime-load.types';
+import { NetworkOnnxPerceptronSizeValidationError } from '../network.onnx.errors';
 
 /** Minimum number of layer-size values needed for input/output perceptron construction. */
 const MINIMUM_PERCEPTRON_SIZE_COUNT = 2;
@@ -164,7 +165,9 @@ function validatePerceptronSizes(
     return;
   }
 
-  throw new Error(validationContext.errorMessage);
+  throw new NetworkOnnxPerceptronSizeValidationError(
+    validationContext.errorMessage,
+  );
 }
 
 /**
