@@ -2,7 +2,7 @@
 
 ## Purpose
 
-When generating, modifying, or suggesting code that touches files under `src/` or `test/`, follow the project `STYLEGUIDE.md` rules and perform the quick validations listed below before returning suggestions.
+When generating, modifying, or suggesting code that touches files under `src/`, `testing/`, `benchmarks/`, or `examples/`, follow the project `STYLEGUIDE.md` rules and perform the quick validations listed below before returning suggestions.
 
 ## Educational docs preference (JSDoc)
 
@@ -70,7 +70,7 @@ a compressed plan plus matching log.
 
 For split or refactor work with meaningful documentation scope, let `solid-split` own the boundary work and `educational-docs` own documentation quality.
 
-When you touch code under `src/` or `test/`, prefer improving JSDoc so the generated docs are:
+When you touch code under `src/`, `testing/`, `benchmarks/`, or `examples/`, prefer improving JSDoc so the generated docs are:
 
 - **Interesting and explanatory**, not just type signatures.
 - **Example-driven**: include small examples in the main description (prefer fenced code blocks like ```ts) so the docs generator preserves them.
@@ -109,7 +109,7 @@ When a task touches `.github/workflows/**`, `package.json`, `package-lock.json`,
 
 Because JSDoc is auto-compiled into each folder's `README.md`, those README files are the fastest condensed overview of a module's purpose, exported surface, neighboring files, and intended usage.
 
-Before exploring or editing a folder in `src/` or `test/`, agents should:
+Before exploring or editing a folder in `src/`, `examples/`, `benchmarks/`, or `testing/`, agents should:
 
 1. Read the nearest folder `README.md` first.
    - Example: before changing `src/architecture/network/genetic/*`, read `src/architecture/network/genetic/README.md`.
@@ -137,7 +137,7 @@ belong in that skill.
 
 ## Demo-first library gap policy (critical)
 
-Examples and demos in `test/examples/` are not places to normalize library ergonomics gaps. They are probes that should reveal where the public API, defaults, or runtime contracts fall short of world-class expectations.
+Examples and demos in `examples/` are not places to normalize library ergonomics gaps. They are probes that should reveal where the public API, defaults, or runtime contracts fall short of world-class expectations.
 
 When demo work exposes a mismatch between obvious user intent and the library behavior:
 
@@ -206,7 +206,7 @@ Avoid (legacy/less clear):
 
 ## Standard architecture for project files
 
-When splitting medium or large modules in `src/` or `test/`, prefer a dedicated folder-based module boundary instead of accumulating many sibling files at the parent level.
+When splitting medium or large modules in `src/`, `examples/`, `benchmarks/`, or `testing/`, prefer a dedicated folder-based module boundary instead of accumulating many sibling files at the parent level.
 
 Use this naming convention for a module named `module`:
 
@@ -243,7 +243,7 @@ Architecture rules:
 - Avoid one-off naming patterns during refactors; once a module is folderized, keep all follow-up files in the same naming scheme.
 - Replace broad catch-all files with narrower module-owned `*.types.ts`, `*.services.ts`, or `*.utils.ts` files rather than recreating another hub.
 
-## Strict rules to enforce (apply to any suggestion touching `src/` or `test/`)
+## Strict rules to enforce (apply to any suggestion touching `src/`, `testing/`, `benchmarks/`, or `examples/`)
 
 1. Naming: avoid short local identifiers. Do not use these short names for non-trivial locals: `dx`, `dy`, `d`, `i`, `a`, `b`, `c`, `p`, `o`, `cand`, `tries`, `idx`.
    - If the original code uses a short name in a tiny loop (1–3 lines) and it is clearly idiomatic, allow `i`, `j` only.
@@ -251,7 +251,7 @@ Architecture rules:
 
 2. JSDoc: exported classes/functions/constants and public methods must have JSDoc with `@param` and `@returns` where appropriate. Add short `@example` when behavior is non-obvious.
 
-   JSDoc-for-constants rule: All exported or shared default constants in `src/` and `test/` must include a concise educational JSDoc explaining what the value controls (e.g., decay factor meaning, floor rates). Keep descriptions short and clarifying.
+  JSDoc-for-constants rule: All exported or shared default constants in `src/`, `testing/`, `benchmarks/`, and `examples/` must include a concise educational JSDoc explaining what the value controls (e.g., decay factor meaning, floor rates). Keep descriptions short and clarifying.
 
 3. Tests: follow the single-expect rule. Each `it()` (or `test()`) must have exactly one top-level `expect(...)` statement. If multiple assertions are needed, split into multiple `it()` cases or use helper assertions.
 
@@ -261,7 +261,7 @@ Architecture rules:
 
 6. Lookup tables and enums: prefer a single table/enum for small fixed mappings (for example direction deltas) and helper methods like `#opposite(direction)` rather than scattered arithmetic.
 
-7. Types: avoid `any` and `unknown` in `src/` and `test/`. Use precise types or `// eslint-disable-next-line @typescript-eslint/no-explicit-any` with a short justification comment.
+7. Types: avoid `any` and `unknown` in `src/`, `testing/`, `benchmarks/`, and `examples/`. Use precise types or `// eslint-disable-next-line @typescript-eslint/no-explicit-any` with a short justification comment.
 
 8. Local helper structure preference:
    - For new or refactored functions that introduce internal helpers, order the function as:
@@ -272,7 +272,7 @@ Architecture rules:
    - Helpers should be small and pure where practical, with step-level inline comments and JSDoc.
 
 9. Mandatory implementation pattern (always; keep cognitive complexity low):
-   - Applies to all new code and any modified/refactored code in `src/` and `test/`.
+  - Applies to all new code and any modified/refactored code in `src/`, `testing/`, `benchmarks/`, and `examples/`.
    - Prefer a _declarative top-level flow_ ("collect → transform → fold/return") over deeply nested control flow.
    - Avoid ternary chains (especially nested) for multi-branch fallback logic; use named resolver helpers with early returns instead.
    - When normalizing legacy/loose data, isolate type assertions/casting into a single helper and keep the rest strongly typed.
@@ -332,7 +332,7 @@ type Output = unknown;
 
 ## Automated validations to run before finalizing a suggestion
 
-When you modify or create files under `src/` or `test/`, run (or advise running) these quick validations. If you cannot run them, still make sure your suggestion would pass them.
+When you modify or create files under `src/`, `testing/`, `benchmarks/`, or `examples/`, run (or advise running) these quick validations. If you cannot run them, still make sure your suggestion would pass them.
 
 1. TypeScript diagnostics
 
@@ -340,7 +340,7 @@ When you modify or create files under `src/` or `test/`, run (or advise running)
 
    ## Purpose
 
-   Give brief, actionable guidance so suggestions touching `src/` or `test/` prioritize compliance with `STYLEGUIDE.md`.
+  Give brief, actionable guidance so suggestions touching `src/`, `testing/`, `benchmarks/`, or `examples/` prioritize compliance with `STYLEGUIDE.md`.
 
    Keep it light: prefer small, automated checks and a short validation summary with every patch.
 

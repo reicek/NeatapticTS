@@ -569,6 +569,21 @@ Parameters:
 
 Returns: Named function source string.
 
+### resolveBuiltinActivationSource
+
+```ts
+resolveBuiltinActivationSource(
+  squashName: string,
+): string | undefined
+```
+
+Resolve built-in activation snippets for both canonical and exported helper names.
+
+Parameters:
+- `squashName` - Activation function name.
+
+Returns: Built-in activation source when known.
+
 ### resolveSquashName
 
 ```ts

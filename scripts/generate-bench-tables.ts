@@ -19,7 +19,7 @@ import path from 'node:path';
 
 /** Canonical benchmark artifact consumed by the table generator. */
 const BENCHMARK_ARTIFACT_PATH = path.resolve(
-  'test/benchmarks/benchmark.results.json',
+  'benchmarks/benchmark.results.json',
 );
 
 /** Metrics shown in the variant delta table. */

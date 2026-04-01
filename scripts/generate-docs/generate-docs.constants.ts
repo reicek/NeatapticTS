@@ -23,7 +23,7 @@ export const FILE_SUMMARY_SYMBOL_NAME = '__file_summary__';
 export const SOURCE_FILE_GLOBS = ['**/*.ts'];
 
 /** Ignore rules for files that should never become generated docs sources. */
-export const SOURCE_FILE_IGNORE_GLOBS = ['**/*.d.ts'];
+export const SOURCE_FILE_IGNORE_GLOBS = ['**/*.d.ts', '**/*.test.ts'];
 
 /** Generated docs landing page file name for the folder index. */
 export const FOLDER_INDEX_FILE_NAME = 'FOLDERS.md';
@@ -62,15 +62,10 @@ export const DOCS_TARGETS: Record<string, DocsTargetConfig> = {
   },
   asciiMaze: {
     name: 'asciiMaze',
-    sourceDir: path.resolve('test', 'examples', 'asciiMaze'),
+    sourceDir: path.resolve('examples', 'asciiMaze'),
     docsDir: path.join(DOCS_DIR, 'examples', 'asciiMaze', 'docs'),
     rootDocsDir: path.join(DOCS_DIR, 'examples', 'asciiMaze', 'docs'),
-    rootReadmeSource: path.resolve(
-      'test',
-      'examples',
-      'asciiMaze',
-      'README.md',
-    ),
+    rootReadmeSource: path.resolve('examples', 'asciiMaze', 'README.md'),
     rootReadmeDestination: path.join(
       DOCS_DIR,
       'examples',
@@ -84,15 +79,10 @@ export const DOCS_TARGETS: Record<string, DocsTargetConfig> = {
   },
   'flappy-bird': {
     name: 'flappy-bird',
-    sourceDir: path.resolve('test', 'examples', 'flappy_bird'),
+    sourceDir: path.resolve('examples', 'flappy_bird'),
     docsDir: path.join(DOCS_DIR, 'examples', 'flappy_bird', 'docs'),
     rootDocsDir: path.join(DOCS_DIR, 'examples', 'flappy_bird', 'docs'),
-    rootReadmeSource: path.resolve(
-      'test',
-      'examples',
-      'flappy_bird',
-      'README.md',
-    ),
+    rootReadmeSource: path.resolve('examples', 'flappy_bird', 'README.md'),
     rootReadmeDestination: path.join(
       DOCS_DIR,
       'examples',

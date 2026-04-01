@@ -10,7 +10,11 @@ const config = {
   projects: [
     {
       displayName: 'default',
-      testMatch: ['**/test/**/!(asciiMaze).*.(test).ts'],
+      testMatch: [
+        '**/src/**/*.test.ts',
+        '**/benchmarks/**/*.test.ts',
+        '**/examples/**/*.test.ts',
+      ],
       preset: 'ts-jest/presets/default-esm',
       testEnvironment: 'node',
       extensionsToTreatAsEsm: ['.ts'],
@@ -20,15 +24,25 @@ const config = {
           { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true }
         ]
       },
-      setupFilesAfterEnv: ['<rootDir>/test/utils/jest-setup.ts'],
+      setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
       testTimeout: 300000,
-      collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
+      collectCoverageFrom: [
+        'src/**/*.ts',
+        '!src/**/*.d.ts',
+        '!src/**/*.test.ts',
+      ],
       coverageReporters: ['lcov', 'text', 'html'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/']
+      testPathIgnorePatterns: [
+        '/node_modules/',
+        '/dist/',
+        '/examples/asciiMaze/',
+      ],
     },
     {
       displayName: 'asciiMaze-browser',
-      testMatch: ['**/test/examples/asciiMaze/**/*.test.ts'],
+      testMatch: [
+        '**/examples/asciiMaze/**/*.test.ts',
+      ],
       preset: 'ts-jest/presets/default-esm',
       testEnvironment: 'jsdom',
       extensionsToTreatAsEsm: ['.ts'],
@@ -38,11 +52,15 @@ const config = {
           { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true }
         ]
       },
-      setupFilesAfterEnv: ['<rootDir>/test/utils/jest-setup.ts'],
-      testTimeout: 3000000
-    }
+      setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
+      testTimeout: 3000000,
+    },
   ],
-  testMatch: ['**/test/**/*.test.ts'],
+  testMatch: [
+    '**/src/**/*.test.ts',
+    '**/benchmarks/**/*.test.ts',
+    '**/examples/**/*.test.ts',
+  ],
   moduleFileExtensions: ['ts', 'js', 'mjs', 'cjs', 'json'],
   extensionsToTreatAsEsm: ['.ts'],
   transform: {
@@ -55,14 +73,11 @@ const config = {
       }
     ]
   },
-  setupFilesAfterEnv: ['<rootDir>/test/utils/jest-setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
   testTimeout: 300000,
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/*.test.ts'],
   coverageReporters: ['lcov', 'text', 'html'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-  globals: {
-    __SHOW_CONSOLE_FOR__: process.env.JEST_SHOW_CONSOLE_FOR || ''
-  }
+  testPathIgnorePatterns: ['/node_modules/', '/dist/']
 };
 
 export default config;

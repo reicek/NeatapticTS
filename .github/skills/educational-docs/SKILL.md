@@ -72,7 +72,7 @@ better teaching choice.
 - A generated folder README has become so large or monolithic that the better
   fix is to invoke `solid-split` and break the boundary into smaller chapter
   folders before continuing the docs pass.
-- A folder under `src/` or `test/` needs richer JSDoc so doc generation becomes
+- A folder under `src/`, `examples/`, `benchmarks/`, or `testing/` needs richer JSDoc so doc generation becomes
   more useful.
 - A split or refactor changed a module boundary and the documentation story now
   lags behind the code.

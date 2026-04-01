@@ -23,7 +23,7 @@ npm run trace:analyze -- <trace-path> --top=15
 Example:
 
 ```bash
-npm run trace:analyze -- test/examples/flappy_bird/Trace-20260309T191949.json --top=15
+npm run trace:analyze -- examples/flappy_bird/Trace-20260309T191949.json --top=15
 ```
 
 ## What the Analyzer Produces

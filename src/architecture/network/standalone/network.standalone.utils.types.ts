@@ -46,7 +46,7 @@ export const COVERAGE_COUNTER_REGEX =
 /** Regex stripping Istanbul function invocations from source snippets. */
 export const COVERAGE_CALL_REGEX = /cov_[\w$]+\(\)/g;
 /** Regex stripping sourceMappingURL comments from generated snippets. */
-export const SOURCE_MAP_REGEX = /^\s*\/\/ # sourceMappingURL=.*\s*$/gm;
+export const SOURCE_MAP_REGEX = /^\s*\/\/\s*# sourceMappingURL=.*\s*$/gm;
 /** Regex normalizing stray commas near opening parentheses. */
 export const STRAY_COMMA_OPEN_REGEX = /\(\s*,\s*/g;
 /** Regex normalizing stray commas near closing parentheses. */
@@ -56,7 +56,7 @@ export const SOLITARY_SEMICOLON_REGEX = /^\s*;\s*$/gm;
 /** Regex collapsing repeated semicolons. */
 export const REPEATED_SEMICOLON_REGEX = /;{2,}/g;
 /** Regex removing empty punctuation-only token lines. */
-export const EMPTY_TOKEN_REGEX = /^\s*[,;]?\s*$/gm;
+export const EMPTY_TOKEN_REGEX = /^\s*[,;]+\s*$/gm;
 
 /**
  * Built-in activation snippets emitted as named JavaScript function declarations.

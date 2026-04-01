@@ -1,6 +1,6 @@
 ---
 name: solid-split
-description: 'Plan and execute repo-consistent SOLID splits in NeatapticTS across src/ or test/, starting from a user-specified root such as #file:flappy_bird. Use when folderizing a module, thinning a compatibility facade, improving JSDoc so generated README files read naturally, or continuing an incremental split pass with stable imports.'
+description: 'Plan and execute repo-consistent SOLID splits in NeatapticTS across src/, examples/, benchmarks/, or testing/ surfaces, starting from a user-specified root such as #file:flappy_bird. Use when folderizing a module, thinning a compatibility facade, improving JSDoc so generated README files read naturally, or continuing an incremental split pass with stable imports.'
 argument-hint: 'Describe the split root, target module or folder, any relevant plan file, and optional detail about the next boundary to extract.'
 user-invocable: true
 disable-model-invocation: false
@@ -9,8 +9,8 @@ disable-model-invocation: false
 # Solid Split Playbook
 
 Use this skill to run the NeatapticTS house style for deliberate, resumable,
-documentation-aware SOLID splits in either library code under `src/` or demos
-and examples under `test/`.
+documentation-aware SOLID splits in either library code under `src/` or
+supporting surfaces under `examples/`, `benchmarks/`, and `testing/`.
 
 This skill is designed to complement the existing `solid-split` custom agent.
 The skill defines the repository-specific split protocol, documentation bar,
@@ -170,7 +170,7 @@ one-pass rewrites.
 - Keep top-level flows declarative: collect, transform, fold, return.
 - Use descriptive names and ES2023-first style where the touched code benefits.
 
-For demos under `test/examples/`, treat DX gaps as library/runtime evidence
+For demos under `examples/`, treat DX gaps as library/runtime evidence
 first. Do not normalize demo-specific workarounds if the real issue is a shared
 API, default, or runtime contract.
 
@@ -247,8 +247,8 @@ small-chapter split pattern.
 - A good split outcome is one where a new reader can discover the boundary by
   drilling down through a few concise README pages rather than one monolithic
   README.
-- Apply this standard everywhere the split skill is used: `src/`, `test/`,
-  `test/examples/`, `scripts/`, browser/demo surfaces, tooling folders, and any
+- Apply this standard everywhere the split skill is used: `src/`, `examples/`,
+  `benchmarks/`, `testing/`, `scripts/`, browser/demo surfaces, tooling folders, and any
   other project area that has become too broad for one file or one folder README.
 - Do not treat examples, scripts, or support tooling as exceptions. If they are
   large enough to need a SOLID split, they should follow the same direct-path,

@@ -48,7 +48,7 @@ Selection guide:
 - `plans/methods-docs.plans.md`: completed educational-docs lane for `src/methods` and reopen point for methods documentation drift.
 - `plans/methods-solid-split.plans.md`: completed structural split lane for `src/methods` and reopen point for later refactors.
 - `plans/neat-docs.plans.md`: completed educational-docs baseline for root-facing NEAT surfaces, kept as the reopen point for future README-opening drift or generator-ordering regressions.
-- `plans/readme-first-section-pass.plans.md`: completed repo-wide README-opening baseline across `src/` and `test/examples/`; use the matching `.logs.md` file for audit history and reopen the plan only if a changed boundary or new README surface reopens the lane.
+- `plans/readme-first-section-pass.plans.md`: completed repo-wide README-opening baseline across `src/` and `examples/`; use the matching `.logs.md` file for audit history and reopen the plan only if a changed boundary or new README surface reopens the lane.
 - `plans/neat-test-surface-repair.plans.md`: completed NEAT public test-surface repair baseline and reopen point for future compatibility regressions.
 - `plans/Network_Visualization_Export_Schema.md`: stable export schema for visualization and inspection tooling.
 - `plans/ONNX_EXPORT_PLAN.md`: ONNX export/import architecture and rollout phases.
@@ -79,7 +79,7 @@ Task-to-plan trigger phrases:
 - methods docs, methods README quality, educational-docs for methods: `plans/methods-docs.plans.md`
 - methods split, `src/methods` refactor, methods folderization: `plans/methods-solid-split.plans.md`
 - NEAT docs, generated README quality, NEAT documentation lane: `plans/neat-docs.plans.md`
-- README opening, first section, chapter intro quality, repo-wide README openings, `src` plus `test/examples` docs pass: `plans/readme-first-section-pass.plans.md`
+- README opening, first section, chapter intro quality, repo-wide README openings, `src` plus `examples` docs pass: `plans/readme-first-section-pass.plans.md`
 - NEAT test surface, public type compatibility, root facade repair: `plans/neat-test-surface-repair.plans.md`
 - explicit any, no-explicit-any, strict typing, src lint cleanup follow-up, reopen completed cleanup lane: `plans/src-no-explicit-any-cleanup.plans.md`
 - HTML docs renderer, sidebar, Mermaid validation, docs site tooling split: `plans/render-docs-html-solid-split.plans.md`

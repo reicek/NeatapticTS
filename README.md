@@ -35,9 +35,9 @@ If you want a library you can inspect, modify, and learn from while still runnin
 | Goal | Best place to start |
 | --- | --- |
 | Read the architecture from the source side | [src/README.md](./src/README.md) |
-| Study the strongest end-to-end example | [test/examples/flappy_bird/README.md](./test/examples/flappy_bird/README.md) |
-| Study curriculum learning and reward shaping | [test/examples/asciiMaze/README.md](./test/examples/asciiMaze/README.md) |
-| Browse runnable example source directly | [test/examples](./test/examples) |
+| Study the strongest end-to-end example | [examples/flappy_bird/README.md](./examples/flappy_bird/README.md) |
+| Study curriculum learning and reward shaping | [examples/asciiMaze/README.md](./examples/asciiMaze/README.md) |
+| Browse runnable example source directly | [examples](./examples) |
 | Review contribution standards | [CONTRIBUTING.md](./CONTRIBUTING.md) and [STYLEGUIDE.md](./STYLEGUIDE.md) |
 
 ## Reading paths
@@ -47,13 +47,13 @@ If you want a library you can inspect, modify, and learn from while still runnin
 1. Read [docs/index.html](./docs/index.html).
 2. Read [src/README.md](./src/README.md).
 3. Open one example:
-	 - [test/examples/flappy_bird/README.md](./test/examples/flappy_bird/README.md)
-	 - [test/examples/asciiMaze/README.md](./test/examples/asciiMaze/README.md)
+	 - [examples/flappy_bird/README.md](./examples/flappy_bird/README.md)
+	 - [examples/asciiMaze/README.md](./examples/asciiMaze/README.md)
 
 ### If you want runnable source first
 
-- [test/examples/flappy_bird](./test/examples/flappy_bird) for the clearest full-system example.
-- [test/examples/asciiMaze](./test/examples/asciiMaze) for evolution orchestration, telemetry, and visualization.
+- [examples/flappy_bird](./examples/flappy_bird) for the clearest full-system example.
+- [examples/asciiMaze](./examples/asciiMaze) for evolution orchestration, telemetry, and visualization.
 
 ### If you want library internals
 
@@ -66,7 +66,7 @@ If you want a library you can inspect, modify, and learn from while still runnin
 
 ### Flappy Bird
 
-[test/examples/flappy_bird](./test/examples/flappy_bird) is the best single example if you want to understand how NeatapticTS feels in a real project.
+[examples/flappy_bird](./examples/flappy_bird) is the best single example if you want to understand how NeatapticTS feels in a real project.
 
 It combines:
 
@@ -78,7 +78,7 @@ It combines:
 
 ### ASCII Maze
 
-[test/examples/asciiMaze](./test/examples/asciiMaze) is the best companion example if you want to study curriculum progression, compact observations, reward shaping, and browser plus terminal visualization.
+[examples/asciiMaze](./examples/asciiMaze) is the best companion example if you want to study curriculum progression, compact observations, reward shaping, and browser plus terminal visualization.
 
 ## Install
 
@@ -117,7 +117,7 @@ For options, telemetry, and subsystem details, continue in [docs/index.html](./d
 | Path | Purpose |
 | --- | --- |
 | [src](./src) | Core library code and generated module docs |
-| [test/examples](./test/examples) | Educational examples and demos |
+| [examples](./examples) | Educational examples and demos |
 | [docs](./docs) | Generated documentation site and example assets |
 | [scripts](./scripts) | Build and docs tooling |
 | [plans](./plans) | Architecture and roadmap material |

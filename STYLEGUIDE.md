@@ -429,7 +429,7 @@ All tests in the repository must follow these rules to keep examples, tutorials,
 - Aim for 100% coverage on logic you change or add. For legacy modules where 100% isn't feasible in one pass, document missing coverage areas and add tests incrementally.
 
 - Check existing tests and folder patterns before creating a new test file:
-  - Use existing folders (e.g. `test/neat/`) and file naming conventions as a guide.
+  - Use existing folders (e.g. `src/neat/`, `benchmarks/`, or `examples/`) and file naming conventions as a guide.
   - Reuse and extend existing fixtures/helpers instead of adding new duplicate files.
 
 Example test layout:
@@ -508,6 +508,6 @@ Use this regex to find likely candidates to rename (review results manually):
 
 ---
 
-If you want, I can run a repo-wide scan and propose a patchset that renames short locals automatically (I will not apply bulk renames without your approval). If you'd like that, say which folders to prioritize (suggestion: `test/examples/asciiMaze/` then `src/`).
+If you want, I can run a repo-wide scan and propose a patchset that renames short locals automatically (I will not apply bulk renames without your approval). If you'd like that, say which folders to prioritize (suggestion: `examples/asciiMaze/` then `src/`).
 
 Thank you — I'll keep the guide updated as we iterate on modernization and educational docs. <3

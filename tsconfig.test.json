@@ -6,16 +6,21 @@
     // Ensure test files compile as ESM and allow ESM syntax
     "module": "ESNext",
     "moduleResolution": "Bundler",
-  "types": ["jest", "node"],
-  "lib": ["ES2023", "DOM"],
-  // Disable verbatimModuleSyntax for tests so Jest/ts-jest won't complain about ESM syntax classification
-  "verbatimModuleSyntax": false,
+    "types": ["jest", "node"],
+    "lib": ["ES2023", "DOM"],
+    // Disable verbatimModuleSyntax for tests so Jest/ts-jest won't complain about ESM syntax classification
+    "verbatimModuleSyntax": false,
     // Allow explicit `.ts` import specifiers in ESM examples executed via ts-node.
     "allowImportingTsExtensions": true,
     // Allow importing from src with relative paths
     "allowJs": false,
     "noEmit": false
   },
-  "include": ["test/**/*.ts", "src/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "testing/jest-setup.ts",
+    "benchmarks/**/*.ts",
+    "examples/**/*.ts"
+  ],
   "exclude": ["dist", "node_modules"]
 }

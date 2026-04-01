@@ -22,7 +22,7 @@ export function resolveCliOptions(
   );
   if (!pathArgument) {
     throw new Error(
-      'Missing trace path. Example: npm run trace:analyze -- test/examples/flappy_bird/Trace.json',
+      'Missing trace path. Example: npm run trace:analyze -- examples/flappy_bird/Trace.json',
     );
   }
 

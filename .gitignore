@@ -50,5 +50,11 @@ Thumbs.db
 *.results.json
 jest-dev.dev.bundle.*
 jest-prod.prod.bundle.*
-test/benchmarks/asciiMaze.benchmark.results.
+bench-browser/dev.bundle*.js
+bench-browser/dev.bundle*.js.map
+bench-browser/prod.bundle*.js
+bench-browser/prod.bundle*.js.map
+bench-browser/jest-*.html
+bench-browser/tmp-*.html
+benchmarks/asciiMaze.benchmark.results.
 .tmp_liquidcarrot_flappy
