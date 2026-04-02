@@ -433,7 +433,7 @@ Returns: Nothing.
 ```ts
 requestGenerationWithOptionalStartupPreview(
   options: { evolutionWorker: Worker; canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; isStopped: () => boolean; showStartupPreview: boolean; },
-): Promise<EvolutionGenerationPayload>
+): Promise<WorkerChannelGenerationPayload>
 ```
 
 Requests the next generation and optionally shows the first-load startup preview.

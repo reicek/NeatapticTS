@@ -512,8 +512,7 @@ function resolvePositionedNetworkGraphScene(
  * Draws the positioned graph layers and optional guide overlays.
  *
  * @param context - Canvas 2D drawing context.
- * @param networkVisualizationScene - Frame scene context.
- * @param positionedNetworkGraphScene - Positioned graph scene.
+ * @param resolvedNetworkVisualizationFrame - Resolved network visualization frame containing positioned scene, connections, and color scales.
  * @param hoverState - Optional host-owned hover state for interactive emphasis.
  * @returns Nothing.
  */
