@@ -36,13 +36,13 @@ const EXAMPLE_DEFINITIONS: readonly ExampleDefinition[] = [
     dirName: 'asciiMaze',
     label: 'asciiMaze',
     title: 'ASCII Maze (NeatapticTS)',
-    sourceDir: path.resolve('test', 'examples', 'asciiMaze'),
+    sourceDir: path.resolve('examples', 'asciiMaze'),
   },
   {
     dirName: 'flappy_bird',
     label: 'flappy_bird',
     title: 'Flappy Bird (NeatapticTS)',
-    sourceDir: path.resolve('test', 'examples', 'flappy_bird'),
+    sourceDir: path.resolve('examples', 'flappy_bird'),
   },
 ];
 

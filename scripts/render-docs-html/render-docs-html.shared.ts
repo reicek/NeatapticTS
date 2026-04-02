@@ -185,8 +185,8 @@ function resolveExplicitRepositoryPath(href: string): string | undefined {
     normalizedHref.startsWith('docs/') ||
     normalizedHref === 'src' ||
     normalizedHref.startsWith('src/') ||
-    normalizedHref === 'test/examples' ||
-    normalizedHref.startsWith('test/examples/')
+    normalizedHref === 'examples' ||
+    normalizedHref.startsWith('examples/')
   ) {
     return normalizedHref;
   }
@@ -224,18 +224,16 @@ function resolveCurrentSourceDirectory(currentDir: string): string | undefined {
   if (exampleDocsMatch) {
     const [, exampleDirName, subpath = ''] = exampleDocsMatch;
     return normalizeRepoRelativeHref(
-      path.posix.join('test/examples', exampleDirName, subpath),
+      path.posix.join('examples', exampleDirName, subpath),
     );
   }
 
   if (currentDir === 'examples') {
-    return 'test/examples';
+    return 'examples';
   }
 
   if (currentDir.startsWith('examples/')) {
-    return normalizeRepoRelativeHref(
-      currentDir.replace(/^examples\//, 'test/examples/'),
-    );
+    return normalizeRepoRelativeHref(currentDir);
   }
 
   return normalizeRepoRelativeHref(path.posix.join('src', currentDir));
@@ -292,21 +290,20 @@ function resolvePublishedDocsTargetFromRepositoryPath(
   }
 
   if (
-    normalizedPath === 'test/examples' ||
-    normalizedPath === 'test/examples/'
+    normalizedPath === 'examples' ||
+    normalizedPath === 'examples/' ||
+    normalizedPath === 'examples/README.md'
   ) {
     return 'examples';
   }
 
-  const exampleReadmeMatch = /^test\/examples\/([^/]+)\/README\.md$/.exec(
-    normalizedPath,
-  );
+  const exampleReadmeMatch = /^examples\/([^/]+)\/README\.md$/.exec(normalizedPath);
   if (exampleReadmeMatch) {
     return `examples/${exampleReadmeMatch[1]}/docs`;
   }
 
   const nestedExampleReadmeMatch =
-    /^test\/examples\/([^/]+)\/(.+)\/README\.md$/.exec(normalizedPath);
+    /^examples\/([^/]+)\/(.+)\/README\.md$/.exec(normalizedPath);
   if (nestedExampleReadmeMatch) {
     return `examples/${nestedExampleReadmeMatch[1]}/docs/${nestedExampleReadmeMatch[2]}`;
   }

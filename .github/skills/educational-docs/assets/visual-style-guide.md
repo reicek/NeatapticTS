@@ -24,7 +24,7 @@ poster.
 ## Canonical Palette
 
 Anchor the look to the Astro Bird constants in
-`test/examples/flappy_bird/constants/constants.palette.ts`.
+`examples/flappy_bird/constants/constants.palette.ts`.
 
 Primary colors:
 

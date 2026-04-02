@@ -99,7 +99,7 @@ surface for the library rather than the final destination for a workaround.
 
 - This repository already includes `scripts/analyze-trace/analyze-trace.ts` for compact,
   thread-aware trace audits.
-- For work in `src/` or `test/`, consult the nearest folder `README.md` before
+- For work in `src/`, `examples/`, `benchmarks/`, or `testing/`, consult the nearest folder `README.md` before
   deep file reads.
 - For substantial architecture findings, align the report with the relevant
   `plans/` document when one exists.

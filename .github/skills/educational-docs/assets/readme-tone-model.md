@@ -1,7 +1,7 @@
 # README Tone Model
 
 Use this rubric when shaping JSDoc so generated README output feels closer to
-`test/examples/flappy_bird/README.md` and farther from a dry symbol dump.
+`examples/flappy_bird/README.md` and farther from a dry symbol dump.
 
 ## What Makes The Flappy Bird README Strong
 

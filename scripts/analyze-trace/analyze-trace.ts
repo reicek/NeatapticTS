@@ -6,7 +6,7 @@
  * analysis, and report rendering each live in focused sibling modules.
  *
  * Usage:
- *   npm run trace:analyze -- test/examples/flappy_bird/Trace-20260309T191949.json
+ *   npm run trace:analyze -- examples/flappy_bird/Trace-20260309T191949.json
  *   npm run docs:build-scripts && node dist-docs/scripts/analyze-trace/analyze-trace.js path/to/trace.json --top=20
  */
 import path from 'node:path';

@@ -29,7 +29,7 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
   - [utils-docs.plans.md](utils-docs.plans.md) [DONE]
   - Both demos are now solid split and the Flappy Bird documentation pass is complete enough to stop being a documentation blocker.
   - The architecture split follow-through and the NEAT educational-docs lane are now also complete enough to stop being Phase 0 blockers.
-  - The repo-wide README first-section pass is now closed across the tracked README surfaces under `src/` and `test/examples/`.
+  - The repo-wide README first-section pass is now closed across the tracked README surfaces under `src/` and `examples/`.
   - The remaining structural polish in Phase 0 is the repository-wide modernization pass plus its validation gate.
 - Supporting repair and docs-tooling stabilization lane [DONE]
   - [neat-test-surface-repair.plans.md](neat-test-surface-repair.plans.md) [DONE]
@@ -43,7 +43,7 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
   - Scope note: this lane replaced the stale root checklist with a roadmap-tracked plan aligned to the current folderized tree and is now the closed baseline for future reopen-only follow-up.
 - ES2023 modernization (completed Phase 0 lane: project-wide named errors with `Error.cause`, targeted syntax cleanup, helper normalization, narrow module-edge cleanup, and lint/CI enforcement) [DONE]
   - Plan: [ES2023 migration](ES2023%20migration)
-   - Scope note: ESM package wiring, the ES2023 TypeScript baseline, the lint scaffold, named-error rollout, targeted syntax cleanup, shared clone-helper normalization, narrow workflow or benchmark edge cleanup, and CI enforcement are now complete. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
+  - Scope note: ESM package wiring, the ES2023 TypeScript baseline, the lint scaffold, named-error rollout, targeted syntax cleanup, shared clone-helper normalization, narrow workflow or benchmark edge cleanup, and CI enforcement are now complete. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
 
 **Gate to Phase 1:** satisfied. Both demos are solid split and documented, the main app split is stable, the remaining documentation work is no longer obscuring ownership boundaries, the ES2023 cleanup lane is complete, and `npm run build`, `npm run lint`, and `npm test` are green after the modernization pass.
 
@@ -161,13 +161,13 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 - HyperEvoDevo MorphoNEAT
   - Plan: [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]
 - HyperEvoDevo racing curriculum and behavioral drives follow-on
-   - Plan: [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md) [PLANNED]
+  - Plan: [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md) [PLANNED]
 
 **Why last:** this work depends heavily on the Memory Optimization track (Track 2 in that plan) and benefits from stable NEAT correctness, deterministic activation semantics, robust serialization/checkpointing, and a mature enough Hyper core that benchmark results reflect the algorithm rather than unstable infrastructure.
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phase 0 is complete** and the project is ready to begin **Phase 1**. Both demos are solid split and documented, the example learnability pass materially strengthened across `test/examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, and the ES2023 modernization lane is closed as a completed Phase 0 baseline.
+Current status: **Phase 0 is complete** and the project is ready to begin **Phase 1**. Both demos are solid split and documented, the example learnability pass materially strengthened across `examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, and the ES2023 modernization lane is closed as a completed Phase 0 baseline.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes

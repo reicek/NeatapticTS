@@ -263,7 +263,7 @@ Deferred (post‑Phase 3): chunked copy yield refinements (browser large slabs),
 
 ### Phase 3 Results (Final Validation Before Later Track 1 Phases)
 
-Source: `test/benchmarks/benchmark.results.json` (latest history entry vs earliest recorded baseline in same file).
+Source: `benchmarks/benchmark.results.json` (latest history entry vs earliest recorded baseline in same file).
 
 | Size | Baseline Build ms (mean) | Phase 3 Build ms (mean) | Δ Build % | Baseline Fwd Avg ms | Phase 3 Fwd Avg ms | Δ Fwd % | Bytes/Conn Baseline | Bytes/Conn Phase 3 | Δ Bytes/Conn |
 | ---- | ------------------------ | ----------------------- | --------: | ------------------- | ------------------ | ------: | ------------------- | ------------------ | -----------: |
@@ -456,7 +456,7 @@ Use Cases: Deep recurrent nets, streaming sensor data, on-device low-memory infe
 
 ### Phase 10 – Foundation Hardening & Release Gates [Planned]
 
-Files: `test/benchmarks/*`, CI/workflow configs, memory telemetry integration points
+Files: `benchmarks/*`, CI/workflow configs, memory telemetry integration points
 
 1. (C) Consolidate pass/fail gates for variance, memory regression, and determinism replay.
 2. (C) Enforce stable artifact snapshots for rollback and audit (Node + Browser where feasible).

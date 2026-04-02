@@ -43,7 +43,7 @@ npm run docs
 
 - Keep changes small and focused. Prefer many small PRs over one large PR.
 - Follow TypeScript types and avoid `any` unless necessary; include type updates where relevant.
-- Add or update tests for behavioral changes. Tests live in `test/` and run with `npm test`.
+- Add or update tests for behavioral changes. Most behavioral tests now live alongside their owners in `src/**/*.test.ts`, the shared global Jest setup lives in `testing/jest-setup.ts`, and longer-running suites live in `examples/` and `benchmarks/`; run them with `npm test`.
 
 ---
 

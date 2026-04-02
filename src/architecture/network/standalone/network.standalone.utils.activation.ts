@@ -68,7 +68,7 @@ function resolveActivationFunctionSource(
   squashFunction: StandaloneSquashFunction,
   nodeTraversalIndex: number,
 ): string {
-  const builtinSource = BUILTIN_ACTIVATION_SNIPPETS[squashName];
+  const builtinSource = resolveBuiltinActivationSource(squashName);
   if (typeof builtinSource === 'string') {
     return normalizeBuiltinSource(builtinSource, squashName);
   }
@@ -78,6 +78,29 @@ function resolveActivationFunctionSource(
     squashName,
     nodeTraversalIndex,
   );
+}
+
+/**
+ * Resolve built-in activation snippets for both canonical and exported helper names.
+ *
+ * @param squashName Activation function name.
+ * @returns Built-in activation source when known.
+ */
+function resolveBuiltinActivationSource(
+  squashName: string,
+): string | undefined {
+  const directBuiltinSource = BUILTIN_ACTIVATION_SNIPPETS[squashName];
+  if (typeof directBuiltinSource === 'string') {
+    return directBuiltinSource;
+  }
+
+  const builtinAliasSuffix = 'Activation';
+  if (!squashName.endsWith(builtinAliasSuffix)) {
+    return undefined;
+  }
+
+  const canonicalBuiltinName = squashName.slice(0, -builtinAliasSuffix.length);
+  return BUILTIN_ACTIVATION_SNIPPETS[canonicalBuiltinName];
 }
 
 /**
