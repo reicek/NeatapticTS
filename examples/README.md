@@ -6,17 +6,19 @@ The `examples` folder exists to show what NeatapticTS looks like when it leaves 
 
 There are currently two flagship examples here:
 
-- [flappy_bird](./flappy_bird) for a fast, reactive control problem with rich temporal observations and browser-worker playback.
-- [asciiMaze](./asciiMaze) for a more deliberate navigation problem with compact inputs, reward shaping, curriculum transfer, and terminal/browser telemetry.
+- [flappy_bird](./flappy_bird) for a fast, reactive control problem with shared-seed evaluation, temporal observations, feed-forward local memory, and browser-worker playback.
+- [asciiMaze](./asciiMaze) for a more deliberate navigation problem with compact inputs, reward shaping, curriculum transfer, telemetry-rich search, and explicit controller-level search overlays.
 
 If the main library README is the front door, this folder is the arcade: two cabinets, two different kinds of thinking, same evolutionary engine underneath.
+
+Read them as complementary uses of the same controller contract. Flappy Bird shows how deterministic evaluation, feed-forward local memory, and worker-backed inspection fit a fast control loop. ASCII Maze shows how compact perception, curriculum transfer, telemetry-rich search, and explicit search overlays fit a navigation problem where the shaping story has to stay visible.
 
 ## Pick your cabinet
 
 | If you want to learn about... | Start here | Why |
 | --- | --- | --- |
-| Browser-friendly neuroevolution as a system | [flappy_bird/README.md](./flappy_bird/README.md) | It is the clearest end-to-end architecture demo in the repo. |
-| Reward shaping and compact policy design | [asciiMaze/README.md](./asciiMaze/README.md) | It shows how a small observation space can still support interesting behavior. |
+| Browser-friendly neuroevolution as a system | [flappy_bird/README.md](./flappy_bird/README.md) | It is the clearest end-to-end architecture demo in the repo and the best place to study shared-seed evaluation plus feed-forward local memory. |
+| Reward shaping, compact policy design, and search overlays | [asciiMaze/README.md](./asciiMaze/README.md) | It shows how a small observation space can still support interesting behavior while keeping curriculum and telemetry visible. |
 | Live demos you can open in the browser | [flappy_bird/index.html](./flappy_bird/index.html) and [asciiMaze/index.html](./asciiMaze/index.html) | Both examples have browser surfaces, but they teach different engineering tradeoffs. |
 | Runnable source before documentation | [flappy_bird](./flappy_bird) and [asciiMaze](./asciiMaze) | Both folders are structured as readable systems, not single demo files. |
 
@@ -36,8 +38,8 @@ flowchart LR
     Flappy --> FlappyGoal[Goal: survive pipes and time jumps well]
     Maze --> MazeGoal[Goal: reach the exit efficiently]
 
-    Flappy --> FlappyTeach[Teaches fairness, replay, UI boundaries]
-    Maze --> MazeTeach[Teaches reward shaping, policy minimalism, telemetry]
+    Flappy --> FlappyTeach[Teaches fairness, feed-forward memory, UI boundaries]
+    Maze --> MazeTeach[Teaches reward shaping, search overlays, telemetry]
 ```
 
 Both examples use evolving neural networks whose topology and weights can change over time. The difference is not the evolutionary family. The difference is the kind of intelligence pressure each environment applies.
@@ -87,6 +89,7 @@ What the policy decides:
 What this example is really for:
 
 - learning how to reduce lucky-rollout bias,
+- seeing how temporal observations can keep a feed-forward policy stateful enough for a fast control task,
 - seeing how a browser demo can stay educational without owning simulation authority,
 - understanding how to expose evolved networks for inspection instead of just replaying them as spectacle.
 
@@ -117,7 +120,7 @@ What this example is really for:
 
 - learning how compact observations can still support useful behavior,
 - studying reward shaping in sparse-goal environments,
-- seeing curriculum transfer, telemetry, and optional refinement in one system.
+- seeing curriculum transfer, telemetry-rich search, and controller-level search overlays in one system.
 
 Best starting points:
 
@@ -132,7 +135,7 @@ Best starting points:
 | Core challenge | Reflex control under changing geometry | Deliberate navigation toward a goal |
 | Observation style | Broad temporal observation | Tight handcrafted state summary |
 | Policy outputs | 2 action scores | 4 directional scores |
-| Teaching emphasis | Evaluation fairness, worker playback, inspectable UI | Reward shaping, curriculum transfer, telemetry-rich evolution |
+| Teaching emphasis | Evaluation fairness, feed-forward local memory, worker playback, inspectable UI | Reward shaping, curriculum transfer, telemetry-rich evolution, explicit search overlays |
 | Runtime flavor | Browser-heavy and replay-oriented | Console/browser hybrid and experiment-oriented |
 | Best first question | How do I run NEAT in a responsive app? | How do I turn sparse navigation into learnable signals? |
 

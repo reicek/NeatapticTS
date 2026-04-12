@@ -143,6 +143,7 @@ export function assignOffspringNodes(
     crossoverContext.randomGenerator,
   );
   assignNodeIndexes(crossoverContext.offspring.nodes);
+  crossoverContext.offspring.refreshExplicitIORoles();
 }
 
 /**
@@ -224,6 +225,7 @@ function createOffspringScaffold(
   offspring.nodes = [];
   offspring.selfconns = [];
   offspring.gates = [];
+  offspring.refreshExplicitIORoles();
   return offspring;
 }
 

@@ -159,6 +159,7 @@ export default class Architect {
     network.connections = Array.from(connections);
     network.gates = Array.from(gates);
     network.selfconns = Array.from(selfconns);
+    network.refreshExplicitIORoles();
 
     if (network.input === 0 || network.output === 0) {
       throw new ArchitectZeroInputOutputNodesError(

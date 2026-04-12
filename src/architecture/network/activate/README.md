@@ -199,16 +199,17 @@ is currently valid. If that attempt fails (for instance because the slab is stal
 after a structural mutation) execution gracefully falls back to a node‑by‑node loop.
 
 Algorithm outline:
- 1. (Optional) Refresh cached topological order if the network enforces acyclicity
-    and a structural change marked the order as dirty.
+1. (Optional) Refresh the compiled activation schedule when a structural change
+   marked topology as dirty.
  2. Validate the input dimensionality.
  3. Try the fast slab path; if it throws, continue with the standard path.
  4. Acquire a pooled output buffer sized to the number of output neurons.
- 5. Iterate all nodes in their internal order:
-      - Input nodes: directly assign provided input values.
-      - Hidden nodes: compute activation via Node.noTraceActivate (no bookkeeping).
-      - Output nodes: compute activation and store it (in sequence) inside the
-        pooled output buffer.
+5. Traverse nodes in the compiled activation order when available:
+     - Input nodes: assign values by explicit `inputNodeIds`, not raw node position.
+     - Hidden and recurrent-component nodes: compute activation via
+       Node.noTraceActivate without training traces.
+     - Output nodes: activate in schedule order, then read out results in explicit
+       `outputNodeIds` order so vector semantics stay stable even if storage order drifts.
  6. Copy the pooled buffer into a fresh array (detaches user from the pool) and
     release the pooled buffer back to the pool.
 
@@ -234,8 +235,8 @@ console.log(out); // => e.g. [0.5123, 0.0441]
 
 Runtime network view used by the object-graph activation pipeline.
 
-This intentionally describes the internal fields activation reads/writes
-(training step, RNG, regularization knobs, and slab fast-path hooks).
+This intentionally describes the internal fields activation reads and writes
+while orchestrating scheduling, RNG use, regularization, and slab fast-path hooks.
 
 ### ActivationOutputBuffer
 
@@ -436,7 +437,7 @@ activateNodeNetworkFallback(
 ): void
 ```
 
-Run fallback node-by-node activation for networks without explicit layer definitions.
+Run schedule-aware node activation for networks without explicit layer definitions.
 
 Parameters:
 - `network` - Network being activated.
@@ -452,17 +453,19 @@ Returns: Nothing.
 
 ```ts
 activateNodesAndCollectOutputs(
-  nodes: default[],
-  inputVector: number[],
+  activationNodes: default[],
+  inputValuesByNodeId: Map<number, number>,
+  orderedOutputNodes: default[],
   outputBuffer: ActivationArray,
 ): void
 ```
 
-Activate raw nodes in order and collect output-node activations into output buffer.
+Activate raw nodes in the resolved execution order and collect outputs by explicit role order.
 
 Parameters:
-- `nodes` - Network nodes in activation order.
-- `inputVector` - Input vector.
+- `activationNodes` - Network nodes in activation order.
+- `inputValuesByNodeId` - Stable lookup for explicit input-role injection.
+- `orderedOutputNodes` - Output nodes in public vector order.
 - `outputBuffer` - Mutable output buffer.
 
 Returns: Nothing.
@@ -872,7 +875,7 @@ prepareTopologyForActivation(
 ): void
 ```
 
-Ensure topological order is refreshed before activation when acyclic mode requires it.
+Ensure compiled activation scheduling is refreshed before activation when topology changed.
 
 Parameters:
 - `runtimeNetwork` - Runtime activation internals.
@@ -1614,7 +1617,7 @@ refreshTopologicalOrderWhenRequired(
 ): void
 ```
 
-Refresh cached topological order when acyclic mode is active and marked dirty.
+Refresh compiled activation scheduling when topology is marked dirty.
 
 Parameters:
 - `activationContext` - Shared no-trace activation state.
@@ -1710,6 +1713,97 @@ Parameters:
 
 Returns: Network internals view used by activation helper modules.
 
+## architecture/network/activate/network.activate.schedule.utils.ts
+
+### createNodesByGeneId
+
+```ts
+createNodesByGeneId(
+  nodes: readonly default[],
+): Map<number, default>
+```
+
+Create a stable node lookup by gene id.
+
+Parameters:
+- `nodes` - Runtime node collection.
+
+Returns: Stable node lookup map.
+
+### resolveActivationTraversalNodes
+
+```ts
+resolveActivationTraversalNodes(
+  network: default,
+): default[]
+```
+
+Resolve the node traversal order for one activation pass.
+
+The compiled activation schedule takes priority, then the legacy acyclic
+`_topoOrder` cache, then the raw `nodes` array as a final compatibility
+fallback for older or partially initialized runtimes.
+
+Parameters:
+- `network` - Target runtime network.
+
+Returns: Deterministic activation-node traversal list.
+
+### resolveInputValuesByNodeId
+
+```ts
+resolveInputValuesByNodeId(
+  network: default,
+  inputVector: number[],
+): Map<number, number>
+```
+
+Resolve one input-value lookup keyed by stable input-node gene id.
+
+Explicit `inputNodeIds` are used when available so callers can reorder the
+runtime `nodes` array without changing public input-vector semantics.
+
+Parameters:
+- `network` - Target runtime network.
+- `inputVector` - Input vector supplied by the caller.
+
+Returns: Stable input-value lookup for this activation pass.
+
+### resolveNodesFromCompiledSchedule
+
+```ts
+resolveNodesFromCompiledSchedule(
+  activationSchedule: ActivationSchedule | null | undefined,
+  nodesByGeneId: ReadonlyMap<number, default>,
+): default[] | null
+```
+
+Resolve activation nodes from the compiled schedule when it is present and valid.
+
+Parameters:
+- `activationSchedule` - Cached compiled schedule.
+- `nodesByGeneId` - Stable node lookup by gene id.
+
+Returns: Flattened activation-node order or null when the schedule is absent or stale.
+
+### resolveOrderedOutputNodes
+
+```ts
+resolveOrderedOutputNodes(
+  network: default,
+): default[]
+```
+
+Resolve output nodes in the public output-vector order.
+
+Explicit `outputNodeIds` keep output readout stable even when traversal order
+or storage order changes. Older runtimes fall back to raw output-node order.
+
+Parameters:
+- `network` - Target runtime network.
+
+Returns: Output nodes in public vector order.
+
 ## architecture/network/activate/network.activate.notrace.traversal.utils.ts
 
 ### activateHiddenNode
@@ -1742,27 +1836,12 @@ Parameters:
 
 Returns: Nothing.
 
-### activateOutputNodeAndAdvanceIndex
-
-```ts
-activateOutputNodeAndAdvanceIndex(
-  activationContext: SingleNodeNoTraceActivationContext,
-): number
-```
-
-Activate an output node, write the activation value, and advance the output index.
-
-Parameters:
-- `activationContext` - Node-specific activation state.
-
-Returns: Next output write index.
-
 ### activateSingleNodeWithoutTrace
 
 ```ts
 activateSingleNodeWithoutTrace(
   activationContext: SingleNodeNoTraceActivationContext,
-): number
+): void
 ```
 
 Activate one node and return the next output write index.

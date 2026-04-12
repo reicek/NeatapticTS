@@ -1,11 +1,11 @@
 # Proper NEAT (Reference-Quality) — Phase 1 Log
 
-**Status:** [WIP]
+**Status:** [DONE]
 
 ## Audit scope
 
 - Objective: turn NeatapticTS into a reference-quality proper-NEAT implementation with canonical historical markings, deterministic replay, strict native compatibility, source-first documentation, and opt-in beyond-paper extensions that do not redefine canonical behavior.
-- Active tracker: detailed live planning remains in [neat.plans.md](neat.plans.md).
+- Closed tracker: the final plan state and reopen conditions now live in [neat.plans.md](neat.plans.md).
 
 ## Durable milestones
 
@@ -104,6 +104,24 @@
 - Clarified the runtime temporal-extension helper and strict genome descriptor contract so enable/disable toggles preserve descriptor identity while the referenced node ids, connection innovations, and gater ownership still exist.
 - Added focused regressions across runtime serialization, strict genome materialization, strict validation, and export/import to prove temporal descriptors survive disabled-gene state until structural removal or ungating removes the referenced identity.
 
+### [DONE] Step 7.5 — Controller-policy boundary hardening
+
+- Confirmed `src/neat/diversity/`, `src/neat/objectives/`, `src/neat/selection/`, and `src/neat/telemetry/` remain explicit external controller layers rather than canonical genome or phenotype state.
+- Hardened the overlay-heavy novelty, adaptive, speciation, and multiobjective chapters so score blending, acceptance policy, species-pressure behavior, and `_mo*` annotations stay documented as controller-owned overlays.
+- Preserved export and import semantics by keeping score, novelty, and `_moRank` / `_moCrowd` inside explicit `controllerMeta` instead of widening the canonical genome contract.
+
+### [DONE] Step 7.6 — Flagship-demo boundary audit and source follow-through
+
+- Closed the README-first flagship audit with a deliberately asymmetric result: ASCII Maze now carries the beyond-paper navigation story, while Flappy Bird stays the feed-forward-first control and runtime-inspection story.
+- Tightened the public docs across `examples/asciiMaze/README.md`, `examples/flappy_bird/README.md`, `examples/README.md`, and `src/neat/README.md` so the two demo roles read through current concepts rather than plan chronology.
+- Landed the source-contract follow-through by tying the ASCII Maze default mutation shelf to `allowRecurrent`, while Flappy Bird now pins both the trainer and worker runtime to `allowRecurrent: false` alongside the feed-forward mutation shelf.
+
+### [DONE] Phase 7 closure — Beyond-paper lane closed for current scope
+
+- Closed the local Phase 7 lane in [neat.plans.md](neat.plans.md) after Step 7.5 and Step 7.6 met the stated exit criteria and no active frontier remained.
+- Kept later beyond-paper continuation explicitly reopen-only: any future performance or extension follow-on must start from a new user-directed reopen decision rather than leaving this tracker live by default.
+- Preserved the closed-state rules for recurrent descriptors, controller-policy overlays, and flagship-demo boundaries as the durable beyond-paper baseline.
+
 ## Controls and evidence
 
 - Each landed milestone used the relevant subset of `npm run build`, targeted guard suites, and `npm run docs`.
@@ -114,10 +132,13 @@
 - Step 7.4b evidence: targeted `network.serialize` / `network.mutate` / `network.genetic` / `genome` / `export` / `compat` / `validate` slice (7 suites / 187 tests), plus `npm run build` and `npm run docs`; `npm run lint` stayed at the same four unrelated existing blockers.
 - Step 7.4c evidence: targeted `network.connect` / `network.gating` / `network.remove` / `network.serialize` / `network.mutate` / `network.genetic` / `genome` / `export` / `compat` / `validate` slice (10 suites / 203 tests), plus `npm run build` and `npm run docs`; `npm run lint` stayed at the same four unrelated existing blockers.
 - Step 7.4d evidence: targeted `network.connect` / `network.gating` / `network.remove` / `network.serialize` / `network.mutate` / `network.genetic` / `genome` / `export` / `compat` / `validate` slice (10 suites / 207 tests), plus `npm run build` and `npm run docs`; `npm run lint` stayed at the same four unrelated existing blockers.
+- Step 7.5 evidence: regenerated README openings across novelty, adaptive, speciation, multiobjective, diversity, objectives, selection, and telemetry, plus `npm run build` and `npm run docs`; `npm run lint` stayed at the same unrelated existing blockers.
+- Step 7.6 evidence: `npm run docs` after the flagship README updates, the focused ASCII Maze and Flappy configuration regression slice covering the new source-contract tests, `npm run build`, and a final `npm run docs` sync after the source-facing JSDoc update.
 - Known unrelated blockers remain outside this workstream: lint issues in `src/architecture/layer/layer.factory.normalization.utils.test.ts`, `src/architecture/network/network.ts`, `src/neat/species/core/shared/species.core.shared.ts`, and `src/neat/topology-intent/neat.topology-intent.ts`, plus the separate add-node compile-time test issue.
 
-## Open control notes
+## Closure notes
 
-- The active implementation frontier now sits at Step 7.5 in [neat.plans.md](neat.plans.md), while closed Steps 7.3 and 7.4 remain the current beyond-paper baseline until a future controller-policy proposal proves it needs a new external seam.
-- The current beyond-paper frontier is no longer "should temporal descriptors survive disabled-gene toggles?" That rule is now landed: disabled referenced genes remain dormant structure until structural removal or ungating removes the referenced identity. The next live question is how novelty, multiobjective, adaptive, and related controller policy layers stay explicitly external to the canonical genome and runtime contract.
+- Phase 7 is now closed in [neat.plans.md](neat.plans.md); no active implementation frontier remains inside that tracker.
+- The durable beyond-paper baseline now includes the closed Step 7.5 controller-policy boundary and the closed Step 7.6 flagship-demo docs plus source-contract alignment.
+- Reopen this boundary only for an explicit Phase 8 performance follow-on, a newly discovered controller/runtime boundary gap that escapes the closed Step 7.4 or Step 7.5 rules, or flagship-demo drift that breaks the closed Step 7.6 contract.
 - Step 7.2 closure guardrails remain in force: deferred owners remain `src/neat/helpers/`, `src/neat/mutation/`, `src/neat/export/`, and the current runtime-only validation lane until a narrower extension seam is justified.

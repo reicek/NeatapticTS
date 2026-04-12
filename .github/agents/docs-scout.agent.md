@@ -30,6 +30,7 @@ If your recommendation includes updating a tracker file, assume
 - DO NOT edit generated `src/**/README.md` files.
 - DO NOT suggest hand-editing generated READMEs.
 - DO NOT rewrite code behavior; focus on documentation drift, missing explanation, and likely source JSDoc targets.
+- DO NOT recommend plan labels, tracker terms, roadmap phases, or repo before/after framing in public docs.
 - DO NOT restate the full documentation workflow, tone model, or guardrails
   that belong in `educational-docs`.
 
@@ -40,7 +41,7 @@ If your recommendation includes updating a tracker file, assume
 3. Distinguish between three cases: README is sufficient, JSDoc should be improved, or docs likely just need regeneration with `npm run docs`.
 4. If the README is structurally too broad, call that out as a `solid-split`
    escalation target instead of pretending a longer doc pass will solve it.
-5. Call out examples, invariants, or exported symbols that seem under-documented.
+5. Call out examples, invariants, exported symbols, or user-facing plan-speak and before/after framing that seem under-documented or conceptually misframed.
 6. Frame your result as a compact handoff into `educational-docs` rather than a
    standalone rewrite plan.
 

@@ -52,17 +52,17 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 **Outcome:** deterministic semantics and “proper NEAT” correctness so everything built on top is reliable.
 
 1. Proper NEAT (historical markings, correct crossover alignment, recurrent/self-connection policy, RNG determinism)
-   - Plan: [neat.plans.md](neat.plans.md) [WIP]
-   - Current internal state: the canonical lift through Step 7.5 is closed; Step 7.6 flagship-demo validation is the active frontier.
+   - Plan: [neat.plans.md](neat.plans.md) [DONE]
+   - Current internal state: the proper-NEAT lane is closed for its current scope through local Phase 7; any later beyond-paper continuation is deferred until an explicit reopen decision.
 2. Explicit I/O roles + stable activation ordering (acyclic + recurrent mode semantics)
-   - Plan: [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [PLANNED]
+   - Plan: [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [DONE]
 
 **Why this ordering:**
 
 - Fixing NEAT correctness prevents “paper cuts” and broken invariants from leaking into every future feature.
 - Stable execution semantics (I/O + scheduling) are required for safe builders, serialization, export, and workers.
 
-**Gate to Phase 2:** deterministic runs are achievable end-to-end (seeded runs don’t “leak” randomness; scheduling is stable; recurrent behavior is documented and tested).
+**Gate to Phase 2:** satisfied for the current roadmap scope. The proper-NEAT and stable activation-ordering lanes are closed, and explicit I/O roles plus deterministic acyclic and recurrent scheduling are now the documented runtime baseline.
 
 ## Phase 2 — Architecture DX (Build Graphs Safely)
 
@@ -168,7 +168,7 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phase 0 is complete** and **Phase 1 is now active** through [neat.plans.md](neat.plans.md), with the canonical proper-NEAT lift through Step 7.5 closed and Step 7.6 flagship-demo validation active. Both demos are solid split and documented, the example learnability pass materially strengthened across `examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, and the ES2023 modernization lane is closed as a completed Phase 0 baseline.
+Current status: **Phase 0 and Phase 1 are complete** and **Phase 2 is now the current roadmap stage**. The proper-NEAT lane in [neat.plans.md](neat.plans.md) and the stable activation-ordering lane in [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) are closed for their current scope. Both demos are solid split and documented, the example learnability pass materially strengthened across `examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, and the ES2023 modernization lane is closed as a completed Phase 0 baseline.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
@@ -202,8 +202,8 @@ than a roadmap-tracked plan file.
 
 ### Phase 1 inventory
 
-15. [neat.plans.md](neat.plans.md) [WIP]
-16. [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [PLANNED]
+15. [neat.plans.md](neat.plans.md) [DONE]
+16. [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [DONE]
 
 ### Phase 2 inventory
 

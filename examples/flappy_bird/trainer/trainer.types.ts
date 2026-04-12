@@ -52,6 +52,7 @@ export interface FlappyTrainerNetwork extends FlappyNetworkLike {
 export interface FlappyTrainerNeatController {
   generation: number;
   options: {
+    allowRecurrent?: boolean;
     mutationRate: number;
     mutationAmount: number;
     fitnessPopulation?: boolean;

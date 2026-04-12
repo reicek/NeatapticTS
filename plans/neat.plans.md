@@ -1,10 +1,10 @@
 # Proper NEAT (Reference-Quality) — Phase 1 Plan
 
-**Status:** [WIP]
+**Status:** [DONE]
 
 ## Scope
 
-This workstream is the active Phase 1 critical-path item from [Roadmap.md](Roadmap.md). Its job is to turn NeatapticTS into a reference-quality proper-NEAT implementation: academically correct historical markings, deterministic reproduction, explicit recurrent policy, checkpoint-safe innovation tracking, SOLID code boundaries, and educational documentation that teaches the whole lifecycle from generation zero through export/import.
+This workstream covers the Phase 1 critical-path proper-NEAT item from [Roadmap.md](Roadmap.md) and now records its closed state. Its job was to turn NeatapticTS into a reference-quality proper-NEAT implementation: academically correct historical markings, deterministic reproduction, explicit recurrent policy, checkpoint-safe innovation tracking, SOLID code boundaries, and educational documentation that teaches the whole lifecycle from generation zero through export/import.
 
 This plan intentionally separates three bars:
 
@@ -32,7 +32,7 @@ The standard for this plan is intentionally higher than “make the tests pass.�
 
 - Completed milestone history through Phase 6, Step 7.1, and closed Step 7.2 now lives in [neat.logs.md](neat.logs.md).
 - The canonical proper-NEAT baseline is closed in the repo: explicit historical markings, innovation-tracker-backed structural reuse, innovation-aligned crossover, recurrent-policy hardening, strict native compatibility, deterministic replay, and source-first generated docs.
-- Phase 7 is the only active lane. Step 7.2 is closed, Step 7.3 is closed, Step 7.4 is closed, Step 7.5 is closed, Step 7.6 is the live workstream, and later beyond-paper steps remain planned and explicitly opt-in.
+- Phase 7 is closed. Steps 7.2 through 7.6 are complete, no active frontier remains inside this tracker, and any later beyond-paper continuation is reopen-only and explicitly opt-in.
 - The active guardrails remain unchanged: `Network` stays the phenotype boundary, replay and checkpoint semantics stay controller-owned, runtime-only validation stays outside the genome contract, and helper, mutation, and export owner moves stay deferred until narrower seams are justified.
 - Known unrelated blockers remain outside this plan: lint issues in `src/architecture/layer/layer.factory.normalization.utils.test.ts`, `src/architecture/network/network.ts`, `src/neat/species/core/shared/species.core.shared.ts`, and `src/neat/topology-intent/neat.topology-intent.ts`, plus the separate add-node compile-time test issue tracked elsewhere.
 
@@ -55,7 +55,7 @@ Goal: keep the academically correct proper-NEAT lane stable before optional exte
 - Closed coverage: contract and serialization safety, fail-fast native validation, explicit innovation-tracker semantics, homologous generation-zero identity, innovation-aligned crossover with controller-owned RNG, recurrent-policy hardening, strict native compatibility and species-history expectations, deterministic checkpoints and replay, and educational-docs follow-through.
 - Durable milestone log: [neat.logs.md](neat.logs.md).
 
-### [WIP] Phase 7 — Beyond-paper, still reference-quality
+### [DONE] Phase 7 — Beyond-paper, still reference-quality
 
 Goal: exceed the 2002 paper without contaminating canonical semantics.
 
@@ -251,7 +251,7 @@ Implementation passes:
 - [DONE] Pass 7.5b — Explicit policy-hook and docs hardening: made extension hooks and README wording explicit across the overlay-heavy novelty/adaptive/speciation/multiobjective chapters and the already-external diversity/objectives/selection/telemetry roots without changing the default meaning of fitness, compatibility, species history, or replay determinism.
 - Closed evidence: the regenerated README openings across novelty, adaptive, speciation, multiobjective, diversity, objectives, selection, and telemetry now spell out controller-only or read-only ownership, while export/import keeps score, novelty, and `_moRank` / `_moCrowd` annotations inside explicit `controllerMeta` instead of widening the canonical genome contract. Validation for the docs-hardening slice remains `npm run docs` and `npm run build` passing.
 
-[WIP] Step 7.6 — Validate beyond-paper value on flagship demos and surface it in docs.
+[DONE] Step 7.6 — Validate beyond-paper value on flagship demos and surface it in docs.
 
 - Treat `examples/flappy_bird/` and `examples/asciiMaze/` as the first flagship demo probes for beyond-paper NEAT: analyze which Phase 7 features materially improve each example and which ones would only add novelty without strengthening the demo's concept.
 - Evaluate the current and planned beyond-paper lanes against each demo's actual teaching boundary instead of forcing one extension story onto both examples.
@@ -260,6 +260,35 @@ Implementation passes:
 - Prefer library-level fixes, public contracts, and reusable defaults when either flagship demo exposes a DX or modeling gap; avoid demo-local compensation unless the issue is genuinely example-specific.
 - Update the relevant README openings so the beyond-paper gains are easy to find for readers and presentation contexts, especially the owning NEAT chapter plus `examples/flappy_bird/README.md` and `examples/asciiMaze/README.md` when the chosen features land.
 - Use the existing Flappy Bird and ASCII Maze documentation workflows rather than treating the docs follow-through as optional; reopen those documentation boundaries only when the examples or their chapter openings materially drift.
+
+Public-doc guardrail for this step:
+
+- keep README openings concept-based and atemporal,
+- do not surface plan labels, tracker language, roadmap phases, or repo before/after framing in public docs,
+- describe the current teaching boundary, concepts, and tradeoffs instead.
+
+Implementation passes:
+
+- [DONE] Pass 7.6a — ASCII Maze flagship audit and docs-first positioning: tightened `examples/asciiMaze/README.md` into a concept-first, atemporal showcase for compact navigation, deterministic and replayable runs, explicit controller-owned search overlays, curriculum transfer, and optional richer temporal structure.
+- [DONE] Pass 7.6b — Flappy Bird boundary confirmation and concept-only docs hardening: confirmed the example should stay feed-forward-first for pedagogic clarity and sharpened the README explanation that temporal observations provide local memory without requiring a second recurrent or gated teaching lane.
+- [DONE] Pass 7.6c — Examples-root and chapter drift audit: tightened `examples/README.md` so the two flagship roles read more explicitly through current concepts, and confirmed `src/neat/README.md` was healthy enough for a minimal concept bridge rather than a broader rewrite.
+- [DONE] Pass 7.6d — Source contract follow-through: aligned the demo configuration seams with those flagship roles by letting ASCII Maze expose the richer temporal mutation shelf only when recurrent growth is enabled, while Flappy Bird now pins both the trainer and the worker runtime to `allowRecurrent: false` alongside the feed-forward mutation shelf.
+
+Closed evidence so far:
+
+- `examples/asciiMaze/README.md` now opens with a concept-first and atemporal explanation of why compact navigation, deterministic and replayable runs, explicit controller-owned search overlays, and optional richer temporal structure belong together in one maze example.
+- `examples/flappy_bird/README.md` now makes the feed-forward teaching goal more explicit by stating why the example prefers temporal observation and local memory over adding a second recurrent or gated control story.
+- `examples/README.md` now names the two flagship roles more explicitly, and `src/neat/README.md` now explains how the same controller contract surfaces differently across Flappy Bird and ASCII Maze without changing the canonical-versus-extension boundary.
+- `examples/asciiMaze/evolutionEngine/neatConfiguration.ts` now resolves its default mutation shelf from `allowRecurrent`, so the maze demo only widens into gated, self/back-connection, LSTM, and GRU growth when the controller is already allowed to explore richer temporal structure.
+- `examples/flappy_bird/trainer/trainer.setup.service.ts` and `examples/flappy_bird/flappy-evolution-worker/flappy-evolution-worker.runtime.service.ts` now set `allowRecurrent: false` explicitly, so the feed-forward teaching boundary is enforced in source as well as in docs.
+- Validation for Pass 7.6a: `npm run docs` passed after the ASCII Maze README opening update.
+- Validation for Pass 7.6c: `npm run docs` passed after the examples-root and NEAT-root README updates.
+- Validation for Pass 7.6d: the targeted Jest slice covering the new ASCII Maze and Flappy Bird configuration tests passed, followed by `npm run build` and `npm run docs`.
+
+Current demo-positioning summary:
+
+- ASCII Maze: the flagship for compact navigation, curriculum transfer, telemetry-rich search, deterministic and replayable runs, explicit controller-owned search overlays, and optional richer temporal structure where the maze benefits from it.
+- Flappy Bird: the flagship for deterministic shared-seed evaluation, temporal observation, feed-forward local memory, worker-backed playback, and inspectable browser runtime behavior.
 
 Exit criteria:
 
@@ -270,19 +299,6 @@ Exit criteria:
 - Any extracted operator or extension boundary is small enough to remain teachable and passes the same deterministic guard slice as the canonical path.
 
 This phase may require a focused follow-on split if the `network.genetic` or mutation boundaries become too broad to remain educational.
-
-### [PLANNED] Phase 8 — Performance lane after correctness freeze
-
-Goal: scale proper NEAT without diluting the correctness work.
-
-Guiding rule: use the research signal from TensorNEAT and the existing [Memory_Optimization.md](Memory_Optimization.md) plan as a later acceleration lane, not as justification for premature correctness shortcuts.
-
-Planned steps:
-
-- Cache innovation-sorted views, homologous-gene maps, and node lookup tables with mutation-aware invalidation.
-- Benchmark compatibility and crossover cost before and after any structural refactor.
-- Explore typed-array or SoA gene storage only after the correctness and docs layers are stable.
-- Treat population-wide tensorization or GPU acceleration as a follow-on design study, not a Phase 1 blocker.
 
 ## Validation Matrix
 
@@ -304,12 +320,13 @@ Minimum targeted test surfaces for the proper-NEAT lift:
 - [../src/neat/export/neat.export.test.ts](../src/neat/export/neat.export.test.ts)
 - [../src/neat/speciation/speciation.test.ts](../src/neat/speciation/speciation.test.ts)
 
-## Immediate Next Steps
+## Reopen Conditions
 
-- Keep Step 7.4 closed unless a new recurrent or gated descriptor requirement is identified that is not already covered by the landed builder, heredity, structural-edit, and dormant disabled-gene rules.
-- Keep Step 7.5 closed unless a concrete controller-policy leak reappears; the final audit confirmed that the remaining score and `_mo*` round-trip path is explicit controller metadata rather than canonical genome state.
-- Start Step 7.6 with a narrow flagship-demo audit over `examples/flappy_bird/` and `examples/asciiMaze/`: identify which beyond-paper features materially improve each example, which ones are only novelty, and which README openings need the value proposition made easier to find.
-- Keep the landed Step 7.4 rules fixed: descriptor identity survives enabled-state toggles while the referenced node ids, connection innovations, and gater ownership still exist; retirement remains tied to structural removal or ungating rather than temporary inactivity.
+- Reopen this tracker only if the user explicitly activates a follow-on Phase 8 performance lane after the closed correctness freeze.
+- If Phase 8 is explicitly activated, keep its intended scope limited to cache innovation-sorted views, benchmark compatibility and crossover cost, explore typed-array or SoA gene storage only after correctness and docs stability, and treat population-wide tensorization or GPU acceleration as a later design study rather than a Phase 1 blocker.
+- Reopen Step 7.4 only if a new recurrent or gated descriptor requirement appears that is not already covered by the landed builder, heredity, structural-edit, and dormant disabled-gene rules.
+- Reopen Step 7.5 only if a concrete controller-policy leak reappears; the closed audit confirmed that the remaining score and `_mo*` round-trip path is explicit controller metadata rather than canonical genome state.
+- Reopen Step 7.6 only if flagship-demo docs or source contracts drift away from the current concept-first, atemporal, and source-aligned teaching boundary.
 
 ## Deferred Questions
 
@@ -319,64 +336,6 @@ Minimum targeted test surfaces for the proper-NEAT lift:
 - How should recurrent block mutations such as LSTM/GRU expansion map onto canonical node and connection genes once recurrence becomes first-class in heredity?
 - What is the exact migration policy for older checkpoints and serialized networks that lack connection innovations?
 
-## Handoff query
+## Audit Log
 
-```text
-Continue from the current repo state only. Do not rely on prior chat history. Update Handoff query when step is finished.
-
-Active workstream: Phase 1 Proper NEAT in plans/neat.plans.md.
-Current active frontier: [WIP] Step 7.6 — validate beyond-paper value on flagship demos and surface it in docs, with Step 7.2 closed, Step 7.3 closed through Passes 7.3a, 7.3b, and 7.3c plus coverage-hardening closure, Step 7.4 closed through Passes 7.4a, 7.4b, 7.4c, and 7.4d, and Step 7.5 closed through Passes 7.5a and 7.5b.
-
-Closed milestone history:
-- Durable done-state coverage through closed Step 7.2 now lives in plans/neat.logs.md.
-- The canonical lane through Phases 0 through 6 is closed, Step 7.1 is closed, and Step 7.2 is closed through Pass 7.2d.
-
-Current live state:
-- Step 7.2 is closed: genome heredity selection stays inside src/neat/genome/heredity/ while the public runtime crossover facade, setup, selection adapter, and phenotype materialization stay in src/architecture/network/genetic/.
-- src/architecture/network/genetic/network.genetic.selection.utils.ts remains a thin runtime adapter that projects parent networks into the genome heredity boundary and forwards only stable gene ids plus inherited weight and enabled state to materialization.
-- src/architecture/network/genetic/network.genetic.materialize.utils.ts still resolves endpoints and gaters only by stable gene id, and the runtime shelf still owns scaffold creation, topology pruning, and gating reattachment.
-- src/neat/helpers/neat.helpers.ts, src/neat/mutation/mutation.ts plus repair shelves, and src/neat/export/neat.export.ts remain deferred owners for generation-zero bootstrap, live structural edit and repair, and checkpoint or replay bridging without importing the runtime crossover shelves.
-- src/neat/validate/neat.validate.ts still owns runtime-only phenotype guards while strict genome-contract checks remain delegated through src/neat/genome/ instead of widening the validator split.
-- Pass 7.3a is landed: the first additive trait is opt-in connection-gain extension state, captured through `options.genomeExtensions.connectionGain` or direct genome-adapter options, stored as `extensions.values.connectionGainByInnovation`, restored through export/import and genome materialization, and rejected when malformed or applied to gated genes.
-- Pass 7.3b is landed: `Node.response` is now a real runtime field with neutral default `1`, strict genomes can capture non-neutral response as `extensions.values.nodeResponseByGeneId`, and disabled-gene re-enable policy is now explicit extension state as `extensions.values.disabledConnectionReenableProbability` sourced from runtime `_reenableProb`.
-- Pass 7.3c is landed: activation mutation was audited and confirmed to already be canonical node-gene state through `nodeGenes[].squash`, so it does not need a new Step 7.3 extension bag field or export flag.
-- Step 7.3 is now closed: the latest focused coverage slice across node, network.serialize, genome, genome.heredity, export, compat, and validate passed at 7 suites / 151 tests, with the recent-change owner boundary measuring `network.serialize.json.utils.ts` at 96.38% lines, `neat.export.ts` at 95.12% lines, and `genome.utils.ts` at 90.94% lines.
-- Pass 7.4a is landed: explicit recurrent-module and gated-block descriptors now have a typed, validator-backed genome extension lane and can survive runtime JSON plus controller export/import without changing builder or mutation ownership yet.
-- Pass 7.4b is landed: runtime recurrent builders now emit deliberate temporal descriptors, direct `ADD_LSTM_NODE` and `ADD_GRU_NODE` mutations append descriptors for their inserted blocks, serialization conservatively prunes stale descriptors after later structural edits, and runtime crossover preserves only parent descriptors that still match the offspring graph.
-- Pass 7.4c is landed: runtime `connect` / `disconnect` / `gate` / `ungate` and hidden-node gate-detach flows now synchronize the explicit temporal extension bag immediately, so generic structural edits and repair-driven rewires retire invalid descriptors in memory while preserving deliberate degradation when only the gated block disappears.
-- Pass 7.4d is landed: disabled connection genes now count as dormant temporal structure rather than implicit removal, so runtime synchronization, strict genome validation, runtime materialization, and export/import preserve temporal descriptors while the referenced nodes, innovations, and gater ownership remain present.
-- `src/neat/export/neat.export.ts` now captures strict genomes from the live runtime genome during export so `_reenableProb` survives import even when controller meta omits the fallback field.
-- Canonical compatibility still ignores current Step 7.3 extension state by design, and the activation audit now makes the adjacent baseline explicit: node activation differences also remain ignored unless a later pass deliberately changes the formula.
-- Final Step 7.4 closure evidence is the targeted 10-suite / 207-test connect, gating, remove, serialize, mutate, genetic, genome, export, compat, and validate slice, followed by npm run build and npm run docs. npm run lint still reports only the unrelated existing blockers in src/architecture/layer/layer.factory.normalization.utils.test.ts, src/architecture/network/network.ts, src/neat/species/core/shared/species.core.shared.ts, and src/neat/topology-intent/neat.topology-intent.ts.
-- Step 7.5 is closed: `src/neat/diversity/`, `src/neat/objectives/`, `src/neat/selection/`, and `src/neat/telemetry/` remain external controller layers, while the overlay-heavy novelty/adaptive/speciation/multiobjective chapters now explicitly call out controller-owned score and annotation overlays instead of teaching them as canonical genome behavior.
-- Final Step 7.5 closure evidence: regenerated README openings across novelty, adaptive, speciation, multiobjective, diversity, objectives, selection, and telemetry now preserve the same boundary wording as source, and the export/import seam keeps score, novelty, and `_moRank` / `_moCrowd` inside explicit `controllerMeta` rather than widening the canonical genome contract.
-
-Next narrow task:
-- Begin Step 7.6 with a narrow flagship-demo audit over `examples/flappy_bird/` and `examples/asciiMaze/`: map which beyond-paper features materially improve each example, which ones only add novelty, and which owning README openings should surface that value proposition first.
-- Keep the Step 7.6 implementation narrow: start with README-first and plan-first reconnaissance, then adjust only the smallest library or documentation seams that clearly improve the chosen flagship demos.
-- Keep the landed 7.4a-7.4d rule set fixed: builders and direct `ADD_LSTM_NODE` / `ADD_GRU_NODE` may emit descriptors, runtime crossover may inherit only still-valid descriptors, generic structural edits synchronize the hydrated extension bag immediately, and disabled referenced genes remain dormant structure until structural removal or ungating removes the referenced identity.
-- Preserve the closed Step 7.3 baseline rule set: connection gain, node response, and disabled-connection re-enable probability remain opt-in extension state, activation mutation remains canonical node-gene state, and canonical compatibility continues to ignore both the extension bag and activation-only deltas unless a later pass deliberately changes that formula.
-- Tracker preference: do not create additional side repair logs for Step 7.6; keep live continuity in plans/neat.plans.md and plans/Roadmap.md unless the user explicitly asks otherwise.
-
-Current risks:
-- Later extension traits can bleed into canonical compatibility, replay, or checkpoint semantics unless they remain opt-in, versioned, and explicitly documented as beyond-paper state.
-- Runtime crossover, repair, and builder shelves can sprawl again if Step 7.3 tries to pull trait semantics through phenotype-only files instead of keeping the genome/export/validate seams primary.
-- A future attempt to treat activation mutation as new extension state would duplicate the existing canonical `nodeGenes[].squash` contract and blur the boundary that Pass 7.3c just re-confirmed.
-- Legacy fallback behavior can blur native proper-NEAT guarantees unless new trait handling keeps strict native mode and deliberate import bridges distinct.
-- Ignore the unrelated lint debt and separate add-node compile-time test issue unless this workstream explicitly reopens those surfaces.
-
-Priorities:
-1. Keep Step 7.2 closed; do not reopen runtime crossover ownership unless a genuinely narrower seam is proven.
-2. Treat closed Steps 7.3, 7.4, and 7.5 as the current baseline and keep Step 7.6 scoped to flagship-demo validation plus documentation-value follow-through instead of reopening controller-policy boundary work without a concrete leak.
-3. Preserve deterministic replay and validator-backed invariants while extension state remains opt-in and versioned.
-4. Run npm run docs only when source-first JSDoc changes affect generated README surfaces.
-
-Validation expectations:
-- npm run build when Step 7.6 source changes land
-- npm run lint when public types or new boundaries change
-- targeted tests for diversity, multiobjective, objectives, selection, adaptive, speciation, telemetry, and compat/export/validate when the stable contract is touched
-- npm run docs if touched JSDoc changes affect generated README surfaces
-
-Worktree caution:
-- Ignore unrelated package-lock.json changes unless the task explicitly requires touching them.
-```
+See [neat.logs.md](neat.logs.md) for the durable milestone record covering the canonical lane, the closed Step 7.5 and Step 7.6 milestones, and the final Phase 7 closure notes.

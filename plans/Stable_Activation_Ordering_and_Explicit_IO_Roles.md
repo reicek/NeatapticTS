@@ -1,182 +1,39 @@
 # Stable Activation Ordering + Explicit I/O Roles Plan
 
-**Status:** [PLANNED]
+**Status:** [DONE]
 
-## Purpose
+## Scope
 
-Make network execution **deterministic, explainable, and architecture-independent** by standardizing:
+This workstream covers the remaining Phase 1 critical-path activation-semantics item from [Roadmap.md](Roadmap.md). Its job was to make network execution deterministic and explainable through explicit ordered I/O role metadata, deterministic acyclic and recurrent scheduling, schedule-aware activation traversal, and user-facing scheduling diagnostics.
 
-1. **Explicit input/output roles** (no “mystery nodes” inferred implicitly)
-2. **Stable activation ordering** (same graph → same execution schedule)
+Not in scope for this closed lane:
 
-This is foundational for:
+- speculative performance work beyond cached scheduling
+- reopening the Proper NEAT tracker
+- pulling Phase 2 builder work forward before Phase 1 closure
 
-- primitives/graph assembly
-- preconfigured architecture builders
-- consistent serialization
-- worker-friendly evaluation
-- reproducible telemetry
+## Final state
 
-## Goals
+- `Network` now owns explicit ordered `inputNodeIds` and `outputNodeIds`, refreshed by bootstrap, builders, restore paths, and evolutionary materialization seams.
+- Acyclic mode now compiles deterministic Kahn-wave schedules with stable node `geneId` tie-breaks while preserving the legacy flattened `_topoOrder` cache for compatibility.
+- Recurrent mode now compiles deterministic SCC-condensation schedules with explicit `recurrent-component` steps, default `iterations: 1`, and `stateSemantics: 'carry'`.
+- `activate()` and `noTraceActivate()` now resolve traversal from the compiled schedule first, then fall back only when required, while input injection and output readout follow the explicit role ids rather than raw node storage order.
+- The runtime now exposes `getActivationSchedulingDiagnostics()` so callers can inspect compiled-schedule use, cycle fallback, stale-topology state, recurrent carry semantics, and suggested next actions.
+- Source-first docs and generated README surfaces now explain activation ordering, explicit I/O role semantics, schedule-aware execution, and carried recurrent state.
 
-- G1: Define an explicit representation of I/O node sets for every built network.
-- G2: Ensure deterministic activation scheduling for both acyclic and recurrent graphs.
-- G3: Provide actionable diagnostics when a graph cannot be scheduled under the chosen mode.
+## Audit summary
 
-## Non-goals
+- Durable milestone history for Steps 1 through 5 now lives in [Stable_Activation_Ordering_and_Explicit_IO_Roles.logs.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.logs.md).
+- Focused regression coverage passed for the touched runtime boundaries: `src/architecture/network/runtime/network.runtime.scheduling-diagnostics.test.ts`, `src/architecture/network/activate/network.activate.test.ts`, and `src/architecture/network/topology/network.topology.test.ts` (3 suites / 44 tests).
+- Final closure validation passed with `npm run build` and `npm run docs`.
+- This closes the remaining Phase 1 activation-ordering lane, so Phase 2 builder work can assume explicit I/O roles and deterministic acyclic or recurrent scheduling as the baseline runtime contract.
 
-- Supporting arbitrary dynamic graph mutation at activation time.
-- Achieving maximal runtime performance in the first iteration (correctness + determinism first).
+## Reopen conditions
 
-## Key concepts
+- Reopen this tracker only if future builder, serialization, or runtime work exposes missing explicit I/O role refresh or schedule invalidation seams.
+- Reopen if deterministic activation ordering drifts for acyclic or recurrent graphs after structural edits or materialization.
+- Reopen if public diagnostics or docs stop matching the actual compiled-schedule, fallback, or carried-state contracts.
 
-### Concept A — I/O roles as first-class metadata
+## Audit log
 
-Every network must have:
-
-- `inputNodeIds: number[]`
-- `outputNodeIds: number[]`
-
-Optional (future): named ports and grouped inputs.
-
-Constraints:
-
-- Inputs must be disjoint from outputs.
-- The order of `inputNodeIds` defines input vector semantics.
-- The order of `outputNodeIds` defines output vector semantics.
-
-### Concept B — Stable activation scheduling
-
-We define an `ActivationSchedule` that captures the order and grouping of node activations.
-
-Modes:
-
-- **Acyclic mode**: schedule via topological sorting; reject cycles.
-- **Recurrent mode**: schedule via strongly-connected component (SCC) condensation graph; within SCCs use a deterministic iteration policy.
-
-## Proposed internal API
-
-```ts
-export type ActivationMode = 'acyclic' | 'recurrent';
-
-export interface ExplicitIORoles {
-  inputNodeIds: number[];
-  outputNodeIds: number[];
-}
-
-export interface ActivationSchedule {
-  mode: ActivationMode;
-  steps: ReadonlyArray<ReadonlyArray<number>>;
-  outputNodeIds: number[];
-}
-
-export interface BuildScheduleOptions {
-  mode: ActivationMode;
-  stableTieBreak?: 'nodeId' | 'creationIndex';
-  maxRecurrentIterations?: number;
-}
-
-export function buildActivationSchedule(
-  graph: GraphDefinition,
-  io: ExplicitIORoles,
-  options: BuildScheduleOptions,
-): ActivationSchedule;
-```
-
-Notes:
-
-- `steps` is a list of “parallelizable groups” (a group may be executed in any order, but we still fix an internal deterministic order).
-- Tie-breaking must be deterministic and documented.
-
-## Behavior specification
-
-### Acyclic mode
-
-- Reject cycles with a clear error that includes:
-  - the mode
-  - a minimal cycle trace (or at least a set of involved node IDs)
-  - suggestions: “switch to recurrent mode” or “remove back-connections”
-
-### Recurrent mode
-
-- Build SCCs and schedule SCCs topologically.
-- For SCCs of size > 1 or self-loops:
-  - execute nodes in stable order for `k` iterations (default `k = 1` for compatibility; configurable)
-  - define initial state semantics (e.g., node value reset vs carried state)
-
-### Input injection and output readout
-
-- Input nodes are set before schedule execution.
-- Output values are read after schedule completion.
-
-## Implementation steps
-
-### Step 1 — Define I/O role plumbing
-
-- Add an internal structure (or extend `Network`) to store explicit I/O node lists.
-- Ensure all builders and graph assembly code fill these lists.
-
-Acceptance:
-
-- All constructed networks have explicit, ordered I/O sets.
-
-### Step 2 — Deterministic acyclic schedule
-
-- Implement topological scheduling with stable tie-breaks.
-- Ensure it is consistent across runtimes.
-
-Acceptance:
-
-- Same graph always yields identical schedule output.
-
-### Step 3 — Deterministic recurrent schedule
-
-- Implement SCC condensation scheduling.
-- Define iteration policy and defaults.
-
-Acceptance:
-
-- Recurrent graphs run with deterministic ordering and predictable semantics.
-
-### Step 4 — Integrate schedule into activation path
-
-- Ensure the runtime activation uses the computed schedule.
-- Provide safe fallbacks for legacy networks (if any) with a deprecation path.
-
-Acceptance:
-
-- Legacy paths continue to work; new paths are the default for constructed architectures.
-
-### Step 5 — Diagnostics and docs
-
-- Add human-friendly errors and doc sections:
-  - “What is activation ordering?”
-  - “Acyclic vs recurrent mode”
-  - “State clearing”
-
-Acceptance:
-
-- Users can understand and fix scheduling errors quickly.
-
-## Testing strategy
-
-- Determinism tests:
-  - schedule output is identical for repeated builds
-  - tie-break behavior is stable
-- Correctness tests:
-  - acyclic: known DAG produces correct ordering
-  - cyclic: acyclic mode rejects
-  - recurrent: SCC graphs run and match expected iteration semantics
-
-## Risks and mitigations
-
-- Risk: behavior changes for existing recurrent networks.
-  - Mitigation: keep legacy behavior behind a compatibility mode; document differences.
-- Risk: performance overhead.
-  - Mitigation: schedule computed once and cached; keep schedule representation compact.
-
-## Success criteria
-
-- All architecture builders produce networks with explicit I/O roles.
-- Activation order is deterministic across runs.
-- Scheduling failures are actionable and well documented.
+See [Stable_Activation_Ordering_and_Explicit_IO_Roles.logs.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.logs.md) for the durable milestone record and validation summary.

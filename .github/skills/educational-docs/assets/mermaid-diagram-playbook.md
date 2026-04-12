@@ -173,7 +173,7 @@ Use class diagrams for structure, not for runtime flow.
 - historical evolution,
 - staged migrations,
 - rollout order,
-- roadmap explanation.
+- roadmap explanation in trackers, migration docs, or other explicitly historical surfaces.
 
 ### Use quadrant charts for
 
@@ -185,7 +185,7 @@ Use class diagrams for structure, not for runtime flow.
 ### Use xychart for
 
 - simple trends,
-- before/after comparisons,
+- explicitly comparative measurements,
 - performance changes over categories or time,
 - paired bar and line views.
 
@@ -495,7 +495,9 @@ journey
 
 ### Timeline diagrams
 
-Use timelines for history, milestone sequencing, or concept evolution.
+Use timelines for history, milestone sequencing, or concept evolution when the
+reader explicitly needs chronology. Do not default to timelines in public
+README openings that should remain concept-first and atemporal.
 
 Example:
 
@@ -513,7 +515,8 @@ timeline
 ### Gantt charts
 
 Use `gantt` when the reader needs schedule overlap, dependencies, or active plan
-state.
+state. Prefer this in trackers, migration docs, or delivery planning surfaces,
+not in ordinary public module documentation.
 
 Example:
 

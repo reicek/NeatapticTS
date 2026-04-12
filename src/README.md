@@ -3219,6 +3219,20 @@ Network gates collection.
 
 Stable per-node gene identifier for NEAT innovation reuse
 
+#### getActivationSchedulingDiagnostics
+
+```ts
+getActivationSchedulingDiagnostics(): ActivationSchedulingDiagnostics
+```
+
+Read a human-friendly snapshot of the current activation-ordering contract.
+
+Use this after activation or structural edits to see whether the runtime is
+using a compiled schedule, a cycle fallback, or a raw-node-order fallback,
+and what to do next if that result is not the one you expected.
+
+Returns: Activation scheduling diagnostics snapshot.
+
 #### getConnectionSlab
 
 ```ts
@@ -3421,6 +3435,15 @@ Parameters:
 - `weight` - An optional fixed weight for the connections.
 
 Returns: An array containing the newly created connection objects.
+
+#### inputNodeIds
+
+Ordered stable gene ids that define the network input vector contract.
+
+Returns a cloned array so callers can inspect role metadata without
+mutating runtime state.
+
+Returns: Ordered input node gene ids.
 
 #### isActivating
 
@@ -3663,6 +3686,15 @@ The node's state from the previous activation cycle. Used for recurrent self-con
 
 Output node count.
 
+#### outputNodeIds
+
+Ordered stable gene ids that define the network output vector contract.
+
+Returns a cloned array so callers can inspect role metadata without
+mutating runtime state.
+
+Returns: Ordered output node gene ids.
+
 #### perceptron
 
 ```ts
@@ -3842,6 +3874,20 @@ Parameters:
 - `force` - Whether to force a rebuild.
 
 Returns: Slab rebuild result.
+
+#### refreshExplicitIORoles
+
+```ts
+refreshExplicitIORoles(): void
+```
+
+Refresh explicit ordered input and output role ids from the current graph.
+
+Builder, restore, and evolutionary materialization paths use this after
+replacing `nodes` wholesale so the role contract stays explicit even while
+activation semantics still rely on legacy ordering rules.
+
+Returns: Nothing.
 
 #### release
 

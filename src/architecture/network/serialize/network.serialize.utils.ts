@@ -157,6 +157,7 @@ export const deserialize = (
     input: resolvedSize.input,
     output: resolvedSize.output,
   });
+  rebuiltNetwork.refreshExplicitIORoles();
 
   // Step 4: Rebuild all compact connections and restore gating links.
   rebuildConnectionsFromCompactPayload({
@@ -266,6 +267,7 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
     networkInternals,
     nodeJsonEntries: json.nodes,
   });
+  rebuiltNetwork.refreshExplicitIORoles();
 
   // Step 4: Rebuild JSON connections, gating links, and enabled flags.
   rebuildConnectionsFromJsonPayload({

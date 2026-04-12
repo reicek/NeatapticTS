@@ -83,6 +83,7 @@ function createMaterializationContext(
     sourceNodeEntriesByGeneId,
   );
   assignOffspringNodeIndexes(targetOffspring.nodes);
+  targetOffspring.refreshExplicitIORoles();
 
   return {
     offspring: targetOffspring,

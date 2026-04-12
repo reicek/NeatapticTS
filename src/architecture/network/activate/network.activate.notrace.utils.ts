@@ -34,7 +34,7 @@ export function executeNoTraceActivation(
 }
 
 /**
- * Refresh cached topological order when acyclic mode is active and marked dirty.
+ * Refresh compiled activation scheduling when topology is marked dirty.
  *
  * @param activationContext - Shared no-trace activation state.
  * @returns Nothing.
@@ -42,10 +42,7 @@ export function executeNoTraceActivation(
 function refreshTopologicalOrderWhenRequired(
   activationContext: NoTraceActivationContext,
 ): void {
-  if (
-    activationContext.networkInternal._enforceAcyclic &&
-    activationContext.networkInternal._topoDirty
-  ) {
+  if (activationContext.networkInternal._topoDirty) {
     activationContext.networkInternal._computeTopoOrder();
   }
 }
@@ -157,7 +154,7 @@ function activateWithoutTraceUsingNodeIteration(
 
   try {
     populatePooledOutputBufferFromNodes({
-      networkNodes: activationContext.network.nodes,
+      network: activationContext.network,
       inputVector: activationContext.inputVector,
       pooledOutputBuffer,
     });

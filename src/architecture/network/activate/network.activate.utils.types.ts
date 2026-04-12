@@ -64,7 +64,7 @@ export type NoTraceActivationContext = {
  * Shared state used for node traversal during no-trace activation.
  */
 export type NoTraceNodeTraversalContext = {
-  networkNodes: Network['nodes'];
+  network: Network;
   inputVector: number[];
   pooledOutputBuffer: ActivationOutputBuffer;
 };
@@ -73,11 +73,8 @@ export type NoTraceNodeTraversalContext = {
  * Shared state used while activating one node during no-trace traversal.
  */
 export type SingleNodeNoTraceActivationContext = {
-  networkNode: NoTraceNodeTraversalContext['networkNodes'][number];
-  nodeIndex: number;
-  inputVector: NoTraceNodeTraversalContext['inputVector'];
-  pooledOutputBuffer: ActivationOutputBuffer;
-  outputWriteIndex: number;
+  inputValuesByNodeId: Map<number, number>;
+  networkNode: NoTraceNodeTraversalContext['network']['nodes'][number];
 };
 
 /**
@@ -114,8 +111,8 @@ export type BatchRowActivationContext = {
 /**
  * Runtime network view used by the object-graph activation pipeline.
  *
- * This intentionally describes the internal fields activation reads/writes
- * (training step, RNG, regularization knobs, and slab fast-path hooks).
+ * This intentionally describes the internal fields activation reads and writes
+ * while orchestrating scheduling, RNG use, regularization, and slab fast-path hooks.
  */
 export type ActivateRuntimeNetworkProps = {
   _enforceAcyclic?: boolean;

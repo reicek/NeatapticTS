@@ -89,6 +89,7 @@ export function createNeatController(
       elitism: trainerSetup.elitismCount,
       mutationRate: FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE,
       mutationAmount: FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_AMOUNT,
+      allowRecurrent: false,
       mutation: methods.mutation.FFW,
       network: Architect.perceptron(
         trainerSetup.inputSize,

@@ -28,11 +28,11 @@ import {
 import {
   applyIncomingEdgeCounts,
   asTopologyProps,
-  clearCachedTopoOrder,
   createTopologyBuildContext,
+  finalizeRecurrentSchedule,
   finalizeTopoOrder,
   initializeAllNodeInDegreeCounts,
-  shouldUseRawNodeOrder,
+  shouldBuildRecurrentSchedule,
 } from './network.topology.setup.utils';
 
 /**
@@ -54,17 +54,21 @@ import {
  */
 
 /**
- * Compute a topological ordering (Kahn's algorithm) for the current directed acyclic graph.
- * If cycles are detected (order shorter than node count) we fall back to raw node order to avoid breaking callers.
- * In non-acyclic mode we simply clear cached order to signal use of sequential node array.
+ * Compute a deterministic activation schedule for the current topology mode.
+ *
+ * Acyclic mode uses Kahn traversal with stable waves and still flattens those
+ * waves back into the legacy `_topoOrder` cache for callers that depend on one
+ * ordered list. Recurrent mode uses the SCC condensation graph to emit
+ * deterministic recurrent-component boundaries while leaving the legacy acyclic
+ * cache empty until the activation path adopts the richer schedule directly.
  */
 export function computeTopoOrder(this: Network): void {
   // Step 1: Resolve internal topology flags.
   const internalTopologyProps = asTopologyProps(this);
 
-  // Step 2: Handle non-acyclic mode by clearing cached topological order.
-  if (shouldUseRawNodeOrder(internalTopologyProps)) {
-    clearCachedTopoOrder(internalTopologyProps);
+  // Step 2: Build recurrent schedule when acyclic enforcement is disabled.
+  if (shouldBuildRecurrentSchedule(internalTopologyProps)) {
+    finalizeRecurrentSchedule(this, internalTopologyProps);
     return;
   }
 

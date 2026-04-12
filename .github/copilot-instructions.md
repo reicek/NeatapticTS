@@ -75,6 +75,14 @@ When you touch code under `src/`, `testing/`, `benchmarks/`, or `examples/`, pre
 - **Interesting and explanatory**, not just type signatures.
 - **Example-driven**: include small examples in the main description (prefer fenced code blocks like ```ts) so the docs generator preserves them.
 - **Conceptual**: include a brief “what/why” explanation and any important semantics (defaults, invariants, error cases, performance notes).
+- **Atemporal**: public docs should read as current conceptual guidance, not as repo chronology.
+
+Public documentation rule for `src/**`, `examples/**`, `benchmarks/**`, and `testing/**` README or JSDoc surfaces:
+
+- never reference internal plans, tracker steps, roadmap phases, pass labels, or chat-only context unless the user explicitly asks for process, migration, or historical documentation,
+- never structure public docs as repo before/after comparisons,
+- keep public docs focused on current concepts, boundaries, invariants, tradeoffs, and reading paths,
+- keep plan, rollout, migration, and tracker language in `plans/`, `.logs.md`, PR text, or release notes instead of README openings.
 
 When a diagram would teach faster than prose, prefer Mermaid Markdown in the documentation surface. Use diagrams for architecture overviews, data flows, decision flows, state transitions, entity relationships, and simple quantitative views when they materially improve comprehension.
 

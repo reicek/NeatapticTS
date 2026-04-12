@@ -3,6 +3,10 @@
 Core network chapter for the architecture surface.
 
 This folder owns the public `Network` class: the boundary where a graph stops
+
+This is the explicit reset boundary for recurrent execution with carried
+state semantics. Call it before a new independent sequence when previous
+recurrent state should not influence the next activation run.
 being only nodes and connections and starts behaving like one runnable,
 mutable, trainable system. Higher-level NEAT code can mutate or score a
 network, but this chapter is where the graph itself learns how to activate,
@@ -416,6 +420,20 @@ Adds the connection to the network's `gates` list.
 
 Network gates collection.
 
+#### getActivationSchedulingDiagnostics
+
+```ts
+getActivationSchedulingDiagnostics(): ActivationSchedulingDiagnostics
+```
+
+Read a human-friendly snapshot of the current activation-ordering contract.
+
+Use this after activation or structural edits to see whether the runtime is
+using a compiled schedule, a cycle fallback, or a raw-node-order fallback,
+and what to do next if that result is not the one you expected.
+
+Returns: Activation scheduling diagnostics snapshot.
+
 #### getConnectionSlab
 
 ```ts
@@ -502,6 +520,15 @@ Consolidated training stats snapshot.
 
 Input node count.
 
+#### inputNodeIds
+
+Ordered stable gene ids that define the network input vector contract.
+
+Returns a cloned array so callers can inspect role metadata without
+mutating runtime state.
+
+Returns: Ordered input node gene ids.
+
 #### lastSkippedLayers
 
 Last skipped stochastic-depth layers from activation runtime state.
@@ -547,6 +574,15 @@ Returns: An array of numerical values representing the activations of the networ
 #### output
 
 Output node count.
+
+#### outputNodeIds
+
+Ordered stable gene ids that define the network output vector contract.
+
+Returns a cloned array so callers can inspect role metadata without
+mutating runtime state.
+
+Returns: Ordered output node gene ids.
 
 #### propagate
 
@@ -613,6 +649,20 @@ Parameters:
 - `force` - Whether to force a rebuild.
 
 Returns: Slab rebuild result.
+
+#### refreshExplicitIORoles
+
+```ts
+refreshExplicitIORoles(): void
+```
+
+Refresh explicit ordered input and output role ids from the current graph.
+
+Builder, restore, and evolutionary materialization paths use this after
+replacing `nodes` wholesale so the role contract stays explicit even while
+activation semantics still rely on legacy ordering rules.
+
+Returns: Nothing.
 
 #### remove
 
@@ -1066,9 +1116,13 @@ Returns: Deep-cloned network instance.
 computeTopoOrder(): void
 ```
 
-Compute a topological ordering (Kahn's algorithm) for the current directed acyclic graph.
-If cycles are detected (order shorter than node count) we fall back to raw node order to avoid breaking callers.
-In non-acyclic mode we simply clear cached order to signal use of sequential node array.
+Compute a deterministic activation schedule for the current topology mode.
+
+Acyclic mode uses Kahn traversal with stable waves and still flattens those
+waves back into the legacy `_topoOrder` cache for callers that depend on one
+ordered list. Recurrent mode uses the SCC condensation graph to emit
+deterministic recurrent-component boundaries while leaving the legacy acyclic
+cache empty until the activation path adopts the richer schedule directly.
 
 ### connect
 
@@ -1628,16 +1682,17 @@ is currently valid. If that attempt fails (for instance because the slab is stal
 after a structural mutation) execution gracefully falls back to a node‑by‑node loop.
 
 Algorithm outline:
- 1. (Optional) Refresh cached topological order if the network enforces acyclicity
-    and a structural change marked the order as dirty.
+1. (Optional) Refresh the compiled activation schedule when a structural change
+   marked topology as dirty.
  2. Validate the input dimensionality.
  3. Try the fast slab path; if it throws, continue with the standard path.
  4. Acquire a pooled output buffer sized to the number of output neurons.
- 5. Iterate all nodes in their internal order:
-      - Input nodes: directly assign provided input values.
-      - Hidden nodes: compute activation via Node.noTraceActivate (no bookkeeping).
-      - Output nodes: compute activation and store it (in sequence) inside the
-        pooled output buffer.
+5. Traverse nodes in the compiled activation order when available:
+     - Input nodes: assign values by explicit `inputNodeIds`, not raw node position.
+     - Hidden and recurrent-component nodes: compute activation via
+       Node.noTraceActivate without training traces.
+     - Output nodes: activate in schedule order, then read out results in explicit
+       `outputNodeIds` order so vector semantics stay stable even if storage order drifts.
  6. Copy the pooled buffer into a fresh array (detaches user from the pool) and
     release the pooled buffer back to the pool.
 
@@ -2088,6 +2143,42 @@ const y = activation(x);
 const dy = activation(x, true);
 ```
 
+### ActivationMode
+
+Supported activation-schedule modes.
+
+### ActivationSchedule
+
+Deterministic execution schedule for a network graph.
+
+Steps preserve deterministic order while distinguishing ordinary waves from
+recurrent strongly-connected components.
+
+### ActivationScheduleStep
+
+One deterministic activation step inside a compiled schedule.
+
+### ActivationScheduleStepKind
+
+Supported step kinds inside one activation schedule.
+
+### ActivationSchedulingDiagnostics
+
+Human-friendly snapshot of the current activation-ordering contract.
+
+Activation ordering is the resolved execution story for one network: which
+mode is active, whether execution is using a compiled schedule or a fallback
+path, what recurrent state semantics apply, and what callers should do next
+when a cycle or stale cache prevents the preferred path.
+
+### ActivationSchedulingExecutionPath
+
+Execution path used by the most recent activation scheduling decision.
+
+### ActivationSchedulingIssue
+
+High-level issue attached to the latest scheduling decision.
+
 ### ActivationSquashFunction
 
 ```ts
@@ -2420,6 +2511,12 @@ Evolve-side cost function signature.
 ### EvolveOptions
 
 Evolve options bag.
+
+### ExplicitIORoles
+
+Explicit ordered node-role metadata stored on a runtime network.
+
+The order of each array defines the public input and output vector semantics.
 
 ### FanOutCollectionContext
 
@@ -3368,6 +3465,10 @@ Minimal recurrent-layer shape used by mutation expanders.
 ### RecurrentRowCollectionContext
 
 Context for collecting one recurrent matrix row.
+
+### RecurrentStateSemantics
+
+State-handling rule for recurrent schedule execution.
 
 ### RegrowthExecutionContext
 

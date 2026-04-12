@@ -2514,6 +2514,27 @@ const neat = createNeat(10, 4, fitnessFn);
 
 NEAT configuration object shape for type safety.
 
+### resolveDefaultMutationShelf
+
+```ts
+resolveDefaultMutationShelf(
+  allowRecurrent: boolean,
+): unknown[]
+```
+
+Resolves the default mutation shelf for the ASCII Maze demo.
+
+The maze example already opts into recurrent-capable search at the
+controller level, so its default mutation shelf should expose the newer
+temporal and gated operators that make that policy meaningful. When callers
+explicitly disable recurrent growth, the shelf falls back to the compact
+feed-forward subset so the controller contract stays aligned with the shelf.
+
+Parameters:
+- `allowRecurrent` - Whether recurrent and gated growth is allowed.
+
+Returns: Demo-aligned default mutation shelf.
+
 ### seedInitialPopulation
 
 ```ts

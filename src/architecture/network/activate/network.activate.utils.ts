@@ -110,16 +110,17 @@ import { DEFAULT_MAX_ACTIVATION_DEPTH } from './network.activate.utils.types';
  * after a structural mutation) execution gracefully falls back to a node‑by‑node loop.
  *
  * Algorithm outline:
- *  1. (Optional) Refresh cached topological order if the network enforces acyclicity
- *     and a structural change marked the order as dirty.
+ * 1. (Optional) Refresh the compiled activation schedule when a structural change
+ *    marked topology as dirty.
  *  2. Validate the input dimensionality.
  *  3. Try the fast slab path; if it throws, continue with the standard path.
  *  4. Acquire a pooled output buffer sized to the number of output neurons.
- *  5. Iterate all nodes in their internal order:
- *       - Input nodes: directly assign provided input values.
- *       - Hidden nodes: compute activation via Node.noTraceActivate (no bookkeeping).
- *       - Output nodes: compute activation and store it (in sequence) inside the
- *         pooled output buffer.
+ * 5. Traverse nodes in the compiled activation order when available:
+ *      - Input nodes: assign values by explicit `inputNodeIds`, not raw node position.
+ *      - Hidden and recurrent-component nodes: compute activation via
+ *        Node.noTraceActivate without training traces.
+ *      - Output nodes: activate in schedule order, then read out results in explicit
+ *        `outputNodeIds` order so vector semantics stay stable even if storage order drifts.
  *  6. Copy the pooled buffer into a fresh array (detaches user from the pool) and
  *     release the pooled buffer back to the pool.
  *

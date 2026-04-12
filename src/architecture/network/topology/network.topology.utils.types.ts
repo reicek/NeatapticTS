@@ -1,6 +1,9 @@
 import type Network from '../../network/network';
 import type Node from '../../node';
 import type {
+  ActivationSchedule as NetworkActivationSchedule,
+  ActivationSchedulingDiagnostics as NetworkActivationSchedulingDiagnostics,
+  ActivationScheduleStep as NetworkActivationScheduleStep,
   PathSearchContext as NetworkPathSearchContext,
   TopologyBuildContext as NetworkTopologyBuildContext,
   TopologyNetworkProps as NetworkTopologyProps,
@@ -23,6 +26,16 @@ export type TopologyBuildContext = NetworkTopologyBuildContext;
 
 /** Mutable context used while running iterative DFS reachability checks. */
 export type PathSearchContext = NetworkPathSearchContext;
+
+/** Deterministic activation schedule type used by topology helpers. */
+export type ActivationSchedule = NetworkActivationSchedule;
+
+/** Human-friendly activation scheduling diagnostics type used by topology helpers. */
+export type ActivationSchedulingDiagnostics =
+  NetworkActivationSchedulingDiagnostics;
+
+/** Deterministic activation schedule step type used by topology helpers. */
+export type ActivationScheduleStep = NetworkActivationScheduleStep;
 
 /** Network instance type used by topology helpers. */
 export type TopologyNetwork = Network;

@@ -231,8 +231,74 @@ Returns: Nothing.
 Runtime diagnostics and safety helpers for the public `Network` class.
 
 This chapter owns the public readers and small runtime controls that expose
-training-health state, DropConnect policy, and dropout-mask cleanup without
-changing the network topology itself.
+training-health state, activation-ordering diagnostics, DropConnect policy,
+and dropout-mask cleanup without changing the network topology itself.
+
+### appendSuggestion
+
+```ts
+appendSuggestion(
+  suggestions: string[],
+  suggestion: string,
+): string[]
+```
+
+Append one suggestion string only when it is not already present.
+
+Parameters:
+- `suggestions` - Existing suggestions.
+- `suggestion` - Suggested next action.
+
+Returns: Updated suggestions list.
+
+### cloneSchedulingDiagnostics
+
+```ts
+cloneSchedulingDiagnostics(
+  diagnostics: ActivationSchedulingDiagnostics,
+): ActivationSchedulingDiagnostics
+```
+
+Clone the diagnostics snapshot so callers cannot mutate runtime state.
+
+Parameters:
+- `diagnostics` - Diagnostics snapshot to clone.
+
+Returns: Detached diagnostics snapshot.
+
+### createCompiledSchedulingDiagnostics
+
+```ts
+createCompiledSchedulingDiagnostics(
+  network: default,
+  activationSchedule: ActivationSchedule,
+): ActivationSchedulingDiagnostics
+```
+
+Build the standard diagnostics snapshot for a compiled activation schedule.
+
+Parameters:
+- `network` - Target network instance.
+- `activationSchedule` - Cached compiled schedule.
+
+Returns: Scheduling diagnostics snapshot.
+
+### createDefaultSchedulingDiagnostics
+
+```ts
+createDefaultSchedulingDiagnostics(
+  network: default,
+  runtimeNetwork: NetworkRuntimeDiagnosticsInternals,
+): ActivationSchedulingDiagnostics
+```
+
+Build a safe default diagnostics snapshot when no explicit scheduling record exists yet.
+
+Parameters:
+- `network` - Target network instance.
+- `runtimeNetwork` - Runtime diagnostics internals.
+
+Returns: Default scheduling diagnostics snapshot.
 
 ### disableDropConnect
 
@@ -262,6 +328,23 @@ Parameters:
 - `probability` - DropConnect probability.
 
 Returns: Nothing.
+
+### getActivationSchedulingDiagnostics
+
+```ts
+getActivationSchedulingDiagnostics(): ActivationSchedulingDiagnostics
+```
+
+Read a human-friendly snapshot of the current activation-ordering contract.
+
+The snapshot explains whether activation is using a compiled schedule or a
+fallback path, whether topology is currently dirty, and what callers should
+do next when cycles or stale caches prevent the preferred schedule.
+
+Parameters:
+- `this` - Target network instance.
+
+Returns: Activation scheduling diagnostics snapshot.
 
 ### getLastGradClipGroupCount
 

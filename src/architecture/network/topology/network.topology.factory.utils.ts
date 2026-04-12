@@ -115,6 +115,7 @@ function assignNetworkNodes(
   mlpNodeLayers: MlpNodeLayers,
 ): void {
   networkInstance.nodes = createOrderedNodeList(mlpNodeLayers);
+  networkInstance.refreshExplicitIORoles();
 }
 
 /**

@@ -135,8 +135,9 @@ export function bootstrapNetwork(
   // Step 3: Seed deterministic RNG state when the caller requested reproducibility.
   applySeedOption(network, options);
 
-  // Step 4: Materialize the initial IO nodes and their dense starter graph.
+  // Step 4: Materialize the initial IO nodes, capture their explicit roles, and wire the starter graph.
   initializeIONodes(network);
+  network.refreshExplicitIORoles();
   connectInitialInputToOutputGraph(network);
 
   // Step 5: Synthesize minimum hidden capacity through the public node-split flow.

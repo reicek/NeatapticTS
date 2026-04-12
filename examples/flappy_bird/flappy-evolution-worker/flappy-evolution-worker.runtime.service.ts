@@ -49,6 +49,7 @@ export function createInitializedWorkerRuntime(
     elitism: initPayload.elitismCount,
     mutationRate: 0.75,
     mutationAmount: 2,
+    allowRecurrent: false,
     mutation: methods.mutation.FFW,
     network: Architect.perceptron(
       inputSize,

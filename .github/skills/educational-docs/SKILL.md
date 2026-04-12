@@ -38,6 +38,26 @@ rules, Mermaid policy, and citation/media guardrails. Companion agents such as
 gaps, and hand those specifics back into this skill rather than re-defining the
 documentation bar themselves.
 
+## Atemporal Public Docs Rule
+
+Public documentation in this repo must stand on current concepts rather than on
+repo process history.
+
+Hard rules unless the user explicitly asks for process, migration, or
+historical documentation:
+
+- do not reference internal plans, tracker steps, roadmap phases, pass labels,
+  or prior chat context in public README or JSDoc surfaces,
+- do not use repo before/after framing, “now that X landed” framing, or
+  milestone-driven chronology in public docs,
+- keep public docs centered on what the boundary is for, why it exists, what
+  concepts it teaches, and what tradeoffs it makes,
+- keep rollout, tracker, and migration storytelling in `plans/`, `.logs.md`,
+  PR descriptions, release notes, or explicitly historical docs.
+
+External conceptual history is still allowed when it teaches faster than pure
+API prose. Repo-internal chronology is not.
+
 ## Repo Preference Override
 
 When a generated README chapter is the target surface, treat the opening under
@@ -249,7 +269,7 @@ Apply that model broadly:
 - use named sections that create momentum,
 - teach architecture and behavior together,
 - connect the boundary back to neural-network practice and motivation,
-- include concise historical framing when it teaches faster than pure API prose,
+- include concise conceptual or external background framing when it teaches faster than pure API prose, but keep repo milestones, tracker terms, and before/after repo chronology out of public docs,
 - finish with recommended reading or next steps when helpful.
 
 Treat heading depth as a teaching contract, not a formatting afterthought:
@@ -284,6 +304,7 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
 3. Read before rewriting.
    - Read the nearest folder README, then the nearest useful parent README.
    - Read the smallest set of source files that own the public story.
+  - Identify and remove user-facing plan labels, tracker language, or repo before/after framing when they leak into public docs.
 
 - Judge the README's flow like a chapter outline: opening promise, reading
   order, conceptual bridges, and whether the symbol sequence helps or hurts

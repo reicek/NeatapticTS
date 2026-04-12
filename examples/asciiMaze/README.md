@@ -6,6 +6,20 @@ The example uses an ASCII maze, but the maze is not the whole point. The real po
 
 If Flappy Bird is the repo's lesson in fast control systems, ASCII Maze is its lesson in disciplined decision-making.
 
+This example is a good place to see several ideas meet cleanly: a tiny observation space, reward shaping that stays inspectable, curriculum transfer across harder mazes, and telemetry that makes long search runs legible.
+
+It is also a strong demonstration of what a stable evolutionary contract buys a navigation task. Deterministic execution, replayable and exportable runs, explicit controller-level search overlays such as novelty or multiobjective ranking, and optional richer temporal structure all fit here without changing the example's central lesson.
+
+## Why This Example Holds Up Under Longer Experiments
+
+| Concept | Why it matters here |
+| --- | --- |
+| Compact perception | The policy has to reason from six values, so observation design stays visible instead of disappearing behind a huge sensor surface. |
+| Deterministic and replayable runs | Sparse-goal search is hard to trust when every run feels different. Stable seeds and exportable state make comparisons, debugging, and regression checks easier to understand. |
+| Explicit search overlays | Novelty, adaptive pressure, multiobjective ranking, and telemetry remain legible controller choices instead of being hidden inside the base network contract. |
+| Optional richer structure | Recurrent or gated structure can be explored when navigation benefits from it, but the core lesson remains compact decision-making rather than architecture spectacle. |
+| Curriculum transfer | The folder treats progression across harder mazes as part of the design, not as an afterthought bolted onto a single-run demo. |
+
 ## What This Folder Is Trying To Teach
 
 This example is organized around four reader questions:
@@ -16,6 +30,8 @@ This example is organized around four reader questions:
 4. How do you make long-running search legible through dashboards, telemetry, and browser integration instead of waiting blindly for a lucky winner?
 
 The folder matters because it treats those questions as one system. Perception, movement, scoring, curriculum evolution, and presentation are separate boundaries on purpose. That separation is what makes the example useful as a reference architecture rather than just a clever test.
+
+The folder also raises one broader systems question: what makes a navigation demo trustworthy enough to reuse, replay, and extend rather than merely watch?
 
 ## Choose Your Route
 

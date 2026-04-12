@@ -189,6 +189,8 @@ Genomes are compared on the same deterministic seeds. That makes fitness compari
 
 The policy receives a 38-input observation assembled from current, previous, and two-frames-ago feature slices plus short action-memory signals. That gives a feed-forward controller short-horizon temporal context without requiring recurrent state.
 
+That choice is intentional. The library can represent richer recurrent and gated structure, but this folder keeps the policy feed-forward so readers can study observation design, evaluation fairness, and runtime boundaries without mixing in a second control story.
+
 ### Two outputs keep the action story simple
 
 The action surface is intentionally narrow: `no flap` versus `flap`. A flap occurs when `output[1] > output[0]`.

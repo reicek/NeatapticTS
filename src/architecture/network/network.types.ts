@@ -56,6 +56,103 @@ export interface NetworkArchitectureDescriptor {
 export type NetworkTopologyIntent = 'feed-forward' | 'unconstrained';
 
 /**
+ * Explicit ordered node-role metadata stored on a runtime network.
+ *
+ * The order of each array defines the public input and output vector semantics.
+ */
+export interface ExplicitIORoles {
+  /** Ordered stable gene ids for input-role nodes. */
+  inputNodeIds: number[];
+  /** Ordered stable gene ids for output-role nodes. */
+  outputNodeIds: number[];
+}
+
+/** Supported activation-schedule modes. */
+export type ActivationMode = 'acyclic' | 'recurrent';
+
+/** Execution path used by the most recent activation scheduling decision. */
+export type ActivationSchedulingExecutionPath =
+  | 'compiled-schedule'
+  | 'cycle-fallback-order'
+  | 'raw-node-order';
+
+/** High-level issue attached to the latest scheduling decision. */
+export type ActivationSchedulingIssue =
+  | 'cycle-detected'
+  | 'schedule-missing'
+  | null;
+
+/** Supported step kinds inside one activation schedule. */
+export type ActivationScheduleStepKind = 'wave' | 'recurrent-component';
+
+/** State-handling rule for recurrent schedule execution. */
+export type RecurrentStateSemantics = 'carry';
+
+/** One deterministic activation step inside a compiled schedule. */
+export interface ActivationScheduleStep {
+  /** Whether the step is a plain feed-forward wave or a recurrent SCC boundary. */
+  kind: ActivationScheduleStepKind;
+  /** Stable node gene ids executed by this step in deterministic order. */
+  nodeIds: ReadonlyArray<number>;
+  /** Fixed iteration count for recurrent components. */
+  iterations?: number;
+}
+
+/**
+ * Deterministic execution schedule for a network graph.
+ *
+ * Steps preserve deterministic order while distinguishing ordinary waves from
+ * recurrent strongly-connected components.
+ */
+export interface ActivationSchedule {
+  /** Execution mode used to derive this schedule. */
+  mode: ActivationMode;
+  /** Deterministic activation steps stored as stable node gene ids. */
+  steps: ReadonlyArray<ActivationScheduleStep>;
+  /** Ordered output-role node gene ids aligned with output vector semantics. */
+  outputNodeIds: number[];
+  /** Recurrent runtime state policy for recurrent schedules. */
+  stateSemantics?: RecurrentStateSemantics;
+}
+
+/**
+ * Human-friendly snapshot of the current activation-ordering contract.
+ *
+ * Activation ordering is the resolved execution story for one network: which
+ * mode is active, whether execution is using a compiled schedule or a fallback
+ * path, what recurrent state semantics apply, and what callers should do next
+ * when a cycle or stale cache prevents the preferred path.
+ */
+export interface ActivationSchedulingDiagnostics {
+  /** Semantic topology contract currently advertised by the network. */
+  topologyIntent: NetworkTopologyIntent;
+  /** Scheduling mode requested by the current topology contract. */
+  requestedMode: ActivationMode;
+  /** Whether structural edits marked the scheduling cache as stale. */
+  topologyDirty: boolean;
+  /** Execution path currently selected for activation traversal. */
+  executionPath: ActivationSchedulingExecutionPath;
+  /** High-level issue attached to the current scheduling result, when one exists. */
+  issue: ActivationSchedulingIssue;
+  /** Human-readable summary of the scheduling result. */
+  message: string;
+  /** Ordered input-role node ids that define public input-vector semantics. */
+  inputNodeIds: number[];
+  /** Ordered output-role node ids that define public output-vector semantics. */
+  outputNodeIds: number[];
+  /** Number of execution steps in the compiled schedule when one exists. */
+  stepCount: number;
+  /** Number of recurrent-component steps in the compiled schedule. */
+  recurrentComponentCount: number;
+  /** Recurrent state policy for the current schedule, when one exists. */
+  stateSemantics: RecurrentStateSemantics | null;
+  /** Node ids implicated in a cycle fallback, when one was detected. */
+  cycleNodeIds: number[];
+  /** Suggested next actions for callers who want a different scheduling result. */
+  suggestions: string[];
+}
+
+/**
  * Public constructor options for `Network`.
  *
  * `topologyIntent` is the semantic, DX-first contract. `enforceAcyclic`
@@ -107,6 +204,8 @@ export interface NetworkBootstrapInternals {
   _reuseActivationArrays: boolean;
   /** Whether pooled typed activations can be returned directly. */
   _returnTypedActivations: boolean;
+  /** Refresh explicit ordered input/output role ids from the current node list. */
+  refreshExplicitIORoles: () => void;
   /** Seed the internal deterministic RNG. */
   setSeed: (seed: number) => void;
   /** Connect two nodes inside the runtime graph. */
@@ -213,6 +312,20 @@ export interface NetworkRuntimeDiagnosticsInternals {
   layers?: { nodes: Node[] }[];
   /** Flat network node collection. */
   nodes: Node[];
+  /** Ordered input-role node ids. */
+  inputNodeIds: number[];
+  /** Ordered output-role node ids. */
+  outputNodeIds: number[];
+  /** Public topology intent preserved on the runtime seam. */
+  _topologyIntent?: NetworkTopologyIntent;
+  /** Cached compiled activation schedule. */
+  _activationSchedule?: ActivationSchedule | null;
+  /** Cached scheduling diagnostics snapshot. */
+  _activationSchedulingDiagnostics?: ActivationSchedulingDiagnostics | null;
+  /** Topology dirty marker. */
+  _topoDirty?: boolean;
+  /** Acyclic mode enforcement flag. */
+  _enforceAcyclic?: boolean;
   /** Active DropConnect probability. */
   _dropConnectProb: number;
   /** Last recorded gradient norm. */
@@ -261,6 +374,10 @@ export interface StatsNetworkProps {
 export interface TopologyNetworkProps {
   /** Acyclic mode enforcement flag. */
   _enforceAcyclic?: boolean;
+  /** Cached deterministic activation schedule for acyclic execution. */
+  _activationSchedule?: ActivationSchedule | null;
+  /** Cached human-friendly scheduling diagnostics snapshot. */
+  _activationSchedulingDiagnostics?: ActivationSchedulingDiagnostics | null;
   /** Cached topological order. */
   _topoOrder: Node[] | null;
   /** Topology dirty marker. */
@@ -277,6 +394,8 @@ export interface TopologyBuildContext {
   inDegreeByNode: Map<Node, number>;
   /** Pending processing queue. */
   processingQueue: Node[];
+  /** Deterministic wave groups captured during Kahn traversal. */
+  activationSteps: number[][];
   /** Built topological order. */
   topoOrder: Node[];
 }
