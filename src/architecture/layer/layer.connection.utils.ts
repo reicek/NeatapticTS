@@ -44,10 +44,10 @@ const REVERSE_INDEX_STEP = 1;
  * connectLayer(layerAContext, someGroup, methods.groupConnection.ALL_TO_ALL);
  * ```
  *
- * @param context - The layer state needed for connections.
- * @param target - The layer, group, or node to connect to.
- * @param method - Optional connection method override.
- * @param weight - Optional fixed weight to apply.
+ * @param context The layer state needed for connections.
+ * @param target The layer, group, or node to connect to.
+ * @param method Optional connection method override.
+ * @param weight Optional fixed weight to apply.
  * @returns The created connection list.
  */
 export function connectLayer(
@@ -90,9 +90,9 @@ export function connectLayer(
  * gateLayer(layerContext, connections, methods.gating.OUTPUT);
  * ```
  *
- * @param context - The layer state needed for gating.
- * @param connections - The connections to gate.
- * @param method - The gating method.
+ * @param context The layer state needed for gating.
+ * @param connections The connections to gate.
+ * @param method The gating method.
  */
 export function gateLayer(
   context: LayerConnectionContext,
@@ -130,10 +130,10 @@ export function gateLayer(
  * inputLayer(thisLayerContext, someGroup, methods.groupConnection.ONE_TO_ONE);
  * ```
  *
- * @param context - The layer state needed for input wiring.
- * @param from - The source layer or group.
- * @param method - Optional connection method override.
- * @param weight - Optional fixed weight to apply.
+ * @param context The layer state needed for input wiring.
+ * @param from The source layer or group.
+ * @param method Optional connection method override.
+ * @param weight Optional fixed weight to apply.
  * @returns The created connection list.
  */
 export function inputLayer(
@@ -179,9 +179,9 @@ export function inputLayer(
  * disconnectLayer(layerContext, someNode, false);
  * ```
  *
- * @param context - The layer state needed for disconnecting.
- * @param target - The group or node to disconnect.
- * @param twoSided - Whether to remove reciprocal connections as well.
+ * @param context The layer state needed for disconnecting.
+ * @param target The group or node to disconnect.
+ * @param twoSided Whether to remove reciprocal connections as well.
  */
 export function disconnectLayer(
   context: LayerConnectionContext,
@@ -205,10 +205,10 @@ export function disconnectLayer(
  * This is a "cartesian disconnect": every node in this layer is disconnected
  * from every node in the target group.
  *
- * @param layerNodes - Nodes in the layer.
- * @param targetGroup - Group to disconnect from.
- * @param layerConnections - Connection tracking for the layer.
- * @param removeTwoSided - Whether to remove reciprocal connections as well.
+ * @param layerNodes Nodes in the layer.
+ * @param targetGroup Group to disconnect from.
+ * @param layerConnections Connection tracking for the layer.
+ * @param removeTwoSided Whether to remove reciprocal connections as well.
  */
 export function disconnectFromGroup(
   layerNodes: Node[],
@@ -241,10 +241,10 @@ export function disconnectFromGroup(
 /**
  * Disconnects all layer nodes from a target node.
  *
- * @param layerNodes - Nodes in the layer.
- * @param targetNode - Node to disconnect from.
- * @param layerConnections - Connection tracking for the layer.
- * @param removeTwoSided - Whether to remove reciprocal connections as well.
+ * @param layerNodes Nodes in the layer.
+ * @param targetNode Node to disconnect from.
+ * @param layerConnections Connection tracking for the layer.
+ * @param removeTwoSided Whether to remove reciprocal connections as well.
  */
 export function disconnectFromNode(
   layerNodes: Node[],
@@ -272,9 +272,9 @@ export function disconnectFromNode(
  *
  * This scans in reverse so we can `splice(...)` safely while iterating.
  *
- * @param layerConnections - Connection tracking for the layer.
- * @param sourceNode - Source node for the connection.
- * @param targetNode - Target node for the connection.
+ * @param layerConnections Connection tracking for the layer.
+ * @param sourceNode Source node for the connection.
+ * @param targetNode Target node for the connection.
  */
 export function removeOutgoingConnection(
   layerConnections: LayerConnectionContext['connections'],
@@ -299,9 +299,9 @@ export function removeOutgoingConnection(
  *
  * This scans in reverse so we can `splice(...)` safely while iterating.
  *
- * @param layerConnections - Connection tracking for the layer.
- * @param sourceNode - Source node for the connection.
- * @param targetNode - Target node for the connection.
+ * @param layerConnections Connection tracking for the layer.
+ * @param sourceNode Source node for the connection.
+ * @param targetNode Target node for the connection.
  */
 export function removeIncomingConnection(
   layerConnections: LayerConnectionContext['connections'],
@@ -333,7 +333,7 @@ export function removeIncomingConnection(
  * clearLayer(layerContext);
  * ```
  *
- * @param context - The layer state needed to reset nodes.
+ * @param context The layer state needed to reset nodes.
  */
 export function clearLayer(context: LayerConnectionContext): void {
   const { nodes } = context;

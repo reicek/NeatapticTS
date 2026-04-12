@@ -175,6 +175,7 @@ import {
   crossOver as _crossOver,
 } from './network.utils';
 import type {
+  CompactSerializedNetworkTuple,
   NetworkArchitectureDescriptor,
   MutationMethod,
   NetworkBootstrapInternals,
@@ -859,7 +860,7 @@ export default class Network implements NetworkView {
    * This is a core operation for neuro-evolutionary algorithms (like NEAT).
    * The method argument should be one of the mutation types defined in `methods.mutation`.
    *
-   * @param method - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+    * @param method The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
    *                 Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
    * @throws {Error} If no valid mutation `method` is provided.
    *
@@ -1030,14 +1031,7 @@ export default class Network implements NetworkView {
   }
 
   /** Lightweight tuple serializer delegating to network.serialize.ts */
-  serialize(): [
-    number[],
-    number[],
-    string[],
-    SerializedConnection[],
-    number,
-    number,
-  ] {
+  serialize(): CompactSerializedNetworkTuple {
     return _serialize.call(this);
   }
 
@@ -1046,7 +1040,9 @@ export default class Network implements NetworkView {
    * Reconstructs the network structure and state based on the provided arrays.
    *
    * @param {unknown[]} data - The serialized network data array, typically obtained from `network.serialize()`.
-   *                       Expected format: `[activations, states, squashNames, connectionData, inputSize, outputSize]`.
+  *                       Expected format: `[activations, states, squashNames, connectionData, inputSize, outputSize]`
+  *                       with optional trailing `nodeGeneIds` and `topologyIntent` slots for
+  *                       identity-preserving restore paths.
    * @param {number} [inputSize] - Optional input size override.
    * @param {number} [outputSize] - Optional output size override.
    * @returns {Network} A new Network instance reconstructed from the serialized data.
@@ -1054,16 +1050,7 @@ export default class Network implements NetworkView {
    */
   /** Static lightweight tuple deserializer delegate */
   static deserialize(
-    data:
-      | [
-          number[],
-          number[],
-          string[],
-          { from: number; to: number; weight: number; gater: number | null }[],
-          number,
-          number,
-        ]
-      | unknown[],
+    data: CompactSerializedNetworkTuple | unknown[],
     inputSize?: number,
     outputSize?: number,
   ): Network {

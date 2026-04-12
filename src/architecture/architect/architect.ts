@@ -18,6 +18,14 @@ import Node from '../node/node';
 import Layer from '../layer/layer';
 import Group from '../group/group';
 import Network from '../network/network';
+import {
+  appendTemporalDescriptorSet,
+  buildGruTemporalDescriptorSet,
+  buildLstmTemporalDescriptorSet,
+  buildNarxMemoryTemporalDescriptorSet,
+  splitGruLayerNodes,
+  splitLstmLayerNodes,
+} from '../network/network.temporal.extensions.utils';
 import * as methods from '../../methods/methods';
 import Connection from '../connection/connection';
 import {
@@ -337,12 +345,14 @@ export default class Architect {
     outputLayer.set({ type: 'output' });
 
     const nodes: (Layer | Group)[] = [inputLayer];
+    const recurrentLayers: Array<{ layer: Layer; size: number }> = [];
     let previousLayer: Layer | Group = inputLayer;
 
     for (const layerSize of layers) {
       const lstmLayer = Layer.lstm(layerSize);
       (previousLayer as Layer).connect(lstmLayer);
       nodes.push(lstmLayer);
+      recurrentLayers.push({ layer: lstmLayer, size: layerSize });
       previousLayer = lstmLayer;
     }
 
@@ -356,6 +366,15 @@ export default class Architect {
     const network = Architect.construct(nodes);
     network.input = inputLayerSize;
     network.output = outputLayerSize;
+    recurrentLayers.forEach(({ layer, size }) => {
+      const roleNodes = splitLstmLayerNodes(layer.nodes, size);
+      appendTemporalDescriptorSet(
+        network,
+        roleNodes
+          ? buildLstmTemporalDescriptorSet(network, roleNodes)
+          : undefined,
+      );
+    });
 
     return network;
   }
@@ -384,12 +403,14 @@ export default class Architect {
     outputLayer.set({ type: 'output' });
 
     const nodes: (Layer | Group)[] = [inputLayer];
+    const recurrentLayers: Array<{ layer: Layer; size: number }> = [];
     let previousLayer: Layer | Group = inputLayer;
 
     for (const blockSize of layers) {
       const gruLayer = Layer.gru(blockSize);
       (previousLayer as Layer).connect(gruLayer);
       nodes.push(gruLayer);
+      recurrentLayers.push({ layer: gruLayer, size: blockSize });
       previousLayer = gruLayer;
     }
 
@@ -399,6 +420,15 @@ export default class Architect {
     const network = Architect.construct(nodes);
     network.input = inputLayerSize;
     network.output = outputLayerSize;
+    recurrentLayers.forEach(({ layer, size }) => {
+      const roleNodes = splitGruLayerNodes(layer.nodes, size);
+      appendTemporalDescriptorSet(
+        network,
+        roleNodes
+          ? buildGruTemporalDescriptorSet(network, roleNodes)
+          : undefined,
+      );
+    });
 
     return network;
   }
@@ -499,6 +529,22 @@ export default class Architect {
     const network = Architect.construct(nodes);
     network.input = inputSize;
     network.output = outputSize;
+    appendTemporalDescriptorSet(
+      network,
+      buildNarxMemoryTemporalDescriptorSet(
+        network,
+        'input',
+        resolveMemoryBlockNodes(inputMemory),
+      ),
+    );
+    appendTemporalDescriptorSet(
+      network,
+      buildNarxMemoryTemporalDescriptorSet(
+        network,
+        'output',
+        resolveMemoryBlockNodes(outputMemory),
+      ),
+    );
 
     return network;
   }
@@ -558,4 +604,10 @@ export default class Architect {
 
     return network;
   }
+}
+
+function resolveMemoryBlockNodes(memoryLayer: Layer): Node[][] {
+  return (memoryLayer.nodes as unknown as Group[])
+    .filter((layerNode) => layerNode instanceof Group)
+    .map((memoryBlock) => memoryBlock.nodes);
 }

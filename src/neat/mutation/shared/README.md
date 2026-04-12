@@ -17,7 +17,7 @@ The contracts fall into four groups:
    `ConnectionWithMetadata`,
 2. operator description and adaptation state: `MutationMethod` and
    `OperatorStats`,
-3. innovation-history state: `NodeSplitRecord`,
+3. controller-owned innovation tracking: `InnovationTracker`,
 4. host controller seam: `NeatControllerForMutation`.
 
 Read this chapter before diving into the helper folders when you need to know
@@ -30,8 +30,7 @@ flowchart TD
   Genome --> Operators[Mutation method descriptors]
   Operators --> Stats[Operator success tracking]
   Genome --> Controller[Mutation host controller seam]
-  Controller --> SplitStore[Node split innovation store]
-  Controller --> ConnStore[Connection innovation store]
+  Controller --> Tracker[Generation-scoped innovation tracker]
   Controller --> Flow[Used by flow, select, add-node, and add-conn helpers]
 ```
 
@@ -80,15 +79,6 @@ statistics, and the narrow controller callbacks that the mutation helpers need.
 The important boundary is that mutation chapters can mutate controller-owned
 bookkeeping through this interface, but they do not need the entire `Neat`
 class surface to do their work.
-
-### NodeSplitRecord
-
-Runtime interface for node-split innovation records.
-
-A node-split record is the durable memory that tells the add-node path,
-"this exact split has happened before." Reusing the stored node gene id and
-paired edge innovations is how separate genomes can independently perform the
-same split and still remain historically alignable.
 
 ### NodeWithMetadata
 

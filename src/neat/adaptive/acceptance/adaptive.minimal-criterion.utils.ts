@@ -25,6 +25,11 @@ import type {
  * 2. snapshot current scores,
  * 3. measure how much of the population clears the bar,
  * 4. retune the threshold and reject genomes that still miss it.
+ *
+ * That last step is deliberately a controller-policy overlay. Rejection may
+ * rewrite the current generation's `score` field so later selection can treat
+ * weak genomes as filtered out, but it does not redefine the raw evaluation
+ * evidence or the canonical genome contract.
  */
 
 /* Module introduction boundary for generated README output. */
@@ -136,12 +141,13 @@ export function updateThreshold(
 }
 
 /**
- * Zero scores below the final threshold.
+ * Rewrite controller-visible scores below the final threshold.
  *
  * Rejection is the acceptance chapter's most direct intervention. Instead of
  * queuing a future policy change, it rewrites the current generation's scores so
  * the same selection pass immediately treats low-performing genomes as filtered
- * out.
+ * out. Treat that write as current-generation controller state, not as a claim
+ * that the task evaluator itself literally returned zero.
  *
  * Example:
  *

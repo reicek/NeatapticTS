@@ -61,9 +61,9 @@ archive helpers can read one stable annotation instead of carrying a parallel
 rank table beside the population.
 
 Parameters:
-- `population` - - Genome population.
-- `genomeIndex` - - Index of the genome to annotate.
-- `frontRank` - - Pareto front rank (0 = best front).
+- `population` - Genome population.
+- `genomeIndex` - Index of the genome to annotate.
+- `frontRank` - Pareto front rank (0 = best front).
 
 ### appendFront
 
@@ -84,9 +84,9 @@ stable indices to genome references happens only after the current layer has
 been fully identified.
 
 Parameters:
-- `paretoFronts` - - Accumulator for Pareto fronts.
-- `population` - - Genome population.
-- `currentFrontIndices` - - Indices for the current front.
+- `paretoFronts` - Accumulator for Pareto fronts.
+- `population` - Genome population.
+- `currentFrontIndices` - Indices for the current front.
 
 ### buildNextFrontIndices
 
@@ -106,10 +106,10 @@ current front with the same rank, then remove each genome's blocking
 influence so newly non-dominated neighbors can surface as the next front.
 
 Parameters:
-- `population` - - Genome population.
-- `dominanceState` - - Dominance bookkeeping.
-- `currentFrontIndices` - - Indices for the current front.
-- `currentFrontRank` - - Rank to assign to the current front.
+- `population` - Genome population.
+- `dominanceState` - Dominance bookkeeping.
+- `currentFrontIndices` - Indices for the current front.
+- `currentFrontRank` - Rank to assign to the current front.
 
 Returns: Indices for the next front.
 
@@ -143,10 +143,10 @@ Guard:
   be incomplete.
 
 Parameters:
-- `population` - - Genome population (same ordering used by dominance
+- `population` - Genome population (same ordering used by dominance
 bookkeeping).
-- `dominanceState` - - Dominance bookkeeping.
-- `maxFrontRankGuard` - - Safety guard for ranking iterations.
+- `dominanceState` - Dominance bookkeeping.
+- `maxFrontRankGuard` - Safety guard for ranking iterations.
 
 Returns: Ordered Pareto fronts (rank order).
 
@@ -169,9 +169,9 @@ removing that blocker. When the count reaches zero, the neighbor has no
 remaining dominating opponents and can join the next frontier.
 
 Parameters:
-- `dominanceState` - - Dominance bookkeeping.
-- `genomeIndex` - - Index of the current genome.
-- `nextFrontIndices` - - Accumulator for the next front.
+- `dominanceState` - Dominance bookkeeping.
+- `genomeIndex` - Index of the current genome.
+- `nextFrontIndices` - Accumulator for the next front.
 
 ### incrementFrontRank
 
@@ -187,7 +187,7 @@ Keeping rank advancement in its own helper makes the frontier loop easier to
 read and keeps the guard check phrased in terms of the next rank value.
 
 Parameters:
-- `currentFrontRank` - - Current front rank.
+- `currentFrontRank` - Current front rank.
 
 Returns: Incremented front rank.
 
@@ -216,7 +216,7 @@ configured maximum rank, the function stops and returns the fronts collected
 so far rather than risking a pathological or corrupted infinite loop.
 
 Parameters:
-- `currentFrontRank` - - Current front rank after increment.
-- `maxFrontRankGuard` - - Safety guard for ranking iterations.
+- `currentFrontRank` - Current front rank after increment.
+- `maxFrontRankGuard` - Safety guard for ranking iterations.
 
 Returns: `true` if ranking should stop.

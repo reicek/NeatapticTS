@@ -23,6 +23,11 @@ It owns three related jobs:
 3. summarize structural and innovation signals so history entries teach more
    than simple species counts.
 
+One Step 7.5 nuance matters here: age protection is a controller-pressure
+overlay applied after evaluation and assignment. When it penalizes member
+scores, it changes the active generation's selection view, not the canonical
+compatibility identity or the stored historical markings.
+
 Keeping those responsibilities together makes the speciation pipeline easier
 to follow: this chapter does not decide who belongs to a species, but it does
 decide what evidence about species evolution is preserved once assignment is
@@ -80,9 +85,14 @@ trying to protect innovation, not just sort genomes. New structural ideas are
 often weak before they are refined, so this helper delays harsh pressure long
 enough for those ideas to either improve or clearly fail.
 
+The penalty is intentionally applied to current member `score` values as a
+controller-side pressure overlay. That keeps later allocation and selection
+aligned with the protection rule without redefining raw task evaluation or
+compatibility identity.
+
 Parameters:
-- `speciationContext` - - Speciation harness context.
-- `options` - - Speciation options.
+- `speciationContext` - Speciation harness context.
+- `options` - Speciation options.
 
 Returns: Nothing.
 
@@ -139,8 +149,8 @@ flowchart LR
 ```
 
 Parameters:
-- `speciationContext` - - Speciation harness context.
-- `options` - - Speciation options.
+- `speciationContext` - Speciation harness context.
+- `options` - Speciation options.
 
 Returns: Nothing.
 
@@ -174,8 +184,8 @@ strength, and the structural clues that explain why the species looks the way
 it does.
 
 Parameters:
-- `speciationContext` - - Speciation harness context.
-- `species` - - Species to snapshot.
+- `speciationContext` - Speciation harness context.
+- `species` - Species to snapshot.
 
 Returns: Extended history entry.
 
@@ -202,9 +212,13 @@ genealogy, but enough to estimate whether a species is clustered around older
 structure, still spreading into newer innovations, or carrying a large amount
 of disabled architectural baggage.
 
+Native species-history reads expect explicit connection innovations. Only
+genomes that deliberately opt into `_compatInnovationMode = 'allow-fallback'`
+may synthesize innovation ids through the fallback resolver.
+
 Parameters:
-- `speciationContext` - - Speciation harness context.
-- `members` - - Members to summarize.
+- `speciationContext` - Speciation harness context.
+- `members` - Members to summarize.
 
 Returns: Innovation summary statistics.
 
@@ -226,7 +240,7 @@ Even tiny helpers matter in educational telemetry code: one unstable average
 can turn a readable chapter into a confusing table full of exceptional cases.
 
 Parameters:
-- `values` - - Numeric values to average.
+- `values` - Numeric values to average.
 
 Returns: Mean of the values or zero.
 
@@ -249,6 +263,6 @@ to teach the trend, but not so much that yesterday's data overwhelms today's
 run.
 
 Parameters:
-- `speciationContext` - - Speciation harness context.
+- `speciationContext` - Speciation harness context.
 
 Returns: Nothing.

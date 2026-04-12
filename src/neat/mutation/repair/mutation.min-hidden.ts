@@ -1,3 +1,5 @@
+import { allowsRecurrentConnectionMutation } from '../../topology-intent/neat.topology-intent';
+import * as mutationAddConn from '../add-conn/mutation.add-conn';
 import type {
   GenomeWithMetadata,
   NeatControllerForMutation,
@@ -145,14 +147,15 @@ export function warnMissingEndpointsForMinHidden(): void {
 /**
  * Ensure the network has at least the minimum number of hidden nodes.
  *
- * This is the chapter's structural growth step. It creates fresh hidden nodes
- * only until the configured floor is met and stops early when the broader
- * maximum-node cap would be violated.
+ * This is the chapter's structural growth step. It asks the canonical add-node
+ * helper to create fresh hidden structure until the configured floor is met and
+ * stops early when the broader maximum-node cap would be violated.
  *
  * @param networkToEdit - network to edit
  * @param nodeGroupsToEdit - grouped node arrays
  * @param minimumHidden - minimum hidden nodes required
  * @param maxNodesLimit - maximum allowed nodes
+ * @param internal - neat controller context
  * @returns Promise resolving when nodes are created
  */
 export async function ensureHiddenNodeCountForMinHidden(
@@ -162,19 +165,26 @@ export async function ensureHiddenNodeCountForMinHidden(
   },
   minimumHidden: number,
   maxNodesLimit: number,
+  internal: NeatControllerForMutation,
 ): Promise<void> {
   // Step 1: return early when minimum is already satisfied.
   if (nodeGroupsToEdit.hiddenNodes.length >= minimumHidden) return;
 
-  // Step 2: create hidden nodes until the minimum is satisfied.
-  const { default: NodeClass } = await import('../../../architecture/node');
+  // Step 2: create hidden nodes through canonical split reuse until the minimum is satisfied.
   while (
     nodeGroupsToEdit.hiddenNodes.length < minimumHidden &&
     networkToEdit.nodes.length < maxNodesLimit
   ) {
-    const newNode = new NodeClass('hidden') as unknown as NodeWithMetadata;
-    networkToEdit.nodes.push(newNode);
-    nodeGroupsToEdit.hiddenNodes.push(newNode);
+    const hiddenCountBefore = nodeGroupsToEdit.hiddenNodes.length;
+    await internal._mutateAddNodeReuse(networkToEdit);
+    nodeGroupsToEdit.hiddenNodes = networkToEdit.nodes.filter(
+      (node: NodeWithMetadata) => node.type === 'hidden',
+    );
+
+    // Step 3: stop if the canonical add-node path could not make progress.
+    if (nodeGroupsToEdit.hiddenNodes.length === hiddenCountBefore) {
+      return;
+    }
   }
 }
 
@@ -255,7 +265,8 @@ export function computeMinimumHiddenSize(
  *
  * The helper prefers the smallest legal repair: if a hidden node already has an
  * inbound edge it is left untouched; otherwise one random input or peer hidden
- * node is allowed to become the new source.
+ * node is allowed to become the new source through the canonical add-connection
+ * identity path.
  *
  * @param networkToEdit - network to edit
  * @param nodeGroupsToUse - grouped node arrays
@@ -281,14 +292,32 @@ export function ensureIncomingConnectionForMinHidden(
   );
   if (!candidates.length) return;
 
-  // Step 3: connect a random candidate to the hidden node.
-  const sourceNode = chooseRandomNodeForMinHidden(candidates, internal);
+  // Step 3: keep repairs on the same topology-policy bridge as add-connection.
+  const allowRecurrentConnections = allowsRecurrentConnectionMutation(
+    networkToEdit,
+    internal.options.allowRecurrent,
+  );
+  const connectableCandidates = candidates.filter((candidateNode) => {
+    return mutationAddConn.canApplyChosenPairForConn(
+      networkToEdit,
+      [candidateNode, hiddenNode],
+      allowRecurrentConnections,
+    );
+  });
+  if (!connectableCandidates.length) return;
+
+  // Step 4: connect a random legal candidate to the hidden node.
+  const sourceNode = chooseRandomNodeForMinHidden(
+    connectableCandidates,
+    internal,
+  );
   if (!sourceNode) return;
-  try {
-    networkToEdit.connect?.(sourceNode, hiddenNode);
-  } catch {
-    // Intentionally ignore: connection may fail if nodes are incompatible.
-  }
+  mutationAddConn.connectChosenPairWithInnovationReuse(
+    networkToEdit,
+    [sourceNode, hiddenNode],
+    internal,
+    allowRecurrentConnections,
+  );
 }
 
 /**
@@ -296,7 +325,8 @@ export function ensureIncomingConnectionForMinHidden(
  *
  * This is the outbound twin of {@link ensureIncomingConnectionForMinHidden}.
  * It reconnects a hidden node only when it would otherwise remain a sink with
- * no downstream effect on outputs or later hidden nodes.
+ * no downstream effect on outputs or later hidden nodes, again through the
+ * canonical add-connection identity path.
  *
  * @param networkToEdit - network to edit
  * @param nodeGroupsToUse - grouped node arrays
@@ -322,14 +352,32 @@ export function ensureOutgoingConnectionForMinHidden(
   );
   if (!candidates.length) return;
 
-  // Step 3: connect the hidden node to a random candidate.
-  const targetNode = chooseRandomNodeForMinHidden(candidates, internal);
+  // Step 3: keep repairs on the same topology-policy bridge as add-connection.
+  const allowRecurrentConnections = allowsRecurrentConnectionMutation(
+    networkToEdit,
+    internal.options.allowRecurrent,
+  );
+  const connectableCandidates = candidates.filter((candidateNode) => {
+    return mutationAddConn.canApplyChosenPairForConn(
+      networkToEdit,
+      [hiddenNode, candidateNode],
+      allowRecurrentConnections,
+    );
+  });
+  if (!connectableCandidates.length) return;
+
+  // Step 4: connect the hidden node to a random legal candidate.
+  const targetNode = chooseRandomNodeForMinHidden(
+    connectableCandidates,
+    internal,
+  );
   if (!targetNode) return;
-  try {
-    networkToEdit.connect?.(hiddenNode, targetNode);
-  } catch {
-    // Intentionally ignore: connection may fail if nodes are incompatible.
-  }
+  mutationAddConn.connectChosenPairWithInnovationReuse(
+    networkToEdit,
+    [hiddenNode, targetNode],
+    internal,
+    allowRecurrentConnections,
+  );
 }
 
 /**

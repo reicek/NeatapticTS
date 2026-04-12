@@ -1,4 +1,17 @@
 /**
+ * Shared constants and tiny contracts for the genetic crossover helpers.
+ *
+ * This file keeps the "small but important" numbers used across the crossover
+ * implementation named and documented.
+ *
+ * Most of these are not user-facing tuning knobs. They are intended to:
+ *
+ * - keep randomness decisions easy to audit in tests,
+ * - centralize compatibility error messaging,
+ * - make sentinel values (like "no gater") explicit.
+ */
+
+/**
  * Canonical threshold used for random binary parent/gene choice.
  */
 export const RANDOM_BINARY_SELECTION_THRESHOLD = 0.5;

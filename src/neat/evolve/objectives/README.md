@@ -56,9 +56,9 @@ Callers should therefore treat it as a policy update step rather than a pure
 read.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `currentObjectiveKeys` - - Keys of active objectives.
-- `config` - - Scheduling constants.
+- `internal` - NEAT controller instance.
+- `currentObjectiveKeys` - Keys of active objectives.
+- `config` - Scheduling constants.
 
 Returns: void.
 
@@ -78,7 +78,7 @@ rest of the dynamic-objective machinery into test-specific code. Production
 runs should normally ignore this path entirely.
 
 Parameters:
-- `internal` - - NEAT controller instance.
+- `internal` - NEAT controller instance.
 
 Returns: void.
 
@@ -99,7 +99,7 @@ explain why an objective may be a good candidate for pruning or why a newly
 added objective is not yet influencing search strongly.
 
 Parameters:
-- `internal` - - NEAT controller instance.
+- `internal` - NEAT controller instance.
 
 Returns: void.
 
@@ -119,7 +119,7 @@ can stay declarative while preserving the existing expectation that entropy
 scheduling only makes sense on hosts exposing that hook.
 
 Parameters:
-- `internal` - - NEAT controller instance.
+- `internal` - NEAT controller instance.
 
 Returns: Accessor that reads structural entropy from one genome.
 
@@ -149,9 +149,9 @@ The important state transitions are:
   marker.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `currentObjectiveKeys` - - Active objective keys.
-- `dynamicConfig` - - Dynamic objective config.
+- `internal` - NEAT controller instance.
+- `currentObjectiveKeys` - Active objective keys.
+- `dynamicConfig` - Dynamic objective config.
 
 Returns: void.
 
@@ -172,7 +172,7 @@ or suppresses an objective, this cache must be cleared so the next
 earlier generation's list.
 
 Parameters:
-- `internal` - - NEAT controller instance.
+- `internal` - NEAT controller instance.
 
 Returns: void.
 
@@ -197,8 +197,8 @@ tracking is useful metadata, not a requirement for the rest of evolution to
 continue.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `helpers` - - Helper callbacks used by scheduling logic.
-- `helpers` - - Dynamic objective scheduler.
+- `internal` - NEAT controller instance.
+- `helpers` - Helper callbacks used by scheduling logic.
+- `helpers` - Dynamic objective scheduler.
 
 Returns: void.

@@ -33,10 +33,10 @@ buildMazeMovementVisionAndDistance(
 Build the current perception vector and update distance-tracking state.
 
 Parameters:
-- `state` - - Mutable simulation state for the active run.
-- `encodedMaze` - - Maze grid used for perception and distance lookup.
-- `exitPos` - - Goal coordinate for the current run.
-- `distanceMap` - - Optional precomputed distance map.
+- `state` - Mutable simulation state for the active run.
+- `encodedMaze` - Maze grid used for perception and distance lookup.
+- `exitPos` - Goal coordinate for the current run.
+- `distanceMap` - Optional precomputed distance map.
 
 ### createMazeMovementRunState
 
@@ -52,10 +52,10 @@ createMazeMovementRunState(
 Create the initial run-state object for one simulation episode.
 
 Parameters:
-- `encodedMaze` - - Maze grid used by the run.
-- `startPos` - - Starting coordinate.
-- `distanceMap` - - Optional precomputed distance map.
-- `maxSteps` - - Maximum number of allowed simulation steps.
+- `encodedMaze` - Maze grid used by the run.
+- `startPos` - Starting coordinate.
+- `distanceMap` - Optional precomputed distance map.
+- `maxSteps` - Maximum number of allowed simulation steps.
 
 Returns: Fresh simulation state backed by the shared buffer pools.
 
@@ -72,9 +72,9 @@ getMazeMovementDistance(
 Resolve the current distance value for a maze coordinate.
 
 Parameters:
-- `encodedMaze` - - Maze grid aligned with the optional distance map.
-- `coordinates` - - Zero-based `[x, y]` coordinate tuple.
-- `distanceMap` - - Optional precomputed distance map.
+- `encodedMaze` - Maze grid aligned with the optional distance map.
+- `coordinates` - Zero-based `[x, y]` coordinate tuple.
+- `distanceMap` - Optional precomputed distance map.
 
 Returns: Finite distance when present, otherwise `Infinity`.
 
@@ -90,8 +90,8 @@ getMazeMovementHistoryFromEnd(
 Return the `nth` most recent cell index from the visit-history ring.
 
 Parameters:
-- `state` - - Mutable simulation state containing the ring buffer.
-- `nth` - - One-based index from the history tail.
+- `state` - Mutable simulation state containing the ring buffer.
+- `nth` - One-based index from the history tail.
 
 Returns: The requested cell index or `undefined` when out of range.
 
@@ -109,10 +109,10 @@ isMazeMovementCellOpen(
 Determine whether a maze cell is inside bounds and not a wall.
 
 Parameters:
-- `encodedMaze` - - Maze grid to inspect.
-- `x` - - Zero-based maze column.
-- `y` - - Zero-based maze row.
-- `coordinateScratch` - - Reused integer scratch buffer for coordinate coercion.
+- `encodedMaze` - Maze grid to inspect.
+- `x` - Zero-based maze column.
+- `y` - Zero-based maze row.
+- `coordinateScratch` - Reused integer scratch buffer for coordinate coercion.
 
 Returns: True when the target cell is within bounds and open.
 
@@ -128,8 +128,8 @@ pushMazeMovementHistory(
 Push a cell index into the circular visit-history ring.
 
 Parameters:
-- `state` - - Mutable simulation state containing the ring buffer.
-- `cellIndex` - - Linearized cell index to append.
+- `state` - Mutable simulation state containing the ring buffer.
+- `cellIndex` - Linearized cell index to append.
 
 ### recordMazeMovementVisitAndPenalties
 
@@ -142,4 +142,4 @@ recordMazeMovementVisitAndPenalties(
 Record the current cell visit and update visit-driven penalties.
 
 Parameters:
-- `state` - - Mutable simulation state for the active run.
+- `state` - Mutable simulation state for the active run.

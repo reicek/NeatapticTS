@@ -36,6 +36,6 @@ redrawDashboard(
 Repaint the live dashboard from current state and refresh the detailed snapshot.
 
 Parameters:
-- `context` - - Dashboard runtime context for state and output callbacks.
-- `currentMaze` - - Maze currently being evolved.
-- `neat` - - Optional NEAT runtime instance used for detailed stats.
+- `context` - Dashboard runtime context for state and output callbacks.
+- `currentMaze` - Maze currently being evolved.
+- `neat` - Optional NEAT runtime instance used for detailed stats.

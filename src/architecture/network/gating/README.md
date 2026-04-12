@@ -59,13 +59,15 @@ becomes dynamically modulated by the gater's activation (see {@link Node.gate} f
 Validation / invariants:
  - Throws if the gater node is not part of this network (prevents cross-network corruption).
  - If the connection is already gated, function is a no-op (emits warning when enabled).
+ - Successful gate attachment revalidates the explicit temporal descriptor bag so generic gating edits
+   cannot leave stale module metadata behind.
 
 Complexity: O(1)
 
 Parameters:
-- `this` - - Bound Network instance.
-- `node` - - Candidate gater node (must belong to network).
-- `connection` - - Connection to gate.
+- `this` - Bound Network instance.
+- `node` - Candidate gater node (must belong to network).
+- `connection` - Connection to gate.
 
 ### removeNode
 
@@ -100,8 +102,8 @@ Preservation rationale:
    be lost, aiding continuity during topology simplification.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `node` - - Hidden node to remove.
+- `this` - Bound Network instance.
+- `node` - Hidden node to remove.
 
 ### ungate
 
@@ -116,12 +118,14 @@ Remove gating from a connection, restoring its static weight contribution.
 Idempotent: If the connection is not currently gated, the call performs no structural changes
 (and optionally logs a warning). After ungating, the connection's weight will be used directly
 without modulation by a gater activation.
+Successful ungate operations also revalidate the explicit temporal descriptor bag so stale gated-block
+descriptors do not survive until a later serialize pass.
 
 Complexity: O(n) where n = number of gated connections (indexOf lookup) – typically small.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `connection` - - Connection to ungate.
+- `this` - Bound Network instance.
+- `connection` - Connection to ungate.
 
 ## architecture/network/gating/network.gating.gate.utils.ts
 
@@ -137,8 +141,8 @@ assertGaterNodeBelongsToNetwork(
 Validate that a candidate gater node belongs to the target network.
 
 Parameters:
-- `network` - - Network performing the gating operation.
-- `node` - - Candidate gater node.
+- `network` - Network performing the gating operation.
+- `node` - Candidate gater node.
 
 Returns: Nothing.
 
@@ -155,9 +159,9 @@ attachGaterToConnection(
 Attach a gater to a connection and track that connection in the network gate list.
 
 Parameters:
-- `network` - - Network being updated.
-- `node` - - Gater node to attach.
-- `connection` - - Connection to gate.
+- `network` - Network being updated.
+- `node` - Gater node to attach.
+- `connection` - Connection to gate.
 
 Returns: Nothing.
 
@@ -172,7 +176,7 @@ detachConnectionFromGater(
 Remove reverse gater bookkeeping from a connection's gater node.
 
 Parameters:
-- `connection` - - Connection to detach from its gater.
+- `connection` - Connection to detach from its gater.
 
 Returns: Nothing.
 
@@ -188,8 +192,8 @@ findGateIndex(
 Find a connection position within the network global gates list.
 
 Parameters:
-- `network` - - Network containing global gate references.
-- `connection` - - Connection to locate.
+- `network` - Network containing global gate references.
+- `connection` - Connection to locate.
 
 Returns: Zero-based index in the gates list, or -1 when absent.
 
@@ -204,7 +208,7 @@ isConnectionAlreadyGated(
 Determine whether a connection already has a gater node assigned.
 
 Parameters:
-- `connection` - - Connection candidate.
+- `connection` - Connection candidate.
 
 Returns: True when a gater is already set; otherwise false.
 
@@ -220,8 +224,8 @@ removeGateAtIndex(
 Remove a gated connection from the network global gate list.
 
 Parameters:
-- `network` - - Network being updated.
-- `gateIndex` - - Index to remove from the gate list.
+- `network` - Network being updated.
+- `gateIndex` - Index to remove from the gate list.
 
 Returns: Nothing.
 
@@ -259,8 +263,8 @@ assertNodeRemovableAndGetIndex(
 Ensure a node can be removed and return its index in the network node list.
 
 Parameters:
-- `network` - - Network containing the node.
-- `node` - - Node to validate.
+- `network` - Network containing the node.
+- `node` - Node to validate.
 
 Returns: Index of the node in the network node list.
 
@@ -277,9 +281,9 @@ createBridgingConnections(
 Create bridging connections from each predecessor to each successor when valid.
 
 Parameters:
-- `network` - - Network where bridge connections are created.
-- `predecessorNodes` - - Source nodes collected from inbound edges.
-- `successorNodes` - - Target nodes collected from outbound edges.
+- `network` - Network where bridge connections are created.
+- `predecessorNodes` - Source nodes collected from inbound edges.
+- `successorNodes` - Target nodes collected from outbound edges.
 
 Returns: Newly created bridge connections.
 
@@ -297,10 +301,10 @@ disconnectInboundConnections(
 Disconnect all inbound connections for a node while collecting predecessors.
 
 Parameters:
-- `network` - - Network being updated.
-- `node` - - Node being removed.
-- `preservedGaters` - - Mutable collection for gaters that should be reassigned.
-- `subNodeConfig` - - Current SUB_NODE mutation settings.
+- `network` - Network being updated.
+- `node` - Node being removed.
+- `preservedGaters` - Mutable collection for gaters that should be reassigned.
+- `subNodeConfig` - Current SUB_NODE mutation settings.
 
 Returns: Predecessor nodes that previously projected into the removed node.
 
@@ -316,8 +320,8 @@ disconnectNodeSelfLoop(
 Disconnect a node self-loop before broader edge rewiring.
 
 Parameters:
-- `network` - - Network being updated.
-- `node` - - Node whose self-loop should be removed.
+- `network` - Network being updated.
+- `node` - Node whose self-loop should be removed.
 
 Returns: Nothing.
 
@@ -335,10 +339,10 @@ disconnectOutboundConnections(
 Disconnect all outbound connections for a node while collecting successors.
 
 Parameters:
-- `network` - - Network being updated.
-- `node` - - Node being removed.
-- `preservedGaters` - - Mutable collection for gaters that should be reassigned.
-- `subNodeConfig` - - Current SUB_NODE mutation settings.
+- `network` - Network being updated.
+- `node` - Node being removed.
+- `preservedGaters` - Mutable collection for gaters that should be reassigned.
+- `subNodeConfig` - Current SUB_NODE mutation settings.
 
 Returns: Successor nodes that were previously targeted by the removed node.
 
@@ -356,10 +360,10 @@ preserveGaterForReassignment(
 Preserve a gater for later reassignment when gate retention is enabled.
 
 Parameters:
-- `connection` - - Connection being detached.
-- `removedNode` - - Node currently being removed.
-- `preservedGaters` - - Mutable list of gaters to keep.
-- `subNodeConfig` - - Current SUB_NODE mutation settings.
+- `connection` - Connection being detached.
+- `removedNode` - Node currently being removed.
+- `preservedGaters` - Mutable list of gaters to keep.
+- `subNodeConfig` - Current SUB_NODE mutation settings.
 
 Returns: Nothing.
 
@@ -376,9 +380,9 @@ reassignPreservedGaters(
 Reattach preserved gaters to randomly selected newly-created bridge connections.
 
 Parameters:
-- `network` - - Network performing reassignment.
-- `preservedGaters` - - Gaters retained during node removal.
-- `bridgingConnections` - - Available bridge connections for reassignment.
+- `network` - Network performing reassignment.
+- `preservedGaters` - Gaters retained during node removal.
+- `bridgingConnections` - Available bridge connections for reassignment.
 
 Returns: Nothing.
 
@@ -394,8 +398,8 @@ removeNodeAtIndex(
 Remove a node from the network list and mark node indexing as dirty.
 
 Parameters:
-- `network` - - Network being mutated.
-- `nodeIndex` - - Index of the node to remove.
+- `network` - Network being mutated.
+- `nodeIndex` - Index of the node to remove.
 
 Returns: Nothing.
 
@@ -420,7 +424,7 @@ selectRandomIndex(
 Select a uniformly random integer index in the range [0, length).
 
 Parameters:
-- `length` - - Upper bound (exclusive).
+- `length` - Upper bound (exclusive).
 
 Returns: Random zero-based index.
 
@@ -436,8 +440,8 @@ shouldCreateBridgeConnection(
 Decide whether a predecessor-successor pair should receive a bridge connection.
 
 Parameters:
-- `predecessorNode` - - Candidate source node.
-- `successorNode` - - Candidate target node.
+- `predecessorNode` - Candidate source node.
+- `successorNode` - Candidate target node.
 
 Returns: True when the pair is distinct and no projection already exists.
 
@@ -453,8 +457,8 @@ ungateConnectionsGatedByNode(
 Ungate all connections that are currently gated by the removed node.
 
 Parameters:
-- `network` - - Network performing ungate operations.
-- `node` - - Node whose gated connections should be released.
+- `network` - Network performing ungate operations.
+- `node` - Node whose gated connections should be released.
 
 Returns: Nothing.
 

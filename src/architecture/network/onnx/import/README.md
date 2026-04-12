@@ -782,7 +782,7 @@ Returns: Layer-weight buckets keyed by export layer index.
 ```ts
 collectNodesByType(
   nodes: default[],
-  nodeType: "input" | "output" | "hidden",
+  nodeType: "input" | "hidden" | "output",
 ): default[]
 ```
 
@@ -1169,7 +1169,7 @@ Returns: Diagonal recurrent self-weights.
 ```ts
 collectNodesByType(
   nodes: default[],
-  nodeType: "input" | "output" | "hidden",
+  nodeType: "input" | "hidden" | "output",
 ): default[]
 ```
 

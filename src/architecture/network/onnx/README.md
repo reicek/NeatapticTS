@@ -338,9 +338,9 @@ High-level behavior:
  3. Return the resulting ONNX-like JSON graph container unchanged.
 
 Parameters:
-- `network` - - Source network to serialize.
-- `layers` - - Ordered layer matrix produced by layer inference utilities.
-- `options` - - Export options controlling metadata/recurrent/partial-connectivity behavior.
+- `network` - Source network to serialize.
+- `layers` - Ordered layer matrix produced by layer inference utilities.
+- `options` - Export options controlling metadata/recurrent/partial-connectivity behavior.
 
 Returns: ONNX-like model object representing graph nodes, tensors, and metadata.
 

@@ -100,7 +100,7 @@ This function is intentionally orchestration-focused:
 4) expose a small stop/isRunning/done handle for callers.
 
 Parameters:
-- `container` - - Element id or HTMLElement to host the demo.
+- `container` - Element id or HTMLElement to host the demo.
 
 Returns: Run handle for stop/state control.
 
@@ -764,7 +764,7 @@ create canvases, wire resize behavior, render placeholders, then return the
 handles the runtime will mutate during execution.
 
 Parameters:
-- `containerElement` - - Root host container.
+- `containerElement` - Root host container.
 
 Returns: Canvas handles, stats cells and network render callback.
 
@@ -783,8 +783,8 @@ The runtime writes HUD values incrementally, so the host exposes a narrow
 partial-update helper rather than requiring full table redraws.
 
 Parameters:
-- `statsValueByKey` - - Lookup of stat keys to value cells.
-- `partialValues` - - Subset of values to write this tick.
+- `statsValueByKey` - Lookup of stat keys to value cells.
+- `partialValues` - Subset of values to write this tick.
 
 Returns: Nothing.
 
@@ -802,8 +802,8 @@ applyAlphaToHexColor(
 Converts a six-digit hex color to rgba with the requested alpha.
 
 Parameters:
-- `hexColor` - - Color in `#RRGGBB` form.
-- `alphaValue` - - Alpha value to apply.
+- `hexColor` - Color in `#RRGGBB` form.
+- `alphaValue` - Alpha value to apply.
 
 Returns: rgba color string, or original value when not 6-digit hex.
 
@@ -820,9 +820,9 @@ clamp(
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
 Parameters:
-- `value` - - Candidate value.
-- `min` - - Inclusive lower bound.
-- `max` - - Inclusive upper bound.
+- `value` - Candidate value.
+- `min` - Inclusive lower bound.
+- `max` - Inclusive upper bound.
 
 Returns: Clamped value.
 
@@ -837,7 +837,7 @@ clamp01(
 Clamps a numeric value to the inclusive `[0, 1]` interval.
 
 Parameters:
-- `value` - - Candidate value.
+- `value` - Candidate value.
 
 Returns: Value clamped between 0 and 1.
 
@@ -854,9 +854,9 @@ interpolateValue(
 Linear interpolation helper.
 
 Parameters:
-- `startValue` - - Start value at progress `0`.
-- `endValue` - - End value at progress `1`.
-- `progress` - - Normalized interpolation progress.
+- `startValue` - Start value at progress `0`.
+- `endValue` - End value at progress `1`.
+- `progress` - Normalized interpolation progress.
 
 Returns: Interpolated value.
 
@@ -874,8 +874,8 @@ createBirdColor(
 Resolves deterministic bird color from palette index.
 
 Parameters:
-- `birdIndex` - - Bird index in current population.
-- `totalBirds` - - Population size.
+- `birdIndex` - Bird index in current population.
+- `totalBirds` - Population size.
 
 Returns: Hex color string.
 
@@ -895,7 +895,7 @@ keep browser playback distribution aligned with trainer/evaluation defaults,
 while still supporting smaller world heights.
 
 Parameters:
-- `worldHeightPx` - - Current world height.
+- `worldHeightPx` - Current world height.
 
 Returns: Exclusive upper bound for `nextInt(minInclusive, maxExclusive)`.
 
@@ -912,9 +912,9 @@ resolveNextSpawnGapCenterY(
 Resolves next gap center with bounded per-pipe delta.
 
 Parameters:
-- `previousGapCenterYPx` - - Previous spawn gap center.
-- `rng` - - Deterministic RNG.
-- `worldHeightPx` - - World height used to clamp candidate gap centers.
+- `previousGapCenterYPx` - Previous spawn gap center.
+- `rng` - Deterministic RNG.
+- `worldHeightPx` - World height used to clamp candidate gap centers.
 
 Returns: Next gap center y-position.
 
@@ -931,9 +931,9 @@ resolveNextSpawnGapSize(
 Resolves next spawn gap size using progressive shrink and jitter.
 
 Parameters:
-- `previousSpawnGapPx` - - Previous spawn gap size.
-- `difficultyProfile` - - Active difficulty profile.
-- `rng` - - Deterministic RNG.
+- `previousSpawnGapPx` - Previous spawn gap size.
+- `difficultyProfile` - Active difficulty profile.
+- `rng` - Deterministic RNG.
 
 Returns: Next spawn gap size.
 
@@ -949,8 +949,8 @@ resolveNextSpawnIntervalFrames(
 Resolves next spawn interval using progressive shrink.
 
 Parameters:
-- `previousSpawnIntervalFrames` - - Previous spawn interval.
-- `difficultyProfile` - - Active difficulty profile.
+- `previousSpawnIntervalFrames` - Previous spawn interval.
+- `difficultyProfile` - Active difficulty profile.
 
 Returns: Next spawn interval in frames.
 
@@ -966,8 +966,8 @@ sampleGapCenterY(
 Samples a random gap center y-position.
 
 Parameters:
-- `rng` - - Deterministic RNG.
-- `worldHeightPx` - - World height used to derive valid gap-center bounds.
+- `rng` - Deterministic RNG.
+- `worldHeightPx` - World height used to derive valid gap-center bounds.
 
 Returns: Sampled y-position.
 
@@ -984,7 +984,7 @@ createFlappyStatsTableRows(
 Builds stats table rows and returns value-cell lookup by key.
 
 Parameters:
-- `input` - - Table construction inputs.
+- `input` - Table construction inputs.
 
 Returns: Mapping from stat key to value cell.
 
@@ -999,7 +999,7 @@ formatArchitectureStatsValue(
 Splits architecture suffix onto a second line for readability in the stats table.
 
 Parameters:
-- `architectureValue` - - Full architecture label.
+- `architectureValue` - Full architecture label.
 
 Returns: Line-broken label value.
 
@@ -1030,10 +1030,10 @@ The implementation is shared with the public entry so legacy imports and the
 newer folderized surface behave identically.
 
 Parameters:
-- `canvas` - - Target playback canvas.
-- `context` - - Canvas 2D context.
-- `evolutionWorker` - - Worker owning playback simulation state.
-- `onFrameStats` - - Callback receiving per-frame playback telemetry.
+- `canvas` - Target playback canvas.
+- `context` - Canvas 2D context.
+- `evolutionWorker` - Worker owning playback simulation state.
+- `onFrameStats` - Callback receiving per-frame playback telemetry.
 
 Returns: Aggregate playback summary for the current episode.
 
@@ -1050,7 +1050,7 @@ resolvePipeSpawnXPx(
 Resolves the world-space x spawn position for new pipes.
 
 Parameters:
-- `visibleWorldWidthPx` - - Current visible world width.
+- `visibleWorldWidthPx` - Current visible world width.
 
 Returns: Spawn x-position.
 
@@ -1069,7 +1069,7 @@ The current viewport model uses a 1:1 mapping between canvas pixels and
 world-space pixels, so visible height is the canvas height directly.
 
 Parameters:
-- `canvas` - - Playback canvas.
+- `canvas` - Playback canvas.
 
 Returns: Visible height in world-space pixels.
 
@@ -1088,7 +1088,7 @@ The current viewport model uses a 1:1 mapping between canvas pixels and
 world-space pixels, so visible width is the canvas width directly.
 
 Parameters:
-- `canvas` - - Playback canvas.
+- `canvas` - Playback canvas.
 
 Returns: Visible width in world-space pixels.
 
@@ -1103,7 +1103,7 @@ resolveWorldViewport(
 Resolves world viewport transformation based on canvas size.
 
 Parameters:
-- `canvas` - - Playback canvas.
+- `canvas` - Playback canvas.
 
 Returns: Viewport scale and offsets.
 
@@ -1120,7 +1120,7 @@ createMinorGcObserver(
 Creates a PerformanceObserver that tracks minor GC events when supported.
 
 Parameters:
-- `minorGcTimestampsMs` - - Mutable minor-GC timestamp buffer.
+- `minorGcTimestampsMs` - Mutable minor-GC timestamp buffer.
 
 Returns: Observer when supported; otherwise `undefined`.
 
@@ -1135,7 +1135,7 @@ resolveEventsPerMinute(
 Resolves events per minute from the latest sample window.
 
 Parameters:
-- `samples` - - Event timestamps.
+- `samples` - Event timestamps.
 
 Returns: Events-per-minute estimate.
 
@@ -1150,7 +1150,7 @@ resolveHudUpdatesPerSecond(
 Resolves HUD updates per second from the latest sample window.
 
 Parameters:
-- `samples` - - HUD update timestamps.
+- `samples` - HUD update timestamps.
 
 Returns: Updates-per-second estimate.
 
@@ -1167,9 +1167,9 @@ trimSamplesToWindow(
 Trims timestamp samples to a sliding time window.
 
 Parameters:
-- `samples` - - Mutable timestamp buffer.
-- `windowMs` - - Window width in milliseconds.
-- `nowMs` - - Current timestamp.
+- `samples` - Mutable timestamp buffer.
+- `windowMs` - Window width in milliseconds.
+- `nowMs` - Current timestamp.
 
 Returns: Nothing.
 
@@ -1187,8 +1187,8 @@ buildCenteredTitleBoxLines(
 Builds an ASCII centered title box.
 
 Parameters:
-- `centeredColumns` - - Available centered column count.
-- `titleText` - - Title text.
+- `centeredColumns` - Available centered column count.
+- `titleText` - Title text.
 
 Returns: Three-row title box.
 
@@ -1204,8 +1204,8 @@ buildOuterBoxLines(
 Builds an ASCII outer frame with closed borders.
 
 Parameters:
-- `centeredColumns` - - Centered column count.
-- `totalRows` - - Total row count.
+- `centeredColumns` - Centered column count.
+- `totalRows` - Total row count.
 
 Returns: Frame lines.
 
@@ -1220,7 +1220,7 @@ renderClosedOuterBox(
 Renders a complete closed outer glyph box.
 
 Parameters:
-- `input` - - Rendering input object.
+- `input` - Rendering input object.
 
 Returns: Nothing.
 
@@ -1235,7 +1235,7 @@ renderStandaloneTitleBox(
 Renders only the centered title box.
 
 Parameters:
-- `input` - - Rendering input object.
+- `input` - Rendering input object.
 
 Returns: Nothing.
 
@@ -1250,7 +1250,7 @@ resolveGlyphWidthPx(
 Resolves a stable glyph width used for frame-column math.
 
 Parameters:
-- `context` - - Rendering context used to measure text.
+- `context` - Rendering context used to measure text.
 
 Returns: Floored glyph width clamped to a minimum pixel value.
 
@@ -1269,11 +1269,11 @@ resolveTextFrameMetrics(
 Resolves core text-frame metrics for glyph box rendering.
 
 Parameters:
-- `frameWidthPx` - - Frame width.
-- `frameHeightPx` - - Frame height.
-- `glyphWidthPx` - - Measured glyph width.
-- `rowHeightPx` - - Glyph row height.
-- `minimumColumns` - - Minimum column count.
+- `frameWidthPx` - Frame width.
+- `frameHeightPx` - Frame height.
+- `glyphWidthPx` - Measured glyph width.
+- `rowHeightPx` - Glyph row height.
+- `minimumColumns` - Minimum column count.
 
 Returns: Text frame metrics.
 
@@ -1292,9 +1292,9 @@ commitObservationMemoryStep(
 Commits one browser decision step into temporal memory.
 
 Parameters:
-- `observationMemoryState` - - Mutable memory state for one bird.
-- `observationFeatures` - - Structured features used for this decision.
-- `shouldFlap` - - Action selected by the policy.
+- `observationMemoryState` - Mutable memory state for one bird.
+- `observationFeatures` - Structured features used for this decision.
+- `shouldFlap` - Action selected by the policy.
 
 Returns: Nothing.
 
@@ -1309,7 +1309,7 @@ hasAliveBirds(
 Checks whether at least one bird remains alive.
 
 Parameters:
-- `birds` - - Population birds.
+- `birds` - Population birds.
 
 Returns: True when any bird is alive.
 
@@ -1324,7 +1324,7 @@ resolveAliveBirdCount(
 Counts birds that are still alive.
 
 Parameters:
-- `birds` - - Population birds.
+- `birds` - Population birds.
 
 Returns: Alive bird count.
 
@@ -1339,7 +1339,7 @@ resolveFlapDecision(
 Resolves flap/no-flap decision from network outputs.
 
 Parameters:
-- `rawOutputs` - - Activation output payload.
+- `rawOutputs` - Activation output payload.
 
 Returns: True when flap should trigger.
 
@@ -1355,8 +1355,8 @@ resolveFramePrimaryWinnerIndex(
 Resolves winner index for current frame.
 
 Parameters:
-- `birds` - - Population birds.
-- `includeAliveOnly` - - When true, ignores dead birds.
+- `birds` - Population birds.
+- `includeAliveOnly` - When true, ignores dead birds.
 
 Returns: Winner index, or `-1` when unavailable.
 
@@ -1371,7 +1371,7 @@ resolveLeaderPipesPassed(
 Resolves leading pipes-passed score in the population.
 
 Parameters:
-- `birds` - - Population birds.
+- `birds` - Population birds.
 
 Returns: Maximum pipes passed.
 
@@ -1393,14 +1393,14 @@ resolveObservationVector(
 Builds the normalized observation vector consumed by bird networks.
 
 Parameters:
-- `birdYPx` - - Bird y position.
-- `velocityYPxPerFrame` - - Bird vertical velocity.
-- `pipes` - - Current pipe list.
-- `visibleWorldWidthPx` - - Current visible world width.
-- `worldHeightPx` - - Current world height used for normalization and bounds.
-- `difficultyProfile` - - Active difficulty profile.
-- `activeSpawnIntervalFrames` - - Current spawn interval.
-- `observationMemoryState` - - Temporal memory state for recurrent observation features.
+- `birdYPx` - Bird y position.
+- `velocityYPxPerFrame` - Bird vertical velocity.
+- `pipes` - Current pipe list.
+- `visibleWorldWidthPx` - Current visible world width.
+- `worldHeightPx` - Current world height used for normalization and bounds.
+- `difficultyProfile` - Active difficulty profile.
+- `activeSpawnIntervalFrames` - Current spawn interval.
+- `observationMemoryState` - Temporal memory state for recurrent observation features.
 
 Returns: Ordered normalized observation vector.
 
@@ -1415,7 +1415,7 @@ resolveUpcomingPipes(
 Resolves the next two upcoming pipes in front of the bird.
 
 Parameters:
-- `pipes` - - Current pipe list.
+- `pipes` - Current pipe list.
 
 Returns: Tuple of first and second upcoming pipes.
 
@@ -1444,11 +1444,11 @@ Conceptually, this is the main fold from network object to finished panel:
 resolve scene state, compute layout, paint the graph, then paint overlays.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
-- `hoverState` - - Optional host-owned hover state for interactive emphasis.
+- `context` - Canvas 2D drawing context.
+- `network` - Network to visualize.
+- `inputSize` - Input-layer size.
+- `outputSize` - Output-layer size.
+- `hoverState` - Optional host-owned hover state for interactive emphasis.
 
 Returns: Positioned node snapshot reused by host-side hover hit testing.
 
@@ -1474,9 +1474,9 @@ The label compresses the active network into a short human-readable summary:
 input size, hidden-layer structure, output size, and graph size metadata.
 
 Parameters:
-- `network` - - Network to describe.
-- `inputSize` - - Configured input size.
-- `outputSize` - - Configured output size.
+- `network` - Network to describe.
+- `inputSize` - Configured input size.
+- `outputSize` - Configured output size.
 
 Returns: Readable architecture label.
 
@@ -1496,9 +1496,9 @@ Dense or deeper networks need more vertical room to stay readable, so panel
 height is driven by topology rather than fixed to a single constant.
 
 Parameters:
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
+- `network` - Network to visualize.
+- `inputSize` - Input-layer size.
+- `outputSize` - Output-layer size.
 
 Returns: Recommended height in pixels.
 
@@ -1530,9 +1530,9 @@ to a topology-derived depth estimate so even loosely structured networks can
 still be drawn in an intelligible left-to-right order.
 
 Parameters:
-- `network` - - Runtime network instance.
-- `inputSize` - - Input count fallback.
-- `outputSize` - - Output count fallback.
+- `network` - Runtime network instance.
+- `inputSize` - Input count fallback.
+- `outputSize` - Output count fallback.
 
 Returns: Layered nodes for rendering.
 
@@ -1558,8 +1558,8 @@ Each row describes one closed numeric interval and the swatch used to paint
 it, making the dynamic color scale legible to a human reader.
 
 Parameters:
-- `scale` - - Dynamic color scale containing bounds, tiers, and overflow color.
-- `symbol` - - Label symbol.
+- `scale` - Dynamic color scale containing bounds, tiers, and overflow color.
+- `symbol` - Label symbol.
 
 Returns: Legend rows.
 
@@ -1578,7 +1578,7 @@ around zero. Negative and positive values should feel visually related, but
 not identical.
 
 Parameters:
-- `input` - - Tier creation options.
+- `input` - Tier creation options.
 
 Returns: Ordered tier list.
 
@@ -1600,11 +1600,11 @@ The node layer pairs each rectangle with a compact bias label so the panel can
 show both topology and a lightweight hint of parameter state.
 
 Parameters:
-- `context` - - Render context.
-- `positionedNodes` - - Positioned nodes.
-- `nodeDimensions` - - Node dimensions.
-- `biasScale` - - Dynamic bias color scale.
-- `animatedHoveredNodes` - - Optional animated hovered-node samples owned by the host canvas.
+- `context` - Render context.
+- `positionedNodes` - Positioned nodes.
+- `nodeDimensions` - Node dimensions.
+- `biasScale` - Dynamic bias color scale.
+- `animatedHoveredNodes` - Optional animated hovered-node samples owned by the host canvas.
 
 Returns: Nothing.
 
@@ -1625,9 +1625,9 @@ instrument: it tells the viewer what each weight and bias color actually
 means numerically.
 
 Parameters:
-- `context` - - Render context.
-- `architectureLabel` - - Compact architecture description.
-- `colorScales` - - Connection and bias color scales.
+- `context` - Render context.
+- `architectureLabel` - Compact architecture description.
+- `colorScales` - Connection and bias color scales.
 
 Returns: Nothing.
 
@@ -1646,8 +1646,8 @@ The header gives viewers a compact architecture summary before they inspect
 individual nodes and edges.
 
 Parameters:
-- `context` - - Render context.
-- `architectureLabel` - - Header label.
+- `context` - Render context.
+- `architectureLabel` - Header label.
 
 Returns: Nothing.
 
@@ -1670,11 +1670,11 @@ while dash patterns help distinguish disabled or negative
 edges in a way that still reads quickly on a dense graph.
 
 Parameters:
-- `context` - - Render context.
-- `runtimeConnections` - - Runtime connection list.
-- `positionByNodeIndex` - - Node layout map.
-- `connectionScale` - - Dynamic connection color scale.
-- `animatedHoveredNodes` - - Optional animated hovered-node samples owned by the host canvas.
+- `context` - Render context.
+- `runtimeConnections` - Runtime connection list.
+- `positionByNodeIndex` - Node layout map.
+- `connectionScale` - Dynamic connection color scale.
+- `animatedHoveredNodes` - Optional animated hovered-node samples owned by the host canvas.
 
 Returns: Nothing.
 
@@ -1692,7 +1692,7 @@ Consistent sign and precision make dense node labels easier to scan quickly in
 the rendered network panel.
 
 Parameters:
-- `nodeBias` - - Node bias value.
+- `nodeBias` - Node bias value.
 
 Returns: Label text.
 
@@ -1710,7 +1710,7 @@ Bias colors follow the same diverging logic as connection colors so the legend
 remains conceptually consistent across channels.
 
 Parameters:
-- `nodeBias` - - Node bias.
+- `nodeBias` - Node bias.
 
 Returns: Tier color.
 
@@ -1728,7 +1728,7 @@ This small helper is useful when one-off drawing code wants the same color
 semantics as the full dynamic scale machinery.
 
 Parameters:
-- `connectionWeight` - - Connection weight.
+- `connectionWeight` - Connection weight.
 
 Returns: Tier color.
 
@@ -1748,8 +1748,8 @@ currently active network and does not need to assemble the intermediate rows
 manually.
 
 Parameters:
-- `context` - - Render context.
-- `network` - - Active network instance.
+- `context` - Render context.
+- `network` - Active network instance.
 
 Returns: Legend layout.
 
@@ -1770,9 +1770,9 @@ panel can stay informative on smaller viewports without swallowing the whole
 canvas.
 
 Parameters:
-- `context` - - Render context.
-- `connectionLegendRows` - - Connection legend rows.
-- `biasLegendRows` - - Bias legend rows.
+- `context` - Render context.
+- `connectionLegendRows` - Connection legend rows.
+- `biasLegendRows` - Bias legend rows.
 
 Returns: Computed legend layout.
 
@@ -1791,7 +1791,7 @@ value range, so the legend adapts to what is currently present instead of
 always rendering a fixed generic scale.
 
 Parameters:
-- `network` - - Active network.
+- `network` - Active network.
 
 Returns: Dynamic scales used by graph drawing and legend rows.
 
@@ -1817,9 +1817,9 @@ to a topology-derived depth estimate so even loosely structured networks can
 still be drawn in an intelligible left-to-right order.
 
 Parameters:
-- `network` - - Runtime network instance.
-- `inputSize` - - Input count fallback.
-- `outputSize` - - Output count fallback.
+- `network` - Runtime network instance.
+- `inputSize` - Input count fallback.
+- `outputSize` - Output count fallback.
 
 Returns: Layered nodes for rendering.
 
@@ -1839,9 +1839,9 @@ This is the final classification step that maps one numeric weight or bias to
 the swatch color the renderer should paint.
 
 Parameters:
-- `value` - - Numeric value to classify.
-- `tiers` - - Ordered tier list.
-- `aboveTierColor` - - Fallback color for values above the last tier.
+- `value` - Numeric value to classify.
+- `tiers` - Ordered tier list.
+- `aboveTierColor` - Fallback color for values above the last tier.
 
 Returns: Resolved color string.
 
@@ -1868,7 +1868,7 @@ requestWorkerGeneration(
 Waits for the next generation payload emitted by the evolution worker.
 
 Parameters:
-- `evolutionWorker` - - Worker emitting generation-ready messages.
+- `evolutionWorker` - Worker emitting generation-ready messages.
 
 Returns: Next generation payload.
 
@@ -1884,7 +1884,7 @@ requestWorkerPlaybackStep(
 Requests one playback batch step from the worker.
 
 Parameters:
-- `evolutionWorker` - - Worker that owns playback simulation state.
-- `playbackStepRequest` - - Requested simulation budget and viewport width.
+- `evolutionWorker` - Worker that owns playback simulation state.
+- `playbackStepRequest` - Requested simulation budget and viewport width.
 
 Returns: Playback-step payload including snapshot and completion marker.

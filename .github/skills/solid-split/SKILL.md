@@ -146,6 +146,12 @@ README-owning folders is visible in the todo list.
 The project prefers small, durable, orchestration-first refactors over large
 one-pass rewrites.
 
+When a split step changes behavior or meaningfully risks runtime drift, prefer a
+TDD lane for that boundary: add or reshape the narrow red-phase test first,
+complete the split until that boundary turns green, then raise coverage on the
+new or directly related area toward >95% when practical before the step is
+considered fully hardened.
+
 - Default to direct path migration once a boundary is folderized.
 - Do not preserve the old flat path with placeholder, mirror, or compatibility
   re-export files unless the user explicitly asks for them or there is a
@@ -189,15 +195,18 @@ API, default, or runtime contract.
 7. If no durable plan exists, create one using the bundled template.
 8. Keep the README todo explicit and folder-focused, with exactly one active
    README or folder documentation item at a time.
-9. Execute only one durable step unless the user explicitly asks for more.
-10. Improve JSDoc on touched exported and public surfaces so generated README
+9. Before implementation, add or update the smallest boundary-local test that
+   should go red for the intended behavior whenever the step changes behavior
+   or carries meaningful runtime risk.
+10. Execute only one durable step unless the user explicitly asks for more.
+11. Improve JSDoc on touched exported and public surfaces so generated README
     output remains educational, example-driven, and conceptually clear.
-11. After moving a boundary into a real folder, update repo-local imports and
+12. After moving a boundary into a real folder, update repo-local imports and
     tests to use the new folder path directly unless the task packet explicitly
     requires compatibility files.
-12. Delete obsolete flat or mirror files from the old location once direct
+13. Delete obsolete flat or mirror files from the old location once direct
     imports are in place and validations pass.
-13. Update the plan immediately after the step completes.
+14. Update the plan immediately after the step completes.
 
 - Follow `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, compression,
   and `Handoff query` structure.
@@ -205,7 +214,11 @@ API, default, or runtime contract.
 - Prefer `### Playback boundary pass` over
   `### YYYY-MM-DD - Playback boundary pass`.
 
-14. Immediately run `educational-docs` as the next step on the touched
+15. Run the narrow green validation for the active boundary, then raise
+  coverage on the new code and the directly related boundary toward >95%
+  when practical and safe.
+
+16. Immediately run `educational-docs` as the next step on the touched
     surface.
 
 - This is mandatory even when the user invokes `solid-split` directly.
@@ -217,9 +230,9 @@ API, default, or runtime contract.
 - Do not report the split step as complete until that follow-up has run or
   the user has explicitly said to defer it.
 
-15. Run the minimum validation needed for touched files, documentation output,
+17. Run the minimum validation needed for touched files, documentation output,
     and the step's done criteria.
-16. End with the correct tracker-closing action for the current state.
+18. End with the correct tracker-closing action for the current state.
 
 - If the workstream is still active, end with a next-session handoff prompt
   that can continue from the next step without depending on prior chat

@@ -213,7 +213,7 @@ clampProbability(
 Clamps a probability into the inclusive bounds defined by PROBABILITY_LOWER_BOUND and PROBABILITY_UPPER_BOUND.
 
 Parameters:
-- `probability` - - Raw probability value to bound.
+- `probability` - Raw probability value to bound.
 
 Returns: Probability constrained to the numeric stability range.
 
@@ -228,7 +228,7 @@ classifyBinary(
 Converts a probability into a binary class label using the configured threshold.
 
 Parameters:
-- `probability` - - Probability to classify.
+- `probability` - Probability to classify.
 
 Returns: POSITIVE_CLASS_LABEL when above or equal to threshold; otherwise NEGATIVE_CLASS_LABEL.
 
@@ -244,8 +244,8 @@ computeBinaryError(
 Computes binary classification error rate.
 
 Parameters:
-- `targets` - - Target labels (0 or 1).
-- `outputs` - - Predicted probabilities.
+- `targets` - Target labels (0 or 1).
+- `outputs` - Predicted probabilities.
 
 Returns: Proportion of misclassified samples.
 
@@ -261,8 +261,8 @@ computeCrossEntropy(
 Computes the Cross Entropy error over the provided targets and outputs.
 
 Parameters:
-- `targets` - - Desired target probabilities (may be soft labels between 0 and 1).
-- `outputs` - - Model output probabilities.
+- `targets` - Desired target probabilities (may be soft labels between 0 and 1).
+- `outputs` - Model output probabilities.
 
 Returns: Mean cross-entropy error across all samples.
 
@@ -280,10 +280,10 @@ computeFocalLoss(
 Computes focal loss for imbalanced classification tasks.
 
 Parameters:
-- `targets` - - Target labels (0 or 1) or soft labels.
-- `outputs` - - Predicted probabilities.
-- `gamma` - - Focusing parameter controlling hard example emphasis.
-- `alpha` - - Balancing parameter for class weighting.
+- `targets` - Target labels (0 or 1) or soft labels.
+- `outputs` - Predicted probabilities.
+- `gamma` - Focusing parameter controlling hard example emphasis.
+- `alpha` - Balancing parameter for class weighting.
 
 Returns: Mean focal loss.
 
@@ -299,8 +299,8 @@ computeHingeLoss(
 Computes hinge loss for margin-based classification.
 
 Parameters:
-- `targets` - - Target labels encoded as -1 or 1.
-- `outputs` - - Model outputs (raw scores).
+- `targets` - Target labels encoded as -1 or 1.
+- `outputs` - Model outputs (raw scores).
 
 Returns: Mean hinge loss.
 
@@ -317,9 +317,9 @@ computeLabelSmoothingLoss(
 Computes cross entropy with label smoothing applied to targets.
 
 Parameters:
-- `targets` - - Target labels (0 or 1) or soft labels.
-- `outputs` - - Predicted probabilities.
-- `smoothing` - - Smoothing factor between 0 and 1.
+- `targets` - Target labels (0 or 1) or soft labels.
+- `outputs` - Predicted probabilities.
+- `smoothing` - Smoothing factor between 0 and 1.
 
 Returns: Mean cross-entropy loss with smoothed targets.
 
@@ -335,8 +335,8 @@ computeMeanAbsoluteError(
 Computes mean absolute error between targets and outputs.
 
 Parameters:
-- `targets` - - Desired target values.
-- `outputs` - - Model outputs.
+- `targets` - Desired target values.
+- `outputs` - Model outputs.
 
 Returns: Mean absolute error.
 
@@ -352,8 +352,8 @@ computeMeanAbsolutePercentageError(
 Computes mean absolute percentage error between targets and outputs.
 
 Parameters:
-- `targets` - - Desired target values.
-- `outputs` - - Model outputs.
+- `targets` - Desired target values.
+- `outputs` - Model outputs.
 
 Returns: Mean absolute percentage error (fractional form).
 
@@ -369,8 +369,8 @@ computeMeanSquaredError(
 Computes mean squared error between targets and outputs.
 
 Parameters:
-- `targets` - - Desired target values.
-- `outputs` - - Model outputs.
+- `targets` - Desired target values.
+- `outputs` - Model outputs.
 
 Returns: Mean squared error.
 
@@ -386,8 +386,8 @@ computeMeanSquaredLogarithmicError(
 Computes mean squared logarithmic error between targets and outputs.
 
 Parameters:
-- `targets` - - Desired non-negative target values.
-- `outputs` - - Model outputs (expected non-negative).
+- `targets` - Desired non-negative target values.
+- `outputs` - Model outputs (expected non-negative).
 
 Returns: Mean squared logarithmic error.
 
@@ -403,8 +403,8 @@ computeSoftmaxCrossEntropy(
 Computes the softmax cross entropy given targets and raw score outputs.
 
 Parameters:
-- `targets` - - Desired target probabilities that should sum to 1 (will be normalized if not).
-- `outputs` - - Raw logits or scores for each class.
+- `targets` - Desired target probabilities that should sum to 1 (will be normalized if not).
+- `outputs` - Raw logits or scores for each class.
 
 Returns: Total (non-averaged) softmax cross-entropy loss.
 
@@ -420,8 +420,8 @@ crossEntropyTerm(
 Computes the cross-entropy contribution for a single target/output pair.
 
 Parameters:
-- `targetProbability` - - Target probability for the sample (may be soft).
-- `clampedProbability` - - Output probability already clamped for stability.
+- `targetProbability` - Target probability for the sample (may be soft).
+- `clampedProbability` - Output probability already clamped for stability.
 
 Returns: Cross-entropy term for the sample.
 
@@ -464,7 +464,7 @@ normalizeTargets(
 Normalizes target probabilities so they sum to 1 when possible.
 
 Parameters:
-- `targets` - - Raw target probabilities.
+- `targets` - Raw target probabilities.
 
 Returns: Normalized target probabilities; returns a shallow copy when the sum is zero.
 
@@ -484,8 +484,8 @@ smoothTarget(
 Applies label smoothing to a target probability.
 
 Parameters:
-- `targetProbability` - - Original target probability.
-- `smoothing` - - Smoothing factor between 0 and 1.
+- `targetProbability` - Original target probability.
+- `smoothing` - Smoothing factor between 0 and 1.
 
 Returns: Smoothed target probability.
 
@@ -504,7 +504,7 @@ stableSoftmax(
 Computes a numerically stable softmax from raw output scores.
 
 Parameters:
-- `outputs` - - Raw logits or scores.
+- `outputs` - Raw logits or scores.
 
 Returns: Softmax probabilities corresponding to the inputs.
 

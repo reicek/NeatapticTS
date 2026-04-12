@@ -43,6 +43,13 @@ import {
   WARNING_SELF_CONNECTIONS_ALREADY_PRESENT,
 } from './network.mutate.utils.types';
 import { NetworkMutateRecurrentLayerOutputInitializationError } from './network.mutate.errors';
+import {
+  appendTemporalDescriptorSet,
+  buildGruTemporalDescriptorSet,
+  buildLstmTemporalDescriptorSet,
+  splitGruLayerNodes,
+  splitLstmLayerNodes,
+} from '../network.temporal.extensions.utils';
 
 /**
  * Concrete mutation handler implementations used by the network mutate orchestrator.
@@ -1901,6 +1908,10 @@ function expandConnectionWithRecurrentBlock(
     recurrentLayer,
   );
   tryGateLatestConnection(network, previousGater, latestConnection);
+  appendTemporalDescriptorSet(
+    network,
+    buildRecurrentMutationDescriptorSet(network, recurrentLayer, blockType),
+  );
 }
 
 /**
@@ -1933,6 +1944,7 @@ function reconnectThroughRecurrentLayer(
   recurrentLayer: RecurrentLayerShape,
 ): Connection | undefined {
   appendRecurrentLayerNodes(network, recurrentLayer.nodes);
+  registerRecurrentLayerConnections(network, recurrentLayer.nodes);
   network.connect(connectionToExpand.from, recurrentLayer.nodes[0]);
   network.connect(recurrentLayer.output.nodes[0], connectionToExpand.to);
   return network.connections.at(-1);
@@ -1983,6 +1995,32 @@ function createRecurrentLayer(
   return recurrentLayer as RecurrentLayerShape;
 }
 
+function buildRecurrentMutationDescriptorSet(
+  network: Network,
+  recurrentLayer: RecurrentLayerShape,
+  blockType: typeof RECURRENT_BLOCK_LSTM | typeof RECURRENT_BLOCK_GRU,
+) {
+  if (blockType === RECURRENT_BLOCK_LSTM) {
+    const roleNodes = splitLstmLayerNodes(
+      recurrentLayer.nodes,
+      SINGLE_UNIT_RECURRENT_BLOCK_WIDTH,
+    );
+
+    return roleNodes
+      ? buildLstmTemporalDescriptorSet(network, roleNodes)
+      : undefined;
+  }
+
+  const roleNodes = splitGruLayerNodes(
+    recurrentLayer.nodes,
+    SINGLE_UNIT_RECURRENT_BLOCK_WIDTH,
+  );
+
+  return roleNodes
+    ? buildGruTemporalDescriptorSet(network, roleNodes)
+    : undefined;
+}
+
 /**
  * Appends recurrent layer nodes as hidden nodes.
  *
@@ -1995,6 +2033,73 @@ function appendRecurrentLayerNodes(network: Network, layerNodes: Node[]): void {
     const layerNode = layerNodes[nodeIndex];
     layerNode.type = NODE_TYPE_HIDDEN;
     network.nodes.push(layerNode);
+  }
+}
+
+/**
+ * Registers a recurrent layer's prebuilt internal connections on the network.
+ *
+ * Recurrent layer factories wire their own internal node graph before the layer
+ * is attached to a `Network`. Mutation must therefore register those existing
+ * connection objects onto the network's canonical forward, self, and gated
+ * shelves before later serialization, validation, and compatibility paths read
+ * the graph.
+ *
+ * @param network - Target network.
+ * @param layerNodes - Recurrent layer nodes whose internal edges should be registered.
+ * @returns Nothing.
+ */
+function registerRecurrentLayerConnections(
+  network: Network,
+  layerNodes: Node[],
+): void {
+  const seenConnections = new Set<Connection>();
+
+  for (let nodeIndex = 0; nodeIndex < layerNodes.length; nodeIndex++) {
+    const layerNode = layerNodes[nodeIndex];
+    const candidateConnections = [
+      ...layerNode.connections.out,
+      ...layerNode.connections.self,
+    ];
+
+    for (
+      let connectionIndex = 0;
+      connectionIndex < candidateConnections.length;
+      connectionIndex++
+    ) {
+      const candidateConnection = candidateConnections[connectionIndex];
+      if (seenConnections.has(candidateConnection)) {
+        continue;
+      }
+
+      seenConnections.add(candidateConnection);
+      registerRecurrentLayerConnection(network, candidateConnection);
+    }
+  }
+}
+
+/**
+ * Registers one recurrent-layer connection on the canonical runtime shelves.
+ *
+ * @param network - Target network.
+ * @param connection - Recurrent-layer connection to register.
+ * @returns Nothing.
+ */
+function registerRecurrentLayerConnection(
+  network: Network,
+  connection: Connection,
+): void {
+  const targetCollection =
+    connection.from === connection.to
+      ? network.selfconns
+      : network.connections;
+
+  if (!targetCollection.includes(connection)) {
+    targetCollection.push(connection);
+  }
+
+  if (connection.gater && !network.gates.includes(connection)) {
+    network.gates.push(connection);
   }
 }
 

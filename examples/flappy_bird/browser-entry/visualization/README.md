@@ -42,9 +42,9 @@ to a topology-derived depth estimate so even loosely structured networks can
 still be drawn in an intelligible left-to-right order.
 
 Parameters:
-- `network` - - Runtime network instance.
-- `inputSize` - - Input count fallback.
-- `outputSize` - - Output count fallback.
+- `network` - Runtime network instance.
+- `inputSize` - Input count fallback.
+- `outputSize` - Output count fallback.
 
 Returns: Layered nodes for rendering.
 
@@ -193,9 +193,9 @@ drawBiasNodeScene(
 Draws a resolved node rectangle and optional bias label.
 
 Parameters:
-- `context` - - Render context.
-- `biasNodeScene` - - Paint-ready node scene.
-- `nodeWidthPx` - - Shared node width.
+- `context` - Render context.
+- `biasNodeScene` - Paint-ready node scene.
+- `nodeWidthPx` - Shared node width.
 
 Returns: Nothing.
 
@@ -217,11 +217,11 @@ The node layer pairs each rectangle with a compact bias label so the panel can
 show both topology and a lightweight hint of parameter state.
 
 Parameters:
-- `context` - - Render context.
-- `positionedNodes` - - Positioned nodes.
-- `nodeDimensions` - - Node dimensions.
-- `biasScale` - - Dynamic bias color scale.
-- `animatedHoveredNodes` - - Optional animated hovered-node samples owned by the host canvas.
+- `context` - Render context.
+- `positionedNodes` - Positioned nodes.
+- `nodeDimensions` - Node dimensions.
+- `biasScale` - Dynamic bias color scale.
+- `animatedHoveredNodes` - Optional animated hovered-node samples owned by the host canvas.
 
 Returns: Nothing.
 
@@ -237,8 +237,8 @@ drawLeftAlignedTextRows(
 Draws multiline text rows aligned to a fixed left edge.
 
 Parameters:
-- `context` - - Render context.
-- `request` - - Multiline text draw request.
+- `context` - Render context.
+- `request` - Multiline text draw request.
 
 Returns: Nothing.
 
@@ -254,8 +254,8 @@ drawLegendArchitectureLabel(
 Draws the architecture label block above the legend frame.
 
 Parameters:
-- `context` - - Render context.
-- `legendSceneContext` - - Legend scene context.
+- `context` - Render context.
+- `legendSceneContext` - Legend scene context.
 
 Returns: Nothing.
 
@@ -273,10 +273,10 @@ drawLegendBiasRow(
 Draws a single bias legend row.
 
 Parameters:
-- `context` - - Render context.
-- `legendSceneContext` - - Legend scene context.
-- `biasLegendRow` - - Legend row.
-- `biasRowTopPx` - - Row top coordinate.
+- `context` - Render context.
+- `legendSceneContext` - Legend scene context.
+- `biasLegendRow` - Legend row.
+- `biasRowTopPx` - Row top coordinate.
 
 Returns: Nothing.
 
@@ -292,8 +292,8 @@ drawLegendBiasSection(
 Draws the bias legend section.
 
 Parameters:
-- `context` - - Render context.
-- `legendSceneContext` - - Legend scene context.
+- `context` - Render context.
+- `legendSceneContext` - Legend scene context.
 
 Returns: Nothing.
 
@@ -311,10 +311,10 @@ drawLegendConnectionRow(
 Draws a single connection legend row.
 
 Parameters:
-- `context` - - Render context.
-- `legendSceneContext` - - Legend scene context.
-- `connectionLegendRow` - - Legend row.
-- `connectionRowTopPx` - - Row top coordinate.
+- `context` - Render context.
+- `legendSceneContext` - Legend scene context.
+- `connectionLegendRow` - Legend row.
+- `connectionRowTopPx` - Row top coordinate.
 
 Returns: Nothing.
 
@@ -330,8 +330,8 @@ drawLegendConnectionSection(
 Draws the connection-weight legend section.
 
 Parameters:
-- `context` - - Render context.
-- `legendSceneContext` - - Legend scene context.
+- `context` - Render context.
+- `legendSceneContext` - Legend scene context.
 
 Returns: Nothing.
 
@@ -347,8 +347,8 @@ drawLegendFrame(
 Draws the legend container frame.
 
 Parameters:
-- `context` - - Render context.
-- `legendSceneContext` - - Legend scene context.
+- `context` - Render context.
+- `legendSceneContext` - Legend scene context.
 
 Returns: Nothing.
 
@@ -364,8 +364,8 @@ drawLegendHeader(
 Draws the legend title row.
 
 Parameters:
-- `context` - - Render context.
-- `legendSceneContext` - - Legend scene context.
+- `context` - Render context.
+- `legendSceneContext` - Legend scene context.
 
 Returns: Nothing.
 
@@ -386,9 +386,9 @@ instrument: it tells the viewer what each weight and bias color actually
 means numerically.
 
 Parameters:
-- `context` - - Render context.
-- `architectureLabel` - - Compact architecture description.
-- `colorScales` - - Connection and bias color scales.
+- `context` - Render context.
+- `architectureLabel` - Compact architecture description.
+- `colorScales` - Connection and bias color scales.
 
 Returns: Nothing.
 
@@ -407,8 +407,8 @@ The header gives viewers a compact architecture summary before they inspect
 individual nodes and edges.
 
 Parameters:
-- `context` - - Render context.
-- `architectureLabel` - - Header label.
+- `context` - Render context.
+- `architectureLabel` - Header label.
 
 Returns: Nothing.
 
@@ -424,8 +424,8 @@ drawWeightedConnectionScene(
 Draws a previously resolved weighted connection scene.
 
 Parameters:
-- `context` - - Render context.
-- `weightedConnectionScene` - - Render-ready connection scene.
+- `context` - Render context.
+- `weightedConnectionScene` - Render-ready connection scene.
 
 Returns: Nothing.
 
@@ -448,11 +448,11 @@ while dash patterns help distinguish disabled or negative
 edges in a way that still reads quickly on a dense graph.
 
 Parameters:
-- `context` - - Render context.
-- `runtimeConnections` - - Runtime connection list.
-- `positionByNodeIndex` - - Node layout map.
-- `connectionScale` - - Dynamic connection color scale.
-- `animatedHoveredNodes` - - Optional animated hovered-node samples owned by the host canvas.
+- `context` - Render context.
+- `runtimeConnections` - Runtime connection list.
+- `positionByNodeIndex` - Node layout map.
+- `connectionScale` - Dynamic connection color scale.
+- `animatedHoveredNodes` - Optional animated hovered-node samples owned by the host canvas.
 
 Returns: Nothing.
 
@@ -469,9 +469,9 @@ resolveBiasNodeHeightPx(
 Resolves node rectangle height from label metrics and node role.
 
 Parameters:
-- `nodeDimensions` - - Shared node dimensions.
-- `biasNodeLabelMetrics` - - Measured label metrics.
-- `isOutputNode` - - Whether the node is an output node.
+- `nodeDimensions` - Shared node dimensions.
+- `biasNodeLabelMetrics` - Measured label metrics.
+- `isOutputNode` - Whether the node is an output node.
 
 Returns: Render height for the node rectangle.
 
@@ -488,9 +488,9 @@ resolveBiasNodeLabelMetrics(
 Measures a bias label and resolves its font declaration.
 
 Parameters:
-- `context` - - Render context.
-- `nodeLabel` - - Bias label string.
-- `nodeDimensions` - - Shared node dimensions.
+- `context` - Render context.
+- `nodeLabel` - Bias label string.
+- `nodeDimensions` - Shared node dimensions.
 
 Returns: Measured label metrics.
 
@@ -506,8 +506,8 @@ resolveBiasNodePaintStyle(
 Resolves node fill and stroke styling.
 
 Parameters:
-- `positionedNode` - - Positioned node payload.
-- `biasScale` - - Bias color scale.
+- `positionedNode` - Positioned node payload.
+- `biasScale` - Bias color scale.
 
 Returns: Node paint style.
 
@@ -527,11 +527,11 @@ resolveBiasNodeScene(
 Resolves all paint attributes needed to render a single node.
 
 Parameters:
-- `context` - - Render context.
-- `positionedNode` - - Positioned node payload.
-- `nodeDimensions` - - Shared node dimensions.
-- `halfNodeWidthPx` - - Cached half node width.
-- `biasScale` - - Bias color scale.
+- `context` - Render context.
+- `positionedNode` - Positioned node payload.
+- `nodeDimensions` - Shared node dimensions.
+- `halfNodeWidthPx` - Cached half node width.
+- `biasScale` - Bias color scale.
 
 Returns: Paint-ready node scene.
 
@@ -548,9 +548,9 @@ resolveLegendSceneContext(
 Resolves the legend rows, layout, and architecture label bounds.
 
 Parameters:
-- `context` - - Render context.
-- `architectureLabel` - - Multiline architecture label.
-- `colorScales` - - Connection and bias color scales.
+- `context` - Render context.
+- `architectureLabel` - Multiline architecture label.
+- `colorScales` - Connection and bias color scales.
 
 Returns: Legend scene context.
 
@@ -568,9 +568,9 @@ resolveWeightedConnectionScene(
 Resolves a renderable connection scene from runtime data and node positions.
 
 Parameters:
-- `runtimeConnection` - - Candidate runtime connection.
-- `positionByNodeIndex` - - Node layout map.
-- `connectionScale` - - Connection color scale.
+- `runtimeConnection` - Candidate runtime connection.
+- `positionByNodeIndex` - Node layout map.
+- `connectionScale` - Connection color scale.
 
 Returns: Renderable connection scene, when both endpoint nodes exist.
 
@@ -585,7 +585,7 @@ shouldHideNetworkColorLegend(
 Determines whether the responsive viewport intentionally hides the overlay legend.
 
 Parameters:
-- `context` - - Render context.
+- `context` - Render context.
 
 Returns: True when the legend should be omitted.
 
@@ -612,8 +612,8 @@ Each row describes one closed numeric interval and the swatch used to paint
 it, making the dynamic color scale legible to a human reader.
 
 Parameters:
-- `scale` - - Dynamic color scale containing bounds, tiers, and overflow color.
-- `symbol` - - Label symbol.
+- `scale` - Dynamic color scale containing bounds, tiers, and overflow color.
+- `symbol` - Label symbol.
 
 Returns: Legend rows.
 
@@ -633,8 +633,8 @@ currently active network and does not need to assemble the intermediate rows
 manually.
 
 Parameters:
-- `context` - - Render context.
-- `network` - - Active network instance.
+- `context` - Render context.
+- `network` - Active network instance.
 
 Returns: Legend layout.
 
@@ -655,9 +655,9 @@ panel can stay informative on smaller viewports without swallowing the whole
 canvas.
 
 Parameters:
-- `context` - - Render context.
-- `connectionLegendRows` - - Connection legend rows.
-- `biasLegendRows` - - Bias legend rows.
+- `context` - Render context.
+- `connectionLegendRows` - Connection legend rows.
+- `biasLegendRows` - Bias legend rows.
 
 Returns: Computed legend layout.
 
@@ -685,7 +685,7 @@ around zero. Negative and positive values should feel visually related, but
 not identical.
 
 Parameters:
-- `input` - - Tier creation options.
+- `input` - Tier creation options.
 
 Returns: Ordered tier list.
 
@@ -703,7 +703,7 @@ Bias colors follow the same diverging logic as connection colors so the legend
 remains conceptually consistent across channels.
 
 Parameters:
-- `nodeBias` - - Node bias.
+- `nodeBias` - Node bias.
 
 Returns: Tier color.
 
@@ -721,7 +721,7 @@ This small helper is useful when one-off drawing code wants the same color
 semantics as the full dynamic scale machinery.
 
 Parameters:
-- `connectionWeight` - - Connection weight.
+- `connectionWeight` - Connection weight.
 
 Returns: Tier color.
 
@@ -740,7 +740,7 @@ value range, so the legend adapts to what is currently present instead of
 always rendering a fixed generic scale.
 
 Parameters:
-- `network` - - Active network.
+- `network` - Active network.
 
 Returns: Dynamic scales used by graph drawing and legend rows.
 
@@ -760,9 +760,9 @@ This is the final classification step that maps one numeric weight or bias to
 the swatch color the renderer should paint.
 
 Parameters:
-- `value` - - Numeric value to classify.
-- `tiers` - - Ordered tier list.
-- `aboveTierColor` - - Fallback color for values above the last tier.
+- `value` - Numeric value to classify.
+- `tiers` - Ordered tier list.
+- `aboveTierColor` - Fallback color for values above the last tier.
 
 Returns: Resolved color string.
 
@@ -788,7 +788,7 @@ Consistent sign and precision make dense node labels easier to scan quickly in
 the rendered network panel.
 
 Parameters:
-- `nodeBias` - - Node bias value.
+- `nodeBias` - Node bias value.
 
 Returns: Label text.
 
@@ -814,9 +814,9 @@ to a topology-derived depth estimate so even loosely structured networks can
 still be drawn in an intelligible left-to-right order.
 
 Parameters:
-- `network` - - Runtime network instance.
-- `inputSize` - - Input count fallback.
-- `outputSize` - - Output count fallback.
+- `network` - Runtime network instance.
+- `inputSize` - Input count fallback.
+- `outputSize` - Output count fallback.
 
 Returns: Layered nodes for rendering.
 
@@ -835,7 +835,7 @@ assertFiniteLegendBound(
 Guards legend-bound formatting against non-finite values.
 
 Parameters:
-- `value` - - Legend bound candidate.
+- `value` - Legend bound candidate.
 
 Returns: Nothing.
 

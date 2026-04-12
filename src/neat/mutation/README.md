@@ -94,9 +94,12 @@ keep a mutated genome above a minimum hidden-capacity floor. It is less about
 exploration than about preserving a usable topology budget so later mutation,
 evaluation, and selection steps do not inherit a trivially underbuilt graph.
 
-The helper may add hidden nodes, wire missing edges, and rebuild cached
-connection structures, so callers should treat it as a topology-maintenance
-pass rather than a tiny invariant check.
+The helper may add hidden nodes, wire missing edges, normalize feed-forward
+node ordering, and rebuild cached connection structures, so callers should
+treat it as a topology-maintenance pass rather than a tiny invariant check.
+Those structural edits now stay on the canonical add-node/add-connection
+identity paths so repair work cannot drift from the innovation tracker or
+the explicit topology-policy bridge.
 
 Parameters:
 - `network` - Genome whose hidden-node budget and connectivity should be repaired.
@@ -118,7 +121,10 @@ Mutation can produce temporarily awkward graphs, especially after structural
 growth or pruning-like simplification. This repair pass reconnects stranded
 input, output, or hidden nodes so the genome remains a sensible candidate for
 later evaluation and does not carry obviously broken topology into the next
-controller stage.
+controller stage. Repair connections now reuse the canonical add-connection
+identity path, and feed-forward runs normalize hidden/output ordering before
+reconnecting edges so maintenance work still respects the innovation tracker
+and the explicit topology-policy bridge.
 
 Parameters:
 - `network` - Genome whose endpoint and hidden-node connectivity should be repaired.
@@ -173,15 +179,20 @@ mutateAddConnReuse(
 ```
 
 Add a connection between two previously unconnected nodes, reusing a
-stable innovation id per unordered node pair when possible.
+stable innovation id per exact directed edge when possible.
 
 Notes on behavior:
 - The search space consists of node pairs (from, to) where `from` is not
-  already projecting to `to` and respects the input/output ordering used by
-  the genome representation.
-- When a historical innovation exists for the unordered pair, the
-  previously assigned innovation id is reused to keep different genomes
-  compatible for downstream crossover and speciation.
+  already projecting to `to`.
+- When recurrent growth is enabled, the candidate pool expands beyond
+  forward-only pairs so the generic add-connection path follows the same
+  topology contract as crossover and operator selection.
+- When a historical innovation exists for the exact directed pair and that
+  edge is currently absent, the previously assigned innovation id is reused
+  so different genomes can recreate the same structural event.
+- When the exact directed edge already exists in a disabled state,
+  add-connection does not duplicate it. Revival stays an explicit re-enable
+  concern elsewhere in the evolutionary flow.
 
 Steps:
 - Build a list of all legal (from,to) pairs that don't currently have a
@@ -195,9 +206,9 @@ Steps:
 
 This is the connection-growth companion to `mutateAddNodeReuse()`. Its main
 controller value is innovation consistency: if two genomes discover the same
-structural pair across time, the mutation system tries to keep that edit
-comparable for later crossover and speciation rather than treating it as a
-completely unrelated event.
+directed structural edit across time, the mutation system tries to keep that
+edit comparable for later crossover and speciation rather than treating it
+as a completely unrelated event.
 
 Parameters:
 - `genome` - Genome to modify in place.
@@ -215,20 +226,24 @@ mutateAddNodeReuse(
 Split a randomly chosen enabled connection and insert a hidden node.
 
 This routine attempts to reuse a historical "node split" innovation record
-so that identical splits across different genomes share the same
-innovation ids. This preservation of innovation information is important
-for NEAT-style speciation and genome alignment.
+so that genomes splitting the same historically marked connection during one
+mutation window share the same inserted node id and replacement connection
+innovations. This preservation of innovation information is important for
+NEAT-style speciation and genome alignment.
 
 Use this helper when the controller wants a structural growth mutation that
 stays compatible with prior history. The important state change is not only
 the new hidden node inside one genome, but also the possible update to the
-controller's split-innovation table when this exact split has never been seen
-before.
+controller's split-innovation table when this exact split event has never
+been seen before.
 
 Method steps (high-level):
 - If the genome has no connections, connect an input to an output to
   bootstrap connectivity.
 - Filter enabled connections and choose one at random.
+- Build a split descriptor from the split connection's historical
+  innovation when available, falling back to legacy endpoint identity only
+  when the connection lacks innovation metadata.
 - Disconnect the chosen connection and either reuse an existing split
   innovation record or create a new hidden node + two connecting
   connections (in->new, new->out) assigning new innovation ids.
@@ -245,6 +260,30 @@ Example:
 ```ts
 neat._mutateAddNodeReuse(genome);
 ```
+
+### normalizeRepairNodeOrderForFeedForward
+
+```ts
+normalizeRepairNodeOrderForFeedForward(
+  network: GenomeWithMetadata,
+  allowRecurrent: boolean | undefined,
+): void
+```
+
+Normalize node ordering for feed-forward maintenance repairs.
+
+Some legacy or bootstrap paths can leave hidden nodes after the output tail.
+That ordering is awkward whenever the current mutation policy is effectively
+feed-forward, because the mutation chapter interprets hidden-to-output
+repairs through node order. This helper keeps repair decisions conservative
+by reestablishing the standard input-hidden-output ordering before any
+repair shelf is evaluated when recurrent growth is not currently allowed.
+
+Parameters:
+- `network` - genome whose node ordering may need normalization
+- `allowRecurrent` - controller flag for recurrent growth
+
+Returns: void
 
 ### selectMutationMethod
 

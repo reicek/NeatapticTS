@@ -52,7 +52,8 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 **Outcome:** deterministic semantics and “proper NEAT” correctness so everything built on top is reliable.
 
 1. Proper NEAT (historical markings, correct crossover alignment, recurrent/self-connection policy, RNG determinism)
-   - Plan: [neat.plans.md](neat.plans.md) [PLANNED]
+   - Plan: [neat.plans.md](neat.plans.md) [WIP]
+   - Current internal state: the canonical lift through Step 7.5 is closed; Step 7.6 flagship-demo validation is the active frontier.
 2. Explicit I/O roles + stable activation ordering (acyclic + recurrent mode semantics)
    - Plan: [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [PLANNED]
 
@@ -167,7 +168,7 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phase 0 is complete** and the project is ready to begin **Phase 1**. Both demos are solid split and documented, the example learnability pass materially strengthened across `examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, and the ES2023 modernization lane is closed as a completed Phase 0 baseline.
+Current status: **Phase 0 is complete** and **Phase 1 is now active** through [neat.plans.md](neat.plans.md), with the canonical proper-NEAT lift through Step 7.5 closed and Step 7.6 flagship-demo validation active. Both demos are solid split and documented, the example learnability pass materially strengthened across `examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, and the ES2023 modernization lane is closed as a completed Phase 0 baseline.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
@@ -201,7 +202,7 @@ than a roadmap-tracked plan file.
 
 ### Phase 1 inventory
 
-15. [neat.plans.md](neat.plans.md) [PLANNED]
+15. [neat.plans.md](neat.plans.md) [WIP]
 16. [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [PLANNED]
 
 ### Phase 2 inventory

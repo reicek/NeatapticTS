@@ -205,6 +205,26 @@ export default class Connection {
     Connection._nextInnovation = value;
   }
 
+  /**
+   * Advances the innovation cursor past a restored maximum.
+   *
+   * This keeps import and clone paths monotonic: once a payload brings in a high
+   * innovation id, newly created edges continue from above that value.
+   *
+   * @param maxObservedInnovation Highest restored innovation id currently in memory.
+   * @returns Nothing.
+   */
+  static syncInnovationCounter(maxObservedInnovation: number): void {
+    if (!Number.isFinite(maxObservedInnovation)) {
+      return;
+    }
+
+    Connection._nextInnovation = Math.max(
+      Connection._nextInnovation,
+      maxObservedInnovation + 1,
+    );
+  }
+
   private static _pool: Connection[] = [];
 
   /**

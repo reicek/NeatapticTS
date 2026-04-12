@@ -113,12 +113,14 @@ Edge cases & invariants:
  - Acyclic mode silently refuses back‑edges instead of throwing (makes evolutionary search easier).
  - Self‑connections are skipped entirely when acyclicity is enforced.
  - Weight initialization policy is delegated to Node.connect if not explicitly provided.
+ - When the network carries explicit temporal extension metadata, successful edge creation
+   revalidates that descriptor bag immediately so generic structural edits keep the extension lane honest.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `from` - - Source node (emits signal).
-- `to` - - Target node (receives signal).
-- `weight` - - Optional explicit initial weight value.
+- `this` - Bound Network instance.
+- `from` - Source node (emits signal).
+- `to` - Target node (receives signal).
+- `weight` - Optional explicit initial weight value.
 
 Returns: Array of created  {@link Connection} objects (possibly empty if acyclicity rejected the edge).
 
@@ -156,11 +158,13 @@ Complexity:
 
 Idempotence: If no such edge exists we still perform node-level disconnect and flag caches dirty –
 this conservative approach simplifies callers (they need not pre‑check existence).
+When the network carries explicit temporal extension metadata, the disconnect path also revalidates
+that descriptor bag immediately so stale module claims do not linger until a later serialize pass.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `from` - - Source node.
-- `to` - - Target node.
+- `this` - Bound Network instance.
+- `from` - Source node.
+- `to` - Target node.
 
 Example:
 
@@ -187,9 +191,9 @@ createConnectionsFromSourceNode(
 Build one or more low-level connection objects from source node to target node.
 
 Parameters:
-- `sourceNode` - - Source node.
-- `targetNode` - - Target node.
-- `initialWeight` - - Optional explicit initial weight.
+- `sourceNode` - Source node.
+- `targetNode` - Target node.
+- `initialWeight` - Optional explicit initial weight.
 
 Returns: Created low-level connection objects.
 
@@ -205,8 +209,8 @@ markConnectionCachesDirtyWhenNeeded(
 Mark topology and slab caches dirty when connection creation occurred.
 
 Parameters:
-- `internalState` - - Runtime network internals used by connection pipeline.
-- `createdConnectionCount` - - Number of created low-level connections.
+- `internalState` - Runtime network internals used by connection pipeline.
+- `createdConnectionCount` - Number of created low-level connections.
 
 Returns: Nothing.
 
@@ -225,11 +229,11 @@ registerCreatedConnections(
 Register created connections in either normal-connection or self-connection storage.
 
 Parameters:
-- `network` - - Network instance owning connection collections.
-- `internalState` - - Runtime network internals used by connection pipeline.
-- `sourceNode` - - Source node used during connection creation.
-- `targetNode` - - Target node used during connection creation.
-- `createdConnections` - - Created low-level connection objects.
+- `network` - Network instance owning connection collections.
+- `internalState` - Runtime network internals used by connection pipeline.
+- `sourceNode` - Source node used during connection creation.
+- `targetNode` - Target node used during connection creation.
+- `createdConnections` - Created low-level connection objects.
 
 Returns: Nothing.
 
@@ -247,10 +251,10 @@ registerSingleCreatedConnection(
 Register one created connection in the appropriate collection.
 
 Parameters:
-- `network` - - Network instance owning connection collections.
-- `internalState` - - Runtime network internals used by connection pipeline.
-- `isSelfConnection` - - Whether source and target nodes are the same.
-- `createdConnection` - - Created low-level connection object.
+- `network` - Network instance owning connection collections.
+- `internalState` - Runtime network internals used by connection pipeline.
+- `isSelfConnection` - Whether source and target nodes are the same.
+- `createdConnection` - Created low-level connection object.
 
 Returns: Nothing.
 
@@ -268,10 +272,10 @@ shouldRejectConnectionForAcyclicMode(
 Determine whether an edge must be rejected to preserve acyclic ordering.
 
 Parameters:
-- `network` - - Network instance owning node ordering.
-- `internalState` - - Runtime network internals used by connection pipeline.
-- `sourceNode` - - Candidate source node.
-- `targetNode` - - Candidate target node.
+- `network` - Network instance owning node ordering.
+- `internalState` - Runtime network internals used by connection pipeline.
+- `sourceNode` - Candidate source node.
+- `targetNode` - Candidate target node.
 
 Returns: True when edge should be rejected.
 
@@ -289,8 +293,8 @@ disconnectNodes(
 Delegate per-node disconnect cleanup.
 
 Parameters:
-- `sourceNode` - - Source node.
-- `targetNode` - - Target node.
+- `sourceNode` - Source node.
+- `targetNode` - Target node.
 
 Returns: Nothing.
 
@@ -307,9 +311,9 @@ findConnectionIndex(
 Find index of the first connection matching source and target nodes.
 
 Parameters:
-- `candidateConnections` - - Candidate collection to search.
-- `sourceNode` - - Source node.
-- `targetNode` - - Target node.
+- `candidateConnections` - Candidate collection to search.
+- `sourceNode` - Source node.
+- `targetNode` - Target node.
 
 Returns: Matching index or -1 when no edge is found.
 
@@ -324,7 +328,7 @@ markStructureCachesDirty(
 Mark topology/slab caches dirty after structural mutation.
 
 Parameters:
-- `internalState` - - Runtime network internals used by connection pipeline.
+- `internalState` - Runtime network internals used by connection pipeline.
 
 Returns: Nothing.
 
@@ -341,9 +345,9 @@ removeConnectionAtIndex(
 Remove one connection by index, ungating first if required.
 
 Parameters:
-- `network` - - Network instance used for ungating.
-- `candidateConnections` - - Candidate collection containing target index.
-- `targetConnectionIndex` - - Index to remove.
+- `network` - Network instance used for ungating.
+- `candidateConnections` - Candidate collection containing target index.
+- `targetConnectionIndex` - Index to remove.
 
 Returns: Nothing.
 
@@ -361,10 +365,10 @@ removeFirstMatchingConnection(
 Remove first connection that matches source and target nodes.
 
 Parameters:
-- `network` - - Network instance used for ungating.
-- `candidateConnections` - - Candidate collection to search.
-- `sourceNode` - - Source node.
-- `targetNode` - - Target node.
+- `network` - Network instance used for ungating.
+- `candidateConnections` - Candidate collection to search.
+- `sourceNode` - Source node.
+- `targetNode` - Target node.
 
 Returns: Nothing.
 
@@ -381,8 +385,8 @@ selectConnectionCollection(
 Select the relevant collection to search for the edge.
 
 Parameters:
-- `network` - - Network instance owning connection collections.
-- `sourceNode` - - Source node.
-- `targetNode` - - Target node.
+- `network` - Network instance owning connection collections.
+- `sourceNode` - Source node.
+- `targetNode` - Target node.
 
 Returns: Candidate connection collection.

@@ -1,5 +1,6 @@
 import Node from '../../node';
 import Network from '../network';
+import type { NetworkJSON } from '../network.types';
 import {
   NetworkRemoveNodeNotFoundError,
   NetworkRemoveStructuralAnchorError,
@@ -11,6 +12,37 @@ function createRemoveNetwork(seed: number): Network {
 
 function getNetworkRandomGenerator(network: Network): () => number {
   return Reflect.get(network, '_rand') as () => number;
+}
+
+function summarizeHydratedTemporalExtensionBag(network: Network): {
+  recurrentModuleCount: number;
+  gatedBlockCount: number;
+  recurrentKinds: string[];
+} {
+  const hydratedExtensions = Reflect.get(network, '_serializedExtensions') as
+    | NetworkJSON['extensions']
+    | undefined;
+  const extensionValues = hydratedExtensions?.values as
+    | {
+        recurrentModules?: Array<{ kind?: string }>;
+        gatedBlocks?: Array<unknown>;
+      }
+    | undefined;
+  const recurrentModules = Array.isArray(extensionValues?.recurrentModules)
+    ? extensionValues.recurrentModules
+    : [];
+  const gatedBlocks = Array.isArray(extensionValues?.gatedBlocks)
+    ? extensionValues.gatedBlocks
+    : [];
+
+  return {
+    recurrentModuleCount: recurrentModules.length,
+    gatedBlockCount: gatedBlocks.length,
+    recurrentKinds: recurrentModules
+      .map((recurrentModule) => recurrentModule.kind)
+      .filter((kind): kind is string => typeof kind === 'string')
+      .toSorted(),
+  };
 }
 
 describe('network remove chapter', () => {
@@ -96,6 +128,66 @@ describe('network remove chapter', () => {
 
           // Assert
           expect(restoredProjectionExists).toBe(true);
+        });
+      });
+    });
+
+    describe('given the removal target only owns gating on an external connection', () => {
+      describe('when remove() is called', () => {
+        it('retires the hydrated temporal descriptor bag immediately', () => {
+          // Arrange
+          const network = new Network(1, 1, { seed: 395 });
+          const gaterNode = new Node(
+            'hidden',
+            undefined,
+            getNetworkRandomGenerator(network),
+          );
+          network.nodes.splice(1, 0, gaterNode);
+
+          const gatedConnection = network.connections[0];
+          if (!gatedConnection) {
+            throw new Error('Expected a bootstrap connection to gate.');
+          }
+
+          network.gate(gaterNode, gatedConnection);
+          Reflect.set(network, '_serializedExtensions', {
+            version: 1,
+            values: {
+              gatedBlocks: [
+                {
+                  blockId: 'gated:block:manual-fixture',
+                  gaterGeneIds: [gaterNode.geneId ?? 0],
+                  connectionInnovations: [gatedConnection.innovation],
+                },
+              ],
+            },
+          });
+          const summaryBeforeRemove = summarizeHydratedTemporalExtensionBag(
+            network,
+          );
+
+          // Act
+          network.remove(gaterNode);
+          const summaryAfterRemove = summarizeHydratedTemporalExtensionBag(
+            network,
+          );
+
+          // Assert
+          expect({
+            summaryBeforeRemove,
+            summaryAfterRemove,
+          }).toEqual({
+            summaryBeforeRemove: {
+              recurrentModuleCount: 0,
+              gatedBlockCount: 1,
+              recurrentKinds: [],
+            },
+            summaryAfterRemove: {
+              recurrentModuleCount: 0,
+              gatedBlockCount: 0,
+              recurrentKinds: [],
+            },
+          });
         });
       });
     });

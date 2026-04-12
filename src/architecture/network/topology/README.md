@@ -99,6 +99,27 @@ Parameters:
 
 Returns: Current topology intent.
 
+### hasFeedForwardTopologyContract
+
+```ts
+hasFeedForwardTopologyContract(
+  carrier: FeedForwardTopologyContractCarrier,
+): boolean
+```
+
+Check whether a runtime shape currently carries the feed-forward contract.
+
+The helper is intentionally conservative when callers are in a mismatched
+transitional state: either an explicit `feed-forward` intent or a truthy
+`_enforceAcyclic` flag is treated as a feed-forward contract. That keeps
+mutation and crossover helpers from introducing recurrent structure into a
+genome that still advertises acyclic semantics anywhere on its runtime seam.
+
+Parameters:
+- `carrier` - Narrow runtime shape or full network instance.
+
+Returns: True when feed-forward semantics are currently enforced.
+
 ### hasPath
 
 ```ts
@@ -766,7 +787,7 @@ Returns: Grouped node layers for MLP assembly.
 ```ts
 createNodesOfType(
   nodeCount: number,
-  nodeType: "input" | "output" | "hidden",
+  nodeType: "input" | "hidden" | "output",
 ): default[]
 ```
 
@@ -855,6 +876,14 @@ Parameters:
 
 ## architecture/network/topology/network.topology.contract.utils.ts
 
+### FeedForwardTopologyContractCarrier
+
+Minimal runtime surface needed to read the active feed-forward contract.
+
+Some callers have a full `Network` instance with `getTopologyIntent()`, while
+others only hold a narrow runtime genome shape with the low-level acyclic flag.
+This contract keeps both shapes usable from one small helper.
+
 ### getTopologyIntent
 
 ```ts
@@ -871,6 +900,27 @@ Parameters:
 - `this` - Target network instance.
 
 Returns: Current topology intent.
+
+### hasFeedForwardTopologyContract
+
+```ts
+hasFeedForwardTopologyContract(
+  carrier: FeedForwardTopologyContractCarrier,
+): boolean
+```
+
+Check whether a runtime shape currently carries the feed-forward contract.
+
+The helper is intentionally conservative when callers are in a mismatched
+transitional state: either an explicit `feed-forward` intent or a truthy
+`_enforceAcyclic` flag is treated as a feed-forward contract. That keeps
+mutation and crossover helpers from introducing recurrent structure into a
+genome that still advertises acyclic semantics anywhere on its runtime seam.
+
+Parameters:
+- `carrier` - Narrow runtime shape or full network instance.
+
+Returns: True when feed-forward semantics are currently enforced.
 
 ### setEnforceAcyclic
 
@@ -930,11 +980,11 @@ Keeping descriptor assembly in one place ensures every resolution strategy
 returns the same payload contract and avoids accidental field drift.
 
 Parameters:
-- `hiddenLayerSizes` - - Hidden-layer widths.
-- `hasCycles` - - Whether cycles were detected.
-- `source` - - Descriptor provenance.
-- `totalNodes` - - Node count.
-- `totalConnections` - - Connection count.
+- `hiddenLayerSizes` - Hidden-layer widths.
+- `hasCycles` - Whether cycles were detected.
+- `source` - Descriptor provenance.
+- `totalNodes` - Node count.
+- `totalConnections` - Connection count.
 
 Returns: Descriptor object.
 
@@ -960,8 +1010,8 @@ Invalid references, disabled connections, and self-loops are removed so the
 remaining edge list can be consumed safely by cycle and depth algorithms.
 
 Parameters:
-- `runtimeConnections` - - Runtime connections.
-- `nodeByIndex` - - Indexed nodes.
+- `runtimeConnections` - Runtime connections.
+- `nodeByIndex` - Indexed nodes.
 
 Returns: Valid directed edges.
 
@@ -986,7 +1036,7 @@ Runtime objects may omit `index`; in that case the current array position is
 used as a deterministic fallback to keep downstream graph logic total.
 
 Parameters:
-- `runtimeNodes` - - Runtime nodes.
+- `runtimeNodes` - Runtime nodes.
 
 Returns: Node map keyed by stable node index.
 
@@ -1017,7 +1067,7 @@ Resolution priority is intentionally explicit:
 3) hidden-node count fallback (heuristic inference)
 
 Parameters:
-- `network` - - Runtime network instance.
+- `network` - Runtime network instance.
 
 Returns: Stable architecture descriptor.
 
@@ -1041,7 +1091,7 @@ Identifies whether a runtime node should be treated as hidden for topology
 reconstruction and fallback inference.
 
 Parameters:
-- `runtimeNode` - - Candidate node.
+- `runtimeNode` - Candidate node.
 
 Returns: True when node type is hidden.
 
@@ -1107,8 +1157,8 @@ A complete topological ordering implies an acyclic graph. If some nodes
 remain unprocessed, at least one cycle exists.
 
 Parameters:
-- `nodeByIndex` - - Indexed nodes.
-- `directedEdges` - - Directed edges.
+- `nodeByIndex` - Indexed nodes.
+- `directedEdges` - Directed edges.
 
 Returns: Topological order and cycle status.
 
@@ -1133,8 +1183,8 @@ This is the final transformation before emitting architecture widths:
 hidden nodes are grouped by depth and counted in insertion-safe maps.
 
 Parameters:
-- `nodeByIndex` - - Indexed nodes.
-- `depthByNodeIndex` - - Derived depths.
+- `nodeByIndex` - Indexed nodes.
+- `depthByNodeIndex` - Derived depths.
 
 Returns: Hidden-node counts by depth.
 
@@ -1161,8 +1211,8 @@ graphs are flagged and intentionally return no width inference because depth
 is not well-defined in recurrent loops.
 
 Parameters:
-- `runtimeNodes` - - Runtime nodes.
-- `runtimeConnections` - - Runtime connections.
+- `runtimeNodes` - Runtime nodes.
+- `runtimeConnections` - Runtime connections.
 
 Returns: Hidden-layer widths derived from acyclic topology and cycle flag.
 
@@ -1187,7 +1237,7 @@ usually produced by architecture-aware builders and does not depend on
 topological reconstruction.
 
 Parameters:
-- `runtimeNodes` - - Runtime nodes.
+- `runtimeNodes` - Runtime nodes.
 
 Returns: Hidden-layer widths from explicit node.layer metadata.
 
@@ -1214,9 +1264,9 @@ Depth assignment is parent-driven: each node depth is one plus the maximum
 resolved parent depth. Nodes with no resolved parents are skipped.
 
 Parameters:
-- `nodeByIndex` - - Indexed nodes.
-- `directedEdges` - - Directed edges.
-- `topologicalOrder` - - Acyclic topological order.
+- `nodeByIndex` - Indexed nodes.
+- `directedEdges` - Directed edges.
+- `topologicalOrder` - Acyclic topological order.
 
 Returns: Derived depth by node index.
 

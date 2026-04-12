@@ -2,11 +2,13 @@ import type Network from '../../network/network';
 import type Node from '../../node';
 import {
   getTopologyIntent,
+  hasFeedForwardTopologyContract,
   setEnforceAcyclic,
   setTopologyIntent,
 } from './network.topology.contract.utils';
 export {
   getTopologyIntent,
+  hasFeedForwardTopologyContract,
   setEnforceAcyclic,
   setTopologyIntent,
 } from './network.topology.contract.utils';
@@ -93,6 +95,7 @@ export default {
   computeTopoOrder,
   getTopologyIntent,
   hasPath,
+  hasFeedForwardTopologyContract,
   setEnforceAcyclic,
   setTopologyIntent,
 };

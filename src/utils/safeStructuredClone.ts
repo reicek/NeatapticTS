@@ -10,7 +10,7 @@
  *   dropped or coerced to `null` by `JSON.stringify`, so callers should not
  *   rely on strict value preservation through the fallback path.
  *
- * @param value - Value to clone.
+ * @param value Value to clone.
  * @returns Deep-cloned value.
  *
  * @example

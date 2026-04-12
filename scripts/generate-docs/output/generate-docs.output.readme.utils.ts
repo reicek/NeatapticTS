@@ -370,8 +370,9 @@ function renderSymbolBlock(
   if (renderedSymbol.jsdoc.params?.length) {
     lines.push('', 'Parameters:');
     for (const parameter of renderedSymbol.jsdoc.params) {
+      const normalizedParamDoc = normalizeParameterDoc(parameter.doc);
       lines.push(
-        `- \`${parameter.name}\`${parameter.doc ? ` - ${parameter.doc}` : ''}`,
+        `- \`${parameter.name}\`${normalizedParamDoc ? ` - ${normalizedParamDoc}` : ''}`,
       );
     }
   }
@@ -392,6 +393,25 @@ function renderSymbolBlock(
   }
 
   lines.push('');
+}
+
+/**
+ * Normalizes parameter documentation extracted from JSDoc.
+ *
+ * The generator renders parameter bullets as `- \`name\` - description`.
+ * If the extracted doc already begins with `-` (common when authors write
+ * `@param name - description`), the README ends up with a doubled dash.
+ *
+ * @param doc Raw parameter doc string from the JSDoc parser.
+ * @returns Normalized parameter doc string safe for bullet rendering.
+ */
+function normalizeParameterDoc(doc: string | undefined): string {
+  if (!doc) {
+    return '';
+  }
+
+  const trimmed = doc.trim();
+  return trimmed.replace(/^-(\s+)/, '');
 }
 
 /**

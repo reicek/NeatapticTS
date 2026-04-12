@@ -23,8 +23,8 @@ const DEFAULT_TRAINING = false;
  * In this implementation, the normalization is applied to the activation vector
  * produced *per call*.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of nodes in the normalization layer.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of nodes in the normalization layer.
  * @returns The configured layer instance.
  *
  * Example:
@@ -54,8 +54,8 @@ export function buildBatchNormLayer<TLayer extends LayerFactoryLayer>(
  * compute statistics. Here they share the same post-processing to keep the code
  * simple and educational.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of nodes in the normalization layer.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of nodes in the normalization layer.
  * @returns The configured layer instance.
  *
  * Example:
@@ -84,7 +84,7 @@ export function buildLayerNormLayer<TLayer extends LayerFactoryLayer>(
  * This is implemented as a function wrapper rather than modifying node math.
  * That makes it easy to layer normalization behavior onto each dense layer.
  *
- * @param layer - Dense layer to decorate with normalization behavior.
+ * @param layer Dense layer to decorate with normalization behavior.
  * @returns No return value.
  *
  * Example (conceptual flow):
@@ -112,7 +112,7 @@ function applyNormalizationActivation<TLayer extends LayerFactoryLayer>(
 /**
  * Computes the arithmetic mean for a vector of activations.
  *
- * @param activations - Activation values to summarize.
+ * @param activations Activation values to summarize.
  * @returns Mean activation value.
  *
  * Example:
@@ -135,8 +135,8 @@ function computeMean(activations: number[]): number {
  *
  * Educational note: the standard deviation is `Math.sqrt(variance)`.
  *
- * @param activations - Activation values to summarize.
- * @param mean - Mean value used for centering.
+ * @param activations Activation values to summarize.
+ * @param mean Mean value used for centering.
  * @returns Variance of the activation values.
  *
  * Example:
@@ -164,9 +164,9 @@ function computeVariance(activations: number[], mean: number): number {
  * The transformation is applied per element:
  * $(x - \mu) / \sqrt{\sigma^2 + \epsilon}$
  *
- * @param activations - Activation values to normalize.
- * @param mean - Mean activation value.
- * @param variance - Variance activation value.
+ * @param activations Activation values to normalize.
+ * @param mean Mean activation value.
+ * @param variance Variance activation value.
  * @returns Normalized activation values.
  *
  * Example:

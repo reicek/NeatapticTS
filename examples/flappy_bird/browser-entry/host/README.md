@@ -27,7 +27,7 @@ Builds the browser demo host tree and returns rendering handles.
 This is the public host entrypoint used by the runtime startup path.
 
 Parameters:
-- `containerElement` - - Root host container.
+- `containerElement` - Root host container.
 
 Returns: Canvas handles, stats cells and network render callback.
 
@@ -46,7 +46,7 @@ create canvases, wire resize behavior, render placeholders, then return the
 handles the runtime will mutate during execution.
 
 Parameters:
-- `containerElement` - - Root host container.
+- `containerElement` - Root host container.
 
 Returns: Canvas handles, stats cells and network render callback.
 
@@ -62,8 +62,8 @@ createHeaderFrameRenderer(
 Creates the reusable title-frame renderer for the header canvas.
 
 Parameters:
-- `headerCanvas` - - Header canvas element.
-- `headerContext` - - Header canvas 2D context.
+- `headerCanvas` - Header canvas element.
+- `headerContext` - Header canvas 2D context.
 
 Returns: Callback that redraws the framed title.
 
@@ -81,7 +81,7 @@ The host manages three canvas surfaces with different jobs: a title/header
 frame, the main simulation view, and the side-panel network visualization.
 
 Parameters:
-- `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
+- `hostVisualPrimitives` - Shared visual primitives for border and shadow styling.
 
 Returns: Simulation, header, and network canvases with required contexts.
 
@@ -99,7 +99,7 @@ This creates the structural DOM only. Canvases, stats content, and
 visualization wiring are layered on afterward.
 
 Parameters:
-- `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
+- `hostVisualPrimitives` - Shared visual primitives for border and shadow styling.
 
 Returns: Layout elements grouped by host responsibility.
 
@@ -116,9 +116,9 @@ createHostNetworkVisualizationController(
 Creates the network visualization renderer and redraw controller.
 
 Parameters:
-- `networkCanvasHost` - - Host element wrapping the network canvas.
-- `networkCanvas` - - Network visualization canvas.
-- `networkContext` - - Network visualization 2D context.
+- `networkCanvasHost` - Host element wrapping the network canvas.
+- `networkCanvas` - Network visualization canvas.
+- `networkContext` - Network visualization 2D context.
 
 Returns: Renderer and redraw callbacks for the network panel.
 
@@ -137,11 +137,11 @@ installCanvasHostResizeHooks(
 Installs responsive resize hooks for the simulation canvas and side panel.
 
 Parameters:
-- `canvas` - - Simulation canvas.
-- `hostLayoutElements` - - Prepared layout containers.
-- `networkCanvas` - - Network visualization canvas.
-- `drawHeaderFrame` - - Callback that redraws the header title.
-- `hostNetworkVisualizationController` - - Network panel resize/redraw controller.
+- `canvas` - Simulation canvas.
+- `hostLayoutElements` - Prepared layout containers.
+- `networkCanvas` - Network visualization canvas.
+- `drawHeaderFrame` - Callback that redraws the header title.
+- `hostNetworkVisualizationController` - Network panel resize/redraw controller.
 
 Returns: Nothing.
 
@@ -160,11 +160,11 @@ mountCanvasHostTree(
 Mounts the completed host DOM tree into the container in final order.
 
 Parameters:
-- `containerElement` - - Root host container.
-- `hostLayoutElements` - - Prepared layout containers.
-- `headerCanvas` - - Header title canvas.
-- `canvas` - - Main simulation canvas.
-- `networkCanvas` - - Network visualization canvas.
+- `containerElement` - Root host container.
+- `hostLayoutElements` - Prepared layout containers.
+- `headerCanvas` - Header title canvas.
+- `canvas` - Main simulation canvas.
+- `networkCanvas` - Network visualization canvas.
 
 Returns: Nothing.
 
@@ -180,8 +180,8 @@ renderInitialCanvasHostState(
 Renders the initial header and placeholder network visualization state.
 
 Parameters:
-- `drawHeaderFrame` - - Callback that redraws the header title.
-- `renderNetworkArchitecture` - - Network visualization renderer.
+- `drawHeaderFrame` - Callback that redraws the header title.
+- `renderNetworkArchitecture` - Network visualization renderer.
 
 Returns: Nothing.
 
@@ -199,7 +199,7 @@ The demo rebuilds the host from scratch on each startup so repeated runs begin
 from a known clean DOM state.
 
 Parameters:
-- `containerElement` - - Root host container.
+- `containerElement` - Root host container.
 
 Returns: Nothing.
 
@@ -231,8 +231,8 @@ The runtime writes HUD values incrementally, so the host exposes a narrow
 partial-update helper rather than requiring full table redraws.
 
 Parameters:
-- `statsValueByKey` - - Lookup of stat keys to value cells.
-- `partialValues` - - Subset of values to write this tick.
+- `statsValueByKey` - Lookup of stat keys to value cells.
+- `partialValues` - Subset of values to write this tick.
 
 Returns: Nothing.
 
@@ -320,9 +320,9 @@ Browser canvases have both backing-store dimensions and CSS box dimensions;
 this helper updates both together.
 
 Parameters:
-- `canvas` - - Target canvas element.
-- `widthPx` - - Desired backing-store width in pixels.
-- `heightPx` - - Desired backing-store height in pixels.
+- `canvas` - Target canvas element.
+- `widthPx` - Desired backing-store width in pixels.
+- `heightPx` - Desired backing-store height in pixels.
 
 Returns: True when canvas dimensions changed.
 
@@ -342,9 +342,9 @@ The main simulation canvas uses fixed bounds because the world renderer is
 tuned for a controlled viewport rather than fluid DOM stretching.
 
 Parameters:
-- `canvas` - - Simulation canvas element.
-- `widthPx` - - Desired width in pixels.
-- `heightPx` - - Desired height in pixels.
+- `canvas` - Simulation canvas element.
+- `widthPx` - Desired width in pixels.
+- `heightPx` - Desired height in pixels.
 
 Returns: True when backing-store dimensions changed.
 
@@ -363,8 +363,8 @@ The side-panel network view needs the drawable size after panel insets are
 accounted for, not just the raw host client box.
 
 Parameters:
-- `networkCanvasHost` - - Host element wrapping the network canvas.
-- `hostInsetPx` - - Total inset to subtract from both dimensions.
+- `networkCanvasHost` - Host element wrapping the network canvas.
+- `hostInsetPx` - Total inset to subtract from both dimensions.
 
 Returns: Width/height pair in pixels.
 
@@ -390,8 +390,8 @@ Resolves a required 2D context from a canvas element.
 Failing early here keeps later rendering code free from repeated null checks.
 
 Parameters:
-- `canvas` - - Target canvas element.
-- `errorMessage` - - Error message when 2D context is unavailable.
+- `canvas` - Target canvas element.
+- `errorMessage` - Error message when 2D context is unavailable.
 
 Returns: Canvas 2D rendering context.
 
@@ -418,7 +418,7 @@ The initial placeholders make the HUD legible before the first generation or
 playback frame has been processed.
 
 Parameters:
-- `statsTableHost` - - DOM host that receives the table.
+- `statsTableHost` - DOM host that receives the table.
 
 Returns: Lookup map for future incremental stat updates.
 
@@ -437,8 +437,8 @@ This keeps HUD writes cheap and explicit: only supplied keys are rewritten,
 and architecture values receive their display formatting in one place.
 
 Parameters:
-- `statsValueByKey` - - Lookup of stat keys to value cells.
-- `partialValues` - - Subset of values to write this tick.
+- `statsValueByKey` - Lookup of stat keys to value cells.
+- `partialValues` - Subset of values to write this tick.
 
 Returns: Nothing.
 
@@ -467,14 +467,14 @@ creates the deferred redraw policy, runs the first layout pass, and installs
 ongoing resize listeners.
 
 Parameters:
-- `canvas` - - Simulation canvas to resize.
-- `containerElement` - - Width/height source.
-- `mainSplitContainer` - - Main split panel host.
-- `statsContainer` - - Stats host element.
-- `statsSplitContainer` - - Stats split panel containing stats and network panes.
-- `statsTableHost` - - Stats table host element.
-- `networkCanvas` - - Network canvas.
-- `networkCanvasHost` - - Network host element.
-- `onNetworkResize` - - Callback after network resize.
+- `canvas` - Simulation canvas to resize.
+- `containerElement` - Width/height source.
+- `mainSplitContainer` - Main split panel host.
+- `statsContainer` - Stats host element.
+- `statsSplitContainer` - Stats split panel containing stats and network panes.
+- `statsTableHost` - Stats table host element.
+- `networkCanvas` - Network canvas.
+- `networkCanvasHost` - Network host element.
+- `onNetworkResize` - Callback after network resize.
 
 Returns: Nothing.

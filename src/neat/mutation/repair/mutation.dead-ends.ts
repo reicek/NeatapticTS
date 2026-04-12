@@ -1,3 +1,5 @@
+import { allowsRecurrentConnectionMutation } from '../../topology-intent/neat.topology-intent';
+import * as mutationAddConn from '../add-conn/mutation.add-conn';
 import type {
   GenomeWithMetadata,
   NeatControllerForMutation,
@@ -95,16 +97,27 @@ export function ensureInputConnectivityForDeadEnds(
   for (const inputNode of nodeGroupsToUse.inputNodes) {
     if (hasOutgoingForDeadEnds(inputNode)) continue;
 
-    const candidates = nodeGroupsToUse.hiddenNodes.length
-      ? nodeGroupsToUse.hiddenNodes
-      : nodeGroupsToUse.outputNodes;
+    const preferredCandidates = nodeGroupsToUse.hiddenNodes;
     connectIfCandidatesExistForDeadEnds(
       networkToEdit,
       inputNode,
-      candidates,
+      preferredCandidates.length
+        ? preferredCandidates
+        : nodeGroupsToUse.outputNodes,
       false,
       internal,
     );
+
+    // Step 2: fall back to output endpoints when hidden candidates were illegal.
+    if (!hasOutgoingForDeadEnds(inputNode) && preferredCandidates.length) {
+      connectIfCandidatesExistForDeadEnds(
+        networkToEdit,
+        inputNode,
+        nodeGroupsToUse.outputNodes,
+        false,
+        internal,
+      );
+    }
   }
 }
 
@@ -134,16 +147,27 @@ export function ensureOutputConnectivityForDeadEnds(
   for (const outputNode of nodeGroupsToUse.outputNodes) {
     if (hasIncomingForDeadEnds(outputNode)) continue;
 
-    const candidates = nodeGroupsToUse.hiddenNodes.length
-      ? nodeGroupsToUse.hiddenNodes
-      : nodeGroupsToUse.inputNodes;
+    const preferredCandidates = nodeGroupsToUse.hiddenNodes;
     connectIfCandidatesExistForDeadEnds(
       networkToEdit,
       outputNode,
-      candidates,
+      preferredCandidates.length
+        ? preferredCandidates
+        : nodeGroupsToUse.inputNodes,
       true,
       internal,
     );
+
+    // Step 2: fall back to direct input repair when hidden candidates were illegal.
+    if (!hasIncomingForDeadEnds(outputNode) && preferredCandidates.length) {
+      connectIfCandidatesExistForDeadEnds(
+        networkToEdit,
+        outputNode,
+        nodeGroupsToUse.inputNodes,
+        true,
+        internal,
+      );
+    }
   }
 }
 
@@ -204,8 +228,8 @@ export function ensureHiddenConnectivityForDeadEnds(
  *
  * This is the chapter's small best-effort wiring primitive. It does not decide
  * whether repair should happen; it only applies one candidate connection in the
- * requested direction and tolerates incompatible node pairs without turning a
- * maintenance pass into a fatal error.
+ * requested direction and now routes that edit through the canonical
+ * add-connection identity policy instead of using a raw runtime connect.
  *
  * @param networkToEdit - network to edit
  * @param anchorNode - node to connect from/to
@@ -224,20 +248,40 @@ export function connectIfCandidatesExistForDeadEnds(
   // Step 1: return when no candidates exist.
   if (!candidates.length) return;
 
-  // Step 2: choose a random candidate.
-  const chosenNode = chooseRandomNodeForDeadEnds(candidates, internal);
+  // Step 2: keep repair on the same topology-policy bridge as add-connection.
+  const allowRecurrentConnections = allowsRecurrentConnectionMutation(
+    networkToEdit,
+    internal.options.allowRecurrent,
+  );
+  const connectableCandidates = candidates.filter((candidateNode) => {
+    const chosenPair: [NodeWithMetadata, NodeWithMetadata] = reverse
+      ? [candidateNode, anchorNode]
+      : [anchorNode, candidateNode];
+    return mutationAddConn.canApplyChosenPairForConn(
+      networkToEdit,
+      chosenPair,
+      allowRecurrentConnections,
+    );
+  });
+  if (!connectableCandidates.length) return;
+
+  // Step 3: choose a random candidate from the legal repair pool.
+  const chosenNode = chooseRandomNodeForDeadEnds(
+    connectableCandidates,
+    internal,
+  );
   if (!chosenNode) return;
 
-  // Step 3: connect nodes with correct orientation.
-  try {
-    if (reverse) {
-      networkToEdit.connect?.(chosenNode, anchorNode);
-    } else {
-      networkToEdit.connect?.(anchorNode, chosenNode);
-    }
-  } catch {
-    // Intentionally ignore: connection may fail if nodes are incompatible.
-  }
+  // Step 4: apply the repair through canonical connection reuse.
+  const chosenPair: [NodeWithMetadata, NodeWithMetadata] = reverse
+    ? [chosenNode, anchorNode]
+    : [anchorNode, chosenNode];
+  mutationAddConn.connectChosenPairWithInnovationReuse(
+    networkToEdit,
+    chosenPair,
+    internal,
+    allowRecurrentConnections,
+  );
 }
 
 /**

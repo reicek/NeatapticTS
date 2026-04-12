@@ -154,8 +154,8 @@ This is the simplest evaluation entrypoint: one policy, one rollout, one
 scalar fitness.
 
 Parameters:
-- `network` - - Genome/network to evaluate.
-- `rolloutOptions` - - Optional rollout controls.
+- `network` - Genome/network to evaluate.
+- `rolloutOptions` - Optional rollout controls.
 
 Returns: Fitness score (higher is better).
 
@@ -177,9 +177,9 @@ sees the same rollout seeds, which makes the aggregate statistics much more
 useful for selection than a single lucky episode.
 
 Parameters:
-- `network` - - Genome/network to evaluate.
-- `sharedSeeds` - - Shared deterministic seeds used for all genomes.
-- `rolloutOptions` - - Optional rollout controls.
+- `network` - Genome/network to evaluate.
+- `sharedSeeds` - Shared deterministic seeds used for all genomes.
+- `rolloutOptions` - Optional rollout controls.
 
 Returns: Robust aggregate metrics for selection/ranking.
 
@@ -211,7 +211,7 @@ gives a reasonable intuition for why a few avalanche-style mixing steps help
 nearby ids map to less-correlated seed values.
 
 Parameters:
-- `genomeId` - - Genome id from NEAT bookkeeping.
+- `genomeId` - Genome id from NEAT bookkeeping.
 
 Returns: Mixed uint32 seed.
 
@@ -246,8 +246,8 @@ rolloutEpisode(
 Roll out an episode and return details.
 
 Parameters:
-- `network` - - Genome/network to evaluate.
-- `rolloutOptions` - - Optional rollout controls.
+- `network` - Genome/network to evaluate.
+- `rolloutOptions` - Optional rollout controls.
 
 Returns: Episode result details.
 

@@ -25,6 +25,12 @@ helper chapters that own one responsibility each:
   age-based protection,
 - `sharing/` normalizes within-species scores and tracks stagnation.
 
+Step 7.5 boundary note: assignment and threshold tuning define the canonical
+species grouping boundary. The later history and sharing stages are
+controller-policy overlays layered after that grouping; they may rewrite the
+current generation's score view or species bookkeeping, but they do not
+change compatibility identity or replay semantics by themselves.
+
 Read this root chapter when you want the speciation lifecycle first. Drop
 into the helper folders when you want the exact assignment heuristics,
 threshold controller, or history bookkeeping.
@@ -67,15 +73,17 @@ Apply fitness sharing to penalize similarity within species.
 
 Use this after species assignment when a dense cluster should no longer keep
 all of its raw score advantage. The helper resolves the configured sharing
-radius and delegates to `sharing/`, where each genome's score contribution is
-softened according to how crowded its neighborhood is.
+radius and delegates to `sharing/`, where each genome's current score field is
+rewritten as a controller-side shared-fitness overlay according to how
+crowded its neighborhood is. The underlying evaluated score evidence remains
+upstream of this pass.
 
 This is intentionally separate from {@link _speciate}. Some runs want species
 bookkeeping without immediately renormalizing scores, while others use
 sharing as a deliberate second pass after assignment has stabilized.
 
 Parameters:
-- `this` - - Neat instance context with species array and compatibility distance function.
+- `this` - Neat instance context with species array and compatibility distance function.
 
 Example:
 
@@ -103,7 +111,7 @@ Even though the implementation is tiny, the helper exists as a named boundary
 because multiple speciation flows need the same ordering rule.
 
 Parameters:
-- `species` - - Species to sort.
+- `species` - Species to sort.
 
 Example:
 
@@ -131,7 +139,7 @@ as selection, pruning, telemetry, and archive inspection can reason about a
 stable notion of species identity.
 
 Parameters:
-- `this` - - Speciation harness context.
+- `this` - Speciation harness context.
 
 Returns: Nothing.
 
@@ -155,13 +163,16 @@ progress. It resolves the configured stagnation window, sorts each species so
 "best member" comparisons are stable, and then delegates to `sharing/` to
 mark stagnant species and prune them when necessary.
 
+The resulting `bestScore` and `lastImproved` values belong to controller-side
+species bookkeeping, not to the canonical genome contract.
+
 Read this together with {@link _applyFitnessSharing} if you want the
 post-assignment story: one helper reduces the dominance of crowded species,
 and the other decides whether a species has stopped earning its place in the
 run.
 
 Parameters:
-- `this` - - Neat instance context with species array and generation counter.
+- `this` - Neat instance context with species array and generation counter.
 
 Example:
 

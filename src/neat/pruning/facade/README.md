@@ -62,7 +62,7 @@ enough to matter." That makes it the better fit for maintenance-style runs
 where pruning should respond to observed complexity rather than the calendar.
 
 Parameters:
-- `host` - - `Neat` instance exposing adaptive pruning state and population metrics.
+- `host` - `Neat` instance exposing adaptive pruning state and population metrics.
 
 Returns: Promise that resolves after the best-effort adaptive pruning attempt finishes.
 
@@ -96,7 +96,7 @@ That makes it the better fit for orchestrated evolve loops and deterministic
 experiments where pruning should follow a known calendar.
 
 Parameters:
-- `host` - - `Neat` instance exposing pruning options, generation state, and population.
+- `host` - `Neat` instance exposing pruning options, generation state, and population.
 
 Returns: Promise that resolves after the best-effort pruning attempt finishes.
 

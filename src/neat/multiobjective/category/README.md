@@ -55,9 +55,9 @@ generation to the next. Waiting a few generations between adjustments keeps
 the threshold from chattering.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `paretoFronts` - - Non-dominated fronts.
-- `config` - - Epsilon tuning constants.
+- `internal` - NEAT controller instance.
+- `paretoFronts` - Non-dominated fronts.
+- `config` - Epsilon tuning constants.
 
 Returns: void.
 
@@ -85,10 +85,10 @@ solution in that degenerate case. Larger fronts accumulate normalized
 neighbor distance objective by objective.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `populationSnapshot` - - Current population reference.
-- `paretoFronts` - - Non-dominated fronts.
-- `objectives` - - Active objectives.
+- `internal` - NEAT controller instance.
+- `populationSnapshot` - Current population reference.
+- `paretoFronts` - Non-dominated fronts.
+- `objectives` - Active objectives.
 
 Returns: crowding distances aligned with population order.
 
@@ -120,8 +120,8 @@ ordering, archive state, and adaptive settings immediately for the rest of
 the generation loop.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `config` - - Multi-objective tuning constants.
+- `internal` - NEAT controller instance.
+- `config` - Multi-objective tuning constants.
 
 Returns: Nothing. The controller is updated in place.
 
@@ -148,8 +148,8 @@ The pruning pass is intentionally conservative:
   reads rebuild the descriptor list from the surviving objective set.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `config` - - Pruning constants.
+- `internal` - NEAT controller instance.
+- `config` - Pruning constants.
 
 Returns: void.
 
@@ -176,10 +176,10 @@ just enough evidence for telemetry and retrospective inspection without
 retaining every dominated genome in every generation.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `paretoFronts` - - Non-dominated fronts.
-- `objectives` - - Active objectives.
-- `archiveMax` - - Maximum archive size.
+- `internal` - NEAT controller instance.
+- `paretoFronts` - Non-dominated fronts.
+- `objectives` - Active objectives.
+- `archiveMax` - Maximum archive size.
 
 Returns: void.
 
@@ -201,8 +201,8 @@ aligned with NSGA-II style selection pressure while preserving one stable
 index map from the pre-sort snapshot to the later crowding write-back.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `populationSnapshot` - - Current population reference.
-- `crowdingDistances` - - Crowding distances aligned with population order.
+- `internal` - NEAT controller instance.
+- `populationSnapshot` - Current population reference.
+- `crowdingDistances` - Crowding distances aligned with population order.
 
 Returns: void.

@@ -5,7 +5,9 @@ import {
   resolveActivationKey,
 } from './network.serialize.activation.utils';
 import {
+  applyRestoredConnectionIdentity,
   asNodeInternals,
+  hydrateNodeGeneIdWhenProvided,
   isNodeIndexInBounds,
 } from './network.serialize.runtime.utils';
 import type {
@@ -92,7 +94,8 @@ export function collectNodeSquashKeys(nodes: Node[]): string[] {
  * @param networkInternals - Runtime internals.
  * @returns Serialized connection list.
  * @remarks
- * Connection endpoints and optional gaters are stored as numeric indices.
+ * Connection endpoints remain index-based, while historical identity fields keep
+ * innovation and node-gene metadata stable across compact round-trips.
  * Callers should refresh node indices first to avoid stale references.
  *
  * Time complexity is $O(C)$ where $C$ is total forward + self connections.
@@ -102,6 +105,21 @@ export function collectSerializedConnections(
 ): SerializedConnection[] {
   const allConnections = collectAllConnections(networkInternals);
   return allConnections.map(serializeOneConnection);
+}
+
+/**
+ * Collects stable node gene ids aligned to compact node order.
+ *
+ * This optional compact payload slot closes the identity gap that previously forced
+ * restored nodes to receive fresh constructor-time ids.
+ *
+ * @param nodes - Node list in compact export order.
+ * @returns Gene-id list aligned to node indices.
+ */
+export function collectNodeGeneIds(nodes: Node[]): Array<number | null> {
+  return nodes.map(
+    (nodeReference) => asNodeInternals(nodeReference).geneId ?? null,
+  );
 }
 
 /**
@@ -142,6 +160,10 @@ export function rebuildNodesFromCompactPayload(
       compactNodeContext.states[nodeIndex],
       compactNodeContext.squashes[nodeIndex],
       nodeIndex,
+    );
+    hydrateNodeGeneIdWhenProvided(
+      rebuiltNode,
+      compactNodeContext.nodeGeneIds?.[nodeIndex],
     );
     networkInternals.nodes.push(rebuiltNode);
   });
@@ -208,6 +230,13 @@ function serializeOneConnection(
     gater: connectionInstance.gater
       ? asNodeInternals(connectionInstance.gater).index
       : null,
+    innovation: connectionInstance.innovation,
+    fromGeneId: asNodeInternals(connectionInstance.from).geneId,
+    toGeneId: asNodeInternals(connectionInstance.to).geneId,
+    gaterGeneId: connectionInstance.gater
+      ? asNodeInternals(connectionInstance.gater).geneId
+      : null,
+    enabled: connectionInstance.enabled,
   };
 }
 
@@ -291,16 +320,24 @@ function rebuildOneCompactConnection(
 
   const sourceNode = networkInternals.nodes[serializedConnection.from];
   const targetNode = networkInternals.nodes[serializedConnection.to];
+  hydrateNodeGeneIdWhenProvided(sourceNode, serializedConnection.fromGeneId);
+  hydrateNodeGeneIdWhenProvided(targetNode, serializedConnection.toGeneId);
   const createdConnection = createConnection(
     networkInternals,
     sourceNode,
     targetNode,
     serializedConnection.weight,
   );
+  applyRestoredConnectionIdentity(createdConnection, serializedConnection);
   assignCompactGaterWhenValid(
     networkInternals,
     serializedConnection.gater,
     createdConnection,
+  );
+  assignCompactGaterGeneIdWhenProvided(
+    networkInternals,
+    serializedConnection.gater,
+    serializedConnection.gaterGeneId,
   );
 }
 
@@ -366,4 +403,31 @@ function assignCompactGaterWhenValid(
   }
 
   networkInternals.gate(networkInternals.nodes[gaterIndex], createdConnection);
+}
+
+/**
+ * Restores a gater node's historical gene id when compact metadata provides it.
+ *
+ * @param networkInternals - Runtime internals.
+ * @param gaterIndex - Optional compact gater index.
+ * @param gaterGeneId - Optional persisted gater gene id.
+ * @returns Nothing.
+ */
+function assignCompactGaterGeneIdWhenProvided(
+  networkInternals: NetworkInternals,
+  gaterIndex: number | null,
+  gaterGeneId: number | null | undefined,
+): void {
+  if (gaterIndex == null || typeof gaterGeneId !== 'number') {
+    return;
+  }
+
+  if (!isNodeIndexInBounds(networkInternals.nodes, gaterIndex)) {
+    return;
+  }
+
+  hydrateNodeGeneIdWhenProvided(
+    networkInternals.nodes[gaterIndex],
+    gaterGeneId,
+  );
 }

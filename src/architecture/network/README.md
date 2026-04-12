@@ -278,7 +278,7 @@ Returns: Architecture descriptor with hidden-layer widths and provenance.
 
 ```ts
 deserialize(
-  data: unknown[] | [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number],
+  data: unknown[] | CompactSerializedNetworkTuple,
   inputSize: number | undefined,
   outputSize: number | undefined,
 ): default
@@ -523,8 +523,8 @@ This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in `methods.mutation`.
 
 Parameters:
-- `method` - - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
-  Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
+- `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+ Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
 
 #### nodes
 
@@ -665,7 +665,7 @@ Self-connection list.
 #### serialize
 
 ```ts
-serialize(): [number[], number[], string[], SerializedConnection[], number, number]
+serialize(): CompactSerializedNetworkTuple
 ```
 
 Lightweight tuple serializer delegating to network.serialize.ts
@@ -941,9 +941,9 @@ vectorized backend that exploits SIMD, GPU kernels, or parallel workers.
 Input validation occurs per row to surface the earliest mismatch with a descriptive index.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `inputs` - - Array of input vectors; each must have length == network.input.
-- `training` - - Whether each activation should keep training traces.
+- `this` - Bound Network instance.
+- `inputs` - Array of input vectors; each must have length == network.input.
+- `training` - Whether each activation should keep training traces.
 
 Returns: 2‑D array: outputs[i] is the activation result for inputs[i].
 
@@ -970,10 +970,10 @@ At present this simply forwards to {@link Network.activate}. The indirection is 
  - Providing a stable exported symbol for external tooling / instrumentation.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `input` - - Input vector (length == network.input).
-- `training` - - Whether to retain training traces / gradients (delegated downstream).
-- `maxActivationDepth` - - Guard against runaway recursion / cyclic activation attempts.
+- `this` - Bound Network instance.
+- `input` - Input vector (length == network.input).
+- `training` - Whether to retain training traces / gradients (delegated downstream).
+- `maxActivationDepth` - Guard against runaway recursion / cyclic activation attempts.
 
 Returns: Implementation-defined result of Network.activate (typically an output vector).
 
@@ -1013,8 +1013,8 @@ Apply gradient clipping to a network using a normalized runtime configuration.
 This is a small wrapper that forwards to the concrete implementation used by training.
 
 Parameters:
-- `net` - - Network instance to update.
-- `cfg` - - Normalized clipping settings.
+- `net` - Network instance to update.
+- `cfg` - Normalized clipping settings.
 
 ### canUseFastSlab
 
@@ -1104,12 +1104,14 @@ Edge cases & invariants:
  - Acyclic mode silently refuses back‑edges instead of throwing (makes evolutionary search easier).
  - Self‑connections are skipped entirely when acyclicity is enforced.
  - Weight initialization policy is delegated to Node.connect if not explicitly provided.
+ - When the network carries explicit temporal extension metadata, successful edge creation
+   revalidates that descriptor bag immediately so generic structural edits keep the extension lane honest.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `from` - - Source node (emits signal).
-- `to` - - Target node (receives signal).
-- `weight` - - Optional explicit initial weight value.
+- `this` - Bound Network instance.
+- `from` - Source node (emits signal).
+- `to` - Target node (receives signal).
+- `weight` - Optional explicit initial weight value.
 
 Returns: Array of created  {@link Connection} objects (possibly empty if acyclicity rejected the edge).
 
@@ -1157,11 +1159,11 @@ Conceptual model:
 - Fitness controls inheritance pressure unless `equal` is enabled, in which case both
   parents contribute symmetrically where possible.
 
-Simplifications relative to canonical NEAT:
- - Innovation ID is synthesized from (from.index, to.index) via Connection.innovationID instead of
-   maintaining a global innovation number per mutation event.
- - Node alignment relies on current index ordering. This is weaker than historical innovation
-   tracking, but adequate for many lightweight evolutionary experiments.
+Current simplifications relative to canonical NEAT:
+ - Node alignment still relies on current index ordering while the broader
+   proper-NEAT lift keeps the public runtime `Network` surface stable.
+ - Recurrent and self-connection legality is still finalized during
+   materialization rather than by a separate genotype-first heredity layer.
 
 Compatibility assumptions:
 - Both parents must expose identical input/output counts.
@@ -1178,12 +1180,16 @@ High-level algorithm:
       - Output indices (aligned from end): randomly choose if both present else take existing.
       - Hidden indices: if both present pick randomly; else inherit from fitter (or either if equal).
  4. Reindex offspring nodes.
- 5. Collect connections (standard + self) from each parent into maps keyed by innovationID capturing
-    weight, enabled flag, and gater index.
- 6. For overlapping genes (present in both), randomly choose one; if either disabled apply optional
-    re-enable probability (reenableProb) to possibly re-activate.
- 7. For disjoint/excess genes, inherit only from fitter parent (or both if equal flag set / scores tied).
- 8. Materialize selected connection genes if their endpoints both exist in offspring; set weight & enabled state.
+ 5. Delegate innovation-keyed connection-gene collection and inheritance
+    choice to the genome heredity boundary.
+ 6. For matching genes (present in both parents with the same innovation),
+    randomly choose one; if either copy is disabled, apply the explicit
+    re-enable policy through the crossover RNG.
+ 7. For disjoint/excess genes, inherit only from the fitter parent (or from
+    both parents when `equal` is enabled or scores tie).
+ 8. Rebuild the offspring node set from required IO nodes plus inherited
+    gene identities, then materialize selected connection genes under the
+    offspring topology intent.
  9. Reattach gating if gater node exists in offspring.
 
 Enabled reactivation probability:
@@ -1191,9 +1197,9 @@ Enabled reactivation probability:
    from parent-specific _reenableProb (or default 0.25). This allows dormant structures to resurface.
 
 Parameters:
-- `parentNetwork1` - - First parent (ties resolved in its favor when scores equal and equal=false for some cases).
-- `parentNetwork2` - - Second parent.
-- `equal` - - Force symmetric treatment regardless of fitness (true => node count random between sizes and both parents equally contribute disjoint genes).
+- `parentNetwork1` - First parent (ties resolved in its favor when scores equal and equal=false for some cases).
+- `parentNetwork2` - Second parent.
+- `equal` - Force symmetric treatment regardless of fitness (true => node count random between sizes and both parents equally contribute disjoint genes).
 
 Returns: Offspring network instance.
 
@@ -1224,7 +1230,7 @@ Resolution priority is intentionally explicit:
 3) hidden-node count fallback (heuristic inference)
 
 Parameters:
-- `network` - - Runtime network instance.
+- `network` - Runtime network instance.
 
 Returns: Stable architecture descriptor.
 
@@ -1252,9 +1258,9 @@ Use this importer for compact payloads produced by `serialize`.
 Optional `inputSize` and `outputSize` let callers enforce shape overrides at import time.
 
 Parameters:
-- `data` - - Compact tuple payload.
-- `inputSize` - - Optional input-size override that takes precedence over serialized input.
-- `outputSize` - - Optional output-size override that takes precedence over serialized output.
+- `data` - Compact tuple payload.
+- `inputSize` - Optional input-size override that takes precedence over serialized input.
+- `outputSize` - Optional output-size override that takes precedence over serialized output.
 
 Returns: Reconstructed network instance.
 
@@ -1296,11 +1302,13 @@ Complexity:
 
 Idempotence: If no such edge exists we still perform node-level disconnect and flag caches dirty –
 this conservative approach simplifies callers (they need not pre‑check existence).
+When the network carries explicit temporal extension metadata, the disconnect path also revalidates
+that descriptor bag immediately so stale module claims do not linger until a later serialize pass.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `from` - - Source node.
-- `to` - - Target node.
+- `this` - Bound Network instance.
+- `from` - Source node.
+- `to` - Target node.
 
 Example:
 
@@ -1329,9 +1337,9 @@ Typical usage guidance:
 - Increase `threads` only when worker support exists and dataset evaluation is expensive.
 
 Parameters:
-- `this` - - Bound Network instance that receives the best evolved structure.
-- `set` - - Supervised samples; sample input/output dimensions must match network I/O.
-- `options` - - Evolution hyperparameters and stop conditions.
+- `this` - Bound Network instance that receives the best evolved structure.
+- `set` - Supervised samples; sample input/output dimensions must match network I/O.
+- `options` - Evolution hyperparameters and stop conditions.
 
 Returns: Final summary containing best error estimate, generations processed, and elapsed milliseconds.
 
@@ -1386,7 +1394,7 @@ This importer validates payload shape, restores dropout and topology, and then r
 connections, gating relationships, and optional enabled flags.
 
 Parameters:
-- `json` - - Verbose JSON payload.
+- `json` - Verbose JSON payload.
 
 Returns: Reconstructed network instance.
 
@@ -1413,13 +1421,15 @@ becomes dynamically modulated by the gater's activation (see {@link Node.gate} f
 Validation / invariants:
  - Throws if the gater node is not part of this network (prevents cross-network corruption).
  - If the connection is already gated, function is a no-op (emits warning when enabled).
+ - Successful gate attachment revalidates the explicit temporal descriptor bag so generic gating edits
+   cannot leave stale module metadata behind.
 
 Complexity: O(1)
 
 Parameters:
-- `this` - - Bound Network instance.
-- `node` - - Candidate gater node (must belong to network).
-- `connection` - - Connection to gate.
+- `this` - Bound Network instance.
+- `node` - Candidate gater node (must belong to network).
+- `connection` - Connection to gate.
 
 ### gaussianRand
 
@@ -1514,7 +1524,7 @@ Overview:
 - This is commonly used by tests that assert deterministic continuity across operations.
 
 Parameters:
-- `this` - - Bound network instance queried for deterministic RNG numeric state.
+- `this` - Bound network instance queried for deterministic RNG numeric state.
 
 Returns: Numeric RNG state value, or `undefined` when no deterministic state exists yet.
 
@@ -1589,8 +1599,8 @@ Error and warning behavior:
 - Emits a warning and no-ops when an unknown method key is received.
 
 Parameters:
-- `this` - - Network instance.
-- `method` - - Mutation enum value or descriptor object.
+- `this` - Network instance.
+- `method` - Mutation enum value or descriptor object.
 
 Returns: Nothing.
 
@@ -1637,8 +1647,8 @@ Complexity considerations:
  - Space: O(O) transient (O = number of outputs) due to the pooled output buffer.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `input` - - Flat numeric vector whose length must equal network.input.
+- `this` - Bound Network instance.
+- `input` - Flat numeric vector whose length must equal network.input.
 
 Returns: Array of output neuron activations (length == network.output).
 
@@ -1685,8 +1695,8 @@ Unlike maybePrune this operates immediately relative to the first invocation's c
 (stored separately as _evoInitialConnCount) and does not implement scheduling or regrowth.
 
 Parameters:
-- `targetSparsity` - - Requested target sparsity.
-- `method` - - Connection ranking heuristic.
+- `targetSparsity` - Requested target sparsity.
+- `method` - Connection ranking heuristic.
 
 Returns: Nothing.
 
@@ -1803,8 +1813,8 @@ Overview:
 - This keeps deterministic plumbing explicit when external code owns RNG reconstruction.
 
 Parameters:
-- `this` - - Bound network instance receiving the restored RNG lifecycle function.
-- `fn` - - Deterministic RNG function to install (expected to return values in `[0, 1)`).
+- `this` - Bound network instance receiving the restored RNG lifecycle function.
+- `fn` - Deterministic RNG function to install (expected to return values in `[0, 1)`).
 
 Returns: Nothing.
 
@@ -1826,7 +1836,7 @@ Use this format when payload size and serialization speed matter more than reada
 The tuple layout is positional and optimized for transport/storage efficiency.
 
 Parameters:
-- `this` - - Bound network instance.
+- `this` - Bound network instance.
 
 Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
 
@@ -1857,8 +1867,8 @@ Overview:
 - Delegation keeps the write path consistent with the rest of deterministic state utilities.
 
 Parameters:
-- `this` - - Bound network instance receiving deterministic RNG state.
-- `state` - - Numeric RNG state checkpoint to install.
+- `this` - Bound network instance receiving deterministic RNG state.
+- `state` - Numeric RNG state checkpoint to install.
 
 Returns: Nothing.
 
@@ -1884,8 +1894,8 @@ Overview:
 - This method delegates to setup utilities so behavior stays centralized across deterministic APIs.
 
 Parameters:
-- `this` - - Bound network instance whose RNG state is being initialized.
-- `seed` - - Seed value used to derive deterministic RNG state (low 32 bits are applied).
+- `this` - Bound network instance whose RNG state is being initialized.
+- `seed` - Seed value used to derive deterministic RNG state (low 32 bits are applied).
 
 Returns: Nothing.
 
@@ -1909,7 +1919,7 @@ Overview:
 - This is useful when comparing alternate algorithm branches from an identical random timeline.
 
 Parameters:
-- `this` - - Bound network instance whose RNG lifecycle state is captured.
+- `this` - Bound network instance whose RNG lifecycle state is captured.
 
 Returns: Snapshot containing deterministic progress metadata and RNG state payload.
 
@@ -1949,7 +1959,7 @@ Use this format when you need human-readable snapshots, explicit schema versioni
 and better forward/backward compatibility handling.
 
 Parameters:
-- `this` - - Bound network instance.
+- `this` - Bound network instance.
 
 Returns: Versioned JSON payload with shape metadata, nodes, and connections.
 
@@ -1979,9 +1989,9 @@ High-level training orchestration with early stopping, smoothing & callbacks.
 This is the main entrypoint used by `Network.train(...)`-style APIs.
 
 Parameters:
-- `net` - - Network instance to train.
-- `set` - - Training dataset.
-- `options` - - Training options (stopping conditions, optimizer, hooks, etc.).
+- `net` - Network instance to train.
+- `set` - Training dataset.
+- `options` - Training options (stopping conditions, optimizer, hooks, etc.).
 
 Returns: Summary payload containing final error, iteration count, and elapsed time.
 
@@ -2014,15 +2024,15 @@ Returns mean cost across processed samples.
 This is the core "one epoch" primitive used by higher-level training orchestration.
 
 Parameters:
-- `net` - - Network instance receiving training updates.
-- `set` - - Training samples.
-- `batchSize` - - Mini-batch size (use 1 for pure SGD).
-- `accumulationSteps` - - Micro-batch accumulation steps.
-- `currentRate` - - Current learning rate (may be scheduled by caller).
-- `momentum` - - Momentum used by some optimizers (when applicable).
-- `regularization` - - Regularization configuration passed down to nodes.
-- `costFunction` - - Cost function selector (function or compatible object).
-- `optimizer` - - Optional optimizer configuration.
+- `net` - Network instance receiving training updates.
+- `set` - Training samples.
+- `batchSize` - Mini-batch size (use 1 for pure SGD).
+- `accumulationSteps` - Micro-batch accumulation steps.
+- `currentRate` - Current learning rate (may be scheduled by caller).
+- `momentum` - Momentum used by some optimizers (when applicable).
+- `regularization` - Regularization configuration passed down to nodes.
+- `costFunction` - Cost function selector (function or compatible object).
+- `optimizer` - Optional optimizer configuration.
 
 Returns: Mean cost across the processed samples.
 
@@ -2039,12 +2049,14 @@ Remove gating from a connection, restoring its static weight contribution.
 Idempotent: If the connection is not currently gated, the call performs no structural changes
 (and optionally logs a warning). After ungating, the connection's weight will be used directly
 without modulation by a gater activation.
+Successful ungate operations also revalidate the explicit temporal descriptor bag so stale gated-block
+descriptors do not survive until a later serialize pass.
 
 Complexity: O(n) where n = number of gated connections (indexOf lookup) – typically small.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `connection` - - Connection to ungate.
+- `this` - Bound Network instance.
+- `connection` - Connection to ungate.
 
 ## architecture/network/network.types.ts
 
@@ -2114,6 +2126,12 @@ Context for compact-node reconstruction.
 
 Arrays are expected to be index-aligned so each node can be hydrated deterministically.
 
+This is a serialization/hydration constraint only: the compact format stores node fields
+(activation, state, squash, and optional gene id) as parallel arrays.
+
+Do not read this as guidance for genetic alignment. In NEAT-style crossover and speciation,
+homologous structure is matched by historical markings (innovation ids), not by array indices.
+
 ### CompactPayloadContext
 
 Context carrying compact payload fields.
@@ -2125,7 +2143,8 @@ This named-object form replaces tuple index access in internal orchestration cod
 Compact tuple payload used by `serialize` output.
 
 Tuple slots are intentionally positional to reduce payload size:
-0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size.
+0) activations, 1) states, 2) squash keys, 3) connections, 4) input size,
+5) output size, 6) optional node gene ids, 7) optional topology intent.
 
 Example:
 
@@ -2142,7 +2161,13 @@ const compactTuple: CompactSerializedNetworkTuple = [
 
 ### ConnectionGene
 
-Crossover connection-gene descriptor.
+Runtime materialization descriptor for one inherited connection gene.
+
+Step 7.2b keeps this runtime shelf narrower than the old crossover gene
+shape. The phenotype materializer consumes only stable heredity identity
+plus weight and enabled state. Runtime node indexes are intentionally
+excluded because endpoints and gaters are resolved later by `geneId` after
+the offspring node set is rebuilt.
 
 ### ConnectionGeneSelectionContext
 
@@ -2155,6 +2180,14 @@ Extended connection shape used during genetic crossover.
 ### ConnectionGroupReinitContext
 
 Context for reinitializing connection group weights.
+
+### ConnectionHistoricalIdentity
+
+Stable historical identity fields for a connection gene.
+
+Runtime node indices are useful for fast reconstruction, but NEAT alignment,
+checkpoint migration, and future genotype-first work all depend on the
+historical identifiers that survive reindexing.
 
 ### ConnectionInternals
 
@@ -2644,6 +2677,14 @@ const payload: NetworkJSON = {
 Verbose JSON connection representation.
 
 Includes optional gater and explicit enabled state for portability.
+
+### NetworkJSONExtensions
+
+Optional extension bag carried by versioned network JSON payloads.
+
+The runtime serializer keeps this generic so stricter boundaries such as the
+NEAT genome adapter can attach additive, versioned metadata without forcing
+the network layer to understand each feature-specific field.
 
 ### NetworkJSONNode
 
@@ -3373,7 +3414,8 @@ Result of scheduled-pruning target computation.
 
 Serialized connection representation used by compact and JSON formats.
 
-Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
+Endpoints stay index-based for deterministic reconstruction, while the optional
+historical fields preserve NEAT identity across clone, export, and restore flows.
 
 ### SerializedNetwork
 
@@ -3549,3 +3591,165 @@ Raised when a network is constructed without the required input or output sizes.
 ### NetworkConstructorDimensionRequiredError
 
 Raised when a network is constructed without the required input or output sizes.
+
+## architecture/network/network.temporal.extensions.utils.ts
+
+### appendTemporalDescriptorSet
+
+```ts
+appendTemporalDescriptorSet(
+  network: default,
+  descriptorSet: TemporalDescriptorSet | undefined,
+): void
+```
+
+Append one or more temporal descriptors to the runtime extension bag.
+
+Parameters:
+- `network` - Runtime network that should retain explicit temporal metadata.
+- `descriptorSet` - Descriptor set to merge into the hydrated extension bag.
+
+Returns: Nothing.
+
+### buildGruTemporalDescriptorSet
+
+```ts
+buildGruTemporalDescriptorSet(
+  network: default,
+  roleNodes: GruRoleNodes,
+): TemporalDescriptorSet | undefined
+```
+
+Build the explicit Step 7.4 descriptor set for one runtime GRU block.
+
+Parameters:
+- `network` - Runtime network carrying the block.
+- `roleNodes` - Canonical GRU role groups.
+
+Returns: Descriptor set suitable for the network extension bag.
+
+### buildLstmTemporalDescriptorSet
+
+```ts
+buildLstmTemporalDescriptorSet(
+  network: default,
+  roleNodes: LstmRoleNodes,
+): TemporalDescriptorSet | undefined
+```
+
+Build the explicit Step 7.4 descriptor set for one runtime LSTM block.
+
+Parameters:
+- `network` - Runtime network carrying the block.
+- `roleNodes` - Canonical LSTM role groups.
+
+Returns: Descriptor set suitable for the network extension bag.
+
+### buildNarxMemoryTemporalDescriptorSet
+
+```ts
+buildNarxMemoryTemporalDescriptorSet(
+  network: default,
+  moduleLabel: string,
+  memoryBlocks: readonly (readonly default[])[],
+): TemporalDescriptorSet | undefined
+```
+
+Build one explicit Step 7.4 descriptor set for a NARX delay line.
+
+Parameters:
+- `network` - Runtime network carrying the delay line.
+- `moduleLabel` - Stable label distinguishing multiple delay-line modules.
+- `memoryBlocks` - Ordered memory blocks grouped by delay step.
+
+Returns: Descriptor set suitable for the network extension bag.
+
+### collectRegisteredConnections
+
+```ts
+collectRegisteredConnections(
+  network: default,
+): default[]
+```
+
+Collect every registered runtime connection, including disabled genes.
+
+Temporal descriptors treat disabled edges as dormant structure rather than
+deletion, so descriptor validation must index every connection that still
+belongs to the runtime graph.
+
+Parameters:
+- `network` - Runtime network whose registered connections should be read.
+
+Returns: Registered connections across forward and self-edge shelves.
+
+### inheritTemporalDescriptorExtensions
+
+```ts
+inheritTemporalDescriptorExtensions(
+  offspring: default,
+  parents: readonly default[],
+): void
+```
+
+Preserve parent temporal descriptors that remain structurally valid on one offspring.
+
+Parameters:
+- `offspring` - Offspring runtime network produced by crossover.
+- `parents` - Parent runtime networks that may carry temporal descriptors.
+
+Returns: Nothing.
+
+### splitGruLayerNodes
+
+```ts
+splitGruLayerNodes(
+  layerNodes: readonly default[],
+  blockSize: number,
+): GruRoleNodes | undefined
+```
+
+Split one GRU layer node list into its canonical role groups.
+
+Parameters:
+- `layerNodes` - Flat GRU layer node list in factory order.
+- `blockSize` - Number of nodes allocated per role group.
+
+Returns: Role-group partition when the shape matches one GRU block.
+
+### splitLstmLayerNodes
+
+```ts
+splitLstmLayerNodes(
+  layerNodes: readonly default[],
+  blockSize: number,
+): LstmRoleNodes | undefined
+```
+
+Split one LSTM layer node list into its canonical role groups.
+
+Parameters:
+- `layerNodes` - Flat LSTM layer node list in factory order.
+- `blockSize` - Number of nodes allocated per role group.
+
+Returns: Role-group partition when the shape matches one LSTM block.
+
+### synchronizeTemporalDescriptorExtensions
+
+```ts
+synchronizeTemporalDescriptorExtensions(
+  network: default,
+): void
+```
+
+Remove stale temporal descriptors that no longer match the runtime graph.
+
+Disabled connections still count as historically present genes for the Step
+7.4 lane. Synchronization therefore retires descriptors only when their
+referenced nodes, connection innovations, or gating ownership disappear from
+the runtime graph, not when one of those genes is merely toggled inactive.
+
+Parameters:
+- `network` - Runtime network whose hydrated extension bag should be normalized.
+
+Returns: Nothing.

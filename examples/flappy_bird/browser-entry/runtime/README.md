@@ -38,7 +38,7 @@ This function is intentionally orchestration-focused:
 4) expose a small stop/isRunning/done handle for callers.
 
 Parameters:
-- `container` - - Element id or HTMLElement to host the demo.
+- `container` - Element id or HTMLElement to host the demo.
 
 Returns: Run handle for stop/state control.
 
@@ -148,7 +148,7 @@ runtime has a host view, a worker channel, telemetry state, and a resolved
 configuration object.
 
 Parameters:
-- `container` - - Element id or HTMLElement to host the demo.
+- `container` - Element id or HTMLElement to host the demo.
 
 Returns: Shared runtime start context for setup and loop launch.
 
@@ -166,7 +166,7 @@ The HUD is seeded immediately so the page communicates that startup is in
 progress rather than appearing blank while the worker and loop are booting.
 
 Parameters:
-- `runtimeStartContext` - - Shared runtime start context.
+- `runtimeStartContext` - Shared runtime start context.
 
 Returns: Nothing.
 
@@ -183,7 +183,7 @@ finalizeRuntimeLegendPreview(
 Waits for a runtime legend preview to finish and then stops its animation loop.
 
 Parameters:
-- `legendPreviewHandle` - - Active preview handle.
+- `legendPreviewHandle` - Active preview handle.
 
 Returns: Nothing.
 
@@ -199,8 +199,8 @@ paintRuntimeStartupPreviewFrame(
 Paints one full startup-preview frame.
 
 Parameters:
-- `context` - - Target canvas 2D context.
-- `input` - - Render-ready startup-preview frame values.
+- `context` - Target canvas 2D context.
+- `input` - Render-ready startup-preview frame values.
 
 Returns: Nothing.
 
@@ -219,7 +219,7 @@ the startup loading screen, but with a bounded fade-in, hold, and fade-out
 lifecycle that automatically completes before playback starts.
 
 Parameters:
-- `options` - - Canvas, context, stop-state, and generation legend inputs.
+- `options` - Canvas, context, stop-state, and generation legend inputs.
 
 Returns: Nothing.
 
@@ -235,8 +235,8 @@ renderRuntimeStartupPreviewLegend(
 Draws the centered neon loading legend over the startup preview canvas.
 
 Parameters:
-- `context` - - Target canvas 2D context.
-- `input` - - Canvas geometry and resolved opacity for the legend.
+- `context` - Target canvas 2D context.
+- `input` - Canvas geometry and resolved opacity for the legend.
 
 Returns: Nothing.
 
@@ -265,7 +265,7 @@ generation title cards. The difference is whether the fade-out is scheduled
 up front or started later by calling `complete()`.
 
 Parameters:
-- `options` - - Canvas, legend text, and preview lifecycle inputs.
+- `options` - Canvas, legend text, and preview lifecycle inputs.
 
 Returns: Handle used to complete or stop the preview.
 
@@ -285,7 +285,7 @@ then fades a centered loading legend out before the first playback session is
 allowed to begin.
 
 Parameters:
-- `options` - - Canvas, context, and stop-state inputs for the startup preview.
+- `options` - Canvas, context, and stop-state inputs for the startup preview.
 
 Returns: Handle used to begin the exit transition or stop the preview outright.
 
@@ -303,8 +303,8 @@ resolveRuntimeStartupPreviewLegendFontSizePx(
 Resolves a responsive legend font size for the startup preview.
 
 Parameters:
-- `canvasWidthPx` - - Current preview canvas width.
-- `canvasHeightPx` - - Current preview canvas height.
+- `canvasWidthPx` - Current preview canvas width.
+- `canvasHeightPx` - Current preview canvas height.
 
 Returns: Responsive legend font size in pixels.
 
@@ -324,7 +324,7 @@ the animated background, and a responsive font size that stays readable on
 both compact and wide canvases.
 
 Parameters:
-- `input` - - Timing, canvas size, and scroll-speed inputs for the preview frame.
+- `input` - Timing, canvas size, and scroll-speed inputs for the preview frame.
 
 Returns: Resolved visual state for the current startup-preview frame.
 
@@ -369,8 +369,8 @@ just a thin closure layer over the mutable lifecycle state and startup
 context.
 
 Parameters:
-- `runtimeStartContext` - - Shared runtime start context.
-- `runtimeLifecycleState` - - Mutable lifecycle state for stop semantics.
+- `runtimeStartContext` - Shared runtime start context.
+- `runtimeLifecycleState` - Mutable lifecycle state for stop semantics.
 
 Returns: Public run handle exposed to callers.
 
@@ -398,9 +398,9 @@ This is the boundary between normal browser startup and the long-running async
 loop that drives evolution plus playback.
 
 Parameters:
-- `runtimeStartContext` - - Shared runtime start context.
-- `runtimeLifecycleState` - - Mutable lifecycle state used for stop checks.
-- `stop` - - Idempotent stop function bound to the current runtime handle.
+- `runtimeStartContext` - Shared runtime start context.
+- `runtimeLifecycleState` - Mutable lifecycle state used for stop checks.
+- `stop` - Idempotent stop function bound to the current runtime handle.
 
 Returns: Nothing.
 
@@ -424,7 +424,7 @@ finalizeStartupPreview(
 Completes and tears down the startup preview when one is active.
 
 Parameters:
-- `startupPreviewHandle` - - Optional preview handle created for first-load boot.
+- `startupPreviewHandle` - Optional preview handle created for first-load boot.
 
 Returns: Nothing.
 
@@ -433,7 +433,7 @@ Returns: Nothing.
 ```ts
 requestGenerationWithOptionalStartupPreview(
   options: { evolutionWorker: Worker; canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; isStopped: () => boolean; showStartupPreview: boolean; },
-): Promise<WorkerChannelGenerationPayload>
+): Promise<EvolutionGenerationPayload>
 ```
 
 Requests the next generation and optionally shows the first-load startup preview.
@@ -443,7 +443,7 @@ first generation is still booting. Later generations can reuse the same
 canvas style through the separate generation-presentation path.
 
 Parameters:
-- `options` - - Generation request inputs and preview-gating state.
+- `options` - Generation request inputs and preview-gating state.
 
 Returns: The next generation payload from the worker.
 
@@ -463,8 +463,8 @@ order, so the browser can reuse this ordered cache to redraw the network
 panel when the red-bird champion changes.
 
 Parameters:
-- `generationPayload` - - Worker generation-ready payload.
-- `bestNetwork` - - Current generation best-network fallback.
+- `generationPayload` - Worker generation-ready payload.
+- `bestNetwork` - Current generation best-network fallback.
 
 Returns: Ordered population networks for the upcoming playback session.
 
@@ -479,7 +479,7 @@ resolveGenerationPresentationLegendText(
 Resolves the centered legend text used to present one ready generation.
 
 Parameters:
-- `generation` - - Ready generation number from the worker payload.
+- `generation` - Ready generation number from the worker payload.
 
 Returns: Generation presentation legend text.
 
@@ -501,7 +501,7 @@ This rhythm makes the demo feel like a live training dashboard instead of a
 one-shot batch job.
 
 Parameters:
-- `options` - - Runtime evolution dependencies and mutable state accessors.
+- `options` - Runtime evolution dependencies and mutable state accessors.
 
 Returns: Nothing.
 
@@ -548,7 +548,7 @@ This is part of runtime teardown and prevents instrumentation observers from
 lingering after the demo has stopped.
 
 Parameters:
-- `telemetryState` - - Runtime telemetry state.
+- `telemetryState` - Runtime telemetry state.
 
 Returns: Nothing.
 
@@ -580,8 +580,8 @@ On each published playback frame, the runtime folds the new telemetry sample
 into rolling windows and emits human-readable HUD strings.
 
 Parameters:
-- `frameStats` - - Playback frame stats for the current frame.
-- `telemetryState` - - Runtime telemetry mutable state.
+- `frameStats` - Playback frame stats for the current frame.
+- `telemetryState` - Runtime telemetry mutable state.
 
 Returns: Formatted telemetry HUD values for this frame.
 
@@ -619,7 +619,7 @@ This keeps parity with the asciiMaze entry style:
 - one guarded auto-start for standalone HTML usage.
 
 Parameters:
-- `startRuntime` - - Runtime entry function.
+- `startRuntime` - Runtime entry function.
 
 Returns: Nothing.
 
@@ -659,7 +659,7 @@ The runtime accepts either a string id or a concrete element so this helper
 folds that loose input into one validated host node.
 
 Parameters:
-- `container` - - Element id or HTMLElement provided to runtime start.
+- `container` - Element id or HTMLElement provided to runtime start.
 
 Returns: Resolved host element.
 
@@ -677,7 +677,7 @@ The HUD should not need to understand arbitrary thrown values, so this helper
 normalizes anything throwable into one readable status line.
 
 Parameters:
-- `error` - - Unknown runtime exception value.
+- `error` - Unknown runtime exception value.
 
 Returns: Normalized status string for HUD output.
 

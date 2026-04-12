@@ -1,348 +1,382 @@
-# Proper NEAT (No-Compromise) — Gap Analysis + Implementation Plan
+# Proper NEAT (Reference-Quality) — Phase 1 Plan
 
-**Status:** [PLANNED]
+**Status:** [WIP]
 
-This document is the engineering plan to upgrade NeatapticTS from “NEAT‑inspired” topology evolution to **canonical NEAT with historical markings**, i.e. **proper innovation tracking, correct crossover alignment, and speciation that remains meaningful across the entire run**.
+## Scope
 
-It also includes an “ultimate” tier: improvements that go beyond the 2002 NEAT paper while keeping NEAT’s core guarantees.
+This workstream is the active Phase 1 critical-path item from [Roadmap.md](Roadmap.md). Its job is to turn NeatapticTS into a reference-quality proper-NEAT implementation: academically correct historical markings, deterministic reproduction, explicit recurrent policy, checkpoint-safe innovation tracking, SOLID code boundaries, and educational documentation that teaches the whole lifecycle from generation zero through export/import.
 
-## Executive Summary (What’s broken vs NEAT)
+This plan intentionally separates three bars:
 
-NeatapticTS already has a strong NEAT _controller_ layer in [src/neat/](../../../neat/) (speciation, fitness sharing, mutation helpers, RNG/telemetry, export/import of innovation tables).
+- Canonical NEAT compliance: historical markings, meaningful speciation, principled crossover, and minimal-start complexification.
+- Reference-library quality: deterministic replay, migration-safe checkpoints, clear public contracts, validator-backed invariants, and educational docs.
+- Beyond-paper upgrades: genotype-first architecture, recurrent/gated extensions, modern caching, and later population-scale acceleration.
 
-However, the **genome representation and genetic operators at the `Network` level** (notably `Network.crossOver` implemented via [src/architecture/network/genetic/](./)) are still “NEAT-ish” and currently violate key NEAT invariants:
+Not in scope for the first lift:
 
-- **Historical markings are not preserved through crossover**
-  - Offspring nodes are cloned without preserving `geneId`.
-  - Offspring connections are re-created without preserving `connection.innovation`.
-  - Therefore offspring genomes become “new, unrelated genomes” from the perspective of speciation/compatibility.
-- **Initial population genomes do not share stable gene IDs / innovations** when created via repeated `new Network(...)`.
-  - This prevents meaningful innovation reuse and causes compatibility distance to treat identical structures as disjoint.
-- **Recurrent and self connections are implicitly dropped by crossover**
-  - Materialization filters only `from < to`, which excludes `from === to` (self) and `from > to` (recurrent).
-- **Determinism is leaky**
-  - Some crossover decisions use `Math.random()` instead of the controller-provided RNG.
+- pulling Phase 2 builder work forward,
+- treating GPU or tensorization as the primary design constraint before correctness is frozen,
+- hiding non-canonical fallback behavior behind silent defaults once proper NEAT is the advertised mode.
 
-These gaps mean we are not yet offering “proper NEAT”. Fixing them is non-trivial, but it’s very achievable because much of the controller/telemetry infrastructure already exists.
+## Reference Bar
 
-## Canonical NEAT Requirements (No Compromise)
+The standard for this plan is intentionally higher than “make the tests pass.”
 
-These are the minimum invariants we must satisfy to claim “proper NEAT”:
+- Paper compliance means matching the core claims of Stanley and Miikkulainen’s NEAT paper: principled crossover across different topologies, protection of structural innovation through speciation, and growth from minimal structure instead of starting complex. Source: <https://nn.cs.utexas.edu/?stanley:ec02>.
+- Strict innovation semantics should follow the original paper’s generation-scoped de-duplication rule for structural mutations. The repo’s current persistent innovation maps are useful scaffolding, but they are not yet the final academic behavior.
+- Modern community expectation now treats innovation numbers as mandatory implementation data, not a nice-to-have. NEAT-Python’s recent innovation-number work is a strong external signal that users now expect checkpoint-safe, always-on historical markings. Source: <https://neat-python.readthedocs.io/en/latest/innovation_numbers.html>.
+- Recurrent and gated extensions are legitimate and useful, but only after canonical connection-gene semantics are stable. The recurrent lane must sit on top of correct historical markings instead of patching around them. Source: <https://arxiv.org/abs/1904.06239>.
+- Performance matters, but correctness comes first. Modern acceleration work such as TensorNEAT shows where the later optimization ceiling is, not what should drive the first correctness refactor. Source: <https://arxiv.org/abs/2504.08339>.
 
-### R1) Stable node identity (node genes)
+## Current State
 
-- Every node must have a **stable identifier** across the entire evolutionary history.
-- In this repo, `Node.geneId` already exists and is the right idea — but it must be:
-  - **preserved** during cloning and crossover,
-  - **consistent** across the initial population,
-  - **restorable** from serialization,
-  - and **globally unique** when genuinely new nodes arise.
+- Completed milestone history through Phase 6, Step 7.1, and closed Step 7.2 now lives in [neat.logs.md](neat.logs.md).
+- The canonical proper-NEAT baseline is closed in the repo: explicit historical markings, innovation-tracker-backed structural reuse, innovation-aligned crossover, recurrent-policy hardening, strict native compatibility, deterministic replay, and source-first generated docs.
+- Phase 7 is the only active lane. Step 7.2 is closed, Step 7.3 is closed, Step 7.4 is closed, Step 7.5 is closed, Step 7.6 is the live workstream, and later beyond-paper steps remain planned and explicitly opt-in.
+- The active guardrails remain unchanged: `Network` stays the phenotype boundary, replay and checkpoint semantics stay controller-owned, runtime-only validation stays outside the genome contract, and helper, mutation, and export owner moves stay deferred until narrower seams are justified.
+- Known unrelated blockers remain outside this plan: lint issues in `src/architecture/layer/layer.factory.normalization.utils.test.ts`, `src/architecture/network/network.ts`, `src/neat/species/core/shared/species.core.shared.ts`, and `src/neat/topology-intent/neat.topology-intent.ts`, plus the separate add-node compile-time test issue tracked elsewhere.
 
-### R2) Stable connection identity (connection genes)
+## Non-Negotiable Architecture Rules
 
-- Every connection gene must have a stable **innovation number** (“historical marking”).
-- In this repo, `Connection.innovation` already exists — but we must ensure:
-  - when a connection gene is inherited in crossover, the offspring connection keeps the same `innovation`.
-  - when a connection gene is created by mutation, it is assigned a deterministic global innovation number via the controller’s innovation registry (not via per-instance auto-increment semantics).
+- Any touched source file under `src/neat/**` or `src/architecture/network/**` gets source-first educational JSDoc improvement before the phase can close.
+- Any doc-affecting phase ends with `npm run docs` so generated README surfaces stay synchronized.
+- Keep top-level methods orchestration-first. Put branching logic into pure helpers or narrow services. If a file stops being teachable, split it before adding more logic.
+- Preserve current public APIs unless a migration is explicitly justified in the phase notes.
+- Use ES2023-first patterns when they improve clarity or safety: `toSorted`, `at`, `structuredClone` or project-safe equivalents, spread over `Object.assign`, typed arrays where appropriate, and named constants over magic numbers.
+- Native NEAT genomes must not silently rely on fallback innovations once proper NEAT is the default. Fallback remains a legacy/import bridge.
+- Performance work is welcome only when it does not blur correctness boundaries. Any performance-oriented change must keep deterministic parity and benchmark evidence.
 
-### R3) Crossover aligns by innovation number
+## Coverage Backlog
 
-- Matching genes are those with the same innovation number.
-- Disjoint/excess genes are determined by innovation ordering.
-- Offspring inherits:
-  - matching genes randomly (or via fitness bias),
-  - disjoint/excess from fitter parent (or both when `equal` / tie).
-- Disabled genes follow canonical re-enable semantics (commonly: inherit disabled if either disabled; sometimes allow re-enable with probability ~0.25).
+### [DONE] Phases 0 through 6 — Canonical proper-NEAT baseline
 
-### R4) Compatibility distance uses innovation numbers
+Goal: keep the academically correct proper-NEAT lane stable before optional extensions start.
 
-- Speciation must compute distance on **innovation numbers**, not on node indices.
-- We should be able to guarantee that for genomes produced by our NEAT flow:
-  - innovations are present and meaningful,
-  - any fallback heuristic is only for importing legacy/foreign genomes.
+- Closed coverage: contract and serialization safety, fail-fast native validation, explicit innovation-tracker semantics, homologous generation-zero identity, innovation-aligned crossover with controller-owned RNG, recurrent-policy hardening, strict native compatibility and species-history expectations, deterministic checkpoints and replay, and educational-docs follow-through.
+- Durable milestone log: [neat.logs.md](neat.logs.md).
 
-### R5) Recurrent/self connections are supported (at least configurable)
+### [WIP] Phase 7 — Beyond-paper, still reference-quality
 
-- Canonical NEAT supports recurrence. Many modern NEAT libs allow the user to enable/disable recurrence.
-- Our genetic pipeline must not silently drop these genes.
+Goal: exceed the 2002 paper without contaminating canonical semantics.
 
-## Current Implementation Audit (Where we are)
+Phase intent:
 
-### What’s already strong
+- This is a local continuation lane inside the proper-NEAT plan, not the repo-wide Roadmap Phase 7.
+- Treat this phase as optional and explicitly gated: it should start only if the roadmap decision is to keep extending the proper-NEAT boundary instead of closing Phase 1 after the canonical lift.
+- Preserve the freeze established by Phases 0 through 6: historical markings, deterministic replay, strict native compatibility, and source-first docs are already the baseline, not a moving target.
+- Make the beyond-paper value proposition easy to find in documentation: the README opening for the owning NEAT chapter and any flagship example surface should explain what Phase 7 adds, why those gains are opt-in, and why the canonical proper-NEAT contract still remains the baseline.
 
-- Controller-level innovation bookkeeping exists:
-  - `_connInnovations: Map<string, number>`
-  - `_nodeSplitInnovations: Map<string, NodeSplitRecord>`
-  - `_nextGlobalInnovation: number`
-  - exported/restored via [src/neat/neat.export.ts](../../../neat/neat.export.ts).
-- Mutation helpers attempt innovation reuse:
-  - add-conn reuses keys derived from node geneIds.
-  - add-node reuses a split record based on `from.geneId -> to.geneId`.
-- Compatibility distance is implemented (and cached) and already supports a fallback innovation for missing innovation ids.
+Entry gate:
 
-### What blocks “proper NEAT” right now
+- Phase 6 wording is clean on native versus fallback behavior and no longer teaches index-aligned crossover as the intended model.
+- The focused proper-NEAT guard slice still passes on the current codebase.
+- There is concrete pressure to narrow ownership further, not just a desire to add features into broad runtime files.
 
-#### B1) `Network.crossOver` currently does not preserve historical markings
+Architecture guardrails:
 
-The crossover implementation in [network.genetic.setup.utils.ts](./network.genetic.setup.utils.ts) clones nodes with:
+- `Network` stays the phenotype/runtime boundary; any new genotype surface must describe heredity and mutation state without becoming a second runtime.
+- New beyond-paper features must be opt-in, versioned in checkpoint/export contracts, and documented as extensions rather than folded into canonical defaults.
+- Compatibility distance, crossover matching, and deterministic replay stay defined by the canonical Phase 0 through 5 contract unless an extension explicitly advertises a different formula or policy.
+- If a lane needs large-scale cache, worker, or deployment changes, hand it off to the existing roadmap plans instead of expanding this phase into a catch-all research bucket.
+- When a beyond-paper feature materially changes how the library should be pitched, capture that value proposition in one easy-to-find README opening instead of leaving it buried inside deep implementation chapters or tracker notes.
 
-- `const clonedNode = new Node(sourceNode.type)`
-- Copies bias and squash
-- **Does not copy `geneId`**
+### [DONE] Step 7.1 — Introduce a first-class genome boundary.
 
-Connections are materialized in [network.genetic.materialize.utils.ts](./network.genetic.materialize.utils.ts) by calling `offspring.connect(...)`, which creates brand-new `Connection` objects with brand-new `innovation` numbers.
+Outcome:
 
-Net effect:
+- Land one strict genome contract and hard adapter set under `src/neat/genome/` while keeping `Network` as the executable phenotype.
+- Closed coverage: the genome chapter and structural validator landed, export/import plus compatibility and validate now normalize through the genome boundary, and deferred-owner confirmation kept helpers, mutation, and innovation allocation out of the genome contract.
+- Durable milestone log: [neat.logs.md](neat.logs.md).
 
-- Offspring loses node identity and connection identity.
-- Compatibility distance becomes meaningless after the first sexual reproduction.
+[DONE] Step 7.2 — Re-home heredity and mutation operators behind the genome surface.
 
-#### B2) Initial pool genomes aren’t identity-aligned
+Outcome:
 
-The pool creation path in [src/neat/helpers/neat.helpers.ts](../../../neat/helpers/neat.helpers.ts) constructs each genome with `new Network(...)` (when no seed is supplied).
+- Re-home the smallest clearly genome-owned heredity slice first while keeping `Network.crossOver()` and all live mutation and repair paths behaviorally stable.
+- Freeze runtime and controller owners up front so Step 7.2 does not accidentally absorb generation-zero, checkpoint, or live phenotype-edit responsibilities into `src/neat/genome/`.
+- Closed coverage: Passes 7.2a through 7.2d kept runtime crossover ownership in `src/architecture/network/genetic/`, confined the genome move to `src/neat/genome/heredity/`, and confirmed helper, mutation, export, and runtime-only validation owners stayed deferred.
+- Durable milestone log: [neat.logs.md](neat.logs.md).
 
-That means:
+Step 7.2 owner freeze during the opening pass:
 
-- Each genome gets different `Node.geneId` values (because `geneId` allocation is global/static).
-- Each genome gets different `Connection.innovation` values (because `Connection` innovations auto-increment globally).
+- `src/neat/genome/` may own pure heredity selection logic over `NeatGenome` plus deliberate adapter views only.
+- `src/architecture/network/genetic/network.genetic.utils.ts` remains the public runtime crossover facade.
+- `src/architecture/network/genetic/network.genetic.setup.utils.ts` keeps crossover context creation, RNG resolution, offspring node-count choice, and provisional runtime node assignment.
+- `src/architecture/network/genetic/network.genetic.materialize.utils.ts` keeps phenotype rebuilding, runtime node-index rebuilding, topology-intent pruning, and gating reattachment.
+- `src/neat/helpers/neat.helpers.ts` keeps generation-zero template creation, canonicalized starter innovations, and innovation-tracker reseeding.
+- `src/neat/mutation/shared/mutation.types.ts`, `src/neat/mutation/mutation.ts`, `src/neat/mutation/add-node/`, `src/neat/mutation/add-conn/`, `src/neat/mutation/select/`, `src/neat/mutation/flow/`, and `src/neat/mutation/repair/` keep live mutation descriptors and `connect`/`disconnect`-based structural edits.
+- `src/neat/export/` keeps checkpoint, controller-meta, runtime-hint, and replay bridging.
+- `src/neat/validate/` keeps runtime-only phenotype guards; the validator split stays unchanged during Step 7.2 opening.
+
+Smallest safe first extraction slice:
+
+- Extract connection-gene collection and innovation-aligned inheritance choice from `src/architecture/network/genetic/network.genetic.selection.utils.ts` plus the delegation seam in `src/architecture/network/genetic/network.genetic.setup.utils.ts` into a genome-owned heredity helper.
+- This is the smallest safe slice because selection already normalizes parents through the strict genome adapter, while setup and materialization still depend on live `Network` scaffolding, runtime node indexes, and gating reattachment.
+- Keep node selection, runtime scaffold creation, and offspring materialization on the runtime shelf for now.
 
-Even if the networks are structurally identical, they will appear completely unrelated.
+Proposed first-pass boundary under `src/neat/genome/heredity/`:
+
+- `genome/heredity/genome.heredity.ts` as the orchestration-first heredity-selection entry.
+- `genome/heredity/genome.heredity.types.ts` for parent-view and selection-result contracts if the extraction needs more than the current `ConnectionGene` shape.
+- `genome/heredity/genome.heredity.utils.ts` for pure collection and innovation-aligned selection helpers.
+- Keep phenotype materializers, mutation services, and controller checkpoint bridges out of this first Step 7.2 slice.
+
+Implementation passes:
+
+- [DONE] Pass 7.2a — Genome-owned heredity selection: landed `src/neat/genome/heredity/` as the first strict-genome heredity owner, moved innovation-aligned connection-gene collection plus inheritance choice behind that boundary, and kept the runtime crossover facade plus phenotype materialization stable.
+- [DONE] Pass 7.2b — Runtime adapter hardening: audited the remaining runtime adapter seam, removed dead parent-local node-index hints from the runtime `ConnectionGene` materialization descriptor, and kept the runtime materializer consuming only stable gene ids plus inherited weight, enabled state, and innovation identity.
+- [DONE] Pass 7.2c — Deferred-owner confirmation: audited the thinner runtime adapter seam and confirmed `src/neat/helpers/`, `src/neat/mutation/`, and `src/neat/export/` still own generation-zero bootstrap, live structural edit and repair, and checkpoint or replay concerns without importing the runtime crossover shelves; kept the runtime-only validator split unchanged.
+- [DONE] Pass 7.2d — Closure audit: confirmed `src/architecture/network/genetic/network.genetic.utils.ts`, `network.genetic.setup.utils.ts`, and `network.genetic.materialize.utils.ts` still own the runtime crossover facade, setup, and phenotype materialization shelves; confirmed the genome move stopped at heredity selection; and closed Step 7.2 without another operator move.
+
+Completed in the current repo state:
+
+- Owner audit confirmed the smallest safe first move is heredity selection only, and the runtime-only validator split stays unchanged.
+- Pass 7.2a landed `src/neat/genome/heredity/` and reduced `src/architecture/network/genetic/network.genetic.selection.utils.ts` to a thin materialization adapter while keeping runtime setup, materialization, and public crossover ownership stable.
+- Pass 7.2b narrowed that adapter further: `src/architecture/network/network.types.ts` no longer lets the runtime `ConnectionGene` materialization descriptor carry `from`, `to`, or `gater` node-index hints, and `src/architecture/network/genetic/network.genetic.selection.utils.ts` now forwards only stable heredity identity plus the inherited weight and enabled state.
+- `src/architecture/network/genetic/network.genetic.materialize.utils.ts` now documents the stricter seam explicitly, and `src/architecture/network/genetic/network.genetic.test.ts` now proves the adapter output strips runtime index hints while materialization still resolves endpoints and gaters through stable gene ids.
+- Pass 7.2c confirmed the deferred owners stayed fixed after the adapter thinning: `src/neat/helpers/neat.helpers.ts` still owns generation-zero template normalization plus tracker reseeding, `src/neat/mutation/mutation.ts` plus `repair/` still own live structural edits and repair, and `src/neat/export/neat.export.ts` still owns checkpoint and replay bridging without importing the runtime crossover shelves.
+- Pass 7.2d closed the boundary audit: `src/architecture/network/genetic/network.genetic.utils.ts` still owns the public runtime crossover facade, `src/architecture/network/genetic/network.genetic.setup.utils.ts` still owns runtime setup plus the heredity delegation seam, and `src/architecture/network/genetic/network.genetic.materialize.utils.ts` still owns phenotype materialization by stable gene id, so no further operator move is required for Step 7.2.
+- `src/neat/validate/neat.validate.ts` still owns runtime-only phenotype guards while strict genome-contract checks continue to delegate through `src/neat/genome/` instead of widening the validator split.
+- Adjacent guard hardening landed only where required to keep the validation slice stable: `src/neat/genome/genome.utils.ts` now canonicalizes runtime node order before strict validation, and `src/neat/evolve/population/evolve.population.utils.ts` now refreshes or filters unusable species state before speciated breeding.
+- Validation for the current repo state remains the existing `npm run build` plus a focused 10-suite / 102-test guard slice covering `network.genetic`, `genome`, `genome.heredity`, `helpers`, `export`, `compat`, `validate`, `mutation.add-conn`, `innovation-tracker`, and `speciation`. Pass 7.2d landed tracker-only closure evidence, so no new build, focused guard rerun, or `npm run docs` pass was required. `npm run lint` still reports only the same unrelated existing blockers.
+- Durable milestone log: [neat.logs.md](neat.logs.md).
+
+Current working boundaries:
+
+- Genome heredity owner: `src/neat/genome/heredity/`.
+- Runtime adapter seam: `src/architecture/network/genetic/network.genetic.selection.utils.ts` now forwards only the stable materialization descriptor consumed by runtime materialization.
+- Runtime materializer seam: `src/architecture/network/genetic/network.genetic.materialize.utils.ts` now resolves endpoints and gaters only by stable gene id.
+- Runtime owners that stayed fixed through Step 7.2 closure: `src/architecture/network/genetic/network.genetic.utils.ts`, `src/architecture/network/genetic/network.genetic.setup.utils.ts`, and `src/architecture/network/genetic/network.genetic.materialize.utils.ts`.
+- Adjacent guard seams: `src/neat/genome/genome.utils.ts` and `src/neat/evolve/population/evolve.population.utils.ts`.
+
+Step 7.2 coupling points to actively guard:
+
+- Moving setup or materialization too early would pull runtime scaffold creation, node indexing, topology pruning, and gating reattachment into the genome boundary.
+- Moving generation-zero helpers too early would mix startup population normalization and tracker reseeding into heredity ownership.
+- Moving mutation descriptors too early would entangle genome heredity with `methods.mutation` policy objects and live `connect`/`disconnect` services.
+- Moving export too early would blur checkpoint, controller-meta, and runtime-hint bridging with operator ownership.
+- Narrowing native validation here would risk duplicating endpoint, gater, cache, and runtime-topology checks that still belong to phenotype validation.
+
+Validation evidence used to close Step 7.2:
+
+- `npm run build`
+- targeted tests in `src/neat/genome/heredity/genome.heredity.test.ts`, `src/neat/genome/genome.test.ts`, and `src/architecture/network/genetic/network.genetic.test.ts`, plus `src/neat/export/neat.export.test.ts`, `src/neat/compat/compat.test.ts`, `src/neat/validate/neat.validate.test.ts`, `src/neat/mutation/add-conn/mutation.add-conn.test.ts`, `src/neat/innovation-tracker/innovation-tracker.test.ts`, and `src/neat/speciation/speciation.test.ts` when adjacent guard paths are touched
+- `npm run docs` only when source-first JSDoc changes land under the touched heredity or genome chapters
+- `npm run lint` only when new public types or new boundary files change; unrelated existing lint blockers remain deferred
+
+[DONE] Step 7.3 — Add modern gene attributes as explicit extension state.
+
+- Introduce opt-in node-gene and connection-gene traits such as activation-function mutation, response parameters, and clearer enable/disable semantics behind explicit feature flags or controller options.
+- Serialize these traits additively and version them so canonical checkpoints stay readable while extension checkpoints remain deterministic.
+- Decide trait by trait whether compatibility distance should ignore, weight, or separately account for them; document the chosen rule before changing formulas.
+- Extend validator coverage so malformed extension genomes fail fast rather than degrading into runtime surprises.
+
+Implementation passes:
+
+- [DONE] Pass 7.3a — Opt-in connection-gain extension state: landed the first additive Step 7.3 trait through `options.genomeExtensions.connectionGain` plus direct genome-adapter capture options, taught runtime JSON to preserve connection gain and top-level extension bags, stored non-neutral ungated gains inside `extensions.values.connectionGainByInnovation`, kept canonical compatibility explicitly ignoring that extension bag, and hardened strict validation plus export/import replay around the new contract.
+- [DONE] Pass 7.3b — Opt-in node-response and disabled-connection re-enable extension state: added runtime `Node.response` with a neutral default of `1`, taught runtime JSON plus the strict genome adapters to carry non-neutral node response and explicit disabled-gene re-enable probability through `extensions.values.nodeResponseByGeneId` and `extensions.values.disabledConnectionReenableProbability`, kept canonical compatibility extension-agnostic, and updated export/import to capture strict genomes from the live runtime genome so `_reenableProb` becomes checkpoint-safe extension state instead of a controller-meta-only fallback.
+- [DONE] Pass 7.3c — Activation-function audit and boundary hardening: confirmed that `MOD_ACTIVATION` is already a canonical runtime and genome trait through the base node-gene `squash` field rather than a missing Step 7.3 extension, verified that export/import preserves activation mutation without `genomeExtensions`, and pinned the current compatibility rule that activation deltas remain ignored unless a later pass deliberately changes the formula.
 
-#### B3) Recurrent/self genes are dropped by crossover
+Completed in the current repo state:
 
-The filter `from < to` in genetic materialization excludes:
+- Activation-function mutation is not an unlanded Step 7.3 extension seam: `MOD_ACTIVATION` already exists on the runtime mutation shelf, strict genomes already store the node activation key in the canonical `nodeGenes[].squash` field, and materialization restores that state without using the extension bag.
+- `src/architecture/node/` now treats response as real runtime node state: `Node.response` defaults to `1`, activation and derivative paths scale by that response, and runtime JSON plus clone restore preserve non-neutral response values.
+- `src/architecture/network/serialize/` now preserves both connection gain and node response across raw JSON serialize/restore so ordinary runtime snapshots no longer drop either non-neutral trait.
+- `src/neat/genome/` now exposes three additive Step 7.3 traits behind the same typed extension bag: non-neutral ungated connection gain, non-neutral node response keyed by node gene id, and explicit disabled-connection re-enable probability keyed as one genome-level policy value.
+- `src/neat/export/` now threads the same opt-in capture flags through controller population export/import and captures strict genomes from the live runtime genome instead of only from serialized runtime JSON, so `_reenableProb` can survive as explicit extension state even when controller-meta fallback is absent.
+- `src/neat/compat/` continues to keep canonical compatibility extension-agnostic, and `src/neat/shared/neat.shared.types.ts` plus `src/neat/export/neat.export.types.ts` now document the controller-facing `genomeExtensions` option slice for all landed Step 7.3 traits.
 
-- self connections (`from === to`)
-- recurrent/back edges (`from > to`)
+Validation evidence used to close Step 7.3:
 
-This is not acceptable for NEAT correctness; it should be controlled by a clear policy (e.g., `allowRecurrent`), not silently filtered.
+- `npm run build`
+- targeted tests in `src/architecture/node/node.test.ts`, `src/architecture/network/serialize/network.serialize.test.ts`, `src/neat/genome/genome.test.ts`, and `src/neat/export/neat.export.test.ts` (4 suites / 118 tests)
+- broader guard slice in `src/architecture/node/node.test.ts`, `src/architecture/network/serialize/network.serialize.test.ts`, `src/neat/genome/genome.test.ts`, `src/neat/genome/heredity/genome.heredity.test.ts`, `src/neat/export/neat.export.test.ts`, `src/neat/compat/compat.test.ts`, and `src/neat/validate/neat.validate.test.ts` (7 suites / 138 tests)
+- activation-audit hardening slice in `src/neat/genome/genome.test.ts`, `src/neat/export/neat.export.test.ts`, and `src/neat/compat/compat.test.ts` (3 suites / 51 tests)
+- focused Step 7.3 coverage closure slice in `src/architecture/node/node.test.ts`, `src/architecture/network/serialize/network.serialize.test.ts`, `src/neat/genome/genome.test.ts`, `src/neat/genome/heredity/genome.heredity.test.ts`, `src/neat/export/neat.export.test.ts`, `src/neat/compat/compat.test.ts`, and `src/neat/validate/neat.validate.test.ts` (7 suites / 151 tests) with `network.serialize.json.utils.ts` at 96.38% lines, `neat.export.ts` at 95.12% lines, and `genome.utils.ts` at 90.94% lines across the recent-change owner boundary
+- `npm run docs`
+- `npm run lint` still reports only unrelated existing blockers in `src/architecture/layer/layer.factory.normalization.utils.test.ts`, `src/architecture/network/network.ts`, `src/neat/species/core/shared/species.core.shared.ts`, and `src/neat/topology-intent/neat.topology-intent.ts`
 
-#### B4) RNG determinism is inconsistent
+[DONE] Step 7.4 — Make recurrent modules and gated blocks a deliberate extension lane.
 
-Some logic uses `Math.random()` instead of `randomGenerator`.
-For deterministic runs, **every stochastic decision in genetic operators must use the same RNG source**.
+- Keep canonical recurrent and self-edge support from Phases 3 through 5 as the baseline, then layer higher-order recurrent modules or gated blocks as explicit genome constructs instead of hidden runtime conventions.
+- Define heredity, mutation, enable/disable, and checkpoint semantics for module-scoped structure before exposing new builders or demo surfaces.
+- Preserve a clean distinction between canonical recurrent connections and repo-specific module extensions in both code and docs.
+- If these structures begin to overlap with architecture-builder plans, stop and align with `plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md` rather than inventing a second builder story here.
 
-## Gap to “Full Proper NEAT” (What we need to build)
+Implementation passes:
 
-This section is deliberately strict: “proper NEAT” means the genome is a stable, comparable object across generations.
+- [DONE] Pass 7.4a — Explicit temporal-module extension scaffolding: kept builder and mutation ownership frozen, taught `Network.fromJSON()` and `toJSON()` to preserve generic extension bags across runtime round-trips, typed the first explicit Step 7.4 descriptors as `extensions.values.recurrentModules` plus `extensions.values.gatedBlocks`, validated those descriptors against known node gene ids and gated connection innovations, preserved them through strict genome capture plus export/import, and pinned canonical compatibility to keep ignoring the extension bag.
+- [DONE] Pass 7.4b — Runtime builder emission and heredity carry-through: taught `Architect.lstm()`, `Architect.gru()`, and `Architect.narx()` to emit explicit temporal descriptors on the runtime extension bag, added one runtime temporal-extension helper that conservatively prunes stale descriptors during serialization, taught direct `ADD_LSTM_NODE` and `ADD_GRU_NODE` runtime mutations to append descriptors for the inserted block, and preserved surviving parent descriptors across runtime crossover when the offspring still materializes the referenced nodes, innovations, and gating assignments.
+- [DONE] Pass 7.4c — Runtime structural-edit lifecycle synchronization: taught the shared runtime `connect`, `disconnect`, `gate`, `ungate`, and hidden-node gate-detach seams to synchronize temporal descriptors immediately after structural edits, so generic structural edits and repair flows retire invalid module metadata in memory instead of waiting for later serialization, while still allowing deliberate degradation when an edit drops a gated block but leaves the recurrent-module scaffold intact.
+- [DONE] Pass 7.4d — Dormant disabled-gene temporal semantics: defined disabled referenced genes as dormant structure rather than implicit descriptor retirement, taught the shared runtime temporal-extension helper to validate against all registered connections instead of only enabled ones, and added regression coverage across runtime serialization, strict genome materialization, strict validation, and export/import so temporal descriptors survive enable/disable toggles until structural removal or ungating removes the referenced identity.
 
-### Gap G1 — Make `Network` a correct NEAT genome
+Completed in the current repo state:
 
-We need a single, coherent contract:
+- `src/architecture/network/serialize/` now preserves explicit JSON extension bags on live runtime networks, which gives Phase 7 a checkpoint-safe place to carry additive module metadata without teaching the network layer the feature-specific schema.
+- `src/neat/genome/` now exposes the first typed Step 7.4 descriptor surfaces for recurrent modules and gated blocks while keeping canonical node genes and connection genes as the executable source of truth.
+- `src/neat/export/` now preserves those explicit module descriptors across population export/import whenever the live runtime genome already carries the extension bag.
+- `src/neat/compat/` still keeps canonical compatibility extension-agnostic, which means the Step 7.4 lane remains additive until a later pass deliberately changes the formula.
+- `src/architecture/network/network.temporal.extensions.utils.ts` now owns runtime descriptor emission, immediate structural-edit synchronization, conservative pruning, and crossover carry-through for the Step 7.4 lane without teaching the serializer feature-specific schema rules.
+- `src/architecture/architect/` now emits deliberate temporal descriptors for `Architect.lstm()`, `Architect.gru()`, and both NARX delay lines while keeping the executable graph on canonical nodes and connection genes.
+- `src/architecture/network/mutate/` now appends descriptors for direct `ADD_LSTM_NODE` and `ADD_GRU_NODE` runtime mutations, while later structural edits inherit explicit runtime survival, degradation, and retirement rules from the shared edit seams instead of relying only on serialization-time pruning.
+- `src/architecture/network/connect/`, `src/architecture/network/gating/`, and `src/architecture/network/remove/` now resynchronize temporal descriptors after disconnect, ungate, and hidden-node gate-detach flows so generic structural edits and repair-driven rewires update the hydrated extension bag immediately.
+- `src/architecture/network/genetic/` now preserves parent temporal descriptors only when the offspring still carries the referenced node gene ids, connection innovations, and gating assignments, which keeps heredity additive and validator-backed.
+- Disabled connection genes now count as dormant temporal structure rather than implicit removal, so runtime synchronization, strict genome validation, runtime materialization, and export/import keep recurrent-module and gated-block descriptors alive while the referenced nodes, innovations, and gater ownership still exist.
+- Builder overlap is now deliberately runtime-owned rather than frozen: descriptor emission lives on the same preset shelf as the existing recurrent builders, so Step 7.4 still avoids inventing a second architecture story.
 
-- Node gene identity: `Node.geneId` is the stable node gene ID.
-- Connection gene identity: `Connection.innovation` is the stable connection gene ID.
+Validation evidence used to close Step 7.4:
 
-And the entire lifecycle must preserve those:
+- targeted guard slice in `src/architecture/network/connect/network.connect.test.ts`, `src/architecture/network/gating/network.gating.test.ts`, `src/architecture/network/remove/network.remove.test.ts`, `src/architecture/network/serialize/network.serialize.test.ts`, `src/architecture/network/mutate/network.mutate.test.ts`, `src/architecture/network/genetic/network.genetic.test.ts`, `src/neat/genome/genome.test.ts`, `src/neat/export/neat.export.test.ts`, `src/neat/compat/compat.test.ts`, and `src/neat/validate/neat.validate.test.ts` (10 suites / 203 tests)
+- `npm run build`
+- `npm run docs`
+- `npm run lint` still reports only the unrelated existing blockers in `src/architecture/layer/layer.factory.normalization.utils.test.ts`, `src/architecture/network/network.ts`, `src/neat/species/core/shared/species.core.shared.ts`, and `src/neat/topology-intent/neat.topology-intent.ts`
 
-1. Initial genome creation
-2. Mutation (add node, add connection, enable/disable)
-3. Crossover (gene alignment, inheritance)
-4. Serialization/import/export
-5. Pooling (nodePool/connection pooling)
+Final Step 7.4 closure evidence:
 
-### Gap G2 — Rewrite crossover to align by connection innovations (not indices)
+- targeted guard slice in `src/architecture/network/connect/network.connect.test.ts`, `src/architecture/network/gating/network.gating.test.ts`, `src/architecture/network/remove/network.remove.test.ts`, `src/architecture/network/serialize/network.serialize.test.ts`, `src/architecture/network/mutate/network.mutate.test.ts`, `src/architecture/network/genetic/network.genetic.test.ts`, `src/neat/genome/genome.test.ts`, `src/neat/export/neat.export.test.ts`, `src/neat/compat/compat.test.ts`, and `src/neat/validate/neat.validate.test.ts` (10 suites / 207 tests)
+- `npm run build`
+- `npm run docs`
+- `npm run lint` still reports only the unrelated existing blockers in `src/architecture/layer/layer.factory.normalization.utils.test.ts`, `src/architecture/network/network.ts`, `src/neat/species/core/shared/species.core.shared.ts`, and `src/neat/topology-intent/neat.topology-intent.ts`
 
-The current crossover uses:
+[DONE] Step 7.5 — Keep novelty, multiobjective, and adaptive policy layers explicitly external.
 
-- innovation key = `Connection.innovationID(from.index, to.index)`
-- endpoints stored as node indices
-- nodes selected by position
-
-Proper NEAT requires:
-
-- innovation key = `connection.innovation`
-- endpoints stored as **node geneIds** (or as innovations referencing node genes)
-- offspring node set derived from inherited genes + required IO nodes
-
-### Gap G3 — Make speciation distance operate on correct innovations
-
-Compatibility already prefers `connection.innovation`. That’s good, but we must:
-
-- ensure those innovations are meaningful and consistent.
-- reserve `_fallbackInnov` for legacy import only.
-
-### Gap G4 — Fix population bootstrapping
-
-We must guarantee that the initial population uses:
-
-- identical IO node geneIds across all genomes
-- identical initial connection innovation ids across all genomes
-
-Simplest canonical approach:
-
-- build a single template genome once, then clone it N times.
-
-## Implementation Plan (Phased)
-
-The plan is split into **Phase 0 (diagnostics + invariants)**, **Phase 1 (correctness)**, and **Phase 2+ (ultimate NEAT)**.
-
-### Phase 0 — Freeze the invariants (1–2 days)
-
-Goal: create an explicit contract + tests so we can refactor safely.
-
-- [ ] Define the “NEAT Genome Contract” in one place (doc + types):
-  - Node identity: `geneId`
-  - Connection identity: `innovation`
-  - Connection endpoints reference nodes by `geneId` (NOT by `index`).
-- [ ] Add a small set of correctness tests:
-  - Crossover preserves node geneIds.
-  - Crossover preserves connection innovation IDs.
-  - Compatibility distance between identical genomes is 0 (or near 0 depending on weight noise), and remains stable after crossover/mutation.
-  - Self/recurrent genes are preserved when allowed.
-- [ ] Add a debug validator (dev-only) that can be run on a genome:
-  - verifies unique geneIds, innovation numbers, endpoints valid, gater references valid.
-
-### Phase 1 — Make “proper NEAT” the default behavior (core lift) (3–10 days)
-
-This is the big lift. It’s mostly surgical but touches foundational code.
-
-#### 1.1 Fix pool bootstrapping (must-do)
-
-Target: [src/neat/helpers/neat.helpers.ts](../../../neat/helpers/neat.helpers.ts)
-
-- [ ] When `seedNetwork` is null, create exactly **one** template genome (e.g., `new Network(input, output, ...)`) and then clone it `popsize` times using `toJSON()` / `Network.fromJSON()`.
-- [ ] Ensure template cloning preserves:
-  - node geneIds
-  - connection innovation numbers
-  - enabled flags
-  - gates / selfconns
-
-Why this matters:
-
-- It guarantees identical initial genomes have identical historical markings.
-- It makes innovation reuse maps based on `geneId` actually work.
-
-#### 1.2 Rewrite `Network.crossOver` to be true NEAT crossover (must-do)
-
-Targets:
-
-- [src/architecture/network/genetic/network.genetic.selection.utils.ts](./network.genetic.selection.utils.ts)
-- [src/architecture/network/genetic/network.genetic.materialize.utils.ts](./network.genetic.materialize.utils.ts)
-- [src/architecture/network/genetic/network.genetic.setup.utils.ts](./network.genetic.setup.utils.ts)
-- Types: [src/architecture/network/network.types.ts](../network.types.ts)
-
-Key changes:
-
-- [ ] Collect parent connection genes keyed by `connection.innovation` (not `Connection.innovationID(from.index,to.index)`).
-- [ ] Connection gene descriptor must include:
-  - `innovation: number`
-  - `fromGeneId: number`
-  - `toGeneId: number`
-  - `weight`, `enabled`
-  - `gaterGeneId?: number` (or sentinel)
-  - plus an explicit `isRecurrent?: boolean` if we want to preserve recurrent classification.
-- [ ] Offspring node set must be derived as:
-  - always include all IO nodes (input + output), preserving their geneIds
-  - include any hidden nodes referenced by inherited connection genes
-  - optionally include isolated hidden nodes if we decide to preserve them (configurable)
-- [ ] Node inheritance:
-  - for nodes present in both parents (same `geneId`): choose bias/squash from one parent (or average/weighted)
-  - for nodes present in only one parent: inherit from the parent that contributed the structural gene
-- [ ] Connection materialization:
-  - create runtime connections between the resolved offspring nodes
-  - explicitly set `createdConnection.innovation = gene.innovation`
-  - explicitly set enabled flag
-  - attach gater by `gaterGeneId` mapping
-- [ ] Recurrent/self policy:
-  - do NOT filter `from < to` unconditionally
-  - apply policy based on:
-    - genome/network flag `_enforceAcyclic`
-    - controller option `allowRecurrent`
-  - self connections (`fromGeneId === toGeneId`) must be representable and preserved when recurrence is allowed.
-- [ ] RNG determinism:
-  - replace all `Math.random()` calls inside genetic operators with the injected RNG.
-
-#### 1.3 Ensure mutation operators keep innovations/geneIds consistent (tighten)
-
-Targets: [src/neat/neat.mutation.\*](../../../neat/)
-
-- [ ] Make connection innovation keys directional (ordered pair) when recurrence is supported.
-  - The current unordered/symmetric key (`min::max`) is only valid if recurrence/back edges are impossible.
-- [ ] Ensure that re-adding a previously seen connection reuses the original innovation (persistent registry, not generation-local).
-- [ ] Ensure add-node split record is keyed robustly:
-  - preferred: key by the **split connection’s innovation id** (canonical) or by ordered endpoint geneIds + (optionally) connection innovation.
-
-#### 1.4 Tighten compatibility distance expectations (optional but recommended)
-
-Targets: [src/neat/neat.compat.ts](../../../neat/neat.compat.ts)
-
-- [ ] For genomes produced by our NEAT engine, require `connection.innovation` to exist and be a number.
-- [ ] Keep `_fallbackInnov` only for imported legacy genomes.
-
-### Phase 2 — “Ultimate NEAT” upgrades (2–6+ weeks, modular)
-
-These are improvements that modern NEAT users expect, without compromising the core NEAT guarantees.
-
-#### 2.1 First-class genotype layer (recommended long-term)
-
-Problem: using the full `Network` runtime object as the genotype is convenient, but slow and easy to corrupt.
-
-Plan:
-
-- [ ] Introduce an explicit `Genome` representation:
-  - `NodeGene[]` and `ConnectionGene[]` sorted by innovation
-  - tiny, immutable-ish, easy to clone
-- [ ] Provide compilation step `Genome -> Network` (phenotype build)
-- [ ] Keep `Network` as the phenotype/runtime; keep NEAT ops on `Genome`
-
-Benefits:
-
-- Faster crossover/mutation
-- Clear invariants
-- Easy compatibility distance
-- Easy export/import and reproducible runs
-
-#### 2.2 Canonical reproduction pipeline knobs
-
-- [ ] Per-species elitism (champion always survives)
-- [ ] Explicit offspring allocation by adjusted fitness (already partially present; validate vs canonical)
-- [ ] Species stagnation pruning consistent with NEAT paper
-
-#### 2.3 Operator completeness for topology and parameters
-
-- [ ] Mutate activation function per node gene (with compatibility impact)
-- [ ] Mutate bias and response parameters per node gene
-- [ ] Structured weight mutation (perturb vs reset) per canonical NEAT configs
-- [ ] Toggle enable/disable mutations for connection genes
-- [ ] Optional gate mutation operators (if gating is a featured extension)
-
-#### 2.4 Deterministic replay and “experiment state”
-
-- [ ] Ensure export/import includes:
-  - RNG state
-  - innovation registries
-  - generation
-  - options snapshot
-  - population genomes
-- [ ] Provide a deterministic replay harness (same seed => same evolution).
-
-#### 2.5 Performance: compatibility distance at scale
-
-- [ ] Keep innovation lists cached per genome and invalidate only on structural mutation
-- [ ] SIMD-ish / typed-array adjacency for genome comparisons when popsize is large
-- [ ] Optional “fast mode” approximate speciation (already some fast diversity metrics exist)
-
-## Definition of Done (for “Proper NEAT”)
-
-We should consider NEAT “proper” when all are true:
-
-- Initial population genomes share the same gene IDs for equivalent nodes, and the same innovation IDs for equivalent connections.
-- After crossover, offspring nodes retain parent gene IDs; offspring connections retain inherited innovation IDs.
-- Compatibility distance produces sensible results (identical ≈ 0, small mutations => small distance, major topology divergence => larger distance).
-- Recurrent/self genes are preserved when allowed and explicitly disallowed when acyclic mode is enabled.
-- All randomness in NEAT operations is routed through the controller RNG.
-
-## Rough Lift Estimate
-
-Assuming we want “proper NEAT” first (Phase 1) before the genotype refactor:
-
-- Phase 0: **Small** (1–2 days)
-- Phase 1: **Medium–Large** (3–10 days) depending on how much API surface we keep stable and how many tests we add
-- Phase 2 (Ultimate): **Large** (weeks), but can be shipped incrementally
-
-The highest risk items are:
-
-- rewriting crossover without breaking existing users’ expectations
-- reconciling recurrent/self/gating semantics across mutation/crossover/speciation
-- ensuring geneId/innovation counters remain consistent across pooling and serialization
+- Treat novelty search, multiobjective selection, adaptive operator choice, and other research-heavy policies as controller-level extensions that consume the stable genome/runtime contract rather than redefining it.
+- Align existing `src/neat/diversity/`, `src/neat/multiobjective/`, `src/neat/objectives/`, `src/neat/selection/`, and `src/neat/adaptive/` boundaries around explicit extension hooks and docs.
+- Do not let extension policies silently redefine the default meaning of fitness, compatibility, species history, or replay determinism.
+- Prefer separate docs and examples for these lanes so users can opt into them intentionally.
+
+Implementation passes:
+
+- [DONE] Pass 7.5a — Boundary mapping and owner audit: confirmed `src/neat/diversity/`, `src/neat/objectives/`, `src/neat/selection/`, and `src/neat/telemetry/` already read as external controller layers, and narrowed the remaining Step 7.5 overlays to novelty score blending, adaptive acceptance rejection, speciation age protection and fitness sharing, plus controller-owned `_moRank` and `_moCrowd` annotations.
+- [DONE] Pass 7.5b — Explicit policy-hook and docs hardening: made extension hooks and README wording explicit across the overlay-heavy novelty/adaptive/speciation/multiobjective chapters and the already-external diversity/objectives/selection/telemetry roots without changing the default meaning of fitness, compatibility, species history, or replay determinism.
+- Closed evidence: the regenerated README openings across novelty, adaptive, speciation, multiobjective, diversity, objectives, selection, and telemetry now spell out controller-only or read-only ownership, while export/import keeps score, novelty, and `_moRank` / `_moCrowd` annotations inside explicit `controllerMeta` instead of widening the canonical genome contract. Validation for the docs-hardening slice remains `npm run docs` and `npm run build` passing.
+
+[WIP] Step 7.6 — Validate beyond-paper value on flagship demos and surface it in docs.
+
+- Treat `examples/flappy_bird/` and `examples/asciiMaze/` as the first flagship demo probes for beyond-paper NEAT: analyze which Phase 7 features materially improve each example and which ones would only add novelty without strengthening the demo's concept.
+- Evaluate the current and planned beyond-paper lanes against each demo's actual teaching boundary instead of forcing one extension story onto both examples.
+- For Flappy Bird, prioritize beyond-paper features that strengthen fast control, temporal decision-making, and browser-inspectable runtime behavior.
+- For ASCII Maze, prioritize beyond-paper features that strengthen compact perception, navigation policy quality, curriculum transfer, and telemetry-rich search rather than reflex-heavy control features that do not fit the example's concept.
+- Prefer library-level fixes, public contracts, and reusable defaults when either flagship demo exposes a DX or modeling gap; avoid demo-local compensation unless the issue is genuinely example-specific.
+- Update the relevant README openings so the beyond-paper gains are easy to find for readers and presentation contexts, especially the owning NEAT chapter plus `examples/flappy_bird/README.md` and `examples/asciiMaze/README.md` when the chosen features land.
+- Use the existing Flappy Bird and ASCII Maze documentation workflows rather than treating the docs follow-through as optional; reopen those documentation boundaries only when the examples or their chapter openings materially drift.
+
+Exit criteria:
+
+- A genome-owned boundary exists without making `Network` obsolete or ambiguous.
+- Beyond-paper traits and policies are opt-in, checkpoint-safe, and validator-backed.
+- Canonical NEAT docs still teach the Phase 0 through 6 contract first, with explicit extension chapters layered after it.
+- The beyond-paper value proposition is easy to find in README openings, and the flagship Flappy Bird plus ASCII Maze paths explain which Phase 7 gains materially improve each demo and why.
+- Any extracted operator or extension boundary is small enough to remain teachable and passes the same deterministic guard slice as the canonical path.
+
+This phase may require a focused follow-on split if the `network.genetic` or mutation boundaries become too broad to remain educational.
+
+### [PLANNED] Phase 8 — Performance lane after correctness freeze
+
+Goal: scale proper NEAT without diluting the correctness work.
+
+Guiding rule: use the research signal from TensorNEAT and the existing [Memory_Optimization.md](Memory_Optimization.md) plan as a later acceleration lane, not as justification for premature correctness shortcuts.
+
+Planned steps:
+
+- Cache innovation-sorted views, homologous-gene maps, and node lookup tables with mutation-aware invalidation.
+- Benchmark compatibility and crossover cost before and after any structural refactor.
+- Explore typed-array or SoA gene storage only after the correctness and docs layers are stable.
+- Treat population-wide tensorization or GPU acceleration as a follow-on design study, not a Phase 1 blocker.
+
+## Validation Matrix
+
+Every implementation pass under this plan should report the relevant subset of:
+
+- `npm run build`
+- `npm run lint`
+- targeted tests for the touched boundary
+- `npm test` before closing a major phase
+- `npm run docs` for any doc-affecting phase
+
+Minimum targeted test surfaces for the proper-NEAT lift:
+
+- [../src/architecture/network/genetic/network.genetic.test.ts](../src/architecture/network/genetic/network.genetic.test.ts)
+- [../src/neat/helpers/neat.helpers.test.ts](../src/neat/helpers/neat.helpers.test.ts)
+- [../src/neat/mutation/add-conn/mutation.add-conn.test.ts](../src/neat/mutation/add-conn/mutation.add-conn.test.ts)
+- [../src/neat/mutation/add-node/mutation.add-node.test.ts](../src/neat/mutation/add-node/mutation.add-node.test.ts)
+- [../src/neat/compat/compat.test.ts](../src/neat/compat/compat.test.ts)
+- [../src/neat/export/neat.export.test.ts](../src/neat/export/neat.export.test.ts)
+- [../src/neat/speciation/speciation.test.ts](../src/neat/speciation/speciation.test.ts)
+
+## Immediate Next Steps
+
+- Keep Step 7.4 closed unless a new recurrent or gated descriptor requirement is identified that is not already covered by the landed builder, heredity, structural-edit, and dormant disabled-gene rules.
+- Keep Step 7.5 closed unless a concrete controller-policy leak reappears; the final audit confirmed that the remaining score and `_mo*` round-trip path is explicit controller metadata rather than canonical genome state.
+- Start Step 7.6 with a narrow flagship-demo audit over `examples/flappy_bird/` and `examples/asciiMaze/`: identify which beyond-paper features materially improve each example, which ones are only novelty, and which README openings need the value proposition made easier to find.
+- Keep the landed Step 7.4 rules fixed: descriptor identity survives enabled-state toggles while the referenced node ids, connection innovations, and gater ownership still exist; retirement remains tied to structural removal or ungating rather than temporary inactivity.
+
+## Deferred Questions
+
+- Should strict canonical mode become the only default, with legacy persistent-map behavior available only behind import or compatibility flags?
+- Should `Network.crossOver()` keep its exact public signature, or should the deterministic internal path gain a private RNG-aware helper while the public API stays convenience-oriented?
+- If the crossover chapter becomes too broad during the rewrite, should the genotype layer be pulled earlier instead of forcing more logic into runtime-network helpers?
+- How should recurrent block mutations such as LSTM/GRU expansion map onto canonical node and connection genes once recurrence becomes first-class in heredity?
+- What is the exact migration policy for older checkpoints and serialized networks that lack connection innovations?
+
+## Handoff query
+
+```text
+Continue from the current repo state only. Do not rely on prior chat history. Update Handoff query when step is finished.
+
+Active workstream: Phase 1 Proper NEAT in plans/neat.plans.md.
+Current active frontier: [WIP] Step 7.6 — validate beyond-paper value on flagship demos and surface it in docs, with Step 7.2 closed, Step 7.3 closed through Passes 7.3a, 7.3b, and 7.3c plus coverage-hardening closure, Step 7.4 closed through Passes 7.4a, 7.4b, 7.4c, and 7.4d, and Step 7.5 closed through Passes 7.5a and 7.5b.
+
+Closed milestone history:
+- Durable done-state coverage through closed Step 7.2 now lives in plans/neat.logs.md.
+- The canonical lane through Phases 0 through 6 is closed, Step 7.1 is closed, and Step 7.2 is closed through Pass 7.2d.
+
+Current live state:
+- Step 7.2 is closed: genome heredity selection stays inside src/neat/genome/heredity/ while the public runtime crossover facade, setup, selection adapter, and phenotype materialization stay in src/architecture/network/genetic/.
+- src/architecture/network/genetic/network.genetic.selection.utils.ts remains a thin runtime adapter that projects parent networks into the genome heredity boundary and forwards only stable gene ids plus inherited weight and enabled state to materialization.
+- src/architecture/network/genetic/network.genetic.materialize.utils.ts still resolves endpoints and gaters only by stable gene id, and the runtime shelf still owns scaffold creation, topology pruning, and gating reattachment.
+- src/neat/helpers/neat.helpers.ts, src/neat/mutation/mutation.ts plus repair shelves, and src/neat/export/neat.export.ts remain deferred owners for generation-zero bootstrap, live structural edit and repair, and checkpoint or replay bridging without importing the runtime crossover shelves.
+- src/neat/validate/neat.validate.ts still owns runtime-only phenotype guards while strict genome-contract checks remain delegated through src/neat/genome/ instead of widening the validator split.
+- Pass 7.3a is landed: the first additive trait is opt-in connection-gain extension state, captured through `options.genomeExtensions.connectionGain` or direct genome-adapter options, stored as `extensions.values.connectionGainByInnovation`, restored through export/import and genome materialization, and rejected when malformed or applied to gated genes.
+- Pass 7.3b is landed: `Node.response` is now a real runtime field with neutral default `1`, strict genomes can capture non-neutral response as `extensions.values.nodeResponseByGeneId`, and disabled-gene re-enable policy is now explicit extension state as `extensions.values.disabledConnectionReenableProbability` sourced from runtime `_reenableProb`.
+- Pass 7.3c is landed: activation mutation was audited and confirmed to already be canonical node-gene state through `nodeGenes[].squash`, so it does not need a new Step 7.3 extension bag field or export flag.
+- Step 7.3 is now closed: the latest focused coverage slice across node, network.serialize, genome, genome.heredity, export, compat, and validate passed at 7 suites / 151 tests, with the recent-change owner boundary measuring `network.serialize.json.utils.ts` at 96.38% lines, `neat.export.ts` at 95.12% lines, and `genome.utils.ts` at 90.94% lines.
+- Pass 7.4a is landed: explicit recurrent-module and gated-block descriptors now have a typed, validator-backed genome extension lane and can survive runtime JSON plus controller export/import without changing builder or mutation ownership yet.
+- Pass 7.4b is landed: runtime recurrent builders now emit deliberate temporal descriptors, direct `ADD_LSTM_NODE` and `ADD_GRU_NODE` mutations append descriptors for their inserted blocks, serialization conservatively prunes stale descriptors after later structural edits, and runtime crossover preserves only parent descriptors that still match the offspring graph.
+- Pass 7.4c is landed: runtime `connect` / `disconnect` / `gate` / `ungate` and hidden-node gate-detach flows now synchronize the explicit temporal extension bag immediately, so generic structural edits and repair-driven rewires retire invalid descriptors in memory while preserving deliberate degradation when only the gated block disappears.
+- Pass 7.4d is landed: disabled connection genes now count as dormant temporal structure rather than implicit removal, so runtime synchronization, strict genome validation, runtime materialization, and export/import preserve temporal descriptors while the referenced nodes, innovations, and gater ownership remain present.
+- `src/neat/export/neat.export.ts` now captures strict genomes from the live runtime genome during export so `_reenableProb` survives import even when controller meta omits the fallback field.
+- Canonical compatibility still ignores current Step 7.3 extension state by design, and the activation audit now makes the adjacent baseline explicit: node activation differences also remain ignored unless a later pass deliberately changes the formula.
+- Final Step 7.4 closure evidence is the targeted 10-suite / 207-test connect, gating, remove, serialize, mutate, genetic, genome, export, compat, and validate slice, followed by npm run build and npm run docs. npm run lint still reports only the unrelated existing blockers in src/architecture/layer/layer.factory.normalization.utils.test.ts, src/architecture/network/network.ts, src/neat/species/core/shared/species.core.shared.ts, and src/neat/topology-intent/neat.topology-intent.ts.
+- Step 7.5 is closed: `src/neat/diversity/`, `src/neat/objectives/`, `src/neat/selection/`, and `src/neat/telemetry/` remain external controller layers, while the overlay-heavy novelty/adaptive/speciation/multiobjective chapters now explicitly call out controller-owned score and annotation overlays instead of teaching them as canonical genome behavior.
+- Final Step 7.5 closure evidence: regenerated README openings across novelty, adaptive, speciation, multiobjective, diversity, objectives, selection, and telemetry now preserve the same boundary wording as source, and the export/import seam keeps score, novelty, and `_moRank` / `_moCrowd` inside explicit `controllerMeta` rather than widening the canonical genome contract.
+
+Next narrow task:
+- Begin Step 7.6 with a narrow flagship-demo audit over `examples/flappy_bird/` and `examples/asciiMaze/`: map which beyond-paper features materially improve each example, which ones only add novelty, and which owning README openings should surface that value proposition first.
+- Keep the Step 7.6 implementation narrow: start with README-first and plan-first reconnaissance, then adjust only the smallest library or documentation seams that clearly improve the chosen flagship demos.
+- Keep the landed 7.4a-7.4d rule set fixed: builders and direct `ADD_LSTM_NODE` / `ADD_GRU_NODE` may emit descriptors, runtime crossover may inherit only still-valid descriptors, generic structural edits synchronize the hydrated extension bag immediately, and disabled referenced genes remain dormant structure until structural removal or ungating removes the referenced identity.
+- Preserve the closed Step 7.3 baseline rule set: connection gain, node response, and disabled-connection re-enable probability remain opt-in extension state, activation mutation remains canonical node-gene state, and canonical compatibility continues to ignore both the extension bag and activation-only deltas unless a later pass deliberately changes that formula.
+- Tracker preference: do not create additional side repair logs for Step 7.6; keep live continuity in plans/neat.plans.md and plans/Roadmap.md unless the user explicitly asks otherwise.
+
+Current risks:
+- Later extension traits can bleed into canonical compatibility, replay, or checkpoint semantics unless they remain opt-in, versioned, and explicitly documented as beyond-paper state.
+- Runtime crossover, repair, and builder shelves can sprawl again if Step 7.3 tries to pull trait semantics through phenotype-only files instead of keeping the genome/export/validate seams primary.
+- A future attempt to treat activation mutation as new extension state would duplicate the existing canonical `nodeGenes[].squash` contract and blur the boundary that Pass 7.3c just re-confirmed.
+- Legacy fallback behavior can blur native proper-NEAT guarantees unless new trait handling keeps strict native mode and deliberate import bridges distinct.
+- Ignore the unrelated lint debt and separate add-node compile-time test issue unless this workstream explicitly reopens those surfaces.
+
+Priorities:
+1. Keep Step 7.2 closed; do not reopen runtime crossover ownership unless a genuinely narrower seam is proven.
+2. Treat closed Steps 7.3, 7.4, and 7.5 as the current baseline and keep Step 7.6 scoped to flagship-demo validation plus documentation-value follow-through instead of reopening controller-policy boundary work without a concrete leak.
+3. Preserve deterministic replay and validator-backed invariants while extension state remains opt-in and versioned.
+4. Run npm run docs only when source-first JSDoc changes affect generated README surfaces.
+
+Validation expectations:
+- npm run build when Step 7.6 source changes land
+- npm run lint when public types or new boundaries change
+- targeted tests for diversity, multiobjective, objectives, selection, adaptive, speciation, telemetry, and compat/export/validate when the stable contract is touched
+- npm run docs if touched JSDoc changes affect generated README surfaces
+
+Worktree caution:
+- Ignore unrelated package-lock.json changes unless the task explicitly requires touching them.
+```

@@ -45,6 +45,21 @@ flowchart LR
   admit --> population
 ```
 
+Required teaching output: generation-zero alignment.
+
+```mermaid
+flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  intent[Seeded or unseeded start]:::base --> template[Build one normalized template genome]:::accent
+  template --> ids[Normalize identity\nnode geneIds and connection innovations]:::base
+  ids --> tracker[Reseed innovation tracker above template maxima]:::base
+  tracker --> clones[Clone template across popsize]:::accent
+  clones --> metadata[Assign controller-owned metadata\n_id, lineage, caches]:::base
+  metadata --> ready[Homologous generation-zero population]:::base
+```
+
 Read this chapter when you want to answer one practical controller question:
 before selection, evaluation, and speciation can trust a genome, how does it
 cross the boundary into the live population in a normalized state?
@@ -103,10 +118,12 @@ createPool(
 Create or reset the initial population pool for a NEAT run.
 
 If a `seedNetwork` is supplied, every genome is a structural and weight clone
-of that seed. This is useful for transfer learning or continuing evolution
-from a known good architecture. When omitted, brand-new minimal networks are
-synthesized using the configured input/output sizes and optional minimum
-hidden layer size.
+of one normalized template derived from that seed. This is useful for
+transfer learning or continuing evolution from a known good architecture.
+When omitted, one fresh minimal template is synthesized using the configured
+input/output sizes and optional minimum hidden layer size, then cloned across
+the whole starting population so node gene ids and connection innovations are
+aligned from the first generation.
 
 This is the controller's bootstrap path, not its general-purpose import path.
 `createPool()` assumes the caller is defining generation zero and therefore
@@ -116,6 +133,9 @@ belongs to {@link addGenome} instead.
 
 Design notes:
 - Population size is derived from `options.popsize` (default 50).
+- The controller innovation tracker is reseeded from the normalized
+  generation-zero template so later structural mutations start above the
+  starter graph's historical markings.
 - Each genome gets a unique sequential `_id` for reproducible lineage.
 - When lineage tracking is enabled (`_lineageEnabled`), parent and depth
   fields are initialized for later analytics.

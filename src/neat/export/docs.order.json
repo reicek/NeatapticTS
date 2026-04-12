@@ -1,0 +1,12 @@
+{
+  "introFile": "neat.export.ts",
+  "fileOrder": [
+    "neat.export.ts",
+    "neat.export.types.ts",
+    "neat.export.utils.ts",
+    "neat.export.population.utils.ts",
+    "neat.export.runtime.utils.ts",
+    "neat.export.speciation.utils.ts",
+    "neat.export.errors.ts"
+  ]
+}

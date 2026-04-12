@@ -75,6 +75,30 @@ describe('neat mutation chapter', () => {
       });
     });
 
+    describe('given minimum-hidden repair must create hidden structure canonically', () => {
+      describe('when the hidden floor is enforced', () => {
+        it('records node-split innovations in the controller tracker', async () => {
+          // Arrange
+          const mutationController = createMutationHarness({
+            inputCount: 2,
+            outputCount: 1,
+            minimumHidden: 1,
+            seed: 620,
+          });
+          const network = new Network(2, 1, { seed: 621 });
+
+          // Act
+          await enforceMinimumHiddenRepair({ mutationController, network });
+
+          // Assert
+          expect(
+            mutationController.toJSON().innovationTracker.nodeSplitRecords.length >
+              0,
+          ).toBe(true);
+        });
+      });
+    });
+
     describe('given an existing hidden node has lost both incident connections', () => {
       describe('when minimum-hidden repair runs', () => {
         it('restores inbound and outbound connectivity for every hidden node', async () => {

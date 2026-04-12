@@ -55,6 +55,12 @@ import {
   type NeatMetaJSON,
   type NeatStateJSON,
 } from './neat/export/neat.export';
+import {
+  createInnovationTracker,
+  prepareInnovationTrackerForGeneration,
+  prepareInnovationTrackerForMutation,
+} from './neat/innovation-tracker/innovation-tracker';
+import type { InnovationTracker } from './neat/innovation-tracker/innovation-tracker.types';
 import { getOrCreateRng, type RngHost } from './neat/rng/rng';
 import { invalidateGenomeCaches } from './neat/cache/cache';
 import { DEFAULT_NEAT_CONSTRUCTOR_DEFAULTS } from './neat/neat.defaults.constants';
@@ -291,6 +297,8 @@ class Neat {
   private _nextGenomeId: number = 1;
   /** Whether lineage metadata should be recorded on genomes. */
   private _lineageEnabled: boolean = false;
+  /** Explicit owner for global innovation ids and generation-local reuse state. */
+  private _innovationTracker: InnovationTracker = createInnovationTracker();
   /** Last observed count of inbreeding (used for detecting excessive cloning). */
   private _lastInbreedingCount: number = 0;
   /** Telemetry buffer storing diagnostic snapshots per generation. */
@@ -543,7 +551,19 @@ class Neat {
    * @returns Promise resolving once mutation has been applied to the current population.
    */
   async mutate(): Promise<void> {
+    prepareInnovationTrackerForMutation(
+      this._innovationTracker,
+      this.generation,
+    );
     return mutate.call(this as unknown as ThisParameterType<typeof mutate>);
+  }
+
+  /** Prepare the innovation tracker for a specific mutation-generation window. */
+  private _prepareInnovationTrackerGeneration(targetGeneration: number): void {
+    prepareInnovationTrackerForGeneration(
+      this._innovationTracker,
+      targetGeneration,
+    );
   }
 
   /**

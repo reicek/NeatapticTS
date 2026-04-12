@@ -66,6 +66,28 @@ promoteGenomeToFeedForwardIntentWhenEligible(genome, shouldPromote);
 
 ## neat/topology-intent/neat.topology-intent.ts
 
+### allowsRecurrentConnectionMutation
+
+```ts
+allowsRecurrentConnectionMutation(
+  genome: TopologyIntentRuntimeGenome,
+  allowRecurrent: boolean | undefined,
+): boolean
+```
+
+Decide whether mutation may add recurrent or self connections to a genome.
+
+Phase 3 needs one explicit policy seam shared by selection and structural
+mutation helpers. Recurrent growth is allowed only when the controller opts
+in through `allowRecurrent` and the genome is not currently under the
+feed-forward topology contract.
+
+Parameters:
+- `genome` - Genome candidate whose topology contract is being inspected.
+- `allowRecurrent` - Whether the controller configuration permits recurrent growth.
+
+Returns: True when mutation may add recurrent or self connections.
+
 ### isGenomeEligibleForFeedForwardIntentPromotion
 
 ```ts
@@ -183,6 +205,14 @@ canonical feed-forward pool without importing the full mutation subsystem.
 Keeping the contract this small also makes the chapter's main teaching point
 easier to see: topology intent recognition is a public-policy comparison, not
 a second mutation-engine implementation.
+
+### TopologyIntentRuntimeGenome
+
+Minimal runtime surface required to decide whether mutation may add recurrence.
+
+This bridge intentionally stays smaller than `TopologyIntentGenome` because
+selection and mutation helpers only need the topology contract itself, not
+the full node/connection shape required for feed-forward promotion checks.
 
 ### usesFeedForwardMutationPolicy
 

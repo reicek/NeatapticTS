@@ -162,6 +162,26 @@ re-stating the repair protocol in ad hoc instructions.
 Keep this file as the invocation layer. The detailed planning sequence,
 validation cadence, and no-premature-test-run rules belong in that skill.
 
+## TDD-first execution policy (critical)
+
+When a task changes behavior, fixes a regression, or deepens a refactor with
+meaningful runtime risk, prefer a TDD sequence instead of implementation-first
+work.
+
+- Start by adding or updating the smallest targeted test that should fail for
+  the intended behavior or bug fix.
+- Make that narrow surface go red first when the task is not purely
+  documentation, search, or mechanical rename work.
+- Then implement the code change until the targeted test or test slice goes
+  green.
+- After the green step, expand coverage for the new code and the directly
+  related boundary toward >95% when practical and safe.
+- Keep the red/green loop narrow. Do not jump to broad suite runs before the
+  active boundary is green.
+- For coverage passes, prefer dedicated owner-local `*.test.ts` files and keep
+  tests aligned with repo conventions such as AAA structure, nested `describe`
+  blocks, and one top-level `expect(...)` per test.
+
 ## ES2023-first policy (strict)
 
 For educational clarity and a modern look, always prefer idiomatic ES2023 syntax when it improves readability or safety without changing behavior. This repo is intentionally opinionated: use the immutable array methods and modern language constructs by default.
@@ -189,6 +209,9 @@ Avoid (legacy/less clear):
 - Always prefer to produce code that already satisfies the style guide.
 - If you cannot fully transform a file (large refactor), return a patch with clear TODO comments, an explicit list of remaining violations, and small, safe automated fixes where possible.
 - If you propose changes that alter public behavior, include tests and TypeScript typechecks.
+- Prefer a TDD execution order for behavioral work: red-phase targeted tests,
+  then implementation, then green validation, then coverage expansion on the
+  new or directly related boundary.
 - Prefer invoking the relevant repo skill when the task matches an established
   workflow instead of duplicating that workflow in ad hoc instructions.
 - Default discovery order for non-trivial tasks: relevant folder `README.md` -> parent folder `README.md` if needed -> `plans/README.md` for roadmap alignment when relevant -> the specific source files and the single most relevant detailed plan.

@@ -1,5 +1,6 @@
 import type Connection from '../../connection';
 import type Node from '../../node';
+import { synchronizeTemporalDescriptorExtensions } from '../network.temporal.extensions.utils';
 import type { NodeRemovalContext } from './network.remove.utils.types';
 
 /**
@@ -11,13 +12,22 @@ import type { NodeRemovalContext } from './network.remove.utils.types';
 export function detachGatesOwnedByNode(
   removalContext: NodeRemovalContext,
 ): void {
+  let removedGateOwnedByNode = false;
+
   removalContext.network.gates = removalContext.network.gates.filter(
-    (candidateConnection) =>
-      keepGateConnectionAfterNodeRemoval(
+    (candidateConnection) => {
+      const shouldKeepGateConnection = keepGateConnectionAfterNodeRemoval(
         candidateConnection,
         removalContext.targetNode,
-      ),
+      );
+      removedGateOwnedByNode ||= !shouldKeepGateConnection;
+      return shouldKeepGateConnection;
+    },
   );
+
+  if (removedGateOwnedByNode) {
+    synchronizeTemporalDescriptorExtensions(removalContext.network);
+  }
 }
 
 /**

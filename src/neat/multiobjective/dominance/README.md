@@ -67,11 +67,11 @@ That asymmetry is the key bookkeeping contract for the later frontier peel:
   the candidate is removed as a blocker.
 
 Parameters:
-- `dominanceState` - - Dominance bookkeeping.
-- `valuesMatrixInput` - - Matrix of objective values.
-- `descriptors` - - Objective descriptors.
-- `candidateIndex` - - Candidate genome index.
-- `opponentIndex` - - Opponent genome index.
+- `dominanceState` - Dominance bookkeeping.
+- `valuesMatrixInput` - Matrix of objective values.
+- `descriptors` - Objective descriptors.
+- `candidateIndex` - Candidate genome index.
+- `opponentIndex` - Opponent genome index.
 
 ### buildDominanceState
 
@@ -109,8 +109,8 @@ Assumptions:
 - Genome ordering in later steps is expected to match the matrix ordering.
 
 Parameters:
-- `valuesMatrixInput` - - Matrix of objective values (row = genome).
-- `descriptors` - - Objective descriptors (direction semantics).
+- `valuesMatrixInput` - Matrix of objective values (row = genome).
+- `descriptors` - Objective descriptors (direction semantics).
 
 Returns: Dominance bookkeeping structures for ranking.
 
@@ -130,7 +130,7 @@ dominance state compact and guarantees later frontier code can look up rows
 and genomes with the same integer keys.
 
 Parameters:
-- `populationSize` - - Number of genomes.
+- `populationSize` - Number of genomes.
 
 Returns: Array of indices `0..populationSize-1`.
 
@@ -154,9 +154,9 @@ on this objective, another decides whether it is strictly better, and the
 outer vector fold turns those flags into a whole-pair outcome.
 
 Parameters:
-- `direction` - - Objective direction.
-- `candidateValue` - - Candidate objective value.
-- `opponentValue` - - Opponent objective value.
+- `direction` - Objective direction.
+- `candidateValue` - Candidate objective value.
+- `opponentValue` - Opponent objective value.
 
 Returns: Comparison flags for this objective.
 
@@ -175,7 +175,7 @@ the ranking pass. Initializing the structure once keeps later comparison
 helpers focused on bookkeeping updates rather than allocation details.
 
 Parameters:
-- `populationSize` - - Number of genomes.
+- `populationSize` - Number of genomes.
 
 Returns: An initialized dominance state with zeroed counts.
 
@@ -210,9 +210,9 @@ For dominance, being worse on one objective makes the candidate unable to
 dominate the opponent.
 
 Parameters:
-- `direction` - - Objective direction.
-- `candidateValue` - - Candidate objective value.
-- `opponentValue` - - Opponent objective value.
+- `direction` - Objective direction.
+- `candidateValue` - Candidate objective value.
+- `opponentValue` - Opponent objective value.
 
 Returns: `true` if the candidate is dominated for this objective.
 
@@ -233,9 +233,9 @@ Strict improvement in at least one objective is required for Pareto
 dominance when the candidate is not worse on a single objective.
 
 Parameters:
-- `direction` - - Objective direction.
-- `candidateValue` - - Candidate objective value.
-- `opponentValue` - - Opponent objective value.
+- `direction` - Objective direction.
+- `candidateValue` - Candidate objective value.
+- `opponentValue` - Opponent objective value.
 
 Returns: `true` if the candidate is strictly better for this objective.
 
@@ -255,8 +255,8 @@ finding a dominating opponent, which is exactly the criterion for first-front
 membership before frontier peeling begins.
 
 Parameters:
-- `dominanceState` - - Dominance bookkeeping.
-- `candidateIndex` - - Candidate genome index.
+- `dominanceState` - Dominance bookkeeping.
+- `candidateIndex` - Candidate genome index.
 
 Returns: `true` if the candidate is currently non-dominated.
 
@@ -283,9 +283,9 @@ multi-objective population are intentionally incomparable rather than simply
 "better" or "worse."
 
 Parameters:
-- `candidateVector` - - Candidate objective values.
-- `opponentVector` - - Opponent objective values.
-- `descriptors` - - Objective descriptors.
+- `candidateVector` - Candidate objective values.
+- `opponentVector` - Opponent objective values.
+- `descriptors` - Objective descriptors.
 
 Returns: Dominance outcome between candidate and opponent.
 
@@ -305,8 +305,8 @@ Keeping that default here ensures every comparison helper downstream reads
 one normalized direction rule instead of repeating fallback logic.
 
 Parameters:
-- `descriptors` - - Objective descriptors.
-- `objectiveIndex` - - Objective index.
+- `descriptors` - Objective descriptors.
+- `objectiveIndex` - Objective index.
 
 Returns: Normalized objective direction.
 
@@ -328,8 +328,8 @@ preserves the invariant that every stored relationship refers to two distinct
 matrix rows.
 
 Parameters:
-- `candidateIndex` - - Candidate genome index.
-- `opponentIndex` - - Opponent genome index.
+- `candidateIndex` - Candidate genome index.
+- `opponentIndex` - Opponent genome index.
 
 Returns: `true` if the pair should be skipped.
 
@@ -356,11 +356,11 @@ discovery to the outer orchestration once all opponent evidence has been
 accumulated.
 
 Parameters:
-- `dominanceState` - - Dominance bookkeeping.
-- `valuesMatrixInput` - - Matrix of objective values.
-- `descriptors` - - Objective descriptors.
-- `candidateIndex` - - Candidate genome index.
-- `candidateIndices` - - Indices to compare against.
+- `dominanceState` - Dominance bookkeeping.
+- `valuesMatrixInput` - Matrix of objective values.
+- `descriptors` - Objective descriptors.
+- `candidateIndex` - Candidate genome index.
+- `candidateIndices` - Indices to compare against.
 
 ### updateStrictImprovement
 
@@ -375,8 +375,8 @@ Accumulates whether the candidate has a strict improvement across
 objectives.
 
 Parameters:
-- `hasStrictImprovement` - - Current strict-improvement flag.
-- `isStrictlyBetter` - - Whether the candidate strictly improves on the
+- `hasStrictImprovement` - Current strict-improvement flag.
+- `isStrictlyBetter` - Whether the candidate strictly improves on the
 current objective.
 
 Returns: Updated strict-improvement flag.
@@ -408,9 +408,9 @@ Assumptions:
 - If a descriptor has no `direction`, it defaults to `'max'`.
 
 Parameters:
-- `valuesA` - - Objective values for candidate A.
-- `valuesB` - - Objective values for candidate B.
-- `descriptors` - - Objective descriptors defining direction semantics.
+- `valuesA` - Objective values for candidate A.
+- `valuesB` - Objective values for candidate B.
+- `descriptors` - Objective descriptors defining direction semantics.
 
 Returns: `true` if A dominates B; otherwise `false`.
 

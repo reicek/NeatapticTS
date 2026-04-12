@@ -194,8 +194,8 @@ start(
 Start the browser-hosted ASCII Maze curriculum demo.
 
 Parameters:
-- `container` - - Element id or host element for the browser demo.
-- `opts` - - Optional cooperative cancellation settings.
+- `container` - Element id or host element for the browser demo.
+- `opts` - Optional cooperative cancellation settings.
 
 Returns: Lifecycle handle for stop, status, completion, and telemetry access.
 
@@ -236,8 +236,8 @@ composeBrowserEntryAbortSignal(
 Compose an internal and external abort signal into one cooperative signal.
 
 Parameters:
-- `internalController` - - Internal controller owned by the browser run handle.
-- `externalSignal` - - Optional caller-provided signal.
+- `internalController` - Internal controller owned by the browser run handle.
+- `externalSignal` - Optional caller-provided signal.
 
 Returns: A signal that aborts when either source aborts.
 
@@ -262,7 +262,7 @@ createBrowserEntryHostServices(
 Create the browser host services used by one ASCII Maze demo run.
 
 Parameters:
-- `hostElements` - - Resolved host elements for live output, archive output, and resize observation.
+- `hostElements` - Resolved host elements for live output, archive output, and resize observation.
 
 Returns: Dashboard, telemetry hub, runtime dashboard adapter, and resize cleanup.
 
@@ -277,7 +277,7 @@ installBrowserEntryGlobals(
 Install browser globals and one-time auto-start compatibility hooks.
 
 Parameters:
-- `start` - - Public browser entry function to expose on the window namespace.
+- `start` - Public browser entry function to expose on the window namespace.
 
 Returns: Nothing.
 
@@ -292,7 +292,7 @@ runBrowserEntryCurriculum(
 Run the progressive browser curriculum across increasingly larger mazes.
 
 Parameters:
-- `context` - - Runtime dashboard, cancellation, and completion callbacks for one browser session.
+- `context` - Runtime dashboard, cancellation, and completion callbacks for one browser session.
 
 Returns: Nothing.
 
@@ -328,7 +328,7 @@ createBrowserEntryHostServices(
 Create the browser host services used by one ASCII Maze demo run.
 
 Parameters:
-- `hostElements` - - Resolved host elements for live output, archive output, and resize observation.
+- `hostElements` - Resolved host elements for live output, archive output, and resize observation.
 
 Returns: Dashboard, telemetry hub, runtime dashboard adapter, and resize cleanup.
 
@@ -354,8 +354,8 @@ installResizeRedraw(
 Attach dashboard redraw behavior to host resizes and return a cleanup function.
 
 Parameters:
-- `observeTarget` - - Element whose width should trigger redraw checks.
-- `runtimeDashboard` - - Shared dashboard presentation adapter with redraw support.
+- `observeTarget` - Element whose width should trigger redraw checks.
+- `runtimeDashboard` - Shared dashboard presentation adapter with redraw support.
 
 Returns: Cleanup function that removes active observers or listeners.
 
@@ -370,7 +370,7 @@ safelyRedrawDashboard(
 Safely request a dashboard redraw without letting host issues break the run.
 
 Parameters:
-- `runtimeDashboard` - - Shared dashboard presentation adapter with optional redraw support.
+- `runtimeDashboard` - Shared dashboard presentation adapter with optional redraw support.
 
 ## browser-entry/browser-entry.abort.services.ts
 
@@ -391,8 +391,8 @@ composeBrowserEntryAbortSignal(
 Compose an internal and external abort signal into one cooperative signal.
 
 Parameters:
-- `internalController` - - Internal controller owned by the browser run handle.
-- `externalSignal` - - Optional caller-provided signal.
+- `internalController` - Internal controller owned by the browser run handle.
+- `externalSignal` - Optional caller-provided signal.
 
 Returns: A signal that aborts when either source aborts.
 
@@ -424,7 +424,7 @@ installBrowserEntryGlobals(
 Install browser globals and one-time auto-start compatibility hooks.
 
 Parameters:
-- `start` - - Public browser entry function to expose on the window namespace.
+- `start` - Public browser entry function to expose on the window namespace.
 
 Returns: Nothing.
 
@@ -448,7 +448,7 @@ runBrowserEntryCurriculum(
 Run the progressive browser curriculum across increasingly larger mazes.
 
 Parameters:
-- `context` - - Runtime dashboard, cancellation, and completion callbacks for one browser session.
+- `context` - Runtime dashboard, cancellation, and completion callbacks for one browser session.
 
 Returns: Nothing.
 
@@ -465,7 +465,7 @@ createBrowserEvolutionSettings(
 Build immutable evolution settings for a single maze dimension.
 
 Parameters:
-- `dimension` - - Side length in cells for the procedural square maze.
+- `dimension` - Side length in cells for the procedural square maze.
 
 Returns: Per-phase evolution settings consumed by the curriculum runtime.
 
@@ -480,7 +480,7 @@ didSolveBrowserMaze(
 Determine whether a reported progress value counts as solved for curriculum advancement.
 
 Parameters:
-- `progress` - - Runtime progress emitted by the evolution layer.
+- `progress` - Runtime progress emitted by the evolution layer.
 
 Returns: Whether the maze phase should advance to the next dimension.
 
@@ -495,7 +495,7 @@ getNextBrowserMazeDimension(
 Advance the procedural maze dimension without exceeding the configured maximum.
 
 Parameters:
-- `currentDimension` - - Current maze side length.
+- `currentDimension` - Current maze side length.
 
 Returns: Next side length to use.
 
@@ -510,7 +510,7 @@ resolveBrowserEntryHostElements(
 Resolve the browser host elements used by the demo logger and dashboard.
 
 Parameters:
-- `container` - - Element id or host element provided by the caller.
+- `container` - Element id or host element provided by the caller.
 
 Returns: Resolved host, archive, live, and resize-observer targets.
 
@@ -525,4 +525,4 @@ scheduleBrowserEntryFrame(
 Schedule follow-up curriculum work on the next animation tick when possible.
 
 Parameters:
-- `callback` - - Follow-up phase callback.
+- `callback` - Follow-up phase callback.

@@ -1,0 +1,7 @@
+{
+  "introFile": "innovation-tracker.ts",
+  "fileOrder": [
+    "innovation-tracker.ts",
+    "innovation-tracker.types.ts"
+  ]
+}

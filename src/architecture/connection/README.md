@@ -225,6 +225,24 @@ Second raw moment estimate used by Adam-family optimizers.
 
 Secondary momentum buffer used by Lion-style updates.
 
+#### syncInnovationCounter
+
+```ts
+syncInnovationCounter(
+  maxObservedInnovation: number,
+): void
+```
+
+Advances the innovation cursor past a restored maximum.
+
+This keeps import and clone paths monotonic: once a payload brings in a high
+innovation id, newly created edges continue from above that value.
+
+Parameters:
+- `maxObservedInnovation` - Highest restored innovation id currently in memory.
+
+Returns: Nothing.
+
 #### to
 
 The target (post-synaptic) node receiving activation.

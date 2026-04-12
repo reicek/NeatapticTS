@@ -84,7 +84,7 @@ Together, `getFittest()` and `getAverage()` are the facade's public promise:
 one read for the leader and one read for the generation as a whole.
 
 Parameters:
-- `host` - - `Neat` instance exposing population and evaluation state.
+- `host` - `Neat` instance exposing population and evaluation state.
 
 Returns: Mean score across the current population.
 
@@ -119,7 +119,7 @@ answers "who is winning right now?" without exposing lower-level parent
 strategy mechanics that belong to root selection and `core/`.
 
 Parameters:
-- `host` - - `Neat` instance exposing population and evaluation state.
+- `host` - `Neat` instance exposing population and evaluation state.
 
 Returns: Champion network with the highest current score.
 
@@ -168,7 +168,7 @@ This is the facade's one explicit reordering primitive. Everything else in
 the chapter is read-only population inspection.
 
 Parameters:
-- `host` - - `Neat` instance exposing population sorting state.
+- `host` - `Neat` instance exposing population sorting state.
 
 Returns: Nothing. The population array is reordered in place.
 

@@ -27,7 +27,7 @@ clampRecommendedNetworkHeightPx(
 Clamps a recommended network height into the configured panel range.
 
 Parameters:
-- `recommendedHeightPx` - - Recommended panel height.
+- `recommendedHeightPx` - Recommended panel height.
 
 Returns: Clamped panel height.
 
@@ -42,7 +42,7 @@ createPositionByNodeIndex(
 Builds a node-index lookup map for resolved positioned nodes.
 
 Parameters:
-- `centeredPositionedNodes` - - Positioned nodes after centering.
+- `centeredPositionedNodes` - Positioned nodes after centering.
 
 Returns: Map keyed by node index.
 
@@ -64,11 +64,11 @@ Conceptually, this is the main fold from network object to finished panel:
 resolve scene state, compute layout, paint the graph, then paint overlays.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
-- `hoverState` - - Optional host-owned hover state for interactive emphasis.
+- `context` - Canvas 2D drawing context.
+- `network` - Network to visualize.
+- `inputSize` - Input-layer size.
+- `outputSize` - Output-layer size.
+- `hoverState` - Optional host-owned hover state for interactive emphasis.
 
 Returns: Positioned node snapshot reused by host-side hover hit testing.
 
@@ -91,10 +91,9 @@ drawPositionedNetworkGraph(
 Draws the positioned graph layers and optional guide overlays.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `networkVisualizationScene` - - Frame scene context.
-- `positionedNetworkGraphScene` - - Positioned graph scene.
-- `hoverState` - - Optional host-owned hover state for interactive emphasis.
+- `context` - Canvas 2D drawing context.
+- `resolvedNetworkVisualizationFrame` - Resolved network visualization frame containing positioned scene, connections, and color scales.
+- `hoverState` - Optional host-owned hover state for interactive emphasis.
 
 Returns: Nothing.
 
@@ -114,9 +113,9 @@ The host uses this path for hover-only repaint work because it can reuse the
 cached static frame and only vary interactive emphasis.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `resolvedNetworkVisualizationFrame` - - Reusable frame cache.
-- `hoverState` - - Optional host-owned hover state for interactive emphasis.
+- `context` - Canvas 2D drawing context.
+- `resolvedNetworkVisualizationFrame` - Reusable frame cache.
+- `hoverState` - Optional host-owned hover state for interactive emphasis.
 
 Returns: Positioned node snapshot reused by host-side hover hit testing.
 
@@ -135,11 +134,11 @@ formatArchitectureLabel(
 Formats the two-line architecture label used by the header and legend.
 
 Parameters:
-- `architectureInputSize` - - Input layer size.
-- `hiddenLayersLabel` - - Hidden-layer description.
-- `architectureOutputSize` - - Output layer size.
-- `totalNodeCount` - - Total node count.
-- `totalConnectionCount` - - Total connection count.
+- `architectureInputSize` - Input layer size.
+- `hiddenLayersLabel` - Hidden-layer description.
+- `architectureOutputSize` - Output layer size.
+- `totalNodeCount` - Total node count.
+- `totalConnectionCount` - Total connection count.
 
 Returns: Formatted architecture label.
 
@@ -163,8 +162,8 @@ paintNetworkVisualizationCanvasBase(
 Paints the static background fill for the network visualization canvas.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `networkVisualizationScene` - - Frame scene context.
+- `context` - Canvas 2D drawing context.
+- `networkVisualizationScene` - Frame scene context.
 
 Returns: Nothing.
 
@@ -183,11 +182,11 @@ resolveAdjustedGraphPaddingContext(
 Adjusts graph-side padding to keep the floating legend from overlapping nodes.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `network` - - Network to visualize.
-- `canvasWidthPx` - - Canvas width.
-- `hideNetworkOverlays` - - Whether overlays are hidden.
-- `graphPaddingContext` - - Base graph padding context.
+- `context` - Canvas 2D drawing context.
+- `network` - Network to visualize.
+- `canvasWidthPx` - Canvas width.
+- `hideNetworkOverlays` - Whether overlays are hidden.
+- `graphPaddingContext` - Base graph padding context.
 
 Returns: Adjusted graph padding context.
 
@@ -213,8 +212,8 @@ resolveHiddenLayersLabel(
 Resolves the hidden-layer portion of the compact architecture label.
 
 Parameters:
-- `hiddenLayerSizes` - - Hidden-layer sizes.
-- `architectureSource` - - Architecture source metadata.
+- `hiddenLayerSizes` - Hidden-layer sizes.
+- `architectureSource` - Architecture source metadata.
 
 Returns: Hidden-layer label.
 
@@ -234,9 +233,9 @@ The label compresses the active network into a short human-readable summary:
 input size, hidden-layer structure, output size, and graph size metadata.
 
 Parameters:
-- `network` - - Network to describe.
-- `inputSize` - - Configured input size.
-- `outputSize` - - Configured output size.
+- `network` - Network to describe.
+- `inputSize` - Configured input size.
+- `outputSize` - Configured output size.
 
 Returns: Readable architecture label.
 
@@ -251,7 +250,7 @@ resolveNetworkDrawableArea(
 Resolves the drawable graph area after scene padding is applied.
 
 Parameters:
-- `networkVisualizationScene` - - Frame scene context.
+- `networkVisualizationScene` - Frame scene context.
 
 Returns: Drawable area dimensions.
 
@@ -268,9 +267,9 @@ resolveNetworkNodeDimensionsFromTopologySummary(
 Resolves node rectangle dimensions from topology density and drawable bounds.
 
 Parameters:
-- `networkTopologySummary` - - Topology summary.
-- `drawableWidthPx` - - Drawable graph width.
-- `drawableHeightPx` - - Drawable graph height.
+- `networkTopologySummary` - Topology summary.
+- `drawableWidthPx` - Drawable graph width.
+- `drawableHeightPx` - Drawable graph height.
 
 Returns: Node dimensions.
 
@@ -287,9 +286,9 @@ resolveNetworkTopologySummary(
 Resolves a reusable topology summary for layout and sizing helpers.
 
 Parameters:
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
+- `network` - Network to visualize.
+- `inputSize` - Input-layer size.
+- `outputSize` - Output-layer size.
 
 Returns: Topology summary.
 
@@ -310,10 +309,10 @@ This fold captures the expensive static work for the panel in one object so
 hover-only redraws can repaint from cached layout and legend data.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
+- `context` - Canvas 2D drawing context.
+- `network` - Network to visualize.
+- `inputSize` - Input-layer size.
+- `outputSize` - Output-layer size.
 
 Returns: Reusable resolved frame for subsequent draw passes.
 
@@ -333,9 +332,9 @@ Dense or deeper networks need more vertical room to stay readable, so panel
 height is driven by topology rather than fixed to a single constant.
 
 Parameters:
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
+- `network` - Network to visualize.
+- `inputSize` - Input-layer size.
+- `outputSize` - Output-layer size.
 
 Returns: Recommended height in pixels.
 
@@ -362,10 +361,10 @@ This separates frame-scene concerns such as canvas size, overlays, and color
 scales from the later graph-topology layout step.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
+- `context` - Canvas 2D drawing context.
+- `network` - Network to visualize.
+- `inputSize` - Input-layer size.
+- `outputSize` - Output-layer size.
 
 Returns: Scene context for the current frame.
 
@@ -383,10 +382,10 @@ resolvePositionedNetworkGraphScene(
 Resolves positioned nodes, connection lookup state, and shared node dimensions.
 
 Parameters:
-- `networkVisualizationScene` - - Frame scene context.
-- `network` - - Network to visualize.
-- `inputSize` - - Input-layer size.
-- `outputSize` - - Output-layer size.
+- `networkVisualizationScene` - Frame scene context.
+- `network` - Network to visualize.
+- `inputSize` - Input-layer size.
+- `outputSize` - Output-layer size.
 
 Returns: Positioned graph scene.
 
@@ -402,8 +401,8 @@ resolveRecommendedNetworkHeightPx(
 Resolves the recommended panel height from topology and density adjustments.
 
 Parameters:
-- `networkTopologySummary` - - Topology summary.
-- `topologyDrivenHeightPx` - - Minimum readable topology height.
+- `networkTopologySummary` - Topology summary.
+- `topologyDrivenHeightPx` - Minimum readable topology height.
 
 Returns: Recommended panel height.
 
@@ -418,7 +417,7 @@ resolveRuntimeConnections(
 Resolves the runtime connection array from the active network.
 
 Parameters:
-- `network` - - Network to visualize.
+- `network` - Network to visualize.
 
 Returns: Runtime connection list.
 
@@ -433,7 +432,7 @@ resolveTopologyDrivenHeightPx(
 Resolves the topology-driven minimum readable height.
 
 Parameters:
-- `networkTopologySummary` - - Topology summary.
+- `networkTopologySummary` - Topology summary.
 
 Returns: Minimum readable height in pixels.
 
@@ -449,8 +448,8 @@ shouldHideNetworkOverlays(
 Determines whether responsive rules hide auxiliary network overlays.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `fallbackViewportWidthPx` - - Fallback viewport width.
+- `context` - Canvas 2D drawing context.
+- `fallbackViewportWidthPx` - Fallback viewport width.
 
 Returns: True when overlays should be hidden.
 
@@ -505,13 +504,13 @@ Positioning establishes relative structure first; centering then shifts the
 whole graph as a block so it sits comfortably within the padded draw region.
 
 Parameters:
-- `positionedNodes` - - Positioned nodes before centering.
-- `leftPaddingPx` - - Left graph padding.
-- `topPaddingPx` - - Top graph padding.
-- `drawableWidthPx` - - Drawable graph width.
-- `drawableHeightPx` - - Drawable graph height.
-- `nodeLayoutPaddingPx` - - Inner graph padding.
-- `nodeDimensions` - - Node dimensions.
+- `positionedNodes` - Positioned nodes before centering.
+- `leftPaddingPx` - Left graph padding.
+- `topPaddingPx` - Top graph padding.
+- `drawableWidthPx` - Drawable graph width.
+- `drawableHeightPx` - Drawable graph height.
+- `nodeLayoutPaddingPx` - Inner graph padding.
+- `nodeDimensions` - Node dimensions.
 
 Returns: Center-aligned positioned nodes.
 
@@ -535,13 +534,13 @@ The layout keeps layer ordering stable while adapting inter-node spacing to
 the amount of available vertical space.
 
 Parameters:
-- `networkLayers` - - Resolved network layers.
-- `leftPaddingPx` - - Left graph padding.
-- `topPaddingPx` - - Top graph padding.
-- `drawableWidthPx` - - Drawable graph width.
-- `drawableHeightPx` - - Drawable graph height.
-- `nodeLayoutPaddingPx` - - Inner graph padding.
-- `nodeDimensions` - - Node dimensions.
+- `networkLayers` - Resolved network layers.
+- `leftPaddingPx` - Left graph padding.
+- `topPaddingPx` - Top graph padding.
+- `drawableWidthPx` - Drawable graph width.
+- `drawableHeightPx` - Drawable graph height.
+- `nodeLayoutPaddingPx` - Inner graph padding.
+- `nodeDimensions` - Node dimensions.
 
 Returns: Positioned nodes.
 
@@ -575,9 +574,9 @@ to a topology-derived depth estimate so even loosely structured networks can
 still be drawn in an intelligible left-to-right order.
 
 Parameters:
-- `network` - - Runtime network instance.
-- `inputSize` - - Input count fallback.
-- `outputSize` - - Output count fallback.
+- `network` - Runtime network instance.
+- `inputSize` - Input count fallback.
+- `outputSize` - Output count fallback.
 
 Returns: Layered nodes for rendering.
 
@@ -601,8 +600,8 @@ drawInputGroupLabelBands(
 Draws vertical neon bands that label semantic groups in the input layer.
 
 Parameters:
-- `context` - - Canvas 2D rendering context.
-- `inputGroupLabelBandScenes` - - Positioned label-band scenes.
+- `context` - Canvas 2D rendering context.
+- `inputGroupLabelBandScenes` - Positioned label-band scenes.
 
 Returns: Nothing.
 
@@ -639,8 +638,8 @@ Resolving the bands up front lets drawing and hover hit testing reuse the
 same geometry instead of maintaining duplicate layout logic.
 
 Parameters:
-- `positionedNodes` - - Positioned nodes in graph coordinates.
-- `nodeDimensions` - - Resolved node dimensions.
+- `positionedNodes` - Positioned nodes in graph coordinates.
+- `nodeDimensions` - Resolved node dimensions.
 
 Returns: Positioned label-band scenes.
 
@@ -667,6 +666,6 @@ annotate groups such as stacked frames and action channels directly beside the
 input layer.
 
 Parameters:
-- `inputNodeCount` - - Input-layer node count.
+- `inputNodeCount` - Input-layer node count.
 
 Returns: Group label ranges with band colors.

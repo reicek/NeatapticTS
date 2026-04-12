@@ -32,9 +32,9 @@ the call site instead of scattering champion-specific retention numbers
 through the playback renderer.
 
 Parameters:
-- `trailPoints` - - Mutable champion trail collection.
-- `frameIndex` - - Source frame index.
-- `yPosition` - - Bird y position.
+- `trailPoints` - Mutable champion trail collection.
+- `frameIndex` - Source frame index.
+- `yPosition` - Bird y position.
 
 Returns: Nothing.
 
@@ -57,10 +57,10 @@ old turns from dominating the current frame, and avoids per-frame growth in a
 long-running browser session.
 
 Parameters:
-- `trailPoints` - - Mutable trail collection.
-- `frameIndex` - - Source frame index.
-- `yPosition` - - Bird y position.
-- `maxRetainedPoints` - - Optional maximum retained trail history length.
+- `trailPoints` - Mutable trail collection.
+- `frameIndex` - Source frame index.
+- `yPosition` - Bird y position.
+- `maxRetainedPoints` - Optional maximum retained trail history length.
 
 Returns: Nothing.
 
@@ -101,7 +101,7 @@ utility local to the module makes the intent obvious: every opacity channel
 must remain safe for direct canvas alpha use.
 
 Parameters:
-- `value` - - Candidate value.
+- `value` - Candidate value.
 
 Returns: Clamped value.
 
@@ -125,9 +125,9 @@ Returns 0 exactly on or beyond an edge and rises to 1 once distance exceeds
 the configured fade band.
 
 Parameters:
-- `pointXPx` - - Point x position.
-- `pointYPx` - - Point y position.
-- `edgeBounds` - - Visible world bounds used for edge distance checks.
+- `pointXPx` - Point x position.
+- `pointYPx` - Point y position.
+- `edgeBounds` - Visible world bounds used for edge distance checks.
 
 Returns: Opacity multiplier in [0, 1].
 
@@ -157,7 +157,7 @@ away smoothly so the viewer's eye stays anchored to the current flock motion.
 Oldest retained history approaches 0 opacity; newest approaches 1.
 
 Parameters:
-- `frameOffset` - - Frames between this point and newest trail point.
-- `maxTrailFrameOffset` - - Oldest age offset currently retained by trail.
+- `frameOffset` - Frames between this point and newest trail point.
+- `maxTrailFrameOffset` - Oldest age offset currently retained by trail.
 
 Returns: Opacity multiplier in [0, 1].

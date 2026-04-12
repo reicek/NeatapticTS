@@ -8,6 +8,18 @@ import type {
 type TopologyContractNetworkProps = TopologyNetworkProps & NetworkRuntimeProps;
 
 /**
+ * Minimal runtime surface needed to read the active feed-forward contract.
+ *
+ * Some callers have a full `Network` instance with `getTopologyIntent()`, while
+ * others only hold a narrow runtime genome shape with the low-level acyclic flag.
+ * This contract keeps both shapes usable from one small helper.
+ */
+export interface FeedForwardTopologyContractCarrier {
+  /** Optional topology-intent accessor used by full Network instances. */
+  getTopologyIntent?: () => NetworkTopologyIntent;
+}
+
+/**
  * Read the public topology intent preserved on a network instance.
  *
  * This accessor keeps the semantic contract visible to callers even though the
@@ -22,6 +34,30 @@ export function getTopologyIntent(this: Network): NetworkTopologyIntent {
     (this as unknown as TopologyContractNetworkProps)._topologyIntent ??
     'unconstrained'
   );
+}
+
+/**
+ * Check whether a runtime shape currently carries the feed-forward contract.
+ *
+ * The helper is intentionally conservative when callers are in a mismatched
+ * transitional state: either an explicit `feed-forward` intent or a truthy
+ * `_enforceAcyclic` flag is treated as a feed-forward contract. That keeps
+ * mutation and crossover helpers from introducing recurrent structure into a
+ * genome that still advertises acyclic semantics anywhere on its runtime seam.
+ *
+ * @param carrier Narrow runtime shape or full network instance.
+ * @returns True when feed-forward semantics are currently enforced.
+ */
+export function hasFeedForwardTopologyContract(
+  carrier: FeedForwardTopologyContractCarrier,
+): boolean {
+  const runtimeCarrier = carrier as Record<string, unknown>;
+  const topologyIntent =
+    typeof carrier.getTopologyIntent === 'function'
+      ? carrier.getTopologyIntent()
+      : (runtimeCarrier._topologyIntent as NetworkTopologyIntent | undefined);
+
+  return topologyIntent === 'feed-forward' || runtimeCarrier._enforceAcyclic === true;
 }
 
 /**

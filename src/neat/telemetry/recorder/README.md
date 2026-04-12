@@ -58,7 +58,7 @@ retained on the produced entry. Core fields (generation, best score and
 species count) are always preserved.
 
 Parameters:
-- `entry` - - Raw telemetry object to be filtered in-place.
+- `entry` - Raw telemetry object to be filtered in-place.
 
 Returns: The filtered telemetry object (same reference as input).
 
@@ -90,7 +90,7 @@ This function intentionally mirrors the legacy in-loop telemetry construction
 to preserve behavior relied upon by tests and consumers.
 
 Parameters:
-- `fittest` - - The currently fittest genome (used to report `best` score).
+- `fittest` - The currently fittest genome (used to report `best` score).
 
 Returns: A TelemetryEntry object suitable for recording/streaming.
 
@@ -176,7 +176,7 @@ Write order:
 4. trim history to a bounded window
 
 Parameters:
-- `entry` - - Telemetry entry to record.
+- `entry` - Telemetry entry to record.
 
 Returns: Nothing. The entry is persisted by side effect on the host.
 
@@ -203,7 +203,7 @@ The result is cached on the graph object for the current generation in
 `_entropyVal` to avoid repeated expensive recomputation.
 
 Parameters:
-- `graph` - - A genome-like object with `nodes` and `connections` arrays.
+- `graph` - A genome-like object with `nodes` and `connections` arrays.
 
 Returns: A non-negative number approximating structural entropy.
 

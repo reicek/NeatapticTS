@@ -1,4 +1,8 @@
 import type { NeatLike } from '../shared/neat.shared.types';
+import {
+  getNodeSplitRecord,
+  prepareInnovationTrackerForMutation,
+} from '../innovation-tracker/innovation-tracker';
 import type {
   GenomeWithMetadata,
   MutationMethod,
@@ -10,6 +14,7 @@ import * as mutationFlow from './flow/mutation.flow';
 import * as mutationDeadEnds from './repair/mutation.dead-ends';
 import * as mutationMinHidden from './repair/mutation.min-hidden';
 import * as mutationSelect from './select/mutation.select';
+import { allowsRecurrentConnectionMutation } from '../topology-intent/neat.topology-intent';
 
 /**
  * Default connection weight used when mutation must create a structural edge from scratch.
@@ -138,20 +143,24 @@ export async function mutate(this: NeatLike): Promise<void> {
  * Split a randomly chosen enabled connection and insert a hidden node.
  *
  * This routine attempts to reuse a historical "node split" innovation record
- * so that identical splits across different genomes share the same
- * innovation ids. This preservation of innovation information is important
- * for NEAT-style speciation and genome alignment.
+ * so that genomes splitting the same historically marked connection during one
+ * mutation window share the same inserted node id and replacement connection
+ * innovations. This preservation of innovation information is important for
+ * NEAT-style speciation and genome alignment.
  *
  * Use this helper when the controller wants a structural growth mutation that
  * stays compatible with prior history. The important state change is not only
  * the new hidden node inside one genome, but also the possible update to the
- * controller's split-innovation table when this exact split has never been seen
- * before.
+ * controller's split-innovation table when this exact split event has never
+ * been seen before.
  *
  * Method steps (high-level):
  * - If the genome has no connections, connect an input to an output to
  *   bootstrap connectivity.
  * - Filter enabled connections and choose one at random.
+ * - Build a split descriptor from the split connection's historical
+ *   innovation when available, falling back to legacy endpoint identity only
+ *   when the connection lacks innovation metadata.
  * - Disconnect the chosen connection and either reuse an existing split
  *   innovation record or create a new hidden node + two connecting
  *   connections (in->new, new->out) assigning new innovation ids.
@@ -190,7 +199,8 @@ export async function mutateAddNodeReuse(
   mutationAddNode.disconnectOriginalConnection(genome, chosenConnection);
 
   // Step 4: resolve split record and create split node.
-  const splitRecord = internal._nodeSplitInnovations.get(
+  const splitRecord = getNodeSplitRecord(
+    internal._innovationTracker,
     splitDescriptor.splitKey,
   );
   const { default: NodeClass } = await import('../../architecture/node');
@@ -202,6 +212,7 @@ export async function mutateAddNodeReuse(
       splitDescriptor,
       splitRecord,
       NodeClass,
+      internal._getRNG(),
     );
     return;
   }
@@ -217,15 +228,20 @@ export async function mutateAddNodeReuse(
 
 /**
  * Add a connection between two previously unconnected nodes, reusing a
- * stable innovation id per unordered node pair when possible.
+ * stable innovation id per exact directed edge when possible.
  *
  * Notes on behavior:
  * - The search space consists of node pairs (from, to) where `from` is not
- *   already projecting to `to` and respects the input/output ordering used by
- *   the genome representation.
- * - When a historical innovation exists for the unordered pair, the
- *   previously assigned innovation id is reused to keep different genomes
- *   compatible for downstream crossover and speciation.
+ *   already projecting to `to`.
+ * - When recurrent growth is enabled, the candidate pool expands beyond
+ *   forward-only pairs so the generic add-connection path follows the same
+ *   topology contract as crossover and operator selection.
+ * - When a historical innovation exists for the exact directed pair and that
+ *   edge is currently absent, the previously assigned innovation id is reused
+ *   so different genomes can recreate the same structural event.
+ * - When the exact directed edge already exists in a disabled state,
+ *   add-connection does not duplicate it. Revival stays an explicit re-enable
+ *   concern elsewhere in the evolutionary flow.
  *
  * Steps:
  * - Build a list of all legal (from,to) pairs that don't currently have a
@@ -239,9 +255,9 @@ export async function mutateAddNodeReuse(
  *
  * This is the connection-growth companion to `mutateAddNodeReuse()`. Its main
  * controller value is innovation consistency: if two genomes discover the same
- * structural pair across time, the mutation system tries to keep that edit
- * comparable for later crossover and speciation rather than treating it as a
- * completely unrelated event.
+ * directed structural edit across time, the mutation system tries to keep that
+ * edit comparable for later crossover and speciation rather than treating it
+ * as a completely unrelated event.
  *
  * @this NeatLike Neat controller context that holds innovation tables.
  * @param genome Genome to modify in place.
@@ -252,9 +268,16 @@ export function mutateAddConnReuse(
   genome: GenomeWithMetadata,
 ): void {
   const internal = this as unknown as NeatControllerForMutation;
+  const allowRecurrentConnections = allowsRecurrentConnectionMutation(
+    genome,
+    internal.options.allowRecurrent,
+  );
 
   // Step 1: build candidate node pairs.
-  const candidatePairs = mutationAddConn.collectCandidatePairsForConn(genome);
+  const candidatePairs = mutationAddConn.collectCandidatePairsForConn(
+    genome,
+    allowRecurrentConnections,
+  );
   if (!candidatePairs.length) return;
 
   // Step 2: choose the candidate pool based on reuse and hidden-pair rules.
@@ -271,17 +294,12 @@ export function mutateAddConnReuse(
   const chosenPair = mutationAddConn.choosePairForConn(selectionPool, internal);
   if (!chosenPair) return;
 
-  // Step 4: evaluate acyclic constraints if configured.
-  const pairNodes = mutationAddConn.resolvePairNodes(chosenPair);
-  if (mutationAddConn.shouldAbortForCycle(genome, pairNodes)) return;
-
-  // Step 5: create the connection and assign an innovation id.
-  const connection = mutationAddConn.connectChosenPair(genome, pairNodes);
-  if (!connection) return;
-  mutationAddConn.assignInnovationForConnection(
-    connection,
-    pairNodes,
+  // Step 4: create the connection through the shared exact-pair service.
+  mutationAddConn.connectChosenPairWithInnovationReuse(
+    genome,
+    chosenPair,
     internal,
+    allowRecurrentConnections,
   );
 }
 
@@ -293,9 +311,12 @@ export function mutateAddConnReuse(
  * exploration than about preserving a usable topology budget so later mutation,
  * evaluation, and selection steps do not inherit a trivially underbuilt graph.
  *
- * The helper may add hidden nodes, wire missing edges, and rebuild cached
- * connection structures, so callers should treat it as a topology-maintenance
- * pass rather than a tiny invariant check.
+ * The helper may add hidden nodes, wire missing edges, normalize feed-forward
+ * node ordering, and rebuild cached connection structures, so callers should
+ * treat it as a topology-maintenance pass rather than a tiny invariant check.
+ * Those structural edits now stay on the canonical add-node/add-connection
+ * identity paths so repair work cannot drift from the innovation tracker or
+ * the explicit topology-policy bridge.
  *
  * @param network Genome whose hidden-node budget and connectivity should be repaired.
  * @param multiplierOverride Optional override for the configured hidden-node multiplier.
@@ -307,8 +328,22 @@ export async function ensureMinHiddenNodes(
   multiplierOverride?: number,
 ): Promise<void> {
   const internal = this as unknown as NeatControllerForMutation;
+  const controllerGeneration = (this as NeatLike & { generation: number })
+    .generation;
 
-  // Step 1: resolve node groups and size constraints.
+  // Step 1: prepare the innovation tracker for repair-generated structure.
+  prepareInnovationTrackerForMutation(
+    internal._innovationTracker,
+    controllerGeneration,
+  );
+
+  // Step 2: normalize feed-forward node ordering before repair decisions.
+  normalizeRepairNodeOrderForFeedForward(
+    network,
+    internal.options.allowRecurrent,
+  );
+
+  // Step 3: resolve node groups and size constraints.
   const nodeGroups = mutationMinHidden.collectNodeGroupsForMinHidden(network);
   const maxNodes = mutationMinHidden.resolveMaxNodesForMinHidden(internal);
   const minHidden = mutationMinHidden.resolveMinHiddenForMinHidden(
@@ -318,28 +353,29 @@ export async function ensureMinHiddenNodes(
     internal,
   );
 
-  // Step 2: validate network inputs/outputs.
+  // Step 4: validate network inputs/outputs.
   if (!mutationMinHidden.hasRequiredEndpointsForMinHidden(nodeGroups)) {
     mutationMinHidden.warnMissingEndpointsForMinHidden();
     return;
   }
 
-  // Step 3: ensure the minimum number of hidden nodes exist.
+  // Step 5: ensure the minimum number of hidden nodes exist.
   await mutationMinHidden.ensureHiddenNodeCountForMinHidden(
     network,
     nodeGroups,
     minHidden,
     maxNodes,
+    internal,
   );
 
-  // Step 4: ensure hidden nodes have at least one incoming and outgoing edge.
+  // Step 6: ensure hidden nodes have at least one incoming and outgoing edge.
   mutationMinHidden.ensureHiddenConnectivityForMinHidden(
     network,
     nodeGroups,
     internal,
   );
 
-  // Step 5: rebuild cached connection structures.
+  // Step 7: rebuild cached connection structures.
   await mutationMinHidden.rebuildNetworkConnectionsForMinHidden(network);
   return;
 }
@@ -351,7 +387,10 @@ export async function ensureMinHiddenNodes(
  * growth or pruning-like simplification. This repair pass reconnects stranded
  * input, output, or hidden nodes so the genome remains a sensible candidate for
  * later evaluation and does not carry obviously broken topology into the next
- * controller stage.
+ * controller stage. Repair connections now reuse the canonical add-connection
+ * identity path, and feed-forward runs normalize hidden/output ordering before
+ * reconnecting edges so maintenance work still respects the innovation tracker
+ * and the explicit topology-policy bridge.
  *
  * @param network Genome whose endpoint and hidden-node connectivity should be repaired.
  * @returns Nothing. The network may gain repair connections in place.
@@ -361,31 +400,94 @@ export function ensureNoDeadEnds(
   network: GenomeWithMetadata,
 ): void {
   const internal = this as unknown as NeatControllerForMutation;
+  const controllerGeneration = (this as NeatLike & { generation: number })
+    .generation;
 
-  // Step 1: gather node groups for connectivity repair.
+  // Step 1: prepare the innovation tracker for repair-generated structure.
+  prepareInnovationTrackerForMutation(
+    internal._innovationTracker,
+    controllerGeneration,
+  );
+
+  // Step 2: normalize feed-forward node ordering before repair decisions.
+  normalizeRepairNodeOrderForFeedForward(
+    network,
+    internal.options.allowRecurrent,
+  );
+
+  // Step 3: gather node groups for connectivity repair.
   const nodeGroups = mutationDeadEnds.collectNodeGroupsForDeadEnds(network);
 
-  // Step 2: repair input nodes that lack outgoing connections.
+  // Step 4: repair input nodes that lack outgoing connections.
   mutationDeadEnds.ensureInputConnectivityForDeadEnds(
     network,
     nodeGroups,
     internal,
   );
 
-  // Step 3: repair output nodes that lack incoming connections.
+  // Step 5: repair output nodes that lack incoming connections.
   mutationDeadEnds.ensureOutputConnectivityForDeadEnds(
     network,
     nodeGroups,
     internal,
   );
 
-  // Step 4: repair hidden nodes with missing in/out connections.
+  // Step 6: repair hidden nodes with missing in/out connections.
   mutationDeadEnds.ensureHiddenConnectivityForDeadEnds(
     network,
     nodeGroups,
     internal,
   );
+
+  // Step 7: invalidate caches after any repair-driven structural edits.
+  internal._invalidateGenomeCaches(network);
   return;
+}
+
+/**
+ * Normalize node ordering for feed-forward maintenance repairs.
+ *
+ * Some legacy or bootstrap paths can leave hidden nodes after the output tail.
+ * That ordering is awkward whenever the current mutation policy is effectively
+ * feed-forward, because the mutation chapter interprets hidden-to-output
+ * repairs through node order. This helper keeps repair decisions conservative
+ * by reestablishing the standard input-hidden-output ordering before any
+ * repair shelf is evaluated when recurrent growth is not currently allowed.
+ *
+ * @param network - genome whose node ordering may need normalization
+ * @param allowRecurrent - controller flag for recurrent growth
+ * @returns void
+ */
+function normalizeRepairNodeOrderForFeedForward(
+  network: GenomeWithMetadata,
+  allowRecurrent: boolean | undefined,
+): void {
+  // Step 1: skip runs where the active policy still allows recurrent growth.
+  if (allowsRecurrentConnectionMutation(network, allowRecurrent)) {
+    return;
+  }
+
+  // Step 2: rebuild the standard input-hidden-output ordering.
+  const normalizedNodes = network.nodes
+    .filter((node: GenomeWithMetadata['nodes'][number]) => node.type === 'input')
+    .concat(
+      network.nodes.filter(
+        (node: GenomeWithMetadata['nodes'][number]) => node.type === 'hidden',
+      ),
+      network.nodes.filter(
+        (node: GenomeWithMetadata['nodes'][number]) => node.type === 'output',
+      ),
+    );
+
+  // Step 3: avoid churn when the ordering is already normalized.
+  const orderingAlreadyNormalized = normalizedNodes.every(
+    (node, nodeIndex) => network.nodes[nodeIndex] === node,
+  );
+  if (orderingAlreadyNormalized) {
+    return;
+  }
+
+  network.nodes = normalizedNodes;
 }
 
 /**
@@ -471,6 +573,7 @@ export async function selectMutationMethod(
   if (
     mutationSelect.isBlockedByRecurrentPolicyForSelect(
       banditMethod,
+      genome,
       internal,
       methods,
     )

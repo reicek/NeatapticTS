@@ -30,9 +30,9 @@ The render order matters: background first, then pipes, then birds, then
 trails and overlays that should visually sit on top.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `trailState` - - Leader trail render cache.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
+- `trailState` - Leader trail render cache.
 
 Returns: Nothing.
 
@@ -58,8 +58,8 @@ history for every bird, which keeps the visual emphasis clear and the per-frame
 work small.
 
 Parameters:
-- `trailState` - - Mutable trail state.
-- `renderState` - - Current render state.
+- `trailState` - Mutable trail state.
+- `renderState` - Current render state.
 
 Returns: Nothing.
 
@@ -173,8 +173,8 @@ After this transform, draw calls can work in simulation coordinates instead of
 raw canvas pixel coordinates.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `sceneContext` - - Shared scene geometry for the frame.
+- `context` - Canvas 2D drawing context.
+- `sceneContext` - Shared scene geometry for the frame.
 
 Returns: Nothing.
 
@@ -192,7 +192,7 @@ This ensures later canvas users do not inherit playback-specific transform or
 alpha state.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
+- `context` - Canvas 2D drawing context.
 
 Returns: Nothing.
 
@@ -210,7 +210,7 @@ This establishes a predictable baseline before world-space transforms and glow
 effects are applied.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
+- `context` - Canvas 2D drawing context.
 
 Returns: Nothing.
 
@@ -230,9 +230,9 @@ Background painting is delegated to the dedicated background subsystem so this
 layer can stay focused on frame composition order.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `sceneContext` - - Shared scene geometry for the frame.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
+- `sceneContext` - Shared scene geometry for the frame.
 
 Returns: Nothing.
 
@@ -253,10 +253,10 @@ Only live birds are painted so the playback frame reflects the active
 population rather than leaving ghost bodies behind.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `sceneContext` - - Shared scene geometry for the frame.
-- `renderBird` - - Bird body renderer owned by the detailed utility layer.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
+- `sceneContext` - Shared scene geometry for the frame.
+- `renderBird` - Bird body renderer owned by the detailed utility layer.
 
 Returns: Nothing.
 
@@ -276,9 +276,9 @@ Pipes are rendered as upper and lower segments connected to the projected
 floor profile used by the background grid.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `sceneContext` - - Shared scene geometry for the frame.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
+- `sceneContext` - Shared scene geometry for the frame.
 
 Returns: Nothing.
 
@@ -302,12 +302,12 @@ renderer stays generic and asks the trail-style policy how each active bird
 should be painted.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `trailState` - - Leader trail render cache.
-- `sceneContext` - - Shared scene geometry for the frame.
-- `resolveTrailStyle` - - Trail style resolver owned by the detailed utility layer.
-- `renderTrail` - - Trail segment renderer owned by the detailed utility layer.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
+- `trailState` - Leader trail render cache.
+- `sceneContext` - Shared scene geometry for the frame.
+- `resolveTrailStyle` - Trail style resolver owned by the detailed utility layer.
+- `renderTrail` - Trail segment renderer owned by the detailed utility layer.
 
 Returns: Nothing.
 
@@ -326,8 +326,8 @@ The camera is anchored so the focal bird region stays at a readable screen
 position while the world scrolls beneath it.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
 
 Returns: Viewport, camera, and edge-bounds state for the frame.
 
@@ -354,8 +354,8 @@ The camera is anchored so the focal bird region stays at a readable screen
 position while the world scrolls beneath it.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
 
 Returns: Viewport, camera, and edge-bounds state for the frame.
 
@@ -381,8 +381,8 @@ After this transform, draw calls can work in simulation coordinates instead of
 raw canvas pixel coordinates.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `sceneContext` - - Shared scene geometry for the frame.
+- `context` - Canvas 2D drawing context.
+- `sceneContext` - Shared scene geometry for the frame.
 
 Returns: Nothing.
 
@@ -400,7 +400,7 @@ This ensures later canvas users do not inherit playback-specific transform or
 alpha state.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
+- `context` - Canvas 2D drawing context.
 
 Returns: Nothing.
 
@@ -418,7 +418,7 @@ This establishes a predictable baseline before world-space transforms and glow
 effects are applied.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
+- `context` - Canvas 2D drawing context.
 
 Returns: Nothing.
 
@@ -445,9 +445,9 @@ Background painting is delegated to the dedicated background subsystem so this
 layer can stay focused on frame composition order.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `sceneContext` - - Shared scene geometry for the frame.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
+- `sceneContext` - Shared scene geometry for the frame.
 
 Returns: Nothing.
 
@@ -468,10 +468,10 @@ Only live birds are painted so the playback frame reflects the active
 population rather than leaving ghost bodies behind.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `sceneContext` - - Shared scene geometry for the frame.
-- `renderBird` - - Bird body renderer owned by the detailed utility layer.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
+- `sceneContext` - Shared scene geometry for the frame.
+- `renderBird` - Bird body renderer owned by the detailed utility layer.
 
 Returns: Nothing.
 
@@ -491,9 +491,9 @@ Pipes are rendered as upper and lower segments connected to the projected
 floor profile used by the background grid.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `sceneContext` - - Shared scene geometry for the frame.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
+- `sceneContext` - Shared scene geometry for the frame.
 
 Returns: Nothing.
 
@@ -517,12 +517,12 @@ renderer stays generic and asks the trail-style policy how each active bird
 should be painted.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `renderState` - - Mutable simulation state snapshot.
-- `trailState` - - Leader trail render cache.
-- `sceneContext` - - Shared scene geometry for the frame.
-- `resolveTrailStyle` - - Trail style resolver owned by the detailed utility layer.
-- `renderTrail` - - Trail segment renderer owned by the detailed utility layer.
+- `context` - Canvas 2D drawing context.
+- `renderState` - Mutable simulation state snapshot.
+- `trailState` - Leader trail render cache.
+- `sceneContext` - Shared scene geometry for the frame.
+- `resolveTrailStyle` - Trail style resolver owned by the detailed utility layer.
+- `renderTrail` - Trail segment renderer owned by the detailed utility layer.
 
 Returns: Nothing.
 
@@ -544,9 +544,9 @@ Reusing the pipe-style glow language helps the whole playback scene feel like
 one visual system instead of unrelated rendering effects.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdGeometry` - - Pixel-aligned bird geometry.
-- `birdRenderStyle` - - Resolved bird style payload.
+- `context` - Canvas 2D drawing context.
+- `birdGeometry` - Pixel-aligned bird geometry.
+- `birdRenderStyle` - Resolved bird style payload.
 
 Returns: Nothing.
 
@@ -565,9 +565,9 @@ Draws the square bird body with its base neon glow.
 This is the standard body pass shared by champion and non-champion birds.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdGeometry` - - Pixel-aligned bird geometry.
-- `birdRenderStyle` - - Resolved bird style payload.
+- `context` - Canvas 2D drawing context.
+- `birdGeometry` - Pixel-aligned bird geometry.
+- `birdRenderStyle` - Resolved bird style payload.
 
 Returns: Nothing.
 
@@ -590,12 +590,12 @@ The stepped shape makes the trajectory feel more schematic and readable than a
 perfectly smooth spline, which fits the overall instrument-panel aesthetic.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `trailPoints` - - Cached per-frame trail points for one bird.
-- `color` - - Stroke color for the trail.
-- `anchorX` - - Bird anchor x-position in world space.
-- `baseOpacity` - - Base opacity before edge and lifetime fading.
-- `edgeBounds` - - Visible world bounds used for edge fading.
+- `context` - Canvas 2D drawing context.
+- `trailPoints` - Cached per-frame trail points for one bird.
+- `color` - Stroke color for the trail.
+- `anchorX` - Bird anchor x-position in world space.
+- `baseOpacity` - Base opacity before edge and lifetime fading.
+- `edgeBounds` - Visible world bounds used for edge fading.
 
 Returns: Nothing.
 
@@ -616,10 +616,10 @@ The champion receives an extra additive-outline treatment so viewers can spot
 the leading bird quickly during playback.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdYPx` - - Bird vertical position in world pixels.
-- `birdIndex` - - Index of the bird being rendered.
-- `championBirdIndex` - - Champion index for the current frame.
+- `context` - Canvas 2D drawing context.
+- `birdYPx` - Bird vertical position in world pixels.
+- `birdIndex` - Index of the bird being rendered.
+- `championBirdIndex` - Champion index for the current frame.
 
 Returns: Nothing.
 
@@ -637,7 +637,7 @@ Champion birds receive a slightly stronger body glow than the rest of the
 population.
 
 Parameters:
-- `birdRenderStyle` - - Resolved bird style payload.
+- `birdRenderStyle` - Resolved bird style payload.
 
 Returns: Blur radius used behind the square bird body.
 
@@ -655,7 +655,7 @@ Geometry is snapped to integer pixels so the square body stays crisp instead
 of blurring across subpixel boundaries.
 
 Parameters:
-- `birdYPx` - - Bird vertical position in world pixels.
+- `birdYPx` - Bird vertical position in world pixels.
 
 Returns: Pixel-aligned square geometry for the bird body.
 
@@ -674,8 +674,8 @@ Champion trails are emphasized while non-champion trails, when present, are
 intentionally subdued.
 
 Parameters:
-- `birdIndex` - - Index of the bird being rendered.
-- `championBirdIndex` - - Champion index for the current frame.
+- `birdIndex` - Index of the bird being rendered.
+- `championBirdIndex` - Champion index for the current frame.
 
 Returns: Base opacity and color for the bird trail.
 
@@ -703,9 +703,9 @@ Reusing the pipe-style glow language helps the whole playback scene feel like
 one visual system instead of unrelated rendering effects.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdGeometry` - - Pixel-aligned bird geometry.
-- `birdRenderStyle` - - Resolved bird style payload.
+- `context` - Canvas 2D drawing context.
+- `birdGeometry` - Pixel-aligned bird geometry.
+- `birdRenderStyle` - Resolved bird style payload.
 
 Returns: Nothing.
 
@@ -724,9 +724,9 @@ Draws the square bird body with its base neon glow.
 This is the standard body pass shared by champion and non-champion birds.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdGeometry` - - Pixel-aligned bird geometry.
-- `birdRenderStyle` - - Resolved bird style payload.
+- `context` - Canvas 2D drawing context.
+- `birdGeometry` - Pixel-aligned bird geometry.
+- `birdRenderStyle` - Resolved bird style payload.
 
 Returns: Nothing.
 
@@ -747,10 +747,10 @@ The champion receives an extra additive-outline treatment so viewers can spot
 the leading bird quickly during playback.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `birdYPx` - - Bird vertical position in world pixels.
-- `birdIndex` - - Index of the bird being rendered.
-- `championBirdIndex` - - Champion index for the current frame.
+- `context` - Canvas 2D drawing context.
+- `birdYPx` - Bird vertical position in world pixels.
+- `birdIndex` - Index of the bird being rendered.
+- `championBirdIndex` - Champion index for the current frame.
 
 Returns: Nothing.
 
@@ -768,7 +768,7 @@ Champion birds receive a slightly stronger body glow than the rest of the
 population.
 
 Parameters:
-- `birdRenderStyle` - - Resolved bird style payload.
+- `birdRenderStyle` - Resolved bird style payload.
 
 Returns: Blur radius used behind the square bird body.
 
@@ -786,7 +786,7 @@ Geometry is snapped to integer pixels so the square body stays crisp instead
 of blurring across subpixel boundaries.
 
 Parameters:
-- `birdYPx` - - Bird vertical position in world pixels.
+- `birdYPx` - Bird vertical position in world pixels.
 
 Returns: Pixel-aligned square geometry for the bird body.
 
@@ -816,12 +816,12 @@ The stepped shape makes the trajectory feel more schematic and readable than a
 perfectly smooth spline, which fits the overall instrument-panel aesthetic.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `trailPoints` - - Cached per-frame trail points for one bird.
-- `color` - - Stroke color for the trail.
-- `anchorX` - - Bird anchor x-position in world space.
-- `baseOpacity` - - Base opacity before edge and lifetime fading.
-- `edgeBounds` - - Visible world bounds used for edge fading.
+- `context` - Canvas 2D drawing context.
+- `trailPoints` - Cached per-frame trail points for one bird.
+- `color` - Stroke color for the trail.
+- `anchorX` - Bird anchor x-position in world space.
+- `baseOpacity` - Base opacity before edge and lifetime fading.
+- `edgeBounds` - Visible world bounds used for edge fading.
 
 Returns: Nothing.
 
@@ -848,16 +848,16 @@ Two independent fade signals are combined here: old segments dim over time,
 and segments near the viewport edge fade to avoid harsh clipping.
 
 Parameters:
-- `context` - - Canvas 2D drawing context.
-- `startXPx` - - Segment start x-position.
-- `startYPx` - - Segment start y-position.
-- `endXPx` - - Segment end x-position.
-- `endYPx` - - Segment end y-position.
-- `baseOpacity` - - Base opacity before fade factors.
-- `edgeBounds` - - Visible world bounds used for edge fading.
-- `startFrameOffset` - - Relative age of the segment start.
-- `endFrameOffset` - - Relative age of the segment end.
-- `maximumTrailFrameOffset` - - Oldest visible trail age.
+- `context` - Canvas 2D drawing context.
+- `startXPx` - Segment start x-position.
+- `startYPx` - Segment start y-position.
+- `endXPx` - Segment end x-position.
+- `endYPx` - Segment end y-position.
+- `baseOpacity` - Base opacity before fade factors.
+- `edgeBounds` - Visible world bounds used for edge fading.
+- `startFrameOffset` - Relative age of the segment start.
+- `endFrameOffset` - Relative age of the segment end.
+- `maximumTrailFrameOffset` - Oldest visible trail age.
 
 Returns: Nothing.
 
@@ -876,7 +876,7 @@ Champion trails are emphasized while non-champion trails, when present, are
 intentionally subdued.
 
 Parameters:
-- `birdIndex` - - Index of the bird being rendered.
-- `championBirdIndex` - - Champion index for the current frame.
+- `birdIndex` - Index of the bird being rendered.
+- `championBirdIndex` - Champion index for the current frame.
 
 Returns: Base opacity and color for the bird trail.

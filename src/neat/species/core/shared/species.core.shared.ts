@@ -88,14 +88,16 @@ export type SpeciesConnectionSummary = {
  * Read the fold in three stages:
  *
  * 1. walk every member connection,
- * 2. resolve an innovation id from the connection or fallback resolver,
+ * 2. resolve an innovation id from the connection or, for deliberate
+ *    legacy/import reads only, the fallback resolver,
  * 3. reduce the seen ids and enabled flags into one compact summary.
  *
  * The fold preserves three small rules:
  * - connection innovation ids come from the connection itself when present,
- * - legacy connections may fall back to the supplied innovation resolver,
- * - empty or fully unresolved inputs collapse to safe zero-style defaults
- *   instead of producing `NaN` or `Infinity` noise in history output.
+ * - only genomes that opt into `_compatInnovationMode = 'allow-fallback'` may
+ *   use the supplied innovation resolver,
+ * - empty inputs collapse to safe zero-style defaults, while malformed native
+ *   inputs fail fast instead of silently inventing structure.
  *
  * @param members - Detailed member genomes for a single species.
  * @param fallbackInnov - Optional innovation resolver for legacy connections that do not carry a direct innovation id.
@@ -116,13 +118,16 @@ export function summarizeSpeciesConnections(
   let enabledCount = SPECIES_HISTORY_ZERO;
   let disabledCount = SPECIES_HISTORY_ZERO;
 
-  for (const member of members) {
+  for (const [memberIndex, member] of members.entries()) {
     const connections = member.connections as ConnectionLike[];
-    for (const connection of connections) {
-      const innovationId =
-        connection.innovation ??
-        fallbackInnov?.(connection) ??
-        SPECIES_HISTORY_DEFAULT_INNOVATION_ID;
+    for (const [connectionIndex, connection] of connections.entries()) {
+      const innovationId = resolveSpeciesHistoryInnovation(
+        member,
+        connection,
+        fallbackInnov,
+        memberIndex,
+        connectionIndex,
+      );
 
       if (innovationId > maxInnovation) {
         maxInnovation = innovationId;
@@ -151,4 +156,86 @@ export function summarizeSpeciesConnections(
         ? enabledCount / (enabledCount + disabledCount)
         : SPECIES_HISTORY_DEFAULT_ENABLED_RATIO,
   };
+}
+
+type CompatibilityInnovationMode = NonNullable<
+  GenomeDetailed['_compatInnovationMode']
+>;
+
+function resolveSpeciesHistoryInnovation(
+  member: GenomeDetailed,
+  connection: ConnectionLike,
+  fallbackInnov: ((connection: ConnectionLike) => number) | undefined,
+  memberIndex: number,
+  connectionIndex: number,
+): number {
+  if (Number.isFinite(connection.innovation)) {
+    return connection.innovation!;
+  }
+
+  if (resolveCompatibilityInnovationMode(member) === 'allow-fallback') {
+    if (!fallbackInnov) {
+      throw createMissingFallbackResolverError(
+        member,
+        connection,
+        memberIndex,
+        connectionIndex,
+      );
+    }
+
+    return fallbackInnov(connection);
+  }
+
+  throw createMissingInnovationError(
+    member,
+    connection,
+    memberIndex,
+    connectionIndex,
+  );
+}
+
+function resolveCompatibilityInnovationMode(
+  member: GenomeDetailed,
+): CompatibilityInnovationMode {
+  return member._compatInnovationMode ?? 'require-explicit';
+}
+
+function createMissingInnovationError(
+  member: GenomeDetailed,
+  connection: ConnectionLike,
+  memberIndex: number,
+  connectionIndex: number,
+): Error {
+  return new Error(
+    'Species history backfill requires explicit connection innovations for native genomes. Use `_compatInnovationMode = "allow-fallback"` only for legacy, imported, or deliberately partial genomes.',
+    {
+      cause: {
+        genomeId: member._id ?? null,
+        memberIndex,
+        connectionIndex,
+        fromGeneId: (connection.from as { geneId?: number }).geneId ?? null,
+        toGeneId: (connection.to as { geneId?: number }).geneId ?? null,
+      },
+    },
+  );
+}
+
+function createMissingFallbackResolverError(
+  member: GenomeDetailed,
+  connection: ConnectionLike,
+  memberIndex: number,
+  connectionIndex: number,
+): Error {
+  return new Error(
+    'Species history backfill requires `_fallbackInnov` when a genome opts into `_compatInnovationMode = "allow-fallback"`.',
+    {
+      cause: {
+        genomeId: member._id ?? null,
+        memberIndex,
+        connectionIndex,
+        fromGeneId: (connection.from as { geneId?: number }).geneId ?? null,
+        toGeneId: (connection.to as { geneId?: number }).geneId ?? null,
+      },
+    },
+  );
 }

@@ -17,11 +17,15 @@ type SpeciesHistoryReadHost = {
 function createGenomeMember(
   genomeId: number,
   connections: ConnectionLike[],
+  compatibilityMode?: 'allow-fallback',
 ): GenomeDetailed {
   return {
     _id: genomeId,
     nodes: [],
     connections,
+    ...(compatibilityMode
+      ? { _compatInnovationMode: compatibilityMode }
+      : {}),
   };
 }
 
@@ -151,7 +155,35 @@ describe('neat species history read chapter', () => {
       });
     });
 
-    describe('given extended history needs backfill and live species connections lack direct innovation ids', () => {
+    describe('given extended history needs backfill and native live species connections lack direct innovation ids', () => {
+      it('throws instead of silently backfilling synthetic innovation ids', () => {
+        // Arrange
+        const speciesHistoryHost = createSpeciesHistoryHost({
+          members: [
+            createGenomeMember(1, [
+              {
+                enabled: true,
+                from: { geneId: 1 },
+                to: { geneId: 2 },
+              },
+            ]),
+          ],
+          fallbackInnov(connection) {
+            return (
+              ((connection.from as { geneId?: number }).geneId ?? 0) * 100 +
+              ((connection.to as { geneId?: number }).geneId ?? 0)
+            );
+          },
+        });
+
+        // Assert
+        expect(() => getSpeciesHistory(speciesHistoryHost)).toThrow(
+          /Species history backfill requires explicit connection innovations/,
+        );
+      });
+    });
+
+    describe('given extended history needs backfill and legacy live species connections deliberately allow fallback ids', () => {
       let historyEntries: SpeciesHistoryEntry[];
 
       beforeAll(() => {
@@ -169,14 +201,14 @@ describe('neat species history read chapter', () => {
                 from: { geneId: 2 },
                 to: { geneId: 3 },
               },
-            ]),
+            ], 'allow-fallback'),
             createGenomeMember(2, [
               {
                 enabled: true,
                 from: { geneId: 1 },
                 to: { geneId: 3 },
               },
-            ]),
+            ], 'allow-fallback'),
           ],
           fallbackInnov(connection) {
             return (

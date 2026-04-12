@@ -99,7 +99,7 @@ observation is meaningful immediately. That avoids a cold-start phase where a
 policy would receive mostly empty-space inputs.
 
 Parameters:
-- `rng` - - Random source used to generate initial pipe configuration.
+- `rng` - Random source used to generate initial pipe configuration.
 
 Returns: Initial state for one deterministic rollout.
 
@@ -128,10 +128,10 @@ This is the simplest stepping surface: one logical frame and one flap choice.
 More advanced callers can use the control-substep variant below.
 
 Parameters:
-- `state` - - Mutable state object to update in-place.
-- `rng` - - Random source used to spawn pipes.
-- `flap` - - If true, applies an upward velocity impulse.
-- `difficultyScale` - - Curriculum difficulty scale in [0, 1].
+- `state` - Mutable state object to update in-place.
+- `rng` - Random source used to spawn pipes.
+- `flap` - If true, applies an upward velocity impulse.
+- `difficultyScale` - Curriculum difficulty scale in [0, 1].
 
 Returns: Nothing.
 
@@ -161,11 +161,11 @@ For background reading, the Wikipedia article on "numerical integration"
 provides the general idea behind updating continuous motion in small steps.
 
 Parameters:
-- `state` - - Mutable state object to update in-place.
-- `rng` - - Random source used to spawn pipes.
-- `shouldFlapForSubstep` - - Callback deciding flap action per substep.
-- `difficultyScale` - - Curriculum difficulty scale in [0, 1].
-- `controlSubstepsPerFrame` - - Number of substeps to run this frame.
+- `state` - Mutable state object to update in-place.
+- `rng` - Random source used to spawn pipes.
+- `shouldFlapForSubstep` - Callback deciding flap action per substep.
+- `difficultyScale` - Curriculum difficulty scale in [0, 1].
+- `controlSubstepsPerFrame` - Number of substeps to run this frame.
 
 Returns: Nothing.
 
@@ -188,7 +188,7 @@ place helps the environment avoid inconsistent "passed but also collided"
 edge cases.
 
 Parameters:
-- `state` - - Mutable simulation state to update in-place.
+- `state` - Mutable simulation state to update in-place.
 
 Returns: Nothing.
 
@@ -226,8 +226,8 @@ Observation (12 numbers):
 12) gap-center transition (next to second) normalized to [-1, 1]
 
 Parameters:
-- `state` - - Current state.
-- `difficultyScale` - - Curriculum difficulty scale in [0, 1].
+- `state` - Current state.
+- `difficultyScale` - Curriculum difficulty scale in [0, 1].
 
 Returns: Input vector for the neural network.
 
@@ -243,8 +243,8 @@ getFlappyObservationFeatures(
 Resolve structured observation features for policy input and reward shaping.
 
 Parameters:
-- `state` - - Current state.
-- `difficultyScale` - - Curriculum difficulty scale in [0, 1].
+- `state` - Current state.
+- `difficultyScale` - Curriculum difficulty scale in [0, 1].
 
 Returns: Named feature object.
 

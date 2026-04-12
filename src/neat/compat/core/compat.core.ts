@@ -1,8 +1,11 @@
 import type {
+  CompatibilityInnovationMode,
   ComparisonMetrics,
   GenomeLike,
   NeatLikeForCompat,
 } from './compat.types';
+
+const explicitCompatibilityCacheGenomes = new WeakSet<GenomeLike>();
 
 /**
  * Compatibility-distance mechanics used by NEAT speciation.
@@ -107,26 +110,49 @@ export function getSortedInnovationCache(
   neatContext: NeatLikeForCompat,
   genome: GenomeLike,
 ): [number, number][] {
-  // Step 1: Return the existing cache when present.
-  if (genome._compatCache) {
+  const innovationMode = resolveCompatibilityInnovationMode(genome);
+
+  // Step 1: Reuse the cached explicit-innovation view when it is still valid.
+  if (
+    innovationMode === 'require-explicit' &&
+    genome._compatCache &&
+    explicitCompatibilityCacheGenomes.has(genome)
+  ) {
     return genome._compatCache as [number, number][];
   }
 
-  // Step 2: Build innovation-weight pairs from the connection list.
+  // Step 2: Drop any non-canonical cached view before rebuilding.
+  if (genome._compatCache && !explicitCompatibilityCacheGenomes.has(genome)) {
+    delete genome._compatCache;
+  }
+
+  // Step 3: Build and sort the current innovation-weight pairs.
   const innovationPairs: [number, number][] = genome.connections.map(
-    (connection) => [
-      connection.innovation ?? neatContext._fallbackInnov(connection),
+    (connection, connectionIndex) => [
+      resolveConnectionInnovation(
+        neatContext,
+        genome,
+        connection,
+        connectionIndex,
+        innovationMode,
+      ),
       connection.weight,
     ],
   );
 
-  // Step 3: Sort by innovation id for linear merge comparisons.
+  // Step 4: Sort by innovation id for linear merge comparisons.
   const sortedPairs = innovationPairs.toSorted(
     ([innovationA], [innovationB]) => innovationA - innovationB,
   );
 
-  // Step 4: Store and return the cache.
+  // Step 5: Keep fallback-derived views transient so native caches stay canonical.
+  if (innovationMode === 'allow-fallback') {
+    return sortedPairs;
+  }
+
+  // Step 6: Store and return the canonical explicit-innovation cache.
   genome._compatCache = sortedPairs;
+  explicitCompatibilityCacheGenomes.add(genome);
   return sortedPairs;
 }
 
@@ -265,4 +291,77 @@ export function computeCompatibilityDistance(
 
   // Step 4: Fold the components into the final distance.
   return excessComponent + disjointComponent + weightComponent;
+}
+
+/**
+ * Resolve the compatibility-innovation mode for one genome.
+ *
+ * Native controller genomes default to `require-explicit`. Legacy or partial
+ * genomes must opt into `allow-fallback` deliberately before compatibility can
+ * synthesize alignment ids from endpoints.
+ *
+ * @param genome - Genome whose compatibility mode should be read.
+ * @returns Effective compatibility-innovation mode.
+ */
+function resolveCompatibilityInnovationMode(
+  genome: GenomeLike,
+): CompatibilityInnovationMode {
+  return genome._compatInnovationMode ?? 'require-explicit';
+}
+
+/**
+ * Resolve the comparison innovation id for one connection.
+ *
+ * Native compatibility reads require explicit innovations. The fallback path is
+ * reserved for genomes that deliberately opt into legacy or partial comparison.
+ *
+ * @param neatContext - NEAT context providing the fallback innovation resolver.
+ * @param genome - Genome currently being normalized for comparison.
+ * @param connection - Connection whose innovation id must be resolved.
+ * @param connectionIndex - Stable connection position used for diagnostics.
+ * @param innovationMode - Effective compatibility mode for the genome.
+ * @returns Finite innovation id used for compatibility alignment.
+ */
+function resolveConnectionInnovation(
+  neatContext: NeatLikeForCompat,
+  genome: GenomeLike,
+  connection: GenomeLike['connections'][number],
+  connectionIndex: number,
+  innovationMode: CompatibilityInnovationMode,
+): number {
+  if (Number.isFinite(connection.innovation)) {
+    return connection.innovation!;
+  }
+
+  if (innovationMode === 'allow-fallback') {
+    return neatContext._fallbackInnov(connection);
+  }
+
+  throw createMissingInnovationError(genome, connection, connectionIndex);
+}
+
+/**
+ * Build the fail-fast error for native genomes missing explicit innovations.
+ *
+ * @param genome - Genome that failed compatibility normalization.
+ * @param connection - Connection missing its explicit innovation id.
+ * @param connectionIndex - Stable connection position used for diagnostics.
+ * @returns Error describing why native compatibility refused fallback ids.
+ */
+function createMissingInnovationError(
+  genome: GenomeLike,
+  connection: GenomeLike['connections'][number],
+  connectionIndex: number,
+): Error {
+  return new Error(
+    'Compatibility distance requires explicit connection innovations for native genomes. Use `_compatInnovationMode = "allow-fallback"` only for legacy, imported, or deliberately partial genomes.',
+    {
+      cause: {
+        genomeId: genome._id ?? null,
+        connectionIndex,
+        fromIndex: connection.from?.index ?? null,
+        toIndex: connection.to?.index ?? null,
+      },
+    },
+  );
 }

@@ -43,6 +43,8 @@ interface NodeOptimizerProps {
   batchNorm?: boolean;
 }
 
+const NEUTRAL_NODE_RESPONSE = 1;
+
 /**
  * Node (Neuron)
  * =============
@@ -65,6 +67,14 @@ export default class Node {
    * Input nodes typically have a bias of 0.
    */
   bias: number;
+  /**
+   * Response multiplier applied to the node state before the squash function.
+   *
+   * A neutral response of `1` preserves the historical runtime behavior. Values
+   * above or below `1` steepen or flatten the node's effective transfer curve
+   * without changing the chosen activation family.
+   */
+  response: number;
   /**
    * The activation function (squashing function) applied to the node's state.
    * Maps the internal state to the node's output (activation).
@@ -159,6 +169,7 @@ export default class Node {
   ) {
     // Initialize bias: 0 for input nodes, small random value for others (deterministic if rng seeded)
     this.bias = type === 'input' ? 0 : rng() * 0.2 - 0.1;
+    this.response = NEUTRAL_NODE_RESPONSE;
     // Set activation function. Default to logistic or identity if logistic is not available.
     this.squash = customActivation ?? methods.Activation.logistic ?? ((x) => x);
     this.type = type;
@@ -199,6 +210,23 @@ export default class Node {
     }
     // Assign stable gene id (independent from per-network index)
     this.geneId = Node._nextGeneId++;
+  }
+
+  /**
+   * Advances the global gene-id cursor past a restored maximum.
+   *
+   * Restore flows use this after hydrating persisted genomes so the next freshly
+   * created node cannot collide with an older serialized `geneId`.
+   *
+   * @param maxObservedGeneId Highest restored node gene id currently in memory.
+   * @returns Nothing.
+   */
+  static syncGeneIdCounter(maxObservedGeneId: number): void {
+    if (!Number.isFinite(maxObservedGeneId)) {
+      return;
+    }
+
+    Node._nextGeneId = Math.max(Node._nextGeneId, maxObservedGeneId + 1);
   }
 
   /**
@@ -263,8 +291,9 @@ export default class Node {
         return this.activation;
       }
       this.state = input;
-      this.activation = this.squash(this.state) * this.mask;
-      this.derivative = this.squash(this.state, true);
+      const effectiveState = this.state * this.response;
+      this.activation = this.squash(effectiveState) * this.mask;
+      this.derivative = this.squash(effectiveState, true) * this.response;
       for (const connection of this.connections.gated)
         connection.gain = this.activation;
       if (withTrace)
@@ -297,8 +326,9 @@ export default class Node {
       this.squash = methods.Activation.identity;
     }
     if (typeof this.mask !== 'number') this.mask = 1;
-    this.activation = this.squash(this.state) * this.mask;
-    this.derivative = this.squash(this.state, true);
+    const effectiveState = this.state * this.response;
+    this.activation = this.squash(effectiveState) * this.mask;
+    this.derivative = this.squash(effectiveState, true) * this.response;
     // Update gated connection gains
     if (this.connections.gated.length) {
       for (const conn of this.connections.gated) conn.gain = this.activation;
@@ -626,6 +656,7 @@ export default class Node {
     return {
       index: this.index,
       bias: this.bias,
+      response: this.response,
       type: this.type,
       squash: this.squash ? this.squash.name : null,
       mask: this.mask,
@@ -639,12 +670,17 @@ export default class Node {
    */
   static fromJSON(json: {
     bias: number;
+    response?: number;
     type: string;
     squash: string;
     mask: number;
   }): Node {
     const node = new Node(json.type);
     node.bias = json.bias;
+    node.response =
+      typeof json.response === 'number' && Number.isFinite(json.response)
+        ? json.response
+        : NEUTRAL_NODE_RESPONSE;
     node.mask = json.mask;
     if (json.squash) {
       const squashFn =

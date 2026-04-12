@@ -155,7 +155,7 @@ and terminal messaging consistent whether the failure came from setup,
 evaluation, or the loop itself.
 
 Parameters:
-- `error` - - Unknown rejection reason from trainer execution.
+- `error` - Unknown rejection reason from trainer execution.
 
 Returns: Nothing.
 
@@ -237,7 +237,7 @@ values. Normalizing both cases into one predictable string keeps the CLI
 surface boring in the good way.
 
 Parameters:
-- `error` - - Unknown rejection reason from trainer execution.
+- `error` - Unknown rejection reason from trainer execution.
 
 Returns: Formatted error string for CLI logging.
 
@@ -588,8 +588,8 @@ The schedule is resolved outside this helper so the loop can read as a clean
 easier to inspect the active schedule in logs or tests.
 
 Parameters:
-- `neatController` - - Trainer NEAT controller.
-- `mutationSchedule` - - Mutation schedule for current generation.
+- `neatController` - Trainer NEAT controller.
+- `mutationSchedule` - Mutation schedule for current generation.
 
 Returns: Nothing.
 
@@ -629,9 +629,9 @@ evolve one generation, run a representative fallback rollout for logging, and
 emit a compact summary.
 
 Parameters:
-- `neatController` - - Trainer NEAT controller.
-- `trainerRuntimeState` - - Mutable trainer runtime state.
-- `logGenerationSummary` - - Callback that emits compact generation logs.
+- `neatController` - Trainer NEAT controller.
+- `trainerRuntimeState` - Mutable trainer runtime state.
+- `logGenerationSummary` - Callback that emits compact generation logs.
 
 Returns: Promise resolved when the trainer has been stopped.
 
@@ -660,7 +660,7 @@ Flappy policy depends on fair comparison across shared seed batches, not on a
 one-network-at-a-time scoring callback.
 
 Parameters:
-- `trainerSetup` - - Immutable trainer setup values.
+- `trainerSetup` - Immutable trainer setup values.
 
 Returns: Typed NEAT controller used by the trainer loop.
 
@@ -740,9 +740,9 @@ whether a generation is broadly improving or whether one lucky genome is
 masking a weak population.
 
 Parameters:
-- `population` - - Current population.
-- `aggregateByGenome` - - Aggregate evaluation results keyed by genome.
-- `generationEvaluationPlan` - - Per-generation staged evaluation plan.
+- `population` - Current population.
+- `aggregateByGenome` - Aggregate evaluation results keyed by genome.
+- `generationEvaluationPlan` - Per-generation staged evaluation plan.
 
 Returns: Aggregated generation report.
 
@@ -766,11 +766,11 @@ hundreds of generations. The goal is not pretty output. The goal is a line
 that lets you spot drift, plateaus, and sudden regressions at a glance.
 
 Parameters:
-- `generationLabel` - - Current generation label.
-- `mutationSchedule` - - Active mutation schedule.
-- `report` - - Optional aggregated generation report.
-- `fittestGenome` - - Fittest genome returned by the NEAT controller.
-- `fallbackEpisode` - - Fallback representative rollout episode.
+- `generationLabel` - Current generation label.
+- `mutationSchedule` - Active mutation schedule.
+- `report` - Optional aggregated generation report.
+- `fittestGenome` - Fittest genome returned by the NEAT controller.
+- `fallbackEpisode` - Fallback representative rollout episode.
 
 Returns: Nothing.
 
@@ -814,10 +814,10 @@ evaluator that understands shared-seed screening, full-pass scoring, and
 reevaluation.
 
 Parameters:
-- `neatController` - - Trainer NEAT controller.
-- `trainerRuntimeState` - - Mutable trainer runtime state.
-- `elitismCount` - - Number of elite genomes preserved each generation.
-- `dependencies` - - Pure/impure helper callbacks used by the evaluator.
+- `neatController` - Trainer NEAT controller.
+- `trainerRuntimeState` - Mutable trainer runtime state.
+- `elitismCount` - Number of elite genomes preserved each generation.
+- `dependencies` - Pure/impure helper callbacks used by the evaluator.
 
 Returns: Nothing.
 
@@ -844,10 +844,10 @@ the same generation budget is spent unevenly so weak genomes are filtered out
 early and strong genomes are compared more carefully.
 
 Parameters:
-- `neatController` - - Trainer NEAT controller.
-- `trainerRuntimeState` - - Mutable trainer runtime state.
-- `elitismCount` - - Number of elite genomes preserved each generation.
-- `dependencies` - - Pure/impure helper callbacks used by the evaluator.
+- `neatController` - Trainer NEAT controller.
+- `trainerRuntimeState` - Mutable trainer runtime state.
+- `elitismCount` - Number of elite genomes preserved each generation.
+- `dependencies` - Pure/impure helper callbacks used by the evaluator.
 
 Returns: Evaluator callback assigned to `neatController.fitness`.
 
@@ -882,7 +882,7 @@ The handler does the minimum possible work because signal paths should stay
 predictable and side-effect light.
 
 Parameters:
-- `trainerRuntimeState` - - Mutable trainer runtime state.
+- `trainerRuntimeState` - Mutable trainer runtime state.
 
 Returns: Nothing.
 
@@ -902,7 +902,7 @@ Long-running evolutionary runs should stop cleanly when the user presses
 the process mid-generation.
 
 Parameters:
-- `trainerRuntimeState` - - Mutable trainer runtime state.
+- `trainerRuntimeState` - Mutable trainer runtime state.
 
 Returns: Nothing.
 
@@ -942,8 +942,8 @@ them without mutating the genomes too early. This helper performs the final
 write-back once staged evaluation is complete.
 
 Parameters:
-- `population` - - Current population.
-- `provisionalScoresByGenome` - - Final provisional score map.
+- `population` - Current population.
+- `provisionalScoresByGenome` - Final provisional score map.
 
 Returns: Nothing.
 
@@ -966,11 +966,11 @@ survives into it, but the survivors receive a more trustworthy estimate than
 the quick screen alone can provide.
 
 Parameters:
-- `population` - - Current population.
-- `generationEvaluationPlan` - - Per-generation staged evaluation plan.
-- `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
-- `provisionalScoresByGenome` - - Mutable provisional score map.
-- `elitismCount` - - Configured elitism count.
+- `population` - Current population.
+- `generationEvaluationPlan` - Per-generation staged evaluation plan.
+- `aggregateByGenome` - Mutable aggregate cache keyed by genome.
+- `provisionalScoresByGenome` - Mutable provisional score map.
+- `elitismCount` - Configured elitism count.
 
 Returns: Nothing.
 
@@ -993,10 +993,10 @@ small shared seed batch so the trainer can discard obviously weak candidates
 before spending more rollout budget on them.
 
 Parameters:
-- `population` - - Current population.
-- `generationEvaluationPlan` - - Per-generation staged evaluation plan.
-- `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
-- `provisionalScoresByGenome` - - Mutable provisional score map.
+- `population` - Current population.
+- `generationEvaluationPlan` - Per-generation staged evaluation plan.
+- `aggregateByGenome` - Mutable aggregate cache keyed by genome.
+- `provisionalScoresByGenome` - Mutable provisional score map.
 
 Returns: Nothing.
 
@@ -1031,11 +1031,11 @@ are tested again on a larger shared seed batch so leaderboard positions are
 less sensitive to a fortunate early sample.
 
 Parameters:
-- `population` - - Current population.
-- `generationEvaluationPlan` - - Per-generation staged evaluation plan.
-- `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
-- `provisionalScoresByGenome` - - Mutable provisional score map.
-- `elitismCount` - - Configured elitism count.
+- `population` - Current population.
+- `generationEvaluationPlan` - Per-generation staged evaluation plan.
+- `aggregateByGenome` - Mutable aggregate cache keyed by genome.
+- `provisionalScoresByGenome` - Mutable provisional score map.
+- `elitismCount` - Configured elitism count.
 
 Returns: Nothing.
 
@@ -1062,7 +1062,7 @@ Unevaluated or invalid scores are intentionally skipped so percentile and
 standard deviation calculations operate on stable numeric inputs only.
 
 Parameters:
-- `population` - - Current population.
+- `population` - Current population.
 
 Returns: Finite scores in population order.
 
@@ -1091,11 +1091,11 @@ episode. This helper centralizes the fallback rules so the service facade can
 remain a thin orchestration layer.
 
 Parameters:
-- `population` - - Current population.
-- `bestGenome` - - Genome selected as generation best.
-- `aggregateByGenome` - - Cached aggregate evaluations keyed by genome.
-- `fallbackSeeds` - - Seeds used when the aggregate must be recomputed.
-- `fallbackRolloutOptions` - - Rollout options for fallback evaluation.
+- `population` - Current population.
+- `bestGenome` - Genome selected as generation best.
+- `aggregateByGenome` - Cached aggregate evaluations keyed by genome.
+- `fallbackSeeds` - Seeds used when the aggregate must be recomputed.
+- `fallbackRolloutOptions` - Rollout options for fallback evaluation.
 
 Returns: Aggregate metrics and a representative best-genome episode.
 
@@ -1147,12 +1147,12 @@ The chosen order moves from identity (`gen`) to quality (`best`, `mean`,
 mutation, seed counts).
 
 Parameters:
-- `generationLabel` - - Generation label shown in logs.
-- `bestFitness` - - Best resolved fitness value for this generation.
-- `bestPipesPassed` - - Best resolved pipes passed value.
-- `bestFramesSurvived` - - Best resolved frames survived value.
-- `report` - - Optional aggregated generation report.
-- `mutationSchedule` - - Active mutation schedule for this generation.
+- `generationLabel` - Generation label shown in logs.
+- `bestFitness` - Best resolved fitness value for this generation.
+- `bestPipesPassed` - Best resolved pipes passed value.
+- `bestFramesSurvived` - Best resolved frames survived value.
+- `report` - Optional aggregated generation report.
+- `mutationSchedule` - Active mutation schedule for this generation.
 
 Returns: Ordered log tokens for compact console output.
 
@@ -1179,7 +1179,7 @@ single vocabulary term for "the current best genome under whatever score shelf
 is currently populated."
 
 Parameters:
-- `population` - - Current trainer population.
+- `population` - Current trainer population.
 
 Returns: Highest-scoring genome or `undefined` when population is empty.
 
@@ -1196,9 +1196,9 @@ selectTopGenomesByScore(
 Returns top genomes ordered by current provisional score.
 
 Parameters:
-- `population` - - Current trainer population.
-- `provisionalScoresByGenome` - - Optional map of staged provisional scores.
-- `targetCount` - - Maximum number of genomes to return.
+- `population` - Current trainer population.
+- `provisionalScoresByGenome` - Optional map of staged provisional scores.
+- `targetCount` - Maximum number of genomes to return.
 
 Returns: Highest-scoring genomes in descending score order.
 
@@ -1249,9 +1249,9 @@ same sampled worlds instead of winning because they happened to get a kinder
 random rollout.
 
 Parameters:
-- `generationIndex` - - Zero-based generation index.
-- `stageSalt` - - Constant stage-specific salt.
-- `seedCount` - - Number of seeds to produce.
+- `generationIndex` - Zero-based generation index.
+- `stageSalt` - Constant stage-specific salt.
+- `seedCount` - Number of seeds to produce.
 
 Returns: Deterministic shared seed list.
 
@@ -1269,7 +1269,7 @@ This stage gives stronger candidates a longer, stricter test so the trainer
 can refine the leaderboard before committing to expensive reevaluation.
 
 Parameters:
-- `difficultyScale` - - Difficulty scale for this generation.
+- `difficultyScale` - Difficulty scale for this generation.
 
 Returns: Full stage rollout options.
 
@@ -1288,7 +1288,7 @@ trusted estimates because weak genomes only need enough evidence to be ruled
 out early.
 
 Parameters:
-- `difficultyScale` - - Difficulty scale for this generation.
+- `difficultyScale` - Difficulty scale for this generation.
 
 Returns: Quick stage rollout options.
 
@@ -1306,7 +1306,7 @@ Reevaluation deliberately disables early termination so the strongest
 candidates are judged on a more faithful, less shortcut-heavy comparison.
 
 Parameters:
-- `difficultyScale` - - Difficulty scale for this generation.
+- `difficultyScale` - Difficulty scale for this generation.
 
 Returns: Reevaluation stage rollout options.
 
@@ -1332,8 +1332,8 @@ The small mixing pipeline spreads nearby generation numbers apart so adjacent
 stages and generations do not accidentally reuse overly correlated seed sets.
 
 Parameters:
-- `generationIndex` - - Current generation index.
-- `stageSalt` - - Stage-specific salt.
+- `generationIndex` - Current generation index.
+- `stageSalt` - Stage-specific salt.
 
 Returns: Mixed uint32 seed.
 
@@ -1351,7 +1351,7 @@ The course starts gentle, ramps through the middle generations, and then caps
 at full difficulty once the population has had time to discover viable flight.
 
 Parameters:
-- `generationIndex` - - Zero-based generation index.
+- `generationIndex` - Zero-based generation index.
 
 Returns: Difficulty scale in [0, 1].
 
@@ -1370,7 +1370,7 @@ can ask for one object and receive a fully prepared set of seeds, rollout
 options, and annealed mutation values.
 
 Parameters:
-- `generationIndex` - - Zero-based generation index.
+- `generationIndex` - Zero-based generation index.
 
 Returns: Full staged evaluation plan for the generation.
 
@@ -1389,6 +1389,6 @@ space broadly. Later generations cool down so the trainer can refine useful
 structures rather than constantly replacing them.
 
 Parameters:
-- `generationIndex` - - Zero-based generation index.
+- `generationIndex` - Zero-based generation index.
 
 Returns: Mutation rate and mutation amount for this generation.

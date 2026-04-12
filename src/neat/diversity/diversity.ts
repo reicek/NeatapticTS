@@ -60,6 +60,12 @@ export { MAX_LINEAGE_PAIR_SAMPLE } from './core/diversity.core';
  * are meant to stay cheap enough to run during telemetry capture, so the root
  * API favors stable trend signals over perfect all-pairs precision.
  *
+ * Step 7.5 boundary note: this chapter is a read-heavy controller inspection
+ * surface. It summarizes structural and lineage evidence, but it does not
+ * redefine genome identity, fitness, compatibility distance, or replay
+ * semantics unless another controller policy explicitly feeds the summary back
+ * into later search decisions.
+ *
  * Read the chapter in this order:
  *
  * - `structuralEntropy()` for the single-network topology fingerprint.

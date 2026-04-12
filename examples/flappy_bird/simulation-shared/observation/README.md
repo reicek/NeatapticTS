@@ -40,7 +40,7 @@ at several recent compact frames at once.
 The Wikipedia article on "frame stacking" is a useful conceptual reference.
 
 Parameters:
-- `features` - - Structured observation features.
+- `features` - Structured observation features.
 
 Returns: Core per-frame vector.
 
@@ -81,7 +81,7 @@ For broader context, the Wikipedia article on "feature engineering" is a
 good companion reference.
 
 Parameters:
-- `input` - - Observation input bundle.
+- `input` - Observation input bundle.
 
 Returns: Structured observation features.
 
@@ -122,7 +122,7 @@ network topology has evolved against one input layout, silent channel
 reshuffles would invalidate learned behavior.
 
 Parameters:
-- `features` - - Structured feature object.
+- `features` - Structured feature object.
 
 Returns: Ordered feature vector.
 
@@ -152,10 +152,10 @@ it. Looking further ahead adds noise faster than it adds useful control
 signal.
 
 Parameters:
-- `pipes` - - Current pipe list.
-- `birdCenterXPx` - - Bird center x-position.
-- `birdRadiusPx` - - Bird radius.
-- `pipeWidthPx` - - Pipe width.
+- `pipes` - Current pipe list.
+- `birdCenterXPx` - Bird center x-position.
+- `birdRadiusPx` - Bird radius.
+- `pipeWidthPx` - Pipe width.
 
 Returns: Tuple of first and second upcoming pipes.
 
@@ -183,9 +183,9 @@ Observation synthesis normalizes many raw measurements, so this helper keeps
 derived channels inside their documented ranges.
 
 Parameters:
-- `value` - - Candidate value.
-- `min` - - Inclusive lower bound.
-- `max` - - Inclusive upper bound.
+- `value` - Candidate value.
+- `min` - Inclusive lower bound.
+- `max` - Inclusive upper bound.
 
 Returns: Clamped value.
 
@@ -203,7 +203,7 @@ This is used for channels that are naturally interpreted as normalized
 proportions or bounded progress values.
 
 Parameters:
-- `value` - - Candidate value.
+- `value` - Candidate value.
 
 Returns: Value clamped between 0 and 1.
 
@@ -237,7 +237,7 @@ For broader context, the Wikipedia article on "feature engineering" is a
 good companion reference.
 
 Parameters:
-- `input` - - Observation input bundle.
+- `input` - Observation input bundle.
 
 Returns: Structured observation features.
 
@@ -276,9 +276,9 @@ the current physics assumption?" That small prediction is enough to build the
 reachability and urgency features used by the controller.
 
 Parameters:
-- `startYPx` - - Current bird y-position.
-- `initialVerticalVelocityPxPerFrame` - - Initial vertical velocity.
-- `frameHorizon` - - Predicted horizon in simulation frames.
+- `startYPx` - Current bird y-position.
+- `initialVerticalVelocityPxPerFrame` - Initial vertical velocity.
+- `frameHorizon` - Predicted horizon in simulation frames.
 
 Returns: Predicted y-position.
 
@@ -301,10 +301,10 @@ it. Looking further ahead adds noise faster than it adds useful control
 signal.
 
 Parameters:
-- `pipes` - - Current pipe list.
-- `birdCenterXPx` - - Bird center x-position.
-- `birdRadiusPx` - - Bird radius.
-- `pipeWidthPx` - - Pipe width.
+- `pipes` - Current pipe list.
+- `birdCenterXPx` - Bird center x-position.
+- `birdRadiusPx` - Bird radius.
+- `pipeWidthPx` - Pipe width.
 
 Returns: Tuple of first and second upcoming pipes.
 
@@ -338,7 +338,7 @@ at several recent compact frames at once.
 The Wikipedia article on "frame stacking" is a useful conceptual reference.
 
 Parameters:
-- `features` - - Structured observation features.
+- `features` - Structured observation features.
 
 Returns: Core per-frame vector.
 
@@ -369,7 +369,7 @@ network topology has evolved against one input layout, silent channel
 reshuffles would invalidate learned behavior.
 
 Parameters:
-- `features` - - Structured feature object.
+- `features` - Structured feature object.
 
 Returns: Ordered feature vector.
 

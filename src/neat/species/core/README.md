@@ -58,8 +58,8 @@ registry can still supply the evidence, the helper fills them in.
 Backfill missing extended history fields in place.
 
 Parameters:
-- `history` - - Recorded species history to enrich.
-- `context` - - NEAT context exposing current species and optional fallback innovations.
+- `history` - Recorded species history to enrich.
+- `context` - NEAT context exposing current species and optional fallback innovations.
 
 Returns: Nothing. The history entries are mutated in place when backfill succeeds.
 
@@ -87,6 +87,6 @@ or whether the caller explicitly asked for the richer innovation-range and
 enabled-ratio view.
 
 Parameters:
-- `options` - - Current NEAT options.
+- `options` - Current NEAT options.
 
 Returns: `true` when extended history is enabled.

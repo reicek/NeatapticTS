@@ -1,4 +1,5 @@
 import Network from '../../../architecture/network/network';
+import { crossOverWithRandomGenerator } from '../../../architecture/network/genetic/network.genetic.utils';
 import {
   LINEAGE_BASE_DEPTH,
   LINEAGE_DEPTH_INCREMENT,
@@ -47,17 +48,20 @@ export function createOffspring(
   context: OffspringContext,
   selectParent: () => Network,
 ): Network {
-  const parentOne = safelySelectParent(context, selectParent);
+  const randomGenerator = context._getRNG();
+  const parentOne = safelySelectParent(context, selectParent, randomGenerator);
   const parentTwo = safelySelectParent(
     context,
     selectParent,
+    randomGenerator,
     context.population,
   );
 
-  const offspring = Network.crossOver(
+  const offspring = crossOverWithRandomGenerator(
     parentOne,
     parentTwo,
     context.options.equal ?? false,
+    randomGenerator,
   );
 
   annotateOffspringMetadata(context, offspring, parentOne, parentTwo);
@@ -82,6 +86,7 @@ export function createOffspring(
 function safelySelectParent(
   context: OffspringContext,
   selectParent: () => Network,
+  randomGenerator: () => number,
   populationFallback?: Network[],
 ): Network {
   try {
@@ -92,9 +97,10 @@ function safelySelectParent(
       fallbackPopulation[OFFSPRING_FALLBACK_INDEX] ?? fallbackPopulation.at(0);
     if (fallbackGenome) return fallbackGenome;
 
-    const rng = context._getRNG();
     const populationLength = fallbackPopulation.length;
-    const randomIndex = Math.floor(rng() * Math.max(populationLength, 1));
+    const randomIndex = Math.floor(
+      randomGenerator() * Math.max(populationLength, 1),
+    );
     return (
       fallbackPopulation[randomIndex] ??
       fallbackPopulation[OFFSPRING_FALLBACK_INDEX]

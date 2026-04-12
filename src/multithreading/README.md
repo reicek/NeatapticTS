@@ -430,7 +430,7 @@ absoluteActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Absolute activation.
 
@@ -449,11 +449,11 @@ activateSerializedNetwork(
 Activates a serialized network and produces outputs.
 
 Parameters:
-- `inputValues` - - Inputs to feed into the network.
-- `activationValues` - - Mutable activation register shared across runs.
-- `stateValues` - - Mutable state register shared across runs.
-- `serializedNetwork` - - Flat encoded network data.
-- `activationFunctions` - - Ordered activation functions.
+- `inputValues` - Inputs to feed into the network.
+- `activationValues` - Mutable activation register shared across runs.
+- `stateValues` - Mutable state register shared across runs.
+- `serializedNetwork` - Flat encoded network data.
+- `activationFunctions` - Ordered activation functions.
 
 Returns: Activated outputs.
 
@@ -470,7 +470,7 @@ bentIdentityActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Bent identity activation.
 
@@ -483,7 +483,7 @@ bipolarActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Bipolar activation.
 
@@ -496,7 +496,7 @@ bipolarSigmoidActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Bipolar sigmoid activation.
 
@@ -511,7 +511,7 @@ deserializeDataSet(
 Deserializes a dataset from its flat representation.
 
 Parameters:
-- `serializedSet` - - Flat serialized dataset array.
+- `serializedSet` - Flat serialized dataset array.
 
 Returns: Array of input/output sample pairs.
 
@@ -524,7 +524,7 @@ gaussianActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Gaussian activation.
 
@@ -537,7 +537,7 @@ hardTanhActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Hard tanh activation.
 
@@ -550,7 +550,7 @@ identityActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Identity activation.
 
@@ -563,7 +563,7 @@ inverseActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Inverse activation.
 
@@ -576,7 +576,7 @@ logisticActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Logistic activation.
 
@@ -589,7 +589,7 @@ reluActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: ReLU activation.
 
@@ -602,7 +602,7 @@ seluActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: SELU activation.
 
@@ -617,7 +617,7 @@ serializeDataSet(
 Serializes a dataset into a flat numeric array.
 
 Parameters:
-- `dataSet` - - Collection of samples with input and output arrays.
+- `dataSet` - Collection of samples with input and output arrays.
 
 Returns: Flat serialized representation [inputCount, outputCount, ...samples].
 
@@ -630,7 +630,7 @@ sinusoidActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Sinusoid activation.
 
@@ -643,7 +643,7 @@ softplusActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Softplus activation.
 
@@ -656,7 +656,7 @@ softsignActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Softsign activation.
 
@@ -669,7 +669,7 @@ stepActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Step activation.
 
@@ -682,7 +682,7 @@ tanhActivation(
 ```
 
 Parameters:
-- `value` - - Input value.
+- `value` - Input value.
 
 Returns: Hyperbolic tangent activation.
 
@@ -702,11 +702,11 @@ testSerializedSet(
 Tests a serialized dataset using a cost function.
 
 Parameters:
-- `serializedSampleSet` - - Serialized dataset samples.
-- `costFunction` - - Cost function comparing expected and actual outputs.
-- `activationValues` - - Mutable activation register.
-- `stateValues` - - Mutable state register.
-- `serializedNetwork` - - Serialized network data.
-- `activationFunctions` - - Activation functions to apply.
+- `serializedSampleSet` - Serialized dataset samples.
+- `costFunction` - Cost function comparing expected and actual outputs.
+- `activationValues` - Mutable activation register.
+- `stateValues` - Mutable state register.
+- `serializedNetwork` - Serialized network data.
+- `activationFunctions` - Activation functions to apply.
 
 Returns: Average cost or NaN when invalid input.

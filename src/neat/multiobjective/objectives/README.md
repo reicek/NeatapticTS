@@ -53,8 +53,8 @@ the dominance and crowding pipeline assumes that the same objective occupies
 the same index in every vector.
 
 Parameters:
-- `genomeItem` - - Genome to evaluate.
-- `descriptors` - - Objective descriptors (vector schema).
+- `genomeItem` - Genome to evaluate.
+- `descriptors` - Objective descriptors (vector schema).
 
 Returns: Objective value vector (length equals `descriptors.length`).
 
@@ -76,8 +76,8 @@ This matrix is the handoff format for the rest of the multi-objective stack:
 rows preserve population order, columns preserve objective-schema order.
 
 Parameters:
-- `population` - - Genomes to evaluate (population order is preserved).
-- `descriptors` - - Objective descriptors (column schema).
+- `population` - Genomes to evaluate (population order is preserved).
+- `descriptors` - Objective descriptors (column schema).
 
 Returns: Objective values matrix.
 
@@ -101,8 +101,8 @@ Notes:
   this helper is intentionally defensive for long-running training loops.
 
 Parameters:
-- `genomeItem` - - Genome to evaluate.
-- `descriptor` - - Objective descriptor providing an accessor.
+- `genomeItem` - Genome to evaluate.
+- `descriptor` - Objective descriptor providing an accessor.
 
 Returns: Numeric objective value; `0` if the accessor throws.
 

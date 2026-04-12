@@ -59,6 +59,11 @@ export {
  * The public helpers stay readable by keeping those questions adjacent but not
  * collapsed into one overloaded routine.
  *
+ * Step 7.5 boundary note: selection consumes the current controller-visible
+ * score or objective view. It applies search pressure over that view, but it
+ * does not define canonical fitness, compatibility identity, or species
+ * history by itself.
+ *
  * The re-exported constants in this file are the small tuning and traversal
  * anchors that make those behaviors predictable: fallback scores for
  * unevaluated genomes, default parameters for the built-in parent-selection

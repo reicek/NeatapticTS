@@ -134,7 +134,7 @@ helper keeps that budget honest by capping the requested sample count to both
 the true combinatorial maximum and the chapter's global runtime limit.
 
 Parameters:
-- `size` - - Population size.
+- `size` - Population size.
 
 Returns: Sample cap respecting both the combinatorial count and the global limit.
 
@@ -159,8 +159,8 @@ full genealogy of the run; they need a stable recent-neighborhood view that
 remains cheap to recompute.
 
 Parameters:
-- `queueEntries` - - Breadth-first queue seeded with direct parents.
-- `population` - - Current population for ID lookups.
+- `queueEntries` - Breadth-first queue seeded with direct parents.
+- `population` - Current population for ID lookups.
 
 Returns: Unique ancestor IDs encountered within the depth window.
 
@@ -179,7 +179,7 @@ scalar. Rounding is intentional: the value is meant to be a stable telemetry
 and adaptive-policy signal rather than a high-precision scientific output.
 
 Parameters:
-- `distances` - - Pairwise Jaccard distances.
+- `distances` - Pairwise Jaccard distances.
 
 Returns: Mean distance rounded to the configured decimal precision.
 
@@ -201,9 +201,9 @@ set, and those sets are compared using Jaccard distance so the final metric
 reflects overlap rather than raw ancestor counts.
 
 Parameters:
-- `pairs` - - Sampled index pairs.
-- `population` - - Current population.
-- `buildAncestorSet` - - Helper that builds ancestor sets for genomes.
+- `pairs` - Sampled index pairs.
+- `population` - Current population.
+- `buildAncestorSet` - Helper that builds ancestor sets for genomes.
 
 Returns: Jaccard distances for valid pairs.
 
@@ -224,8 +224,8 @@ recent-family metric first; later queue expansion can then walk outward while
 still respecting the bounded depth window.
 
 Parameters:
-- `parentIds` - - Direct parent IDs to seed the queue.
-- `population` - - Current population for ID lookups.
+- `parentIds` - Direct parent IDs to seed the queue.
+- `population` - Current population for ID lookups.
 
 Returns: Queue entries at depth 1.
 
@@ -244,7 +244,7 @@ comparisons, not individual genomes. A population smaller than two can still
 have ancestry data, but it cannot produce a meaningful pairwise distance.
 
 Parameters:
-- `size` - - Population size.
+- `size` - Population size.
 
 Returns: `true` when at least two genomes exist.
 
@@ -263,7 +263,7 @@ metadata" into a guaranteed array shape so the traversal code never needs to
 branch on missing parent storage.
 
 Parameters:
-- `value` - - Genome to read parents from.
+- `value` - Genome to read parents from.
 
 Returns: Parent ID list, or an empty array when absent.
 
@@ -285,8 +285,8 @@ not a canonical population ordering; it is a reproducible comparison budget
 for the current generation.
 
 Parameters:
-- `sampleCount` - - Number of pairs to sample.
-- `size` - - Population size for index bounds.
-- `rngFactory` - - RNG provider used to obtain a random function.
+- `sampleCount` - Number of pairs to sample.
+- `size` - Population size for index bounds.
+- `rngFactory` - RNG provider used to obtain a random function.
 
 Returns: Array of sampled index pairs.

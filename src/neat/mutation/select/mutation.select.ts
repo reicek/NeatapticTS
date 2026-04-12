@@ -4,6 +4,7 @@ import type {
   NeatControllerForMutation,
   OperatorStats,
 } from '../shared/mutation.types';
+import { allowsRecurrentConnectionMutation } from '../../topology-intent/neat.topology-intent';
 
 /** Default operator adaptation boost factor. */
 const DEFAULT_OPERATOR_ADAPTATION_BOOST = 2;
@@ -432,14 +433,23 @@ export function applyOperatorBanditForSelect(
  */
 export function isBlockedByRecurrentPolicyForSelect(
   mutationMethod: MutationMethod,
+  genome: GenomeWithMetadata,
   internal: NeatControllerForMutation,
   methods: { mutation: unknown },
 ): boolean {
-  // Step 1: enforce recurrent restrictions when disabled.
-  if (internal.options.allowRecurrent) return false;
+  // Step 1: return early for non-recurrent mutation methods.
   const mutationMethods = methods.mutation as Record<string, MutationMethod>;
-  return (
+  const isRecurrentMutation =
     mutationMethod === mutationMethods.ADD_BACK_CONN ||
-    mutationMethod === mutationMethods.ADD_SELF_CONN
+    mutationMethod === mutationMethods.ADD_SELF_CONN;
+
+  if (!isRecurrentMutation) {
+    return false;
+  }
+
+  // Step 2: require both controller opt-in and a non-feed-forward genome contract.
+  return !allowsRecurrentConnectionMutation(
+    genome,
+    internal.options.allowRecurrent,
   );
 }

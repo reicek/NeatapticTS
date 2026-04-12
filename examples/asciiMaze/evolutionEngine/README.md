@@ -391,8 +391,8 @@ Cancellation Priority:
 Parameters:
 
 Parameters:
-- `options` - - Optional run configuration which may contain `cancellation` and/or `signal`
-- `bestResult` - - Optional mutable result object that will be annotated with `exitReason`
+- `options` - Optional run configuration which may contain `cancellation` and/or `signal`
+- `bestResult` - Optional mutable result object that will be annotated with `exitReason`
 
 Returns: A reason string ('cancelled' | 'aborted') when cancellation is detected, otherwise `undefined`
 
@@ -452,20 +452,20 @@ Side Effects (Best-Effort):
 Parameters:
 
 Parameters:
-- `bestResult` - - Mutable run summary object (may be mutated with `exitReason`)
-- `bestNetwork` - - Network object associated with the best result (for dashboard)
-- `maze` - - Maze descriptor passed to dashboard updates/events
-- `completedGenerations` - - Current generation index (integer)
-- `neat` - - NEAT driver instance (passed to dashboard update)
-- `dashboardManager` - - Optional manager exposing `update(maze, result, network, gen, neat)`
-- `flushToFrame` - - Async function to yield to host renderer (e.g. requestAnimationFrame)
-- `hostAdapter` - - Optional host adapter that owns host-side stop behavior
-- `minProgressToPass` - - Numeric threshold to consider a run 'solved'
-- `autoPauseOnSolve` - - When truthy request host-side pause handling on solve
-- `stopOnlyOnSolve` - - When true ignore stagnation/maxGenerations as stop reasons
-- `stagnantGenerations` - - Current count of stagnant generations observed
-- `maxStagnantGenerations` - - Max allowed stagnant generations before stopping
-- `maxGenerations` - - Absolute generation cap after which the run stops
+- `bestResult` - Mutable run summary object (may be mutated with `exitReason`)
+- `bestNetwork` - Network object associated with the best result (for dashboard)
+- `maze` - Maze descriptor passed to dashboard updates/events
+- `completedGenerations` - Current generation index (integer)
+- `neat` - NEAT driver instance (passed to dashboard update)
+- `dashboardManager` - Optional manager exposing `update(maze, result, network, gen, neat)`
+- `flushToFrame` - Async function to yield to host renderer (e.g. requestAnimationFrame)
+- `hostAdapter` - Optional host adapter that owns host-side stop behavior
+- `minProgressToPass` - Numeric threshold to consider a run 'solved'
+- `autoPauseOnSolve` - When truthy request host-side pause handling on solve
+- `stopOnlyOnSolve` - When true ignore stagnation/maxGenerations as stop reasons
+- `stagnantGenerations` - Current count of stagnant generations observed
+- `maxStagnantGenerations` - Max allowed stagnant generations before stopping
+- `maxGenerations` - Absolute generation cap after which the run stops
 
 Returns: A canonical reason string ('solved'|'stagnation'|'maxGenerations') when stopping, otherwise `undefined`
 
@@ -519,14 +519,14 @@ Calculation Steps:
 Parameters:
 
 Parameters:
-- `engineState` - - Shared engine state with scratch buffers and profiling accumulators
-- `safeWrite` - - Safe logging function (best-effort, never throws)
-- `completedGenerations` - - Number of completed generations (must be > 0)
-- `totalEvolveMs` - - Total milliseconds spent in NEAT evolve() calls
-- `totalLamarckMs` - - Total milliseconds spent in Lamarckian training
-- `totalSimMs` - - Total milliseconds spent in simulation
-- `isProfilingDetailsEnabledFn` - - Function to check if detailed profiling is enabled
-- `getProfilingAccumulatorsFn` - - Function to get detailed profiling accumulators
+- `engineState` - Shared engine state with scratch buffers and profiling accumulators
+- `safeWrite` - Safe logging function (best-effort, never throws)
+- `completedGenerations` - Number of completed generations (must be > 0)
+- `totalEvolveMs` - Total milliseconds spent in NEAT evolve() calls
+- `totalLamarckMs` - Total milliseconds spent in Lamarckian training
+- `totalSimMs` - Total milliseconds spent in simulation
+- `isProfilingDetailsEnabledFn` - Function to check if detailed profiling is enabled
+- `getProfilingAccumulatorsFn` - Function to get detailed profiling accumulators
 
 Example:
 
@@ -602,24 +602,24 @@ Snapshot Structure:
 Parameters:
 
 Parameters:
-- `engineState` - - Shared engine state with scratch buffers and profiling
-- `fs` - - Node.js fs module or compatible FS API
-- `pathModule` - - Node.js path module or compatible path API
-- `persistDir` - - Directory path where snapshots should be written
-- `persistTopK` - - Number of top genomes to include in snapshot
-- `completedGenerations` - - Current generation index
-- `persistEvery` - - Generation interval for persistence (e.g., 25 = every 25th generation)
-- `neat` - - NEAT instance with population
-- `bestFitness` - - Best fitness score this generation
-- `simplifyMode` - - Whether simplification mode is active
-- `plateauCounter` - - Current plateau counter value
-- `scratchSnapshotObj` - - Pooled snapshot object (reused across calls)
-- `scratchSnapshotTop` - - Pooled top-K buffer (reused across calls)
-- `collectTelemetryTailFn` - - Function to collect telemetry tail from state
-- `getSortedIndicesByScoreFn` - - Function to get sorted genome indices
-- `isProfilingDetailsEnabledFn` - - Function to check profiling state
-- `profilingStartTimestampFn` - - Function to get profiling start time
-- `accumulateProfilingDurationFn` - - Function to accumulate profiling duration
+- `engineState` - Shared engine state with scratch buffers and profiling
+- `fs` - Node.js fs module or compatible FS API
+- `pathModule` - Node.js path module or compatible path API
+- `persistDir` - Directory path where snapshots should be written
+- `persistTopK` - Number of top genomes to include in snapshot
+- `completedGenerations` - Current generation index
+- `persistEvery` - Generation interval for persistence (e.g., 25 = every 25th generation)
+- `neat` - NEAT instance with population
+- `bestFitness` - Best fitness score this generation
+- `simplifyMode` - Whether simplification mode is active
+- `plateauCounter` - Current plateau counter value
+- `scratchSnapshotObj` - Pooled snapshot object (reused across calls)
+- `scratchSnapshotTop` - Pooled top-K buffer (reused across calls)
+- `collectTelemetryTailFn` - Function to collect telemetry tail from state
+- `getSortedIndicesByScoreFn` - Function to get sorted genome indices
+- `isProfilingDetailsEnabledFn` - Function to check profiling state
+- `profilingStartTimestampFn` - Function to get profiling start time
+- `accumulateProfilingDurationFn` - Function to accumulate profiling duration
 
 Example:
 
@@ -660,8 +660,8 @@ Scratch Buffer Warm-Up:
 Parameters:
 
 Parameters:
-- `opts` - - Normalized run options (contains persistDir and dashboardManager)
-- `scratchBundle` - - Engine scratch state for optional buffer warm-up
+- `opts` - Normalized run options (contains persistDir and dashboardManager)
+- `scratchBundle` - Engine scratch state for optional buffer warm-up
 
 Returns: Object containing:
 - flushToFrame: Async function for cooperative yielding
@@ -709,21 +709,21 @@ Behaviour & contract:
    fashion and yields to the host when requested via `helpers.flushToFrame`.
 
 Parameters:
-- `engineState` - - Shared engine state with scratch buffers and configuration
-- `neat` - - NEAT driver instance used to perform evolution and mutation operations
-- `opts` - - Normalised run options (produced by normalizeRunOptions)
-- `lamarckianTrainingSet` - - Optional supervised training cases used for Lamarckian warm-start
-- `encodedMaze` - - Encoded maze representation consumed by simulators
-- `startPosition` - - Start coordinates for the simulated agent
-- `exitPosition` - - Exit coordinates for the simulated agent
-- `distanceMap` - - Optional precomputed distance map to speed simulation
-- `helpers` - - Helper utilities: { flushToFrame, fs, path, safeWrite }
-- `doProfile` - - When truthy collect and return millisecond timings in the result
-- `runtimeContext` - - Shared pooled ring buffers and limits for the hot path.
-- `initialRingState` - - Current mutable ring state for this run.
-- `telemetryContext` - - Telemetry thresholds and verbosity switches used during simulation.
-- `supportContext` - - Shared scratch buffers and helper callbacks used by the loop.
-- `constants` - - Object containing all engine constants (DEFAULT_TRAIN_ERROR, etc.)
+- `engineState` - Shared engine state with scratch buffers and configuration
+- `neat` - NEAT driver instance used to perform evolution and mutation operations
+- `opts` - Normalised run options (produced by normalizeRunOptions)
+- `lamarckianTrainingSet` - Optional supervised training cases used for Lamarckian warm-start
+- `encodedMaze` - Encoded maze representation consumed by simulators
+- `startPosition` - Start coordinates for the simulated agent
+- `exitPosition` - Exit coordinates for the simulated agent
+- `distanceMap` - Optional precomputed distance map to speed simulation
+- `helpers` - Helper utilities: { flushToFrame, fs, path, safeWrite }
+- `doProfile` - When truthy collect and return millisecond timings in the result
+- `runtimeContext` - Shared pooled ring buffers and limits for the hot path.
+- `initialRingState` - Current mutable ring state for this run.
+- `telemetryContext` - Telemetry thresholds and verbosity switches used during simulation.
+- `supportContext` - Shared scratch buffers and helper callbacks used by the loop.
+- `constants` - Object containing all engine constants (DEFAULT_TRAIN_ERROR, etc.)
 
 Returns: Promise resolving to an object:
 { bestNetwork, bestResult, neat, completedGenerations, totalEvolveMs, totalLamarckMs, totalSimMs, updatedRingState }
@@ -780,26 +780,26 @@ Behaviour & contract:
    via the provided `safeWrite` function.
 
 Parameters:
-- `engineState` - - Shared engine state with scratch buffers and RNG
-- `neat` - - NEAT driver instance used for evolving the generation
-- `doProfile` - - When truthy measure timing for the evolve step (ms) using engine clock
-- `lamarckianIterations` - - Number of supervised training iterations to run per genome (0 to skip)
-- `lamarckianTrainingSet` - - Array of supervised training cases used for warm-start (may be empty)
-- `lamarckianSampleSize` - - Optional per-network sample size used by the warm-start routine
-- `safeWrite` - - Safe logging function; used only for best-effort diagnostic messages
-- `completedGenerations` - - Current generation index (used by expansion heuristics)
-- `dynamicPopEnabled` - - Whether dynamic population expansion is enabled
-- `dynamicPopMax` - - Upper bound on population size for expansion
-- `plateauGenerations` - - Window size used by plateau detection
-- `plateauCounter` - - Current plateau counter used by expansion heuristics
-- `dynamicPopExpandInterval` - - Generation interval to attempt expansion
-- `dynamicPopExpandFactor` - - Fractional growth factor used to compute new members
-- `dynamicPopPlateauSlack` - - Minimum plateau ratio required to trigger expansion
-- `speciesHistoryRef` - - Mutable array holding species history (maintained externally)
-- `emptyVec` - - Empty array fallback to avoid ephemeral allocations
-- `scratchNodeIdx` - - Pooled node index buffer (passed through to helpers)
-- `getNodeIndicesByType` - - Helper function to collect node indices by type
-- `constants` - - Object containing DEFAULT_TRAIN_ERROR, DEFAULT_TRAIN_RATE, DEFAULT_TRAIN_MOMENTUM, DEFAULT_TRAIN_BATCH_SMALL, DEFAULT_STD_SMALL, DEFAULT_STD_ADJUST_MULT
+- `engineState` - Shared engine state with scratch buffers and RNG
+- `neat` - NEAT driver instance used for evolving the generation
+- `doProfile` - When truthy measure timing for the evolve step (ms) using engine clock
+- `lamarckianIterations` - Number of supervised training iterations to run per genome (0 to skip)
+- `lamarckianTrainingSet` - Array of supervised training cases used for warm-start (may be empty)
+- `lamarckianSampleSize` - Optional per-network sample size used by the warm-start routine
+- `safeWrite` - Safe logging function; used only for best-effort diagnostic messages
+- `completedGenerations` - Current generation index (used by expansion heuristics)
+- `dynamicPopEnabled` - Whether dynamic population expansion is enabled
+- `dynamicPopMax` - Upper bound on population size for expansion
+- `plateauGenerations` - Window size used by plateau detection
+- `plateauCounter` - Current plateau counter used by expansion heuristics
+- `dynamicPopExpandInterval` - Generation interval to attempt expansion
+- `dynamicPopExpandFactor` - Fractional growth factor used to compute new members
+- `dynamicPopPlateauSlack` - Minimum plateau ratio required to trigger expansion
+- `speciesHistoryRef` - Mutable array holding species history (maintained externally)
+- `emptyVec` - Empty array fallback to avoid ephemeral allocations
+- `scratchNodeIdx` - Pooled node index buffer (passed through to helpers)
+- `getNodeIndicesByType` - Helper function to collect node indices by type
+- `constants` - Object containing DEFAULT_TRAIN_ERROR, DEFAULT_TRAIN_RATE, DEFAULT_TRAIN_MOMENTUM, DEFAULT_TRAIN_BATCH_SMALL, DEFAULT_STD_SMALL, DEFAULT_STD_ADJUST_MULT
 
 Returns: An object shaped { fittest, tEvolve, tLamarck } where:
 - `fittest` is the network returned by `neat.evolve()` (may be null on error),
@@ -884,22 +884,22 @@ Notes on pooling / reentrancy:
    for cross-thread producers.
 
 Parameters:
-- `engineState` - - Shared engine state with scratch buffers and ring configuration
-- `fittest` - - Genome/network considered the generation's best; may be mutated with metadata
-- `encodedMaze` - - Maze descriptor used by the simulator
-- `startPosition` - - Start co-ordinates passed as-is to the simulator
-- `exitPosition` - - Exit co-ordinates passed as-is to the simulator
-- `distanceMap` - - Optional precomputed distance map consumed by the simulator
-- `maxSteps` - - Optional maximum simulation steps; may be undefined to allow default
-- `doProfile` - - When truthy measure and return the simulation time in milliseconds
-- `safeWrite` - - Optional logger used for non-fatal diagnostic messages
-- `logEvery` - - Emit telemetry every `logEvery` generations (0 disables periodic telemetry)
-- `completedGenerations` - - Current generation index used for conditional telemetry
-- `neat` - - NEAT driver instance passed to telemetry hooks
-- `runtimeContext` - - Shared pooled ring buffers and limits for logits telemetry.
-- `ringState` - - Current mutable ring state (capacity, shared-mode flag, write cursor).
-- `telemetryContext` - - Telemetry thresholds and verbosity switches used after simulation.
-- `loopSupportContext` - - Shared scratch buffers and helper callbacks used by the loop.
+- `engineState` - Shared engine state with scratch buffers and ring configuration
+- `fittest` - Genome/network considered the generation's best; may be mutated with metadata
+- `encodedMaze` - Maze descriptor used by the simulator
+- `startPosition` - Start co-ordinates passed as-is to the simulator
+- `exitPosition` - Exit co-ordinates passed as-is to the simulator
+- `distanceMap` - Optional precomputed distance map consumed by the simulator
+- `maxSteps` - Optional maximum simulation steps; may be undefined to allow default
+- `doProfile` - When truthy measure and return the simulation time in milliseconds
+- `safeWrite` - Optional logger used for non-fatal diagnostic messages
+- `logEvery` - Emit telemetry every `logEvery` generations (0 disables periodic telemetry)
+- `completedGenerations` - Current generation index used for conditional telemetry
+- `neat` - NEAT driver instance passed to telemetry hooks
+- `runtimeContext` - Shared pooled ring buffers and limits for logits telemetry.
+- `ringState` - Current mutable ring state (capacity, shared-mode flag, write cursor).
+- `telemetryContext` - Telemetry thresholds and verbosity switches used after simulation.
+- `loopSupportContext` - Shared scratch buffers and helper callbacks used by the loop.
 
 Returns: An object { generationResult, simTime, updatedRingState } where simTime is ms when profiling is enabled
 
@@ -949,13 +949,13 @@ Design Rationale:
 Parameters:
 
 Parameters:
-- `maze` - - Maze instance or descriptor used by dashboard rendering.
-- `result` - - Per-run result object (path, progress, telemetry, etc.).
-- `network` - - Network or genome object that should be visualised.
-- `completedGenerations` - - Integer index of the completed generation.
-- `neat` - - NEAT manager instance (context passed to the dashboard update).
-- `dashboardManager` - - Optional manager exposing `update(maze, result, network, gen, neat)`.
-- `flushToFrame` - - Optional async function used to yield to the host/frame scheduler; may be omitted.
+- `maze` - Maze instance or descriptor used by dashboard rendering.
+- `result` - Per-run result object (path, progress, telemetry, etc.).
+- `network` - Network or genome object that should be visualised.
+- `completedGenerations` - Integer index of the completed generation.
+- `neat` - NEAT manager instance (context passed to the dashboard update).
+- `dashboardManager` - Optional manager exposing `update(maze, result, network, gen, neat)`.
+- `flushToFrame` - Optional async function used to yield to the host/frame scheduler; may be omitted.
 
 Example:
 
@@ -1008,13 +1008,13 @@ Steps / inline intent:
 Parameters:
 
 Parameters:
-- `maze` - - Maze descriptor passed to the dashboard renderer.
-- `bestResult` - - Best-run result object used for display (may be falsy when not present).
-- `bestNetwork` - - Network or genome object to visualise (may be falsy when not present).
-- `completedGenerations` - - Completed generation index (number).
-- `neat` - - NEAT manager instance (passed through to dashboard update).
-- `dashboardManager` - - Optional manager exposing `update(maze, result, network, gen, neat)`.
-- `flushToFrame` - - Optional async function used to yield to the host/frame scheduler
+- `maze` - Maze descriptor passed to the dashboard renderer.
+- `bestResult` - Best-run result object used for display (may be falsy when not present).
+- `bestNetwork` - Network or genome object to visualise (may be falsy when not present).
+- `completedGenerations` - Completed generation index (number).
+- `neat` - NEAT manager instance (passed through to dashboard update).
+- `dashboardManager` - Optional manager exposing `update(maze, result, network, gen, neat)`.
+- `flushToFrame` - Optional async function used to yield to the host/frame scheduler
  (for example: `() => new Promise(r => requestAnimationFrame(r))`).
 
 Example:
@@ -1037,7 +1037,7 @@ applyEvolutionEngineRingState(
 Apply the latest logits-ring runtime values returned by the evolution loop.
 
 Parameters:
-- `updatedRingState` - - New ring-capacity, shared-mode, and write-cursor values.
+- `updatedRingState` - New ring-capacity, shared-mode, and write-cursor values.
 
 ### configureEvolutionEngineToggles
 
@@ -1052,9 +1052,9 @@ configureEvolutionEngineToggles(
 Apply telemetry and Baldwin-phase toggles derived from one normalized run request.
 
 Parameters:
-- `reducedTelemetry` - - When true, keep only the essential telemetry metrics.
-- `telemetryMinimal` - - When true, disable verbose telemetry capture.
-- `disableBaldwinPhase` - - When true, skip the Baldwin refinement stage.
+- `reducedTelemetry` - When true, keep only the essential telemetry metrics.
+- `telemetryMinimal` - When true, disable verbose telemetry capture.
+- `disableBaldwinPhase` - When true, skip the Baldwin refinement stage.
 
 ### getEvolutionEngineFacadeRuntimeState
 
@@ -1823,7 +1823,7 @@ Notes:
 - No large allocations are performed here; the function returns lightweight references
 
 Parameters:
-- `persistDir` - - Optional directory to ensure exists. If falsy, no filesystem mutations are attempted.
+- `persistDir` - Optional directory to ensure exists. If falsy, no filesystem mutations are attempted.
 
 Returns: Object with `{ fs, path }` where each value may be `null` when unavailable.
 
@@ -1845,7 +1845,7 @@ isPauseRequested(
 Read host-controlled pause state without letting host errors break the engine.
 
 Parameters:
-- `hostAdapter` - - Optional host adapter implementing pause polling.
+- `hostAdapter` - Optional host adapter implementing pause polling.
 
 Returns: True when the host asks the engine to remain paused.
 
@@ -1871,7 +1871,7 @@ Steps:
 3. Resolve once a tick passed while not paused
 
 Parameters:
-- `hostAdapter` - - Optional host adapter that owns cooperative pause state.
+- `hostAdapter` - Optional host adapter that owns cooperative pause state.
 
 Returns: A function that yields cooperatively to the next animation frame / tick.
 
@@ -1902,7 +1902,7 @@ Notes:
   when falling back to `console.log`
 
 Parameters:
-- `dashboardManager` - - Optional manager exposing `logFunction(msg:string)` used in some UIs.
+- `dashboardManager` - Optional manager exposing `logFunction(msg:string)` used in some UIs.
 
 Returns: A function accepting a single string message to write.
 
@@ -1929,8 +1929,8 @@ hasMazeEvolutionReachedCurriculumThreshold(
 Determine whether a completed phase should advance the surrounding curriculum.
 
 Parameters:
-- `progress` - - Progress reported by the best run result.
-- `minProgressToPass` - - Minimum progress percentage required to advance.
+- `progress` - Progress reported by the best run result.
+- `minProgressToPass` - Minimum progress percentage required to advance.
 
 Returns: Whether the phase counts as curriculum-complete.
 
@@ -1946,8 +1946,8 @@ refineMazeEvolutionCarryOverNetwork(
 Refine the winning network before seeding the next curriculum phase.
 
 Parameters:
-- `bestNetwork` - - Network returned by the latest evolution phase.
-- `previousBestNetwork` - - Previously carried curriculum seed.
+- `bestNetwork` - Network returned by the latest evolution phase.
+- `previousBestNetwork` - Previously carried curriculum seed.
 
 Returns: Refined winner or the best available carry-over network.
 
@@ -1964,9 +1964,9 @@ resolveMazeEvolutionPhaseOutcome(
 Resolve the stable curriculum-facing outcome of one maze evolution phase.
 
 Parameters:
-- `evolutionResult` - - Stable engine result returned by `EvolutionEngine.runMazeEvolution()`.
-- `previousBestNetwork` - - Previously carried winner used when the latest phase has no replacement.
-- `minProgressToPass` - - Progress threshold required before curriculum should advance.
+- `evolutionResult` - Stable engine result returned by `EvolutionEngine.runMazeEvolution()`.
+- `previousBestNetwork` - Previously carried winner used when the latest phase has no replacement.
+- `minProgressToPass` - Progress threshold required before curriculum should advance.
 
 Returns: Shared curriculum outcome describing progress, solve state, and next carry-over seed.
 
@@ -2035,12 +2035,12 @@ Buffer Management:
 Parameters:
 
 Parameters:
-- `opts` - - Normalized run options (produced by normalizeRunOptions)
-- `inputSize` - - Network input count
-- `outputSize` - - Network output count
-- `fitnessContext` - - Compact fitness evaluation context
-- `scratchPopClone` - - Pooled clone buffer (will be grown if needed)
-- `scratchSample` - - Pooled sample buffer (will be grown if needed)
+- `opts` - Normalized run options (produced by normalizeRunOptions)
+- `inputSize` - Network input count
+- `outputSize` - Network output count
+- `fitnessContext` - Compact fitness evaluation context
+- `scratchPopClone` - Pooled clone buffer (will be grown if needed)
+- `scratchSample` - Pooled sample buffer (will be grown if needed)
 
 Returns: Object containing:
 - neat: Configured and seeded NEAT driver instance
@@ -2109,11 +2109,11 @@ Side Effects:
 Parameters:
 
 Parameters:
-- `options` - - Raw run options from the user
-- `setDeterministic` - - Callback to set deterministic mode (seed: number) => void
-- `setReducedTelemetry` - - Callback to set reduced telemetry flag (enabled: boolean) => void
-- `setMinimalTelemetry` - - Callback to set minimal telemetry flag (enabled: boolean) => void
-- `setDisableBaldwin` - - Callback to disable Baldwinian refinement (disabled: boolean) => void
+- `options` - Raw run options from the user
+- `setDeterministic` - Callback to set deterministic mode (seed: number) => void
+- `setReducedTelemetry` - Callback to set reduced telemetry flag (enabled: boolean) => void
+- `setMinimalTelemetry` - Callback to set minimal telemetry flag (enabled: boolean) => void
+- `setDisableBaldwin` - Callback to disable Baldwinian refinement (disabled: boolean) => void
 
 Returns: Normalized options object with all defaults applied and configuration groups extracted
 
@@ -2163,8 +2163,8 @@ Steps (high-level):
 Parameters:
 
 Parameters:
-- `opts` - - Normalized run options (produced by `normalizeRunOptions`)
-- `scratchBundle` - - Engine scratch state for optional pool warm-up
+- `opts` - Normalized run options (produced by `normalizeRunOptions`)
+- `scratchBundle` - Engine scratch state for optional pool warm-up
 
 Returns: Object containing:
 - encodedMaze: Simulator-friendly maze representation
@@ -2343,20 +2343,20 @@ Telemetry Steps (in order):
 Parameters:
 
 Parameters:
-- `engineState` - - Shared engine state with scratch buffers and profiling
-- `neat` - - NEAT instance with population
-- `fittest` - - Best network/genome from this generation
-- `genResult` - - Generation result with simulation data
-- `generationIndex` - - Current generation index
-- `writeLog` - - Safe logging function
-- `actionDimension` - - Number of possible actions (for entropy normalization)
-- `recentWindow` - - Window size for logits tail sampling
-- `reducedTelemetry` - - Whether reduced telemetry mode is active
-- `telemetryMinimal` - - Whether minimal telemetry mode is active (skip all if true)
-- `onCollapseRecovery` - - Callback invoked when collapse is detected (for recovery)
-- `isProfilingDetailsEnabledFn` - - Function to check profiling state
-- `profilingStartTimestampFn` - - Function to get profiling start time
-- `accumulateProfilingDurationFn` - - Function to accumulate profiling duration
+- `engineState` - Shared engine state with scratch buffers and profiling
+- `neat` - NEAT instance with population
+- `fittest` - Best network/genome from this generation
+- `genResult` - Generation result with simulation data
+- `generationIndex` - Current generation index
+- `writeLog` - Safe logging function
+- `actionDimension` - Number of possible actions (for entropy normalization)
+- `recentWindow` - Window size for logits tail sampling
+- `reducedTelemetry` - Whether reduced telemetry mode is active
+- `telemetryMinimal` - Whether minimal telemetry mode is active (skip all if true)
+- `onCollapseRecovery` - Callback invoked when collapse is detected (for recovery)
+- `isProfilingDetailsEnabledFn` - Function to check profiling state
+- `profilingStartTimestampFn` - Function to get profiling start time
+- `accumulateProfilingDurationFn` - Function to accumulate profiling duration
 
 Example:
 
@@ -2485,10 +2485,10 @@ Default Constants (from EvolutionEngine):
 Parameters:
 
 Parameters:
-- `inputCount` - - Number of input nodes for the network topology
-- `outputCount` - - Number of output nodes for the network topology
-- `fitnessCallback` - - Function to evaluate network fitness (net: Network) => number
-- `cfg` - - Optional configuration bag with the following supported properties:
+- `inputCount` - Number of input nodes for the network topology
+- `outputCount` - Number of output nodes for the network topology
+- `fitnessCallback` - Function to evaluate network fitness (net: Network) => number
+- `cfg` - Optional configuration bag with the following supported properties:
 - popSize: Population size (default: 150)
 - mutation: Array of mutation operators (default: comprehensive set including LSTM)
 - allowRecurrent: Enable recurrent connections (default: true)
@@ -2552,11 +2552,11 @@ Pooling Pattern:
 Parameters:
 
 Parameters:
-- `neat` - - NEAT driver/manager object which may receive the initial population
-- `initialPopulation` - - Optional array of networks to use as the starting population
-- `initialBestNetwork` - - Optional single network to place at index 0 (best seed)
-- `targetPopSize` - - Fallback population size used when `neat.population` is missing
-- `scratchPopClone` - - Pooled clone buffer to reuse across calls (will be grown if needed)
+- `neat` - NEAT driver/manager object which may receive the initial population
+- `initialPopulation` - Optional array of networks to use as the starting population
+- `initialBestNetwork` - Optional single network to place at index 0 (best seed)
+- `targetPopSize` - Fallback population size used when `neat.population` is missing
+- `scratchPopClone` - Pooled clone buffer to reuse across calls (will be grown if needed)
 
 Returns: The scratchPopClone buffer (may be a new array if grown)
 
@@ -2614,8 +2614,8 @@ Design:
 - Delegates to helper functions for modular, testable logic
 
 Parameters:
-- `engineState` - - Shared engine state containing pooled scratch buffers.
-- `network` - - Network-like object to inspect.
+- `engineState` - Shared engine state containing pooled scratch buffers.
+- `network` - Network-like object to inspect.
 
 Example:
 
@@ -2641,7 +2641,7 @@ Design Rationale:
  - Zero runtime overhead (optimized away by JIT)
 
 Parameters:
-- `error` - - The error object to void (can be any type)
+- `error` - The error object to void (can be any type)
 
 Example:
 
@@ -2807,11 +2807,11 @@ Steps:
 5. Clamp adjusted biases to safe operational range [-5, 5] and write back
 
 Parameters:
-- `network` - - Network object containing `nodes` array. Missing nodes treated as empty.
-- `state` - - Shared engine state (provides scratch buffers and node index pool).
-- `constants` - - Hyperparameters for adjustment (std threshold, multiplier).
-- `scratchNodeIdx` - - Pooled index buffer for output nodes (written by getNodeIndicesByType).
-- `getNodeIndicesByType` - - Helper function to collect node indices by type.
+- `network` - Network object containing `nodes` array. Missing nodes treated as empty.
+- `state` - Shared engine state (provides scratch buffers and node index pool).
+- `constants` - Hyperparameters for adjustment (std threshold, multiplier).
+- `scratchNodeIdx` - Pooled index buffer for output nodes (written by getNodeIndicesByType).
+- `getNodeIndicesByType` - Helper function to collect node indices by type.
 
 Example:
 
@@ -2859,16 +2859,16 @@ Steps:
 8. Return elapsed time when profiling; otherwise return 0
 
 Parameters:
-- `neat` - - NEAT instance exposing `population` array.
-- `trainingSet` - - Array of `{input:number[], output:number[]}` training cases.
-- `iterations` - - Number of training iterations to run per-network (must be > 0).
-- `sampleSize` - - Optional sample size to down-sample `trainingSet` (with replacement).
-- `safeWrite` - - Logging helper used for telemetry lines (string writer).
-- `profileEnabled` - - When true, function returns elapsed ms spent training; otherwise returns 0.
-- `completedGenerations` - - Generation index used when emitting telemetry lines.
-- `state` - - Shared engine state (provides RNG for sampling and profiling timer).
-- `constants` - - Training hyperparameters (learning rates, batch sizes, etc.).
-- `adjustOutputBiases` - - Helper function for post-training bias adjustment.
+- `neat` - NEAT instance exposing `population` array.
+- `trainingSet` - Array of `{input:number[], output:number[]}` training cases.
+- `iterations` - Number of training iterations to run per-network (must be > 0).
+- `sampleSize` - Optional sample size to down-sample `trainingSet` (with replacement).
+- `safeWrite` - Logging helper used for telemetry lines (string writer).
+- `profileEnabled` - When true, function returns elapsed ms spent training; otherwise returns 0.
+- `completedGenerations` - Generation index used when emitting telemetry lines.
+- `state` - Shared engine state (provides RNG for sampling and profiling timer).
+- `constants` - Training hyperparameters (learning rates, batch sizes, etc.).
+- `adjustOutputBiases` - Helper function for post-training bias adjustment.
 
 Returns: Elapsed milliseconds spent in training when profiling is enabled; otherwise 0.
 
@@ -2910,8 +2910,8 @@ Each training case maps a 6-dimensional input to a soft one-hot output:
 - Output: [pN, pE, pS, pW] with probabilities (high for target, low for others)
 
 Parameters:
-- `state` - - Shared engine state (used for RNG when applying jitter augmentation).
-- `constants` - - Training hyperparameters and signal constants.
+- `state` - Shared engine state (used for RNG when applying jitter augmentation).
+- `constants` - Training hyperparameters and signal constants.
 
 Returns: Array of training cases `{ input: number[], output: number[] }`.
 
@@ -2980,11 +2980,11 @@ Steps:
 3. Apply warm-start heuristics (compass wiring + bias centering). Swallow any per-network exceptions.
 
 Parameters:
-- `neat` - - NEAT instance exposing a `population` array of networks.
-- `lamarckianTrainingSet` - - Array of `{input:number[], output:number[]}` training cases.
-- `constants` - - Training hyperparameters (iteration limits, learning rates, etc.).
-- `applyCompassWarmStart` - - Helper function for compass wiring adjustment.
-- `centerOutputBiases` - - Helper function for output bias centering.
+- `neat` - NEAT instance exposing a `population` array of networks.
+- `lamarckianTrainingSet` - Array of `{input:number[], output:number[]}` training cases.
+- `constants` - Training hyperparameters (iteration limits, learning rates, etc.).
+- `applyCompassWarmStart` - Helper function for compass wiring adjustment.
+- `centerOutputBiases` - Helper function for output bias centering.
 
 Example:
 
@@ -3045,10 +3045,10 @@ Steps:
 3. Invoke the pretrain helper (best-effort). This may mutate the NEAT driver
 
 Parameters:
-- `neat` - - NEAT driver instance which will be pre-trained (may be `null`/`undefined`).
-- `trainingSet` - - Array of supervised training cases used for warm-start; ignored when empty.
-- `state` - - Shared engine state (provides scratch buffer pools).
-- `pretrainPopulation` - - Helper function for population pretraining.
+- `neat` - NEAT driver instance which will be pre-trained (may be `null`/`undefined`).
+- `trainingSet` - Array of supervised training cases used for warm-start; ignored when empty.
+- `state` - Shared engine state (provides scratch buffer pools).
+- `pretrainPopulation` - Helper function for population pretraining.
 
 Example:
 
@@ -3105,11 +3105,11 @@ Behaviour:
 - Emits diagnostic summary.
 
 Parameters:
-- `state` - - Shared engine state.
-- `neat` - - NEAT driver with `population` and `options.elitism`.
-- `completedGenerations` - - Current generation for logging.
-- `safeWrite` - - Logging callback.
-- `sampleSegmentIntoScratchFn` - - Sampling helper function.
+- `state` - Shared engine state.
+- `neat` - NEAT driver with `population` and `options.elitism`.
+- `completedGenerations` - Current generation for logging.
+- `safeWrite` - Logging callback.
+- `sampleSegmentIntoScratchFn` - Sampling helper function.
 
 Example:
 
@@ -3134,10 +3134,10 @@ Behaviour:
 3. For small `mutateCount` values, uses unrolled fast path.
 
 Parameters:
-- `state` - - Shared engine state for RNG and scratch buffers.
-- `clone` - - Genome-like object with `mutate(op)` method.
-- `neat` - - NEAT driver for resolving mutation ops.
-- `mutateCount` - - Desired number of distinct mutation ops.
+- `state` - Shared engine state for RNG and scratch buffers.
+- `clone` - Genome-like object with `mutate(op)` method.
+- `neat` - NEAT driver for resolving mutation ops.
+- `mutateCount` - Desired number of distinct mutation ops.
 
 Example:
 
@@ -3159,7 +3159,7 @@ Behaviour:
 - Two-pointer write/read technique.
 
 Parameters:
-- `genome` - - Mutable genome with `connections` array.
+- `genome` - Mutable genome with `connections` array.
 
 Returns: Number of removed (disabled) connections.
 
@@ -3184,8 +3184,8 @@ Behaviour:
 - Returns total removed connections.
 
 Parameters:
-- `state` - - Shared engine state.
-- `neat` - - NEAT driver with `population`.
+- `state` - Shared engine state.
+- `neat` - NEAT driver with `population`.
 
 Returns: Total removed disabled connections.
 
@@ -3212,9 +3212,9 @@ Behaviour:
 4. Register the clone with the NEAT driver.
 
 Parameters:
-- `state` - - Shared engine state.
-- `neat` - - NEAT driver instance.
-- `parent` - - Parent genome object.
+- `state` - Shared engine state.
+- `neat` - NEAT driver instance.
+- `parent` - Parent genome object.
 
 Example:
 
@@ -3231,7 +3231,7 @@ determineMutateCount(
 Determine how many mutation operations to attempt (1 or 2).
 
 Parameters:
-- `state` - - Shared engine state for RNG.
+- `state` - Shared engine state for RNG.
 
 Returns: 1 or 2 based on random sample.
 
@@ -3251,7 +3251,7 @@ Behaviour:
 - Best-effort: swallows errors.
 
 Parameters:
-- `neat` - - NEAT driver with `population` array.
+- `neat` - NEAT driver with `population` array.
 
 Example:
 
@@ -3283,11 +3283,11 @@ Steps:
 4. Update `neat.options.popsize` and emit status line.
 
 Parameters:
-- `state` - - Shared engine state for RNG.
-- `neat` - - NEAT driver with `population` and `options`.
-- `targetAdd` - - Desired number of new genomes.
-- `safeWrite` - - Logging callback.
-- `completedGenerations` - - Generation counter for telemetry.
+- `state` - Shared engine state for RNG.
+- `neat` - NEAT driver with `population` and `options`.
+- `targetAdd` - Desired number of new genomes.
+- `safeWrite` - Logging callback.
+- `completedGenerations` - Generation counter for telemetry.
 
 Example:
 
@@ -3311,8 +3311,8 @@ Implementation details:
 4. Falls back to insertion sort for small partitions.
 
 Parameters:
-- `state` - - Shared engine state for scratch buffers.
-- `population` - - Population array with `.score` property.
+- `state` - Shared engine state for scratch buffers.
+- `population` - Population array with `.score` property.
 
 Returns: Sorted indices (highest score first). Empty array when input empty.
 
@@ -3347,15 +3347,15 @@ Behaviour:
   actual pruning work to `runSimplifyCycle`.
 
 Parameters:
-- `state` - - Shared engine state.
-- `neat` - - NEAT driver instance.
-- `plateauCounter` - - Current plateau counter.
-- `plateauGenerations` - - Window size for plateau decision.
-- `simplifyDuration` - - Requested simplify duration.
-- `simplifyMode` - - Current simplify active flag.
-- `simplifyRemaining` - - Remaining simplify generations.
-- `simplifyStrategy` - - Strategy identifier.
-- `simplifyPruneFraction` - - Pruning fraction.
+- `state` - Shared engine state.
+- `neat` - NEAT driver instance.
+- `plateauCounter` - Current plateau counter.
+- `plateauGenerations` - Window size for plateau decision.
+- `simplifyDuration` - Requested simplify duration.
+- `simplifyMode` - Current simplify active flag.
+- `simplifyRemaining` - Remaining simplify generations.
+- `simplifyStrategy` - Strategy identifier.
+- `simplifyPruneFraction` - Pruning fraction.
 
 Returns: Updated `{ simplifyMode, simplifyRemaining, plateauCounter }`.
 
@@ -3382,9 +3382,9 @@ Behaviour:
 - When collapsed, escalates mutation/novelty parameters.
 
 Parameters:
-- `state` - - Shared engine state.
-- `neat` - - NEAT driver with `population`.
-- `speciesHistory` - - Global species history array (mutated).
+- `state` - Shared engine state.
+- `neat` - NEAT driver with `population`.
+- `speciesHistory` - Global species history array (mutated).
 
 Returns: `true` when collapse detected; `false` otherwise.
 
@@ -3422,17 +3422,17 @@ Behaviour:
 - Delegates to `expandPopulation` when there is room to grow.
 
 Parameters:
-- `state` - - Shared engine state.
-- `neat` - - NEAT driver.
-- `dynamicPopEnabled` - - Flag to enable dynamic expansion.
-- `completedGenerations` - - Current generation index.
-- `dynamicPopMax` - - Maximum allowed population size.
-- `plateauGenerations` - - Plateau window size.
-- `plateauCounter` - - Current plateau counter.
-- `dynamicPopExpandInterval` - - Generations between expansion attempts.
-- `dynamicPopExpandFactor` - - Fraction of current size to add.
-- `dynamicPopPlateauSlack` - - Minimum plateau ratio to trigger.
-- `safeWrite` - - Logging callback.
+- `state` - Shared engine state.
+- `neat` - NEAT driver.
+- `dynamicPopEnabled` - Flag to enable dynamic expansion.
+- `completedGenerations` - Current generation index.
+- `dynamicPopMax` - Maximum allowed population size.
+- `plateauGenerations` - Plateau window size.
+- `plateauCounter` - Current plateau counter.
+- `dynamicPopExpandInterval` - Generations between expansion attempts.
+- `dynamicPopExpandFactor` - Fraction of current size to add.
+- `dynamicPopPlateauSlack` - Minimum plateau ratio to trigger.
+- `safeWrite` - Logging callback.
 
 Example:
 
@@ -3455,9 +3455,9 @@ Behaviour:
 - Skips simplify in browser environments (presence of `window` global).
 
 Parameters:
-- `plateauCounter` - - Observed consecutive plateau generations.
-- `plateauGenerations` - - Threshold to trigger simplify.
-- `simplifyDuration` - - Requested simplify phase length.
+- `plateauCounter` - Observed consecutive plateau generations.
+- `plateauGenerations` - Threshold to trigger simplify.
+- `simplifyDuration` - Requested simplify phase length.
 
 Returns: Number of generations to run simplify (0 means "do not start").
 
@@ -3522,8 +3522,8 @@ That gives expansion a clear bias toward current evidence without hard-coding
 elitist cloning only.
 
 Parameters:
-- `state` - - Shared engine state.
-- `neat` - - NEAT driver with `population`.
+- `state` - Shared engine state.
+- `neat` - NEAT driver with `population`.
 
 Returns: Object with `populationRef`, `sortedIdx`, `parentPoolSize`.
 
@@ -3550,10 +3550,10 @@ Behaviour:
 - If collapsed (low mean, near-zero variance), disables smallest half.
 
 Parameters:
-- `state` - - Shared engine state for scratch buffers and profiling.
-- `genome` - - Mutable genome with `nodes` array.
-- `getNodeIndicesByType` - - Helper to collect node indices by type.
-- `collectHiddenToOutputConns` - - Helper to collect outgoing connections.
+- `state` - Shared engine state for scratch buffers and profiling.
+- `genome` - Mutable genome with `nodes` array.
+- `getNodeIndicesByType` - Helper to collect node indices by type.
+- `collectHiddenToOutputConns` - Helper to collect outgoing connections.
 
 Example:
 
@@ -3572,9 +3572,9 @@ registerClone(
 Register a cloned genome with the NEAT driver's bookkeeping.
 
 Parameters:
-- `neat` - - NEAT driver instance.
-- `clone` - - Cloned genome object.
-- `parentId` - - Optional parent ID for lineage tracking.
+- `neat` - NEAT driver instance.
+- `clone` - Cloned genome object.
+- `parentId` - Optional parent ID for lineage tracking.
 
 Example:
 
@@ -3597,8 +3597,8 @@ Behaviour:
 - Resets connection `weight` for connections targeting outputs.
 
 Parameters:
-- `state` - - Shared engine state.
-- `genome` - - Mutable genome with `nodes` and `connections`.
+- `state` - Shared engine state.
+- `genome` - Mutable genome with `nodes` and `connections`.
 
 Returns: Object with `{ connReset: number, biasReset: number }`.
 
@@ -3633,11 +3633,11 @@ Steps:
 5. Record profiling delta and return remaining generations decremented.
 
 Parameters:
-- `state` - - Shared engine state for RNG and profiling.
-- `neat` - - NEAT instance with `population` array.
-- `simplifyRemaining` - - Remaining simplify generations.
-- `simplifyStrategy` - - Strategy identifier for pruning.
-- `simplifyPruneFraction` - - Fraction in [0,1] controlling pruning aggressiveness.
+- `state` - Shared engine state for RNG and profiling.
+- `neat` - NEAT instance with `population` array.
+- `simplifyRemaining` - Remaining simplify generations.
+- `simplifyStrategy` - Strategy identifier for pruning.
+- `simplifyPruneFraction` - Fraction in [0,1] controlling pruning aggressiveness.
 
 Returns: Remaining simplify generations after executing one cycle (0 means done).
 
@@ -3664,10 +3664,10 @@ Behaviour:
 - Otherwise, increments plateau counter (capped at a safe maximum).
 
 Parameters:
-- `fitness` - - Current best fitness (must be finite).
-- `lastBestFitnessForPlateau` - - Previous baseline fitness.
-- `plateauCounter` - - Current consecutive plateau generations.
-- `plateauImprovementThreshold` - - Minimum improvement to reset plateau.
+- `fitness` - Current best fitness (must be finite).
+- `lastBestFitnessForPlateau` - Previous baseline fitness.
+- `plateauCounter` - Current consecutive plateau generations.
+- `plateauImprovementThreshold` - Minimum improvement to reset plateau.
 
 Returns: Updated `{ plateauCounter, lastBestFitnessForPlateau }`.
 
@@ -4004,10 +4004,10 @@ The evolution loop reuses this helper during network inspection to avoid
 allocating transient arrays while still keeping the public facade compact.
 
 Parameters:
-- `state` - - Shared engine state that owns the reusable scratch arrays.
-- `hiddenNode` - - Hidden node whose outgoing edges should be inspected.
-- `nodes` - - Full node list aligned with the scratch index buffer.
-- `outputCount` - - Number of output-node indices already staged in scratch.
+- `state` - Shared engine state that owns the reusable scratch arrays.
+- `hiddenNode` - Hidden node whose outgoing edges should be inspected.
+- `nodes` - Full node list aligned with the scratch index buffer.
+- `outputCount` - Number of output-node indices already staged in scratch.
 
 Returns: Shared scratch array containing enabled hidden-to-output connections.
 
@@ -4036,9 +4036,9 @@ This helper keeps the facade free of buffer-growth details while preserving
 the existing allocation-light behaviour used by the evolution loop.
 
 Parameters:
-- `state` - - Shared engine state that owns the reusable node-index buffer.
-- `nodes` - - Candidate nodes to scan.
-- `type` - - Node type to collect, such as `input`, `hidden`, or `output`.
+- `state` - Shared engine state that owns the reusable node-index buffer.
+- `nodes` - Candidate nodes to scan.
+- `type` - Node type to collect, such as `input`, `hidden`, or `output`.
 
 Returns: Number of matching indices written into the shared scratch buffer.
 

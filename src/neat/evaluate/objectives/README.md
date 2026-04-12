@@ -58,7 +58,7 @@ must also be invalidated so later ranking stages resolve the updated
 objective set instead of continuing to use stale ordering information.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
+- `controller` - NEAT controller instance for evaluation.
 
 ### runAutoEntropyObjectiveInjection
 
@@ -82,8 +82,8 @@ The helper preserves several important controller assumptions:
 - only the objective-registration layer and its cache are updated.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `evaluationOptions` - - Options object for the current evaluation pass.
+- `controller` - NEAT controller instance for evaluation.
+- `evaluationOptions` - Options object for the current evaluation pass.
 
 Example:
 
@@ -107,6 +107,6 @@ treated as the stronger owner when it is enabled, which prevents this helper
 from silently competing with a more explicit objective-management policy.
 
 Parameters:
-- `evaluationOptions` - - Options object for the current evaluation pass.
+- `evaluationOptions` - Options object for the current evaluation pass.
 
 Returns: True when entropy should be injected.

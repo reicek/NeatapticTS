@@ -16,6 +16,8 @@ export interface NetworkRuntimeProps {
   layers?: unknown[];
   /** Optional architecture descriptor hydrated from serialization metadata. */
   _serializedArchitectureDescriptor?: NetworkArchitectureDescriptor;
+  /** Optional generic extension bag hydrated from serialization metadata. */
+  _serializedExtensions?: NetworkJSONExtensions;
   /** Optional public topology intent preserved across runtime boundaries. */
   _topologyIntent?: NetworkTopologyIntent;
 }
@@ -536,6 +538,8 @@ export interface SerializeNodeInternals {
   state: number;
   /** Node bias value. */
   bias: number;
+  /** Node response multiplier applied before squashing. */
+  response: number;
   /** Optional stable gene identifier. */
   geneId?: number;
   /** Node self-connection holder. */
@@ -556,11 +560,30 @@ export type ConnectionInternalsWithEnabled = Connection & {
 };
 
 /**
+ * Stable historical identity fields for a connection gene.
+ *
+ * Runtime node indices are useful for fast reconstruction, but NEAT alignment,
+ * checkpoint migration, and future genotype-first work all depend on the
+ * historical identifiers that survive reindexing.
+ */
+export interface ConnectionHistoricalIdentity {
+  /** Stable innovation number for this connection gene. */
+  innovation?: number;
+  /** Stable gene id of the source node. */
+  fromGeneId?: number;
+  /** Stable gene id of the target node. */
+  toGeneId?: number;
+  /** Stable gene id of the gater node when one exists. */
+  gaterGeneId?: number | null;
+}
+
+/**
  * Serialized connection representation used by compact and JSON formats.
  *
- * Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
+ * Endpoints stay index-based for deterministic reconstruction, while the optional
+ * historical fields preserve NEAT identity across clone, export, and restore flows.
  */
-export interface SerializedConnection {
+export interface SerializedConnection extends ConnectionHistoricalIdentity {
   /** Source node index. */
   from: number;
   /** Target node index. */
@@ -569,13 +592,16 @@ export interface SerializedConnection {
   weight: number;
   /** Optional gater node index. */
   gater: number | null;
+  /** Optional explicit enabled state for compact historical payloads. */
+  enabled?: boolean;
 }
 
 /**
  * Compact tuple payload used by `serialize` output.
  *
  * Tuple slots are intentionally positional to reduce payload size:
- * 0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size.
+ * 0) activations, 1) states, 2) squash keys, 3) connections, 4) input size,
+ * 5) output size, 6) optional node gene ids, 7) optional topology intent.
  *
  * @remarks
  * This format is efficient but less self-describing than JSON.
@@ -599,6 +625,8 @@ export type CompactSerializedNetworkTuple = [
   SerializedConnection[],
   number,
   number,
+  Array<number | null>?,
+  NetworkTopologyIntent?,
 ];
 
 /**
@@ -611,6 +639,8 @@ export interface NetworkJSONNode {
   type: string;
   /** Node bias value. */
   bias: number;
+  /** Optional non-neutral response multiplier. Missing means the neutral response value `1`. */
+  response?: number;
   /** Squash function name. */
   squash: string;
   /** Node index in topology. */
@@ -624,17 +654,33 @@ export interface NetworkJSONNode {
  *
  * Includes optional gater and explicit enabled state for portability.
  */
-export interface NetworkJSONConnection {
+export interface NetworkJSONConnection extends ConnectionHistoricalIdentity {
   /** Source node index. */
   from: number;
   /** Target node index. */
   to: number;
   /** Connection weight. */
   weight: number;
+  /** Optional non-neutral gain. Missing means the neutral gain value `1`. */
+  gain?: number;
   /** Optional gater node index. */
   gater: number | null;
   /** Explicit enabled state. */
   enabled: boolean;
+}
+
+/**
+ * Optional extension bag carried by versioned network JSON payloads.
+ *
+ * The runtime serializer keeps this generic so stricter boundaries such as the
+ * NEAT genome adapter can attach additive, versioned metadata without forcing
+ * the network layer to understand each feature-specific field.
+ */
+export interface NetworkJSONExtensions {
+  /** Monotonic extension-bag version. */
+  version: number;
+  /** Plain-object extension payload. */
+  values: Record<string, unknown>;
 }
 
 /**
@@ -668,6 +714,8 @@ export interface NetworkJSON {
   nodes: NetworkJSONNode[];
   /** Serialized connections. */
   connections: NetworkJSONConnection[];
+  /** Optional additive extension bag preserved for higher-level bridges. */
+  extensions?: NetworkJSONExtensions;
   /** Optional architecture metadata for diagnostics/UI consumers. */
   architecture?: NetworkArchitectureDescriptor;
 }
@@ -690,6 +738,10 @@ export interface CompactPayloadContext {
   serializedInput: number;
   /** Serialized output size. */
   serializedOutput: number;
+  /** Optional stable node gene ids aligned to node order. */
+  nodeGeneIds?: Array<number | null>;
+  /** Optional topology intent contract for compact restore. */
+  topologyIntent?: NetworkTopologyIntent;
 }
 
 /**
@@ -708,6 +760,12 @@ export interface ResolvedNetworkSizeContext {
  * Context for compact-node reconstruction.
  *
  * Arrays are expected to be index-aligned so each node can be hydrated deterministically.
+ *
+ * This is a serialization/hydration constraint only: the compact format stores node fields
+ * (activation, state, squash, and optional gene id) as parallel arrays.
+ *
+ * Do not read this as guidance for genetic alignment. In NEAT-style crossover and speciation,
+ * homologous structure is matched by historical markings (innovation ids), not by array indices.
  */
 export interface CompactNodeRebuildContext {
   /** Activation values. */
@@ -716,6 +774,8 @@ export interface CompactNodeRebuildContext {
   states: number[];
   /** Squash function names. */
   squashes: string[];
+  /** Optional stable node gene ids aligned to node order. */
+  nodeGeneIds?: Array<number | null>;
   /** Input size. */
   input: number;
   /** Output size. */
@@ -1425,16 +1485,26 @@ export interface NetworkGeneticProps {
   _reenableProb?: number;
 }
 
-/** Crossover connection-gene descriptor. */
-export interface ConnectionGene {
+/**
+ * Runtime materialization descriptor for one inherited connection gene.
+ *
+ * Step 7.2b keeps this runtime shelf narrower than the old crossover gene
+ * shape. The phenotype materializer consumes only stable heredity identity
+ * plus weight and enabled state. Runtime node indexes are intentionally
+ * excluded because endpoints and gaters are resolved later by `geneId` after
+ * the offspring node set is rebuilt.
+ */
+export interface ConnectionGene extends ConnectionHistoricalIdentity {
   /** Weight value. */
   weight: number;
-  /** Source node index. */
-  from: number;
-  /** Target node index. */
-  to: number;
-  /** Gater node index. */
-  gater: number;
+  /** Stable innovation number used for historical alignment. */
+  innovation: number;
+  /** Stable gene id for the source node. */
+  fromGeneId: number;
+  /** Stable gene id for the target node. */
+  toGeneId: number;
+  /** Stable gene id for the gater node when one exists. */
+  gaterGeneId: number | null;
   /** Enabled state. */
   enabled: boolean;
 }
@@ -1452,8 +1522,14 @@ export type GeneticNetwork = Network & NetworkGeneticProps;
 export interface OffspringMaterializationContext {
   /** Mutable offspring reference. */
   offspring: GeneticNetwork;
-  /** Chosen offspring node count. */
-  offspringNodeCount: number;
+  /** Public topology intent guiding recurrent/self-gene pruning. */
+  topologyIntent: NetworkTopologyIntent;
+  /** Gene-id lookup for resolving inherited endpoints after node reindexing. */
+  offspringNodesByGeneId: Map<number, Node>;
+  /** Source nodes keyed by gene id for interface-resolution fallback. */
+  sourceNodesByGeneId: Map<number, Node>;
+  /** Input/output ordinals keyed by source gene id for interface fallback. */
+  sourceNodeInterfaceOrdinalsByGeneId: Map<number, number>;
 }
 
 /** Traversal context for one connection gene. */

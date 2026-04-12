@@ -22,8 +22,8 @@ const PROPAGATE_PROJECTED_ERROR = 0;
  * assertTargetInputSize(2, [1, 0]);
  * ```
  *
- * @param nodeCount - Number of nodes in the layer.
- * @param inputTargets - Optional target values provided by the caller.
+ * @param nodeCount Number of nodes in the layer.
+ * @param inputTargets Optional target values provided by the caller.
  */
 export function assertTargetInputSize(
   nodeCount: number,
@@ -57,10 +57,10 @@ export function assertTargetInputSize(
  * propagateNodesInReverse({ nodes }, 0.3, 0.1, [1, 0, 0]);
  * ```
  *
- * @param context - The layer state needed for propagation.
- * @param rate - The learning rate for weight updates.
- * @param momentum - The momentum factor for smoothing updates.
- * @param targets - Optional target values for output layers.
+ * @param context The layer state needed for propagation.
+ * @param rate The learning rate for weight updates.
+ * @param momentum The momentum factor for smoothing updates.
+ * @param targets Optional target values for output layers.
  */
 export function propagateNodesInReverse(
   context: LayerPropagationContext,

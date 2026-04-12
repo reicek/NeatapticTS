@@ -40,6 +40,11 @@ import type { InnovationAccumulator } from '../shared/speciation.shared';
  * 3. summarize structural and innovation signals so history entries teach more
  *    than simple species counts.
  *
+ * One Step 7.5 nuance matters here: age protection is a controller-pressure
+ * overlay applied after evaluation and assignment. When it penalizes member
+ * scores, it changes the active generation's selection view, not the canonical
+ * compatibility identity or the stored historical markings.
+ *
  * Keeping those responsibilities together makes the speciation pipeline easier
  * to follow: this chapter does not decide who belongs to a species, but it does
  * decide what evidence about species evolution is preserved once assignment is
@@ -87,6 +92,11 @@ import type { InnovationAccumulator } from '../shared/speciation.shared';
  * trying to protect innovation, not just sort genomes. New structural ideas are
  * often weak before they are refined, so this helper delays harsh pressure long
  * enough for those ideas to either improve or clearly fail.
+ *
+ * The penalty is intentionally applied to current member `score` values as a
+ * controller-side pressure overlay. That keeps later allocation and selection
+ * aligned with the protection rule without redefining raw task evaluation or
+ * compatibility identity.
  *
  * @param speciationContext - Speciation harness context.
  * @param options - Speciation options.
@@ -332,6 +342,10 @@ function averageNumbers(values: number[]): number {
  * structure, still spreading into newer innovations, or carrying a large amount
  * of disabled architectural baggage.
  *
+ * Native species-history reads expect explicit connection innovations. Only
+ * genomes that deliberately opt into `_compatInnovationMode = 'allow-fallback'`
+ * may synthesize innovation ids through the fallback resolver.
+ *
  * @param speciationContext - Speciation harness context.
  * @param members - Members to summarize.
  * @returns Innovation summary statistics.
@@ -376,9 +390,18 @@ function summarizeInnovations<
       disabledCount: 0,
     };
     // Step 2: Walk every connection and update the counters.
-    for (const member of memberList) {
-      for (const connection of member.connections as ConnectionLike[]) {
-        applyConnectionInnovation(context, accumulator, connection);
+    for (const [memberIndex, member] of memberList.entries()) {
+      for (const [connectionIndex, connection] of (
+        member.connections as ConnectionLike[]
+      ).entries()) {
+        applyConnectionInnovation(
+          context,
+          accumulator,
+          member,
+          connection,
+          memberIndex,
+          connectionIndex,
+        );
       }
     }
     return accumulator;
@@ -393,11 +416,19 @@ function summarizeInnovations<
   function applyConnectionInnovation(
     context: SpeciationHarnessContext<TOptions>,
     accumulator: InnovationAccumulator,
+    member: GenomeDetailed,
     connection: ConnectionLike,
+    memberIndex: number,
+    connectionIndex: number,
   ): void {
     // Step 1: Resolve the innovation id for this connection.
-    const innovation =
-      connection.innovation ?? context._fallbackInnov(connection);
+    const innovation = resolveHistoricalInnovation(
+      context,
+      member,
+      connection,
+      memberIndex,
+      connectionIndex,
+    );
     // Step 2: Update numeric aggregates.
     accumulator.innovationSum += innovation;
     accumulator.innovationCount += 1;
@@ -408,6 +439,77 @@ function summarizeInnovations<
     // Step 3: Track enabled and disabled totals.
     if (connection.enabled === false) accumulator.disabledCount += 1;
     else accumulator.enabledCount += 1;
+  }
+
+  /**
+   * @param context - Speciation harness context.
+   * @param member - Member that owns the connection.
+   * @param connection - Connection whose innovation id is required.
+   * @param memberIndex - Stable member position for diagnostics.
+   * @param connectionIndex - Stable connection position for diagnostics.
+   * @returns Explicit or deliberately backfilled innovation id.
+   */
+  function resolveHistoricalInnovation(
+    context: SpeciationHarnessContext<TOptions>,
+    member: GenomeDetailed,
+    connection: ConnectionLike,
+    memberIndex: number,
+    connectionIndex: number,
+  ): number {
+    // Step 1: Prefer the explicit innovation id when present.
+    if (Number.isFinite(connection.innovation)) {
+      return connection.innovation!;
+    }
+
+    // Step 2: Allow synthetic ids only for deliberate fallback-mode genomes.
+    if (resolveCompatibilityInnovationMode(member) === 'allow-fallback') {
+      return context._fallbackInnov(connection);
+    }
+
+    // Step 3: Fail fast for native genomes missing historical markings.
+    throw createMissingInnovationError(
+      member,
+      connection,
+      memberIndex,
+      connectionIndex,
+    );
+  }
+
+  /**
+   * @param member - Genome whose compatibility/history mode should be read.
+   * @returns Effective compatibility-innovation mode.
+   */
+  function resolveCompatibilityInnovationMode(
+    member: GenomeDetailed,
+  ): NonNullable<GenomeDetailed['_compatInnovationMode']> {
+    return member._compatInnovationMode ?? 'require-explicit';
+  }
+
+  /**
+   * @param member - Genome missing its explicit historical marking.
+   * @param connection - Connection missing its innovation id.
+   * @param memberIndex - Stable member position for diagnostics.
+   * @param connectionIndex - Stable connection position for diagnostics.
+   * @returns Error explaining why native history summarization refused fallback ids.
+   */
+  function createMissingInnovationError(
+    member: GenomeDetailed,
+    connection: ConnectionLike,
+    memberIndex: number,
+    connectionIndex: number,
+  ): Error {
+    return new Error(
+      'Species history requires explicit connection innovations for native genomes. Use `_compatInnovationMode = "allow-fallback"` only for legacy, imported, or deliberately partial genomes.',
+      {
+        cause: {
+          genomeId: member._id ?? null,
+          memberIndex,
+          connectionIndex,
+          fromGeneId: (connection.from as { geneId?: number }).geneId ?? null,
+          toGeneId: (connection.to as { geneId?: number }).geneId ?? null,
+        },
+      },
+    );
   }
 
   /**

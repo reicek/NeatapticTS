@@ -57,7 +57,7 @@ behavior is whether missing extended fields are enriched before that buffer
 is handed back.
 
 Parameters:
-- `host` - - NEAT host exposing species history, species records, fallback innovation logic, and options.
+- `host` - NEAT host exposing species history, species records, fallback innovation logic, and options.
 
 Returns: Generation-stamped species history snapshots.
 

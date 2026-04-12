@@ -187,9 +187,9 @@ clamp(
 Internal clamp primitive.
 
 Parameters:
-- `value` - - Candidate value.
-- `min` - - Inclusive lower bound.
-- `max` - - Inclusive upper bound.
+- `value` - Candidate value.
+- `min` - Inclusive lower bound.
+- `max` - Inclusive upper bound.
 
 Returns: Clamped value.
 
@@ -204,7 +204,7 @@ clamp01(
 Clamps a numeric value to the inclusive `[0, 1]` interval.
 
 Parameters:
-- `value` - - Candidate value.
+- `value` - Candidate value.
 
 Returns: Value clamped between 0 and 1.
 
@@ -221,9 +221,9 @@ clampValue(
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
 Parameters:
-- `value` - - Candidate value.
-- `min` - - Inclusive lower bound.
-- `max` - - Inclusive upper bound.
+- `value` - Candidate value.
+- `min` - Inclusive lower bound.
+- `max` - Inclusive upper bound.
 
 Returns: Clamped value.
 
@@ -240,9 +240,9 @@ interpolateValue(
 Linear interpolation helper.
 
 Parameters:
-- `startValue` - - Start value at progress `0`.
-- `endValue` - - End value at progress `1`.
-- `progress` - - Normalized interpolation progress.
+- `startValue` - Start value at progress `0`.
+- `endValue` - End value at progress `1`.
+- `progress` - Normalized interpolation progress.
 
 Returns: Interpolated value.
 
@@ -269,8 +269,8 @@ task dominate early, then the example interpolates toward the harder target
 settings as progress increases.
 
 Parameters:
-- `pipesPassed` - - Number of passed pipes.
-- `difficultyScale` - - Curriculum scale in `[0, 1]`.
+- `pipesPassed` - Number of passed pipes.
+- `difficultyScale` - Curriculum scale in `[0, 1]`.
 
 Returns: Active difficulty profile.
 
@@ -294,9 +294,9 @@ The environment should still be challenging, but it should not demand an
 impossible vertical correction from one pipe to the next.
 
 Parameters:
-- `previousGapCenterYPx` - - Previous spawn gap center.
-- `rng` - - Deterministic RNG.
-- `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
+- `previousGapCenterYPx` - Previous spawn gap center.
+- `rng` - Deterministic RNG.
+- `maximumGapCenterYPx` - Optional inclusive upper bound for smaller viewports.
 
 Returns: Next gap center y-position.
 
@@ -317,9 +317,9 @@ active difficulty profile with a small amount of deterministic jitter so runs
 do not feel mechanically repetitive.
 
 Parameters:
-- `previousSpawnGapPx` - - Previous spawn gap size.
-- `difficultyProfile` - - Active difficulty profile.
-- `rng` - - Deterministic RNG.
+- `previousSpawnGapPx` - Previous spawn gap size.
+- `difficultyProfile` - Active difficulty profile.
+- `rng` - Deterministic RNG.
 
 Returns: Next spawn gap size.
 
@@ -339,8 +339,8 @@ spacing contracts toward the current difficulty target as the episode settles
 into its harder rhythm.
 
 Parameters:
-- `previousSpawnIntervalFrames` - - Previous spawn interval.
-- `difficultyProfile` - - Active difficulty profile.
+- `previousSpawnIntervalFrames` - Previous spawn interval.
+- `difficultyProfile` - Active difficulty profile.
 
 Returns: Next spawn interval in frames.
 
@@ -359,8 +359,8 @@ The sampled center is bounded so the resulting pipe gap always remains inside
 the visible play area.
 
 Parameters:
-- `rng` - - Deterministic RNG.
-- `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
+- `rng` - Deterministic RNG.
+- `maximumGapCenterYPx` - Optional inclusive upper bound for smaller viewports.
 
 Returns: Sampled y-position.
 
@@ -397,7 +397,7 @@ at several recent compact frames at once.
 The Wikipedia article on "frame stacking" is a useful conceptual reference.
 
 Parameters:
-- `features` - - Structured observation features.
+- `features` - Structured observation features.
 
 Returns: Core per-frame vector.
 
@@ -438,7 +438,7 @@ For broader context, the Wikipedia article on "feature engineering" is a
 good companion reference.
 
 Parameters:
-- `input` - - Observation input bundle.
+- `input` - Observation input bundle.
 
 Returns: Structured observation features.
 
@@ -479,7 +479,7 @@ network topology has evolved against one input layout, silent channel
 reshuffles would invalidate learned behavior.
 
 Parameters:
-- `features` - - Structured feature object.
+- `features` - Structured feature object.
 
 Returns: Ordered feature vector.
 
@@ -509,10 +509,10 @@ it. Looking further ahead adds noise faster than it adds useful control
 signal.
 
 Parameters:
-- `pipes` - - Current pipe list.
-- `birdCenterXPx` - - Bird center x-position.
-- `birdRadiusPx` - - Bird radius.
-- `pipeWidthPx` - - Pipe width.
+- `pipes` - Current pipe list.
+- `birdCenterXPx` - Bird center x-position.
+- `birdRadiusPx` - Bird radius.
+- `pipeWidthPx` - Pipe width.
 
 Returns: Tuple of first and second upcoming pipes.
 
@@ -550,8 +550,8 @@ flexibility makes the helper reusable across experiments without forcing every
 caller to reshape its outputs first.
 
 Parameters:
-- `rawOutputs` - - Activation output payload.
-- `flapThreshold` - - Scalar threshold for single-output policies.
+- `rawOutputs` - Activation output payload.
+- `flapThreshold` - Scalar threshold for single-output policies.
 
 Returns: True when flap should trigger.
 
@@ -574,9 +574,9 @@ both the recent observation context and the action history that produced the
 current trajectory.
 
 Parameters:
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-- `features` - - Structured observation features used for the decision.
-- `didFlap` - - Decision taken at this step.
+- `observationMemoryState` - Mutable temporal memory for the active bird.
+- `features` - Structured observation features used for the decision.
+- `didFlap` - Decision taken at this step.
 
 Returns: Nothing.
 
@@ -610,7 +610,7 @@ Zero padding keeps the policy input width stable during the first few frames
 of an episode before enough history has accumulated.
 
 Parameters:
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
+- `observationMemoryState` - Mutable temporal memory for the active bird.
 
 Returns: Previous core frame list with fixed target length.
 
@@ -638,8 +638,8 @@ Output layout:
 4) recent flap-rate channel over a fixed window
 
 Parameters:
-- `features` - - Structured observation features for the current decision step.
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
+- `features` - Structured observation features for the current decision step.
+- `observationMemoryState` - Mutable temporal memory for the active bird.
 
 Returns: Ordered temporal input vector for policy activation.
 
@@ -667,8 +667,8 @@ compareNumbersAscending(
 Compares two numeric values in ascending order.
 
 Parameters:
-- `leftValue` - - Left numeric value.
-- `rightValue` - - Right numeric value.
+- `leftValue` - Left numeric value.
+- `rightValue` - Right numeric value.
 
 Returns: Comparator delta for `Array.prototype.toSorted`.
 
@@ -683,7 +683,7 @@ computeMean(
 Computes arithmetic mean for numeric samples.
 
 Parameters:
-- `values` - - Numeric samples.
+- `values` - Numeric samples.
 
 Returns: Arithmetic mean.
 
@@ -702,8 +702,8 @@ Percentiles are useful in the trainer because they reveal whether strong
 performance is broad across the population or concentrated in a single outlier.
 
 Parameters:
-- `values` - - Numeric samples.
-- `percentile` - - Percentile in [0, 1].
+- `values` - Numeric samples.
+- `percentile` - Percentile in [0, 1].
 
 Returns: Percentile value, or `Number.NaN` when `values` is empty.
 
@@ -723,8 +723,8 @@ is summarizing the whole evolved population for that generation, not estimating
 a larger hidden distribution from a subsample.
 
 Parameters:
-- `values` - - Numeric samples.
-- `meanValue` - - Precomputed mean.
+- `values` - Numeric samples.
+- `meanValue` - Precomputed mean.
 
 Returns: Population standard deviation.
 
@@ -757,6 +757,6 @@ the error surface human-readable even when the thrown value is not an
 `Error` instance.
 
 Parameters:
-- `error` - - Unknown error value.
+- `error` - Unknown error value.
 
 Returns: Readable error message.

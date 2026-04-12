@@ -51,8 +51,8 @@ inspected alongside telemetry trends during experiment review, even though
 the underlying export mechanics live in the dedicated telemetry export layer.
 
 Parameters:
-- `host` - - `Neat` instance whose species history should be exported.
-- `maxEntries` - - Maximum number of recent history entries to include.
+- `host` - `Neat` instance whose species history should be exported.
+- `maxEntries` - Maximum number of recent history entries to include.
 
 Returns: CSV payload for offline species analysis.
 
@@ -79,8 +79,8 @@ script. JSONL keeps one history snapshot per line, which makes it easy to
 append, stream, diff, or ingest without loading one large array wrapper.
 
 Parameters:
-- `host` - - `Neat` instance whose species history should be serialized.
-- `maxEntries` - - Maximum number of recent history entries to include.
+- `host` - `Neat` instance whose species history should be serialized.
+- `maxEntries` - Maximum number of recent history entries to include.
 
 Returns: JSONL payload describing recent species history snapshots.
 
@@ -111,7 +111,7 @@ metrics when the host options allow it, which keeps the read-side call small
 while still producing a more explanatory history surface.
 
 Parameters:
-- `host` - - `Neat` instance storing species history snapshots.
+- `host` - `Neat` instance storing species history snapshots.
 
 Returns: Historical species entries for each recorded generation.
 
@@ -138,7 +138,7 @@ sizes, best scores, and recent improvement markers without paying for the
 heavier historical buffer.
 
 Parameters:
-- `host` - - `Neat` instance whose live species registry should be summarized.
+- `host` - `Neat` instance whose live species registry should be summarized.
 
 Returns: Array of current species summaries.
 

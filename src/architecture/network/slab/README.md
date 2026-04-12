@@ -275,10 +275,10 @@ _acquireTA(
 Acquires a typed array from pool or allocates a fresh one.
 
 Parameters:
-- `kind` - - Pool kind discriminator.
-- `ctor` - - Typed array constructor.
-- `length` - - Desired typed array length.
-- `bytesPerElement` - - Element byte width for keying.
+- `kind` - Pool kind discriminator.
+- `ctor` - Typed array constructor.
+- `length` - Desired typed array length.
+- `bytesPerElement` - Element byte width for keying.
 
 Returns: Acquired typed array.
 
@@ -305,9 +305,9 @@ _poolKey(
 Creates a stable pool key from kind, element width, and length.
 
 Parameters:
-- `kind` - - Short pool kind discriminator.
-- `bytes` - - Bytes per element.
-- `length` - - Typed array logical length.
+- `kind` - Short pool kind discriminator.
+- `bytes` - Bytes per element.
+- `length` - Typed array logical length.
 
 Returns: Stable pool key.
 
@@ -324,9 +324,9 @@ _releaseTA(
 Releases a typed array back to bounded per-key pool.
 
 Parameters:
-- `kind` - - Pool kind discriminator.
-- `bytesPerElement` - - Element byte width for keying.
-- `arr` - - Typed array instance to retain when room exists.
+- `kind` - Pool kind discriminator.
+- `bytesPerElement` - Element byte width for keying.
+- `arr` - Typed array instance to retain when room exists.
 
 Returns: Nothing.
 
@@ -353,7 +353,7 @@ _createConnectionSlabView(
 Creates a read-oriented packed slab view from current network internals.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Packed connection slab view.
 
@@ -368,7 +368,7 @@ _readSlabVersion(
 Reads the current monotonic slab version from network internals.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Non-negative slab version counter.
 
@@ -384,8 +384,8 @@ _resolveConnectionGainView(
 Resolves gain slab view, synthesizing neutral gain values when omitted.
 
 Parameters:
-- `internalNet` - - Internal slab runtime shape.
-- `capacity` - - Resolved slab capacity.
+- `internalNet` - Internal slab runtime shape.
+- `capacity` - Resolved slab capacity.
 
 Returns: Gain array view.
 
@@ -400,7 +400,7 @@ _resolveConnectionSlabCapacity(
 Resolves effective slab capacity using explicit capacity first.
 
 Parameters:
-- `internalNet` - - Internal slab runtime shape.
+- `internalNet` - Internal slab runtime shape.
 
 Returns: Effective capacity value.
 
@@ -417,7 +417,7 @@ _prepareSlabBuildPreconditions(
 Applies prerequisite normalization for slab rebuild passes.
 
 Parameters:
-- `buildContext` - - Slab build context.
+- `buildContext` - Slab build context.
 
 Returns: Nothing.
 
@@ -435,8 +435,8 @@ _activateFastSlab(
 Executes fast slab activation once slab and adjacency prerequisites are prepared.
 
 Parameters:
-- `network` - - Target network.
-- `input` - - Input activation vector.
+- `network` - Target network.
+- `input` - Input activation vector.
 
 Returns: Output activation array.
 
@@ -453,7 +453,7 @@ _reindexNodes(
 Assigns sequential node indices used by slab packing and fast-path traversal.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Nothing.
 
@@ -472,7 +472,7 @@ _allocateCoreSlabArrays(
 Allocates core slab arrays (weights/from/to/flags).
 
 Parameters:
-- `buildContext` - - Slab build context.
+- `buildContext` - Slab build context.
 
 Returns: Nothing.
 
@@ -487,7 +487,7 @@ _allocateGainSlabForAsync(
 Allocates gain slab for async pass prefill strategy.
 
 Parameters:
-- `buildContext` - - Slab build context.
+- `buildContext` - Slab build context.
 
 Returns: Nothing.
 
@@ -503,8 +503,8 @@ _applyGainOmissionPolicy(
 Applies gain omission rule by releasing neutral gain slab.
 
 Parameters:
-- `buildContext` - - Slab build context.
-- `populateResult` - - Populate result.
+- `buildContext` - Slab build context.
+- `populateResult` - Populate result.
 
 Returns: Nothing.
 
@@ -520,8 +520,8 @@ _applyPlasticPolicyAsync(
 Applies async plastic slab allocation/release policy.
 
 Parameters:
-- `buildContext` - - Slab build context.
-- `populateResult` - - Populate result.
+- `buildContext` - Slab build context.
+- `populateResult` - Populate result.
 
 Returns: Nothing.
 
@@ -537,8 +537,8 @@ _applyPlasticPolicySync(
 Applies sync plastic slab allocation/release policy.
 
 Parameters:
-- `buildContext` - - Slab build context.
-- `populateResult` - - Populate result.
+- `buildContext` - Slab build context.
+- `populateResult` - Populate result.
 
 Returns: Nothing.
 
@@ -553,7 +553,7 @@ _createInitialSlabPopulateResult(
 Creates initial populate result from current optional slab state.
 
 Parameters:
-- `internalNet` - - Internal slab runtime shape.
+- `internalNet` - Internal slab runtime shape.
 
 Returns: Initial populate result.
 
@@ -569,8 +569,8 @@ _createSlabBuildContext(
 Creates immutable slab build context for one rebuild pass.
 
 Parameters:
-- `network` - - Target network.
-- `growthFactor` - - Capacity growth multiplier.
+- `network` - Target network.
+- `growthFactor` - Capacity growth multiplier.
 
 Returns: Build context.
 
@@ -585,7 +585,7 @@ _createSlabWriteArrays(
 Creates strongly typed write-array bundle for connection population.
 
 Parameters:
-- `buildContext` - - Slab build context.
+- `buildContext` - Slab build context.
 
 Returns: Write-array bundle.
 
@@ -602,9 +602,9 @@ _ensureGainArrayExistsForIndex(
 Ensures gain slab exists before writing non-neutral value.
 
 Parameters:
-- `buildContext` - - Slab build context.
-- `populateResult` - - Mutable populate result.
-- `connectionIndex` - - Current connection index.
+- `buildContext` - Slab build context.
+- `populateResult` - Mutable populate result.
+- `connectionIndex` - Current connection index.
 
 Returns: Nothing.
 
@@ -619,7 +619,7 @@ _ensureSlabCapacityAsync(
 Ensures async rebuild has enough slab capacity.
 
 Parameters:
-- `buildContext` - - Slab build context.
+- `buildContext` - Slab build context.
 
 Returns: Nothing.
 
@@ -634,7 +634,7 @@ _ensureSlabCapacitySync(
 Ensures sync rebuild has enough slab capacity.
 
 Parameters:
-- `buildContext` - - Slab build context.
+- `buildContext` - Slab build context.
 
 Returns: Nothing.
 
@@ -651,9 +651,9 @@ _expandSlabCapacity(
 Computes next capacity satisfying required size using geometric growth.
 
 Parameters:
-- `currentCapacity` - - Existing capacity.
-- `requiredCapacity` - - Required minimum capacity.
-- `growthFactor` - - Capacity growth multiplier.
+- `currentCapacity` - Existing capacity.
+- `requiredCapacity` - Required minimum capacity.
+- `growthFactor` - Capacity growth multiplier.
 
 Returns: Expanded capacity.
 
@@ -670,9 +670,9 @@ _fillPlasticityRates(
 Fills plastic slab values from connection plasticity rates.
 
 Parameters:
-- `network` - - Target network.
-- `plasticArray` - - Plastic slab array.
-- `connectionCount` - - Number of active connections.
+- `network` - Target network.
+- `plasticArray` - Plastic slab array.
+- `connectionCount` - Number of active connections.
 
 Returns: Nothing.
 
@@ -687,7 +687,7 @@ _finalizeAsyncSlabRebuild(
 Finalizes async rebuild bookkeeping fields.
 
 Parameters:
-- `buildContext` - - Slab build context.
+- `buildContext` - Slab build context.
 
 Returns: Nothing.
 
@@ -703,8 +703,8 @@ _finalizeSharedSlabState(
 Finalizes shared rebuild bookkeeping fields.
 
 Parameters:
-- `internalNet` - - Internal slab runtime shape.
-- `connectionCount` - - Number of active connections.
+- `internalNet` - Internal slab runtime shape.
+- `connectionCount` - Number of active connections.
 
 Returns: Nothing.
 
@@ -719,7 +719,7 @@ _finalizeSyncSlabRebuild(
 Finalizes sync rebuild bookkeeping fields.
 
 Parameters:
-- `buildContext` - - Slab build context.
+- `buildContext` - Slab build context.
 
 Returns: Nothing.
 
@@ -738,11 +738,11 @@ _populateAsyncChunkRange(
 Populates one inclusive-exclusive chunk range for async rebuild.
 
 Parameters:
-- `buildContext` - - Slab build context.
-- `writeArrays` - - Core write arrays.
-- `populateResult` - - Mutable populate result.
-- `startIndex` - - Chunk start index.
-- `endIndex` - - Chunk end index.
+- `buildContext` - Slab build context.
+- `writeArrays` - Core write arrays.
+- `populateResult` - Mutable populate result.
+- `startIndex` - Chunk start index.
+- `endIndex` - Chunk end index.
 
 Returns: Nothing.
 
@@ -758,8 +758,8 @@ _populateSlabConnectionsAsync(
 Populates core slab arrays in cooperative async chunks.
 
 Parameters:
-- `buildContext` - - Slab build context.
-- `chunkSize` - - Maximum items per chunk.
+- `buildContext` - Slab build context.
+- `chunkSize` - Maximum items per chunk.
 
 Returns: Population result flags and optional slabs.
 
@@ -774,7 +774,7 @@ _populateSlabConnectionsSync(
 Populates core slab arrays in synchronous single pass.
 
 Parameters:
-- `buildContext` - - Slab build context.
+- `buildContext` - Slab build context.
 
 Returns: Population result flags and optional slabs.
 
@@ -789,7 +789,7 @@ _releaseExistingSlabArrays(
 Releases all currently allocated slab arrays back to pool.
 
 Parameters:
-- `buildContext` - - Slab build context.
+- `buildContext` - Slab build context.
 
 Returns: Nothing.
 
@@ -804,7 +804,7 @@ _resetOptionalSlabArraysAfterSyncAllocate(
 Resets optional slabs after sync allocation to keep omission semantics.
 
 Parameters:
-- `internalNet` - - Internal slab runtime shape.
+- `internalNet` - Internal slab runtime shape.
 
 Returns: Nothing.
 
@@ -820,8 +820,8 @@ _resolveAsyncChunkSize(
 Resolves effective async chunk size using adaptive heuristics.
 
 Parameters:
-- `totalConnections` - - Number of active connections.
-- `requestedChunkSize` - - Requested chunk size.
+- `totalConnections` - Number of active connections.
+- `requestedChunkSize` - Requested chunk size.
 
 Returns: Effective chunk size.
 
@@ -837,8 +837,8 @@ _shouldSkipSlabRebuild(
 Determines whether slab rebuild can be skipped.
 
 Parameters:
-- `internalNet` - - Internal slab runtime shape.
-- `force` - - True when rebuild must run regardless of dirty state.
+- `internalNet` - Internal slab runtime shape.
+- `force` - True when rebuild must run regardless of dirty state.
 
 Returns: True when rebuild can be skipped.
 
@@ -854,8 +854,8 @@ _updatePlasticPresence(
 Updates plastic-presence flag from connection bitfield.
 
 Parameters:
-- `populateResult` - - Mutable populate result.
-- `connection` - - Connection internals.
+- `populateResult` - Mutable populate result.
+- `connection` - Connection internals.
 
 Returns: Nothing.
 
@@ -870,7 +870,7 @@ _weightArrayCtor(
 Resolves typed-array constructor for weight slabs.
 
 Parameters:
-- `useFloat32Weights` - - True when 32-bit weights are enabled.
+- `useFloat32Weights` - True when 32-bit weights are enabled.
 
 Returns: Matching typed-array constructor.
 
@@ -885,7 +885,7 @@ _weightByteWidth(
 Resolves byte width for weight slab arrays.
 
 Parameters:
-- `useFloat32Weights` - - True when 32-bit weights are enabled.
+- `useFloat32Weights` - True when 32-bit weights are enabled.
 
 Returns: Byte width for weight elements.
 
@@ -902,9 +902,9 @@ _writeConnectionCoreFields(
 Writes core fields for one connection into slab arrays.
 
 Parameters:
-- `writeArrays` - - Core write arrays.
-- `connection` - - Connection internals.
-- `connectionIndex` - - Connection index.
+- `writeArrays` - Core write arrays.
+- `connection` - Connection internals.
+- `connectionIndex` - Connection index.
 
 Returns: Nothing.
 
@@ -922,10 +922,10 @@ _writeConnectionGainField(
 Writes gain field for one connection and updates gain flags.
 
 Parameters:
-- `buildContext` - - Slab build context.
-- `populateResult` - - Mutable populate result.
-- `connection` - - Connection internals.
-- `connectionIndex` - - Connection index.
+- `buildContext` - Slab build context.
+- `populateResult` - Mutable populate result.
+- `connection` - Connection internals.
+- `connectionIndex` - Connection index.
 
 Returns: Nothing.
 
@@ -944,7 +944,7 @@ _buildAdjacency(
 Build or refresh CSR-style adjacency (outStart + outOrder) for fast fan-out traversal.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Nothing.
 
@@ -959,7 +959,7 @@ asNetworkSlabProps(
 Cast network instance into internal slab-backed shape.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Internal slab-backed network representation.
 
@@ -974,7 +974,7 @@ buildOutgoingOrder(
 Build source-grouped outgoing order using CSR start offsets.
 
 Parameters:
-- `outgoingOrderBuildContext` - - Context holding build data and start offsets.
+- `outgoingOrderBuildContext` - Context holding build data and start offsets.
 
 Returns: Ordered outgoing connection indices.
 
@@ -989,7 +989,7 @@ buildOutgoingStartIndices(
 Build CSR start offsets from fan-out counts.
 
 Parameters:
-- `startIndicesBuildContext` - - Context holding build data and fan-out counts.
+- `startIndicesBuildContext` - Context holding build data and fan-out counts.
 
 Returns: Outgoing start indices slab.
 
@@ -1004,7 +1004,7 @@ collectFanOutCounts(
 Collect fan-out counts for each source node.
 
 Parameters:
-- `buildContext` - - Shared adjacency build context.
+- `buildContext` - Shared adjacency build context.
 
 Returns: Fan-out counts per node.
 
@@ -1019,7 +1019,7 @@ createBuildAdjacencyContext(
 Build adjacency context when required slabs are available.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Build context or null when adjacency cannot be built yet.
 
@@ -1034,7 +1034,7 @@ createFanOutCollectionContext(
 Build fan-out collection context.
 
 Parameters:
-- `buildContext` - - Shared adjacency build context.
+- `buildContext` - Shared adjacency build context.
 
 Returns: Fan-out collection context.
 
@@ -1049,7 +1049,7 @@ createFanOutCountsBuffer(
 Allocate fan-out counts buffer.
 
 Parameters:
-- `nodeCount` - - Number of nodes.
+- `nodeCount` - Number of nodes.
 
 Returns: Zero-initialized fan-out counts.
 
@@ -1064,7 +1064,7 @@ createInsertionCursor(
 Create insertion cursor copy from outgoing start indices.
 
 Parameters:
-- `outgoingStartIndices` - - Outgoing start indices slab.
+- `outgoingStartIndices` - Outgoing start indices slab.
 
 Returns: Mutable insertion cursor.
 
@@ -1079,7 +1079,7 @@ createOutgoingOrderBuffer(
 Allocate outgoing order buffer.
 
 Parameters:
-- `connectionCount` - - Number of active connections.
+- `connectionCount` - Number of active connections.
 
 Returns: Outgoing order buffer.
 
@@ -1094,7 +1094,7 @@ createOutgoingStartIndicesBuffer(
 Allocate outgoing start indices buffer with terminal slot.
 
 Parameters:
-- `nodeCount` - - Number of nodes.
+- `nodeCount` - Number of nodes.
 
 Returns: Outgoing start indices buffer.
 
@@ -1109,7 +1109,7 @@ hasRequiredConnectionSlabs(
 Check whether required connection slabs exist.
 
 Parameters:
-- `internalNet` - - Internal slab-backed network representation.
+- `internalNet` - Internal slab-backed network representation.
 
 Returns: True when adjacency build prerequisites are present.
 
@@ -1124,7 +1124,7 @@ incrementFanOutCountAtSource(
 Increment fan-out count for one connection source index.
 
 Parameters:
-- `context` - - Increment context.
+- `context` - Increment context.
 
 Returns: Nothing.
 
@@ -1139,7 +1139,7 @@ insertConnectionIntoOutgoingOrder(
 Insert one connection index into the proper source-grouped slot.
 
 Parameters:
-- `context` - - Insertion context.
+- `context` - Insertion context.
 
 Returns: Nothing.
 
@@ -1155,8 +1155,8 @@ iterateConnectionIndices(
 Iterate all connection indices.
 
 Parameters:
-- `connectionCount` - - Number of active connections.
-- `visitor` - - Index visitor.
+- `connectionCount` - Number of active connections.
+- `visitor` - Index visitor.
 
 Returns: Nothing.
 
@@ -1172,8 +1172,8 @@ iterateNodeIndices(
 Iterate all node indices.
 
 Parameters:
-- `nodeCount` - - Number of nodes.
-- `visitor` - - Index visitor.
+- `nodeCount` - Number of nodes.
+- `visitor` - Index visitor.
 
 Returns: Nothing.
 
@@ -1188,7 +1188,7 @@ populateFanOutCounts(
 Populate fan-out counts from the connection source slab.
 
 Parameters:
-- `fanOutCollectionContext` - - Fan-out collection context.
+- `fanOutCollectionContext` - Fan-out collection context.
 
 Returns: Nothing.
 
@@ -1203,7 +1203,7 @@ populateOutgoingOrder(
 Populate outgoing order by source-grouped insertion.
 
 Parameters:
-- `context` - - Outgoing order population context.
+- `context` - Outgoing order population context.
 
 Returns: Nothing.
 
@@ -1218,7 +1218,7 @@ populateOutgoingStartIndices(
 Populate outgoing start indices and return terminal offset.
 
 Parameters:
-- `context` - - Population context.
+- `context` - Population context.
 
 Returns: Terminal running offset after the last node.
 
@@ -1233,7 +1233,7 @@ publishAdjacency(
 Publish adjacency slabs and clear dirty flag.
 
 Parameters:
-- `publishAdjacencyContext` - - Values to publish on the internal network slab state.
+- `publishAdjacencyContext` - Values to publish on the internal network slab state.
 
 Returns: Nothing.
 
@@ -1248,7 +1248,7 @@ setTerminalOutgoingStartOffset(
 Set terminal outgoing start offset at the tail slot.
 
 Parameters:
-- `context` - - Terminal offset context.
+- `context` - Terminal offset context.
 
 Returns: Nothing.
 
@@ -1268,8 +1268,8 @@ _activateThroughLegacyPath(
 Executes legacy network activation fallback.
 
 Parameters:
-- `network` - - Target network.
-- `input` - - Activation input.
+- `network` - Target network.
+- `input` - Activation input.
 
 Returns: Legacy activation output.
 
@@ -1284,7 +1284,7 @@ _canUseFastSlab(
 Predicate gating usage of high-performance slab forward pass.
 
 Parameters:
-- `training` - - Whether caller is in training mode.
+- `training` - Whether caller is in training mode.
 
 Returns: True if fast path can be safely used.
 
@@ -1301,9 +1301,9 @@ _collectFastSlabOutput(
 Collects output activations into detached number array.
 
 Parameters:
-- `network` - - Target network.
-- `activationBuffer` - - Activation buffer.
-- `nodeCount` - - Node count.
+- `network` - Target network.
+- `activationBuffer` - Activation buffer.
+- `nodeCount` - Node count.
 
 Returns: Output activation array.
 
@@ -1319,8 +1319,8 @@ _createFastActivationBuffer(
 Creates typed fast activation/state buffer.
 
 Parameters:
-- `useFloat32Activation` - - True when 32-bit buffer is required.
-- `nodeCount` - - Node count.
+- `useFloat32Activation` - True when 32-bit buffer is required.
+- `nodeCount` - Node count.
 
 Returns: New typed buffer.
 
@@ -1336,8 +1336,8 @@ _ensureFastSlabBuffers(
 Ensures fast activation/state buffers are allocated and shape-compatible.
 
 Parameters:
-- `internalNet` - - Internal slab runtime shape.
-- `nodeCount` - - Node count.
+- `internalNet` - Internal slab runtime shape.
+- `nodeCount` - Node count.
 
 Returns: Nothing.
 
@@ -1352,7 +1352,7 @@ _hasFastSlabPrerequisites(
 Checks whether core slab prerequisites are available.
 
 Parameters:
-- `internalNet` - - Internal slab runtime shape.
+- `internalNet` - Internal slab runtime shape.
 
 Returns: True when all required slabs/adjacency arrays exist.
 
@@ -1371,11 +1371,11 @@ _maybeActivateNonInputNode(
 Activates one non-input node when required.
 
 Parameters:
-- `network` - - Target network.
-- `node` - - Current node.
-- `nodeIndex` - - Node index.
-- `stateBuffer` - - State buffer.
-- `activationBuffer` - - Activation buffer.
+- `network` - Target network.
+- `node` - Current node.
+- `nodeIndex` - Node index.
+- `stateBuffer` - State buffer.
+- `activationBuffer` - Activation buffer.
 
 Returns: Nothing.
 
@@ -1392,9 +1392,9 @@ _needsFastBufferReplacement(
 Checks whether a fast buffer requires replacement.
 
 Parameters:
-- `buffer` - - Existing buffer.
-- `nodeCount` - - Node count.
-- `useFloat32Activation` - - True when 32-bit buffer is required.
+- `buffer` - Existing buffer.
+- `nodeCount` - Node count.
+- `useFloat32Activation` - True when 32-bit buffer is required.
 
 Returns: True when replacement is needed.
 
@@ -1411,9 +1411,9 @@ _prepareFastSlabRuntime(
 Prepares topology and indices for fast slab pass.
 
 Parameters:
-- `network` - - Target network.
-- `internalNet` - - Internal slab runtime shape.
-- `reindexNodes` - - Callback used to reindex nodes when needed.
+- `network` - Target network.
+- `internalNet` - Internal slab runtime shape.
+- `reindexNodes` - Callback used to reindex nodes when needed.
 
 Returns: Nothing.
 
@@ -1432,11 +1432,11 @@ _propagateFastSlabActivations(
 Propagates activations through topology using slab arrays.
 
 Parameters:
-- `network` - - Target network.
-- `internalNet` - - Internal slab runtime shape.
-- `topoOrder` - - Topological node order.
-- `activationBuffer` - - Activation buffer.
-- `stateBuffer` - - State buffer.
+- `network` - Target network.
+- `internalNet` - Internal slab runtime shape.
+- `topoOrder` - Topological node order.
+- `activationBuffer` - Activation buffer.
+- `stateBuffer` - State buffer.
 
 Returns: Nothing.
 
@@ -1458,14 +1458,14 @@ _propagateNodeOutgoingEdges(
 Propagates one node activation over all outgoing slab edges.
 
 Parameters:
-- `internalNet` - - Internal slab runtime shape.
-- `nodeIndex` - - Source node index.
-- `activationBuffer` - - Activation buffer.
-- `stateBuffer` - - State buffer.
-- `weightArray` - - Weight slab.
-- `toIndexArray` - - Destination-index slab.
-- `outgoingOrder` - - Outgoing edge order slab.
-- `outgoingStartIndices` - - Outgoing start-offset slab.
+- `internalNet` - Internal slab runtime shape.
+- `nodeIndex` - Source node index.
+- `activationBuffer` - Activation buffer.
+- `stateBuffer` - State buffer.
+- `weightArray` - Weight slab.
+- `toIndexArray` - Destination-index slab.
+- `outgoingOrder` - Outgoing edge order slab.
+- `outgoingStartIndices` - Outgoing start-offset slab.
 
 Returns: Nothing.
 
@@ -1480,7 +1480,7 @@ _recomputeTopologyOrder(
 Recomputes topological order on demand.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Nothing.
 
@@ -1496,8 +1496,8 @@ _resolveFastTopoOrder(
 Resolves topological iteration order for fast slab pass.
 
 Parameters:
-- `network` - - Target network.
-- `internalNet` - - Internal slab runtime shape.
+- `network` - Target network.
+- `internalNet` - Internal slab runtime shape.
 
 Returns: Topological node order.
 
@@ -1514,9 +1514,9 @@ _resolveWeightedConnectionValue(
 Resolves effective connection weight including optional gain.
 
 Parameters:
-- `internalNet` - - Internal slab runtime shape.
-- `weightArray` - - Weight slab.
-- `connectionIndex` - - Connection index.
+- `internalNet` - Internal slab runtime shape.
+- `weightArray` - Weight slab.
+- `connectionIndex` - Connection index.
 
 Returns: Effective weighted value.
 
@@ -1533,9 +1533,9 @@ _seedFastInputLayer(
 Seeds input-layer activations for fast slab pass.
 
 Parameters:
-- `network` - - Target network.
-- `input` - - Activation input.
-- `activationBuffer` - - Activation buffer.
+- `network` - Target network.
+- `input` - Activation input.
+- `activationBuffer` - Activation buffer.
 
 Returns: Nothing.
 
@@ -1551,8 +1551,8 @@ _tryFastSlabFallbackForGating(
 Falls back to legacy activation when gating is present.
 
 Parameters:
-- `network` - - Target network.
-- `input` - - Activation input.
+- `network` - Target network.
+- `input` - Activation input.
 
 Returns: Legacy output or null when fast path may continue.
 
@@ -1569,9 +1569,9 @@ _tryFastSlabFallbackForMissingPrerequisites(
 Falls back to legacy activation when slab prerequisites are missing.
 
 Parameters:
-- `network` - - Target network.
-- `internalNet` - - Internal slab runtime shape.
-- `input` - - Activation input.
+- `network` - Target network.
+- `internalNet` - Internal slab runtime shape.
+- `input` - Activation input.
 
 Returns: Legacy output or null when fast path may continue.
 
@@ -1587,7 +1587,7 @@ _writeInputNodeRuntime(
 Writes runtime activation/state for one input node.
 
 Parameters:
-- `node` - - Input node.
-- `inputValue` - - Input activation value.
+- `node` - Input node.
+- `inputValue` - Input activation value.
 
 Returns: Nothing.

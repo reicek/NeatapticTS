@@ -1,3 +1,5 @@
+import type { InnovationTracker } from '../../innovation-tracker/innovation-tracker.types';
+
 /**
  * Shared contracts for the NEAT mutation chapter.
  *
@@ -16,7 +18,7 @@
  *    `ConnectionWithMetadata`,
  * 2. operator description and adaptation state: `MutationMethod` and
  *    `OperatorStats`,
- * 3. innovation-history state: `NodeSplitRecord`,
+ * 3. controller-owned innovation tracking: `InnovationTracker`,
  * 4. host controller seam: `NeatControllerForMutation`.
  *
  * Read this chapter before diving into the helper folders when you need to know
@@ -29,8 +31,7 @@
  *   Genome --> Operators[Mutation method descriptors]
  *   Operators --> Stats[Operator success tracking]
  *   Genome --> Controller[Mutation host controller seam]
- *   Controller --> SplitStore[Node split innovation store]
- *   Controller --> ConnStore[Connection innovation store]
+ *   Controller --> Tracker[Generation-scoped innovation tracker]
  *   Controller --> Flow[Used by flow, select, add-node, and add-conn helpers]
  * ```
  */
@@ -61,6 +62,8 @@ export interface GenomeWithMetadata {
   output: number;
   /** Flag indicating whether cycles are disallowed. */
   _enforceAcyclic?: boolean;
+  /** Optional public topology-intent accessor used by policy bridges. */
+  getTopologyIntent?: () => 'feed-forward' | 'unconstrained';
   /** Per-genome adaptive mutation rate. */
   _mutRate?: number;
   /** Per-genome adaptive mutation amount. */
@@ -116,6 +119,8 @@ export interface ConnectionWithMetadata {
   to: NodeWithMetadata;
   /** Weight applied along the connection. */
   weight: number;
+  /** Gater node when this edge is multiplicatively controlled. */
+  gater?: NodeWithMetadata | null;
   /** Whether the connection is active. */
   enabled?: boolean;
   /** Innovation identifier for NEAT alignment. */
@@ -158,23 +163,6 @@ export interface OperatorStats {
   success: number;
   /** Total times the operator was attempted. */
   attempts: number;
-}
-
-/**
- * Runtime interface for node-split innovation records.
- *
- * A node-split record is the durable memory that tells the add-node path,
- * "this exact split has happened before." Reusing the stored node gene id and
- * paired edge innovations is how separate genomes can independently perform the
- * same split and still remain historically alignable.
- */
-export interface NodeSplitRecord {
-  /** Gene id assigned to the inserted node. */
-  newNodeGeneId: number;
-  /** Innovation id for the incoming split connection. */
-  inInnov: number;
-  /** Innovation id for the outgoing split connection. */
-  outInnov: number;
 }
 
 /**
@@ -253,12 +241,8 @@ export interface NeatControllerForMutation {
   _invalidateGenomeCaches: (genome: GenomeWithMetadata) => void;
   /** Per-operator success/attempt statistics. */
   _operatorStats: Map<string, OperatorStats>;
-  /** Cache of node split innovation records. */
-  _nodeSplitInnovations: Map<string, NodeSplitRecord>;
-  /** Cache of connection innovation ids. */
-  _connInnovations: Map<string, number>;
-  /** Next global innovation id. */
-  _nextGlobalInnovation: number;
+  /** Explicit innovation tracker for structural mutation identity. */
+  _innovationTracker: InnovationTracker;
   /** Current phased-complexity mode. */
   _phase?: 'simplify' | 'complexify';
   /** Computes minimum hidden node target. */

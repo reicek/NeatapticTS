@@ -44,7 +44,7 @@ Reach for this when a caller wants a fresh archive observation window
 without resetting the rest of the telemetry system.
 
 Parameters:
-- `host` - - `Neat` instance whose Pareto archive should be emptied.
+- `host` - `Neat` instance whose Pareto archive should be emptied.
 
 Returns: Nothing. The archive buffer is reset in place.
 
@@ -64,8 +64,8 @@ easy to append to files, load into notebooks, or post-process with simple
 scripts while preserving one archived snapshot per line.
 
 Parameters:
-- `host` - - `Neat` instance storing Pareto objective snapshots.
-- `maxEntries` - - Maximum number of entries to serialize.
+- `host` - `Neat` instance storing Pareto objective snapshots.
+- `maxEntries` - Maximum number of entries to serialize.
 
 Returns: JSONL payload for recent Pareto archive entries.
 
@@ -91,7 +91,7 @@ caller can move from per-genome rank summaries to reconstructed fronts and
 archived vectors without leaving the same conceptual boundary.
 
 Parameters:
-- `host` - - `Neat` instance whose population should be summarized.
+- `host` - `Neat` instance whose population should be summarized.
 
 Returns: Rank, crowding, score, and size metrics per genome.
 
@@ -118,8 +118,8 @@ reconstructing the current live fronts, it slices the archive the controller
 has already decided to retain for later inspection or export.
 
 Parameters:
-- `host` - - `Neat` instance storing archived Pareto metadata.
-- `maxEntries` - - Maximum number of archive entries to return.
+- `host` - `Neat` instance storing archived Pareto metadata.
+- `maxEntries` - Maximum number of archive entries to return.
 
 Returns: Slice of the recent Pareto archive.
 
@@ -148,8 +148,8 @@ tests, or teaching material that needs to show how genomes separate into
 dominance layers.
 
 Parameters:
-- `host` - - `Neat` instance whose population should be partitioned.
-- `maxFronts` - - Maximum number of fronts to reconstruct.
+- `host` - `Neat` instance whose population should be partitioned.
+- `maxFronts` - Maximum number of fronts to reconstruct.
 
 Returns: Pareto fronts ordered from best to worst.
 

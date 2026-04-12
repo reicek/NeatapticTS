@@ -76,10 +76,10 @@ tracks the population's recent structural spread and responds to drift,
 rather than forcing every problem domain toward one global variance number.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `autoDistanceCoeffOptions` - - Tuning options that define adjustment rate
+- `controller` - NEAT controller instance for evaluation.
+- `autoDistanceCoeffOptions` - Tuning options that define adjustment rate
 and coefficient bounds.
-- `connectionVariance` - - Freshly observed variance of population
+- `connectionVariance` - Freshly observed variance of population
 connection counts.
 
 ### applyDistanceCoefficientDecrease
@@ -99,9 +99,9 @@ topology sizes are already spreading, which helps keep the controller from
 over-fragmenting species on the next pass.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `bounds` - - Min and max coefficient bounds.
-- `adjustRate` - - Adjustment rate.
+- `controller` - NEAT controller instance for evaluation.
+- `bounds` - Min and max coefficient bounds.
+- `adjustRate` - Adjustment rate.
 
 ### applyDistanceCoefficientIncrease
 
@@ -120,9 +120,9 @@ and disjoint structural differences as more important, which helps push back
 when topology sizes are collapsing toward one narrow profile.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `bounds` - - Min and max coefficient bounds.
-- `adjustRate` - - Adjustment rate.
+- `controller` - NEAT controller instance for evaluation.
+- `bounds` - Min and max coefficient bounds.
+- `adjustRate` - Adjustment rate.
 
 ### computeMean
 
@@ -139,7 +139,7 @@ connection counts first, then summarize them before making policy
 decision.
 
 Parameters:
-- `values` - - Input values.
+- `values` - Input values.
 
 Returns: Mean of the values.
 
@@ -159,8 +159,8 @@ notice when topology sizes are collapsing toward one narrow shape or
 spreading apart more aggressively than before.
 
 Parameters:
-- `values` - - Input values.
-- `meanValue` - - Precomputed mean.
+- `values` - Input values.
+- `meanValue` - Precomputed mean.
 
 Returns: Variance of the values.
 
@@ -179,7 +179,7 @@ pressure until compatibility becomes toothless, or increasing it until small
 topology edits dominate every comparison.
 
 Parameters:
-- `autoDistanceCoeffOptions` - - Tuning options.
+- `autoDistanceCoeffOptions` - Tuning options.
 
 Returns: Min and max coefficient bounds.
 
@@ -202,10 +202,10 @@ the policy immediately visible instead of waiting one extra generation before
 a coefficient change is possible.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `connectionVariance` - - Current connection variance.
-- `bounds` - - Min and max coefficient bounds.
-- `adjustRate` - - Adjustment rate.
+- `controller` - NEAT controller instance for evaluation.
+- `connectionVariance` - Current connection variance.
+- `bounds` - Min and max coefficient bounds.
+- `adjustRate` - Adjustment rate.
 
 ### runAutoDistanceCoefficientTuning
 
@@ -231,8 +231,8 @@ The helper preserves several important controller assumptions:
   updated for future passes.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `evaluationOptions` - - Options object for the current evaluation pass.
+- `controller` - NEAT controller instance for evaluation.
+- `evaluationOptions` - Options object for the current evaluation pass.
 
 Example:
 

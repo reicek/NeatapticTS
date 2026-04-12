@@ -51,7 +51,7 @@ import type { RngHost } from './rng.types';
  * const checkpoint = snapshotRngState(neat);
  * ```
  *
- * @param host - Object holding RNG state and configuration.
+ * @param host Object holding RNG state and configuration.
  * @returns A function that yields a uniform random value in [0, 1).
  */
 export function getOrCreateRng(host: RngHost): () => number {
@@ -103,7 +103,7 @@ export function getOrCreateRng(host: RngHost): () => number {
  * process. Use `exportRngState()` when the same token is about to cross a wider
  * boundary such as JSON serialization, checkpoint files, or fixture snapshots.
  *
- * @param host - Object holding RNG state.
+ * @param host Object holding RNG state.
  * @returns The numeric RNG state or undefined when uninitialized.
  */
 export function snapshotRngState(host: RngHost): number | undefined {
@@ -125,8 +125,8 @@ export function snapshotRngState(host: RngHost): number | undefined {
  * restoreRngState(neat, savedState);
  * ```
  *
- * @param host - Object holding RNG state.
- * @param state - Numeric RNG state to restore.
+ * @param host Object holding RNG state.
+ * @param state Numeric RNG state to restore.
  */
 export function restoreRngState(
   host: RngHost,
@@ -142,8 +142,8 @@ export function restoreRngState(
  * This exists so older callers can keep using the import-style name while the
  * underlying behavior remains the same replay boundary as `restoreRngState()`.
  *
- * @param host - Object holding RNG state.
- * @param state - Numeric RNG state to restore.
+ * @param host Object holding RNG state.
+ * @param state Numeric RNG state to restore.
  */
 export function importRngState(
   host: RngHost,
@@ -163,7 +163,7 @@ export function importRngState(
  * case: the returned token is meant to leave the immediate call site and later
  * come back through `restoreRngState()` or `importRngState()`.
  *
- * @param host - Object holding RNG state.
+ * @param host Object holding RNG state.
  * @returns The numeric RNG state or undefined when not set.
  */
 export function exportRngState(host: RngHost): number | undefined {
@@ -189,8 +189,8 @@ export function exportRngState(host: RngHost): number | undefined {
  * restoreRngState(neat, before);
  * ```
  *
- * @param host - Object holding RNG state.
- * @param sampleCount - Number of samples to generate.
+ * @param host Object holding RNG state.
+ * @param sampleCount Number of samples to generate.
  * @returns Array of random samples in [0, 1).
  */
 export function sampleRandomSequence(

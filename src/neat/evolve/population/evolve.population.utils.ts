@@ -1,4 +1,5 @@
 import Network from '../../../architecture/network/network';
+import { crossOverWithRandomGenerator } from '../../../architecture/network/genetic/network.genetic.utils';
 import type {
   GenomeWithMetadata,
   NeatControllerForEvolution,
@@ -299,7 +300,8 @@ export async function addOffspring(
   const remainingSlots = Math.max(0, desiredPopulation - nextPopulation.length);
   if (remainingSlots <= 0) return;
   // Step 2: Branch based on speciation.
-  if (internal.options.speciation && (internal._species?.length ?? 0) > 0) {
+  refreshSpeciesRegistryWhenNeeded(internal);
+  if (internal.options.speciation && hasUsableSpeciesRegistry(internal)) {
     internal._suppressTournamentError = true;
     await helpers.addSpeciatedOffspring(nextPopulation, remainingSlots);
     internal._suppressTournamentError = false;
@@ -308,6 +310,35 @@ export async function addOffspring(
   internal._suppressTournamentError = true;
   await helpers.addUnspeciatedOffspring(nextPopulation, remainingSlots);
   internal._suppressTournamentError = false;
+}
+
+function refreshSpeciesRegistryWhenNeeded(
+  internal: NeatControllerForEvolution,
+): void {
+  if (!internal.options.speciation || hasUsableSpeciesRegistry(internal)) {
+    return;
+  }
+
+  internal._speciate?.();
+}
+
+function hasUsableSpeciesRegistry(
+  internal: NeatControllerForEvolution,
+): boolean {
+  const speciesList = internal._species ?? [];
+  if (speciesList.length === 0) {
+    return false;
+  }
+
+  const liveSpeciesMemberCount = speciesList.reduce(
+    (memberCount, species) => memberCount + species.members.length,
+    0,
+  );
+
+  return (
+    liveSpeciesMemberCount > 0 &&
+    liveSpeciesMemberCount === internal.population.length
+  );
 }
 
 /**
@@ -472,8 +503,19 @@ function computeOffspringAllocation(
     ageConfig.youngMultiplier ?? config.youngMultiplierDefault;
   const oldThreshold = ageConfig.oldThreshold ?? config.oldThresholdDefault;
   const oldMultiplier = ageConfig.oldMultiplier ?? config.oldMultiplierDefault;
+  const speciesList = internal._species ?? [];
+  const activeSpeciesIndexes = collectActiveSpeciesIndexes(speciesList);
+
+  if (activeSpeciesIndexes.length === 0) {
+    return speciesList.map(() => 0);
+  }
+
   // Step 2: Compute adjusted fitness per species.
-  const speciesAdjusted = (internal._species ?? []).map((species) => {
+  const speciesAdjusted = speciesList.map((species, speciesIndex) => {
+    if (!activeSpeciesIndexes.includes(speciesIndex)) {
+      return 0;
+    }
+
     const base = species.members.reduce(
       (sum: number, member: GenomeWithMetadata) => sum + (member.score || 0),
       0,
@@ -486,7 +528,7 @@ function computeOffspringAllocation(
   // Step 3: Compute raw shares.
   const totalAdjusted =
     speciesAdjusted.reduce((sum: number, value: number) => sum + value, 0) || 1;
-  const rawShares = (internal._species ?? []).map(
+  const rawShares = speciesList.map(
     (_species, speciesIndex) =>
       (speciesAdjusted[speciesIndex] / totalAdjusted) * remainingSlots,
   );
@@ -495,17 +537,32 @@ function computeOffspringAllocation(
   enforceMinimumOffspring(
     internal,
     offspringAllocation,
+    activeSpeciesIndexes,
     remainingSlots,
     config.minOffspringDefault,
   );
-  distributeRemainingSlots(offspringAllocation, rawShares, remainingSlots);
+  distributeRemainingSlots(
+    offspringAllocation,
+    rawShares,
+    activeSpeciesIndexes,
+    remainingSlots,
+  );
   trimOversubscription(
     internal,
     offspringAllocation,
+    activeSpeciesIndexes,
     remainingSlots,
     config.minOffspringDefault,
   );
   return offspringAllocation;
+}
+
+function collectActiveSpeciesIndexes(
+  speciesList: Array<{ members: unknown[] }>,
+): number[] {
+  return speciesList.flatMap((species, speciesIndex) =>
+    species.members.length > 0 ? [speciesIndex] : [],
+  );
 }
 
 /**
@@ -527,16 +584,22 @@ function computeOffspringAllocation(
 function enforceMinimumOffspring(
   internal: NeatControllerForEvolution,
   allocation: number[],
+  activeSpeciesIndexes: number[],
   remainingSlots: number,
   minOffspringDefault: number,
 ): void {
   // Step 1: Resolve minimum offspring policy.
   const minOffspring =
     internal.options.speciesAllocation?.minOffspring ?? minOffspringDefault;
-  const speciesCount = internal._species?.length ?? 0;
+  const speciesCount = activeSpeciesIndexes.length;
   if (remainingSlots < speciesCount * minOffspring) return;
   // Step 2: Enforce minimum for each species.
-  for (let speciesIndex = 0; speciesIndex < allocation.length; speciesIndex++) {
+  for (
+    let activeSpeciesIndex = 0;
+    activeSpeciesIndex < activeSpeciesIndexes.length;
+    activeSpeciesIndex++
+  ) {
+    const speciesIndex = activeSpeciesIndexes[activeSpeciesIndex];
     if (allocation[speciesIndex] < minOffspring)
       allocation[speciesIndex] = minOffspring;
   }
@@ -561,6 +624,7 @@ function enforceMinimumOffspring(
 function distributeRemainingSlots(
   allocation: number[],
   rawShares: number[],
+  activeSpeciesIndexes: number[],
   remainingSlots: number,
 ): void {
   // Step 1: Compute slots left after flooring.
@@ -568,10 +632,10 @@ function distributeRemainingSlots(
   let slotsLeft = remainingSlots - allocated;
   if (slotsLeft <= 0) return;
   // Step 2: Distribute by largest fractional remainder.
-  const remainders = rawShares
-    .map((share, speciesIndex) => ({
+  const remainders = activeSpeciesIndexes
+    .map((speciesIndex) => ({
       speciesIndex,
-      fraction: share - Math.floor(share),
+      fraction: rawShares[speciesIndex] - Math.floor(rawShares[speciesIndex]),
     }))
     .toSorted((left, right) => right.fraction - left.fraction);
   if (remainders.length === 0) return;
@@ -604,6 +668,7 @@ function distributeRemainingSlots(
 function trimOversubscription(
   internal: NeatControllerForEvolution,
   allocation: number[],
+  activeSpeciesIndexes: number[],
   remainingSlots: number,
   minOffspringDefault: number,
 ): void {
@@ -614,8 +679,11 @@ function trimOversubscription(
   // Step 2: Trim from largest allocations while respecting minimum.
   const minOffspring =
     internal.options.speciesAllocation?.minOffspring ?? minOffspringDefault;
-  const order = allocation
-    .map((value, speciesIndex) => ({ speciesIndex, value }))
+  const order = activeSpeciesIndexes
+    .map((speciesIndex) => ({
+      speciesIndex,
+      value: allocation[speciesIndex],
+    }))
     .toSorted((left, right) => right.value - left.value);
   if (order.length === 0) return;
   let didTrim = true;
@@ -661,9 +729,10 @@ function buildSpeciesOffspring(
   crossSpeciesGuardLimit: number,
   survivalThresholdDefault: number,
 ): GenomeWithMetadata {
+  const randomGenerator = internal._getRNG();
+
   // Step 1: Select first parent.
-  const parentA =
-    survivors[Math.floor(internal._getRNG()() * survivors.length)];
+  const parentA = survivors[Math.floor(randomGenerator() * survivors.length)];
   // Step 2: Select second parent.
   const parentB = selectSecondParent(
     internal,
@@ -672,12 +741,14 @@ function buildSpeciesOffspring(
     crossSpeciesProbability,
     crossSpeciesGuardLimit,
     survivalThresholdDefault,
+    randomGenerator,
   );
   // Step 3: Cross over and assign lineage metadata.
-  const child = Network.crossOver(
+  const child = crossOverWithRandomGenerator(
     parentA as never,
     parentB as never,
     internal.options.equal || false,
+    randomGenerator,
   ) as never as GenomeWithMetadata;
   child._reenableProb = internal.options.reenableProb;
   child._id = internal._nextGenomeId++;
@@ -721,30 +792,25 @@ function selectSecondParent(
   crossSpeciesProbability: number,
   crossSpeciesGuardLimit: number,
   survivalThresholdDefault: number,
+  randomGenerator: () => number,
 ): GenomeWithMetadata {
   // Step 1: Determine whether to cross species.
   const shouldCross =
     crossSpeciesProbability > 0 &&
     (internal._species?.length ?? 0) > 1 &&
-    internal._getRNG()() < crossSpeciesProbability;
+    randomGenerator() < crossSpeciesProbability;
   if (!shouldCross) {
-    return survivors[
-      Math.floor(internal._getRNG()() * survivors.length)
-    ] as never;
+    return survivors[Math.floor(randomGenerator() * survivors.length)] as never;
   }
   // Step 2: Choose another species (bounded retries).
   let otherIndex = speciesIndex;
   let guard = 0;
   while (otherIndex === speciesIndex && guard++ < crossSpeciesGuardLimit) {
-    otherIndex = Math.floor(
-      internal._getRNG()() * (internal._species?.length ?? 1),
-    );
+    otherIndex = Math.floor(randomGenerator() * (internal._species?.length ?? 1));
   }
   const otherSpecies = internal._species?.[otherIndex];
   if (!otherSpecies) {
-    return survivors[
-      Math.floor(internal._getRNG()() * survivors.length)
-    ] as never;
+    return survivors[Math.floor(randomGenerator() * survivors.length)] as never;
   }
   // Step 3: Select parent from the other species.
   internal._sortSpeciesMembers?.(otherSpecies as SpeciesWithMetadata);
@@ -758,7 +824,5 @@ function selectSecondParent(
       ),
     ),
   );
-  return otherSurvivors[
-    Math.floor(internal._getRNG()() * otherSurvivors.length)
-  ] as never;
+  return otherSurvivors[Math.floor(randomGenerator() * otherSurvivors.length)] as never;
 }

@@ -16,6 +16,10 @@ type PopulationAllocationHost = Neat & {
 };
 type PopulationMetadataNetwork = Network & GenomeWithMetadata;
 
+type PopulationRandomCarrier = {
+  _rand?: () => number;
+};
+
 function createPopulationMember(input: {
   genomeId: number;
   score: number;
@@ -28,6 +32,13 @@ function createPopulationMember(input: {
   populationMember._depth = input.depth;
 
   return populationMember;
+}
+
+function setPopulationRandomSource(
+  network: Network,
+  randomGenerator: () => number,
+): void {
+  (network as unknown as PopulationRandomCarrier)._rand = randomGenerator;
 }
 
 function countHiddenNodes(genome: Network): number {
@@ -329,6 +340,61 @@ describe('neat evolve population chapter', () => {
               (hiddenNodeCount) => hiddenNodeCount >= minimumHiddenCount,
             ),
           ).toBe(true);
+        });
+      });
+    });
+
+    describe('given speciated crossover receives an explicit controller rng', () => {
+      describe('when parent-owned runtime rng disagrees with the controller rng', () => {
+        it('still uses the controller rng for disabled-gene re-enable decisions', async () => {
+          // Arrange
+          const firstParent = createPopulationMember({
+            genomeId: 501,
+            score: 10,
+            depth: 1,
+          });
+          const secondParent = firstParent.clone() as PopulationMetadataNetwork;
+          secondParent._id = 502;
+          secondParent.score = 5;
+          secondParent._depth = 2;
+          firstParent.connections[0].enabled = false;
+          secondParent.connections[0].enabled = false;
+          firstParent._reenableProb = 0.75;
+          secondParent._reenableProb = 0.75;
+          setPopulationRandomSource(firstParent, () => 0.99);
+          setPopulationRandomSource(secondParent, () => 0.99);
+          const evolutionController = createEvolutionController({
+            species: [
+              createSpeciesSnapshot({
+                speciesId: 1,
+                members: [firstParent, secondParent],
+                lastImproved: 0,
+              }),
+            ],
+            randomValues: [0, 0.9, 0.8, 0.8, 0.5],
+            crossSpeciesMatingProb: 0,
+            popsize: 1,
+          });
+          const nextPopulation: Network[] = [];
+          const mathRandomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.99);
+
+          try {
+            // Act
+            await addSpeciatedOffspring(evolutionController, nextPopulation, 1, {
+              minOffspringDefault: 0,
+              survivalThresholdDefault: 1,
+              youngThresholdDefault: 0,
+              youngMultiplierDefault: 1,
+              oldThresholdDefault: 100,
+              oldMultiplierDefault: 1,
+              crossSpeciesGuardLimit: 4,
+            });
+
+            // Assert
+            expect(nextPopulation[0]?.connections[0]?.enabled).toBe(true);
+          } finally {
+            mathRandomSpy.mockRestore();
+          }
         });
       });
     });

@@ -127,9 +127,9 @@ vectorized backend that exploits SIMD, GPU kernels, or parallel workers.
 Input validation occurs per row to surface the earliest mismatch with a descriptive index.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `inputs` - - Array of input vectors; each must have length == network.input.
-- `training` - - Whether each activation should keep training traces.
+- `this` - Bound Network instance.
+- `inputs` - Array of input vectors; each must have length == network.input.
+- `training` - Whether each activation should keep training traces.
 
 Returns: 2‑D array: outputs[i] is the activation result for inputs[i].
 
@@ -156,10 +156,10 @@ At present this simply forwards to {@link Network.activate}. The indirection is 
  - Providing a stable exported symbol for external tooling / instrumentation.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `input` - - Input vector (length == network.input).
-- `training` - - Whether to retain training traces / gradients (delegated downstream).
-- `maxActivationDepth` - - Guard against runaway recursion / cyclic activation attempts.
+- `this` - Bound Network instance.
+- `input` - Input vector (length == network.input).
+- `training` - Whether to retain training traces / gradients (delegated downstream).
+- `maxActivationDepth` - Guard against runaway recursion / cyclic activation attempts.
 
 Returns: Implementation-defined result of Network.activate (typically an output vector).
 
@@ -218,8 +218,8 @@ Complexity considerations:
  - Space: O(O) transient (O = number of outputs) due to the pooled output buffer.
 
 Parameters:
-- `this` - - Bound Network instance.
-- `input` - - Flat numeric vector whose length must equal network.input.
+- `this` - Bound Network instance.
+- `input` - Flat numeric vector whose length must equal network.input.
 
 Returns: Array of output neuron activations (length == network.output).
 
@@ -1192,9 +1192,9 @@ createBatchActivationContext(
 Build shared batch activation context for helper orchestration.
 
 Parameters:
-- `network` - - Network instance bound to the activation call.
-- `batchInputs` - - Input matrix supplied by the caller.
-- `isTraining` - - Whether activation should retain training traces.
+- `network` - Network instance bound to the activation call.
+- `batchInputs` - Input matrix supplied by the caller.
+- `isTraining` - Whether activation should retain training traces.
 
 Returns: Fully populated batch activation context.
 
@@ -1210,8 +1210,8 @@ createNoTraceActivationContext(
 Build shared no-trace activation context for helper orchestration.
 
 Parameters:
-- `network` - - Network instance bound to the activation call.
-- `inputVector` - - Input activation vector supplied by the caller.
+- `network` - Network instance bound to the activation call.
+- `inputVector` - Input activation vector supplied by the caller.
 
 Returns: Fully populated no-trace activation context.
 
@@ -1229,10 +1229,10 @@ createRawActivationContext(
 Build shared raw activation context for helper orchestration.
 
 Parameters:
-- `network` - - Network instance bound to the activation call.
-- `inputVector` - - Input activation vector supplied by the caller.
-- `isTraining` - - Whether activation should retain training traces.
-- `maximumActivationDepth` - - Guard against runaway activation depth.
+- `network` - Network instance bound to the activation call.
+- `inputVector` - Input activation vector supplied by the caller.
+- `isTraining` - Whether activation should retain training traces.
+- `maximumActivationDepth` - Guard against runaway activation depth.
 
 Returns: Fully populated raw activation context.
 
@@ -1250,7 +1250,7 @@ The orchestration keeps behavior deterministic by validating the container first
 then validating each row before delegating to the core network activation function.
 
 Parameters:
-- `activationContext` - - Shared batch activation state.
+- `activationContext` - Shared batch activation state.
 
 Returns: Matrix of activation outputs.
 
@@ -1268,7 +1268,7 @@ The orchestration follows a strict sequence: refresh order guarantees, validate 
 try fast slab inference, then compute outputs through node traversal when needed.
 
 Parameters:
-- `activationContext` - - Shared no-trace activation state.
+- `activationContext` - Shared no-trace activation state.
 
 Returns: Output activation vector detached from pooled storage.
 
@@ -1286,7 +1286,7 @@ This helper keeps the exported activation method focused on context creation whi
 module owns the execution path and future branching behavior.
 
 Parameters:
-- `activationContext` - - Shared raw activation state.
+- `activationContext` - Shared raw activation state.
 
 Returns: Activation output vector from the network delegate.
 
@@ -1319,7 +1319,7 @@ activateViaNetworkDelegate(
 Delegate raw activation to the core network activation implementation.
 
 Parameters:
-- `activationContext` - - Shared raw activation state.
+- `activationContext` - Shared raw activation state.
 
 Returns: Activation output vector.
 
@@ -1334,7 +1334,7 @@ activateWithSelectedReusePath(
 Select the raw activation execution path based on runtime reuse configuration.
 
 Parameters:
-- `activationContext` - - Shared raw activation state.
+- `activationContext` - Shared raw activation state.
 
 Returns: Activation output vector.
 
@@ -1352,7 +1352,7 @@ This helper keeps the exported activation method focused on context creation whi
 module owns the execution path and future branching behavior.
 
 Parameters:
-- `activationContext` - - Shared raw activation state.
+- `activationContext` - Shared raw activation state.
 
 Returns: Activation output vector from the network delegate.
 
@@ -1369,7 +1369,7 @@ activateSingleBatchRow(
 Validate and activate one batch row.
 
 Parameters:
-- `rowActivationContext` - - Shared state for one batch-row activation.
+- `rowActivationContext` - Shared state for one batch-row activation.
 
 Returns: Activation output vector for the row.
 
@@ -1384,7 +1384,7 @@ activateValidatedBatchRows(
 Activate each row in a validated batch matrix.
 
 Parameters:
-- `activationContext` - - Shared batch activation state.
+- `activationContext` - Shared batch activation state.
 
 Returns: Matrix of activation outputs.
 
@@ -1399,7 +1399,7 @@ assertBatchInputCollection(
 Validate that the batch input collection is an array of rows.
 
 Parameters:
-- `batchInputs` - - Candidate batch input collection.
+- `batchInputs` - Candidate batch input collection.
 
 Returns: Nothing.
 
@@ -1414,7 +1414,7 @@ assertBatchRowInputSize(
 Validate one batch row dimensionality.
 
 Parameters:
-- `rowActivationContext` - - Shared state for one batch-row activation.
+- `rowActivationContext` - Shared state for one batch-row activation.
 
 Returns: Nothing.
 
@@ -1429,7 +1429,7 @@ buildBatchRowInputSizeMismatchMessage(
 Build a descriptive mismatch message for invalid batch row input dimensions.
 
 Parameters:
-- `rowActivationContext` - - Shared state for one batch-row activation.
+- `rowActivationContext` - Shared state for one batch-row activation.
 
 Returns: Formatted error message for invalid row dimensionality.
 
@@ -1447,7 +1447,7 @@ The orchestration keeps behavior deterministic by validating the container first
 then validating each row before delegating to the core network activation function.
 
 Parameters:
-- `activationContext` - - Shared batch activation state.
+- `activationContext` - Shared batch activation state.
 
 Returns: Matrix of activation outputs.
 
@@ -1462,7 +1462,7 @@ formatInputLengthForMessage(
 Convert input length into a display-safe string for error messaging.
 
 Parameters:
-- `inputVector` - - Candidate batch row input vector.
+- `inputVector` - Candidate batch row input vector.
 
 Returns: Numeric length as string or predefined undefined text.
 
@@ -1477,7 +1477,7 @@ isBatchRowInputSizeValid(
 Determine whether one batch row matches the expected input dimensionality.
 
 Parameters:
-- `rowActivationContext` - - Shared state for one batch-row activation.
+- `rowActivationContext` - Shared state for one batch-row activation.
 
 Returns: True when row size is valid.
 
@@ -1494,7 +1494,7 @@ activateWithoutTraceUsingNodeIteration(
 Execute no-trace activation through node traversal and pooled output collection.
 
 Parameters:
-- `activationContext` - - Shared no-trace activation state.
+- `activationContext` - Shared no-trace activation state.
 
 Returns: Detached output activation vector.
 
@@ -1509,7 +1509,7 @@ assertInputMatchesNetworkInputSize(
 Validate that the input vector length matches expected network input dimensionality.
 
 Parameters:
-- `activationContext` - - Shared no-trace activation state.
+- `activationContext` - Shared no-trace activation state.
 
 Returns: Nothing.
 
@@ -1524,7 +1524,7 @@ buildInputSizeMismatchMessage(
 Build a descriptive input mismatch message for activation validation errors.
 
 Parameters:
-- `activationContext` - - Shared no-trace activation state.
+- `activationContext` - Shared no-trace activation state.
 
 Returns: Formatted mismatch error message.
 
@@ -1539,7 +1539,7 @@ canUseNoTraceFastSlab(
 Determine whether fast slab activation is available for no-trace execution mode.
 
 Parameters:
-- `activationContext` - - Shared no-trace activation state.
+- `activationContext` - Shared no-trace activation state.
 
 Returns: True when slab execution is available for inference mode.
 
@@ -1554,7 +1554,7 @@ detachPooledOutputBuffer(
 Clone pooled output storage into a detached plain array.
 
 Parameters:
-- `pooledOutputBuffer` - - Pooled activation output storage.
+- `pooledOutputBuffer` - Pooled activation output storage.
 
 Returns: Detached output activation vector.
 
@@ -1572,7 +1572,7 @@ The orchestration follows a strict sequence: refresh order guarantees, validate 
 try fast slab inference, then compute outputs through node traversal when needed.
 
 Parameters:
-- `activationContext` - - Shared no-trace activation state.
+- `activationContext` - Shared no-trace activation state.
 
 Returns: Output activation vector detached from pooled storage.
 
@@ -1587,7 +1587,7 @@ formatInputLengthForMessage(
 Convert input length into a display-safe string for error messaging.
 
 Parameters:
-- `inputVector` - - Candidate activation input vector.
+- `inputVector` - Candidate activation input vector.
 
 Returns: Numeric length as string or predefined undefined text.
 
@@ -1602,7 +1602,7 @@ isInputVectorLengthValid(
 Check whether the input vector has a valid length for activation.
 
 Parameters:
-- `activationContext` - - Shared no-trace activation state.
+- `activationContext` - Shared no-trace activation state.
 
 Returns: True when the input vector is an array with expected length.
 
@@ -1617,7 +1617,7 @@ refreshTopologicalOrderWhenRequired(
 Refresh cached topological order when acyclic mode is active and marked dirty.
 
 Parameters:
-- `activationContext` - - Shared no-trace activation state.
+- `activationContext` - Shared no-trace activation state.
 
 Returns: Nothing.
 
@@ -1632,7 +1632,7 @@ tryActivateWithFastSlab(
 Attempt fast slab activation and return null when slab execution is unavailable or fails.
 
 Parameters:
-- `activationContext` - - Shared no-trace activation state.
+- `activationContext` - Shared no-trace activation state.
 
 Returns: Fast slab output when successful, otherwise null.
 
@@ -1651,9 +1651,9 @@ createBatchActivationContext(
 Build shared batch activation context for helper orchestration.
 
 Parameters:
-- `network` - - Network instance bound to the activation call.
-- `batchInputs` - - Input matrix supplied by the caller.
-- `isTraining` - - Whether activation should retain training traces.
+- `network` - Network instance bound to the activation call.
+- `batchInputs` - Input matrix supplied by the caller.
+- `isTraining` - Whether activation should retain training traces.
 
 Returns: Fully populated batch activation context.
 
@@ -1669,8 +1669,8 @@ createNoTraceActivationContext(
 Build shared no-trace activation context for helper orchestration.
 
 Parameters:
-- `network` - - Network instance bound to the activation call.
-- `inputVector` - - Input activation vector supplied by the caller.
+- `network` - Network instance bound to the activation call.
+- `inputVector` - Input activation vector supplied by the caller.
 
 Returns: Fully populated no-trace activation context.
 
@@ -1688,10 +1688,10 @@ createRawActivationContext(
 Build shared raw activation context for helper orchestration.
 
 Parameters:
-- `network` - - Network instance bound to the activation call.
-- `inputVector` - - Input activation vector supplied by the caller.
-- `isTraining` - - Whether activation should retain training traces.
-- `maximumActivationDepth` - - Guard against runaway activation depth.
+- `network` - Network instance bound to the activation call.
+- `inputVector` - Input activation vector supplied by the caller.
+- `isTraining` - Whether activation should retain training traces.
+- `maximumActivationDepth` - Guard against runaway activation depth.
 
 Returns: Fully populated raw activation context.
 
@@ -1706,7 +1706,7 @@ toNetworkInternals(
 Convert a network instance into the activation internals interface used by helper modules.
 
 Parameters:
-- `network` - - Runtime network instance.
+- `network` - Runtime network instance.
 
 Returns: Network internals view used by activation helper modules.
 
@@ -1723,7 +1723,7 @@ activateHiddenNode(
 Activate a hidden node without trace bookkeeping.
 
 Parameters:
-- `networkNode` - - Hidden-role node to activate.
+- `networkNode` - Hidden-role node to activate.
 
 Returns: Nothing.
 
@@ -1738,7 +1738,7 @@ activateInputNode(
 Activate an input node using the matching input vector value.
 
 Parameters:
-- `activationContext` - - Node-specific activation state.
+- `activationContext` - Node-specific activation state.
 
 Returns: Nothing.
 
@@ -1753,7 +1753,7 @@ activateOutputNodeAndAdvanceIndex(
 Activate an output node, write the activation value, and advance the output index.
 
 Parameters:
-- `activationContext` - - Node-specific activation state.
+- `activationContext` - Node-specific activation state.
 
 Returns: Next output write index.
 
@@ -1768,7 +1768,7 @@ activateSingleNodeWithoutTrace(
 Activate one node and return the next output write index.
 
 Parameters:
-- `activationContext` - - Node-specific activation state.
+- `activationContext` - Node-specific activation state.
 
 Returns: Updated output write index.
 
@@ -1783,7 +1783,7 @@ isInputNode(
 Determine whether a node is an input-role node.
 
 Parameters:
-- `networkNode` - - Node under traversal.
+- `networkNode` - Node under traversal.
 
 Returns: True when node role is input.
 
@@ -1798,7 +1798,7 @@ isOutputNode(
 Determine whether a node is an output-role node.
 
 Parameters:
-- `networkNode` - - Node under traversal.
+- `networkNode` - Node under traversal.
 
 Returns: True when node role is output.
 
@@ -1816,6 +1816,6 @@ This helper isolates traversal concerns from no-trace orchestration so the main 
 can remain focused on high-level activation phases.
 
 Parameters:
-- `traversalContext` - - Inputs required to process each node and collect outputs.
+- `traversalContext` - Inputs required to process each node and collect outputs.
 
 Returns: Nothing.

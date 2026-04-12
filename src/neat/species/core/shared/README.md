@@ -69,18 +69,20 @@ decides when augmentation should happen.
 Read the fold in three stages:
 
 1. walk every member connection,
-2. resolve an innovation id from the connection or fallback resolver,
+2. resolve an innovation id from the connection or, for deliberate
+   legacy/import reads only, the fallback resolver,
 3. reduce the seen ids and enabled flags into one compact summary.
 
 The fold preserves three small rules:
 - connection innovation ids come from the connection itself when present,
-- legacy connections may fall back to the supplied innovation resolver,
-- empty or fully unresolved inputs collapse to safe zero-style defaults
-  instead of producing `NaN` or `Infinity` noise in history output.
+- only genomes that opt into `_compatInnovationMode = 'allow-fallback'` may
+  use the supplied innovation resolver,
+- empty inputs collapse to safe zero-style defaults, while malformed native
+  inputs fail fast instead of silently inventing structure.
 
 Parameters:
-- `members` - - Detailed member genomes for a single species.
-- `fallbackInnov` - - Optional innovation resolver for legacy connections that do not carry a direct innovation id.
+- `members` - Detailed member genomes for a single species.
+- `fallbackInnov` - Optional innovation resolver for legacy connections that do not carry a direct innovation id.
 
 Returns: Compact innovation-range and enabled-ratio telemetry for the species.
 

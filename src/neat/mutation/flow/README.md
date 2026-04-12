@@ -66,11 +66,11 @@ identical edge discoveries can still share innovation identity across the
 population.
 
 Parameters:
-- `genome` - - genome to mutate
-- `internal` - - neat controller context
-- `methods` - - mutation methods module
+- `genome` - Genome to mutate.
+- `internal` - NEAT controller context.
+- `methods` - Mutation methods module.
 
-Returns: void
+Returns: Nothing.
 
 ### applyAddNodeMutation
 
@@ -79,7 +79,7 @@ applyAddNodeMutation(
   genome: GenomeWithMetadata,
   internal: NeatControllerForMutation,
   methods: { mutation: unknown; },
-): void
+): Promise<void>
 ```
 
 Apply an ADD_NODE mutation with reuse and weight nudging.
@@ -91,11 +91,34 @@ intentionally treats cache invalidation as part of the operation rather than
 leaving it to callers.
 
 Parameters:
-- `genome` - - genome to mutate
-- `internal` - - neat controller context
-- `methods` - - mutation methods module
+- `genome` - Genome to mutate.
+- `internal` - NEAT controller context.
+- `methods` - Mutation methods module.
 
-Returns: void
+Returns: Promise resolving after the add-node operation completes.
+
+### applyDeterministicWeightNudge
+
+```ts
+applyDeterministicWeightNudge(
+  genome: GenomeWithMetadata,
+  internal: NeatControllerForMutation,
+  mutationMethod: MutationMethod,
+): void
+```
+
+Apply the post-structural weight nudge using the controller RNG.
+
+The standalone network mutation helpers are allowed to own their own random
+streams, but NEAT replay needs these follow-up weight changes to come from
+the controller-owned RNG so the same checkpoint resumes identically.
+
+Parameters:
+- `genome` - Genome whose connection weight should be nudged.
+- `internal` - NEAT controller owning the deterministic RNG.
+- `mutationMethod` - MOD_WEIGHT descriptor providing the delta range.
+
+Returns: Nothing.
 
 ### applyMutationOperator
 
@@ -105,7 +128,7 @@ applyMutationOperator(
   mutationMethod: MutationMethod,
   internal: NeatControllerForMutation,
   methods: { mutation: unknown; },
-): void
+): Promise<void>
 ```
 
 Apply a mutation operator to a genome and invalidate caches as needed.
@@ -122,12 +145,12 @@ keep the expensive cleanup targeted to methods that plausibly changed the
 structural view of the genome.
 
 Parameters:
-- `genome` - - genome to mutate
-- `mutationMethod` - - mutation operator to apply
-- `internal` - - neat controller context
-- `methods` - - mutation methods module
+- `genome` - Genome to mutate.
+- `mutationMethod` - Mutation operator to apply.
+- `internal` - NEAT controller context.
+- `methods` - Mutation methods module.
 
-Returns: void
+Returns: Promise resolving after the operator has been applied.
 
 ### captureStructuralSizes
 
@@ -145,9 +168,9 @@ resulting genome later scored better. This helper records the pre-mutation
 node and connection counts that make that local success signal possible.
 
 Parameters:
-- `genome` - - genome to inspect
+- `genome` - Genome to inspect.
 
-Returns: structural size snapshot
+Returns: Structural size snapshot.
 
 ### initializeAdaptiveMutation
 
@@ -170,10 +193,10 @@ cheap bootstrap check rather than a repeated reset of evolved mutation
 behavior.
 
 Parameters:
-- `genome` - - genome to initialize
-- `internal` - - neat controller context
+- `genome` - Genome to initialize.
+- `internal` - NEAT controller context.
 
-Returns: void
+Returns: Nothing.
 
 ### maybeAddExtraConnection
 
@@ -192,10 +215,10 @@ probabilistic and lightweight: the flow uses it as a gentle exploration bump,
 not as a second full operator-selection phase.
 
 Parameters:
-- `genome` - - genome to mutate
-- `internal` - - neat controller context
+- `genome` - Genome to mutate.
+- `internal` - NEAT controller context.
 
-Returns: void
+Returns: Nothing.
 
 ### mutateGenome
 
@@ -227,11 +250,11 @@ and bandit-style policies to reward operators that change structure instead
 of merely consuming attempts.
 
 Parameters:
-- `genome` - - genome to mutate
-- `internal` - - neat controller context
-- `methods` - - mutation methods module
+- `genome` - Genome to mutate.
+- `internal` - NEAT controller context.
+- `methods` - Mutation methods module.
 
-Returns: Promise resolving after mutation attempts complete
+Returns: Promise resolving after mutation attempts complete.
 
 ### resolveEffectiveAmount
 
@@ -251,10 +274,10 @@ may carry its own evolving attempt budget; otherwise the controller-wide
 amount stays authoritative.
 
 Parameters:
-- `genome` - - genome to resolve for
-- `internal` - - neat controller context
+- `genome` - Genome to resolve for.
+- `internal` - NEAT controller context.
 
-Returns: effective mutation amount
+Returns: Effective mutation amount.
 
 ### resolveEffectiveRate
 
@@ -278,10 +301,10 @@ Keeping that precedence isolated here makes the rest of the mutation flow
 read as orchestration instead of configuration branching.
 
 Parameters:
-- `genome` - - genome to resolve for
-- `internal` - - neat controller context
+- `genome` - Genome to resolve for.
+- `internal` - NEAT controller context.
 
-Returns: effective mutation rate
+Returns: Effective mutation rate.
 
 ### selectConcreteMutationMethod
 
@@ -303,10 +326,10 @@ That normalization keeps `mutateGenome()` focused on lifecycle sequencing
 rather than on legacy selection-shape quirks.
 
 Parameters:
-- `genome` - - genome to select for
-- `internal` - - neat controller context
+- `genome` - Genome to select for.
+- `internal` - NEAT controller context.
 
-Returns: resolved mutation method or null
+Returns: Resolved mutation method or null.
 
 ### shouldInvalidateCaches
 
@@ -325,10 +348,10 @@ graph structure or traversal semantics enough to make cached topology views
 unsafe.
 
 Parameters:
-- `mutationMethod` - - mutation operator to inspect
-- `methods` - - mutation methods module
+- `mutationMethod` - Mutation operator to inspect.
+- `methods` - Mutation methods module.
 
-Returns: true when caches should be invalidated
+Returns: True when caches should be invalidated.
 
 ### shouldMutateGenome
 
@@ -346,10 +369,10 @@ comparison in one helper makes the orchestration read clearly and gives tests
 one stable seam for deterministic gating behavior.
 
 Parameters:
-- `effectiveRate` - - effective mutation probability
-- `internal` - - neat controller context
+- `effectiveRate` - Effective mutation probability.
+- `internal` - NEAT controller context.
 
-Returns: true when the genome should be mutated
+Returns: True when the genome should be mutated.
 
 ### updateOperatorStatsIfNeeded
 
@@ -371,9 +394,9 @@ collect every generation and concrete enough for later adaptation logic to
 bias toward operators that are actually creating new structure.
 
 Parameters:
-- `genome` - - genome used to compute after-sizes
-- `mutationMethod` - - operator being recorded
-- `beforeSizes` - - structural sizes captured before mutation
-- `internal` - - neat controller context
+- `genome` - Genome used to compute after-sizes.
+- `mutationMethod` - Operator being recorded.
+- `beforeSizes` - Structural sizes captured before mutation.
+- `internal` - NEAT controller context.
 
-Returns: void
+Returns: Nothing.

@@ -1,5 +1,9 @@
 import { Architect, methods } from '../../../neataptic';
+import Connection from '../../connection';
+import Node from '../../node';
+import { validateNativeGenome } from '../../../neat/validate/neat.validate';
 import Network from '../network';
+import type { NetworkJSON } from '../network.types';
 
 function createSerializableNetwork(seed: number): Network {
   return new Network(2, 1, { seed });
@@ -49,6 +53,102 @@ function createDeterministicInputValues(inputCount: number): number[] {
   return Array.from({ length: inputCount }, (_, inputIndex) =>
     Number(((inputIndex + 1) / 10).toFixed(2)),
   );
+}
+
+function createTemporalModuleExtensions(
+  networkJson: NetworkJSON,
+): NonNullable<NetworkJSON['extensions']> {
+  const hiddenNodeGeneIds = networkJson.nodes
+    .filter((node) => node.type !== 'input' && node.type !== 'output')
+    .map((node) => node.geneId)
+    .filter((geneId): geneId is number => typeof geneId === 'number');
+  const gatedConnections = networkJson.connections.filter(
+    (
+      connection,
+    ): connection is NetworkJSON['connections'][number] & {
+      innovation: number;
+      gaterGeneId: number;
+    } =>
+      typeof connection.innovation === 'number' &&
+      typeof connection.gaterGeneId === 'number',
+  );
+
+  if (hiddenNodeGeneIds.length === 0 || gatedConnections.length === 0) {
+    throw new Error('Expected recurrent module fixtures with hidden nodes and gated connections.');
+  }
+
+  return {
+    version: 1,
+    values: {
+      recurrentModules: [
+        {
+          moduleId: 'module:lstm:0',
+          kind: 'lstm',
+          nodeGeneIdsByRole: {
+            recurrentCore: hiddenNodeGeneIds,
+          },
+          connectionInnovations: gatedConnections.map(
+            (connection) => connection.innovation,
+          ),
+        },
+      ],
+      gatedBlocks: [
+        {
+          blockId: 'gated:block:0',
+          gaterGeneIds: [...new Set(gatedConnections.map((connection) => connection.gaterGeneId))],
+          connectionInnovations: gatedConnections.map(
+            (connection) => connection.innovation,
+          ),
+        },
+      ],
+    },
+  };
+}
+
+function summarizeTemporalExtensionBag(networkJson: NetworkJSON): {
+  recurrentModuleCount: number;
+  gatedBlockCount: number;
+  recurrentKinds: string[];
+} {
+  const extensionValues = networkJson.extensions?.values as
+    | {
+        recurrentModules?: Array<{ kind?: string }>;
+        gatedBlocks?: Array<unknown>;
+      }
+    | undefined;
+  const recurrentModules = Array.isArray(extensionValues?.recurrentModules)
+    ? extensionValues.recurrentModules
+    : [];
+  const gatedBlocks = Array.isArray(extensionValues?.gatedBlocks)
+    ? extensionValues.gatedBlocks
+    : [];
+
+  return {
+    recurrentModuleCount: recurrentModules.length,
+    gatedBlockCount: gatedBlocks.length,
+    recurrentKinds: recurrentModules
+      .map((recurrentModule) => recurrentModule.kind)
+      .filter((kind): kind is string => typeof kind === 'string')
+      .toSorted(),
+  };
+}
+
+function readFirstTemporalConnectionInnovation(
+  extensions: NonNullable<NetworkJSON['extensions']> | undefined,
+): number {
+  const extensionValues = extensions?.values as
+    | {
+        gatedBlocks?: Array<{ connectionInnovations: number[] }>;
+      }
+    | undefined;
+  const connectionInnovation =
+    extensionValues?.gatedBlocks?.[0]?.connectionInnovations?.[0];
+
+  if (typeof connectionInnovation !== 'number') {
+    throw new Error('Expected one temporal gated-block connection innovation.');
+  }
+
+  return connectionInnovation;
 }
 
 describe('network serialize chapter', () => {
@@ -130,6 +230,59 @@ describe('network serialize chapter', () => {
 
           // Assert
           expect(allOutputsStayClose).toBe(true);
+        });
+      });
+
+      describe('when historical identity is compared after rebuild', () => {
+        it('preserves node gene ids, connection innovations, and topology intent', () => {
+          // Arrange
+          const network = createSerializableNetwork(3631);
+          network.setTopologyIntent('unconstrained');
+          network.mutate(methods.mutation.ADD_NODE);
+          const serializedNetwork = network.serialize();
+
+          // Act
+          const deserialized = Network.deserialize(
+            serializedNetwork,
+            network.input,
+            network.output,
+          );
+
+          // Assert
+          expect({
+            nodeGeneIds: deserialized.nodes.map((node) => node.geneId),
+            connectionInnovations: deserialized.connections.map(
+              (connection) => connection.innovation,
+            ),
+            topologyIntent: deserialized.getTopologyIntent(),
+          }).toEqual({
+            nodeGeneIds: network.nodes.map((node) => node.geneId),
+            connectionInnovations: network.connections.map(
+              (connection) => connection.innovation,
+            ),
+            topologyIntent: network.getTopologyIntent(),
+          });
+        });
+      });
+
+      describe('when the rebuilt network is validated as a native genome', () => {
+        it('passes the proper-NEAT validator', () => {
+          // Arrange
+          const network = createSerializableNetwork(3632);
+          network.setTopologyIntent('unconstrained');
+          network.mutate(methods.mutation.ADD_NODE);
+          const serializedNetwork = network.serialize();
+
+          // Act
+          const deserialized = Network.deserialize(
+            serializedNetwork,
+            network.input,
+            network.output,
+          );
+          const validationReport = validateNativeGenome(deserialized);
+
+          // Assert
+          expect(validationReport.isValid).toBe(true);
         });
       });
     });
@@ -402,6 +555,119 @@ describe('network serialize chapter', () => {
       }
     });
 
+    describe('given a network snapshot uses historical identity fields', () => {
+      describe('when the payload is inspected before restore', () => {
+        it('includes connection innovations and endpoint gene ids', () => {
+          // Arrange
+          const network = createSerializableNetwork(3721);
+          const serializedJson = network.toJSON() as {
+            connections: Array<{
+              innovation?: number;
+              fromGeneId?: number;
+              toGeneId?: number;
+            }>;
+          };
+
+          // Act
+          const connectionIdentity = serializedJson.connections.map(
+            ({ innovation, fromGeneId, toGeneId }) => ({
+              innovation,
+              fromGeneId,
+              toGeneId,
+            }),
+          );
+
+          // Assert
+          expect(connectionIdentity).toEqual(
+            network.connections.map((connection) => ({
+              innovation: connection.innovation,
+              fromGeneId: connection.from.geneId,
+              toGeneId: connection.to.geneId,
+            })),
+          );
+        });
+      });
+
+      describe('when clone() rebuilds the network through JSON', () => {
+        it('preserves node ids, node responses, connection innovations, and enabled flags', () => {
+          // Arrange
+          const network = createSerializableNetwork(3722);
+          network.connections[0].enabled = false;
+          network.nodes.at(-1)!.response = 1.5;
+          network.mutate(methods.mutation.ADD_NODE);
+
+          // Act
+          const cloned = network.clone();
+
+          // Assert
+          expect({
+            nodeGeneIds: cloned.nodes.map((node) => node.geneId),
+            nodeResponses: cloned.nodes.map((node) => node.response),
+            connectionIdentity: cloned.connections.map((connection) => ({
+              innovation: connection.innovation,
+              enabled: connection.enabled,
+            })),
+          }).toEqual({
+            nodeGeneIds: network.nodes.map((node) => node.geneId),
+            nodeResponses: network.nodes.map((node) => node.response),
+            connectionIdentity: network.connections.map((connection) => ({
+              innovation: connection.innovation,
+              enabled: connection.enabled,
+            })),
+          });
+        });
+      });
+
+      describe('when a high-id payload is restored into a fresh process', () => {
+        it('advances node and connection counters past the restored maxima', () => {
+          // Arrange
+          const network = createSerializableNetwork(3723);
+          const serializedJson = network.toJSON() as {
+            nodes: Array<{ geneId?: number }>;
+            connections: Array<{
+              innovation?: number;
+              fromGeneId?: number;
+              toGeneId?: number;
+            }>;
+          };
+          serializedJson.nodes.forEach((node, nodeIndex) => {
+            node.geneId = 900 + nodeIndex;
+          });
+          serializedJson.connections.forEach((connection, connectionIndex) => {
+            connection.innovation = 1_200 + connectionIndex;
+            connection.fromGeneId = serializedJson.nodes[0].geneId;
+            connection.toGeneId = serializedJson.nodes.at(-1)?.geneId;
+          });
+          (Node as unknown as { _nextGeneId: number })._nextGeneId = 1;
+          (
+            Connection as unknown as { _nextInnovation: number }
+          )._nextInnovation = 1;
+
+          // Act
+          const restored = Network.fromJSON(
+            serializedJson as unknown as Record<string, unknown>,
+          );
+          const nextNode = new Node('hidden');
+          const nextConnection = new Connection(
+            restored.nodes[0],
+            restored.nodes.at(-1) ?? restored.nodes[0],
+            0.25,
+          );
+
+          // Assert
+          expect({
+            nodeCounterAdvanced:
+              nextNode.geneId > 900 + restored.nodes.length - 1,
+            connectionCounterAdvanced:
+              nextConnection.innovation > 1_200 + restored.connections.length - 1,
+          }).toEqual({
+            nodeCounterAdvanced: true,
+            connectionCounterAdvanced: true,
+          });
+        });
+      });
+    });
+
     describe('given the JSON payload contains an unknown squash key', () => {
       describe('when fromJSON() rebuilds the payload', () => {
         it('falls back to identity activation', () => {
@@ -560,6 +826,176 @@ describe('network serialize chapter', () => {
 
           // Assert
           expect(deserialized.connections[0].gater).toBeNull();
+        });
+      });
+    });
+
+    describe('given a serialized connection uses a non-neutral gain', () => {
+      describe('when fromJSON() rebuilds the payload', () => {
+        it('preserves the connection gain', () => {
+          // Arrange
+          const network = createSingleValueSerializableNetwork(3811);
+          network.connections[0].gain = 1.5;
+          const serializedJson = network.toJSON();
+
+          // Act
+          const deserialized = Network.fromJSON(serializedJson);
+
+          // Assert
+          expect(deserialized.connections[0].gain).toBe(1.5);
+        });
+      });
+    });
+
+    describe('given the JSON payload carries an explicit temporal-module extension bag', () => {
+      describe('when fromJSON() rebuilds the payload and it is serialized again', () => {
+        it('preserves the extension bag across the runtime round-trip', () => {
+          // Arrange
+          const serializedJson = Architect.lstm(1, 2, 1)
+            .toJSON() as unknown as NetworkJSON;
+          serializedJson.extensions = createTemporalModuleExtensions(serializedJson);
+
+          // Act
+          const deserialized = Network.fromJSON(
+            serializedJson as unknown as Record<string, unknown>,
+          );
+          const reserialized = deserialized.toJSON() as unknown as NetworkJSON;
+
+          // Assert
+          expect(reserialized.extensions).toEqual(serializedJson.extensions);
+        });
+      });
+    });
+
+    describe('given a recurrent builder emits deliberate temporal descriptors', () => {
+      describe('when LSTM JSON is serialized without manual extension tagging', () => {
+        it('includes one LSTM recurrent module and one gated block', () => {
+          // Arrange
+          const serializedJson = Architect.lstm(1, 2, 1)
+            .toJSON() as unknown as NetworkJSON;
+
+          // Act
+          const temporalSummary = summarizeTemporalExtensionBag(serializedJson);
+
+          // Assert
+          expect(temporalSummary).toEqual({
+            recurrentModuleCount: 1,
+            gatedBlockCount: 1,
+            recurrentKinds: ['lstm'],
+          });
+        });
+      });
+
+      describe('when GRU JSON is serialized without manual extension tagging', () => {
+        it('includes one GRU recurrent module and one gated block', () => {
+          // Arrange
+          const serializedJson = Architect.gru(1, 2, 1)
+            .toJSON() as unknown as NetworkJSON;
+
+          // Act
+          const temporalSummary = summarizeTemporalExtensionBag(serializedJson);
+
+          // Assert
+          expect(temporalSummary).toEqual({
+            recurrentModuleCount: 1,
+            gatedBlockCount: 1,
+            recurrentKinds: ['gru'],
+          });
+        });
+      });
+
+      describe('when NARX JSON is serialized without manual extension tagging', () => {
+        it('includes one memory-module descriptor per delay line and no gated blocks', () => {
+          // Arrange
+          const serializedJson = Architect.narx(2, 2, 1, 2, 1)
+            .toJSON() as unknown as NetworkJSON;
+
+          // Act
+          const temporalSummary = summarizeTemporalExtensionBag(serializedJson);
+
+          // Assert
+          expect(temporalSummary).toEqual({
+            recurrentModuleCount: 2,
+            gatedBlockCount: 0,
+            recurrentKinds: ['narx-memory', 'narx-memory'],
+          });
+        });
+      });
+    });
+
+    describe('given one recurrent builder loses a module-owned connection after construction', () => {
+      describe('when the edited network is serialized again', () => {
+        it('drops the stale temporal descriptors instead of emitting invalid module metadata', () => {
+          // Arrange
+          const network = Architect.lstm(1, 2, 1);
+          const serializedBeforeEdit = network.toJSON() as unknown as NetworkJSON;
+          const extensionValues = serializedBeforeEdit.extensions?.values as {
+            gatedBlocks?: Array<{ connectionInnovations: number[] }>;
+          };
+          const moduleConnectionInnovation =
+            extensionValues.gatedBlocks?.[0]?.connectionInnovations?.[0];
+          const moduleConnection = [...network.connections, ...network.selfconns].find(
+            (connection) => connection.innovation === moduleConnectionInnovation,
+          );
+
+          if (!moduleConnection) {
+            throw new Error('Expected one module-owned connection to exist for invalidation coverage.');
+          }
+
+          network.disconnect(moduleConnection.from, moduleConnection.to);
+
+          // Act
+          const serializedAfterEdit = network.toJSON() as unknown as NetworkJSON;
+          const temporalSummary = summarizeTemporalExtensionBag(serializedAfterEdit);
+
+          // Assert
+          expect(temporalSummary).toEqual({
+            recurrentModuleCount: 0,
+            gatedBlockCount: 0,
+            recurrentKinds: [],
+          });
+        });
+      });
+    });
+
+    describe('given one recurrent builder disables a module-owned connection after construction', () => {
+      describe('when the edited network is serialized again', () => {
+        it('keeps the temporal descriptors because disabled genes still count as dormant structure', () => {
+          // Arrange
+          const network = Architect.lstm(1, 2, 1);
+          const serializedBeforeEdit = network.toJSON() as unknown as NetworkJSON;
+          const moduleConnectionInnovation = readFirstTemporalConnectionInnovation(
+            serializedBeforeEdit.extensions,
+          );
+          const moduleConnection = [...network.connections, ...network.selfconns].find(
+            (connection) => connection.innovation === moduleConnectionInnovation,
+          );
+
+          if (!moduleConnection) {
+            throw new Error('Expected one module-owned connection to exist for dormant-state coverage.');
+          }
+
+          moduleConnection.enabled = false;
+
+          // Act
+          const serializedAfterEdit = network.toJSON() as unknown as NetworkJSON;
+          const temporalSummary = summarizeTemporalExtensionBag(serializedAfterEdit);
+          const disabledConnection = serializedAfterEdit.connections.find(
+            (connection) => connection.innovation === moduleConnectionInnovation,
+          );
+
+          // Assert
+          expect({
+            temporalSummary,
+            enabled: disabledConnection?.enabled ?? null,
+          }).toEqual({
+            temporalSummary: {
+              recurrentModuleCount: 1,
+              gatedBlockCount: 1,
+              recurrentKinds: ['lstm'],
+            },
+            enabled: false,
+          });
         });
       });
     });

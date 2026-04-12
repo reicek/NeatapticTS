@@ -116,6 +116,23 @@ describe('Node', () => {
       });
     });
 
+    describe('given a hidden node with a non-neutral response', () => {
+      describe('when activating the node from an explicit input', () => {
+        it('applies the response multiplier before squashing', () => {
+          // Arrange
+          const node = new Node('hidden');
+          node.squash = Activation.identity;
+          node.response = 1.5;
+
+          // Act
+          const actualActivation = node.activate(0.5);
+
+          // Assert
+          expect(actualActivation).toBeCloseTo(0.75, 12);
+        });
+      });
+    });
+
     describe('given one incoming connection', () => {
       describe('when activating the node', () => {
         it('sums weighted input and bias before squashing', () => {
@@ -270,6 +287,25 @@ describe('Node', () => {
 
           // Assert
           expect(actualSquash).toBe(Activation.relu);
+        });
+      });
+
+      describe('when rehydrating the response value', () => {
+        it('restores the explicit response parameter', () => {
+          // Arrange
+          const restoredNode = Node.fromJSON({
+            bias: 0.25,
+            type: 'output',
+            squash: 'relu',
+            mask: 1,
+            response: 1.5,
+          });
+
+          // Act
+          const actualResponse = restoredNode.response;
+
+          // Assert
+          expect(actualResponse).toBe(1.5);
         });
       });
     });

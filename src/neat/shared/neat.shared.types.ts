@@ -233,8 +233,8 @@ export interface SpeciationHarnessContext<
   ) => number;
 
   /**
-   * Resolve a fallback innovation id for a connection when `connection.innovation`
-   * is missing.
+    * Resolve a fallback innovation id for a connection when a genome has
+    * deliberately opted into compatibility/history fallback mode.
    *
    * @param connection - Connection to extract/derive an innovation identifier from.
    * @returns Numeric innovation identifier.
@@ -366,6 +366,15 @@ export interface GenomeLike {
    * Number of network output nodes.
    */
   output?: number;
+
+  /**
+   * Optional compatibility-innovation policy for compatibility and history reads.
+   *
+   * Native controller genomes stay on the default `require-explicit` path.
+   * Only legacy, imported, or deliberately partial genomes should opt into
+   * `allow-fallback`.
+   */
+  _compatInnovationMode?: 'require-explicit' | 'allow-fallback';
 }
 
 /**
@@ -573,6 +582,17 @@ export interface NeatOptions {
 
   /** Whether to store/export RNG state for deterministic replay. */
   rngState?: boolean;
+
+  /** Opt-in genome-extension capture and restore settings. */
+  genomeExtensions?: {
+    /** Preserve non-neutral ungated connection gain as explicit genome extension state. */
+    connectionGain?: boolean;
+    /** Preserve non-neutral node response as explicit genome extension state. */
+    nodeResponse?: boolean;
+    /** Preserve disabled-connection re-enable probability as explicit genome extension state. */
+    disabledConnectionReenableProbability?: boolean;
+    [k: string]: unknown;
+  };
 
   /** Telemetry feature flags. */
   telemetry?: {

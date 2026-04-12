@@ -45,6 +45,16 @@ can stay separate from the merge walk that discovered the evidence. That
 split keeps the algorithm easier to explain: one pass classifies the gene
 relationship, a later pass applies the NEAT weighting policy.
 
+### CompatibilityInnovationMode
+
+Compatibility-innovation policy for one genome comparison surface.
+
+Native controller genomes should stay on `require-explicit`, which means
+compatibility reads expect every connection gene to carry a finite
+innovation number. Legacy, imported, or deliberately partial genomes may opt
+into `allow-fallback` so comparison can still proceed with endpoint-derived
+synthetic ids.
+
 ### ConnectionLike
 
 Shape of a connection entry used during compatibility checks.
@@ -100,8 +110,8 @@ Ordering the genome ids ensures the pair `(A, B)` lands in the same cache
 slot as `(B, A)` instead of duplicating work or storing conflicting entries.
 
 Parameters:
-- `firstGenome` - - First genome in the pair.
-- `secondGenome` - - Second genome in the pair.
+- `firstGenome` - First genome in the pair.
+- `secondGenome` - Second genome in the pair.
 
 Returns: Stable cache key in the form `minId|maxId`.
 
@@ -124,8 +134,8 @@ only measured for matching genes because that is the only case where the two
 genomes clearly refer to the same structural gene.
 
 Parameters:
-- `firstList` - - Sorted innovation list for the first genome.
-- `secondList` - - Sorted innovation list for the second genome.
+- `firstList` - Sorted innovation list for the first genome.
+- `secondList` - Sorted innovation list for the second genome.
 
 Returns: Aggregated comparison metrics for distance computation.
 
@@ -147,8 +157,8 @@ larger topologies do not inflate distance merely because they contain more
 possible genes.
 
 Parameters:
-- `neatContext` - - NEAT context providing compatibility coefficients.
-- `metrics` - - Aggregated comparison metrics.
+- `neatContext` - NEAT context providing compatibility coefficients.
+- `metrics` - Aggregated comparison metrics.
 
 Returns: Final compatibility distance for the genome pair.
 
@@ -164,6 +174,25 @@ const distance = computeCompatibilityDistance(neat, {
   weightDifferenceSum: 0.9,
 });
 ```
+
+### createMissingInnovationError
+
+```ts
+createMissingInnovationError(
+  genome: GenomeLike,
+  connection: ConnectionLike,
+  connectionIndex: number,
+): Error
+```
+
+Build the fail-fast error for native genomes missing explicit innovations.
+
+Parameters:
+- `genome` - Genome that failed compatibility normalization.
+- `connection` - Connection missing its explicit innovation id.
+- `connectionIndex` - Stable connection position used for diagnostics.
+
+Returns: Error describing why native compatibility refused fallback ids.
 
 ### ensureGenerationCache
 
@@ -182,7 +211,7 @@ the safety boundary that drops stale cache state before later helpers assume
 a cache map exists.
 
 Parameters:
-- `neatContext` - - Current NEAT context holding generation and caches.
+- `neatContext` - Current NEAT context holding generation and caches.
 
 Returns: Nothing. The helper resets caches when the generation changes.
 
@@ -202,7 +231,7 @@ It keeps the later flow focused on comparison logic rather than repeated null
 checks or map initialization details.
 
 Parameters:
-- `neatContext` - - Current NEAT context with the cache map.
+- `neatContext` - Current NEAT context with the cache map.
 
 Returns: Map storing cached distances for genome pairs this generation.
 
@@ -224,8 +253,8 @@ connections. This helper normalizes that surface into sorted
 returns the stable view that the merge comparison depends on.
 
 Parameters:
-- `neatContext` - - NEAT context used for fallback innovation numbers.
-- `genome` - - Genome to derive a sorted innovation list for.
+- `neatContext` - NEAT context used for fallback innovation numbers.
+- `genome` - Genome to derive a sorted innovation list for.
 
 Returns: Array of `[innovationNumber, weight]` sorted by innovation number.
 
@@ -235,6 +264,51 @@ Example:
 const innovationPairs = getSortedInnovationCache(neat, genome);
 // [[3, 0.12], [8, -0.7], [11, 0.44]]
 ```
+
+### resolveCompatibilityInnovationMode
+
+```ts
+resolveCompatibilityInnovationMode(
+  genome: GenomeLike,
+): CompatibilityInnovationMode
+```
+
+Resolve the compatibility-innovation mode for one genome.
+
+Native controller genomes default to `require-explicit`. Legacy or partial
+genomes must opt into `allow-fallback` deliberately before compatibility can
+synthesize alignment ids from endpoints.
+
+Parameters:
+- `genome` - Genome whose compatibility mode should be read.
+
+Returns: Effective compatibility-innovation mode.
+
+### resolveConnectionInnovation
+
+```ts
+resolveConnectionInnovation(
+  neatContext: NeatLikeForCompat,
+  genome: GenomeLike,
+  connection: ConnectionLike,
+  connectionIndex: number,
+  innovationMode: CompatibilityInnovationMode,
+): number
+```
+
+Resolve the comparison innovation id for one connection.
+
+Native compatibility reads require explicit innovations. The fallback path is
+reserved for genomes that deliberately opt into legacy or partial comparison.
+
+Parameters:
+- `neatContext` - NEAT context providing the fallback innovation resolver.
+- `genome` - Genome currently being normalized for comparison.
+- `connection` - Connection whose innovation id must be resolved.
+- `connectionIndex` - Stable connection position used for diagnostics.
+- `innovationMode` - Effective compatibility mode for the genome.
+
+Returns: Finite innovation id used for compatibility alignment.
 
 ### resolveMaxInnovation
 
@@ -252,6 +326,6 @@ the remaining unmatched genes are no longer in-range mismatches; they are the
 structural tail that NEAT treats as excess.
 
 Parameters:
-- `list` - - Sorted innovation list for a genome.
+- `list` - Sorted innovation list for a genome.
 
 Returns: Highest innovation id or `0` when the list is empty.

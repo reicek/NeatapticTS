@@ -46,6 +46,11 @@ import {
  * blends that evidence into the current score so later tuning, selection, and
  * speciation reads can still reason from one stable evaluated population.
  *
+ * Step 7.5 boundary note: novelty is a controller-policy overlay. It may
+ * annotate `_novelty` and optionally rewrite the current generation's `score`
+ * field when blending against existing fitness, but it does not redefine genome
+ * identity, compatibility distance, or objective registration.
+ *
  * ```mermaid
  * flowchart TD
  *   Population[Freshly scored population] --> Descriptors[Build one behavior descriptor per genome]
@@ -265,6 +270,11 @@ function computeNoveltyScore(
  * This stage intentionally does not invent a base score when one is missing.
  * Novelty acts as a companion signal to the existing evaluation path, not as a
  * universal replacement for every scoring mode.
+ *
+ * When this helper writes `genome.score`, it is rewriting the current
+ * controller-visible score overlay for later phases of the same generation.
+ * Callers that need the unblended raw task score should preserve it separately
+ * before novelty blending.
  *
  * @param genome - Genome to update.
  * @param novelty - Computed novelty value.

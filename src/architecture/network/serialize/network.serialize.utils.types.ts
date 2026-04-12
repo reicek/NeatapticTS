@@ -43,7 +43,7 @@ export type {
  * Bump this value only when the `NetworkJSON` shape changes in a way that affects compatibility.
  * Readers should treat unknown versions as a migration signal.
  */
-export const NETWORK_JSON_FORMAT_VERSION = 3;
+export const NETWORK_JSON_FORMAT_VERSION = 4;
 
 /**
  * Default numeric fallback for absent scalar values.

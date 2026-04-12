@@ -172,8 +172,8 @@ default hidden-layer choice, but it can be useful in experiments where the
 intensity of a signal matters more than whether it was positive or negative.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Absolute output or derivative.
 
@@ -222,8 +222,8 @@ organized around reusable transfer-curve families instead of separate forward
 and derivative tables.
 
 Parameters:
-- `inputValue` - - Input to the activation function.
-- `shouldComputeDerivative` - - Whether to compute the derivative instead of the value.
+- `inputValue` - Input to the activation function.
+- `shouldComputeDerivative` - Whether to compute the derivative instead of the value.
 
 Returns: Activation output or derivative at the input.
 
@@ -243,8 +243,8 @@ non-linearity near the origin. It is useful when pure identity feels too weak
 but a strongly saturating activation would distort the signal too early.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Bent identity output or derivative.
 
@@ -264,8 +264,8 @@ This is the sign-function version of a hard classifier: values collapse to
 diagnostic contrast against smoother bounded activations.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Bipolar output or derivative.
 
@@ -285,8 +285,8 @@ it is another route to a tanh-like curve, but the explicit bipolar naming is
 helpful when comparing older NEAT-era literature or porting legacy settings.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Bipolar sigmoid output or derivative.
 
@@ -306,8 +306,8 @@ which makes them useful when you want a node to behave more like a localized
 detector than a broad monotonic amplifier.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Gaussian output or derivative.
 
@@ -328,8 +328,8 @@ approximation, which is fast enough for ordinary training code while staying
 close to the exact GELU shape used in many transformer-era models.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: GELU output or derivative.
 
@@ -350,8 +350,8 @@ practical compromise when you want bounded outputs without paying for a full
 smooth tanh evaluation.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Hard tanh output or derivative.
 
@@ -371,8 +371,8 @@ common in regression-style output layers or in experiments where the upstream
 topology already provides the non-linearity and you only need a value relay.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Identity output or derivative.
 
@@ -393,8 +393,8 @@ part of the method vocabulary's legacy and experimentation shelf rather than
 as a recommended first-choice default.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Inverse output or derivative.
 
@@ -415,8 +415,8 @@ activation to saturate if pre-activation values become too large in
 magnitude.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Logistic output or derivative.
 
@@ -438,8 +438,8 @@ strategy so the helper behaves sensibly in the far positive and negative
 tails.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Mish output or derivative.
 
@@ -460,8 +460,8 @@ convention of returning `0` for the derivative at exactly `0`, even though
 the mathematical derivative is not uniquely defined there.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: ReLU output or derivative.
 
@@ -483,8 +483,8 @@ whole hidden stack is designed around SELU rather than mixed casually with
 unrelated activation families.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: SELU output or derivative.
 
@@ -504,8 +504,8 @@ either the mathematically explicit `logistic` name or the more common
 deep-learning alias `sigmoid` without creating two separate implementations.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Sigmoid output or derivative.
 
@@ -525,8 +525,8 @@ sinusoidal response can encode cycles and phase relationships that ordinary
 squashing activations tend to smooth away.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Sinusoid output or derivative.
 
@@ -548,8 +548,8 @@ piecewise. The threshold checks keep the implementation numerically stable in
 the extreme tails.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Softplus output or derivative.
 
@@ -570,8 +570,8 @@ gradually, which can make it a useful comparison point when tanh feels too
 eager to saturate.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Softsign output or derivative.
 
@@ -591,8 +591,8 @@ negative from positive evidence, but its zero derivative almost everywhere
 makes it a poor default for gradient-based training.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Step output or derivative.
 
@@ -612,8 +612,8 @@ smoothly instead of snapping to zero as ReLU does. That makes it a useful
 comparison point when experimenting with smoother hidden-layer behavior.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Swish output or derivative.
 
@@ -633,7 +633,7 @@ zero-centered, which often makes hidden activations easier to interpret when
 positive and negative evidence should balance around zero.
 
 Parameters:
-- `inputValue` - - Input to evaluate.
-- `shouldComputeDerivative` - - Whether to compute the derivative.
+- `inputValue` - Input to evaluate.
+- `shouldComputeDerivative` - Whether to compute the derivative.
 
 Returns: Tanh output or derivative.

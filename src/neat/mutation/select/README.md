@@ -63,8 +63,8 @@ pool, which keeps the later selection steps simple and preserves compatibility
 with random sampling and bandit-based final choice.
 
 Parameters:
-- `pool` - - base pool
-- `internal` - - neat controller context
+- `pool` - base pool
+- `internal` - neat controller context
 
 Returns: augmented pool
 
@@ -91,9 +91,9 @@ observed structural payoff. That makes this helper the bridge between simple
 mutation policy configuration and online operator learning.
 
 Parameters:
-- `pool` - - operator pool
-- `fallbackMethod` - - method used when bandit is disabled
-- `internal` - - neat controller context
+- `pool` - operator pool
+- `fallbackMethod` - method used when bandit is disabled
+- `internal` - neat controller context
 
 Returns: selected method
 
@@ -115,8 +115,8 @@ a soft bias rather than a hard switch, which keeps the controller from losing
 all policy diversity when it changes search phase.
 
 Parameters:
-- `pool` - - base operator pool
-- `internal` - - neat controller context
+- `pool` - base operator pool
+- `internal` - neat controller context
 
 Returns: pool with phased complexity adjustments
 
@@ -125,6 +125,7 @@ Returns: pool with phased complexity adjustments
 ```ts
 isBlockedByRecurrentPolicyForSelect(
   mutationMethod: MutationMethod,
+  genome: GenomeWithMetadata,
   internal: NeatControllerForMutation,
   methods: { mutation: unknown; },
 ): boolean
@@ -137,9 +138,9 @@ recurrent structure entirely, and this helper keeps that policy localized so
 the rest of the selection code can stay focused on scoring and weighting.
 
 Parameters:
-- `mutationMethod` - - mutation operator to check
-- `internal` - - neat controller context
-- `methods` - - methods module
+- `mutationMethod` - mutation operator to check
+- `internal` - neat controller context
+- `methods` - methods module
 
 Returns: true when the mutation should be blocked
 
@@ -162,10 +163,10 @@ it must still respect controller-wide caps such as maximum nodes,
 connections, or gates.
 
 Parameters:
-- `mutationMethod` - - mutation operator to check
-- `genome` - - genome to inspect
-- `internal` - - neat controller context
-- `methods` - - methods module
+- `mutationMethod` - mutation operator to check
+- `genome` - genome to inspect
+- `internal` - neat controller context
+- `methods` - methods module
 
 Returns: true when the mutation should be blocked
 
@@ -186,8 +187,8 @@ that the configured pool is really a feed-forward preset that may deserve
 special handling.
 
 Parameters:
-- `configuredPool` - - configured operator pool
-- `methods` - - methods module
+- `configuredPool` - configured operator pool
+- `methods` - methods module
 
 Returns: true when the pool matches FFW
 
@@ -207,8 +208,8 @@ hard-coding every method in multiple places. That keeps phased complexity
 logic concise while still making the intent readable in the generated docs.
 
 Parameters:
-- `method` - - mutation operator
-- `prefix` - - name prefix to match
+- `method` - mutation operator
+- `prefix` - name prefix to match
 
 Returns: true when the operator name matches the prefix
 
@@ -229,9 +230,9 @@ candidate shelf. It flattens nested legacy arrays and preserves the special
 FFW path when tests explicitly need the historical representation.
 
 Parameters:
-- `internal` - - neat controller context
-- `methods` - - methods module
-- `rawReturnForTest` - - whether to return raw FFW for tests
+- `internal` - neat controller context
+- `methods` - methods module
+- `rawReturnForTest` - whether to return raw FFW for tests
 
 Returns: normalized mutation pool
 
@@ -257,9 +258,9 @@ legacy pool shape rather than one sampled method. Production mutation flow,
 by contrast, normally wants one concrete operator.
 
 Parameters:
-- `internal` - - neat controller context
-- `methods` - - methods module
-- `rawReturnForTest` - - whether to return raw FFW array for tests
+- `internal` - neat controller context
+- `methods` - methods module
+- `rawReturnForTest` - whether to return raw FFW array for tests
 
 Returns: mutation method or null when not handled
 
@@ -279,7 +280,7 @@ legacy sampling paths and for each configuration that wants weighted random
 choice without the stronger opinion of the operator bandit.
 
 Parameters:
-- `pool` - - operator pool
-- `internal` - - neat controller context
+- `pool` - operator pool
+- `internal` - neat controller context
 
 Returns: sampled method or null

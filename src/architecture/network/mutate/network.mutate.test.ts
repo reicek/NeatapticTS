@@ -1,6 +1,8 @@
 import { config } from '../../../config';
 import mutation from '../../../methods/mutation/mutation';
+import { createGenomeFromNetwork } from '../../../neat/genome/genome';
 import Network from '../network';
+import type { NetworkJSON } from '../network.types';
 
 function countHiddenNodes(network: Network): number {
   return network.nodes.filter(
@@ -40,6 +42,35 @@ function hasHiddenBatchNormTag(network: Network): boolean {
       candidateNode.type === 'hidden' &&
       Reflect.get(candidateNode, '_batchNorm') === true,
   );
+}
+
+function summarizeTemporalExtensionBag(network: Network): {
+  recurrentModuleCount: number;
+  gatedBlockCount: number;
+  recurrentKinds: string[];
+} {
+  const serializedJson = network.toJSON() as unknown as NetworkJSON;
+  const extensionValues = serializedJson.extensions?.values as
+    | {
+        recurrentModules?: Array<{ kind?: string }>;
+        gatedBlocks?: Array<unknown>;
+      }
+    | undefined;
+  const recurrentModules = Array.isArray(extensionValues?.recurrentModules)
+    ? extensionValues.recurrentModules
+    : [];
+  const gatedBlocks = Array.isArray(extensionValues?.gatedBlocks)
+    ? extensionValues.gatedBlocks
+    : [];
+
+  return {
+    recurrentModuleCount: recurrentModules.length,
+    gatedBlockCount: gatedBlocks.length,
+    recurrentKinds: recurrentModules
+      .map((recurrentModule) => recurrentModule.kind)
+      .filter((kind): kind is string => typeof kind === 'string')
+      .toSorted(),
+  };
 }
 
 function createBackwardConnectionRemovalNetwork(): Network {
@@ -514,6 +545,37 @@ describe('network mutate chapter', () => {
           // Assert
           expect(nodeCountAfterMutation > nodeCountBeforeMutation).toBe(true);
         });
+
+        it('emits one LSTM temporal descriptor on serialization', () => {
+          // Arrange
+          const network = new Network(1, 1, {
+            seed: 442,
+            enforceAcyclic: false,
+          });
+
+          // Act
+          network.mutate(mutation.ADD_LSTM_NODE);
+          const temporalSummary = summarizeTemporalExtensionBag(network);
+
+          // Assert
+          expect(temporalSummary).toEqual({
+            recurrentModuleCount: 1,
+            gatedBlockCount: 1,
+            recurrentKinds: ['lstm'],
+          });
+        });
+
+        it('captures the mutated LSTM block as a strict genome without dropping its internal edges', () => {
+          // Arrange
+          const network = new Network(1, 1, {
+            seed: 444,
+            enforceAcyclic: false,
+          });
+
+          // Act / Assert
+          network.mutate(mutation.ADD_LSTM_NODE);
+          expect(() => createGenomeFromNetwork(network)).not.toThrow();
+        });
       });
     });
 
@@ -533,6 +595,37 @@ describe('network mutate chapter', () => {
 
           // Assert
           expect(nodeCountAfterMutation > nodeCountBeforeMutation).toBe(true);
+        });
+
+        it('emits one GRU temporal descriptor on serialization', () => {
+          // Arrange
+          const network = new Network(1, 1, {
+            seed: 443,
+            enforceAcyclic: false,
+          });
+
+          // Act
+          network.mutate(mutation.ADD_GRU_NODE);
+          const temporalSummary = summarizeTemporalExtensionBag(network);
+
+          // Assert
+          expect(temporalSummary).toEqual({
+            recurrentModuleCount: 1,
+            gatedBlockCount: 1,
+            recurrentKinds: ['gru'],
+          });
+        });
+
+        it('captures the mutated GRU block as a strict genome without dropping its internal edges', () => {
+          // Arrange
+          const network = new Network(1, 1, {
+            seed: 445,
+            enforceAcyclic: false,
+          });
+
+          // Act / Assert
+          network.mutate(mutation.ADD_GRU_NODE);
+          expect(() => createGenomeFromNetwork(network)).not.toThrow();
         });
       });
     });

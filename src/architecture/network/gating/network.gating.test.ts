@@ -1,7 +1,9 @@
+import { Architect } from '../../../neataptic';
 import { config } from '../../../config';
 import mutation from '../../../methods/mutation/mutation';
 import Node from '../../node';
 import Network from '../network';
+import type { NetworkJSON } from '../network.types';
 import { gatingRemoveNode } from '../network.utils';
 import { NetworkGatingNodeMembershipError } from './network.gating.errors';
 
@@ -11,6 +13,37 @@ function createAcyclicNetwork(seed: number): Network {
 
 function getNetworkRandomGenerator(network: Network): () => number {
   return Reflect.get(network, '_rand') as () => number;
+}
+
+function summarizeHydratedTemporalExtensionBag(network: Network): {
+  recurrentModuleCount: number;
+  gatedBlockCount: number;
+  recurrentKinds: string[];
+} {
+  const hydratedExtensions = Reflect.get(network, '_serializedExtensions') as
+    | NetworkJSON['extensions']
+    | undefined;
+  const extensionValues = hydratedExtensions?.values as
+    | {
+        recurrentModules?: Array<{ kind?: string }>;
+        gatedBlocks?: Array<unknown>;
+      }
+    | undefined;
+  const recurrentModules = Array.isArray(extensionValues?.recurrentModules)
+    ? extensionValues.recurrentModules
+    : [];
+  const gatedBlocks = Array.isArray(extensionValues?.gatedBlocks)
+    ? extensionValues.gatedBlocks
+    : [];
+
+  return {
+    recurrentModuleCount: recurrentModules.length,
+    gatedBlockCount: gatedBlocks.length,
+    recurrentKinds: recurrentModules
+      .map((recurrentModule) => recurrentModule.kind)
+      .filter((kind): kind is string => typeof kind === 'string')
+      .toSorted(),
+  };
 }
 
 describe('network gating chapter', () => {
@@ -182,6 +215,43 @@ describe('network gating chapter', () => {
 
           // Assert
           expect(trackedGateCount).toBe(0);
+        });
+
+        it('retires the hydrated gated-block descriptor immediately', () => {
+          // Arrange
+          const network = Architect.lstm(1, 1, 1);
+          const gatedConnection = network.gates[0];
+
+          if (!gatedConnection) {
+            throw new Error('Expected an LSTM fixture gate to remove.');
+          }
+
+          const summaryBeforeUngate = summarizeHydratedTemporalExtensionBag(
+            network,
+          );
+
+          // Act
+          network.ungate(gatedConnection);
+          const summaryAfterUngate = summarizeHydratedTemporalExtensionBag(
+            network,
+          );
+
+          // Assert
+          expect({
+            summaryBeforeUngate,
+            summaryAfterUngate,
+          }).toEqual({
+            summaryBeforeUngate: {
+              recurrentModuleCount: 1,
+              gatedBlockCount: 1,
+              recurrentKinds: ['lstm'],
+            },
+            summaryAfterUngate: {
+              recurrentModuleCount: 1,
+              gatedBlockCount: 0,
+              recurrentKinds: ['lstm'],
+            },
+          });
         });
       });
     });

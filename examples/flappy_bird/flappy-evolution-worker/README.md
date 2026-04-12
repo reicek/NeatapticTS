@@ -123,7 +123,7 @@ actual completion signal is the later `generation-ready` or `error` message
 posted back to the host.
 
 Parameters:
-- `workerMutableRuntimeState` - - Mutable worker runtime state.
+- `workerMutableRuntimeState` - Mutable worker runtime state.
 
 Returns: Nothing.
 
@@ -142,8 +142,8 @@ The worker retains the initialization promise so later generation requests can
 await setup completion instead of racing against it.
 
 Parameters:
-- `workerMutableRuntimeState` - - Mutable worker runtime state.
-- `initPayload` - - Initialization payload.
+- `workerMutableRuntimeState` - Mutable worker runtime state.
+- `initPayload` - Initialization payload.
 
 Returns: Nothing.
 
@@ -163,8 +163,8 @@ current population. Each new session resets playback RNG and world state so
 the host can replay generations cleanly.
 
 Parameters:
-- `workerMutableRuntimeState` - - Mutable worker runtime state.
-- `payload` - - Playback start payload.
+- `workerMutableRuntimeState` - Mutable worker runtime state.
+- `payload` - Playback start payload.
 
 Returns: Nothing.
 
@@ -183,7 +183,7 @@ delegated to the router service so the worker entrypoint stays readable as a
 high-level orchestration module.
 
 Parameters:
-- `workerMutableRuntimeState` - - Mutable worker runtime state.
+- `workerMutableRuntimeState` - Mutable worker runtime state.
 
 Returns: Worker message handler.
 
@@ -223,7 +223,7 @@ worker runtime. Each callback closes over the same mutable state bag so the
 protocol layer can remain small and declarative.
 
 Parameters:
-- `workerMutableRuntimeState` - - Mutable worker runtime state.
+- `workerMutableRuntimeState` - Mutable worker runtime state.
 
 Returns: Protocol handler bundle.
 
@@ -265,7 +265,7 @@ playback and it does not evolve a generation yet; those remain separate
 protocol steps so the host can control them explicitly.
 
 Parameters:
-- `initPayload` - - Initialization values from the browser host.
+- `initPayload` - Initialization values from the browser host.
 
 Returns: Promise resolved when runtime setup is complete.
 
@@ -284,8 +284,8 @@ This is the narrowest possible transport helper: all message construction is
 done elsewhere so the README can point to one stable worker-to-host boundary.
 
 Parameters:
-- `workerMessage` - - Outbound worker response payload.
-- `transferList` - - Optional transferable buffers moved with the payload.
+- `workerMessage` - Outbound worker response payload.
+- `transferList` - Optional transferable buffers moved with the payload.
 
 Returns: Nothing.
 
@@ -309,7 +309,7 @@ Importantly, the worker remains authoritative for deciding when the run is
 over and which bird should be treated as the playback winner.
 
 Parameters:
-- `playbackStepPayload` - - Host-selected simulation-step budget and viewport.
+- `playbackStepPayload` - Host-selected simulation-step budget and viewport.
 
 Returns: Nothing.
 
@@ -511,7 +511,7 @@ is exercising, even though the repository implements its own detailed runtime
 behavior and modern extensions.
 
 Parameters:
-- `initPayload` - - Initialization values from the browser host.
+- `initPayload` - Initialization values from the browser host.
 
 Returns: Initialized NEAT runtime.
 
@@ -549,8 +549,8 @@ conceptual refresher, the Wikipedia article on "finite-state machine" maps
 well onto the worker's init -> evolve -> start playback -> step playback flow.
 
 Parameters:
-- `workerMessage` - - Inbound worker request payload.
-- `handlers` - - Runtime action callbacks and state probes.
+- `workerMessage` - Inbound worker request payload.
+- `handlers` - Runtime action callbacks and state probes.
 
 Returns: Nothing.
 
@@ -590,7 +590,7 @@ evolution step. Instead it emits a compact summary containing the generation
 index, best fitness, and a serializable best-network snapshot for inspection.
 
 Parameters:
-- `options` - - Evolution dependencies and runtime state accessors.
+- `options` - Evolution dependencies and runtime state accessors.
 
 Returns: Generation-ready worker response payload.
 
@@ -634,9 +634,9 @@ population, then playback freezes that population into a deterministic
 simulation state that the host can step frame-by-frame for rendering.
 
 Parameters:
-- `currentPopulation` - - Current evolved population.
-- `payload` - - Playback start viewport payload.
-- `createPopulationRenderState` - - Callback that builds initial simulation state.
+- `currentPopulation` - Current evolved population.
+- `payload` - Playback start viewport payload.
+- `createPopulationRenderState` - Callback that builds initial simulation state.
 
 Returns: Playback runtime state and deterministic RNG.
 
@@ -667,7 +667,7 @@ control of simulation correctness, winner selection, and packed snapshot
 publishing.
 
 Parameters:
-- `options` - - Playback step dependencies and mutable runtime state.
+- `options` - Playback step dependencies and mutable runtime state.
 
 Returns: Updated playback runtime state after processing this step.
 
@@ -698,7 +698,7 @@ reference for why packed columns are often friendlier to hot-path data
 movement than arrays of rich objects.
 
 Parameters:
-- `playbackState` - - Current mutable playback state.
+- `playbackState` - Current mutable playback state.
 
 Returns: Immutable frame snapshot for the host.
 
@@ -721,7 +721,7 @@ population snapshots without forcing the main thread to pay unnecessary copy
 costs every frame.
 
 Parameters:
-- `snapshot` - - Packed playback snapshot posted back to the browser host.
+- `snapshot` - Packed playback snapshot posted back to the browser host.
 
 Returns: Transfer list used to move typed-array buffers without copying.
 
@@ -758,10 +758,10 @@ simulation service mutates the returned state on every step, but only this
 helper decides how a fresh population is placed into the world at time zero.
 
 Parameters:
-- `networks` - - Population to visualize.
-- `rng` - - Deterministic random source.
-- `initialVisibleWorldWidthPx` - - Initial viewport width from host.
-- `initialVisibleWorldHeightPx` - - Initial viewport height from host.
+- `networks` - Population to visualize.
+- `rng` - Deterministic random source.
+- `initialVisibleWorldWidthPx` - Initial viewport width from host.
+- `initialVisibleWorldHeightPx` - Initial viewport height from host.
 
 Returns: Fresh mutable playback state.
 
@@ -789,7 +789,7 @@ advanceBirdPhysics(
 Integrates bird velocity and vertical motion for one control substep.
 
 Parameters:
-- `frameContext` - - Shared frame context for this logical frame.
+- `frameContext` - Shared frame context for this logical frame.
 
 Returns: Nothing.
 
@@ -804,7 +804,7 @@ advancePipes(
 Advances all visible pipes and culls those that have left the camera window.
 
 Parameters:
-- `frameContext` - - Shared frame context for this logical frame.
+- `frameContext` - Shared frame context for this logical frame.
 
 Returns: Nothing.
 
@@ -820,8 +820,8 @@ commitPassedPipeProgress(
 Commits one passed-pipe progress increment for a bird when eligible.
 
 Parameters:
-- `bird` - - Mutable bird state.
-- `pipe` - - Pipe candidate to mark as passed.
+- `bird` - Mutable bird state.
+- `pipe` - Pipe candidate to mark as passed.
 
 Returns: Nothing.
 
@@ -836,7 +836,7 @@ incrementLivingBirdFrameCounters(
 Increments survival counters for birds that remain active at frame start.
 
 Parameters:
-- `renderState` - - Mutable playback state.
+- `renderState` - Mutable playback state.
 
 Returns: Nothing.
 
@@ -853,9 +853,9 @@ resolveBirdCollisionAgainstPipe(
 Resolves whether a bird collides with one pipe corridor during this substep.
 
 Parameters:
-- `bird` - - Mutable bird state.
-- `pipe` - - Pipe candidate to test.
-- `frameContext` - - Shared frame context for this logical frame.
+- `bird` - Mutable bird state.
+- `pipe` - Pipe candidate to test.
+- `frameContext` - Shared frame context for this logical frame.
 
 Returns: `true` when the bird overlaps the pipe body instead of the gap.
 
@@ -870,7 +870,7 @@ resolveBirdControlActions(
 Runs policy evaluation and commits the resulting observation memory updates.
 
 Parameters:
-- `frameContext` - - Shared frame context for this logical frame.
+- `frameContext` - Shared frame context for this logical frame.
 
 Returns: Number of activation calls performed in the substep.
 
@@ -886,8 +886,8 @@ resolveBirdOutOfBounds(
 Resolves whether a bird has exceeded the vertical play area.
 
 Parameters:
-- `bird` - - Mutable bird state.
-- `visibleWorldHeightPx` - - Current visible world height.
+- `bird` - Mutable bird state.
+- `visibleWorldHeightPx` - Current visible world height.
 
 Returns: `true` when the bird is outside the vertical bounds.
 
@@ -902,7 +902,7 @@ resolveBirdTerminationAndProgress(
 Resolves bird deaths and passed-pipe progress after motion is applied.
 
 Parameters:
-- `frameContext` - - Shared frame context for this logical frame.
+- `frameContext` - Shared frame context for this logical frame.
 
 Returns: Nothing.
 
@@ -917,7 +917,7 @@ resolveCameraLeftXPx(
 Resolves the current left-edge of the visible world in world-space pixels.
 
 Parameters:
-- `visibleWorldWidthPx` - - Current visible world width.
+- `visibleWorldWidthPx` - Current visible world width.
 
 Returns: Left edge x-position in world coordinates.
 
@@ -932,7 +932,7 @@ runWorkerPopulationControlSubstep(
 Advances one control substep of the worker playback simulation.
 
 Parameters:
-- `frameContext` - - Shared frame context for this logical frame.
+- `frameContext` - Shared frame context for this logical frame.
 
 Returns: Number of activation calls performed in the substep.
 
@@ -947,7 +947,7 @@ spawnPipeIfNeeded(
 Spawns a new pipe when the substep budget crosses the spawn boundary.
 
 Parameters:
-- `frameContext` - - Shared frame context for this logical frame.
+- `frameContext` - Shared frame context for this logical frame.
 
 Returns: Nothing.
 
@@ -974,9 +974,9 @@ The companion `simulation.utils` file creates initial state; this service is
 responsible for mutating that state over time.
 
 Parameters:
-- `renderState` - - Mutable simulation state.
-- `rng` - - Deterministic random source for spawn variation.
-- `difficultyProfile` - - Active dynamic difficulty profile.
+- `renderState` - Mutable simulation state.
+- `rng` - Deterministic random source for spawn variation.
+- `difficultyProfile` - Active dynamic difficulty profile.
 
 Returns: Number of policy activation calls made in this frame.
 
@@ -1000,10 +1000,10 @@ The template network gives generation 0 a shared prior, while the noise terms
 restore diversity so the population is still worth evolving.
 
 Parameters:
-- `genome` - - Target genome to mutate in-place.
-- `template` - - Trained template source network.
-- `rng` - - Deterministic random source for noise sampling.
-- `noise` - - Standard deviations for weight and bias perturbations.
+- `genome` - Target genome to mutate in-place.
+- `template` - Trained template source network.
+- `rng` - Deterministic random source for noise sampling.
+- `noise` - Standard deviations for weight and bias perturbations.
 
 Returns: Nothing.
 
@@ -1024,8 +1024,8 @@ generated from the same observation pipeline used during real playback so the
 teacher labels and the evolved policy inputs stay in the same feature space.
 
 Parameters:
-- `rng` - - Deterministic random source.
-- `sampleCount` - - Requested number of synthetic samples.
+- `rng` - Deterministic random source.
+- `sampleCount` - Requested number of synthetic samples.
 
 Returns: Supervised dataset of input/output pairs.
 
@@ -1041,8 +1041,8 @@ buildWarmStartRolloutSeedBatch(
 Builds the deterministic shared rollout seed batch used during warm-start refinement.
 
 Parameters:
-- `rng` - - Deterministic random source.
-- `seedCount` - - Requested seed count.
+- `rng` - Deterministic random source.
+- `seedCount` - Requested seed count.
 
 Returns: Shared rollout seed batch.
 
@@ -1058,8 +1058,8 @@ evaluateWarmStartTemplateAcrossRollouts(
 Evaluates one warm-start template across the shared rollout seed batch.
 
 Parameters:
-- `templateNetwork` - - Candidate template to score.
-- `sharedRolloutSeeds` - - Shared rollout seeds used for stable comparison.
+- `templateNetwork` - Candidate template to score.
+- `sharedRolloutSeeds` - Shared rollout seeds used for stable comparison.
 
 Returns: Aggregate shared-seed evaluation.
 
@@ -1076,9 +1076,9 @@ interpolateValue(
 Linearly interpolates between two scalar values.
 
 Parameters:
-- `startValue` - - Value at ratio `0`.
-- `endValue` - - Value at ratio `1`.
-- `ratio` - - Interpolation ratio.
+- `startValue` - Value at ratio `0`.
+- `endValue` - Value at ratio `1`.
+- `ratio` - Interpolation ratio.
 
 Returns: Interpolated value.
 
@@ -1098,8 +1098,8 @@ survival act as deterministic tie-breakers so upgrades remain stable when the
 robust score is identical.
 
 Parameters:
-- `candidateEvaluation` - - Newly scored candidate aggregate.
-- `bestEvaluation` - - Current best aggregate.
+- `candidateEvaluation` - Newly scored candidate aggregate.
+- `bestEvaluation` - Current best aggregate.
 
 Returns: True when the candidate should replace the incumbent template.
 
@@ -1121,8 +1121,8 @@ rollout fitness so the first visible generation starts closer to competent
 control.
 
 Parameters:
-- `templateNetwork` - - Heuristic-pretrained template network.
-- `workerInitSeed` - - Deterministic worker seed.
+- `templateNetwork` - Heuristic-pretrained template network.
+- `workerInitSeed` - Deterministic worker seed.
 
 Returns: Best rollout-refined template found within the bounded budget.
 
@@ -1143,9 +1143,9 @@ candidate template directly so the rollout optimizer can evaluate one local
 parameter move at a time while keeping the topology unchanged.
 
 Parameters:
-- `network` - - Candidate template to perturb.
-- `rng` - - Deterministic random source.
-- `noise` - - Standard deviations for weight and bias perturbations.
+- `network` - Candidate template to perturb.
+- `rng` - Deterministic random source.
+- `noise` - Standard deviations for weight and bias perturbations.
 
 Returns: Nothing.
 
@@ -1164,7 +1164,7 @@ meaningfully below the next gap center, not already rising fast, and either
 close to the gap entry or in an urgent approach state.
 
 Parameters:
-- `features` - - Structured observation features for one synthetic state.
+- `features` - Structured observation features for one synthetic state.
 
 Returns: True when the teacher says to flap.
 
@@ -1180,8 +1180,8 @@ resolveWarmStartAnnealRatio(
 Resolves the annealing ratio for rollout-guided warm-start refinement.
 
 Parameters:
-- `optimizationStepIndex` - - Zero-based optimization step index.
-- `totalOptimizationSteps` - - Total number of optimization steps.
+- `optimizationStepIndex` - Zero-based optimization step index.
+- `totalOptimizationSteps` - Total number of optimization steps.
 
 Returns: Clamped ratio in the inclusive range [0, 1].
 
@@ -1201,7 +1201,7 @@ here because it is deterministic, dependency-light, and good enough for small
 noise injection during warm-start diversification.
 
 Parameters:
-- `rng` - - Deterministic random source.
+- `rng` - Deterministic random source.
 
 Returns: One approximately standard-normal random value.
 
@@ -1227,8 +1227,8 @@ background, the Wikipedia article on "imitation learning" is a helpful bridge
 between the heuristic teacher used here and the later evolutionary search.
 
 Parameters:
-- `neatController` - - Initialized NEAT runtime.
-- `warmStartState` - - Mutable warm-start lifecycle state.
+- `neatController` - Initialized NEAT runtime.
+- `warmStartState` - Mutable warm-start lifecycle state.
 
 Returns: Promise resolved when warm-start evaluation finishes.
 
@@ -1270,7 +1270,7 @@ createWorkerErrorMessage(
 Creates a typed worker error response payload from a message string.
 
 Parameters:
-- `message` - - Error message text.
+- `message` - Error message text.
 
 Returns: Worker error response message.
 
@@ -1297,7 +1297,7 @@ regular exceptions, while the browser host still receives one predictable
 `WorkerErrorMessage` shape.
 
 Parameters:
-- `error` - - Unknown thrown value.
+- `error` - Unknown thrown value.
 
 Returns: Worker error response message.
 
@@ -1338,7 +1338,7 @@ Normalizing that value here gives the rest of the protocol a simple
 `string`-only error surface.
 
 Parameters:
-- `error` - - Unknown error value thrown by worker logic.
+- `error` - Unknown error value thrown by worker logic.
 
 Returns: Normalized error message string.
 

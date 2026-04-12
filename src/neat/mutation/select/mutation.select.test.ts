@@ -1,8 +1,10 @@
 import * as methods from '../../../methods/methods';
+import { createInnovationTracker } from '../../innovation-tracker/innovation-tracker';
 import {
   applyOperatorAdaptationForSelect,
   applyOperatorBanditForSelect,
   applyPhasedComplexityForSelect,
+  isBlockedByRecurrentPolicyForSelect,
   isBlockedByStructuralLimitsForSelect,
   normalizeMutationPoolForSelect,
   sampleFromPoolForSelect,
@@ -26,6 +28,7 @@ function createSelectionController(input: {
   maxNodes?: number;
   maxConns?: number;
   maxGates?: number;
+  allowRecurrent?: boolean;
   phase?: NeatControllerForMutation['_phase'];
   randomValue?: number;
 }): NeatControllerForMutation {
@@ -39,6 +42,7 @@ function createSelectionController(input: {
       maxNodes: input.maxNodes,
       maxConns: input.maxConns,
       maxGates: input.maxGates,
+      allowRecurrent: input.allowRecurrent,
     },
     _getRNG: () => () => input.randomValue ?? 0,
     selectMutationMethod: async () => null,
@@ -46,9 +50,7 @@ function createSelectionController(input: {
     _mutateAddConnReuse: () => undefined,
     _invalidateGenomeCaches: () => undefined,
     _operatorStats: input.operatorStats ?? new Map(),
-    _nodeSplitInnovations: new Map(),
-    _connInnovations: new Map(),
-    _nextGlobalInnovation: 1,
+    _innovationTracker: createInnovationTracker(),
     _phase: input.phase,
   };
 }
@@ -57,11 +59,17 @@ function createStructuralGenome(input: {
   nodeCount?: number;
   connectionCount?: number;
   gateCount?: number;
+  topologyIntent?: 'feed-forward' | 'unconstrained';
+  enforceAcyclic?: boolean;
 }): GenomeWithMetadata {
   return {
     nodes: Array.from({ length: input.nodeCount ?? 0 }, () => ({})),
     connections: Array.from({ length: input.connectionCount ?? 0 }, () => ({})),
     gates: Array.from({ length: input.gateCount ?? 0 }, () => ({})),
+    _enforceAcyclic: input.enforceAcyclic,
+    getTopologyIntent: input.topologyIntent
+      ? () => input.topologyIntent as 'feed-forward' | 'unconstrained'
+      : undefined,
   } as unknown as GenomeWithMetadata;
 }
 
@@ -262,6 +270,79 @@ describe('neat mutation selection chapter', () => {
         // Act
         const isBlocked = isBlockedByStructuralLimitsForSelect(
           methods.mutation.ADD_GATE as unknown as MutationMethod,
+          genome,
+          selectionController,
+          methods,
+        );
+
+        // Assert
+        expect(isBlocked).toBe(true);
+      });
+    });
+  });
+
+  describe('isBlockedByRecurrentPolicyForSelect', () => {
+    describe('given recurrent mutation is enabled globally but the genome stays feed-forward', () => {
+      it('blocks ADD_BACK_CONN so the genome contract remains acyclic', () => {
+        // Arrange
+        const selectionController = createSelectionController({
+          allowRecurrent: true,
+        });
+        const genome = createStructuralGenome({
+          topologyIntent: 'feed-forward',
+          enforceAcyclic: true,
+        });
+
+        // Act
+        const isBlocked = isBlockedByRecurrentPolicyForSelect(
+          methods.mutation.ADD_BACK_CONN as unknown as MutationMethod,
+          genome,
+          selectionController,
+          methods,
+        );
+
+        // Assert
+        expect(isBlocked).toBe(true);
+      });
+    });
+
+    describe('given recurrent mutation is enabled and the genome is unconstrained', () => {
+      it('allows ADD_SELF_CONN to proceed', () => {
+        // Arrange
+        const selectionController = createSelectionController({
+          allowRecurrent: true,
+        });
+        const genome = createStructuralGenome({
+          topologyIntent: 'unconstrained',
+          enforceAcyclic: false,
+        });
+
+        // Act
+        const isBlocked = isBlockedByRecurrentPolicyForSelect(
+          methods.mutation.ADD_SELF_CONN as unknown as MutationMethod,
+          genome,
+          selectionController,
+          methods,
+        );
+
+        // Assert
+        expect(isBlocked).toBe(false);
+      });
+    });
+
+    describe('given only the legacy acyclic flag is present on the genome', () => {
+      it('still blocks recurrent operators conservatively', () => {
+        // Arrange
+        const selectionController = createSelectionController({
+          allowRecurrent: true,
+        });
+        const genome = createStructuralGenome({
+          enforceAcyclic: true,
+        });
+
+        // Act
+        const isBlocked = isBlockedByRecurrentPolicyForSelect(
+          methods.mutation.ADD_BACK_CONN as unknown as MutationMethod,
           genome,
           selectionController,
           methods,

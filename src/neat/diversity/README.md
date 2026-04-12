@@ -13,6 +13,12 @@ The summary is intentionally sampled rather than exhaustive. Diversity reads
 are meant to stay cheap enough to run during telemetry capture, so the root
 API favors stable trend signals over perfect all-pairs precision.
 
+Step 7.5 boundary note: this chapter is a read-heavy controller inspection
+surface. It summarizes structural and lineage evidence, but it does not
+redefine genome identity, fitness, compatibility distance, or replay
+semantics unless another controller policy explicitly feeds the summary back
+into later search decisions.
+
 Read the chapter in this order:
 
 - `structuralEntropy()` for the single-network topology fingerprint.
@@ -54,7 +60,7 @@ whose shape matches ordinary diversity output without pretending that real
 real sampling work has happened yet.
 
 Parameters:
-- `populationSize` - - Population size to echo into the empty snapshot.
+- `populationSize` - Population size to echo into the empty snapshot.
 
 Returns: Diversity stats object with zeroed aggregates.
 
@@ -85,8 +91,8 @@ for comparing generations, spotting collapse, or validating that speciation
 and mutation pressure are still producing variety.
 
 Parameters:
-- `population` - - Population genomes exposing nodes, connections, and optional lineage depth.
-- `compatibilityComputer` - - Compatibility-distance provider used for pair sampling.
+- `population` - Population genomes exposing nodes, connections, and optional lineage depth.
+- `compatibilityComputer` - Compatibility-distance provider used for pair sampling.
 
 Returns: Aggregate diversity statistics or `undefined` when the population is empty.
 
@@ -155,6 +161,6 @@ generally mean connectivity is spread across more nodes instead of being
 concentrated into a few hubs.
 
 Parameters:
-- `graph` - - Network to summarize structurally.
+- `graph` - Network to summarize structurally.
 
 Returns: Shannon-style entropy of the out-degree distribution.

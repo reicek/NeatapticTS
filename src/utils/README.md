@@ -114,7 +114,7 @@ changed the memory story in the expected direction, or teach why reserved and
 used bytes can diverge even when the active connection count stays stable.
 
 Parameters:
-- `targetNetworks` - - Optional single network or array. If omitted, uses registered networks.
+- `targetNetworks` - Optional single network or array. If omitted, uses registered networks.
 
 Returns: MemoryStats heuristic snapshot.
 
@@ -254,7 +254,7 @@ Behavior of the JSON fallback path:
   rely on strict value preservation through the fallback path.
 
 Parameters:
-- `value` - - Value to clone.
+- `value` - Value to clone.
 
 Returns: Deep-cloned value.
 

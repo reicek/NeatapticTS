@@ -221,9 +221,11 @@ export async function applyPruningAndMutation(
   } catch {
     // Empty catch: adaptive pruning is optional.
   }
-  // Step 3: Mutate population.
+  // Step 3: Prepare generation-scoped innovation tracking for the new population.
+  internal._prepareInnovationTrackerGeneration?.(internal.generation + 1);
+  // Step 4: Mutate population.
   await internal.mutate?.();
-  // Step 4: Apply adaptive mutation if available.
+  // Step 5: Apply adaptive mutation if available.
   try {
     const adaptiveModule = await import('../../adaptive/adaptive');
     adaptiveModule.applyAdaptiveMutation.call(internal as never);

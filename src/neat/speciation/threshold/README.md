@@ -80,11 +80,11 @@ that the public compatibility threshold remains safe for the next speciation
 cycle.
 
 Parameters:
-- `speciationContext` - - Speciation harness context.
-- `options` - - Speciation options.
-- `compatAdjust` - - Resolved threshold-controller gains and bounds from the shared speciation vocabulary.
-- `minCompatibilityThreshold` - - Lower clamp bound.
-- `maxCompatibilityThreshold` - - Upper clamp bound.
+- `speciationContext` - Speciation harness context.
+- `options` - Speciation options.
+- `compatAdjust` - Resolved threshold-controller gains and bounds from the shared speciation vocabulary.
+- `minCompatibilityThreshold` - Lower clamp bound.
+- `maxCompatibilityThreshold` - Upper clamp bound.
 
 Returns: Nothing.
 
@@ -123,9 +123,9 @@ public option safe to persist into the next generation even if the caller did
 not come through the full PID path.
 
 Parameters:
-- `options` - - Speciation options.
-- `minCompatibilityThreshold` - - Lower clamp bound.
-- `maxCompatibilityThreshold` - - Upper clamp bound.
+- `options` - Speciation options.
+- `minCompatibilityThreshold` - Lower clamp bound.
+- `maxCompatibilityThreshold` - Upper clamp bound.
 
 Returns: Nothing.
 
@@ -166,12 +166,12 @@ only real question it answers is whether the next pass should make forming
 new species easier or harder.
 
 Parameters:
-- `speciationContext` - - Speciation harness context.
-- `options` - - Speciation options.
-- `compatAdjust` - - Resolved threshold-controller gains shared across speciation helpers.
-- `currentThreshold` - - Current compatibility threshold.
-- `minCompatibilityThreshold` - - Lower clamp bound.
-- `maxCompatibilityThreshold` - - Upper clamp bound.
+- `speciationContext` - Speciation harness context.
+- `options` - Speciation options.
+- `compatAdjust` - Resolved threshold-controller gains shared across speciation helpers.
+- `currentThreshold` - Current compatibility threshold.
+- `minCompatibilityThreshold` - Lower clamp bound.
+- `maxCompatibilityThreshold` - Upper clamp bound.
 
 Returns: Updated threshold.
 

@@ -1,6 +1,6 @@
 ---
 name: test-fix-workflow
-description: 'Systematically fix multiple test failures by planning first, applying all fixes before broad test execution, validating types early, and only running the full suite at the end.'
+description: 'Systematically fix multiple test failures by planning first, preferring a TDD red-green-coverage cadence inside each fix cluster, validating types early, and only running the full suite at the end.'
 argument-hint: 'Describe the failing surface, available failure output, whether the issue is type-level, runtime, or mixed, and any known plan file or validation constraints.'
 user-invocable: true
 disable-model-invocation: false
@@ -14,6 +14,11 @@ repair pass.
 This skill is the canonical workflow for multi-failure test repair in this
 repo. It owns the durable planning sequence, validation cadence, and the rule
 that broad test execution happens only after the planned fixes are applied.
+
+Inside each planned failure cluster, the preferred execution order is TDD:
+narrow red test first, implementation second, narrow green validation third,
+and coverage expansion on the new or directly related area before the final
+broad suite run.
 
 When this workflow updates a durable fix tracker, `tracker-handoff` owns the
 canonical tracker format and continuation prompt shape.
@@ -61,13 +66,22 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
 3. Prioritize the plan.
    - Prefer: blocking type errors first, then cheap/high-confidence fixes, then
      deeper investigation items.
-4. Apply all planned fixes systematically before running broad tests.
-5. Do not run `npm test`, `npm run test:silent`, or partial failure scans during
-   the main fix phase.
-6. TypeScript-only validation is allowed during the fix phase when it helps
-   confirm compile-time repairs.
-7. After the planned fixes are complete, run the final broad validation.
-8. Analyze any remaining failures and update the plan rather than switching to
+4. Prefer a TDD loop inside each fix cluster.
+  - Add or reshape the smallest test that should fail for the intended
+    behavior or regression.
+  - Run only that narrow surface to confirm the red phase when practical.
+  - Implement the repair.
+  - Rerun only that narrow surface until it turns green.
+5. Apply all planned fixes systematically before running broad tests.
+6. Do not run `npm test`, `npm run test:silent`, or broad failure scans during
+  the main fix phase.
+  - Narrow red/green reruns for the active fix cluster are allowed.
+7. TypeScript-only validation is allowed during the fix phase when it helps
+  confirm compile-time repairs.
+8. After the targeted fixes are green, raise coverage on the new code and the
+  directly related boundary toward >95% when practical and safe.
+9. After the planned fixes are complete, run the final broad validation.
+10. Analyze any remaining failures and update the plan rather than switching to
    unstructured iteration.
 
 ## Guardrails
@@ -84,6 +98,9 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
   user explicitly wants reopen guidance.
 - Do not bounce between test execution and partial fixes when the workflow is
   still in the main repair phase.
+- Do not skip the red phase for behavior-changing work unless the task is
+  purely documentation, reconnaissance, or a mechanical edit with no runtime
+  behavior change.
 - Do not treat partial reruns as a substitute for a durable plan.
 - Do not improvise a new order once the plan is in motion unless new evidence
   forces a reprioritization.
@@ -93,7 +110,10 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
 
 Preferred validation cadence:
 
-- During the fix phase: `npx tsc --noEmit -p tsconfig.test.json` when needed.
+- During the fix phase: narrow red/green test reruns for the active cluster,
+  plus `npx tsc --noEmit -p tsconfig.test.json` when needed.
+- After the cluster is green: expand coverage on the new or directly related
+  boundary toward >95% when practical.
 - After all planned fixes: `npm test` or `npm run test:silent`.
 
 If the task is compile-heavy rather than runtime-heavy, file- or package-level

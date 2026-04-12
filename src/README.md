@@ -332,6 +332,10 @@ Provide a memoized RNG function, initializing from internal state if needed.
 
 Returns: RNG function bound to this instance.
 
+#### _innovationTracker
+
+Explicit owner for global innovation ids and generation-local reuse state.
+
 #### _invalidateGenomeCaches
 
 ```ts
@@ -414,6 +418,16 @@ Archive of Pareto front metadata for multi-objective tracking.
 #### _paretoObjectivesArchive
 
 Archive storing Pareto objectives snapshots.
+
+#### _prepareInnovationTrackerGeneration
+
+```ts
+_prepareInnovationTrackerGeneration(
+  targetGeneration: number,
+): void
+```
+
+Prepare the innovation tracker for a specific mutation-generation window.
 
 #### _rng
 
@@ -1454,6 +1468,10 @@ Provide a memoized RNG function, initializing from internal state if needed.
 
 Returns: RNG function bound to this instance.
 
+#### _innovationTracker
+
+Explicit owner for global innovation ids and generation-local reuse state.
+
 #### _invalidateGenomeCaches
 
 ```ts
@@ -1536,6 +1554,16 @@ Archive of Pareto front metadata for multi-objective tracking.
 #### _paretoObjectivesArchive
 
 Archive storing Pareto objectives snapshots.
+
+#### _prepareInnovationTrackerGeneration
+
+```ts
+_prepareInnovationTrackerGeneration(
+  targetGeneration: number,
+): void
+```
+
+Prepare the innovation tracker for a specific mutation-generation window.
 
 #### _rng
 
@@ -2463,8 +2491,8 @@ During training, layer-level dropout is applied, masking all nodes in the layer 
 During inference, all masks are set to 1.
 
 Parameters:
-- `value` - - An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
-- `training` - - A boolean indicating whether the layer is in training mode. Defaults to false.
+- `value` - An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
+- `training` - A boolean indicating whether the layer is in training mode. Defaults to false.
 
 Returns: An array containing the activation value of each node in the layer after activation.
 
@@ -2626,8 +2654,8 @@ attention(
 Creates a multi-head self-attention layer (stub implementation).
 
 Parameters:
-- `size` - - Number of output nodes.
-- `heads` - - Number of attention heads (default 1).
+- `size` - Number of output nodes.
+- `heads` - Number of attention heads (default 1).
 
 Returns: A new Layer instance representing an attention layer.
 
@@ -2643,7 +2671,7 @@ Creates a batch normalization layer.
 Applies batch normalization to the activations of the nodes in this layer during activation.
 
 Parameters:
-- `size` - - The number of nodes in this layer.
+- `size` - The number of nodes in this layer.
 
 Returns: A new Layer instance configured as a batch normalization layer.
 
@@ -2751,9 +2779,9 @@ or the target layer's `input` method. It establishes the forward connections
 necessary for signal propagation.
 
 Parameters:
-- `target` - - The destination Layer, Group, or Node to connect to.
-- `method` - - The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
-- `weight` - - An optional fixed weight to assign to all created connections.
+- `target` - The destination Layer, Group, or Node to connect to.
+- `method` - The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
+- `weight` - An optional fixed weight to assign to all created connections.
 
 Returns: An array containing the newly created connection objects.
 
@@ -2815,10 +2843,10 @@ conv1d(
 Creates a 1D convolutional layer (stub implementation).
 
 Parameters:
-- `size` - - Number of output nodes (filters).
-- `kernelSize` - - Size of the convolution kernel.
-- `stride` - - Stride of the convolution (default 1).
-- `padding` - - Padding (default 0).
+- `size` - Number of output nodes (filters).
+- `kernelSize` - Size of the convolution kernel.
+- `stride` - Stride of the convolution (default 1).
+- `padding` - Padding (default 0).
 
 Returns: A new Layer instance representing a 1D convolutional layer.
 
@@ -2866,7 +2894,7 @@ All nodes in the source layer/group will connect to all nodes in this layer
 when using the default `ALL_TO_ALL` connection method via `layer.input()`.
 
 Parameters:
-- `size` - - The number of nodes (neurons) in this layer.
+- `size` - The number of nodes (neurons) in this layer.
 
 Returns: A new Layer instance configured as a dense layer.
 
@@ -2891,7 +2919,7 @@ Returns: Architecture descriptor with hidden-layer widths and provenance.
 
 ```ts
 deserialize(
-  data: unknown[] | [number[], number[], string[], { from: number; to: number; weight: number; gater: number | null; }[], number, number],
+  data: unknown[] | CompactSerializedNetworkTuple,
   inputSize: number | undefined,
   outputSize: number | undefined,
 ): default
@@ -2963,8 +2991,8 @@ disconnect(
 Removes connections between this layer's nodes and a target Group or Node.
 
 Parameters:
-- `target` - - The Group or Node to disconnect from.
-- `twosided` - - If true, removes connections in both directions (from this layer to target, and from target to this layer). Defaults to false.
+- `target` - The Group or Node to disconnect from.
+- `twosided` - If true, removes connections in both directions (from this layer to target, and from target to this layer). Defaults to false.
 
 #### disconnect
 
@@ -3102,7 +3130,7 @@ Verbose JSON static deserializer
 
 ```ts
 fromJSON(
-  json: { bias: number; type: string; squash: string; mask: number; },
+  json: { bias: number; response?: number | undefined; type: string; squash: string; mask: number; },
 ): default
 ```
 
@@ -3159,8 +3187,8 @@ Gating allows the activity of nodes in this layer (specifically, the output grou
 to modulate the flow of information through the specified `connections`.
 
 Parameters:
-- `connections` - - An array of connection objects to be gated.
-- `method` - - The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
+- `connections` - An array of connection objects to be gated.
+- `method` - The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
 
 #### gate
 
@@ -3292,7 +3320,7 @@ simpler than LSTMs but achieving similar performance on many tasks.
 They use an update gate and a reset gate to manage information flow.
 
 Parameters:
-- `size` - - The number of GRU units (and nodes in each gate/cell group).
+- `size` - The number of GRU units (and nodes in each gate/cell group).
 
 Returns: A new Layer instance configured as a GRU layer.
 
@@ -3388,9 +3416,9 @@ input mechanism (which is often the `output` group itself, but depends on the la
 This method is usually called by the `connect` method of the source layer/group.
 
 Parameters:
-- `from` - - The source Layer or Group connecting *to* this layer.
-- `method` - - The connection method (e.g., `ALL_TO_ALL`). Defaults to `ALL_TO_ALL`.
-- `weight` - - An optional fixed weight for the connections.
+- `from` - The source Layer or Group connecting *to* this layer.
+- `method` - The connection method (e.g., `ALL_TO_ALL`). Defaults to `ALL_TO_ALL`.
+- `weight` - An optional fixed weight for the connections.
 
 Returns: An array containing the newly created connection objects.
 
@@ -3461,7 +3489,7 @@ Creates a layer normalization layer.
 Applies layer normalization to the activations of the nodes in this layer during activation.
 
 Parameters:
-- `size` - - The number of nodes in this layer.
+- `size` - The number of nodes in this layer.
 
 Returns: A new Layer instance configured as a layer normalization layer.
 
@@ -3488,7 +3516,7 @@ long-range dependencies. This implementation uses standard LSTM architecture
 with input, forget, and output gates, and a memory cell.
 
 Parameters:
-- `size` - - The number of LSTM units (and nodes in each gate/cell group).
+- `size` - The number of LSTM units (and nodes in each gate/cell group).
 
 Returns: A new Layer instance configured as an LSTM layer.
 
@@ -3532,8 +3560,8 @@ information propagates backward through the blocks. The layer's output
 concatenates the states of all memory blocks.
 
 Parameters:
-- `size` - - The number of nodes in each memory block (must match the input size).
-- `memory` - - The number of time steps to remember (number of memory blocks).
+- `size` - The number of nodes in each memory block (must match the input size).
+- `memory` - The number of time steps to remember (number of memory blocks).
 
 Returns: A new Layer instance configured as a Memory layer.
 
@@ -3550,8 +3578,8 @@ This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in `methods.mutation`.
 
 Parameters:
-- `method` - - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
-  Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
+- `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+ Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
 
 #### mutate
 
@@ -3743,9 +3771,9 @@ to calculate the initial error for each node. Otherwise, nodes calculate
 their error based on the error propagated from subsequent layers.
 
 Parameters:
-- `rate` - - The learning rate, controlling the step size of weight adjustments.
-- `momentum` - - The momentum factor, used to smooth weight updates and escape local minima.
-- `target` - - An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
+- `rate` - The learning rate, controlling the step size of weight adjustments.
+- `momentum` - The momentum factor, used to smooth weight updates and escape local minima.
+- `target` - An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
 
 #### pruneToSparsity
 
@@ -3874,6 +3902,14 @@ Parameters:
 
 Returns: Nothing.
 
+#### response
+
+Response multiplier applied to the node state before the squash function.
+
+A neutral response of `1` preserves the historical runtime behavior. Values
+above or below `1` steepen or flatten the node's effective transfer curve
+without changing the chosen activation family.
+
 #### restoreRNG
 
 ```ts
@@ -3906,7 +3942,7 @@ Self-connection list.
 #### serialize
 
 ```ts
-serialize(): [number[], number[], string[], SerializedConnection[], number, number]
+serialize(): CompactSerializedNetworkTuple
 ```
 
 Lightweight tuple serializer delegating to network.serialize.ts
@@ -3937,8 +3973,8 @@ or node type. If a node within the `nodes` array is actually a `Group` (e.g., in
 the configuration is applied recursively to the nodes within that group.
 
 Parameters:
-- `values` - - An object containing the properties and their values to set.
-  Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
+- `values` - An object containing the properties and their values to set.
+   Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
 
 #### setActivation
 
@@ -4105,6 +4141,42 @@ Returns: Standalone JavaScript source for inference.
 
 The internal state of the node (sum of weighted inputs + bias) before the activation function is applied.
 
+#### syncGeneIdCounter
+
+```ts
+syncGeneIdCounter(
+  maxObservedGeneId: number,
+): void
+```
+
+Advances the global gene-id cursor past a restored maximum.
+
+Restore flows use this after hydrating persisted genomes so the next freshly
+created node cannot collide with an older serialized `geneId`.
+
+Parameters:
+- `maxObservedGeneId` - Highest restored node gene id currently in memory.
+
+Returns: Nothing.
+
+#### syncInnovationCounter
+
+```ts
+syncInnovationCounter(
+  maxObservedInnovation: number,
+): void
+```
+
+Advances the innovation cursor past a restored maximum.
+
+This keeps import and clone paths monotonic: once a payload brings in a high
+innovation id, newly created edges continue from above that value.
+
+Parameters:
+- `maxObservedInnovation` - Highest restored innovation id currently in memory.
+
+Returns: Nothing.
+
 #### test
 
 ```ts
@@ -4144,7 +4216,7 @@ Verbose JSON serializer delegate
 #### toJSON
 
 ```ts
-toJSON(): { index: number | undefined; bias: number; type: string; squash: string | null; mask: number; }
+toJSON(): { index: number | undefined; bias: number; response: number; type: string; squash: string | null; mask: number; }
 ```
 
 Converts the node's essential properties to a JSON object for serialization.

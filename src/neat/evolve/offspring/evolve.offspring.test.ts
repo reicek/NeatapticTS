@@ -11,6 +11,28 @@ type OffspringMetadataNetwork = Network & {
   _reenableProb?: number;
 };
 
+type OffspringRandomCarrier = {
+  _rand?: () => number;
+};
+
+function createDeterministicRandomSequence(values: number[]): () => number {
+  let randomIndex = 0;
+
+  return () => {
+    const nextValue = values[randomIndex] ?? values.at(-1) ?? 0;
+
+    randomIndex += 1;
+    return nextValue;
+  };
+}
+
+function setNetworkRandomSource(
+  network: Network,
+  randomGenerator: () => number,
+): void {
+  (network as unknown as OffspringRandomCarrier)._rand = randomGenerator;
+}
+
 function createParentNetwork(input: {
   genomeId: number;
   depth: number;
@@ -87,6 +109,44 @@ describe('neat evolve offspring chapter', () => {
           parents: [7, 11],
           depth: 5,
         });
+      });
+
+      it('uses the controller rng instead of parent-owned runtime rng during crossover', () => {
+        // Arrange
+        const firstParent = createParentNetwork({
+          genomeId: 13,
+          depth: 1,
+          score: 2,
+        });
+        const secondParent = firstParent.clone() as OffspringMetadataNetwork;
+        secondParent._id = 17;
+        secondParent._depth = 2;
+        secondParent.score = 1;
+        firstParent.connections[0].enabled = false;
+        secondParent.connections[0].enabled = false;
+        firstParent._reenableProb = 0.75;
+        secondParent._reenableProb = 0.75;
+        setNetworkRandomSource(firstParent, () => 0.99);
+        setNetworkRandomSource(secondParent, () => 0.99);
+        const randomSource = createDeterministicRandomSequence([0.8, 0.8, 0.5]);
+        const offspringContext = {
+          ...createOffspringContext([firstParent, secondParent]),
+          _getRNG: () => randomSource,
+        };
+        const mathRandomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.99);
+
+        try {
+          // Act
+          const offspring = createOffspring(
+            offspringContext,
+            createSequentialParentSelector([firstParent, secondParent]),
+          ) as OffspringMetadataNetwork;
+
+          // Assert
+          expect(offspring.connections[0]?.enabled).toBe(true);
+        } finally {
+          mathRandomSpy.mockRestore();
+        }
       });
     });
   });

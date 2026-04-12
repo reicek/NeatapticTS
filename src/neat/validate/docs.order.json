@@ -1,0 +1,8 @@
+{
+  "introFile": "neat.validate.ts",
+  "fileOrder": [
+    "neat.validate.ts",
+    "neat.validate.types.ts",
+    "neat.validate.errors.ts"
+  ]
+}

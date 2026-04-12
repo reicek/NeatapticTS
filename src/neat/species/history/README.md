@@ -75,8 +75,8 @@ The export sequence is intentionally small:
 3. join those serialized rows with newline separators.
 
 Parameters:
-- `speciesHistory` - - Recorded species history entries to serialize.
-- `maxEntries` - - Maximum number of recent entries to include.
+- `speciesHistory` - Recorded species history entries to serialize.
+- `maxEntries` - Maximum number of recent entries to include.
 
 Returns: JSONL payload containing the requested recent history slice.
 

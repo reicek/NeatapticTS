@@ -230,7 +230,7 @@ Stores error values calculated during backpropagation.
 
 ```ts
 fromJSON(
-  json: { bias: number; type: string; squash: string; mask: number; },
+  json: { bias: number; response?: number | undefined; type: string; squash: string; mask: number; },
 ): default
 ```
 
@@ -393,6 +393,14 @@ Parameters:
 - (weight: number) => number (custom function)
 - `target` - The target output value for this node. Only used if the node is of type 'output'.
 
+#### response
+
+Response multiplier applied to the node state before the squash function.
+
+A neutral response of `1` preserves the historical runtime behavior. Values
+above or below `1` steepen or flatten the node's effective transfer curve
+without changing the chosen activation family.
+
 #### setActivation
 
 ```ts
@@ -428,10 +436,28 @@ Returns: The activation value or its derivative.
 
 The internal state of the node (sum of weighted inputs + bias) before the activation function is applied.
 
+#### syncGeneIdCounter
+
+```ts
+syncGeneIdCounter(
+  maxObservedGeneId: number,
+): void
+```
+
+Advances the global gene-id cursor past a restored maximum.
+
+Restore flows use this after hydrating persisted genomes so the next freshly
+created node cannot collide with an older serialized `geneId`.
+
+Parameters:
+- `maxObservedGeneId` - Highest restored node gene id currently in memory.
+
+Returns: Nothing.
+
 #### toJSON
 
 ```ts
-toJSON(): { index: number | undefined; bias: number; type: string; squash: string | null; mask: number; }
+toJSON(): { index: number | undefined; bias: number; response: number; type: string; squash: string | null; mask: number; }
 ```
 
 Converts the node's essential properties to a JSON object for serialization.
