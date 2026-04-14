@@ -8,6 +8,8 @@ import {
 } from './network.genetic.setup.utils';
 import type { ConnectionGene, GeneticNetwork } from '../network.types';
 import type { NetworkJSON } from '../network.types';
+import Group from '../../group';
+import Layer from '../../layer';
 import Node from '../../node';
 
 function createCrossOverCallback(
@@ -187,6 +189,33 @@ function summarizeTemporalExtensionBag(network: Network): {
   };
 }
 
+function createConstructedFeedForwardParent(
+  inputNodeLabels: readonly [string, string],
+  outputNodeLabel: string,
+): Network {
+  const leftSensor = new Node('input');
+  const rightSensor = new Node('input');
+  const hiddenStage = new Group(2);
+  const readoutLayer = Layer.dense(1, 'output');
+  const readoutNode = readoutLayer.nodes[0];
+
+  leftSensor.describe({ label: inputNodeLabels[0] });
+  rightSensor.describe({ label: inputNodeLabels[1] });
+  readoutNode.describe({ label: outputNodeLabel });
+
+  leftSensor.connect(hiddenStage);
+  rightSensor.connect(hiddenStage);
+  hiddenStage.connect(readoutLayer);
+
+  return Network.construct(
+    [hiddenStage, rightSensor, readoutLayer, leftSensor],
+    {
+      inputNodes: [inputNodeLabels[1], inputNodeLabels[0]],
+      outputNodes: [outputNodeLabel],
+    },
+  ).network;
+}
+
 describe('network genetic chapter', () => {
   describe('proper-NEAT validator guard', () => {
     describe('given a parent genome with duplicate connection innovations', () => {
@@ -236,6 +265,40 @@ describe('network genetic chapter', () => {
 
           // Assert
           expect(offspringNetwork.getTopologyIntent()).toBe('feed-forward');
+        });
+      });
+    });
+
+    describe('given both parent networks were built through Network.construct()', () => {
+      describe('when crossover materializes the offspring graph', () => {
+        it('keeps the explicit input ordering from the first construct parent and stays feed-forward', () => {
+          // Arrange
+          const firstParent = createConstructedFeedForwardParent(
+            ['firstLeftSensor', 'firstRightSensor'],
+            'firstReadout',
+          );
+          const secondParent = createConstructedFeedForwardParent(
+            ['secondLeftSensor', 'secondRightSensor'],
+            'secondReadout',
+          );
+          const expectedInputNodeIds = firstParent.inputNodeIds;
+
+          // Act
+          const offspringNetwork = Network.crossOver(firstParent, secondParent);
+          const actualConstructCrossoverSummary = {
+            inputNodeIds: offspringNetwork.inputNodeIds,
+            outputNodeCount: offspringNetwork.outputNodeIds.length,
+            topologyIntent: offspringNetwork.getTopologyIntent(),
+            feedForward: areAllConnectionsFeedForward(offspringNetwork),
+          };
+
+          // Assert
+          expect(actualConstructCrossoverSummary).toEqual({
+            inputNodeIds: expectedInputNodeIds,
+            outputNodeCount: 1,
+            topologyIntent: 'feed-forward',
+            feedForward: true,
+          });
         });
       });
     });
@@ -496,6 +559,31 @@ describe('network genetic chapter', () => {
           recurrentModuleCount: 1,
           gatedBlockCount: 1,
           recurrentKinds: ['lstm'],
+        });
+      });
+
+      it('preserves GRU temporal module descriptors on the offspring payload', () => {
+        // Arrange
+        const firstParent = Architect.gru(1, 2, 1, { inputToOutput: true });
+        const secondParent = Network.fromJSON(
+          firstParent.toJSON() as unknown as Record<string, unknown>,
+        );
+        firstParent.score = 1;
+        secondParent.score = 1;
+
+        // Act
+        const offspringNetwork = Network.crossOver(
+          firstParent,
+          secondParent,
+          true,
+        );
+        const temporalSummary = summarizeTemporalExtensionBag(offspringNetwork);
+
+        // Assert
+        expect(temporalSummary).toEqual({
+          recurrentModuleCount: 1,
+          gatedBlockCount: 1,
+          recurrentKinds: ['gru'],
         });
       });
 

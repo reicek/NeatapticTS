@@ -4,7 +4,7 @@
 
 ## Scope
 
-This workstream covers the Phase 1 critical-path proper-NEAT item from [Roadmap.md](Roadmap.md) and now records its closed state. Its job was to turn NeatapticTS into a reference-quality proper-NEAT implementation: academically correct historical markings, deterministic reproduction, explicit recurrent policy, checkpoint-safe innovation tracking, SOLID code boundaries, and educational documentation that teaches the whole lifecycle from generation zero through export/import.
+This workstream covers the Phase 1 critical-path proper-NEAT item from [../Roadmap.md](../Roadmap.md) and now records its closed state. Its job was to turn NeatapticTS into a reference-quality proper-NEAT implementation: academically correct historical markings, deterministic reproduction, explicit recurrent policy, checkpoint-safe innovation tracking, SOLID code boundaries, and educational documentation that teaches the whole lifecycle from generation zero through export/import.
 
 This plan intentionally separates three bars:
 
@@ -312,13 +312,13 @@ Every implementation pass under this plan should report the relevant subset of:
 
 Minimum targeted test surfaces for the proper-NEAT lift:
 
-- [../src/architecture/network/genetic/network.genetic.test.ts](../src/architecture/network/genetic/network.genetic.test.ts)
-- [../src/neat/helpers/neat.helpers.test.ts](../src/neat/helpers/neat.helpers.test.ts)
-- [../src/neat/mutation/add-conn/mutation.add-conn.test.ts](../src/neat/mutation/add-conn/mutation.add-conn.test.ts)
-- [../src/neat/mutation/add-node/mutation.add-node.test.ts](../src/neat/mutation/add-node/mutation.add-node.test.ts)
-- [../src/neat/compat/compat.test.ts](../src/neat/compat/compat.test.ts)
-- [../src/neat/export/neat.export.test.ts](../src/neat/export/neat.export.test.ts)
-- [../src/neat/speciation/speciation.test.ts](../src/neat/speciation/speciation.test.ts)
+- [../../src/architecture/network/genetic/network.genetic.test.ts](../../src/architecture/network/genetic/network.genetic.test.ts)
+- [../../src/neat/helpers/neat.helpers.test.ts](../../src/neat/helpers/neat.helpers.test.ts)
+- [../../src/neat/mutation/add-conn/mutation.add-conn.test.ts](../../src/neat/mutation/add-conn/mutation.add-conn.test.ts)
+- [../../src/neat/mutation/add-node/mutation.add-node.test.ts](../../src/neat/mutation/add-node/mutation.add-node.test.ts)
+- [../../src/neat/compat/compat.test.ts](../../src/neat/compat/compat.test.ts)
+- [../../src/neat/export/neat.export.test.ts](../../src/neat/export/neat.export.test.ts)
+- [../../src/neat/speciation/speciation.test.ts](../../src/neat/speciation/speciation.test.ts)
 
 ## Reopen Conditions
 

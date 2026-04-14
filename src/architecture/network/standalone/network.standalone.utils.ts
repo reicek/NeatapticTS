@@ -61,6 +61,7 @@ import {
   asStandaloneProps,
   createGenerationContext,
   ensureOutputNodesExist,
+  resolveStandaloneExecutionMetadata,
   seedNodeIndexesAndState,
 } from './network.standalone.utils.setup';
 
@@ -90,6 +91,7 @@ export function generateStandalone(net: Network): string {
   // Step 2: Initialize generation context and seed runtime arrays.
   const generationContext = createGenerationContext(standaloneProps);
   seedNodeIndexesAndState(generationContext);
+  resolveStandaloneExecutionMetadata(net, generationContext);
 
   // Step 3: Build activate(input) body using tiny orchestration helpers.
   appendInputSeedLine(generationContext);

@@ -34,26 +34,7 @@ export function buildNodeSumExpression(
 export function collectOutputIndexes(
   generationContext: GenerationContext,
 ): number[] {
-  const outputIndexes: number[] = [];
-  const startIndex =
-    generationContext.standaloneProps.nodes.length -
-    generationContext.standaloneProps.output;
-  const endIndex = generationContext.standaloneProps.nodes.length;
-
-  for (
-    let nodeTraversalIndex = startIndex;
-    nodeTraversalIndex < endIndex;
-    nodeTraversalIndex++
-  ) {
-    const currentNode = generationContext.standaloneProps.nodes[
-      nodeTraversalIndex
-    ] as NodeWithIndex;
-    if (typeof currentNode.index === 'number') {
-      outputIndexes.push(currentNode.index);
-    }
-  }
-
-  return outputIndexes;
+  return [...generationContext.outputNodeIndexes];
 }
 
 /**

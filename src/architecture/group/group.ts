@@ -13,8 +13,19 @@
  *    vocabulary for wiring groups into larger graphs,
  * 3. finish with `disconnect()`, `clear()`, and `toJSON()` when you want the
  *    lifecycle and persistence view for composite primitives.
+ *
+ * Groups also carry the same two-level story as nodes: construction-time role
+ * describes the runtime semantics of their allocated nodes, while
+ * `describe({ label, intent, metadata })` lets later tooling remember why this
+ * block exists without changing how activation or propagation works.
  */
-import Node from '../node/node';
+import Node, {
+  type PrimitiveDescriptor,
+  type PrimitiveIntent,
+  type PrimitiveMetadata,
+  type PrimitiveNodeType,
+  resolvePrimitiveIntent,
+} from '../node/node';
 import Connection from '../connection/connection';
 import Layer from '../layer/layer';
 import { config } from '../../config';
@@ -40,14 +51,28 @@ import {
  * - recurrent and gated substructures where node-level behavior is still
  *   needed but orchestration should stay above the single-neuron level.
  *
+ * The practical pattern is usually: allocate the group with the right runtime
+ * role when the whole block is clearly input- or output-oriented, then add a
+ * descriptor only when the boundary should stay visible in diagnostics or
+ * later graph assembly.
+ *
  * @example
  * ```ts
- * const encoderBlock = new Group(4);
- * const decoderBlock = new Group(4);
+ * const sensorBlock = new Group(4, 'input');
+ * const readoutBlock = new Group(2, 'output');
  *
- * encoderBlock.connect(
- *   decoderBlock,
- *   methods.groupConnection.ONE_TO_ONE,
+ * sensorBlock.describe({
+ *   label: 'sensorBlock',
+ *   metadata: { stage: 'encoder' },
+ * });
+ * readoutBlock.describe({
+ *   label: 'readoutBlock',
+ *   metadata: { stage: 'readout' },
+ * });
+ *
+ * sensorBlock.connect(
+ *   readoutBlock,
+ *   methods.groupConnection.ALL_TO_ALL,
  * );
  * ```
  */
@@ -65,23 +90,71 @@ export default class Group {
     out: Connection[];
     self: Connection[];
   };
+  /** Optional human-readable descriptor label for architecture tooling. */
+  label: string | null;
+  /** Optional semantic intent for architecture tooling and diagnostics. */
+  intent: PrimitiveIntent | null;
+  /** Optional scalar metadata retained on the primitive boundary. */
+  metadata: PrimitiveMetadata;
 
   /**
    * Creates a new group comprised of a specified number of nodes.
    *
    * @param size The quantity of nodes to initialize within this group.
+   * @param nodeType Optional primitive role assigned to each allocated node.
    * @returns A live group whose nodes can be wired into larger graph structures.
    */
-  constructor(size: number) {
+  constructor(size: number, nodeType: PrimitiveNodeType = 'hidden') {
     this.nodes = [];
     this.connections = {
       in: [],
       out: [],
       self: [],
     };
+    this.label = null;
+    this.intent = resolvePrimitiveIntent(nodeType);
+    this.metadata = { size };
 
     for (let nodeIndex = 0; nodeIndex < size; nodeIndex++) {
-      this.nodes.push(new Node());
+      this.nodes.push(new Node(nodeType));
+    }
+  }
+
+  /**
+   * Attaches optional descriptor metadata to the group boundary.
+   *
+   * Use this when a group represents a named stage, gate bundle, or other
+   * meaningful architecture unit that later diagnostics should recognize
+   * without inferring from node order alone.
+   *
+   * @param descriptor Optional label, intent, and scalar metadata to merge.
+   * @returns Nothing.
+    *
+    * @example
+    * ```ts
+    * const forgetGate = new Group(8);
+    *
+    * forgetGate.describe({
+    *   label: 'forgetGate',
+    *   intent: 'gate',
+    *   metadata: { family: 'lstm' },
+    * });
+    * ```
+   */
+  describe(descriptor: PrimitiveDescriptor): void {
+    if (descriptor.label !== undefined) {
+      this.label = descriptor.label;
+    }
+
+    if (descriptor.intent !== undefined) {
+      this.intent = descriptor.intent;
+    }
+
+    if (descriptor.metadata !== undefined) {
+      this.metadata = {
+        ...this.metadata,
+        ...descriptor.metadata,
+      };
     }
   }
 
@@ -347,7 +420,12 @@ export default class Group {
       }
       if (values.type !== undefined) {
         this.nodes[nodeIndex].type = values.type;
+        this.nodes[nodeIndex].intent = resolvePrimitiveIntent(values.type);
       }
+    }
+
+    if (values.type !== undefined) {
+      this.intent = resolvePrimitiveIntent(values.type);
     }
   }
 

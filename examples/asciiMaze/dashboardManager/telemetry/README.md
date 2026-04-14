@@ -70,6 +70,21 @@ Parameters:
 
 Returns: Public telemetry snapshot used by browser hosts.
 
+### resolveActivationSchedulingDetails
+
+```ts
+resolveActivationSchedulingDetails(
+  network: INetwork | null | undefined,
+): AsciiMazeActivationSchedulingStats | null
+```
+
+Resolve compact activation-scheduling details for telemetry export.
+
+Parameters:
+- `network` - Current best network instance.
+
+Returns: Compact scheduling detail snapshot or null when unavailable.
+
 ### updateTelemetryHistory
 
 ```ts

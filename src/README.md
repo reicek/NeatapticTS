@@ -1331,20 +1331,47 @@ function (squash) and emits an activation value. Supports:
  - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
  - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
    a variety of learning rules beyond simple backprop).
+ - Optional descriptors via `describe({ label, intent, metadata })` when a
+   low-level node should keep a stable human-facing identity inside a larger
+   architecture story.
 
 Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
 assignment works in algorithms like RTRL / policy gradients. They are updated only when
 using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
+Most architecture code should only attach a descriptor when a node boundary
+matters outside the current function. That keeps the primitive cheap for raw
+graph math while still letting later passes recover names such as
+`readoutNode`, `memoryCell`, or `temperatureGate`.
+
 Examples:
 
 ```ts
-const encoderBlock = new Group(4);
-const decoderBlock = new Group(4);
+const sensor = new Node('input');
+const readout = new Node('output');
 
-encoderBlock.connect(
-  decoderBlock,
-  methods.groupConnection.ONE_TO_ONE,
+readout.describe({
+  label: 'readoutNode',
+  metadata: { stage: 'policy' },
+});
+```
+
+```ts
+const sensorBlock = new Group(4, 'input');
+const readoutBlock = new Group(2, 'output');
+
+sensorBlock.describe({
+  label: 'sensorBlock',
+  metadata: { stage: 'encoder' },
+});
+readoutBlock.describe({
+  label: 'readoutBlock',
+  metadata: { stage: 'readout' },
+});
+
+sensorBlock.connect(
+  readoutBlock,
+  methods.groupConnection.ALL_TO_ALL,
 );
 ```
 
@@ -1360,6 +1387,32 @@ edge.enabled = true;
 ```ts
 const network = Architect.perceptron(2, 4, 1);
 const output = network.activate([0, 1]);
+```
+
+### formatConstructSummary
+
+```ts
+formatConstructSummary(
+  constructResult: ConstructResult,
+): string
+```
+
+Build a compact human-readable summary for one construct-from-parts result.
+
+The summary is layered on top of the detached `ConstructResult.graph`
+snapshot so tooling can log or display one stable explanation of the built
+graph without reading mutable `Network` internals.
+
+Parameters:
+- `constructResult` - Construct result returned by `Network.construct(...)`.
+
+Returns: Multi-line summary string suitable for logs, diagnostics panels, or snapshots.
+
+Example:
+
+```ts
+const construction = Network.construct([sensor, hidden, readout]);
+const summary = formatConstructSummary(construction);
 ```
 
 ### Neat
@@ -2812,6 +2865,40 @@ Connection list.
 
 ```ts
 construct(
+  parts: readonly ConstructPart[],
+  options: ConstructOptions | undefined,
+): ConstructResult
+```
+
+Construct a runnable network from mixed `Node`, `Group`, and `Layer` parts.
+
+This builder compiles the provided parts into the ordinary `Network`
+runtime, preserving explicit input/output ordering and then rebuilding the
+scheduling cache in either acyclic or recurrent mode.
+
+Parameters:
+- `parts` - Mixed architecture parts to flatten.
+- `options` - Optional construct-time validation, ordering, and runtime flags.
+
+Returns: Materialized runtime plus lightweight diagnostics.
+
+Example:
+
+```ts
+const sensor = new Node('input');
+const hidden = new Group(2);
+const readout = Layer.dense(1, 'output');
+
+sensor.connect(hidden);
+hidden.connect(readout);
+
+const { network } = Network.construct([sensor, hidden, readout]);
+```
+
+#### construct
+
+```ts
+construct(
   list: (default | default | default)[],
 ): default
 ```
@@ -2885,6 +2972,7 @@ DropConnect active mask: `1` means active for this stochastic pass, `0` means dr
 ```ts
 dense(
   size: number,
+  nodeType: PrimitiveNodeType,
 ): default
 ```
 
@@ -2892,15 +2980,78 @@ Creates a standard fully connected (dense) layer.
 
 All nodes in the source layer/group will connect to all nodes in this layer
 when using the default `ALL_TO_ALL` connection method via `layer.input()`.
+Dense layers also stamp default descriptor metadata (`family: 'dense'`) so
+later tooling can recognize the block even when the caller never names it.
 
 Parameters:
 - `size` - The number of nodes (neurons) in this layer.
+- `nodeType` - Optional primitive role assigned to the dense block.
 
 Returns: A new Layer instance configured as a dense layer.
+
+Example:
+
+```ts
+const output = Layer.dense(2, 'output');
+
+output.describe({ label: 'policyHead' });
+```
 
 #### derivative
 
 The derivative of the activation function evaluated at the node's current state. Used in backpropagation.
+
+#### describe
+
+```ts
+describe(
+  descriptor: PrimitiveDescriptor,
+): void
+```
+
+Attaches optional descriptor metadata to the primitive boundary.
+
+This descriptor is advisory only. It does not change runtime activation,
+mutation, or serialization behavior, but it gives later architecture
+assembly, diagnostics, and visualization passes a stable place to read
+human-facing labels and intent.
+
+Reach for this when the node is still the right abstraction but a later
+reader should not have to infer its purpose from connection order alone.
+
+Parameters:
+- `descriptor` - Optional label, intent, and scalar metadata to merge.
+
+Returns: Nothing.
+
+Examples:
+
+```ts
+const readout = new Node('output');
+readout.describe({
+  label: 'readoutNode',
+  metadata: { stage: 'readout' },
+});
+```
+
+```ts
+const readout = Layer.dense(2, 'output');
+
+readout.describe({
+  label: 'readoutHead',
+  metadata: { stage: 'policy' },
+});
+```
+
+```ts
+const forgetGate = new Group(8);
+
+forgetGate.describe({
+  label: 'forgetGate',
+  intent: 'gate',
+  metadata: { family: 'lstm' },
+});
+```
 
 #### describeArchitecture
 
@@ -3342,14 +3493,22 @@ Returns: A new Layer instance configured as a GRU layer.
 
 ```ts
 gru(
-  layers: number[],
+  layerArgs: (number | ArchitectRecurrentShortcutOptions)[],
 ): default
 ```
 
 Creates a Gated Recurrent Unit network.
 
+This builder keeps the GRU graph explicit: update, inverse-update, reset,
+memory, output, and previous-output groups are all wired from the public
+primitive surface rather than hidden behind a fused recurrent runtime.
+
+The optional `inputToOutput` shortcut is disabled by default so existing
+GRU topologies keep their historical shape. Enable it when you want a
+direct input-to-readout path in addition to the recurrent block stack.
+
 Parameters:
-- `layers` - Layer sizes starting with input and ending with output.
+- `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed GRU network.
 
@@ -3445,6 +3604,10 @@ mutating runtime state.
 
 Returns: Ordered input node gene ids.
 
+#### intent
+
+Optional semantic intent for architecture tooling and diagnostics.
+
 #### isActivating
 
 Internal flag to detect cycles during activation
@@ -3495,6 +3658,10 @@ Parameters:
 - `node` - The potential target node.
 
 Returns: True if this node projects to the target node, false otherwise.
+
+#### label
+
+Optional human-readable descriptor label for architecture tooling.
 
 #### lastSkippedLayers
 
@@ -3547,11 +3714,19 @@ Returns: A new Layer instance configured as an LSTM layer.
 
 ```ts
 lstm(
-  layerArgs: (number | { inputToOutput?: boolean | undefined; })[],
+  layerArgs: (number | ArchitectRecurrentShortcutOptions)[],
 ): default
 ```
 
 Creates a Long Short-Term Memory network.
+
+This builder keeps the LSTM graph explicit: each recurrent block is
+assembled from gate groups, a memory-cell group, and an output block using
+the same primitive wiring surface used elsewhere in the architecture layer.
+
+The optional `inputToOutput` shortcut preserves the historical builder
+behavior by default. Disable it when you want the public preset to route
+information strictly through the recurrent block stack.
 
 Parameters:
 - `layerArgs` - Layer sizes plus an optional trailing options object.
@@ -3587,6 +3762,10 @@ Parameters:
 - `memory` - The number of time steps to remember (number of memory blocks).
 
 Returns: A new Layer instance configured as a Memory layer.
+
+#### metadata
+
+Optional scalar metadata retained on the primitive boundary.
 
 #### mutate
 
@@ -3634,6 +3813,22 @@ narx(
 
 Creates a Nonlinear AutoRegressive network with eXogenous inputs.
 
+This is the smallest stateful preset in the public builder surface. The
+main processing path receives the current exogenous input plus two explicit
+delay lines: one for recent inputs and one for recent outputs. That keeps
+the temporal story readable for debugging, visualization, and evolution
+work without immediately jumping to gated cells.
+
+Both delay lines are built from `Layer.memory(...)` blocks. Those memory
+blocks use identity activation, zero bias, and one-to-one unit carry links,
+so remembered values behave like a deterministic rolling window rather than
+a learned recurrent cell.
+
+Clear-state guidance: call `network.clear()` before starting a new
+independent sequence, episode, or evaluation run. If you keep activating
+the same runtime without clearing it, the delay lines intentionally carry
+their terminal state into the next activation stream.
+
 Parameters:
 - `inputSize` - The exogenous input size at each time step.
 - `hiddenLayers` - Hidden layer sizes, or zero / empty for none.
@@ -3642,6 +3837,22 @@ Parameters:
 - `previousOutput` - The number of delayed output steps.
 
 Returns: The constructed NARX network.
+
+Example:
+
+```ts
+const network = Architect.narx(1, [4], 1, 2, 1);
+
+for (const sample of sequenceA) {
+  network.activate(sample.input);
+}
+
+network.clear();
+
+for (const sample of sequenceB) {
+  network.activate(sample.input);
+}
+```
 
 #### nodes
 
@@ -3830,20 +4041,62 @@ random(
   input: number,
   hidden: number,
   output: number,
-  options: { connections?: number | undefined; backconnections?: number | undefined; selfconnections?: number | undefined; gates?: number | undefined; },
+  options: ArchitectLegacyRandomOptions,
 ): default
 ```
 
 Creates a randomly structured network based on node counts and connection
 options.
 
+This compatibility wrapper preserves the historical `random()` surface
+while forwarding to the stricter `randomSparse()` builder that uses the
+Phase 2 sparse-profile vocabulary.
+
 Parameters:
 - `input` - The number of input nodes.
 - `hidden` - The number of hidden nodes to add.
 - `output` - The number of output nodes.
-- `options` - Optional configuration for connection counts and gates.
+- `options` - Optional legacy configuration using lowercase back/self keys.
 
 Returns: The constructed randomized network.
+
+#### randomSparse
+
+```ts
+randomSparse(
+  input: number,
+  hidden: number,
+  output: number,
+  options: ArchitectRandomSparseOptions,
+): default
+```
+
+Creates a sparse random starting graph for topology-oriented search.
+
+This builder is the explicit sparse-profile entrypoint for the public
+architecture set. It accepts camelCase option names, validates the request
+up front, and throws a clear error as soon as one requested structural edit
+cannot be satisfied instead of silently leaving the graph underspecified.
+
+Parameters:
+- `input` - The number of input nodes.
+- `hidden` - The number of hidden nodes to add.
+- `output` - The number of output nodes.
+- `options` - Optional sparse-structure counts for forward connections,
+back connections, self connections, gates, and an optional deterministic seed.
+
+Returns: The constructed sparse random network.
+
+Example:
+
+```ts
+const network = Architect.randomSparse(3, 6, 2, {
+  connections: 12,
+  backConnections: 2,
+  selfConnections: 1,
+  seed: 7,
+});
+```
 
 #### rebuildConnections
 

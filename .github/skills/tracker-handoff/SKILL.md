@@ -1,6 +1,6 @@
 ---
 name: tracker-handoff
-description: 'Standardize durable tracker files in NeatapticTS. Use when creating or updating .plans.md or .logs.md files, compressing historical passes, marking [PLANNED]/[WIP]/[DONE], or adding a reusable Handoff query section for safe session continuation.'
+description: 'Standardize durable tracker files in NeatapticTS. Use when creating or updating .plans.md or .logs.md files, compressing historical passes, marking [PLANNED]/[WIP]/[DONE], archiving terminally closed trackers in plans/completed, or adding a reusable Handoff query section for safe session continuation.'
 argument-hint: 'Describe the tracker file, whether it is active or archival, the current workstream state, and what the next session should be able to continue safely.'
 user-invocable: true
 disable-model-invocation: false
@@ -14,7 +14,7 @@ This skill is the canonical workflow for `.plans.md` and `.logs.md` structure in
 NeatapticTS. It owns the tracker status markers, compression rules for old work,
 the required `Handoff query` section that makes WIP sessions safe to resume
 with a simple copy-paste prompt, and the terminal closure rule for finished
-plans.
+plans, including archival under `plans/completed/`.
 
 Other skills may decide when a tracker should be updated, but they should defer
 the tracker shape itself to this skill instead of redefining status markers,
@@ -38,6 +38,8 @@ handoff layout, or history-compression rules ad hoc.
   `Handoff query`.
 - Use `.logs.md` for compressed done-state records and completed work that no
   longer needs active session guidance.
+- Keep active trackers in `plans/` and move terminally closed `.plans.md` plus
+  `.logs.md` pairs into `plans/completed/`.
 
 ### Completion Closure Rule
 
@@ -48,6 +50,9 @@ close it deliberately.
   preserves only the durable reopen-point context.
 - Add or update a same-boundary `.logs.md` file with the durable done-state
   record.
+- Move the closed `.plans.md` file and its same-boundary `.logs.md` record into
+  `plans/completed/` as the last tracker action before any next workstream
+  begins.
 - Remove active-session scaffolding that no longer applies, especially stale
   `Remaining gaps`, `Next step`, or `Handoff query` sections.
 - Do not preserve or emit a next-session handoff prompt on a fully closed plan
@@ -179,8 +184,9 @@ For `.logs.md` files, prefer:
 - Do not bury the next-session continuation prompt in prose.
 - Do not leave a `.plans.md` file without a `Handoff query` section when the
   workstream is still active.
-- Do not mark a workstream `[DONE]` and stop before compressing the plan and
-  adding or updating the same-boundary `.logs.md` file.
+- Do not mark a workstream `[DONE]` and stop before compressing the plan,
+  adding or updating the same-boundary `.logs.md` file, and moving both files
+  into `plans/completed/`.
 - Do not leave a stale `Handoff query` on a fully closed plan unless the user
   explicitly wants reopen guidance.
 - Do not preserve detailed historical narration when compact coverage notes are
@@ -197,5 +203,6 @@ A strong tracker update should report:
 - what the new active frontier is,
 - whether a `Handoff query` section was added, refreshed, or intentionally
   removed because the plan was terminally closed,
-- whether a same-boundary `.logs.md` file was added or refreshed.
+- whether a same-boundary `.logs.md` file was added or refreshed,
+- whether the closed tracker pair now lives in `plans/completed/`.
 ```

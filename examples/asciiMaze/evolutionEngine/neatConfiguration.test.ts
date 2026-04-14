@@ -1,4 +1,5 @@
 import { methods } from '../../../src/neataptic';
+import { buildExampleArchitectureProfileNetwork } from '../../architectureProfiles';
 import { createNeat } from './neatConfiguration';
 
 const TEMPORAL_MUTATION_NAMES = [
@@ -38,6 +39,18 @@ describe('createNeat', () => {
         TEMPORAL_MUTATION_NAMES.includes(mutationName),
       ),
     ).toEqual([]);
+  });
+
+  it('forwards an explicit builder-backed seed network into the NEAT runtime options', () => {
+    const seedNetwork = buildExampleArchitectureProfileNetwork(
+      'ascii-maze',
+      'mlp',
+    );
+    const neatInstance = createNeat(6, 4, () => 0, {
+      network: seedNetwork,
+    });
+
+    expect(neatInstance.options.network).toBe(seedNetwork);
   });
 });
 

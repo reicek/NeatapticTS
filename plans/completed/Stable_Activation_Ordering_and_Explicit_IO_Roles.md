@@ -4,7 +4,7 @@
 
 ## Scope
 
-This workstream covers the remaining Phase 1 critical-path activation-semantics item from [Roadmap.md](Roadmap.md). Its job was to make network execution deterministic and explainable through explicit ordered I/O role metadata, deterministic acyclic and recurrent scheduling, schedule-aware activation traversal, and user-facing scheduling diagnostics.
+This workstream covers the remaining Phase 1 critical-path activation-semantics item from [../Roadmap.md](../Roadmap.md). Its job was to make network execution deterministic and explainable through explicit ordered I/O role metadata, deterministic acyclic and recurrent scheduling, schedule-aware activation traversal, and user-facing scheduling diagnostics.
 
 Not in scope for this closed lane:
 

@@ -615,7 +615,8 @@ For diagram selection, syntax caveats, and validation guidance, use
   `Achievements`, and `Decision`.
 - When a documentation workstream becomes fully complete, finish with
   `tracker-handoff` terminal closure: compress the `.plans.md` file into a
-  short closed tracker and add or update the same-boundary `.logs.md` file.
+  short closed tracker, add or update the same-boundary `.logs.md` file, and
+  archive both files into `plans/completed/`.
 - Do not keep a `Handoff query` on a terminally closed plan unless the user
   explicitly wants reopen guidance.
 - Remove `Validation` from completed passes after the result has been folded
@@ -656,8 +657,8 @@ also leave only the active pass with forward-looking `Remaining gaps` and
 `Next step`; prior completed passes should stay compressed.
 
 When that in-repo plan reaches terminal closure, the final tracker action
-should be the compressed closed plan plus the matching `.logs.md` record rather
-than a next-session handoff prompt.
+should be the compressed closed plan plus the matching archived `.logs.md`
+record in `plans/completed/` rather than a next-session handoff prompt.
 
 ## Companion Agent Contract
 

@@ -1,5 +1,6 @@
 export { default as Neat } from './neat';
 export { default as Network } from './architecture/network';
+export { formatConstructSummary } from './architecture/network';
 export { default as Node } from './architecture/node';
 export { default as Layer } from './architecture/layer';
 export { default as Group } from './architecture/group';

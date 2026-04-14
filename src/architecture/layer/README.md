@@ -35,6 +35,11 @@ handles activation and propagation, another handles wiring and guards, and
 the factory helpers explain how dense, recurrent, normalization, and
 experimental layer families are assembled.
 
+The descriptor surface follows the same rule as the rest of the primitive
+chapter: factory helpers already stamp default family metadata when they can,
+so callers usually only reach for `describe(...)` when a block needs a stable
+human-facing name such as `encoder`, `memoryShelf`, or `policyHead`.
+
 ```mermaid
 flowchart LR
   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
@@ -74,11 +79,13 @@ Example: wire a small dense stack using the same block-level API that higher
 level builders depend on.
 
 ```ts
-const input = Layer.dense(2);
-input.set({ type: 'input' });
+const input = Layer.dense(2, 'input');
 const hidden = Layer.dense(4);
-const output = Layer.dense(1);
-output.set({ type: 'output' });
+const output = Layer.dense(1, 'output');
+
+input.describe({ label: 'sensorStage' });
+hidden.describe({ label: 'hiddenStage' });
+output.describe({ label: 'policyHead' });
 
 input.connect(hidden);
 hidden.connect(output);
@@ -94,6 +101,9 @@ layer-to-layer wiring vocabulary.
 ```ts
 const recurrent = Layer.lstm(8);
 const readout = Layer.dense(2);
+
+recurrent.describe({ label: 'controllerCore' });
+readout.describe({ label: 'readoutHead', intent: 'output' });
 
 recurrent.connect(readout);
 ```
@@ -116,6 +126,11 @@ This makes the class useful when you want to:
 - reuse the same activation, wiring, and propagation vocabulary across layer
   families,
 - keep factory-specific mechanics below the public API.
+
+Dense, recurrent, normalization, convolution, attention, and memory helpers
+can all stamp their own default family metadata. That means the public layer
+API stays low ceremony: choose the right factory first, then add
+`describe(...)` only if a later reader benefits from a clearer boundary name.
 
 ### default
 
@@ -242,6 +257,7 @@ Returns: A new Layer instance representing a 1D convolutional layer.
 ```ts
 dense(
   size: number,
+  nodeType: PrimitiveNodeType,
 ): default
 ```
 
@@ -249,11 +265,52 @@ Creates a standard fully connected (dense) layer.
 
 All nodes in the source layer/group will connect to all nodes in this layer
 when using the default `ALL_TO_ALL` connection method via `layer.input()`.
+Dense layers also stamp default descriptor metadata (`family: 'dense'`) so
+later tooling can recognize the block even when the caller never names it.
 
 Parameters:
 - `size` - The number of nodes (neurons) in this layer.
+- `nodeType` - Optional primitive role assigned to the dense block.
 
 Returns: A new Layer instance configured as a dense layer.
+
+Example:
+
+```ts
+const output = Layer.dense(2, 'output');
+
+output.describe({ label: 'policyHead' });
+```
+
+#### describe
+
+```ts
+describe(
+  descriptor: PrimitiveDescriptor,
+): void
+```
+
+Attaches optional descriptor metadata to the layer boundary.
+
+Use this when a layer represents a named stage such as a readout block,
+memory shelf, or recurrent cell family that later diagnostics should
+understand without re-deriving meaning from the internal node order.
+
+Parameters:
+- `descriptor` - Optional label, intent, and scalar metadata to merge.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+const readout = Layer.dense(2, 'output');
+
+readout.describe({
+  label: 'readoutHead',
+  metadata: { stage: 'policy' },
+});
+```
 
 #### disconnect
 
@@ -335,6 +392,14 @@ Parameters:
 
 Returns: An array containing the newly created connection objects.
 
+#### intent
+
+Optional semantic intent for architecture tooling and diagnostics.
+
+#### label
+
+Optional human-readable descriptor label for architecture tooling.
+
 #### layerNorm
 
 ```ts
@@ -391,6 +456,10 @@ Parameters:
 - `memory` - The number of time steps to remember (number of memory blocks).
 
 Returns: A new Layer instance configured as a Memory layer.
+
+#### metadata
+
+Optional scalar metadata retained on the primitive boundary.
 
 #### nodes
 
@@ -747,6 +816,7 @@ const conv1d = createConv1dLayer(factoryContext, 8, 3);
 createDenseLayer(
   context: LayerFactoryContext<TLayer>,
   size: number,
+  nodeType: PrimitiveNodeType,
 ): TLayer
 ```
 
@@ -755,6 +825,7 @@ Orchestrates dense layer creation with a high-level flow.
 Parameters:
 - `context` - Factory helpers for constructing the layer instance.
 - `size` - Number of nodes in the dense layer.
+- `nodeType` - Optional primitive role assigned to the dense block.
 
 Returns: The configured layer instance.
 Example:
@@ -1494,6 +1565,7 @@ Parameters:
 buildDenseLayer(
   context: LayerFactoryContext<TLayer>,
   size: number,
+  nodeType: PrimitiveNodeType,
 ): TLayer
 ```
 
@@ -1510,6 +1582,7 @@ and provides an `input(...)` function so external code can wire it.
 Parameters:
 - `context` - Factory helpers for constructing the layer instance.
 - `size` - Number of nodes to create in the dense layer.
+- `nodeType` - Optional primitive role assigned to every allocated node.
 
 Returns: The configured layer instance.
 

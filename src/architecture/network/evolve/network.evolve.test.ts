@@ -1,4 +1,7 @@
 import { Architect, Network } from '../../../neataptic';
+import Group from '../../group';
+import Layer from '../../layer';
+import Node from '../../node';
 import {
   NetworkEvolveDatasetCompatibilityError,
   NetworkEvolveStoppingConditionRequiredError,
@@ -15,6 +18,44 @@ const xorTrainingSet: TrainingSet = [
   { input: [1, 0], output: [1] },
   { input: [1, 1], output: [0] },
 ];
+
+type ConstructedEvolutionScenario = {
+  network: Network;
+  trainingSet: TrainingSet;
+  inputNodeIds: number[];
+  outputNodeIds: number[];
+};
+
+function createConstructedEvolutionScenario(): ConstructedEvolutionScenario {
+  const leftSensor = new Node('input');
+  const rightSensor = new Node('input');
+  const hiddenStage = new Group(2);
+  const readoutLayer = Layer.dense(1, 'output');
+  const readoutNode = readoutLayer.nodes[0];
+
+  leftSensor.describe({ label: 'leftSensor' });
+  rightSensor.describe({ label: 'rightSensor' });
+  readoutNode.describe({ label: 'readout' });
+
+  leftSensor.connect(hiddenStage);
+  rightSensor.connect(hiddenStage);
+  hiddenStage.connect(readoutLayer);
+
+  const network = Network.construct(
+    [hiddenStage, rightSensor, readoutLayer, leftSensor],
+    {
+      inputNodes: ['rightSensor', 'leftSensor'],
+      outputNodes: ['readout'],
+    },
+  ).network;
+
+  return {
+    network,
+    trainingSet: [{ input: [0.8, 0.2], output: [1] }],
+    inputNodeIds: [rightSensor.geneId, leftSensor.geneId],
+    outputNodeIds: [readoutNode.geneId],
+  };
+}
 
 describe('network evolve chapter', () => {
   describe('Network.evolve()', () => {
@@ -187,6 +228,40 @@ describe('network evolve chapter', () => {
 
           // Assert
           expect(evolutionSummary.iterations).toBe(1);
+        });
+      });
+    });
+
+    describe('given a construct-built feed-forward runtime uses explicit public IO ids', () => {
+      describe('when evolve() finishes one bounded generation', () => {
+        it('preserves the explicit IO ordering and feed-forward topology intent', async () => {
+          // Arrange
+          const {
+            network,
+            trainingSet,
+            inputNodeIds,
+            outputNodeIds,
+          } = createConstructedEvolutionScenario();
+
+          // Act
+          await network.evolve(trainingSet, {
+            iterations: 1,
+            popsize: 4,
+            amount: 1,
+            threads: 1,
+          });
+          const actualEvolutionBoundarySummary = {
+            inputNodeIds: network.inputNodeIds,
+            outputNodeIds: network.outputNodeIds,
+            topologyIntent: network.getTopologyIntent(),
+          };
+
+          // Assert
+          expect(actualEvolutionBoundarySummary).toEqual({
+            inputNodeIds,
+            outputNodeIds,
+            topologyIntent: 'feed-forward',
+          });
         });
       });
     });

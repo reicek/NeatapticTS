@@ -34,6 +34,11 @@
  * the factory helpers explain how dense, recurrent, normalization, and
  * experimental layer families are assembled.
  *
+ * The descriptor surface follows the same rule as the rest of the primitive
+ * chapter: factory helpers already stamp default family metadata when they can,
+ * so callers usually only reach for `describe(...)` when a block needs a stable
+ * human-facing name such as `encoder`, `memoryShelf`, or `policyHead`.
+ *
  * ```mermaid
  * flowchart LR
  *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
@@ -73,11 +78,13 @@
  * level builders depend on.
  *
  * ```ts
- * const input = Layer.dense(2);
- * input.set({ type: 'input' });
+ * const input = Layer.dense(2, 'input');
  * const hidden = Layer.dense(4);
- * const output = Layer.dense(1);
- * output.set({ type: 'output' });
+ * const output = Layer.dense(1, 'output');
+ *
+ * input.describe({ label: 'sensorStage' });
+ * hidden.describe({ label: 'hiddenStage' });
+ * output.describe({ label: 'policyHead' });
  *
  * input.connect(hidden);
  * hidden.connect(output);
@@ -94,11 +101,21 @@
  * const recurrent = Layer.lstm(8);
  * const readout = Layer.dense(2);
  *
+ * recurrent.describe({ label: 'controllerCore' });
+ * readout.describe({ label: 'readoutHead', intent: 'output' });
+ *
  * recurrent.connect(readout);
  * ```
  */
 
 import Node from '../node/node';
+import {
+  type PrimitiveDescriptor,
+  type PrimitiveIntent,
+  type PrimitiveMetadata,
+  type PrimitiveNodeType,
+  resolvePrimitiveIntent,
+} from '../node/node';
 import Connection from '../connection/connection';
 import Group from '../group/group';
 import {
@@ -145,6 +162,11 @@ const NODE_INDEX_STEP = 1;
  * - reuse the same activation, wiring, and propagation vocabulary across layer
  *   families,
  * - keep factory-specific mechanics below the public API.
+ *
+ * Dense, recurrent, normalization, convolution, attention, and memory helpers
+ * can all stamp their own default family metadata. That means the public layer
+ * API stays low ceremony: choose the right factory first, then add
+ * `describe(...)` only if a later reader benefits from a clearer boundary name.
  */
 export default class Layer {
   /**
@@ -168,6 +190,12 @@ export default class Layer {
    * It might be null if the layer is not yet fully constructed or is an input layer.
    */
   output: Group | null;
+  /** Optional human-readable descriptor label for architecture tooling. */
+  label: string | null;
+  /** Optional semantic intent for architecture tooling and diagnostics. */
+  intent: PrimitiveIntent | null;
+  /** Optional scalar metadata retained on the primitive boundary. */
+  metadata: PrimitiveMetadata;
 
   /**
    * Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
@@ -182,6 +210,46 @@ export default class Layer {
     this.output = null;
     this.nodes = [];
     this.connections = { in: [], out: [], self: [] };
+    this.label = null;
+    this.intent = null;
+    this.metadata = {};
+  }
+
+  /**
+   * Attaches optional descriptor metadata to the layer boundary.
+   *
+   * Use this when a layer represents a named stage such as a readout block,
+   * memory shelf, or recurrent cell family that later diagnostics should
+   * understand without re-deriving meaning from the internal node order.
+   *
+   * @param descriptor Optional label, intent, and scalar metadata to merge.
+   * @returns Nothing.
+    *
+    * @example
+    * ```ts
+    * const readout = Layer.dense(2, 'output');
+    *
+    * readout.describe({
+    *   label: 'readoutHead',
+    *   metadata: { stage: 'policy' },
+    * });
+    * ```
+   */
+  describe(descriptor: PrimitiveDescriptor): void {
+    if (descriptor.label !== undefined) {
+      this.label = descriptor.label;
+    }
+
+    if (descriptor.intent !== undefined) {
+      this.intent = descriptor.intent;
+    }
+
+    if (descriptor.metadata !== undefined) {
+      this.metadata = {
+        ...this.metadata,
+        ...descriptor.metadata,
+      };
+    }
   }
 
   /**
@@ -320,10 +388,15 @@ export default class Layer {
         }
         if (values.type !== undefined) {
           node.type = values.type;
+          node.intent = resolvePrimitiveIntent(values.type);
         }
       } else if (isGroupUtils(node)) {
         (node as Group).set(values);
       }
+    }
+
+    if (values.type !== undefined) {
+      this.intent = resolvePrimitiveIntent(values.type);
     }
   }
 
@@ -403,11 +476,24 @@ export default class Layer {
    *
    * All nodes in the source layer/group will connect to all nodes in this layer
    * when using the default `ALL_TO_ALL` connection method via `layer.input()`.
+    * Dense layers also stamp default descriptor metadata (`family: 'dense'`) so
+    * later tooling can recognize the block even when the caller never names it.
    *
   * @param size The number of nodes (neurons) in this layer.
+  * @param nodeType Optional primitive role assigned to the dense block.
    * @returns A new Layer instance configured as a dense layer.
+    *
+    * @example
+    * ```ts
+    * const output = Layer.dense(2, 'output');
+    *
+    * output.describe({ label: 'policyHead' });
+    * ```
    */
-  static dense(size: number): Layer {
+  static dense(
+    size: number,
+    nodeType: PrimitiveNodeType = 'hidden',
+  ): Layer {
     // Step 1: Delegate dense layer creation to the utils orchestrator.
     return createDenseLayerUtils<Layer>(
       {
@@ -416,6 +502,7 @@ export default class Layer {
           candidate instanceof Layer,
       },
       size,
+      nodeType,
     );
   }
 

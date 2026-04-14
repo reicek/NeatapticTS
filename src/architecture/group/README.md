@@ -15,15 +15,29 @@ Read this chapter in three passes:
 3. finish with `disconnect()`, `clear()`, and `toJSON()` when you want the
    lifecycle and persistence view for composite primitives.
 
+Groups also carry the same two-level story as nodes: construction-time role
+describes the runtime semantics of their allocated nodes, while
+`describe({ label, intent, metadata })` lets later tooling remember why this
+block exists without changing how activation or propagation works.
+
 Example:
 
 ```ts
-const encoderBlock = new Group(4);
-const decoderBlock = new Group(4);
+const sensorBlock = new Group(4, 'input');
+const readoutBlock = new Group(2, 'output');
 
-encoderBlock.connect(
-  decoderBlock,
-  methods.groupConnection.ONE_TO_ONE,
+sensorBlock.describe({
+  label: 'sensorBlock',
+  metadata: { stage: 'encoder' },
+});
+readoutBlock.describe({
+  label: 'readoutBlock',
+  metadata: { stage: 'readout' },
+});
+
+sensorBlock.connect(
+  readoutBlock,
+  methods.groupConnection.ALL_TO_ALL,
 );
 ```
 
@@ -45,15 +59,29 @@ This makes the boundary useful in three different modes:
 - recurrent and gated substructures where node-level behavior is still
   needed but orchestration should stay above the single-neuron level.
 
+The practical pattern is usually: allocate the group with the right runtime
+role when the whole block is clearly input- or output-oriented, then add a
+descriptor only when the boundary should stay visible in diagnostics or
+later graph assembly.
+
 Example:
 
 ```ts
-const encoderBlock = new Group(4);
-const decoderBlock = new Group(4);
+const sensorBlock = new Group(4, 'input');
+const readoutBlock = new Group(2, 'output');
 
-encoderBlock.connect(
-  decoderBlock,
-  methods.groupConnection.ONE_TO_ONE,
+sensorBlock.describe({
+  label: 'sensorBlock',
+  metadata: { stage: 'encoder' },
+});
+readoutBlock.describe({
+  label: 'readoutBlock',
+  metadata: { stage: 'readout' },
+});
+
+sensorBlock.connect(
+  readoutBlock,
+  methods.groupConnection.ALL_TO_ALL,
 );
 ```
 
@@ -110,6 +138,37 @@ Stores connection information related to this group.
 `out`: Connections going out from nodes in this group to outside.
 `self`: Connections between nodes within this same group.
 
+#### describe
+
+```ts
+describe(
+  descriptor: PrimitiveDescriptor,
+): void
+```
+
+Attaches optional descriptor metadata to the group boundary.
+
+Use this when a group represents a named stage, gate bundle, or other
+meaningful architecture unit that later diagnostics should recognize
+without inferring from node order alone.
+
+Parameters:
+- `descriptor` - Optional label, intent, and scalar metadata to merge.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+const forgetGate = new Group(8);
+
+forgetGate.describe({
+  label: 'forgetGate',
+  intent: 'gate',
+  metadata: { family: 'lstm' },
+});
+```
+
 #### disconnect
 
 ```ts
@@ -143,6 +202,18 @@ Parameters:
 - `method` - Gating mechanism to use.
 
 Returns: Nothing.
+
+#### intent
+
+Optional semantic intent for architecture tooling and diagnostics.
+
+#### label
+
+Optional human-readable descriptor label for architecture tooling.
+
+#### metadata
+
+Optional scalar metadata retained on the primitive boundary.
 
 #### nodes
 

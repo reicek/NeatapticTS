@@ -37,9 +37,10 @@ the new or directly related boundary toward >95% when practical.
 - If no suitable durable plan exists, create one in `plans/` before making implementation edits.
 - ALWAYS keep the plan high-level and resumable, using `tracker-handoff`
   status markers `[PLANNED]`, `[WIP]`, and `[DONE]`.
-- ALWAYS use `tracker-handoff` to compress the completed `.plans.md` file and
-  add or update the same-boundary `.logs.md` file when the current step closes
-  the whole workstream.
+- ALWAYS use `tracker-handoff` to compress the completed `.plans.md` file,
+	add or update the same-boundary `.logs.md` file, and move both closed
+	trackers into `plans/completed/` when the current step closes the whole
+	workstream.
 - ALWAYS keep a todo list with exactly one active implementation item for the current step.
 - ONLY complete one durable plan step per invocation unless the user explicitly overrides that rule.
 - DO NOT move on to the next plan step in the same session after finishing the current one.
@@ -92,12 +93,12 @@ Return:
 - `Documentation follow-up:` `completed` or `deferred by user`.
 - `Validation:` short bullet list with pass, fail, or not run.
 - `Plan update:` one short sentence describing the durable plan change.
-- `Continuation:` a paste-ready prompt that explicitly tells the next session to continue with the next numbered plan step, rendered inside a fenced code block so it appears in a text-copy box, or `none - plan closed` plus the closed `.plans.md` and matching `.logs.md` paths.
+- `Continuation:` a paste-ready prompt that explicitly tells the next session to continue with the next numbered plan step, rendered inside a fenced code block so it appears in a text-copy box, or `none - plan closed` plus the archived closed `.plans.md` and matching `.logs.md` paths under `plans/completed/`.
 
 ## Final Response Requirement
 
 - If the workstream remains active, the last part of every successful run MUST be a next-session handoff prompt rendered in a fenced `text` code block.
-- If the workstream becomes fully complete, the final tracker action MUST be to compress the plan and add or update the same-boundary `.logs.md` file; in that terminal closure case, do not emit a next-session handoff prompt unless the user explicitly asks for reopen guidance.
+- If the workstream becomes fully complete, the final tracker action MUST be to compress the plan, add or update the same-boundary `.logs.md` file, and move both files into `plans/completed/`; in that terminal closure case, do not emit a next-session handoff prompt unless the user explicitly asks for reopen guidance.
 - Any active-plan handoff prompt MUST use the complete template below, adapted to the specific repository, plan file, module boundary, known current state, validation expectations, and next numbered step.
 - Any active-plan handoff prompt MUST be actionable on its own, without requiring the next session to infer missing context from prior chat history.
 - When relevant, include confirmed completed prior steps, important file locations, validation commands already known to be required, and any worktree cautions about unrelated generated changes.
@@ -178,6 +179,6 @@ Every successful run that leaves the workstream active must end with a handoff p
 Continue with <plan path>, starting Step <N>: <step title>. First read the nearest folder README.md files, confirm plan alignment, complete only this step, update the plan when done, validate the touched surface, and stop with the next handoff prompt.
 ```
 
-If the run closes the workstream completely, do not emit a next-session handoff prompt unless the user explicitly asks for reopen guidance; instead, finish by reporting the compressed plan and matching `.logs.md` file.
+If the run closes the workstream completely, do not emit a next-session handoff prompt unless the user explicitly asks for reopen guidance; instead, finish by reporting the archived closed plan and matching `.logs.md` file in `plans/completed/`.
 
 If the run is blocked, end with the same fenced code block shape and the same complete template, but replace the completion request with the smallest safe unblock action.

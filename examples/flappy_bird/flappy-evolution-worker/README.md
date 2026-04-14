@@ -132,7 +132,7 @@ Returns: Nothing.
 ```ts
 beginWorkerInitialization(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
-  initPayload: { populationSize: number; elitismCount: number; rngSeed: number; },
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
 ): void
 ```
 
@@ -213,7 +213,7 @@ Returns: Mutable worker runtime state.
 ```ts
 createWorkerProtocolHandlers(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
-): { markStopped: () => void; beginInitialization: (payload: { populationSize: number; elitismCount: number; rngSeed: number; }) => void; beginGenerationRequest: () => void; hasPopulation: () => boolean; startPlayback: (payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; hasPlaybackState: () => boolean; processPlaybackStep: (payload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; postWorkerMessage: typeof postWorkerMessage; }
+): { markStopped: () => void; beginInitialization: (payload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; }) => void; beginGenerationRequest: () => void; hasPopulation: () => boolean; startPlayback: (payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; hasPlaybackState: () => boolean; processPlaybackStep: (payload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; postWorkerMessage: typeof postWorkerMessage; }
 ```
 
 Creates protocol handlers bound to the mutable worker runtime state.
@@ -249,7 +249,7 @@ Returns: Promise resolved after generation payload is posted.
 ```ts
 initializeRuntime(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
-  initPayload: { populationSize: number; elitismCount: number; rngSeed: number; },
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
 ): Promise<void>
 ```
 
@@ -490,7 +490,7 @@ cares about.
 
 ```ts
 createInitializedWorkerRuntime(
-  initPayload: { populationSize: number; elitismCount: number; rngSeed: number; },
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
 ): default
 ```
 

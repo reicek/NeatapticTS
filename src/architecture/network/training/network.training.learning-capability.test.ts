@@ -80,6 +80,44 @@ function createNormalizedSineCosineDataset(
   });
 }
 
+function createSequenceEchoDataset(): TrainingSample[] {
+  return [0.1, 0.8, 0.2, 0.6].map((inputValue) => ({
+    input: [inputValue],
+    output: [inputValue],
+  }));
+}
+
+function measureSequenceMeanAbsoluteError(
+  network: Network,
+  sequenceDataset: TrainingSample[],
+): number {
+  network.clear();
+
+  const totalAbsoluteError = sequenceDataset.reduce(
+    (runningTotal, trainingSample) => {
+      const [actualOutput = 0] = network.activate(trainingSample.input);
+      return runningTotal + Math.abs(trainingSample.output[0] - actualOutput);
+    },
+    0,
+  );
+
+  return totalAbsoluteError / sequenceDataset.length;
+}
+
+function trainSequenceDatasetWithManualEpochs(
+  network: Network,
+  sequenceDataset: TrainingSample[],
+): void {
+  for (let epochIndex = 0; epochIndex < 160; epochIndex += 1) {
+    network.clear();
+
+    for (const trainingSample of sequenceDataset) {
+      network.activate(trainingSample.input, true);
+      network.propagate(0.2, 0, true, trainingSample.output);
+    }
+  }
+}
+
 describe('network training learning capability chapter', () => {
   describe('logic-gate learning', () => {
     describe('given a perceptron trains on XOR', () => {
@@ -254,6 +292,7 @@ describe('network training learning capability chapter', () => {
         });
       });
     });
+
   });
 
   describe('dropout during training', () => {
@@ -272,6 +311,31 @@ describe('network training learning capability chapter', () => {
 
           // Assert
           expect(trainingResult.error).toBeLessThanOrEqual(0.5);
+        });
+      });
+    });
+
+    describe('given one GRU builder trains on a tiny ordered sequence', () => {
+      describe('when manual recurrent epochs are used', () => {
+        it('reduces the sequence echo error below its initial baseline', () => {
+          // Arrange
+          const network = Architect.gru(1, 2, 1, { inputToOutput: true });
+          network.setSeed(310);
+          const sequenceDataset = createSequenceEchoDataset();
+          const initialError = measureSequenceMeanAbsoluteError(
+            network,
+            sequenceDataset,
+          );
+
+          // Act
+          trainSequenceDatasetWithManualEpochs(network, sequenceDataset);
+          const trainedError = measureSequenceMeanAbsoluteError(
+            network,
+            sequenceDataset,
+          );
+
+          // Assert
+          expect(trainedError).toBeLessThan(initialError);
         });
       });
     });

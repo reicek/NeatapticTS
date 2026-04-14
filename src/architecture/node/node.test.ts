@@ -82,6 +82,34 @@ describe('Node', () => {
     });
   });
 
+  describe('describe()', () => {
+    describe('given an output node', () => {
+      describe('when applying label and scalar metadata', () => {
+        it('stores additive primitive descriptor state', () => {
+          // Arrange
+          const node = new Node('output');
+
+          // Act
+          node.describe({
+            label: 'readoutNode',
+            metadata: { priority: 2, reusable: true },
+          });
+
+          // Assert
+          expect({
+            label: node.label,
+            intent: node.intent,
+            metadata: node.metadata,
+          }).toStrictEqual({
+            label: 'readoutNode',
+            intent: 'output',
+            metadata: { priority: 2, reusable: true },
+          });
+        });
+      });
+    });
+  });
+
   describe('activate()', () => {
     describe('given an identity node with only bias', () => {
       describe('when activating without an explicit input', () => {

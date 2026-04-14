@@ -92,6 +92,7 @@ import type {
   IMazeRunResult,
   INetwork,
 } from '../interfaces';
+import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
 
 /** Maze configuration used by the ASCII Maze evolution helpers. */
 export interface IMazeConfig {
@@ -108,6 +109,7 @@ export interface IAgentSimulationConfig {
 /** Configuration options for the evolutionary algorithm used in the ASCII Maze demos. */
 export interface IEvolutionAlgorithmConfig {
   allowRecurrent?: boolean;
+  architectureProfileId?: ExampleArchitectureProfileId;
   popSize?: number;
   maxStagnantGenerations?: number;
   minProgressToPass?: number;

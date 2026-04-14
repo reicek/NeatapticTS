@@ -128,6 +128,7 @@ formatArchitectureLabel(
   architectureOutputSize: number,
   totalNodeCount: number,
   totalConnectionCount: number,
+  schedulingStatusLine: string | null | undefined,
 ): string
 ```
 
@@ -231,6 +232,12 @@ Resolves compact architecture label text for headers and HUD rows.
 
 The label compresses the active network into a short human-readable summary:
 input size, hidden-layer structure, output size, and graph size metadata.
+When a runtime network is present, explicit input/output role metadata is
+treated as the authoritative boundary size instead of the caller's fallback
+hints so the browser panel reflects the network's current public contract.
+The label can also append a compact scheduling line when the runtime exposes
+a non-standard activation contract such as recurrent execution or cycle
+fallback behavior.
 
 Parameters:
 - `network` - Network to describe.
@@ -420,6 +427,40 @@ Parameters:
 - `network` - Network to visualize.
 
 Returns: Runtime connection list.
+
+### resolveSchedulingExecutionLabel
+
+```ts
+resolveSchedulingExecutionLabel(
+  executionPath: ActivationSchedulingExecutionPath,
+): string
+```
+
+Resolve a short human-readable execution label for browser architecture text.
+
+Parameters:
+- `executionPath` - Scheduling execution path reported by the runtime.
+
+Returns: Compact browser-facing label.
+
+### resolveSchedulingStatusLine
+
+```ts
+resolveSchedulingStatusLine(
+  network: default,
+): string | null
+```
+
+Resolve a compact scheduling status line for the architecture label.
+
+The browser panel should stay quiet for the standard feed-forward contract,
+but it should surface a small extra line when a network is recurrent or when
+acyclic scheduling fell back because of a detected cycle.
+
+Parameters:
+- `network` - Network being visualized.
+
+Returns: Scheduling status line or null for the normal feed-forward path.
 
 ### resolveTopologyDrivenHeightPx
 

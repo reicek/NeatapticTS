@@ -97,3 +97,13 @@
  *    teachable chapters.
  */
 export { default } from './network/network';
+export { formatConstructSummary } from './network/construct/network.construct.summary.utils';
+export type {
+	ConstructDiagnostics,
+	ConstructGraphConnectionSummary,
+	ConstructGraphNodeSummary,
+	ConstructGraphSnapshot,
+	ConstructOptions,
+	ConstructPart,
+	ConstructResult,
+} from './network/construct/network.construct.utils.types';

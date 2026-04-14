@@ -321,6 +321,12 @@ export function resolveNetworkVisualizationHeightPx(
  *
  * The label compresses the active network into a short human-readable summary:
  * input size, hidden-layer structure, output size, and graph size metadata.
+ * When a runtime network is present, explicit input/output role metadata is
+ * treated as the authoritative boundary size instead of the caller's fallback
+ * hints so the browser panel reflects the network's current public contract.
+ * The label can also append a compact scheduling line when the runtime exposes
+ * a non-standard activation contract such as recurrent execution or cycle
+ * fallback behavior.
  *
  * @param network - Network to describe.
  * @param inputSize - Configured input size.
@@ -349,15 +355,75 @@ export function resolveNetworkArchitectureLabel(
     architectureDescriptor.hiddenLayerSizes,
     architectureDescriptor.source,
   );
+  const architectureInputSize =
+    network.inputNodeIds.length > 0 ? network.inputNodeIds.length : inputSize;
+  const architectureOutputSize =
+    network.outputNodeIds.length > 0
+      ? network.outputNodeIds.length
+      : outputSize;
+  const schedulingStatusLine = resolveSchedulingStatusLine(network);
 
   // Step 3: Compose the two-line architecture label from the descriptor values.
   return formatArchitectureLabel(
-    inputSize,
+    architectureInputSize,
     hiddenLayersLabel,
-    outputSize,
+    architectureOutputSize,
     architectureDescriptor.totalNodes,
     architectureDescriptor.totalConnections,
+    schedulingStatusLine,
   );
+}
+
+/**
+ * Resolve a compact scheduling status line for the architecture label.
+ *
+ * The browser panel should stay quiet for the standard feed-forward contract,
+ * but it should surface a small extra line when a network is recurrent or when
+ * acyclic scheduling fell back because of a detected cycle.
+ *
+ * @param network - Network being visualized.
+ * @returns Scheduling status line or null for the normal feed-forward path.
+ */
+function resolveSchedulingStatusLine(network: Network): string | null {
+  const schedulingDiagnostics = network.getActivationSchedulingDiagnostics();
+
+  if (schedulingDiagnostics.issue === 'cycle-detected') {
+    return 'warning: acyclic via cycle fallback';
+  }
+
+  if (schedulingDiagnostics.issue === 'schedule-missing') {
+    return null;
+  }
+
+  if (schedulingDiagnostics.requestedMode !== 'recurrent') {
+    return null;
+  }
+
+  return `schedule: recurrent via ${resolveSchedulingExecutionLabel(
+    schedulingDiagnostics.executionPath,
+  )}`;
+}
+
+/**
+ * Resolve a short human-readable execution label for browser architecture text.
+ *
+ * @param executionPath - Scheduling execution path reported by the runtime.
+ * @returns Compact browser-facing label.
+ */
+function resolveSchedulingExecutionLabel(
+  executionPath: ReturnType<
+    Network['getActivationSchedulingDiagnostics']
+  >['executionPath'],
+): string {
+  if (executionPath === 'compiled-schedule') {
+    return 'compiled schedule';
+  }
+
+  if (executionPath === 'cycle-fallback-order') {
+    return 'cycle fallback';
+  }
+
+  return 'raw node order';
 }
 
 /**
@@ -912,6 +978,7 @@ function formatArchitectureLabel(
   architectureOutputSize: number,
   totalNodeCount: number,
   totalConnectionCount: number,
+  schedulingStatusLine?: string | null,
 ): string {
   // Step 1: Build the compact architecture row from input, hidden, and output sizes.
   const architectureColumnsLabel = [
@@ -922,7 +989,16 @@ function formatArchitectureLabel(
 
   // Step 2: Build the totals row and join both lines into the final label block.
   const architectureTotalsLabel = `(${totalNodeCount} nodes, ${totalConnectionCount} connections)`;
-  return [architectureColumnsLabel, architectureTotalsLabel].join(
+  return [
+    architectureColumnsLabel,
+    schedulingStatusLine,
+    architectureTotalsLabel,
+  ]
+    .filter(
+      (architectureLabelLine): architectureLabelLine is string =>
+        typeof architectureLabelLine === 'string' && architectureLabelLine.length > 0,
+    )
+    .join(
     FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR,
   );
 }

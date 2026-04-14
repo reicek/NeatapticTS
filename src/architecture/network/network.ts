@@ -102,6 +102,7 @@ import {
   resolveTopologyIntent,
   validateTopologyIntentConfiguration,
 } from './bootstrap/network.bootstrap.utils';
+import { constructNetwork as _constructNetwork } from './construct/network.construct.utils';
 import { NetworkConstructorDimensionRequiredError } from './network.errors';
 import {
   createMLP as _createMLP,
@@ -183,6 +184,9 @@ import type {
   ActivationSchedule,
   ActivationSchedulingDiagnostics,
   CompactSerializedNetworkTuple,
+  ConstructOptions,
+  ConstructPart,
+  ConstructResult,
   ExplicitIORoles,
   NetworkArchitectureDescriptor,
   MutationMethod,
@@ -1236,6 +1240,36 @@ export default class Network implements NetworkView {
     outputCount: number,
   ): Network {
     return _createMLP.call(this, inputCount, hiddenCounts, outputCount);
+  }
+
+  /**
+   * Construct a runnable network from mixed `Node`, `Group`, and `Layer` parts.
+   *
+   * This builder compiles the provided parts into the ordinary `Network`
+   * runtime, preserving explicit input/output ordering and then rebuilding the
+   * scheduling cache in either acyclic or recurrent mode.
+   *
+   * @param parts Mixed architecture parts to flatten.
+   * @param options Optional construct-time validation, ordering, and runtime flags.
+   * @returns Materialized runtime plus lightweight diagnostics.
+   *
+   * @example
+   * ```ts
+   * const sensor = new Node('input');
+   * const hidden = new Group(2);
+   * const readout = Layer.dense(1, 'output');
+   *
+   * sensor.connect(hidden);
+   * hidden.connect(readout);
+   *
+   * const { network } = Network.construct([sensor, hidden, readout]);
+   * ```
+   */
+  static construct(
+    parts: readonly ConstructPart[],
+    options?: ConstructOptions,
+  ): ConstructResult {
+    return _constructNetwork.call(this, parts, options);
   }
 
   /**

@@ -2,6 +2,17 @@ import type Network from './network';
 import type Node from '../node';
 import type Connection from '../connection/connection';
 import type { TestWorkerInstance } from '../../multithreading/types';
+export type {
+  ConstructDiagnostics,
+  ConstructGraphConnectionSummary,
+  ConstructGraphNodeSummary,
+  ConstructGraphSnapshot,
+  ConstructNodeId,
+  ConstructOptions,
+  ConstructPart,
+  ConstructResult,
+  ConstructValidationOptions,
+} from './construct/network.construct.utils.types';
 
 export * from './onnx/network.onnx.utils.types';
 export * from './slab/network.slab.utils.types';
@@ -252,6 +263,8 @@ export interface ActivateNetworkInternals {
 export interface ConnectNetworkInternals {
   /** Acyclic mode enforcement flag. */
   _enforceAcyclic?: boolean;
+  /** Network-owned RNG used for deterministic default connection weights. */
+  _rand?: () => number;
   /** Topology dirty marker. */
   _topoDirty: boolean;
   /** Slab dirty marker. */
@@ -432,6 +445,12 @@ export interface NodeWithIndex extends Node {
 export interface StandaloneGenerationContext {
   /** Standalone network projection. */
   standaloneProps: NetworkStandaloneProps;
+  /** Indexed input nodes in public input-vector order. */
+  inputNodeIndexes: number[];
+  /** Indexed activation traversal in runtime execution order without inputs. */
+  activationNodeIndexes: number[];
+  /** Indexed output nodes in public output-vector order. */
+  outputNodeIndexes: number[];
   /** Already emitted activation source by name. */
   emittedActivationSource: Record<string, string>;
   /** Activation source snippets in order. */

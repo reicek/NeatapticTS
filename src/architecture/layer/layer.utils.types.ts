@@ -1,6 +1,7 @@
 import type Connection from '../connection/connection';
 import type Group from '../group/group';
 import type Node from '../node';
+import type { PrimitiveDescriptor } from '../node/node';
 
 /**
  * Minimal state required to run layer activation helpers.
@@ -109,6 +110,7 @@ export type LayerConnectionContext = {
  */
 export type LayerFactoryLayer = {
   activate: (values?: number[], training?: boolean) => number[];
+  describe?: (descriptor: PrimitiveDescriptor) => void;
   input: (
     from: LayerLike | Group,
     method?: unknown,

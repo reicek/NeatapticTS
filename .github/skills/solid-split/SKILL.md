@@ -238,8 +238,9 @@ API, default, or runtime contract.
   that can continue from the next step without depending on prior chat
   history.
 - If the workstream becomes fully complete, use `tracker-handoff` to
-  compress the plan into a short closed tracker and add or update the
-  same-boundary `.logs.md` file.
+  compress the plan into a short closed tracker, add or update the
+  same-boundary `.logs.md` file, and archive both files into
+  `plans/completed/`.
 - Do not preserve a next-session handoff prompt on a terminally closed plan
   unless the user explicitly wants reopen guidance.
 
@@ -287,8 +288,8 @@ the plan file and how active versus completed tracker sections are marked.
 
 When the split workstream is fully complete, the terminal closure rule takes
 precedence instead: compress the `.plans.md` file, add or update the matching
-`.logs.md` file, and omit the handoff prompt unless the user explicitly wants a
-reopen prompt.
+`.logs.md` file, move both files into `plans/completed/`, and omit the handoff
+prompt unless the user explicitly wants a reopen prompt.
 
 The handoff prompt must:
 

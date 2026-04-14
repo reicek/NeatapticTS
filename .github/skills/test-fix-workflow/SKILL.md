@@ -93,7 +93,8 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
   `tracker-handoff` conventions instead.
 - When the fix workstream becomes fully complete, finish by using
   `tracker-handoff` to compress the `.plans.md` file into a short closed
-  tracker and add or update the same-boundary `.logs.md` file.
+  tracker, add or update the same-boundary `.logs.md` file, and archive both
+  files into `plans/completed/`.
 - Do not preserve a `Handoff query` on a terminally closed fix plan unless the
   user explicitly wants reopen guidance.
 - Do not bounce between test execution and partial fixes when the workflow is

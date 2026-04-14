@@ -52,7 +52,7 @@ applySplitWithExistingRecord(
   connectionToSplit: ConnectionWithMetadata,
   splitDescriptor: { splitKey: string; originalWeight: number; },
   splitRecord: NodeSplitRecord,
-  NodeClass: new (type: "input" | "hidden" | "output", customActivation?: ((x: number, derivate?: boolean | undefined) => number) | undefined, rng?: (() => number) | undefined) => unknown,
+  NodeClass: new (type: "hidden" | "input" | "output", customActivation?: ((x: number, derivate?: boolean | undefined) => number) | undefined, rng?: (() => number) | undefined) => unknown,
   randomValue: () => number,
 ): void
 ```
@@ -80,7 +80,7 @@ applySplitWithNewRecord(
   genomeToEdit: GenomeWithMetadata,
   connectionToSplit: ConnectionWithMetadata,
   splitDescriptor: { splitKey: string; originalWeight: number; },
-  NodeClass: new (type: "input" | "hidden" | "output", customActivation?: ((x: number, derivate?: boolean | undefined) => number) | undefined, rng?: (() => number) | undefined) => unknown,
+  NodeClass: new (type: "hidden" | "input" | "output", customActivation?: ((x: number, derivate?: boolean | undefined) => number) | undefined, rng?: (() => number) | undefined) => unknown,
   internal: NeatControllerForMutation,
 ): void
 ```
@@ -236,7 +236,7 @@ Returns: incoming/outgoing connection handles
 
 ```ts
 createSplitNode(
-  NodeClass: new (type: "input" | "hidden" | "output", customActivation?: ((x: number, derivate?: boolean | undefined) => number) | undefined, rng?: (() => number) | undefined) => unknown,
+  NodeClass: new (type: "hidden" | "input" | "output", customActivation?: ((x: number, derivate?: boolean | undefined) => number) | undefined, rng?: (() => number) | undefined) => unknown,
   randomValue: () => number,
 ): NodeWithMetadata
 ```
@@ -303,7 +303,7 @@ Returns: void
 ```ts
 findFirstNodeByType(
   genomeToSearch: GenomeWithMetadata,
-  nodeType: "input" | "hidden" | "output",
+  nodeType: "hidden" | "input" | "output",
 ): NodeWithMetadata | undefined
 ```
 

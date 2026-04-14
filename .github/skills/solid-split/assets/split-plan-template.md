@@ -22,7 +22,8 @@ working, and the target architectural shape after the split.
 - Do not hand-edit generated README files; improve source JSDoc and run docs.
 - Keep the true public facade orchestration-first.
 - When this workstream reaches terminal `[DONE]`, compress this file into a
-  short closed tracker and add or update the matching `.logs.md` file.
+  short closed tracker, add or update the matching `.logs.md` file, and move
+  both files into `plans/completed/`.
 
 ## Target Shape
 
@@ -56,7 +57,8 @@ working, and the target architectural shape after the split.
 - Execute only the single active `[WIP]` step.
 - Refresh `## Handoff query` whenever the workstream remains active.
 - If the whole workstream closes, replace active-session scaffolding with a
-  short closed tracker and add or update the matching `.logs.md` file.
+  short closed tracker, add or update the matching `.logs.md` file, and move
+  both files into `plans/completed/`.
 
 ## Handoff query
 
@@ -74,4 +76,5 @@ Continue from the current repo state only. Do not rely on prior chat history.
 - If more work remains, the boundary can be resumed safely in a later session
   from this plan alone.
 - If no work remains, this plan is compressed into a short closed tracker and a
-  matching `.logs.md` file records the durable audit history.
+  matching `.logs.md` file records the durable audit history after both files
+  are moved into `plans/completed/`.

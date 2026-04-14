@@ -2492,6 +2492,7 @@ Parameters:
 - popSize: Population size (default: 150)
 - mutation: Array of mutation operators (default: comprehensive set including LSTM)
 - allowRecurrent: Enable recurrent connections (default: true)
+- network: Optional builder-backed seed network used as the NEAT base graph
 - adaptiveMutation: Adaptive mutation config (default: enabled with 'twoTier' strategy)
 - multiObjective: Multi-objective config (default: enabled with 'nodes' metric)
 - telemetry: Telemetry config (default: enabled with all metrics)

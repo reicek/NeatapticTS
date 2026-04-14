@@ -47,6 +47,6 @@
 
 ## Closure notes
 
-- This closes the remaining Phase 1 activation-ordering lane in [Roadmap.md](Roadmap.md).
+- This closes the remaining Phase 1 activation-ordering lane in [../Roadmap.md](../Roadmap.md).
 - Phase 2 builder work can now assume explicit I/O roles plus deterministic acyclic and recurrent scheduling as the baseline activation contract.
 - Reopen only if future builder, serialization, or runtime changes expose missing role refresh, schedule invalidation, or diagnostics drift.

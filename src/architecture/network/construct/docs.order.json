@@ -1,0 +1,9 @@
+{
+  "introFile": "network.construct.utils.ts",
+  "fileOrder": [
+    "network.construct.utils.ts",
+    "network.construct.utils.types.ts",
+    "network.construct.summary.utils.ts",
+    "network.construct.errors.ts"
+  ]
+}

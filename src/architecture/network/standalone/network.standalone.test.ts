@@ -144,6 +144,14 @@ describe('network standalone chapter', () => {
         createNetwork: () => Architect.random(2, 3, 1),
       },
       {
+        architectureName: 'RandomSparse',
+        createNetwork: () =>
+          Architect.randomSparse(2, 3, 1, {
+            connections: 6,
+            seed: 702,
+          }),
+      },
+      {
         architectureName: 'NARX',
         createNetwork: () => Architect.narx(2, 2, 2, 2, 1),
       },

@@ -4,4 +4,11 @@
  * Read the `node/` chapter when you want the activation, propagation, and
  * trace semantics; use this file when you only need the stable root export.
  */
-export { default } from './node/node';
+export { default, type PrimitiveNodeType } from './node/node';
+export {
+	type PrimitiveDescriptor,
+	type PrimitiveIntent,
+	type PrimitiveMetadata,
+	type PrimitiveMetadataValue,
+	resolvePrimitiveIntent,
+} from './node/node';

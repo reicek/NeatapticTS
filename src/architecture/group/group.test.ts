@@ -40,6 +40,53 @@ describe('Group', () => {
         });
       });
     });
+
+    describe('given an explicit node role', () => {
+      describe('when creating the group', () => {
+        it('allocates nodes with that role', () => {
+          // Arrange
+          const requestedRole = 'input';
+
+          // Act
+          const group = new Group(3, requestedRole);
+
+          // Assert
+          expect(group.nodes.map((node) => node.type)).toStrictEqual([
+            requestedRole,
+            requestedRole,
+            requestedRole,
+          ]);
+        });
+      });
+    });
+  });
+
+  describe('describe()', () => {
+    describe('given a role-aware group', () => {
+      describe('when applying label and scalar metadata', () => {
+        it('stores additive boundary metadata on the group', () => {
+          // Arrange
+          const group = new Group(3, 'input');
+
+          // Act
+          group.describe({
+            label: 'sensorBlock',
+            metadata: { stage: 1, reusable: true },
+          });
+
+          // Assert
+          expect({
+            label: group.label,
+            intent: group.intent,
+            metadata: group.metadata,
+          }).toStrictEqual({
+            label: 'sensorBlock',
+            intent: 'input',
+            metadata: { size: 3, stage: 1, reusable: true },
+          });
+        });
+      });
+    });
   });
 
   describe('activate()', () => {

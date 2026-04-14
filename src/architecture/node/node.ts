@@ -14,6 +14,14 @@
  *    traced and no-trace execution,
  * 3. finish with connectivity, gating, and optimizer helpers when you need to
  *    understand how one node participates in larger graph changes.
+ *
+ * Architecture building asks two different questions at this boundary:
+ * what role does the neuron play at runtime, and what human-facing meaning
+ * should later tooling remember about it? The runtime role lives in `type`
+ * (`input`, `hidden`, `output`) and changes execution semantics. The optional
+ * descriptor surface (`label`, `intent`, `metadata`) does not change
+ * activation math; it keeps architecture intent visible for later diagnostics,
+ * visualization, and construct-from-parts work.
  */
 import Connection from '../connection';
 import { config } from '../../config';
@@ -43,6 +51,63 @@ interface NodeOptimizerProps {
   batchNorm?: boolean;
 }
 
+/** Runtime-supported primitive roles for architecture-building surfaces. */
+export type PrimitiveNodeType = 'input' | 'hidden' | 'output';
+
+/** Small semantic hints that later architecture tooling can read safely. */
+export type PrimitiveIntent =
+  | 'attention'
+  | 'convolution'
+  | 'gate'
+  | 'hidden'
+  | 'input'
+  | 'memory'
+  | 'normalization'
+  | 'output'
+  | 'recurrent'
+  | 'state';
+
+/** Scalar metadata values retained on architecture primitives. */
+export type PrimitiveMetadataValue = boolean | null | number | string;
+
+/** Lightweight metadata bag for architecture primitives. */
+export type PrimitiveMetadata = Record<string, PrimitiveMetadataValue>;
+
+/**
+ * Optional human-readable descriptor attached to one architecture primitive.
+ *
+ * Descriptors are intentionally lightweight. They keep the public primitive
+ * API teachable by separating runtime behavior from architectural meaning:
+ * `type` still controls execution semantics, while `label`, `intent`, and
+ * scalar metadata keep the boundary recognizable to later tooling.
+ *
+ * @example
+ * ```ts
+ * const readout = new Node('output');
+ *
+ * readout.describe({
+ *   label: 'policyLogits',
+ *   metadata: { stage: 'readout' },
+ * });
+ * ```
+ */
+export interface PrimitiveDescriptor {
+  intent?: PrimitiveIntent | null;
+  label?: string | null;
+  metadata?: PrimitiveMetadata;
+}
+
+/** Resolve public primitive intent from a runtime node type when possible. */
+export function resolvePrimitiveIntent(
+  nodeType: string,
+): PrimitiveIntent | null {
+  if (nodeType === 'input' || nodeType === 'hidden' || nodeType === 'output') {
+    return nodeType;
+  }
+
+  return null;
+}
+
 const NEUTRAL_NODE_RESPONSE = 1;
 
 /**
@@ -54,10 +119,29 @@ const NEUTRAL_NODE_RESPONSE = 1;
  *  - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
  *  - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
  *    a variety of learning rules beyond simple backprop).
+ *  - Optional descriptors via `describe({ label, intent, metadata })` when a
+ *    low-level node should keep a stable human-facing identity inside a larger
+ *    architecture story.
  *
  * Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
  * assignment works in algorithms like RTRL / policy gradients. They are updated only when
  * using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
+ *
+ * Most architecture code should only attach a descriptor when a node boundary
+ * matters outside the current function. That keeps the primitive cheap for raw
+ * graph math while still letting later passes recover names such as
+ * `readoutNode`, `memoryCell`, or `temperatureGate`.
+ *
+ * @example
+ * ```ts
+ * const sensor = new Node('input');
+ * const readout = new Node('output');
+ *
+ * readout.describe({
+ *   label: 'readoutNode',
+ *   metadata: { stage: 'policy' },
+ * });
+ * ```
  *
  * @see Instinct article (Section 1.1 Nodes) for conceptual background.
  */
@@ -88,6 +172,12 @@ export default class Node {
    * Determines behavior (e.g., input nodes don't have biases modified typically, output nodes calculate error differently).
    */
   type: string;
+  /** Optional human-readable descriptor label for architecture tooling. */
+  label: string | null;
+  /** Optional semantic intent for architecture tooling and diagnostics. */
+  intent: PrimitiveIntent | null;
+  /** Optional scalar metadata retained on the primitive boundary. */
+  metadata: PrimitiveMetadata;
   /**
    * The output value of the node after applying the activation function. This is the value transmitted to connected nodes.
    */
@@ -173,6 +263,9 @@ export default class Node {
     // Set activation function. Default to logistic or identity if logistic is not available.
     this.squash = customActivation ?? methods.Activation.logistic ?? ((x) => x);
     this.type = type;
+    this.label = null;
+    this.intent = resolvePrimitiveIntent(type);
+    this.metadata = {};
 
     // Initialize state and activation values.
     this.activation = 0;
@@ -235,6 +328,46 @@ export default class Node {
    */
   setActivation(fn: (x: number, derivate?: boolean) => number) {
     this.squash = fn;
+  }
+
+  /**
+   * Attaches optional descriptor metadata to the primitive boundary.
+   *
+   * This descriptor is advisory only. It does not change runtime activation,
+   * mutation, or serialization behavior, but it gives later architecture
+   * assembly, diagnostics, and visualization passes a stable place to read
+   * human-facing labels and intent.
+    *
+    * Reach for this when the node is still the right abstraction but a later
+    * reader should not have to infer its purpose from connection order alone.
+   *
+   * @param descriptor Optional label, intent, and scalar metadata to merge.
+   * @returns Nothing.
+   *
+   * @example
+   * ```ts
+   * const readout = new Node('output');
+   * readout.describe({
+   *   label: 'readoutNode',
+    *   metadata: { stage: 'readout' },
+   * });
+   * ```
+   */
+  describe(descriptor: PrimitiveDescriptor): void {
+    if (descriptor.label !== undefined) {
+      this.label = descriptor.label;
+    }
+
+    if (descriptor.intent !== undefined) {
+      this.intent = descriptor.intent;
+    }
+
+    if (descriptor.metadata !== undefined) {
+      this.metadata = {
+        ...this.metadata,
+        ...descriptor.metadata,
+      };
+    }
   }
 
   /**

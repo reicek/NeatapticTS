@@ -94,6 +94,7 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
   const layer = context.createLayer();
   const lstmGroups = createLstmGroups(size);
 
+  describeLstmBoundary(layer, lstmGroups, size);
   configureLstmBiases(lstmGroups);
   const lstmOutputConnections = connectLstmCoreTopology(lstmGroups);
   applyLstmOutputGating(lstmGroups, lstmOutputConnections);
@@ -118,6 +119,49 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
       outputGate: new Group(groupSize),
       outputBlock: new Group(groupSize),
     };
+  }
+
+  /**
+   * Attaches lightweight descriptor metadata to the LSTM boundary.
+   * @param targetLayer Layer receiving the public descriptor.
+   * @param groups Internal grouped blocks used by the topology.
+   * @param units Number of units in each grouped block.
+   * @returns No return value.
+   */
+  function describeLstmBoundary(
+    targetLayer: TLayer,
+    groups: LstmGroups,
+    units: number,
+  ): void {
+    targetLayer.describe?.({
+      intent: 'recurrent',
+      metadata: { family: 'lstm', units },
+    });
+    groups.inputGate.describe({
+      label: 'inputGate',
+      intent: 'gate',
+      metadata: { family: 'lstm', units },
+    });
+    groups.forgetGate.describe({
+      label: 'forgetGate',
+      intent: 'gate',
+      metadata: { family: 'lstm', units },
+    });
+    groups.memoryCell.describe({
+      label: 'memoryCell',
+      intent: 'state',
+      metadata: { family: 'lstm', units },
+    });
+    groups.outputGate.describe({
+      label: 'outputGate',
+      intent: 'gate',
+      metadata: { family: 'lstm', units },
+    });
+    groups.outputBlock.describe({
+      label: 'outputBlock',
+      intent: 'output',
+      metadata: { family: 'lstm', units },
+    });
   }
 
   /**
@@ -345,6 +389,7 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
   const gruGroups = createGruGroups(size);
 
   configureGruNodes(gruGroups);
+  describeGruBoundary(layer, gruGroups, size);
   connectGruCoreTopology(gruGroups);
 
   layer.nodes = collectGruNodes(gruGroups);
@@ -370,6 +415,54 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
   }
 
   /**
+   * Attaches lightweight descriptor metadata to the GRU boundary.
+   * @param targetLayer Layer receiving the public descriptor.
+   * @param groups Internal grouped blocks used by the topology.
+   * @param units Number of units in each grouped block.
+   * @returns No return value.
+   */
+  function describeGruBoundary(
+    targetLayer: TLayer,
+    groups: GruGroups,
+    units: number,
+  ): void {
+    targetLayer.describe?.({
+      intent: 'recurrent',
+      metadata: { family: 'gru', units },
+    });
+    groups.updateGate.describe({
+      label: 'updateGate',
+      intent: 'gate',
+      metadata: { family: 'gru', units },
+    });
+    groups.inverseUpdateGate.describe({
+      label: 'inverseUpdateGate',
+      intent: 'gate',
+      metadata: { family: 'gru', units },
+    });
+    groups.resetGate.describe({
+      label: 'resetGate',
+      intent: 'gate',
+      metadata: { family: 'gru', units },
+    });
+    groups.memoryCell.describe({
+      label: 'memoryCell',
+      intent: 'state',
+      metadata: { family: 'gru', units },
+    });
+    groups.output.describe({
+      label: 'outputBlock',
+      intent: 'output',
+      metadata: { family: 'gru', units },
+    });
+    groups.previousOutput.describe({
+      label: 'previousOutput',
+      intent: 'state',
+      metadata: { family: 'gru', units },
+    });
+  }
+
+  /**
    * Applies baseline node settings for GRU groups.
     * @param groups GRU groups to configure.
    * @returns No return value.
@@ -378,13 +471,13 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
     groups.previousOutput.set({
       bias: BIAS_OFF,
       squash: methods.Activation.identity,
-      type: VARIANT_NODE_TYPE,
+      type: 'hidden',
     });
     groups.memoryCell.set({ squash: methods.Activation.tanh });
     groups.inverseUpdateGate.set({
       bias: BIAS_OFF,
       squash: methods.Activation.inverse,
-      type: VARIANT_NODE_TYPE,
+      type: 'hidden',
     });
     groups.updateGate.set({ bias: BIAS_ON });
     groups.resetGate.set({ bias: BIAS_OFF });
@@ -575,9 +668,15 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
   const layer = context.createLayer();
   const memoryBuildInput: MemoryBuildInput = { memorySteps: memory, size };
   const orderedMemoryBlocks = createOrderedMemoryBlocks(memoryBuildInput);
+  describeMemoryBoundary(layer, orderedMemoryBlocks, size, memory);
 
   layer.nodes = castMemoryBlocksToLayerNodes(orderedMemoryBlocks);
   layer.output = createMemoryOutputGroup(layer.nodes);
+  layer.output.describe({
+    label: 'memoryOutput',
+    intent: 'memory',
+    metadata: { family: 'memory', memorySteps: memory, size },
+  });
   layer.input = createMemoryInputConnector(context, layer.nodes);
 
   return layer;
@@ -591,6 +690,39 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
     const memoryBlocks = createMemoryBlocks(buildInput);
     connectMemoryBlocksInSequence(memoryBlocks);
     return memoryBlocks.toReversed?.() ?? [...memoryBlocks].reverse();
+  }
+
+  /**
+   * Attaches lightweight descriptor metadata to the memory-layer boundary.
+   * @param targetLayer Layer receiving the public descriptor.
+   * @param memoryBlocks Ordered memory blocks exposed by the layer.
+   * @param blockSize Number of nodes in each block.
+   * @param memorySteps Number of remembered time steps.
+   * @returns No return value.
+   */
+  function describeMemoryBoundary(
+    targetLayer: TLayer,
+    memoryBlocks: Group[],
+    blockSize: number,
+    memorySteps: number,
+  ): void {
+    targetLayer.describe?.({
+      intent: 'memory',
+      metadata: { family: 'memory', memorySteps, size: blockSize },
+    });
+
+    memoryBlocks.forEach((memoryBlock, blockIndex) => {
+      memoryBlock.describe({
+        label: `memoryBlock${blockIndex}`,
+        intent: 'state',
+        metadata: {
+          family: 'memory',
+          memoryBlockIndex: blockIndex,
+          memorySteps,
+          size: blockSize,
+        },
+      });
+    });
   }
 
   /**

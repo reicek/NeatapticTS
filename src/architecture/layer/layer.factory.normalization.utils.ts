@@ -39,6 +39,14 @@ export function buildBatchNormLayer<TLayer extends LayerFactoryLayer>(
 ): TLayer {
   const layer = buildDenseLayer(context, size);
   (layer as unknown as { batchNorm: boolean }).batchNorm = BATCH_NORM_ENABLED;
+  layer.describe?.({
+    intent: 'normalization',
+    metadata: { family: 'batchNorm', size },
+  });
+  layer.output?.describe({
+    intent: 'normalization',
+    metadata: { family: 'batchNorm', size },
+  });
   applyNormalizationActivation(layer);
 
   return layer;
@@ -70,6 +78,14 @@ export function buildLayerNormLayer<TLayer extends LayerFactoryLayer>(
 ): TLayer {
   const layer = buildDenseLayer(context, size);
   (layer as unknown as { layerNorm: boolean }).layerNorm = LAYER_NORM_ENABLED;
+  layer.describe?.({
+    intent: 'normalization',
+    metadata: { family: 'layerNorm', size },
+  });
+  layer.output?.describe({
+    intent: 'normalization',
+    metadata: { family: 'layerNorm', size },
+  });
   applyNormalizationActivation(layer);
 
   return layer;

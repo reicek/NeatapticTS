@@ -3,6 +3,7 @@ import type {
   SharedObservationFeatures,
   SharedObservationMemoryState,
 } from '../flappy.simulation.shared.utils';
+import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
 
 /**
  * Loose JSON-compatible network payload used by worker messages.
@@ -160,6 +161,7 @@ export interface WorkerPlaybackFrameSnapshot {
 export interface WorkerInitMessage {
   type: 'init';
   payload: {
+    architectureProfileId?: ExampleArchitectureProfileId;
     populationSize: number;
     elitismCount: number;
     rngSeed: number;

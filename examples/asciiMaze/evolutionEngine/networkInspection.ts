@@ -23,7 +23,10 @@
  * @module evolutionEngine/networkInspection
  */
 
-import type { INetwork } from '../interfaces';
+import type {
+  IActivationSchedulingDiagnostics,
+  INetwork,
+} from '../interfaces';
 import type { EngineState } from './engineState';
 import type { NetworkConnection, NetworkNode } from './evolutionEngine.types';
 import { ensureConnFlagsCapacity } from './scratchPools';
@@ -352,6 +355,107 @@ const detectRecurrentOrGated = (
 };
 
 /**
+ * Resolve activation scheduling diagnostics when the runtime exposes them.
+ *
+ * Best-effort only: if the runtime has no scheduling reader or the reader
+ * throws, the inspection path simply omits scheduling lines.
+ *
+ * @param network - Network-like object under inspection.
+ * @returns Scheduling diagnostics snapshot or null when unavailable.
+ */
+const resolveActivationSchedulingDiagnostics = (
+  network: INetwork,
+): IActivationSchedulingDiagnostics | null => {
+  if (typeof network.getActivationSchedulingDiagnostics !== 'function') {
+    return null;
+  }
+
+  try {
+    return network.getActivationSchedulingDiagnostics();
+  } catch (diagnosticsError: unknown) {
+    swallowError(diagnosticsError);
+    return null;
+  }
+};
+
+/**
+ * Format one concise scheduling summary line for console inspection output.
+ *
+ * @param diagnostics - Scheduling diagnostics snapshot.
+ * @returns Human-readable scheduling summary.
+ */
+const formatActivationSchedulingSummary = (
+  diagnostics: IActivationSchedulingDiagnostics,
+): string => {
+  const requestedMode = diagnostics.requestedMode ?? 'unknown';
+  const executionPath = diagnostics.executionPath ?? 'unknown';
+  const stepCount =
+    typeof diagnostics.stepCount === 'number' ? diagnostics.stepCount : 0;
+  const recurrentComponentCount =
+    typeof diagnostics.recurrentComponentCount === 'number'
+      ? diagnostics.recurrentComponentCount
+      : 0;
+  const issueLabel = diagnostics.issue ?? 'none';
+
+  return `${requestedMode} via ${executionPath} (steps=${stepCount}, recurrent components=${recurrentComponentCount}, issue=${issueLabel})`;
+};
+
+/**
+ * Format one concise explicit-role summary line for console inspection output.
+ *
+ * @param network - Network-like object under inspection.
+ * @param diagnostics - Scheduling diagnostics snapshot.
+ * @returns Human-readable role summary or null when role metadata is missing.
+ */
+const formatExplicitRoleSummary = (
+  network: INetwork,
+  diagnostics: IActivationSchedulingDiagnostics,
+): string | null => {
+  const inputNodeIds = Array.isArray(diagnostics.inputNodeIds)
+    ? diagnostics.inputNodeIds
+    : Array.isArray(network.inputNodeIds)
+      ? network.inputNodeIds
+      : [];
+  const outputNodeIds = Array.isArray(diagnostics.outputNodeIds)
+    ? diagnostics.outputNodeIds
+    : Array.isArray(network.outputNodeIds)
+      ? network.outputNodeIds
+      : [];
+
+  if (inputNodeIds.length === 0 && outputNodeIds.length === 0) {
+    return null;
+  }
+
+  return `${inputNodeIds.length} inputs, ${outputNodeIds.length} outputs`;
+};
+
+/**
+ * Print concise scheduling and explicit-role lines when available.
+ *
+ * @param network - Network-like object under inspection.
+ * @returns Nothing.
+ */
+const printSchedulingSummary = (network: INetwork): void => {
+  const schedulingDiagnostics = resolveActivationSchedulingDiagnostics(network);
+  if (!schedulingDiagnostics) {
+    return;
+  }
+
+  console.log(
+    'Activation scheduling:',
+    formatActivationSchedulingSummary(schedulingDiagnostics),
+  );
+
+  const explicitRoleSummary = formatExplicitRoleSummary(
+    network,
+    schedulingDiagnostics,
+  );
+  if (explicitRoleSummary) {
+    console.log('Explicit IO roles:', explicitRoleSummary);
+  }
+};
+
+/**
  * Print a structured summary of network topology to the console.
  *
  * This is a developer-facing inspection utility that logs:
@@ -403,6 +507,7 @@ export const printNetworkStructure = (
       connectionsList,
     );
     console.log('Has recurrent/gated connections:', hasRecurrentOrGated);
+    printSchedulingSummary(network);
   } catch (inspectError: unknown) {
     swallowError(inspectError);
     // Best-effort logging: swallow and surface a minimal message.

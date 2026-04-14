@@ -1,5 +1,7 @@
 import { Architect, methods } from '../../../neataptic';
 import Connection from '../../connection';
+import Group from '../../group';
+import Layer from '../../layer';
 import Node from '../../node';
 import { validateNativeGenome } from '../../../neat/validate/neat.validate';
 import Network from '../network';
@@ -11,6 +13,40 @@ function createSerializableNetwork(seed: number): Network {
 
 function createSingleValueSerializableNetwork(seed: number): Network {
   return new Network(1, 1, { seed });
+}
+
+type ConstructedSerializationScenario = {
+  network: Network;
+  activationInputValues: number[];
+};
+
+function createConstructedSerializationScenario(): ConstructedSerializationScenario {
+  const leftSensor = new Node('input');
+  const rightSensor = new Node('input');
+  const hiddenStage = new Group(2);
+  const readoutLayer = Layer.dense(2, 'output');
+  const primaryReadout = readoutLayer.nodes[0];
+  const secondaryReadout = readoutLayer.nodes[1];
+
+  leftSensor.describe({ label: 'leftSensor' });
+  rightSensor.describe({ label: 'rightSensor' });
+  primaryReadout.describe({ label: 'primaryReadout' });
+  secondaryReadout.describe({ label: 'secondaryReadout' });
+
+  leftSensor.connect(hiddenStage);
+  rightSensor.connect(hiddenStage);
+  hiddenStage.connect(readoutLayer);
+
+  return {
+    network: Network.construct(
+      [hiddenStage, rightSensor, readoutLayer, leftSensor],
+      {
+        inputNodes: ['rightSensor', 'leftSensor'],
+        outputNodes: ['secondaryReadout', 'primaryReadout'],
+      },
+    ).network,
+    activationInputValues: [0.8, 0.2],
+  };
 }
 
 type JsonRoundTripScenario = {
@@ -38,6 +74,14 @@ const JSON_ROUND_TRIP_SCENARIOS: JsonRoundTripScenario[] = [
   {
     architectureName: 'Random',
     createNetwork: () => Architect.random(2, 5, 1),
+  },
+  {
+    architectureName: 'RandomSparse',
+    createNetwork: () =>
+      Architect.randomSparse(2, 5, 1, {
+        connections: 10,
+        seed: 701,
+      }),
   },
   {
     architectureName: 'NARX',
@@ -153,6 +197,36 @@ function readFirstTemporalConnectionInnovation(
 
 describe('network serialize chapter', () => {
   describe('Network.deserialize()', () => {
+    describe('given one construct-built runtime uses explicit public IO ordering', () => {
+      describe('when the compact payload is rebuilt', () => {
+        it('preserves the ordered IO ids and topology intent', () => {
+          // Arrange
+          const { network } = createConstructedSerializationScenario();
+          const serializedNetwork = network.serialize();
+          const expectedSignature = {
+            inputNodeIds: network.inputNodeIds,
+            outputNodeIds: network.outputNodeIds,
+            topologyIntent: network.getTopologyIntent(),
+          };
+
+          // Act
+          const deserialized = Network.deserialize(
+            serializedNetwork,
+            network.input,
+            network.output,
+          );
+          const actualSignature = {
+            inputNodeIds: deserialized.inputNodeIds,
+            outputNodeIds: deserialized.outputNodeIds,
+            topologyIntent: deserialized.getTopologyIntent(),
+          };
+
+          // Assert
+          expect(actualSignature).toEqual(expectedSignature);
+        });
+      });
+    });
+
     describe('given a compact payload is rebuilt without explicit size overrides', () => {
       describe('when the source network shape is compared to the rebuilt network', () => {
         it('preserves the node count', () => {
@@ -475,6 +549,43 @@ describe('network serialize chapter', () => {
   });
 
   describe('Network.fromJSON()', () => {
+    describe('given one construct-built runtime is serialized to JSON', () => {
+      describe('when the rebuilt network is activated with the same input vector', () => {
+        it('preserves the activation output values exactly', () => {
+          // Arrange
+          const { network, activationInputValues } =
+            createConstructedSerializationScenario();
+          const expectedOutputValues = network.activate(activationInputValues);
+          const serializedJson = network.toJSON();
+
+          // Act
+          const rebuiltNetwork = Network.fromJSON(serializedJson);
+          const actualOutputValues = rebuiltNetwork.activate(
+            activationInputValues,
+          );
+
+          // Assert
+          expect(actualOutputValues).toEqual(expectedOutputValues);
+        });
+      });
+
+      describe('when the rebuilt network architecture is inspected', () => {
+        it('preserves the public architecture descriptor', () => {
+          // Arrange
+          const { network } = createConstructedSerializationScenario();
+          const expectedDescriptor = network.describeArchitecture();
+          const serializedJson = network.toJSON();
+
+          // Act
+          const rebuiltNetwork = Network.fromJSON(serializedJson);
+          const actualDescriptor = rebuiltNetwork.describeArchitecture();
+
+          // Assert
+          expect(actualDescriptor).toEqual(expectedDescriptor);
+        });
+      });
+    });
+
     describe('given a supported architecture is serialized to JSON', () => {
       for (const jsonRoundTripScenario of JSON_ROUND_TRIP_SCENARIOS) {
         describe(`${jsonRoundTripScenario.architectureName}`, () => {

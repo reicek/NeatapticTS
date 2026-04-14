@@ -53,7 +53,7 @@ What was stale in the earlier version of this plan:
 3. Pattern-first targeting: work by current boundary and pattern, not by stale legacy filenames.
 4. Enforcement follows cleanup: do not harden lint or CI until the current baseline is green.
 5. Runtime honesty: prefer ES2023-only APIs where the repo baseline supports them, but keep intentional fallbacks when they are still required by real browser, workflow, or optional-dependency constraints.
-6. Scope discipline: performance architecture stays in `plans/Memory_Optimization.md`, and correctness architecture stays in `plans/neat.plans.md`.
+6. Scope discipline: performance architecture stays in `plans/Memory_Optimization.md`, and correctness architecture stays in `plans/completed/neat.plans.md`.
 7. Folder-local SRP: when multiple files in one folder share error contracts, prefer a folder-local plural `*.errors.ts` module over a root-level mega registry.
 
 ## Locked execution defaults
@@ -467,7 +467,7 @@ Use these packets to reduce rediscovery and keep future execution direct.
    - Completed coverage:
       - Added `npm run lint` to `.github/workflows/ci.yml`.
       - Added `npm run lint` to `.github/workflows/publish.yml`.
-      - Synced completion state into `plans/ES2023 migration`, `plans/Roadmap.md`, and `plans/README.md`.
+      - Synced completion state into `plans/completed/ES2023 migration`, `plans/Roadmap.md`, and `plans/README.md`.
    - Validation snapshot:
       - `npm ci`: pass
       - `npm run build`: pass

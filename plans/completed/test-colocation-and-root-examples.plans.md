@@ -35,4 +35,4 @@
 
 ## Audit log
 
-- See `plans/test-colocation-and-root-examples.logs.md`.
+- See `plans/completed/test-colocation-and-root-examples.logs.md`.

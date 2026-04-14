@@ -130,7 +130,7 @@ Primary contribution entry points:
 
 - [CONTRIBUTING.md](./CONTRIBUTING.md)
 - [STYLEGUIDE.md](./STYLEGUIDE.md)
-- [plans/src-no-explicit-any-cleanup.plans.md](./plans/src-no-explicit-any-cleanup.plans.md)
+- [plans/completed/src-no-explicit-any-cleanup.plans.md](./plans/completed/src-no-explicit-any-cleanup.plans.md)
 - [RELEASE.md](./RELEASE.md)
 
 ## License

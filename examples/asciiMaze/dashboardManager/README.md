@@ -72,6 +72,10 @@ console.log(telemetry.bestFitness);
 
 ## dashboardManager/dashboardManager.types.ts
 
+### AsciiMazeActivationSchedulingStats
+
+Public scheduling snapshot retained in dashboard details and exports.
+
 ### AsciiMazeComplexityStats
 
 ### AsciiMazeDetailedStats

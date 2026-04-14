@@ -1135,7 +1135,7 @@ Returns: Grouped node layers for MLP assembly.
 ```ts
 createNodesOfType(
   nodeCount: number,
-  nodeType: "input" | "hidden" | "output",
+  nodeType: "hidden" | "input" | "output",
 ): default[]
 ```
 

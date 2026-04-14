@@ -9,8 +9,8 @@
  *
  * 1. start with `construct()` to see how pre-wired primitives become one
  *    `Network` instance,
- * 2. continue to `perceptron()` and `random()` when you want feed-forward and
- *    topology-search-friendly builders,
+ * 2. continue to `perceptron()`, `randomSparse()`, and `random()` when you
+ *    want feed-forward and topology-search-friendly builders,
  * 3. finish with `lstm()`, `gru()`, `hopfield()`, and `narx()` when you need
  *    recurrent presets built from the lower-level architecture chapters.
  */
@@ -26,16 +26,47 @@ import {
   splitGruLayerNodes,
   splitLstmLayerNodes,
 } from '../network/network.temporal.extensions.utils';
+import type { MutationMethod } from '../network/network.types';
 import * as methods from '../../methods/methods';
 import Connection from '../connection/connection';
 import {
   ArchitectInputOutputTypeResolutionError,
   ArchitectInvalidGruConfigurationError,
+  ArchitectInvalidGruLayerArgumentsError,
   ArchitectInvalidLstmConfigurationError,
   ArchitectInvalidLstmLayerArgumentsError,
   ArchitectInvalidPerceptronConfigurationError,
+  ArchitectInvalidRandomSparseConfigurationError,
   ArchitectZeroInputOutputNodesError,
 } from './architect.errors';
+
+type ArchitectRecurrentShortcutOptions = {
+  inputToOutput?: boolean;
+};
+
+type ArchitectRandomSparseOptions = {
+  seed?: number;
+  connections?: number;
+  backConnections?: number;
+  selfConnections?: number;
+  gates?: number;
+};
+
+type ArchitectLegacyRandomOptions = {
+  seed?: number;
+  connections?: number;
+  backconnections?: number;
+  selfconnections?: number;
+  gates?: number;
+};
+
+type NormalizedArchitectRandomSparseOptions = {
+  seed?: number;
+  connections: number;
+  backConnections: number;
+  selfConnections: number;
+  gates: number;
+};
 
 /**
  * Provides static methods for constructing predefined neural network
@@ -61,7 +92,7 @@ import {
  * ```
  *
  * @see {@link https://medium.com/data-science/neuro-evolution-on-steroids-82bd14ddc2f6#3-mutation Instinct Algorithm - Section 3 Mutation}
- * Some methods like `random` are inspired by concepts discussed here.
+ * Some methods like `randomSparse` are inspired by concepts discussed here.
  */
 export default class Architect {
   /**
@@ -193,8 +224,7 @@ export default class Architect {
     const outputSize = layers.at(-1)!;
     const minHidden = Math.min(inputSize, outputSize) + 1;
 
-    const inputLayer = Layer.dense(inputSize);
-    inputLayer.set({ type: 'input' });
+    const inputLayer = Layer.dense(inputSize, 'input');
 
     const nodes: (Layer | Group)[] = [inputLayer];
     let previousLayer: Layer | Group = inputLayer;
@@ -205,10 +235,10 @@ export default class Architect {
         layerSize = minHidden;
       }
 
-      const currentLayer = Layer.dense(layerSize);
-      if (layerIndex === layers.length - 1) {
-        currentLayer.set({ type: 'output' });
-      }
+      const currentLayer =
+        layerIndex === layers.length - 1
+          ? Layer.dense(layerSize, 'output')
+          : Layer.dense(layerSize);
 
       (previousLayer as Layer).connect(
         currentLayer,
@@ -232,62 +262,125 @@ export default class Architect {
    * Creates a randomly structured network based on node counts and connection
    * options.
    *
+   * This compatibility wrapper preserves the historical `random()` surface
+   * while forwarding to the stricter `randomSparse()` builder that uses the
+   * Phase 2 sparse-profile vocabulary.
+   *
    * @param input The number of input nodes.
    * @param hidden The number of hidden nodes to add.
    * @param output The number of output nodes.
-   * @param options Optional configuration for connection counts and gates.
+   * @param options Optional legacy configuration using lowercase back/self keys.
    * @returns The constructed randomized network.
    */
   static random(
     input: number,
     hidden: number,
     output: number,
-    options: {
-      connections?: number;
-      backconnections?: number;
-      selfconnections?: number;
-      gates?: number;
-    } = {},
+    options: ArchitectLegacyRandomOptions = {},
   ): Network {
-    const {
-      connections = hidden * 2,
-      backconnections = 0,
-      selfconnections = 0,
-      gates = 0,
-    } = options;
+    return Architect.randomSparse(input, hidden, output, {
+      seed: options.seed,
+      connections: options.connections,
+      backConnections: options.backconnections,
+      selfConnections: options.selfconnections,
+      gates: options.gates,
+    });
+  }
 
-    const network = new Network(input, output);
+  /**
+   * Creates a sparse random starting graph for topology-oriented search.
+   *
+   * This builder is the explicit sparse-profile entrypoint for the public
+   * architecture set. It accepts camelCase option names, validates the request
+   * up front, and throws a clear error as soon as one requested structural edit
+   * cannot be satisfied instead of silently leaving the graph underspecified.
+   *
+   * @param input The number of input nodes.
+   * @param hidden The number of hidden nodes to add.
+   * @param output The number of output nodes.
+   * @param options Optional sparse-structure counts for forward connections,
+  * back connections, self connections, gates, and an optional deterministic seed.
+   * @returns The constructed sparse random network.
+   * @throws {Error} If the dimensions are invalid or the requested sparse
+   * structure cannot be fully created.
+   *
+   * @example
+   * ```ts
+   * const network = Architect.randomSparse(3, 6, 2, {
+   *   connections: 12,
+   *   backConnections: 2,
+   *   selfConnections: 1,
+  *   seed: 7,
+   * });
+   * ```
+   */
+  static randomSparse(
+    input: number,
+    hidden: number,
+    output: number,
+    options: ArchitectRandomSparseOptions = {},
+  ): Network {
+    validateRandomSparseDimensions(input, hidden, output);
+    const normalizedOptions = normalizeRandomSparseOptions(hidden, options);
+    const network = new Network(input, output, {
+      seed: normalizedOptions.seed,
+    });
 
     for (let hiddenNodeIndex = 0; hiddenNodeIndex < hidden; hiddenNodeIndex++) {
-      network.mutate(methods.mutation.ADD_NODE as never);
+      applyRandomSparseMutationOrThrow(
+        network,
+        methods.mutation.ADD_NODE as never,
+        () => network.nodes.length,
+        `Invalid RandomSparse configuration: unable to add hidden node ${hiddenNodeIndex + 1} of ${hidden}.`,
+      );
     }
 
     for (
       let connectionIndex = 0;
-      connectionIndex < connections - hidden;
+      connectionIndex < Math.max(0, normalizedOptions.connections - hidden);
       connectionIndex++
     ) {
-      network.mutate(methods.mutation.ADD_CONN as never);
+      applyRandomSparseMutationOrThrow(
+        network,
+        methods.mutation.ADD_CONN as never,
+        () => network.connections.length,
+        `Invalid RandomSparse configuration: unable to add forward connection ${connectionIndex + 1} of ${Math.max(0, normalizedOptions.connections - hidden)} because no unused forward pairs remain.`,
+      );
     }
 
     for (
       let connectionIndex = 0;
-      connectionIndex < backconnections;
+      connectionIndex < normalizedOptions.backConnections;
       connectionIndex++
     ) {
-      network.mutate(methods.mutation.ADD_BACK_CONN as never);
+      applyRandomSparseMutationOrThrow(
+        network,
+        methods.mutation.ADD_BACK_CONN as never,
+        () => network.connections.length,
+        `Invalid RandomSparse configuration: unable to add back connection ${connectionIndex + 1} of ${normalizedOptions.backConnections}.`,
+      );
     }
 
     for (
       let connectionIndex = 0;
-      connectionIndex < selfconnections;
+      connectionIndex < normalizedOptions.selfConnections;
       connectionIndex++
     ) {
-      network.mutate(methods.mutation.ADD_SELF_CONN as never);
+      applyRandomSparseMutationOrThrow(
+        network,
+        methods.mutation.ADD_SELF_CONN as never,
+        () => network.selfconns.length,
+        `Invalid RandomSparse configuration: unable to add self connection ${connectionIndex + 1} of ${normalizedOptions.selfConnections}.`,
+      );
     }
 
-    for (let gateIndex = 0; gateIndex < gates; gateIndex++) {
-      network.mutate(methods.mutation.ADD_GATE as never);
+    for (let gateIndex = 0; gateIndex < normalizedOptions.gates; gateIndex++) {
+      applyRandomSparseMutationOrThrow(
+        network,
+        methods.mutation.ADD_GATE as never,
+        () => network.gates.length,
+        `Invalid RandomSparse configuration: unable to add gate ${gateIndex + 1} of ${normalizedOptions.gates}.`,
+      );
     }
 
     return network;
@@ -296,13 +389,21 @@ export default class Architect {
   /**
    * Creates a Long Short-Term Memory network.
    *
+   * This builder keeps the LSTM graph explicit: each recurrent block is
+   * assembled from gate groups, a memory-cell group, and an output block using
+   * the same primitive wiring surface used elsewhere in the architecture layer.
+   *
+   * The optional `inputToOutput` shortcut preserves the historical builder
+   * behavior by default. Disable it when you want the public preset to route
+   * information strictly through the recurrent block stack.
+   *
    * @param layerArgs Layer sizes plus an optional trailing options object.
    * @returns The constructed LSTM network.
    * @throws {Error} If fewer than three numerical layer sizes are provided.
    * @throws {Error} If one or more layer sizes are not positive finite numbers.
    */
-  static lstm(...layerArgs: (number | { inputToOutput?: boolean })[]): Network {
-    let options: { inputToOutput?: boolean } = {};
+  static lstm(...layerArgs: (number | ArchitectRecurrentShortcutOptions)[]): Network {
+    let options: ArchitectRecurrentShortcutOptions = {};
     const trailingArgument = layerArgs.at(-1);
 
     if (
@@ -311,7 +412,7 @@ export default class Architect {
       trailingArgument !== null &&
       !Array.isArray(trailingArgument)
     ) {
-      options = layerArgs.pop() as { inputToOutput?: boolean };
+      options = layerArgs.pop() as ArchitectRecurrentShortcutOptions;
     }
 
     if (
@@ -339,11 +440,9 @@ export default class Architect {
     const inputLayerSize = layers.shift()!;
     const outputLayerSize = layers.pop()!;
 
-    const inputLayer = Layer.dense(inputLayerSize);
-    inputLayer.set({ type: 'input' });
+    const inputLayer = Layer.dense(inputLayerSize, 'input');
 
-    const outputLayer = Layer.dense(outputLayerSize);
-    outputLayer.set({ type: 'output' });
+    const outputLayer = Layer.dense(outputLayerSize, 'output');
 
     const nodes: (Layer | Group)[] = [inputLayer];
     const recurrentLayers: Array<{ layer: Layer; size: number }> = [];
@@ -383,25 +482,61 @@ export default class Architect {
   /**
    * Creates a Gated Recurrent Unit network.
    *
-   * @param layers Layer sizes starting with input and ending with output.
+   * This builder keeps the GRU graph explicit: update, inverse-update, reset,
+   * memory, output, and previous-output groups are all wired from the public
+   * primitive surface rather than hidden behind a fused recurrent runtime.
+   *
+   * The optional `inputToOutput` shortcut is disabled by default so existing
+   * GRU topologies keep their historical shape. Enable it when you want a
+   * direct input-to-readout path in addition to the recurrent block stack.
+   *
+   * @param layerArgs Layer sizes plus an optional trailing options object.
    * @returns The constructed GRU network.
+   * @throws {Error} If one or more layer sizes are not positive finite numbers.
    * @throws {Error} If fewer than three layer sizes are provided.
    */
-  static gru(...layers: number[]): Network {
+  static gru(...layerArgs: (number | ArchitectRecurrentShortcutOptions)[]): Network {
+    let options: ArchitectRecurrentShortcutOptions = {};
+    const trailingArgument = layerArgs.at(-1);
+
+    if (
+      layerArgs.length > 0 &&
+      typeof trailingArgument === 'object' &&
+      trailingArgument !== null &&
+      !Array.isArray(trailingArgument)
+    ) {
+      options = layerArgs.pop() as ArchitectRecurrentShortcutOptions;
+    }
+
+    if (
+      !layerArgs.every(
+        (argument): argument is number =>
+          typeof argument === 'number' &&
+          Number.isFinite(argument) &&
+          argument > 0,
+      )
+    ) {
+      throw new ArchitectInvalidGruLayerArgumentsError(
+        'Invalid GRU layer arguments: All layer sizes must be positive finite numbers.',
+      );
+    }
+
+    const layers = layerArgs as number[];
+
     if (layers.length < 3) {
       throw new ArchitectInvalidGruConfigurationError(
         'Invalid GRU configuration: You must specify at least 3 layer sizes (input, hidden..., output).',
       );
     }
 
+    const { inputToOutput = false } = options;
+
     const inputLayerSize = layers.shift()!;
     const outputLayerSize = layers.pop()!;
 
-    const inputLayer = Layer.dense(inputLayerSize);
-    inputLayer.set({ type: 'input' });
+    const inputLayer = Layer.dense(inputLayerSize, 'input');
 
-    const outputLayer = Layer.dense(outputLayerSize);
-    outputLayer.set({ type: 'output' });
+    const outputLayer = Layer.dense(outputLayerSize, 'output');
 
     const nodes: (Layer | Group)[] = [inputLayer];
     const recurrentLayers: Array<{ layer: Layer; size: number }> = [];
@@ -417,6 +552,10 @@ export default class Architect {
 
     (previousLayer as Layer).connect(outputLayer);
     nodes.push(outputLayer);
+
+    if (inputToOutput) {
+      inputLayer.connect(outputLayer, methods.groupConnection.ALL_TO_ALL);
+    }
 
     const network = Architect.construct(nodes);
     network.input = inputLayerSize;
@@ -441,13 +580,12 @@ export default class Architect {
    * @returns The constructed Hopfield network.
    */
   static hopfield(size: number): Network {
-    const inputLayer = Layer.dense(size);
-    const outputLayer = Layer.dense(size);
+    const inputLayer = Layer.dense(size, 'input');
+    const outputLayer = Layer.dense(size, 'output');
 
     inputLayer.connect(outputLayer, methods.groupConnection.ALL_TO_ALL);
 
-    inputLayer.set({ type: 'input' });
-    outputLayer.set({ squash: methods.Activation.step, type: 'output' });
+    outputLayer.set({ squash: methods.Activation.step });
 
     return Architect.construct([inputLayer, outputLayer]);
   }
@@ -455,12 +593,42 @@ export default class Architect {
   /**
    * Creates a Nonlinear AutoRegressive network with eXogenous inputs.
    *
+   * This is the smallest stateful preset in the public builder surface. The
+   * main processing path receives the current exogenous input plus two explicit
+   * delay lines: one for recent inputs and one for recent outputs. That keeps
+   * the temporal story readable for debugging, visualization, and evolution
+   * work without immediately jumping to gated cells.
+   *
+   * Both delay lines are built from `Layer.memory(...)` blocks. Those memory
+   * blocks use identity activation, zero bias, and one-to-one unit carry links,
+   * so remembered values behave like a deterministic rolling window rather than
+   * a learned recurrent cell.
+   *
+   * Clear-state guidance: call `network.clear()` before starting a new
+   * independent sequence, episode, or evaluation run. If you keep activating
+   * the same runtime without clearing it, the delay lines intentionally carry
+   * their terminal state into the next activation stream.
+   *
    * @param inputSize The exogenous input size at each time step.
    * @param hiddenLayers Hidden layer sizes, or zero / empty for none.
    * @param outputSize The prediction output size.
    * @param previousInput The number of delayed input steps.
    * @param previousOutput The number of delayed output steps.
    * @returns The constructed NARX network.
+   * @example
+   * ```ts
+   * const network = Architect.narx(1, [4], 1, 2, 1);
+   *
+   * for (const sample of sequenceA) {
+   *   network.activate(sample.input);
+   * }
+   *
+   * network.clear();
+   *
+   * for (const sample of sequenceB) {
+   *   network.activate(sample.input);
+   * }
+   * ```
    */
   static narx(
     inputSize: number,
@@ -473,13 +641,10 @@ export default class Architect {
       hiddenLayers = hiddenLayers > 0 ? [hiddenLayers] : [];
     }
 
-    const input = Layer.dense(inputSize);
+    const input = Layer.dense(inputSize, 'input');
     const inputMemory = Layer.memory(inputSize, previousInput);
-    const output = Layer.dense(outputSize);
+    const output = Layer.dense(outputSize, 'output');
     const outputMemory = Layer.memory(outputSize, previousOutput);
-
-    input.set({ type: 'input' });
-    output.set({ type: 'output' });
 
     input.connect(inputMemory, methods.groupConnection.ONE_TO_ONE, 1);
     output.connect(outputMemory, methods.groupConnection.ONE_TO_ONE, 1);
@@ -611,4 +776,80 @@ function resolveMemoryBlockNodes(memoryLayer: Layer): Node[][] {
   return (memoryLayer.nodes as unknown as Group[])
     .filter((layerNode) => layerNode instanceof Group)
     .map((memoryBlock) => memoryBlock.nodes);
+}
+
+function validateRandomSparseDimensions(
+  input: number,
+  hidden: number,
+  output: number,
+): void {
+  assertNonNegativeInteger(input, 'input', true);
+  assertNonNegativeInteger(hidden, 'hidden');
+  assertNonNegativeInteger(output, 'output', true);
+}
+
+function normalizeRandomSparseOptions(
+  hidden: number,
+  options: ArchitectRandomSparseOptions,
+): NormalizedArchitectRandomSparseOptions {
+  const normalizedOptions = {
+    seed: options.seed,
+    connections: options.connections ?? hidden * 2,
+    backConnections: options.backConnections ?? 0,
+    selfConnections: options.selfConnections ?? 0,
+    gates: options.gates ?? 0,
+  };
+
+  assertFiniteSeed(normalizedOptions.seed);
+
+  assertNonNegativeInteger(normalizedOptions.connections, 'connections');
+  assertNonNegativeInteger(
+    normalizedOptions.backConnections,
+    'backConnections',
+  );
+  assertNonNegativeInteger(
+    normalizedOptions.selfConnections,
+    'selfConnections',
+  );
+  assertNonNegativeInteger(normalizedOptions.gates, 'gates');
+
+  return normalizedOptions;
+}
+
+function assertFiniteSeed(seed: number | undefined): void {
+  if (seed !== undefined && !Number.isFinite(seed)) {
+    throw new ArchitectInvalidRandomSparseConfigurationError(
+      'Invalid RandomSparse configuration: seed must be a finite number.',
+    );
+  }
+}
+
+function assertNonNegativeInteger(
+  value: number,
+  label: string,
+  requirePositive = false,
+): void {
+  const isValidInteger = Number.isInteger(value);
+  const passesLowerBound = requirePositive ? value > 0 : value >= 0;
+
+  if (!isValidInteger || !passesLowerBound) {
+    throw new ArchitectInvalidRandomSparseConfigurationError(
+      `Invalid RandomSparse configuration: ${label} must be ${requirePositive ? 'a positive integer' : 'a non-negative integer'}.`,
+    );
+  }
+}
+
+function applyRandomSparseMutationOrThrow(
+  network: Network,
+  method: MutationMethod,
+  resolveCount: () => number,
+  errorMessage: string,
+): void {
+  const countBeforeMutation = resolveCount();
+  network.mutate(method as never);
+  const countAfterMutation = resolveCount();
+
+  if (countAfterMutation === countBeforeMutation) {
+    throw new ArchitectInvalidRandomSparseConfigurationError(errorMessage);
+  }
 }

@@ -1,6 +1,7 @@
 import {
   ArchitectInputOutputTypeResolutionError,
   ArchitectInvalidGruConfigurationError,
+  ArchitectInvalidGruLayerArgumentsError,
   ArchitectInvalidLstmConfigurationError,
   ArchitectInvalidLstmLayerArgumentsError,
   ArchitectInvalidPerceptronConfigurationError,
@@ -132,6 +133,32 @@ describe('architect errors chapter', () => {
         }).toEqual({
           message: 'lstm requires at least input and output sizes',
           name: 'ArchitectInvalidLstmConfigurationError',
+          cause,
+        });
+      });
+    });
+  });
+
+  describe('ArchitectInvalidGruLayerArgumentsError', () => {
+    describe('given the GRU builder receives invalid layer arguments', () => {
+      it('preserves the configured message and name', () => {
+        // Arrange
+        const cause = new Error('invalid GRU layer argument');
+
+        // Act
+        const error = new ArchitectInvalidGruLayerArgumentsError(
+          'gru layer sizes must be positive integers',
+          { cause },
+        );
+
+        // Assert
+        expect({
+          message: error.message,
+          name: error.name,
+          cause: error.cause,
+        }).toEqual({
+          message: 'gru layer sizes must be positive integers',
+          name: 'ArchitectInvalidGruLayerArgumentsError',
           cause,
         });
       });

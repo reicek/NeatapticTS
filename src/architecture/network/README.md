@@ -239,6 +239,40 @@ Returns: An array containing the newly created connection object(s). Typically c
 
 Connection list.
 
+#### construct
+
+```ts
+construct(
+  parts: readonly ConstructPart[],
+  options: ConstructOptions | undefined,
+): ConstructResult
+```
+
+Construct a runnable network from mixed `Node`, `Group`, and `Layer` parts.
+
+This builder compiles the provided parts into the ordinary `Network`
+runtime, preserving explicit input/output ordering and then rebuilding the
+scheduling cache in either acyclic or recurrent mode.
+
+Parameters:
+- `parts` - Mixed architecture parts to flatten.
+- `options` - Optional construct-time validation, ordering, and runtime flags.
+
+Returns: Materialized runtime plus lightweight diagnostics.
+
+Example:
+
+```ts
+const sensor = new Node('input');
+const hidden = new Group(2);
+const readout = Layer.dense(1, 'output');
+
+sensor.connect(hidden);
+hidden.connect(readout);
+
+const { network } = Network.construct([sensor, hidden, readout]);
+```
+
 #### createMLP
 
 ```ts
@@ -1143,7 +1177,8 @@ function always treats the result as an array and appends each edge to the appro
 Algorithm outline:
  1. (Acyclic guard) If acyclicity is enforced and the source node appears after the target node in
     the network's node ordering, abort early and return an empty array (prevents back‑edge creation).
- 2. Delegate to sourceNode.connect(targetNode, weight) to build the raw Connection object(s).
+ 2. Resolve a deterministic default weight from the owning network RNG when no explicit
+    weight was supplied, then delegate to sourceNode.connect(targetNode, weight).
  3. For each created connection:
       a. If it's a self‑connection: either ignore (acyclic mode) or store in selfconns.
       b. Otherwise store in standard connections array.
@@ -1157,7 +1192,7 @@ Complexity:
 Edge cases & invariants:
  - Acyclic mode silently refuses back‑edges instead of throwing (makes evolutionary search easier).
  - Self‑connections are skipped entirely when acyclicity is enforced.
- - Weight initialization policy is delegated to Node.connect if not explicitly provided.
+ - Weight initialization stays deterministic for seeded networks even when callers omit an explicit weight.
  - When the network carries explicit temporal extension metadata, successful edge creation
    revalidates that descriptor bag immediately so generic structural edits keep the extension lane honest.
 
@@ -2306,6 +2341,64 @@ Internal runtime properties attached to Connection instances.
 ### ConnectNetworkInternals
 
 Runtime interface for connect internals.
+
+### ConstructDiagnostics
+
+Lightweight diagnostics returned alongside one constructed network.
+
+`activationOrder` resolves into network node indices so downstream tooling can
+inspect one canonical traversal order without re-reading private scheduling
+fields.
+
+### ConstructGraphConnectionSummary
+
+One detached edge row in the construct graph snapshot.
+
+### ConstructGraphNodeSummary
+
+One detached node row in the construct graph snapshot.
+
+### ConstructGraphSnapshot
+
+Detached construct graph snapshot for developer tooling.
+
+The snapshot is intentionally JSON-friendly so callers can log it directly,
+persist it to diagnostics artifacts, or feed it into visualization tooling
+without re-reading mutable `Network` internals.
+
+### ConstructNodeId
+
+Stable node identifiers accepted by the construct-from-parts API.
+
+Numeric ids resolve against `node.geneId`. String ids resolve against
+`node.label` when one was attached through `describe({ label })`.
+
+### ConstructOptions
+
+Public options for `Network.construct(...)`.
+
+This surface deliberately reuses the existing `Network` runtime instead of
+introducing a second execution engine. Callers provide graph parts, choose
+acyclic versus recurrent compilation, and optionally pin the public input and
+output vector ordering explicitly. Public input nodes are always validated as
+pure sources, and output nodes default to pure sinks unless validation opts
+into outward feedback or gating explicitly.
+
+### ConstructPart
+
+Mixed primitive inputs accepted by `Network.construct(...)`.
+
+The builder flattens nodes out of each composite part while preserving
+deterministic ordering and validating that referenced edges stay inside the
+provided part set.
+
+### ConstructResult
+
+Return payload for `Network.construct(...)`.
+
+### ConstructValidationOptions
+
+Extra validation switches for construct-from-parts materialization.
 
 ### Conv2DMapping
 

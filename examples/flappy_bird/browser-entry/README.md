@@ -1472,6 +1472,12 @@ Resolves compact architecture label text for headers and HUD rows.
 
 The label compresses the active network into a short human-readable summary:
 input size, hidden-layer structure, output size, and graph size metadata.
+When a runtime network is present, explicit input/output role metadata is
+treated as the authoritative boundary size instead of the caller's fallback
+hints so the browser panel reflects the network's current public contract.
+The label can also append a compact scheduling line when the runtime exposes
+a non-standard activation contract such as recurrent execution or cycle
+fallback behavior.
 
 Parameters:
 - `network` - Network to describe.

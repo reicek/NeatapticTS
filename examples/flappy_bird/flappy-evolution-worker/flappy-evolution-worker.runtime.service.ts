@@ -1,13 +1,15 @@
 import { Neat, methods } from '../../../src/neataptic';
-import Architect from '../../../src/architecture/architect';
 import { evaluateFlappyFitness } from '../flappyEvaluation';
 import type { WorkerInitMessage } from './flappy-evolution-worker.types';
 import {
   FLAPPY_MAX_FRAMES_PER_EPISODE,
-  FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
   FLAPPY_NETWORK_INPUT_SIZE,
   FLAPPY_NETWORK_OUTPUT_SIZE,
 } from '../constants/constants';
+import {
+  DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
+  buildExampleArchitectureProfileNetwork,
+} from '../../architectureProfiles';
 
 /**
  * Creates and configures the worker-local NEAT runtime used by browser evolution playback.
@@ -43,6 +45,11 @@ export function createInitializedWorkerRuntime(
 ): Neat {
   const inputSize = FLAPPY_NETWORK_INPUT_SIZE;
   const outputSize = FLAPPY_NETWORK_OUTPUT_SIZE;
+  const seedNetwork = buildExampleArchitectureProfileNetwork(
+    'flappy-bird',
+    initPayload.architectureProfileId ??
+      DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
+  );
 
   const neatRuntime = new Neat(inputSize, outputSize, () => 0, {
     popsize: initPayload.populationSize,
@@ -51,11 +58,7 @@ export function createInitializedWorkerRuntime(
     mutationAmount: 2,
     allowRecurrent: false,
     mutation: methods.mutation.FFW,
-    network: Architect.perceptron(
-      inputSize,
-      ...FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
-      outputSize,
-    ),
+    network: seedNetwork,
     speciation: true,
     multiObjective: { enabled: false },
     novelty: { enabled: false },

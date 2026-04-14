@@ -19,8 +19,10 @@
  * 3. the detail builders below when you want the richer analytical shelf.
  */
 import { MazeUtils } from '../../mazeUtils';
+import type { IActivationSchedulingDiagnostics, INetwork } from '../../interfaces';
 import { DASHBOARD_MANAGER_CONSTANTS as C } from '../dashboardManager.constants';
 import type {
+  AsciiMazeActivationSchedulingStats,
   AsciiMazeDetailedStats,
   AsciiMazeTelemetrySnapshot,
   DashboardManagerState,
@@ -225,6 +227,9 @@ export function createDetailedStatsSnapshot(
         typeof state.currentBest?.result?.actionEntropy === 'number'
           ? state.currentBest.result.actionEntropy
           : null,
+      activationScheduling: resolveActivationSchedulingDetails(
+        state.currentBest?.network,
+      ),
       populationMean: populationStats.mean,
       populationMedian: populationStats.median,
       enabledConnRatio: populationStats.enabledRatio,
@@ -269,6 +274,41 @@ export function createDetailedStatsSnapshot(
         species: sliceDashboardHistoryForExport(state.histories.speciesCount),
       },
       timestamp: Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve compact activation-scheduling details for telemetry export.
+ *
+ * @param network - Current best network instance.
+ * @returns Compact scheduling detail snapshot or null when unavailable.
+ */
+function resolveActivationSchedulingDetails(
+  network: INetwork | null | undefined,
+): AsciiMazeActivationSchedulingStats | null {
+  if (!network || typeof network.getActivationSchedulingDiagnostics !== 'function') {
+    return null;
+  }
+
+  try {
+    const schedulingDiagnostics =
+      network.getActivationSchedulingDiagnostics() as IActivationSchedulingDiagnostics;
+
+    return {
+      requestedMode: schedulingDiagnostics.requestedMode ?? null,
+      executionPath: schedulingDiagnostics.executionPath ?? null,
+      issue: schedulingDiagnostics.issue ?? null,
+      stepCount:
+        typeof schedulingDiagnostics.stepCount === 'number'
+          ? schedulingDiagnostics.stepCount
+          : 0,
+      recurrentComponentCount:
+        typeof schedulingDiagnostics.recurrentComponentCount === 'number'
+          ? schedulingDiagnostics.recurrentComponentCount
+          : 0,
     };
   } catch {
     return null;

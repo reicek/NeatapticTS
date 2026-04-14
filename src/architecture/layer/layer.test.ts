@@ -52,6 +52,68 @@ describe('Layer', () => {
     });
   });
 
+  describe('dense()', () => {
+    describe('given an explicit primitive role', () => {
+      describe('when creating a dense layer', () => {
+        it('allocates nodes with that role', () => {
+          // Arrange
+          const requestedRole = 'output';
+
+          // Act
+          const layer = Layer.dense(3, requestedRole);
+
+          // Assert
+          expect(layer.nodes.map((node) => node.type)).toStrictEqual([
+            requestedRole,
+            requestedRole,
+            requestedRole,
+          ]);
+        });
+
+        it('describes the dense block with role-aware intent metadata', () => {
+          // Arrange
+          const requestedRole = 'output';
+
+          // Act
+          const layer = Layer.dense(3, requestedRole);
+
+          // Assert
+          expect({
+            intent: layer.intent,
+            metadata: layer.metadata,
+          }).toStrictEqual({
+            intent: requestedRole,
+            metadata: { family: 'dense', size: 3 },
+          });
+        });
+      });
+    });
+  });
+
+  describe('memory()', () => {
+    describe('given a fixed memory shape', () => {
+      describe('when creating the layer', () => {
+        it('describes the delay-line boundary with metadata', () => {
+          // Arrange
+          const blockSize = 2;
+          const memorySteps = 3;
+
+          // Act
+          const layer = Layer.memory(blockSize, memorySteps);
+
+          // Assert
+          expect({
+            intent: layer.intent,
+            metadata: layer.metadata,
+          }).toStrictEqual({
+            intent: 'memory',
+            metadata: { family: 'memory', memorySteps, size: blockSize },
+          });
+        });
+      });
+    });
+  });
+
   describe('propagate()', () => {
     describe('given a mismatched target array', () => {
       describe('when propagating through the layer', () => {

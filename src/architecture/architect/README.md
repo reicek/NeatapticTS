@@ -10,8 +10,8 @@ Read this chapter in three passes:
 
 1. start with `construct()` to see how pre-wired primitives become one
    `Network` instance,
-2. continue to `perceptron()` and `random()` when you want feed-forward and
-   topology-search-friendly builders,
+2. continue to `perceptron()`, `randomSparse()`, and `random()` when you
+   want feed-forward and topology-search-friendly builders,
 3. finish with `lstm()`, `gru()`, `hopfield()`, and `narx()` when you need
    recurrent presets built from the lower-level architecture chapters.
 
@@ -91,14 +91,22 @@ Returns: The same network with hidden layers grown to the minimum size when need
 
 ```ts
 gru(
-  layers: number[],
+  layerArgs: (number | ArchitectRecurrentShortcutOptions)[],
 ): default
 ```
 
 Creates a Gated Recurrent Unit network.
 
+This builder keeps the GRU graph explicit: update, inverse-update, reset,
+memory, output, and previous-output groups are all wired from the public
+primitive surface rather than hidden behind a fused recurrent runtime.
+
+The optional `inputToOutput` shortcut is disabled by default so existing
+GRU topologies keep their historical shape. Enable it when you want a
+direct input-to-readout path in addition to the recurrent block stack.
+
 Parameters:
-- `layers` - Layer sizes starting with input and ending with output.
+- `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed GRU network.
 
@@ -121,11 +129,19 @@ Returns: The constructed Hopfield network.
 
 ```ts
 lstm(
-  layerArgs: (number | { inputToOutput?: boolean | undefined; })[],
+  layerArgs: (number | ArchitectRecurrentShortcutOptions)[],
 ): default
 ```
 
 Creates a Long Short-Term Memory network.
+
+This builder keeps the LSTM graph explicit: each recurrent block is
+assembled from gate groups, a memory-cell group, and an output block using
+the same primitive wiring surface used elsewhere in the architecture layer.
+
+The optional `inputToOutput` shortcut preserves the historical builder
+behavior by default. Disable it when you want the public preset to route
+information strictly through the recurrent block stack.
 
 Parameters:
 - `layerArgs` - Layer sizes plus an optional trailing options object.
@@ -146,6 +162,22 @@ narx(
 
 Creates a Nonlinear AutoRegressive network with eXogenous inputs.
 
+This is the smallest stateful preset in the public builder surface. The
+main processing path receives the current exogenous input plus two explicit
+delay lines: one for recent inputs and one for recent outputs. That keeps
+the temporal story readable for debugging, visualization, and evolution
+work without immediately jumping to gated cells.
+
+Both delay lines are built from `Layer.memory(...)` blocks. Those memory
+blocks use identity activation, zero bias, and one-to-one unit carry links,
+so remembered values behave like a deterministic rolling window rather than
+a learned recurrent cell.
+
+Clear-state guidance: call `network.clear()` before starting a new
+independent sequence, episode, or evaluation run. If you keep activating
+the same runtime without clearing it, the delay lines intentionally carry
+their terminal state into the next activation stream.
+
 Parameters:
 - `inputSize` - The exogenous input size at each time step.
 - `hiddenLayers` - Hidden layer sizes, or zero / empty for none.
@@ -154,6 +186,22 @@ Parameters:
 - `previousOutput` - The number of delayed output steps.
 
 Returns: The constructed NARX network.
+
+Example:
+
+```ts
+const network = Architect.narx(1, [4], 1, 2, 1);
+
+for (const sample of sequenceA) {
+  network.activate(sample.input);
+}
+
+network.clear();
+
+for (const sample of sequenceB) {
+  network.activate(sample.input);
+}
+```
 
 #### perceptron
 
@@ -182,20 +230,62 @@ random(
   input: number,
   hidden: number,
   output: number,
-  options: { connections?: number | undefined; backconnections?: number | undefined; selfconnections?: number | undefined; gates?: number | undefined; },
+  options: ArchitectLegacyRandomOptions,
 ): default
 ```
 
 Creates a randomly structured network based on node counts and connection
 options.
 
+This compatibility wrapper preserves the historical `random()` surface
+while forwarding to the stricter `randomSparse()` builder that uses the
+Phase 2 sparse-profile vocabulary.
+
 Parameters:
 - `input` - The number of input nodes.
 - `hidden` - The number of hidden nodes to add.
 - `output` - The number of output nodes.
-- `options` - Optional configuration for connection counts and gates.
+- `options` - Optional legacy configuration using lowercase back/self keys.
 
 Returns: The constructed randomized network.
+
+#### randomSparse
+
+```ts
+randomSparse(
+  input: number,
+  hidden: number,
+  output: number,
+  options: ArchitectRandomSparseOptions,
+): default
+```
+
+Creates a sparse random starting graph for topology-oriented search.
+
+This builder is the explicit sparse-profile entrypoint for the public
+architecture set. It accepts camelCase option names, validates the request
+up front, and throws a clear error as soon as one requested structural edit
+cannot be satisfied instead of silently leaving the graph underspecified.
+
+Parameters:
+- `input` - The number of input nodes.
+- `hidden` - The number of hidden nodes to add.
+- `output` - The number of output nodes.
+- `options` - Optional sparse-structure counts for forward connections,
+back connections, self connections, gates, and an optional deterministic seed.
+
+Returns: The constructed sparse random network.
+
+Example:
+
+```ts
+const network = Architect.randomSparse(3, 6, 2, {
+  connections: 12,
+  backConnections: 2,
+  selfConnections: 1,
+  seed: 7,
+});
+```
 
 ## architecture/architect/architect.errors.ts
 
@@ -209,6 +299,10 @@ Raised when architect construction cannot infer input/output nodes from supplied
 
 Raised when a GRU builder receives too few layer sizes.
 
+### ArchitectInvalidGruLayerArgumentsError
+
+Raised when GRU builder arguments contain invalid layer-size values.
+
 ### ArchitectInvalidLstmConfigurationError
 
 Raised when an LSTM builder receives too few layer sizes.
@@ -220,6 +314,11 @@ Raised when LSTM builder arguments contain invalid layer-size values.
 ### ArchitectInvalidPerceptronConfigurationError
 
 Raised when an MLP builder receives too few layer sizes.
+
+### ArchitectInvalidRandomSparseConfigurationError
+
+Raised when a sparse architect builder receives invalid dimensions or
+requests more structural edits than the graph can satisfy.
 
 ### ArchitectZeroInputOutputNodesError
 

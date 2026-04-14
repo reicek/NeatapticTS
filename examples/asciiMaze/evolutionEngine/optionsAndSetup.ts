@@ -24,6 +24,10 @@
 import { Network } from '../../../src/neataptic';
 import { MazeUtils } from '../mazeUtils';
 import { FitnessEvaluator } from '../fitness';
+import {
+  buildExampleArchitectureProfileNetwork,
+  type ExampleArchitectureProfileId,
+} from '../../architectureProfiles';
 import type { IFitnessEvaluationContext } from '../fitness.types';
 import type {
   IEvolutionAlgorithmConfig,
@@ -38,6 +42,7 @@ import type { NeatConfig } from './neatConfiguration';
 interface NormalizedRunOptions {
   mazeConfig?: IMazeConfig;
   agentSimConfig: IFitnessEvaluationContext['agentSimConfig'];
+  architectureProfileId?: ExampleArchitectureProfileId;
   evolutionAlgorithmConfig: IEvolutionAlgorithmConfig;
   reportingConfig: IReportingConfig | Record<string, never>;
   fitnessEvaluator?: IRunMazeEvolutionOptions['fitnessEvaluator'];
@@ -162,6 +167,7 @@ export const normalizeRunOptions = (
   // Step 2: pull algorithm-level settings with clear defaults and descriptive locals.
   const {
     allowRecurrent = true,
+    architectureProfileId,
     popSize = 500,
     maxStagnantGenerations = 500,
     minProgressToPass = 95,
@@ -206,11 +212,19 @@ export const normalizeRunOptions = (
     typeof dynamicPopulationMaxCfg === 'number'
       ? dynamicPopulationMaxCfg
       : Math.max(popSize, 120);
+  const seedNetwork =
+    architectureProfileId === undefined
+      ? undefined
+      : buildExampleArchitectureProfileNetwork(
+          'ascii-maze',
+          architectureProfileId,
+        );
 
   // Step 5: compose the final normalised options object (shape expected by callers).
   const normalizedOptions: NormalizedRunOptions = {
     mazeConfig,
     agentSimConfig,
+    architectureProfileId,
     evolutionAlgorithmConfig,
     reportingConfig,
     fitnessEvaluator: options?.fitnessEvaluator,
@@ -268,6 +282,7 @@ export const normalizeRunOptions = (
         speciesRange: [6, 14],
         smooth: 0.5,
       },
+      network: seedNetwork,
     },
     maze: mazeConfig?.maze,
   };

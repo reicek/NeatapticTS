@@ -51,6 +51,14 @@ export function buildConv1dLayer<TLayer extends LayerFactoryLayer>(
       conv1d: { kernelSize: number; stride: number; padding: number };
     }
   ).conv1d = { kernelSize, stride, padding };
+  layer.describe?.({
+    intent: 'convolution',
+    metadata: { family: 'conv1d', kernelSize, padding, size, stride },
+  });
+  layer.output?.describe({
+    intent: 'convolution',
+    metadata: { family: 'conv1d', kernelSize, padding, size, stride },
+  });
 
   layer.activate = createConv1dActivator(layer, size);
 
@@ -88,6 +96,14 @@ export function buildAttentionLayer<TLayer extends LayerFactoryLayer>(
 ): TLayer {
   const layer = createStubLayer(context, size);
   (layer as unknown as { attention: { heads: number } }).attention = { heads };
+  layer.describe?.({
+    intent: 'attention',
+    metadata: { family: 'attention', heads, size },
+  });
+  layer.output?.describe({
+    intent: 'attention',
+    metadata: { family: 'attention', heads, size },
+  });
 
   layer.activate = createAttentionActivator(layer, size);
 

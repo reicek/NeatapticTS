@@ -17,10 +17,11 @@ Follow these rules:
 - Use the compressed logging convention already established in this repo for long tasks: prefer short pass-style entries that record what changed, what remains, and the next concrete target without replaying full transcript detail.
 - Keep chat communication to brief confirmations and step transitions only. Prefer one or two short sentences when moving to the next step unless the user explicitly asks for more detail.
 - Prefer communicating ongoing work through markdown tracker files instead of chat when the task spans multiple steps.
+- Treat `plans/` as the active tracker surface and `plans/completed/` as the archive for terminally closed tracker baselines and their matching logs.
 - Use `.plans.md` files for work in progress, pending decisions, next steps, and handoff context.
 - Use `.logs.md` files for completed work, concise pass history, and done-state records.
 - When creating or reshaping tracker files, use `tracker-handoff` as the canonical workflow for `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and `Handoff query` structure.
-- When a workstream reaches `[DONE]`, the final tracker step is to compress the completed `.plans.md` into a short closed tracker and add or update a same-boundary `.logs.md` audit record.
+- When a workstream reaches `[DONE]`, the final tracker step is to compress the completed `.plans.md` into a short closed tracker, add or update a same-boundary `.logs.md` audit record, and move both files into `plans/completed/` before beginning the next workstream.
 - Handoff prompts are strict for active trackers and blocker recovery, but omit them for fully closed trackers unless the user explicitly asks for reopen guidance.
 - When both chat and tracker files are available, treat the tracker files as the primary source of detailed continuity and keep chat as a thin status layer.
 
@@ -53,7 +54,7 @@ Current intended ownership split:
 - `tracker-handoff`: canonical workflow for `.plans.md` and `.logs.md`
   structure, `[PLANNED]/[WIP]/[DONE]` status markers, compression,
   active-plan `Handoff query` continuity, and terminal closure into matching
-  `.logs.md` records.
+  `.logs.md` records archived under `plans/completed/`.
 - `Boundary Mapper`: read-only seam mapping and structural handoff into
   `solid-split`.
 - `Docs Scout`: read-only documentation reconnaissance and handoff into
@@ -66,7 +67,7 @@ Use `educational-docs` by default when the task is primarily about documentation
 Use `tracker-handoff` by default when the task includes creating, compressing,
 or updating `.plans.md` or `.logs.md` files, especially when the tracker needs
 safe session continuation via a `Handoff query` section or terminal closure via
-a compressed plan plus matching log.
+a compressed plan plus matching log archived under `plans/completed/`.
 
 For split or refactor work with meaningful documentation scope, let `solid-split` own the boundary work and `educational-docs` own documentation quality.
 

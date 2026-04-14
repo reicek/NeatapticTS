@@ -1,0 +1,721 @@
+import Group from '../group';
+import Layer from '../layer';
+import Node from '../node';
+import Network from '../network';
+import type { NetworkJSON } from '../network/network.types';
+import Architect from './architect';
+import { ArchitectInvalidRandomSparseConfigurationError } from './architect.errors';
+
+type HydratedTemporalExtensionBag = NetworkJSON['extensions'];
+
+function summarizeSparseNetwork(network: Network): {
+  biasSignature: string;
+  connectionSignature: string;
+  gateSignature: string;
+  hiddenNodeCount: number;
+  inputRoleCount: number;
+  outputRoleCount: number;
+  selfConnectionSignature: string;
+} {
+  function resolveConnectionSignature(
+    sourceNode: Network['nodes'][number],
+    targetNode: Network['nodes'][number],
+  ): string {
+    return `${network.nodes.indexOf(sourceNode)}->${network.nodes.indexOf(targetNode)}`;
+  }
+
+  return {
+    biasSignature: network.nodes
+      .map((candidateNode) => candidateNode.bias.toFixed(6))
+      .join(','),
+    connectionSignature: network.connections
+      .map(
+        (candidateConnection) =>
+          `${resolveConnectionSignature(candidateConnection.from, candidateConnection.to)}:${candidateConnection.weight.toFixed(6)}`,
+      )
+      .join(','),
+    gateSignature: network.gates
+      .map(
+        (candidateConnection) =>
+          resolveConnectionSignature(
+            candidateConnection.from,
+            candidateConnection.to,
+          ),
+      )
+      .join(','),
+    hiddenNodeCount: network.nodes.filter(
+      (candidateNode) => candidateNode.type === 'hidden',
+    ).length,
+    inputRoleCount: network.inputNodeIds.length,
+    outputRoleCount: network.outputNodeIds.length,
+    selfConnectionSignature: network.selfconns
+      .map(
+        (candidateConnection) =>
+          `${resolveConnectionSignature(candidateConnection.from, candidateConnection.to)}:${candidateConnection.weight.toFixed(6)}`,
+      )
+      .join(','),
+  };
+}
+
+function createIdentityActivation(): (
+  value: number,
+  derivative?: boolean,
+) => number {
+  return (value, derivative = false) => (derivative ? 1 : value);
+}
+
+function roundNumericSignature(candidateValue: number): number {
+  return Number(candidateValue.toFixed(6));
+}
+
+function collectUniqueRoundedValues(candidateValues: number[]): number[] {
+  return [...new Set(candidateValues.map(roundNumericSignature))].toSorted(
+    (leftValue, rightValue) => leftValue - rightValue,
+  );
+}
+
+function findNetworkNodeByGeneId(network: Network, geneId: number): Node {
+  const resolvedNode = network.nodes.find(
+    (candidateNode) => candidateNode.geneId === geneId,
+  );
+
+  if (!resolvedNode) {
+    throw new Error(`Expected node with gene id ${geneId} to exist.`);
+  }
+
+  return resolvedNode;
+}
+
+function summarizeNarxDelayLines(network: Network): {
+  clearSuggestion: string | null;
+  recurrentKinds: string[];
+  recurrentModuleCount: number;
+  roleSizesPerModule: string[];
+  schedulingStateSemantics: string | null;
+  uniqueActivationSamples: number[];
+  uniqueBiases: number[];
+  uniqueCarryWeights: number[];
+  uniqueDerivativeSamples: number[];
+} {
+  const hydratedExtensions = Reflect.get(
+    network,
+    '_serializedExtensions',
+  ) as HydratedTemporalExtensionBag | undefined;
+  const extensionValues = hydratedExtensions?.values as
+    | {
+        recurrentModules?: Array<{
+          kind?: string;
+          nodeGeneIdsByRole?: Record<string, number[]>;
+        }>;
+      }
+    | undefined;
+  const recurrentModules = Array.isArray(extensionValues?.recurrentModules)
+    ? extensionValues.recurrentModules
+    : [];
+  const narxModules = recurrentModules.filter(
+    (candidateModule): candidateModule is {
+      kind: string;
+      nodeGeneIdsByRole: Record<string, number[]>;
+    } =>
+      candidateModule.kind === 'narx-memory' &&
+      typeof candidateModule.nodeGeneIdsByRole === 'object' &&
+      candidateModule.nodeGeneIdsByRole !== null,
+  );
+  const moduleNodeIds = narxModules.flatMap((candidateModule) =>
+    Object.values(candidateModule.nodeGeneIdsByRole).flatMap(
+      (candidateRoleNodeIds) => candidateRoleNodeIds,
+    ),
+  );
+  const moduleNodeIdSet = new Set(moduleNodeIds);
+  const moduleNodes = [...moduleNodeIdSet].map((geneId) =>
+    findNetworkNodeByGeneId(network, geneId),
+  );
+  const carryWeights = network.connections
+    .filter(
+      (candidateConnection) =>
+        moduleNodeIdSet.has(candidateConnection.from.geneId) &&
+        moduleNodeIdSet.has(candidateConnection.to.geneId),
+    )
+    .map((candidateConnection) => candidateConnection.weight);
+  const schedulingDiagnostics = network.getActivationSchedulingDiagnostics();
+
+  return {
+    clearSuggestion: schedulingDiagnostics.suggestions.at(0) ?? null,
+    recurrentKinds: narxModules
+      .map((candidateModule) => candidateModule.kind)
+      .toSorted(),
+    recurrentModuleCount: narxModules.length,
+    roleSizesPerModule: narxModules
+      .map((candidateModule) =>
+        Object.values(candidateModule.nodeGeneIdsByRole)
+          .map((candidateRoleNodeIds) => candidateRoleNodeIds.length)
+          .join(','),
+      )
+      .toSorted(),
+    schedulingStateSemantics: schedulingDiagnostics.stateSemantics,
+    uniqueActivationSamples: collectUniqueRoundedValues(
+      moduleNodes.map((candidateNode) => candidateNode.squash(0.25)),
+    ),
+    uniqueBiases: collectUniqueRoundedValues(
+      moduleNodes.map((candidateNode) => candidateNode.bias),
+    ),
+    uniqueCarryWeights: collectUniqueRoundedValues(carryWeights),
+    uniqueDerivativeSamples: collectUniqueRoundedValues(
+      moduleNodes.map((candidateNode) => candidateNode.squash(0.25, true)),
+    ),
+  };
+}
+
+function configureNarxClearStateFixture(network: Network): void {
+  network.nodes.forEach((candidateNode) => {
+    if (candidateNode.type === 'input') {
+      return;
+    }
+
+    candidateNode.bias = 0;
+    candidateNode.squash = createIdentityActivation();
+  });
+
+  network.connections.forEach((candidateConnection) => {
+    candidateConnection.weight = 1;
+  });
+}
+
+function resolveNarxBoundaryNodes(network: Network): {
+  delayedInputMemoryNode?: Node;
+  inputMemoryNode: Node;
+  inputNode: Node;
+  outputMemoryNode: Node;
+  outputNode: Node;
+} {
+  const inputNode = network.nodes.find(
+    (candidateNode) => candidateNode.type === 'input',
+  );
+  const outputNode = network.nodes.find(
+    (candidateNode) => candidateNode.type === 'output',
+  );
+
+  if (!inputNode || !outputNode) {
+    throw new Error('Expected NARX fixture to expose one input and one output node.');
+  }
+
+  const inputMemoryNode = network.connections.find(
+    (candidateConnection) =>
+      candidateConnection.from === inputNode &&
+      candidateConnection.to.type === 'variant',
+  )?.to;
+  const outputMemoryNode = network.connections.find(
+    (candidateConnection) =>
+      candidateConnection.from === outputNode &&
+      candidateConnection.to.type === 'variant',
+  )?.to;
+
+  if (!inputMemoryNode || !outputMemoryNode) {
+    throw new Error('Expected NARX fixture to expose both input and output delay lines.');
+  }
+
+  const delayedInputMemoryNode = network.connections.find(
+    (candidateConnection) =>
+      candidateConnection.from === inputMemoryNode &&
+      candidateConnection.to.type === 'variant',
+  )?.to;
+
+  return {
+    delayedInputMemoryNode,
+    inputMemoryNode,
+    inputNode,
+    outputMemoryNode,
+    outputNode,
+  };
+}
+
+function configureNarxRunningTotalPredictor(network: Network): void {
+  const {
+    inputNode,
+    outputMemoryNode,
+    outputNode,
+  } = resolveNarxBoundaryNodes(network);
+
+  network.nodes.forEach((candidateNode) => {
+    if (candidateNode.type === 'input') {
+      return;
+    }
+
+    candidateNode.bias = 0;
+    candidateNode.squash = createIdentityActivation();
+  });
+
+  network.connections.forEach((candidateConnection) => {
+    candidateConnection.weight = 0;
+  });
+
+  const inputToMemoryConnection = network.connections.find(
+    (candidateConnection) =>
+      candidateConnection.from === inputNode &&
+      candidateConnection.to === outputNode,
+  );
+  const outputToMemoryConnection = network.connections.find(
+    (candidateConnection) =>
+      candidateConnection.from === outputNode &&
+      candidateConnection.to === outputMemoryNode,
+  );
+  const outputMemoryToOutputConnection = network.connections.find(
+    (candidateConnection) =>
+      candidateConnection.from === outputMemoryNode &&
+      candidateConnection.to === outputNode,
+  );
+
+  if (
+    !inputToMemoryConnection ||
+    !outputToMemoryConnection ||
+    !outputMemoryToOutputConnection
+  ) {
+    throw new Error('Expected NARX fixture connections needed for the sequence predictor.');
+  }
+
+  inputToMemoryConnection.weight = 1;
+  outputToMemoryConnection.weight = 1;
+  outputMemoryToOutputConnection.weight = 1;
+}
+
+function captureSequenceOutputs(
+  network: Network,
+  inputSequence: number[],
+): number[] {
+  return inputSequence.map((inputValue) => network.activate([inputValue])[0]);
+}
+
+function roundSequenceOutputs(outputSequence: number[]): number[] {
+  return outputSequence.map(roundNumericSignature);
+}
+
+function countDirectInputToOutputConnections(network: Network): number {
+  return network.connections.filter(
+    (candidateConnection) =>
+      candidateConnection.from.type === 'input' &&
+      candidateConnection.to.type === 'output',
+  ).length;
+}
+
+function summarizeHydratedRecurrentExtensions(network: Network): {
+  gatedBlockCount: number;
+  recurrentKinds: string[];
+  recurrentModuleCount: number;
+} {
+  const hydratedExtensions = Reflect.get(
+    network,
+    '_serializedExtensions',
+  ) as HydratedTemporalExtensionBag | undefined;
+  const extensionValues = hydratedExtensions?.values as
+    | {
+        recurrentModules?: Array<{ kind?: string }>;
+        gatedBlocks?: Array<unknown>;
+      }
+    | undefined;
+  const recurrentModules = Array.isArray(extensionValues?.recurrentModules)
+    ? extensionValues.recurrentModules
+    : [];
+  const gatedBlocks = Array.isArray(extensionValues?.gatedBlocks)
+    ? extensionValues.gatedBlocks
+    : [];
+
+  return {
+    gatedBlockCount: gatedBlocks.length,
+    recurrentKinds: recurrentModules
+      .map((candidateModule) => candidateModule.kind)
+      .filter((kind): kind is string => typeof kind === 'string')
+      .toSorted(),
+    recurrentModuleCount: recurrentModules.length,
+  };
+}
+
+function summarizeRecurrentArchitectureBoundary(network: Network): {
+  clearSuggestion: string | null;
+  directInputToOutputConnections: number;
+  gatedBlockCount: number;
+  hasCycles: boolean;
+  recurrentKinds: string[];
+  recurrentModuleCount: number;
+  stateSemantics: string | null;
+  topologyIntent: string;
+} {
+  network.activate(new Array(network.input).fill(0));
+  const schedulingDiagnostics = network.getActivationSchedulingDiagnostics();
+  const hydratedExtensions = summarizeHydratedRecurrentExtensions(network);
+
+  return {
+    clearSuggestion: schedulingDiagnostics.suggestions.at(0) ?? null,
+    directInputToOutputConnections: countDirectInputToOutputConnections(network),
+    gatedBlockCount: hydratedExtensions.gatedBlockCount,
+    hasCycles: network.describeArchitecture().hasCycles,
+    recurrentKinds: hydratedExtensions.recurrentKinds,
+    recurrentModuleCount: hydratedExtensions.recurrentModuleCount,
+    stateSemantics: schedulingDiagnostics.stateSemantics,
+    topologyIntent: network.getTopologyIntent(),
+  };
+}
+
+function createConstructedPerceptronEquivalent(): Network {
+  const leftSensor = new Node('input');
+  const rightSensor = new Node('input');
+  const hiddenStage = new Group(3);
+  const readoutLayer = Layer.dense(1, 'output');
+  const readoutNode = readoutLayer.nodes[0];
+
+  leftSensor.describe({ label: 'leftSensor' });
+  rightSensor.describe({ label: 'rightSensor' });
+  readoutNode.describe({ label: 'readout' });
+
+  leftSensor.connect(hiddenStage);
+  rightSensor.connect(hiddenStage);
+  hiddenStage.connect(readoutLayer);
+
+  return Network.construct(
+    [hiddenStage, rightSensor, readoutLayer, leftSensor],
+    {
+      inputNodes: ['leftSensor', 'rightSensor'],
+      outputNodes: ['readout'],
+    },
+  ).network;
+}
+
+describe('Architect', () => {
+  describe('perceptron()', () => {
+    describe('given input, hidden, and output sizes', () => {
+      describe('when constructing the network', () => {
+        it('preserves explicit input and output role counts', () => {
+          // Arrange
+          const network = Architect.perceptron(2, 3, 1);
+
+          // Act
+          const roleCounts = {
+            inputNodeIds: network.inputNodeIds.length,
+            outputNodeIds: network.outputNodeIds.length,
+            inputNodes: network.nodes.filter((node) => node.type === 'input').length,
+            outputNodes: network.nodes.filter((node) => node.type === 'output').length,
+          };
+
+          // Assert
+          expect(roleCounts).toStrictEqual({
+            inputNodeIds: 2,
+            outputNodeIds: 1,
+            inputNodes: 2,
+            outputNodes: 1,
+          });
+        });
+      });
+    });
+
+    describe('given one construct-built feed-forward graph matches the builder width', () => {
+      describe('when comparing the public architecture contract', () => {
+        it('stays interoperable with the preconfigured builder surface', () => {
+          // Arrange
+          const builderNetwork = Architect.perceptron(2, 3, 1);
+          const constructedNetwork = createConstructedPerceptronEquivalent();
+
+          // Act
+          const actualArchitectureBoundarySummary = {
+            builder: {
+              topologyIntent: builderNetwork.getTopologyIntent(),
+              inputNodeIds: builderNetwork.inputNodeIds.length,
+              outputNodeIds: builderNetwork.outputNodeIds.length,
+              hiddenLayerSizes: builderNetwork.describeArchitecture().hiddenLayerSizes,
+              hasCycles: builderNetwork.describeArchitecture().hasCycles,
+            },
+            constructed: {
+              topologyIntent: constructedNetwork.getTopologyIntent(),
+              inputNodeIds: constructedNetwork.inputNodeIds.length,
+              outputNodeIds: constructedNetwork.outputNodeIds.length,
+              hiddenLayerSizes: constructedNetwork.describeArchitecture().hiddenLayerSizes,
+              hasCycles: constructedNetwork.describeArchitecture().hasCycles,
+            },
+          };
+
+          // Assert
+          expect(actualArchitectureBoundarySummary).toStrictEqual({
+            builder: {
+              topologyIntent: 'feed-forward',
+              inputNodeIds: 2,
+              outputNodeIds: 1,
+              hiddenLayerSizes: [3],
+              hasCycles: false,
+            },
+            constructed: {
+              topologyIntent: 'feed-forward',
+              inputNodeIds: 2,
+              outputNodeIds: 1,
+              hiddenLayerSizes: [3],
+              hasCycles: false,
+            },
+          });
+        });
+      });
+    });
+  });
+
+  describe('randomSparse()', () => {
+    describe('given valid sparse builder sizes', () => {
+      describe('when constructing the network', () => {
+        it('preserves explicit input and output role counts', () => {
+          // Arrange
+          const network = Architect.randomSparse(2, 3, 1);
+
+          // Act
+          const roleCounts = {
+            inputNodeIds: network.inputNodeIds.length,
+            outputNodeIds: network.outputNodeIds.length,
+            inputNodes: network.nodes.filter((node) => node.type === 'input').length,
+            outputNodes: network.nodes.filter((node) => node.type === 'output').length,
+          };
+
+          // Assert
+          expect(roleCounts).toStrictEqual({
+            inputNodeIds: 2,
+            outputNodeIds: 1,
+            inputNodes: 2,
+            outputNodes: 1,
+          });
+        });
+      });
+    });
+
+    describe('given two sparse builder requests share the same seed', () => {
+      describe('when constructing both networks', () => {
+        it('replays the same sparse topology and parameter signatures', () => {
+          // Arrange
+          const firstNetwork = Architect.randomSparse(2, 4, 1, {
+            connections: 8,
+            backConnections: 1,
+            selfConnections: 1,
+            gates: 1,
+            seed: 31415,
+          });
+          const secondNetwork = Architect.randomSparse(2, 4, 1, {
+            connections: 8,
+            backConnections: 1,
+            selfConnections: 1,
+            gates: 1,
+            seed: 31415,
+          });
+
+          // Act
+          const sparseSignatures = {
+            first: summarizeSparseNetwork(firstNetwork),
+            second: summarizeSparseNetwork(secondNetwork),
+          };
+
+          // Assert
+          expect(sparseSignatures.first).toStrictEqual(sparseSignatures.second);
+        });
+      });
+    });
+
+    describe('given the legacy random wrapper uses the same sparse request and seed', () => {
+      describe('when constructing both compatibility surfaces', () => {
+        it('preserves the seeded sparse builder contract', () => {
+          // Arrange
+          const legacyNetwork = Architect.random(2, 4, 1, {
+            connections: 8,
+            backconnections: 1,
+            selfconnections: 1,
+            gates: 1,
+            seed: 27182,
+          });
+          const sparseNetwork = Architect.randomSparse(2, 4, 1, {
+            connections: 8,
+            backConnections: 1,
+            selfConnections: 1,
+            gates: 1,
+            seed: 27182,
+          });
+
+          // Act
+          const contractSummary = {
+            legacy: summarizeSparseNetwork(legacyNetwork),
+            sparse: summarizeSparseNetwork(sparseNetwork),
+          };
+
+          // Assert
+          expect(contractSummary.legacy).toStrictEqual(contractSummary.sparse);
+        });
+      });
+    });
+
+    describe('given an impossible forward-connection request', () => {
+      describe('when constructing the network', () => {
+        it('throws a clear sparse-builder configuration error', () => {
+          // Arrange
+          const createNetwork = () =>
+            Architect.randomSparse(1, 0, 1, { connections: 2 });
+
+          // Assert
+          expect(createNetwork).toThrow(
+            ArchitectInvalidRandomSparseConfigurationError,
+          );
+        });
+      });
+    });
+  });
+
+  describe('narx()', () => {
+    describe('given explicit input and output delay lines', () => {
+      describe('when constructing the network', () => {
+        it('hydrates identity delay blocks with unit carry links and clear-state guidance', () => {
+          // Arrange
+          const network = Architect.narx(1, 2, 1, 2, 2);
+
+          // Act
+          network.activate([0]);
+          const delayLineSummary = summarizeNarxDelayLines(network);
+
+          // Assert
+          expect(delayLineSummary).toStrictEqual({
+            clearSuggestion:
+              'Call clear() before a new independent sequence when carried recurrent state should reset.',
+            recurrentKinds: ['narx-memory', 'narx-memory'],
+            recurrentModuleCount: 2,
+            roleSizesPerModule: ['1,1', '1,1'],
+            schedulingStateSemantics: 'carry',
+            uniqueActivationSamples: [0.25],
+            uniqueBiases: [0],
+            uniqueCarryWeights: [1],
+            uniqueDerivativeSamples: [1],
+          });
+        });
+      });
+    });
+
+    describe('given one NARX delay line is configured as a running-total predictor', () => {
+      describe('when one short independent sequence is activated after clear()', () => {
+        it('predicts the carried running total across the sequence', () => {
+          // Arrange
+          const network = Architect.narx(1, 0, 1, 1, 1);
+          const inputSequence = [0.2, 0.7, 0.4];
+
+          configureNarxRunningTotalPredictor(network);
+
+          // Act
+          network.clear();
+          const predictedSequence = roundSequenceOutputs(
+            captureSequenceOutputs(network, inputSequence),
+          );
+
+          // Assert
+          expect(predictedSequence).toStrictEqual([0.2, 0.9, 1.3]);
+        });
+      });
+    });
+
+    describe('given one NARX runtime replays the same sequence twice', () => {
+      describe('when clear() is only called before the third replay', () => {
+        it('resets the carried delay-line state before the next independent sequence starts', () => {
+          // Arrange
+          const network = Architect.narx(1, 0, 1, 1, 1);
+          const inputSequence = [1, 0, 0];
+
+          configureNarxClearStateFixture(network);
+
+          const firstReplay = roundSequenceOutputs(
+            captureSequenceOutputs(network, inputSequence),
+          );
+          const carriedReplay = roundSequenceOutputs(
+            captureSequenceOutputs(network, inputSequence),
+          );
+
+          // Act
+          network.clear();
+          const clearedReplay = roundSequenceOutputs(
+            captureSequenceOutputs(network, inputSequence),
+          );
+
+          // Assert
+          expect({
+            carriedFirstOutputChanged: carriedReplay[0] !== firstReplay[0],
+            clearedReplayMatchesInitial:
+              clearedReplay.join(',') === firstReplay.join(','),
+          }).toStrictEqual({
+            carriedFirstOutputChanged: true,
+            clearedReplayMatchesInitial: true,
+          });
+        });
+      });
+    });
+  });
+
+  describe('lstm()', () => {
+    describe('given the direct input-to-output shortcut is disabled', () => {
+      describe('when constructing the network', () => {
+        it('keeps the recurrent descriptor boundary without the shortcut edge', () => {
+          // Arrange
+          const network = Architect.lstm(2, 3, 1, { inputToOutput: false });
+
+          // Act
+          const recurrentSummary = summarizeRecurrentArchitectureBoundary(
+            network,
+          );
+
+          // Assert
+          expect(recurrentSummary).toStrictEqual({
+            clearSuggestion:
+              'Call clear() before a new independent sequence when carried recurrent state should reset.',
+            directInputToOutputConnections: 0,
+            gatedBlockCount: 1,
+            hasCycles: false,
+            recurrentKinds: ['lstm'],
+            recurrentModuleCount: 1,
+            stateSemantics: 'carry',
+            topologyIntent: 'unconstrained',
+          });
+        });
+      });
+    });
+  });
+
+  describe('gru()', () => {
+    describe('given the direct input-to-output shortcut is toggled', () => {
+      describe('when constructing the network', () => {
+        it('adds the shortcut only for the enabled builder request', () => {
+          // Arrange
+          const disabledNetwork = Architect.gru(2, 3, 1, {
+            inputToOutput: false,
+          });
+          const enabledNetwork = Architect.gru(2, 3, 1, {
+            inputToOutput: true,
+          });
+
+          // Act
+          const recurrentBoundarySummary = {
+            disabled: summarizeRecurrentArchitectureBoundary(disabledNetwork),
+            enabled: summarizeRecurrentArchitectureBoundary(enabledNetwork),
+          };
+
+          // Assert
+          expect(recurrentBoundarySummary).toStrictEqual({
+            disabled: {
+              clearSuggestion:
+                'Call clear() before a new independent sequence when carried recurrent state should reset.',
+              directInputToOutputConnections: 0,
+              gatedBlockCount: 1,
+              hasCycles: true,
+              recurrentKinds: ['gru'],
+              recurrentModuleCount: 1,
+              stateSemantics: 'carry',
+              topologyIntent: 'unconstrained',
+            },
+            enabled: {
+              clearSuggestion:
+                'Call clear() before a new independent sequence when carried recurrent state should reset.',
+              directInputToOutputConnections: 2,
+              gatedBlockCount: 1,
+              hasCycles: true,
+              recurrentKinds: ['gru'],
+              recurrentModuleCount: 1,
+              stateSemantics: 'carry',
+              topologyIntent: 'unconstrained',
+            },
+          });
+        });
+      });
+    });
+  });
+});

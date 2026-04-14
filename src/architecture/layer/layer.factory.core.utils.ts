@@ -1,5 +1,9 @@
 import type Connection from '../connection/connection';
 import Group from '../group/group';
+import {
+  type PrimitiveNodeType,
+  resolvePrimitiveIntent,
+} from '../node/node';
 import * as methods from '../../methods/methods';
 import type {
   LayerFactoryContext,
@@ -22,6 +26,7 @@ const DEFAULT_GROUP_CONNECTION_METHOD = methods.groupConnection.ALL_TO_ALL;
  *
  * @param context Factory helpers for constructing the layer instance.
  * @param size Number of nodes to create in the dense layer.
+ * @param nodeType Optional primitive role assigned to every allocated node.
  * @returns The configured layer instance.
  *
  * Example:
@@ -37,9 +42,19 @@ const DEFAULT_GROUP_CONNECTION_METHOD = methods.groupConnection.ALL_TO_ALL;
 export function buildDenseLayer<TLayer extends LayerFactoryLayer>(
   context: LayerFactoryContext<TLayer>,
   size: number,
+  nodeType: PrimitiveNodeType = 'hidden',
 ): TLayer {
   const layer = context.createLayer();
-  const block = new Group(size);
+  const block = new Group(size, nodeType);
+
+   block.describe({
+    intent: resolvePrimitiveIntent(nodeType),
+    metadata: { family: 'dense', size },
+  });
+  layer.describe?.({
+    intent: resolvePrimitiveIntent(nodeType),
+    metadata: { family: 'dense', size },
+  });
 
   layer.nodes.push(...block.nodes);
   layer.output = block;

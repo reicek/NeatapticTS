@@ -26,6 +26,7 @@ import {
   propagateNodesInReverse,
 } from './layer.propagation.utils';
 import { buildDenseLayer } from './layer.factory.core.utils';
+import type { PrimitiveNodeType } from '../node/node';
 import {
   buildGruLayer,
   buildLstmLayer,
@@ -252,6 +253,7 @@ export function clearLayer(context: LayerConnectionContext): void {
  *
  * @param context Factory helpers for constructing the layer instance.
  * @param size Number of nodes in the dense layer.
+ * @param nodeType Optional primitive role assigned to the dense block.
  * @returns The configured layer instance.
  * Example:
  *
@@ -262,9 +264,10 @@ export function clearLayer(context: LayerConnectionContext): void {
 export function createDenseLayer<TLayer extends LayerFactoryLayer>(
   context: LayerFactoryContext<TLayer>,
   size: number,
+  nodeType: PrimitiveNodeType = 'hidden',
 ): TLayer {
   // Step 1: Delegate dense layer creation to the focused helper implementation.
-  return buildDenseLayer(context, size);
+  return buildDenseLayer(context, size, nodeType);
 }
 
 /**
