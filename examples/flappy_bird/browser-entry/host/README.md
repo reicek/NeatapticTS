@@ -19,6 +19,7 @@ hand the runtime narrow handles for drawing and HUD updates.
 ```ts
 createCanvasHost(
   containerElement: HTMLElement,
+  options: CanvasHostOptions,
 ): CanvasHostResult
 ```
 
@@ -36,6 +37,7 @@ Returns: Canvas handles, stats cells and network render callback.
 ```ts
 createCanvasHostInternal(
   containerElement: HTMLElement,
+  options: CanvasHostOptions,
 ): CanvasHostResult
 ```
 
@@ -154,6 +156,7 @@ mountCanvasHostTree(
   headerCanvas: HTMLCanvasElement,
   canvas: HTMLCanvasElement,
   networkCanvas: HTMLCanvasElement,
+  architectureSelectorElement: HTMLDivElement,
 ): void
 ```
 
@@ -243,12 +246,24 @@ Public type contracts for the browser-entry host boundary.
 These types describe what the host builder returns to the runtime and how HUD
 value updates are represented once the UI tree exists.
 
+### CanvasHostOptions
+
+Browser host callback bundle used by the architecture selector control group.
+
 ### CanvasHostResult
 
 Result payload returned after constructing the browser host UI tree.
 
 This is the runtime's handle into the rendered browser shell: the main canvas,
 its 2D context, the stats-cell lookup, and the network-panel draw callback.
+
+### HostArchitectureSelectorController
+
+Imperative controller returned by the host architecture selector service.
+
+### HostArchitectureSelectorItem
+
+Render-ready button state for one Flappy architecture profile selector item.
 
 ### HostStatsPartialValues
 
@@ -415,7 +430,9 @@ Creates the host stats table, appends it into the provided host element, and
 initializes all HUD values to their baseline placeholders.
 
 The initial placeholders make the HUD legible before the first generation or
-playback frame has been processed.
+playback frame has been processed: live counters start at zero, generation
+summary metrics wait on worker playback completion, and instrumentation rows
+stay explicit about whether runtime telemetry is enabled.
 
 Parameters:
 - `statsTableHost` - DOM host that receives the table.
@@ -478,3 +495,128 @@ Parameters:
 - `onNetworkResize` - Callback after network resize.
 
 Returns: Nothing.
+
+## browser-entry/host/host.network-tooltip.service.ts
+
+### HostCanvasPointLike
+
+Canvas-space point used when resolving network tooltip targets.
+
+### NetworkVisualizationTooltipScene
+
+Tooltip scene model resolved from the hovered network overlay target.
+
+### resolveHoveredNetworkVisualizationTooltipScene
+
+```ts
+resolveHoveredNetworkVisualizationTooltipScene(
+  canvasPoint: HostCanvasPointLike,
+  positionedScene: NetworkVisualizationPositionedScene,
+): NetworkVisualizationTooltipScene | undefined
+```
+
+Resolves the educational tooltip scene for the current hovered network overlay target.
+
+Input descriptions and input nodes intentionally share the same tooltip copy,
+while semantic group bands resolve a broader group-level teaching tooltip.
+
+Parameters:
+- `canvasPoint` - Hover point in network-canvas coordinates.
+- `positionedScene` - Rendered positioned scene reused for hover hit testing.
+
+Returns: Tooltip scene model for the hovered overlay target.
+
+## browser-entry/host/host.architecture-selector.service.ts
+
+### applyArchitectureSelectorButtonPresentation
+
+```ts
+applyArchitectureSelectorButtonPresentation(
+  buttonElement: HTMLButtonElement,
+  selectorItem: HostArchitectureSelectorItem,
+  disabled: boolean,
+  hovered: boolean,
+): void
+```
+
+Applies the neon-outline presentation for one architecture selector button.
+
+Parameters:
+- `buttonElement` - Target button element.
+- `selectorItem` - Render-ready selector state.
+- `disabled` - Whether the selector is disabled.
+- `hovered` - Whether the pointer is currently hovering the button.
+
+Returns: Nothing.
+
+### createArchitectureSelectorItemElement
+
+```ts
+createArchitectureSelectorItemElement(
+  selectorItem: HostArchitectureSelectorItem,
+  disabled: boolean,
+  onClick: () => void,
+): HTMLDivElement
+```
+
+Creates one selector item element with hover glow and optional best-score caption.
+
+Parameters:
+- `selectorItem` - Render-ready button state.
+- `disabled` - Whether the selector is temporarily disabled.
+- `onClick` - Click callback invoked for fresh-run selection.
+
+Returns: Rendered selector item wrapper.
+
+### createArchitectureSelectorTooltipElement
+
+```ts
+createArchitectureSelectorTooltipElement(
+  selectorItem: HostArchitectureSelectorItem,
+): HTMLDivElement
+```
+
+Creates the neon tooltip shown above one architecture selector button.
+
+Parameters:
+- `selectorItem` - Render-ready selector item with heading and teaching copy.
+
+Returns: Tooltip element positioned above the button.
+
+### createHostArchitectureSelector
+
+```ts
+createHostArchitectureSelector(
+  options: CanvasHostOptions,
+): HostArchitectureSelectorController
+```
+
+Creates the Flappy architecture selector control group used in the browser HUD.
+
+The selector is intentionally presentation-only. It renders the current shared
+architecture profiles, exposes a narrow click callback, and lets the runtime
+update local-record captions without rebuilding the whole host tree.
+
+Parameters:
+- `options` - Initial selector items and restart callback.
+
+Returns: Imperative controller for selector item and disabled-state updates.
+
+### resolveArchitectureSelectorBoxShadow
+
+```ts
+resolveArchitectureSelectorBoxShadow(
+  selected: boolean,
+  hovered: boolean,
+  hoverGlowColor: string,
+): string
+```
+
+Resolves the neon glow stack for the architecture selector button state.
+
+Parameters:
+- `selected` - Whether the button is the active profile.
+- `hovered` - Whether the button is hovered.
+- `hoverGlowColor` - Primary glow color for the current button state.
+
+Returns: CSS box-shadow string.

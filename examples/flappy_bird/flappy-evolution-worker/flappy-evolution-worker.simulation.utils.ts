@@ -57,16 +57,22 @@ export function createWorkerPopulationRenderState(
     initialDifficultyProfile,
   );
 
-  const birds = networks.map((network) => ({
-    network,
-    observationMemoryState: createSharedObservationMemoryState(),
-    yPx: initialVisibleWorldHeightPx * 0.5,
-    velocityYPxPerFrame: 0,
-    pipesPassed: 0,
-    framesSurvived: 0,
-    passedPipeIds: new Set<number>(),
-    done: false,
-  }));
+  const birds = networks.map((network) => {
+    // Step 1: Reset carried state before the browser starts a fresh playback session.
+    network.clear?.();
+
+    // Step 2: Seed fresh per-bird world and observation-memory state.
+    return {
+      network,
+      observationMemoryState: createSharedObservationMemoryState(),
+      yPx: initialVisibleWorldHeightPx * 0.5,
+      velocityYPxPerFrame: 0,
+      pipesPassed: 0,
+      framesSurvived: 0,
+      passedPipeIds: new Set<number>(),
+      done: false,
+    };
+  });
 
   return {
     frameIndex: 0,

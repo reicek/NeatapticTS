@@ -120,7 +120,20 @@ export function appendJsonForwardConnections(
     const sourceIndex = asNodeInternals(connectionInstance.from).index;
     const targetIndex = asNodeInternals(connectionInstance.to).index;
 
-    if (!isFiniteIndex(sourceIndex) || !isFiniteIndex(targetIndex)) {
+    if (
+      !isFiniteIndex(sourceIndex) ||
+      !isFiniteIndex(targetIndex) ||
+      !isCurrentJsonEndpoint(
+        networkInternals.nodes,
+        connectionInstance.from,
+        sourceIndex,
+      ) ||
+      !isCurrentJsonEndpoint(
+        networkInternals.nodes,
+        connectionInstance.to,
+        targetIndex,
+      )
+    ) {
       return;
     }
 
@@ -132,6 +145,25 @@ export function appendJsonForwardConnections(
       ),
     );
   });
+}
+
+/**
+ * Validates that one serialized endpoint still points at the canonical node table.
+ *
+ * @param nodes - Canonical node table being serialized.
+ * @param endpointNode - Connection endpoint node reference.
+ * @param endpointIndex - Endpoint index stored on the node internals.
+ * @returns True when the endpoint still belongs to the canonical node table.
+ */
+function isCurrentJsonEndpoint(
+  nodes: Node[],
+  endpointNode: Node,
+  endpointIndex: number,
+): boolean {
+  return (
+    isNodeIndexInBounds(nodes, endpointIndex) &&
+    nodes[endpointIndex] === endpointNode
+  );
 }
 
 /**

@@ -130,6 +130,28 @@ Default population size for browser playback worker initialization.
 The browser default stays intentionally small so the interactive demo remains
 responsive and each generation is easy to inspect during playback.
 
+### FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_ELITISM_COUNT
+
+Reduced browser elitism count paired with the post-success population downshift.
+
+Two elites keep a small continuity shelf while still leaving most of the
+reduced flock available for visible variation.
+
+### FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE
+
+Reduced browser population size used after a live run has already hit the success bar.
+
+The downshift keeps later browser generations cheaper once an architecture is
+already demonstrating stable pipe-clearing behavior.
+
+### FLAPPY_BROWSER_SUCCESS_PIPE_TARGET
+
+Pipe-count milestone that marks a browser run as "good enough" to downshift.
+
+Once a generation clears this bar, future browser generations can shrink to a
+lighter flock without losing the core demonstration that the selected
+architecture is already solving pipes in the live demo.
+
 ### FLAPPY_CENTER_BLUE_RAMP
 
 Neutral-center blue ramp for near-zero diverging tiers.
@@ -177,6 +199,13 @@ sustain long runs without additional spacing compression.
 ### FLAPPY_EMULATION_SPEED_MULTIPLIER
 
 Emulation speed multiplier for browser playback (1.5 => 50% faster).
+
+### FLAPPY_ENABLE_RECURRENT_DEBUG_LOGS
+
+Enables recurrent-profile debug logging for temporary browser worker investigations.
+
+Keep this disabled during normal demo runs so the browser console stays clean.
+Re-enable it only for short-lived recurrent debugging passes.
 
 ### FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION
 
@@ -318,6 +347,10 @@ Initial status text displayed before evolution starts.
 
 Shared HUD value when a metric is intentionally disabled.
 
+### FLAPPY_HUD_PLACEHOLDER_TEXT
+
+Shared HUD value for metrics that are not available yet.
+
 ### FLAPPY_HUD_UPDATE_INTERVAL_FRAMES
 
 Update HUD counters every N simulation frames to reduce DOM churn.
@@ -380,7 +413,10 @@ runtime and keeps evolution throughput predictable.
 
 ### FLAPPY_MEMORY_ACTION_WINDOW_STEPS
 
-Number of past actions retained for the action-memory channel.
+Size of the legacy action-history buffer.
+
+This stays at zero so no controller receives hand-authored action memory on
+top of its learned state.
 
 ### FLAPPY_MEMORY_CORE_FEATURE_COUNT
 
@@ -388,7 +424,11 @@ Number of core per-frame observation features retained for temporal stacking.
 
 ### FLAPPY_MEMORY_STACKED_FRAME_COUNT
 
-Number of temporal frames included in the stacked observation window.
+Effective controller frame count kept in the external observation window.
+
+All Flappy architectures now consume only the current normalized frame so
+recurrent profiles are not double-fed with both built-in state and a
+hand-authored temporal stack.
 
 ### FLAPPY_MIN_CLEARANCE_MARGIN_PX
 
@@ -486,9 +526,69 @@ Hidden-node stroke color.
 
 Prefix used when hidden-layer counts are inferred rather than declared.
 
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_CHARACTER_WIDTH_PX
+
+Approximate monospace character width used to size the input-description column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX
+
+Minimum vertical gap kept between adjacent input-description chip outlines.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FILL_COLOR
+
+Background fill used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_SIZE_PX
+
+Font size used for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_WEIGHT
+
+Font weight used for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX
+
+Horizontal gap between the input-description column and the input-node column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_LINE_HEIGHT_PX
+
+Vertical distance between wrapped input-description lines.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_HEIGHT_PX
+
+Minimum visual height reserved for one input-description hover row.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_WIDTH_PX
+
+Minimum reserved width for the input-description column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_RADIUS_PX
+
+Corner radius used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_COLOR
+
+Outline color for horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_WIDTH_PX
+
+Stroke width used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_COLOR
+
+Text color for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_PADDING_PX
+
+Inner left padding used by the input-description text column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_VERTICAL_PADDING_PX
+
+Inner vertical padding used by outlined input-description chips.
+
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX
 
-Horizontal gap between input-node column and vertical group label band.
+Horizontal gap between the vertical group-band column and the input-description column.
 
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX
 
@@ -502,6 +602,10 @@ Font size used for vertical input-group label text.
 
 Font weight used for vertical input-group label text.
 
+### FLAPPY_NETWORK_INPUT_GROUP_LABEL_LINE_HEIGHT_PX
+
+Vertical distance between wrapped input-group label lines.
+
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX
 
 Minimum visual height for any input-group label band.
@@ -514,9 +618,21 @@ Corner radius used by input-group label band backgrounds.
 
 Text color for vertical input-group labels on neon backgrounds.
 
+### FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX
+
+Inner vertical padding applied to each semantic input group block.
+
+### FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX
+
+Vertical gap kept between adjacent semantic input groups.
+
 ### FLAPPY_NETWORK_INPUT_LAYER_TARGET_GAP_PX
 
 Preferred vertical spacing between input-layer nodes.
+
+### FLAPPY_NETWORK_INPUT_OVERLAY_FOCUS_STROKE_WIDTH_PX
+
+Stroke width used when an input overlay element is actively hovered.
 
 ### FLAPPY_NETWORK_INPUT_SIZE
 
@@ -1011,7 +1127,7 @@ Stats keys whose values should render multi-line architecture content.
 
 ### FLAPPY_STATS_KEYS
 
-Ordered keys for the runtime stats table.
+Ordered keys for the runtime stats table in rendered top-to-bottom order.
 
 ### FLAPPY_STATS_ROWS
 
@@ -1226,6 +1342,13 @@ Fixed horizontal position of the bird (pixels).
 
 A fixed x-anchor turns the task into primarily vertical control while pipes
 move left, making policy behavior easier to visualize and debug.
+
+### FLAPPY_ENABLE_RECURRENT_DEBUG_LOGS
+
+Enables recurrent-profile debug logging for temporary browser worker investigations.
+
+Keep this disabled during normal demo runs so the browser console stays clean.
+Re-enable it only for short-lived recurrent debugging passes.
 
 ### FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION
 
@@ -1486,7 +1609,10 @@ used when seeding agents for evolution.
 
 ### FLAPPY_MEMORY_ACTION_WINDOW_STEPS
 
-Number of past actions retained for the action-memory channel.
+Size of the legacy action-history buffer.
+
+This stays at zero so no controller receives hand-authored action memory on
+top of its learned state.
 
 ### FLAPPY_MEMORY_CORE_FEATURE_COUNT
 
@@ -1494,7 +1620,11 @@ Number of core per-frame observation features retained for temporal stacking.
 
 ### FLAPPY_MEMORY_STACKED_FRAME_COUNT
 
-Number of temporal frames included in the stacked observation window.
+Effective controller frame count kept in the external observation window.
+
+All Flappy architectures now consume only the current normalized frame so
+recurrent profiles are not double-fed with both built-in state and a
+hand-authored temporal stack.
 
 ### FLAPPY_NETWORK_HIDDEN_LAYER_SIZES
 
@@ -1590,6 +1720,28 @@ Default population size for browser playback worker initialization.
 The browser default stays intentionally small so the interactive demo remains
 responsive and each generation is easy to inspect during playback.
 
+### FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_ELITISM_COUNT
+
+Reduced browser elitism count paired with the post-success population downshift.
+
+Two elites keep a small continuity shelf while still leaving most of the
+reduced flock available for visible variation.
+
+### FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE
+
+Reduced browser population size used after a live run has already hit the success bar.
+
+The downshift keeps later browser generations cheaper once an architecture is
+already demonstrating stable pipe-clearing behavior.
+
+### FLAPPY_BROWSER_SUCCESS_PIPE_TARGET
+
+Pipe-count milestone that marks a browser run as "good enough" to downshift.
+
+Once a generation clears this bar, future browser generations can shrink to a
+lighter flock without losing the core demonstration that the selected
+architecture is already solving pipes in the live demo.
+
 ### FLAPPY_DEFAULT_RNG_SEED
 
 Deterministic default RNG seed shared by browser runtime and trainer flows.
@@ -1620,6 +1772,10 @@ Initial status text displayed before evolution starts.
 ### FLAPPY_HUD_OFF_TEXT
 
 Shared HUD value when a metric is intentionally disabled.
+
+### FLAPPY_HUD_PLACEHOLDER_TEXT
+
+Shared HUD value for metrics that are not available yet.
 
 ### FLAPPY_HUD_UPDATE_INTERVAL_FRAMES
 
@@ -1801,8 +1957,9 @@ Vertical layout gutter between stats panel and simulation canvas.
 
 Browser HUD stats table constants.
 
-This module defines table ordering, hidden groups, and row metadata for the
-runtime status panel shown during playback.
+This module defines the teaching layout for the browser HUD: a live
+current-run block, a generation-summary block fed by worker-side aggregates,
+and an optional instrumentation block for runtime diagnostics.
 
 ### FLAPPY_INSTRUMENTATION_STATS_KEYS
 
@@ -1818,7 +1975,7 @@ Stats keys whose values should render multi-line architecture content.
 
 ### FLAPPY_STATS_KEYS
 
-Ordered keys for the runtime stats table.
+Ordered keys for the runtime stats table in rendered top-to-bottom order.
 
 ### FLAPPY_STATS_ROWS
 
@@ -2217,9 +2374,69 @@ Separator used between hidden-layer sizes inside architecture labels.
 
 Prefix used when hidden-layer counts are inferred rather than declared.
 
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_CHARACTER_WIDTH_PX
+
+Approximate monospace character width used to size the input-description column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX
+
+Minimum vertical gap kept between adjacent input-description chip outlines.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FILL_COLOR
+
+Background fill used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_SIZE_PX
+
+Font size used for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_WEIGHT
+
+Font weight used for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX
+
+Horizontal gap between the input-description column and the input-node column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_LINE_HEIGHT_PX
+
+Vertical distance between wrapped input-description lines.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_HEIGHT_PX
+
+Minimum visual height reserved for one input-description hover row.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_WIDTH_PX
+
+Minimum reserved width for the input-description column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_RADIUS_PX
+
+Corner radius used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_COLOR
+
+Outline color for horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_WIDTH_PX
+
+Stroke width used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_COLOR
+
+Text color for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_PADDING_PX
+
+Inner left padding used by the input-description text column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_VERTICAL_PADDING_PX
+
+Inner vertical padding used by outlined input-description chips.
+
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX
 
-Horizontal gap between input-node column and vertical group label band.
+Horizontal gap between the vertical group-band column and the input-description column.
 
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX
 
@@ -2233,6 +2450,10 @@ Font size used for vertical input-group label text.
 
 Font weight used for vertical input-group label text.
 
+### FLAPPY_NETWORK_INPUT_GROUP_LABEL_LINE_HEIGHT_PX
+
+Vertical distance between wrapped input-group label lines.
+
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX
 
 Minimum visual height for any input-group label band.
@@ -2245,9 +2466,21 @@ Corner radius used by input-group label band backgrounds.
 
 Text color for vertical input-group labels on neon backgrounds.
 
+### FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX
+
+Inner vertical padding applied to each semantic input group block.
+
+### FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX
+
+Vertical gap kept between adjacent semantic input groups.
+
 ### FLAPPY_NETWORK_INPUT_LAYER_TARGET_GAP_PX
 
 Preferred vertical spacing between input-layer nodes.
+
+### FLAPPY_NETWORK_INPUT_OVERLAY_FOCUS_STROKE_WIDTH_PX
+
+Stroke width used when an input overlay element is actively hovered.
 
 ### FLAPPY_NETWORK_LAYER_COMPLEXITY_BASELINE_COUNT
 

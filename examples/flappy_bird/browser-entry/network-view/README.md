@@ -75,7 +75,7 @@ Returns: Positioned node snapshot reused by host-side hover hit testing.
 Example:
 
 ```ts
-drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
+drawNetworkVisualization(networkContext, bestNetwork, 12, 2);
 ```
 
 ### drawPositionedNetworkGraph
@@ -194,7 +194,10 @@ Returns: Adjusted graph padding context.
 ### resolveBaseGraphPaddingContext
 
 ```ts
-resolveBaseGraphPaddingContext(): NetworkGraphPaddingContext
+resolveBaseGraphPaddingContext(
+  hideNetworkOverlays: boolean,
+  inputNodeCount: number,
+): NetworkGraphPaddingContext
 ```
 
 Resolves the base graph padding before legend-aware adjustments are applied.
@@ -348,7 +351,7 @@ Returns: Recommended height in pixels.
 Example:
 
 ```ts
-const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
+const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 12, 2);
 ```
 
 ### resolveNetworkVisualizationScene
@@ -498,9 +501,9 @@ Returns: True when overlays should be hidden.
 
 Shared type contracts for network-view overlays.
 
-The most notable overlay is the input-group label band system, which annotates
-stacked temporal observation channels so the input layer reads as grouped
-semantics instead of a flat strip of anonymous nodes.
+The most notable overlays are the input-group label bands and the per-input
+row descriptions. Together they turn the Flappy input shelf back into a
+readable teaching surface instead of a flat strip of anonymous nodes.
 
 ### InputGroupLabelBand
 
@@ -508,6 +511,13 @@ Input-group label band geometry and style contract.
 
 Each band identifies a contiguous span of input nodes and the visual style
 used to render that group marker.
+
+### InputNodeDescriptionLabel
+
+One horizontal description aligned to a specific Flappy input node.
+
+The label sits between the semantic group band and the network itself so the
+viewer can understand each observation channel without inspecting source.
 
 ## browser-entry/network-view/network-view.constants.ts
 
@@ -626,8 +636,25 @@ Returns: Layered nodes for rendering.
 Overlay drawing helpers specific to the network-view panel.
 
 These helpers render semantic guides that sit on top of the raw graph, most
-notably the colored input-group bands that explain how temporal observation
-channels are organized.
+notably the colored input-group bands and per-input labels that explain how
+the simplified observation shelf is organized.
+
+### alignInputNodesToDescriptionScenes
+
+```ts
+alignInputNodesToDescriptionScenes(
+  positionedNodes: PositionedNetworkNodeLike[],
+  inputDescriptionScenes: readonly NetworkInputDescriptionScene[],
+): PositionedNetworkNodeLike[]
+```
+
+Aligns input-node centers with the resolved description chip centers.
+
+Parameters:
+- `positionedNodes` - Positioned nodes in graph coordinates.
+- `inputDescriptionScenes` - Positioned input-description scenes.
+
+Returns: Positioned nodes with input-node rows aligned to their description chips.
 
 ### drawInputGroupLabelBands
 
@@ -635,6 +662,7 @@ channels are organized.
 drawInputGroupLabelBands(
   context: CanvasRenderingContext2D,
   inputGroupLabelBandScenes: NetworkInputGroupLabelBandScene[],
+  hoveredNodeIndices: readonly number[] | undefined,
 ): void
 ```
 
@@ -643,6 +671,24 @@ Draws vertical neon bands that label semantic groups in the input layer.
 Parameters:
 - `context` - Canvas 2D rendering context.
 - `inputGroupLabelBandScenes` - Positioned label-band scenes.
+
+Returns: Nothing.
+
+### drawInputNodeDescriptions
+
+```ts
+drawInputNodeDescriptions(
+  context: CanvasRenderingContext2D,
+  inputDescriptionScenes: NetworkInputDescriptionScene[],
+  hoveredNodeIndices: readonly number[] | undefined,
+): void
+```
+
+Draws the horizontal per-input description rows.
+
+Parameters:
+- `context` - Canvas 2D rendering context.
+- `inputDescriptionScenes` - Positioned input-description scenes.
 
 Returns: Nothing.
 
@@ -664,12 +710,30 @@ Draws a filled rounded rectangle path.
 
 This is the small geometry primitive used by the input-group band renderer.
 
+### resolveInputDescriptionScenes
+
+```ts
+resolveInputDescriptionScenes(
+  positionedNodes: PositionedNetworkNodeLike[],
+  nodeDimensions: NetworkNodeDimensionsLike,
+): NetworkInputDescriptionScene[]
+```
+
+Resolves one horizontal description scene for each input node.
+
+Parameters:
+- `positionedNodes` - Positioned nodes in graph coordinates.
+- `nodeDimensions` - Resolved node dimensions.
+
+Returns: Positioned input-description scenes.
+
 ### resolveInputGroupLabelBandScenes
 
 ```ts
 resolveInputGroupLabelBandScenes(
   positionedNodes: PositionedNetworkNodeLike[],
   nodeDimensions: NetworkNodeDimensionsLike,
+  inputDescriptionScenes: readonly NetworkInputDescriptionScene[] | undefined,
 ): NetworkInputGroupLabelBandScene[]
 ```
 
@@ -688,9 +752,42 @@ Returns: Positioned label-band scenes.
 
 Semantic input-label helpers for the network-view panel.
 
-The Flappy controller input layer is not just a list of anonymous scalars; it
-is organized into stacked observation frames plus action-history channels.
-These helpers recover that grouping for visual annotation.
+The Flappy controller now uses a compact current-frame shelf, but the panel
+still needs to teach what each row means. These helpers recover both the
+broader semantic families and the per-input descriptions.
+
+### resolveInputDescriptionChipWidthPx
+
+```ts
+resolveInputDescriptionChipWidthPx(
+  labelLines: readonly string[],
+): number
+```
+
+Resolves the content-driven width of one input-description chip.
+
+Parameters:
+- `labelLines` - Human-readable label lines shown inside the chip.
+
+Returns: Pixel width needed to render the chip without clipping.
+
+### resolveInputDescriptionColumnWidthPx
+
+```ts
+resolveInputDescriptionColumnWidthPx(
+  inputNodeCount: number,
+): number
+```
+
+Resolves the maximum width required by the current input-description column.
+
+The layout shelf should reserve enough space for the widest chip so the
+semantic group bands never get pushed off the left edge of the canvas.
+
+Parameters:
+- `inputNodeCount` - Input-layer node count.
+
+Returns: Maximum chip width needed by the current input-description column.
 
 ### resolveInputGroupLabelBands
 
@@ -700,13 +797,30 @@ resolveInputGroupLabelBands(
 ): InputGroupLabelBand[]
 ```
 
-Resolves input-layer semantic label bands for Flappy temporal observation channels.
+Resolves input-layer semantic label bands for the simplified Flappy inputs.
 
-When the input size matches the expected temporal-memory layout, the view can
-annotate groups such as stacked frames and action channels directly beside the
-input layer.
+When the input size matches the current-frame layout, the view can annotate
+the full input band directly beside the input layer.
 
 Parameters:
 - `inputNodeCount` - Input-layer node count.
 
 Returns: Group label ranges with band colors.
+
+### resolveInputNodeDescriptionLabels
+
+```ts
+resolveInputNodeDescriptionLabels(
+  inputNodeCount: number,
+): InputNodeDescriptionLabel[]
+```
+
+Resolves one short horizontal description for each simplified Flappy input.
+
+These descriptions sit between the group bands and the network so each input
+row can be read directly from the browser visualizer.
+
+Parameters:
+- `inputNodeCount` - Input-layer node count.
+
+Returns: Ordered node descriptions for the input shelf.

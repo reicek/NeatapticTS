@@ -216,13 +216,12 @@ export interface SharedObservationFeatures {
 /**
  * Mutable temporal memory attached to one policy-controlled bird.
  *
- * The memory stores recent core observation frames and recent action history,
- * allowing feedforward policies to consume short-term context without adding
- * recurrent connections.
+ * The buffers remain available as compatibility state for shared browser and
+ * worker runtime plumbing, but the current controller input contract no longer
+ * feeds this external history into any architecture.
  *
- * If you want background reading, the Wikipedia article on "frame stacking"
- * captures the basic idea of giving a feed-forward policy a short motion trail
- * instead of full recurrent state.
+ * That keeps feed-forward and recurrent profiles on the same current-frame
+ * observation shelf while still leaving room for future opt-in experiments.
  */
 export interface SharedObservationMemoryState {
   /** Previous core frames, newest-first, excluding the current frame. */

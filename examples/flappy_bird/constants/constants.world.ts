@@ -27,6 +27,14 @@ export const FLAPPY_BIRD_RADIUS_PX = 4;
 export const FLAPPY_BIRD_HEIGHT_PX = FLAPPY_BIRD_RADIUS_PX * 2;
 
 /**
+ * Enables recurrent-profile debug logging for temporary browser worker investigations.
+ *
+ * Keep this disabled during normal demo runs so the browser console stays clean.
+ * Re-enable it only for short-lived recurrent debugging passes.
+ */
+export const FLAPPY_ENABLE_RECURRENT_DEBUG_LOGS = false;
+
+/**
  * Enables runtime telemetry counters used for profiling diagnostics.
  *
  * Keep disabled during normal demo runs to avoid instrumentation overhead and

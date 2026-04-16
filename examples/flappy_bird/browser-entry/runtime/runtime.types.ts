@@ -1,9 +1,14 @@
 import { createCanvasHost } from '../host/host';
 import type {
+  ExampleArchitectureProfile,
+  ExampleArchitectureProfileId,
+} from '../../../architectureProfiles';
+import type {
   FlappyBirdRunHandle,
   RuntimeWindow,
 } from '../browser-entry.types';
 import type { RuntimeTelemetryState } from './runtime.telemetry.service';
+import type { RuntimeArchitectureHistoryByProfileId } from './runtime.architecture-profile.service';
 
 /**
  * Core runtime contracts for the Flappy Bird browser demo.
@@ -44,10 +49,21 @@ export type RuntimeContainerTarget = string | HTMLElement;
  * browser session.
  */
 export interface RuntimeStartConfig {
+  architectureHistoryByProfileId: RuntimeArchitectureHistoryByProfileId;
+  availableArchitectureProfiles: ExampleArchitectureProfile[];
   inputSize: number;
   outputSize: number;
   populationSize: number;
   elitismCount: number;
+  selectedArchitectureProfile: ExampleArchitectureProfile;
+}
+
+/** Optional runtime session inputs used by internal browser startup flows. */
+export interface RuntimeStartOptions {
+  architectureProfileId?: ExampleArchitectureProfileId;
+  onSelectArchitectureProfile?: (
+    profileId: ExampleArchitectureProfileId,
+  ) => void;
 }
 
 /**
@@ -78,6 +94,7 @@ export interface RuntimeMutableLifecycleState {
  */
 export interface RuntimeStartContext {
   config: RuntimeStartConfig;
+  hostElement: HTMLElement;
   viewContext: RuntimeHostViewContext;
   runtimeTelemetryState: RuntimeTelemetryState;
   evolutionWorker: Worker;

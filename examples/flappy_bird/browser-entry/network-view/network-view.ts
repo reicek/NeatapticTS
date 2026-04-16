@@ -26,6 +26,8 @@ import {
   FLAPPY_NETWORK_GRAPH_TOP_PADDING_PX,
   FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR,
   FLAPPY_NETWORK_INFERRED_HIDDEN_LAYER_PREFIX,
+  FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX,
+  FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_WIDTH_PX,
   FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX,
   FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX,
   FLAPPY_NETWORK_LAYER_COMPLEXITY_BASELINE_COUNT,
@@ -59,6 +61,7 @@ import {
 } from '../../constants/constants';
 import { clamp } from '../browser-entry.math.utils';
 import type {
+  NetworkInputDescriptionScene,
   NetworkInputGroupLabelBandScene,
   NetworkNodeDimensionsLike as NetworkNodeDimensions,
   NetworkVisualizationHoverState,
@@ -75,13 +78,17 @@ import { resolveDefaultNetworkLegendLayout } from '../visualization/visualizatio
 import { resolveNetworkVisualizationColorScales } from '../visualization/visualization.colors.utils';
 import type { NetworkVisualizationColorScales } from '../visualization/visualization.types';
 import {
+  alignInputNodesToDescriptionScenes,
+  drawInputNodeDescriptions,
   drawInputGroupLabelBands,
+  resolveInputDescriptionScenes,
   resolveInputGroupLabelBandScenes,
 } from './network-view.draw.service';
 import {
   centerPositionedNodesInDrawableArea,
   positionNetworkNodes,
 } from './network-view.layout.utils';
+import { resolveInputDescriptionColumnWidthPx } from './network-view.labels.utils';
 import { resolveNetworkVisualizationLayers } from './network-view.topology.utils';
 
 type NetworkTopologySummary = {
@@ -114,6 +121,7 @@ type NetworkDrawableArea = {
 
 type PositionedNetworkGraphScene = {
   centeredPositionedNodes: PositionedNetworkNode[];
+  inputDescriptionScenes: NetworkInputDescriptionScene[];
   inputGroupLabelBandScenes: NetworkInputGroupLabelBandScene[];
   positionByNodeIndex: Map<number, PositionedNetworkNode>;
   runtimeConnections: VisualNetworkConnectionLike[];
@@ -146,7 +154,7 @@ export interface NetworkVisualizationResolvedFrame {
  *
  * @example
  * ```ts
- * drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
+ * drawNetworkVisualization(networkContext, bestNetwork, 12, 2);
  * ```
  *
  * @param context - Canvas 2D drawing context.
@@ -226,6 +234,8 @@ export function resolveNetworkVisualizationFrame(
     positionedScene: {
       positionedNodes: positionedNetworkGraphScene.centeredPositionedNodes,
       nodeDimensions: positionedNetworkGraphScene.nodeDimensions,
+      inputDescriptionScenes:
+        positionedNetworkGraphScene.inputDescriptionScenes,
       inputGroupLabelBandScenes:
         positionedNetworkGraphScene.inputGroupLabelBandScenes,
     },
@@ -281,7 +291,7 @@ export function drawResolvedNetworkVisualization(
  *
  * @example
  * ```ts
- * const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
+ * const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 12, 2);
  * ```
  *
  * @param network - Network to visualize.
@@ -453,8 +463,11 @@ function resolveNetworkVisualizationScene(
     outputSize,
   );
   const colorScales = resolveNetworkVisualizationColorScales(network);
-  const graphPaddingContext = resolveBaseGraphPaddingContext();
   const hideNetworkOverlays = shouldHideNetworkOverlays(context, canvasWidthPx);
+  const graphPaddingContext = resolveBaseGraphPaddingContext(
+    hideNetworkOverlays,
+    inputSize,
+  );
 
   // Step 2: Adjust graph-side padding when the legend is visible.
   const adjustedGraphPaddingContext = resolveAdjustedGraphPaddingContext(
@@ -556,19 +569,38 @@ function resolvePositionedNetworkGraphScene(
     FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX,
     nodeDimensions,
   );
+  const initialInputDescriptionScenes =
+    networkVisualizationScene.hideNetworkOverlays
+      ? []
+      : resolveInputDescriptionScenes(centeredPositionedNodes, nodeDimensions);
+  const overlayAlignedPositionedNodes =
+    networkVisualizationScene.hideNetworkOverlays
+      ? centeredPositionedNodes
+      : alignInputNodesToDescriptionScenes(
+          centeredPositionedNodes,
+          initialInputDescriptionScenes,
+        );
   const inputGroupLabelBandScenes =
     networkVisualizationScene.hideNetworkOverlays
       ? []
       : resolveInputGroupLabelBandScenes(
-          centeredPositionedNodes,
+          overlayAlignedPositionedNodes,
+          nodeDimensions,
+        );
+  const inputDescriptionScenes =
+    networkVisualizationScene.hideNetworkOverlays
+      ? []
+      : resolveInputDescriptionScenes(
+          overlayAlignedPositionedNodes,
           nodeDimensions,
         );
 
   // Step 3: Build the connection lookup state used by the drawing layers.
   return {
-    centeredPositionedNodes,
+    centeredPositionedNodes: overlayAlignedPositionedNodes,
+    inputDescriptionScenes,
     inputGroupLabelBandScenes,
-    positionByNodeIndex: createPositionByNodeIndex(centeredPositionedNodes),
+    positionByNodeIndex: createPositionByNodeIndex(overlayAlignedPositionedNodes),
     runtimeConnections: resolveRuntimeConnections(network),
     nodeDimensions,
   };
@@ -602,6 +634,12 @@ function drawPositionedNetworkGraph(
       context,
       resolvedNetworkVisualizationFrame.positionedScene
         .inputGroupLabelBandScenes,
+      hoverState?.hoveredNodeIndices,
+    );
+    drawInputNodeDescriptions(
+      context,
+      resolvedNetworkVisualizationFrame.positionedScene.inputDescriptionScenes,
+      hoverState?.hoveredNodeIndices,
     );
   }
 
@@ -620,12 +658,23 @@ function drawPositionedNetworkGraph(
  *
  * @returns Base graph padding context.
  */
-function resolveBaseGraphPaddingContext(): NetworkGraphPaddingContext {
-  // Step 1: Reserve the input-group label band to the left of the graph body.
+function resolveBaseGraphPaddingContext(
+  hideNetworkOverlays: boolean,
+  inputNodeCount: number,
+): NetworkGraphPaddingContext {
+  // Step 1: Reserve the full input-overlay shelf only when overlays are visible.
+  const descriptionColumnReserveWidthPx =
+    hideNetworkOverlays
+      ? 0
+      : resolveInputDescriptionColumnWidthPx(inputNodeCount);
   const groupLabelBandReserveWidthPx =
-    FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX +
-    FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX +
-    FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX;
+    hideNetworkOverlays || descriptionColumnReserveWidthPx === 0
+      ? 0
+      : FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX +
+        FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX +
+        descriptionColumnReserveWidthPx +
+        FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX +
+        FLAPPY_NETWORK_NODE_LAYOUT_PADDING_PX;
 
   return {
     graphLeftPaddingPx:

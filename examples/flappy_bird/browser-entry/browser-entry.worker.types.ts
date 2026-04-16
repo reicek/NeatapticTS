@@ -1,3 +1,5 @@
+import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
+
 /**
  * Worker transport contracts for the Flappy Bird browser runtime.
  *
@@ -73,6 +75,7 @@ export interface PackedPlaybackBirdSnapshot {
  * network for visualization or playback.
  */
 export interface EvolutionGenerationPayload {
+  architectureProfileId: ExampleArchitectureProfileId;
   generation: number;
   bestFitness: number;
   bestNetworkJson?: SerializedNetwork;

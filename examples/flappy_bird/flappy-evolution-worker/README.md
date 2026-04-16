@@ -486,6 +486,21 @@ cares about.
 
 ## flappy-evolution-worker/flappy-evolution-worker.runtime.service.ts
 
+### buildWorkerSharedRolloutSeedBatch
+
+```ts
+buildWorkerSharedRolloutSeedBatch(
+  workerInitSeed: number,
+): number[]
+```
+
+Builds the deterministic rollout seed batch used by the pipe-first worker objective.
+
+Parameters:
+- `workerInitSeed` - Deterministic worker seed.
+
+Returns: Shared rollout seed batch.
+
 ### createInitializedWorkerRuntime
 
 ```ts
@@ -524,6 +539,47 @@ const neatRuntime = createInitializedWorkerRuntime({
   rngSeed: 12345,
 });
 ```
+
+### createWorkerFitnessEvaluator
+
+```ts
+createWorkerFitnessEvaluator(
+  architectureProfileId: NonNullable<ExampleArchitectureProfileId | undefined>,
+  workerInitSeed: number,
+): (network: never) => number
+```
+
+Builds the worker fitness evaluator for the selected architecture profile.
+
+NARX and GRU benefit from a slightly stricter browser objective because the
+tiny interactive population is otherwise too willing to overfit one lucky
+rollout and stall at a zero-pipe local optimum.
+
+Parameters:
+- `architectureProfileId` - Resolved worker architecture profile id.
+- `workerInitSeed` - Deterministic worker seed.
+
+Returns: Worker-local scalar fitness function.
+
+### scorePipeFirstWorkerAggregateEvaluation
+
+```ts
+scorePipeFirstWorkerAggregateEvaluation(
+  aggregateEvaluation: FlappySeedBatchEvaluation,
+): number
+```
+
+Scores one aggregate with a pipe-first browser selection scalar.
+
+The interactive worker population is tiny, so escaping the first-pipe local
+optimum matters more than preserving the exact trainer ranking stack. This
+scalar therefore promotes mean pipe progress first, then uses survival and
+stability as tie-breakers inside the same shared-seed batch.
+
+Parameters:
+- `aggregateEvaluation` - Shared-seed evaluation evidence.
+
+Returns: Scalar fitness consumed by the browser worker NEAT loop.
 
 ## flappy-evolution-worker/flappy-evolution-worker.protocol.service.ts
 
@@ -622,7 +678,7 @@ slice of behavior.
 
 ```ts
 beginWorkerPlaybackSession(
-  options: { currentPopulation: default[]; payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; createPopulationRenderState: (networks: default[], rng: FlappyRng, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number) => WorkerPlaybackState; },
+  options: { architectureProfileId: ExampleArchitectureProfileId; generation?: number | undefined; currentPopulation: default[]; payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; createPopulationRenderState: (networks: default[], rng: FlappyRng, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number) => WorkerPlaybackState; },
 ): { currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; playbackWinnerIndex: number; }
 ```
 
@@ -650,11 +706,32 @@ const session = beginWorkerPlaybackSession({
 });
 ```
 
+### maybeDownshiftSuccessfulBrowserPopulation
+
+```ts
+maybeDownshiftSuccessfulBrowserPopulation(
+  neatRuntime: default | undefined,
+  winnerPipesPassed: number,
+): void
+```
+
+Downshifts the worker's future browser population budget after a successful playback run.
+
+The current generation has already been evaluated, so the savings apply to
+future generations only. This keeps the demo responsive once an architecture
+has already demonstrated that it can clear the live pipe target.
+
+Parameters:
+- `neatRuntime` - Worker-local NEAT runtime.
+- `winnerPipesPassed` - Winning playback pipe count for the completed generation.
+
+Returns: Nothing.
+
 ### processWorkerPlaybackStep
 
 ```ts
 processWorkerPlaybackStep(
-  options: { playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; currentPopulation: default[]; neatRuntime: default | undefined; stepPopulationFrame: (renderState: WorkerPlaybackState, rng: FlappyRng, difficultyProfile: SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: WorkerPlaybackState) => WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; },
+  options: { architectureProfileId: ExampleArchitectureProfileId; generation?: number | undefined; playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; currentPopulation: default[]; neatRuntime: default | undefined; stepPopulationFrame: (renderState: WorkerPlaybackState, rng: FlappyRng, difficultyProfile: SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: WorkerPlaybackState) => WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; },
 ): { currentPlaybackState: WorkerPlaybackState | undefined; currentPlaybackRng: FlappyRng | undefined; currentPopulation: default[]; playbackWinnerIndex: number; }
 ```
 
@@ -982,6 +1059,25 @@ Returns: Number of policy activation calls made in this frame.
 
 ## flappy-evolution-worker/flappy-evolution-worker.warm-start.service.ts
 
+### applyTeacherWarmStart
+
+```ts
+applyTeacherWarmStart(
+  templateNetwork: default,
+  trainingSet: { input: number[]; output: number[]; }[],
+  architectureProfileId: ExampleArchitectureProfileId,
+): void
+```
+
+Applies the teacher phase that best matches the selected architecture family.
+
+Parameters:
+- `templateNetwork` - Template network cloned from the current population.
+- `trainingSet` - Synthetic heuristic dataset.
+- `architectureProfileId` - Selected shared Flappy profile id.
+
+Returns: Nothing.
+
 ### applyTemplateWeightsWithNoise
 
 ```ts
@@ -1088,6 +1184,7 @@ Returns: Interpolated value.
 isWarmStartEvaluationBetter(
   candidateEvaluation: FlappySeedBatchEvaluation,
   bestEvaluation: FlappySeedBatchEvaluation,
+  architectureProfileId: ExampleArchitectureProfileId,
 ): boolean
 ```
 
@@ -1109,6 +1206,7 @@ Returns: True when the candidate should replace the incumbent template.
 optimizeWarmStartTemplateNetwork(
   templateNetwork: default,
   workerInitSeed: number,
+  architectureProfileId: ExampleArchitectureProfileId,
 ): default
 ```
 
@@ -1123,6 +1221,7 @@ control.
 Parameters:
 - `templateNetwork` - Heuristic-pretrained template network.
 - `workerInitSeed` - Deterministic worker seed.
+- `architectureProfileId` - Selected shared Flappy profile id.
 
 Returns: Best rollout-refined template found within the bounded budget.
 
@@ -1184,6 +1283,61 @@ Parameters:
 - `totalOptimizationSteps` - Total number of optimization steps.
 
 Returns: Clamped ratio in the inclusive range [0, 1].
+
+### resolveWarmStartEvaluationScore
+
+```ts
+resolveWarmStartEvaluationScore(
+  aggregateEvaluation: FlappySeedBatchEvaluation,
+  architectureProfileId: ExampleArchitectureProfileId,
+): number
+```
+
+Resolves the architecture-specific scalar used during warm-start rollout refinement.
+
+NARX and GRU use a pipe-first scalar so rollout refinement prefers real pipe
+progress over a dense-shaping local optimum before the browser NEAT loop
+begins.
+
+Parameters:
+- `aggregateEvaluation` - Shared-seed rollout evidence for one template.
+- `architectureProfileId` - Selected shared Flappy profile id.
+
+Returns: Scalar score used for candidate comparison.
+
+### resolveWarmStartRolloutOptimizationPlan
+
+```ts
+resolveWarmStartRolloutOptimizationPlan(
+  architectureProfileId: ExampleArchitectureProfileId,
+): { rolloutSeedCount: number; optimizationStepCount: number; }
+```
+
+Resolves the rollout-refinement budget for one warm-start architecture profile.
+
+NARX gets a stronger rollout pass, while GRU keeps a smaller bounded pass so
+the browser worker stays responsive after the Flappy-specific readout
+shortcut expands the recurrent seed.
+
+Parameters:
+- `architectureProfileId` - Selected shared Flappy profile id.
+
+Returns: Shared-seed count and optimization-step budget.
+
+### resolveWorkerWarmStartTeacherStrategy
+
+```ts
+resolveWorkerWarmStartTeacherStrategy(
+  architectureProfileId: ExampleArchitectureProfileId,
+): WorkerWarmStartTeacherStrategy
+```
+
+Resolves which teacher path should run before rollout refinement.
+
+Parameters:
+- `architectureProfileId` - Selected shared Flappy profile id.
+
+Returns: Teacher strategy best matched to the architecture family.
 
 ### sampleGaussian
 
@@ -1444,3 +1598,64 @@ Gaussian standard deviation used for post-pretrain connection-weight diversifica
 After the template network is trained once, each genome receives a noisy copy
 of its weights. That keeps generation 0 visually coherent while preserving
 enough diversity for NEAT to search meaningfully.
+
+## flappy-evolution-worker/flappy-evolution-worker.debug.service.ts
+
+### logRecurrentDebugMarker
+
+```ts
+logRecurrentDebugMarker(
+  options: RecurrentDebugMarkerOptions,
+): void
+```
+
+Emits one compact recurrent debug marker when the selected profile is stateful.
+
+The logging pass is intentionally restricted to the recurrent profiles so the
+browser console stays readable while we isolate where the live GRU, LSTM, and
+NARX path first diverges from the passing helper-only tests.
+
+Parameters:
+- `options` - Marker phase, profile id, and optional debug metadata.
+
+Returns: Nothing.
+
+### logRecurrentPlaybackReferenceSnapshot
+
+```ts
+logRecurrentPlaybackReferenceSnapshot(
+  options: RecurrentDebugPlaybackReferenceOptions,
+): void
+```
+
+Emits whether playback birds are reusing the same network objects as the live population.
+
+This matters because the browser-only playback path is the largest remaining
+difference between the failing live recurrent flow and the helper-level tests
+that already pass.
+
+Parameters:
+- `options` - Profile id plus live-population and playback-network references.
+
+Returns: Nothing.
+
+### logRecurrentPopulationSnapshot
+
+```ts
+logRecurrentPopulationSnapshot(
+  options: RecurrentDebugPopulationSnapshotOptions,
+): void
+```
+
+Emits structural health summaries for the current recurrent population.
+
+Each network summary records whether the strict-genome adapter accepts the
+live runtime phenotype and, when it does not, reports the first duplicate
+innovation groups visible in JSON form. This is the fastest way to tell
+whether corruption happens before playback, during playback, or after the
+winner-clone handoff.
+
+Parameters:
+- `options` - Profile id, phase label, and population snapshot inputs.
+
+Returns: Nothing.

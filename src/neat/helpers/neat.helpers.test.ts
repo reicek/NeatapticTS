@@ -56,6 +56,22 @@ function resolveMaxPopulationInnovation(population: Network[]): number {
     );
 }
 
+function createSeedNetworkWithDisconnectedInput(): Network {
+  const seedNetwork = new Network(2, 1, { seed: 1_204 });
+  const disconnectedConnection = seedNetwork.connections[0];
+
+  if (!disconnectedConnection) {
+    throw new Error('Expected seed network to expose one connection');
+  }
+
+  seedNetwork.disconnect(
+    disconnectedConnection.from,
+    disconnectedConnection.to,
+  );
+
+  return seedNetwork;
+}
+
 describe('neat helpers chapter', () => {
   describe('spawnFromParent', () => {
     const fitness = (network: Network) => network.nodes.length;
@@ -228,6 +244,21 @@ describe('neat helpers chapter', () => {
         // Arrange
         const seedNetwork = new Network(2, 1);
         const neat = new Neat(2, 1, fitness, { popsize: 5, seed: 335 });
+
+        // Act
+        neat.createPool(seedNetwork);
+        const allGenomesValidate = neat.population.every((genome: Network) =>
+          validateNativeGenome(genome).isValid,
+        );
+
+        // Assert
+        expect(allGenomesValidate).toBe(true);
+      });
+
+      it('keeps repaired seeded generation-zero genomes validator-clean when the seed needs dead-end repair', () => {
+        // Arrange
+        const seedNetwork = createSeedNetworkWithDisconnectedInput();
+        const neat = new Neat(2, 1, fitness, { popsize: 5, seed: 340 });
 
         // Act
         neat.createPool(seedNetwork);

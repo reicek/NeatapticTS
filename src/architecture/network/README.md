@@ -3894,6 +3894,27 @@ Parameters:
 
 Returns: Nothing.
 
+### resolveTemporalRecurrentModuleNodeGeneIds
+
+```ts
+resolveTemporalRecurrentModuleNodeGeneIds(
+  network: default,
+): Set<number>
+```
+
+Collect gene ids currently owned by validated recurrent module descriptors.
+
+Mutation-repair helpers sometimes need to distinguish ordinary hidden nodes
+from hidden nodes that are internal parts of one explicit recurrent module.
+Those module-owned nodes can look locally stranded even when the module as a
+whole is valid, so repair code should consult this helper before rewiring
+them like generic hidden neurons.
+
+Parameters:
+- `network` - Runtime network whose temporal descriptor ownership should be read.
+
+Returns: Gene-id set for hidden nodes protected by live recurrent descriptors.
+
 ### splitGruLayerNodes
 
 ```ts

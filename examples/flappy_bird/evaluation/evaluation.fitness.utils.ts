@@ -25,7 +25,7 @@ export function evaluateFlappyFitness(
   network: FlappyNetworkLike,
   rolloutOptions: FlappyRolloutOptions = {},
 ): number {
-  return rolloutEpisode(network, rolloutOptions).fitness;
+  return runClearedRolloutEpisode(network, rolloutOptions).fitness;
 }
 
 /**
@@ -54,7 +54,7 @@ export function evaluateFlappyFitnessAcrossSeeds(
   rolloutOptions: FlappyRolloutOptions = {},
 ): FlappySeedBatchEvaluation {
   const episodeResults = sharedSeeds.map((seedValue) =>
-    rolloutEpisode(network, {
+    runClearedRolloutEpisode(network, {
       ...rolloutOptions,
       seed: seedValue,
     }),
@@ -87,4 +87,27 @@ export function evaluateFlappyFitnessAcrossSeeds(
     meanPipesPassed,
     meanFramesSurvived,
   };
+}
+
+/**
+ * Runs one rollout after resetting any carried recurrent network state.
+ *
+ * Stateful builders such as NARX, GRU, and LSTM must start each deterministic
+ * Flappy rollout from a clean memory slate. Feed-forward networks ignore the
+ * optional `clear()` hook, but recurrent networks use it to avoid leaking state
+ * across shared-seed evaluations.
+ *
+ * @param network - Network being evaluated.
+ * @param rolloutOptions - Rollout controls for this episode.
+ * @returns One deterministic episode result.
+ */
+function runClearedRolloutEpisode(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+) {
+  // Step 1: Reset carried network state before the new episode begins.
+  network.clear?.();
+
+  // Step 2: Run the deterministic rollout from a clean controller state.
+  return rolloutEpisode(network, rolloutOptions);
 }

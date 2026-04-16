@@ -18,6 +18,7 @@ describe('evolveAndBuildGenerationReadyMessage', () => {
     } as unknown as Neat;
 
     const generationReadyMessage = await evolveAndBuildGenerationReadyMessage({
+      architectureProfileId: 'random-sparse',
       neatRuntime,
       isStopped: () => false,
       warmStartGenerationZeroIfNeeded: async () => undefined,
@@ -27,6 +28,7 @@ describe('evolveAndBuildGenerationReadyMessage', () => {
     expect(generationReadyMessage).toEqual({
       type: 'generation-ready',
       payload: {
+        architectureProfileId: 'random-sparse',
         generation: 7,
         bestFitness: 42,
         bestNetworkJson,

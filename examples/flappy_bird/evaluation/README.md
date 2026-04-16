@@ -191,6 +191,28 @@ const aggregate = evaluateFlappyFitnessAcrossSeeds(network, [11, 22, 33], {
 });
 ```
 
+### runClearedRolloutEpisode
+
+```ts
+runClearedRolloutEpisode(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+): FlappyEpisodeResult
+```
+
+Runs one rollout after resetting any carried recurrent network state.
+
+Stateful builders such as NARX, GRU, and LSTM must start each deterministic
+Flappy rollout from a clean memory slate. Feed-forward networks ignore the
+optional `clear()` hook, but recurrent networks use it to avoid leaking state
+across shared-seed evaluations.
+
+Parameters:
+- `network` - Network being evaluated.
+- `rolloutOptions` - Rollout controls for this episode.
+
+Returns: One deterministic episode result.
+
 ## evaluation/evaluation.seed.utils.ts
 
 ### mixGenomeEvaluationSeed

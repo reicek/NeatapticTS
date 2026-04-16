@@ -323,10 +323,18 @@ function createNodeGeneFromJsonNode(nodeJsonEntry: NetworkJSONNode): NeatGenomeN
       typeof nodeJsonEntry.geneId === 'number'
         ? nodeJsonEntry.geneId
         : Number.NaN,
-    type: nodeJsonEntry.type as NeatGenomeNodeType,
+    type: resolveCanonicalGenomeNodeType(nodeJsonEntry.type),
     bias: nodeJsonEntry.bias,
     squash: nodeJsonEntry.squash,
   };
+}
+
+function resolveCanonicalGenomeNodeType(nodeType: string): NeatGenomeNodeType {
+  if (nodeType === 'input' || nodeType === 'output') {
+    return nodeType;
+  }
+
+  return 'hidden';
 }
 
 function createGeneIdLookupByNodeIndex(

@@ -891,6 +891,25 @@ Parameters:
 
 Returns: True when connection is enabled.
 
+### isCurrentJsonEndpoint
+
+```ts
+isCurrentJsonEndpoint(
+  nodes: default[],
+  endpointNode: default,
+  endpointIndex: number,
+): boolean
+```
+
+Validates that one serialized endpoint still points at the canonical node table.
+
+Parameters:
+- `nodes` - Canonical node table being serialized.
+- `endpointNode` - Connection endpoint node reference.
+- `endpointIndex` - Endpoint index stored on the node internals.
+
+Returns: True when the endpoint still belongs to the canonical node table.
+
 ### isJsonConnectionInNodeBounds
 
 ```ts

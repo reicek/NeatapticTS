@@ -109,6 +109,10 @@
 
 import { Neat } from '../../../src/neataptic';
 import Network from '../../../src/architecture/network';
+import {
+  DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
+  type ExampleArchitectureProfileId,
+} from '../../architectureProfiles';
 import { createXorshift32 } from '../rng';
 import type {
   WorkerInitMessage,
@@ -131,6 +135,11 @@ import {
   processWorkerPlaybackStep,
 } from './flappy-evolution-worker.playback.service';
 import {
+  logRecurrentDebugMarker,
+  logRecurrentPopulationSnapshot,
+  logRecurrentPlaybackReferenceSnapshot,
+} from './flappy-evolution-worker.debug.service';
+import {
   createWorkerPlaybackSnapshot,
   resolveWorkerPlaybackSnapshotTransferList,
 } from './flappy-evolution-worker.snapshot.utils';
@@ -142,6 +151,7 @@ const FLAPPY_WORKER_INITIAL_SEED = 0;
 const FLAPPY_WORKER_INITIAL_WINNER_INDEX = -1;
 
 type WorkerMutableRuntimeState = {
+  currentArchitectureProfileId: ExampleArchitectureProfileId;
   stopped: boolean;
   neatRuntime: Neat | undefined;
   currentPopulation: Network[];
@@ -189,6 +199,7 @@ self.onmessage = createWorkerMessageHandler(workerMutableRuntimeState);
 function createWorkerMutableRuntimeState(): WorkerMutableRuntimeState {
   // Step 1: Initialize the worker state with empty runtime and playback fields.
   return {
+    currentArchitectureProfileId: DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
     stopped: false,
     neatRuntime: undefined,
     currentPopulation: [],
@@ -293,9 +304,40 @@ async function initializeRuntime(
   // Step 1: Persist the worker seed so warm-start logic can reuse it deterministically.
   workerMutableRuntimeState.workerInitSeed = initPayload.rngSeed;
 
-  // Step 2: Build and configure the NEAT runtime controller.
+  // Step 2: Persist the selected shared profile so generation payloads can report it explicitly.
+  workerMutableRuntimeState.currentArchitectureProfileId =
+    initPayload.architectureProfileId ??
+    DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID;
+
+  // Step 3: Reset generation-local caches so a fresh init starts from a clean runtime state.
+  workerMutableRuntimeState.currentPopulation = [];
+  workerMutableRuntimeState.currentPlaybackState = undefined;
+  workerMutableRuntimeState.currentPlaybackRng = undefined;
+  workerMutableRuntimeState.playbackWinnerIndex =
+    FLAPPY_WORKER_INITIAL_WINNER_INDEX;
+  workerMutableRuntimeState.generationZeroWarmStartApplied = false;
+
+  // Step 4: Build and configure the NEAT runtime controller.
   workerMutableRuntimeState.neatRuntime =
     createInitializedWorkerRuntime(initPayload);
+
+  // Step 5: Log the initialized recurrent population so browser runs can be compared with helper-only tests.
+  const runtimeNeat = workerMutableRuntimeState.neatRuntime as unknown as {
+    population?: Network[];
+  };
+  logRecurrentPopulationSnapshot({
+    architectureProfileId: workerMutableRuntimeState.currentArchitectureProfileId,
+    phase: 'runtime-init',
+    generation: workerMutableRuntimeState.neatRuntime.generation,
+    population: Array.isArray(runtimeNeat.population)
+      ? runtimeNeat.population
+      : [],
+    extra: {
+      populationSize: initPayload.populationSize,
+      elitismCount: initPayload.elitismCount,
+      rngSeed: initPayload.rngSeed,
+    },
+  });
 }
 
 /**
@@ -312,11 +354,14 @@ async function evolveAndPublishGeneration(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
 ): Promise<void> {
   const generationPayload = await evolveAndBuildGenerationReadyMessage({
+    architectureProfileId: workerMutableRuntimeState.currentArchitectureProfileId,
     initializationPromise: workerMutableRuntimeState.initializationPromise,
     neatRuntime: workerMutableRuntimeState.neatRuntime,
     isStopped: () => workerMutableRuntimeState.stopped,
     warmStartGenerationZeroIfNeeded: (neatController) =>
       warmStartWorkerGenerationZeroIfNeeded(neatController, {
+        architectureProfileId:
+          workerMutableRuntimeState.currentArchitectureProfileId,
         workerInitSeed: workerMutableRuntimeState.workerInitSeed,
         generationZeroWarmStartApplied:
           workerMutableRuntimeState.generationZeroWarmStartApplied,
@@ -375,6 +420,16 @@ function beginWorkerInitialization(
 function beginWorkerGenerationRequest(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
 ): void {
+  logRecurrentDebugMarker({
+    architectureProfileId: workerMutableRuntimeState.currentArchitectureProfileId,
+    phase: 'generation-request-received',
+    generation: workerMutableRuntimeState.neatRuntime?.generation,
+    extra: {
+      currentPopulationSize: workerMutableRuntimeState.currentPopulation.length,
+      warmStartApplied: workerMutableRuntimeState.generationZeroWarmStartApplied,
+    },
+  });
+
   // Step 1: Run the generation pipeline and publish worker errors on failure.
   void evolveAndPublishGeneration(workerMutableRuntimeState).catch(
     (error: unknown) => {
@@ -398,11 +453,34 @@ function beginWorkerPlayback(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
   payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number },
 ): void {
+  logRecurrentPopulationSnapshot({
+    architectureProfileId: workerMutableRuntimeState.currentArchitectureProfileId,
+    phase: 'playback-start-before-session',
+    generation: workerMutableRuntimeState.neatRuntime?.generation,
+    population: workerMutableRuntimeState.currentPopulation,
+    extra: {
+      visibleWorldWidthPx: payload.visibleWorldWidthPx,
+      visibleWorldHeightPx: payload.visibleWorldHeightPx,
+    },
+  });
+
   // Step 1: Create the next playback session from the current population snapshot.
   const nextPlaybackSessionState = beginWorkerPlaybackSession({
+    architectureProfileId: workerMutableRuntimeState.currentArchitectureProfileId,
+    generation: workerMutableRuntimeState.neatRuntime?.generation,
     currentPopulation: workerMutableRuntimeState.currentPopulation,
     payload,
     createPopulationRenderState: createWorkerPopulationRenderState,
+  });
+
+  logRecurrentPlaybackReferenceSnapshot({
+    architectureProfileId: workerMutableRuntimeState.currentArchitectureProfileId,
+    phase: 'playback-start-after-session',
+    generation: workerMutableRuntimeState.neatRuntime?.generation,
+    population: workerMutableRuntimeState.currentPopulation,
+    playbackNetworks: nextPlaybackSessionState.currentPlaybackState.birds.map(
+      (bird) => bird.network,
+    ),
   });
 
   // Step 2: Persist the next playback state, RNG, and winner index.
@@ -444,6 +522,8 @@ function processWorkerPlaybackStepRequest(
 
   // Step 2: Advance playback and build the next compact snapshot payload.
   const nextPlaybackStepState = processWorkerPlaybackStep({
+    architectureProfileId: workerMutableRuntimeState.currentArchitectureProfileId,
+    generation: workerMutableRuntimeState.neatRuntime?.generation,
     playbackStepPayload,
     currentPlaybackState: workerMutableRuntimeState.currentPlaybackState,
     currentPlaybackRng: workerMutableRuntimeState.currentPlaybackRng,
@@ -465,6 +545,18 @@ function processWorkerPlaybackStepRequest(
     nextPlaybackStepState.currentPopulation;
   workerMutableRuntimeState.playbackWinnerIndex =
     nextPlaybackStepState.playbackWinnerIndex;
+
+  if (!nextPlaybackStepState.currentPlaybackState) {
+    logRecurrentPopulationSnapshot({
+      architectureProfileId: workerMutableRuntimeState.currentArchitectureProfileId,
+      phase: 'playback-finished-after-step',
+      generation: workerMutableRuntimeState.neatRuntime?.generation,
+      population: workerMutableRuntimeState.currentPopulation,
+      extra: {
+        playbackWinnerIndex: nextPlaybackStepState.playbackWinnerIndex,
+      },
+    });
+  }
 }
 
 /**

@@ -1,11 +1,22 @@
 import type Network from '../../../src/architecture/network';
+import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
 import { createXorshift32 } from '../rng';
 import {
   hasAliveBirds,
   resolveFramePrimaryWinnerIndex,
   resolveLeaderPipesPassed,
 } from '../browser-entry/browser-entry.observation.utils';
-import { FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION } from '../constants/constants';
+import {
+  FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_ELITISM_COUNT,
+  FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE,
+  FLAPPY_BROWSER_SUCCESS_PIPE_TARGET,
+  FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION,
+} from '../constants/constants';
+import {
+  logRecurrentDebugMarker,
+  logRecurrentPlaybackReferenceSnapshot,
+  logRecurrentPopulationSnapshot,
+} from './flappy-evolution-worker.debug.service';
 import {
   resolveAdaptiveDifficultyProfile,
   type SharedDifficultyProfile,
@@ -42,6 +53,8 @@ import type { Neat } from '../../../src/neataptic';
  * @returns Playback runtime state and deterministic RNG.
  */
 export function beginWorkerPlaybackSession(options: {
+  architectureProfileId: ExampleArchitectureProfileId;
+  generation?: number;
   currentPopulation: Network[];
   payload: WorkerStartPlaybackMessage['payload'];
   createPopulationRenderState: (
@@ -55,16 +68,31 @@ export function beginWorkerPlaybackSession(options: {
   currentPlaybackRng: ReturnType<typeof createXorshift32>;
   playbackWinnerIndex: number;
 } {
-  const { currentPopulation, payload, createPopulationRenderState } = options;
+  const {
+    architectureProfileId,
+    generation,
+    currentPopulation,
+    payload,
+    createPopulationRenderState,
+  } = options;
   const playbackRng = createXorshift32(0xabcdef01);
+  const currentPlaybackState = createPopulationRenderState(
+    currentPopulation,
+    playbackRng,
+    payload.visibleWorldWidthPx,
+    payload.visibleWorldHeightPx,
+  );
+
+  logRecurrentPlaybackReferenceSnapshot({
+    architectureProfileId,
+    phase: 'playback-session-created',
+    generation,
+    population: currentPopulation,
+    playbackNetworks: currentPlaybackState.birds.map((bird) => bird.network),
+  });
 
   return {
-    currentPlaybackState: createPopulationRenderState(
-      currentPopulation,
-      playbackRng,
-      payload.visibleWorldWidthPx,
-      payload.visibleWorldHeightPx,
-    ),
+    currentPlaybackState,
     currentPlaybackRng: playbackRng,
     playbackWinnerIndex: -1,
   };
@@ -83,6 +111,8 @@ export function beginWorkerPlaybackSession(options: {
  * @returns Updated playback runtime state after processing this step.
  */
 export function processWorkerPlaybackStep(options: {
+  architectureProfileId: ExampleArchitectureProfileId;
+  generation?: number;
   playbackStepPayload: WorkerRequestPlaybackStepMessage['payload'];
   currentPlaybackState: WorkerPlaybackState;
   currentPlaybackRng: ReturnType<typeof createXorshift32>;
@@ -110,6 +140,8 @@ export function processWorkerPlaybackStep(options: {
   playbackWinnerIndex: number;
 } {
   const {
+    architectureProfileId,
+    generation,
     playbackStepPayload,
     currentPlaybackState,
     currentPlaybackRng,
@@ -194,7 +226,27 @@ export function processWorkerPlaybackStep(options: {
       ? currentPlaybackState.birds[playbackWinnerIndex]
       : undefined;
 
+  logRecurrentPopulationSnapshot({
+    architectureProfileId,
+    phase: 'playback-finished-before-winner-clone',
+    generation,
+    population: currentPopulation,
+    extra: {
+      playbackWinnerIndex,
+      winnerFramesSurvived: winnerBird?.framesSurvived,
+      winnerPipesPassed: winnerBird?.pipesPassed,
+    },
+  });
+
   if (winnerBird && currentPopulation.length > 0) {
+    logRecurrentDebugMarker({
+      architectureProfileId,
+      phase: 'playback-winner-clone-start',
+      generation,
+      extra: {
+        playbackWinnerIndex,
+      },
+    });
     currentPopulation[0] = winnerBird.network.clone();
     if (neatRuntime) {
       const runtimeNeat = neatRuntime as unknown as { population?: Network[] };
@@ -205,6 +257,16 @@ export function processWorkerPlaybackStep(options: {
         runtimeNeat.population[0] = winnerBird.network.clone();
       }
     }
+
+    logRecurrentPopulationSnapshot({
+      architectureProfileId,
+      phase: 'playback-finished-after-winner-clone',
+      generation,
+      population: currentPopulation,
+      extra: {
+        playbackWinnerIndex,
+      },
+    });
   }
 
   const averagePipesPassed =
@@ -221,6 +283,12 @@ export function processWorkerPlaybackStep(options: {
   );
   const p90FramesSurvived =
     sortedFramesSurvived.length > 0 ? sortedFramesSurvived[p90FrameIndex] : 0;
+
+  // Step 4: Downshift future browser generations once this architecture has clearly solved pipes.
+  maybeDownshiftSuccessfulBrowserPopulation(
+    neatRuntime,
+    winnerBird?.pipesPassed ?? 0,
+  );
 
   postWorkerMessage(
     {
@@ -245,4 +313,48 @@ export function processWorkerPlaybackStep(options: {
     currentPopulation,
     playbackWinnerIndex,
   };
+}
+
+/**
+ * Downshifts the worker's future browser population budget after a successful playback run.
+ *
+ * The current generation has already been evaluated, so the savings apply to
+ * future generations only. This keeps the demo responsive once an architecture
+ * has already demonstrated that it can clear the live pipe target.
+ *
+ * @param neatRuntime - Worker-local NEAT runtime.
+ * @param winnerPipesPassed - Winning playback pipe count for the completed generation.
+ * @returns Nothing.
+ */
+function maybeDownshiftSuccessfulBrowserPopulation(
+  neatRuntime: Neat | undefined,
+  winnerPipesPassed: number,
+): void {
+  if (!neatRuntime || winnerPipesPassed < FLAPPY_BROWSER_SUCCESS_PIPE_TARGET) {
+    return;
+  }
+
+  const runtimeNeat = neatRuntime as unknown as {
+    options?: {
+      popsize?: number;
+      elitism?: number;
+    };
+  };
+  const currentPopulationSize = Math.max(
+    0,
+    runtimeNeat.options?.popsize ?? 0,
+  );
+  if (
+    !runtimeNeat.options ||
+    currentPopulationSize <= FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE
+  ) {
+    return;
+  }
+
+  runtimeNeat.options.popsize =
+    FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE;
+  runtimeNeat.options.elitism = Math.min(
+    FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_ELITISM_COUNT,
+    FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE,
+  );
 }

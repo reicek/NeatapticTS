@@ -549,6 +549,34 @@ describe('network serialize chapter', () => {
   });
 
   describe('Network.fromJSON()', () => {
+    describe('given a live runtime carries a stale forward connection reference', () => {
+      describe('when the JSON snapshot is built', () => {
+        it('skips the stale connection instead of exporting invalid endpoint indices', () => {
+          // Arrange
+          const network = createSingleValueSerializableNetwork(3719);
+          const staleNode = new Node('hidden');
+          const staleConnection = new Connection(
+            staleNode,
+            network.nodes.at(-1) ?? network.nodes[0],
+            0.5,
+          );
+
+          (staleNode as unknown as { index: number }).index = 0;
+          network.connections.push(staleConnection);
+
+          // Act
+          const serializedJson = network.toJSON() as {
+            connections: Array<Record<string, unknown>>;
+          };
+
+          // Assert
+          expect(serializedJson.connections.length).toBe(
+            network.connections.length - 1,
+          );
+        });
+      });
+    });
+
     describe('given one construct-built runtime is serialized to JSON', () => {
       describe('when the rebuilt network is activated with the same input vector', () => {
         it('preserves the activation output values exactly', () => {

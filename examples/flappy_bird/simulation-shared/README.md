@@ -129,13 +129,12 @@ projection step.
 
 Mutable temporal memory attached to one policy-controlled bird.
 
-The memory stores recent core observation frames and recent action history,
-allowing feedforward policies to consume short-term context without adding
-recurrent connections.
+The buffers remain available as compatibility state for shared browser and
+worker runtime plumbing, but the current controller input contract no longer
+feeds this external history into any architecture.
 
-If you want background reading, the Wikipedia article on "frame stacking"
-captures the basic idea of giving a feed-forward policy a short motion trail
-instead of full recurrent state.
+That keeps feed-forward and recurrent profiles on the same current-frame
+observation shelf while still leaving room for future opt-in experiments.
 
 ### SharedPipeLike
 
@@ -596,62 +595,28 @@ Example:
 const memoryState = createSharedObservationMemoryState();
 ```
 
-### resolvePreviousCoreFramesWithPadding
-
-```ts
-resolvePreviousCoreFramesWithPadding(
-  observationMemoryState: SharedObservationMemoryState,
-): number[][]
-```
-
-Resolves previous core frames (newest-first) with deterministic zero padding.
-
-Zero padding keeps the policy input width stable during the first few frames
-of an episode before enough history has accumulated.
-
-Parameters:
-- `observationMemoryState` - Mutable temporal memory for the active bird.
-
-Returns: Previous core frame list with fixed target length.
-
 ### resolveTemporalObservationVector
 
 ```ts
 resolveTemporalObservationVector(
   features: SharedObservationFeatures,
-  observationMemoryState: SharedObservationMemoryState,
+  _observationMemoryState: SharedObservationMemoryState,
 ): number[]
 ```
 
-Builds the temporal policy input vector (stacked observation + action memory).
+Builds the controller input vector for one decision step.
 
 Educational note:
-This helper turns an interpretable feature object into the exact flat vector a
-feed-forward network consumes. That is why the output layout is documented so
-explicitly: changing the order would change the meaning of every trained
-weight in the policy.
-
-Output layout:
-1) current core observation frame
-2) previous core frames (newest to oldest) with zero padding
-3) last-action channel
-4) recent flap-rate channel over a fixed window
+This helper keeps the public observation API stable while making the
+effective controller input just the current normalized frame. That removes
+hand-authored memory from all architectures so recurrent profiles must learn
+temporal state internally instead of receiving it as extra inputs.
 
 Parameters:
 - `features` - Structured observation features for the current decision step.
 - `observationMemoryState` - Mutable temporal memory for the active bird.
 
-Returns: Ordered temporal input vector for policy activation.
-
-### resolveZeroCoreObservationFrame
-
-```ts
-resolveZeroCoreObservationFrame(): number[]
-```
-
-Builds a zero-valued core frame with canonical length.
-
-Returns: Zero core frame.
+Returns: Ordered controller input vector for policy activation.
 
 ## simulation-shared/simulation-shared.statistics.utils.ts
 

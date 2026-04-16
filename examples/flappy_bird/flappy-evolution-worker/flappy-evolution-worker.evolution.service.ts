@@ -1,6 +1,10 @@
 import type { Neat } from '../../../src/neataptic';
 import type Network from '../../../src/architecture/network';
 import type { WorkerGenerationReadyMessage } from './flappy-evolution-worker.types';
+import {
+  logRecurrentDebugMarker,
+  logRecurrentPopulationSnapshot,
+} from './flappy-evolution-worker.debug.service';
 
 /**
  * Dependencies required to evolve one generation and prepare host payload output.
@@ -12,6 +16,7 @@ import type { WorkerGenerationReadyMessage } from './flappy-evolution-worker.typ
  * slice of behavior.
  */
 export interface WorkerEvolutionServiceOptions {
+  architectureProfileId: WorkerGenerationReadyMessage['payload']['architectureProfileId'];
   initializationPromise?: Promise<void>;
   neatRuntime: Neat | undefined;
   isStopped: () => boolean;
@@ -45,6 +50,7 @@ export async function evolveAndBuildGenerationReadyMessage(
   options: WorkerEvolutionServiceOptions,
 ): Promise<WorkerGenerationReadyMessage> {
   const {
+    architectureProfileId,
     initializationPromise,
     neatRuntime,
     isStopped,
@@ -60,19 +66,58 @@ export async function evolveAndBuildGenerationReadyMessage(
     throw new Error('Evolution worker runtime is not initialized.');
   }
 
+  const runtimeNeat = neatRuntime as unknown as { population?: Network[] };
+  logRecurrentPopulationSnapshot({
+    architectureProfileId,
+    phase: 'generation-before-warm-start',
+    generation: neatRuntime.generation,
+    population: Array.isArray(runtimeNeat.population)
+      ? runtimeNeat.population
+      : [],
+  });
+
   await warmStartGenerationZeroIfNeeded(neatRuntime);
 
+  logRecurrentPopulationSnapshot({
+    architectureProfileId,
+    phase: 'generation-after-warm-start',
+    generation: neatRuntime.generation,
+    population: Array.isArray(runtimeNeat.population)
+      ? runtimeNeat.population
+      : [],
+  });
+
   const bestNetwork = (await neatRuntime.evolve()) as Network;
-  const runtimeNeat = neatRuntime as unknown as { population?: Network[] };
   setCurrentPopulation(
     Array.isArray(runtimeNeat.population)
       ? runtimeNeat.population
       : [bestNetwork],
   );
 
+  logRecurrentPopulationSnapshot({
+    architectureProfileId,
+    phase: 'generation-after-evolve',
+    generation: neatRuntime.generation,
+    population: Array.isArray(runtimeNeat.population)
+      ? runtimeNeat.population
+      : [bestNetwork],
+    extra: {
+      bestFitness: Number(bestNetwork.score ?? 0),
+    },
+  });
+  logRecurrentDebugMarker({
+    architectureProfileId,
+    phase: 'generation-ready-payload-building',
+    generation: neatRuntime.generation,
+    extra: {
+      bestFitness: Number(bestNetwork.score ?? 0),
+    },
+  });
+
   return {
     type: 'generation-ready',
     payload: {
+      architectureProfileId,
       generation: neatRuntime.generation,
       bestFitness: Number(bestNetwork.score ?? 0),
       bestNetworkJson: bestNetwork.toJSON(),

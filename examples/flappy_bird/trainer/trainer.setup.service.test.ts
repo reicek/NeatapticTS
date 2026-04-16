@@ -1,3 +1,4 @@
+import { FLAPPY_NETWORK_HIDDEN_LAYER_SIZES } from '../constants/constants';
 import {
   createNeatController,
   createTrainerSetup,
@@ -36,7 +37,7 @@ describe('createNeatController', () => {
       inputNodeIds: neatController.options.network?.inputNodeIds.length,
       outputNodeIds: neatController.options.network?.outputNodeIds.length,
     }).toEqual({
-      hiddenLayerSizes: [16, 8, 4],
+      hiddenLayerSizes: FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
       inputNodeIds: 38,
       outputNodeIds: 2,
     });

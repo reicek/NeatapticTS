@@ -3,6 +3,8 @@ import {
   getApprovedExampleArchitectureProfiles,
   resolveExampleArchitectureProfile,
 } from './architectureProfiles';
+import { createGenomeFromNetwork } from '../src/neat/genome/genome';
+import { FLAPPY_NETWORK_HIDDEN_LAYER_SIZES } from './flappy_bird/constants/constants.network';
 
 describe('shared example architecture profiles', () => {
   describe('resolveExampleArchitectureProfile()', () => {
@@ -31,8 +33,8 @@ describe('shared example architecture profiles', () => {
         asciiId: 'mlp',
         flappyConfiguration: {
           family: 'MLP',
-          hiddenLayerSizes: [16, 8, 4],
-          input: 38,
+          hiddenLayerSizes: FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
+          input: 12,
           output: 2,
         },
         flappyFamily: 'MLP',
@@ -52,7 +54,7 @@ describe('shared example architecture profiles', () => {
         flappy: approvedFlappyProfiles.map((profile) => profile.id),
       }).toEqual({
         ascii: ['mlp'],
-        flappy: ['mlp'],
+        flappy: ['mlp', 'random-sparse', 'narx', 'gru', 'lstm'],
       });
     });
   });
@@ -86,11 +88,45 @@ describe('shared example architecture profiles', () => {
           topologyIntent: 'feed-forward',
         },
         flappy: {
-          inputNodeIds: 38,
+          inputNodeIds: 12,
           outputNodeIds: 2,
           topologyIntent: 'feed-forward',
         },
       });
     });
+
+    it('enables the Flappy GRU direct readout shortcut so the browser profile can react to current-frame inputs immediately', () => {
+      const flappyGruNetwork = buildExampleArchitectureProfileNetwork(
+        'flappy-bird',
+        'gru',
+      );
+      const directInputToOutputConnectionCount = flappyGruNetwork.connections.filter(
+        (connection) =>
+          connection.from.type === 'input' && connection.to.type === 'output',
+      ).length;
+
+      expect(directInputToOutputConnectionCount).toBe(24);
+    });
+
+    it('captures the shared Flappy NARX seed as a strict genome without leaking non-canonical node roles', () => {
+      const flappyNarxNetwork = buildExampleArchitectureProfileNetwork(
+        'flappy-bird',
+        'narx',
+      );
+
+      expect(() => createGenomeFromNetwork(flappyNarxNetwork)).not.toThrow();
+    });
+
+    it.each(['gru', 'lstm'] as const)(
+      'captures the shared Flappy %s seed as a strict genome before worker bootstrap',
+      (architectureProfileId) => {
+        const flappyRecurrentNetwork = buildExampleArchitectureProfileNetwork(
+          'flappy-bird',
+          architectureProfileId,
+        );
+
+        expect(() => createGenomeFromNetwork(flappyRecurrentNetwork)).not.toThrow();
+      },
+    );
   });
 });

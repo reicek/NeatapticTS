@@ -32,11 +32,12 @@ Provide a set of **high-quality, preconfigured architecture builders** that are:
 - [DONE] Step 2: `Architect.randomSparse(...)` now supports deterministic seeded replay through the public sparse-builder surface, and downstream architecture matrices exercise `RandomSparse` beyond its owner-local tests.
 - [DONE] Step 3: `Architect.narx(...)` is now closed for the current scope with explicit delay-line coverage, public clear-state guidance, and a small deterministic sequence example.
 - [DONE] Step 4: `Architect.lstm(...)` and `Architect.gru(...)` are now closed for the current scope with explicit gated-block coverage, GRU shortcut-option parity, direct evolution compatibility, and recurrent training smoke coverage.
+- [DONE] Step 5: the public `Architect` builder docs now include runnable examples, recommended starting knobs, and explicit pitfall guidance for `Perceptron`, `RandomSparse`, `NARX`, `GRU`, and `LSTM`.
 - [DONE] Step 6: the shared demo architecture-profile contract is landed through one shared example profile registry.
-- [DONE] Early Step 7 slice: Flappy Bird's trainer and worker default MLP seed paths now resolve through that shared contract instead of hardcoded `Architect.perceptron(...)` calls.
+- [DONE] Step 7: Flappy Bird now starts fresh worker-backed runs from multiple shared architecture profiles through a browser selector, explicit worker/HUD profile labels, and browser-local per-profile best-score tracking.
 - [DONE] Early Step 8 slice: ASCII Maze now accepts an additive `architectureProfileId` option that threads the shared contract into its evolution-engine and NEAT setup path.
-- [WIP] Current active frontier: Step 5 docs and examples, with Step 7 intentionally paused until the remaining non-Flappy closeout steps are finished.
-- [PLANNED] Remaining closeout: Step 5 docs and examples, Step 8 default ASCII profile rollout and telemetry/archive metadata, Step 9 cross-demo e2e matrix, Step 10 demo documentation, and then the remaining Step 7 Flappy integration work.
+- [WIP] Current active frontier: Step 8 default ASCII profile rollout and telemetry/archive metadata.
+- [PLANNED] Remaining closeout: Step 8 default ASCII profile rollout and telemetry/archive metadata, Step 9 cross-demo e2e matrix, and Step 10 demo documentation.
 
 ## Architecture set (initial)
 
@@ -168,12 +169,17 @@ Acceptance:
 
 - Produces stable graphs; can be evolved and optionally trained.
 
-### [PLANNED] Step 5 — Docs and examples
+### [DONE] Step 5 — Docs and examples
 
 - For each builder, include:
   - small example
   - recommended training/evolution knobs
   - pitfalls (state clearing, dataset shuffling)
+
+Completion note:
+
+- The public `Architect` builder docs now provide source-first runnable examples for `perceptron`, `randomSparse`, `narx`, `gru`, and `lstm`.
+- Each builder now documents practical starting knobs for training or evolution plus the main misuse patterns, including recurrent state resets and sequence-order handling.
 
 Acceptance:
 
@@ -202,7 +208,7 @@ Completion note:
 - Flappy Bird's current default MLP seed path now resolves through that shared contract in both the trainer and worker runtime.
 - ASCII Maze can now request the same shared profile concept through additive evolution-engine plumbing when a run provides `architectureProfileId`.
 
-### [PLANNED] Step 7 — Flappy Bird demo integration
+### [DONE] Step 7 — Flappy Bird demo integration
 
 - Replace the current hardcoded `Architect.perceptron(...)` seed path in the Node trainer and browser worker with the shared architecture-profile contract.
 - Keep architecture-selection buttons as a Flappy Bird-only control surface; do not introduce equivalent architecture buttons into ASCII Maze.
@@ -213,7 +219,7 @@ Completion note:
 - Treat `GRU` and `LSTM` as gated Flappy deliverables within this phase, not as optional post-phase extras.
 - If `GRU` or `LSTM` remain too opaque or unstable for Flappy Bird’s browser label, worker playback, restart semantics, or fresh-run selection flow, then this Phase 2 lane is still open.
 - ASCII Maze may validate them earlier, but that earlier success does not close the phase unless Flappy Bird also reaches reference-quality behavior for the same public families.
-- Add a small architecture control group in the lower-left stats area only if it behaves as a **new-run selector**:
+- Add a small architecture control group in the lower-right stats area only if it behaves as a **new-run selector**:
   - clicking a profile stops the current session,
   - starts a fresh worker-backed run with the selected seed profile,
   - resets population state and telemetry for that run,
@@ -224,11 +230,12 @@ Completion note:
 - Do **not** implement this as a live switch that mutates the currently running population or swaps one genome family under an active round.
 - Keep the labels concrete. Prefer `MLP`, `Sparse`, `NARX`, `GRU`, `LSTM` or similarly exact names over `classic`, `advanced`, or `beyond NEAT` in the final UI.
 
-Current implementation note:
+Completion note:
 
-- The current default MLP seed path in the Node trainer and browser worker is now routed through the shared architecture-profile contract.
-- Remaining work for this step is the host-visible profile selection flow, worker-init/profile propagation from the browser host, HUD/runtime labeling for multiple profiles, and the Flappy-only browser selector plus local-storage record behavior.
-- This step is intentionally paused until the remaining non-Flappy closeout work is done.
+- The Flappy browser host now exposes shared-profile fresh-run selector buttons for `MLP`, `Sparse`, `NARX`, `GRU`, and `LSTM`, with neon-outline hover treatment and no live population hot-swap path.
+- Browser worker initialization and generation-ready payloads now carry the selected `architectureProfileId`, and the runtime HUD keeps the chosen family visible across startup, playback, and restart flows.
+- The selector stores per-profile browser-local best pipe scores, renders per-button captions only when a record exists, and marks the current browser leader with a `*` suffix.
+- Flappy evaluation and playback now clear carried recurrent network state at rollout and fresh-session boundaries so stateful profiles restart deterministically.
 
 Acceptance:
 
@@ -342,8 +349,8 @@ Acceptance:
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
 Active tracker: plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md.
-This plan is [WIP]. Completed coverage: Step 1 MLP builder hardening is done; Step 2 RandomSparse builder hardening is done, including seeded replay and downstream serialize/standalone coverage; Step 3 NARX builder hardening is done, including explicit delay-line coverage, clear-state guidance, and a deterministic sequence example; Step 4 LSTM/GRU builder hardening is done, including GRU shortcut-option parity, GRU crossover compatibility, and recurrent training smoke coverage; Step 6 shared example architecture-profile contract is done; Flappy trainer/worker default MLP seed paths now resolve through the shared profile contract; ASCII Maze has additive architectureProfileId plumbing into the evolution engine and NEAT setup.
-Current active frontier: Step 5 docs and examples. Next narrow task: document the public sequence builders with small examples, recommended knobs, and explicit state-clearing guidance before resuming the paused Step 7 Flappy integration work.
-Required validations: targeted Jest for the touched builder and docs-adjacent surfaces, then npm run build and npm run docs.
+This plan is [WIP]. Completed coverage: Step 1 MLP builder hardening is done; Step 2 RandomSparse builder hardening is done, including seeded replay and downstream serialize/standalone coverage; Step 3 NARX builder hardening is done, including explicit delay-line coverage, clear-state guidance, and a deterministic sequence example; Step 4 LSTM/GRU builder hardening is done, including GRU shortcut-option parity, GRU crossover compatibility, and recurrent training smoke coverage; Step 5 docs and examples is done, including runnable source-first builder examples plus practical knob and pitfall guidance across the public Architect presets; Step 6 shared example architecture-profile contract is done; Step 7 Flappy integration is done, including browser-side profile selection, explicit worker/HUD profile labels, per-profile local best-score tracking, and recurrent-state reset hardening; ASCII Maze has additive architectureProfileId plumbing into the evolution engine and NEAT setup.
+Current active frontier: Step 8 default ASCII profile rollout and telemetry/archive metadata. Next narrow task: make builder-backed profiles the default fresh-start path in ASCII Maze, carry profile identity through telemetry/archive metadata, and thread the same contract through curriculum and warm-start surfaces.
+Required validations: targeted Jest for the touched ASCII Maze and shared profile surfaces, then npm run build and npm run docs.
 Worktree caution: the repo may contain unrelated ongoing changes; do not revert or normalize files outside this boundary.
 ```

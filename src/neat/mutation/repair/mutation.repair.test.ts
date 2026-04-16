@@ -1,5 +1,8 @@
 import { createInnovationTracker } from '../../innovation-tracker/innovation-tracker';
-import { connectIfCandidatesExistForDeadEnds } from './mutation.dead-ends';
+import {
+  connectIfCandidatesExistForDeadEnds,
+  ensureHiddenConnectivityForDeadEnds,
+} from './mutation.dead-ends';
 import type {
   ConnectionWithMetadata,
   GenomeWithMetadata,
@@ -37,6 +40,70 @@ describe('neat mutation repair chapter', () => {
 
         // Assert
         expect(genome.connections.length).toBe(0);
+      });
+    });
+  });
+
+  describe('ensureHiddenConnectivityForDeadEnds', () => {
+    describe('given one hidden node belongs to a validated recurrent module descriptor', () => {
+      it('skips outbound repair for that module-owned hidden node', () => {
+        // Arrange
+        const inputNode = createNode('input', 1);
+        const protectedHiddenNode = createNode('hidden', 2);
+        const outputNode = createNode('output', 3);
+        const genome = createGenome([inputNode, protectedHiddenNode, outputNode]);
+        const mutationController = createMutationController({
+          allowRecurrent: true,
+        });
+        const genomeWithTemporalDescriptor = genome as GenomeWithMetadata & {
+          _serializedExtensions?: {
+            version: number;
+            values: {
+              recurrentModules: Array<{
+                moduleId: string;
+                kind: 'gru';
+                nodeGeneIdsByRole: Record<string, number[]>;
+                connectionInnovations: number[];
+              }>;
+            };
+          };
+        };
+        const moduleConnection = genome.connect?.(inputNode, protectedHiddenNode)[0];
+
+        if (!moduleConnection) {
+          throw new Error('Expected recurrent module seed connection');
+        }
+
+        moduleConnection.innovation = 999;
+        genomeWithTemporalDescriptor._serializedExtensions = {
+          version: 1,
+          values: {
+            recurrentModules: [
+              {
+                moduleId: 'module:gru:2',
+                kind: 'gru',
+                nodeGeneIdsByRole: {
+                  output: [protectedHiddenNode.geneId ?? 0],
+                },
+                connectionInnovations: [999],
+              },
+            ],
+          },
+        };
+
+        // Act
+        ensureHiddenConnectivityForDeadEnds(
+          genomeWithTemporalDescriptor,
+          {
+            inputNodes: [inputNode],
+            outputNodes: [outputNode],
+            hiddenNodes: [protectedHiddenNode],
+          },
+          mutationController,
+        );
+
+        // Assert
+        expect(genome.connections).toHaveLength(1);
       });
     });
   });
@@ -102,9 +169,12 @@ function createNode(
   type: NodeWithMetadata['type'],
   geneId: number,
 ): NodeWithMetadata {
-  const connections: NodeWithMetadata['connections'] = {
+  const connections = {
     in: [],
     out: [],
+    self: [],
+  } as NodeWithMetadata['connections'] & {
+    self: ConnectionWithMetadata[];
   };
 
   return {

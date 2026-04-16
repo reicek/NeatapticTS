@@ -2,8 +2,11 @@
  * HUD and runtime stats contracts for the Flappy Bird browser demo.
  *
  * The browser HUD is intentionally declarative: keys describe what should be
- * shown, and helper utilities map those keys to DOM rows and live values. That
- * keeps the status panel readable even as telemetry grows.
+ * shown, and helper utilities map those keys to DOM rows and live values. The
+ * panel is split into a live current-run section, a generation-summary section,
+ * and optional instrumentation rows so the browser can show both immediate
+ * playback state and worker-computed population context without recomputing
+ * aggregates on the main thread.
  */
 
 /** Runtime stats table key union used across browser-entry helpers. */
@@ -11,20 +14,19 @@ export type FlappyStatsKey =
   | 'currentHeader'
   | 'currentFrames'
   | 'currentPipes'
-  | 'currentMaxFrames'
-  | 'currentMaxPipes'
   | 'currentArchitecture'
+  | 'summaryHeader'
+  | 'summaryFitness'
+  | 'summaryWinnerFrames'
+  | 'summaryWinnerPipes'
+  | 'summaryAveragePipes'
+  | 'summaryP90Frames'
+  | 'summaryArchitecture'
   | 'telemetryHeader'
   | 'telemetryActivationsPerFrame'
   | 'telemetrySimulationStepsPerRaf'
   | 'telemetryHudUpdatesPerSecond'
   | 'telemetryMinorGcPerMinute'
-  | 'bestHeader'
-  | 'bestFrames'
-  | 'bestPipes'
-  | 'bestMaxFrames'
-  | 'bestMaxPipes'
-  | 'bestArchitecture'
   | 'status'
   | 'birds';
 
@@ -53,7 +55,8 @@ export type FlappyStatsTableCells = Partial<
  * Color pair used for stats category key/value styling.
  *
  * The HUD uses paired colors so labels and values stay visually grouped while
- * still separating categories such as current run, telemetry, and best-so-far.
+ * still separating categories such as current run, generation summary,
+ * telemetry, and status.
  */
 export interface FlappyStatsCategoryColors {
   keyColor: string;

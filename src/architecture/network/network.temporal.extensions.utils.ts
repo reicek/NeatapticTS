@@ -302,6 +302,34 @@ export function synchronizeTemporalDescriptorExtensions(network: Network): void 
 }
 
 /**
+ * Collect gene ids currently owned by validated recurrent module descriptors.
+ *
+ * Mutation-repair helpers sometimes need to distinguish ordinary hidden nodes
+ * from hidden nodes that are internal parts of one explicit recurrent module.
+ * Those module-owned nodes can look locally stranded even when the module as a
+ * whole is valid, so repair code should consult this helper before rewiring
+ * them like generic hidden neurons.
+ *
+ * @param network Runtime network whose temporal descriptor ownership should be read.
+ * @returns Gene-id set for hidden nodes protected by live recurrent descriptors.
+ */
+export function resolveTemporalRecurrentModuleNodeGeneIds(
+  network: Network,
+): Set<number> {
+  synchronizeTemporalDescriptorExtensions(network);
+
+  const runtimeNetwork = network as RuntimeNetworkWithSerializedExtensions;
+  return new Set(
+    readRecurrentModules(runtimeNetwork._serializedExtensions)
+      .flatMap((recurrentModule) =>
+        Object.values(recurrentModule.nodeGeneIdsByRole),
+      )
+      .flat()
+      .filter((geneId): geneId is number => Number.isFinite(geneId)),
+  );
+}
+
+/**
  * Preserve parent temporal descriptors that remain structurally valid on one offspring.
  *
  * @param offspring Offspring runtime network produced by crossover.

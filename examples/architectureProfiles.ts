@@ -13,11 +13,11 @@ const ASCII_MAZE_RANDOM_SPARSE_CONNECTIONS = 12;
 const ASCII_MAZE_SEQUENCE_BLOCK_SIZES = [6] as const;
 const ASCII_MAZE_NARX_INPUT_MEMORY = 1;
 const ASCII_MAZE_NARX_OUTPUT_MEMORY = 1;
-const FLAPPY_RANDOM_SPARSE_HIDDEN_SIZE = 16;
-const FLAPPY_RANDOM_SPARSE_CONNECTIONS = 32;
+const FLAPPY_RANDOM_SPARSE_HIDDEN_SIZE = 8;
+const FLAPPY_RANDOM_SPARSE_CONNECTIONS = 16;
 const FLAPPY_SEQUENCE_BLOCK_SIZES = [16, 8] as const;
-const FLAPPY_NARX_INPUT_MEMORY = 2;
-const FLAPPY_NARX_OUTPUT_MEMORY = 2;
+const FLAPPY_NARX_INPUT_MEMORY = 3;
+const FLAPPY_NARX_OUTPUT_MEMORY = 3;
 
 /** Stable demo identifiers supported by the shared example profile contract. */
 export type ExampleDemoId = 'ascii-maze' | 'flappy-bird';
@@ -37,6 +37,14 @@ export type ExampleArchitectureProfileId =
   | 'mlp'
   | 'narx'
   | 'random-sparse';
+
+const EXAMPLE_ARCHITECTURE_PROFILE_ORDER: readonly ExampleArchitectureProfileId[] = [
+  'mlp',
+  'random-sparse',
+  'narx',
+  'gru',
+  'lstm',
+] as const;
 
 /** Demo approval flags keyed by the shared example demo ids. */
 export type ExampleArchitectureApprovalMap = Record<ExampleDemoId, boolean>;
@@ -76,6 +84,7 @@ export interface ExampleSequenceArchitectureConfiguration {
   blockSizes: number[];
   family: 'GRU' | 'LSTM';
   input: number;
+  inputToOutput?: boolean;
   output: number;
 }
 
@@ -132,13 +141,13 @@ const EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS: Record<
   'random-sparse': {
     id: 'random-sparse',
     family: 'RandomSparse',
-    label: 'RandomSparse',
+    label: 'Sparse',
     shortDescription:
       'Sparse topology-search baseline that starts with fewer explicit edges.',
     recurrent: false,
     approvalByDemoId: {
       'ascii-maze': false,
-      'flappy-bird': false,
+      'flappy-bird': true,
     },
     resolveConfiguration: (demoId) =>
       demoId === 'flappy-bird'
@@ -172,7 +181,7 @@ const EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS: Record<
     recurrent: true,
     approvalByDemoId: {
       'ascii-maze': false,
-      'flappy-bird': false,
+      'flappy-bird': true,
     },
     resolveConfiguration: (demoId) =>
       demoId === 'flappy-bird'
@@ -202,7 +211,7 @@ const EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS: Record<
     recurrent: true,
     approvalByDemoId: {
       'ascii-maze': false,
-      'flappy-bird': false,
+      'flappy-bird': true,
     },
     resolveConfiguration: (demoId) =>
       demoId === 'flappy-bird'
@@ -210,6 +219,7 @@ const EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS: Record<
             family: 'GRU',
             input: FLAPPY_NETWORK_INPUT_SIZE,
             blockSizes: [...FLAPPY_SEQUENCE_BLOCK_SIZES],
+            inputToOutput: true,
             output: FLAPPY_NETWORK_OUTPUT_SIZE,
           }
         : {
@@ -228,7 +238,7 @@ const EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS: Record<
     recurrent: true,
     approvalByDemoId: {
       'ascii-maze': false,
-      'flappy-bird': false,
+      'flappy-bird': true,
     },
     resolveConfiguration: (demoId) =>
       demoId === 'flappy-bird'
@@ -308,10 +318,9 @@ export function resolveExampleArchitectureProfile(
 export function getApprovedExampleArchitectureProfiles(
   demoId: ExampleDemoId,
 ): ExampleArchitectureProfile[] {
-  return Object.values(EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS)
-    .map((profileDefinition) =>
-      resolveExampleArchitectureProfile(demoId, profileDefinition.id),
-    )
+  return EXAMPLE_ARCHITECTURE_PROFILE_ORDER.map((profileId) =>
+    resolveExampleArchitectureProfile(demoId, profileId),
+  )
     .filter((profile) => profile.approvedForDemo);
 }
 
@@ -364,6 +373,7 @@ export function buildExampleArchitectureProfileNetwork(
         configuration.input,
         ...configuration.blockSizes,
         configuration.output,
+        { inputToOutput: configuration.inputToOutput },
       );
 
     case 'LSTM':

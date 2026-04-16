@@ -1,3 +1,4 @@
+import { resolveTemporalRecurrentModuleNodeGeneIds } from '../../../architecture/network/network.temporal.extensions.utils';
 import { allowsRecurrentConnectionMutation } from '../../topology-intent/neat.topology-intent';
 import * as mutationAddConn from '../add-conn/mutation.add-conn';
 import type {
@@ -193,8 +194,22 @@ export function ensureHiddenConnectivityForDeadEnds(
   },
   internal: NeatControllerForMutation,
 ): void {
+  const protectedTemporalModuleGeneIds =
+    resolveTemporalRecurrentModuleNodeGeneIds(
+      networkToEdit as unknown as Parameters<
+        typeof resolveTemporalRecurrentModuleNodeGeneIds
+      >[0],
+    );
+
   // Step 1: fix missing inbound and outbound edges for each hidden node.
   for (const hiddenNode of nodeGroupsToUse.hiddenNodes) {
+    if (
+      typeof hiddenNode.geneId === 'number' &&
+      protectedTemporalModuleGeneIds.has(hiddenNode.geneId)
+    ) {
+      continue;
+    }
+
     if (!hasIncomingForDeadEnds(hiddenNode)) {
       const incomingCandidates = nodeGroupsToUse.inputNodes.concat(
         nodeGroupsToUse.hiddenNodes.filter((node) => node !== hiddenNode),

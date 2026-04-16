@@ -1,10 +1,13 @@
 import Network from '../../../../src/architecture/network';
 import { updateStatsTableValues } from '../host/host';
-import { resolveNetworkArchitectureLabel } from '../network-view/network-view';
-import { animatePopulationEpisode } from '../playback/playback';
+import {
+  animatePopulationEpisode,
+  type PlaybackEpisodeSummary,
+} from '../playback/playback';
 import { requestWorkerGeneration } from '../worker-channel/worker-channel';
 import {
   FLAPPY_HUD_UPDATE_INTERVAL_FRAMES,
+  FLAPPY_HUD_PLACEHOLDER_TEXT,
   FLAPPY_HUD_ZERO_TEXT,
   FLAPPY_DEFAULT_RNG_SEED,
   FLAPPY_STATUS_EVOLVING_TEXT,
@@ -16,14 +19,23 @@ import {
 } from './runtime.telemetry.service';
 import {
   presentRuntimeGenerationPreview,
+  startRuntimeEvolvingPreview,
   startRuntimeStartupPreview,
 } from './runtime.startup-preview.service';
+import type { HostArchitectureSelectorController } from '../host/host.types';
 import type {
   FlappyStatsTableCells,
   NetworkVisualizationHandle,
 } from '../browser-entry.types';
 import type { WorkerChannelGenerationPayload } from '../worker-channel/worker-channel.types';
 import type { RuntimeStartupPreviewHandle } from './runtime.types';
+import type { ExampleArchitectureProfile, ExampleArchitectureProfileId } from '../../../architectureProfiles';
+import {
+  persistRuntimeArchitectureHistory,
+  resolveRuntimeArchitectureSelectorItems,
+  updateRuntimeArchitectureHistory,
+  type RuntimeArchitectureHistoryByProfileId,
+} from './runtime.architecture-profile.service';
 import type { RuntimeTelemetryState } from './runtime.telemetry.service';
 
 /**
@@ -31,8 +43,9 @@ import type { RuntimeTelemetryState } from './runtime.telemetry.service';
  *
  * This loop is the heart of the interactive demo. It repeatedly asks the worker
  * for the next evolved generation, updates the HUD and network view, plays back
- * that generation on the canvas, then folds the outcome into best-so-far
- * browser state.
+ * that generation on the canvas, then folds the outcome into the generation
+ * summary section and the cross-generation history used by the architecture
+ * selector.
  */
 
 /**
@@ -42,15 +55,20 @@ import type { RuntimeTelemetryState } from './runtime.telemetry.service';
  * declarative and avoids a long positional parameter list.
  */
 export interface RuntimeEvolutionLoopOptions {
+  architectureSelectorController: HostArchitectureSelectorController;
   evolutionWorker: Worker;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   statsValueByKey: FlappyStatsTableCells;
   renderNetworkArchitecture: NetworkVisualizationHandle['renderNetworkArchitecture'];
+  availableArchitectureProfiles: ExampleArchitectureProfile[];
+  initialArchitectureHistoryByProfileId: RuntimeArchitectureHistoryByProfileId;
   populationSize: number;
   elitismCount: number;
   inputSize: number;
   outputSize: number;
+  selectedArchitectureProfileId: ExampleArchitectureProfileId;
+  selectedArchitectureProfileLabel: string;
   runtimeTelemetryState: RuntimeTelemetryState;
   isStopped: () => boolean;
 }
@@ -72,31 +90,40 @@ export async function runRuntimeEvolutionLoop(
   options: RuntimeEvolutionLoopOptions,
 ): Promise<void> {
   const {
+    architectureSelectorController,
     evolutionWorker,
     canvas,
     context,
     statsValueByKey,
     renderNetworkArchitecture,
+    availableArchitectureProfiles,
+    initialArchitectureHistoryByProfileId,
     populationSize,
     elitismCount,
     inputSize,
     outputSize,
+    selectedArchitectureProfileId,
+    selectedArchitectureProfileLabel,
     runtimeTelemetryState,
     isStopped,
   } = options;
 
-  // Step 1: Track best-so-far metrics across all completed generations.
+  // Step 1: Track cross-generation maxima used by architecture-history badges.
   let bestRunFrames = 0;
   let bestRunPipes = 0;
+  let architectureHistoryByProfileId = initialArchitectureHistoryByProfileId;
   let shouldShowStartupPreview = true;
+  let expectedGeneration = 1;
 
   // Step 2: Initialize worker runtime with deterministic seed + config.
+
   evolutionWorker.postMessage({
     type: 'init',
     payload: {
       populationSize,
       elitismCount,
       rngSeed: FLAPPY_DEFAULT_RNG_SEED,
+      architectureProfileId: selectedArchitectureProfileId,
     },
   });
 
@@ -110,6 +137,7 @@ export async function runRuntimeEvolutionLoop(
         context,
         isStopped,
         showStartupPreview: shouldShowStartupPreview,
+        waitLegendText: resolveEvolutionWaitLegendText(expectedGeneration),
       },
     );
     if (isStopped()) {
@@ -126,28 +154,24 @@ export async function runRuntimeEvolutionLoop(
       generationPayload,
       bestNetwork,
     );
-    const bestArchitectureLabel = resolveNetworkArchitectureLabel(
-      bestNetwork,
-      inputSize,
-      outputSize,
+    const generationPopulationSize = resolveGenerationPopulationSize(
+      generationPopulationNetworks,
+      populationSize,
     );
+    const bestArchitectureLabel = selectedArchitectureProfileLabel;
 
     // Step 3.3: Hydrate current-generation HUD values before playback begins.
     updateStatsTableValues(statsValueByKey, {
-      currentHeader: `Current run · Gen ${generationPayload.generation}`,
+      currentHeader: resolveCurrentRunHeaderText(generationPayload.generation),
       currentFrames: FLAPPY_HUD_ZERO_TEXT,
       currentPipes: FLAPPY_HUD_ZERO_TEXT,
-      currentMaxFrames: FLAPPY_HUD_ZERO_TEXT,
-      currentMaxPipes: FLAPPY_HUD_ZERO_TEXT,
       currentArchitecture: bestArchitectureLabel,
       ...resolveInitialRuntimeTelemetryHudValues(),
-      bestHeader: 'Best run',
-      bestFrames: String(bestRunFrames),
-      bestPipes: String(bestRunPipes),
-      bestMaxFrames: String(bestRunFrames),
-      bestMaxPipes: String(bestRunPipes),
-      bestArchitecture: bestArchitectureLabel,
-      birds: `${FLAPPY_HUD_ZERO_TEXT}/${populationSize}`,
+      ...resolveGenerationSummaryHudValues({
+        architectureLabel: bestArchitectureLabel,
+        bestFitness,
+      }),
+      birds: `${FLAPPY_HUD_ZERO_TEXT}/${generationPopulationSize}`,
     });
 
     // Step 3.4: Render active network architecture in the side panel.
@@ -184,11 +208,9 @@ export async function runRuntimeEvolutionLoop(
 
         // Step 3.7.2: Publish current frame counters + telemetry values.
         updateStatsTableValues(statsValueByKey, {
-          birds: `${frameStats.activeBirdCount}/${populationSize}`,
+          birds: `${frameStats.activeBirdCount}/${generationPopulationSize}`,
           currentFrames: String(frameStats.frameIndex),
           currentPipes: String(frameStats.leaderPipesPassed),
-          currentMaxFrames: String(frameStats.leaderFramesSurvived),
-          currentMaxPipes: String(frameStats.leaderPipesPassed),
           ...resolveRuntimeTelemetryHudValues(
             frameStats,
             runtimeTelemetryState,
@@ -203,13 +225,6 @@ export async function runRuntimeEvolutionLoop(
           return;
         }
 
-        updateStatsTableValues(statsValueByKey, {
-          currentArchitecture: resolveNetworkArchitectureLabel(
-            championNetwork,
-            inputSize,
-            outputSize,
-          ),
-        });
         renderNetworkArchitecture(championNetwork, inputSize, outputSize);
       },
     );
@@ -221,15 +236,42 @@ export async function runRuntimeEvolutionLoop(
     );
     bestRunPipes = Math.max(bestRunPipes, playbackSummary.winnerPipesPassed);
 
+    const nextArchitectureHistoryByProfileId = updateRuntimeArchitectureHistory(
+      architectureHistoryByProfileId,
+      selectedArchitectureProfileId,
+      {
+        pipesPassed: bestRunPipes,
+        framesSurvived: bestRunFrames,
+      },
+    );
+    if (nextArchitectureHistoryByProfileId !== architectureHistoryByProfileId) {
+      architectureHistoryByProfileId = nextArchitectureHistoryByProfileId;
+      persistRuntimeArchitectureHistory(architectureHistoryByProfileId);
+      architectureSelectorController.updateItems(
+        resolveRuntimeArchitectureSelectorItems({
+          availableProfiles: availableArchitectureProfiles,
+          selectedProfileId: selectedArchitectureProfileId,
+          historyByProfileId: architectureHistoryByProfileId,
+        }),
+      );
+    }
+
+    const nextExpectedGeneration = generationPayload.generation + 1;
+
     // Step 3.9: Finalize generation HUD summary and switch status back to evolving.
     updateStatsTableValues(statsValueByKey, {
-      bestFrames: String(playbackSummary.winnerFramesSurvived),
-      bestPipes: String(playbackSummary.winnerPipesPassed),
-      bestMaxFrames: String(bestRunFrames),
-      bestMaxPipes: String(bestRunPipes),
+      currentHeader: resolveCurrentRunHeaderText(nextExpectedGeneration),
+      currentFrames: FLAPPY_HUD_ZERO_TEXT,
+      currentPipes: FLAPPY_HUD_ZERO_TEXT,
+      ...resolveGenerationSummaryHudValues({
+        architectureLabel: bestArchitectureLabel,
+        bestFitness,
+        playbackSummary,
+      }),
       status: FLAPPY_STATUS_EVOLVING_TEXT,
-      birds: `${FLAPPY_HUD_ZERO_TEXT}/${populationSize}`,
+      birds: `${FLAPPY_HUD_ZERO_TEXT}/${generationPopulationSize}`,
     });
+    expectedGeneration = nextExpectedGeneration;
 
     // Step 3.10: Emit compact generation summary to console (best-effort only).
     try {
@@ -258,15 +300,21 @@ async function requestGenerationWithOptionalStartupPreview(options: {
   context: CanvasRenderingContext2D;
   isStopped: () => boolean;
   showStartupPreview: boolean;
+  waitLegendText: string;
 }): Promise<WorkerChannelGenerationPayload> {
-  // Step 1: Start the animated loading preview only for the first generation.
+  // Step 1: Show either the first-load preview or the between-generation evolving overlay.
   const startupPreviewHandle = options.showStartupPreview
     ? startRuntimeStartupPreview({
         canvas: options.canvas,
         context: options.context,
         isStopped: options.isStopped,
       })
-    : undefined;
+    : startRuntimeEvolvingPreview({
+        canvas: options.canvas,
+        context: options.context,
+        isStopped: options.isStopped,
+        legendText: options.waitLegendText,
+      });
 
   try {
     // Step 2: Await the next worker generation while the preview animates.
@@ -342,6 +390,81 @@ function resolveGenerationPopulationNetworks(
 }
 
 /**
+ * Resolves which population size the browser HUD should display for the current generation.
+ *
+ * Browser sessions may start with one population budget and later downshift to a
+ * smaller one after a successful run. The worker generation payload already
+ * carries the actual serialized population, so the HUD should prefer that real
+ * size over the startup budget whenever it is available.
+ *
+ * @param generationPopulationNetworks - Browser-side cache of the current generation population.
+ * @param fallbackPopulationSize - Startup budget used before a generation payload is available.
+ * @returns Population size that should be displayed in the HUD for this generation.
+ */
+export function resolveGenerationPopulationSize(
+  generationPopulationNetworks: Network[],
+  fallbackPopulationSize: number,
+): number {
+  return generationPopulationNetworks.length > 0
+    ? generationPopulationNetworks.length
+    : fallbackPopulationSize;
+}
+
+/**
+ * Resolves the centered legend text shown while the worker evolves the next generation.
+ *
+ * @param generation - Next generation number expected from the worker.
+ * @returns Evolving overlay text.
+ */
+export function resolveEvolutionWaitLegendText(generation: number): string {
+  return `Evolving Gen ${generation}...`;
+}
+
+/**
+ * Resolves the generation-summary HUD values shown beside the live run counters.
+ *
+ * The summary intentionally shows metrics the worker already computes for the
+ * whole population so the browser can present higher-signal data without doing
+ * extra aggregation on the main thread.
+ *
+ * @param input - Summary source values for the active generation.
+ * @returns HUD-ready summary values with placeholders until playback completes.
+ */
+export function resolveGenerationSummaryHudValues(input: {
+  architectureLabel: string;
+  bestFitness: number;
+  playbackSummary?: PlaybackEpisodeSummary;
+}): {
+  summaryHeader: string;
+  summaryFitness: string;
+  summaryWinnerFrames: string;
+  summaryWinnerPipes: string;
+  summaryAveragePipes: string;
+  summaryP90Frames: string;
+  summaryArchitecture: string;
+} {
+  const summary = input.playbackSummary;
+
+  return {
+    summaryHeader: 'Generation summary',
+    summaryFitness: input.bestFitness.toFixed(0),
+    summaryWinnerFrames: summary
+      ? String(summary.winnerFramesSurvived)
+      : FLAPPY_HUD_PLACEHOLDER_TEXT,
+    summaryWinnerPipes: summary
+      ? String(summary.winnerPipesPassed)
+      : FLAPPY_HUD_PLACEHOLDER_TEXT,
+    summaryAveragePipes: summary
+      ? summary.averagePipesPassed.toFixed(2)
+      : FLAPPY_HUD_PLACEHOLDER_TEXT,
+    summaryP90Frames: summary
+      ? String(summary.p90FramesSurvived)
+      : FLAPPY_HUD_PLACEHOLDER_TEXT,
+    summaryArchitecture: input.architectureLabel,
+  };
+}
+
+/**
  * Resolves the centered legend text used to present one ready generation.
  *
  * @param generation - Ready generation number from the worker payload.
@@ -349,4 +472,8 @@ function resolveGenerationPopulationNetworks(
  */
 function resolveGenerationPresentationLegendText(generation: number): string {
   return `GENERATION ${generation}`;
+}
+
+function resolveCurrentRunHeaderText(generation: number): string {
+  return `Current run · Gen ${generation}`;
 }

@@ -130,6 +130,9 @@ export interface NetworkVisualizationHoverState {
  */
 export interface NetworkInputGroupLabelBandScene {
   label: string;
+  labelLines: readonly string[];
+  tooltipHeading: string;
+  tooltipBodyParagraphs: readonly string[];
   leftPx: number;
   topPx: number;
   widthPx: number;
@@ -137,6 +140,23 @@ export interface NetworkInputGroupLabelBandScene {
   backgroundColor: string;
   orientation: 'vertical' | 'horizontal';
   nodeIndices: number[];
+}
+
+/**
+ * Positioned input-description row scene reused by drawing and hover hit testing.
+ *
+ * Each row maps one human-readable description to one input node so hovering
+ * the text can emphasize the same node the description explains.
+ */
+export interface NetworkInputDescriptionScene {
+  labelLines: readonly string[];
+  tooltipHeading: string;
+  tooltipBodyParagraphs: readonly string[];
+  leftPx: number;
+  topPx: number;
+  widthPx: number;
+  heightPx: number;
+  nodeIndex: number;
 }
 
 /**
@@ -149,6 +169,7 @@ export interface NetworkVisualizationPositionedScene {
   positionedNodes: PositionedNetworkNodeLike[];
   nodeDimensions: NetworkNodeDimensionsLike;
   inputGroupLabelBandScenes: NetworkInputGroupLabelBandScene[];
+  inputDescriptionScenes: NetworkInputDescriptionScene[];
 }
 
 /**

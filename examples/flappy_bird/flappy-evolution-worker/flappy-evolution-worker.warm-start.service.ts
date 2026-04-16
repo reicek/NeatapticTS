@@ -1,5 +1,6 @@
 import type { Neat } from '../../../src/neataptic';
 import type Network from '../../../src/architecture/network';
+import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
 import { createXorshift32 } from '../rng';
 import {
   evaluateFlappyFitnessAcrossSeeds,
@@ -35,6 +36,14 @@ import {
   createSharedObservationMemoryState,
   resolveAdaptiveDifficultyProfile,
 } from '../flappy.simulation.shared.utils';
+import { logRecurrentDebugMarker } from './flappy-evolution-worker.debug.service';
+
+const FLAPPY_WORKER_NARX_WARM_START_ROLLOUT_SEED_COUNT = 7;
+const FLAPPY_WORKER_NARX_WARM_START_OPTIMIZATION_STEPS = 20;
+const FLAPPY_WORKER_NARX_WARM_START_PIPE_PROGRESS_WEIGHT = 10_000;
+const FLAPPY_WORKER_NARX_WARM_START_STABILITY_STDDEV_WEIGHT = 0.5;
+const FLAPPY_WORKER_GRU_WARM_START_ROLLOUT_SEED_COUNT = 4;
+const FLAPPY_WORKER_GRU_WARM_START_OPTIMIZATION_STEPS = 8;
 
 /**
  * State carried between generation requests for one worker runtime.
@@ -44,6 +53,7 @@ import {
  * RNG seed should be reused for deterministic synthetic sample generation.
  */
 export interface WorkerWarmStartState {
+  architectureProfileId: ExampleArchitectureProfileId;
   workerInitSeed: number;
   generationZeroWarmStartApplied: boolean;
 }
@@ -63,6 +73,7 @@ export interface WorkerWarmStartDependencies {
   optimizeWarmStartTemplateNetwork: (
     templateNetwork: Network,
     workerInitSeed: number,
+    architectureProfileId: ExampleArchitectureProfileId,
   ) => Network;
 }
 
@@ -124,30 +135,39 @@ export async function warmStartWorkerGenerationZeroIfNeeded(
     FLAPPY_WORKER_GEN0_PRETRAIN_SAMPLE_COUNT,
   );
 
-  // Step 5: Train a single template network, then seed the whole population from it.
+  // Step 5: Train a single template network when the selected profile supports it.
   const templateNetwork = population[0]?.clone();
   if (!templateNetwork) {
     warmStartState.generationZeroWarmStartApplied = true;
     return;
   }
 
-  try {
-    templateNetwork.train(trainingSet, {
-      iterations: FLAPPY_WORKER_GEN0_PRETRAIN_ITERATIONS,
-      rate: FLAPPY_WORKER_GEN0_PRETRAIN_RATE,
-      batchSize: FLAPPY_WORKER_GEN0_PRETRAIN_BATCH_SIZE,
-      optimizer: 'adam',
-      mixedPrecision: false,
-    });
-  } catch {
-    // If training fails for any reason, fall back to pure noise seeding.
-  }
+  const teacherStrategy = resolveWorkerWarmStartTeacherStrategy(
+    warmStartState.architectureProfileId,
+  );
+  logRecurrentDebugMarker({
+    architectureProfileId: warmStartState.architectureProfileId,
+    phase: 'warm-start-start',
+    generation: neatController.generation,
+    extra: {
+      teacherStrategy,
+      trainingSetSize: trainingSet.length,
+      populationSize: population.length,
+    },
+  });
+
+  applyTeacherWarmStart(
+    templateNetwork,
+    trainingSet,
+    warmStartState.architectureProfileId,
+  );
 
   // Step 6: Refine the trained template with a short rollout-guided hill-climb.
   const optimizedTemplateNetwork =
     dependencies.optimizeWarmStartTemplateNetwork(
       templateNetwork,
       warmStartState.workerInitSeed,
+      warmStartState.architectureProfileId,
     );
 
   // Step 7: Copy trained weights/biases into each genome with small noise for diversity.
@@ -165,6 +185,76 @@ export async function warmStartWorkerGenerationZeroIfNeeded(
   }
 
   warmStartState.generationZeroWarmStartApplied = true;
+  logRecurrentDebugMarker({
+    architectureProfileId: warmStartState.architectureProfileId,
+    phase: 'warm-start-finished',
+    generation: neatController.generation,
+    extra: {
+      teacherStrategy,
+      populationSize: population.length,
+    },
+  });
+}
+
+type WorkerWarmStartTeacherStrategy =
+  | 'feed-forward-teacher-fit'
+  | 'rollout-only';
+
+/**
+ * Applies the teacher phase that best matches the selected architecture family.
+ *
+ * @param templateNetwork - Template network cloned from the current population.
+ * @param trainingSet - Synthetic heuristic dataset.
+ * @param architectureProfileId - Selected shared Flappy profile id.
+ * @returns Nothing.
+ */
+function applyTeacherWarmStart(
+  templateNetwork: Network,
+  trainingSet: Array<{ input: number[]; output: number[] }>,
+  architectureProfileId: ExampleArchitectureProfileId,
+): void {
+  const teacherStrategy = resolveWorkerWarmStartTeacherStrategy(
+    architectureProfileId,
+  );
+
+  if (teacherStrategy === 'rollout-only') {
+    return;
+  }
+
+  try {
+    if (teacherStrategy === 'feed-forward-teacher-fit') {
+      templateNetwork.train(trainingSet, {
+        iterations: FLAPPY_WORKER_GEN0_PRETRAIN_ITERATIONS,
+        rate: FLAPPY_WORKER_GEN0_PRETRAIN_RATE,
+        batchSize: FLAPPY_WORKER_GEN0_PRETRAIN_BATCH_SIZE,
+        optimizer: 'adam',
+        mixedPrecision: false,
+      });
+    }
+  } catch {
+    // If teacher fitting fails for any reason, fall back to rollout-only refinement.
+  }
+}
+
+/**
+ * Resolves which teacher path should run before rollout refinement.
+ *
+ * @param architectureProfileId - Selected shared Flappy profile id.
+ * @returns Teacher strategy best matched to the architecture family.
+ */
+export function resolveWorkerWarmStartTeacherStrategy(
+  architectureProfileId: ExampleArchitectureProfileId,
+): WorkerWarmStartTeacherStrategy {
+  switch (architectureProfileId) {
+    case 'mlp':
+    case 'random-sparse':
+      return 'feed-forward-teacher-fit';
+
+    case 'narx':
+    case 'gru':
+    case 'lstm':
+      return 'rollout-only';
+  }
 }
 
 /**
@@ -257,17 +347,23 @@ function buildHeuristicPretrainSet(
  *
  * @param templateNetwork - Heuristic-pretrained template network.
  * @param workerInitSeed - Deterministic worker seed.
+ * @param architectureProfileId - Selected shared Flappy profile id.
  * @returns Best rollout-refined template found within the bounded budget.
  */
 function optimizeWarmStartTemplateNetwork(
   templateNetwork: Network,
   workerInitSeed: number,
+  architectureProfileId: ExampleArchitectureProfileId,
 ): Network {
+  const rolloutOptimizationPlan = resolveWarmStartRolloutOptimizationPlan(
+    architectureProfileId,
+  );
+
   // Step 1: Build deterministic shared rollout seeds for candidate comparison.
   const rolloutSeedRng = createXorshift32(workerInitSeed ^ 0xa341_316c);
   const sharedRolloutSeeds = buildWarmStartRolloutSeedBatch(
     rolloutSeedRng,
-    FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_SEED_COUNT,
+    rolloutOptimizationPlan.rolloutSeedCount,
   );
 
   // Step 2: Start from the teacher-fitted template as the current best policy.
@@ -281,14 +377,13 @@ function optimizeWarmStartTemplateNetwork(
   // Step 3: Run a bounded topology-fixed hill-climb on actual rollout fitness.
   for (
     let optimizationStepIndex = 0;
-    optimizationStepIndex <
-    FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS;
+    optimizationStepIndex < rolloutOptimizationPlan.optimizationStepCount;
     optimizationStepIndex++
   ) {
     const candidateTemplateNetwork = bestTemplateNetwork.clone();
     const annealRatio = resolveWarmStartAnnealRatio(
       optimizationStepIndex,
-      FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS,
+      rolloutOptimizationPlan.optimizationStepCount,
     );
 
     perturbNetworkParametersInPlace(candidateTemplateNetwork, optimizationRng, {
@@ -312,6 +407,7 @@ function optimizeWarmStartTemplateNetwork(
       !isWarmStartEvaluationBetter(
         candidateTemplateEvaluation,
         bestTemplateEvaluation,
+        architectureProfileId,
       )
     ) {
       continue;
@@ -380,10 +476,20 @@ function evaluateWarmStartTemplateAcrossRollouts(
 function isWarmStartEvaluationBetter(
   candidateEvaluation: FlappySeedBatchEvaluation,
   bestEvaluation: FlappySeedBatchEvaluation,
+  architectureProfileId: ExampleArchitectureProfileId,
 ): boolean {
-  // Step 1: Prefer higher robust shared-seed fitness.
-  if (candidateEvaluation.robustFitness !== bestEvaluation.robustFitness) {
-    return candidateEvaluation.robustFitness > bestEvaluation.robustFitness;
+  // Step 1: Prefer the architecture-specific warm-start scalar.
+  const candidateScore = resolveWarmStartEvaluationScore(
+    candidateEvaluation,
+    architectureProfileId,
+  );
+  const bestScore = resolveWarmStartEvaluationScore(
+    bestEvaluation,
+    architectureProfileId,
+  );
+
+  if (candidateScore !== bestScore) {
+    return candidateScore > bestScore;
   }
 
   // Step 2: Break ties with more practical gameplay progress.
@@ -394,6 +500,72 @@ function isWarmStartEvaluationBetter(
   return (
     candidateEvaluation.meanFramesSurvived > bestEvaluation.meanFramesSurvived
   );
+}
+
+/**
+ * Resolves the rollout-refinement budget for one warm-start architecture profile.
+ *
+ * NARX gets a stronger rollout pass, while GRU keeps a smaller bounded pass so
+ * the browser worker stays responsive after the Flappy-specific readout
+ * shortcut expands the recurrent seed.
+ *
+ * @param architectureProfileId - Selected shared Flappy profile id.
+ * @returns Shared-seed count and optimization-step budget.
+ */
+export function resolveWarmStartRolloutOptimizationPlan(
+  architectureProfileId: ExampleArchitectureProfileId,
+): {
+  rolloutSeedCount: number;
+  optimizationStepCount: number;
+} {
+  if (architectureProfileId === 'narx') {
+    return {
+      rolloutSeedCount: FLAPPY_WORKER_NARX_WARM_START_ROLLOUT_SEED_COUNT,
+      optimizationStepCount: FLAPPY_WORKER_NARX_WARM_START_OPTIMIZATION_STEPS,
+    };
+  }
+
+  if (architectureProfileId === 'gru') {
+    return {
+      rolloutSeedCount: FLAPPY_WORKER_GRU_WARM_START_ROLLOUT_SEED_COUNT,
+      optimizationStepCount: FLAPPY_WORKER_GRU_WARM_START_OPTIMIZATION_STEPS,
+    };
+  }
+
+  return {
+    rolloutSeedCount: FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_SEED_COUNT,
+    optimizationStepCount: FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS,
+  };
+}
+
+/**
+ * Resolves the architecture-specific scalar used during warm-start rollout refinement.
+ *
+ * NARX and GRU use a pipe-first scalar so rollout refinement prefers real pipe
+ * progress over a dense-shaping local optimum before the browser NEAT loop
+ * begins.
+ *
+ * @param aggregateEvaluation - Shared-seed rollout evidence for one template.
+ * @param architectureProfileId - Selected shared Flappy profile id.
+ * @returns Scalar score used for candidate comparison.
+ */
+export function resolveWarmStartEvaluationScore(
+  aggregateEvaluation: FlappySeedBatchEvaluation,
+  architectureProfileId: ExampleArchitectureProfileId,
+): number {
+  if (architectureProfileId === 'narx' || architectureProfileId === 'gru') {
+    const pipeProgressScore =
+      aggregateEvaluation.meanPipesPassed *
+      FLAPPY_WORKER_NARX_WARM_START_PIPE_PROGRESS_WEIGHT;
+    const survivalScore = aggregateEvaluation.meanFramesSurvived;
+    const stabilityPenalty =
+      aggregateEvaluation.fitnessStdDev *
+      FLAPPY_WORKER_NARX_WARM_START_STABILITY_STDDEV_WEIGHT;
+
+    return pipeProgressScore + survivalScore - stabilityPenalty;
+  }
+
+  return aggregateEvaluation.robustFitness;
 }
 
 /**

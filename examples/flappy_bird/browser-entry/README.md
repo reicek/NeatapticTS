@@ -225,7 +225,8 @@ Handle returned by `start` for controlling demo execution lifecycle.
 Color pair used for stats category key/value styling.
 
 The HUD uses paired colors so labels and values stay visually grouped while
-still separating categories such as current run, telemetry, and best-so-far.
+still separating categories such as current run, generation summary,
+telemetry, and status.
 
 ### FlappyStatsKey
 
@@ -244,6 +245,13 @@ Runtime lookup map of stat keys to writable value cells.
 
 This acts like a small DOM index so the update loop can mutate the correct
 cells directly without repeatedly querying the document.
+
+### NetworkInputDescriptionScene
+
+Positioned input-description row scene reused by drawing and hover hit testing.
+
+Each row maps one human-readable description to one input node so hovering
+the text can emphasize the same node the description explains.
 
 ### NetworkInputGroupLabelBandScene
 
@@ -423,8 +431,11 @@ while still exposing the semantic fields that matter visually.
 HUD and runtime stats contracts for the Flappy Bird browser demo.
 
 The browser HUD is intentionally declarative: keys describe what should be
-shown, and helper utilities map those keys to DOM rows and live values. That
-keeps the status panel readable even as telemetry grows.
+shown, and helper utilities map those keys to DOM rows and live values. The
+panel is split into a live current-run section, a generation-summary section,
+and optional instrumentation rows so the browser can show both immediate
+playback state and worker-computed population context without recomputing
+aggregates on the main thread.
 
 ### CreateFlappyStatsTableRowsInput
 
@@ -438,7 +449,8 @@ whether instrumentation rows should appear and how rows should be colored.
 Color pair used for stats category key/value styling.
 
 The HUD uses paired colors so labels and values stay visually grouped while
-still separating categories such as current run, telemetry, and best-so-far.
+still separating categories such as current run, generation summary,
+telemetry, and status.
 
 ### FlappyStatsKey
 
@@ -677,6 +689,13 @@ Connection or bias tier used for color mapping ramps.
 Visualization buckets continuous weights into legible color bands so humans
 can scan sign and magnitude at a glance.
 
+### NetworkInputDescriptionScene
+
+Positioned input-description row scene reused by drawing and hover hit testing.
+
+Each row maps one human-readable description to one input node so hovering
+the text can emphasize the same node the description explains.
+
 ### NetworkInputGroupLabelBandScene
 
 Positioned input-group label band scene reused by drawing and hit testing.
@@ -754,6 +773,7 @@ while still exposing the semantic fields that matter visually.
 ```ts
 createCanvasHostInternal(
   containerElement: HTMLElement,
+  options: CanvasHostOptions,
 ): CanvasHostResult
 ```
 
@@ -1455,7 +1475,7 @@ Returns: Positioned node snapshot reused by host-side hover hit testing.
 Example:
 
 ```ts
-drawNetworkVisualization(networkContext, bestNetwork, 38, 2);
+drawNetworkVisualization(networkContext, bestNetwork, 12, 2);
 ```
 
 ### resolveNetworkArchitectureLabel
@@ -1511,7 +1531,7 @@ Returns: Recommended height in pixels.
 Example:
 
 ```ts
-const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 38, 2);
+const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 12, 2);
 ```
 
 ### resolveNetworkVisualizationLayers

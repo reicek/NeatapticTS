@@ -243,6 +243,7 @@ export type WorkerRequestMessage =
 export interface WorkerGenerationReadyMessage {
   type: 'generation-ready';
   payload: {
+    architectureProfileId: ExampleArchitectureProfileId;
     generation: number;
     bestFitness: number;
     bestNetworkJson?: SerializedNetwork;
