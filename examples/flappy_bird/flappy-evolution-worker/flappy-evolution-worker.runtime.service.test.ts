@@ -169,13 +169,25 @@ describe('createInitializedWorkerRuntime', () => {
     });
   });
 
-  it.each(['narx', 'gru'] as const)(
-    'uses a pipe-first shared-seed browser scalar for the %s worker profile',
-    (architectureProfileId) => {
-    const singleRolloutFitnessSpy = jest.spyOn(
-      flappyEvaluation,
-      'evaluateFlappyFitness',
-    );
+  it.each([
+    {
+      architectureProfileId: 'narx' as const,
+      expectedSharedSeedCount: 1,
+    },
+    {
+      architectureProfileId: 'gru' as const,
+      expectedSharedSeedCount: 1,
+    },
+    {
+      architectureProfileId: 'lstm' as const,
+      expectedSharedSeedCount: 4,
+    },
+  ])(
+    'uses a pipe-first shared-seed browser scalar for the $architectureProfileId worker profile',
+    ({ architectureProfileId, expectedSharedSeedCount }) => {
+    const singleRolloutFitnessSpy = jest
+      .spyOn(flappyEvaluation, 'evaluateFlappyFitness')
+      .mockReturnValue(999);
     const sharedSeedFitnessSpy = jest
       .spyOn(flappyEvaluation, 'evaluateFlappyFitnessAcrossSeeds')
       .mockReturnValue({
@@ -213,11 +225,64 @@ describe('createInitializedWorkerRuntime', () => {
         pipeProgressTarget: 12,
       },
       resolvedFitness: 20_145,
-      sharedSeedCount: 1,
+      sharedSeedCount: expectedSharedSeedCount,
       singleRolloutCallCount: 0,
     });
     },
   );
+
+  it('rotates the LSTM shared rollout seed batch after each evolved generation', () => {
+    const sharedSeedFitnessSpy = jest
+      .spyOn(flappyEvaluation, 'evaluateFlappyFitnessAcrossSeeds')
+      .mockReturnValue({
+        seedCount: 2,
+        meanFitness: 0,
+        medianFitness: 0,
+        p90Fitness: 0,
+        fitnessStdDev: 10,
+        robustFitness: 321,
+        meanPipesPassed: 2,
+        meanFramesSurvived: 150,
+      });
+    const neatRuntime = createInitializedWorkerRuntime({
+      architectureProfileId: 'lstm',
+      populationSize: 8,
+      elitismCount: 2,
+      rngSeed: 12345,
+    }) as WorkerRuntimeWithPopulation & { generation: number };
+
+    neatRuntime.fitness(neatRuntime.population[0]);
+    const firstGenerationSeeds = [
+      ...(sharedSeedFitnessSpy.mock.calls.at(-1)?.[1] ?? []),
+    ];
+
+    neatRuntime.fitness(neatRuntime.population[0]);
+    const repeatedGenerationSeeds = [
+      ...(sharedSeedFitnessSpy.mock.calls.at(-1)?.[1] ?? []),
+    ];
+
+    neatRuntime.generation = 1;
+    neatRuntime.fitness(neatRuntime.population[0]);
+    const nextGenerationSeeds = [
+      ...(sharedSeedFitnessSpy.mock.calls.at(-1)?.[1] ?? []),
+    ];
+
+    expect({
+      firstGenerationSeedCount: firstGenerationSeeds.length,
+      repeatsWithinGeneration:
+        JSON.stringify(firstGenerationSeeds) ===
+        JSON.stringify(repeatedGenerationSeeds),
+      rotatesAcrossGenerations:
+        JSON.stringify(firstGenerationSeeds) !==
+        JSON.stringify(nextGenerationSeeds),
+      secondGenerationSeedCount: nextGenerationSeeds.length,
+    }).toEqual({
+      firstGenerationSeedCount: 4,
+      repeatsWithinGeneration: true,
+      rotatesAcrossGenerations: true,
+      secondGenerationSeedCount: 4,
+    });
+  });
 
   it.each(['gru', 'lstm'] as const)(
     'keeps the generation-zero worker population structurally valid before warm-start for the %s profile',

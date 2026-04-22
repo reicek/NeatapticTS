@@ -312,6 +312,20 @@ metadata when graph-based resolution is purely inferred.
 
 Returns: Architecture descriptor with hidden-layer widths and provenance.
 
+#### describeTemporalStructure
+
+```ts
+describeTemporalStructure(): NetworkTemporalStructureDescriptor
+```
+
+Resolves the validated temporal-module structure for diagnostics and visualization.
+
+Call this when the coarse hidden-layer descriptor is not enough and you
+need the explicit recurrent-module and gated-block ownership story that the
+runtime builders preserve for LSTM, GRU, and NARX networks.
+
+Returns: Temporal-structure descriptor synchronized against the live graph.
+
 #### deserialize
 
 ```ts
@@ -1330,6 +1344,26 @@ const descriptor = describeArchitecture(network);
 // descriptor.hiddenLayerSizes -> [8, 4]
 // descriptor.source -> 'layer-metadata' | 'graph-topology' | 'inferred'
 ```
+
+### describeTemporalStructure
+
+```ts
+describeTemporalStructure(
+  network: default,
+): NetworkTemporalStructureDescriptor
+```
+
+Describe the validated temporal structure currently attached to a runtime network.
+
+This accessor is the public read seam for recurrent-aware diagnostics and
+visualization work. It synchronizes the hydrated extension bag against the
+live graph first, then returns a cloned snapshot so consumers never need to
+inspect private runtime properties directly.
+
+Parameters:
+- `network` - Runtime network whose temporal structure should be described.
+
+Returns: Read-only recurrent-module and gated-block snapshot.
 
 ### deserialize
 
@@ -2914,6 +2948,33 @@ Internal Network properties for slab operations.
 
 Internal standalone generation network view.
 
+### NetworkTemporalGatedBlockDescriptor
+
+Public snapshot of one validated gated block on a runtime network.
+
+This keeps recurrent-aware tooling free to highlight which gates own which
+structural edges without exposing the raw private extension bag directly.
+
+### NetworkTemporalRecurrentModuleDescriptor
+
+Public snapshot of one validated recurrent module on a runtime network.
+
+The role map keeps architecture-aware tooling honest: a visualizer can label
+LSTM gates or NARX delay shelves directly instead of reverse-engineering the
+meaning of each hidden node from raw graph topology alone.
+
+### NetworkTemporalRecurrentModuleKind
+
+Supported explicit recurrent-module descriptor kinds.
+
+### NetworkTemporalStructureDescriptor
+
+Public temporal-structure descriptor for one runtime network.
+
+Consumers should treat this as a read-only teaching and diagnostics surface.
+It summarizes validated recurrent modules and gated blocks after stale
+extension records have been synchronized against the live graph.
+
 ### NetworkTopologyIntent
 
 Public topology intent exposed by the network API.
@@ -3876,6 +3937,26 @@ Parameters:
 - `network` - Runtime network whose registered connections should be read.
 
 Returns: Registered connections across forward and self-edge shelves.
+
+### describeTemporalStructure
+
+```ts
+describeTemporalStructure(
+  network: default,
+): NetworkTemporalStructureDescriptor
+```
+
+Describe the validated temporal structure currently attached to a runtime network.
+
+This accessor is the public read seam for recurrent-aware diagnostics and
+visualization work. It synchronizes the hydrated extension bag against the
+live graph first, then returns a cloned snapshot so consumers never need to
+inspect private runtime properties directly.
+
+Parameters:
+- `network` - Runtime network whose temporal structure should be described.
+
+Returns: Read-only recurrent-module and gated-block snapshot.
 
 ### inheritTemporalDescriptorExtensions
 

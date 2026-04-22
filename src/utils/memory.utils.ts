@@ -192,7 +192,7 @@ export function aggregateNetworkStats(
 
     const connectionTypedArrays = collectConnectionTypedArrays(network);
     accumulateSlabArrays(accumulators, connectionTypedArrays);
-    accumulateCapacitySlices(accumulators, network, heuristics);
+    accumulateCapacitySlices(accumulators, network);
     captureVersionMetadata(accumulators, network);
   }
 
@@ -407,18 +407,16 @@ function accumulateSlabArrays(
  * Track reserved vs used bytes based on connection capacity slices.
  * @param accumulators Running totals for the memory snapshot.
  * @param network Network exposing capacity metadata.
- * @param heuristics Fallback byte weights for connection objects.
  */
 function accumulateCapacitySlices(
   accumulators: Accumulators,
   network: NetworkView,
-  heuristics: HeuristicBytes,
 ): void {
   const capacity = network._connCapacity;
   const used = network._connCount;
   if (!capacity || used === undefined || used > capacity) return;
 
-  const elementBytes = describeConnectionBytes(network, heuristics);
+  const elementBytes = describeConnectionBytes(network);
   accumulators.totalReservedBytes += elementBytes * capacity;
   accumulators.totalUsedBytes += elementBytes * used;
 }
@@ -426,12 +424,10 @@ function accumulateCapacitySlices(
 /**
  * Determine bytes per connection using typed-array width or heuristic fallback.
  * @param network Network whose storage format drives the byte width.
- * @param heuristics Heuristic sizes for non-typed-array cases.
  * @returns Estimated bytes per connection entry.
  */
 function describeConnectionBytes(
   network: NetworkView,
-  heuristics: HeuristicBytes,
 ): number {
   const weightBytes = network._useFloat32Weights
     ? FLOAT32_BYTE_WIDTH
@@ -444,7 +440,7 @@ function describeConnectionBytes(
   const totalParallelBytes =
     weightBytes + gainBytes + fromBytes + toBytes + flagBytes + plasticBytes;
 
-  return totalParallelBytes || heuristics.connectionObjectBytes;
+  return totalParallelBytes;
 }
 
 /**

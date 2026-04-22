@@ -12,7 +12,7 @@ export interface HostCanvasPointLike {
 
 /** Tooltip scene model resolved from the hovered network overlay target. */
 export interface NetworkVisualizationTooltipScene {
-  kind: 'group' | 'input';
+  kind: 'group' | 'input' | 'column';
   heading: string;
   bodyParagraphs: readonly string[];
   anchorLeftPx: number;
@@ -36,10 +36,35 @@ export function resolveHoveredNetworkVisualizationTooltipScene(
   positionedScene: NetworkVisualizationPositionedScene,
 ): NetworkVisualizationTooltipScene | undefined {
   return (
+    resolveHiddenColumnTooltipSceneFromNode(canvasPoint, positionedScene) ??
     resolveInputTooltipSceneFromInputNode(canvasPoint, positionedScene) ??
+    resolveHiddenColumnTooltipSceneFromLabel(canvasPoint, positionedScene) ??
     resolveInputTooltipSceneFromDescription(canvasPoint, positionedScene) ??
     resolveInputTooltipSceneFromGroup(canvasPoint, positionedScene)
   );
+}
+
+function resolveHiddenColumnTooltipSceneFromNode(
+  canvasPoint: HostCanvasPointLike,
+  positionedScene: NetworkVisualizationPositionedScene,
+): NetworkVisualizationTooltipScene | undefined {
+  const hoveredNodeIndex = resolveHoveredNodeIndexFromCanvasPoint(
+    canvasPoint,
+    positionedScene,
+  );
+  if (typeof hoveredNodeIndex !== 'number') {
+    return undefined;
+  }
+
+  const hoveredHiddenColumnLabelScene =
+    positionedScene.hiddenColumnLabelScenes?.find((hiddenColumnLabelScene) =>
+      hiddenColumnLabelScene.nodeIndices.includes(hoveredNodeIndex),
+    );
+  if (!hoveredHiddenColumnLabelScene) {
+    return undefined;
+  }
+
+  return createHiddenColumnTooltipScene(hoveredHiddenColumnLabelScene);
 }
 
 function resolveInputTooltipSceneFromInputNode(
@@ -66,6 +91,27 @@ function resolveInputTooltipSceneFromInputNode(
     positionedScene.positionedNodes,
     positionedScene.nodeDimensions.widthPx,
   );
+}
+
+function resolveHiddenColumnTooltipSceneFromLabel(
+  canvasPoint: HostCanvasPointLike,
+  positionedScene: NetworkVisualizationPositionedScene,
+): NetworkVisualizationTooltipScene | undefined {
+  const hoveredHiddenColumnLabelScene =
+    positionedScene.hiddenColumnLabelScenes?.findLast(
+      (hiddenColumnLabelScene) =>
+        canvasPoint.xPx >= hiddenColumnLabelScene.leftPx &&
+        canvasPoint.xPx <=
+          hiddenColumnLabelScene.leftPx + hiddenColumnLabelScene.widthPx &&
+        canvasPoint.yPx >= hiddenColumnLabelScene.topPx &&
+        canvasPoint.yPx <=
+          hiddenColumnLabelScene.topPx + hiddenColumnLabelScene.heightPx,
+    );
+  if (!hoveredHiddenColumnLabelScene) {
+    return undefined;
+  }
+
+  return createHiddenColumnTooltipScene(hoveredHiddenColumnLabelScene);
 }
 
 function resolveInputTooltipSceneFromDescription(
@@ -157,6 +203,23 @@ function createInputTooltipScene(
     anchorWidthPx: tooltipAnchorWidthPx,
     anchorCenterXPx:
       hoveredInputDescriptionScene.leftPx + tooltipAnchorWidthPx * 0.5,
+  };
+}
+
+function createHiddenColumnTooltipScene(
+  hiddenColumnLabelScene: NonNullable<
+    NetworkVisualizationPositionedScene['hiddenColumnLabelScenes']
+  >[number],
+): NetworkVisualizationTooltipScene {
+  return {
+    kind: 'column',
+    heading: hiddenColumnLabelScene.tooltipHeading,
+    bodyParagraphs: hiddenColumnLabelScene.tooltipBodyParagraphs,
+    anchorLeftPx: hiddenColumnLabelScene.leftPx,
+    anchorTopPx: hiddenColumnLabelScene.topPx,
+    anchorWidthPx: hiddenColumnLabelScene.widthPx,
+    anchorCenterXPx:
+      hiddenColumnLabelScene.leftPx + hiddenColumnLabelScene.widthPx * 0.5,
   };
 }
 

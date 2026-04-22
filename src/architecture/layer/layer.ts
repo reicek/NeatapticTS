@@ -147,6 +147,10 @@ const DEFAULT_ATTENTION_HEADS = 1;
 const NODE_INDEX_START = 0;
 const NODE_INDEX_STEP = 1;
 
+function isLayerInstance(candidate: unknown): candidate is LayerLike {
+  return candidate instanceof Layer;
+}
+
 /**
  * Public block-level facade for layer-oriented architecture building.
  *
@@ -319,8 +323,7 @@ export default class Layer {
     return connectLayerUtils(
       {
         connections: this.connections,
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
         layer: this,
         nodes: this.nodes,
         output: this.output,
@@ -346,8 +349,7 @@ export default class Layer {
     gateLayerUtils(
       {
         connections: this.connections,
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
         layer: this,
         nodes: this.nodes,
         output: this.output,
@@ -411,8 +413,7 @@ export default class Layer {
     disconnectLayerUtils(
       {
         connections: this.connections,
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
         layer: this,
         nodes: this.nodes,
         output: this.output,
@@ -430,7 +431,7 @@ export default class Layer {
     // Step 1: Delegate clearing to the orchestrated utils flow.
     clearLayerUtils({
       connections: this.connections,
-      isLayer: (candidate): candidate is Layer => candidate instanceof Layer,
+      isLayer: isLayerInstance,
       layer: this,
       nodes: this.nodes,
       output: this.output,
@@ -459,8 +460,7 @@ export default class Layer {
     return inputLayerUtils(
       {
         connections: this.connections,
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
         layer: this,
         nodes: this.nodes,
         output: this.output,
@@ -498,8 +498,7 @@ export default class Layer {
     return createDenseLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
       nodeType,
@@ -521,8 +520,7 @@ export default class Layer {
     return createLstmLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
     );
@@ -543,8 +541,7 @@ export default class Layer {
     return createGruLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
     );
@@ -568,8 +565,7 @@ export default class Layer {
     return createMemoryLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
       memory,
@@ -587,8 +583,7 @@ export default class Layer {
     return createBatchNormLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
     );
@@ -605,8 +600,7 @@ export default class Layer {
     return createLayerNormLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
     );
@@ -630,8 +624,7 @@ export default class Layer {
     return createConv1dLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
       kernelSize,
@@ -654,8 +647,7 @@ export default class Layer {
     return createAttentionLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
       heads,

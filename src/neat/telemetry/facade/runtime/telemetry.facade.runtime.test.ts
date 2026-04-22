@@ -1,8 +1,84 @@
 import Network from '../../../../architecture/network';
 import Neat from '../../../../neat';
+import { buildEmptyDiversityStats } from '../../../diversity/diversity';
+import { getDiversityStats } from './telemetry.facade.runtime';
+import * as telemetryAccessors from '../../accessors/telemetry.accessors';
+import type { DiversityStats } from '../../../diversity/diversity';
+
+function createDiversityStatsHost(input: {
+  populationSize: number;
+  diversityStats?: DiversityStats;
+  computedStats: DiversityStats;
+}) {
+  const computeDiversityStats = jest.fn(() => input.computedStats);
+
+  return {
+    population: { length: input.populationSize },
+    _diversityStats: input.diversityStats,
+    _computeDiversityStats: computeDiversityStats,
+    computeDiversityStats,
+  };
+}
 
 describe('neat telemetry facade runtime chapter', () => {
   describe('getDiversityStats', () => {
+    describe('given no cached diversity snapshot exists yet', () => {
+      it('computes the diversity metrics on demand', () => {
+        // Arrange
+        const computedStats = buildEmptyDiversityStats(4);
+        const runtimeHost = createDiversityStatsHost({
+          populationSize: 4,
+          computedStats,
+        });
+
+        // Act
+        const diversityStats = getDiversityStats(runtimeHost);
+
+        // Assert
+        expect({
+          diversityStats,
+          computeCalls: runtimeHost.computeDiversityStats.mock.calls.length,
+        }).toEqual({
+          diversityStats: computedStats,
+          computeCalls: 1,
+        });
+      });
+    });
+
+    describe('given a cached diversity flag exists but the shared accessor returns nothing', () => {
+      it('falls back to an empty snapshot sized to the current population', () => {
+        // Arrange
+        const cachedStats = {
+          ...buildEmptyDiversityStats(7),
+          meanCompat: 1.5,
+        };
+        const runtimeHost = createDiversityStatsHost({
+          populationSize: 7,
+          diversityStats: cachedStats,
+          computedStats: buildEmptyDiversityStats(99),
+        });
+        const cachedDiversitySpy = jest
+          .spyOn(telemetryAccessors, 'getCachedDiversityStats')
+          .mockReturnValue(undefined);
+
+        try {
+          // Act
+          const diversityStats = getDiversityStats(runtimeHost);
+
+          // Assert
+          expect({
+            diversityStats,
+            computeCalls: runtimeHost.computeDiversityStats.mock.calls.length,
+          }).toEqual({
+            diversityStats: buildEmptyDiversityStats(7),
+            computeCalls: 0,
+          });
+        } finally {
+          cachedDiversitySpy.mockRestore();
+        }
+      });
+    });
+
     describe('given a telemetry-enabled controller after one evaluation and evolution pass', () => {
       const scoreByConnectionCount = (network: Network) =>
         network.connections.length;

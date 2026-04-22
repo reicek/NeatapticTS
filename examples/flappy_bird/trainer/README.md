@@ -181,8 +181,8 @@ runTrainer(): Promise<void>
 Flappy Bird neuroevolution demo.
 
 This script runs a small NEAT population where each genome controls a bird.
-The network sees a temporal observation (38 floats) and outputs two competing
-action scores (`no flap` vs `flap`).
+The network sees the compact current-frame observation (6 floats) and
+outputs two competing action scores (`no flap` vs `flap`).
 
 The function is intentionally orchestration-first. It answers one practical
 question: what has to be connected so a generic NEAT controller turns into a

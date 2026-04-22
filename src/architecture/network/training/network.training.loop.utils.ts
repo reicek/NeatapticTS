@@ -159,9 +159,7 @@ export const trainSetCore = (
           );
           if (overflowDetected) {
             zeroAccumulatedGradients(net);
-            if (internalNet._mixedPrecision.enabled) {
-              handleOverflow(internalNet);
-            }
+            handleOverflow(internalNet);
             internalNet._lastGradNorm = 0;
           } else {
             if (internalNet._currentGradClip) {
@@ -238,7 +236,6 @@ const averageAccumulatedGradients = (
   net: Network,
   accumulationSteps: number,
 ): void => {
-  if (accumulationSteps <= 1) return;
   net.nodes.forEach((node) => {
     const nodeInternal = node as unknown as NodeInternals;
     nodeInternal.connections.in.forEach((connection) => {

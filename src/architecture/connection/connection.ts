@@ -259,6 +259,8 @@ export default class Connection {
       connectionInstance.xtrace.nodes.length = 0;
       connectionInstance.xtrace.values.length = 0;
       if (symbolProps[kOpt]) delete symbolProps[kOpt];
+      if (symbolProps[kPlasticRate] !== undefined)
+        delete symbolProps[kPlasticRate];
       mutableConnection.innovation = Connection._nextInnovation++;
     } else {
       connectionInstance = new Connection(from, to, weight);

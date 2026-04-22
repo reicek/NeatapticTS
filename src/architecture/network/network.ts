@@ -160,6 +160,7 @@ import {
   restoreRNG as _restoreRNG,
   getRNGState as _getRNGState,
   setRNGState as _setRNGState,
+  getRandomFn as _getRandomFn,
   removeNode as _removeNodeStandalone,
   connect as _connect,
   disconnect as _disconnect,
@@ -179,6 +180,7 @@ import {
   clearState as _clearState,
   trainImpl as _trainImpl,
   crossOver as _crossOver,
+  describeTemporalStructure as _describeTemporalStructure,
 } from './network.utils';
 import type {
   ActivationSchedule,
@@ -192,9 +194,9 @@ import type {
   MutationMethod,
   NetworkBootstrapInternals,
   NetworkConstructorOptions,
+  NetworkTemporalStructureDescriptor,
   NetworkTopologyIntent,
   RNGSnapshot,
-  SerializedConnection,
   TrainingOptions,
 } from './network.types';
 
@@ -744,6 +746,14 @@ export default class Network implements NetworkView {
     _setRNGState.call(this, state);
   }
   /**
+   * Read the active deterministic RNG function.
+   *
+   * @returns RNG function when deterministic state is initialized.
+   */
+  getRandomFn(): (() => number) | undefined {
+    return _getRandomFn.call(this);
+  }
+  /**
    * Set stochastic-depth schedule function.
    *
    * @param fn Function mapping step and current schedule to next schedule.
@@ -1150,6 +1160,19 @@ export default class Network implements NetworkView {
    */
   describeArchitecture(): NetworkArchitectureDescriptor {
     return _resolveArchitectureDescriptor(this);
+  }
+
+  /**
+   * Resolves the validated temporal-module structure for diagnostics and visualization.
+   *
+   * Call this when the coarse hidden-layer descriptor is not enough and you
+   * need the explicit recurrent-module and gated-block ownership story that the
+   * runtime builders preserve for LSTM, GRU, and NARX networks.
+   *
+   * @returns Temporal-structure descriptor synchronized against the live graph.
+   */
+  describeTemporalStructure(): NetworkTemporalStructureDescriptor {
+    return _describeTemporalStructure(this);
   }
 
   /**

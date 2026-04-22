@@ -2,14 +2,21 @@ import {
   FLAPPY_MEMORY_ACTION_WINDOW_STEPS,
   FLAPPY_MEMORY_STACKED_FRAME_COUNT,
 } from '../constants/constants';
-import { resolveCoreObservationVectorFromFeatures } from './simulation-shared.observation.utils';
+import {
+  resolveCoreObservationVectorFromFeatures,
+  resolveObservationVectorFromFeatures,
+} from './simulation-shared.observation.utils';
 import type {
   SharedObservationFeatures,
   SharedObservationMemoryState,
 } from './simulation-shared.types';
 
 /**
- * Creates an empty temporal observation memory state.
+ * Creates the shared observation-memory compatibility state.
+ *
+ * The buffers remain part of the shared Flappy runtime contract even though
+ * the current controller input does not read external history. That keeps the
+ * browser, worker, and evaluation helpers aligned on one state shape.
  *
  * @example
  * ```ts
@@ -40,17 +47,20 @@ export function createSharedObservationMemoryState(): SharedObservationMemorySta
  */
 export function resolveTemporalObservationVector(
   features: SharedObservationFeatures,
-  _observationMemoryState: SharedObservationMemoryState,
+  observationMemoryState: SharedObservationMemoryState,
 ): number[] {
-  return resolveCoreObservationVectorFromFeatures(features);
+  void observationMemoryState;
+  return resolveObservationVectorFromFeatures(features);
 }
 
 /**
- * Commits one observation-action step into temporal memory.
+ * Commits one observation-action step into the shared compatibility memory surface.
  *
- * The memory update happens after the decision is made so the next step can see
- * both the recent observation context and the action history that produced the
- * current trajectory.
+ * The bookkeeping point stays fixed at the same post-decision boundary used by
+ * the browser, worker, and evaluation runtimes. Under the current Flappy
+ * defaults both history windows are zero-width, so this usually becomes a
+ * no-op, but the stable hook prevents those runtimes from drifting apart if an
+ * opt-in history experiment returns later.
  *
  * @param observationMemoryState - Mutable temporal memory for the active bird.
  * @param features - Structured observation features used for the decision.

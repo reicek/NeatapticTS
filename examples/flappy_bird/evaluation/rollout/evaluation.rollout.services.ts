@@ -132,8 +132,8 @@ export function resolveRolloutEpisodeContext(
  * Creates mutable runtime state for one rollout episode.
  *
  * The runtime state carries the seeded RNG, the mutable environment, the
- * temporal observation memory, and the shaping counters accumulated during the
- * episode.
+ * shared observation-memory compatibility state, and the shaping counters
+ * accumulated during the episode.
  *
  * @param rolloutEpisodeContext - Normalized rollout configuration.
  * @returns Mutable runtime state.
@@ -145,7 +145,7 @@ export function createRolloutEpisodeRuntimeState(
   const rng = createXorshift32(rolloutEpisodeContext.seed);
   const state = createInitialFlappyState(rng);
 
-  // Step 2: Create the temporal observation memory used by the network controller.
+  // Step 2: Create the shared compatibility memory state carried across runtimes.
   return {
     rng,
     state,
@@ -272,8 +272,10 @@ function runRolloutEpisodeFrame(
 /**
  * Resolves the flap decision for one control substep and commits memory state.
  *
- * The temporal memory is updated immediately after the decision so subsequent
- * substeps can see short-term action history without needing recurrent state.
+ * The shared memory surface is updated at the same post-decision boundary used
+ * by browser playback and worker simulation. The current controller input still
+ * reads only the current normalized frame, but keeping the bookkeeping point
+ * stable avoids runtime drift if an opt-in external-history experiment returns.
  *
  * @param network - Genome/network to evaluate.
  * @param rolloutEpisodeContext - Normalized rollout configuration.
@@ -291,7 +293,7 @@ function resolveRolloutFrameFlapDecision(
     rolloutEpisodeContext.difficultyScale,
   );
 
-  // Step 2: Build the temporal observation vector and query the network outputs.
+  // Step 2: Build the current-frame controller input and query the network outputs.
   const observation = resolveTemporalObservationVector(
     observationFeatures,
     rolloutEpisodeRuntimeState.observationMemoryState,
@@ -299,7 +301,7 @@ function resolveRolloutFrameFlapDecision(
   const outputs = network.activate(observation);
   const shouldFlap = resolveFlapDecision(outputs);
 
-  // Step 3: Commit the observation and control decision to temporal memory.
+  // Step 3: Commit the observation and decision to the shared compatibility state.
   commitSharedObservationMemoryStep(
     rolloutEpisodeRuntimeState.observationMemoryState,
     observationFeatures,

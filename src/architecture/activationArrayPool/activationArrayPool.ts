@@ -113,11 +113,7 @@ class ActivationArrayPool {
       this.reused++;
       const activationArray = bucket.pop()!;
 
-      if (Array.isArray(activationArray)) {
-        activationArray.fill(0);
-      } else if (activationArray instanceof Float32Array) {
-        activationArray.fill(0);
-      }
+      activationArray.fill(0);
 
       return activationArray;
     }

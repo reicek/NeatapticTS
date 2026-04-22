@@ -1,4 +1,29 @@
 import { Architect, Network, methods } from '../../../neataptic';
+import { describeArchitecture } from './network.topology.architecture.utils';
+
+type RuntimeNodeSnapshot = {
+  index?: number;
+  layer?: number;
+  type?: string;
+};
+
+type RuntimeConnectionSnapshot = {
+  enabled?: boolean;
+  from?: { index?: number };
+  to?: { index?: number };
+};
+
+function createArchitectureProbeNetwork(input: {
+  connections?: RuntimeConnectionSnapshot[];
+  nodes?: RuntimeNodeSnapshot[];
+}): Network {
+  const network = new Network(1, 1, {});
+
+  Reflect.set(network, 'nodes', input.nodes);
+  Reflect.set(network, 'connections', input.connections);
+
+  return network;
+}
 
 describe('network topology architecture descriptor', () => {
   describe('describeArchitecture()', () => {
@@ -162,6 +187,154 @@ describe('network topology architecture descriptor', () => {
           expect(descriptor.hiddenLayerSizes.join(' - ')).not.toBe(
             staleDescriptor,
           );
+        });
+      });
+    });
+
+    describe('given runtime node and connection arrays are missing entirely', () => {
+      describe('when the descriptor is read directly from the helper', () => {
+        it('falls back to an empty inferred descriptor', () => {
+          // Arrange
+          const network = createArchitectureProbeNetwork({});
+          const expectedDescriptor = {
+            hiddenLayerSizes: [],
+            hasCycles: false,
+            source: 'inferred',
+            totalNodes: 0,
+            totalConnections: 0,
+          };
+
+          // Act
+          const descriptor = describeArchitecture(network);
+
+          // Assert
+          expect(descriptor).toEqual(expectedDescriptor);
+        });
+      });
+    });
+
+    describe('given explicit hidden-layer metadata is present on unordered runtime nodes', () => {
+      describe('when the descriptor is read directly from the helper', () => {
+        it('prefers the sorted layer-metadata widths over fallback inference', () => {
+          // Arrange
+          const network = createArchitectureProbeNetwork({
+            nodes: [
+              { type: 'hidden', layer: 2 },
+              { type: 'input', layer: 0 },
+              { type: 'hidden', layer: 1 },
+              { type: 'constant', layer: 4 },
+              { type: 'hidden', layer: 2 },
+              { type: 'output', layer: 5 },
+              { type: 'hidden' },
+            ],
+            connections: [],
+          });
+          const expectedDescriptor = {
+            hiddenLayerSizes: [1, 2],
+            hasCycles: false,
+            source: 'layer-metadata',
+            totalNodes: 7,
+            totalConnections: 0,
+          };
+
+          // Act
+          const descriptor = describeArchitecture(network);
+
+          // Assert
+          expect(descriptor).toEqual(expectedDescriptor);
+        });
+      });
+    });
+
+    describe('given a runtime node omits its type tag but keeps numeric layer metadata', () => {
+      describe('when the descriptor is read directly from the helper', () => {
+        it('treats the node as a hidden-layer metadata candidate', () => {
+          // Arrange
+          const network = createArchitectureProbeNetwork({
+            nodes: [{ layer: 3 }],
+            connections: [],
+          });
+          const expectedDescriptor = {
+            hiddenLayerSizes: [1],
+            hasCycles: false,
+            source: 'layer-metadata',
+            totalNodes: 1,
+            totalConnections: 0,
+          };
+
+          // Act
+          const descriptor = describeArchitecture(network);
+
+          // Assert
+          expect(descriptor).toEqual(expectedDescriptor);
+        });
+      });
+    });
+
+    describe('given graph topology includes malformed and ignored edge shapes', () => {
+      describe('when the descriptor is read directly from the helper', () => {
+        it('derives hidden widths from only the validated directed edges', () => {
+          // Arrange
+          const network = createArchitectureProbeNetwork({
+            nodes: [
+              { index: 10, type: 'input' },
+              { index: 20, type: 'hidden' },
+              { index: 30, type: 'output' },
+            ],
+            connections: [
+              { enabled: false, from: { index: 10 }, to: { index: 20 } },
+              { enabled: true, from: {}, to: { index: 20 } },
+              { enabled: true, from: { index: 10 }, to: { index: 999 } },
+              { enabled: true, from: { index: 20 }, to: { index: 20 } },
+              { enabled: true, from: { index: 10 }, to: { index: 20 } },
+              { enabled: true, from: { index: 20 }, to: { index: 30 } },
+            ],
+          });
+          const expectedDescriptor = {
+            hiddenLayerSizes: [1],
+            hasCycles: false,
+            source: 'graph-topology',
+            totalNodes: 3,
+            totalConnections: 6,
+          };
+
+          // Act
+          const descriptor = describeArchitecture(network);
+
+          // Assert
+          expect(descriptor).toEqual(expectedDescriptor);
+        });
+      });
+    });
+
+    describe('given hidden nodes never receive a resolved parent depth', () => {
+      describe('when the descriptor is read directly from the helper', () => {
+        it('falls back to inferred hidden-node counting', () => {
+          // Arrange
+          const network = createArchitectureProbeNetwork({
+            nodes: [
+              { index: 0, type: 'hidden' },
+              { index: 1, type: 'hidden' },
+              { index: 2, type: 'output' },
+            ],
+            connections: [
+              { enabled: true, from: { index: 0 }, to: { index: 1 } },
+              { enabled: true, from: { index: 1 }, to: { index: 2 } },
+            ],
+          });
+          const expectedDescriptor = {
+            hiddenLayerSizes: [2],
+            hasCycles: false,
+            source: 'inferred',
+            totalNodes: 3,
+            totalConnections: 2,
+          };
+
+          // Act
+          const descriptor = describeArchitecture(network);
+
+          // Assert
+          expect(descriptor).toEqual(expectedDescriptor);
         });
       });
     });

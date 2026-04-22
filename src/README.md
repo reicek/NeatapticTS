@@ -3066,6 +3066,20 @@ metadata when graph-based resolution is purely inferred.
 
 Returns: Architecture descriptor with hidden-layer widths and provenance.
 
+#### describeTemporalStructure
+
+```ts
+describeTemporalStructure(): NetworkTemporalStructureDescriptor
+```
+
+Resolves the validated temporal-module structure for diagnostics and visualization.
+
+Call this when the coarse hidden-layer descriptor is not enough and you
+need the explicit recurrent-module and gated-block ownership story that the
+runtime builders preserve for LSTM, GRU, and NARX networks.
+
+Returns: Temporal-structure descriptor synchronized against the live graph.
+
 #### deserialize
 
 ```ts

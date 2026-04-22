@@ -47,6 +47,9 @@ Current intended ownership split:
 - `solid-split`: canonical split/refactor workflow and step sequencing.
 - `educational-docs`: canonical documentation quality workflow and generated
   README/JSDoc policy.
+- `flappy-architecture-polish`: canonical workflow for tuning one Flappy Bird
+  architecture profile across runtime budget, warm-start, worker selection,
+  and durable empirical probes.
 - `test-fix-workflow`: canonical workflow for systematically repairing multiple
   test failures.
 - `plan-alignment`: canonical workflow for selecting and applying roadmap/plan
@@ -68,6 +71,11 @@ Use `tracker-handoff` by default when the task includes creating, compressing,
 or updating `.plans.md` or `.logs.md` files, especially when the tracker needs
 safe session continuation via a `Handoff query` section or terminal closure via
 a compressed plan plus matching log archived under `plans/completed/`.
+
+Use `flappy-architecture-polish` by default when the task is to tune, rerun,
+or harden one Flappy Bird architecture profile in the browser-worker path,
+especially when the pass needs durable probe commands, worker-fairness tuning,
+or warm-start stabilization that should be reusable for other profiles later.
 
 For split or refactor work with meaningful documentation scope, let `solid-split` own the boundary work and `educational-docs` own documentation quality.
 
@@ -227,6 +235,9 @@ Avoid (legacy/less clear):
 - Treat generated folder READMEs as compressed context, not as a substitute for code. Use them to reduce search noise, then verify behavior in source.
 - Prefer multiple small, targeted, documented edits over large single-pass rewrites when both approaches can solve the task. This reduces breakage risk and makes generated-doc refreshes easier to verify.
 - For documentation-first work, invoke `educational-docs` instead of duplicating its standards in ad hoc instructions.
+- For Flappy architecture tuning or empirical rerun work, invoke
+  `flappy-architecture-polish` instead of recreating the browser-worker polish
+  loop ad hoc.
 - For split work with meaningful docs scope, let `solid-split` own sequencing and `educational-docs` own documentation quality.
 - For multiple test-failure repair work, invoke `test-fix-workflow` instead of
   duplicating its planning and validation sequence here.

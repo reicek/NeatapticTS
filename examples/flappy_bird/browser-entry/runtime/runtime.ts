@@ -76,13 +76,14 @@ async function startRuntimeSession(
   container: RuntimeContainerTarget,
   runtimeStartOptions: RuntimeStartOptions,
 ): Promise<RuntimeRunHandle> {
-  let runtimeLifecycleState: RuntimeMutableLifecycleState | undefined;
-  let runtimeRunHandle: RuntimeRunHandle | undefined;
-  let runtimeStartContext: RuntimeStartContext;
+  const runtimeLifecycleState: RuntimeMutableLifecycleState =
+    createRuntimeLifecycleState();
   let queuedRestartProfileId: RuntimeStartOptions['architectureProfileId'];
 
   // Step 1: Resolve the runtime view, worker, telemetry, and static config.
-  runtimeStartContext = createRuntimeStartContext(container, {
+  const runtimeStartContext: RuntimeStartContext = createRuntimeStartContext(
+    container,
+    {
     ...runtimeStartOptions,
     onSelectArchitectureProfile: (profileId): void => {
       if (
@@ -116,14 +117,14 @@ async function startRuntimeSession(
         }).catch(() => undefined);
       });
     },
-  });
+    },
+  );
 
   // Step 2: Paint the initial HUD state before evolution bootstrapping starts.
   initializeRuntimeHud(runtimeStartContext);
 
   // Step 3: Create lifecycle state and externally exposed run-handle methods.
-  runtimeLifecycleState = createRuntimeLifecycleState();
-  runtimeRunHandle = createRuntimeRunHandle(
+  const runtimeRunHandle: RuntimeRunHandle = createRuntimeRunHandle(
     runtimeStartContext,
     runtimeLifecycleState,
   );

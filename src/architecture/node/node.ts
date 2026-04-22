@@ -297,10 +297,8 @@ export default class Node {
       gated: 0,
     };
 
-    // Assign a unique index if not already set
-    if (typeof this.index === 'undefined') {
-      this.index = Node._globalNodeIndex++;
-    }
+    // Assign a unique index for this live instance.
+    this.index = Node._globalNodeIndex++;
     // Assign stable gene id (independent from per-network index)
     this.geneId = Node._nextGeneId++;
   }

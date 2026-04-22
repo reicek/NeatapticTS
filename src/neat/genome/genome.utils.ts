@@ -571,14 +571,7 @@ function resolveNodeIndexForGeneId(
   label: 'fromGeneId' | 'toGeneId' | 'gaterGeneId',
 ): number {
   const resolvedIndex = nodeIndexesByGeneId.get(geneId);
-  if (typeof resolvedIndex === 'number') {
-    return resolvedIndex;
-  }
-
-  throw new NeatGenomeConversionError(
-    `Cannot materialize a phenotype because ${label} ${geneId} does not resolve to a node gene in the genome contract.`,
-    { geneId, label },
-  );
+  return resolvedIndex as number;
 }
 
 function validateGenomeSize(
@@ -1252,10 +1245,8 @@ function createIssue(
 function buildGenomeValidationFailureMessage(
   validationReport: NeatGenomeValidationReport,
 ): string {
-  const firstIssue = validationReport.issues[0];
-  return firstIssue
-    ? `${firstIssue.message} (${firstIssue.path})`
-    : 'Strict genome validation failed.';
+  const firstIssue = validationReport.issues[0]!;
+  return `${firstIssue.message} (${firstIssue.path})`;
 }
 
 function isNodeType(nodeType: string): nodeType is NeatGenomeNodeType {

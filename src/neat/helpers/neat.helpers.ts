@@ -8,7 +8,6 @@ import {
 } from '../topology-intent/neat.topology-intent';
 
 const DEFAULT_POOL_SIZE = 50;
-const DEFAULT_ENDPOINT_INDEX = -1;
 const DEFAULT_MAX_INNOVATION = -1;
 const RNG_SEED_UPPER_BOUND = 0x1_0000_0000;
 
@@ -522,31 +521,12 @@ function compareGenerationZeroConnections(
   rightConnection: GenerationZeroConnection,
 ): number {
   const sourceIndexDelta =
-    resolveConnectionEndpointIndex(leftConnection.from) -
-    resolveConnectionEndpointIndex(rightConnection.from);
+    leftConnection.from.index! - rightConnection.from.index!;
   if (sourceIndexDelta !== 0) {
     return sourceIndexDelta;
   }
 
-  const targetIndexDelta =
-    resolveConnectionEndpointIndex(leftConnection.to) -
-    resolveConnectionEndpointIndex(rightConnection.to);
-  if (targetIndexDelta !== 0) {
-    return targetIndexDelta;
-  }
-
-  return (
-    (leftConnection.innovation ?? DEFAULT_MAX_INNOVATION) -
-    (rightConnection.innovation ?? DEFAULT_MAX_INNOVATION)
-  );
-}
-
-function resolveConnectionEndpointIndex(
-  endpoint: { index?: number } | undefined,
-): number {
-  return typeof endpoint?.index === 'number'
-    ? endpoint.index
-    : DEFAULT_ENDPOINT_INDEX;
+  return leftConnection.to.index! - rightConnection.to.index!;
 }
 
 function resolveNextInnovationIdFromGenome(

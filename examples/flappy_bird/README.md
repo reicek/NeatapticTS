@@ -185,11 +185,11 @@ Several design decisions explain why the folder looks the way it does.
 
 Genomes are compared on the same deterministic seeds. That makes fitness comparisons harsher, but also far more trustworthy. A network that wins under shared seeds is usually learning a policy, not just getting lucky.
 
-### Temporal observations give feed-forward networks local memory
+### Current-frame observations keep architecture comparisons honest
 
-The policy receives a 38-input observation assembled from current, previous, and two-frames-ago feature slices plus short action-memory signals. That gives a feed-forward controller short-horizon temporal context without requiring recurrent state.
+The policy now receives a compact 6-feature observation built from the current normalized frame: bird state and next-gap geometry. The example no longer stacks previous frames, recent flap actions, extra control-pressure hints, or any additional future-gap channels into the external controller input.
 
-That choice is intentional. The library can represent richer recurrent and gated structure, but this folder keeps the policy feed-forward so readers can study observation design, evaluation fairness, and runtime boundaries without mixing in a second control story.
+That choice is intentional. The shared Flappy profile contract keeps MLP, Sparse, NARX, GRU, and LSTM on the same current-frame shelf. Feed-forward builders solve the task from instantaneous geometry, while recurrent builders earn any temporal advantage through carried internal state instead of hand-authored memory channels.
 
 ### Two outputs keep the action story simple
 
@@ -215,9 +215,6 @@ The observation vector focuses on control-relevant geometry rather than pixels. 
 | --- | --- | --- |
 | Bird state | vertical position and vertical velocity | The network needs immediate kinematic context before deciding whether a flap is corrective or wasteful. |
 | Next gap geometry | distance to the next gap, gap bounds, and relative offset | This is the primary near-term survival problem. |
-| Second gap lookahead | distance and delta to the following opening | It discourages short-sighted behavior that solves one pipe but ruins the next one. |
-| Clearance and urgency features | how safe or dangerous the current approach is | These features help shape timing near failure cases. |
-| Action memory | recent flap behavior | It gives a feed-forward policy a small amount of temporal continuity. |
 
 Fitness then combines normalized channels with caps so one lucky dimension does not dominate selection:
 

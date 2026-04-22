@@ -49,7 +49,6 @@ import type {
  * stored as a compact summary instead of raw connection lists.
  */
 
-const SPECIES_HISTORY_DEFAULT_INNOVATION_ID = 0;
 const SPECIES_HISTORY_DEFAULT_INNOVATION_RANGE = 0;
 const SPECIES_HISTORY_DEFAULT_ENABLED_RATIO = 0;
 const SPECIES_HISTORY_ZERO = 0;

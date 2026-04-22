@@ -29,19 +29,13 @@ import type {
  * training, and browser playback all derive their policy inputs from the same
  * feature definitions.
  *
- * Observation (12 numbers):
+ * Observation (6 numbers):
  *  1) bird y position normalized to [0, 1]
  *  2) bird vertical velocity normalized to [-1, 1]
  *  3) distance to next pipe normalized to [0, 1]
  *  4) delta (bird y - gap center y) normalized to [-1, 1]
  *  5) next pipe gap top normalized to [0, 1]
  *  6) next pipe gap bottom normalized to [0, 1]
- *  7) distance to second pipe normalized to [0, 1]
- *  8) delta to second gap center normalized to [-1, 1]
- *  9) time-to-next-pipe closeness normalized to [0, 1]
- * 10) signed clearance relative to next gap normalized to [-1, 1]
- * 11) required vertical velocity toward next gap center normalized to [-1, 1]
- * 12) gap-center transition (next to second) normalized to [-1, 1]
  *
  * @param state - Current state.
  * @param difficultyScale - Curriculum difficulty scale in [0, 1].

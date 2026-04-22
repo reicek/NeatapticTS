@@ -428,9 +428,11 @@ HUD metrics when a playback session completes.
 Mutable bird state tracked by the worker playback simulation.
 
 Educational note:
-Each bird keeps both physics state and policy state. The observation-memory
-field lets feed-forward networks approximate short-term temporal memory by
-carrying previous observation features between simulation steps.
+Each bird keeps both physics state and policy state. The
+`observationMemoryState` field stays on the bird so worker playback shares
+the same control-state shape as evaluation and browser helpers. The current
+controller input does not read external history, but the aligned state shelf
+keeps future opt-in experiments from forking the runtime contracts.
 
 ### WorkerPopulationPipe
 
@@ -491,6 +493,8 @@ cares about.
 ```ts
 buildWorkerSharedRolloutSeedBatch(
   workerInitSeed: number,
+  generation: number,
+  sharedRolloutSeedCount: number,
 ): number[]
 ```
 
@@ -546,20 +550,40 @@ const neatRuntime = createInitializedWorkerRuntime({
 createWorkerFitnessEvaluator(
   architectureProfileId: NonNullable<ExampleArchitectureProfileId | undefined>,
   workerInitSeed: number,
+  resolveCurrentGeneration: () => number,
 ): (network: never) => number
 ```
 
 Builds the worker fitness evaluator for the selected architecture profile.
 
-NARX and GRU benefit from a slightly stricter browser objective because the
-tiny interactive population is otherwise too willing to overfit one lucky
-rollout and stall at a zero-pipe local optimum.
+NARX, GRU, and LSTM benefit from a slightly stricter browser objective
+because the tiny interactive population is otherwise too willing to overfit
+one lucky rollout and stall at a zero-pipe local optimum.
 
 Parameters:
 - `architectureProfileId` - Resolved worker architecture profile id.
 - `workerInitSeed` - Deterministic worker seed.
 
 Returns: Worker-local scalar fitness function.
+
+### resolveWorkerPipeFirstEvaluationPlan
+
+```ts
+resolveWorkerPipeFirstEvaluationPlan(
+  architectureProfileId: NonNullable<ExampleArchitectureProfileId | undefined>,
+): WorkerPipeFirstEvaluationPlan
+```
+
+Resolves the recurrent worker evaluation plan for one browser profile.
+
+LSTM gets a slightly broader shared-seed batch than the other recurrent
+profiles because the heavier gated controller was still regressing after
+generation-zero warm-start when browser selection only saw one static lane.
+
+Parameters:
+- `architectureProfileId` - Resolved worker architecture profile id.
+
+Returns: Shared-seed batch size for worker fitness.
 
 ### scorePipeFirstWorkerAggregateEvaluation
 
@@ -678,7 +702,7 @@ slice of behavior.
 
 ```ts
 beginWorkerPlaybackSession(
-  options: { architectureProfileId: ExampleArchitectureProfileId; generation?: number | undefined; currentPopulation: default[]; payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; createPopulationRenderState: (networks: default[], rng: FlappyRng, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number) => WorkerPlaybackState; },
+  options: { currentPopulation: default[]; payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; createPopulationRenderState: (networks: default[], rng: FlappyRng, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number) => WorkerPlaybackState; },
 ): { currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; playbackWinnerIndex: number; }
 ```
 
@@ -731,7 +755,7 @@ Returns: Nothing.
 
 ```ts
 processWorkerPlaybackStep(
-  options: { architectureProfileId: ExampleArchitectureProfileId; generation?: number | undefined; playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; currentPopulation: default[]; neatRuntime: default | undefined; stepPopulationFrame: (renderState: WorkerPlaybackState, rng: FlappyRng, difficultyProfile: SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: WorkerPlaybackState) => WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; },
+  options: { playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; currentPopulation: default[]; neatRuntime: default | undefined; stepPopulationFrame: (renderState: WorkerPlaybackState, rng: FlappyRng, difficultyProfile: SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: WorkerPlaybackState) => WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; },
 ): { currentPlaybackState: WorkerPlaybackState | undefined; currentPlaybackRng: FlappyRng | undefined; currentPopulation: default[]; playbackWinnerIndex: number; }
 ```
 
@@ -1118,6 +1142,8 @@ Educational note:
 These samples are not recorded gameplay traces. They are synthetic states
 generated from the same observation pipeline used during real playback so the
 teacher labels and the evolved policy inputs stay in the same feature space.
+The critical rule is that the teacher must only read the same compact
+current-frame controller shelf that the live network will later receive.
 
 Parameters:
 - `rng` - Deterministic random source.
@@ -1248,11 +1274,11 @@ Parameters:
 
 Returns: Nothing.
 
-### resolveHeuristicTeacherFlapDecision
+### resolveHeuristicTeacherFlapDecisionFromObservationVector
 
 ```ts
-resolveHeuristicTeacherFlapDecision(
-  features: SharedObservationFeatures,
+resolveHeuristicTeacherFlapDecisionFromObservationVector(
+  observationVector: readonly number[],
 ): boolean
 ```
 
@@ -1260,10 +1286,14 @@ Heuristic teacher policy used to label synthetic pretraining samples.
 
 The rule intentionally stays simple and interpretable: flap when the bird is
 meaningfully below the next gap center, not already rising fast, and either
-close to the gap entry or in an urgent approach state.
+near the next pipe or drifting close to the lower edge of the current gap.
+
+The key constraint is architectural consistency: this teacher reads only the
+same compact 6-value controller vector used by regular training and playback.
+Extra legacy-derived features must not influence generation-zero labels.
 
 Parameters:
-- `features` - Structured observation features for one synthetic state.
+- `observationVector` - Compact current-frame controller input vector.
 
 Returns: True when the teacher says to flap.
 
@@ -1295,9 +1325,9 @@ resolveWarmStartEvaluationScore(
 
 Resolves the architecture-specific scalar used during warm-start rollout refinement.
 
-NARX and GRU use a pipe-first scalar so rollout refinement prefers real pipe
-progress over a dense-shaping local optimum before the browser NEAT loop
-begins.
+NARX, GRU, and LSTM use a pipe-first scalar so rollout refinement prefers
+real pipe progress over a dense-shaping local optimum before the browser
+NEAT loop begins.
 
 Parameters:
 - `aggregateEvaluation` - Shared-seed rollout evidence for one template.
@@ -1598,64 +1628,3 @@ Gaussian standard deviation used for post-pretrain connection-weight diversifica
 After the template network is trained once, each genome receives a noisy copy
 of its weights. That keeps generation 0 visually coherent while preserving
 enough diversity for NEAT to search meaningfully.
-
-## flappy-evolution-worker/flappy-evolution-worker.debug.service.ts
-
-### logRecurrentDebugMarker
-
-```ts
-logRecurrentDebugMarker(
-  options: RecurrentDebugMarkerOptions,
-): void
-```
-
-Emits one compact recurrent debug marker when the selected profile is stateful.
-
-The logging pass is intentionally restricted to the recurrent profiles so the
-browser console stays readable while we isolate where the live GRU, LSTM, and
-NARX path first diverges from the passing helper-only tests.
-
-Parameters:
-- `options` - Marker phase, profile id, and optional debug metadata.
-
-Returns: Nothing.
-
-### logRecurrentPlaybackReferenceSnapshot
-
-```ts
-logRecurrentPlaybackReferenceSnapshot(
-  options: RecurrentDebugPlaybackReferenceOptions,
-): void
-```
-
-Emits whether playback birds are reusing the same network objects as the live population.
-
-This matters because the browser-only playback path is the largest remaining
-difference between the failing live recurrent flow and the helper-level tests
-that already pass.
-
-Parameters:
-- `options` - Profile id plus live-population and playback-network references.
-
-Returns: Nothing.
-
-### logRecurrentPopulationSnapshot
-
-```ts
-logRecurrentPopulationSnapshot(
-  options: RecurrentDebugPopulationSnapshotOptions,
-): void
-```
-
-Emits structural health summaries for the current recurrent population.
-
-Each network summary records whether the strict-genome adapter accepts the
-live runtime phenotype and, when it does not, reports the first duplicate
-innovation groups visible in JSON form. This is the fastest way to tell
-whether corruption happens before playback, during playback, or after the
-winner-clone handoff.
-
-Parameters:
-- `options` - Profile id, phase label, and population snapshot inputs.
-
-Returns: Nothing.

@@ -34,7 +34,7 @@ import type {
  * @param worldHeightPx - Current world height used for normalization and bounds.
  * @param difficultyProfile - Active difficulty profile.
  * @param activeSpawnIntervalFrames - Current spawn interval.
- * @param observationMemoryState - Temporal memory state for recurrent observation features.
+ * @param observationMemoryState - Shared compatibility memory state kept alongside browser decisions.
  * @returns Ordered normalized observation vector.
  */
 export function resolveObservationVector(
@@ -76,7 +76,7 @@ export function resolveObservationVector(
 }
 
 /**
- * Commits one browser decision step into temporal memory.
+ * Commits one browser decision step into the shared compatibility memory surface.
  *
  * @param observationMemoryState - Mutable memory state for one bird.
  * @param observationFeatures - Structured features used for this decision.

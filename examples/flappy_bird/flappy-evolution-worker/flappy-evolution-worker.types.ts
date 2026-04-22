@@ -31,9 +31,11 @@ export interface WorkerPopulationPipe {
  * Mutable bird state tracked by the worker playback simulation.
  *
  * Educational note:
- * Each bird keeps both physics state and policy state. The observation-memory
- * field lets feed-forward networks approximate short-term temporal memory by
- * carrying previous observation features between simulation steps.
+ * Each bird keeps both physics state and policy state. The
+ * `observationMemoryState` field stays on the bird so worker playback shares
+ * the same control-state shape as evaluation and browser helpers. The current
+ * controller input does not read external history, but the aligned state shelf
+ * keeps future opt-in experiments from forking the runtime contracts.
  */
 export interface WorkerPopulationBird {
   network: Network;

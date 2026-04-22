@@ -1,6 +1,19 @@
 import {
   FLAPPY_MONOSPACE_FONT_FAMILY,
   FLAPPY_NEON_PALETTE,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_CHARACTER_WIDTH_PX,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FILL_COLOR,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_SIZE_PX,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_WEIGHT,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_MIN_WIDTH_PX,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_RADIUS_PX,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_COLOR,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_WIDTH_PX,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_COLOR,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_PADDING_PX,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_VERTICAL_PADDING_PX,
   FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX,
   FLAPPY_NETWORK_INPUT_DESCRIPTION_FILL_COLOR,
   FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_SIZE_PX,
@@ -28,10 +41,11 @@ import {
 import type {
   NetworkInputDescriptionScene,
   NetworkInputGroupLabelBandScene,
+  NetworkHiddenColumnLabelScene,
   NetworkNodeDimensionsLike as NetworkNodeDimensions,
-  NetworkVisualizationHoverState,
   PositionedNetworkNodeLike as PositionedNetworkNode,
 } from '../browser-entry.types';
+import type { NetworkHiddenColumnAnnotation } from './network-view.topology.utils';
 import {
   resolveInputDescriptionChipWidthPx,
   resolveInputDescriptionColumnWidthPx,
@@ -370,6 +384,166 @@ export function drawInputNodeDescriptions(
         descriptionCenterXPx,
         descriptionCenterYPx - descriptionLineBlockHeightPx * 0.5 +
           labelLineIndex * FLAPPY_NETWORK_INPUT_DESCRIPTION_LINE_HEIGHT_PX,
+      );
+    });
+  });
+
+  context.restore();
+}
+
+/**
+ * Resolves hidden-column guide scenes for recurrent-aware layouts.
+ *
+ * @param positionedNodes - Positioned nodes in graph coordinates.
+ * @param nodeDimensions - Resolved node dimensions.
+ * @param hiddenColumnAnnotations - Semantic hidden-column annotations.
+ * @returns Positioned hidden-column label scenes.
+ */
+export function resolveHiddenColumnLabelScenes(
+  positionedNodes: PositionedNetworkNode[],
+  nodeDimensions: NetworkNodeDimensions,
+  hiddenColumnAnnotations: readonly NetworkHiddenColumnAnnotation[],
+): NetworkHiddenColumnLabelScene[] {
+  if (hiddenColumnAnnotations.length === 0) {
+    return [];
+  }
+
+  const positionedNodeByIndex = new Map(
+    positionedNodes.map((positionedNode) => [positionedNode.node.index, positionedNode]),
+  );
+  const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
+  const halfNodeHeightPx = nodeDimensions.heightPx * 0.5;
+
+  return hiddenColumnAnnotations.flatMap((hiddenColumnAnnotation) => {
+    const resolvedColumnNodes = hiddenColumnAnnotation.nodeIndices
+      .map((nodeIndex) => positionedNodeByIndex.get(nodeIndex))
+      .filter(
+        (positionedNode): positionedNode is PositionedNetworkNode =>
+          positionedNode != null,
+      );
+    if (resolvedColumnNodes.length === 0) {
+      return [];
+    }
+
+    const widestLineCharacterCount = Math.max(
+      0,
+      ...hiddenColumnAnnotation.labelLines.map((labelLine) => labelLine.length),
+    );
+    const minimumNodeLeftPx = Math.min(
+      ...resolvedColumnNodes.map(
+        (resolvedColumnNode) => resolvedColumnNode.xPx - halfNodeWidthPx,
+      ),
+    );
+    const maximumNodeRightPx = Math.max(
+      ...resolvedColumnNodes.map(
+        (resolvedColumnNode) => resolvedColumnNode.xPx + halfNodeWidthPx,
+      ),
+    );
+    const widthPx = Math.max(
+      FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_MIN_WIDTH_PX,
+      widestLineCharacterCount *
+        FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_CHARACTER_WIDTH_PX +
+        FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_PADDING_PX * 2,
+      maximumNodeRightPx - minimumNodeLeftPx,
+    );
+    const heightPx = Math.max(
+      nodeDimensions.heightPx +
+        FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_VERTICAL_PADDING_PX * 2,
+      hiddenColumnAnnotation.labelLines.length *
+        FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX +
+        FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_VERTICAL_PADDING_PX * 2,
+    );
+    const minimumNodeTopPx = Math.min(
+      ...resolvedColumnNodes.map(
+        (resolvedColumnNode) => resolvedColumnNode.yPx - halfNodeHeightPx,
+      ),
+    );
+    const columnCenterXPx = (minimumNodeLeftPx + maximumNodeRightPx) * 0.5;
+
+    return [
+      {
+        labelLines: hiddenColumnAnnotation.labelLines,
+        tooltipHeading: hiddenColumnAnnotation.tooltipHeading,
+        tooltipBodyParagraphs: hiddenColumnAnnotation.tooltipBodyParagraphs,
+        leftPx: columnCenterXPx - widthPx * 0.5,
+        topPx: minimumNodeTopPx - FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX - heightPx,
+        widthPx,
+        heightPx,
+        backgroundColor:
+          hiddenColumnAnnotation.backgroundColor ||
+          FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FILL_COLOR,
+        nodeIndices: [...hiddenColumnAnnotation.nodeIndices],
+      },
+    ];
+  });
+}
+
+/**
+ * Draws hidden-column guide chips for recurrent-aware layouts.
+ *
+ * @param context - Canvas 2D rendering context.
+ * @param hiddenColumnLabelScenes - Positioned hidden-column label scenes.
+ * @param hoveredNodeIndices - Optional hovered-node indices used to focus the matching column.
+ * @returns Nothing.
+ */
+export function drawHiddenColumnLabelScenes(
+  context: CanvasRenderingContext2D,
+  hiddenColumnLabelScenes: readonly NetworkHiddenColumnLabelScene[],
+  hoveredNodeIndices?: readonly number[],
+): void {
+  if (hiddenColumnLabelScenes.length === 0) {
+    return;
+  }
+
+  context.save();
+  context.font = `${FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_WEIGHT} ${FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_SIZE_PX}px ${FLAPPY_MONOSPACE_FONT_FAMILY}`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+
+  hiddenColumnLabelScenes.forEach((hiddenColumnLabelScene) => {
+    drawRoundedRect(
+      context,
+      hiddenColumnLabelScene.leftPx,
+      hiddenColumnLabelScene.topPx,
+      hiddenColumnLabelScene.widthPx,
+      hiddenColumnLabelScene.heightPx,
+      FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_RADIUS_PX,
+      hiddenColumnLabelScene.backgroundColor,
+    );
+    strokeRoundedRect(
+      context,
+      hiddenColumnLabelScene.leftPx,
+      hiddenColumnLabelScene.topPx,
+      hiddenColumnLabelScene.widthPx,
+      hiddenColumnLabelScene.heightPx,
+      FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_RADIUS_PX,
+      hoveredNodeIndices?.some((hoveredNodeIndex) =>
+        hiddenColumnLabelScene.nodeIndices.includes(hoveredNodeIndex),
+      )
+        ? FLAPPY_NEON_PALETTE.statusText
+        : FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_COLOR,
+      hoveredNodeIndices?.some((hoveredNodeIndex) =>
+        hiddenColumnLabelScene.nodeIndices.includes(hoveredNodeIndex),
+      )
+        ? FLAPPY_NETWORK_INPUT_OVERLAY_FOCUS_STROKE_WIDTH_PX
+        : FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_WIDTH_PX,
+    );
+
+    const labelLineBlockHeightPx =
+      (hiddenColumnLabelScene.labelLines.length - 1) *
+      FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX;
+    const labelCenterXPx =
+      hiddenColumnLabelScene.leftPx + hiddenColumnLabelScene.widthPx * 0.5;
+    const labelCenterYPx =
+      hiddenColumnLabelScene.topPx + hiddenColumnLabelScene.heightPx * 0.5;
+
+    hiddenColumnLabelScene.labelLines.forEach((labelLine, labelLineIndex) => {
+      context.fillStyle = FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_COLOR;
+      context.fillText(
+        labelLine,
+        labelCenterXPx,
+        labelCenterYPx - labelLineBlockHeightPx * 0.5 +
+          labelLineIndex * FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX,
       );
     });
   });

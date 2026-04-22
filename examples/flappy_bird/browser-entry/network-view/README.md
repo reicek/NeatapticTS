@@ -197,6 +197,7 @@ Returns: Adjusted graph padding context.
 resolveBaseGraphPaddingContext(
   hideNetworkOverlays: boolean,
   inputNodeCount: number,
+  network: default | undefined,
 ): NetworkGraphPaddingContext
 ```
 
@@ -603,6 +604,21 @@ These helpers answer a key visualization question: how should the current
 network be partitioned into ordered layers so layout and architecture labels
 stay meaningful even when some metadata is missing?
 
+### NetworkHiddenColumnAnnotation
+
+Semantic annotation for one hidden column in the browser network view.
+
+These annotations power recurrent-role guide chips such as “input gate” or
+“IN t-1”, making recurrent presets readable without flattening them into one
+anonymous hidden shelf.
+
+### NetworkVisualizationTopologyPlan
+
+Full topology plan for the browser network view.
+
+The plan preserves the original layer-array input used by layout helpers and
+adds semantic hidden-column annotations for recurrent-aware overlays.
+
 ### resolveNetworkVisualizationLayers
 
 ```ts
@@ -615,21 +631,31 @@ resolveNetworkVisualizationLayers(
 
 Resolves layered node groups for network-view layout and rendering.
 
-Educational note:
-Layer grouping is a network-view concern because it drives sizing, node
-placement, and architecture presentation. Visualization code can still reuse
-the result, but this helper now lives with the module that owns layout.
-
-The resolver prefers explicit layer metadata when it exists, then falls back
-to a topology-derived depth estimate so even loosely structured networks can
-still be drawn in an intelligible left-to-right order.
-
 Parameters:
 - `network` - Runtime network instance.
 - `inputSize` - Input count fallback.
 - `outputSize` - Output count fallback.
 
 Returns: Layered nodes for rendering.
+
+### resolveNetworkVisualizationTopologyPlan
+
+```ts
+resolveNetworkVisualizationTopologyPlan(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): NetworkVisualizationTopologyPlan
+```
+
+Resolves the full topology plan for browser layout and recurrent guides.
+
+Parameters:
+- `network` - Runtime network instance.
+- `inputSize` - Input count fallback.
+- `outputSize` - Output count fallback.
+
+Returns: Layered nodes plus semantic hidden-column annotations.
 
 ## browser-entry/network-view/network-view.draw.service.ts
 
@@ -655,6 +681,25 @@ Parameters:
 - `inputDescriptionScenes` - Positioned input-description scenes.
 
 Returns: Positioned nodes with input-node rows aligned to their description chips.
+
+### drawHiddenColumnLabelScenes
+
+```ts
+drawHiddenColumnLabelScenes(
+  context: CanvasRenderingContext2D,
+  hiddenColumnLabelScenes: readonly NetworkHiddenColumnLabelScene[],
+  hoveredNodeIndices: readonly number[] | undefined,
+): void
+```
+
+Draws hidden-column guide chips for recurrent-aware layouts.
+
+Parameters:
+- `context` - Canvas 2D rendering context.
+- `hiddenColumnLabelScenes` - Positioned hidden-column label scenes.
+- `hoveredNodeIndices` - Optional hovered-node indices used to focus the matching column.
+
+Returns: Nothing.
 
 ### drawInputGroupLabelBands
 
@@ -709,6 +754,25 @@ drawRoundedRect(
 Draws a filled rounded rectangle path.
 
 This is the small geometry primitive used by the input-group band renderer.
+
+### resolveHiddenColumnLabelScenes
+
+```ts
+resolveHiddenColumnLabelScenes(
+  positionedNodes: PositionedNetworkNodeLike[],
+  nodeDimensions: NetworkNodeDimensionsLike,
+  hiddenColumnAnnotations: readonly NetworkHiddenColumnAnnotation[],
+): NetworkHiddenColumnLabelScene[]
+```
+
+Resolves hidden-column guide scenes for recurrent-aware layouts.
+
+Parameters:
+- `positionedNodes` - Positioned nodes in graph coordinates.
+- `nodeDimensions` - Resolved node dimensions.
+- `hiddenColumnAnnotations` - Semantic hidden-column annotations.
+
+Returns: Positioned hidden-column label scenes.
 
 ### resolveInputDescriptionScenes
 

@@ -129,8 +129,9 @@ export function trackGlobalImprovement(
   snapshot: Network,
 ): void {
   // Step 1: Compare to prior global best.
-  if ((snapshot.score ?? -Infinity) > internal._bestGlobalScore) {
-    internal._bestGlobalScore = snapshot.score ?? -Infinity;
+  const snapshotScore = snapshot.score;
+  if (snapshotScore !== undefined && snapshotScore > internal._bestGlobalScore) {
+    internal._bestGlobalScore = snapshotScore;
     internal._lastGlobalImproveGeneration = internal.generation;
   }
 }

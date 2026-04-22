@@ -638,7 +638,6 @@ function distributeRemainingSlots(
       fraction: rawShares[speciesIndex] - Math.floor(rawShares[speciesIndex]),
     }))
     .toSorted((left, right) => right.fraction - left.fraction);
-  if (remainders.length === 0) return;
   let remainderIndex = 0;
   while (slotsLeft > 0) {
     const targetSpeciesIndex = remainders[remainderIndex].speciesIndex;
@@ -685,7 +684,6 @@ function trimOversubscription(
       value: allocation[speciesIndex],
     }))
     .toSorted((left, right) => right.value - left.value);
-  if (order.length === 0) return;
   let didTrim = true;
   while (slotsLeft < 0 && didTrim) {
     didTrim = false;

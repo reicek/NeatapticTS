@@ -1203,7 +1203,17 @@ function resolveHoveredNodeIndicesFromCanvasPoint(
     return hoveredInputDescriptionNodeIndices;
   }
 
-  // Step 3: Fall back to input-group combo-hover when the pointer is over a category band.
+  // Step 3: Fall back to recurrent-column combo-hover when the pointer is over a guide chip.
+  const hoveredHiddenColumnNodeIndices =
+    resolveHoveredHiddenColumnNodeIndicesFromCanvasPoint(
+      canvasPoint,
+      positionedScene,
+    );
+  if (hoveredHiddenColumnNodeIndices?.length) {
+    return hoveredHiddenColumnNodeIndices;
+  }
+
+  // Step 4: Fall back to input-group combo-hover when the pointer is over a category band.
   return resolveHoveredInputGroupNodeIndicesFromCanvasPoint(
     canvasPoint,
     positionedScene,
@@ -1246,6 +1256,21 @@ function resolveHoveredInputGroupNodeIndicesFromCanvasPoint(
       canvasPoint.yPx >= inputGroupLabelBandScene.topPx &&
       canvasPoint.yPx <=
         inputGroupLabelBandScene.topPx + inputGroupLabelBandScene.heightPx,
+  )?.nodeIndices;
+}
+
+function resolveHoveredHiddenColumnNodeIndicesFromCanvasPoint(
+  canvasPoint: HostCanvasPoint,
+  positionedScene: NetworkVisualizationPositionedScene,
+): number[] | undefined {
+  return positionedScene.hiddenColumnLabelScenes?.findLast(
+    (hiddenColumnLabelScene) =>
+      canvasPoint.xPx >= hiddenColumnLabelScene.leftPx &&
+      canvasPoint.xPx <=
+        hiddenColumnLabelScene.leftPx + hiddenColumnLabelScene.widthPx &&
+      canvasPoint.yPx >= hiddenColumnLabelScene.topPx &&
+      canvasPoint.yPx <=
+        hiddenColumnLabelScene.topPx + hiddenColumnLabelScene.heightPx,
   )?.nodeIndices;
 }
 

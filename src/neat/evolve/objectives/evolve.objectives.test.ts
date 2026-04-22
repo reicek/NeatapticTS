@@ -1,6 +1,7 @@
 import Network from '../../../architecture/network';
 import Neat from '../../../neat';
 import {
+  applyFitnessSuppressionForTests,
   applyDynamicObjectiveSchedule,
   captureObjectiveImportanceSnapshot,
   updateObjectiveScheduleAndAges,
@@ -170,6 +171,98 @@ describe('neat evolve objectives chapter', () => {
         });
       });
     });
+
+    describe('given no resolved objectives are available on the controller', () => {
+      it('keeps the last importance snapshot undefined', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController();
+
+        Reflect.deleteProperty(evolutionController as object, '_getObjectives');
+
+        // Act
+        captureObjectiveImportanceSnapshot(evolutionController);
+
+        // Assert
+        expect(evolutionController._lastObjImportance).toBeUndefined();
+      });
+    });
+
+    describe('given one objective is resolved but the population is empty', () => {
+      it('uses the empty-population variance divisor fallback', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          population: [],
+          registeredObjectiveKeys: ['fitness'],
+        });
+
+        // Act
+        captureObjectiveImportanceSnapshot(evolutionController);
+
+        // Assert
+        expect(evolutionController._lastObjImportance).toEqual({
+          fitness: { range: Number.NEGATIVE_INFINITY, var: 0 },
+        });
+      });
+    });
+  });
+
+  describe('applyFitnessSuppressionForTests', () => {
+    describe('given pruneInactive is disabled and fitness is one of multiple resolved objectives', () => {
+      it('suppresses fitness once and clears the cached objectives list', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          registeredObjectiveKeys: ['fitness', 'complexity'],
+        });
+
+        evolutionController.options.multiObjective!.pruneInactive = {
+          enabled: false,
+        };
+        evolutionController._objectivesList = [
+          createObjectiveDescriptor('fitness'),
+          createObjectiveDescriptor('complexity'),
+        ];
+
+        // Act
+        applyFitnessSuppressionForTests(evolutionController);
+
+        // Assert
+        expect({
+          fitnessSuppressedOnce: evolutionController._fitnessSuppressedOnce,
+          objectivesList: evolutionController._objectivesList,
+          suppressFitnessObjective: evolutionController._suppressFitnessObjective,
+        }).toEqual({
+          fitnessSuppressedOnce: true,
+          objectivesList: undefined,
+          suppressFitnessObjective: true,
+        });
+      });
+    });
+
+    describe('given pruneInactive is disabled but the controller does not expose a resolved objective getter', () => {
+      it('leaves the fitness suppression flags untouched', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          registeredObjectiveKeys: ['fitness', 'complexity'],
+        });
+
+        evolutionController.options.multiObjective!.pruneInactive = {
+          enabled: false,
+        };
+        Reflect.deleteProperty(evolutionController as object, '_getObjectives');
+
+        // Act
+        applyFitnessSuppressionForTests(evolutionController);
+
+        // Assert
+        expect({
+          fitnessSuppressedOnce: evolutionController._fitnessSuppressedOnce,
+          suppressFitnessObjective: evolutionController._suppressFitnessObjective,
+        }).toEqual({
+          fitnessSuppressedOnce: undefined,
+          suppressFitnessObjective: undefined,
+        });
+      });
+    });
   });
 
   describe('applyDynamicObjectiveSchedule', () => {
@@ -214,6 +307,233 @@ describe('neat evolve objectives chapter', () => {
         expect(evolutionController._pendingObjectiveAdds).toEqual(['entropy']);
       });
     });
+
+    describe('given the dynamic generation gates are omitted', () => {
+      it('uses the Infinity defaults and queues no scheduled objectives', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          generation: 100,
+          registeredObjectiveKeys: ['fitness'],
+        });
+
+        evolutionController.options.multiObjective!.dynamic = {
+          enabled: true,
+        };
+
+        // Act
+        applyDynamicObjectiveSchedule(evolutionController, ['fitness'], {
+          autoEntropyAddAt: Number.POSITIVE_INFINITY,
+        });
+
+        // Assert
+        expect(evolutionController._pendingObjectiveAdds).toEqual([]);
+      });
+    });
+
+    describe('given multi-objective scheduling is disabled entirely', () => {
+      it('returns without queueing any scheduled objectives', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          generation: 10,
+          registeredObjectiveKeys: ['fitness'],
+        });
+
+        evolutionController.options.multiObjective!.enabled = false;
+
+        // Act
+        applyDynamicObjectiveSchedule(evolutionController, ['fitness'], {
+          autoEntropyAddAt: 0,
+        });
+
+        // Assert
+        expect(evolutionController._pendingObjectiveAdds).toEqual([]);
+      });
+    });
+
+    describe('given dynamic scheduling is disabled and auto entropy is also disabled', () => {
+      it('leaves the pending objective queue unchanged', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          generation: 10,
+          registeredObjectiveKeys: ['fitness'],
+        });
+
+        evolutionController.options.multiObjective!.autoEntropy = false;
+        evolutionController.options.multiObjective!.dynamic = {
+          enabled: false,
+        };
+
+        // Act
+        applyDynamicObjectiveSchedule(evolutionController, ['fitness'], {
+          autoEntropyAddAt: 0,
+        });
+
+        // Assert
+        expect(evolutionController._pendingObjectiveAdds).toEqual([]);
+      });
+    });
+
+    describe('given dynamic scheduling is disabled but auto entropy reached its fallback generation gate', () => {
+      it('queues entropy through the fallback path', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          generation: 4,
+          registeredObjectiveKeys: ['fitness'],
+        });
+
+        evolutionController.options.multiObjective!.autoEntropy = true;
+        evolutionController.options.multiObjective!.dynamic = {
+          enabled: false,
+        };
+
+        // Act
+        applyDynamicObjectiveSchedule(evolutionController, ['fitness'], {
+          autoEntropyAddAt: 4,
+        });
+
+        // Assert
+        expect(evolutionController._pendingObjectiveAdds).toEqual(['entropy']);
+      });
+    });
+
+    describe('given dynamic scheduling is disabled but auto entropy has not reached its fallback generation gate', () => {
+      it('does not queue entropy yet', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          generation: 2,
+          registeredObjectiveKeys: ['fitness'],
+        });
+
+        evolutionController.options.multiObjective!.autoEntropy = true;
+        evolutionController.options.multiObjective!.dynamic = {
+          enabled: false,
+        };
+
+        // Act
+        applyDynamicObjectiveSchedule(evolutionController, ['fitness'], {
+          autoEntropyAddAt: 4,
+        });
+
+        // Assert
+        expect(evolutionController._pendingObjectiveAdds).toEqual([]);
+      });
+    });
+
+    describe('given entropy is active when stagnation reaches the configured drop generation', () => {
+      it('removes entropy from the configured objectives and records the drop generation', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          generation: 5,
+          registeredObjectiveKeys: ['fitness', 'entropy'],
+        });
+
+        evolutionController.options.multiObjective!.dynamic = {
+          enabled: true,
+          addComplexityAt: Number.POSITIVE_INFINITY,
+          addEntropyAt: Number.POSITIVE_INFINITY,
+          dropEntropyOnStagnation: 5,
+          readdEntropyAfter: 2,
+        };
+
+        // Act
+        applyDynamicObjectiveSchedule(
+          evolutionController,
+          ['fitness', 'entropy'],
+          {
+            autoEntropyAddAt: Number.POSITIVE_INFINITY,
+          },
+        );
+
+        // Assert
+        expect({
+          entropyDropped: evolutionController._entropyDropped,
+          objectiveKeys:
+            evolutionController.options.multiObjective!.objectives?.map(
+              (objective) => objective.key,
+            ),
+          pendingObjectiveRemoves: evolutionController._pendingObjectiveRemoves,
+        }).toEqual({
+          entropyDropped: 5,
+          objectiveKeys: ['fitness'],
+          pendingObjectiveRemoves: ['entropy'],
+        });
+      });
+    });
+
+    describe('given entropy is active but the configured objective array is missing at drop time', () => {
+      it('skips the drop bookkeeping without mutating pending removals', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          generation: 5,
+          registeredObjectiveKeys: ['fitness', 'entropy'],
+        });
+
+        evolutionController.options.multiObjective!.dynamic = {
+          enabled: true,
+          addComplexityAt: Number.POSITIVE_INFINITY,
+          addEntropyAt: Number.POSITIVE_INFINITY,
+          dropEntropyOnStagnation: 5,
+          readdEntropyAfter: 2,
+        };
+        evolutionController.options.multiObjective!.objectives = undefined;
+
+        // Act
+        applyDynamicObjectiveSchedule(
+          evolutionController,
+          ['fitness', 'entropy'],
+          {
+            autoEntropyAddAt: Number.POSITIVE_INFINITY,
+          },
+        );
+
+        // Assert
+        expect({
+          entropyDropped: evolutionController._entropyDropped,
+          pendingObjectiveRemoves: evolutionController._pendingObjectiveRemoves,
+        }).toEqual({
+          entropyDropped: undefined,
+          pendingObjectiveRemoves: [],
+        });
+      });
+    });
+
+    describe('given entropy was dropped earlier and the configured cooldown elapsed', () => {
+      it('re-adds entropy and clears the dropped marker', () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController({
+          generation: 5,
+          registeredObjectiveKeys: ['fitness'],
+        });
+
+        evolutionController._entropyDropped = 3;
+        evolutionController.options.multiObjective!.dynamic = {
+          enabled: true,
+          addComplexityAt: Number.POSITIVE_INFINITY,
+          addEntropyAt: Number.POSITIVE_INFINITY,
+          dropEntropyOnStagnation: 9,
+          readdEntropyAfter: 2,
+        };
+
+        // Act
+        applyDynamicObjectiveSchedule(evolutionController, ['fitness'], {
+          autoEntropyAddAt: Number.POSITIVE_INFINITY,
+        });
+
+        // Assert
+        expect({
+          entropyDropped: evolutionController._entropyDropped,
+          objectiveKeys:
+            evolutionController.options.multiObjective!.objectives?.map(
+              (objective) => objective.key,
+            ),
+          pendingObjectiveAdds: evolutionController._pendingObjectiveAdds,
+        }).toEqual({
+          entropyDropped: undefined,
+          objectiveKeys: ['fitness', 'entropy'],
+          pendingObjectiveAdds: ['entropy'],
+        });
+      });
+    });
   });
 
   describe('updateObjectiveScheduleAndAges', () => {
@@ -245,6 +565,27 @@ describe('neat evolve objectives chapter', () => {
         expect(Object.fromEntries(evolutionController._objectiveAges)).toEqual({
           fitness: 5,
           complexity: 3,
+          entropy: 0,
+        });
+      });
+    });
+
+    describe('given the controller does not expose the resolved objective getter', () => {
+      it('still initializes the ages of newly queued objectives', async () => {
+        // Arrange
+        const evolutionController = createEvolutionObjectivesController();
+
+        Reflect.deleteProperty(evolutionController as object, '_getObjectives');
+
+        // Act
+        await updateObjectiveScheduleAndAges(evolutionController, {
+          applyDynamicObjectiveSchedule: () => {
+            evolutionController._pendingObjectiveAdds.push('entropy');
+          },
+        });
+
+        // Assert
+        expect(Object.fromEntries(evolutionController._objectiveAges)).toEqual({
           entropy: 0,
         });
       });

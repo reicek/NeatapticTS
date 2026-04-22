@@ -282,6 +282,48 @@ export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_WEIGHT = 700;
 /** Text color for vertical input-group labels on neon backgrounds. */
 export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_TEXT_COLOR = '#000000';
 
+/** Reserved vertical shelf for recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TOP_RESERVE_PX = 24;
+
+/** Minimum chip width for recurrent hidden-column guide labels. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_MIN_WIDTH_PX = 34;
+
+/** Approximate monospace character width used to size recurrent guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_CHARACTER_WIDTH_PX = 6;
+
+/** Horizontal text padding inside recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_PADDING_PX = 5;
+
+/** Vertical text padding inside recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_VERTICAL_PADDING_PX = 3;
+
+/** Font size used for recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_SIZE_PX = 8;
+
+/** Line height used for recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX = 8;
+
+/** Font weight used for recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_WEIGHT = 700;
+
+/** Corner radius used by recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_RADIUS_PX = 6;
+
+/** Gap between hidden-column guide chips and the node shelf below. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX = 6;
+
+/** Outline color used by recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_COLOR = '#7fe8ff';
+
+/** Fill color used by recurrent hidden-column guide chips when no custom color is set. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FILL_COLOR = 'rgba(21, 77, 110, 0.28)';
+
+/** Stroke width used by recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_WIDTH_PX = 1.5;
+
+/** Text color used inside recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_COLOR = '#001522';
+
 /** Placeholder label used when the network has no hidden layers. */
 export const FLAPPY_NETWORK_EMPTY_HIDDEN_LAYER_LABEL = '-';
 

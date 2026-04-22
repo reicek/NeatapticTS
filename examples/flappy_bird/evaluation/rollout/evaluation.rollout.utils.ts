@@ -16,7 +16,6 @@ import {
   FLAPPY_FITNESS_BONUS_PER_PIPE,
   FLAPPY_FITNESS_CENTERING_PROGRESS_WEIGHT,
   FLAPPY_FITNESS_CLEARANCE_WEIGHT_PER_FRAME,
-  FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME,
   FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME,
   FLAPPY_FITNESS_SURVIVAL_WEIGHT,
   FLAPPY_FITNESS_TERMINAL_ALIGNMENT_BONUS_WEIGHT,
@@ -132,7 +131,6 @@ export function computeDenseShapingReward(
     denseShapingRewardComponents.approachProgressReward +
     denseShapingRewardComponents.centeringProgressReward +
     denseShapingRewardComponents.clearanceReward +
-    denseShapingRewardComponents.secondGapAlignmentReward +
     denseShapingRewardComponents.velocityStabilityReward
   );
 }
@@ -268,15 +266,7 @@ function resolveDenseShapingRewardComponents(
       currentFeatures.normalizedNextGapClearance,
     ) * FLAPPY_FITNESS_CLEARANCE_WEIGHT_PER_FRAME;
 
-  // Step 5: Reward alignment with the second upcoming gap to encourage stability.
-  const secondGapAlignmentReward =
-    Math.max(
-      FLAPPY_ROLLOUT_ZERO_FITNESS,
-      FLAPPY_ROLLOUT_MIN_MAX_FRAMES -
-        Math.abs(currentFeatures.normalizedDeltaToSecondGap),
-    ) * FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME;
-
-  // Step 6: Reward stable velocity magnitudes that avoid extreme oscillation.
+  // Step 5: Reward stable velocity magnitudes that avoid extreme oscillation.
   const velocityStabilityReward =
     Math.max(
       FLAPPY_ROLLOUT_ZERO_FITNESS,
@@ -289,7 +279,6 @@ function resolveDenseShapingRewardComponents(
     approachProgressReward,
     centeringProgressReward,
     clearanceReward,
-    secondGapAlignmentReward,
     velocityStabilityReward,
   };
 }

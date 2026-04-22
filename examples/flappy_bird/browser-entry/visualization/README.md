@@ -14,7 +14,11 @@ and how sign and magnitude are encoded visually.
 
 Minimal example:
 ```ts
-const layers = resolveNetworkVisualizationLayers(network, 38, 2);
+const layers = resolveNetworkVisualizationLayers(
+  network,
+  network.inputNodeIds.length,
+  network.outputNodeIds.length,
+);
 console.log(layers.length);
 ```
 
@@ -31,15 +35,6 @@ resolveNetworkVisualizationLayers(
 ```
 
 Resolves layered node groups for network-view layout and rendering.
-
-Educational note:
-Layer grouping is a network-view concern because it drives sizing, node
-placement, and architecture presentation. Visualization code can still reuse
-the result, but this helper now lives with the module that owns layout.
-
-The resolver prefers explicit layer metadata when it exists, then falls back
-to a topology-derived depth estimate so even loosely structured networks can
-still be drawn in an intelligible left-to-right order.
 
 Parameters:
 - `network` - Runtime network instance.
@@ -803,15 +798,6 @@ resolveNetworkVisualizationLayers(
 ```
 
 Resolves layered node groups for network-view layout and rendering.
-
-Educational note:
-Layer grouping is a network-view concern because it drives sizing, node
-placement, and architecture presentation. Visualization code can still reuse
-the result, but this helper now lives with the module that owns layout.
-
-The resolver prefers explicit layer metadata when it exists, then falls back
-to a topology-derived depth estimate so even loosely structured networks can
-still be drawn in an intelligible left-to-right order.
 
 Parameters:
 - `network` - Runtime network instance.

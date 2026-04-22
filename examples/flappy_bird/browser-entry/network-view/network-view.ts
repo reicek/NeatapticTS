@@ -24,10 +24,10 @@ import {
   FLAPPY_NETWORK_GRAPH_LEFT_PADDING_PX,
   FLAPPY_NETWORK_GRAPH_RIGHT_PADDING_PX,
   FLAPPY_NETWORK_GRAPH_TOP_PADDING_PX,
+  FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TOP_RESERVE_PX,
   FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR,
   FLAPPY_NETWORK_INFERRED_HIDDEN_LAYER_PREFIX,
   FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX,
-  FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_WIDTH_PX,
   FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX,
   FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX,
   FLAPPY_NETWORK_LAYER_COMPLEXITY_BASELINE_COUNT,
@@ -63,6 +63,7 @@ import { clamp } from '../browser-entry.math.utils';
 import type {
   NetworkInputDescriptionScene,
   NetworkInputGroupLabelBandScene,
+  NetworkHiddenColumnLabelScene,
   NetworkNodeDimensionsLike as NetworkNodeDimensions,
   NetworkVisualizationHoverState,
   NetworkVisualizationPositionedScene,
@@ -79,8 +80,10 @@ import { resolveNetworkVisualizationColorScales } from '../visualization/visuali
 import type { NetworkVisualizationColorScales } from '../visualization/visualization.types';
 import {
   alignInputNodesToDescriptionScenes,
+  drawHiddenColumnLabelScenes,
   drawInputNodeDescriptions,
   drawInputGroupLabelBands,
+  resolveHiddenColumnLabelScenes,
   resolveInputDescriptionScenes,
   resolveInputGroupLabelBandScenes,
 } from './network-view.draw.service';
@@ -89,10 +92,16 @@ import {
   positionNetworkNodes,
 } from './network-view.layout.utils';
 import { resolveInputDescriptionColumnWidthPx } from './network-view.labels.utils';
-import { resolveNetworkVisualizationLayers } from './network-view.topology.utils';
+import {
+  resolveNetworkVisualizationTopologyPlan,
+  type NetworkHiddenColumnAnnotation,
+} from './network-view.topology.utils';
 
 type NetworkTopologySummary = {
-  networkLayers: ReturnType<typeof resolveNetworkVisualizationLayers>;
+  networkLayers: ReturnType<
+    typeof resolveNetworkVisualizationTopologyPlan
+  >['networkLayers'];
+  hiddenColumnAnnotations: NetworkHiddenColumnAnnotation[];
   layerCount: number;
   maximumLayerNodeCount: number;
 };
@@ -123,6 +132,7 @@ type PositionedNetworkGraphScene = {
   centeredPositionedNodes: PositionedNetworkNode[];
   inputDescriptionScenes: NetworkInputDescriptionScene[];
   inputGroupLabelBandScenes: NetworkInputGroupLabelBandScene[];
+  hiddenColumnLabelScenes: NetworkHiddenColumnLabelScene[];
   positionByNodeIndex: Map<number, PositionedNetworkNode>;
   runtimeConnections: VisualNetworkConnectionLike[];
   nodeDimensions: NetworkNodeDimensions;
@@ -238,6 +248,8 @@ export function resolveNetworkVisualizationFrame(
         positionedNetworkGraphScene.inputDescriptionScenes,
       inputGroupLabelBandScenes:
         positionedNetworkGraphScene.inputGroupLabelBandScenes,
+      hiddenColumnLabelScenes:
+        positionedNetworkGraphScene.hiddenColumnLabelScenes,
     },
     positionByNodeIndex: positionedNetworkGraphScene.positionByNodeIndex,
     runtimeConnections: positionedNetworkGraphScene.runtimeConnections,
@@ -361,10 +373,14 @@ export function resolveNetworkArchitectureLabel(
 
   // Step 2: Describe the active network and resolve the hidden-layer fragment.
   const architectureDescriptor = network.describeArchitecture();
-  const hiddenLayersLabel = resolveHiddenLayersLabel(
-    architectureDescriptor.hiddenLayerSizes,
-    architectureDescriptor.source,
-  );
+  const temporalStructure = network.describeTemporalStructure();
+  const hiddenLayersLabel =
+    temporalStructure.recurrentModules.length > 0
+      ? resolveTemporalHiddenLayersLabel(network, temporalStructure)
+      : resolveHiddenLayersLabel(
+          architectureDescriptor.hiddenLayerSizes,
+          architectureDescriptor.source,
+        );
   const architectureInputSize =
     network.inputNodeIds.length > 0 ? network.inputNodeIds.length : inputSize;
   const architectureOutputSize =
@@ -467,6 +483,7 @@ function resolveNetworkVisualizationScene(
   const graphPaddingContext = resolveBaseGraphPaddingContext(
     hideNetworkOverlays,
     inputSize,
+    network,
   );
 
   // Step 2: Adjust graph-side padding when the legend is visible.
@@ -594,12 +611,21 @@ function resolvePositionedNetworkGraphScene(
           overlayAlignedPositionedNodes,
           nodeDimensions,
         );
+  const hiddenColumnLabelScenes =
+    networkVisualizationScene.hideNetworkOverlays
+      ? []
+      : resolveHiddenColumnLabelScenes(
+          overlayAlignedPositionedNodes,
+          nodeDimensions,
+          networkTopologySummary.hiddenColumnAnnotations,
+        );
 
   // Step 3: Build the connection lookup state used by the drawing layers.
   return {
     centeredPositionedNodes: overlayAlignedPositionedNodes,
     inputDescriptionScenes,
     inputGroupLabelBandScenes,
+    hiddenColumnLabelScenes,
     positionByNodeIndex: createPositionByNodeIndex(overlayAlignedPositionedNodes),
     runtimeConnections: resolveRuntimeConnections(network),
     nodeDimensions,
@@ -641,6 +667,11 @@ function drawPositionedNetworkGraph(
       resolvedNetworkVisualizationFrame.positionedScene.inputDescriptionScenes,
       hoverState?.hoveredNodeIndices,
     );
+    drawHiddenColumnLabelScenes(
+      context,
+      resolvedNetworkVisualizationFrame.positionedScene.hiddenColumnLabelScenes ?? [],
+      hoverState?.hoveredNodeIndices,
+    );
   }
 
   // Step 3: Draw node rectangles and bias labels over the connection layer.
@@ -661,6 +692,7 @@ function drawPositionedNetworkGraph(
 function resolveBaseGraphPaddingContext(
   hideNetworkOverlays: boolean,
   inputNodeCount: number,
+  network: Network | undefined,
 ): NetworkGraphPaddingContext {
   // Step 1: Reserve the full input-overlay shelf only when overlays are visible.
   const descriptionColumnReserveWidthPx =
@@ -679,7 +711,9 @@ function resolveBaseGraphPaddingContext(
   return {
     graphLeftPaddingPx:
       FLAPPY_NETWORK_GRAPH_LEFT_PADDING_PX + groupLabelBandReserveWidthPx,
-    graphTopPaddingPx: FLAPPY_NETWORK_GRAPH_TOP_PADDING_PX,
+    graphTopPaddingPx:
+      FLAPPY_NETWORK_GRAPH_TOP_PADDING_PX +
+      resolveHiddenColumnLabelReserveHeightPx(network, hideNetworkOverlays),
     graphRightPaddingPx: FLAPPY_NETWORK_GRAPH_RIGHT_PADDING_PX,
     graphBottomPaddingPx: FLAPPY_NETWORK_GRAPH_BOTTOM_PADDING_PX,
   };
@@ -809,15 +843,17 @@ function resolveNetworkTopologySummary(
   outputSize: number,
 ): NetworkTopologySummary {
   // Step 1: Resolve the layer groups once so downstream helpers share the same topology view.
-  const networkLayers = resolveNetworkVisualizationLayers(
+  const topologyPlan = resolveNetworkVisualizationTopologyPlan(
     network,
     inputSize,
     outputSize,
   );
+  const networkLayers = topologyPlan.networkLayers;
 
   // Step 2: Summarize the topology density values used by sizing logic.
   return {
     networkLayers,
+    hiddenColumnAnnotations: topologyPlan.hiddenColumnAnnotations,
     layerCount: Math.max(1, networkLayers.length),
     maximumLayerNodeCount: Math.max(
       1,
@@ -1080,4 +1116,148 @@ function resolveHiddenLayersLabel(
 
   // Step 3: Join explicit hidden-layer sizes without inference prefixes.
   return hiddenLayerSizes.join(FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR);
+}
+
+function resolveTemporalHiddenLayersLabel(
+  network: Network,
+  temporalStructure: ReturnType<Network['describeTemporalStructure']>,
+): string {
+  const recurrentKinds = [...new Set(
+    temporalStructure.recurrentModules.map((recurrentModule) => recurrentModule.kind),
+  )];
+  const sortedRecurrentModules = [...temporalStructure.recurrentModules].toSorted(
+    (leftModule, rightModule) =>
+      resolveTemporalModuleOrderValue(leftModule) -
+      resolveTemporalModuleOrderValue(rightModule),
+  );
+
+  if (recurrentKinds.length === 1 && recurrentKinds[0] === 'lstm') {
+    return resolveUniformTemporalFamilyLabel(
+      'LSTM',
+      sortedRecurrentModules,
+      ['outputBlock', 'memoryCell'],
+      network,
+    );
+  }
+
+  if (recurrentKinds.length === 1 && recurrentKinds[0] === 'gru') {
+    return resolveUniformTemporalFamilyLabel(
+      'GRU',
+      sortedRecurrentModules,
+      ['output', 'memoryCell'],
+      network,
+    );
+  }
+
+  if (recurrentKinds.length === 1 && recurrentKinds[0] === 'narx-memory') {
+    return resolveNarxTemporalFamilyLabel(sortedRecurrentModules, network);
+  }
+
+  const extraHiddenCount = resolveTemporalExtraHiddenCount(
+    sortedRecurrentModules,
+    network,
+  );
+  return `TEMP[${recurrentKinds.join('+')}]${extraHiddenCount > 0 ? `+${extraHiddenCount}` : ''}`;
+}
+
+function resolveUniformTemporalFamilyLabel(
+  familyLabel: string,
+  recurrentModules: ReturnType<Network['describeTemporalStructure']>['recurrentModules'],
+  preferredRoleNames: readonly string[],
+  network: Network,
+): string {
+  const blockSizes = recurrentModules.map((recurrentModule) =>
+    resolvePreferredRoleSize(recurrentModule, preferredRoleNames),
+  );
+  const extraHiddenCount = resolveTemporalExtraHiddenCount(
+    recurrentModules,
+    network,
+  );
+  return `${familyLabel}[${blockSizes.join(',')}]${extraHiddenCount > 0 ? `+${extraHiddenCount}` : ''}`;
+}
+
+function resolveNarxTemporalFamilyLabel(
+  recurrentModules: ReturnType<Network['describeTemporalStructure']>['recurrentModules'],
+  network: Network,
+): string {
+  const inputDelayModule = recurrentModules.find(
+    (recurrentModule) => recurrentModule.moduleLabel === 'input',
+  );
+  const outputDelayModule = recurrentModules.find(
+    (recurrentModule) => recurrentModule.moduleLabel === 'output',
+  );
+  const inputDelayCount = inputDelayModule
+    ? Object.keys(inputDelayModule.nodeGeneIdsByRole).length
+    : 0;
+  const outputDelayCount = outputDelayModule
+    ? Object.keys(outputDelayModule.nodeGeneIdsByRole).length
+    : 0;
+  const extraHiddenCount = resolveTemporalExtraHiddenCount(
+    recurrentModules,
+    network,
+  );
+  return `NARX[i${inputDelayCount},o${outputDelayCount}${extraHiddenCount > 0 ? `,+${extraHiddenCount}` : ''}]`;
+}
+
+function resolvePreferredRoleSize(
+  recurrentModule: ReturnType<Network['describeTemporalStructure']>['recurrentModules'][number],
+  preferredRoleNames: readonly string[],
+): number {
+  for (const preferredRoleName of preferredRoleNames) {
+    const preferredRoleNodeGeneIds =
+      recurrentModule.nodeGeneIdsByRole[preferredRoleName];
+    if (Array.isArray(preferredRoleNodeGeneIds)) {
+      return preferredRoleNodeGeneIds.length;
+    }
+  }
+
+  return Math.max(
+    0,
+    ...Object.values(recurrentModule.nodeGeneIdsByRole).map(
+      (roleNodeGeneIds) => roleNodeGeneIds.length,
+    ),
+  );
+}
+
+function resolveTemporalExtraHiddenCount(
+  recurrentModules: ReturnType<Network['describeTemporalStructure']>['recurrentModules'],
+  network: Network,
+): number {
+  const moduleOwnedGeneIds = new Set(
+    recurrentModules.flatMap((recurrentModule) =>
+      Object.values(recurrentModule.nodeGeneIdsByRole).flat(),
+    ),
+  );
+
+  return network.nodes.filter(
+    (runtimeNode) =>
+      runtimeNode.type !== 'input' &&
+      runtimeNode.type !== 'output' &&
+      runtimeNode.type !== 'constant' &&
+      !moduleOwnedGeneIds.has(runtimeNode.geneId),
+  ).length;
+}
+
+function resolveTemporalModuleOrderValue(
+  recurrentModule: ReturnType<Network['describeTemporalStructure']>['recurrentModules'][number],
+): number {
+  const orderedGeneIds = Object.values(recurrentModule.nodeGeneIdsByRole)
+    .flat()
+    .filter((geneId): geneId is number => Number.isFinite(geneId));
+  return orderedGeneIds.length > 0
+    ? Math.min(...orderedGeneIds)
+    : Number.MAX_SAFE_INTEGER;
+}
+
+function resolveHiddenColumnLabelReserveHeightPx(
+  network: Network | undefined,
+  hideNetworkOverlays: boolean,
+): number {
+  if (hideNetworkOverlays || !network) {
+    return 0;
+  }
+
+  return network.describeTemporalStructure().recurrentModules.length > 0
+    ? FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TOP_RESERVE_PX
+    : 0;
 }

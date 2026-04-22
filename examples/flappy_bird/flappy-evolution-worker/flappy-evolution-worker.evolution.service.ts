@@ -1,10 +1,6 @@
 import type { Neat } from '../../../src/neataptic';
 import type Network from '../../../src/architecture/network';
 import type { WorkerGenerationReadyMessage } from './flappy-evolution-worker.types';
-import {
-  logRecurrentDebugMarker,
-  logRecurrentPopulationSnapshot,
-} from './flappy-evolution-worker.debug.service';
 
 /**
  * Dependencies required to evolve one generation and prepare host payload output.
@@ -66,26 +62,9 @@ export async function evolveAndBuildGenerationReadyMessage(
     throw new Error('Evolution worker runtime is not initialized.');
   }
 
-  const runtimeNeat = neatRuntime as unknown as { population?: Network[] };
-  logRecurrentPopulationSnapshot({
-    architectureProfileId,
-    phase: 'generation-before-warm-start',
-    generation: neatRuntime.generation,
-    population: Array.isArray(runtimeNeat.population)
-      ? runtimeNeat.population
-      : [],
-  });
-
   await warmStartGenerationZeroIfNeeded(neatRuntime);
 
-  logRecurrentPopulationSnapshot({
-    architectureProfileId,
-    phase: 'generation-after-warm-start',
-    generation: neatRuntime.generation,
-    population: Array.isArray(runtimeNeat.population)
-      ? runtimeNeat.population
-      : [],
-  });
+  const runtimeNeat = neatRuntime as unknown as { population?: Network[] };
 
   const bestNetwork = (await neatRuntime.evolve()) as Network;
   setCurrentPopulation(
@@ -93,26 +72,6 @@ export async function evolveAndBuildGenerationReadyMessage(
       ? runtimeNeat.population
       : [bestNetwork],
   );
-
-  logRecurrentPopulationSnapshot({
-    architectureProfileId,
-    phase: 'generation-after-evolve',
-    generation: neatRuntime.generation,
-    population: Array.isArray(runtimeNeat.population)
-      ? runtimeNeat.population
-      : [bestNetwork],
-    extra: {
-      bestFitness: Number(bestNetwork.score ?? 0),
-    },
-  });
-  logRecurrentDebugMarker({
-    architectureProfileId,
-    phase: 'generation-ready-payload-building',
-    generation: neatRuntime.generation,
-    extra: {
-      bestFitness: Number(bestNetwork.score ?? 0),
-    },
-  });
 
   return {
     type: 'generation-ready',

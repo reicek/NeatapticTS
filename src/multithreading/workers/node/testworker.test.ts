@@ -19,13 +19,16 @@ type ChildProcessHarness = EventEmitter & {
 
 const mockedFork = jest.mocked(fork);
 
-function createChildProcessHarness(): ChildProcessHarness {
+function createChildProcessHarness(input?: {
+  onEvaluationPayload?: (childProcessHarness: ChildProcessHarness) => void;
+}): ChildProcessHarness {
   const childProcessHarness = new EventEmitter() as ChildProcessHarness;
 
   childProcessHarness.send = jest.fn((message: unknown) => {
     if (isEvaluationPayload(message)) {
       queueMicrotask(() => {
-        childProcessHarness.emit('message', 0.25);
+        input?.onEvaluationPayload?.(childProcessHarness) ??
+          childProcessHarness.emit('message', 0.25);
       });
     }
 
@@ -50,6 +53,25 @@ function isEvaluationPayload(message: unknown): message is EvaluationPayload {
     Array.isArray(message.states) &&
     Array.isArray(message.conns)
   );
+}
+
+function createCandidateNetwork() {
+  return {
+    serialize(): [number[], number[], number[]] {
+      return [[1], [2], [3]];
+    },
+  };
+}
+
+async function captureRejectionMessage(
+  evaluationPromise: Promise<number>,
+): Promise<string> {
+  try {
+    await evaluationPromise;
+    return 'resolved';
+  } catch (error: unknown) {
+    return error instanceof Error ? error.message : String(error);
+  }
 }
 
 describe('node worker wrapper chapter', () => {
@@ -91,11 +113,7 @@ describe('node worker wrapper chapter', () => {
           childProcessHarness as unknown as ChildProcess,
         );
         const testWorker = new TestWorker([1, 2, 3], { name: 'mse' });
-        const candidateNetwork = {
-          serialize(): [number[], number[], number[]] {
-            return [[1], [2], [3]];
-          },
-        };
+        const candidateNetwork = createCandidateNetwork();
 
         // Act
         const evaluationResult = await testWorker.evaluate(candidateNetwork);
@@ -116,6 +134,158 @@ describe('node worker wrapper chapter', () => {
             states: [2],
             conns: [3],
           },
+          listenerCounts: {
+            message: 0,
+            error: 0,
+            exit: 0,
+          },
+        });
+      });
+    });
+
+    describe('given the child process emits an error during evaluation', () => {
+      it('rejects with that error and removes evaluation listeners', async () => {
+        // Arrange
+        const childProcessHarness = createChildProcessHarness({
+          onEvaluationPayload: (workerHarness) => {
+            workerHarness.emit('error', new Error('worker error'));
+          },
+        });
+        mockedFork.mockReturnValue(
+          childProcessHarness as unknown as ChildProcess,
+        );
+        const testWorker = new TestWorker([1, 2, 3], { name: 'mse' });
+        const candidateNetwork = createCandidateNetwork();
+
+        // Act
+        const rejectionMessage = await captureRejectionMessage(
+          testWorker.evaluate(candidateNetwork),
+        );
+
+        // Assert
+        expect({
+          rejectionMessage,
+          listenerCounts: {
+            message: childProcessHarness.listenerCount('message'),
+            error: childProcessHarness.listenerCount('error'),
+            exit: childProcessHarness.listenerCount('exit'),
+          },
+        }).toEqual({
+          rejectionMessage: 'worker error',
+          listenerCounts: {
+            message: 0,
+            error: 0,
+            exit: 0,
+          },
+        });
+      });
+    });
+
+    describe('given the child process exits with a numeric exit code', () => {
+      it('rejects with the exit-code message and removes evaluation listeners', async () => {
+        // Arrange
+        const childProcessHarness = createChildProcessHarness({
+          onEvaluationPayload: (workerHarness) => {
+            workerHarness.emit('exit', 9, null);
+          },
+        });
+        mockedFork.mockReturnValue(
+          childProcessHarness as unknown as ChildProcess,
+        );
+        const testWorker = new TestWorker([1, 2, 3], { name: 'mse' });
+        const candidateNetwork = createCandidateNetwork();
+
+        // Act
+        const rejectionMessage = await captureRejectionMessage(
+          testWorker.evaluate(candidateNetwork),
+        );
+
+        // Assert
+        expect({
+          rejectionMessage,
+          listenerCounts: {
+            message: childProcessHarness.listenerCount('message'),
+            error: childProcessHarness.listenerCount('error'),
+            exit: childProcessHarness.listenerCount('exit'),
+          },
+        }).toEqual({
+          rejectionMessage: 'worker exited with code 9',
+          listenerCounts: {
+            message: 0,
+            error: 0,
+            exit: 0,
+          },
+        });
+      });
+    });
+
+    describe('given the child process exits because of a signal', () => {
+      it('rejects with the signal message and removes evaluation listeners', async () => {
+        // Arrange
+        const childProcessHarness = createChildProcessHarness({
+          onEvaluationPayload: (workerHarness) => {
+            workerHarness.emit('exit', null, 'SIGTERM');
+          },
+        });
+        mockedFork.mockReturnValue(
+          childProcessHarness as unknown as ChildProcess,
+        );
+        const testWorker = new TestWorker([1, 2, 3], { name: 'mse' });
+        const candidateNetwork = createCandidateNetwork();
+
+        // Act
+        const rejectionMessage = await captureRejectionMessage(
+          testWorker.evaluate(candidateNetwork),
+        );
+
+        // Assert
+        expect({
+          rejectionMessage,
+          listenerCounts: {
+            message: childProcessHarness.listenerCount('message'),
+            error: childProcessHarness.listenerCount('error'),
+            exit: childProcessHarness.listenerCount('exit'),
+          },
+        }).toEqual({
+          rejectionMessage: 'worker exited with signal SIGTERM',
+          listenerCounts: {
+            message: 0,
+            error: 0,
+            exit: 0,
+          },
+        });
+      });
+    });
+
+    describe('given the child process exits without a code or signal', () => {
+      it('rejects with the generic exit message and removes evaluation listeners', async () => {
+        // Arrange
+        const childProcessHarness = createChildProcessHarness({
+          onEvaluationPayload: (workerHarness) => {
+            workerHarness.emit('exit', null, null);
+          },
+        });
+        mockedFork.mockReturnValue(
+          childProcessHarness as unknown as ChildProcess,
+        );
+        const testWorker = new TestWorker([1, 2, 3], { name: 'mse' });
+        const candidateNetwork = createCandidateNetwork();
+
+        // Act
+        const rejectionMessage = await captureRejectionMessage(
+          testWorker.evaluate(candidateNetwork),
+        );
+
+        // Assert
+        expect({
+          rejectionMessage,
+          listenerCounts: {
+            message: childProcessHarness.listenerCount('message'),
+            error: childProcessHarness.listenerCount('error'),
+            exit: childProcessHarness.listenerCount('exit'),
+          },
+        }).toEqual({
+          rejectionMessage: 'worker exited',
           listenerCounts: {
             message: 0,
             error: 0,

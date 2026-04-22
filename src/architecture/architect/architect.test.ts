@@ -2,11 +2,21 @@ import Group from '../group';
 import Layer from '../layer';
 import Node from '../node';
 import Network from '../network';
-import type { NetworkJSON } from '../network/network.types';
 import Architect from './architect';
-import { ArchitectInvalidRandomSparseConfigurationError } from './architect.errors';
+import {
+  ArchitectInputOutputTypeResolutionError,
+  ArchitectInvalidGruConfigurationError,
+  ArchitectInvalidGruLayerArgumentsError,
+  ArchitectInvalidLstmConfigurationError,
+  ArchitectInvalidLstmLayerArgumentsError,
+  ArchitectInvalidPerceptronConfigurationError,
+  ArchitectInvalidRandomSparseConfigurationError,
+  ArchitectZeroInputOutputNodesError,
+} from './architect.errors';
 
-type HydratedTemporalExtensionBag = NetworkJSON['extensions'];
+type ArchitectLayeredNetwork = Network & {
+  layers?: Layer[];
+};
 
 function summarizeSparseNetwork(network: Network): {
   biasSignature: string;
@@ -97,29 +107,9 @@ function summarizeNarxDelayLines(network: Network): {
   uniqueCarryWeights: number[];
   uniqueDerivativeSamples: number[];
 } {
-  const hydratedExtensions = Reflect.get(
-    network,
-    '_serializedExtensions',
-  ) as HydratedTemporalExtensionBag | undefined;
-  const extensionValues = hydratedExtensions?.values as
-    | {
-        recurrentModules?: Array<{
-          kind?: string;
-          nodeGeneIdsByRole?: Record<string, number[]>;
-        }>;
-      }
-    | undefined;
-  const recurrentModules = Array.isArray(extensionValues?.recurrentModules)
-    ? extensionValues.recurrentModules
-    : [];
-  const narxModules = recurrentModules.filter(
-    (candidateModule): candidateModule is {
-      kind: string;
-      nodeGeneIdsByRole: Record<string, number[]>;
-    } =>
-      candidateModule.kind === 'narx-memory' &&
-      typeof candidateModule.nodeGeneIdsByRole === 'object' &&
-      candidateModule.nodeGeneIdsByRole !== null,
+  const temporalStructure = network.describeTemporalStructure();
+  const narxModules = temporalStructure.recurrentModules.filter(
+    (candidateModule) => candidateModule.kind === 'narx-memory',
   );
   const moduleNodeIds = narxModules.flatMap((candidateModule) =>
     Object.values(candidateModule.nodeGeneIdsByRole).flatMap(
@@ -302,30 +292,14 @@ function summarizeHydratedRecurrentExtensions(network: Network): {
   recurrentKinds: string[];
   recurrentModuleCount: number;
 } {
-  const hydratedExtensions = Reflect.get(
-    network,
-    '_serializedExtensions',
-  ) as HydratedTemporalExtensionBag | undefined;
-  const extensionValues = hydratedExtensions?.values as
-    | {
-        recurrentModules?: Array<{ kind?: string }>;
-        gatedBlocks?: Array<unknown>;
-      }
-    | undefined;
-  const recurrentModules = Array.isArray(extensionValues?.recurrentModules)
-    ? extensionValues.recurrentModules
-    : [];
-  const gatedBlocks = Array.isArray(extensionValues?.gatedBlocks)
-    ? extensionValues.gatedBlocks
-    : [];
+  const temporalStructure = network.describeTemporalStructure();
 
   return {
-    gatedBlockCount: gatedBlocks.length,
-    recurrentKinds: recurrentModules
+    gatedBlockCount: temporalStructure.gatedBlocks.length,
+    recurrentKinds: temporalStructure.recurrentModules
       .map((candidateModule) => candidateModule.kind)
-      .filter((kind): kind is string => typeof kind === 'string')
       .toSorted(),
-    recurrentModuleCount: recurrentModules.length,
+    recurrentModuleCount: temporalStructure.recurrentModules.length,
   };
 }
 
@@ -380,7 +354,259 @@ function createConstructedPerceptronEquivalent(): Network {
 }
 
 describe('Architect', () => {
+  describe('construct()', () => {
+    describe('given one mixed primitive list includes grouped nodes, direct nodes, gates, and a self connection', () => {
+      describe('when constructing the network directly from those primitives', () => {
+        it('collects the unique nodes plus the forward, gated, and self connections', () => {
+          // Arrange
+          const inputNode = new Node('input');
+          const hiddenGroup = new Group(1);
+          const hiddenNode = hiddenGroup.nodes[0];
+          const outputNode = new Node('output');
+
+          inputNode.connect(hiddenGroup);
+          const hiddenToOutputConnection = hiddenNode.connect(outputNode)[0];
+          hiddenNode.connections.gated.push(hiddenToOutputConnection);
+          hiddenToOutputConnection.gater = hiddenNode;
+          hiddenNode.connect(hiddenNode)[0].weight = 0.5;
+
+          // Act
+          const network = Architect.construct([hiddenGroup, inputNode, outputNode]);
+
+          // Assert
+          expect({
+            connections: network.connections.length,
+            gates: network.gates.length,
+            input: network.input,
+            nodes: network.nodes.length,
+            output: network.output,
+            selfconns: network.selfconns.length,
+          }).toStrictEqual({
+            connections: 2,
+            gates: 1,
+            input: 1,
+            nodes: 3,
+            output: 1,
+            selfconns: 1,
+          });
+        });
+      });
+    });
+
+    describe('given one construct request contains malformed connection buckets', () => {
+      describe('when collecting connections from those nodes', () => {
+        it('ignores undefined, non-array, and non-Connection entries', () => {
+          // Arrange
+          const inputNode = new Node('input');
+          const hiddenNode = new Node('hidden');
+          const outputNode = new Node('output');
+
+          (
+            inputNode as unknown as {
+              connections?: unknown;
+            }
+          ).connections = undefined;
+          (
+            hiddenNode as unknown as {
+              connections: unknown;
+            }
+          ).connections = {
+            gated: [{}],
+            in: [],
+            out: [{}],
+            self: [],
+          };
+          (
+            outputNode as unknown as {
+              connections: unknown;
+            }
+          ).connections = {
+            gated: undefined,
+            in: [],
+            out: undefined,
+            self: [],
+          };
+
+          // Act
+          const network = Architect.construct([inputNode, hiddenNode, outputNode]);
+
+          // Assert
+          expect({
+            connections: network.connections.length,
+            gates: network.gates.length,
+            input: network.input,
+            output: network.output,
+            selfconns: network.selfconns.length,
+          }).toStrictEqual({
+            connections: 0,
+            gates: 0,
+            input: 1,
+            output: 1,
+            selfconns: 0,
+          });
+        });
+      });
+    });
+
+    describe('given one layer contains an entry that is neither a node nor a group', () => {
+      describe('when building the network from that layer plus direct input and output nodes', () => {
+        it('ignores the malformed layer entry', () => {
+          // Arrange
+          const malformedLayer = new Layer();
+          const inputNode = new Node('input');
+          const outputNode = new Node('output');
+
+          (malformedLayer as unknown as { nodes: unknown[] }).nodes = [{}];
+
+          // Act
+          const network = Architect.construct([
+            malformedLayer,
+            inputNode,
+            outputNode,
+          ]);
+
+          // Assert
+          expect({
+            input: network.input,
+            nodes: network.nodes.length,
+            output: network.output,
+          }).toStrictEqual({
+            input: 1,
+            nodes: 2,
+            output: 1,
+          });
+        });
+      });
+    });
+
+    describe('given one construct list item is not a group, layer, or node', () => {
+      describe('when building the network from that list plus direct input and output nodes', () => {
+        it('ignores the unsupported list item', () => {
+          // Arrange
+          const inputNode = new Node('input');
+          const outputNode = new Node('output');
+
+          // Act
+          const network = Architect.construct([
+            {} as never,
+            inputNode,
+            outputNode,
+          ]);
+
+          // Assert
+          expect({
+            input: network.input,
+            nodes: network.nodes.length,
+            output: network.output,
+          }).toStrictEqual({
+            input: 1,
+            nodes: 2,
+            output: 1,
+          });
+        });
+      });
+    });
+
+    describe('given one direct node appears twice in the construct list', () => {
+      describe('when building the network from those primitives', () => {
+        it('deduplicates the repeated node', () => {
+          // Arrange
+          const inputNode = new Node('input');
+          const outputNode = new Node('output');
+
+          // Act
+          const network = Architect.construct([inputNode, inputNode, outputNode]);
+
+          // Assert
+          expect({
+            input: network.input,
+            nodes: network.nodes.length,
+            output: network.output,
+          }).toStrictEqual({
+            input: 1,
+            nodes: 2,
+            output: 1,
+          });
+        });
+      });
+    });
+
+    describe('given construction cannot infer any input or output node roles', () => {
+      describe('when building the network from those primitives', () => {
+        it('throws the input-output type resolution error', () => {
+          // Arrange
+          const createNetwork = () => Architect.construct([new Node('hidden')]);
+
+          // Assert
+          expect(createNetwork).toThrow(ArchitectInputOutputTypeResolutionError);
+        });
+      });
+    });
+
+    describe('given construction resolves only input nodes and no output nodes', () => {
+      describe('when building the network from those primitives', () => {
+        it('throws the input-output type resolution error', () => {
+          // Arrange
+          const createNetwork = () => Architect.construct([new Node('input')]);
+
+          // Assert
+          expect(createNetwork).toThrow(ArchitectInputOutputTypeResolutionError);
+        });
+      });
+    });
+
+    describe('given construction resolves only output nodes and no input nodes', () => {
+      describe('when building the network from those primitives', () => {
+        it('throws the input-output type resolution error', () => {
+          // Arrange
+          const createNetwork = () => Architect.construct([new Node('output')]);
+
+          // Assert
+          expect(createNetwork).toThrow(ArchitectInputOutputTypeResolutionError);
+        });
+      });
+    });
+
+    describe('given explicit input and output node types are cleared during role refresh', () => {
+      describe('when building the network from those primitives', () => {
+        it('throws the zero-interface construction error', () => {
+          // Arrange
+          const refreshExplicitIORolesSpy = jest
+            .spyOn(Network.prototype, 'refreshExplicitIORoles')
+            .mockImplementation(function refreshWithoutRoles(this: Network) {
+              this.input = 0;
+              this.output = 0;
+            });
+
+          try {
+            const createNetwork = () =>
+              Architect.construct([new Node('input'), new Node('output')]);
+
+            // Assert
+            expect(createNetwork).toThrow(ArchitectZeroInputOutputNodesError);
+          } finally {
+            refreshExplicitIORolesSpy.mockRestore();
+          }
+        });
+      });
+    });
+  });
+
   describe('perceptron()', () => {
+    describe('given fewer than three layer sizes', () => {
+      describe('when constructing the network', () => {
+        it('throws the perceptron configuration error', () => {
+          // Arrange
+          const createNetwork = () => Architect.perceptron(2, 1);
+
+          // Assert
+          expect(createNetwork).toThrow(
+            ArchitectInvalidPerceptronConfigurationError,
+          );
+        });
+      });
+    });
+
     describe('given input, hidden, and output sizes', () => {
       describe('when constructing the network', () => {
         it('preserves explicit input and output role counts', () => {
@@ -402,6 +628,21 @@ describe('Architect', () => {
             inputNodes: 2,
             outputNodes: 1,
           });
+        });
+      });
+    });
+
+    describe('given one requested hidden layer is smaller than the minimum supported size', () => {
+      describe('when constructing the network', () => {
+        it('grows that hidden layer to the minimum width', () => {
+          // Arrange
+          const network = Architect.perceptron(4, 1, 2) as ArchitectLayeredNetwork;
+
+          // Act
+          const hiddenLayerSizes = network.describeArchitecture().hiddenLayerSizes;
+
+          // Assert
+          expect(hiddenLayerSizes).toStrictEqual([3]);
         });
       });
     });
@@ -454,6 +695,74 @@ describe('Architect', () => {
   });
 
   describe('randomSparse()', () => {
+    describe('given the sparse builder seed is not finite', () => {
+      describe('when constructing the network', () => {
+        it('throws the sparse-builder configuration error', () => {
+          // Arrange
+          const createNetwork = () =>
+            Architect.randomSparse(1, 1, 1, { seed: Number.POSITIVE_INFINITY });
+
+          // Assert
+          expect(createNetwork).toThrow(
+            ArchitectInvalidRandomSparseConfigurationError,
+          );
+        });
+      });
+    });
+
+    describe('given the legacy random wrapper omits the options object', () => {
+      describe('when constructing the network', () => {
+        it('uses the default sparse-profile options', () => {
+          // Arrange
+          const network = Architect.random(2, 3, 1);
+
+          // Act
+          const roleCounts = {
+            hiddenNodeCount: network.nodes.filter(
+              (candidateNode) => candidateNode.type === 'hidden',
+            ).length,
+            inputRoleCount: network.inputNodeIds.length,
+            outputRoleCount: network.outputNodeIds.length,
+          };
+
+          // Assert
+          expect(roleCounts).toStrictEqual({
+            hiddenNodeCount: 3,
+            inputRoleCount: 2,
+            outputRoleCount: 1,
+          });
+        });
+      });
+    });
+
+    describe('given the sparse builder input size is not positive', () => {
+      describe('when constructing the network', () => {
+        it('throws the positive-dimension configuration error', () => {
+          // Arrange
+          const createNetwork = () => Architect.randomSparse(0, 1, 1);
+
+          // Assert
+          expect(createNetwork).toThrow(
+            ArchitectInvalidRandomSparseConfigurationError,
+          );
+        });
+      });
+    });
+
+    describe('given the sparse builder hidden size is negative', () => {
+      describe('when constructing the network', () => {
+        it('throws the non-negative-dimension configuration error', () => {
+          // Arrange
+          const createNetwork = () => Architect.randomSparse(1, -1, 1);
+
+          // Assert
+          expect(createNetwork).toThrow(
+            ArchitectInvalidRandomSparseConfigurationError,
+          );
+        });
+      });
+    });
+
     describe('given valid sparse builder sizes', () => {
       describe('when constructing the network', () => {
         it('preserves explicit input and output role counts', () => {
@@ -558,6 +867,30 @@ describe('Architect', () => {
   });
 
   describe('narx()', () => {
+    describe('given the hidden-layer argument is already an array with two stages', () => {
+      describe('when constructing the network', () => {
+        it('preserves both requested hidden stages alongside the delay modules', () => {
+          // Arrange
+          const network = Architect.narx(1, [2, 2], 1, 1, 1);
+
+          // Act
+          const narxSummary = {
+            hiddenNodeCount: network.nodes.filter(
+              (candidateNode) => candidateNode.type === 'hidden',
+            ).length,
+            recurrentModuleCount: summarizeNarxDelayLines(network)
+              .recurrentModuleCount,
+          };
+
+          // Assert
+          expect(narxSummary).toStrictEqual({
+            hiddenNodeCount: 4,
+            recurrentModuleCount: 2,
+          });
+        });
+      });
+    });
+
     describe('given explicit input and output delay lines', () => {
       describe('when constructing the network', () => {
         it('hydrates identity delay blocks with unit carry links and clear-state guidance', () => {
@@ -643,6 +976,30 @@ describe('Architect', () => {
   });
 
   describe('lstm()', () => {
+    describe('given one LSTM layer size is not a positive finite number', () => {
+      describe('when constructing the network', () => {
+        it('throws the LSTM layer-arguments error', () => {
+          // Arrange
+          const createNetwork = () => Architect.lstm(2, Number.NaN, 1);
+
+          // Assert
+          expect(createNetwork).toThrow(ArchitectInvalidLstmLayerArgumentsError);
+        });
+      });
+    });
+
+    describe('given fewer than three LSTM layer sizes', () => {
+      describe('when constructing the network', () => {
+        it('throws the LSTM configuration error', () => {
+          // Arrange
+          const createNetwork = () => Architect.lstm(2, 1);
+
+          // Assert
+          expect(createNetwork).toThrow(ArchitectInvalidLstmConfigurationError);
+        });
+      });
+    });
+
     describe('given the direct input-to-output shortcut is disabled', () => {
       describe('when constructing the network', () => {
         it('keeps the recurrent descriptor boundary without the shortcut edge', () => {
@@ -669,9 +1026,57 @@ describe('Architect', () => {
         });
       });
     });
+
+    describe('given the LSTM shortcut options are omitted', () => {
+      describe('when constructing the network', () => {
+        it('keeps the default direct input-to-output shortcut', () => {
+          // Arrange
+          const network = Architect.lstm(2, 3, 1);
+
+          // Act
+          const recurrentSummary = summarizeRecurrentArchitectureBoundary(
+            network,
+          );
+
+          // Assert
+          expect({
+            directInputToOutputConnections:
+              recurrentSummary.directInputToOutputConnections,
+            recurrentKinds: recurrentSummary.recurrentKinds,
+          }).toStrictEqual({
+            directInputToOutputConnections: 2,
+            recurrentKinds: ['lstm'],
+          });
+        });
+      });
+    });
   });
 
   describe('gru()', () => {
+    describe('given one GRU layer size is not a positive finite number', () => {
+      describe('when constructing the network', () => {
+        it('throws the GRU layer-arguments error', () => {
+          // Arrange
+          const createNetwork = () => Architect.gru(2, Number.NaN, 1);
+
+          // Assert
+          expect(createNetwork).toThrow(ArchitectInvalidGruLayerArgumentsError);
+        });
+      });
+    });
+
+    describe('given fewer than three GRU layer sizes', () => {
+      describe('when constructing the network', () => {
+        it('throws the GRU configuration error', () => {
+          // Arrange
+          const createNetwork = () => Architect.gru(2, 1);
+
+          // Assert
+          expect(createNetwork).toThrow(ArchitectInvalidGruConfigurationError);
+        });
+      });
+    });
+
     describe('given the direct input-to-output shortcut is toggled', () => {
       describe('when constructing the network', () => {
         it('adds the shortcut only for the enabled builder request', () => {
@@ -713,6 +1118,182 @@ describe('Architect', () => {
               stateSemantics: 'carry',
               topologyIntent: 'unconstrained',
             },
+          });
+        });
+      });
+    });
+
+    describe('given the GRU shortcut options are omitted', () => {
+      describe('when constructing the network', () => {
+        it('keeps the default no-shortcut topology', () => {
+          // Arrange
+          const network = Architect.gru(2, 3, 1);
+
+          // Act
+          const recurrentSummary = summarizeRecurrentArchitectureBoundary(
+            network,
+          );
+
+          // Assert
+          expect({
+            directInputToOutputConnections:
+              recurrentSummary.directInputToOutputConnections,
+            recurrentKinds: recurrentSummary.recurrentKinds,
+          }).toStrictEqual({
+            directInputToOutputConnections: 0,
+            recurrentKinds: ['gru'],
+          });
+        });
+      });
+    });
+  });
+
+  describe('hopfield()', () => {
+    describe('given one Hopfield size request', () => {
+      describe('when constructing the network', () => {
+        it('creates matched input and output roles with step-activated outputs', () => {
+          // Arrange
+          const network = Architect.hopfield(2);
+
+          // Act
+          const hopfieldSummary = {
+            inputRoleCount: network.inputNodeIds.length,
+            outputActivationSamples: network.nodes
+              .filter((candidateNode) => candidateNode.type === 'output')
+              .map((candidateNode) => candidateNode.squash(0.25)),
+            outputRoleCount: network.outputNodeIds.length,
+          };
+
+          // Assert
+          expect(hopfieldSummary).toStrictEqual({
+            inputRoleCount: 2,
+            outputActivationSamples: [1, 1],
+            outputRoleCount: 2,
+          });
+        });
+      });
+    });
+  });
+
+  describe('enforceMinimumHiddenLayerSizes()', () => {
+    describe('given the network exposes no architect layer metadata', () => {
+      describe('when normalizing hidden layer sizes', () => {
+        it('returns the same network unchanged', () => {
+          // Arrange
+          const network = new Network(2, 1);
+
+          // Act
+          const normalizedNetwork = Architect.enforceMinimumHiddenLayerSizes(
+            network,
+          );
+
+          // Assert
+          expect(normalizedNetwork).toBe(network);
+        });
+      });
+    });
+
+    describe('given the hidden layers already satisfy the minimum size rule', () => {
+      describe('when normalizing hidden layer sizes', () => {
+        it('keeps the existing node and connection counts unchanged', () => {
+          // Arrange
+          const network = Architect.perceptron(2, 3, 1) as ArchitectLayeredNetwork;
+          const beforeNormalization = {
+            connections: network.connections.length,
+            hiddenNodes: network.layers?.[1]?.nodes.length,
+            nodes: network.nodes.length,
+          };
+
+          // Act
+          Architect.enforceMinimumHiddenLayerSizes(network);
+
+          // Assert
+          expect({
+            connections: network.connections.length,
+            hiddenNodes: network.layers?.[1]?.nodes.length,
+            nodes: network.nodes.length,
+          }).toStrictEqual(beforeNormalization);
+        });
+      });
+    });
+
+    describe('given one hidden layer has been shrunk below the minimum size', () => {
+      describe('when normalizing hidden layer sizes', () => {
+        it('recreates the missing hidden nodes and reconnects both adjacent layers', () => {
+          // Arrange
+          const network = Architect.perceptron(3, 3, 2) as ArchitectLayeredNetwork;
+          const inputLayer = network.layers?.[0];
+          const hiddenLayer = network.layers?.[1];
+          const outputLayer = network.layers?.[2];
+
+          if (!inputLayer || !hiddenLayer || !outputLayer || !hiddenLayer.output) {
+            throw new Error('Expected the perceptron fixture to expose three layers.');
+          }
+
+          const retainedHiddenNode = hiddenLayer.nodes[0];
+          hiddenLayer.nodes = [retainedHiddenNode];
+          hiddenLayer.output.nodes = [retainedHiddenNode];
+          network.nodes = [
+            ...inputLayer.nodes,
+            retainedHiddenNode,
+            ...outputLayer.nodes,
+          ];
+          network.connections = network.connections.filter(
+            (candidateConnection) =>
+              network.nodes.includes(candidateConnection.from) &&
+              network.nodes.includes(candidateConnection.to),
+          );
+
+          // Act
+          Architect.enforceMinimumHiddenLayerSizes(network);
+
+          // Assert
+          expect({
+            connectionCount: network.connections.length,
+            hiddenLayerOutputNodes: hiddenLayer.output.nodes.length,
+            hiddenNodes: hiddenLayer.nodes.length,
+            totalHiddenNodes: network.nodes.filter(
+              (candidateNode) => candidateNode.type === 'hidden',
+            ).length,
+          }).toStrictEqual({
+            connectionCount: 15,
+            hiddenLayerOutputNodes: 3,
+            hiddenNodes: 3,
+            totalHiddenNodes: 3,
+          });
+        });
+      });
+    });
+
+    describe('given neighboring layer outputs are unavailable during hidden-layer growth', () => {
+      describe('when normalizing hidden layer sizes', () => {
+        it('grows the hidden nodes without adding bridge connections', () => {
+          // Arrange
+          const existingHiddenNode = new Node('hidden');
+          const network = {
+            connections: [],
+            input: 3,
+            layers: [
+              { output: null },
+              { nodes: [existingHiddenNode], output: null },
+              { output: null },
+            ],
+            nodes: [existingHiddenNode],
+            output: 2,
+          } as unknown as ArchitectLayeredNetwork;
+
+          // Act
+          Architect.enforceMinimumHiddenLayerSizes(network);
+
+          // Assert
+          expect({
+            connections: network.connections.length,
+            hiddenNodes: network.layers?.[1]?.nodes.length,
+            totalNodes: network.nodes.length,
+          }).toStrictEqual({
+            connections: 0,
+            hiddenNodes: 3,
+            totalNodes: 3,
           });
         });
       });

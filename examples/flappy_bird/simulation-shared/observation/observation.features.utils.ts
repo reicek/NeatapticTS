@@ -18,10 +18,10 @@ import type {
 /**
  * Resolves the next two upcoming pipes in front of the bird.
  *
- * The observation pipeline only cares about the immediate near future, because
- * Flappy Bird decisions are dominated by the next gap and the transition after
- * it. Looking further ahead adds noise faster than it adds useful control
- * signal.
+ * The shared simulation helpers sometimes need the first two obstacles even
+ * though the current controller contract only reads the next immediate gap.
+ * Keeping this helper small and explicit makes it easy for callers to choose
+ * how much near-future geometry they actually want.
  *
  * @param pipes - Current pipe list.
  * @param birdCenterXPx - Bird center x-position.
@@ -54,11 +54,11 @@ export function resolveUpcomingPipes(
  * the canonical network vectors now lives in the neighboring vector module so
  * observation policy and network-shape concerns can evolve independently.
  *
- * The features deliberately mix three kinds of signal:
+ * The features deliberately mix two kinds of control signal plus a small set of
+ * shaping-oriented derived hints:
  * 1. Current state, such as bird height and vertical velocity.
- * 2. Near-term geometry, such as gap bounds and upcoming-pipe distances.
- * 3. Simple forward-looking control hints, such as urgency and one-flap
- *    reachability.
+ * 2. Immediate next-gap geometry, such as distance, offset, and corridor
+ *    bounds.
  *
  * This is a compact example of feature engineering for control. Instead of
  * asking NEAT to rediscover basic geometry from raw sensory input, the example
@@ -101,7 +101,7 @@ export function resolveObservationFeatures(
     input.normalizationEpsilon ?? FLAPPY_SHARED_DEFAULT_NORMALIZATION_EPSILON;
 
   // Step 2: Resolve next-pipe geometry used by all near-term features.
-  const [nextPipe, secondPipe] = resolveUpcomingPipes(
+  const [nextPipe] = resolveUpcomingPipes(
     input.pipes,
     birdCenterXPx,
     birdRadiusPx,
@@ -131,20 +131,6 @@ export function resolveObservationFeatures(
   );
   const normalizedDeltaToNextGap = clamp(
     (input.birdYPx - nextGapCenterYPx) / worldHeightPx,
-    -1,
-    1,
-  );
-
-  const distanceToSecondPipePx = secondPipe
-    ? secondPipe.xPx + pipeWidthPx - birdCenterXPx
-    : input.visibleWorldWidthPx;
-  const normalizedDistanceToSecondPipe = clamp01(
-    distanceToSecondPipePx / input.visibleWorldWidthPx,
-  );
-
-  const secondGapCenterYPx = secondPipe?.gapCenterYPx ?? nextGapCenterYPx;
-  const normalizedDeltaToSecondGap = clamp(
-    (input.birdYPx - secondGapCenterYPx) / worldHeightPx,
     -1,
     1,
   );
@@ -255,12 +241,6 @@ export function resolveObservationFeatures(
   const normalizedOneFlapReachabilityAtGapEntry =
     minimalEntryErrorPx <= nextGapHalfPx ? 1 : 0;
 
-  const normalizedNextToSecondGapTransition = clamp(
-    (secondGapCenterYPx - nextGapCenterYPx) / worldHeightPx,
-    -1,
-    1,
-  );
-
   // Step 4: Return the structured feature record consumed by both runtimes.
   return {
     normalizedBirdY,
@@ -269,12 +249,9 @@ export function resolveObservationFeatures(
     normalizedDeltaToNextGap,
     normalizedNextGapTop,
     normalizedNextGapBottom,
-    normalizedDistanceToSecondPipe,
-    normalizedDeltaToSecondGap,
     normalizedTimeToNextPipe,
     normalizedNextGapClearance,
     normalizedRequiredVerticalVelocityToNextGap,
-    normalizedNextToSecondGapTransition,
     normalizedFramesToGapEntry,
     normalizedFramesToGapExit,
     normalizedRequiredVerticalVelocityAtGapEntry,

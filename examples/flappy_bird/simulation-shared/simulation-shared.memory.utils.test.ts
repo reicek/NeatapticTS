@@ -1,7 +1,8 @@
+import { FLAPPY_NETWORK_INPUT_SIZE } from '../constants/constants';
 import {
   commitSharedObservationMemoryStep,
   createSharedObservationMemoryState,
-  resolveCoreObservationVectorFromFeatures,
+  resolveObservationVectorFromFeatures,
   resolveTemporalObservationVector,
 } from '../flappy.simulation.shared.utils';
 import type { SharedObservationFeatures } from './simulation-shared.types';
@@ -13,12 +14,9 @@ const SAMPLE_OBSERVATION_FEATURES: SharedObservationFeatures = {
   normalizedDeltaToNextGap: -0.4,
   normalizedNextGapTop: 0.5,
   normalizedNextGapBottom: 0.6,
-  normalizedDistanceToSecondPipe: 0.7,
-  normalizedDeltaToSecondGap: -0.8,
   normalizedTimeToNextPipe: 0.9,
   normalizedNextGapClearance: -0.1,
   normalizedRequiredVerticalVelocityToNextGap: 0.2,
-  normalizedNextToSecondGapTransition: -0.3,
   normalizedFramesToGapEntry: 0.4,
   normalizedFramesToGapExit: 0.5,
   normalizedRequiredVerticalVelocityAtGapEntry: -0.6,
@@ -32,8 +30,8 @@ describe('resolveTemporalObservationVector', () => {
     const observationMemoryState = createSharedObservationMemoryState();
 
     observationMemoryState.previousCoreObservationFrames = [
-      Array.from({ length: 12 }, () => 1),
-      Array.from({ length: 12 }, () => 2),
+      Array.from({ length: FLAPPY_NETWORK_INPUT_SIZE }, () => 1),
+      Array.from({ length: FLAPPY_NETWORK_INPUT_SIZE }, () => 2),
     ];
     observationMemoryState.recentFlapActions = [1, 0, 1, 1];
 
@@ -42,9 +40,7 @@ describe('resolveTemporalObservationVector', () => {
         SAMPLE_OBSERVATION_FEATURES,
         observationMemoryState,
       ),
-    ).toEqual(
-      resolveCoreObservationVectorFromFeatures(SAMPLE_OBSERVATION_FEATURES),
-    );
+    ).toEqual(resolveObservationVectorFromFeatures(SAMPLE_OBSERVATION_FEATURES));
   });
 });
 

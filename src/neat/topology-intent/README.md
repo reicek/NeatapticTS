@@ -70,7 +70,7 @@ promoteGenomeToFeedForwardIntentWhenEligible(genome, shouldPromote);
 
 ```ts
 allowsRecurrentConnectionMutation(
-  genome: TopologyIntentRuntimeGenome,
+  genome: FeedForwardTopologyContractCarrier,
   allowRecurrent: boolean | undefined,
 ): boolean
 ```

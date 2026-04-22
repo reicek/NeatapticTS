@@ -1,23 +1,37 @@
 import Node from '../../architecture/node';
 import Network from '../../architecture/network';
 import { Architect } from '../../neataptic';
-import { createGenomeFromNetwork } from '../genome/genome';
+import { createGenomeFromNetwork, type NeatGenome } from '../genome/genome';
 import {
+  NeatNativeGenomeValidationError,
+  assertValidGenomeContract,
   assertValidNativeGenome,
   validateGenomeContract,
   type NativeGenomeValidationIssue,
   validateNativeGenome,
 } from './neat.validate';
-import { NeatNativeGenomeValidationError } from './neat.validate.errors';
 import type { NetworkJSON } from '../../architecture/network/network.types';
 
 type MutableValidationNetwork = Network & {
-  _compatCache?: Array<[number, number]>;
+  _compatCache?: unknown;
   _outputCache?: unknown;
 };
 
 function createValidationNetwork(): MutableValidationNetwork {
   return new Network(2, 1, { seed: 919 }) as MutableValidationNetwork;
+}
+
+function createCompatibilityCacheEntries(
+  genome: MutableValidationNetwork,
+): Array<[number, number]> {
+  return [...genome.connections, ...genome.selfconns]
+    .filter((connection) => Number.isFinite(connection.innovation))
+    .map(
+      (connection) => [connection.innovation, connection.weight] as [number, number],
+    )
+    .toSorted(
+      ([leftInnovation], [rightInnovation]) => leftInnovation - rightInnovation,
+    );
 }
 
 function collectIssueCodes(
@@ -123,6 +137,22 @@ describe('neat validate chapter', () => {
       });
     });
 
+    describe('given one runtime node is missing its gene id', () => {
+      it('reports the missing node identity issue', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        genome.nodes[0].geneId = Number.NaN;
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'missing-node-gene-id',
+        );
+      });
+    });
+
     describe('given two runtime connections share the same innovation id', () => {
       it('reports the duplicate connection innovation issue', () => {
         // Arrange
@@ -135,6 +165,62 @@ describe('neat validate chapter', () => {
         // Assert
         expect(collectIssueCodes(validationReport.issues)).toContain(
           'duplicate-connection-innovation',
+        );
+      });
+    });
+
+    describe('given one runtime connection is missing its innovation id', () => {
+      it('reports the missing connection innovation issue', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        genome.connections[0].innovation = Number.NaN;
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'missing-connection-innovation',
+        );
+      });
+    });
+
+    describe('given one connection endpoint does not expose an integer node index', () => {
+      it('reports the broken endpoint resolution issue', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        genome.setTopologyIntent('unconstrained');
+        genome.connections[0].from = {
+          geneId: 77,
+          index: 0.5,
+        } as unknown as Node;
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'endpoint-resolution-failed',
+        );
+      });
+    });
+
+    describe('given one connection endpoint points at a detached runtime node', () => {
+      it('reports the detached endpoint resolution issue', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        genome.setTopologyIntent('unconstrained');
+        const detachedNode = new Node('hidden');
+        detachedNode.index = 99;
+        detachedNode.geneId = 199;
+        genome.connections[0].from = detachedNode;
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'endpoint-resolution-failed',
         );
       });
     });
@@ -157,6 +243,58 @@ describe('neat validate chapter', () => {
       });
     });
 
+    describe('given one gated connection does not expose an integer gater index', () => {
+      it('reports the malformed gater resolution issue', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        genome.connections[0].gater = {
+          geneId: 88,
+          index: 0.25,
+        } as unknown as Node;
+        genome.gates.push(genome.connections[0]);
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'gater-resolution-failed',
+        );
+      });
+    });
+
+    describe('given one runtime connection keeps a gater without gate registration', () => {
+      it('reports the missing gated-connection registration issue', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        genome.connections[0].gater = genome.nodes[1];
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'gated-connection-registration-mismatch',
+        );
+      });
+    });
+
+    describe('given one registered gate entry has no attached gater', () => {
+      it('reports the gate registry mismatch issue', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        genome.gates.push(genome.connections[0]);
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'gated-connection-registration-mismatch',
+        );
+      });
+    });
+
     describe('given a feed-forward genome contains a backward edge', () => {
       it('reports the recurrent-edge violation', () => {
         // Arrange
@@ -175,6 +313,26 @@ describe('neat validate chapter', () => {
       });
     });
 
+    describe('given the public topology intent and runtime acyclic flag drift apart', () => {
+      it('reports the topology intent mismatch issue', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        const runtimeGenome = genome as unknown as {
+          _enforceAcyclic?: boolean;
+        };
+        genome.setTopologyIntent('feed-forward');
+        runtimeGenome._enforceAcyclic = false;
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'topology-intent-mismatch',
+        );
+      });
+    });
+
     describe('given the genome carries a stale compatibility cache', () => {
       it('reports the compatibility-cache mismatch issue', () => {
         // Arrange
@@ -186,6 +344,58 @@ describe('neat validate chapter', () => {
 
         // Assert
         expect(collectIssueCodes(validationReport.issues)).toContain(
+          'compat-cache-mismatch',
+        );
+      });
+    });
+
+    describe('given the compatibility cache contains malformed tuple entries', () => {
+      it('reports the malformed compatibility-cache issue', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        genome._compatCache = [genome.connections[0].innovation];
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'compat-cache-mismatch',
+        );
+      });
+    });
+
+    describe('given the compatibility cache length matches but one cached weight is stale', () => {
+      it('reports the stale compatibility-cache content issue', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        const compatibilityCacheEntries = createCompatibilityCacheEntries(genome);
+        genome._compatCache = compatibilityCacheEntries.with(0, [
+          compatibilityCacheEntries[0][0],
+          compatibilityCacheEntries[0][1] + 1,
+        ]);
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'compat-cache-mismatch',
+        );
+      });
+    });
+
+    describe('given the compatibility cache matches the sorted runtime edges', () => {
+      it('accepts the compatibility cache state', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        genome._compatCache = createCompatibilityCacheEntries(genome);
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).not.toContain(
           'compat-cache-mismatch',
         );
       });
@@ -209,6 +419,17 @@ describe('neat validate chapter', () => {
   });
 
   describe('assertValidNativeGenome', () => {
+    describe('given the genome already satisfies the native validation contract', () => {
+      it('returns without throwing', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        const assertGenome = () => assertValidNativeGenome(genome);
+
+        // Assert
+        expect(assertGenome).not.toThrow();
+      });
+    });
+
     describe('given the genome violates a native identity invariant', () => {
       it('throws the dedicated validation error', () => {
         // Arrange
@@ -218,6 +439,28 @@ describe('neat validate chapter', () => {
 
         // Assert
         expect(assertGenome).toThrow(NeatNativeGenomeValidationError);
+      });
+    });
+  });
+
+  describe('assertValidGenomeContract', () => {
+    describe('given a strict genome omits one connection innovation id', () => {
+      it('throws the structural contract failure message', () => {
+        // Arrange
+        const genome = createGenomeFromNetwork(
+          createValidationNetwork(),
+        ) as NeatGenome & {
+          connectionGenes: Array<NeatGenome['connectionGenes'][number] & {
+            innovation?: number;
+          }>;
+        };
+        Reflect.deleteProperty(genome.connectionGenes[0], 'innovation');
+        const assertGenome = () => assertValidGenomeContract(genome);
+
+        // Assert
+        expect(assertGenome).toThrow(
+          'Strict genomes must assign a finite innovation id to every connection gene. (connectionGenes[0].innovation)',
+        );
       });
     });
   });
@@ -248,6 +491,26 @@ describe('neat validate chapter', () => {
 
         // Act
         const validationReport = validateGenomeContract(genome);
+
+        // Assert
+        expect(validationReport.isValid).toBe(true);
+      });
+    });
+
+    describe('given a native runtime genome carries one self connection', () => {
+      it('includes the self-connection path in the native validation pass', () => {
+        // Arrange
+        const genome = createValidationNetwork();
+        genome.setTopologyIntent('unconstrained');
+        const selfConnection = genome.nodes.at(-1)!.connect(
+          genome.nodes.at(-1)!,
+          0.25,
+        )[0];
+        selfConnection.innovation = 10_001;
+        genome.selfconns = [selfConnection];
+
+        // Act
+        const validationReport = validateNativeGenome(genome);
 
         // Assert
         expect(validationReport.isValid).toBe(true);

@@ -2,6 +2,12 @@ import type Connection from '../connection';
 import type Node from '../node';
 import type Network from './network';
 import type { NetworkJSONExtensions } from './network.types';
+import type {
+  NetworkTemporalGatedBlockDescriptor,
+  NetworkTemporalRecurrentModuleDescriptor,
+  NetworkTemporalRecurrentModuleKind,
+  NetworkTemporalStructureDescriptor,
+} from './network.types';
 
 const TEMPORAL_EXTENSION_VERSION = 1;
 const SUPPORTED_RECURRENT_MODULE_KINDS = new Set([
@@ -10,23 +16,10 @@ const SUPPORTED_RECURRENT_MODULE_KINDS = new Set([
   'narx-memory',
 ] as const);
 
-type TemporalRecurrentModuleKind =
-  | 'lstm'
-  | 'gru'
-  | 'narx-memory';
-
-type TemporalRecurrentModuleDescriptor = {
-  moduleId: string;
-  kind: TemporalRecurrentModuleKind;
-  nodeGeneIdsByRole: Record<string, number[]>;
-  connectionInnovations: number[];
-};
-
-type TemporalGatedBlockDescriptor = {
-  blockId: string;
-  gaterGeneIds: number[];
-  connectionInnovations: number[];
-};
+type TemporalRecurrentModuleKind = NetworkTemporalRecurrentModuleKind;
+type TemporalRecurrentModuleDescriptor =
+  NetworkTemporalRecurrentModuleDescriptor;
+type TemporalGatedBlockDescriptor = NetworkTemporalGatedBlockDescriptor;
 
 type TemporalDescriptorSet = {
   recurrentModules?: TemporalRecurrentModuleDescriptor[];
@@ -330,6 +323,36 @@ export function resolveTemporalRecurrentModuleNodeGeneIds(
 }
 
 /**
+ * Describe the validated temporal structure currently attached to a runtime network.
+ *
+ * This accessor is the public read seam for recurrent-aware diagnostics and
+ * visualization work. It synchronizes the hydrated extension bag against the
+ * live graph first, then returns a cloned snapshot so consumers never need to
+ * inspect private runtime properties directly.
+ *
+ * @param network Runtime network whose temporal structure should be described.
+ * @returns Read-only recurrent-module and gated-block snapshot.
+ */
+export function describeTemporalStructure(
+  network: Network,
+): NetworkTemporalStructureDescriptor {
+  synchronizeTemporalDescriptorExtensions(network);
+
+  const runtimeNetwork = network as RuntimeNetworkWithSerializedExtensions;
+  return {
+    recurrentModules: readRecurrentModules(runtimeNetwork._serializedExtensions).map(
+      (recurrentModule) => ({
+        ...recurrentModule,
+        ...(resolveDerivedModuleLabel(recurrentModule)
+          ? { moduleLabel: resolveDerivedModuleLabel(recurrentModule) }
+          : {}),
+      }),
+    ),
+    gatedBlocks: readGatedBlocks(runtimeNetwork._serializedExtensions),
+  };
+}
+
+/**
  * Preserve parent temporal descriptors that remain structurally valid on one offspring.
  *
  * @param offspring Offspring runtime network produced by crossover.
@@ -585,6 +608,20 @@ function createDescriptorId(
 function resolveDescriptorIdentity(nodes: readonly Node[]): number {
   const nodeGeneIds = collectFiniteNodeGeneIds(nodes);
   return nodeGeneIds[0] ?? 0;
+}
+
+function resolveDerivedModuleLabel(
+  recurrentModule: TemporalRecurrentModuleDescriptor,
+): string | undefined {
+  if (recurrentModule.kind !== 'narx-memory') {
+    return undefined;
+  }
+
+  const moduleIdSegments = recurrentModule.moduleId.split(':');
+  const derivedModuleLabel = moduleIdSegments.at(-2);
+  return typeof derivedModuleLabel === 'string' && derivedModuleLabel.length > 0
+    ? derivedModuleLabel
+    : undefined;
 }
 
 function dedupeRecurrentModules(

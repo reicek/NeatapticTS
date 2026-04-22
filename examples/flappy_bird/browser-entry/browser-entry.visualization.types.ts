@@ -82,6 +82,7 @@ export interface VisualNetworkNodeLike {
   index: number;
   type: string;
   bias: number;
+  geneId?: number;
   layer?: number;
 }
 
@@ -160,6 +161,25 @@ export interface NetworkInputDescriptionScene {
 }
 
 /**
+ * Positioned hidden-column label scene reused by drawing and future hit testing.
+ *
+ * Recurrent-aware layouts use these scenes to explain what one hidden column
+ * means, for example an LSTM gate or a NARX delay shelf, without replacing the
+ * underlying node bias encoding.
+ */
+export interface NetworkHiddenColumnLabelScene {
+  labelLines: readonly string[];
+  tooltipHeading: string;
+  tooltipBodyParagraphs: readonly string[];
+  leftPx: number;
+  topPx: number;
+  widthPx: number;
+  heightPx: number;
+  backgroundColor: string;
+  nodeIndices: number[];
+}
+
+/**
  * Reusable positioned-node snapshot returned by the network-view draw path.
  *
  * The host reuses this exact layout snapshot for pointer hit testing so hover
@@ -170,6 +190,7 @@ export interface NetworkVisualizationPositionedScene {
   nodeDimensions: NetworkNodeDimensionsLike;
   inputGroupLabelBandScenes: NetworkInputGroupLabelBandScene[];
   inputDescriptionScenes: NetworkInputDescriptionScene[];
+  hiddenColumnLabelScenes?: NetworkHiddenColumnLabelScene[];
 }
 
 /**

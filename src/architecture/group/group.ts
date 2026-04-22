@@ -468,6 +468,21 @@ export default class Group {
             }
           }
 
+           for (
+             let connectionIndex = target.connections.in.length - 1;
+             connectionIndex >= 0;
+             connectionIndex--
+           ) {
+             const connection = target.connections.in[connectionIndex];
+             if (
+               connection.from === this.nodes[sourceNodeIndex] &&
+               connection.to === target.nodes[targetNodeIndex]
+             ) {
+               target.connections.in.splice(connectionIndex, 1);
+               break;
+             }
+           }
+
           if (twosided) {
             for (
               let connectionIndex = this.connections.in.length - 1;
@@ -495,21 +510,6 @@ export default class Group {
                 connection.to === this.nodes[sourceNodeIndex]
               ) {
                 target.connections.out.splice(connectionIndex, 1);
-                break;
-              }
-            }
-
-            for (
-              let connectionIndex = target.connections.in.length - 1;
-              connectionIndex >= 0;
-              connectionIndex--
-            ) {
-              const connection = target.connections.in[connectionIndex];
-              if (
-                connection.from === this.nodes[sourceNodeIndex] &&
-                connection.to === target.nodes[targetNodeIndex]
-              ) {
-                target.connections.in.splice(connectionIndex, 1);
                 break;
               }
             }

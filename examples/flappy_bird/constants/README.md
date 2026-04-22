@@ -99,7 +99,7 @@ Bird collision radius (pixels).
 Horizontal viewport anchor for the bird.
 
 A value of `0.33` places the bird roughly one-third from the left, leaving
-more lookahead space for incoming pipes.
+more forward screen space for incoming pipes.
 
 ### FLAPPY_BIRD_X_PX
 
@@ -200,13 +200,6 @@ sustain long runs without additional spacing compression.
 
 Emulation speed multiplier for browser playback (1.5 => 50% faster).
 
-### FLAPPY_ENABLE_RECURRENT_DEBUG_LOGS
-
-Enables recurrent-profile debug logging for temporary browser worker investigations.
-
-Keep this disabled during normal demo runs so the browser console stays clean.
-Re-enable it only for short-lived recurrent debugging passes.
-
 ### FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION
 
 Enables runtime telemetry counters used for profiling diagnostics.
@@ -233,10 +226,6 @@ Reward scale for reducing vertical error to the next gap center.
 ### FLAPPY_FITNESS_CLEARANCE_WEIGHT_PER_FRAME
 
 Per-frame reward weight for keeping the bird inside next-gap clearance.
-
-### FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME
-
-Per-frame reward weight for pre-aligning with the second upcoming gap.
 
 ### FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME
 
@@ -420,7 +409,12 @@ top of its learned state.
 
 ### FLAPPY_MEMORY_CORE_FEATURE_COUNT
 
-Number of core per-frame observation features retained for temporal stacking.
+Number of compact current-frame observation features fed into Flappy policies.
+
+The controller keeps only bird-state and next-gap geometry on the public
+input shelf. Higher-level control-pressure hints remain available as derived
+features for shaping and heuristics, but they are no longer wired directly
+into the network input.
 
 ### FLAPPY_MEMORY_STACKED_FRAME_COUNT
 
@@ -506,6 +500,62 @@ Header font size for architecture label lines.
 ### FLAPPY_NETWORK_HEADER_TEXT_COLOR
 
 Header text color for architecture label in visualization.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_CHARACTER_WIDTH_PX
+
+Approximate monospace character width used to size recurrent guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FILL_COLOR
+
+Fill color used by recurrent hidden-column guide chips when no custom color is set.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_SIZE_PX
+
+Font size used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_WEIGHT
+
+Font weight used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX
+
+Gap between hidden-column guide chips and the node shelf below.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX
+
+Line height used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_MIN_WIDTH_PX
+
+Minimum chip width for recurrent hidden-column guide labels.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_RADIUS_PX
+
+Corner radius used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_COLOR
+
+Outline color used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_WIDTH_PX
+
+Stroke width used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_COLOR
+
+Text color used inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_PADDING_PX
+
+Horizontal text padding inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_VERTICAL_PADDING_PX
+
+Vertical text padding inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TOP_RESERVE_PX
+
+Reserved vertical shelf for recurrent hidden-column guide chips.
 
 ### FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR
 
@@ -1343,13 +1393,6 @@ Fixed horizontal position of the bird (pixels).
 A fixed x-anchor turns the task into primarily vertical control while pipes
 move left, making policy behavior easier to visualize and debug.
 
-### FLAPPY_ENABLE_RECURRENT_DEBUG_LOGS
-
-Enables recurrent-profile debug logging for temporary browser worker investigations.
-
-Keep this disabled during normal demo runs so the browser console stays clean.
-Re-enable it only for short-lived recurrent debugging passes.
-
 ### FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION
 
 Enables runtime telemetry counters used for profiling diagnostics.
@@ -1616,7 +1659,12 @@ top of its learned state.
 
 ### FLAPPY_MEMORY_CORE_FEATURE_COUNT
 
-Number of core per-frame observation features retained for temporal stacking.
+Number of compact current-frame observation features fed into Flappy policies.
+
+The controller keeps only bird-state and next-gap geometry on the public
+input shelf. Higher-level control-pressure hints remain available as derived
+features for shaping and heuristics, but they are no longer wired directly
+into the network input.
 
 ### FLAPPY_MEMORY_STACKED_FRAME_COUNT
 
@@ -1667,10 +1715,6 @@ Reward scale for reducing vertical error to the next gap center.
 ### FLAPPY_FITNESS_CLEARANCE_WEIGHT_PER_FRAME
 
 Per-frame reward weight for keeping the bird inside next-gap clearance.
-
-### FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME
-
-Per-frame reward weight for pre-aligning with the second upcoming gap.
 
 ### FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME
 
@@ -1856,7 +1900,7 @@ keep the demo readable from compact to wide viewports.
 Horizontal viewport anchor for the bird.
 
 A value of `0.33` places the bird roughly one-third from the left, leaving
-more lookahead space for incoming pipes.
+more forward screen space for incoming pipes.
 
 ### FLAPPY_SCREEN_PADDING_PX
 
@@ -2365,6 +2409,62 @@ Graph-top padding for network visualization content.
 ### FLAPPY_NETWORK_HEADER_FONT_SIZE_PX
 
 Header font size for architecture label lines.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_CHARACTER_WIDTH_PX
+
+Approximate monospace character width used to size recurrent guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FILL_COLOR
+
+Fill color used by recurrent hidden-column guide chips when no custom color is set.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_SIZE_PX
+
+Font size used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_WEIGHT
+
+Font weight used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX
+
+Gap between hidden-column guide chips and the node shelf below.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX
+
+Line height used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_MIN_WIDTH_PX
+
+Minimum chip width for recurrent hidden-column guide labels.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_RADIUS_PX
+
+Corner radius used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_COLOR
+
+Outline color used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_WIDTH_PX
+
+Stroke width used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_COLOR
+
+Text color used inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_PADDING_PX
+
+Horizontal text padding inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_VERTICAL_PADDING_PX
+
+Vertical text padding inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TOP_RESERVE_PX
+
+Reserved vertical shelf for recurrent hidden-column guide chips.
 
 ### FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR
 

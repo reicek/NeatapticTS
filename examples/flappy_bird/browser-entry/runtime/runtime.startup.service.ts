@@ -1,8 +1,6 @@
 import { createCanvasHost, updateStatsTableValues } from '../host/host';
 import { createEvolutionWorker } from '../worker-channel/worker-channel';
 import {
-  FLAPPY_BROWSER_ELITISM_COUNT,
-  FLAPPY_BROWSER_POPULATION_SIZE,
   FLAPPY_HUD_INITIALIZING_TEXT,
   FLAPPY_HUD_ZERO_TEXT,
 } from '../../constants/constants';
@@ -17,6 +15,7 @@ import {
   resolveRuntimeArchitectureSelectorItems,
   resolveSelectedRuntimeArchitectureProfile,
 } from './runtime.architecture-profile.service';
+import { resolveRuntimePopulationBudget } from './runtime.population-budget';
 import { createRuntimeTelemetryState } from './runtime.telemetry.service';
 import type {
   RuntimeContainerTarget,
@@ -24,16 +23,6 @@ import type {
   RuntimeStartContext,
   RuntimeStartOptions,
 } from './runtime.types';
-import type { ExampleArchitectureProfileId } from '../../../architectureProfiles';
-
-const FLAPPY_BROWSER_SPARSE_POPULATION_SIZE = 30;
-const FLAPPY_BROWSER_SPARSE_ELITISM_COUNT = 6;
-const FLAPPY_BROWSER_NARX_POPULATION_SIZE = 40;
-const FLAPPY_BROWSER_NARX_ELITISM_COUNT = 8;
-const FLAPPY_BROWSER_GRU_POPULATION_SIZE = 18;
-const FLAPPY_BROWSER_GRU_ELITISM_COUNT = 4;
-const FLAPPY_BROWSER_LSTM_POPULATION_SIZE = 6;
-const FLAPPY_BROWSER_LSTM_ELITISM_COUNT = 1;
 
 /**
  * Runtime startup helpers for the Flappy Bird browser demo.
@@ -130,59 +119,5 @@ function createRuntimeStartConfig(
     populationSize: runtimeBudget.populationSize,
     elitismCount: runtimeBudget.elitismCount,
     selectedArchitectureProfile,
-  };
-}
-
-/**
- * Resolves the browser evolution budget for one architecture profile.
- *
- * Sparse and NARX keep wider browser budgets than the dense MLP baseline so
- * the interactive demo still has room to discover pipe-clearing behavior in a
- * small number of generations. GRU and LSTM now stay materially smaller than
- * NARX because their gated recurrent blocks still cause visible main-thread
- * stutter at broader browser flock sizes.
- *
- * @param architectureProfileId - Selected shared Flappy profile id.
- * @returns Browser-local population and elitism settings.
- */
-function resolveRuntimePopulationBudget(
-  architectureProfileId: ExampleArchitectureProfileId,
-): Pick<RuntimeStartConfig, 'populationSize' | 'elitismCount'> {
-  // Step 1: Widen lighter Sparse runs a bit because they stay comparatively cheap.
-  if (architectureProfileId === 'random-sparse') {
-    return {
-      populationSize: FLAPPY_BROWSER_SPARSE_POPULATION_SIZE,
-      elitismCount: FLAPPY_BROWSER_SPARSE_ELITISM_COUNT,
-    };
-  }
-
-  // Step 2: Keep NARX broader than the baseline while trimming its browser cost a bit.
-  if (architectureProfileId === 'narx') {
-    return {
-      populationSize: FLAPPY_BROWSER_NARX_POPULATION_SIZE,
-      elitismCount: FLAPPY_BROWSER_NARX_ELITISM_COUNT,
-    };
-  }
-
-  // Step 3: Keep GRU meaningfully above the MLP baseline without reintroducing visible stutter.
-  if (architectureProfileId === 'gru') {
-    return {
-      populationSize: FLAPPY_BROWSER_GRU_POPULATION_SIZE,
-      elitismCount: FLAPPY_BROWSER_GRU_ELITISM_COUNT,
-    };
-  }
-
-  // Step 4: Cap LSTM near the baseline because the heavier recurrent shelf still stutters first.
-  if (architectureProfileId === 'lstm') {
-    return {
-      populationSize: FLAPPY_BROWSER_LSTM_POPULATION_SIZE,
-      elitismCount: FLAPPY_BROWSER_LSTM_ELITISM_COUNT,
-    };
-  }
-
-  // Step 5: Keep the shared lightweight browser baseline for MLP.
-  return {
-    populationSize: FLAPPY_BROWSER_POPULATION_SIZE,
-    elitismCount: FLAPPY_BROWSER_ELITISM_COUNT,
   };
 }

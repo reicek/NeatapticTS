@@ -1,5 +1,4 @@
 import type Network from '../../../src/architecture/network';
-import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
 import { createXorshift32 } from '../rng';
 import {
   hasAliveBirds,
@@ -12,11 +11,6 @@ import {
   FLAPPY_BROWSER_SUCCESS_PIPE_TARGET,
   FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION,
 } from '../constants/constants';
-import {
-  logRecurrentDebugMarker,
-  logRecurrentPlaybackReferenceSnapshot,
-  logRecurrentPopulationSnapshot,
-} from './flappy-evolution-worker.debug.service';
 import {
   resolveAdaptiveDifficultyProfile,
   type SharedDifficultyProfile,
@@ -53,8 +47,6 @@ import type { Neat } from '../../../src/neataptic';
  * @returns Playback runtime state and deterministic RNG.
  */
 export function beginWorkerPlaybackSession(options: {
-  architectureProfileId: ExampleArchitectureProfileId;
-  generation?: number;
   currentPopulation: Network[];
   payload: WorkerStartPlaybackMessage['payload'];
   createPopulationRenderState: (
@@ -68,13 +60,7 @@ export function beginWorkerPlaybackSession(options: {
   currentPlaybackRng: ReturnType<typeof createXorshift32>;
   playbackWinnerIndex: number;
 } {
-  const {
-    architectureProfileId,
-    generation,
-    currentPopulation,
-    payload,
-    createPopulationRenderState,
-  } = options;
+  const { currentPopulation, payload, createPopulationRenderState } = options;
   const playbackRng = createXorshift32(0xabcdef01);
   const currentPlaybackState = createPopulationRenderState(
     currentPopulation,
@@ -82,14 +68,6 @@ export function beginWorkerPlaybackSession(options: {
     payload.visibleWorldWidthPx,
     payload.visibleWorldHeightPx,
   );
-
-  logRecurrentPlaybackReferenceSnapshot({
-    architectureProfileId,
-    phase: 'playback-session-created',
-    generation,
-    population: currentPopulation,
-    playbackNetworks: currentPlaybackState.birds.map((bird) => bird.network),
-  });
 
   return {
     currentPlaybackState,
@@ -111,8 +89,6 @@ export function beginWorkerPlaybackSession(options: {
  * @returns Updated playback runtime state after processing this step.
  */
 export function processWorkerPlaybackStep(options: {
-  architectureProfileId: ExampleArchitectureProfileId;
-  generation?: number;
   playbackStepPayload: WorkerRequestPlaybackStepMessage['payload'];
   currentPlaybackState: WorkerPlaybackState;
   currentPlaybackRng: ReturnType<typeof createXorshift32>;
@@ -140,8 +116,6 @@ export function processWorkerPlaybackStep(options: {
   playbackWinnerIndex: number;
 } {
   const {
-    architectureProfileId,
-    generation,
     playbackStepPayload,
     currentPlaybackState,
     currentPlaybackRng,
@@ -226,27 +200,7 @@ export function processWorkerPlaybackStep(options: {
       ? currentPlaybackState.birds[playbackWinnerIndex]
       : undefined;
 
-  logRecurrentPopulationSnapshot({
-    architectureProfileId,
-    phase: 'playback-finished-before-winner-clone',
-    generation,
-    population: currentPopulation,
-    extra: {
-      playbackWinnerIndex,
-      winnerFramesSurvived: winnerBird?.framesSurvived,
-      winnerPipesPassed: winnerBird?.pipesPassed,
-    },
-  });
-
   if (winnerBird && currentPopulation.length > 0) {
-    logRecurrentDebugMarker({
-      architectureProfileId,
-      phase: 'playback-winner-clone-start',
-      generation,
-      extra: {
-        playbackWinnerIndex,
-      },
-    });
     currentPopulation[0] = winnerBird.network.clone();
     if (neatRuntime) {
       const runtimeNeat = neatRuntime as unknown as { population?: Network[] };
@@ -257,16 +211,6 @@ export function processWorkerPlaybackStep(options: {
         runtimeNeat.population[0] = winnerBird.network.clone();
       }
     }
-
-    logRecurrentPopulationSnapshot({
-      architectureProfileId,
-      phase: 'playback-finished-after-winner-clone',
-      generation,
-      population: currentPopulation,
-      extra: {
-        playbackWinnerIndex,
-      },
-    });
   }
 
   const averagePipesPassed =

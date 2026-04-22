@@ -172,6 +172,46 @@ describe('network deterministic chapter', () => {
         });
       });
     });
+
+    describe('given a seeded network with an existing RNG state', () => {
+      describe('when a non-number state value is applied at runtime', () => {
+        it('preserves the previous numeric RNG state', () => {
+          // Arrange
+          const network = new Network(1, 1, { seed: 13, enforceAcyclic: true });
+          const initialState = network.getRNGState();
+
+          if (typeof initialState !== 'number') {
+            throw new Error('Initial RNG state should be numeric before update');
+          }
+
+          // Act
+          network.setRNGState('invalid-state' as unknown as number);
+          const preservedState = network.getRNGState();
+
+          // Assert
+          expect(preservedState).toBe(initialState);
+        });
+      });
+    });
+  });
+
+  describe('getRandomFn()', () => {
+    describe('given a custom RNG implementation is installed', () => {
+      describe('when the active random function is requested', () => {
+        it('returns the installed RNG reference', () => {
+          // Arrange
+          const network = new Network(1, 1, { seed: 42, enforceAcyclic: true });
+          const expectedRandomFunction = () => 0.25;
+          network.restoreRNG(expectedRandomFunction);
+
+          // Act
+          const randomFunction = network.getRandomFn();
+
+          // Assert
+          expect(randomFunction).toBe(expectedRandomFunction);
+        });
+      });
+    });
   });
 
   describe('restoreRNG()', () => {

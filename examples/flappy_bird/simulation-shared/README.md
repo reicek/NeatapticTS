@@ -24,8 +24,8 @@ without silently redefining what "next gap" or "urgent correction" means.
 Read this chapter if you want to answer three practical questions:
 
 1. Which geometric signals does the policy actually see?
-2. How does the example add short-horizon memory without requiring recurrent
-   networks?
+2. Why does the shared runtime still carry observation-memory buffers even
+   though the default controller input is current-frame only?
 3. How do difficulty, spawn, observation, and control helpers stay reusable
    across Node training and browser playback?
 
@@ -36,7 +36,7 @@ flowchart LR
     Difficulty["difficulty utils\ncurriculum profile"] --> Spawn["spawn utils\nnext pipe cadence and gap"]
     Spawn --> World["environment + worker playback\nconcrete world state"]
     World --> Features["observation/\nfeature synthesis"]
-    Features --> Memory["memory utils\nstack recent frames and actions"]
+    Features --> Memory["memory utils\ncompatibility history buffers"]
     Features --> Vector["observation/\ncanonical policy vectors"]
     Vector --> Control["control utils\nresolve flap decision"]
     Memory --> Control
@@ -55,10 +55,11 @@ flowchart LR
 ```
 
 The key teaching point is that the policy does not read pixels. It reads a
-curated state representation: gap geometry, velocity, urgency, and a short
-action-conditioned memory trail. That makes the control problem easier to
-inspect and keeps training, evaluation, and playback aligned around the same
-semantics.
+curated state representation: bird state and next-gap geometry from the
+current normalized frame. The compatibility memory surface stays in place
+for shared runtime plumbing, but the active controller contract leaves
+temporal carry-over to recurrent profiles instead of hand-authored input
+history.
 
 ## Choose Your Route
 
@@ -69,8 +70,9 @@ semantics.
   generation rules.
 - Read [simulation-shared/observation/README.md](./observation/README.md) if
   you want the feature-engineering story in more detail.
-- Read `simulation-shared.memory.utils.ts` if you want the frame-stacking and
-  recent-action channels.
+- Read `simulation-shared.memory.utils.ts` if you want the compatibility
+  memory surface and the reasoning behind leaving it unused by the default
+  controller input.
 - Read `simulation-shared.control.utils.ts` if you want the final step from
   network outputs to `flap` versus `no flap`.
 
@@ -114,8 +116,9 @@ Structured observation features for network input.
 
 Educational note:
 These features make the policy input interpretable. The example does not feed
-raw pixels into NEAT; it feeds geometric signals such as distance to the next
-pipe, corridor clearance, and urgency of recovering to the gap center.
+raw pixels into NEAT; it feeds geometric signals such as bird state,
+next-gap geometry, corridor clearance, and urgency of recovering to the gap
+center.
 
 ### SharedObservationInput
 
@@ -382,18 +385,16 @@ resolveCoreObservationVectorFromFeatures(
 ): number[]
 ```
 
-Resolves the compact core vector used for temporal stacking.
+Resolves the compact per-frame vector retained for compatibility bookkeeping.
 
 The core intentionally keeps directly observed kinematic and geometric
-channels while dropping derived one-step predictors that become redundant
-once short-term temporal memory is available.
+channels while dropping some derived one-step predictors. If an opt-in
+experiment wants external history again, this is the narrower slice worth
+carrying between steps.
 
-This is the representation used when the example wants a short history of raw
-observation slices. The idea is similar to frame stacking in reinforcement
-learning: a feed-forward policy can recover some sense of motion by looking
-at several recent compact frames at once.
-
-The Wikipedia article on "frame stacking" is a useful conceptual reference.
+Under the current default controller contract, however, the active network
+input uses `resolveObservationVectorFromFeatures(features)` directly and does
+not stack these core frames.
 
 Parameters:
 - `features` - Structured observation features.
@@ -404,7 +405,7 @@ Example:
 
 ```ts
 const coreFrame = resolveCoreObservationVectorFromFeatures(features);
-observationMemoryState.previousCoreFrames.push(coreFrame);
+console.log(coreFrame.length);
 ```
 
 ### resolveObservationFeatures
@@ -422,11 +423,11 @@ This helper stays focused on semantic feature assembly only. Projection into
 the canonical network vectors now lives in the neighboring vector module so
 observation policy and network-shape concerns can evolve independently.
 
-The features deliberately mix three kinds of signal:
+The features deliberately mix two kinds of control signal plus a small set of
+shaping-oriented derived hints:
 1. Current state, such as bird height and vertical velocity.
-2. Near-term geometry, such as gap bounds and upcoming-pipe distances.
-3. Simple forward-looking control hints, such as urgency and one-flap
-   reachability.
+2. Immediate next-gap geometry, such as distance, offset, and corridor
+   bounds.
 
 This is a compact example of feature engineering for control. Instead of
 asking NEAT to rediscover basic geometry from raw sensory input, the example
@@ -466,13 +467,13 @@ resolveObservationVectorFromFeatures(
 ): number[]
 ```
 
-Converts observation features to the canonical 12-value network input vector.
+Converts observation features to the canonical 6-value network input vector.
 
 Educational note:
 This module owns the network-shape projection so feature semantics can change
 independently from how the policy input is ordered.
 
-The 12-value vector is the compact feed-forward policy input used by the main
+The 6-value vector is the compact feed-forward policy input used by the main
 evaluation and training flow. Its ordering is stable on purpose: once a
 network topology has evolved against one input layout, silent channel
 reshuffles would invalidate learned behavior.
@@ -502,10 +503,10 @@ resolveUpcomingPipes(
 
 Resolves the next two upcoming pipes in front of the bird.
 
-The observation pipeline only cares about the immediate near future, because
-Flappy Bird decisions are dominated by the next gap and the transition after
-it. Looking further ahead adds noise faster than it adds useful control
-signal.
+The shared simulation helpers sometimes need the first two obstacles even
+though the current controller contract only reads the next immediate gap.
+Keeping this helper small and explicit makes it easy for callers to choose
+how much near-future geometry they actually want.
 
 Parameters:
 - `pipes` - Current pipe list.
@@ -566,11 +567,13 @@ commitSharedObservationMemoryStep(
 ): void
 ```
 
-Commits one observation-action step into temporal memory.
+Commits one observation-action step into the shared compatibility memory surface.
 
-The memory update happens after the decision is made so the next step can see
-both the recent observation context and the action history that produced the
-current trajectory.
+The bookkeeping point stays fixed at the same post-decision boundary used by
+the browser, worker, and evaluation runtimes. Under the current Flappy
+defaults both history windows are zero-width, so this usually becomes a
+no-op, but the stable hook prevents those runtimes from drifting apart if an
+opt-in history experiment returns later.
 
 Parameters:
 - `observationMemoryState` - Mutable temporal memory for the active bird.
@@ -585,7 +588,11 @@ Returns: Nothing.
 createSharedObservationMemoryState(): SharedObservationMemoryState
 ```
 
-Creates an empty temporal observation memory state.
+Creates the shared observation-memory compatibility state.
+
+The buffers remain part of the shared Flappy runtime contract even though
+the current controller input does not read external history. That keeps the
+browser, worker, and evaluation helpers aligned on one state shape.
 
 Returns: Fresh mutable memory buffers for one bird/controller.
 
@@ -600,7 +607,7 @@ const memoryState = createSharedObservationMemoryState();
 ```ts
 resolveTemporalObservationVector(
   features: SharedObservationFeatures,
-  _observationMemoryState: SharedObservationMemoryState,
+  observationMemoryState: SharedObservationMemoryState,
 ): number[]
 ```
 

@@ -12,7 +12,7 @@ export const FLAPPY_SCREEN_PADDING_PX = 24;
  * Horizontal viewport anchor for the bird.
  *
  * A value of `0.33` places the bird roughly one-third from the left, leaving
- * more lookahead space for incoming pipes.
+ * more forward screen space for incoming pipes.
  */
 export const FLAPPY_BIRD_VIEWPORT_X_RATIO = 0.33;
 

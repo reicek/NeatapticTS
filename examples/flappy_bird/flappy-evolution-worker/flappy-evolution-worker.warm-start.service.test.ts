@@ -1,6 +1,8 @@
 import type { Neat } from '../../../src/neataptic';
 import type Network from '../../../src/architecture/network';
+import { FLAPPY_NETWORK_INPUT_SIZE } from '../constants/constants';
 import {
+  resolveHeuristicTeacherFlapDecisionFromObservationVector,
   resolveWarmStartEvaluationScore,
   resolveWarmStartRolloutOptimizationPlan,
   resolveWorkerWarmStartTeacherStrategy,
@@ -203,6 +205,13 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
     });
   });
 
+  it('resolves a stronger LSTM-specific rollout optimization plan for browser-safe warm-start refinement', () => {
+    expect(resolveWarmStartRolloutOptimizationPlan('lstm')).toEqual({
+      optimizationStepCount: 16,
+      rolloutSeedCount: 6,
+    });
+  });
+
   it('scores GRU warm-start rollouts with pipe progress as the dominant signal', () => {
     expect(
       resolveWarmStartEvaluationScore(
@@ -217,6 +226,24 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
           meanFramesSurvived: 180,
         },
         'gru',
+      ),
+    ).toBe(20_176);
+  });
+
+  it('scores LSTM warm-start rollouts with pipe progress as the dominant signal', () => {
+    expect(
+      resolveWarmStartEvaluationScore(
+        {
+          seedCount: 4,
+          meanFitness: 11,
+          medianFitness: 10,
+          p90Fitness: 12,
+          fitnessStdDev: 8,
+          robustFitness: 7.5,
+          meanPipesPassed: 2,
+          meanFramesSurvived: 180,
+        },
+        'lstm',
       ),
     ).toBe(20_176);
   });
@@ -252,6 +279,58 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
 
   it('keeps the GRU warm-start strategy on rollout-only refinement', () => {
     expect(resolveWorkerWarmStartTeacherStrategy('gru')).toBe('rollout-only');
+  });
+});
+
+describe('resolveHeuristicTeacherFlapDecisionFromObservationVector', () => {
+  it('labels warm-start samples from the compact live controller shelf', () => {
+    expect(
+      resolveHeuristicTeacherFlapDecisionFromObservationVector([
+        0.62,
+        -0.12,
+        0.31,
+        0.18,
+        0.3,
+        0.66,
+      ]),
+    ).toBe(true);
+  });
+
+  it('ignores trailing legacy-style extras beyond the live controller input width', () => {
+    const baseObservationVector = [
+      0.62,
+      -0.12,
+      0.31,
+      0.18,
+      0.3,
+      0.66,
+    ];
+
+    expect({
+      baseDecision: resolveHeuristicTeacherFlapDecisionFromObservationVector(
+        baseObservationVector,
+      ),
+      extendedDecision: resolveHeuristicTeacherFlapDecisionFromObservationVector(
+        [...baseObservationVector, 0.99, -0.99, 0.77, -0.77],
+      ),
+      expectedInputWidth: FLAPPY_NETWORK_INPUT_SIZE,
+    }).toEqual({
+      baseDecision: true,
+      extendedDecision: true,
+      expectedInputWidth: 6,
+    });
+  });
+
+  it('refuses incomplete vectors so warm-start cannot silently invent missing channels', () => {
+    expect(
+      resolveHeuristicTeacherFlapDecisionFromObservationVector([
+        0.62,
+        -0.12,
+        0.31,
+        0.18,
+        0.3,
+      ]),
+    ).toBe(false);
   });
 });
 

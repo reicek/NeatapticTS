@@ -188,7 +188,7 @@ export default class Architect {
     if (inputSize > 0 && outputSize > 0) {
       network.input = inputSize;
       network.output = outputSize;
-    } else if (!foundTypes || inputSize === 0 || outputSize === 0) {
+    } else {
       throw new ArchitectInputOutputTypeResolutionError(
         'Could not determine input/output nodes. Ensure nodes have their `type` property set to "input" or "output".',
       );
@@ -559,12 +559,10 @@ export default class Architect {
     network.input = inputLayerSize;
     network.output = outputLayerSize;
     recurrentLayers.forEach(({ layer, size }) => {
-      const roleNodes = splitLstmLayerNodes(layer.nodes, size);
+      const roleNodes = splitLstmLayerNodes(layer.nodes, size)!;
       appendTemporalDescriptorSet(
         network,
-        roleNodes
-          ? buildLstmTemporalDescriptorSet(network, roleNodes)
-          : undefined,
+        buildLstmTemporalDescriptorSet(network, roleNodes),
       );
     });
 
@@ -681,12 +679,10 @@ export default class Architect {
     network.input = inputLayerSize;
     network.output = outputLayerSize;
     recurrentLayers.forEach(({ layer, size }) => {
-      const roleNodes = splitGruLayerNodes(layer.nodes, size);
+      const roleNodes = splitGruLayerNodes(layer.nodes, size)!;
       appendTemporalDescriptorSet(
         network,
-        roleNodes
-          ? buildGruTemporalDescriptorSet(network, roleNodes)
-          : undefined,
+        buildGruTemporalDescriptorSet(network, roleNodes),
       );
     });
 

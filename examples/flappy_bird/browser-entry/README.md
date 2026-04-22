@@ -246,6 +246,14 @@ Runtime lookup map of stat keys to writable value cells.
 This acts like a small DOM index so the update loop can mutate the correct
 cells directly without repeatedly querying the document.
 
+### NetworkHiddenColumnLabelScene
+
+Positioned hidden-column label scene reused by drawing and future hit testing.
+
+Recurrent-aware layouts use these scenes to explain what one hidden column
+means, for example an LSTM gate or a NARX delay shelf, without replacing the
+underlying node bias encoding.
+
 ### NetworkInputDescriptionScene
 
 Positioned input-description row scene reused by drawing and hover hit testing.
@@ -688,6 +696,14 @@ Connection or bias tier used for color mapping ramps.
 
 Visualization buckets continuous weights into legible color bands so humans
 can scan sign and magnitude at a glance.
+
+### NetworkHiddenColumnLabelScene
+
+Positioned hidden-column label scene reused by drawing and future hit testing.
+
+Recurrent-aware layouts use these scenes to explain what one hidden column
+means, for example an LSTM gate or a NARX delay shelf, without replacing the
+underlying node bias encoding.
 
 ### NetworkInputDescriptionScene
 
@@ -1309,7 +1325,7 @@ commitObservationMemoryStep(
 ): void
 ```
 
-Commits one browser decision step into temporal memory.
+Commits one browser decision step into the shared compatibility memory surface.
 
 Parameters:
 - `observationMemoryState` - Mutable memory state for one bird.
@@ -1420,7 +1436,7 @@ Parameters:
 - `worldHeightPx` - Current world height used for normalization and bounds.
 - `difficultyProfile` - Active difficulty profile.
 - `activeSpawnIntervalFrames` - Current spawn interval.
-- `observationMemoryState` - Temporal memory state for recurrent observation features.
+- `observationMemoryState` - Shared compatibility memory state kept alongside browser decisions.
 
 Returns: Ordered normalized observation vector.
 
@@ -1545,15 +1561,6 @@ resolveNetworkVisualizationLayers(
 ```
 
 Resolves layered node groups for network-view layout and rendering.
-
-Educational note:
-Layer grouping is a network-view concern because it drives sizing, node
-placement, and architecture presentation. Visualization code can still reuse
-the result, but this helper now lives with the module that owns layout.
-
-The resolver prefers explicit layer metadata when it exists, then falls back
-to a topology-derived depth estimate so even loosely structured networks can
-still be drawn in an intelligible left-to-right order.
 
 Parameters:
 - `network` - Runtime network instance.
@@ -1832,15 +1839,6 @@ resolveNetworkVisualizationLayers(
 ```
 
 Resolves layered node groups for network-view layout and rendering.
-
-Educational note:
-Layer grouping is a network-view concern because it drives sizing, node
-placement, and architecture presentation. Visualization code can still reuse
-the result, but this helper now lives with the module that owns layout.
-
-The resolver prefers explicit layer metadata when it exists, then falls back
-to a topology-derived depth estimate so even loosely structured networks can
-still be drawn in an intelligible left-to-right order.
 
 Parameters:
 - `network` - Runtime network instance.

@@ -5,8 +5,15 @@
  * used when seeding agents for evolution.
  */
 
-/** Number of core per-frame observation features retained for temporal stacking. */
-export const FLAPPY_MEMORY_CORE_FEATURE_COUNT = 12;
+/**
+ * Number of compact current-frame observation features fed into Flappy policies.
+ *
+ * The controller keeps only bird-state and next-gap geometry on the public
+ * input shelf. Higher-level control-pressure hints remain available as derived
+ * features for shaping and heuristics, but they are no longer wired directly
+ * into the network input.
+ */
+export const FLAPPY_MEMORY_CORE_FEATURE_COUNT = 6;
 
 /**
  * Effective controller frame count kept in the external observation window.

@@ -9,10 +9,12 @@ import { FLAPPY_NETWORK_HIDDEN_LAYER_SIZES } from './flappy_bird/constants/const
 describe('shared example architecture profiles', () => {
   describe('resolveExampleArchitectureProfile()', () => {
     it('keeps one shared MLP profile id while resolving demo-specific shapes', () => {
+      // Arrange
       const flappyProfile = resolveExampleArchitectureProfile('flappy-bird', 'mlp');
       const asciiProfile = resolveExampleArchitectureProfile('ascii-maze', 'mlp');
 
-      expect({
+      // Act
+      const resolvedProfiles = {
         asciiConfiguration: asciiProfile.configuration,
         asciiFamily: asciiProfile.family,
         asciiApproved: asciiProfile.approvedForDemo,
@@ -21,6 +23,11 @@ describe('shared example architecture profiles', () => {
         flappyFamily: flappyProfile.family,
         flappyApproved: flappyProfile.approvedForDemo,
         flappyId: flappyProfile.id,
+      };
+
+      // Assert
+      expect({
+        ...resolvedProfiles,
       }).toEqual({
         asciiConfiguration: {
           family: 'MLP',
@@ -34,7 +41,7 @@ describe('shared example architecture profiles', () => {
         flappyConfiguration: {
           family: 'MLP',
           hiddenLayerSizes: FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
-          input: 12,
+          input: 6,
           output: 2,
         },
         flappyFamily: 'MLP',
@@ -46,12 +53,19 @@ describe('shared example architecture profiles', () => {
 
   describe('getApprovedExampleArchitectureProfiles()', () => {
     it('exposes the current approved profile set per demo without inventing demo-local names', () => {
+      // Arrange
       const approvedFlappyProfiles = getApprovedExampleArchitectureProfiles('flappy-bird');
       const approvedAsciiProfiles = getApprovedExampleArchitectureProfiles('ascii-maze');
 
-      expect({
+      // Act
+      const approvedProfileIds = {
         ascii: approvedAsciiProfiles.map((profile) => profile.id),
         flappy: approvedFlappyProfiles.map((profile) => profile.id),
+      };
+
+      // Assert
+      expect({
+        ...approvedProfileIds,
       }).toEqual({
         ascii: ['mlp'],
         flappy: ['mlp', 'random-sparse', 'narx', 'gru', 'lstm'],
@@ -61,6 +75,7 @@ describe('shared example architecture profiles', () => {
 
   describe('buildExampleArchitectureProfileNetwork()', () => {
     it('builds explicit-role feed-forward runtimes from the shared MLP contract', () => {
+      // Arrange
       const flappyNetwork = buildExampleArchitectureProfileNetwork(
         'flappy-bird',
         'mlp',
@@ -70,7 +85,8 @@ describe('shared example architecture profiles', () => {
         'mlp',
       );
 
-      expect({
+      // Act
+      const networkShapes = {
         ascii: {
           inputNodeIds: asciiNetwork.inputNodeIds.length,
           outputNodeIds: asciiNetwork.outputNodeIds.length,
@@ -81,6 +97,11 @@ describe('shared example architecture profiles', () => {
           outputNodeIds: flappyNetwork.outputNodeIds.length,
           topologyIntent: flappyNetwork.getTopologyIntent(),
         },
+      };
+
+      // Assert
+      expect({
+        ...networkShapes,
       }).toEqual({
         ascii: {
           inputNodeIds: 6,
@@ -88,45 +109,84 @@ describe('shared example architecture profiles', () => {
           topologyIntent: 'feed-forward',
         },
         flappy: {
-          inputNodeIds: 12,
+          inputNodeIds: 6,
           outputNodeIds: 2,
           topologyIntent: 'feed-forward',
         },
       });
     });
 
-    it('enables the Flappy GRU direct readout shortcut so the browser profile can react to current-frame inputs immediately', () => {
-      const flappyGruNetwork = buildExampleArchitectureProfileNetwork(
-        'flappy-bird',
-        'gru',
-      );
-      const directInputToOutputConnectionCount = flappyGruNetwork.connections.filter(
-        (connection) =>
-          connection.from.type === 'input' && connection.to.type === 'output',
-      ).length;
-
-      expect(directInputToOutputConnectionCount).toBe(24);
-    });
-
-    it('captures the shared Flappy NARX seed as a strict genome without leaking non-canonical node roles', () => {
-      const flappyNarxNetwork = buildExampleArchitectureProfileNetwork(
-        'flappy-bird',
-        'narx',
-      );
-
-      expect(() => createGenomeFromNetwork(flappyNarxNetwork)).not.toThrow();
-    });
-
-    it.each(['gru', 'lstm'] as const)(
-      'captures the shared Flappy %s seed as a strict genome before worker bootstrap',
-      (architectureProfileId) => {
-        const flappyRecurrentNetwork = buildExampleArchitectureProfileNetwork(
+    describe('when the profile is the Flappy GRU preset', () => {
+      it('adds one direct readout connection for each current-frame input and output pair', () => {
+        // Arrange
+        const flappyGruNetwork = buildExampleArchitectureProfileNetwork(
           'flappy-bird',
-          architectureProfileId,
+          'gru',
         );
 
-        expect(() => createGenomeFromNetwork(flappyRecurrentNetwork)).not.toThrow();
-      },
-    );
+        // Act
+        const directInputToOutputConnectionCount = flappyGruNetwork.connections.filter(
+          (connection) =>
+            connection.from.type === 'input' && connection.to.type === 'output',
+        ).length;
+
+        // Assert
+        expect(directInputToOutputConnectionCount).toBe(12);
+      });
+    });
+
+    describe('when the profile is the Flappy NARX preset', () => {
+      it('captures the seed as a strict genome without leaking non-canonical node roles', () => {
+        // Arrange
+        const flappyNarxNetwork = buildExampleArchitectureProfileNetwork(
+          'flappy-bird',
+          'narx',
+        );
+
+        // Act
+        const captureStrictGenome = (): void => {
+          createGenomeFromNetwork(flappyNarxNetwork);
+        };
+
+        // Assert
+        expect(captureStrictGenome).not.toThrow();
+      });
+    });
+
+    describe('when the profile is the Flappy GRU preset', () => {
+      it('captures the seed as a strict genome before worker bootstrap', () => {
+        // Arrange
+        const flappyGruNetwork = buildExampleArchitectureProfileNetwork(
+          'flappy-bird',
+          'gru',
+        );
+
+        // Act
+        const captureStrictGenome = (): void => {
+          createGenomeFromNetwork(flappyGruNetwork);
+        };
+
+        // Assert
+        expect(captureStrictGenome).not.toThrow();
+      });
+    });
+
+    describe('when the profile is the Flappy LSTM preset', () => {
+      it('captures the seed as a strict genome before worker bootstrap', () => {
+        // Arrange
+        const flappyLstmNetwork = buildExampleArchitectureProfileNetwork(
+          'flappy-bird',
+          'lstm',
+        );
+
+        // Act
+        const captureStrictGenome = (): void => {
+          createGenomeFromNetwork(flappyLstmNetwork);
+        };
+
+        // Assert
+        expect(captureStrictGenome).not.toThrow();
+      });
+    });
   });
 });

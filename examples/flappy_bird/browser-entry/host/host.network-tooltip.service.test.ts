@@ -57,6 +57,52 @@ describe('resolveHoveredNetworkVisualizationTooltipScene', () => {
     });
   });
 
+  it('reuses the recurrent-column tooltip copy when the pointer is over a hidden node inside that column', () => {
+    const positionedScene = createHiddenColumnPositionedScene();
+    const hoveredTooltipScene = resolveHoveredNetworkVisualizationTooltipScene(
+      {
+        xPx: positionedScene.positionedNodes[0]!.xPx,
+        yPx: positionedScene.positionedNodes[0]!.yPx,
+      },
+      positionedScene,
+    );
+
+    expect({
+      bodyParagraphCount: hoveredTooltipScene?.bodyParagraphs.length,
+      heading: hoveredTooltipScene?.heading,
+      kind: hoveredTooltipScene?.kind,
+    }).toEqual({
+      bodyParagraphCount: 2,
+      heading: 'LSTM Input Gate',
+      kind: 'column',
+    });
+  });
+
+  it('resolves the recurrent-column tooltip directly from the guide chip hit box', () => {
+    const positionedScene = createHiddenColumnPositionedScene();
+    const hiddenColumnLabelScene = positionedScene.hiddenColumnLabelScenes?.[0];
+    if (!hiddenColumnLabelScene) {
+      throw new Error('Expected a hidden-column label scene for the recurrent tooltip test.');
+    }
+    const hoveredTooltipScene = resolveHoveredNetworkVisualizationTooltipScene(
+      {
+        xPx: hiddenColumnLabelScene.leftPx + 1,
+        yPx: hiddenColumnLabelScene.topPx + 1,
+      },
+      positionedScene,
+    );
+
+    expect({
+      anchorWidthPx: hoveredTooltipScene?.anchorWidthPx,
+      heading: hoveredTooltipScene?.heading,
+      kind: hoveredTooltipScene?.kind,
+    }).toEqual({
+      anchorWidthPx: hiddenColumnLabelScene.widthPx,
+      heading: 'LSTM Input Gate',
+      kind: 'column',
+    });
+  });
+
   it('returns no tooltip when the pointer is outside the input overlay surfaces', () => {
     expect(
       resolveHoveredNetworkVisualizationTooltipScene(
@@ -106,5 +152,41 @@ function createPositionedScene(): NetworkVisualizationPositionedScene {
     nodeDimensions: TEST_NODE_DIMENSIONS,
     inputDescriptionScenes,
     inputGroupLabelBandScenes,
+    hiddenColumnLabelScenes: [],
+  };
+}
+
+function createHiddenColumnPositionedScene(): NetworkVisualizationPositionedScene {
+  return {
+    positionedNodes: [
+      {
+        node: {
+          index: 41,
+          type: 'hidden',
+          bias: 0,
+        },
+        xPx: 160,
+        yPx: 84,
+      },
+    ],
+    nodeDimensions: TEST_NODE_DIMENSIONS,
+    inputDescriptionScenes: [],
+    inputGroupLabelBandScenes: [],
+    hiddenColumnLabelScenes: [
+      {
+        labelLines: ['INPUT', 'GATE'],
+        tooltipHeading: 'LSTM Input Gate',
+        tooltipBodyParagraphs: [
+          'The input gate decides how much new evidence is allowed to write into the cell state on this step.',
+          'Open it wider and the block learns quickly from the present input; close it and the cell protects older memory.',
+        ],
+        leftPx: 140,
+        topPx: 48,
+        widthPx: 40,
+        heightPx: 18,
+        backgroundColor: '#7fe8ff',
+        nodeIndices: [41],
+      },
+    ],
   };
 }

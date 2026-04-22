@@ -123,8 +123,7 @@ export interface TopologyIntentGenome {
  * selection and mutation helpers only need the topology contract itself, not
  * the full node/connection shape required for feed-forward promotion checks.
  */
-export interface TopologyIntentRuntimeGenome
-  extends FeedForwardTopologyContractCarrier {}
+export type TopologyIntentRuntimeGenome = FeedForwardTopologyContractCarrier;
 
 /**
  * Determine whether the configured mutation policy communicates feed-forward intent.

@@ -198,27 +198,6 @@ Parameters:
 
 Returns: Nothing.
 
-### resolveRuntimePopulationBudget
-
-```ts
-resolveRuntimePopulationBudget(
-  architectureProfileId: ExampleArchitectureProfileId,
-): Pick<RuntimeStartConfig, "populationSize" | "elitismCount">
-```
-
-Resolves the browser evolution budget for one architecture profile.
-
-Sparse and NARX keep wider browser budgets than the dense MLP baseline so
-the interactive demo still has room to discover pipe-clearing behavior in a
-small number of generations. GRU and LSTM now stay materially smaller than
-NARX because their gated recurrent blocks still cause visible main-thread
-stutter at broader browser flock sizes.
-
-Parameters:
-- `architectureProfileId` - Selected shared Flappy profile id.
-
-Returns: Browser-local population and elitism settings.
-
 ## browser-entry/runtime/runtime.startup-preview.service.ts
 
 ### finalizeRuntimeLegendPreview
@@ -813,6 +792,37 @@ Error raised when the browser runtime host container cannot be resolved.
 
 This usually means the caller passed the wrong element id or attempted to
 start the demo before the target container existed in the DOM.
+
+## browser-entry/runtime/runtime.population-budget.ts
+
+### resolveRuntimePopulationBudget
+
+```ts
+resolveRuntimePopulationBudget(
+  architectureProfileId: ExampleArchitectureProfileId,
+): RuntimePopulationBudget
+```
+
+Resolves the browser evolution budget for one architecture profile.
+
+Sparse and NARX keep wider browser budgets than the dense MLP baseline so
+the interactive demo still has room to discover pipe-clearing behavior in a
+small number of generations. GRU and LSTM stay smaller than NARX so the live
+demo remains responsive, but LSTM keeps a broader flock than the old default
+because the heavier gate stack needs more exploration headroom.
+
+Parameters:
+- `architectureProfileId` - Selected shared Flappy profile id.
+
+Returns: Browser-local population and elitism settings.
+
+### RuntimePopulationBudget
+
+Browser-local population budget for one architecture profile.
+
+The browser demo intentionally gives different profiles different flock sizes
+because recurrent builders need more room than the lightweight MLP baseline,
+while still staying responsive enough for an interactive page.
 
 ## browser-entry/runtime/runtime.architecture-profile.service.ts
 

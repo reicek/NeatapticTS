@@ -4,6 +4,4 @@
 export const FLAPPY_INPUT_GROUP_LABELS: readonly string[] = [
   'BIRD STATE',
   'NEXT GAP',
-  'LOOKAHEAD',
-  'CONTROL',
 ] as const;

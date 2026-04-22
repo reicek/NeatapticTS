@@ -28,9 +28,6 @@ export const FLAPPY_FITNESS_CENTERING_PROGRESS_WEIGHT = 320;
 /** Per-frame reward weight for keeping the bird inside next-gap clearance. */
 export const FLAPPY_FITNESS_CLEARANCE_WEIGHT_PER_FRAME = 0.35;
 
-/** Per-frame reward weight for pre-aligning with the second upcoming gap. */
-export const FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME = 0.2;
-
 /** Per-frame reward weight for maintaining controllable vertical velocity. */
 export const FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME = 0.2;
 

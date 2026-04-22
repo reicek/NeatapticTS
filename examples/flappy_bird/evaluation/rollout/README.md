@@ -124,8 +124,8 @@ createRolloutEpisodeRuntimeState(
 Creates mutable runtime state for one rollout episode.
 
 The runtime state carries the seeded RNG, the mutable environment, the
-temporal observation memory, and the shaping counters accumulated during the
-episode.
+shared observation-memory compatibility state, and the shaping counters
+accumulated during the episode.
 
 Parameters:
 - `rolloutEpisodeContext` - Normalized rollout configuration.
@@ -184,8 +184,10 @@ resolveRolloutFrameFlapDecision(
 
 Resolves the flap decision for one control substep and commits memory state.
 
-The temporal memory is updated immediately after the decision so subsequent
-substeps can see short-term action history without needing recurrent state.
+The shared memory surface is updated at the same post-decision boundary used
+by browser playback and worker simulation. The current controller input still
+reads only the current normalized frame, but keeping the bookkeeping point
+stable avoids runtime drift if an opt-in external-history experiment returns.
 
 Parameters:
 - `network` - Genome/network to evaluate.
@@ -453,8 +455,9 @@ Every field here is ready for direct use inside the episode loop.
 
 Mutable runtime state accumulated while one rollout episode executes.
 
-This is the mutable side of the rollout: world state, RNG, temporal memory,
-and the counters accumulated during execution.
+This is the mutable side of the rollout: world state, RNG, shared
+observation-memory compatibility state, and the counters accumulated during
+execution.
 
 ### RolloutFitnessBreakdown
 

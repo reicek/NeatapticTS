@@ -135,10 +135,6 @@ function appendActivationStep(
   activationSteps: number[][],
   activationStep: number[],
 ): void {
-  if (activationStep.length === ZERO_COUNT) {
-    return;
-  }
-
   activationSteps.push(activationStep);
 }
 

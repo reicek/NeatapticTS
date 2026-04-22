@@ -19,9 +19,11 @@ describe('normalization layer factory chapter', () => {
     describe('given the base activator returns a centered spread of values', () => {
       it('marks the layer and normalizes the resulting activations', () => {
         // Arrange
-        const baseActivate = jest.fn(
-          (_values?: number[], _training: boolean = false) => [2, 4],
-        );
+        const baseActivate = jest.fn((values?: number[], training = false) => {
+          void values;
+          void training;
+          return [2, 4];
+        });
         const layer = buildBatchNormLayer(
           createFactoryContext(baseActivate),
           2,

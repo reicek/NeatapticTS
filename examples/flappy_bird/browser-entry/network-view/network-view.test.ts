@@ -1,3 +1,4 @@
+import Architect from '../../../../src/architecture/architect/architect';
 import Network from '../../../../src/architecture/network';
 import Node from '../../../../src/architecture/node';
 import {
@@ -16,6 +17,7 @@ import {
   resolveInputGroupLabelBands,
   resolveInputNodeDescriptionLabels,
 } from './network-view.labels.utils';
+import { resolveNetworkVisualizationTopologyPlan } from './network-view.topology.utils';
 
 describe('resolveNetworkArchitectureLabel', () => {
   it('prefers explicit runtime IO role sizes over caller-provided fallback hints', () => {
@@ -68,6 +70,194 @@ describe('resolveNetworkArchitectureLabel', () => {
 
     expect(architectureLabel).toContain('warning: acyclic via cycle fallback');
   });
+
+  it('formats LSTM builders with explicit block sizes instead of an inferred hidden mass', () => {
+    const network = Architect.lstm(8, 3, 2, { inputToOutput: false });
+    const architectureLabel = resolveNetworkArchitectureLabel(network, 8, 2);
+
+    expect(architectureLabel).toMatch(/^8 \| LSTM\[3\] \| 2\n\(\d+ nodes, \d+ connections\)$/);
+  });
+
+  it('formats NARX builders with explicit delay-shelf sizes and dense hidden carry-through', () => {
+    const network = Architect.narx(1, [3], 1, 2, 1);
+    const architectureLabel = resolveNetworkArchitectureLabel(network, 1, 1);
+
+    expect(architectureLabel).toMatch(/^1 \| NARX\[i2,o1,\+3\] \| 1\n\(\d+ nodes, \d+ connections\)$/);
+  });
+});
+
+describe('resolveNetworkVisualizationTopologyPlan', () => {
+  it('splits one LSTM block into separate semantic hidden columns', () => {
+    const network = Architect.lstm(8, 2, 2, { inputToOutput: false });
+    const topologyPlan = resolveNetworkVisualizationTopologyPlan(network, 8, 2);
+
+    expect({
+      hiddenColumnLabels: topologyPlan.hiddenColumnAnnotations.map(
+        (hiddenColumnAnnotation) => hiddenColumnAnnotation.label,
+      ),
+      layerSizes: topologyPlan.networkLayers.map((networkLayer) => networkLayer.length),
+    }).toStrictEqual({
+      hiddenColumnLabels: [
+        'INPUT GATE',
+        'FORGET GATE',
+        'MEMORY CELL',
+        'OUTPUT GATE',
+        'OUTPUT BLOCK',
+      ],
+      layerSizes: [8, 2, 2, 2, 2, 2, 2],
+    });
+  });
+
+  it('keeps layered fallback columns when only part of the hidden graph is cyclic', () => {
+    const network = new Network(1, 1, {
+      seed: 815,
+      enforceAcyclic: false,
+    });
+    const inputNode = network.nodes[0];
+    const outputNode = network.nodes[1];
+    const setupHiddenNode = new Node('hidden');
+    const recurrentBridgeNode = new Node('hidden');
+    const recurrentMemoryNode = new Node('hidden');
+
+    network.nodes.push(
+      setupHiddenNode,
+      recurrentBridgeNode,
+      recurrentMemoryNode,
+    );
+    network.connections.slice().forEach((connection) => {
+      network.disconnect(connection.from, connection.to);
+    });
+    inputNode.connect(setupHiddenNode);
+    setupHiddenNode.connect(recurrentBridgeNode);
+    recurrentBridgeNode.connect(recurrentMemoryNode);
+    recurrentMemoryNode.connect(recurrentBridgeNode);
+    recurrentMemoryNode.connect(outputNode);
+    Network.rebuildConnections(network);
+
+    const topologyPlan = resolveNetworkVisualizationTopologyPlan(network, 1, 1);
+
+    expect({
+      hiddenColumnLabels: topologyPlan.hiddenColumnAnnotations.map(
+        (hiddenColumnAnnotation) => hiddenColumnAnnotation.label,
+      ),
+      layerSizes: topologyPlan.networkLayers.map((networkLayer) => networkLayer.length),
+    }).toStrictEqual({
+      hiddenColumnLabels: [],
+      layerSizes: [1, 1, 2, 1],
+    });
+  });
+
+  it('attaches educational LSTM tooltip copy to each recurrent role column', () => {
+    const network = Architect.lstm(8, 2, 2, { inputToOutput: false });
+    const topologyPlan = resolveNetworkVisualizationTopologyPlan(network, 8, 2);
+
+    expect(
+      topologyPlan.hiddenColumnAnnotations.map(
+        ({ label, tooltipBodyParagraphs, tooltipHeading }) => ({
+          label,
+          tooltipHeading,
+          firstSentence: tooltipBodyParagraphs[0],
+          paragraphCount: tooltipBodyParagraphs.length,
+        }),
+      ),
+    ).toStrictEqual([
+      {
+        label: 'INPUT GATE',
+        tooltipHeading: 'LSTM Input Gate',
+        firstSentence:
+          'The input gate decides how much new evidence is allowed to write into the cell state on this step.',
+        paragraphCount: 2,
+      },
+      {
+        label: 'FORGET GATE',
+        tooltipHeading: 'LSTM Forget Gate',
+        firstSentence:
+          'The forget gate decides how much of the previous cell state survives into the next step.',
+        paragraphCount: 2,
+      },
+      {
+        label: 'MEMORY CELL',
+        tooltipHeading: 'LSTM Memory Cell',
+        firstSentence:
+          'The memory cell is the long-lived state lane that carries accumulated context across time.',
+        paragraphCount: 2,
+      },
+      {
+        label: 'OUTPUT GATE',
+        tooltipHeading: 'LSTM Output Gate',
+        firstSentence:
+          'The output gate decides how much of the cell state is revealed to the rest of the network right now.',
+        paragraphCount: 2,
+      },
+      {
+        label: 'OUTPUT BLOCK',
+        tooltipHeading: 'LSTM Output Block',
+        firstSentence:
+          'This column is the exposed state emitted after the memory cell has passed through the output gate.',
+        paragraphCount: 2,
+      },
+    ]);
+  });
+
+  it('places NARX input and output delay shelves around dense hidden layers', () => {
+    const network = Architect.narx(1, [3], 1, 2, 1);
+    const topologyPlan = resolveNetworkVisualizationTopologyPlan(network, 1, 1);
+
+    expect({
+      hiddenColumnLabels: topologyPlan.hiddenColumnAnnotations.map(
+        (hiddenColumnAnnotation) => hiddenColumnAnnotation.label,
+      ),
+      layerSizes: topologyPlan.networkLayers.map((networkLayer) => networkLayer.length),
+    }).toStrictEqual({
+      hiddenColumnLabels: ['IN t-1', 'IN t-2', 'HIDDEN 1', 'OUT t-1'],
+      layerSizes: [1, 1, 1, 3, 1, 1],
+    });
+  });
+
+  it('attaches educational NARX tooltip copy to delay shelves and dense hidden columns', () => {
+    const network = Architect.narx(1, [3], 1, 2, 1);
+    const topologyPlan = resolveNetworkVisualizationTopologyPlan(network, 1, 1);
+
+    expect(
+      topologyPlan.hiddenColumnAnnotations.map(
+        ({ label, tooltipBodyParagraphs, tooltipHeading }) => ({
+          label,
+          tooltipHeading,
+          firstSentence: tooltipBodyParagraphs[0],
+          paragraphCount: tooltipBodyParagraphs.length,
+        }),
+      ),
+    ).toStrictEqual([
+      {
+        label: 'IN t-1',
+        tooltipHeading: 'NARX Input Delay t-1',
+        firstSentence:
+          'This shelf stores one older external input, so the network reads recent history explicitly instead of burying it inside a gated cell.',
+        paragraphCount: 2,
+      },
+      {
+        label: 'IN t-2',
+        tooltipHeading: 'NARX Input Delay t-2',
+        firstSentence:
+          'This shelf stores one older external input, so the network reads recent history explicitly instead of burying it inside a gated cell.',
+        paragraphCount: 2,
+      },
+      {
+        label: 'HIDDEN 1',
+        tooltipHeading: 'Dense Hidden Layer 1',
+        firstSentence:
+          'This column is not a delay shelf; it is a standard nonlinear workspace that combines the remembered taps into prediction features.',
+        paragraphCount: 2,
+      },
+      {
+        label: 'OUT t-1',
+        tooltipHeading: 'NARX Output Delay t-1',
+        firstSentence:
+          'This shelf stores one older model output, giving the network an explicit autoregressive trace of its own recent behavior.',
+        paragraphCount: 2,
+      },
+    ]);
+  });
 });
 
 describe('resolveInputGroupLabelBands', () => {
@@ -110,24 +300,6 @@ describe('resolveInputGroupLabelBands', () => {
         startNodeIndex: 2,
         tooltipBodyParagraphCount: 3,
         tooltipHeading: 'Next Gap',
-      },
-      {
-        endNodeIndex: 7,
-        label: 'LOOKAHEAD',
-        labelLines: ['LOOK', 'AHEAD'],
-        orientation: 'vertical',
-        startNodeIndex: 6,
-        tooltipBodyParagraphCount: 3,
-        tooltipHeading: 'Lookahead',
-      },
-      {
-        endNodeIndex: FLAPPY_NETWORK_INPUT_SIZE - 1,
-        label: 'CONTROL',
-        labelLines: ['CONT', 'ROL'],
-        orientation: 'vertical',
-        startNodeIndex: 8,
-        tooltipBodyParagraphCount: 3,
-        tooltipHeading: 'Control Pressure',
       },
     ]);
   });
@@ -180,42 +352,6 @@ describe('resolveInputNodeDescriptionLabels', () => {
         nodeIndex: 5,
         tooltipBodyParagraphCount: 2,
         tooltipHeading: 'Next Gap Bottom',
-      },
-      {
-        labelLines: ['Lookahead distance'],
-        nodeIndex: 6,
-        tooltipBodyParagraphCount: 2,
-        tooltipHeading: 'Lookahead Distance',
-      },
-      {
-        labelLines: ['Lookahead offset'],
-        nodeIndex: 7,
-        tooltipBodyParagraphCount: 2,
-        tooltipHeading: 'Lookahead Offset',
-      },
-      {
-        labelLines: ['Time pressure'],
-        nodeIndex: 8,
-        tooltipBodyParagraphCount: 2,
-        tooltipHeading: 'Time Pressure',
-      },
-      {
-        labelLines: ['Gap clearance'],
-        nodeIndex: 9,
-        tooltipBodyParagraphCount: 2,
-        tooltipHeading: 'Gap Clearance',
-      },
-      {
-        labelLines: ['Needed climb'],
-        nodeIndex: 10,
-        tooltipBodyParagraphCount: 2,
-        tooltipHeading: 'Needed Climb',
-      },
-      {
-        labelLines: ['Gap transition'],
-        nodeIndex: 11,
-        tooltipBodyParagraphCount: 2,
-        tooltipHeading: 'Gap Transition',
       },
     ]);
   });

@@ -7,6 +7,31 @@ import type {
 } from '../types/telemetry.types';
 
 /**
+ * Create a default RNG factory backed by Math.random.
+ *
+ * @returns RNG factory returning Math.random.
+ */
+function createMathRandomFactory(): () => number {
+  // Step 1: Return the default Math.random RNG.
+  return Math.random;
+}
+
+/**
+ * Resolve the RNG factory used by lineage helpers.
+ *
+ * @param providedRngFactory - Optional caller-provided RNG factory.
+ * @returns Caller RNG factory or the Math.random fallback.
+ */
+function resolveLineageRngFactory(
+  providedRngFactory?: () => () => number,
+): () => () => number {
+  // Step 1: Preserve caller-provided RNG factories when available.
+  return typeof providedRngFactory === 'function'
+    ? providedRngFactory
+    : createMathRandomFactory;
+}
+
+/**
  * Compute lineage depth and pairwise depth-distance statistics.
  *
  * @param lineageEnabled - Whether lineage metrics are enabled.
@@ -36,7 +61,6 @@ export function computeLineageStats(
   let lineagePairCount = 0;
   const pairsToSample = Math.min(pairSampleCount, (size * (size - 1)) / 2);
   for (let sampleIndex = 0; sampleIndex < pairsToSample; sampleIndex++) {
-    if (size < 2) break;
     const rng = rngFactoryFn();
     const firstIndex = Math.floor(rng() * size);
     let secondIndex = Math.floor(rng() * size);
@@ -77,16 +101,13 @@ export function applyLineageStatsMultiObjective(
   // Step 2: Compute depth metrics.
   const bestGenome = population[0] as GenomeDetailed;
   const depths = population.map((genome) => genome._depth ?? 0);
-  telemetryContext._lastMeanDepth =
-    depths.reduce((sum, value) => sum + value, 0) / (depths.length || 1);
+  const meanDepth = depths.reduce((sum, value) => sum + value, 0) / depths.length;
+  telemetryContext._lastMeanDepth = meanDepth;
 
   // Step 3: Compute ancestor uniqueness via lineage helper.
   const lineageContext: LineageContext = {
-    population: population || [],
-    _getRNG:
-      typeof telemetryContext._getRNG === 'function'
-        ? telemetryContext._getRNG
-        : () => Math.random,
+    population,
+    _getRNG: resolveLineageRngFactory(telemetryContext._getRNG),
   };
   const ancestorUniqueness = computeAncestorUniqueness.call(lineageContext);
 
@@ -96,7 +117,7 @@ export function applyLineageStatsMultiObjective(
       ? bestGenome._parents.slice()
       : [],
     depthBest: bestGenome._depth ?? 0,
-    meanDepth: +(telemetryContext._lastMeanDepth ?? 0).toFixed(2),
+    meanDepth: +meanDepth.toFixed(2),
     inbreeding: telemetryContext._prevInbreedingCount ?? 0,
     ancestorUniq: ancestorUniqueness,
   };
@@ -203,7 +224,6 @@ export function computeAncestorUniquenessSampled(
   let sampledPairs = 0;
   let jaccardSum = 0;
   for (let sampleIndex = 0; sampleIndex < maxPairsToSample; sampleIndex++) {
-    if (populationSize < 2) break;
     const { firstIndex, secondIndex } = pickDistinctPairIndices(
       context,
       populationSize,
@@ -279,7 +299,7 @@ export function computePairJaccardDistance(
 
   // Step 3: Compute intersection and union counts.
   const intersectionCount = countAncestorIntersection(ancestorsA, ancestorsB);
-  const unionCount = ancestorsA.size + ancestorsB.size - intersectionCount || 1;
+  const unionCount = ancestorsA.size + ancestorsB.size - intersectionCount;
 
   // Step 4: Return the Jaccard distance.
   return 1 - intersectionCount / unionCount;
@@ -299,10 +319,7 @@ export function buildLineageContext(
   // Step 1: Provide population and RNG factory to lineage helpers.
   return {
     population: populationSnapshot,
-    _getRNG:
-      typeof context._getRNG === 'function'
-        ? context._getRNG
-        : () => Math.random,
+    _getRNG: resolveLineageRngFactory(context._getRNG),
   } as LineageContext;
 }
 

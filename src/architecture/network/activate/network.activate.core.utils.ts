@@ -6,7 +6,6 @@ import {
   INITIAL_OUTPUT_WRITE_INDEX,
   INPUT_NODE_TYPE,
   OUTPUT_NODE_TYPE,
-  OUTPUT_WRITE_INDEX_INCREMENT,
   UNDEFINED_INPUT_LENGTH_TEXT,
 } from './network.activate.utils.types';
 import type {
@@ -80,6 +79,7 @@ export function activate(
     this,
     runtimeNetwork,
     training,
+    stats,
   );
 
   updateStochasticDepthFromSchedule(runtimeNetwork, training);
@@ -223,12 +223,14 @@ function createWeightNoiseStats(): WeightNoiseStats {
  * @param network Network being activated.
  * @param runtimeNetwork Runtime activation internals.
  * @param isTraining Training-time flag.
+ * @param stats Activation stats accumulator.
  * @returns Applied-state information for downstream restore logic.
  */
 function applyTrainingWeightNoise(
   network: Network,
   runtimeNetwork: ActivateRuntimeNetworkProps,
   isTraining: boolean,
+  stats: ActivationStats,
 ): WeightNoiseApplyResult {
   if (!isTraining) {
     return { appliedWeightNoise: false };
@@ -264,6 +266,7 @@ function applyTrainingWeightNoise(
         standardDeviation * gaussianRand(runtimeNetwork._rand);
       connection.weight += sampledNoise;
       setLastSampledNoise(connection, sampledNoise);
+      recordWeightNoiseSample(stats, sampledNoise);
       appliedWeightNoise = true;
       continue;
     }
@@ -272,6 +275,24 @@ function applyTrainingWeightNoise(
   }
 
   return { appliedWeightNoise };
+}
+
+/**
+ * Record one sampled weight-noise value in the activation statistics snapshot.
+ *
+ * @param stats Activation stats accumulator.
+ * @param sampledNoise Sampled noise value before restoration.
+ * @returns Nothing.
+ */
+function recordWeightNoiseSample(
+  stats: ActivationStats,
+  sampledNoise: number,
+): void {
+  const absoluteNoise = Math.abs(sampledNoise);
+
+  stats.weightNoise.count++;
+  stats.weightNoise.sumAbs += absoluteNoise;
+  stats.weightNoise.maxAbs = Math.max(stats.weightNoise.maxAbs, absoluteNoise);
 }
 
 /**
@@ -316,10 +337,6 @@ function resolveConnectionNoiseStd(
   }
 
   const hiddenLayerIndex = sourceLayerIndex - 1;
-
-  if (hiddenLayerIndex < 0) {
-    return fallbackStandardDeviation;
-  }
 
   if (hiddenLayerIndex >= runtimeNetwork._weightNoisePerHidden.length) {
     return fallbackStandardDeviation;
@@ -881,7 +898,7 @@ function activateNodeNetworkFallback(
     stats,
   );
 
-  applyFallbackWeightNoise(network, runtimeNetwork, isTraining);
+  applyFallbackWeightNoise(network, runtimeNetwork, isTraining, stats);
   activateNodesAndCollectOutputs(
     activationNodes,
     inputValuesByNodeId,
@@ -962,12 +979,14 @@ function applyFallbackHiddenDropout(
  * @param network Network being activated.
  * @param runtimeNetwork Runtime activation internals.
  * @param isTraining Training-time flag.
+ * @param stats Activation stats accumulator.
  * @returns Nothing.
  */
 function applyFallbackWeightNoise(
   network: Network,
   runtimeNetwork: ActivateRuntimeNetworkProps,
   isTraining: boolean,
+  stats: ActivationStats,
 ): void {
   if (!isTraining || runtimeNetwork._weightNoiseStd <= 0) {
     return;
@@ -993,6 +1012,7 @@ function applyFallbackWeightNoise(
     const sampledNoise =
       runtimeNetwork._weightNoiseStd * gaussianRand(runtimeNetwork._rand);
     connection.weight += sampledNoise;
+    recordWeightNoiseSample(stats, sampledNoise);
   }
 }
 

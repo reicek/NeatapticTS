@@ -57,6 +57,61 @@ export interface NetworkArchitectureDescriptor {
   totalConnections: number;
 }
 
+/** Supported explicit recurrent-module descriptor kinds. */
+export type NetworkTemporalRecurrentModuleKind =
+  | 'lstm'
+  | 'gru'
+  | 'narx-memory';
+
+/**
+ * Public snapshot of one validated recurrent module on a runtime network.
+ *
+ * The role map keeps architecture-aware tooling honest: a visualizer can label
+ * LSTM gates or NARX delay shelves directly instead of reverse-engineering the
+ * meaning of each hidden node from raw graph topology alone.
+ */
+export interface NetworkTemporalRecurrentModuleDescriptor {
+  /** Stable module identity preserved across runtime synchronization. */
+  moduleId: string;
+  /** Public recurrent-module family. */
+  kind: NetworkTemporalRecurrentModuleKind;
+  /** Ordered node gene ids grouped by semantic role within the module. */
+  nodeGeneIdsByRole: Record<string, number[]>;
+  /** Connection innovations that still define the live module boundary. */
+  connectionInnovations: number[];
+  /** Optional user-facing sub-label, currently used by NARX delay shelves. */
+  moduleLabel?: string;
+}
+
+/**
+ * Public snapshot of one validated gated block on a runtime network.
+ *
+ * This keeps recurrent-aware tooling free to highlight which gates own which
+ * structural edges without exposing the raw private extension bag directly.
+ */
+export interface NetworkTemporalGatedBlockDescriptor {
+  /** Stable block identity preserved across runtime synchronization. */
+  blockId: string;
+  /** Ordered gate-owner gene ids attached to the block. */
+  gaterGeneIds: number[];
+  /** Connection innovations gated by this block. */
+  connectionInnovations: number[];
+}
+
+/**
+ * Public temporal-structure descriptor for one runtime network.
+ *
+ * Consumers should treat this as a read-only teaching and diagnostics surface.
+ * It summarizes validated recurrent modules and gated blocks after stale
+ * extension records have been synchronized against the live graph.
+ */
+export interface NetworkTemporalStructureDescriptor {
+  /** Explicit recurrent modules that still match the runtime graph. */
+  recurrentModules: NetworkTemporalRecurrentModuleDescriptor[];
+  /** Explicit gated blocks that still match the runtime graph. */
+  gatedBlocks: NetworkTemporalGatedBlockDescriptor[];
+}
+
 /**
  * Public topology intent exposed by the network API.
  *
