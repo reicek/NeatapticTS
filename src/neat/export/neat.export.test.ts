@@ -324,6 +324,43 @@ describe('neat export chapter', () => {
           NeatExportStateControllerRestoreError,
         );
       });
+
+      it('rebuilds meta-only checkpoints when serialized options are missing', () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 1, seed: 808 });
+        const exportedMeta = neat.toJSON();
+        const optionsFreeMeta = {
+          ...exportedMeta,
+          options: undefined,
+        } as unknown as NeatMetaJSON;
+
+        // Act
+        const restored = Neat.fromJSON(optionsFreeMeta, scoreByNodeCount);
+
+        // Assert
+        expect({
+          generation: restored.generation,
+          nextInnovationId: restored.toJSON().innovationTracker.nextInnovationId,
+        }).toEqual({
+          generation: exportedMeta.generation,
+          nextInnovationId: exportedMeta.innovationTracker.nextInnovationId,
+        });
+      });
+
+      it('ignores non-object runtime payloads during meta restore', () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 1, seed: 809 });
+        const exportedMeta = neat.toJSON();
+        const metaWithPrimitiveRuntime = {
+          ...exportedMeta,
+          runtime: 7,
+        } as unknown as NeatMetaJSON;
+
+        // Assert
+        expect(() =>
+          Neat.fromJSON(metaWithPrimitiveRuntime, scoreByNodeCount)
+        ).not.toThrow();
+      });
     });
   });
 
@@ -660,6 +697,57 @@ describe('neat export chapter', () => {
         });
       });
 
+      it('seeds the next genome id floor from one when the destination cursor is missing', async () => {
+        // Arrange
+        const sourceController = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 1,
+          seed: 223,
+        });
+        const sourceGenome = sourceController.population[0] as ExportGenome;
+        sourceGenome._id = 41;
+        const destinationController = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 1,
+          seed: 224,
+        });
+        const destinationState =
+          destinationController as unknown as ExportControllerState;
+        destinationState._nextGenomeId = undefined;
+        const exportedPopulation = sourceController.export();
+
+        // Act
+        await destinationController.import(exportedPopulation);
+
+        // Assert
+        expect(destinationState._nextGenomeId).toBe(42);
+      });
+
+      it('imports snapshots even when dropout metadata is not numeric', async () => {
+        // Arrange
+        const sourceController = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 1,
+          seed: 225,
+        });
+        const destinationController = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 1,
+          seed: 226,
+        });
+        const exportedPopulation = sourceController.export() as unknown as Array<
+          NetworkJSON & { controllerMeta?: Record<string, unknown> }
+        >;
+        exportedPopulation[0].dropout = 'invalid' as unknown as number;
+
+        // Act
+        await destinationController.import(
+          exportedPopulation as unknown as NeatStateJSON['population'],
+        );
+
+        // Assert
+        expect({
+          populationSize: destinationController.population.length,
+          isValid: validateNativeGenome(destinationController.population[0]).isValid,
+        }).toEqual({ populationSize: 1, isValid: true });
+      });
+
       it('rejects imported genomes that no longer carry explicit connection innovations', async () => {
         // Arrange
         const sourceController = new Neat(2, 1, scoreByNodeCount, {
@@ -724,6 +812,36 @@ describe('neat export chapter', () => {
         }).toEqual({ populationSize: 0, popsize: 0 });
       });
     });
+
+    describe('given the import payload is not an array', () => {
+      it('rejects the population snapshot', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 2, seed: 221 });
+        const invalidImport = neat.import(
+          undefined as unknown as NeatStateJSON['population'],
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          'Population snapshots must be arrays of serialized genomes.',
+        );
+      });
+    });
+
+    describe('given the import payload contains a non-object entry', () => {
+      it('rejects the malformed snapshot entry', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 2, seed: 222 });
+        const invalidImport = neat.import([
+          undefined as unknown as NetworkJSON,
+        ] as unknown as NeatStateJSON['population']);
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          'Population snapshot entry 0 must be a serialized genome object.',
+        );
+      });
+    });
   });
 
   describe('full-state restore', () => {
@@ -779,6 +897,59 @@ describe('neat export chapter', () => {
         await expect(invalidImport).rejects.toThrow(
           NeatExportStateBundleValidationError,
         );
+      });
+
+      it('throws when a full checkpoint advertises an unsupported state format version', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 2, seed: 38 });
+        const invalidState = {
+          ...neat.exportState(),
+          formatVersion: 99,
+        } as unknown as NeatStateJSON;
+
+        // Act
+        const invalidImport = Neat.importState(invalidState, scoreByNodeCount);
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          'Unsupported NEAT checkpoint format version: 99.',
+        );
+      });
+
+      it('throws when a full checkpoint omits serialized neat meta state', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 2, seed: 39 });
+        const invalidState = {
+          ...neat.exportState(),
+          neat: undefined,
+        } as unknown as NeatStateJSON;
+
+        // Act
+        const invalidImport = Neat.importState(invalidState, scoreByNodeCount);
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          'Full checkpoint bundles must include serialized NEAT meta state.',
+        );
+      });
+
+      it('restores legacy full checkpoints even when speciation resume state is absent', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 2, seed: 40 });
+        const legacyState = {
+          ...neat.exportState(),
+          formatVersion: 0,
+          speciation: undefined,
+        } as unknown as NeatStateJSON;
+
+        // Act
+        const restored = await Neat.importState(legacyState, scoreByNodeCount);
+
+        // Assert
+        expect({
+          generation: restored.generation,
+          populationSize: restored.population.length,
+        }).toEqual({ generation: legacyState.neat.generation, populationSize: 2 });
       });
 
       it('throws when a versioned full checkpoint omits speciation resume state', async () => {

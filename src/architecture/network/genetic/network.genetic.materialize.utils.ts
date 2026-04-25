@@ -345,15 +345,12 @@ function createMaterializedNodeCandidate(
       node: existingNode,
       geneId,
       typeRank: resolveNodeTypeRank(existingNode),
-      preferredOrder: currentNodeOrderByGeneId.get(geneId) ?? 0,
+      preferredOrder: currentNodeOrderByGeneId.get(geneId)!,
       sourcePriority: 0,
     };
   }
 
-  const sourceNode = sourceNodesByGeneId.get(geneId);
-  if (!sourceNode) {
-    return undefined;
-  }
+  const sourceNode = sourceNodesByGeneId.get(geneId)!;
 
   const clonedSourceNode = cloneSourceNodeGene(sourceNode.node);
   return {
@@ -422,23 +419,12 @@ function compareMaterializedNodeCandidates(
 ): number {
   const typeRankDelta =
     leftNodeCandidate.typeRank - rightNodeCandidate.typeRank;
-  if (typeRankDelta !== 0) {
-    return typeRankDelta;
-  }
-
   const preferredOrderDelta =
     leftNodeCandidate.preferredOrder - rightNodeCandidate.preferredOrder;
-  if (preferredOrderDelta !== 0) {
-    return preferredOrderDelta;
-  }
-
   const sourcePriorityDelta =
     leftNodeCandidate.sourcePriority - rightNodeCandidate.sourcePriority;
-  if (sourcePriorityDelta !== 0) {
-    return sourcePriorityDelta;
-  }
 
-  return leftNodeCandidate.geneId - rightNodeCandidate.geneId;
+  return typeRankDelta || preferredOrderDelta || sourcePriorityDelta;
 }
 
 /**
@@ -504,9 +490,7 @@ function createOffspringNodeLookupByGeneId(nodes: Node[]): Map<number, Node> {
 
   for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
     const node = nodes[nodeIndex];
-    if (typeof node.geneId === 'number') {
-      nodesByGeneId.set(node.geneId, node);
-    }
+    nodesByGeneId.set(node.geneId!, node);
   }
 
   return nodesByGeneId;
@@ -634,7 +618,7 @@ function resolveNodeByGeneId(
   return resolveInterfaceNodeByOrdinal(
     context,
     sourceNode.type,
-    context.sourceNodeInterfaceOrdinalsByGeneId.get(geneId),
+    context.sourceNodeInterfaceOrdinalsByGeneId.get(geneId)!,
   );
 }
 
@@ -649,12 +633,8 @@ function resolveNodeByGeneId(
 function resolveInterfaceNodeByOrdinal(
   context: OffspringMaterializationContext,
   nodeType: string,
-  interfaceOrdinal: number | undefined,
+  interfaceOrdinal: number,
 ): Node | undefined {
-  if (typeof interfaceOrdinal !== 'number') {
-    return undefined;
-  }
-
   return context.offspring.nodes.filter((node) => node.type === nodeType).at(
     interfaceOrdinal,
   );
@@ -709,15 +689,8 @@ function isEndpointsContextAllowedByTopologyPolicy(
     return true;
   }
 
-  const sourceNodeIndex = endpointsContext.fromNode.index;
-  const targetNodeIndex = endpointsContext.toNode.index;
-  if (
-    typeof sourceNodeIndex !== 'number' ||
-    typeof targetNodeIndex !== 'number'
-  ) {
-    return false;
-  }
-
+  const sourceNodeIndex = endpointsContext.fromNode.index!;
+  const targetNodeIndex = endpointsContext.toNode.index!;
   return sourceNodeIndex < targetNodeIndex;
 }
 

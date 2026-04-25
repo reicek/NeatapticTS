@@ -3434,6 +3434,16 @@ getLossScale(): number
 
 Returns current mixed precision loss scale (1 if disabled).
 
+#### getRandomFn
+
+```ts
+getRandomFn(): (() => number) | undefined
+```
+
+Read the active deterministic RNG function.
+
+Returns: RNG function when deterministic state is initialized.
+
 #### getRawGradientNorm
 
 ```ts

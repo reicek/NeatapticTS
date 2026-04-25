@@ -1082,7 +1082,7 @@ Returns: Endpoint context or undefined.
 resolveInterfaceNodeByOrdinal(
   context: OffspringMaterializationContext,
   nodeType: string,
-  interfaceOrdinal: number | undefined,
+  interfaceOrdinal: number,
 ): default | undefined
 ```
 

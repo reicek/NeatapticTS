@@ -64,6 +64,20 @@ describe('lineage core chapter', () => {
         expect(Array.from(ancestorIds)).toEqual([5, 4, 3, 2]);
       });
     });
+
+    describe('given a queued ancestor cannot be resolved from the population', () => {
+      it('keeps traversal stable and includes the unresolved ancestor id', () => {
+        // Arrange
+        const population = [createGenome(2, [99])];
+        const queueEntries = createInitialQueue([2], population);
+
+        // Act
+        const ancestorIds = collectAncestorIds(queueEntries, population);
+
+        // Assert
+        expect(Array.from(ancestorIds)).toEqual([2, 99]);
+      });
+    });
   });
 
   describe('population guards', () => {
@@ -102,6 +116,27 @@ describe('lineage core chapter', () => {
         ]);
       });
     });
+
+    describe('given the RNG returns different values for each sampled index', () => {
+      it('keeps the generated pair unchanged when the indices are already distinct', () => {
+        // Arrange
+        const randomValues = [0.1, 0.8];
+        const rngFactory = () => {
+          let readIndex = 0;
+          return () => {
+            const nextValue = randomValues[Math.min(readIndex, randomValues.length - 1)];
+            readIndex += 1;
+            return nextValue;
+          };
+        };
+
+        // Act
+        const pairs = sampleGenomePairs(1, 3, rngFactory);
+
+        // Assert
+        expect(pairs).toEqual([{ firstIndex: 0, secondIndex: 2 }]);
+      });
+    });
   });
 
   describe('computePairDistances', () => {
@@ -128,6 +163,28 @@ describe('lineage core chapter', () => {
 
         // Assert
         expect(distances).toEqual([1]);
+      });
+    });
+
+    describe('given the first ancestor set is larger and only partially overlaps', () => {
+      it('returns the expected jaccard distance from the overlap count', () => {
+        // Arrange
+        const population = [createGenome(1), createGenome(2)];
+        const pairs: GenomeIndexPair[] = [{ firstIndex: 0, secondIndex: 1 }];
+        const ancestorSets = new Map<number, Set<number>>([
+          [1, new Set([1, 2, 3])],
+          [2, new Set([2, 4])],
+        ]);
+
+        // Act
+        const distances = computePairDistances(
+          pairs,
+          population,
+          (genome) => ancestorSets.get(genome._id) ?? new Set(),
+        );
+
+        // Assert
+        expect(distances).toEqual([0.75]);
       });
     });
   });

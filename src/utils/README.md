@@ -302,7 +302,6 @@ flowchart LR
 accumulateCapacitySlices(
   accumulators: Accumulators,
   network: NetworkView,
-  heuristics: HeuristicBytes,
 ): void
 ```
 
@@ -311,7 +310,6 @@ Track reserved vs used bytes based on connection capacity slices.
 Parameters:
 - `accumulators` - Running totals for the memory snapshot.
 - `network` - Network exposing capacity metadata.
-- `heuristics` - Fallback byte weights for connection objects.
 
 ### accumulateSlabArrays
 
@@ -540,7 +538,6 @@ Returns: Zeroed accumulators ready for aggregation.
 ```ts
 describeConnectionBytes(
   network: NetworkView,
-  heuristics: HeuristicBytes,
 ): number
 ```
 
@@ -548,7 +545,6 @@ Determine bytes per connection using typed-array width or heuristic fallback.
 
 Parameters:
 - `network` - Network whose storage format drives the byte width.
-- `heuristics` - Heuristic sizes for non-typed-array cases.
 
 Returns: Estimated bytes per connection entry.
 

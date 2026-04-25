@@ -1,5 +1,9 @@
 import Network from '../network';
 import Node from '../../node';
+import {
+  activateBatch as activateBatchUtils,
+  activateRaw as activateRawUtils,
+} from './network.activate.utils';
 
 type FastSlabActivate = (input: number[]) => number[];
 type CanUseFastSlab = () => boolean;
@@ -556,6 +560,38 @@ describe('network activate chapter', () => {
           expect(activateWithInvalidCollection).toThrow(
             /inputs must be an array/,
           );
+        });
+      });
+    });
+  });
+
+  describe('activation utility defaults', () => {
+    describe('given raw activation omits its optional flags', () => {
+      describe('when the helper is called directly', () => {
+        it('uses the default training and recursion-depth values', () => {
+          // Arrange
+          const network = Network.createMLP(2, [2], 1);
+
+          // Act
+          const outputValues = activateRawUtils.call(network, [0.1, 0.9]);
+
+          // Assert
+          expect(outputValues.length).toBe(1);
+        });
+      });
+    });
+
+    describe('given batch activation omits its optional training flag', () => {
+      describe('when the helper is called directly', () => {
+        it('uses the default non-training batch path', () => {
+          // Arrange
+          const network = Network.createMLP(2, [2], 1);
+
+          // Act
+          const batchOutput = activateBatchUtils.call(network, [[0.1, 0.9]]);
+
+          // Assert
+          expect(batchOutput.length).toBe(1);
         });
       });
     });

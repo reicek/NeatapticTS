@@ -518,6 +518,16 @@ getLossScale(): number
 
 Returns current mixed precision loss scale (1 if disabled).
 
+#### getRandomFn
+
+```ts
+getRandomFn(): (() => number) | undefined
+```
+
+Read the active deterministic RNG function.
+
+Returns: RNG function when deterministic state is initialized.
+
 #### getRawGradientNorm
 
 ```ts
@@ -1618,6 +1628,30 @@ getCurrentSparsity(): number
 Current sparsity fraction relative to the training-time pruning baseline.
 
 Returns: Current sparsity in the [0,1] range when baseline is available.
+
+### getRandomFn
+
+```ts
+getRandomFn(): (() => number) | undefined
+```
+
+Returns the active deterministic RNG function currently attached to the network.
+
+Overview:
+- Use this when tooling or diagnostics need direct RNG access.
+- Returning the function allows advanced integration code to inspect or reuse the random stream.
+- For most persistence workflows, prefer `snapshotRNG` and `getRNGState` over direct function plumbing.
+
+Parameters:
+- `this` - Bound network instance queried for active RNG function.
+
+Returns: Active RNG function, or `undefined` when deterministic RNG is not initialized.
+
+Example:
+
+```ts
+const randomFn = network.getRandomFn();
+```
 
 ### getRegularizationStats
 

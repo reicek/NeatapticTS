@@ -3,8 +3,10 @@ import { assertValidNativeGenome } from '../../../neat/validate/neat.validate';
 import { NeatNativeGenomeValidationError } from '../../../neat/validate/neat.validate.errors';
 import { materializeOffspringConnections } from './network.genetic.materialize.utils';
 import {
+  assignOffspringNodes,
   chooseOffspringConnectionGenes,
   createCrossoverContext,
+  createNodeBuildContext,
 } from './network.genetic.setup.utils';
 import type { ConnectionGene, GeneticNetwork } from '../network.types';
 import type { NetworkJSON } from '../network.types';
@@ -926,6 +928,80 @@ describe('network genetic chapter', () => {
           connectionCount: 0,
           selfConnectionCount: 0,
         });
+      });
+
+      it('falls back to the available parent output gene when the first parent output partition is short', () => {
+        // Arrange
+        const firstParent = new Network(2, 2, { seed: 418 });
+        const secondParent = firstParent.clone();
+        const firstParentOutputNodes = firstParent.nodes.filter(
+          (node) => node.type === 'output',
+        );
+        const secondParentOutputNodes = secondParent.nodes.filter(
+          (node) => node.type === 'output',
+        );
+        const firstParentSecondOutputNode = firstParentOutputNodes.at(1);
+        const secondParentSecondOutputNode = secondParentOutputNodes.at(1);
+
+        if (!firstParentSecondOutputNode || !secondParentSecondOutputNode) {
+          throw new Error('Expected both parents to expose two output nodes.');
+        }
+
+        firstParentSecondOutputNode.type = 'hidden';
+        firstParent.score = 1;
+        secondParent.score = 1;
+        const crossoverContext = createCrossoverContext(
+          firstParent,
+          secondParent,
+          true,
+          () => 0,
+        );
+        const nodeBuildContext = createNodeBuildContext(crossoverContext);
+
+        // Act
+        assignOffspringNodes(nodeBuildContext);
+        const offspringSecondOutputGeneId = crossoverContext.offspring.nodes
+          .filter((node) => node.type === 'output')
+          .at(1)?.geneId;
+
+        // Assert
+        expect(offspringSecondOutputGeneId).toBe(secondParentSecondOutputNode.geneId);
+      });
+
+      it('skips unresolved hidden slots when parent hidden partitions do not expose every hidden ordinal', () => {
+        // Arrange
+        const firstParent = new Network(2, 1, { seed: 419 });
+        firstParent.mutate(methods.mutation.ADD_NODE);
+        firstParent.mutate(methods.mutation.ADD_NODE);
+        const secondParent = new Network(2, 1, { seed: 420 });
+        const firstParentHiddenNodes = firstParent.nodes.filter(
+          (node) => node.type === 'hidden',
+        );
+        const firstParentExtraHiddenNode = firstParentHiddenNodes.at(1);
+
+        if (!firstParentExtraHiddenNode) {
+          throw new Error('Expected the first parent to expose at least two hidden nodes.');
+        }
+
+        firstParentExtraHiddenNode.type = 'output';
+        firstParent.score = 2;
+        secondParent.score = 1;
+        const crossoverContext = createCrossoverContext(
+          firstParent,
+          secondParent,
+          false,
+          () => 0,
+        );
+        const nodeBuildContext = createNodeBuildContext(crossoverContext);
+
+        // Act
+        assignOffspringNodes(nodeBuildContext);
+        const skippedHiddenSlotCount =
+          nodeBuildContext.offspringNodeCount -
+          crossoverContext.offspring.nodes.length;
+
+        // Assert
+        expect(skippedHiddenSlotCount).toBe(1);
       });
     });
   });

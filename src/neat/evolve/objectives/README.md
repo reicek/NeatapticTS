@@ -129,7 +129,7 @@ Returns: Accessor that reads structural entropy from one genome.
 handleEntropyDropAndReadd(
   internal: NeatControllerForEvolution,
   currentObjectiveKeys: string[],
-  dynamicConfig: { enabled?: boolean | undefined; addComplexityAt?: number | undefined; addEntropyAt?: number | undefined; dropEntropyOnStagnation?: number | undefined; readdEntropyAfter?: number | undefined; } | undefined,
+  dynamicConfig: { enabled?: boolean | undefined; addComplexityAt?: number | undefined; addEntropyAt?: number | undefined; dropEntropyOnStagnation?: number | undefined; readdEntropyAfter?: number | undefined; },
 ): void
 ```
 

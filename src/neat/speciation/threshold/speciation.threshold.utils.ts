@@ -216,7 +216,7 @@ function computePidThreshold<
     errorValue: number,
   ): number {
     // Step 1: Read the current integral accumulator.
-    const previousIntegral = context._compatIntegral ?? DEFAULT_COMPAT_INTEGRAL;
+    const previousIntegral = context._compatIntegral!;
     // Step 2: Accumulate the error into the integral term.
     const nextIntegral = previousIntegral + errorValue;
     // Step 3: Persist the updated accumulator back to context.
@@ -303,8 +303,8 @@ function clampCompatibilityThreshold(
 ): void {
   // Step 1: Clamp when the threshold is present.
   if (typeof options.compatibilityThreshold !== 'number') return;
-  if (options.compatibilityThreshold < minCompatibilityThreshold)
-    options.compatibilityThreshold = minCompatibilityThreshold;
-  if (options.compatibilityThreshold > maxCompatibilityThreshold)
-    options.compatibilityThreshold = maxCompatibilityThreshold;
+  options.compatibilityThreshold = Math.min(
+    maxCompatibilityThreshold,
+    Math.max(minCompatibilityThreshold, options.compatibilityThreshold),
+  );
 }

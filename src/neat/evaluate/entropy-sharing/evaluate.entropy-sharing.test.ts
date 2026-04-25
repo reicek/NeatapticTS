@@ -1,4 +1,7 @@
-import { runEntropySharingTuning } from './evaluate.entropy-sharing';
+import {
+  ensureDiversityStatsContainer,
+  runEntropySharingTuning,
+} from './evaluate.entropy-sharing';
 import type { NeatControllerForEval } from '../shared/evaluate.types';
 
 function createEvaluationController(input: {
@@ -23,6 +26,25 @@ function createEvaluationController(input: {
 }
 
 describe('neat evaluate entropy-sharing chapter', () => {
+  describe('ensureDiversityStatsContainer', () => {
+    describe('given diversity stats storage is missing', () => {
+      it('creates the container lazily', () => {
+        // Arrange
+        const evaluationController = {
+          fitness: async () => 0,
+          options: {},
+          population: [],
+        } as NeatControllerForEval;
+
+        // Act
+        ensureDiversityStatsContainer(evaluationController);
+
+        // Assert
+        expect(evaluationController._diversityStats).toEqual({});
+      });
+    });
+  });
+
   describe('runEntropySharingTuning', () => {
     describe('given the observed entropy variance falls below the low band', () => {
       it('shrinks the sharing sigma for the next pass', () => {
@@ -57,6 +79,25 @@ describe('neat evaluate entropy-sharing chapter', () => {
 
         // Assert
         expect(evaluationController.options.sharingSigma).toBeCloseTo(3.6);
+      });
+    });
+
+    describe('given the observed entropy variance stays within the target band', () => {
+      it('keeps the current sharing sigma unchanged', () => {
+        // Arrange
+        const evaluationController = createEvaluationController({
+          sharingSigma: 3,
+          varEntropy: 0.2,
+        });
+
+        // Act
+        runEntropySharingTuning(
+          evaluationController,
+          evaluationController.options,
+        );
+
+        // Assert
+        expect(evaluationController.options.sharingSigma).toBe(3);
       });
     });
   });

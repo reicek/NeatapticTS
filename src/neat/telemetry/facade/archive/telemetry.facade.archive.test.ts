@@ -1,6 +1,12 @@
 import Network from '../../../../architecture/network';
 import Neat from '../../../../neat';
 import { structuralEntropy } from '../../../diversity/diversity';
+import {
+  exportParetoFrontJSONL,
+  getParetoArchive,
+  getParetoFronts,
+  type TelemetryFacadeArchiveHost,
+} from './telemetry.facade.archive';
 
 type ParetoArchiveJsonLine = {
   gen?: number;
@@ -163,6 +169,34 @@ describe('neat telemetry facade archive chapter', () => {
       it('empties the retained Pareto archive slice', () => {
         // Assert
         expect(clearedArchiveLength).toBe(0);
+      });
+    });
+  });
+
+  describe('archive helper defaults', () => {
+    describe('given a minimal archive host', () => {
+      describe('when the helper defaults are omitted directly', () => {
+        it('uses the default archive and front window sizes', () => {
+          // Arrange
+          const archiveHost = {
+            population: [],
+            options: { multiObjective: { enabled: true } },
+            _paretoArchive: [],
+            _paretoObjectivesArchive: [],
+          } as TelemetryFacadeArchiveHost;
+
+          // Act
+          const defaultFronts = getParetoFronts(archiveHost);
+          const defaultArchive = getParetoArchive(archiveHost);
+          const defaultJsonl = exportParetoFrontJSONL(archiveHost);
+
+          // Assert
+          expect({
+            frontsLength: defaultFronts.length,
+            archiveLength: defaultArchive.length,
+            jsonlLength: defaultJsonl.length,
+          }).toEqual({ frontsLength: 0, archiveLength: 0, jsonlLength: 0 });
+        });
       });
     });
   });

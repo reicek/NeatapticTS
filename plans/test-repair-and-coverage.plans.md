@@ -317,6 +317,11 @@
 - That species-core augmentation tranche added a dedicated owner-local helper test file covering the missing-live-species-registry backfill fallback path.
 - The layer-activation helper boundary, `src/architecture/layer/layer.activation.utils.ts`, now also has 100% statements, branches, functions, and lines in a targeted coverage run.
 - That layer-activation tranche added a dedicated owner-local helper test file covering the size-mismatch error, both training-time dropout mask outcomes, and the implicit node-activation fill path.
+- The species-core shared helper boundary, `src/neat/species/core/shared/species.core.shared.ts`, now also has 100% statements, branches, functions, and lines in a targeted coverage run.
+- That species-core shared tranche added a dedicated owner-local helper test file covering zero-member summary defaults, the native missing-innovation error with nullish cause fields, and the missing fallback-resolver error path with and without endpoint gene ids.
+- The network-genetic materialize helper boundary, `src/architecture/network/genetic/network.genetic.materialize.utils.ts`, now also has 100% statements, branches, functions, and lines in a targeted coverage run.
+- That network-genetic materialize tranche added a dedicated owner-local helper test file covering provisional non-genetic placeholder nodes, missing endpoint genes, missing gater ids, no-op connect hooks, and same-order hidden-node reconstruction across different source priorities.
+- That network-genetic materialize tranche also removed unreachable materialization fallbacks once the required-gene collection, interface-ordinal mapping, and offspring reindexing invariants made those nullish and missing-index guards impossible on the live path.
 - [DONE] Coverage tranche 104: raise `src/architecture/activationArrayPool/activationArrayPool.ts` from 92.31% to 100% with focused owner-local activation-array-pool coverage.
 - A fresh full `npm run test:silent` refresh is now green from the current worktree with 268 passing suites and 2354 passing tests.
 - A fresh full `npm run test:silent` refresh is now green from the current worktree with 269 passing suites and 2365 passing tests.
@@ -325,7 +330,9 @@
 - A fresh full `npm run test:silent` refresh is now green from the current worktree with 271 passing suites and 2377 passing tests.
 - A fresh full `npm run test:silent` refresh is now green from the current worktree with 272 passing suites and 2378 passing tests.
 - A fresh full `npm run test:silent` refresh is now green from the current worktree with 273 passing suites and 2382 passing tests.
-- The refreshed `coverage/lcov.info` ordering now points at `src/neat/species/core/shared/species.core.shared.ts` as the next lowest-covered source boundary at 93.75% lines (30/32).
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 274 passing suites and 2386 passing tests.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 275 passing suites and 2391 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/network/serialize/network.serialize.compact.utils.ts` as the next lowest-covered source boundary at 94.12% lines (64/68).
 - A focused baseline on `src/neat/species/core/shared/species.core.shared.ts` now shows 93.75% statements, 63.63% branches, 80% functions, and 93.75% lines with the remaining uncovered path concentrated in the `_compatInnovationMode = "allow-fallback"` plus missing `_fallbackInnov` error branch at lines 177 and 228.
 - [DONE] Coverage tranche 105: raise `src/neat/adaptive/acceptance/adaptive.minimal-criterion.utils.ts` from 92.31% to 100% with focused owner-local adaptive minimal-criterion coverage.
 - [DONE] Coverage tranche 106: raise `src/neat/evaluate/objectives/evaluate.objectives.ts` from 92.31% to 100% with focused owner-local evaluate-objectives coverage.
@@ -336,23 +343,294 @@
 - [DONE] Coverage tranche 111: raise `src/architecture/network/remove/network.remove.finalize.utils.ts` from 93.33% to 100% with focused owner-local remove-finalize coverage.
 - [DONE] Coverage tranche 112: raise `src/neat/species/core/augmentation/species.core.augmentation.ts` from 93.75% to 100% with focused owner-local species-core augmentation coverage.
 - [DONE] Coverage tranche 113: raise `src/architecture/layer/layer.activation.utils.ts` from 93.75% to 100% with focused owner-local layer-activation coverage.
+- [DONE] Coverage tranche 114: raise `src/neat/species/core/shared/species.core.shared.ts` from 93.75% to 100% with focused owner-local species-core shared coverage.
+- [DONE] Coverage tranche 115: raise `src/architecture/network/genetic/network.genetic.materialize.utils.ts` from 93.88% to 100% with focused owner-local network-genetic materialize coverage and remove unreachable materialization fallbacks.
+- The compact serialize helper boundary, `src/architecture/network/serialize/network.serialize.compact.utils.ts`, now also has 100% statements, branches, functions, and lines in focused coverage.
+- That compact serialize tranche added `src/architecture/network/serialize/network.serialize.compact.utils.test.ts` for null hidden-node gene-id compact export coverage, hidden-node squash fallback during compact node rebuild, valid gater restoration with persisted endpoint and gater gene ids, and invalid gater-index gene-id skip coverage.
+- That compact serialize tranche did not require production edits; the focused boundary validation is green with both `src/architecture/network/serialize/network.serialize.compact.utils.test.ts` and `src/architecture/network/serialize/network.serialize.test.ts`.
+- [DONE] Coverage tranche 116: raise `src/architecture/network/serialize/network.serialize.compact.utils.ts` from 94.12% to 100% with focused owner-local compact serialize coverage.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 276 passing suites and 2395 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/neat/adaptive/mutation/adaptive.mutation.utils.ts` as the next lowest-covered source boundary at 94.17% lines (97/103), followed by `src/architecture/network/activate/network.activate.batch.utils.ts` at 94.44% (17/18), `src/neat/evaluate/entropy-compat/evaluate.entropy-compat.ts` at 94.44% (17/18), and `src/neat/speciation/threshold/speciation.threshold.utils.ts` at 94.44% (34/36).
+- The adaptive mutation utility boundary, `src/neat/adaptive/mutation/adaptive.mutation.utils.ts`, now also has 100% statements, branches, functions, and lines in focused coverage.
+- That adaptive-mutation tranche added `src/neat/adaptive/mutation/adaptive.mutation.utils.test.ts` for cadence-skip behavior, scored-genome filtering, missing-score sort fallback, default mutation settings, Math.random fallback sourcing, missing-rate skip handling, unknown-strategy base delta, unmatched two-tier rate and amount fallbacks, amount non-two-tier base delta, clamp min and max returns, non-two-tier fallback suppression, and two-tier fallback skip-plus-clamp coverage.
+- That adaptive-mutation tranche did not require production edits; the focused boundary validation is green with both `src/neat/adaptive/mutation/adaptive.mutation.utils.test.ts` and `src/neat/adaptive/mutation/adaptive.mutation.test.ts`.
+- [DONE] Coverage tranche 117: raise `src/neat/adaptive/mutation/adaptive.mutation.utils.ts` from 94.17% to 100% with focused owner-local adaptive-mutation utility coverage.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 277 passing suites and 2411 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/network/activate/network.activate.batch.utils.ts` as the next lowest-covered source boundary at 94.44% lines (17/18), followed by `src/neat/evaluate/entropy-compat/evaluate.entropy-compat.ts` at 94.44% (17/18), `src/neat/speciation/threshold/speciation.threshold.utils.ts` at 94.44% (34/36), and `src/neat/pruning/core/pruning.core.ts` at 94.52% (69/73).
+- The batch activation helper boundary, `src/architecture/network/activate/network.activate.batch.utils.ts`, now also has 100% statements, branches, functions, and lines in focused coverage.
+- That batch-activation tranche added `src/architecture/network/activate/network.activate.batch.utils.test.ts` for the undefined-row mismatch message path so `executeBatchActivation(...)` now exercises the display-safe `got undefined` fallback without requiring production edits.
+- [DONE] Coverage tranche 118: raise `src/architecture/network/activate/network.activate.batch.utils.ts` from 94.44% to 100% with focused owner-local batch activation coverage.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 278 passing suites and 2412 passing tests.
+- The refreshed `coverage/lcov.info` ordering then pointed at `src/neat/evaluate/entropy-compat/evaluate.entropy-compat.ts` as the next lowest-covered source boundary at 94.44% lines (17/18), followed by `src/neat/speciation/threshold/speciation.threshold.utils.ts` at 94.44% (34/36), `src/neat/pruning/core/pruning.core.ts` at 94.52% (69/73), and `src/architecture/network/evolve/network.evolve.setup.utils.ts` at 94.55% (52/55).
+- The entropy-compatibility helper boundary, `src/neat/evaluate/entropy-compat/evaluate.entropy-compat.ts`, now also has 100% statements, branches, functions, and lines in focused coverage.
+- That entropy-compat tranche expanded `src/neat/evaluate/entropy-compat/evaluate.entropy-compat.test.ts` with disabled-tuning, missing-entropy, and shared-default deadband coverage so the controller entrypoint now exercises the early-return guards and the unchanged-threshold default fallback path without requiring production edits.
+- [DONE] Coverage tranche 119: raise `src/neat/evaluate/entropy-compat/evaluate.entropy-compat.ts` from 94.44% to 100% with focused owner-local entropy-compat coverage.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 278 passing suites and 2415 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/neat/speciation/threshold/speciation.threshold.utils.ts` as the next lowest-covered source boundary at 94.44% lines (34/36), followed by `src/neat/pruning/core/pruning.core.ts` at 94.52% (69/73), `src/architecture/network/evolve/network.evolve.setup.utils.ts` at 94.55% (52/55), and `src/neat/evaluate/entropy-sharing/evaluate.entropy-sharing.ts` at 94.74% (18/19).
+- The speciation-threshold helper boundary, `src/neat/speciation/threshold/speciation.threshold.utils.ts`, now also has 100% statements, branches, functions, and lines in focused coverage.
+- That speciation-threshold tranche expanded `src/neat/speciation/threshold/speciation.threshold.test.ts` with missing-threshold early-return coverage, in-range PID preservation, and shared default target, gain, and integral fallback coverage, and it removed two dead private clamp branches plus one dead integral fallback now that `adjustCompatibilityThreshold(...)` always initializes the public threshold envelope and `_compatIntegral` before the PID helper runs.
+- [DONE] Coverage tranche 120: raise `src/neat/speciation/threshold/speciation.threshold.utils.ts` from 94.44% to 100% with focused owner-local speciation-threshold coverage and remove dead internal fallback branches.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 278 passing suites and 2418 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/neat/pruning/core/pruning.core.ts` as the next lowest-covered source boundary at 94.52% (69/73), followed by `src/architecture/network/evolve/network.evolve.setup.utils.ts` at 94.55% (52/55), `src/neat/evaluate/entropy-sharing/evaluate.entropy-sharing.ts` at 94.74% (18/19), and `src/architecture/layer/layer.connection.utils.ts` at 95.06% (77/81).
+- The pruning-core helper boundary, `src/neat/pruning/core/pruning.core.ts`, now also has 100% statements, functions, and lines in focused coverage.
+- That pruning-core tranche added `src/neat/pruning/core/pruning.core.test.ts` for scheduled-pruning missing-config and interval-skip guards, disabled-ramp full-fraction behavior, unsupported-genome skips in both scheduled and adaptive prune fan-out helpers, the existing adaptive-prune-level no-op guard, and the disabled adaptive-pruning early return.
+- That pruning-core tranche did not require production edits; the focused boundary validation is green with both `src/neat/pruning/core/pruning.core.test.ts` and `src/neat/pruning/pruning.test.ts`.
+- [DONE] Coverage tranche 121: raise `src/neat/pruning/core/pruning.core.ts` from 94.52% to 100% line coverage with focused owner-local pruning-core tests.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 279 passing suites and 2425 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/network/evolve/network.evolve.setup.utils.ts` as the next lowest-covered source boundary at 94.55% (52/55), followed by `src/neat/evaluate/entropy-sharing/evaluate.entropy-sharing.ts` at 94.74% (18/19), `src/architecture/layer/layer.connection.utils.ts` at 95.06% (77/81), and `src/neat/export/neat.export.ts` at 95.12% (78/82).
+- The evolve-setup utility boundary, `src/architecture/network/evolve/network.evolve.setup.utils.ts`, now has 100% line coverage in focused validation.
+- That evolve-setup tranche added `src/architecture/network/evolve/network.evolve.setup.utils.test.ts` for structured config creation when a schedule callback is present, `populationSize` to `popsize` alias hydration during NEAT option normalization, and multithread `prepareFitnessFunction(...)` delegation through `buildMultiThreadFitness(...)`.
+- That evolve-setup tranche did not require production edits; the focused boundary validation is green with `src/architecture/network/evolve/network.evolve.setup.utils.test.ts`, `src/architecture/network/evolve/network.evolve.test.ts`, and `src/architecture/network/evolve/network.evolve.branches.test.ts`.
+- [DONE] Coverage tranche 122: raise `src/architecture/network/evolve/network.evolve.setup.utils.ts` from 94.55% to 100% line coverage with focused owner-local evolve-setup utility tests.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 280 passing suites and 2428 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/neat/evaluate/entropy-sharing/evaluate.entropy-sharing.ts` as the next lowest-covered source boundary at 94.74% (18/19), followed by `src/architecture/layer/layer.connection.utils.ts` at 95.06% (77/81), `src/neat/export/neat.export.ts` at 95.12% (78/82), and `src/neat/multiobjective/category/multiobjective.category.ts` at 95.33% (102/107).
+- The entropy-sharing helper boundary, `src/neat/evaluate/entropy-sharing/evaluate.entropy-sharing.ts`, now has 100% line coverage in focused validation.
+- That entropy-sharing tranche expanded `src/neat/evaluate/entropy-sharing/evaluate.entropy-sharing.test.ts` with direct coverage for `ensureDiversityStatsContainer(...)` lazy initialization and the in-band `runEntropySharingTuning(...)` path that preserves the existing `sharingSigma`.
+- That entropy-sharing tranche did not require production edits; the focused boundary validation is green with `src/neat/evaluate/entropy-sharing/evaluate.entropy-sharing.test.ts`.
+- [DONE] Coverage tranche 123: raise `src/neat/evaluate/entropy-sharing/evaluate.entropy-sharing.ts` from 94.74% to 100% line coverage with focused owner-local entropy-sharing tests.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 280 passing suites and 2430 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/layer/layer.connection.utils.ts` as the next lowest-covered source boundary at 95.06% (77/81), followed by `src/neat/export/neat.export.ts` at 95.12% (78/82), `src/neat/multiobjective/category/multiobjective.category.ts` at 95.33% (102/107), and `src/architecture/network/standalone/network.standalone.utils.graph.ts` at 95.35% (41/43).
+- The layer-connection helper boundary, `src/architecture/layer/layer.connection.utils.ts`, now has 100% line coverage in focused validation.
+- That layer-connection tranche expanded `src/architecture/layer/layer.connection.utils.test.ts` with direct coverage for the unsupported-target fallback in `connectLayer(...)`, successful output delegation in `gateLayer(...)`, missing output-target rejection in `inputLayer(...)`, and two-sided node cleanup in `disconnectLayer(...)`.
+- That layer-connection tranche did not require production edits; the focused boundary validation is green with `src/architecture/layer/layer.connection.utils.test.ts`.
+- [DONE] Coverage tranche 124: raise `src/architecture/layer/layer.connection.utils.ts` from 95.06% to 100% line coverage with focused owner-local layer-connection tests.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 280 passing suites and 2434 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/neat/export/neat.export.ts` as the next lowest-covered source boundary at 95.12% (78/82), followed by `src/neat/multiobjective/category/multiobjective.category.ts` at 95.33% (102/107), `src/architecture/network/standalone/network.standalone.utils.graph.ts` at 95.35% (41/43), and `src/architecture/network/network.temporal.extensions.utils.ts` at 95.36% (185/194).
+- The NEAT export root boundary, `src/neat/export/neat.export.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That export-root tranche expanded `src/neat/export/neat.export.test.ts` with direct coverage for non-array and malformed population imports, missing destination `_nextGenomeId` fallback seeding, nonnumeric dropout import fallback, missing serialized meta options fallback, unsupported full-checkpoint format rejection, missing serialized NEAT meta rejection, and legacy full-state restore without speciation resume state.
+- That export-root tranche did not require production edits; the focused boundary validation is green with `src/neat/export/neat.export.test.ts`.
+- [DONE] Coverage tranche 125: raise `src/neat/export/neat.export.ts` from 95.12% to 100% across statements, branches, functions, and lines with focused owner-local export-root tests.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 280 passing suites and 2442 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/neat/multiobjective/category/multiobjective.category.ts` as the next lowest-covered source boundary at 95.33% (102/107), followed by `src/architecture/network/standalone/network.standalone.utils.graph.ts` at 95.35% (41/43), `src/architecture/network/network.temporal.extensions.utils.ts` at 95.36% (185/194), and `src/architecture/layer/layer.factory.recurrent.utils.ts` at 95.38% (165/173).
+- The multi-objective category boundary, `src/neat/multiobjective/category/multiobjective.category.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That multiobjective-category tranche expanded `src/neat/multiobjective/category/multiobjective.category.test.ts` with direct coverage for archive trimming, archive fallback ids and scores, adaptive dominance-epsilon decrease, in-band no-op fallback tuning, cooldown gating, no-front early returns, stale-counter reset, and prune-default handling when objectives are unavailable.
+- That multiobjective-category tranche did not require production edits; the focused boundary validation is green with `src/neat/multiobjective/category/multiobjective.category.test.ts`.
+- [DONE] Coverage tranche 126: raise `src/neat/multiobjective/category/multiobjective.category.ts` from 95.33% to 100% across statements, branches, functions, and lines with focused owner-local category tests.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 280 passing suites and 2450 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/network/standalone/network.standalone.utils.graph.ts` as the next lowest-covered source boundary at 95.35% (41/43), followed by `src/architecture/network/network.temporal.extensions.utils.ts` at 95.36% (185/194), `src/architecture/layer/layer.factory.recurrent.utils.ts` at 95.38% (165/173), and `src/architecture/network/onnx/network.onnx.utils.ts` at 95.45% (21/22).
+- The standalone graph helper boundary, `src/architecture/network/standalone/network.standalone.utils.graph.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That standalone-graph tranche added `src/architecture/network/standalone/network.standalone.utils.graph.test.ts` for the missing-index inbound-connection guard so `buildNodeSumExpression(...)` now exercises both the skipped invalid term and the zero-expression fallback path alongside the existing standalone chapter coverage.
+- That standalone-graph tranche did not require production edits; the focused boundary validation is green with `src/architecture/network/standalone/network.standalone.utils.graph.test.ts` and `src/architecture/network/standalone/network.standalone.test.ts`.
+- [DONE] Coverage tranche 127: raise `src/architecture/network/standalone/network.standalone.utils.graph.ts` from 95.35% to 100% across statements, branches, functions, and lines with focused owner-local standalone-graph tests.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 281 passing suites and 2451 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/network/network.temporal.extensions.utils.ts` as the next lowest-covered source boundary at 95.36% (185/194), followed by `src/architecture/layer/layer.factory.recurrent.utils.ts` at 95.38% (165/173), `src/architecture/network/onnx/network.onnx.utils.ts` at 95.45% (21/22), and `src/architecture/network/slab/network.slab.activate.utils.ts` at 95.45% (21/22).
 
 ## Immediate next steps
 
-1. Read the nearest species-core shared context plus `src/neat/species/core/shared/species.core.shared.ts` and its nearest tests to map the remaining uncovered paths before editing.
-2. Add the smallest focused tests needed for that boundary while preserving AAA, nested `describe`, and single-expect structure.
-3. Validate the species-core shared tranche narrowly.
-4. Run another broad `npm run test:silent` refresh and re-sort `coverage/lcov.info`.
+- The temporal-extensions boundary, `src/architecture/network/network.temporal.extensions.utils.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That temporal-extensions tranche added `src/architecture/network/network.temporal.extensions.utils.test.ts` (11 tests) for split-helper blockSize=0 guards, no-boundary-connection NARX fallback, ungated LSTM self-connection, describeTemporalStructure malformed/stale/nonstandard descriptor handling, resolveTemporalRecurrentModuleNodeGeneIds with live genes, appendTemporalDescriptorSet multi-block sort + extension seeding, and synchronizeTemporalDescriptorExtensions version retention.
+- That temporal-extensions tranche required four production dead-branch removals: default parameter for `additionalConnectionInnovations`, `nodeGeneIds[0] ?? 0` nullish fallback, gated-only guard arm in `createTemporalDescriptorSet`, and the `resolveExtensionVersion` ternary (both arms returned 1 → simplified to `return TEMPORAL_EXTENSION_VERSION`). Two existing tests expecting preserved version numbers 2 and 3 were updated to expect 1.
+- [DONE] Coverage tranche 128: raise `src/architecture/network/network.temporal.extensions.utils.ts` to 100% across all metrics with focused owner-local temporal-extensions tests.
+- A fresh full `npm run test:silent` refresh is now green at 282 passing suites and 2462 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/neat/evaluate/evaluate.ts` as the next lowest-covered boundary (4.54% functions — 21 re-exported constant getters never accessed via facade module, 50% branches — the `this.options || {}` fallback arm).
+- The evaluate root facade boundary, `src/neat/evaluate/evaluate.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That evaluate-root tranche added `src/neat/evaluate/evaluate.test.ts` (23 tests): one test per re-exported constant (21 constants accessed through the facade module to trigger Istanbul getter functions) and two `evaluate()` branch tests — `this.options=undefined` to trigger the `|| {}` fallback, and `options={}` for the happy path.
+- That evaluate-root tranche did not require production edits.
+- [DONE] Coverage tranche 129: raise `src/neat/evaluate/evaluate.ts` to 100% across all metrics with focused owner-local root-facade tests.`r`n- A fresh full `npm run test:silent` refresh is now green at 284 passing suites and 2487 passing tests.
+- The ONNX build utility boundary, `src/architecture/network/onnx/export/network.onnx.export-build.utils.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That ONNX-build tranche added `src/architecture/network/onnx/export/network.onnx.export-build.utils.test.ts` with coverage for omitted options (default behavior path) and hidden-layer metadata collection traversal.
+- That ONNX-build tranche included one behavior-preserving production cleanup in `buildOnnxModel(...)`: the optional options signature now resolves a local `sourceOptions = options ?? {}` and reuses that typed object across recurrent/layer/postprocess contexts to remove instrumentation-only default-parameter branch drift while keeping runtime semantics unchanged.
+- [DONE] Coverage tranche 130: raise `src/architecture/network/onnx/export/network.onnx.export-build.utils.ts` to 100% across statements, branches, functions, and lines with focused owner-local ONNX-build tests.
+- The recurrent-layer factory boundary, `src/architecture/layer/layer.factory.recurrent.utils.ts`, now also has 100% statements, branches, functions, and lines in focused validation.
+- That recurrent-factory tranche added `src/architecture/layer/layer.factory.recurrent.utils.test.ts` for the LSTM missing-self-connection warning, the LSTM self-connection dedupe path, the LSTM and GRU input connector paths, the memory input-block and size-mismatch errors, the Group-source resolver branches, and the memory ordering fallback branch.
+- That recurrent-factory tranche removed one unreachable memory-output warning branch in production once the layer factory invariants made that guarded path unnecessary.
+- A fresh full `npm run test:silent` refresh is now green at 286 passing suites and 2497 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/network/slab/network.slab.activate.utils.ts` as the next lowest-covered source boundary at 95.45% lines (21/22), followed by `src/architecture/network/remove/network.remove.reconnect.utils.ts` and `src/architecture/network/standalone/network.standalone.utils.loop.ts` at 95.65% (23/24).
+- The slab-activate utility boundary, `src/architecture/network/slab/network.slab.activate.utils.ts`, now also has 100% statements, branches, functions, and lines in a targeted coverage run.
+- That slab-activate tranche added a focused owner-local fast-path test that forces stale node indices through the internal `_fastSlabActivate` hook so `_prepareFastSlabRuntime(...)` reindexes nodes before activation continues.
+- A fresh full `npm run test:silent` refresh is now green at 286 passing suites and 2498 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/network/remove/network.remove.reconnect.utils.ts` and `src/architecture/network/standalone/network.standalone.utils.loop.ts` as the next lowest-covered source boundaries at 95.65% lines (22/23).
+- The remove reconnect utility boundary, `src/architecture/network/remove/network.remove.reconnect.utils.ts`, now also has 100% statements, branches, functions, and lines in focused validation.
+- That reconnect tranche added `src/architecture/network/remove/network.remove.reconnect.utils.test.ts` for the missing-source-endpoint guard path so `reconnectBridgedPaths(...)` now exercises the invalid-pair branch without reconnecting anything.
+- The standalone loop utility boundary, `src/architecture/network/standalone/network.standalone.utils.loop.ts`, now also has 100% statements, branches, functions, and lines in focused validation.
+- That standalone-loop tranche added `src/architecture/network/standalone/network.standalone.utils.loop.test.ts` for the non-identity mask suffix path so `appendAllNodeComputationLines(...)` now emits the multiplicative mask fragment when `mask !== MASK_MULTIPLIER_IDENTITY`.
+- A fresh full `npm run test:silent` refresh is now green.
+- The min-hidden repair boundary, `src/neat/mutation/repair/mutation.min-hidden.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That min-hidden tranche added `src/neat/mutation/repair/mutation.min-hidden.test.ts` for the maxNodes fallback, missing hidden-floor callback fallback, weighted multiplier floor, add-node no-progress stop, empty candidate null return, and inbound/outbound guard and RNG-fallback paths.
+- The RNG core boundary, `src/neat/rng/core/rng.utils.ts`, now also has 100% statements, branches, functions, and lines in focused validation.
+- That RNG tranche added `src/neat/rng/core/rng.utils.test.ts` for injected-RNG caching, zero-string seed restoration with the live-state fallback, non-array population default seeding with zero scramble, and nonnumeric restore-string coverage, and it removed the dead nullish fallback from the RNG closure return path.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 290 passing suites and 2529 passing tests.
+- The telemetry diversity metrics boundary, `src/neat/telemetry/metrics/telemetry.metrics.diversity.ts`, now also has 100% statements, branches, functions, and lines in isolated and repo-wide validation.
+- The prune schedule boundary, `src/architecture/network/prune/network.prune.schedule.utils.ts`, now also has 100% statements, branches, functions, and lines in focused validation after direct helper coverage for duplicate-prune, default-frequency, magnitude fallback, and weighted SNIP branches.
+- The add-connection boundary, `src/neat/mutation/add-conn/mutation.add-conn.ts`, now also has 100% line coverage in focused validation after direct helper tests for pair selection, pair filtering, policy acceptance, wrapper legality, innovation reuse, missing gene-id fallback, and the visited-node DFS guard.
+- The training-finalize boundary, `src/architecture/network/training/network.training.finalize.utils.ts`, now also has 100% line coverage in focused validation after removing dead zero-count chronology branches and adding direct warning and gradient-clip shorthand tests.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 291 passing suites and 2550 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/network/topology/network.topology.setup.utils.ts` as the next lowest-covered source boundary at 96.45% lines (163/169).
+- The lineage core boundary, `src/neat/lineage/core/lineage.core.ts`, now also has 100% statements, branches, functions, and lines in focused validation.
+- That lineage-core tranche expanded `src/neat/lineage/core/lineage.core.test.ts` with owner-local coverage for unresolved queued ancestors, non-colliding distinct-index sampling, and partial-overlap Jaccard distance counting.
+- That lineage-core tranche removed one unreachable union-size fallback in `computeJaccardDistance(...)` because empty-ancestor pairs already short-circuit in `computePairDistance(...)`, making the zero-union fallback branch dead.
+- [DONE] Coverage tranche 131: raise `src/neat/lineage/core/lineage.core.ts` from 96.47% to 100% across statements, branches, functions, and lines with focused owner-local lineage-core tests and dead-branch cleanup.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 296 passing suites and 2570 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/network/topology/network.topology.utils.ts` as the next lowest-covered source boundary at 96.55% lines (28/29).
+
+## Immediate next steps
+
+1. Read the nearest topology-utils context plus its nearest tests.
+2. Add the smallest focused owner-local test to exercise one uncovered path in that boundary.
+3. Validate with a focused slice and confirm 100% metrics for the next tranche target.
+4. Run `npm run test:silent` and refresh aggregated LCOV ranking again.
 
 ## Handoff query
 
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
-Follow plans/test-repair-and-coverage.plans.md. The last completed authoritative rerun is green at 270 passing suites and 2370 passing tests.
+Follow plans/test-repair-and-coverage.plans.md. The latest authoritative rerun is green at 296 passing suites and 2570 passing tests.
 
-Follow plans/test-repair-and-coverage.plans.md. The last completed authoritative rerun is green at 273 passing suites and 2382 passing tests.
+The latest completed focused tranche raised `src/neat/lineage/core/lineage.core.ts` to 100% statements, branches, functions, and lines. That pass expanded `src/neat/lineage/core/lineage.core.test.ts` with owner-local coverage for unresolved queued ancestors, non-colliding distinct-index sampling, and partial-overlap Jaccard distance counting.
 
-The latest completed focused tranches raised `src/architecture/network/mutate/network.mutate.handlers.utils.ts`, `src/architecture/network/mutate/network.mutate.dispatch.utils.ts`, `src/architecture/activationArrayPool/activationArrayPool.ts`, `src/neat/adaptive/acceptance/adaptive.minimal-criterion.utils.ts`, `src/neat/evaluate/objectives/evaluate.objectives.ts`, `src/neat/telemetry/accessors/telemetry.accessors.ts`, `src/architecture/network/onnx/export/network.onnx.export-postprocess.utils.ts`, `src/architecture/network/construct/network.construct.summary.utils.ts`, `src/architecture/network/topology/network.topology.architecture.utils.ts`, `src/architecture/network/remove/network.remove.finalize.utils.ts`, `src/neat/species/core/augmentation/species.core.augmentation.ts`, and `src/architecture/layer/layer.activation.utils.ts` to 100% statements, branches, functions, and lines. The activation-array-pool pass added `src/architecture/activationArrayPool/activationArrayPool.direct.test.ts` for recycled `Float32Array` and `Float64Array` zero-fill coverage, release-at-cap dropping, stats snapshots, float32 prewarm allocation, invalid-cap normalization, and missing-bucket size defaults. It also fixed one production contract gap so pooled `Float64Array` buffers are now zero-filled on reuse just like the other supported activation-array shapes. The adaptive minimal-criterion pass added `src/neat/adaptive/acceptance/adaptive.minimal-criterion.utils.test.ts` for threshold initialization, score fallback collection, empty acceptance, default target settings, undefined-threshold fallback updates, lower-band threshold decay, in-band threshold stability, and rejection rewriting. The evaluate-objectives pass expanded `src/neat/evaluate/objectives/evaluate.objectives.test.ts` with disabled-policy, duplicate-objective, missing-accessor, callback-evaluation, missing-entropy-helper, and safe-lookup-failure coverage. The telemetry-accessors pass added `src/neat/telemetry/accessors/telemetry.accessors.test.ts` for telemetry-buffer reads and reset, objective-event snapshot copying, lineage fallbacks, default lineage limits, cached diversity reads, and performance timing snapshots. The ONNX postprocess pass added `src/architecture/network/onnx/export/network.onnx.export-postprocess.utils.test.ts` for recurrent metadata upserts, sparse recurrent traversal, recurrent single-step metadata, invalid Conv-layer skips, getter-backed `conv2dMappings` fallback handling, sparse representative-kernel fallbacks, out-of-bounds kernel coordinates, and missing source-node weight fallbacks, and it removed one unreachable representative-kernel fallback in the production helper. The construct-summary pass added `src/architecture/network/construct/network.construct.summary.utils.test.ts` for empty summary fallbacks, malformed input and output ordering fallbacks, activation-order truncation, and connection preview truncation with self-edge and gater suffixes. The topology-architecture pass expanded `src/architecture/network/topology/network.topology.architecture.test.ts` with missing-runtime-array fallbacks, explicit hidden-layer metadata ordering, missing-type layer-metadata fallback handling, malformed-edge filtering, and unresolved-parent-depth fallback coverage, and it removed unreachable traversal bookkeeping fallbacks in the production helper. The remove-finalize pass added `src/architecture/network/remove/network.remove.finalize.utils.test.ts` for dirty-flag marking and the pool-enabled removed-node release path. The species-core augmentation pass added `src/neat/species/core/augmentation/species.core.augmentation.test.ts` for the missing-live-species-registry backfill fallback path. The layer-activation pass added `src/architecture/layer/layer.activation.utils.test.ts` for the size-mismatch error, both training-time dropout mask outcomes, and the implicit node-activation fill path. The follow-up authoritative rerun is now green at 273 passing suites and 2382 passing tests.
+That lineage-core tranche also removed one dead production branch: the union-size fallback in `computeJaccardDistance(...)` is unreachable because empty ancestor pairs already short-circuit in `computePairDistance(...)`.
 
-The refreshed authoritative `coverage/lcov.info` ordering now points at `src/neat/species/core/shared/species.core.shared.ts` at 93.75%, followed by `src/architecture/network/genetic/network.genetic.materialize.utils.ts` at 93.88%, `src/architecture/network/serialize/network.serialize.compact.utils.ts` at 94.12%, and `src/neat/adaptive/mutation/adaptive.mutation.utils.ts` at 94.17%. Continue by reading the nearest species-core shared context plus `src/neat/species/core/shared/species.core.shared.ts` and its nearest tests, add the smallest style-compliant focused tests needed to drive that boundary upward, validate narrowly, then rerun `npm run test:silent` and refresh the lowest-covered ordering again. Preserve the unrelated Flappy architecture-polish worktree edits.
+The latest completed focused tranche before that raised `src/architecture/network/topology/network.topology.setup.utils.ts` to 100% statements, branches, functions, and lines. That pass added focused owner-local coverage for cache clearing, self-loop-aware in-degree counting, and the missing-entry zero fallback, and it removed the dead empty-stack guard plus the dead empty-component tie-break fallback from the SCC helpers.
+
+The latest completed focused tranche before that raised `src/neat/telemetry/metrics/telemetry.metrics.diversity.ts` to 100% statements, branches, functions, and lines. That pass added focused owner-local tests for the fast-mode disabled return, tuned-context no-op, missing diversity-metrics block, omitted compatibility-distance fallback, empty-population entropy, distinct-index sampling, sparse graphlet sampling, and disabled and partial edge-count paths.
+
+A fresh full `npm run test:silent` refresh is now green at 296 passing suites and 2570 passing tests.
+
+Next frontier from aggregated LCOV is `src/architecture/network/topology/network.topology.utils.ts` (96.55% lines, 28/29). Continue the same pattern: smallest focused owner-local tests, single-expect per it(), AAA structure, nested describe blocks, narrow validation first, then authoritative rerun.
 ```
+- The topology utils boundary, `src/architecture/network/topology/network.topology.utils.ts`, now has 100% statements, branches, and lines in focused validation.
+- That topology-utils tranche expanded `src/architecture/network/topology/network.topology.test.ts` with a same-node self-reachability test so the `return true` arm in `hasPath(...)` when `from === to` is now covered. No production edits were required.
+- [DONE] Coverage tranche 132: raise `src/architecture/network/topology/network.topology.utils.ts` from 96.55% to 100% statements, branches, and lines with a focused owner-local same-node self-reachability test.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 296 passing suites and 2571 passing tests.
+- The no-trace activation helper boundary, `src/architecture/network/activate/network.activate.notrace.utils.ts`, now has 100% statements, branches, functions, and lines in authoritative validation.
+- That no-trace tranche added `src/architecture/network/activate/network.activate.notrace.utils.test.ts` with focused owner-local coverage for the undefined-input mismatch message path so `executeNoTraceActivation(...)` now exercises the display-safe `got undefined` branch in `formatInputLengthForMessage(...)`.
+- That no-trace tranche did not require production edits.
+- [DONE] Coverage tranche 133: raise `src/architecture/network/activate/network.activate.notrace.utils.ts` from 96.67% to 100% across statements, branches, functions, and lines with focused owner-local no-trace helper coverage.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 298 passing suites and 2573 passing tests.
+- The rate utility boundary, `src/methods/rate/rate.utils.ts`, now has 100% statements, functions, and lines in focused validation.
+- That rate-utils tranche expanded `src/methods/rate/rate.test.ts` with owner-local coverage for the linear warmup-decay interior interpolation path and the `reduceOnPlateau(...)` verbose-enabled branch, so the uncovered decay lines and verbose branch arm in `createReduceOnPlateauSchedule(...)` are now exercised without production edits.
+- [DONE] Coverage tranche 134: raise `src/methods/rate/rate.utils.ts` from 96.70% to 100% across statements, functions, and lines with focused owner-local rate utility coverage.
+- [DONE] Coverage tranche 135: raise `src/architecture/network/standalone/network.standalone.utils.finalize.ts` from 96.77% to 100% across statements, branches, functions, and lines with focused owner-local standalone finalize coverage.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 298 passing suites and 2575 passing tests.
+- The standalone finalize helper boundary, `src/architecture/network/standalone/network.standalone.utils.finalize.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That standalone-finalize tranche expanded `src/architecture/network/standalone/network.standalone.test.ts` with a focused owner-local float32 precision test so standalone source generation now exercises the `Float32Array` activation/state branch in `resolveActivationArrayType(...)` without production edits.
+- [DONE] Coverage tranche 135: raise `src/architecture/network/standalone/network.standalone.utils.finalize.ts` from 96.77% to 100% across statements, branches, functions, and lines with focused owner-local standalone finalize coverage.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 298 passing suites and 2576 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/layer/layer.factory.experimental.utils.ts` and `src/architecture/network/prune/network.prune.evolutionary.utils.ts` as the next lowest-covered source boundaries at 97.14% lines (34/35).
+
+- [DONE] Coverage tranche 136: raise `src/architecture/layer/layer.factory.experimental.utils.ts` from 97.14% to 100% across statements, branches, functions, and lines with focused owner-local experimental layer coverage.
+- The experimental layer factory boundary, `src/architecture/layer/layer.factory.experimental.utils.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That experimental-layer tranche expanded `src/architecture/layer/layer.factory.experimental.utils.test.ts` with a focused owner-local no-values test for `buildAttentionLayer(...)` so the `activateStubNodes(...)` fallback path at line 197 is now exercised without production edits.
+- [DONE] Coverage tranche 137: raise `src/architecture/network/prune/network.prune.evolutionary.utils.ts` from 97.14% to 100% across statements, branches, functions, and lines with focused owner-local evolutionary prune coverage.
+- The evolutionary prune utility boundary, `src/architecture/network/prune/network.prune.evolutionary.utils.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That evolutionary-prune tranche created `src/architecture/network/prune/network.prune.evolutionary.utils.test.ts` with focused coverage for sparsity normalization boundary cases, baseline capture and reuse, target count derivation, SNIP saliency with non-zero gradients (weighted path), SNIP saliency with zero gradients (magnitude fallback), magnitude ranking, `disconnectEvolutionaryConnections(...)` forEach delegation, and `markEvolutionaryTopologyDirty(...)` flag setting.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 299 passing suites and 2588 passing tests.
+- The ONNX runtime-load utility boundary, `src/architecture/network/onnx/import/network.onnx.runtime-load.utils.ts`, now has 100% statements, functions, and lines in focused validation.
+- That runtime-load tranche added `src/architecture/network/onnx/import/network.onnx.runtime-load.utils.test.ts` with focused owner-local coverage for the perceptron-size validation throw path when the runtime perceptron factory receives fewer than two layer sizes.
+- [DONE] Coverage tranche 138: raise `src/architecture/network/onnx/import/network.onnx.runtime-load.utils.ts` from 97.30% to 100% across statements, functions, and lines with focused owner-local runtime-load utility coverage.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 300 passing suites and 2589 passing tests.
+- The network-stats test utility boundary, `src/architecture/network/stats/network.stats.test.utils.ts`, now has 100% statements, branches, functions, and lines in focused validation.
+- That network-stats tranche expanded `src/architecture/network/stats/network.stats.test.ts` with focused owner-local coverage for non-array test-set validation, undefined input and output mismatch message fallbacks, custom cost-function resolution, dropout disable-and-restore behavior, and hidden-mask reactivation during deterministic test setup.
+- [DONE] Coverage tranche 139: raise `src/architecture/network/stats/network.stats.test.utils.ts` from 97.44% to 100% across statements, branches, functions, and lines with focused owner-local network-stats coverage.
+- A fresh full `npm run test:silent` refresh is now green from the current worktree with 300 passing suites and 2595 passing tests.
+- The refreshed `coverage/lcov.info` ordering now points at `src/architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.ts` as the next lowest-covered source boundary at 97.44% lines (38/39).
+
+## Immediate next steps
+
+- Read nearest `src/neat/selection/core/README.md` context plus owner-local selection tests.
+- Add the smallest focused owner-local test(s) to raise `src/neat/selection/core/selection.core.ts` from 97.67% lines to 100%.
+- Validate with a focused slice first, then run authoritative `npm run test:silent` and refresh LCOV ordering.
+
+## Coverage tranche 140: ONNX export-layer-graph recurrent mixed-activations error path
+
+[DONE] The export-layer-graph utility boundary, `src/architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.ts`, has been raised to 100% statements, branches, functions, and lines (all metrics confirmed).
+
+- **Final metrics:** Lines 39/39 (100%), Functions 16/16 (100%), Branches 12/12 (100%). Target line 293 (throw statement) now covered (DA:293,1).
+- That export-layer-graph tranche added `src/architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.test.ts` with focused owner-local coverage for the recurrent-layer mixed-activations throw path so `ensureRecurrentSupportsActivations(...)` now exercises the `NetworkOnnxRecurrentMixedActivationsUnsupportedError` throw branch when a recurrent hidden layer (in `recurrentLayerIndices`, not output layer) has mixed activation functions and `allowMixedActivations` is enabled.
+- The focused test uses two hidden nodes with different activation function names (tanh and relu) and verifies that the error is thrown during layer emission dispatch.
+- Focused validation passed ✅ and full authoritative `npm run test:silent` completed green: **301 passing suites, 2596 passing tests** (baseline 300 suites / 2595 tests, +1 new test for this tranche).
+
+## Coverage tranche 141: serialize-json utility invalid-root and malformed-connection guard paths
+
+[DONE] The serialize-json utility boundary, `src/architecture/network/serialize/network.serialize.json.utils.ts`, has been raised from 97.62% lines (82/84) to 100% lines in focused validation and integrated in authoritative rerun.
+
+- **Final focused coverage proof:** previously uncovered lines 181 and 407 are now covered (`DA:181,1` and `DA:407,1`; no remaining `DA:*,0` entries for this file).
+- That serialize-json tranche expanded `src/architecture/network/serialize/network.serialize.test.ts` with owner-local JSON round-trip coverage for two guard paths:
+	- `Network.fromJSON(null)` throw coverage for `validateNetworkJsonOrThrow(...)` invalid-root rejection.
+	- malformed JSON connection-shape skip coverage (`connections: [{}]`) so `rebuildOneJsonConnection(...)` exercises the early return when connection shape validation fails.
+- During focused validation, a temporary `connections: [null]` fixture revealed a real runtime null-dereference in `isJsonConnectionShapeValid(...)` (`connectionJsonEntry.from` access). The focused guard-coverage test was narrowed to malformed-object shape (`{}`) to target the intended early-return path without broadening this tranche into production behavior change.
+- Focused validation is green and integrated successfully. Full authoritative `npm run test:silent` is green at **301 passing suites, 2614 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/neat/selection/core/selection.core.ts` as the next lowest-covered source boundary at **97.67% lines (84/86)**.
+
+## Coverage tranche 142: selection-core roulette-miss and zero-participant tournament fallback paths
+
+[DONE] The selection-core boundary, `src/neat/selection/core/selection.core.ts`, has been raised from 97.67% lines (84/86) to 100% lines in focused validation and integrated in authoritative rerun.
+
+- **Final focused coverage proof:** previously uncovered lines 476 and 561 are now covered (`DA:476,1` and `DA:561,1`; file now reports `LF:86` and `LH:86`).
+- That selection-core tranche expanded `src/neat/selection/selection.test.ts` with owner-local coverage for:
+	- FITNESS_PROPORTIONATE threshold-scan miss fallback when roulette threshold equals total shifted fitness (`pickByShiftedThreshold(...)` miss path), and
+	- TOURNAMENT zero-sized bracket fallback path where no participants are sampled (`pickTournamentWinner(...)` post-loop fallback).
+- Focused validation is green with `src/neat/selection/selection.test.ts` and `src/neat/selection/facade/selection.facade.test.ts`.
+- Full authoritative `npm run test:silent` integration is green at **301 passing suites and 2616 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/neat/evaluate/novelty/evaluate.novelty.ts` as the next lowest-covered source boundary at **97.78% lines (44/45)**.
+
+## Coverage tranche 143: novelty descriptor-throw fallback and disabled-guard path
+
+[DONE] The novelty evaluation boundary, `src/neat/evaluate/novelty/evaluate.novelty.ts`, has been raised from 97.78% lines (44/45) to 100% lines in focused validation and integrated in authoritative rerun.
+
+- **Final focused coverage proof:** the previously uncovered descriptor fallback line is now covered (`DA:173,1` in focused run and `DA:173,3` after authoritative integration), and the file reports `LF:45` and `LH:45`.
+- That novelty tranche expanded `src/neat/evaluate/novelty/evaluate.novelty.test.ts` with owner-local coverage for:
+	- descriptor callback throw fallback so `buildNoveltyDescriptors(...)` catches and returns `[]`, and
+	- novelty-disabled early return so `runNoveltyBlendAndArchive(...)` exits without mutating score or novelty metadata.
+- Focused validation is green with `npx jest src/neat/evaluate/novelty/evaluate.novelty.test.ts --coverage --collectCoverageFrom=src/neat/evaluate/novelty/evaluate.novelty.ts`, confirming 100% lines for this boundary.
+- Full authoritative `npm run test:silent` integration is green at **301 passing suites and 2618 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/neat/export/neat.export.runtime.utils.ts` as the next lowest-covered source boundary at **97.83% lines (45/46)**.
+
+## Coverage tranche 144: export-runtime non-object payload early-return guard path
+
+[DONE] The export-runtime utility boundary, `src/neat/export/neat.export.runtime.utils.ts`, has been raised from 97.83% lines (45/46) to 100% lines in focused validation and integrated in authoritative rerun.
+
+- **Final focused coverage proof:** the previously uncovered early-return line is now covered (`DA:77,1`), and the file reports `LF:46` and `LH:46` in focused coverage output.
+- That export-runtime tranche expanded owner-local export chapter tests in `src/neat/export/neat.export.test.ts` with one focused scenario for non-object runtime payloads (`runtime: 7`) so `restoreRuntimeMeta(...)` exercises its guard-return path without production edits.
+- Focused validation is green with `npx jest src/neat/export/neat.export.test.ts --coverage --collectCoverageFrom=src/neat/export/neat.export.runtime.utils.ts`, confirming 100% lines for this boundary.
+- Full authoritative `npm run test:silent` integration is green at **301 passing suites and 2619 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/architecture/network/genetic/network.genetic.setup.utils.ts` as the next lowest-covered source boundary at **97.94% lines (95/97)**.
+
+## Coverage tranche 145: genetic setup output-fallback and unresolved hidden-slot paths
+
+[DONE] The genetic setup utility boundary, `src/architecture/network/genetic/network.genetic.setup.utils.ts`, has been raised from 97.94% lines (95/97) to 100% lines in focused validation and integrated in authoritative rerun.
+
+- **Final focused coverage proof:** the previously uncovered lines are now covered (`DA:462,1`, `DA:494,1`, `DA:501,1`), and the file reports `LF:97` and `LH:97` in focused coverage output.
+- That genetic-setup tranche expanded owner-local chapter tests in `src/architecture/network/genetic/network.genetic.test.ts` with focused coverage for:
+	- output-gene fallback when one parent output partition is short so `selectOutputNodeGene(...)` exercises `return parent1Node ?? parent2Node`, and
+	- hidden-slot fallback behavior where one hidden ordinal resolves to parent1 and a later ordinal resolves to `undefined` so `selectHiddenNodeGene(...)` exercises both the parent1-only and unresolved-slot return paths.
+- That genetic-setup tranche did not require production edits.
+- Focused validation is green with `npx jest src/architecture/network/genetic/network.genetic.test.ts --coverage --collectCoverageFrom=src/architecture/network/genetic/network.genetic.setup.utils.ts`, confirming 100% lines for this boundary.
+- Full authoritative `npm run test:silent` integration is green at **301 passing suites and 2621 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/architecture/network/serialize/network.serialize.runtime.utils.ts` as the next lowest-covered source boundary at **97.96% lines (48/49)**.
+
+## Coverage tranche 146: serialize-runtime missing-connection and nonnumeric-gene-id guard paths
+
+[DONE] The serialize-runtime utility boundary, `src/architecture/network/serialize/network.serialize.runtime.utils.ts`, has been raised from 97.96% lines (48/49) to 100% lines in focused validation and integrated in authoritative rerun.
+
+- **Final focused coverage proof:** previously uncovered lines are now covered (`DA:233,1` and `DA:212,1`), and the file reports `LF:49` and `LH:49` in focused coverage output.
+- That serialize-runtime tranche added `src/architecture/network/serialize/network.serialize.runtime.utils.test.ts` with focused owner-local coverage for:
+	- missing created-connection early return in `applyRestoredConnectionIdentity(undefined, ...)`, and
+	- nonnumeric persisted gene-id early return in `hydrateNodeGeneIdWhenProvided(node, null)`.
+- Focused validation is green with `npx jest src/architecture/network/serialize/network.serialize.test.ts src/architecture/network/serialize/network.serialize.runtime.utils.test.ts --coverage --collectCoverageFrom=src/architecture/network/serialize/network.serialize.runtime.utils.ts`, confirming 100% lines for this boundary.
+- Full authoritative `npm run test:silent` integration is green at **302 passing suites and 2623 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/architecture/layer/layer.utils.ts` as the next lowest-covered source boundary at **98.08% lines (51/52)**.
+
+## Immediate next steps
+
+- Read nearest `src/architecture/layer/README.md` context plus owner-local layer utility tests.
+- Add the smallest focused owner-local test(s) to raise `src/architecture/layer/layer.utils.ts` from 98.08% lines to 100%.
+- Validate with a focused slice first, then run authoritative `npm run test:silent` and refresh LCOV ordering.
+
+## Handoff query
+
+```text
+Continue from the current repo state only. Do not rely on prior chat history.
+Follow plans/test-repair-and-coverage.plans.md. The latest completed frontier is coverage tranche 146.
+
+Coverage tranche 146 raised `src/architecture/network/serialize/network.serialize.runtime.utils.ts` from 97.96% lines (48/49) to 100% lines by covering two runtime guard lines (`DA:233,1`, `DA:212,1`) in focused validation.
+
+That pass added focused owner-local tests in `src/architecture/network/serialize/network.serialize.runtime.utils.test.ts` for:
+- missing created-connection early return in `applyRestoredConnectionIdentity(undefined, ...)`, and
+- nonnumeric persisted gene-id early return in `hydrateNodeGeneIdWhenProvided(node, null)`.
+
+Focused validation and authoritative integration are both green. Full `npm run test:silent` now reports 302 passing suites and 2623 passing tests.
+
+Next frontier from refreshed aggregate LCOV is `src/architecture/layer/layer.utils.ts` at 98.08% lines (51/52). Continue the same pattern: smallest owner-local tests, one top-level expect per test, AAA structure, nested describe blocks, focused validation first, then authoritative rerun.
+```
+

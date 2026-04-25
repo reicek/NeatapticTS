@@ -690,6 +690,38 @@ describe('network serialize chapter', () => {
               expect(deserializeWithoutConnections).toThrow();
             });
           });
+
+          describe('when the JSON payload root is null', () => {
+            it('throws an invalid JSON error', () => {
+              // Arrange
+              const nullJsonPayload = null as unknown as Record<string, unknown>;
+
+              // Act
+              const deserializeNullRoot = () => Network.fromJSON(nullJsonPayload);
+
+              // Assert
+              expect(deserializeNullRoot).toThrow();
+            });
+          });
+
+          describe('when one connection entry is not an object', () => {
+            it('skips the malformed connection entry', () => {
+              // Arrange
+              const serializedJson = originalNetwork.toJSON() as {
+                connections: unknown[];
+              };
+              serializedJson.connections = [{}];
+
+              // Act
+              const deserializedNetwork = Network.fromJSON(
+                serializedJson as unknown as Record<string, unknown>,
+              );
+              const connectionCount = deserializedNetwork.connections.length;
+
+              // Assert
+              expect(connectionCount).toBe(0);
+            });
+          });
         });
       }
     });
@@ -1002,6 +1034,54 @@ describe('network serialize chapter', () => {
 
           // Assert
           expect(reserialized.extensions).toEqual(serializedJson.extensions);
+        });
+      });
+    });
+
+    describe('given the JSON payload carries an invalid architecture descriptor shape', () => {
+      describe('when hiddenLayerSizes is not an array during fromJSON()', () => {
+        it('ignores the invalid descriptor and keeps a valid runtime architecture descriptor', () => {
+          // Arrange
+          const serializedJson = createSerializableNetwork(3812)
+            .toJSON() as unknown as NetworkJSON;
+          serializedJson.architecture = {
+            source: 'layer-metadata',
+            hiddenLayerSizes: 'invalid-shape',
+          } as unknown as NetworkJSON['architecture'];
+
+          // Act
+          const deserialized = Network.fromJSON(
+            serializedJson as unknown as Record<string, unknown>,
+          );
+          const hasArrayHiddenLayerSizes = Array.isArray(
+            deserialized.describeArchitecture().hiddenLayerSizes,
+          );
+
+          // Assert
+          expect(hasArrayHiddenLayerSizes).toBe(true);
+        });
+      });
+    });
+
+    describe('given the JSON payload carries an invalid generic extension bag shape', () => {
+      describe('when extension values are not a plain object during fromJSON()', () => {
+        it('does not preserve the invalid extension bag in the next JSON snapshot', () => {
+          // Arrange
+          const serializedJson = createSerializableNetwork(3813)
+            .toJSON() as unknown as NetworkJSON;
+          serializedJson.extensions = {
+            version: 1,
+            values: ['invalid-values-shape'] as unknown as Record<string, unknown>,
+          };
+
+          // Act
+          const deserialized = Network.fromJSON(
+            serializedJson as unknown as Record<string, unknown>,
+          );
+          const reserialized = deserialized.toJSON() as unknown as NetworkJSON;
+
+          // Assert
+          expect(reserialized.extensions).toBeUndefined();
         });
       });
     });

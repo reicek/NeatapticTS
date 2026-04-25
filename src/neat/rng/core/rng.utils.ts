@@ -85,7 +85,7 @@ export function getOrCreateRng(host: RngHost): () => number {
     currentState >>>= 0;
 
     host._rngState = currentState >>> 0;
-    return (host._rngState ?? 0) / RNG_NORMALIZATION_DIVISOR;
+    return host._rngState / RNG_NORMALIZATION_DIVISOR;
   };
 
   return host._rng;

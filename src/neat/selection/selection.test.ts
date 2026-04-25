@@ -99,5 +99,61 @@ describe('neat selection chapter', () => {
         expect(chosenParent.score).toBe(3);
       });
     });
+
+    describe('given a roulette threshold that equals total shifted fitness', () => {
+      it('falls back to selecting a random population member when threshold scan misses', async () => {
+        // Arrange
+        const scoreWithoutSideEffects = (network: Network) => {
+          void network;
+          return 1;
+        };
+        const neat = new Neat(2, 1, scoreWithoutSideEffects, {
+          popsize: 4,
+          seed: 558,
+          selection: { name: 'FITNESS_PROPORTIONATE' },
+        });
+        const selectionHost = neat as unknown as SelectionHost;
+        const randomDraws = [1, 0.8];
+
+        await selectionHost.evaluate();
+        selectionHost._getRNG = () => () => randomDraws.shift() ?? 0;
+        selectionHost.population[0].score = 1;
+        selectionHost.population[1].score = 2;
+        selectionHost.population[2].score = 3;
+        selectionHost.population[3].score = 4;
+
+        // Act
+        const chosenParent = selectionHost.getParent();
+
+        // Assert
+        expect(chosenParent.score).toBe(4);
+      });
+    });
+  });
+
+  describe('tournament parent fallback path', () => {
+    describe('given a zero-sized tournament configuration', () => {
+      it('returns undefined when no tournament participants are sampled', () => {
+        // Arrange
+        const scoreWithoutSideEffects = (network: Network) => {
+          void network;
+          return 1;
+        };
+        const neat = new Neat(2, 1, scoreWithoutSideEffects, {
+          popsize: 3,
+          seed: 559,
+          selection: { name: 'TOURNAMENT', size: 0, probability: 0.5 },
+        });
+        const selectionHost = neat as unknown as {
+          getParent: () => { score?: number } | undefined;
+        };
+
+        // Act
+        const chosenParent = selectionHost.getParent();
+
+        // Assert
+        expect(chosenParent).toBeUndefined();
+      });
+    });
   });
 });

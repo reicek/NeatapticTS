@@ -718,6 +718,22 @@ describe('network topology chapter', () => {
   });
 
   describe('hasPath()', () => {
+    describe('given the from and to node are the same node', () => {
+      describe('when hasPath() is called', () => {
+        it('returns true', () => {
+          // Arrange
+          const network = new Network(2, 1, { seed: 76, enforceAcyclic: true });
+          const sameNode = network.nodes[0];
+
+          // Act
+          const selfReachable = hasPath.call(network, sameNode, sameNode);
+
+          // Assert
+          expect(selfReachable).toBe(true);
+        });
+      });
+    });
+
     describe('given the target node is reachable', () => {
       describe('when hasPath() is called', () => {
         it('returns true', () => {

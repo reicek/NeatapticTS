@@ -408,12 +408,12 @@ function createTemporalDescriptorSet(
   recurrentModule?: TemporalRecurrentModuleDescriptor,
   gatedBlock?: TemporalGatedBlockDescriptor,
 ): TemporalDescriptorSet | undefined {
-  if (!recurrentModule && !gatedBlock) {
+  if (!recurrentModule) {
     return undefined;
   }
 
   return {
-    ...(recurrentModule ? { recurrentModules: [recurrentModule] } : {}),
+    recurrentModules: [recurrentModule],
     ...(gatedBlock ? { gatedBlocks: [gatedBlock] } : {}),
   };
 }
@@ -423,7 +423,7 @@ function createRecurrentModuleDescriptor(
   kind: TemporalRecurrentModuleKind,
   roleNodes: Record<string, readonly Node[]>,
   moduleNodes: readonly Node[],
-  additionalConnectionInnovations: readonly number[] = [],
+  additionalConnectionInnovations: readonly number[],
   moduleLabel?: string,
 ): TemporalRecurrentModuleDescriptor | undefined {
   const nodeGeneIdsByRole = Object.fromEntries(
@@ -607,7 +607,7 @@ function createDescriptorId(
 
 function resolveDescriptorIdentity(nodes: readonly Node[]): number {
   const nodeGeneIds = collectFiniteNodeGeneIds(nodes);
-  return nodeGeneIds[0] ?? 0;
+  return nodeGeneIds[0]!;
 }
 
 function resolveDerivedModuleLabel(
@@ -711,11 +711,9 @@ function readNonTemporalValues(
 }
 
 function resolveExtensionVersion(
-  extensions: NetworkJSONExtensions | undefined,
+  _extensions: NetworkJSONExtensions | undefined,
 ): number {
-  return Number.isInteger(extensions?.version) && (extensions?.version ?? 0) > 0
-    ? (extensions?.version as number)
-    : TEMPORAL_EXTENSION_VERSION;
+  return TEMPORAL_EXTENSION_VERSION;
 }
 
 function isRecurrentModuleDescriptorValidOnRuntimeNetwork(

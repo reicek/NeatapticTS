@@ -22,8 +22,6 @@ const MEMORY_BLOCK_LINK_START_INDEX = 1;
 const VARIANT_NODE_TYPE = 'variant';
 const SELF_CONNECTION_WARNING_PREFIX =
   'LSTM Warning: No self-connection found for memory cell node ';
-const MEMORY_OUTPUT_WARNING_MESSAGE =
-  'Unexpected Node type found directly in Memory layer nodes list during output group creation.';
 const MEMORY_INPUT_BLOCK_TYPE_ERROR =
   'Memory layer input block is not a Group.';
 const MEMORY_LAYER_SIZE_ERROR_PREFIX = 'Previous layer size (';
@@ -816,12 +814,9 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
     outputGroup: Group,
     layerNode: Node,
   ): void {
-    if (!isGroupUtils(layerNode)) {
-      console.warn(MEMORY_OUTPUT_WARNING_MESSAGE);
-      return;
-    }
-
-    outputGroup.nodes = outputGroup.nodes.concat(layerNode.nodes);
+    outputGroup.nodes = outputGroup.nodes.concat(
+      (layerNode as unknown as Group).nodes,
+    );
   }
 
   /**

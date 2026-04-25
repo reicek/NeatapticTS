@@ -8,8 +8,13 @@ import { createInnovationTracker } from '../../innovation-tracker/innovation-tra
 import {
   assignInnovationForConnection,
   buildDirectionalKeyForConn,
+  canApplyChosenPairForConn,
   collectCandidatePairsForConn,
+  connectChosenPairWithInnovationReuse,
+  choosePairForConn,
   createsCycle,
+  filterPairsWithInnovations,
+  selectPairPool,
   shouldAbortForCycle,
 } from './mutation.add-conn';
 
@@ -106,6 +111,26 @@ describe('neat mutation add-connection chapter', () => {
 
       // Assert
       expect(connectionKey).toBe('2->2');
+    });
+
+    describe('given node gene ids are missing', () => {
+      it('falls back to zero gene ids in the directional key', () => {
+        // Arrange
+        const sourceNode = createNode('hidden', 2) as NodeWithMetadata & {
+          geneId?: number;
+        };
+        const targetNode = createNode('hidden', 3) as NodeWithMetadata & {
+          geneId?: number;
+        };
+        Reflect.deleteProperty(sourceNode, 'geneId');
+        Reflect.deleteProperty(targetNode, 'geneId');
+
+        // Act
+        const connectionKey = buildDirectionalKeyForConn(sourceNode, targetNode);
+
+        // Assert
+        expect(connectionKey).toBe('0->0');
+      });
     });
   });
 
@@ -287,6 +312,35 @@ describe('neat mutation add-connection chapter', () => {
         });
       });
     });
+
+    describe('given the target node graph revisits a previously seen node', () => {
+      describe('when the cycle detector walks forward from that target node', () => {
+        it('skips the already-visited node and still reports an acyclic result', () => {
+          // Arrange
+          const sourceNode = createNode('hidden', 2);
+          const targetNode = createNode('hidden', 3);
+          const loopNode = createNode('hidden', 4);
+          const cyclicalConnection = {
+            from: targetNode,
+            to: loopNode,
+          } as ConnectionWithMetadata;
+          const returnConnection = {
+            from: loopNode,
+            to: targetNode,
+          } as ConnectionWithMetadata;
+          targetNode.connections.out.push(cyclicalConnection);
+          loopNode.connections.in.push(cyclicalConnection);
+          loopNode.connections.out.push(returnConnection);
+          targetNode.connections.in.push(returnConnection);
+
+          // Act
+          const wouldCreateCycle = createsCycle(sourceNode, targetNode);
+
+          // Assert
+          expect(wouldCreateCycle).toBe(false);
+        });
+      });
+    });
   });
 
   describe('shouldAbortForCycle', () => {
@@ -329,6 +383,289 @@ describe('neat mutation add-connection chapter', () => {
       });
     });
   });
+
+  describe('choosePairForConn', () => {
+    describe('given multiple candidate pairs exist', () => {
+      it('selects the pair chosen by the controller RNG', () => {
+        // Arrange
+        const firstPair = [createNode('hidden', 2), createNode('hidden', 3)] as [
+          NodeWithMetadata,
+          NodeWithMetadata,
+        ];
+        const secondPair = [createNode('hidden', 3), createNode('hidden', 4)] as [
+          NodeWithMetadata,
+          NodeWithMetadata,
+        ];
+
+        // Act
+        const chosenPair = choosePairForConn(
+          [firstPair, secondPair],
+          {
+            ...createMutationController(),
+            _getRNG: () => () => 0.75,
+          },
+        );
+
+        // Assert
+        expect(chosenPair).toBe(secondPair);
+      });
+    });
+  });
+
+  describe('canApplyChosenPairForConn', () => {
+    describe('given a valid feed-forward pair', () => {
+      it('accepts the pair under the feed-forward policy', () => {
+        // Arrange
+        const { genome, firstHiddenNode, inputNode } =
+          createConnectionReuseGenome();
+
+        // Act
+        const canApplyPair = canApplyChosenPairForConn(
+          genome,
+          [inputNode, firstHiddenNode],
+          false,
+        );
+
+        // Assert
+        expect(canApplyPair).toBe(true);
+      });
+    });
+
+    describe('given a valid recurrent pair', () => {
+      it('accepts the pair under the recurrent policy', () => {
+        // Arrange
+        const { genome, firstHiddenNode, secondHiddenNode } =
+          createConnectionReuseGenome();
+
+        // Act
+        const canApplyPair = canApplyChosenPairForConn(
+          genome,
+          [secondHiddenNode, firstHiddenNode],
+          true,
+        );
+
+        // Assert
+        expect(canApplyPair).toBe(true);
+      });
+    });
+  });
+
+  describe('selectPairPool', () => {
+    describe('given reuse candidates exist', () => {
+      it('returns the reuse pool', () => {
+        // Arrange
+        const allPairs = [
+          [createNode('hidden', 2), createNode('hidden', 3)] as [
+            NodeWithMetadata,
+            NodeWithMetadata,
+          ],
+          [createNode('hidden', 3), createNode('hidden', 4)] as [
+            NodeWithMetadata,
+            NodeWithMetadata,
+          ],
+        ];
+        const reusePairs = [allPairs[1]];
+
+        // Act
+        const selectedPool = selectPairPool(allPairs, reusePairs);
+
+        // Assert
+        expect(selectedPool).toBe(reusePairs);
+      });
+    });
+
+    describe('given no reuse candidates exist but hidden-hidden candidates do', () => {
+      it('returns the hidden pair pool', () => {
+        // Arrange
+        const allPairs = [
+          [createNode('input', 1), createNode('hidden', 2)] as [
+            NodeWithMetadata,
+            NodeWithMetadata,
+          ],
+          [createNode('hidden', 3), createNode('hidden', 4)] as [
+            NodeWithMetadata,
+            NodeWithMetadata,
+          ],
+          [createNode('hidden', 4), createNode('output', 5)] as [
+            NodeWithMetadata,
+            NodeWithMetadata,
+          ],
+        ];
+
+        // Act
+        const selectedPool = selectPairPool(allPairs, []);
+
+        // Assert
+        expect(selectedPool).toEqual([allPairs[1]]);
+      });
+    });
+
+    describe('given neither reuse nor hidden-hidden candidates exist', () => {
+      it('returns the full candidate pool', () => {
+        // Arrange
+        const allPairs = [
+          [createNode('input', 1), createNode('output', 2)] as [
+            NodeWithMetadata,
+            NodeWithMetadata,
+          ],
+          [createNode('input', 3), createNode('output', 4)] as [
+            NodeWithMetadata,
+            NodeWithMetadata,
+          ],
+        ];
+
+        // Act
+        const selectedPool = selectPairPool(allPairs, []);
+
+        // Assert
+        expect(selectedPool).toBe(allPairs);
+      });
+    });
+  });
+
+  describe('filterPairsWithInnovations', () => {
+    describe('given only one candidate pair already has a recorded innovation', () => {
+      it('returns only the reusable pair', () => {
+        // Arrange
+        const sourceNode = createNode('hidden', 2);
+        const targetNode = createNode('hidden', 3);
+        const unrelatedSourceNode = createNode('hidden', 4);
+        const unrelatedTargetNode = createNode('hidden', 5);
+        const reusablePair = [sourceNode, targetNode] as [
+          NodeWithMetadata,
+          NodeWithMetadata,
+        ];
+        const unreusedPair = [unrelatedSourceNode, unrelatedTargetNode] as [
+          NodeWithMetadata,
+          NodeWithMetadata,
+        ];
+        const mutationController = createMutationController();
+        mutationController._innovationTracker.connectionInnovations.set(
+          buildDirectionalKeyForConn(sourceNode, targetNode),
+          42,
+        );
+
+        // Act
+        const reusablePairs = filterPairsWithInnovations(
+          [reusablePair, unreusedPair],
+          mutationController,
+        );
+
+        // Assert
+        expect(reusablePairs).toEqual([reusablePair]);
+      });
+    });
+  });
+
+  describe('connectChosenPairWithInnovationReuse', () => {
+    describe('given the chosen pair is not legal for the active topology policy', () => {
+      it('returns undefined without materializing a connection', () => {
+        // Arrange
+        const { genome, firstHiddenNode, secondHiddenNode } =
+          createConnectionReuseGenome();
+
+        // Act
+        const createdConnection = connectChosenPairWithInnovationReuse(
+          genome,
+          [createNode('hidden', 99), secondHiddenNode],
+          createMutationController(),
+          false,
+        );
+
+        // Assert
+        expect(createdConnection).toBeUndefined();
+      });
+    });
+
+    describe('given the source node lives in the output shelf during feed-forward growth', () => {
+      it('returns undefined without materializing a connection', () => {
+        // Arrange
+        const { genome, firstHiddenNode, secondHiddenNode } =
+          createConnectionReuseGenome();
+
+        // Act
+        const createdConnection = connectChosenPairWithInnovationReuse(
+          genome,
+          [secondHiddenNode, firstHiddenNode],
+          createMutationController(),
+          false,
+        );
+
+        // Assert
+        expect(createdConnection).toBeUndefined();
+      });
+    });
+
+    describe('given the genome connect hook creates one new connection', () => {
+      it('returns the created connection after assigning innovation metadata', () => {
+        // Arrange
+        const sourceNode = createNode('input', 1);
+        const targetNode = createNode('hidden', 2);
+        const createdConnection: ConnectionWithMetadata = {
+          from: sourceNode,
+          to: targetNode,
+          weight: 1,
+        };
+        const genome: GenomeWithMetadata = {
+          nodes: [sourceNode, targetNode],
+          connections: [],
+          gates: [],
+          input: 1,
+          output: 1,
+          connect: () => [createdConnection],
+        } as GenomeWithMetadata;
+
+        // Act
+        const returnedConnection = connectChosenPairWithInnovationReuse(
+          genome,
+          [sourceNode, targetNode],
+          createMutationController(),
+          false,
+        );
+
+        // Assert
+        expect(returnedConnection).toBe(createdConnection);
+      });
+    });
+
+    describe('given a legal feed-forward pair but the genome connect hook returns nothing', () => {
+      it('returns undefined after the connection hook fails', () => {
+        // Arrange
+        const { genome, firstHiddenNode, inputNode } =
+          createConnectionReuseGenome();
+
+        // Act
+        const createdConnection = connectChosenPairWithInnovationReuse(
+          genome,
+          [inputNode, firstHiddenNode],
+          createMutationController(),
+          false,
+        );
+
+        // Assert
+        expect(createdConnection).toBeUndefined();
+      });
+    });
+
+    describe('given a legal recurrent pair but the genome connect hook returns nothing', () => {
+      it('returns undefined after the connection hook fails', () => {
+        // Arrange
+        const { genome, firstHiddenNode, secondHiddenNode } =
+          createConnectionReuseGenome();
+
+        // Act
+        const createdConnection = connectChosenPairWithInnovationReuse(
+          genome,
+          [secondHiddenNode, firstHiddenNode],
+          createMutationController(),
+          true,
+        );
+
+        // Assert
+        expect(createdConnection).toBeUndefined();
+      });
+    });
+  });
 });
 
 function createCycleGuardScenario(): {
@@ -358,6 +695,31 @@ function createCycleGuardScenario(): {
     firstHiddenNode,
     secondHiddenNode,
     outputNode,
+  };
+}
+
+function createConnectionReuseGenome(): {
+  genome: GenomeWithMetadata;
+  inputNode: NodeWithMetadata;
+  firstHiddenNode: NodeWithMetadata;
+  secondHiddenNode: NodeWithMetadata;
+} {
+  const inputNode = createNode('input', 1);
+  const firstHiddenNode = createNode('hidden', 2);
+  const secondHiddenNode = createNode('hidden', 3);
+
+  return {
+    genome: {
+      nodes: [inputNode, firstHiddenNode, secondHiddenNode],
+      connections: [],
+      gates: [],
+      input: 1,
+      output: 1,
+      connect: () => [] as ConnectionWithMetadata[],
+    } as GenomeWithMetadata,
+    inputNode,
+    firstHiddenNode,
+    secondHiddenNode,
   };
 }
 

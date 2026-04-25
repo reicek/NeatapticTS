@@ -30,5 +30,24 @@ describe('neat telemetry facade lineage chapter', () => {
         ]);
       });
     });
+
+    describe('given the clip limit is omitted', () => {
+      describe('when the helper is called directly', () => {
+        it('uses the default lineage snapshot window', () => {
+          // Arrange
+          const telemetryLineageHost = createTelemetryLineageHost();
+
+          // Act
+          const lineageSnapshot = getLineageSnapshot(telemetryLineageHost);
+
+          // Assert
+          expect(lineageSnapshot).toEqual([
+            { id: 11, parents: [1, 2] },
+            { id: 12, parents: [] },
+            { id: 13, parents: [11, 12] },
+          ]);
+        });
+      });
+    });
   });
 });

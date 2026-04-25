@@ -1160,6 +1160,16 @@ Parameters:
 
 Returns: Intersection count.
 
+### createMathRandomFactory
+
+```ts
+createMathRandomFactory(): () => number
+```
+
+Create a default RNG factory backed by Math.random.
+
+Returns: RNG factory returning Math.random.
+
 ### isLineageEligible
 
 ```ts
@@ -1193,6 +1203,21 @@ Parameters:
 - `populationSize` - Population size for index bounds.
 
 Returns: Pair of distinct indices.
+
+### resolveLineageRngFactory
+
+```ts
+resolveLineageRngFactory(
+  providedRngFactory: (() => () => number) | undefined,
+): () => () => number
+```
+
+Resolve the RNG factory used by lineage helpers.
+
+Parameters:
+- `providedRngFactory` - Optional caller-provided RNG factory.
+
+Returns: Caller RNG factory or the Math.random fallback.
 
 ## neat/telemetry/metrics/telemetry.metrics.operator.ts
 

@@ -82,5 +82,65 @@ describe('neat evaluate novelty chapter', () => {
         });
       });
     });
+
+    describe('given novelty is disabled', () => {
+      it('returns early without mutating scores or novelty metadata', () => {
+        // Arrange
+        const evaluationController = createNoveltyController();
+        evaluationController.options.novelty = {
+          ...evaluationController.options.novelty,
+          enabled: false,
+        };
+
+        // Act
+        runNoveltyBlendAndArchive(
+          evaluationController,
+          evaluationController.options,
+        );
+
+        // Assert
+        expect(
+          evaluationController.population.map((genome) => ({
+            score: genome.score,
+            novelty: genome._novelty,
+          })),
+        ).toEqual([
+          { score: 10, novelty: undefined },
+          { score: 20, novelty: undefined },
+          { score: 30, novelty: undefined },
+        ]);
+      });
+    });
+
+    describe('given a descriptor callback that throws', () => {
+      it('falls back to empty descriptors and keeps novelty scoring resilient', () => {
+        // Arrange
+        const evaluationController = createNoveltyController();
+        evaluationController.options.novelty = {
+          ...evaluationController.options.novelty,
+          descriptor: () => {
+            throw new Error('descriptor failure');
+          },
+        };
+
+        // Act
+        runNoveltyBlendAndArchive(
+          evaluationController,
+          evaluationController.options,
+        );
+
+        // Assert
+        expect(
+          evaluationController.population.map((genome) => ({
+            score: genome.score,
+            novelty: genome._novelty,
+          })),
+        ).toEqual([
+          { score: 5, novelty: 0 },
+          { score: 10, novelty: 0 },
+          { score: 15, novelty: 0 },
+        ]);
+      });
+    });
   });
 });

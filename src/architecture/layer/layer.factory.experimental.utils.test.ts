@@ -70,6 +70,27 @@ describe('experimental layer factory chapter', () => {
         });
       });
     });
+
+    describe('given no input values are provided', () => {
+      it('falls back to activating the stub nodes', () => {
+        // Arrange
+        const layer = buildAttentionLayer(createFactoryContext(), 2);
+        const firstNodeSpy = jest
+          .spyOn(layer.nodes[0], 'activate')
+          .mockReturnValue(0.3);
+        const secondNodeSpy = jest
+          .spyOn(layer.nodes[1], 'activate')
+          .mockReturnValue(0.7);
+
+        // Act
+        const outputs = layer.activate();
+        firstNodeSpy.mockRestore();
+        secondNodeSpy.mockRestore();
+
+        // Assert
+        expect(outputs).toEqual([0.3, 0.7]);
+      });
+    });
   });
 });
 

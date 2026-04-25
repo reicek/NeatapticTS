@@ -366,11 +366,7 @@ function collectStronglyConnectedComponents(
 
     const componentNodes: TopologyNode[] = [];
     while (nodeStack.length > ZERO_COUNT) {
-      const stackedNode = nodeStack.pop();
-      if (!stackedNode) {
-        break;
-      }
-
+      const stackedNode = nodeStack.pop()!;
       stackedNodes.delete(stackedNode);
       componentNodes.push(stackedNode);
       if (stackedNode === node) {
@@ -615,10 +611,8 @@ function sortComponentIndexesByTieBreak(
 function resolveComponentTieBreakValue(
   componentNodes: readonly TopologyNode[],
 ): number {
-  const firstNode = componentNodes[0];
-  return firstNode
-    ? resolveStableNodeTieBreakValue(firstNode)
-    : Number.MAX_SAFE_INTEGER;
+  const firstNode = componentNodes[0]!;
+  return resolveStableNodeTieBreakValue(firstNode);
 }
 
 /**

@@ -521,6 +521,7 @@ applyFallbackWeightNoise(
   network: default,
   runtimeNetwork: ActivateRuntimeNetworkProps,
   isTraining: boolean,
+  stats: ActivationStats,
 ): void
 ```
 
@@ -530,6 +531,7 @@ Parameters:
 - `network` - Network being activated.
 - `runtimeNetwork` - Runtime activation internals.
 - `isTraining` - Training-time flag.
+- `stats` - Activation stats accumulator.
 
 Returns: Nothing.
 
@@ -584,6 +586,7 @@ applyTrainingWeightNoise(
   network: default,
   runtimeNetwork: ActivateRuntimeNetworkProps,
   isTraining: boolean,
+  stats: ActivationStats,
 ): WeightNoiseApplyResult
 ```
 
@@ -593,6 +596,7 @@ Parameters:
 - `network` - Network being activated.
 - `runtimeNetwork` - Runtime activation internals.
 - `isTraining` - Training-time flag.
+- `stats` - Activation stats accumulator.
 
 Returns: Applied-state information for downstream restore logic.
 
@@ -898,6 +902,23 @@ Parameters:
 - `network` - Network being activated.
 - `stats` - Activation stats accumulator.
 - `layerIndex` - Skipped layer index.
+
+Returns: Nothing.
+
+### recordWeightNoiseSample
+
+```ts
+recordWeightNoiseSample(
+  stats: ActivationStats,
+  sampledNoise: number,
+): void
+```
+
+Record one sampled weight-noise value in the activation statistics snapshot.
+
+Parameters:
+- `stats` - Activation stats accumulator.
+- `sampledNoise` - Sampled noise value before restoration.
 
 Returns: Nothing.
 

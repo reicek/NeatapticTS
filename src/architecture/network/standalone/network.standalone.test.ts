@@ -378,5 +378,24 @@ describe('network standalone chapter', () => {
         });
       });
     });
+
+    describe('given float32 activation precision is requested', () => {
+      describe('when standalone() is called', () => {
+        it('emits Float32Array state and activation buffers', () => {
+          // Arrange
+          const network = new Network(2, 1, { seed: 456 });
+          const networkWithPrecision = network as unknown as {
+            _activationPrecision?: string;
+          };
+          networkWithPrecision._activationPrecision = 'f32';
+
+          // Act
+          const standaloneSource = network.standalone();
+
+          // Assert
+          expect(standaloneSource.includes('new Float32Array([')).toBe(true);
+        });
+      });
+    });
   });
 });

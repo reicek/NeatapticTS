@@ -20,6 +20,11 @@ type TrainingDataset = Parameters<typeof trainImpl>[1];
 
 interface NetworkInternals {
   _forceNextOverflow: boolean;
+  _currentGradClip?: {
+    maxNorm?: number;
+    mode: string;
+    percentile?: number;
+  };
   _mixedPrecision: { enabled: boolean; lossScale: number };
 }
 
@@ -137,6 +142,37 @@ describe('network training chapter', () => {
             expect(trainWithoutStoppingCondition).toThrow(
               NetworkTrainingStoppingConditionRequiredError,
             );
+          });
+        });
+
+        describe('given warnings are enabled for missing stopping conditions', () => {
+          describe('when trainImpl starts', () => {
+            it('logs the missing-condition warning before throwing', () => {
+              // Arrange
+              const network = createSingleInputOutputNetwork(122);
+              const trainingDataset = createSingleSampleDataset();
+              const originalWarnings = config.warnings;
+              const warnSpy = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+
+              config.warnings = true;
+
+              try {
+                // Act
+                const trainWithoutStoppingCondition = () => {
+                  trainImpl(network, trainingDataset, { rate: 0.1 });
+                };
+
+                // Assert
+                expect(trainWithoutStoppingCondition).toThrow(
+                  NetworkTrainingStoppingConditionRequiredError,
+                );
+              } finally {
+                warnSpy.mockRestore();
+                config.warnings = originalWarnings;
+              }
+            });
           });
         });
       });
@@ -384,6 +420,44 @@ describe('network training chapter', () => {
 
             // Assert
             expect(highMagnitudeConnection.totalDeltaWeight).toBeCloseTo(5);
+          });
+        });
+      });
+
+      describe('given gradient clipping uses shorthand max-norm and percentile options', () => {
+        describe('when trainImpl normalizes the runtime configuration', () => {
+          it('stores the expected runtime clipping mode for both shorthand forms', () => {
+            // Arrange
+            const maxNormNetwork = createSingleInputOutputNetwork(123);
+            const percentileNetwork = createSingleInputOutputNetwork(124);
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            trainImpl(maxNormNetwork, trainingDataset, {
+              iterations: 1,
+              rate: 0.1,
+              gradientClip: { maxNorm: 1 },
+            });
+            trainImpl(percentileNetwork, trainingDataset, {
+              iterations: 1,
+              rate: 0.1,
+              gradientClip: { percentile: 90 },
+            });
+
+            const maxNormClip = getNetworkInternal(
+              maxNormNetwork,
+              '_currentGradClip',
+            );
+            const percentileClip = getNetworkInternal(
+              percentileNetwork,
+              '_currentGradClip',
+            );
+
+            // Assert
+            expect([maxNormClip?.mode, percentileClip?.mode]).toEqual([
+              'norm',
+              'percentile',
+            ]);
           });
         });
       });

@@ -273,7 +273,6 @@ export const trainFinalizeCore = (
     if (recentErrorsCount < recentErrorsCapacity) recentErrorsCount++;
   };
   const recentErrorsChrono = (): number[] => {
-    if (recentErrorsCount === 0) return [];
     if (recentErrorsCount < recentErrorsCapacity) {
       return recentErrorsBuf.slice(0, recentErrorsCount);
     }
@@ -308,7 +307,6 @@ export const trainFinalizeCore = (
     if (plateauCount < plateauCapacity) plateauCount++;
   };
   const plateauChrono = (): number[] => {
-    if (plateauCount === 0) return [];
     if (plateauCount < plateauCapacity) {
       return plateauBuf.slice(0, plateauCount);
     }

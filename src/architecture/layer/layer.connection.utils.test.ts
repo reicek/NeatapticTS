@@ -60,6 +60,19 @@ describe('layer connection utility chapter', () => {
         expect(createdConnections).toBe(expectedConnections);
       });
     });
+
+    describe('given the target is not a supported layer, group, or node', () => {
+      it('returns an empty connection list', () => {
+        // Arrange
+        const context = createLayerConnectionContext();
+
+        // Act
+        const createdConnections = connectLayer(context, {} as Group);
+
+        // Assert
+        expect(createdConnections).toEqual([]);
+      });
+    });
   });
 
   describe('gateLayer', () => {
@@ -77,6 +90,32 @@ describe('layer connection utility chapter', () => {
         ).toThrow('Layer output is not defined. Cannot gate from this layer.');
       });
     });
+
+    describe('given the layer has an output group', () => {
+      it('delegates gating to the output group', () => {
+        // Arrange
+        const context = createLayerConnectionContext();
+        const gatedConnections = [
+          new Connection(new Node('hidden'), new Node('hidden')),
+        ];
+        const gateSpy = jest
+          .spyOn(context.output as Group, 'gate')
+          .mockImplementation(() => undefined);
+
+        try {
+          // Act
+          gateLayer(context, gatedConnections, methods.gating.INPUT);
+
+          // Assert
+          expect(gateSpy).toHaveBeenCalledWith(
+            gatedConnections,
+            methods.gating.INPUT,
+          );
+        } finally {
+          gateSpy.mockRestore();
+        }
+      });
+    });
   });
 
   describe('inputLayer', () => {
@@ -90,6 +129,18 @@ describe('layer connection utility chapter', () => {
 
         // Assert
         expect(createdConnections).toHaveLength(4);
+      });
+    });
+
+    describe('given the layer has no output group', () => {
+      it('throws the missing-input-target error', () => {
+        // Arrange
+        const context = createLayerConnectionContext({ output: null });
+
+        // Act and Assert
+        expect(() => inputLayer(context, new Group(1))).toThrow(
+          'Layer output (acting as input target) is not defined.',
+        );
       });
     });
 
@@ -152,6 +203,27 @@ describe('layer connection utility chapter', () => {
           outgoingCount: context.connections.out.length,
           incomingCount: context.connections.in.length,
         }).toEqual({ outgoingCount: 0, incomingCount: 1 });
+      });
+    });
+
+    describe('given the target is a single node and two-sided cleanup is enabled', () => {
+      it('removes both outgoing and incoming tracking entries', () => {
+        // Arrange
+        const context = createLayerConnectionContext();
+        const targetNode = new Node('hidden');
+        const forwardConnection = context.nodes[0].connect(targetNode)[0];
+        const reverseConnection = targetNode.connect(context.nodes[0])[0];
+        context.connections.out.push(forwardConnection);
+        context.connections.in.push(reverseConnection);
+
+        // Act
+        disconnectLayer(context, targetNode, true);
+
+        // Assert
+        expect({
+          outgoingCount: context.connections.out.length,
+          incomingCount: context.connections.in.length,
+        }).toEqual({ outgoingCount: 0, incomingCount: 0 });
       });
     });
   });
