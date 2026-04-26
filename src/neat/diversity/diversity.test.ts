@@ -1,4 +1,16 @@
-import { computeDiversityStats } from './diversity';
+import Network from '../../architecture/network/network';
+import {
+  buildEmptyDiversityStats,
+  computeDiversityStats,
+  MAX_COMPATIBILITY_SAMPLE,
+  MAX_LINEAGE_PAIR_SAMPLE,
+  structuralEntropy,
+} from './diversity';
+import {
+  calculateStructuralEntropy,
+  MAX_COMPATIBILITY_SAMPLE as CORE_MAX_COMPATIBILITY_SAMPLE,
+  MAX_LINEAGE_PAIR_SAMPLE as CORE_MAX_LINEAGE_PAIR_SAMPLE,
+} from './core/diversity.core';
 import type { CompatComputer, GenomeWithMetrics } from './core/diversity.types';
 
 function createGenomeWithMetrics(
@@ -29,6 +41,73 @@ function createCompatibilityComputer(): CompatComputer {
 }
 
 describe('neat diversity chapter', () => {
+  describe('structuralEntropy', () => {
+    describe('given a network graph', () => {
+      it('delegates to the core entropy helper for structural fingerprinting', () => {
+        // Arrange
+        const graph = new Network(2, 1);
+
+        // Act
+        const chapterEntropy = structuralEntropy(graph);
+        const coreEntropy = calculateStructuralEntropy(graph);
+
+        // Assert
+        expect(chapterEntropy).toBe(coreEntropy);
+      });
+    });
+  });
+
+  describe('buildEmptyDiversityStats', () => {
+    describe('given a population size fallback', () => {
+      it('returns a zeroed snapshot with the provided population echoed', () => {
+        // Arrange
+        const populationSize = 7;
+
+        // Act
+        const emptyStats = buildEmptyDiversityStats(populationSize);
+
+        // Assert
+        expect(emptyStats).toEqual({
+          lineageMeanDepth: 0,
+          lineageMeanPairDist: 0,
+          meanNodes: 0,
+          meanConns: 0,
+          nodeVar: 0,
+          connVar: 0,
+          meanCompat: 0,
+          graphletEntropy: 0,
+          population: 7,
+        });
+      });
+    });
+  });
+
+  describe('public sample caps', () => {
+    describe('given root diversity re-exports', () => {
+      it('exposes the compatibility sample cap from core without drift', () => {
+        // Arrange
+        const compatibilityCapFromChapter = MAX_COMPATIBILITY_SAMPLE;
+
+        // Act
+        const compatibilityCapFromCore = CORE_MAX_COMPATIBILITY_SAMPLE;
+
+        // Assert
+        expect(compatibilityCapFromChapter).toBe(compatibilityCapFromCore);
+      });
+
+      it('exposes the lineage pair sample cap from core without drift', () => {
+        // Arrange
+        const lineageCapFromChapter = MAX_LINEAGE_PAIR_SAMPLE;
+
+        // Act
+        const lineageCapFromCore = CORE_MAX_LINEAGE_PAIR_SAMPLE;
+
+        // Assert
+        expect(lineageCapFromChapter).toBe(lineageCapFromCore);
+      });
+    });
+  });
+
   describe('computeDiversityStats', () => {
     describe('given an empty population', () => {
       it('returns undefined instead of a synthetic diversity report', () => {

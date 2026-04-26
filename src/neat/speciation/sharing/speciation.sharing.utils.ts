@@ -160,16 +160,17 @@ export function applyFitnessSharing(
     // Step 1: Normalize each member score by its sharing sum.
     for (let memberIndex = 0; memberIndex < members.length; memberIndex++) {
       const member = members[memberIndex];
-      if (typeof member.score !== 'number') continue;
-      const sharingSum = computeSharingSum(
-        context,
-        members,
-        memberIndex,
-        member,
-        sigmaValue,
-      );
-      const safeSharingSum = sharingSum > 0 ? sharingSum : SHARING_SUM_FLOOR;
-      member.score = member.score / safeSharingSum;
+      if (typeof member.score === 'number') {
+        const sharingSum = computeSharingSum(
+          context,
+          members,
+          memberIndex,
+          member,
+          sigmaValue,
+        );
+        const safeSharingSum = Math.max(sharingSum, SHARING_SUM_FLOOR);
+        member.score = member.score / safeSharingSum;
+      }
     }
   }
 

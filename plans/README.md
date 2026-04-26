@@ -35,6 +35,7 @@ Active selection guide:
 - [plans/Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md): browser packaging, CDN usage, and distribution ergonomics.
 - [plans/Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md): contracts between evolution workflows and gradient-based training.
 - [plans/Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md): runnable examples, onboarding flow, and learning-path improvements.
+- [plans/NEATchat.md](NEATchat.md): tiny online chatbot example planning, scoped as a learnability demo rather than a large-scale language-model training lane.
 - [plans/Memory_Optimization.md](Memory_Optimization.md): scaling, memory layout, and strategies for very large networks.
 - [plans/Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md): stable export schema for visualization and inspection tooling.
 - [plans/ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): ONNX export/import architecture and rollout phases.
@@ -61,6 +62,7 @@ Task-to-plan trigger phrases:
 - memory pressure, large networks, compact storage: `plans/Memory_Optimization.md`
 - visualization, schema, inspect network shape: `plans/Network_Visualization_Export_Schema.md`
 - examples, tutorials, learning path, onboarding: `plans/Interactive_Examples_and_Learning_Path.md`
+- neatchat, chatbot, online language learning, tiny conversation bot: `plans/NEATchat.md`
 - flappy visualizer hover, connection highlight, pointer-driven emphasis: `plans/flappy-network-visualizer-hover-highlight.plans.md`
 - evo-devo, morphology, research-heavy extensions: `plans/HyperEvoDevoMorphoNEAT.md`
 - racing benchmark, optimal line, behavioral drives, overtaking, self-play racecraft, Hyper follow-on: `plans/HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md`

@@ -69,6 +69,22 @@ describe('nodePool', () => {
           // Assert
           expect(recycledNode.type).toBe('output');
         });
+
+        it('applies the requested activation function', () => {
+          // Arrange
+          const firstNode = acquireNode({ type: 'hidden' });
+          releaseNode(firstNode);
+          const requestedActivationFunction = (value: number): number => value;
+
+          // Act
+          const recycledNode = acquireNode({
+            type: 'output',
+            activationFn: requestedActivationFunction,
+          });
+
+          // Assert
+          expect(recycledNode.squash).toBe(requestedActivationFunction);
+        });
       });
     });
   });

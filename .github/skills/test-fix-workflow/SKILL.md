@@ -114,8 +114,8 @@ Preferred validation cadence:
 - During the fix phase: narrow red/green test reruns for the active cluster,
   plus `npx tsc --noEmit -p tsconfig.test.json` when needed.
 - After the cluster is green: expand coverage on the new or directly related
-  boundary toward >95% when practical.
-- After all planned fixes: `npm test` or `npm run test:silent`.
+  boundary toward 100% in all categories. No code should be unreachable.
+- After all planned fixes: `npm run test:silent` and verify tested coverage.
 
 If the task is compile-heavy rather than runtime-heavy, file- or package-level
 diagnostics may be enough before the final suite run.

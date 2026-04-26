@@ -28,6 +28,24 @@ describe('neat genome errors chapter', () => {
           cause,
         });
       });
+
+      it('keeps the cause undefined when no cause is provided', () => {
+        // Act
+        const error = new NeatGenomeConversionError(
+          'failed to convert runtime network into genome',
+        );
+
+        // Assert
+        expect({
+          message: error.message,
+          name: error.name,
+          cause: error.cause,
+        }).toEqual({
+          message: 'failed to convert runtime network into genome',
+          name: 'NeatGenomeConversionError',
+          cause: undefined,
+        });
+      });
     });
   });
 

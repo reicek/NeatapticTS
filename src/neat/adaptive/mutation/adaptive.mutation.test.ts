@@ -1,4 +1,13 @@
-import { applyAdaptiveMutation } from './adaptive.mutation';
+import {
+  applyAdaptiveMutation,
+  applyMutationsToPopulation,
+  applyOperatorDecay as applyOperatorDecayFromFacade,
+  applyTwoTierFallback,
+  resolveMutationSettings,
+  resolveOperatorDecay,
+  shouldAdaptThisGeneration,
+  shouldApplyTwoTierFallback,
+} from './adaptive.mutation';
 import {
   applyOperatorDecay,
   collectOperatorStatsEntries,
@@ -40,6 +49,40 @@ function roundNumericValue(
 }
 
 describe('neat adaptive mutation chapter', () => {
+  describe('adaptive.mutation facade re-exports', () => {
+    it('exports applyAdaptiveMutation as a function', () => {
+      expect(typeof applyAdaptiveMutation).toBe('function');
+    });
+
+    it('exports shouldAdaptThisGeneration as a function', () => {
+      expect(typeof shouldAdaptThisGeneration).toBe('function');
+    });
+
+    it('exports resolveMutationSettings as a function', () => {
+      expect(typeof resolveMutationSettings).toBe('function');
+    });
+
+    it('exports applyMutationsToPopulation as a function', () => {
+      expect(typeof applyMutationsToPopulation).toBe('function');
+    });
+
+    it('exports shouldApplyTwoTierFallback as a function', () => {
+      expect(typeof shouldApplyTwoTierFallback).toBe('function');
+    });
+
+    it('exports applyTwoTierFallback as a function', () => {
+      expect(typeof applyTwoTierFallback).toBe('function');
+    });
+
+    it('exports resolveOperatorDecay as a function', () => {
+      expect(typeof resolveOperatorDecay).toBe('function');
+    });
+
+    it('exports applyOperatorDecay as a function', () => {
+      expect(typeof applyOperatorDecayFromFacade).toBe('function');
+    });
+  });
+
   describe('applyAdaptiveMutation', () => {
     describe('given the two-tier strategy with scored top and bottom halves', () => {
       it('pushes the lower-scoring genomes above the baseline rate and the higher-scoring genomes below it', () => {

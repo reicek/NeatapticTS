@@ -22,6 +22,29 @@ describe('Cost', () => {
       });
     });
 
+    describe('given soft-label targets', () => {
+      describe('when the predictions are evaluated', () => {
+        it('uses the soft-label cross-entropy blend term', () => {
+          // Arrange
+          const targets = [0.25, 0.75];
+          const outputs = [0.8, 0.2];
+          const expectedLoss =
+            (-(
+              0.25 * Math.log(0.8) +
+              (1 - 0.25) * Math.log(1 - 0.8) +
+              (0.75 * Math.log(0.2) + (1 - 0.75) * Math.log(1 - 0.2))
+            )) /
+            2;
+
+          // Act
+          const actualLoss = Cost.crossEntropy(targets, outputs);
+
+          // Assert
+          expect(actualLoss).toBeCloseTo(expectedLoss, 12);
+        });
+      });
+    });
+
     describe('given mismatched target and output lengths', () => {
       describe('when the loss is evaluated', () => {
         it('throws the canonical length-mismatch error', () => {
@@ -61,6 +84,22 @@ describe('Cost', () => {
 
           // Assert
           expect(actualLoss).toBeCloseTo(expectedLoss, 12);
+        });
+      });
+    });
+
+    describe('given zero-sum targets', () => {
+      describe('when the loss is evaluated', () => {
+        it('keeps the targets unchanged before softmax loss reduction', () => {
+          // Arrange
+          const targets = [0, 0, 0];
+          const outputs = [2, 1, 0];
+
+          // Act
+          const actualLoss = Cost.softmaxCrossEntropy(targets, outputs);
+
+          // Assert
+          expect(actualLoss).toBe(0);
         });
       });
     });

@@ -1,4 +1,5 @@
 import Network from '../network';
+import { RNG_WEYL_INCREMENT } from './network.deterministic.utils.types';
 
 type InternalRand = () => number;
 
@@ -124,6 +125,23 @@ describe('network deterministic chapter', () => {
 
           // Assert
           expect(arraysMatchExactly(firstWeights, secondWeights)).toBe(false);
+        });
+      });
+    });
+
+    describe('given deterministic random state is reset to undefined', () => {
+      describe('when the internal random function advances once', () => {
+        it('falls back to zero before applying the Weyl increment', () => {
+          // Arrange
+          const network = new Network(1, 1, { seed: 123 });
+          Reflect.set(network, '_rngState', undefined);
+
+          // Act
+          invokeInternalRand(network);
+          const stateAfterAdvance = network.getRNGState();
+
+          // Assert
+          expect(stateAfterAdvance).toBe(RNG_WEYL_INCREMENT);
         });
       });
     });

@@ -7,12 +7,14 @@ import {
   createConv1dLayer,
   createDenseLayer,
   disconnectLayer,
+  propagateLayer,
 } from './layer.utils';
 import type {
   LayerConnectionContext,
   LayerFactoryContext,
   LayerFactoryLayer,
   LayerLike,
+  LayerPropagationContext,
 } from './layer.utils.types';
 
 type TestLayer = LayerFactoryLayer & {
@@ -61,6 +63,37 @@ describe('layer utils', () => {
             incomingCount: layer.connections.in.length,
             outgoingCount: layer.connections.out.length,
           }).toEqual({ incomingCount: 1, outgoingCount: 0 });
+        });
+      });
+    });
+  });
+
+  describe('propagateLayer()', () => {
+    describe('given a propagation context with explicit targets', () => {
+      describe('when the wrapper delegates to reverse propagation', () => {
+        it('propagates each node in reverse order with aligned targets', () => {
+          // Arrange
+          const callLog: Array<{
+            args: Array<boolean | number>;
+            label: string;
+          }> = [];
+          const context = {
+            nodes: [
+              createPropagationNode('first', callLog),
+              createPropagationNode('second', callLog),
+              createPropagationNode('third', callLog),
+            ],
+          } as unknown as LayerPropagationContext;
+
+          // Act
+          propagateLayer(context, 0.3, 0.1, [0.2, 0.4, 0.6]);
+
+          // Assert
+          expect(callLog).toStrictEqual([
+            { args: [0.3, 0.1, true, 0, 0.6], label: 'third' },
+            { args: [0.3, 0.1, true, 0, 0.4], label: 'second' },
+            { args: [0.3, 0.1, true, 0, 0.2], label: 'first' },
+          ]);
         });
       });
     });
@@ -130,4 +163,15 @@ function createFactoryContext(): LayerFactoryContext<TestLayer> {
       'input' in value &&
       typeof (value as LayerLike).input === 'function',
   };
+}
+
+function createPropagationNode(
+  label: string,
+  callLog: Array<{ args: Array<boolean | number>; label: string }>,
+): Node {
+  return {
+    propagate: (...args: Array<boolean | number>) => {
+      callLog.push({ args, label });
+    },
+  } as unknown as Node;
 }

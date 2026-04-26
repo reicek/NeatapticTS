@@ -428,5 +428,27 @@ describe('network onnx export conv chapter', () => {
         });
       });
     });
+
+    describe('given explicit conv and pooling mappings share the same layer', () => {
+      let onnxModel: OnnxModel;
+
+      beforeEach(() => {
+        // Arrange
+        const scenario = createConvGroundworkScenario();
+
+        // Act
+        onnxModel = exportToONNX(scenario.network, {
+          conv2dMappings: scenario.mappings,
+          pool2dMappings: createPoolingMappings(),
+        });
+      });
+
+      describe('when conv layer emission resolves pooling spec by layer index', () => {
+        it('emits a MaxPool operator after conv activation', () => {
+          // Assert
+          expect(hasGraphNodeType(onnxModel, 'MaxPool')).toBe(true);
+        });
+      });
+    });
   });
 });

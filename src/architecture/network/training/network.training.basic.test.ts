@@ -11,8 +11,10 @@ import {
   NetworkTrainingBatchSizeError,
   NetworkTrainingDatasetCompatibilityError,
   NetworkTrainingDropoutRangeError,
+  NetworkTrainingInvalidOptimizerOptionError,
   NetworkTrainingNestedLookaheadError,
   NetworkTrainingStoppingConditionRequiredError,
+  NetworkTrainingUnknownLookaheadBaseTypeError,
   NetworkTrainingUnknownOptimizerTypeError,
 } from './network.training.errors';
 
@@ -273,6 +275,30 @@ describe('network training chapter', () => {
         });
       });
 
+      describe('given optimizer option is a non-object, non-string value', () => {
+        describe('when trainImpl starts', () => {
+          it('throws the invalid-optimizer-option error', () => {
+            // Arrange
+            const network = createSingleInputOutputNetwork(206);
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            const trainWithInvalidOptimizerOption = () => {
+              trainImpl(network, trainingDataset, {
+                iterations: 1,
+                rate: 0.1,
+                optimizer: 7 as unknown as never,
+              });
+            };
+
+            // Assert
+            expect(trainWithInvalidOptimizerOption).toThrow(
+              NetworkTrainingInvalidOptimizerOptionError,
+            );
+          });
+        });
+      });
+
       describe('given lookahead uses lookahead as its base type', () => {
         describe('when trainImpl starts', () => {
           it('throws the nested-lookahead error', () => {
@@ -292,6 +318,30 @@ describe('network training chapter', () => {
             // Assert
             expect(trainWithNestedLookahead).toThrow(
               NetworkTrainingNestedLookaheadError,
+            );
+          });
+        });
+      });
+
+      describe('given lookahead uses an unsupported base type', () => {
+        describe('when trainImpl starts', () => {
+          it('throws the unknown-lookahead-base-type error', () => {
+            // Arrange
+            const network = createSingleInputOutputNetwork(207);
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            const trainWithUnknownLookaheadBaseType = () => {
+              trainImpl(network, trainingDataset, {
+                iterations: 1,
+                rate: 0.1,
+                optimizer: { type: 'lookahead', baseType: 'notreal' },
+              });
+            };
+
+            // Assert
+            expect(trainWithUnknownLookaheadBaseType).toThrow(
+              NetworkTrainingUnknownLookaheadBaseTypeError,
             );
           });
         });

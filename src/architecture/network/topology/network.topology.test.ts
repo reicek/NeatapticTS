@@ -3,6 +3,7 @@ import Node from '../../node';
 import { Architect } from '../../../neataptic';
 import * as methods from '../../../methods/methods';
 import { computeTopoOrder, hasPath } from '../network.utils';
+import * as topologyUtilsFacade from './network.topology.utils';
 
 function setTopoOrder(network: Network, topologyOrder: Node[] | null): void {
   Reflect.set(network, '_topoOrder', topologyOrder);
@@ -53,6 +54,31 @@ function getNetworkRandomGenerator(network: Network): () => number {
 }
 
 describe('network topology chapter', () => {
+  describe('network.topology.utils facade re-exports', () => {
+    it('exports all topology facade functions as callable values', () => {
+      expect({
+        computeTopoOrder: typeof topologyUtilsFacade.computeTopoOrder,
+        hasPath: typeof topologyUtilsFacade.hasPath,
+        getTopologyIntent: typeof topologyUtilsFacade.getTopologyIntent,
+        hasFeedForwardTopologyContract:
+          typeof topologyUtilsFacade.hasFeedForwardTopologyContract,
+        setEnforceAcyclic: typeof topologyUtilsFacade.setEnforceAcyclic,
+        setTopologyIntent: typeof topologyUtilsFacade.setTopologyIntent,
+        createMLP: typeof topologyUtilsFacade.createMLP,
+        rebuildConnections: typeof topologyUtilsFacade.rebuildConnections,
+      }).toEqual({
+        computeTopoOrder: 'function',
+        hasPath: 'function',
+        getTopologyIntent: 'function',
+        hasFeedForwardTopologyContract: 'function',
+        setEnforceAcyclic: 'function',
+        setTopologyIntent: 'function',
+        createMLP: 'function',
+        rebuildConnections: 'function',
+      });
+    });
+  });
+
   describe('explicit IO role storage', () => {
     describe('given the public constructor creates a starter graph', () => {
       describe('when the explicit role metadata is read', () => {

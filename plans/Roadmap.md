@@ -90,12 +90,16 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
    - Plan: [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
 7. Interactive examples + learning path (Node + browser runnable examples, CI smoke checks)
    - Plan: [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [PLANNED]
-8. Visualization export schema (JSON schema + optional DOT output)
+8. NEATchat (tiny online sequence-learning chatbot demo)
+   - Plan: [NEATchat.md](NEATchat.md) [PLANNED]
+   - Current internal state: this is a Phase 3 learnability demo candidate, not a Phase 7 research lane. It is intended to start from near-zero knowledge, learn incrementally from short chat exchanges, stay language-agnostic at the token-stream level, and remain intentionally small enough for Node or browser experimentation rather than web-scale training.
+9. Visualization export schema (JSON schema + optional DOT output)
    - Plan: [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
 
 **Notes:**
 
 - Phase 3 examples are the starter set only: Node hello/evolve flows plus one minimal browser quickstart once the browser bundle exists.
+- `NEATchat` is part of the learnability lane because it showcases the sequence builders and online adaptation at a toy scale; persistent memory files, worker-backed background training, or any heavier deployment surface remain follow-on work for later phases.
 - Examples that depend on standalone export or worker execution are follow-on additions in Phase 4 after those capabilities land.
 - Before expanding the examples catalog, choose the canonical examples home and decide whether `bench-browser/` is the browser-example host so demo work does not fragment.
 - Visualization can be implemented slightly earlier, but it becomes much more valuable once primitives/builders provide stable labels/roles.
@@ -223,25 +227,26 @@ Completed entries below resolve into `plans/completed/`.
 
 20. [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
 21. [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [PLANNED]
-22. [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
+22. [NEATchat.md](NEATchat.md) [PLANNED]
+23. [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
 
 ### Phase 4 inventory
 
-23. [Standalone_Inference_Export.md](completed/Standalone_Inference_Export.md) [DONE]
-24. [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
-25. [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md) [PLANNED]
-26. [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md) [PLANNED]
-27. [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
+24. [Standalone_Inference_Export.md](completed/Standalone_Inference_Export.md) [DONE]
+25. [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
+26. [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md) [PLANNED]
+27. [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md) [PLANNED]
+28. [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
 
 ### Phase 5 inventory
 
-28. [Memory_Optimization.md](Memory_Optimization.md) [WIP]
+29. [Memory_Optimization.md](Memory_Optimization.md) [WIP]
 
 ### Phase 6 inventory
 
-29. [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
+30. [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
 
 ### Phase 7 inventory
 
-30. [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]
-31. [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md) [PLANNED]
+31. [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]
+32. [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md) [PLANNED]

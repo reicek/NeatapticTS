@@ -142,6 +142,145 @@ describe('genome heredity chapter', () => {
           enabled: true,
         });
       });
+
+      it('falls back to the second parent re-enable probability when the first is unset', () => {
+        // Arrange
+        const firstParentNetwork = new Network(2, 1, { seed: 2_416 });
+        const secondParentNetwork = firstParentNetwork.clone();
+        firstParentNetwork.connections[0].enabled = false;
+        secondParentNetwork.connections[0].enabled = false;
+        const firstParentGenome = createGenomeFromNetwork(firstParentNetwork);
+        const secondParentGenome = createGenomeFromNetwork(secondParentNetwork);
+
+        // Act
+        const selectedGenes = selectGenomeHeredityConnectionGenes({
+          parent1Genome: firstParentGenome,
+          parent2Genome: secondParentGenome,
+          parent1Score: 1,
+          parent2Score: 1,
+          parent2ReenableProbability: 1,
+          equal: false,
+          randomGenerator: createRandomSequenceGenerator([0.75, 0]),
+        });
+
+        // Assert
+        expect(selectedGenes[0].connectionGene.enabled).toBe(true);
+      });
+
+      it('uses the default re-enable probability when both probabilities are unset', () => {
+        // Arrange
+        const firstParentNetwork = new Network(2, 1, { seed: 2_417 });
+        const secondParentNetwork = firstParentNetwork.clone();
+        firstParentNetwork.connections[0].enabled = false;
+        secondParentNetwork.connections[0].enabled = false;
+        const firstParentGenome = createGenomeFromNetwork(firstParentNetwork);
+        const secondParentGenome = createGenomeFromNetwork(secondParentNetwork);
+
+        // Act
+        const selectedGenes = selectGenomeHeredityConnectionGenes({
+          parent1Genome: firstParentGenome,
+          parent2Genome: secondParentGenome,
+          parent1Score: 1,
+          parent2Score: 1,
+          equal: false,
+          randomGenerator: createRandomSequenceGenerator([0.75, 0.1]),
+        });
+
+        // Assert
+        expect(selectedGenes[0].connectionGene.enabled).toBe(true);
+      });
+    });
+
+    describe('given a fitter parent with a disabled disjoint gene', () => {
+      it('applies re-enable probability while inheriting the disjoint connection', () => {
+        // Arrange
+        const firstParentNetwork = new Network(2, 1, { seed: 2_414 });
+        const secondParentNetwork = firstParentNetwork.clone();
+        firstParentNetwork.connections[0].innovation = 101;
+        firstParentNetwork.connections[0].enabled = false;
+        secondParentNetwork.connections[0].innovation = 202;
+        const firstParentGenome = createGenomeFromNetwork(firstParentNetwork);
+        const secondParentGenome = createGenomeFromNetwork(secondParentNetwork);
+
+        // Act
+        const selectedGenes = selectGenomeHeredityConnectionGenes({
+          parent1Genome: firstParentGenome,
+          parent2Genome: secondParentGenome,
+          parent1Score: 2,
+          parent2Score: 1,
+          parent1ReenableProbability: 1,
+          equal: false,
+          randomGenerator: () => 0,
+        });
+
+        // Assert
+        expect(
+          selectedGenes.find(
+            (selectedGene) =>
+              selectedGene.connectionGene.innovation === 101,
+          )?.connectionGene.enabled ?? null,
+        ).toBe(true);
+      });
+    });
+
+    describe('given a less fit parent1 with only disjoint genes', () => {
+      it('skips parent1-only genes and inherits sorted parent2-only genes', () => {
+        // Arrange
+        const firstParentNetwork = new Network(2, 1, { seed: 2_415 });
+        const secondParentNetwork = firstParentNetwork.clone();
+        const firstParentGenome = createGenomeFromNetwork(firstParentNetwork);
+        const secondParentGenome = createGenomeFromNetwork(secondParentNetwork);
+        const sourceTemplateGene = firstParentGenome.connectionGenes[0];
+        const controlledParent1Genome = {
+          ...firstParentGenome,
+          connectionGenes: [
+            {
+              ...sourceTemplateGene,
+              innovation: 101,
+            },
+          ],
+        };
+        const controlledParent2Genome = {
+          ...secondParentGenome,
+          connectionGenes: [
+            {
+              ...sourceTemplateGene,
+              innovation: 303,
+            },
+            {
+              ...sourceTemplateGene,
+              innovation: 202,
+            },
+          ],
+        };
+
+        // Act
+        const selectedGenes = selectGenomeHeredityConnectionGenes({
+          parent1Genome: controlledParent1Genome,
+          parent2Genome: controlledParent2Genome,
+          parent1Score: 1,
+          parent2Score: 2,
+          equal: false,
+          randomGenerator: () => 0,
+        });
+
+        // Assert
+        expect({
+          innovations: selectedGenes.map(
+            (selectedGene) => selectedGene.connectionGene.innovation,
+          ),
+          allFromParent2: selectedGenes.every(
+            (selectedGene) => selectedGene.sourceParent === 'parent2',
+          ),
+          includesParent1Innovation: selectedGenes.some(
+            (selectedGene) => selectedGene.connectionGene.innovation === 101,
+          ),
+        }).toEqual({
+          innovations: [202, 303],
+          allFromParent2: true,
+          includesParent1Innovation: false,
+        });
+      });
     });
   });
 });

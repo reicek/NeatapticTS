@@ -1,4 +1,9 @@
-import { applyAgeProtection, recordHistory } from './speciation.history.utils';
+import {
+  applyAgeProtection,
+  recordHistory,
+  trimHistory,
+} from './speciation.history.utils';
+import { HISTORY_BUFFER_MAX_ENTRIES } from '../shared/speciation.shared';
 import type {
   ConnectionLike,
   GenomeDetailed,
@@ -336,6 +341,28 @@ describe('neat speciation history chapter', () => {
 
         // Assert
         expect(historyStat.innovationRange).toBe(101);
+      });
+    });
+  });
+
+  describe('trimHistory', () => {
+    describe('given the history buffer exceeds the configured cap', () => {
+      it('removes the oldest history entry', () => {
+        // Arrange
+        const speciationContext = buildAgePenaltyContext();
+        speciationContext._speciesHistory = Array.from(
+          { length: HISTORY_BUFFER_MAX_ENTRIES + 1 },
+          (_, index) => ({
+            generation: index,
+            stats: [],
+          }),
+        );
+
+        // Act
+        trimHistory(speciationContext);
+
+        // Assert
+        expect(speciationContext._speciesHistory[0]?.generation).toBe(1);
       });
     });
   });

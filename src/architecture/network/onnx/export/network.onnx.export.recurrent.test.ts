@@ -1,5 +1,6 @@
 import Network from '../../network';
 import { exportToONNX } from '../network.onnx';
+import { collectLstmPatternStubs } from './network.onnx.export-orchestrators.utils';
 import type { OnnxModel } from '../network.onnx';
 
 type OnnxInitializerView = { name: string };
@@ -95,6 +96,26 @@ function buildPartitionedGruNetwork(
 }
 
 describe('network onnx export recurrent chapter', () => {
+  describe('collectLstmPatternStubs()', () => {
+    describe('given malformed hidden-layer entries', () => {
+      describe('when recurrent heuristics are enabled', () => {
+        it('returns an empty list via the safety fallback', () => {
+          // Arrange
+          const malformedLayers: Array<Network['nodes'] | null> = [[], null, []];
+
+          // Act
+          const lstmPatternStubs = collectLstmPatternStubs(
+            malformedLayers as Network['nodes'][],
+            true,
+          );
+
+          // Assert
+          expect(lstmPatternStubs).toEqual([]);
+        });
+      });
+    });
+  });
+
   describe('heuristic fused recurrent emission', () => {
     describe('given a partitioned LSTM-like hidden layer', () => {
       let onnxModel: OnnxModel;

@@ -1,8 +1,8 @@
-import type Node from '../../architecture/node';
+﻿import type Node from '../../architecture/node';
 import Network from '../../architecture/network';
 import * as methods from '../../methods/methods';
 import Neat from '../../neat';
-import { ensureMinHiddenNodes } from './mutation';
+import { ensureMinHiddenNodes, ensureNoDeadEnds, selectMutationMethod } from './mutation';
 
 function countHiddenNodes(network: Network): number {
   return network.nodes.filter((nodeEntry) => nodeEntry.type === 'hidden')
@@ -275,6 +275,77 @@ describe('neat mutation chapter', () => {
 
         // Assert
         expect(genomeMutateSpy).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('selectMutationMethod', () => {
+    describe('given ADD_NODE is sampled but the genome node count is at maxNodes', () => {
+      describe('when selectMutationMethod runs', () => {
+        it('returns null when the structural limit blocks the sampled method', async () => {
+          // Arrange: genome already at the configured node cap.
+          const network = new Network(2, 1, { seed: 702 });
+          const mutationController = new Neat(2, 1, () => 0, {
+            popsize: 0,
+            mutation: [methods.mutation.ADD_NODE],
+            maxNodes: network.nodes.length,
+            seed: 703,
+          });
+
+          // Act
+          const result = await selectMutationMethod.call(
+            mutationController as unknown as ThisParameterType<
+              typeof selectMutationMethod
+            >,
+            network as unknown as Parameters<typeof selectMutationMethod>[0],
+            false,
+          );
+
+          // Assert
+          expect(result).toBeNull();
+        });
+      });
+    });
+  });
+
+  describe('ensureNoDeadEnds', () => {
+    describe('given a non-recurrent network whose hidden node is placed after the output node', () => {
+      describe('when ensureNoDeadEnds runs', () => {
+        it('reorders nodes to the canonical input-hidden-output sequence', () => {
+          // Arrange
+          const mutationController = createMutationHarness({
+            inputCount: 2,
+            outputCount: 1,
+            seed: 700,
+          });
+          const network = new Network(2, 1, { seed: 701 });
+          network.mutate(methods.mutation.ADD_NODE);
+          const inputNodes = network.nodes.filter(
+            (nodeEntry) => nodeEntry.type === 'input',
+          );
+          const hiddenNodes = network.nodes.filter(
+            (nodeEntry) => nodeEntry.type === 'hidden',
+          );
+          const outputNodes = network.nodes.filter(
+            (nodeEntry) => nodeEntry.type === 'output',
+          );
+          // Deliberately shuffle: input → output → hidden (out of standard order).
+          network.nodes = [...inputNodes, ...outputNodes, ...hiddenNodes];
+
+          // Act
+          ensureNoDeadEnds.call(
+            mutationController as unknown as ThisParameterType<
+              typeof ensureNoDeadEnds
+            >,
+            network as unknown as Parameters<typeof ensureNoDeadEnds>[0],
+          );
+
+          // Assert: every hidden node should appear before every output node.
+          const nodeTypes = network.nodes.map((nodeEntry) => nodeEntry.type);
+          const lastHiddenIndex = nodeTypes.lastIndexOf('hidden');
+          const firstOutputIndex = nodeTypes.indexOf('output');
+          expect(lastHiddenIndex < firstOutputIndex).toBe(true);
+        });
       });
     });
   });

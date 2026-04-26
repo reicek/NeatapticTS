@@ -38,13 +38,17 @@ Phase note:
    - Run a tiny NEAT evolution loop.
 4. **Sequence (NARX)**
    - Demonstrate state handling + reset.
+5. **NEATchat**
+   - Demonstrate a tiny online chatbot that starts with near-zero knowledge, learns from short user exchanges, and reuses the sequence builders without pretending to be a large language model.
 
 ### Later extensions (after Phase 4 capabilities land)
 
-5. **Standalone export**
+6. **Standalone export**
    - Export inference module and run it.
-6. **Worker evaluation**
+7. **Worker evaluation**
    - Evaluate a small batch in workers.
+8. **Persistent NEATchat memory**
+   - Save and reload compact chat state only after checkpointing and worker-friendly serialization exist.
 
 ### Location
 
@@ -92,6 +96,7 @@ Acceptance:
 
 - Add a top-level doc that lists examples in recommended order.
 - Clearly mark export/worker examples as later-phase extensions so starter examples stay aligned with the roadmap.
+- Position `NEATchat` as an advanced toy example for sequence learning: useful for demonstrating online adaptation, deliberately constrained in vocabulary and context length, and explicitly not a web-scale trainer.
 
 Acceptance:
 

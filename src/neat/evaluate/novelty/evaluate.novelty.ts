@@ -287,7 +287,7 @@ function blendNoveltyIntoScore(
 ): void {
   if (typeof genome.score !== 'number') return;
   genome.score =
-    (1 - blendFactor) * (genome.score ?? 0) + blendFactor * novelty;
+    (1 - blendFactor) * genome.score + blendFactor * novelty;
 }
 
 /**
@@ -350,7 +350,7 @@ function computeDescriptorDistance(
   const squaredSum = leftDescriptor
     .slice(0, commonLength)
     .reduce((accumulated, leftValue, index) => {
-      const delta = leftValue - (rightDescriptor[index] ?? 0);
+      const delta = leftValue - rightDescriptor[index]!;
       return accumulated + delta * delta;
     }, 0);
 

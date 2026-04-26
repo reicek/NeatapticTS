@@ -165,6 +165,20 @@ describe('neat compat chapter', () => {
           expect(Number.isFinite(expectedFallbackInnovation)).toBe(true);
         });
       });
+
+      describe('when a fallback-allowed genome carries a stale explicit cache', () => {
+        it('drops the stale cache before comparison', () => {
+          // Arrange
+          const staleCache: Array<[number, number]> = [[9_999, 1]];
+          genomeA._compatCache = staleCache;
+
+          // Act
+          neat._compatibilityDistance(genomeA, genomeB);
+
+          // Assert
+          expect(genomeA._compatCache).toBeUndefined();
+        });
+      });
     });
 
     describe('given a native genome loses an explicit innovation id', () => {

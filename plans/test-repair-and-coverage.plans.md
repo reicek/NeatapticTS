@@ -611,26 +611,358 @@ Next frontier from aggregated LCOV is `src/architecture/network/topology/network
 - Full authoritative `npm run test:silent` integration is green at **302 passing suites and 2623 passing tests**.
 - Refreshed aggregate LCOV ordering now points at `src/architecture/layer/layer.utils.ts` as the next lowest-covered source boundary at **98.08% lines (51/52)**.
 
+## Coverage tranche 147: layer-utils propagate wrapper happy path
+
+[DONE] The layer utility boundary, `src/architecture/layer/layer.utils.ts`, has been raised from 98.08% lines (51/52) to 100% lines in focused validation and integrated in authoritative rerun.
+
+- **Final focused coverage proof:** the previously uncovered wrapper delegate line is now covered in the owner-local layer chapter slice, and `src/architecture/layer/layer.utils.ts` reports 100% statements, branches, functions, and lines.
+- That layer-utils tranche expanded `src/architecture/layer/layer.utils.test.ts` with focused owner-local coverage for the explicit-target happy path in `propagateLayer(...)`, so the wrapper now exercises the reverse-propagation delegate call without production edits.
+- Focused validation is green with `npx jest src/architecture/layer --coverage --collectCoverageFrom=src/architecture/layer/layer.utils.ts`, confirming 100% statements, branches, functions, and lines for this boundary.
+- Full authoritative `npm run test:silent` integration is green at **302 passing suites and 2624 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/architecture/nodePool/nodePool.ts` as the next lowest-covered source boundary at **98.11% lines (52/53)**.
+
+## Coverage tranche 148: node-pool recycled activation-function assignment path
+
+[DONE] The node-pool utility boundary, `src/architecture/nodePool/nodePool.ts`, has been raised from 98.11% lines (52/53) to 100% lines in focused validation and integrated in authoritative rerun.
+
+- **Final focused coverage proof:** the previously uncovered recycled acquisition assignment line is now covered, and `src/architecture/nodePool/nodePool.ts` reports 100% lines in focused validation.
+- That node-pool tranche expanded `src/architecture/nodePool/nodePool.test.ts` with one focused owner-local test for the recycled acquire path with a provided `activationFn`, so `acquireNode(...)` now executes the `node.squash = activationFn` branch without production edits.
+- Focused validation is green with `npx jest src/architecture/nodePool/nodePool.test.ts --coverage --collectCoverageFrom=src/architecture/nodePool/nodePool.ts`, confirming 100% lines for this boundary.
+- Full authoritative `npm run test:silent` integration is green at **302 passing suites and 2625 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/architecture/network/onnx/network.onnx.layer-analysis.utils.ts` as the next lowest-covered source boundary at **98.20% lines (109/111)**.
+
+## Coverage tranche 149: ONNX layer-analysis null-squash guard and cyclic-hidden throw paths
+
+[DONE] The ONNX layer-analysis utility boundary, `src/architecture/network/onnx/network.onnx.layer-analysis.utils.ts`, has been raised from 98.20% lines (109/111) to 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** previously uncovered lines 215 and 389 are now covered; combined ONNX-folder focused run reports 100% statements, 100% branches, 100% functions, 100% lines for this file with no uncovered line numbers.
+- That layer-analysis tranche created `src/architecture/network/onnx/network.onnx.layer-analysis.utils.test.ts` with two focused owner-local tests:
+  - `mapActivationToOnnx(null)` — passes a null squash reference to exercise the `!context.squash` early-return guard on line 215 inside `warnWhenActivationFallbackIsUsed(...)`, returning `'Identity'` without emitting a warning.
+  - `inferLayerOrdering(cyclicNetwork)` — creates a 1-2-1 MLP and replaces each hidden node's `connections.in` with a cross-reference to the other hidden node, so neither can be resolved from the input layer; `ensureLayerWasResolved([])` throws `NetworkOnnxLayerOrderingUnresolvableError` on line 389.
+- That layer-analysis tranche did not require production edits.
+- Focused validation is green with `npx jest src/architecture/network/onnx/ --coverage --collectCoverageFrom=src/architecture/network/onnx/network.onnx.layer-analysis.utils.ts`, confirming 100% across all metrics.
+- Full authoritative `npm run test:silent` integration is green at **303 passing suites and 2627 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/neat/diversity/core/diversity.core.ts` as the next lowest-covered source boundary at **98.21% lines (55/56)**.
+
+## Coverage tranche 150: diversity-core missing-lineage fallback and dead variance guard
+
+[DONE] The diversity core boundary, `src/neat/diversity/core/diversity.core.ts`, has been raised from 98.21% lines (55/56) to 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/diversity/diversity.test.ts src/neat/diversity/core/diversity.core.test.ts --coverage --collectCoverageFrom=src/neat/diversity/core/diversity.core.ts` reports 100% statements, 100% branches, 100% functions, and 100% lines for this file with no uncovered line numbers.
+- That diversity-core tranche added `src/neat/diversity/core/diversity.core.test.ts` with one focused owner-local test for a single genome without `_depth` metadata but with a non-zero outgoing edge, so the public `calculateDiversityStats(...)` path now exercises the empty-lineage mean fallback, zero-pair lineage distance fallback, zero-pair compatibility fallback, and the non-zero structural-entropy reducer callback through one natural scenario.
+- That diversity-core tranche also removed one dead production branch in `src/neat/diversity/core/diversity.core.ts`: the private `variance(...)` helper no longer carries an empty-array early return because both live call sites are gated behind the non-empty population guard in `calculateDiversityStats(...)`.
+- Full authoritative `npm run test:silent` integration is green at **304 passing suites and 2628 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/neat/genome/heredity/genome.heredity.ts` as the next lowest-covered tracked source boundary at **98.31% lines (58/59)**.
+
+## Coverage tranche 151: genome-heredity disjoint disabled-gene and fallback re-enable paths
+
+[DONE] The genome heredity boundary, `src/neat/genome/heredity/genome.heredity.ts`, has been raised from 98.31% lines (58/59) to 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/genome/heredity/genome.heredity.test.ts --coverage --collectCoverageFrom=src/neat/genome/heredity/genome.heredity.ts` reports 100% statements, 100% branches, 100% functions, and 100% lines for this file with no uncovered line numbers.
+- That genome-heredity tranche expanded `src/neat/genome/heredity/genome.heredity.test.ts` with focused owner-local coverage for:
+	- disabled disjoint-gene inheritance re-enable behavior for a fitter parent,
+	- parent1-disjoint rejection plus sorted parent2-only inheritance when parent2 is fitter,
+	- matching disabled-gene fallback to parent2 re-enable probability when parent1 probability is unset,
+	- matching disabled-gene fallback to the default re-enable probability when both parent probabilities are unset.
+- That genome-heredity tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **304 passing suites and 2632 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/methods/cost/cost.utils.ts` as the next lowest-covered tracked source boundary at **98.37% lines (121/123)**.
+
+## Coverage tranche 152: cost-utils soft-label blend and zero-sum target normalization paths
+
+[DONE] The cost utility boundary, `src/methods/cost/cost.utils.ts`, has been raised from 98.37% lines (121/123) to 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/methods/cost/cost.test.ts --coverage --collectCoverageFrom=src/methods/cost/cost.utils.ts` reports 100% statements, 100% branches, 100% functions, and 100% lines for this file with no uncovered line numbers.
+- That cost-utils tranche expanded `src/methods/cost/cost.test.ts` with focused owner-local coverage for:
+	- soft-label cross-entropy reduction so `crossEntropyTerm(...)` exercises the blended soft-label return path, and
+	- zero-sum target softmax normalization so `normalizeTargets(...)` exercises the shallow-copy fallback when the target sum is zero.
+- That cost-utils tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **304 passing suites and 2634 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/neat/multiobjective/crowding/multiobjective.crowding.ts` as the next lowest-covered tracked source boundary at **98.53% lines (67/68)** (tied with `src/neat/speciation/history/speciation.history.utils.ts` at 98.53%).
+
+## Coverage tranche 153: crowding unresolved-index guard path
+
+[DONE] The crowding utility boundary, `src/neat/multiobjective/crowding/multiobjective.crowding.ts`, has been raised from 98.53% lines (67/68) to 100% lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/multiobjective/crowding/multiobjective.crowding.test.ts src/neat/multiobjective/multiobjective.test.ts src/neat/multiobjective/category/multiobjective.category.test.ts --coverage --collectCoverageFrom=src/neat/multiobjective/crowding/multiobjective.crowding.ts` reports 100% lines for this boundary with the unresolved-index throw path now executed.
+- That crowding tranche added `src/neat/multiobjective/crowding/multiobjective.crowding.test.ts` with one focused owner-local test for a missing genome reference in `resolveGenomeIndex(...)`, so the `MultiobjectiveCrowdingGenomeIndexResolutionError` guard throw path is now covered.
+- That crowding tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **305 passing suites and 2635 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/neat/speciation/history/speciation.history.utils.ts` as the next lowest-covered tracked source boundary at **98.53% lines (67/68)**.
+
+## Coverage tranche 154: speciation-history trim-buffer overflow guard path
+
+[DONE] The speciation-history utility boundary, `src/neat/speciation/history/speciation.history.utils.ts`, has been raised from 98.53% lines (67/68) to 100% lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/speciation/history/speciation.history.test.ts src/neat/speciation/speciation.test.ts --coverage --collectCoverageFrom=src/neat/speciation/history/speciation.history.utils.ts` reports 100% lines for this boundary.
+- That speciation-history tranche expanded `src/neat/speciation/history/speciation.history.test.ts` with one focused owner-local test for history-buffer overflow trimming, so `trimHistory(...)` now executes the oldest-entry removal path when `_speciesHistory.length > HISTORY_BUFFER_MAX_ENTRIES`.
+- That speciation-history tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **305 passing suites and 2636 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/neat/compat/core/compat.core.ts` as the next lowest-covered tracked source boundary at **98.61% lines (71/72)**.
+
+## Coverage tranche 155: compat-core stale non-canonical cache cleanup path
+
+[DONE] The compat core utility boundary, `src/neat/compat/core/compat.core.ts`, has been raised from 98.61% lines (71/72) to 100% lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/compat/compat.test.ts src/neat/speciation/speciation.test.ts --coverage --collectCoverageFrom=src/neat/compat/core/compat.core.ts --runInBand` reports 100% lines for this boundary.
+- That compat-core tranche expanded `src/neat/compat/compat.test.ts` with one focused owner-local test for fallback-mode stale-cache cleanup, so `getSortedInnovationCache(...)` now executes the stale non-canonical `_compatCache` deletion path before building the transient fallback view.
+- That compat-core tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **305 passing suites and 2637 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/architecture/network/onnx/export/network.onnx.export-orchestrators.utils.ts` as the next lowest-covered tracked source boundary at **98.63% lines (72/73)**.
+
+## Coverage tranche 156: ONNX export orchestrators malformed-layer safety fallback path
+
+[DONE] The ONNX export orchestrators utility boundary, `src/architecture/network/onnx/export/network.onnx.export-orchestrators.utils.ts`, has been raised from 98.63% lines (72/73) to 100% lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/architecture/network/onnx/export/network.onnx.export.test.ts src/architecture/network/onnx/export/network.onnx.export.recurrent.test.ts src/architecture/network/onnx/export/network.onnx.export.conv.test.ts --coverage --collectCoverageFrom=src/architecture/network/onnx/export/network.onnx.export-orchestrators.utils.ts --runInBand` reports 100% lines for this boundary.
+- That ONNX-export-orchestrators tranche expanded `src/architecture/network/onnx/export/network.onnx.export.recurrent.test.ts` with one focused owner-local malformed-layer test for `collectLstmPatternStubs(...)`, so `safelyCollectLstmPatternStubs(...)` now executes the catch fallback return path at line 156.
+- That tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **305 passing suites and 2638 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/architecture/network/onnx/export/layers/network.onnx.export-conv.utils.ts` and `src/neat/evolve/evolve.ts` as the next lowest-covered tracked source boundaries at **98.77% lines (80/81)**.
+
+## Coverage tranche 157: ONNX export conv pooling-spec callback path
+
+[DONE] The ONNX export conv-layer utility boundary, `src/architecture/network/onnx/export/layers/network.onnx.export-conv.utils.ts`, has been raised from 98.77% lines (80/81) to 100% lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npm run test:silent -- src/architecture/network/onnx/export/network.onnx.export.test.ts src/architecture/network/onnx/export/network.onnx.export.recurrent.test.ts src/architecture/network/onnx/export/network.onnx.export.conv.test.ts --coverage --collectCoverageFrom=src/architecture/network/onnx/export/layers/network.onnx.export-conv.utils.ts --runInBand` reports `LF:81` and `LH:81` for this boundary; LCOV now shows `DA:687,1` for the previously uncovered callback line.
+- That ONNX export-conv tranche expanded `src/architecture/network/onnx/export/network.onnx.export.conv.test.ts` with one focused owner-local scenario that combines explicit Conv and pooling mappings on the same layer, so `resolvePoolingSpec(...)` now executes the `pool2dMappings.find(...)` callback path.
+- That tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **305 passing suites and 2639 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/neat/evolve/evolve.ts` as the next lowest-covered tracked source boundary at **98.76% lines (80/81)**.
+
+## Coverage tranche 158: evolve stagnation-injection callback path plus finalize-guard frontier rollover
+
+[DONE] The evolve root boundary, `src/neat/evolve/evolve.ts`, has been raised from 98.76% lines (80/81) to 100% lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npm run test:silent -- src/neat/evolve --coverage --collectCoverageFrom=src/neat/evolve/evolve.ts --runInBand` reports `LF:81` and `LH:81` for this boundary, with the previously uncovered callback line now covered (`DA:382,1`).
+- That evolve tranche expanded `src/neat/evolve/evolve.test.ts` with one focused owner-local stagnation scenario that keeps both global-best trackers saturated, so the global-stagnation injection pass executes the fresh-genome callback path wired through `applyGlobalStagnationInjectionIfNeeded(...)` in `evolve.ts`.
+- That evolve tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **305 passing suites and 2640 passing tests**.
+- Refreshed aggregate LCOV ordering then pointed at `src/architecture/network/training/network.training.finalize.utils.ts` as the next lowest-covered tracked source boundary at **98.91% lines (182/184)**.
+
+[DONE] The training finalize utility boundary, `src/architecture/network/training/network.training.finalize.utils.ts`, has been raised from 98.91% lines (182/184) to 100% lines in focused validation evidence and authoritative integration.
+
+- **Focused guard-path proof:** `npm run test:silent -- src/architecture/network/training/network.training.basic.test.ts --coverage --collectCoverageFrom=src/architecture/network/training/network.training.finalize.utils.ts --runInBand` executes both previously uncovered guard throws (`DA:195,1` and `DA:213,1`).
+- That finalize tranche expanded `src/architecture/network/training/network.training.basic.test.ts` with two focused owner-local scenarios:
+	- invalid non-string/non-object optimizer option (`optimizer: 7 as unknown as never`) to cover `NetworkTrainingInvalidOptimizerOptionError`, and
+	- lookahead with unsupported `baseType: 'notreal'` to cover `NetworkTrainingUnknownLookaheadBaseTypeError`.
+- That finalize tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **305 passing suites and 2642 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/neat/mutation/mutation.ts` as the next lowest-covered tracked source boundary at **98.93% lines (93/94)**.
+
 ## Immediate next steps
 
-- Read nearest `src/architecture/layer/README.md` context plus owner-local layer utility tests.
-- Add the smallest focused owner-local test(s) to raise `src/architecture/layer/layer.utils.ts` from 98.08% lines to 100%.
+- Read nearest `src/neat/mutation/README.md` context and owner-local mutation chapter tests.
+- Add the smallest focused owner-local test to raise `src/neat/mutation/mutation.ts` from 98.93% lines (93/94) to 100%.
+- Validate with a focused slice first, then run authoritative `npm run test:silent` and refresh LCOV ordering.
+
+## Coverage tranche 159: mutation root structural-limits blocked path plus node-reorder path
+
+[DONE] The mutation root boundary, `src/neat/mutation/mutation.ts`, has been raised from 98.93% lines (93/94) to 100% lines (94/94) in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/mutation/mutation.test.ts --coverage --collectCoverageFrom=src/neat/mutation/mutation.ts --runInBand` reports `LF:94` and `LH:94`; previously uncovered line 564 (`return null` after `isBlockedByStructuralLimitsForSelect`) is now covered. Line 490 (`network.nodes = normalizedNodes` in `normalizeRepairNodeOrderForFeedForward`) was also newly covered in the focused slice.
+- That mutation tranche expanded `src/neat/mutation/mutation.test.ts` with two focused owner-local tests:
+  - `selectMutationMethod` structural-limits blocked path: configures a Neat controller with `maxNodes` set to the genome's current node count and `mutation: [ADD_NODE]`, so the sampled `ADD_NODE` method is blocked by `isBlockedByStructuralLimitsForSelect(...)` and `selectMutationMethod` returns `null` (line 564).
+  - `ensureNoDeadEnds` node-reorder path: places a hidden node after output nodes, calls `ensureNoDeadEnds`, and verifies `normalizeRepairNodeOrderForFeedForward(...)` reorders to input-hidden-output order (line 490).
+- That tranche also imported `ensureNoDeadEnds` and `selectMutationMethod` in the test file header; no production edits were required.
+- Full authoritative `npm run test:silent` integration is green at **305 passing suites and 2644 passing tests**.
+- **Refreshed aggregate LCOV now shows 0 files below 100% line coverage across all 313 tracked source files.** The coverage campaign has reached 100% line coverage across the entire tracked source surface.
+
+## Coverage tranche 160: adaptive acceptance root-facade re-export coverage
+
+[DONE] The adaptive acceptance root facade boundary, `src/neat/adaptive/acceptance/adaptive.acceptance.ts`, now has 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/adaptive/acceptance/adaptive.acceptance.test.ts src/neat/adaptive/acceptance/adaptive.minimal-criterion.utils.test.ts --coverage --collectCoverageFrom=src/neat/adaptive/acceptance/adaptive.acceptance.ts --runInBand` reports 100% across all metrics for this boundary.
+- That adaptive-acceptance tranche expanded `src/neat/adaptive/acceptance/adaptive.acceptance.test.ts` with owner-local facade accessor tests for all chapter exports (`applyMinimalCriterionAdaptive`, `initializeThreshold`, `collectScores`, `computeAcceptance`, `resolveTargetSettings`, `updateThreshold`, `applyRejection`) so the compiled re-export getters are exercised through the root chapter.
+- That tranche did not require production edits.
+
+## Coverage tranche 161: adaptive mutation root-facade re-export coverage
+
+[DONE] The adaptive mutation root facade boundary, `src/neat/adaptive/mutation/adaptive.mutation.ts`, now has 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/adaptive/mutation/adaptive.mutation.test.ts src/neat/adaptive/mutation/adaptive.mutation.utils.test.ts src/neat/adaptive/mutation/adaptive.operator.utils.test.ts --coverage --collectCoverageFrom=src/neat/adaptive/mutation/adaptive.mutation.ts --runInBand` reports 100% across all metrics for this boundary.
+- That adaptive-mutation tranche expanded `src/neat/adaptive/mutation/adaptive.mutation.test.ts` with owner-local facade accessor tests for all chapter exports (`applyAdaptiveMutation`, `shouldAdaptThisGeneration`, `resolveMutationSettings`, `applyMutationsToPopulation`, `shouldApplyTwoTierFallback`, `applyTwoTierFallback`, `resolveOperatorDecay`, `applyOperatorDecay`).
+- That tranche did not require production edits.
+
+## Coverage tranche 162: root nodePool and adaptive lineage facade coverage
+
+[DONE] The two tied 20%-function facades, `src/architecture/nodePool.ts` and `src/neat/adaptive/lineage/adaptive.lineage.ts`, now have 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/architecture/nodePool.test.ts src/architecture/nodePool/nodePool.test.ts src/neat/adaptive/lineage/adaptive.lineage.test.ts --coverage --collectCoverageFrom=src/architecture/nodePool.ts --collectCoverageFrom=src/neat/adaptive/lineage/adaptive.lineage.ts --runInBand` reports 100% across all metrics for both boundaries.
+- That tranche added `src/architecture/nodePool.test.ts` with root-facade export coverage and expanded `src/neat/adaptive/lineage/adaptive.lineage.test.ts` with owner-local facade accessor coverage for `extractAncestorUniqueness`, `isCooldownSatisfied`, `resolveUniquenessThresholds`, and `applyUniquenessAdjustment` through the lineage root chapter.
+- That tranche did not require production edits.
+
+## Coverage tranche 163: topology root-facade re-export coverage
+
+[DONE] The topology root facade boundary, `src/architecture/network/topology/network.topology.utils.ts`, now has 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/architecture/network/topology/network.topology.test.ts src/architecture/network/topology/network.topology.setup.utils.test.ts --coverage --collectCoverageFrom=src/architecture/network/topology/network.topology.utils.ts --runInBand` reports 100% across all metrics for this boundary.
+- That topology tranche expanded `src/architecture/network/topology/network.topology.test.ts` with owner-local facade accessor coverage for `getTopologyIntent`, `hasFeedForwardTopologyContract`, `setEnforceAcyclic`, `setTopologyIntent`, `createMLP`, and `rebuildConnections` through the root topology facade.
+- That tranche did not require production edits.
+
+## Coverage tranche 164: root facade export coverage for neataptic/architecture surfaces
+
+[DONE] The remaining 50%-function root facades, `src/neataptic.ts`, `src/architecture/network.ts`, and `src/architecture/node.ts`, now have 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neataptic.test.ts src/architecture/network.test.ts src/architecture/node.test.ts --coverage --collectCoverageFrom=src/neataptic.ts --collectCoverageFrom=src/architecture/network.ts --collectCoverageFrom=src/architecture/node.ts --runInBand` reports 100% across all metrics for all three boundaries.
+- That root-facade tranche added `src/neataptic.test.ts`, `src/architecture/network.test.ts`, and `src/architecture/node.test.ts` with owner-local accessor checks for all root exports.
+- That tranche did not require production edits.
+
+## Coverage tranche 165: genome-errors undefined-cause branch coverage
+
+[DONE] The genome errors boundary, `src/neat/genome/genome.errors.ts`, has been raised from 50% to 100% branch coverage in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/genome/genome.errors.test.ts --coverage --collectCoverageFrom=src/neat/genome/genome.errors.ts --runInBand` reports 100% statements, 100% branches, 100% functions, and 100% lines for this boundary.
+- That genome-errors tranche expanded `src/neat/genome/genome.errors.test.ts` with one focused owner-local test for `NeatGenomeConversionError` when no `cause` is provided, so the `cause === undefined ? undefined : { cause }` constructor branch now exercises the undefined arm.
+- That tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **309 passing suites and 2702 passing tests**.
+
+## Coverage tranche 166: telemetry-novelty undefined-archive branch coverage
+
+[DONE] The telemetry novelty facade boundary, `src/neat/telemetry/facade/novelty/telemetry.facade.novelty.ts`, has been raised from 50% to 100% branch coverage in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/telemetry/facade/novelty/telemetry.facade.novelty.test.ts --coverage --collectCoverageFrom=src/neat/telemetry/facade/novelty/telemetry.facade.novelty.ts --runInBand` reports 100% statements, 100% branches, 100% functions, and 100% lines for this boundary.
+- That telemetry-novelty tranche expanded `src/neat/telemetry/facade/novelty/telemetry.facade.novelty.test.ts` with one focused owner-local test for an undefined novelty archive host so `getNoveltyArchiveSize(...)` now exercises the zero-length fallback branch.
+- That tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **309 passing suites and 2703 passing tests**.
+
+## Coverage tranche 167: species-history context missing-history branch coverage
+
+[DONE] The species-history context boundary, `src/neat/species/history/context/species.history.context.ts`, has been raised from 50% to 100% branch coverage in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/species/history/context/species.history.context.test.ts src/neat/species/history/read/species.history.read.test.ts --coverage --collectCoverageFrom=src/neat/species/history/context/species.history.context.ts --runInBand` reports 100% statements, 100% branches, 100% functions, and 100% lines for this boundary.
+- That species-history-context tranche added `src/neat/species/history/context/species.history.context.test.ts` with focused owner-local coverage for the missing `_speciesHistory` nullish fallback path and backfill-context pass-through assertions.
+- That tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **310 passing suites and 2705 passing tests**.
+
+## Coverage tranche 168: deterministic setup undefined-state fallback branch coverage
+
+[DONE] The deterministic setup boundary, `src/architecture/network/deterministic/network.deterministic.setup.utils.ts`, has been raised from 50% to 100% branch coverage in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npm run test:silent -- src/architecture/network/deterministic/network.deterministic.test.ts --coverage --collectCoverageFrom=src/architecture/network/deterministic/network.deterministic.setup.utils.ts --runInBand` reports 100% statements, 100% branches, 100% functions, and 100% lines for this boundary.
+- That deterministic-setup tranche expanded `src/architecture/network/deterministic/network.deterministic.test.ts` with one focused owner-local branch test that resets `_rngState` to `undefined` before invoking the installed deterministic random function, so `advanceStateWithWeylIncrement(currentState ?? 0)` now executes the nullish fallback arm.
+- That tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **310 passing suites and 2706 passing tests**.
+
+## Coverage tranche 169: slab-view direct fallback and synthesized-gain branch coverage
+
+[DONE] The slab-view utility boundary, `src/architecture/network/slab/network.slab.view.utils.ts`, has been raised from 55.56% to 100% branch coverage in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/architecture/network/slab/network.slab.view.utils.test.ts src/architecture/network/slab/network.slab.utils.test.ts src/architecture/network/slab/network.slab.gain.omission.test.ts --coverage --collectCoverageFrom=src/architecture/network/slab/network.slab.view.utils.ts --runInBand` reports 100% statements, 100% branches, 100% functions, and 100% lines for this boundary.
+- That slab-view tranche added `src/architecture/network/slab/network.slab.view.utils.test.ts` with focused owner-local direct utility coverage for:
+	- omitted slab metadata fallbacks (`plastic`, `version`, `used`, and `_readSlabVersion(...)` returning zero),
+	- capacity fallback to zero when both tracked capacity and weight slab are absent,
+	- synthesized `Float64Array` gain view when float32 mode is disabled and no gain slab is retained,
+	- capacity fallback to weight-slab length plus synthesized `Float32Array` neutral gain filling for active connections.
+- That tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **311 passing suites and 2708 passing tests**.
+
+## Current all-category status
+
+- Full authoritative `npm run test:silent` is green at **311 passing suites and 2722 passing tests**.
+- Aggregate coverage after tranche 170 is now **100.00 statements, branches TBD (was 96.14), functions TBD (was 99.58), 100.00 lines**.
+- The `src/neat/evolve/adaptive/evolve.adaptive.utils.ts` branch coverage has been raised from 59.38% to 100% in focused validation.
+
+## Coverage tranche 170: evolve-adaptive bridge branch and statement coverage to 100%
+
+[DONE] The evolve-adaptive bridge boundary, `src/neat/evolve/adaptive/evolve.adaptive.utils.ts`, has been raised from 59.38% (16/32) to 100% branch coverage, 100% statement coverage, 100% function coverage, and 100% line coverage in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/evolve/adaptive/evolve.adaptive.test.ts --coverage --collectCoverageFrom=src/neat/evolve/adaptive/evolve.adaptive.utils.ts --runInBand` reports 100% statements, 100% branches, 100% functions, and 100% lines for this boundary.
+- That evolve-adaptive tranche expanded `src/neat/evolve/adaptive/evolve.adaptive.test.ts` with 14 focused owner-local tests covering:
+  - `adaptReenableProbability` `undefined`-reenableProb early-return guard (line 280 branch 0),
+  - `adaptReenableProbability` with genomes missing `_reenableSuccess`/`_reenableAttempts` counters (lines 285-286 nullish branches),
+  - `adaptReenableProbability` with `reenableProb: null` (passes `=== undefined` guard, exercises `?? config.target` fallback at line 298),
+  - `applyAutoCompatibilityTuning` disabled-flag early-return path (line 153 branch 0),
+  - `applyAutoCompatibilityTuning` with no `autoCompatTuning.target` but `options.targetSpecies` set (line 156 branch 1),
+  - `applyAutoCompatibilityTuning` with neither `target` nor `targetSpecies` (line 156 branch 2, Math.max fallback),
+  - `applyAutoCompatibilityTuning` with all `adjustRate`/`minCoeff`/`maxCoeff`/`excessCoeff`/`disjointCoeff` absent (lines 164–168 config-fallback branches),
+  - `applyAutoCompatibilityTuning` with empty `_species` list (line 162 branch, `|| 1` fallback),
+  - `invalidateCompatibilityCaches` with a mixed-presence genome population (line 253 both branches),
+  - `applyAdaptiveComplexityControllers`, `applyMinimalCriterionAdaptiveSafe`, `applyAncestorUniqAdaptiveSafe`, `applyPruningAndMutation`, and `applyOperatorAdaptationSafe` nominal resolution coverage (previously zero-hit function bodies).
+- That tranche also updated the import statement in `evolve.adaptive.test.ts` to add the six previously unused exported functions.
+- That tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **311 passing suites and 2722 passing tests**.
+
+## Coverage tranche 171: export-runtime serialization branch coverage to 100%
+
+[DONE] The export-runtime metadata serialization boundary, `src/neat/export/neat.export.runtime.utils.ts`, has been raised from 76.47% (13/17) to 100% branch coverage, 100% statement coverage, 100% function coverage, and 100% line coverage in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** Full authoritative `npm run test:silent` is green at **311 passing suites and 2729 passing tests**. Aggregate coverage report shows `src/neat/export` folder at 100% across all metrics, with `neat.export.runtime.utils.ts` reporting `100 | 100 | 100 | 100` in `stat | stmts | branches | funcs | lines` columns.
+- That export-runtime tranche expanded `src/neat/export/neat.export.test.ts` with 3 focused owner-local tests covering:
+  - `serializeRuntimeMeta` with all optional fields (`nextGenomeId`, `lineageEnabled`, `lastInbreedingCount`, `lastGlobalImproveGeneration`, `speciesHistory`) populated as expected (exercises type-guard true branches).
+  - `serializeRuntimeMeta` with `_rngState` undefined when exported (line 44 `typeof rngState === 'number'` false branch, omits rngState field).
+  - `restoreRuntimeMeta` with architecture counter values in metadata having non-number types (`'not-a-number'`, `null`, plain object) so the three type guards at lines 123–132 all execute false branches, leaving counters unchanged.
+  - Plus two additional tests on early return paths: first, verifying all optional field branches when fields present in metadata, second, verifying guard early returns when metadata is undefined/non-object.
+- That tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **311 passing suites and 2729 passing tests**.
+
+## Next Steps
+
+- Handoff query: Run `npm run test:silent`, parse fresh LCOV report, identify and begin tranche 172 on lowest branch-coverage frontier.
+
+---
+
+## Coverage tranche 172: speciation-sharing branch coverage to 100%
+
+[DONE] The speciation-sharing utility boundary, `src/neat/speciation/sharing/speciation.sharing.utils.ts`, has been raised from 83.33% (20/24 branches) to 100% branch coverage (BRF:22, BRH:22 after source refactor reduced BRF from 24 to 22) in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** Full authoritative `npm run test:silent` is green at **311 passing suites and 2742 passing tests**. LCOV report shows `BRF:22 BRH:22` for this file boundary (100% branches). Aggregate coverage report shows `speciation/sharing` folder at `98.03 | 100 | 100 | 100` (100% branches, functions, lines).
+- That speciation-sharing tranche:
+  - Added 4 focused owner-local tests covering all previously uncovered branch paths.
+  - Refactored `applySigmaSharingToMembers(...)` from `if (not-number) continue;` to `if (typeof member.score === 'number') { ... }` positive block, fixing Istanbul's branch instrumentation for the FALSE path.
+  - Replaced the unreachable `sharingSum > 0 ? sharingSum : SHARING_SUM_FLOOR` ternary with `Math.max(sharingSum, SHARING_SUM_FLOOR)`, removing 2 dead branches from BRF count.
+  - Covered nullish-coalesce FALSE branches (lines 268-269) via tests exercising defined `bestScore` and defined member `score`.
+  - Covered sigma-sharing non-numeric-score FALSE branch via a test with a mixed-score species (one numeric, one undefined) routed through sigma path (sigma=5).
+- That tranche did not require changes to exported public behavior.
+- Full authoritative `npm run test:silent` integration is green at **311 passing suites and 2742 passing tests**.
+
+
+## Coverage tranche 173: evaluate-novelty branch coverage to 100%
+
+[DONE] The evaluate-novelty boundary, `src/neat/evaluate/novelty/evaluate.novelty.ts`, has been raised from 63.33% (19/30 branches) to 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/neat/evaluate/novelty/evaluate.novelty.test.ts --coverage --collectCoverageFrom=src/neat/evaluate/novelty/evaluate.novelty.ts --runInBand` reports 100% statements, 100% branches, 100% functions, and 100% lines for this boundary (9 tests passing).
+- That evaluate-novelty tranche:
+  - Removed two dead `?? 0` production branches: `genome.score ?? 0` in `blendNoveltyIntoScore(...)` (unreachable because the guard at line 288 already ensures score is a number) and `rightDescriptor[index] ?? 0` in `computeDescriptorDistance(...)` (unreachable because `commonLength = Math.min(left.length, right.length)` guarantees index is always within bounds). Dead branches replaced with `genome.score` and `rightDescriptor[index]!` respectively.
+  - Expanded `src/neat/evaluate/novelty/evaluate.novelty.test.ts` with 6 focused owner-local tests covering all remaining reachable branches:
+    - falsy `k: 0` → `|| NOVELTY_DEFAULT_NEIGHBORS` default arm (line 134 branch 1),
+    - `blendFactor: undefined` → `?? NOVELTY_DEFAULT_BLEND` default arm (line 150 branch 1),
+    - descriptor returning `null` → `?? []` fallback arm (line 171 branch 1),
+    - single-genome population → `neighbors.length === 0 → return 0` (line 259 branch 0),
+    - genome with non-number score → `typeof score !== 'number' → return` early exit (line 288 branch 0),
+    - no `archiveAddThreshold` configured → `?? Infinity` arm + `shouldAdd=false` + `!shouldAdd → return` (lines 316 branch 1, 318 branch 1, 319 branch 0),
+    - pre-filled archive at NOVELTY_ARCHIVE_CAP=200 → archive-full guard skips append (line 322 branch 1).
+- Full authoritative `npm run test:silent` integration is green at **311 passing suites and 2748 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/architecture/network/evolve/network.evolve.finalize.utils.ts` as the next lowest-covered source boundary at **66.67% branches (4/6)**.
+
+## Coverage tranche 174: evolve-finalize guard and adoption branch coverage to 100%
+
+[DONE] The evolve finalize helper boundary, `src/architecture/network/evolve/network.evolve.finalize.utils.ts`, has been raised from 66.67% branch coverage (4/6) to 100% statements, branches, functions, and lines in focused validation and authoritative integration.
+
+- **Final focused coverage proof:** `npx jest src/architecture/network/evolve/network.evolve.finalize.utils.test.ts --coverage --collectCoverageFrom=src/architecture/network/evolve/network.evolve.finalize.utils.ts --runInBand` reports 100% statements, 100% branches, 100% functions, and 100% lines for this boundary (8 tests passing).
+- That evolve-finalize tranche added `src/architecture/network/evolve/network.evolve.finalize.utils.test.ts` with focused owner-local coverage for:
+  - best-genome adoption with and without `clearState`,
+  - no-best-genome guard return when warning hook is absent,
+  - warning hook success and warning hook throw-swallow behavior,
+  - worker terminator success and throw-swallow behavior,
+  - evolution-summary payload construction.
+- That tranche did not require production edits.
+- Full authoritative `npm run test:silent` integration is green at **312 passing suites and 2760 passing tests**.
+- Refreshed aggregate LCOV ordering now points at `src/architecture/network/onnx/export/layers/network.onnx.export-dense.utils.ts` and `src/neat/compat/compat.ts` as the next lowest-covered source boundaries at **66.67% branches (4/6)**.
+
+## Immediate next steps
+
+- Read `src/architecture/network/onnx/export/layers/README.md` and owner-local ONNX export tests.
+- Add smallest focused owner-local test(s) to raise `src/architecture/network/onnx/export/layers/network.onnx.export-dense.utils.ts` branch coverage from 66.67% to 100%.
 - Validate with a focused slice first, then run authoritative `npm run test:silent` and refresh LCOV ordering.
 
 ## Handoff query
 
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
-Follow plans/test-repair-and-coverage.plans.md. The latest completed frontier is coverage tranche 146.
+Follow plans/test-repair-and-coverage.plans.md.
 
-Coverage tranche 146 raised `src/architecture/network/serialize/network.serialize.runtime.utils.ts` from 97.96% lines (48/49) to 100% lines by covering two runtime guard lines (`DA:233,1`, `DA:212,1`) in focused validation.
+npm run test:silent
 
-That pass added focused owner-local tests in `src/architecture/network/serialize/network.serialize.runtime.utils.test.ts` for:
-- missing created-connection early return in `applyRestoredConnectionIdentity(undefined, ...)`, and
-- nonnumeric persisted gene-id early return in `hydrateNodeGeneIdWhenProvided(node, null)`.
-
-Focused validation and authoritative integration are both green. Full `npm run test:silent` now reports 302 passing suites and 2623 passing tests.
-
-Next frontier from refreshed aggregate LCOV is `src/architecture/layer/layer.utils.ts` at 98.08% lines (51/52). Continue the same pattern: smallest owner-local tests, one top-level expect per test, AAA structure, nested describe blocks, focused validation first, then authoritative rerun.
+Identify the file with the lowest coverage and continue with the smallest focused owner-local test(s) for that boundary.
 ```
-

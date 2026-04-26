@@ -23,6 +23,10 @@ import {
   type NeatMetaJSON,
   type NeatStateJSON,
 } from './neat.export';
+import {
+  serializeRuntimeMeta,
+  restoreRuntimeMeta,
+} from './neat.export.runtime.utils';
 import type { NetworkJSON } from '../../architecture/network/network.types';
 
 type ExportGenome = Network & {
@@ -1299,6 +1303,256 @@ describe('neat export chapter', () => {
 
         // Assert
         expect(secondReplayFutureState).toEqual(firstReplayFutureState);
+      });
+    });
+  });
+
+  describe('runtime meta serialization and restoration', () => {
+    describe('serializeRuntimeMeta', () => {
+      it('exercises all optional field branches when fields are populated', () => {
+        // Arrange
+        const neatInstance = new Neat(2, 1, (n) => n.nodes.length, {
+          popsize: 1,
+          seed: 999,
+        }) as unknown as {
+          _nextGenomeId: number;
+          _lineageEnabled: boolean;
+          _lastInbreedingCount: number;
+          _lastGlobalImproveGeneration: number;
+          _speciesHistory: SpeciesHistoryEntry[];
+        };
+        neatInstance._nextGenomeId = 42;
+        neatInstance._lineageEnabled = true;
+        neatInstance._lastInbreedingCount = 3;
+        neatInstance._lastGlobalImproveGeneration = 5;
+        neatInstance._speciesHistory = [
+          {
+            generation: 0,
+            stats: [{ id: 1, size: 1, bestScore: 0.5, lastImproved: 0 }],
+          },
+        ];
+
+        // Act
+        const serialized = serializeRuntimeMeta(
+          neatInstance as any,
+        );
+
+        // Assert
+        expect({
+          nextGenomeId: serialized.nextGenomeId,
+          lineageEnabled: serialized.lineageEnabled,
+          lastInbreedingCount: serialized.lastInbreedingCount,
+          lastGlobalImproveGeneration: serialized.lastGlobalImproveGeneration,
+          hasSpeciesHistory: Array.isArray(serialized.speciesHistory),
+        }).toEqual({
+          nextGenomeId: 42,
+          lineageEnabled: true,
+          lastInbreedingCount: 3,
+          lastGlobalImproveGeneration: 5,
+          hasSpeciesHistory: true,
+        });
+      });
+
+      it('omits optional fields from serialization when they are absent', () => {
+        // Arrange - fresh controller with minimal setup
+        const neatInstance = new Neat(2, 1, (n) => n.nodes.length, {
+          popsize: 1,
+          seed: 1000,
+        });
+        const neatCasted = neatInstance as unknown as {
+          _nextGenomeId?: number;
+          _lineageEnabled?: boolean;
+          _lastInbreedingCount?: number;
+          _lastGlobalImproveGeneration?: number;
+          _speciesHistory?: SpeciesHistoryEntry[];
+        };
+        // Explicitly ensure optional fields are undefined
+        neatCasted._nextGenomeId = undefined;
+        neatCasted._lineageEnabled = undefined;
+        neatCasted._lastInbreedingCount = undefined;
+        neatCasted._lastGlobalImproveGeneration = undefined;
+        neatCasted._speciesHistory = undefined;
+
+        // Act
+        const serialized = serializeRuntimeMeta(
+          neatInstance as any,
+        );
+
+        // Assert - optional fields should not be in the output
+        expect({
+          hasNextGenomeId: 'nextGenomeId' in serialized,
+          hasLineageEnabled: 'lineageEnabled' in serialized,
+          hasLastInbreedingCount: 'lastInbreedingCount' in serialized,
+          hasLastGlobalImproveGeneration: 'lastGlobalImproveGeneration' in serialized,
+          hasSpeciesHistory: 'speciesHistory' in serialized,
+        }).toEqual({
+          hasNextGenomeId: false,
+          hasLineageEnabled: false,
+          hasLastInbreedingCount: false,
+          hasLastGlobalImproveGeneration: false,
+          hasSpeciesHistory: false,
+        });
+      });
+    });
+
+    describe('restoreRuntimeMeta', () => {
+      it('exercises all optional field branches when fields are in metadata', () => {
+        // Arrange
+        const neatInstance = new Neat(2, 1, (n) => n.nodes.length, {
+          popsize: 1,
+          seed: 998,
+        });
+        const runtimeMeta = {
+          nextGenomeId: 55,
+          nextConnectionInnovation: 100,
+          nextNodeGeneId: 20,
+          nextNodeIndex: 15,
+          lineageEnabled: false,
+          lastInbreedingCount: 2,
+          lastGlobalImproveGeneration: 4,
+          speciesHistory: [
+            {
+              generation: 1,
+              stats: [{ id: 2, size: 2, bestScore: 0.7, lastImproved: 1 }],
+            },
+          ],
+        };
+
+        // Act
+        restoreRuntimeMeta(neatInstance as any, runtimeMeta);
+        const restored = neatInstance as unknown as {
+          _nextGenomeId: number;
+          _lineageEnabled: boolean;
+          _lastInbreedingCount: number;
+          _lastGlobalImproveGeneration: number;
+          _speciesHistory: SpeciesHistoryEntry[];
+        };
+
+        // Assert
+        expect({
+          nextGenomeId: restored._nextGenomeId,
+          lineageEnabled: restored._lineageEnabled,
+          lastInbreedingCount: restored._lastInbreedingCount,
+          lastGlobalImproveGeneration: restored._lastGlobalImproveGeneration,
+          hasSpeciesHistory: Array.isArray(restored._speciesHistory),
+        }).toEqual({
+          nextGenomeId: 55,
+          lineageEnabled: false,
+          lastInbreedingCount: 2,
+          lastGlobalImproveGeneration: 4,
+          hasSpeciesHistory: true,
+        });
+      });
+
+      it('skips optional field restoration when they are absent from metadata', () => {
+        // Arrange
+        const neatInstance = new Neat(2, 1, (n) => n.nodes.length, {
+          popsize: 1,
+          seed: 997,
+        });
+        const beforeState = neatInstance as unknown as {
+          _nextGenomeId?: number;
+          _lineageEnabled?: boolean;
+          _lastInbreedingCount?: number;
+          _lastGlobalImproveGeneration?: number;
+          _speciesHistory?: SpeciesHistoryEntry[];
+        };
+        const beforeGenomeId = beforeState._nextGenomeId;
+        const beforeLineageEnabled = beforeState._lineageEnabled;
+
+        const runtimeMeta = {
+          nextConnectionInnovation: 200,
+          nextNodeGeneId: 50,
+          nextNodeIndex: 25,
+          // Intentionally omit nextGenomeId, lineageEnabled, etc.
+        };
+
+        // Act
+        restoreRuntimeMeta(neatInstance as any, runtimeMeta);
+        const afterState = neatInstance as unknown as {
+          _nextGenomeId?: number;
+          _lineageEnabled?: boolean;
+        };
+
+        // Assert - optional fields should retain their original values
+        expect({
+          nextGenomeIdUnchanged: afterState._nextGenomeId === beforeGenomeId,
+          lineageEnabledUnchanged: afterState._lineageEnabled === beforeLineageEnabled,
+        }).toEqual({
+          nextGenomeIdUnchanged: true,
+          lineageEnabledUnchanged: true,
+        });
+      });
+
+      it('restores architecture counters when runtime metadata is provided', () => {
+        // Arrange
+        const neatInstance = new Neat(2, 1, (n) => n.nodes.length, {
+          popsize: 1,
+          seed: 996,
+        });
+        const beforeCounters = readArchitectureCounterSnapshot();
+        const runtimeMeta = {
+          nextConnectionInnovation: beforeCounters.nextConnectionInnovation + 10,
+          nextNodeGeneId: beforeCounters.nextNodeGeneId + 5,
+          nextNodeIndex: beforeCounters.nextNodeIndex + 3,
+        };
+
+        // Act
+        restoreRuntimeMeta(neatInstance as any, runtimeMeta);
+        const afterCounters = readArchitectureCounterSnapshot();
+
+        // Assert
+        expect({
+          nextConnectionInnovation: afterCounters.nextConnectionInnovation,
+          nextNodeGeneId: afterCounters.nextNodeGeneId,
+          nextNodeIndex: afterCounters.nextNodeIndex,
+        }).toEqual(runtimeMeta);
+      });
+
+      it('skips architecture counter restoration when values are not numbers', () => {
+        // Arrange
+        const neatInstance = new Neat(2, 1, (n) => n.nodes.length, {
+          popsize: 1,
+          seed: 997,
+        });
+        const beforeCounters = readArchitectureCounterSnapshot();
+        const runtimeMeta = {
+          // All fields present but with non-number values to trigger false branches
+          nextConnectionInnovation: 'not-a-number' as any,
+          nextNodeGeneId: null as any,
+          nextNodeIndex: { value: 100 } as any,
+        };
+
+        // Act
+        restoreRuntimeMeta(neatInstance as any, runtimeMeta);
+        const afterCounters = readArchitectureCounterSnapshot();
+
+        // Assert - counters should not change when non-number values are provided
+        expect({
+          nextConnectionInnovation: afterCounters.nextConnectionInnovation,
+          nextNodeGeneId: afterCounters.nextNodeGeneId,
+          nextNodeIndex: afterCounters.nextNodeIndex,
+        }).toEqual({
+          nextConnectionInnovation: beforeCounters.nextConnectionInnovation,
+          nextNodeGeneId: beforeCounters.nextNodeGeneId,
+          nextNodeIndex: beforeCounters.nextNodeIndex,
+        });
+      });
+
+      it('omits rngState from serialization when rng is not initialized', () => {
+        // Arrange
+        const neatInstance = new Neat(2, 1, (n) => n.nodes.length, {
+          popsize: 1,
+          seed: 998,
+        });
+        // Clear internal RNG state to simulate uninitialized state
+        (neatInstance as any)._rngState = undefined;
+
+        // Act
+        const runtimeMeta = serializeRuntimeMeta(neatInstance as any);
+
+        // Assert - rngState field should not be present when _rngState is undefined
+        expect(runtimeMeta.rngState).toBeUndefined();
       });
     });
   });
