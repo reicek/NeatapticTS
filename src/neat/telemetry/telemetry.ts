@@ -14,7 +14,7 @@
  * - read path: `facade/`, `accessors/`, and `exports/` expose that captured
  *   state back to callers as inspection helpers, JSONL logs, and CSV reports
  *
- * Step 7.5 boundary note: telemetry is an evidence surface, not a hidden
+ * Ownership boundary: telemetry is an evidence surface, not a hidden
  * policy engine. Recording, exporting, and reading these snapshots does not
  * redefine fitness, compatibility, species identity, or replay semantics
  * unless another controller loop explicitly consumes the evidence and chooses

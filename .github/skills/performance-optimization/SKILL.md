@@ -74,9 +74,12 @@ Validate with: benchmarks/activation.bench.ts, then npm run test:silent.
      and after the change.
 6. Implement the optimization in the smallest safe boundary.
 7. Confirm the correctness invariant still holds with the focused test.
-8. Run or author a benchmark to measure the improvement.
-9. Run `npm run test:silent` to confirm no regressions.
-10. Update `plans/Memory_Optimization.md` with the completed phase.
+8. Run `coverage-guard` on every `src/` file changed by this step. 100% in all
+   four categories (statements, branches, functions, lines) is required before
+   proceeding.
+9. Run or author a benchmark to measure the improvement.
+10. Run `npm run test:silent` to confirm no regressions.
+11. Update `plans/Memory_Optimization.md` with the completed phase.
 
 ## Correctness Contract
 

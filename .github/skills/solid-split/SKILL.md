@@ -148,9 +148,9 @@ one-pass rewrites.
 
 When a split step changes behavior or meaningfully risks runtime drift, prefer a
 TDD lane for that boundary: add or reshape the narrow red-phase test first,
-complete the split until that boundary turns green, then raise coverage on the
-new or directly related area toward >95% when practical before the step is
-considered fully hardened.
+complete the split until that boundary turns green, then run `coverage-guard` on
+every `src/` file touched by the split to enforce 100% coverage in all four
+categories before the step is considered fully hardened.
 
 - Default to direct path migration once a boundary is folderized.
 - Do not preserve the old flat path with placeholder, mirror, or compatibility
@@ -214,9 +214,9 @@ API, default, or runtime contract.
 - Prefer `### Playback boundary pass` over
   `### YYYY-MM-DD - Playback boundary pass`.
 
-15. Run the narrow green validation for the active boundary, then raise
-  coverage on the new code and the directly related boundary toward >95%
-  when practical and safe.
+15. Run the narrow green validation for the active boundary, then run
+  `coverage-guard` on every `src/` file touched by the split to enforce 100%
+  coverage in all four categories (statements, branches, functions, lines).
 
 16. Immediately run `educational-docs` as the next step on the touched
     surface.

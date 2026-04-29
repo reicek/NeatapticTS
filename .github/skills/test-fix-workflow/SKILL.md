@@ -83,9 +83,12 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
   - Narrow red/green reruns for the active fix cluster are allowed.
 7. TypeScript-only validation is allowed during the fix phase when it helps
   confirm compile-time repairs.
-8. After the targeted fixes are green, raise coverage on the new code and the
-  directly related boundary toward >95% when practical and safe.
-9. After the planned fixes are complete, run the final broad validation.
+8. After the targeted fixes are green, run `coverage-guard` on every `src/`
+  file touched by the repair. Coverage must reach 100% (statements, branches,
+  functions, lines) for every changed file before the session is marked done.
+  Partial coverage is a bug in the change, not an acceptable tradeoff.
+9. After the planned fixes and coverage gate are both green, run the final
+  broad validation.
 10. Analyze any remaining failures and update the plan rather than switching to
    unstructured iteration.
 
@@ -118,9 +121,15 @@ Preferred validation cadence:
 
 - During the fix phase: narrow red/green test reruns for the active cluster,
   plus `npx tsc --noEmit -p tsconfig.test.json` when needed.
-- After the cluster is green: expand coverage on the new or directly related
-  boundary toward 100% in all categories. No code should be unreachable.
-- After all planned fixes: `npm run test:silent` and verify tested coverage.
+- After the cluster is green: run `coverage-guard` on every `src/` file
+  touched by the repair. All four categories must reach 100% for each file.
+  Use the dead-code rule: remove unreachable branches rather than forcing
+  contorted tests.
+- After all planned fixes and the coverage gate: `npm run test:silent` to
+  confirm the repo-wide suite is green and the baseline has not regressed.
+
+**Coverage is a hard gate, not a recommendation.** No test-fix session is
+complete until every changed `src/` file is at 100% and the suite is green.
 
 If the task is compile-heavy rather than runtime-heavy, file- or package-level
 diagnostics may be enough before the final suite run.
@@ -132,5 +141,8 @@ A strong run should report:
 - the plan file used or created,
 - the failure categories addressed,
 - which validations were intentionally deferred until the end,
-- final validation results,
+- `coverage-guard` result for every changed `src/` file (per-file 100%
+  confirmation or gaps resolved),
+- final `npm run test:silent` result,
+- new green baseline (suite count, test count),
 - any remaining failures or follow-up items.

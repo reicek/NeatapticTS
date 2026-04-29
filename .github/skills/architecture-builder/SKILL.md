@@ -100,7 +100,9 @@ Validate with: npx jest --testPathPattern=gru, then npm run test:silent.
    - determinism under a fixed seed (same output shape for same config),
    - validation rejects invalid configs with actionable error messages.
 7. Validate with a focused Jest slice for the builder boundary.
-8. Raise coverage on the new builder boundary toward 100% before closing the step.
+8. Run `coverage-guard` on every `src/` file added or changed by this step to
+   enforce 100% coverage in all four categories (statements, branches, functions,
+   lines) before closing the step.
 9. Improve JSDoc on all public exported symbols so the generated README reads as
    an educational chapter — explain the architecture, its historical basis, and
    tradeoffs, not just the signature.

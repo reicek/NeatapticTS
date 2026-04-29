@@ -77,47 +77,58 @@ import {
 /**
  * Runtime registry of built-in and custom activation functions.
  *
- * Read this surface as a behavior shelf for neurons rather than as a loose bag
- * of math helpers. The chosen activation determines what each node can express:
- * whether it saturates, stays sparse, preserves negative values, or responds
- * smoothly enough for gradient-based updates.
+ * The chosen activation function determines what each neuron in the network
+ * can *represent* — whether it can learn smooth boundaries, sparse features,
+ * periodic patterns, or gated on/off signals. In NEAT, the evolutionary
+ * controller can assign different activations to different nodes, so this
+ * registry is the complete vocabulary of expressible neuron behaviors.
  *
- * The built-in functions cluster into a few useful families:
+ * ## Key Formulas
  *
- * - saturating classics such as `logistic`, `sigmoid`, and `tanh` keep outputs
- *   bounded and are easy to reason about,
- * - piecewise linear choices such as `relu`, `hardTanh`, and `step` trade
- *   smoothness for cheap evaluation and strong gating behavior,
- * - localized or shape-heavy transforms such as `gaussian`, `sinusoid`, and
- *   `bentIdentity` are useful when you want periodic, radial, or gentler
- *   near-linear responses,
- * - modern smooth hidden-layer options such as `softplus`, `swish`, `gelu`,
- *   and `mish` aim to keep optimization stable without collapsing everything
- *   into hard zero-or-one decisions.
+ * A few formulas are worth memorizing because they define the most-used choices:
+ *
+ * ```
+ * logistic(x)  = 1 / (1 + e^-x)           range: (0, 1)
+ * tanh(x)      = (e^x - e^-x) / (e^x + e^-x)  range: (-1, 1)
+ * relu(x)      = max(0, x)                 range: [0, ∞)
+ * softplus(x)  = ln(1 + e^x)              smooth ReLU approximation
+ * swish(x)     = x · logistic(x)           self-gated, non-monotone
+ * gelu(x)      ≈ x · Φ(x)                 Gaussian CDF gating
+ * ```
+ *
+ * The derivative of each activation function determines how gradient
+ * information flows backward through the network during training. Saturating
+ * functions (`logistic`, `tanh`) have vanishingly small derivatives far from
+ * the origin — this is the *vanishing gradient problem* that motivated
+ * ReLU-family activations. See Wikipedia contributors,
+ * [Vanishing gradient problem](https://en.wikipedia.org/wiki/Vanishing_gradient_problem),
+ * for the historical context.
+ *
+ * ## Function Map
  *
  * ```mermaid
  * flowchart TD
- *   Shelf[Activation shelf] --> Bounded[Bounded classics]
- *   Shelf --> Piecewise[Piecewise gates]
- *   Shelf --> Specialized[Shape-specialized]
- *   Shelf --> Smooth[Smooth modern]
- *   Bounded --> BoundedExamples[logistic sigmoid tanh]
- *   Piecewise --> PiecewiseExamples[relu hardTanh step]
- *   Specialized --> SpecializedExamples[gaussian sinusoid bentIdentity]
- *   Smooth --> SmoothExamples[softplus swish gelu mish]
+ *   classDef base fill:#001522,stroke:#0fb5ff,color:#9fdcff,stroke-width:1.5px;
+ *   classDef accent fill:#0f1f33,stroke:#00e5ff,color:#d8f6ff,stroke-width:2px;
+ *
+ *   Shelf["Activation registry"]:::accent --> Bounded["Saturating · bounded output"]:::base
+ *   Shelf --> Piecewise["Piecewise linear · sparse"]:::base
+ *   Shelf --> Specialized["Shape-specialized · periodic/radial"]:::base
+ *   Shelf --> Smooth["Smooth modern · differentiable everywhere"]:::base
+ *   Bounded --> B2["logistic · sigmoid · tanh\nbipolars · softsign"]:::base
+ *   Piecewise --> P2["relu · hardTanh · step\nidentity · absolute · inverse"]:::base
+ *   Specialized --> S2["gaussian · sinusoid\nbentIdentity · selu"]:::base
+ *   Smooth --> M2["softplus · swish · gelu · mish"]:::base
  * ```
  *
- * Every activation shares the same calling convention: pass the input value as
- * the first argument and optionally pass `true` as the second argument when you
- * want the local derivative instead of the forward value. That derivative mode
- * keeps the registry compatible with the classic Neataptic API shape while also
- * making the individual implementations easy to test in isolation.
+ * Every activation shares the same calling convention: pass the input value
+ * and optionally `true` for the local derivative.
  *
  * Minimal workflow:
  *
  * ```ts
  * const hiddenValue = Activation.relu(weightedSum);
- * const outputSlope = Activation.logistic(weightedSum, true);
+ * const outputSlope = Activation.logistic(weightedSum, true); // derivative
  *
  * registerCustomActivation(
  *   'cube',
@@ -128,20 +139,19 @@ import {
  * const customValue = Activation.cube(0.5);
  * ```
  *
- * A practical chooser for first experiments:
+ * Practical first-experiment chooser:
  *
- * - start with `relu` when you want a simple, sparse hidden-layer default,
- * - prefer `tanh` when zero-centered bounded output helps reasoning or
- *   compatibility with older recurrent setups,
- * - reach for `softplus`, `swish`, `gelu`, or `mish` when you want a smoother
- *   alternative to ReLU,
- * - keep `logistic` or `sigmoid` for bounded probability-like outputs,
- * - use `registerCustomActivation()` when the built-ins are close but not quite
- *   the transfer curve your experiment needs.
+ * - `relu` — simplest sparse hidden-layer default; fast and effective.
+ * - `tanh` — zero-centered bounded alternative; useful for recurrent setups.
+ * - `softplus`, `swish`, `gelu`, or `mish` — smoother ReLU alternatives.
+ * - `logistic` / `sigmoid` — bounded probability-like outputs.
+ * - `registerCustomActivation()` — when the built-ins don't fit the transfer
+ *   curve your experiment needs.
  *
  * @see {@link https://en.wikipedia.org/wiki/Activation_function}
  * @see {@link https://en.wikipedia.org/wiki/Universal_approximation_theorem}
  * @see {@link https://en.wikipedia.org/wiki/Rectifier_(neural_networks)}
+ * @see {@link https://en.wikipedia.org/wiki/Vanishing_gradient_problem}
  */
 export const Activation: Record<string, ActivationFunction> = {
   /**

@@ -43,8 +43,10 @@ Active selection guide:
 - [plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): prebuilt architecture constructors and sequence-oriented builders.
 - [plans/Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md): parallel evaluation API for Node and browser workers.
 - [plans/Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md): fast serialization path for worker-based evaluation.
-- [plans/HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md): evo-devo and morphology-oriented research direction.
-- [plans/HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md): Hyper follow-on racing benchmark plan.
+- [plans/NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md): NEAT Genesis EvoDevo (NGE) — evo-devo algorithm with computation motifs, memory architecture, neuromodulation, and reproduction system.
+- [plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md): NGE racing benchmark — single-agent sensory specialization and behavioral drives.
+- [plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md): NGE ant hive ecosystem — multi-agent stigmergy, role differentiation, and collective intelligence.
+- [plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md): NGE predator/prey co-evolution — sensory arms race and reproduction mode dynamics.
 - [plans/flappy-network-visualizer-hover-highlight.plans.md](flappy-network-visualizer-hover-highlight.plans.md): active Flappy browser network visualizer hover and highlight work.
 - [plans/completed/README.md](completed/README.md): archive map for reopen-only baselines and their logs.
 
@@ -64,8 +66,10 @@ Task-to-plan trigger phrases:
 - examples, tutorials, learning path, onboarding: `plans/Interactive_Examples_and_Learning_Path.md`
 - neatchat, chatbot, online language learning, tiny conversation bot: `plans/NEATchat.md`
 - flappy visualizer hover, connection highlight, pointer-driven emphasis: `plans/flappy-network-visualizer-hover-highlight.plans.md`
-- evo-devo, morphology, research-heavy extensions: `plans/HyperEvoDevoMorphoNEAT.md`
-- racing benchmark, optimal line, behavioral drives, overtaking, self-play racecraft, Hyper follow-on: `plans/HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md`
+- evo-devo, NGE, morphology, research-heavy extensions, computation motifs, DNA program, neuromodulation, reproduction: `plans/NEAT_Genesis_EvoDevo.md`
+- racing benchmark, optimal line, behavioral drives, overtaking, self-play racecraft, NGE racing: `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+- ant hive, stigmergy, pheromone, role differentiation, colony, collective intelligence, multi-agent: `plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md`
+- predator prey, co-evolution, arms race, camouflage, evasion, pursuit, two populations: `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md`
 - archived reopen triggers: see `plans/completed/README.md`
 
 Working rule:

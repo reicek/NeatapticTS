@@ -76,7 +76,7 @@ let highWaterMark = 0;
 /** Incrementing counter to allocate fresh stable geneIds when resetting pooled nodes. */
 let nextGeneId = 1;
 
-/** Counters for recycling efficiency instrumentation (Phase 2 stress harness). */
+/** Counters for recycling efficiency instrumentation. */
 let reusedCount = 0;
 let freshCount = 0;
 

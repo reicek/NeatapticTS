@@ -8,17 +8,29 @@ disable-model-invocation: false
 
 # Coverage Tranche Playbook
 
-Use this skill to expand test coverage on a specific passing source boundary
-toward 100% statements, branches, functions, and lines.
+Use this skill to bring a specific `src/` boundary from its current coverage
+level up to the repo-wide 100% requirement.
 
-This skill is the canonical workflow for the repo's **Parallel Lane C** quality
-pass (`plans/test-repair-and-coverage.plans.md`). It is **not** a replacement
-for `test-fix-workflow`: use `test-fix-workflow` when tests are *failing*, and
-use this skill when tests pass but coverage is incomplete. The two skills are
-complements — fix failures first, then expand coverage.
+**100% coverage across all four categories — statements, branches, functions,
+lines — is a hard requirement for every file in `src/`, not a goal to
+approach.** This skill is the structured workflow for closing gaps that exist
+on already-passing code. For post-change regression repair use `coverage-guard`
+instead; for failing tests use `test-fix-workflow` first.
 
 When this skill updates the coverage tracker, `tracker-handoff` owns the
 `.plans.md` and `Handoff query` shape.
+
+## Skill Relationships
+
+| Situation | Correct skill |
+|---|---|
+| Tests are failing | `test-fix-workflow` first, then `coverage-guard` |
+| Tests pass, file below 100% | `coverage-tranche` (this skill) |
+| Change just landed, verify no regression | `coverage-guard` |
+| Identify next file below 100% | `Coverage Scout` agent |
+
+Do not invoke this skill when tests are red. Fix failures first, then
+return to coverage expansion.
 
 ## When to Use
 
@@ -26,10 +38,7 @@ When this skill updates the coverage tracker, `tracker-handoff` owns the
 - The test suite is green.
 - The task is to add the **smallest** owner-local test that exercises an
   uncovered path — not to fix a broken assertion.
-- Dead code should be confirmed or removed as part of the tranche.
-
-Do not invoke this skill when tests are red. Use `test-fix-workflow` instead,
-then return to coverage expansion once the suite is green.
+- Dead code should be confirmed and removed as part of the tranche.
 
 ## Task Packet
 
@@ -103,11 +112,15 @@ Group by scenario, not by assertion: one `it()` per observable behavior.
 - After the tranche: `npm run test:silent` for repo-wide green confirmation.
 - Do not run the broad suite during implementation; run only the focused slice.
 
-## Companion Agent
+## Companion Agent and Sibling Skill
 
 Use `Coverage Scout` (`coverage-scout`) when you need to identify the next
 coverage tranche target from `coverage/lcov.info` before starting a tranche.
 The scout is read-only recon; this skill is the execution workflow.
+
+Use `coverage-guard` when a code change has just landed and you need to verify
+the touched files have not dropped below 100%. `coverage-tranche` is for
+forward progress; `coverage-guard` is for regression prevention after changes.
 
 ## Guardrails
 
@@ -131,6 +144,11 @@ A strong tranche run should report:
 - the source file processed,
 - the coverage metric before and after (per category),
 - whether the gap was a live path (test added) or dead code (branch removed),
-- the focused Jest validation result,
-- the repo-wide suite result,
+- the focused Jest validation result (100% confirmed in all four categories),
+- the repo-wide suite result (`npm run test:silent` green),
+- the new green baseline (suite count, test count),
 - the updated plan state and next target.
+
+A tranche is only complete when the focused Jest slice confirms 100% in all
+four categories **and** the repo-wide suite is green. Partial results are not
+acceptable.

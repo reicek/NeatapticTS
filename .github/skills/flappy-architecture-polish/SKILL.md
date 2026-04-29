@@ -143,6 +143,9 @@ surface.
      computations.
    - Do not keep multi-minute progress probes in the normal Jest suite once the
      durable CLI or equivalent runner exists.
+   - If any `src/` files were modified during tuning, run `coverage-guard` on
+     each changed file to enforce 100% coverage in all four categories before
+     closing the step.
 
 8. Preserve the durable progress-check contract unless there is a documented
    reason to revise it.

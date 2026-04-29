@@ -364,7 +364,7 @@ options.
 
 This compatibility wrapper preserves the historical `random()` surface
 while forwarding to the stricter `randomSparse()` builder that uses the
-Phase 2 sparse-profile vocabulary.
+sparse-profile vocabulary.
 
 Parameters:
 - `input` - The number of input nodes.

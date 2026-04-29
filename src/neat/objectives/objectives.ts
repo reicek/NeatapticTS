@@ -33,7 +33,7 @@ import type { NeatLikeWithObjectives } from './core/objectives.types';
  * descriptors, and how to replace an existing objective without mutating the
  * old list in place.
  *
- * Step 7.5 boundary note: objective registration is a controller-policy
+ * Ownership boundary: objective registration is a controller-policy
  * surface. It tells later ranking or selection passes how to read progress,
  * but it does not mutate genome identity, compatibility distance, or replay
  * semantics by itself.

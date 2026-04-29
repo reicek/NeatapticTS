@@ -305,7 +305,7 @@ export default class Architect {
    *
    * This compatibility wrapper preserves the historical `random()` surface
    * while forwarding to the stricter `randomSparse()` builder that uses the
-   * Phase 2 sparse-profile vocabulary.
+   * sparse-profile vocabulary.
    *
    * @param input The number of input nodes.
    * @param hidden The number of hidden nodes to add.

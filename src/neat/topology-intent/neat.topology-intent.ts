@@ -235,8 +235,8 @@ export function promoteGenomeToFeedForwardIntentWhenEligible(
 /**
  * Decide whether mutation may add recurrent or self connections to a genome.
  *
- * Phase 3 needs one explicit policy seam shared by selection and structural
- * mutation helpers. Recurrent growth is allowed only when the controller opts
+ * Recurrent growth requires one explicit policy seam shared by selection and
+ * structural mutation helpers. It is allowed only when the controller opts
  * in through `allowRecurrent` and the genome is not currently under the
  * feed-forward topology contract.
  *

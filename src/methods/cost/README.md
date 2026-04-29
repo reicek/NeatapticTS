@@ -1,26 +1,43 @@
 # methods/cost
 
-Provides a collection of standard cost functions (also known as loss functions)
-used for evaluating the performance of neural networks during training.
+Cost (loss) functions for evaluating and training neural networks.
 
-Cost functions quantify the difference between the network's predictions
-and the actual target values. The goal of training is typically to minimize
-the value of the cost function. The choice of cost function is crucial and
-depends on the specific task (e.g., regression, classification) and the
-desired behavior of the model.
+## What a Cost Function Does
 
-Read this chapter as an answer to one practical modeling question: what kind
-of mistake do you want the network to care about most?
+A cost function measures how far the network's output is from the desired
+target. During gradient-based training, the network learns by computing the
+partial derivative of the cost with respect to every weight, then nudging
+each weight in the direction that reduces the cost. The cost function is
+therefore not just a score — it is the *shape of the learning signal*.
 
-The methods cluster into three teaching-friendly families:
+Choosing the right cost function for a task is as important as choosing the
+right activation function. A regression network optimized with cross-entropy
+will produce meaningless gradients; a classification network optimized with
+MSE ignores calibration and confidence. See Wikipedia contributors,
+[Loss function](https://en.wikipedia.org/wiki/Loss_function), for the
+general concept and its role in statistical estimation.
 
-- classification losses such as `crossEntropy()`, `softmaxCrossEntropy()`,
-  `binary()`, and `hinge()` care about confidence, separability, or error
-  rate,
-- regression losses such as `mse()`, `mae()`, `mape()`, and `msle()` care
-  about scale, outliers, or percentage error,
-- calibration helpers such as `focalLoss()` and `labelSmoothing()` change how
-  harshly easy examples or overconfident predictions should be treated.
+## Key Formulas
+
+```
+MSE(y, ŷ)         = (1/n) Σ (yᵢ - ŷᵢ)²       ← penalizes large errors heavily
+MAE(y, ŷ)         = (1/n) Σ |yᵢ - ŷᵢ|          ← robust to outliers
+CrossEntropy(y,ŷ) = −Σ yᵢ log(ŷᵢ)              ← measures prediction confidence
+Binary(y, ŷ)      = −[ y log(ŷ) + (1−y) log(1−ŷ) ]  ← two-class CE variant
+Hinge(y, ŷ)       = max(0, 1 − y · ŷ)           ← SVM-style margin loss
+```
+
+Read this chapter as an answer to one practical modeling question:
+what kind of mistake do you want the network to care about most?*
+
+The functions cluster into three families:
+
+- classification losses (`crossEntropy`, `softmaxCrossEntropy`, `binary`, `hinge`) —
+  care about confidence, separability, or error rate,
+- regression losses (`mse`, `mae`, `mape`, `msle`) — care about scale,
+  outliers, or percentage error,
+- calibration helpers (`focalLoss`, `labelSmoothing`) — change how harshly
+  easy examples or overconfident predictions are treated.
 
 ## methods/cost/cost.ts
 

@@ -2,48 +2,73 @@
 
 Assign genomes into species and maintain the controller's species state.
 
-Speciation is the controller phase that keeps a NEAT population diverse
-enough to keep exploring. Instead of letting one temporarily strong lineage
-absorb the whole run, this boundary repeatedly answers three practical
-questions:
+## Why Speciation Exists
 
-1. which genomes still belong together under the current compatibility rule,
-2. whether the compatibility threshold should move to keep the species count
-   healthy,
-3. which species should remain protected, penalized, or recorded for the next
-   generation.
+In a purely competitive population, a genome with a temporarily strong
+topology would rapidly clone itself and crowd out every structurally different
+solution. New topologies — which often need several generations to tune their
+weights — would be eliminated before they had a chance to prove useful. NEAT
+solves this with *speciation*: genomes are grouped by structural similarity,
+and fitness is shared within each group rather than globally. A new topology
+that scores below the population average still earns enough shared fitness to
+survive long enough to refine itself.
 
-The root file stays orchestration-first so callers can read the full
-controller story in one place. The detailed mechanics then branch into the
-helper chapters that own one responsibility each:
+This idea parallels niche preservation in natural evolution, where
+ecological niches let different strategies coexist even when one currently
+dominates on a shared metric. See Wikipedia contributors,
+[Fitness sharing](https://en.wikipedia.org/wiki/Fitness_sharing), and
+Stanley and Miikkulainen,
+[Evolving Neural Networks through Augmenting Topologies](https://nn.cs.utexas.edu/?stanley:ec02),
+for the original motivation and formal definition.
 
-- `assignment/` snapshots old memberships, clears species, reassigns genomes,
-  and refreshes representatives,
-- `threshold/` keeps the compatibility threshold near the intended species
-  count,
-- `history/` records teaching- and telemetry-friendly snapshots and applies
-  age-based protection,
-- `sharing/` normalizes within-species scores and tracks stagnation.
+## Compatibility Distance
 
-Step 7.5 boundary note: assignment and threshold tuning define the canonical
-species grouping boundary. The later history and sharing stages are
-controller-policy overlays layered after that grouping; they may rewrite the
-current generation's score view or species bookkeeping, but they do not
-change compatibility identity or replay semantics by themselves.
+Two genomes belong to the same species when their *compatibility distance* δ
+falls below the current threshold:
 
-Read this root chapter when you want the speciation lifecycle first. Drop
-into the helper folders when you want the exact assignment heuristics,
-threshold controller, or history bookkeeping.
+```
+δ = (c₁ · E) / N  +  (c₂ · D) / N  +  c₃ · W̄
+```
+
+E = excess gene count, D = disjoint gene count, N = larger genome size,
+W̄ = mean weight difference of matching genes, c₁/c₂/c₃ = tunable
+coefficients. High δ means the genomes represent structurally different
+evolutionary lineages.
+
+## Lifecycle
+
+This boundary repeatedly answers three practical questions per generation:
+
+1. Which genomes still belong together under the current compatibility rule?
+2. Should the compatibility threshold move to keep the species count healthy?
+3. Which species should be protected, penalized, or pruned for the next round?
+
+The root file stays orchestration-first. The detailed mechanics live in four
+helper chapters:
+
+- `assignment/` — snapshot old memberships, clear, reassign, refresh representatives,
+- `threshold/` — adaptively tune δ to keep the species count near a target,
+- `history/` — record teaching-friendly snapshots and apply age-based protection,
+- `sharing/` — normalize scores within species and track stagnation.
+
+The two-phase ownership matters: assignment and threshold tuning establish
+canonical species identity (which determines crossover alignment and replay
+semantics). The history and sharing stages are controller-policy overlays
+applied *after* grouping; they rewrite fitness views and bookkeeping without
+changing identity or innovation-number alignment.
 
 ```mermaid
 flowchart TD
-  Population[Population entering speciation]
-  Snapshot[Snapshot previous memberships]
-  Assignment[assignment/<br/>reset, match, create, refresh]
-  Threshold[threshold/<br/>adapt compatibility threshold]
-  History[history/<br/>protect and record]
-  Sharing[sharing/<br/>share fitness and track stagnation]
-  SpeciesState[Updated species registry]
+  classDef base fill:#001522,stroke:#0fb5ff,color:#9fdcff,stroke-width:1.5px;
+  classDef accent fill:#0f1f33,stroke:#00e5ff,color:#d8f6ff,stroke-width:2px;
+
+  Population["Population entering speciation"]:::accent
+  Snapshot["Snapshot previous memberships"]:::base
+  Assignment["assignment/<br/>reset · match · create · refresh"]:::base
+  Threshold["threshold/<br/>adapt compatibility threshold"]:::base
+  History["history/<br/>protect young species · record snapshot"]:::base
+  Sharing["sharing/<br/>share fitness · track stagnation"]:::base
+  SpeciesState["Updated species registry"]:::accent
 
   Population --> Snapshot
   Snapshot --> Assignment
@@ -52,6 +77,10 @@ flowchart TD
   History --> SpeciesState
   SpeciesState --> Sharing
 ```
+
+Read this root chapter when you want the speciation lifecycle as a whole.
+Drop into the helper folders for the exact assignment heuristics, threshold
+controller, or history bookkeeping.
 
 Example:
 

@@ -17,7 +17,9 @@
       "PowerShell($content = Get-Content \"c:\\\\NeatapticTS\\\\coverage\\\\lcov.info\" -Raw; $start = $content.IndexOf\\('network.activate.utils.ts'\\); $end = $content.IndexOf\\('end_of_record', $start\\); $content.Substring\\($start, $end - $start + 13\\))",
       "Bash(node -e \"const fs=require\\('fs'\\); const c=fs.readFileSync\\('c:/NeatapticTS/coverage/lcov.info','utf8'\\); console.log\\(c.slice\\(0,200\\)\\);\")",
       "Bash(grep -A 40 \"methods\\\\\\\\\\\\\\\\methods.ts\" /c/NeatapticTS/coverage/lcov.info)",
-      "Read(//c/Users/reice/AppData/Local/Temp/claude/c--NeatapticTS/d6e9debc-94b7-43c3-bd32-df4d081f7e5f/tasks/**)"
+      "Read(//c/Users/reice/AppData/Local/Temp/claude/c--NeatapticTS/d6e9debc-94b7-43c3-bd32-df4d081f7e5f/tasks/**)",
+      "Bash(npx ts-node *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

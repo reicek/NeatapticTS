@@ -116,11 +116,13 @@ Documentation style (from `copilot-instructions.md`): dark-background, blue/cyan
 
 Public docs should be **atemporal** — never reference plans, tracker phases, PR numbers, or internal roadmap steps. Those belong in `plans/` only.
 
-## Current focus — test coverage to 100%
+## Test coverage — hard requirement
+
+**100% statements, branches, functions, and lines across all of `src/` is a hard requirement, not a goal.** Any file below 100% is a defect. No change to `src/` is complete until every file it touches is verified at 100%.
 
 Active plan: [plans/test-repair-and-coverage.plans.md](plans/test-repair-and-coverage.plans.md)
 
-The goal is 100% statements, branches, functions, and lines across all of `src/`. The pass works file-by-file from the lowest-covered boundary upward. The latest authoritative run is green at **296 passing suites / 2570 passing tests**. The current next target is `src/architecture/network/topology/network.topology.utils.ts` at 96.55% (28/29 lines).
+The forward-progress pass works file-by-file from the lowest-covered boundary upward. The latest authoritative run is green at **296 passing suites / 2570 passing tests**. The current next target is `src/architecture/network/topology/network.topology.utils.ts` at 96.55% (28/29 lines).
 
 Approach for each tranche:
 1. Read the source boundary and its nearest existing test file.
@@ -132,6 +134,8 @@ Approach for each tranche:
 
 When a test exposes dead code, remove the dead production branch instead of writing a test to force an unreachable path.
 
+After **any** change to `src/`, run `/coverage-guard` on every file that was touched before marking the work done.
+
 ## Skills and agents (`.github/`)
 
 Invoke skills via slash commands — do not re-state their workflow ad hoc:
@@ -140,6 +144,7 @@ Invoke skills via slash commands — do not re-state their workflow ad hoc:
 |---|---|
 | `/test-fix-workflow` | Repairing multiple **failing** tests (red suite) |
 | `/coverage-tranche` | Expanding coverage on **passing** code toward 100% |
+| `/coverage-guard` | Enforcing 100% coverage after **any** change to `src/` |
 | `/solid-split` | SOLID-based module refactor |
 | `/tracker-handoff` | Creating, compressing, or closing `.plans.md` / `.logs.md` files |
 | `/educational-docs` | JSDoc quality, README tone, Mermaid diagrams, citations |
@@ -160,6 +165,7 @@ Invoke skills via slash commands — do not re-state their workflow ad hoc:
 | `Docs Scout` | `educational-docs` |
 | `Plan Scout` | `plan-alignment` |
 | `Coverage Scout` | `coverage-tranche` |
+| `Coverage Guard` (agent) | `coverage-guard` |
 
 ## Tracker and plans conventions
 

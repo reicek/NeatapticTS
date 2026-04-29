@@ -76,8 +76,10 @@ Validate with: npm run build, then manual smoke test in browser.
    - Bundle size is within budget (see rules below).
    - A minimal browser smoke test can load the bundle, instantiate a `Network`,
      and run `activate()` without errors.
-7. Run `npm run test:silent` to confirm the Node test suite is unaffected.
-8. Update `plans/Browser_Build_and_CDN_Distribution.md` with the completed step.
+7. If any `src/` files were modified, run `coverage-guard` on each changed file
+   to enforce 100% coverage in all four categories before continuing.
+8. Run `npm run test:silent` to confirm the Node test suite is unaffected.
+9. Update `plans/Browser_Build_and_CDN_Distribution.md` with the completed step.
 
 ## Bundle Quality Rules
 

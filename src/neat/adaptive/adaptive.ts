@@ -7,7 +7,7 @@
  * sake of a single operator. Instead they watch population behavior over time
  * and adjust thresholds, budgets, or rates that later generations inherit.
  *
- * Step 7.5 boundary note: these helpers are controller-owned policy overlays
+ * Ownership boundary: these helpers are controller-owned policy overlays
  * layered on top of the evaluated population. Complexity budgets and lineage
  * tuning rewrite future controller options, while acceptance may rewrite the
  * current generation's score view for selection. None of these helpers change

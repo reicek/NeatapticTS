@@ -12,7 +12,7 @@ chapters own the narrow mechanics. This file exists so a reader can learn
 the ranking pipeline from top to bottom without digging through those lower-
 level helpers first.
 
-Step 7.5 boundary note: this ranking flow is controller-owned policy, not
+Ownership boundary: this ranking flow is controller-owned policy, not
 canonical genome identity. `_moRank` and `_moCrowd` are temporary annotations
 for selection, telemetry, and export; they do not become compatibility inputs
 or historical markings unless a later opt-in policy explicitly says so.

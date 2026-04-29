@@ -37,7 +37,7 @@ objectives. It annotates each genome with novelty evidence and optionally
 blends that evidence into the current score so later tuning, selection, and
 speciation reads can still reason from one stable evaluated population.
 
-Step 7.5 boundary note: novelty is a controller-policy overlay. It may
+Ownership boundary: novelty is a controller-policy overlay. It may
 annotate `_novelty` and optionally rewrite the current generation's `score`
 field when blending against existing fitness, but it does not redefine genome
 identity, compatibility distance, or objective registration.

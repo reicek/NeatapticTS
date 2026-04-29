@@ -76,11 +76,14 @@ Validate with: npx jest --testPathPattern=onnx, then npm run test:silent.
    - Build a known network → export to ONNX → import back → compare activation
      output for the same input vector within float32 tolerance.
 7. Validate with a focused Jest slice for the ONNX boundary.
-8. Update the supported-subset operator table in the nearest JSDoc or README
+8. Run `coverage-guard` on every `src/` file added or changed in this step.
+   100% in all four categories (statements, branches, functions, lines) is
+   required before proceeding.
+9. Update the supported-subset operator table in the nearest JSDoc or README
    surface to reflect the new operator.
-9. Run `npm run docs` to verify generated output.
-10. Update `plans/ONNX_EXPORT_PLAN.md` with the completed step.
-11. Run `npm run test:silent` to confirm repo-wide green.
+10. Run `npm run docs` to verify generated output.
+11. Update `plans/ONNX_EXPORT_PLAN.md` with the completed step.
+12. Run `npm run test:silent` to confirm repo-wide green.
 
 ## Supported Subset Rule
 
